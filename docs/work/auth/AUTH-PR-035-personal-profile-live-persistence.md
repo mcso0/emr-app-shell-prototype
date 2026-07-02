@@ -38,3 +38,7 @@ Personal profile settings now save through `PATCH /api/users/me/profile`; Supaba
 - Focused local SQL execution for `public.clair_save_personal_profile(...)`
 
 Result: passed on 2026-05-18.
+
+## Follow-up Notes
+
+- 2026-07-01 profile UI redesign keeps the existing `PATCH /api/users/me/profile` contract, but no longer renders `initials` or `notificationOptIn` as editable fields. The client derives initials from display name and preserves the stored notification preference when saving.

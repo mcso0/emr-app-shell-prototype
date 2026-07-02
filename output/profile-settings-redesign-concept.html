@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR Personal Profile Concept</title>
+    <style>
+      @import "../node_modules/pretendard/dist/web/variable/pretendardvariable.css";
+
+      :root {
+        --background: oklch(1 0 0);
+        --foreground: oklch(0.141 0.005 285.823);
+        --primary: oklch(0.21 0.006 285.885);
+        --primary-foreground: oklch(0.985 0 0);
+        --accent: oklch(0.967 0.001 286.375);
+        --border: oklch(0.92 0.004 286.32);
+        --input: oklch(0.92 0.004 286.32);
+        --ring: oklch(0.705 0.015 286.067);
+        --emr-surface-app: #fafafa;
+        --emr-surface-content-panel: #f8f8fa;
+        --emr-surface-subpanel: #f8f8fa;
+        --emr-surface-hover: oklch(0.977 0.001 286.3);
+        --emr-surface-selected: oklch(0.97 0.006 286);
+        --emr-surface-disabled: oklch(0.955 0.001 286);
+        --emr-line-hairline: oklch(0.92 0.004 286.32);
+        --emr-line-selected: oklch(0.588 0.158 241.966);
+        --emr-text-primary: oklch(0.141 0.005 285.823);
+        --emr-text-secondary: oklch(0.32 0.01 286);
+        --emr-text-tertiary: oklch(0.552 0.016 285.938);
+        --emr-text-placeholder: oklch(0.64 0.014 286);
+        --emr-text-disabled: oklch(0.72 0.01 286);
+        --emr-status-success-bg: #ecfdf5;
+        --emr-status-success-border: #bbf7d0;
+        --emr-status-success-text: #15803d;
+        --clair-radius-md: 8px;
+        --clair-radius-atomic-8: 8px;
+        --clair-radius-atomic-10: 10px;
+        --clair-radius-atomic-12: 12px;
+        --clair-control-height-md: 36px;
+        --clair-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+        --clair-shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+        --clair-shadow-md: 0 4px 10px rgba(16, 24, 40, 0.08);
+        --emr-radius-control: var(--clair-radius-md);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+        background: var(--emr-surface-app);
+        color: var(--foreground);
+        font-family:
+          "Pretendard Variable",
+          "Apple SD Gothic Neo",
+          "Noto Sans KR",
+          system-ui,
+          sans-serif;
+        letter-spacing: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background: var(--emr-surface-app);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+      }
+
+      .shell {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: minmax(232px, 280px) minmax(0, 1fr);
+      }
+
+      .side {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        gap: 36px;
+        padding: 72px 28px 32px 40px;
+        border-right: 1px solid var(--emr-line-hairline);
+        background: var(--emr-surface-content-panel);
+      }
+
+      .back-link {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 10px;
+        color: var(--emr-text-secondary);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .back-link i {
+        color: var(--emr-text-tertiary);
+      }
+
+      .profile-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .nav-label {
+        padding: 0 10px 6px;
+        color: var(--emr-text-tertiary);
+        font-size: 11px;
+        font-weight: 650;
+        line-height: 16px;
+      }
+
+      .nav-item {
+        display: flex;
+        min-height: 40px;
+        align-items: center;
+        gap: 10px;
+        border-radius: var(--clair-radius-atomic-8);
+        background: var(--emr-surface-selected);
+        color: var(--emr-text-primary);
+        padding: 0 10px;
+        text-align: left;
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--emr-line-selected) 30%, transparent);
+      }
+
+      .nav-item i {
+        color: var(--emr-line-selected);
+      }
+
+      .content {
+        display: flex;
+        justify-content: center;
+        padding: 72px 56px;
+      }
+
+      .page {
+        width: min(100%, 760px);
+      }
+
+      .page-header {
+        padding-bottom: 30px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--emr-text-tertiary);
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 16px;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--emr-text-primary);
+        font-size: 24px;
+        font-weight: 720;
+        line-height: 32px;
+      }
+
+      .description {
+        max-width: 560px;
+        margin: 8px 0 0;
+        color: var(--emr-text-tertiary);
+        font-size: 14px;
+        line-height: 22px;
+      }
+
+      .profile-form {
+        border-top: 1px solid var(--emr-line-hairline);
+      }
+
+      .section-row {
+        display: grid;
+        grid-template-columns: 168px minmax(0, 1fr);
+        gap: 84px;
+        align-items: start;
+        border-bottom: 1px solid var(--emr-line-hairline);
+        padding: 34px 0;
+      }
+
+      .section-title {
+        margin: 0;
+        color: var(--emr-text-primary);
+        font-size: 16px;
+        font-weight: 720;
+        line-height: 24px;
+      }
+
+      .section-help {
+        margin: 8px 0 0;
+        color: var(--emr-text-tertiary);
+        font-size: 12px;
+        line-height: 18px;
+      }
+
+      .profile-photo {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .avatar {
+        display: grid;
+        width: 84px;
+        height: 84px;
+        place-items: center;
+        border: 1px solid color-mix(in srgb, var(--emr-line-selected) 26%, var(--border));
+        border-radius: var(--clair-radius-atomic-12);
+        background: var(--emr-surface-selected);
+        color: var(--emr-text-primary);
+        font-size: 28px;
+        font-weight: 760;
+      }
+
+      .photo-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .photo-title {
+        color: var(--emr-text-primary);
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 20px;
+      }
+
+      .photo-help {
+        color: var(--emr-text-tertiary);
+        font-size: 12px;
+        line-height: 18px;
+      }
+
+      .field-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .field {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .field-label {
+        color: var(--emr-text-secondary);
+        font-size: 12px;
+        font-weight: 680;
+        line-height: 16px;
+      }
+
+      .input {
+        width: 100%;
+        height: var(--clair-control-height-md);
+        min-width: 0;
+        border: 1px solid var(--input);
+        border-radius: var(--emr-radius-control);
+        background: transparent;
+        color: var(--foreground);
+        padding: 7px 10px;
+        outline: none;
+        transition:
+          border-color 140ms ease,
+          box-shadow 140ms ease;
+      }
+
+      .input::placeholder {
+        color: var(--emr-text-placeholder);
+      }
+
+      .input:focus {
+        border-color: var(--ring);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 24%, transparent);
+      }
+
+      .input[readonly] {
+        background: var(--emr-surface-disabled);
+        color: var(--emr-text-tertiary);
+      }
+
+      .helper {
+        color: var(--emr-text-tertiary);
+        font-size: 12px;
+        line-height: 18px;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding-top: 24px;
+      }
+
+      .button {
+        display: inline-flex;
+        height: var(--clair-control-height-md);
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: var(--emr-radius-control);
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 650;
+        line-height: 18px;
+        white-space: nowrap;
+        cursor: pointer;
+        transition:
+          background-color 150ms ease,
+          border-color 150ms ease,
+          box-shadow 150ms ease;
+      }
+
+      .button:disabled {
+        cursor: default;
+        opacity: 0.45;
+        box-shadow: none;
+      }
+
+      .button-primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        box-shadow: var(--clair-shadow-sm);
+      }
+
+      .button-primary:hover {
+        background: oklch(0.28 0.006 285.885);
+        box-shadow: var(--clair-shadow-md);
+      }
+
+      .button-outline {
+        border: 1px solid var(--input);
+        background: var(--background);
+        color: var(--foreground);
+        box-shadow: var(--clair-shadow-xs);
+      }
+
+      .button-outline:hover {
+        background: var(--accent);
+      }
+
+      .save-notice {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        border: 1px solid var(--emr-status-success-border);
+        border-radius: var(--clair-radius-atomic-8);
+        background: var(--emr-status-success-bg);
+        color: var(--emr-status-success-text);
+        padding: 9px 10px;
+        font-size: 12px;
+        font-weight: 650;
+        line-height: 18px;
+      }
+
+      .save-notice[data-visible="true"] {
+        display: inline-flex;
+      }
+
+      @media (max-width: 900px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .side {
+          min-height: auto;
+          gap: 20px;
+          padding: 24px 20px 16px;
+          border-right: 0;
+          border-bottom: 1px solid var(--emr-line-hairline);
+        }
+
+        .profile-nav {
+          display: none;
+        }
+
+        .content {
+          padding: 32px 20px 48px;
+        }
+
+        .section-row {
+          grid-template-columns: 1fr;
+          gap: 18px;
+          padding: 28px 0;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .profile-photo {
+          align-items: flex-start;
+        }
+
+        .avatar {
+          width: 68px;
+          height: 68px;
+          font-size: 22px;
+        }
+
+        .actions {
+          justify-content: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="side" aria-label="프로필 화면 내비게이션">
+        <a class="back-link" href="#">
+          <i data-lucide="arrow-left" aria-hidden="true"></i>
+          <span>청담점 워크스페이스</span>
+        </a>
+
+        <nav class="profile-nav">
+          <div class="nav-label">내 정보</div>
+          <div class="nav-item" aria-current="page">
+            <i data-lucide="user-round" aria-hidden="true"></i>
+            <span>개인 프로필</span>
+          </div>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <section class="page" aria-labelledby="page-title">
+          <header class="page-header">
+            <p class="eyebrow">Personal profile</p>
+            <h1 id="page-title">개인 프로필</h1>
+            <p class="description">
+              워크스페이스 안에서 동료에게 보이는 이름과 연락처를 관리합니다.
+            </p>
+          </header>
+
+          <form class="profile-form">
+            <section class="section-row">
+              <div>
+                <h2 class="section-title">사진</h2>
+                <p class="section-help">프로필 목록과 담당자 표시 영역에 사용됩니다.</p>
+              </div>
+              <div class="profile-photo">
+                <div class="avatar" aria-hidden="true">청</div>
+                <div class="photo-actions">
+                  <div class="photo-title">청담 관리자</div>
+                  <div class="photo-help">권장 크기 400x400px</div>
+                  <button class="button button-outline" type="button">사진 변경</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="section-row">
+              <div>
+                <h2 class="section-title">기본 정보</h2>
+                <p class="section-help">진료, 접수, 감사 로그에서 표시됩니다.</p>
+              </div>
+              <div class="field-grid">
+                <label class="field">
+                  <span class="field-label">이름</span>
+                  <input class="input" type="text" value="청담 관리자" />
+                </label>
+                <label class="field">
+                  <span class="field-label">이메일</span>
+                  <input class="input" type="email" value="admin@clair.local" readonly />
+                  <span class="helper">로그인에 사용하는 이메일입니다.</span>
+                </label>
+                <label class="field">
+                  <span class="field-label">연락처</span>
+                  <input class="input" type="tel" placeholder="010-0000-0000" />
+                </label>
+              </div>
+            </section>
+
+            <div class="actions">
+              <button class="button button-primary" type="button" id="saveButton" disabled>
+                <i data-lucide="check" aria-hidden="true"></i>
+                저장하기
+              </button>
+            </div>
+
+            <div class="save-notice" id="saveNotice" role="status">
+              <i data-lucide="check-circle-2" aria-hidden="true"></i>
+              변경 내용이 저장되었습니다.
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script>
+      window.lucide?.createIcons({ attrs: { width: 17, height: 17, strokeWidth: 1.8 } });
+
+      const form = document.querySelector(".profile-form");
+      const notice = document.querySelector("#saveNotice");
+      const saveButton = document.querySelector("#saveButton");
+      const originalValues = new Map(
+        Array.from(form.querySelectorAll("input")).map((input) => [input, input.value])
+      );
+
+      form.addEventListener("input", () => {
+        const isDirty = Array.from(originalValues).some(([input, value]) => input.value !== value);
+        saveButton.disabled = !isDirty;
+      });
+
+      document.querySelector("#saveButton")?.addEventListener("click", () => {
+        Array.from(form.querySelectorAll("input")).forEach((input) => {
+          originalValues.set(input, input.value);
+        });
+        saveButton.disabled = true;
+        notice.dataset.visible = "true";
+        window.setTimeout(() => {
+          notice.dataset.visible = "false";
+        }, 2400);
+      });
+    </script>
+  </body>
+</html>

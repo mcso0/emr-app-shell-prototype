@@ -1,7 +1,7 @@
 ---
 status: "approved"
 area: "design-system"
-updated: "2026-06-06"
+updated: "2026-07-01"
 linear_issue: "DEN-434"
 linear_project: "공통 UX/UI 기준 정리 및 화면 적용"
 source_docs:
@@ -10,6 +10,7 @@ source_docs:
   - "docs/design/system/inline-alert-feedback-rules.md"
   - "docs/design/system/border-shadow-depth-contract.md"
   - "docs/design/system/component-ownership-rules.md"
+  - "docs/work/design-system/DESIGN-SYSTEM-PR-070-emr-empty-state-component-storybook.md"
 ---
 
 # Empty State And Info Box Contract
@@ -98,6 +99,52 @@ Use this order:
 4. Consider an `EmrInfoBox` only after info, prerequisite, caution, and unavailable patterns repeat across screen families without feature-specific behavior.
 
 Shared components must expose slots for title, body, icon, action, secondary action, tone, and test IDs without owning route, permission, persistence, or logging behavior.
+
+As of `DESIGN-SYSTEM-PR-070`, `EmrEmptyState` covers the shared empty-state layer for repeated queue, content, drawer, table, widget, and global-shell surfaces. It uses `kind`, `surface`, and `priority` to keep state reason, placement, and CTA ownership explicit. Screen adoption remains separate from the component contract.
+
+## Surface Adoption Rules
+
+`EmrEmptyState` adoption must be surface-led. Do not replace every local "없습니다" message at once.
+
+| Surface | Current default | `EmrEmptyState` adoption rule | Action ownership |
+| --- | --- | --- | --- |
+| Queue side panel | Keep `EmrQueueEmptyState` compact by default | Do not replace with the standard 64px icon pattern until a queue-specific compact variant is approved. Queue empty states should stay quiet and list-local. | Queue may own only local recovery such as clearing search or filters. It should not own screen-level create/navigation actions when content is also empty. |
+| Content body | Preferred first pilot surface | Use `surface="content"` when the main work area has no selected object, no upstream work, or no scope result. This is the right surface for screen-level next steps. | Content body owns the single primary decision when queue and content are both empty. |
+| Table body | Preferred second pilot surface | Use `surface="table"` for no rows, no filter results, or no search results inside table/list bodies when the table layout can preserve header/scroll alignment. Keep very dense tables on the existing empty row until spacing is verified. | Table owns local recovery such as reset filters. It should not trigger source workflow navigation unless the whole content surface is table-only. |
+| Drawer/detail panel | Adopt selectively | Use `surface="drawer"` for selected-object absence or passive detail guidance. Use `EmrInlineAlert` instead for permission blockers, read failures, failed saves, or degraded data. | Drawer should not own primary workflow creation. It may own close, retry, or local selection guidance. |
+| Widget/card | Adopt selectively | Use `surface="widget"` for dashboard cards and small summaries only when the copy needs an icon and repeated structure. Plain one-line widget empty copy is still allowed. | Widget actions stay secondary unless the widget is explicitly a launcher. |
+| Global shell/module | Last resort | Use only when the whole module or workspace surface cannot show its normal structure. Do not use it for transient loading, API failure, or permission denial that needs alert treatment. | Global shell may own a primary action only when there is no more specific content owner. |
+
+## Current Empty-State Inventory
+
+This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. It names representative existing owners and the initial adoption posture.
+
+| Area | Current owner / example | Current state | Adoption posture |
+| --- | --- | --- | --- |
+| Shared queue panels | `src/components/emr/subpanel.tsx` `EmrQueueEmptyState`, `EmrListSearchEmptyState`, `EmrQueueLoadingState` | Compact 40px queue placeholder used by reception, chart/order queue, lab/imaging, billing, and related side panels | Keep as-is for the first implementation pilot. Revisit only through a compact queue variant. |
+| Reception queue | `src/features/reception/module.tsx`, `src/features/reception/reception-list-search.tsx` | `접수/예약이 없습니다`, shared queue search empty | Keep existing compact queue behavior. Do not add create CTA inside the queue. |
+| Shared order queues | `src/components/emr/order-queue-side-panel.tsx`, `src/features/lab-imaging/module.tsx`, `src/features/billing/module.tsx` | `조건에 맞는 ... 업무가 없습니다` or `... 업무가 없습니다` through queue wrappers | Keep existing queue wrapper; use future compact variant only after visual QA. |
+| Chart content body | `src/features/chart/module.tsx` `EmptyChartState` | `EmrEmptyState` content pilot for selected patient absence in the main content area | Adopted as the first content-body pilot on 2026-07-01. It stays passive because queue selection is the next step. If queue is also empty in a future flow, content should own any source-workflow CTA. |
+| Chart order table | `src/features/chart/module.tsx` order table empty row | `EmrEmptyState` table pilot for filter/category-empty order rows | Adopted as the first table-body pilot on 2026-07-01. It keeps local recovery copy and no CTA until a table-local reset action is wired. |
+| Customer tables | `src/features/customer/module.tsx` `CustomerDataTable` | `동물 정보가 없습니다`, `보호자 정보가 없습니다`, filtered empty copy | Good table pilot candidate because the table already centralizes empty copy. |
+| Hospital admin tables | `src/features/hospital-admin/module.tsx` | Order catalog and audit log empty rows | Adopt later; table density and loading/permission states should be separated first. |
+| Home and notification widgets | `src/features/home/components/*`, `src/features/notifications/global-notification-drawer.tsx` | Small dashed-card or one-line empty messages | Adopt only when repeated widget structure needs icon/copy/action. Plain text may remain. |
+| Reception profile drawer | `src/features/reception/profile-drawer.tsx` | Not-found, no linked item, no history, and permission-like copy | Do not bulk replace. Classify each case as drawer empty, info box, inline alert, or field/toast feedback first. |
+| Lab/imaging detail content | `src/features/lab-imaging/module.tsx` | Linked result missing, preview missing, permission and save states | Use `EmrInlineAlert` for permission/save failure. Use `EmrEmptyState` only for true empty content. |
+
+## Initial Implementation Order
+
+1. Pilot `EmrEmptyState` in one content-body absence case and one table-body no-result case.
+2. Verify visual weight in the actual app shell with the module panel open and closed.
+3. Keep queue side panels on `EmrQueueEmptyState` until a compact `queue` density is separately reviewed.
+4. Add focused Playwright checks only for the touched surfaces. Do not rewrite broad queue tests unless queue behavior changes.
+5. Update this inventory after each adopted surface so future work does not re-audit the whole repo.
+
+## 2026-07-01 Pilot Adoption
+
+- `src/features/chart/module.tsx` `EmptyChartState` now uses `EmrEmptyState` with `surface="content"` and `kind="no-scope-result"`.
+- `src/features/chart/module.tsx` order table no-result row now uses `EmrEmptyState` with `surface="table"` and `kind="no-filter-results"`.
+- Queue side panels were intentionally left on the existing compact queue placeholder contract.
 
 ## Implementation Acceptance Criteria
 

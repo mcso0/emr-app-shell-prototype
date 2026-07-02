@@ -14,9 +14,12 @@ import {
   type EmrModuleListSidePanelSectionChild,
 } from "@/components/emr/module-list-side-panel";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
+import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import {
   EmrTableCellText,
   EmrTableHeaderCell,
+  EmrTableSelectionCell,
+  EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
@@ -1198,12 +1201,10 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           >
             <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
               <TableRow className="hover:bg-transparent">
-                <EmrTableHeaderCell
+                <EmrTableSelectionHeaderCell
                   className={hospitalOrderTableColumnClasses.select}
-                  interaction="static"
-                  resize="none"
                 >
-                  <Checkbox
+                  <EmrTableCheckbox
                     aria-label="보이는 오더 전체 선택"
                     checked={allVisibleSelected}
                     indeterminate={someVisibleSelected}
@@ -1211,7 +1212,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                       toggleVisibleOrderSelection(visibleOrderIds, Boolean(checked))
                     }
                   />
-                </EmrTableHeaderCell>
+                </EmrTableSelectionHeaderCell>
                 {hospitalOrderTableHeaderColumns.map((column) =>
                   column.sortKey ? (
                     <HospitalOrderSortableHeader
@@ -1263,13 +1264,13 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                     )}
                     onClick={() => openDrawer(order)}
                   >
-                    <TableCell onClick={(event) => event.stopPropagation()}>
-                      <Checkbox
+                    <EmrTableSelectionCell onClick={(event) => event.stopPropagation()}>
+                      <EmrTableCheckbox
                         aria-label={`${order.standardName} 선택`}
                         checked={selected}
                         onCheckedChange={(checked) => toggleOrderSelection(order.id, Boolean(checked))}
                       />
-                    </TableCell>
+                    </EmrTableSelectionCell>
                     <TableCell><Badge variant="outline">개별</Badge></TableCell>
                     <TableCell className="overflow-hidden font-semibold">
                       <EmrTableCellText mode={hospitalOrderNameTextMode} fullText={order.standardName}>

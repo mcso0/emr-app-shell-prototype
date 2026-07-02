@@ -76,7 +76,7 @@ export function getDefaultSessionPersonalProfile(
 ): SessionPersonalProfile {
   const mockProfile = session.role === "supabase" ? null : defaultMockProfiles[session.role];
   const fallbackName = session.email ?? session.roleLabel;
-  const fallbackInitials = deriveInitials(fallbackName);
+  const fallbackInitials = derivePersonalProfileInitials(fallbackName);
 
   return {
     sessionId: session.sessionId,
@@ -191,7 +191,7 @@ export function persistPersonalProfilesState(
   other?.removeItem(PERSONAL_PROFILE_STORAGE_KEY);
 }
 
-function deriveInitials(label: string) {
+export function derivePersonalProfileInitials(label: string) {
   const compact = label.replace(/[^A-Za-z0-9가-힣]/g, "");
   return (compact.slice(0, 2) || "U").toUpperCase();
 }

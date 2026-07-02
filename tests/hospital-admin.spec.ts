@@ -134,6 +134,22 @@ test("hospital admin order table uses shared header and cell text primitives", a
 
   await expect(page.getByTestId("hospital-order-catalog-read-status")).toContainText("Workspace catalog 기준");
   const row = page.getByTestId("hospital-order-row-ord-lab-cbc-baso");
+  const selectAllOrderBox = await table
+    .getByRole("checkbox", { name: "보이는 오더 전체 선택" })
+    .boundingBox();
+  const firstOrderCheckboxBox = await row
+    .getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" })
+    .boundingBox();
+
+  expect(selectAllOrderBox).not.toBeNull();
+  expect(firstOrderCheckboxBox).not.toBeNull();
+  expect(
+    Math.abs(
+      selectAllOrderBox!.x +
+        selectAllOrderBox!.width / 2 -
+        (firstOrderCheckboxBox!.x + firstOrderCheckboxBox!.width / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
   await expect(row.locator('[data-emr-cell-text-mode="two-line-if-long"]').filter({ hasText: "[CBC 검사] #BASO" }).first()).toBeVisible();
   await expect(row.locator('[data-emr-cell-text-mode="one-line"]').filter({ hasText: "사용" })).toBeVisible();
   await expect(row.locator('[data-emr-cell-text-mode="one-line"]').filter({ hasText: "12,000원" })).toBeVisible();

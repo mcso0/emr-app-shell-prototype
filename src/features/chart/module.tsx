@@ -23,6 +23,7 @@ import {
   CdsActionsSearchIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
 import {
   CdsNavigationChevronsRightIcon,
 } from "@/components/cds-icons/navigation";
@@ -43,6 +44,7 @@ import {
 } from "@/components/emr/instruction-header-stack";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
   EmrListHeaderIconButton,
@@ -62,6 +64,8 @@ import {
 import {
   EmrTableCellText,
   EmrTableHeaderCell,
+  EmrTableSelectionCell,
+  EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
 import {
   getTaskQueueEventKindFromStatus,
@@ -384,7 +388,7 @@ const CHART_TOP_MIN_PX = 180;
 const CHART_ORDER_MIN_PX = 170;
 const CHART_RESIZER_HEIGHT_PX = 16;
 const CHART_RESIZER_STEP_PERCENT = 5;
-const chartDetailSkeletonDelayMs = 200;
+const chartDetailPendingDelayMs = 200;
 const chartSelectedEncounterStoragePrefix =
   "clair-emr:chart-selected-encounter:v1";
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
@@ -2182,6 +2186,7 @@ function SoapPanel({
   encounterId,
   onPersistedSoapNote,
   soapNote,
+  writeDisabled,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
@@ -2189,6 +2194,7 @@ function SoapPanel({
   encounterId: string;
   onPersistedSoapNote: (soapNote: SoapNote) => void;
   soapNote?: SoapNote;
+  writeDisabled: boolean;
   workspaceId: string;
 }) {
   const defaultSection = useMemo<SoapSectionState>(() => {
@@ -2291,6 +2297,7 @@ function SoapPanel({
   };
 
   const updateActiveSoapContent = (content: string) => {
+    if (writeDisabled) return;
     if (!activeSection) return;
     updateSectionOverride({ ...activeSection, content });
     if (activeSection.id === "default") {
@@ -2304,6 +2311,7 @@ function SoapPanel({
     content: string,
     mode: "autosave" | "manual_save",
   ) => {
+    if (writeDisabled) return;
     setSaveState("saving");
     const result = await saveChartSoapNote({
       actorHeaders,
@@ -2359,6 +2367,7 @@ function SoapPanel({
   }, [pendingDefaultContent]);
 
   const addSystemSoap = (systemLabel: string, shouldActivate: boolean) => {
+    if (writeDisabled) return;
     const nextSection = createSystemSoapSection(systemLabel);
     setDeletedSystemLabels((currentLabels) =>
       currentLabels.filter((label) => label !== systemLabel),
@@ -2385,6 +2394,7 @@ function SoapPanel({
   };
 
   const confirmDeleteSoap = () => {
+    if (writeDisabled) return;
     if (!deleteTarget?.deletable) return;
 
     const sectionToRestore = deleteTarget;
@@ -2439,6 +2449,7 @@ function SoapPanel({
   };
 
   const confirmResetSoap = () => {
+    if (writeDisabled) return;
     if (!resetTarget) return;
 
     const previousSection = resetTarget;
@@ -2508,6 +2519,7 @@ function SoapPanel({
                   variant="ghost"
                   size="icon-xs"
                   aria-label={`${section.title} SOAP 삭제`}
+                  disabled={writeDisabled}
                   onClick={(event) => {
                     event.stopPropagation();
                     setDeleteSoapId(section.id);
@@ -2545,6 +2557,7 @@ function SoapPanel({
           variant="outline"
           size="sm"
           className="self-center bg-card"
+          disabled={writeDisabled}
           onClick={() => setAddDialogOpen(true)}
         >
           <CdsActionsPlusIcon data-icon="inline-start" />
@@ -2568,6 +2581,7 @@ function SoapPanel({
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem
                 className="h-8 cursor-pointer"
+                disabled={writeDisabled}
                 onClick={() => setResetSoapId(activeSection.id)}
               >
                 <CdsActionsRotateCcwIcon data-icon="inline-start" />
@@ -2575,6 +2589,7 @@ function SoapPanel({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="h-8 cursor-pointer"
+                disabled={writeDisabled}
                 onClick={() => {
                   updateSectionOverride({
                     ...activeSection,
@@ -2590,6 +2605,7 @@ function SoapPanel({
               {activeSection.deletable ? (
                 <DropdownMenuItem
                   className="h-8 cursor-pointer text-destructive focus:text-destructive"
+                  disabled={writeDisabled}
                   onClick={() => setDeleteSoapId(activeSection.id)}
                 >
                   <CdsActionsTrash2Icon data-icon="inline-start" />
@@ -2613,6 +2629,7 @@ function SoapPanel({
           <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
             <SoapRichTextEditor
               key={`${soapNote?.id ?? "empty"}-${soapNote?.updatedAt ?? "initial"}-${activeSection.id}-${activeSection.version}`}
+              disabled={writeDisabled}
               initialContent={activeSection.content}
               label={activeSection.title}
               onContentChange={updateActiveSoapContent}
@@ -2624,6 +2641,7 @@ function SoapPanel({
                   variant="ghost"
                   size="xs"
                   className="text-muted-foreground"
+                  disabled={writeDisabled}
                   onClick={() => setResetSoapId(activeSection.id)}
                 >
                   <CdsActionsRotateCcwIcon data-icon="inline-start" />
@@ -2634,7 +2652,7 @@ function SoapPanel({
                   variant="ghost"
                   size="xs"
                   className="text-destructive hover:text-destructive"
-                  disabled={!activeSection.deletable}
+                  disabled={writeDisabled || !activeSection.deletable}
                   onClick={() => setDeleteSoapId(activeSection.id)}
                 >
                   <CdsActionsTrash2Icon data-icon="inline-start" />
@@ -2647,7 +2665,7 @@ function SoapPanel({
                   variant="ghost"
                   size="xs"
                   className="text-muted-foreground"
-                  disabled={activeSection.id !== "default"}
+                  disabled={writeDisabled || activeSection.id !== "default"}
                   onClick={() =>
                     void persistDefaultSoapContent(
                       latestDefaultContentRef.current,
@@ -2682,7 +2700,7 @@ function SoapPanel({
                 <button
                   key={systemLabel}
                   type="button"
-                  disabled={alreadyAdded}
+                  disabled={writeDisabled || alreadyAdded}
                   className="flex min-h-11 items-center justify-between rounded-md px-3 text-left emr-text-dense transition-colors hover:bg-[var(--emr-state-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     addSystemSoap(systemLabel, true);
@@ -2716,6 +2734,7 @@ function SoapPanel({
             cancelLabel="취소"
             confirmLabel="삭제"
             confirmButtonVariant="destructive"
+            confirmDisabled={writeDisabled}
             onCancel={() => setDeleteSoapId(null)}
             onConfirm={confirmDeleteSoap}
           />
@@ -2731,6 +2750,7 @@ function SoapPanel({
             description="현재 SOAP의 주관적, 객관적, 평가, 계획 내용을 기본 템플릿으로 되돌립니다."
             cancelLabel="취소"
             confirmLabel="초기화"
+            confirmDisabled={writeDisabled}
             onCancel={() => setResetSoapId(null)}
             onConfirm={confirmResetSoap}
           />
@@ -2746,12 +2766,14 @@ function AssessmentPanel({
   saveStatusText,
   setDiagnosisRows,
   soapNote,
+  writeDisabled,
 }: {
   diagnosisRows: EditableDiagnosis[];
   onDiagnosisRowsChange: (rows: EditableDiagnosis[]) => void;
   saveStatusText: string;
   setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>>;
   soapNote?: SoapNote;
+  writeDisabled: boolean;
 }) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -2770,6 +2792,7 @@ function AssessmentPanel({
     ? "검색 결과"
     : "SOAP/주호소 기반 추천";
   const commitDiagnosisRows = (nextRows: EditableDiagnosis[]) => {
+    if (writeDisabled) return;
     setDiagnosisRows(nextRows);
     onDiagnosisRowsChange(nextRows);
   };
@@ -2881,6 +2904,7 @@ function AssessmentPanel({
           variant="outline"
           size="sm"
           className="bg-card"
+          disabled={writeDisabled}
           onClick={() => {
             setSearchOpen(true);
             searchInputRef.current?.focus();
@@ -2892,7 +2916,10 @@ function AssessmentPanel({
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-4">
         <div className="grid gap-3">
           <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-2">
-            <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+            <Popover
+              open={searchOpen}
+              onOpenChange={(open) => !writeDisabled && setSearchOpen(open)}
+            >
               <PopoverTrigger
                 nativeButton={false}
                 render={<div className="relative min-w-0" />}
@@ -2905,6 +2932,7 @@ function AssessmentPanel({
                   ref={searchInputRef}
                   aria-label="진단명 검색"
                   autoComplete="off"
+                  disabled={writeDisabled}
                   placeholder="한글, 영문, 약자, 연관검색어로 진단명 검색"
                   value={searchQuery}
                   className="h-9 bg-[var(--emr-surface-panel)] pl-9 emr-text-dense"
@@ -2936,6 +2964,7 @@ function AssessmentPanel({
                       aria-selected={diagnosisRows.some(
                         (row) => row.diagnosisText === item.name,
                       )}
+                      disabled={writeDisabled}
                       className="grid gap-1 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => addDiagnosisFromCatalog(item)}
@@ -2961,6 +2990,7 @@ function AssessmentPanel({
                       type="button"
                       role="option"
                       aria-selected="false"
+                      disabled={writeDisabled}
                       className="rounded-md border border-dashed border-[var(--emr-line-hairline)] px-2.5 py-2 text-left emr-text-dense transition-colors hover:bg-[var(--emr-state-hover)]"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={addFreeTextDiagnosis}
@@ -2985,6 +3015,7 @@ function AssessmentPanel({
               variant="outline"
               size="sm"
               className="h-9 bg-card px-0"
+              disabled={writeDisabled}
               onClick={() => {
                 setSearchOpen(true);
                 searchInputRef.current?.focus();
@@ -3018,6 +3049,7 @@ function AssessmentPanel({
                   type="button"
                   aria-label={`${diagnosis.diagnosisText} 확진 토글`}
                   aria-pressed={diagnosis.diagnosisType === "confirmed"}
+                  disabled={writeDisabled}
                   className="w-fit rounded-md px-2 py-1 emr-text-metadata font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
                   onClick={() => toggleConfirmedDiagnosis(diagnosis.id)}
                 >
@@ -3027,6 +3059,7 @@ function AssessmentPanel({
                   type="button"
                   aria-label={`${diagnosis.diagnosisText} 중점 진단 표시`}
                   aria-pressed={diagnosis.isPrimary}
+                  disabled={writeDisabled}
                   className="w-fit rounded-md px-2 py-1 emr-text-metadata font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
                   onClick={() => togglePrimaryDiagnosis(diagnosis.id)}
                 >
@@ -3046,6 +3079,7 @@ function AssessmentPanel({
                     variant="ghost"
                     size="icon-xs"
                     aria-label={`${diagnosis.diagnosisText} 삭제`}
+                    disabled={writeDisabled}
                     onClick={() => removeDiagnosis(diagnosis.id)}
                   >
                     <CdsActionsXIcon className="size-3" />
@@ -3717,6 +3751,7 @@ function ChartOrderTable({
   selectedOrderIds,
   someVisibleSelected,
   sortState,
+  writeDisabled,
 }: {
   allVisibleSelected: boolean;
   density: EmrTableDensity;
@@ -3737,6 +3772,7 @@ function ChartOrderTable({
   selectedOrderIds: Set<string>;
   someVisibleSelected: boolean;
   sortState: ChartOrderSortState;
+  writeDisabled: boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
@@ -3749,19 +3785,17 @@ function ChartOrderTable({
       >
         <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
           <TableRow className="border-[var(--emr-line-hairline)] hover:bg-transparent">
-            <EmrTableHeaderCell
+            <EmrTableSelectionHeaderCell
               className={chartOrderTableColumns[0].className}
-              interaction={chartOrderTableColumns[0].interaction}
-              resize={chartOrderTableColumns[0].resize}
             >
               <EmrTableCheckbox
                 aria-label="오더 전체 선택"
                 checked={allVisibleSelected}
                 indeterminate={someVisibleSelected}
-                disabled={!rows.length}
+                disabled={writeDisabled || !rows.length}
                 onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
               />
-            </EmrTableHeaderCell>
+            </EmrTableSelectionHeaderCell>
             <ChartOrderSortableHead
               className={chartOrderTableColumns[1].className}
               columnKey="groupTitle"
@@ -3874,15 +3908,16 @@ function ChartOrderTable({
                 data-state={selected ? "selected" : undefined}
                 className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)] data-[dirty=true]:bg-[var(--emr-accent-subtle)]/40 data-[state=selected]:bg-[var(--emr-state-selected)]"
               >
-                <TableCell className="px-3">
+                <EmrTableSelectionCell className="px-3">
                   <EmrTableCheckbox
                     aria-label={`${order.displayName} 선택`}
                     checked={selected}
+                    disabled={writeDisabled}
                     onCheckedChange={(checked) =>
                       onToggleOrder(order.id, Boolean(checked))
                     }
                   />
-                </TableCell>
+                </EmrTableSelectionCell>
                 <TableCell className="overflow-hidden emr-text-metadata font-medium text-muted-foreground">
                   <EmrTableCellText mode="one-line" fullText={groupTitle}>
                     {groupTitle}
@@ -3922,6 +3957,7 @@ function ChartOrderTable({
                 <TableCell>
                   <Input
                     aria-label={`${order.displayName} 청구서명 수정`}
+                    disabled={writeDisabled}
                     value={row.billingName}
                     className="h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata"
                     onChange={(event) =>
@@ -3933,6 +3969,7 @@ function ChartOrderTable({
                   <Input
                     aria-label={`${order.displayName} 수량 수정`}
                     aria-invalid={invalidQuantity}
+                    disabled={writeDisabled}
                     inputMode="decimal"
                     title={
                       invalidQuantity
@@ -3994,7 +4031,7 @@ function ChartOrderTable({
                       variant="outline"
                       size="icon-xs"
                       className="bg-card text-destructive"
-                      disabled={!hasCommittedRows}
+                      disabled={writeDisabled || !hasCommittedRows}
                       title={
                         hasCommittedRows
                           ? `${order.displayName} 오더 삭제`
@@ -4011,18 +4048,16 @@ function ChartOrderTable({
           })}
           {!rows.length ? (
             <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
-              <TableCell
-                colSpan={11}
-                className="h-28 text-center emr-text-dense text-muted-foreground"
-              >
-                <span className="grid gap-1">
-                  <span className="font-semibold text-foreground">
-                    표시할 오더가 없습니다.
-                  </span>
-                  <span>
-                    현재 선택한 분류 또는 필터에 해당하는 오더가 없어요.
-                  </span>
-                </span>
+              <TableCell colSpan={11} className="h-44 px-4 py-6">
+                <div className="flex justify-center">
+                  <EmrEmptyState
+                    kind="no-filter-results"
+                    priority="local-recovery"
+                    surface="table"
+                    title="표시할 오더가 없습니다"
+                    description="분류나 필터를 바꾸면 오더가 다시 보입니다."
+                  />
+                </div>
               </TableCell>
             </TableRow>
           ) : null}
@@ -4331,10 +4366,12 @@ function OrderArea({
   actorHeaders,
   bundle,
   orderGroups,
+  writeDisabled,
 }: {
   actorHeaders?: Record<string, string>;
   bundle: ChartBundle;
   orderGroups: ChartOrderGroup[];
+  writeDisabled: boolean;
 }) {
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const initialDraftRows = useMemo(
@@ -4564,6 +4601,7 @@ function OrderArea({
       Pick<ChartOrderDraftRow, "billingName" | "quantityInput">
     >,
   ) => {
+    if (writeDisabled) return;
     draftTouchedRef.current = true;
     setDraftRows((currentRows) =>
       currentRows.map((row) =>
@@ -4594,12 +4632,14 @@ function OrderArea({
     setCatalogSearchStatus("ready");
   };
   const openCatalogDialog = () => {
+    if (writeDisabled) return;
     setCatalogDialogOpen(true);
     if (catalogSearchStatus === "idle" || catalogSearchStatus === "error") {
       void loadCatalogRows();
     }
   };
   const addCatalogOrderToDraft = (row: ChartOrderCatalogSearchRow) => {
+    if (writeDisabled) return;
     const sourceKey = getChartCatalogSourceKey(row);
     if (
       draftRows.some(
@@ -4621,6 +4661,7 @@ function OrderArea({
     toast.success(`${row.displayName} Order를 추가했어요.`);
   };
   const resetDraftRows = () => {
+    if (writeDisabled) return;
     draftTouchedRef.current = false;
     setDraftRows(committedRows);
     setSelectedOrderIds((current) => {
@@ -4721,6 +4762,7 @@ function OrderArea({
     initialDraftRows,
   ]);
   const commitDraftRows = async () => {
+    if (writeDisabled) return;
     const preparedDraft = prepareChartOrderDraftRowsForPersistence(draftRows);
     if (preparedDraft.orderIdMap.size > 0) {
       setDraftRows(preparedDraft.rows);
@@ -4759,6 +4801,7 @@ function OrderArea({
     toast.success("Order 업데이트를 저장했어요.");
   };
   const commitOrderAction = async (action: ChartOrderActionKind) => {
+    if (writeDisabled) return;
     if (action === "bill") {
       const orderIds = Array.from(selectedOrderIds);
       const persistedOrderIds = new Set(
@@ -4958,6 +5001,7 @@ function OrderArea({
     );
   };
   const confirmDeleteOrder = () => {
+    if (writeDisabled) return;
     if (!deleteOrderId) return;
 
     draftTouchedRef.current = true;
@@ -5079,6 +5123,7 @@ function OrderArea({
             variant="outline"
             size="sm"
             className="bg-card"
+            disabled={writeDisabled}
             onClick={openCatalogDialog}
           >
             + Order
@@ -5117,6 +5162,7 @@ function OrderArea({
           selectedOrderIds={selectedOrderIds}
           someVisibleSelected={someVisibleSelected}
           sortState={orderSortState}
+          writeDisabled={writeDisabled}
         />
       </div>
       <ChartOrderCatalogDialog
@@ -5161,7 +5207,7 @@ function OrderArea({
             variant="outline"
             size="sm"
             className="bg-card"
-            disabled={!hasDraftChanges}
+            disabled={writeDisabled || !hasDraftChanges}
             onClick={resetDraftRows}
           >
             <CdsActionsRotateCcwIcon data-icon="inline-start" />
@@ -5171,7 +5217,7 @@ function OrderArea({
             variant="outline"
             size="sm"
             className="bg-card"
-            disabled={!canUpdateOrders}
+            disabled={writeDisabled || !canUpdateOrders}
             onClick={() => void commitDraftRows()}
           >
             <CdsActionsSaveIcon data-icon="inline-start" />
@@ -5181,14 +5227,14 @@ function OrderArea({
             variant="outline"
             size="sm"
             className="bg-card"
-            disabled={!hasSelectedOrders}
+            disabled={writeDisabled || !hasSelectedOrders}
             onClick={() => setOrderActionDialog("bill")}
           >
             Order 청구
           </Button>
           <Button
             size="sm"
-            disabled={!hasSelectedOrders}
+            disabled={writeDisabled || !hasSelectedOrders}
             onClick={() => setOrderActionDialog("confirm")}
           >
             Order 확정
@@ -5251,6 +5297,7 @@ function OrderArea({
           }
           cancelLabel="다시 확인"
           confirmLabel={orderActionLabel}
+          confirmDisabled={writeDisabled}
           onCancel={() => setOrderActionDialog(null)}
           onConfirm={() =>
             orderActionDialog && void commitOrderAction(orderActionDialog)
@@ -5280,6 +5327,7 @@ function OrderArea({
             confirmLabel="삭제"
             confirmButtonVariant="destructive"
             closeAriaLabel="오더 삭제 확인 닫기"
+            confirmDisabled={writeDisabled}
             onCancel={() => setDeleteOrderId(null)}
             onConfirm={confirmDeleteOrder}
           />
@@ -5501,12 +5549,14 @@ function getChartPrecallCautionText(bundle: ChartBundle) {
 
 function ChartStartLockedState({
   bundle,
+  detailPending,
   onOpenReceptionInfo,
   onRequestCall,
   primaryActionBusy,
   queueStatus,
 }: {
   bundle: ChartBundle;
+  detailPending: boolean;
   onOpenReceptionInfo: () => void;
   onRequestCall: () => void;
   primaryActionBusy: boolean;
@@ -5532,7 +5582,8 @@ function ChartStartLockedState({
                 : `${bundle.patient.name}를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다`}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {detailPending ? <ChartDetailPendingIndicator /> : null}
             <Button
               className="bg-card"
               variant="outline"
@@ -5618,8 +5669,14 @@ function ChartPrecallIntakeRow({
 
 function EmptyChartState() {
   return (
-    <div className="flex h-full items-center justify-center emr-text-dense text-muted-foreground">
-      진료 대기열에서 환자를 선택해 주세요.
+    <div className="flex h-full items-center justify-center px-6 py-10">
+      <EmrEmptyState
+        kind="no-scope-result"
+        priority="supporting"
+        surface="content"
+        title="환자를 선택해 주세요"
+        description="대기열에서 환자를 선택하면 차트가 표시됩니다."
+      />
     </div>
   );
 }
@@ -5638,36 +5695,18 @@ function useDelayedBoolean(value: boolean, delayMs: number) {
   return value && delayedValue;
 }
 
-function ChartDetailLoadingState() {
+function ChartDetailPendingIndicator() {
   return (
-    <div
-      className="min-h-0 flex-1 overflow-auto px-3 py-5"
-      data-testid="chart-detail-loading-state"
+    <span
+      aria-label="진료 차트 상세 정보를 불러오는 중입니다"
+      aria-live="polite"
+      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]"
+      data-testid="chart-detail-pending-indicator"
+      role="status"
     >
-      <div className="mx-auto grid w-full max-w-5xl gap-3" aria-hidden="true">
-        <section className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-          <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] px-4 py-3">
-            <div className="h-4 w-32 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-            <div className="h-6 w-20 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </div>
-          <div className="grid gap-3 p-4">
-            <div className="h-4 w-3/5 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-            <div className="h-4 w-4/5 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-            <div className="h-4 w-2/3 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </div>
-        </section>
-        <section className="grid gap-3 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4">
-          <div className="h-4 w-28 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          <div className="h-20 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          <div className="grid grid-cols-3 gap-3">
-            <div className="h-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-            <div className="h-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-            <div className="h-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </div>
-        </section>
-      </div>
-      <span className="sr-only">진료 차트 상세 정보를 불러오는 중입니다</span>
-    </div>
+      <CdsAlertsLoaderIcon className="size-3 animate-spin" aria-hidden="true" />
+      <span>상세 정보 불러오는 중</span>
+    </span>
   );
 }
 
@@ -5841,9 +5880,10 @@ export function ChartContent({
       diagnosisPersistenceState.status === "loading" ||
       chartCompletionState.encounterId !== activeEncounterId ||
       chartCompletionState.status === "loading");
-  const showDetailSkeleton = useDelayedBoolean(
-    detailLoading,
-    chartDetailSkeletonDelayMs,
+  const detailHydrationPending = detailLoading;
+  const showDetailPendingIndicator = useDelayedBoolean(
+    detailHydrationPending,
+    chartDetailPendingDelayMs,
   );
   const getChartSplitBounds = () => {
     const workspace = chartWorkspaceRef.current;
@@ -5935,6 +5975,7 @@ export function ChartContent({
   };
   const handleChartCompletionConfirm = async () => {
     if (chartCompletionState.status === "saving") return;
+    if (detailHydrationPending) return;
     if (!activeEncounterId || !activeWorkspaceId) {
       toast.error("진료 차트를 먼저 선택해 주세요.");
       return;
@@ -5980,6 +6021,7 @@ export function ChartContent({
     action: "call" | "start" | "return_to_waiting",
   ) => {
     if (consultationFlowState.status === "saving") return;
+    if (detailHydrationPending) return;
     if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
       toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
       return;
@@ -6047,6 +6089,7 @@ export function ChartContent({
   };
   const handleCancelEncounterConfirm = async () => {
     if (encounterCancelState.status === "saving") return;
+    if (detailHydrationPending) return;
     if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
       toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
       return;
@@ -6092,6 +6135,7 @@ export function ChartContent({
     toast.success("진료를 취소했어요.");
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
+    if (detailHydrationPending) return;
     if (!activeEncounterId || !activeWorkspaceId) {
       toast.error("진료 차트를 먼저 선택해 주세요.");
       return;
@@ -6349,7 +6393,6 @@ export function ChartContent({
   }, [isChartResizing]);
 
   if (!bundle || !effectiveBundle) return <EmptyChartState />;
-  if (showDetailSkeleton) return <ChartDetailLoadingState />;
 
   const currentBundle = effectiveBundle;
   const consultationCallRooms = getConsultationCallRooms();
@@ -6378,6 +6421,7 @@ export function ChartContent({
     diagnosisRows.length > 0 ||
     allOrders.length > 0;
   const primaryActionBusy =
+    detailHydrationPending ||
     consultationFlowState.status === "saving" ||
     chartCompletionState.status === "saving" ||
     encounterCancelState.status === "saving";
@@ -6422,6 +6466,9 @@ export function ChartContent({
               }
               actions={
                 <>
+                  {showDetailPendingIndicator ? (
+                    <ChartDetailPendingIndicator />
+                  ) : null}
                   <Button
                     variant="outline"
                     className="bg-card"
@@ -6527,6 +6574,7 @@ export function ChartContent({
               size="sm"
               disabled={
                 consultationFlowState.status === "saving" ||
+                detailHydrationPending ||
                 !selectedCallRoomId
               }
               onClick={() => void handleConsultationFlowMutation("call")}
@@ -6589,7 +6637,10 @@ export function ChartContent({
                     setSaveCallRoomPreference(true);
                   }
                 }}
-                disabled={consultationFlowState.status === "saving"}
+                disabled={
+                  consultationFlowState.status === "saving" ||
+                  detailHydrationPending
+                }
               >
                 <SelectTrigger
                   aria-label="호출 진료실"
@@ -6616,6 +6667,7 @@ export function ChartContent({
                   checked={saveCallRoomPreference}
                   disabled={
                     consultationFlowState.status === "saving" ||
+                    detailHydrationPending ||
                     !selectedCallRoomId
                   }
                   onCheckedChange={(checked) =>
@@ -6659,7 +6711,10 @@ export function ChartContent({
           primaryAction={
             <Button
               size="sm"
-              disabled={consultationFlowState.status === "saving"}
+              disabled={
+                consultationFlowState.status === "saving" ||
+                detailHydrationPending
+              }
               onClick={() =>
                 void handleConsultationFlowMutation("return_to_waiting")
               }
@@ -6739,6 +6794,7 @@ export function ChartContent({
               variant="destructive"
               disabled={
                 encounterCancelState.status === "saving" ||
+                detailHydrationPending ||
                 !cancelEncounterReason.trim()
               }
               onClick={() => void handleCancelEncounterConfirm()}
@@ -6803,7 +6859,10 @@ export function ChartContent({
           primaryAction={
             <Button
               size="sm"
-              disabled={chartCompletionState.status === "saving"}
+              disabled={
+                chartCompletionState.status === "saving" ||
+                detailHydrationPending
+              }
               onClick={() => void handleChartCompletionConfirm()}
             >
               {chartCompletionState.status === "saving"
@@ -6877,6 +6936,7 @@ export function ChartContent({
       {chartStartLocked ? (
         <ChartStartLockedState
           bundle={currentBundle}
+          detailPending={showDetailPendingIndicator}
           onOpenReceptionInfo={handleOpenReceptionInfo}
           onRequestCall={handleOpenCallDialog}
           primaryActionBusy={primaryActionBusy}
@@ -6910,6 +6970,7 @@ export function ChartContent({
                 })
               }
               soapNote={effectiveLatestSoap}
+              writeDisabled={detailHydrationPending}
               workspaceId={bundle.encounter.workspaceId}
             />
             <AssessmentPanel
@@ -6919,6 +6980,7 @@ export function ChartContent({
               saveStatusText={diagnosisSaveStatusText}
               setDiagnosisRows={setDiagnosisRows}
               soapNote={effectiveLatestSoap}
+              writeDisabled={detailHydrationPending}
             />
           </div>
           <button
@@ -6950,6 +7012,7 @@ export function ChartContent({
               actorHeaders={actorHeaders}
               bundle={bundle}
               orderGroups={orderGroups}
+              writeDisabled={detailHydrationPending}
             />
           </div>
         </div>
