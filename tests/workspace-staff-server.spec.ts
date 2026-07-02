@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  loadWorkspacePermissionAdapterFromDb,
+  type WorkspacePermissionDbGateway,
+} from "../src/features/auth/db-workspace-permission-adapter-core";
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
   createSupabaseWorkspaceStaffReadGateway,
@@ -103,6 +107,19 @@ test("workspace staff read filters active same-workspace veterinarians", async (
 });
 
 test("workspace staff read enforces reception view permission", async () => {
+  const unauthenticated = await readWorkspaceStaff({
+    actorUserId: null,
+    workspaceId: "workspace-clair-cheongdam",
+    role: "vet",
+    permissionAdapter: createMockWorkspacePermissionAdapter(),
+  });
+
+  expect(unauthenticated).toMatchObject({
+    ok: false,
+    status: 401,
+    denialReason: "unauthenticated",
+  });
+
   const result = await readWorkspaceStaff({
     actorUserId: "user-missing",
     workspaceId: "workspace-clair-cheongdam",
@@ -117,6 +134,67 @@ test("workspace staff read enforces reception view permission", async () => {
     ok: false,
     status: 403,
     denialReason: "workspace_membership_missing",
+  });
+
+  const missingPermission = await readWorkspaceStaff({
+    actorUserId: "user-without-view",
+    workspaceId: "workspace-clair-cheongdam",
+    role: "vet",
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-without-view", status: "active" }],
+      memberships: [
+        {
+          id: "membership-without-view",
+          workspaceId: "workspace-clair-cheongdam",
+          userId: "user-without-view",
+          roles: ["vet"],
+          status: "active",
+        },
+      ],
+      permissionPolicies: [
+        {
+          workspaceId: "workspace-clair-cheongdam",
+          role: "vet",
+          permissionIds: ["chart:view"],
+        },
+      ],
+    }),
+  });
+
+  expect(missingPermission).toMatchObject({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
+});
+
+test("workspace staff read authorizes through legacy DB roles when additive assignments are absent", async () => {
+  const calls: string[] = [];
+  const permissionAdapter = await loadWorkspacePermissionAdapterFromDb({
+    now: "2026-07-02T00:00:00.000Z",
+    workspaceId: "workspace-clair-cheongdam",
+    sessionUserId: "user-front-desk",
+    gateway: createLegacyReceptionViewPermissionGateway(calls),
+  });
+
+  const result = await readWorkspaceStaff({
+    actorUserId: "user-front-desk",
+    workspaceId: "workspace-clair-cheongdam",
+    role: "vet",
+    permissionAdapter,
+  });
+
+  expect(calls).toEqual([
+    "memberships:workspace-clair-cheongdam:user-front-desk",
+    "users:user-front-desk",
+    "policies:workspace-clair-cheongdam",
+    "permissionRoles:workspace-clair-cheongdam:membership-front-desk",
+    "jobPositions:workspace-clair-cheongdam:membership-front-desk",
+  ]);
+  expect(result).toMatchObject({
+    ok: true,
+    status: 200,
+    enforcedBy: "workspace-staff-read",
   });
 });
 
@@ -146,4 +224,39 @@ function createSupabaseRows<Row>(rows: Row[]) {
   };
 
   return query;
+}
+
+function createLegacyReceptionViewPermissionGateway(calls: string[]): WorkspacePermissionDbGateway {
+  return {
+    async listMemberships(workspaceId, userId) {
+      calls.push(`memberships:${workspaceId}:${userId}`);
+      return [
+        {
+          id: "membership-front-desk", workspace_id: workspaceId, user_id: userId,
+          roles: ["front_desk"], status: "active",
+        },
+      ];
+    },
+    async listUsers(userIds) {
+      calls.push(`users:${userIds.join(",")}`);
+      return userIds.map((id) => ({ id, status: "active", display_name: "Front Desk" }));
+    },
+    async listPermissionPolicies(workspaceId) {
+      calls.push(`policies:${workspaceId}`);
+      return [
+        {
+          workspace_id: workspaceId, scope: "role", target_role: "front_desk",
+          permissions: { allowed: ["reception:view"] },
+        },
+      ];
+    },
+    async listPermissionRoleAssignments(workspaceId, membershipIds) {
+      calls.push(`permissionRoles:${workspaceId}:${membershipIds.join(",")}`);
+      return [];
+    },
+    async listJobPositionAssignments(workspaceId, membershipIds) {
+      calls.push(`jobPositions:${workspaceId}:${membershipIds.join(",")}`);
+      return [];
+    },
+  };
 }
