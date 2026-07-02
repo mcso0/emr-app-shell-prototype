@@ -1,4 +1,62 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
+import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
+
+async function grantCheongdamWorkspaceAccess(page: Page) {
+  await page.addInitScript(
+    ([storageKey, workspaceId]) => {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          currentWorkspaceId: workspaceId,
+          workspaces: [
+            {
+              id: workspaceId,
+              displayName: "VIP동물의료센터 청담점",
+              representativeName: "김승욱",
+              contactEmail: "owner@cheongdam.test",
+              contactPhone: null,
+              subscriptionStatus: "trialing",
+              createdBySessionId: "playwright-default-session",
+              createdAt: "2026-06-14T00:00:00.000Z",
+            },
+          ],
+          memberships: [
+            {
+              id: "membership-cheongdam-playwright-admin",
+              workspaceId,
+              userSessionId: "playwright-default-session",
+              displayName: "Playwright Admin",
+              email: "admin@cheongdam.test",
+              roles: ["hospital_admin"],
+              status: "active",
+              createdAt: "2026-06-14T00:00:00.000Z",
+              activatedAt: "2026-06-14T00:00:00.000Z",
+            },
+          ],
+          invitations: [],
+          updatedAt: "2026-06-14T00:00:00.000Z",
+        }),
+      );
+    },
+    [SESSION_WORKSPACES_STORAGE_KEY, PREPARED_EMPTY_CLINIC_WORKSPACE_ID],
+  );
+}
+
+test("billing no-work empty state hides history aside", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/billing?modulePanel=open&aside=history&right=closed`
+  );
+
+  await expect(page.locator("#billing-content-aside")).toHaveCount(0);
+  await expect(page.locator('section[data-surface="content"]')).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "오늘 수납 대기 건이 없습니다" }),
+  ).toBeVisible();
+});
 
 test("billing renders live candidate rows from an encounter handoff", async ({ page }) => {
   await page.addInitScript(() => {

@@ -18,6 +18,7 @@ import {
   EmrContentAsideHeader,
   EmrContentAsidePanel,
 } from "@/components/emr/content-aside-panel";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
@@ -132,6 +133,7 @@ type DispensingContentBodyProps = Pick<
   "hasRightPanel" | "moduleId"
 > & {
   allowLegacyFixtureFallback: boolean;
+  queueItemCount: number;
   selectedQueueItem: OrderQueueItem | null;
 };
 
@@ -764,6 +766,9 @@ export function DispensingContentAside({ moduleId, workspaceId }: ShellComponent
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
     (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
+
+  if (!selectedQueueItem && !allowLegacyFixtureFallback) return null;
+
   const historyLabel = `${getDispensingInstructionType(selectedQueueItem)} 이력`;
   const visibleHistoryGroups = allowLegacyFixtureFallback ? historyGroups : [];
   const totalHistoryCount = visibleHistoryGroups.reduce((total, group) => total + group.count, 0);
@@ -1207,11 +1212,14 @@ export function DispensingContent({
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const fulfillmentQueue = useDispensingFulfillmentQueue();
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const currentWorkspaceQueueItems = useMemo(
+    () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
+    [fulfillmentQueue.workItems, workspaceId]
+  );
   const selectedQueueItem = useMemo(() => {
-    const items = getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems);
-    return items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
+    return currentWorkspaceQueueItems.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
       (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
-  }, [allowLegacyFixtureFallback, fulfillmentQueue.workItems, moduleId, selectedQueueItemIds, workspaceId]);
+  }, [allowLegacyFixtureFallback, currentWorkspaceQueueItems, moduleId, selectedQueueItemIds]);
 
   return (
     <DispensingContentBody
@@ -1220,6 +1228,7 @@ export function DispensingContent({
       hasRightPanel={hasRightPanel}
       moduleId={moduleId}
       allowLegacyFixtureFallback={allowLegacyFixtureFallback}
+      queueItemCount={currentWorkspaceQueueItems.length}
       selectedQueueItem={selectedQueueItem}
     />
   );
@@ -1230,6 +1239,7 @@ function DispensingContentBody({
   hasRightPanel,
   fulfillmentQueue,
   moduleId,
+  queueItemCount,
   selectedQueueItem,
 }: DispensingContentBodyProps & {
   fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
@@ -1333,9 +1343,21 @@ function DispensingContentBody({
   };
 
   if (!selectedQueueItem && !allowLegacyFixtureFallback) {
+    const emptyStateKind = queueItemCount === 0 ? "upstream-pending" : "no-scope-result";
+    const emptyStateTitle =
+      queueItemCount === 0
+        ? "오늘 조제/처치 요청이 없습니다"
+        : "조제/처치 대기열에서 항목을 선택해 주세요";
+
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
-        아직 조제/처치 요청이 없습니다.
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)]">
+        <EmrEmptyState
+          kind={emptyStateKind}
+          priority="supporting"
+          surface="content"
+          testId="dispensing-content-empty-state"
+          title={emptyStateTitle}
+        />
       </div>
     );
   }

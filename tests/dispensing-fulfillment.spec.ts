@@ -44,6 +44,36 @@ async function grantCheongdamWorkspaceAccess(page: Page) {
   );
 }
 
+test("dispensing no-work empty state hides history aside", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "fulfillment-work-item-persistence",
+          workItems: [],
+        }),
+      });
+    }
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/dispensing?modulePanel=open&aside=history&right=closed`
+  );
+
+  await expect(page.locator("#dispensing-content-aside")).toHaveCount(0);
+  const emptyState = page.getByTestId("dispensing-content-empty-state");
+  await expect(emptyState).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-surface", "content");
+  await expect(emptyState.getByRole("heading", { name: "오늘 조제/처치 요청이 없습니다" })).toBeVisible();
+});
+
 type FulfillmentWorkItemStatus =
   | "requested"
   | "accepted"
