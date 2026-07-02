@@ -19,3 +19,13 @@ enabled_tools = [
   "preview-stories",
   "run-story-tests",
 ]
+
+# Managed by LazyCodex: multi_agent_v2 is re-disabled on every Codex session start
+# because enabling it fails every turn with HTTP 400 (openai/codex#26753).
+# Opt out: LAZYCODEX_CONFIG_MIGRATION_DISABLED=1 (or OMO_CODEX_CONFIG_MIGRATION_DISABLED=1).
+[features.multi_agent_v2]
+max_concurrent_threads_per_session = 1000
+enabled = false
+
+[agents]
+max_threads = 1000
