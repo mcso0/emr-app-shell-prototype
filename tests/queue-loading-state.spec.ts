@@ -279,6 +279,50 @@ test("chart content keeps the selected shell visible while details hydrate", () 
   expect(chartModule).not.toContain("if (detailLoading) return <ChartDetailLoadingState />;");
 });
 
+test("chart detail panels label local loading before empty states", () => {
+  const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(chartModule).toContain("function ChartPanelPendingState(");
+  expect(chartModule).toContain("SOAP 정보를 불러오는 중");
+  expect(chartModule).toContain("진단명 정보를 불러오는 중");
+  expect(chartModule).toContain("오더 정보를 불러오는 중");
+  expect(chartModule).toContain("const soapLoading =");
+  expect(chartModule).toContain("const diagnosisLoading =");
+  expect(chartModule).toContain("const orderLoading =");
+  expect(chartModule).toContain("loading={soapLoading}");
+  expect(chartModule).toContain("loading={diagnosisLoading}");
+  expect(chartModule).toContain("loading={orderLoading}");
+  expect(chartModule).toContain("!loading && !diagnosisRows.length");
+  expect(chartModule).toContain("!loading && !rows.length");
+});
+
+test("chart detail panels remount encounter-scoped local state on queue switch", () => {
+  const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(chartModule).toMatch(
+    /<SoapPanel\s+key=\{`chart-soap-\$\{bundle\.encounter\.id\}-/,
+  );
+  expect(chartModule).toContain('key={`chart-assessment-${bundle.encounter.id}`}');
+  expect(chartModule).toMatch(/<OrderArea\s+key=\{bundle\.encounter\.id\}/);
+  expect(chartModule).not.toContain(
+    "key={`chart-soap-${effectiveLatestSoap?.id ?? selectedEncounterId}",
+  );
+});
+
+test("chart queue selection updates local encounter before shell navigation", () => {
+  const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
+  const selectionBlock =
+    chartModule.match(
+      /const selectWorkspaceEncounter = \(itemId: string\) => \{[\s\S]*?\n  \};/,
+    )?.[0] ?? "";
+
+  expect(selectionBlock).toContain("selectEncounter(itemId);");
+  expect(selectionBlock).toContain('setSelectedQueueItem("treatment", itemId);');
+  expect(selectionBlock.indexOf("selectEncounter(itemId);")).toBeLessThan(
+    selectionBlock.indexOf("if (onNavigateWorkspaceSurface)"),
+  );
+});
+
 test("chart content keeps diagnosis rows scoped while the pending grace window is active", () => {
   const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
 

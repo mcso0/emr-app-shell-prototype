@@ -57,7 +57,7 @@ export function EmrSidePanelCard({
           : "emr-density-card rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)] hover:shadow-[var(--clair-shadow-sm)]",
         selected &&
           (selectionVariant === "modulePanel"
-            ? "border-[var(--emr-sidepanel-task-card-selected-border)] bg-[var(--emr-sidepanel-task-card-bg)] hover:bg-[var(--emr-sidepanel-task-card-bg)] hover:shadow-none"
+            ? "border-[var(--emr-sidepanel-task-card-selected-border)] bg-[var(--emr-sidepanel-task-card-selected-bg)] hover:bg-[var(--emr-sidepanel-task-card-selected-bg)] hover:shadow-none"
             : "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] pl-3.5"),
         !selected && selectionVariant !== "modulePanel" && "hover:bg-[var(--emr-state-hover)]",
         className

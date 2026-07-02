@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 const fullDemoQuery =
   "scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&labResultId=lab-result-kong-cbc&imagingStudyId=imaging-kong-abdomen&invoiceId=invoice-kong-260501&modulePanel=open&aside=closed";
@@ -29,6 +29,25 @@ async function resolveCssColor(page: Page, value: string) {
 
 function expectRect(value: Awaited<ReturnType<ReturnType<Page["locator"]>["boundingBox"]>>): asserts value is NonNullable<typeof value> {
   expect(value).not.toBeNull();
+}
+
+async function expectSameCenterX(first: Locator, second: Locator) {
+  await expect
+    .poll(async () => {
+      const firstBox = await first.boundingBox();
+      const secondBox = await second.boundingBox();
+
+      if (!firstBox || !secondBox) {
+        return Number.POSITIVE_INFINITY;
+      }
+
+      return Math.abs(
+        firstBox.x +
+          firstBox.width / 2 -
+          (secondBox.x + secondBox.width / 2),
+      );
+    })
+    .toBeLessThanOrEqual(1);
 }
 
 async function expectHorizontalGap(page: Page, leftTestId: string, rightTestId: string, expectedGap: number) {
@@ -601,6 +620,23 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await expect(checkbox).toHaveCSS("opacity", "1");
 });
 
+test("dispensing table aligns selection header and row checkboxes", async ({ page }) => {
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const row = page.getByTestId("order-row-section-0-o-10024");
+  const table = page.locator("table").filter({ has: row });
+  const headerCheckbox = table.getByRole("checkbox", { name: "전체 선택" });
+  const rowCheckbox = row.getByRole("checkbox", {
+    name: "Amoxicillin 500(mg) C head 1mg 선택",
+  });
+
+  await expect(table).toBeVisible();
+  await expect(row).toBeVisible();
+  await expect(headerCheckbox).toBeVisible();
+  await expect(rowCheckbox).toBeVisible();
+  await expectSameCenterX(headerCheckbox, rowCheckbox);
+});
+
 test("dispensing table column grips resize with a minimum width", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
 
@@ -1129,6 +1165,7 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(selectedQueueCard).toHaveCSS("padding-top", "8px");
   await expect(selectedQueueCard).toHaveCSS("border-radius", "10px");
   await expect(selectedQueueCard).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-sidepanel-task-card-selected-border)"));
+  await expect(selectedQueueCard).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-sidepanel-task-card-selected-bg)"));
   await expect(selectedQueueCard.getByText("예약")).toHaveCSS("height", "20px");
   await expect(selectedQueueCard).toContainText("10:30 이수지 재요청");
   await expect(selectedQueueCard).toContainText("김미래");

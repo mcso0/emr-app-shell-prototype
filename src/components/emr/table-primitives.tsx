@@ -201,7 +201,10 @@ export function EmrTableSelectionHeaderCell({
   return (
     <EmrTableHeaderCell
       {...props}
-      className={cn("w-10", className)}
+      className={cn(
+        "w-10 [&_.emr-table-cell-content]:justify-center [&_.emr-table-cell-content>*]:shrink-0",
+        className,
+      )}
       interaction="static"
       resize="none"
     >
@@ -217,7 +220,7 @@ export function EmrTableSelectionCell({
 }: EmrTableSelectionCellProps) {
   return (
     <TableCell className={cn("w-10", className)} {...props}>
-      <span className="emr-table-cell-content flex min-w-0 items-center gap-1">
+      <span className="emr-table-cell-content flex min-w-0 items-center justify-center gap-1 [&>*]:shrink-0">
         {children}
       </span>
     </TableCell>

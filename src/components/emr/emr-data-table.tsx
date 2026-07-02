@@ -31,6 +31,8 @@ import {
 import {
   EmrTableCellText,
   EmrTableHeaderCell,
+  EmrTableSelectionCell,
+  EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -565,6 +567,20 @@ export function EmrDataTable({
                   ? getColumnResize(header.column.columnDef)
                   : "none";
 
+                if (header.column.id === "select") {
+                  return (
+                    <EmrTableSelectionHeaderCell
+                      key={header.id}
+                      align={align}
+                      style={{ width: header.getSize() }}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </EmrTableSelectionHeaderCell>
+                  );
+                }
+
                 return (
                   <EmrTableHeaderCell
                     key={header.id}
@@ -606,6 +622,18 @@ export function EmrDataTable({
                 {row.getVisibleCells().map((cell) => {
                   const align = getCellAlign(cell.column.columnDef);
                   const textMode = getCellTextMode(cell.column.columnDef);
+
+                  if (cell.column.id === "select") {
+                    return (
+                      <EmrTableSelectionCell
+                        key={cell.id}
+                        className="emr-table-body-cell overflow-hidden font-medium"
+                        style={{ width: cell.column.getSize() }}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </EmrTableSelectionCell>
+                    );
+                  }
 
                   return (
                     <TableCell
