@@ -794,7 +794,12 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
         icon: <Icon className="size-4 shrink-0" />,
         label: item.label,
         onClick: isMembers
-          ? () => setActiveSection("members")
+          ? () => {
+              setActiveSection("members");
+              if (typeof window !== "undefined" && window.innerWidth < 768) {
+                setModulePanelOpen(false);
+              }
+            }
           : isAudit
             ? () => setActiveSection("audit")
             : undefined,
@@ -868,6 +873,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const selectedSubcategoryId = useHospitalAdminStore((state) => state.selectedSubcategoryId);
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const setBillingFilter = useHospitalAdminStore((state) => state.setBillingFilter);
   const setFocusedOrderId = useHospitalAdminStore((state) => state.setFocusedOrderId);
   const setOrders = useHospitalAdminStore((state) => state.setOrders);
@@ -902,6 +908,22 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       )?.label ??
     selectedSubcategory?.label ??
     "Order 관리";
+
+  useEffect(() => {
+    if (activeSection !== "members" || typeof window === "undefined") return;
+
+    const media = window.matchMedia("(max-width: 767px)");
+    const closePanelOnCompactViewport = () => {
+      if (media.matches) setModulePanelOpen(false);
+    };
+
+    closePanelOnCompactViewport();
+    media.addEventListener("change", closePanelOnCompactViewport);
+
+    return () => {
+      media.removeEventListener("change", closePanelOnCompactViewport);
+    };
+  }, [activeSection, setModulePanelOpen]);
   const baseVisibleOrders = useMemo(
     () =>
       getVisibleOrders(orders, {

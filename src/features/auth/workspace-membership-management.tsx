@@ -15,6 +15,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -26,13 +27,20 @@ import {
 } from "@/components/ui/table";
 import { useAuthClient } from "@/features/auth/auth-client";
 import {
-  SESSION_WORKSPACE_ROLES,
+  SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG,
   acceptSessionWorkspaceInvitation,
   appendSessionWorkspaceInvitation,
   cancelSessionWorkspaceInvitation,
+  createOrUpdateSessionWorkspaceCustomPermissionRole,
   createEmptySessionWorkspacesState,
+  createSessionWorkspaceCustomJobPosition,
   createSessionWorkspaceInvitation,
-  getSessionWorkspaceRoleLabels,
+  getSessionWorkspaceJobPositionLabel,
+  getSessionWorkspaceJobPositions,
+  getSessionWorkspaceLegacyRolesForAssignment,
+  getSessionWorkspacePermissionRoleLabel,
+  getSessionWorkspacePermissionRoleSummary,
+  getSessionWorkspacePermissionRoles,
   persistSessionWorkspacesState,
   readSessionWorkspacesState,
   resendSessionWorkspaceInvitation,
@@ -115,20 +123,20 @@ function getRowRoles(row: MembershipRow) {
   return row.roles;
 }
 
-function getEffectivePermissionSummary(roles: SessionWorkspaceRole[]) {
-  if (roles.includes("hospital_admin")) {
-    return "전체 관리자 권한";
-  }
+function getRowPermissionRoleKey(row: MembershipRow) {
+  const roleKey = row.rowType === "invitation" ? row.permissionRoleKey : row.permissionRoleKey;
+  if (roleKey) return roleKey;
+  return getRowRoles(row).includes("hospital_admin") ? "owner" : "general";
+}
 
-  const summaries = [];
-
-  if (roles.includes("vet")) summaries.push("진료/차트 수정 가능");
-  if (roles.includes("front_desk")) summaries.push("접수/수납 처리 가능");
-  if (roles.includes("technician")) summaries.push("검사/처치 완료 가능");
-
-  if (roles.length > 1) summaries.unshift("역할 합산 권한");
-
-  return summaries.join(" · ") || "권한 없음";
+function getRowJobPositionKey(row: MembershipRow) {
+  const positionKey = row.rowType === "invitation" ? row.jobPositionKey : row.jobPositionKey;
+  if (positionKey) return positionKey;
+  const roles = getRowRoles(row);
+  if (roles.includes("vet")) return "veterinarian";
+  if (roles.includes("technician")) return "technician";
+  if (roles.includes("hospital_admin")) return "hospital_director";
+  return "front_desk";
 }
 
 export function WorkspaceMembershipManagement({
@@ -141,18 +149,25 @@ export function WorkspaceMembershipManagement({
   const [statusReadState, setStatusReadState] =
     useState<"idle" | "loading" | "error">("idle");
   const [submittingInvitation, setSubmittingInvitation] = useState(false);
-  const [selectedRoles, setSelectedRoles] = useState<SessionWorkspaceRole[]>([]);
+  const [selectedPermissionRoleKey, setSelectedPermissionRoleKey] = useState("general");
+  const [selectedJobPositionKey, setSelectedJobPositionKey] = useState("front_desk");
   const [editingMembership, setEditingMembership] = useState<SessionWorkspaceMembership | null>(
     null
   );
-  const [editingRoles, setEditingRoles] = useState<SessionWorkspaceRole[]>([]);
+  const [editingPermissionRoleKey, setEditingPermissionRoleKey] = useState("general");
   const [roleChangeError, setRoleChangeError] = useState<string | null>(null);
   const [submittingRoleChange, setSubmittingRoleChange] = useState(false);
   const [confirmRoleChangeOpen, setConfirmRoleChangeOpen] = useState(false);
+  const [customRoleName, setCustomRoleName] = useState("");
+  const [customRolePermissionIds, setCustomRolePermissionIds] = useState<string[]>([]);
+  const [editingCustomRoleKey, setEditingCustomRoleKey] = useState<string | null>(null);
+  const [customRoleError, setCustomRoleError] = useState<string | null>(null);
+  const [customJobPositionName, setCustomJobPositionName] = useState("");
+  const [customJobPositionError, setCustomJobPositionError] = useState<string | null>(null);
   const [deactivatingMembership, setDeactivatingMembership] =
     useState<SessionWorkspaceMembership | null>(null);
   const [deactivationError, setDeactivationError] = useState<string | null>(null);
-const canManageMembers = session?.role === "hospital_admin" || session?.role === "supabase";
+  const canManageMembers = session?.role === "hospital_admin" || session?.role === "supabase";
 
   useEffect(() => {
     hydrate();
@@ -216,6 +231,15 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
       getRowEmail(left).localeCompare(getRowEmail(right))
     );
   }, [state.invitations, state.memberships, workspaceId]);
+  const permissionRoles = useMemo(
+    () => getSessionWorkspacePermissionRoles(state, workspaceId),
+    [state, workspaceId]
+  );
+  const jobPositions = useMemo(
+    () => getSessionWorkspaceJobPositions(state, workspaceId),
+    [state, workspaceId]
+  );
+  const customPermissionRoles = permissionRoles.filter((role) => role.roleType === "custom");
 
   const activeMembers = state.memberships.filter(
     (membership) => membership.workspaceId === workspaceId && membership.status === "active"
@@ -242,23 +266,21 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
     }
   }
 
-  function handleRoleToggle(role: SessionWorkspaceRole, checked: boolean) {
-    setSelectedRoles((current) =>
-      checked
-        ? Array.from(new Set([...current, role]))
-        : current.filter((item) => item !== role)
-    );
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session || !canManageMembers) return;
 
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const selectedRoles = getSessionWorkspaceLegacyRolesForAssignment({
+      permissionRoleKey: selectedPermissionRoleKey,
+      jobPositionKey: selectedJobPositionKey,
+    });
     const input = {
       email: String(formData.get("email") ?? ""),
       roles: selectedRoles,
+      permissionRoleKey: selectedPermissionRoleKey,
+      jobPositionKey: selectedJobPositionKey,
       title: String(formData.get("title") ?? ""),
       department: String(formData.get("department") ?? ""),
     };
@@ -314,7 +336,8 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
 
       updateState(appendSessionWorkspaceInvitation(state, result.invitation));
       setFieldErrors({});
-      setSelectedRoles([]);
+      setSelectedPermissionRoleKey("general");
+      setSelectedJobPositionKey("front_desk");
       form.reset();
     } catch {
       const invitation = createSessionWorkspaceInvitation(input, workspaceId, {
@@ -323,7 +346,8 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
       });
       updateState(appendSessionWorkspaceInvitation(state, invitation));
       setFieldErrors({});
-      setSelectedRoles([]);
+      setSelectedPermissionRoleKey("general");
+      setSelectedJobPositionKey("front_desk");
       form.reset();
     } finally {
       setSubmittingInvitation(false);
@@ -395,27 +419,26 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
 
   function openRoleEditor(membership: SessionWorkspaceMembership) {
     setEditingMembership(membership);
-    setEditingRoles(membership.roles);
+    setEditingPermissionRoleKey(membership.permissionRoleKey ?? "general");
     setRoleChangeError(null);
     setConfirmRoleChangeOpen(false);
-  }
-
-  function handleEditingRoleToggle(role: SessionWorkspaceRole, checked: boolean) {
-    setEditingRoles((current) =>
-      checked
-        ? Array.from(new Set([...current, role]))
-        : current.filter((item) => item !== role)
-    );
-    setRoleChangeError(null);
   }
 
   function handleRoleChangeReview() {
     if (!editingMembership) return;
 
+    const editingRoles = getSessionWorkspaceLegacyRolesForAssignment({
+      permissionRoleKey: editingPermissionRoleKey,
+      jobPositionKey: editingMembership.jobPositionKey,
+    });
     const result = updateSessionWorkspaceMembershipRoles(
       state,
       editingMembership.id,
-      editingRoles
+      {
+        roles: editingRoles,
+        permissionRoleKey: editingPermissionRoleKey,
+        jobPositionKey: editingMembership.jobPositionKey,
+      }
     );
 
     if (!result.success) {
@@ -433,6 +456,10 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
     setRoleChangeError(null);
 
     try {
+      const editingRoles = getSessionWorkspaceLegacyRolesForAssignment({
+        permissionRoleKey: editingPermissionRoleKey,
+        jobPositionKey: editingMembership.jobPositionKey,
+      });
       const response = await fetch(
         `/api/workspaces/${workspaceId}/memberships/${editingMembership.id}/roles`,
         {
@@ -443,7 +470,11 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
               ? {}
               : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session.role) }),
           },
-          body: JSON.stringify({ roles: editingRoles }),
+          body: JSON.stringify({
+            roles: editingRoles,
+            permissionRoleKey: editingPermissionRoleKey,
+            jobPositionKey: editingMembership.jobPositionKey,
+          }),
         }
       );
       const serverResult = await response.json() as {
@@ -465,10 +496,18 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
       setSubmittingRoleChange(false);
     }
 
+    const editingRoles = getSessionWorkspaceLegacyRolesForAssignment({
+      permissionRoleKey: editingPermissionRoleKey,
+      jobPositionKey: editingMembership.jobPositionKey,
+    });
     const result = updateSessionWorkspaceMembershipRoles(
       state,
       editingMembership.id,
-      editingRoles
+      {
+        roles: editingRoles,
+        permissionRoleKey: editingPermissionRoleKey,
+        jobPositionKey: editingMembership.jobPositionKey,
+      }
     );
 
     if (!result.success) {
@@ -479,9 +518,70 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
 
     updateState(result.state);
     setEditingMembership(null);
-    setEditingRoles([]);
+    setEditingPermissionRoleKey("general");
     setRoleChangeError(null);
     setConfirmRoleChangeOpen(false);
+  }
+
+  function handleCustomRolePermissionToggle(permissionId: string, checked: boolean) {
+    setCustomRolePermissionIds((current) =>
+      checked
+        ? Array.from(new Set([...current, permissionId]))
+        : current.filter((item) => item !== permissionId)
+    );
+    setCustomRoleError(null);
+  }
+
+  function handleCustomRoleSubmit() {
+    if (!canManageMembers) return;
+
+    const result = createOrUpdateSessionWorkspaceCustomPermissionRole(state, {
+      workspaceId,
+      roleKey: editingCustomRoleKey,
+      label: customRoleName,
+      permissionIds: customRolePermissionIds,
+    });
+
+    if (!result.success) {
+      setCustomRoleError(getCustomRoleErrorMessage(result.reason));
+      return;
+    }
+
+    updateState(result.state);
+    setSelectedPermissionRoleKey(result.role.roleKey);
+    setCustomRoleName("");
+    setCustomRolePermissionIds([]);
+    setEditingCustomRoleKey(null);
+    setCustomRoleError(null);
+  }
+
+  function handleCustomRoleEdit(roleKey: string) {
+    const role = customPermissionRoles.find((item) => item.roleKey === roleKey);
+    if (!role) return;
+
+    setEditingCustomRoleKey(role.roleKey);
+    setCustomRoleName(role.label);
+    setCustomRolePermissionIds(role.permissionIds);
+    setCustomRoleError(null);
+  }
+
+  function handleCustomJobPositionSubmit() {
+    if (!canManageMembers) return;
+
+    const result = createSessionWorkspaceCustomJobPosition(state, {
+      workspaceId,
+      label: customJobPositionName,
+    });
+
+    if (!result.success) {
+      setCustomJobPositionError(getCustomJobPositionErrorMessage(result.reason));
+      return;
+    }
+
+    updateState(result.state);
+    setSelectedJobPositionKey(result.position.positionKey);
+    setCustomJobPositionName("");
+    setCustomJobPositionError(null);
   }
 
   async function handleDeactivationConfirm() {
@@ -527,7 +627,7 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
     if (!result.success) {
       setDeactivationError(
         result.reason === "last_admin_protected"
-          ? "마지막 병원관리자는 비활성화할 수 없습니다."
+          ? "마지막 소유자는 비활성화할 수 없습니다."
           : getMembershipMutationErrorMessage(result.reason)
       );
       setDeactivatingMembership(null);
@@ -548,12 +648,12 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
+    <div className="flex h-full min-h-0 flex-col overflow-auto bg-[var(--emr-surface-workspace)] lg:overflow-hidden">
       <section className="border-b bg-card px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-[20px] font-semibold leading-7">구성원 및 초대</h1>
-            <p className="mt-1 max-w-2xl text-[13px] leading-5 text-muted-foreground">
+            <p className="mt-1 hidden max-w-2xl text-[13px] leading-5 text-muted-foreground sm:block">
               병원관리자가 직원을 이메일로 초대하고, 역할과 멤버십 상태를 session-only로
               확인합니다.
             </p>
@@ -566,12 +666,15 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
         </div>
       </section>
 
-      <section className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[360px_minmax(0,1fr)]">
-        <form className="border-b bg-card p-4 lg:border-b-0 lg:border-r" onSubmit={handleSubmit}>
+      <section className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:overflow-hidden">
+        <form
+          className="min-h-0 shrink-0 border-b bg-card p-4 lg:shrink lg:overflow-y-auto lg:border-b-0 lg:border-r"
+          onSubmit={handleSubmit}
+        >
           <FieldGroup>
             <div>
               <h2 className="text-[15px] font-semibold">직원 초대</h2>
-              <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
+              <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
                 실제 이메일 발송 없이 초대 상태만 저장합니다.
               </p>
             </div>
@@ -608,7 +711,7 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
                 id="workspace-invitation-email"
                 name="email"
                 type="email"
-                placeholder="staff@hospital.com"
+                placeholder="staff@hos.kr"
                 disabled={!canManageMembers || submittingInvitation}
                 aria-invalid={Boolean(fieldErrors.email)}
               />
@@ -620,29 +723,82 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
             </Field>
 
             <FieldSet className="gap-2">
-              <FieldLegend className="mb-0 text-[13px]">역할</FieldLegend>
-              <FieldDescription className="text-[12px]">
-                여러 역할을 선택하면 권한은 합산됩니다.
+              <FieldLegend className="mb-0 text-[13px]">권한 역할</FieldLegend>
+              <FieldDescription className="hidden text-[12px] sm:block">
+                할 수 있는 작업 범위를 정합니다. 커스텀 역할은 아래에서 추가합니다.
               </FieldDescription>
-              <div className="grid gap-2">
-                {SESSION_WORKSPACE_ROLES.map((role) => (
+              <RadioGroup
+                aria-label="권한 역할"
+                className="gap-2"
+                value={selectedPermissionRoleKey}
+                onValueChange={(value) => {
+                  setSelectedPermissionRoleKey(String(value));
+                  setFieldErrors((current) => ({ ...current, permissionRoleKey: undefined }));
+                }}
+              >
+                {permissionRoles.map((role) => (
                   <label
-                    key={role.id}
-                    className="flex items-center gap-2 text-[13px] text-[var(--emr-text-primary)]"
+                    key={role.roleKey}
+                    className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
                   >
-                    <Checkbox
+                    <Radio
                       aria-label={role.label}
-                      checked={selectedRoles.includes(role.id)}
+                      value={role.roleKey}
                       disabled={!canManageMembers || submittingInvitation}
-                      onCheckedChange={(checked) => handleRoleToggle(role.id, Boolean(checked))}
                     />
-                    {role.label}
+                    <span className="grid gap-0.5">
+                      <span className="font-medium">{role.label}</span>
+                      <span className="hidden text-[12px] leading-4 text-muted-foreground sm:inline">
+                        {getSessionWorkspacePermissionRoleSummary(role.roleKey, state, workspaceId)}
+                      </span>
+                    </span>
                   </label>
                 ))}
-              </div>
-              {fieldErrors.roles ? (
+              </RadioGroup>
+              <p className="hidden text-[12px] leading-5 text-muted-foreground sm:block">
+                커스텀 역할
+                {customPermissionRoles.length === 0
+                  ? "은 아직 없습니다. 필요한 권한만 골라 추가할 수 있습니다."
+                  : ` ${customPermissionRoles.length}개를 사용할 수 있습니다.`}
+              </p>
+              {fieldErrors.permissionRoleKey || fieldErrors.roles ? (
                 <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
-                  {fieldErrors.roles}
+                  {fieldErrors.permissionRoleKey ?? fieldErrors.roles}
+                </FieldError>
+              ) : null}
+            </FieldSet>
+
+            <FieldSet className="gap-2">
+              <FieldLegend className="mb-0 text-[13px]">직무</FieldLegend>
+              <FieldDescription className="hidden text-[12px] sm:block">
+                병원 안에서의 직무입니다. 권한 판단에는 사용하지 않습니다.
+              </FieldDescription>
+              <RadioGroup
+                aria-label="직무"
+                className="grid grid-cols-2 gap-2"
+                value={selectedJobPositionKey}
+                onValueChange={(value) => {
+                  setSelectedJobPositionKey(String(value));
+                  setFieldErrors((current) => ({ ...current, jobPositionKey: undefined }));
+                }}
+              >
+                {jobPositions.map((position) => (
+                  <label
+                    key={position.positionKey}
+                    className="flex items-center gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
+                  >
+                    <Radio
+                      aria-label={position.label}
+                      value={position.positionKey}
+                      disabled={!canManageMembers || submittingInvitation}
+                    />
+                    {position.label}
+                  </label>
+                ))}
+              </RadioGroup>
+              {fieldErrors.jobPositionKey ? (
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
+                  {fieldErrors.jobPositionKey}
                 </FieldError>
               ) : null}
             </FieldSet>
@@ -667,6 +823,135 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
               />
             </Field>
 
+            <div className="grid gap-3 border-t border-[var(--emr-line-hairline)] pt-4">
+              <div>
+                <h3 className="text-[13px] font-semibold">권한 역할 설정</h3>
+                <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
+                  소유자 전용 권한은 커스텀 역할에서 선택할 수 없습니다.
+                </p>
+              </div>
+              <Field>
+                <FieldLabel htmlFor="workspace-custom-role-name">커스텀 역할 이름</FieldLabel>
+                <Input
+                  id="workspace-custom-role-name"
+                  value={customRoleName}
+                  placeholder="검사 보조"
+                  disabled={!canManageMembers || submittingInvitation}
+                  onChange={(event) => {
+                    setCustomRoleName(event.target.value);
+                    setCustomRoleError(null);
+                  }}
+                />
+              </Field>
+              <div className="grid gap-2">
+                {SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG.map((permission) => (
+                  <label
+                    key={permission.id}
+                    className="flex items-center gap-2 text-[13px] text-[var(--emr-text-primary)]"
+                  >
+                    <Checkbox
+                      aria-label={permission.label}
+                      checked={customRolePermissionIds.includes(permission.id)}
+                      disabled={!canManageMembers || submittingInvitation}
+                      onCheckedChange={(checked) =>
+                        handleCustomRolePermissionToggle(permission.id, Boolean(checked))
+                      }
+                    />
+                    {permission.label}
+                  </label>
+                ))}
+              </div>
+              {customRoleError ? (
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
+                  {customRoleError}
+                </FieldError>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!canManageMembers || submittingInvitation}
+                  onClick={handleCustomRoleSubmit}
+                >
+                  커스텀 역할 저장
+                </Button>
+                {editingCustomRoleKey ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingCustomRoleKey(null);
+                      setCustomRoleName("");
+                      setCustomRolePermissionIds([]);
+                      setCustomRoleError(null);
+                    }}
+                  >
+                    편집 취소
+                  </Button>
+                ) : null}
+              </div>
+              {customPermissionRoles.length > 0 ? (
+                <div className="grid gap-1">
+                  {customPermissionRoles.map((role) => (
+                    <div
+                      key={role.roleKey}
+                      className="flex items-center justify-between gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] px-3 py-2 text-[12px]"
+                    >
+                      <span className="min-w-0 truncate">{role.label}</span>
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => handleCustomRoleEdit(role.roleKey)}
+                      >
+                        수정
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="grid gap-3 border-t border-[var(--emr-line-hairline)] pt-4">
+              <div>
+                <h3 className="text-[13px] font-semibold">직무 설정</h3>
+                <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
+                  기본 직무 외 병원별 직무를 추가합니다.
+                </p>
+              </div>
+              <Field>
+                <FieldLabel htmlFor="workspace-custom-job-position-name">
+                  커스텀 직무 이름
+                </FieldLabel>
+                <Input
+                  id="workspace-custom-job-position-name"
+                  value={customJobPositionName}
+                  placeholder="CS"
+                  disabled={!canManageMembers || submittingInvitation}
+                  onChange={(event) => {
+                    setCustomJobPositionName(event.target.value);
+                    setCustomJobPositionError(null);
+                  }}
+                />
+              </Field>
+              {customJobPositionError ? (
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
+                  {customJobPositionError}
+                </FieldError>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!canManageMembers || submittingInvitation}
+                onClick={handleCustomJobPositionSubmit}
+              >
+                직무 추가
+              </Button>
+            </div>
+
             <Button type="submit" disabled={!canManageMembers || submittingInvitation}>
               {submittingInvitation ? "초대 저장 중" : "초대 만들기"}
             </Button>
@@ -675,15 +960,15 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
 
         <ScrollArea className="min-h-0 bg-[var(--emr-surface-workspace)]">
           <div className="p-4">
-            <Table className="min-w-[820px] table-fixed text-[13px]">
+            <Table minWidth={660} className="table-fixed text-[13px]">
               <TableHeader className="bg-[var(--emr-surface-muted)]">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[220px]">이메일</TableHead>
-                  <TableHead className="w-[180px]">역할</TableHead>
-                  <TableHead className="w-[110px]">상태</TableHead>
-                  <TableHead className="w-[230px]">권한 요약</TableHead>
-                  <TableHead className="w-[160px]">직책/부서</TableHead>
-                  <TableHead className="w-[220px] text-right">작업</TableHead>
+                  <TableHead className="w-[170px]">이메일</TableHead>
+                  <TableHead className="w-[80px]">권한 역할</TableHead>
+                  <TableHead className="w-[80px]">직무</TableHead>
+                  <TableHead className="w-[75px]">상태</TableHead>
+                  <TableHead className="w-[100px]">직책/부서</TableHead>
+                  <TableHead className="w-[155px] text-right">작업</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -693,7 +978,20 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
                   return (
                     <TableRow key={`${row.rowType}-${row.id}`} className="bg-card">
                       <TableCell className="font-semibold">{getRowEmail(row)}</TableCell>
-                      <TableCell>{getSessionWorkspaceRoleLabels(getRowRoles(row))}</TableCell>
+                      <TableCell>
+                        {getSessionWorkspacePermissionRoleLabel(
+                          getRowPermissionRoleKey(row),
+                          state,
+                          workspaceId
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {getSessionWorkspaceJobPositionLabel(
+                          getRowJobPositionKey(row),
+                          state,
+                          workspaceId
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={pending ? "secondary" : "outline"}>
                           {getStatusLabel(row)}
@@ -704,15 +1002,12 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
                           </span>
                         ) : null}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {getEffectivePermissionSummary(getRowRoles(row))}
-                      </TableCell>
                       <TableCell className="truncate">
                         {[row.title, row.department].filter(Boolean).join(" · ") || "-"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="whitespace-normal text-right">
                         {pending ? (
-                          <div className="flex justify-end gap-1">
+                          <div className="flex flex-wrap justify-end gap-1">
                             <Button
                               type="button"
                               size="xs"
@@ -742,7 +1037,7 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
                             </Button>
                           </div>
                         ) : row.rowType === "member" ? (
-                          <div className="flex justify-end gap-1">
+                          <div className="flex flex-wrap justify-end gap-1">
                             <Button
                               type="button"
                               size="xs"
@@ -750,7 +1045,7 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
                               disabled={!canManageMembers || row.status !== "active"}
                               onClick={() => openRoleEditor(row)}
                             >
-                              역할 수정
+                              권한 수정
                             </Button>
                             <Button
                               type="button"
@@ -790,7 +1085,7 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
         onOpenChange={(open) => {
           if (!open) {
             setEditingMembership(null);
-            setEditingRoles([]);
+            setEditingPermissionRoleKey("general");
             setRoleChangeError(null);
             setConfirmRoleChangeOpen(false);
           }
@@ -798,32 +1093,46 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
       >
         <DialogContent className="overflow-hidden p-0 sm:max-w-[500px]">
           <DialogHeader className="px-6 pb-3 pt-6">
-            <DialogTitle>구성원 역할 수정</DialogTitle>
+            <DialogTitle>구성원 권한 역할 수정</DialogTitle>
             <DialogDescription>
-              {editingMembership?.email ?? editingMembership?.userSessionId}의 역할을 조정합니다.
+              {editingMembership?.email ?? editingMembership?.userSessionId}의 권한 역할을 조정합니다.
               실제 DB 저장 전까지는 이 브라우저 세션에만 반영됩니다.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 px-6 pb-5">
-            <div className="grid gap-2">
-              {SESSION_WORKSPACE_ROLES.map((role) => (
+            <RadioGroup
+              aria-label="구성원 권한 역할"
+              className="gap-2"
+              value={editingPermissionRoleKey}
+              onValueChange={(value) => {
+                setEditingPermissionRoleKey(String(value));
+                setRoleChangeError(null);
+              }}
+            >
+              {permissionRoles.map((role) => (
                 <label
-                  key={role.id}
-                  className="flex items-center gap-2 text-[13px] text-[var(--emr-text-primary)]"
+                  key={role.roleKey}
+                  className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
                 >
-                  <Checkbox
+                  <Radio
                     aria-label={role.label}
-                    checked={editingRoles.includes(role.id)}
-                    onCheckedChange={(checked) =>
-                      handleEditingRoleToggle(role.id, Boolean(checked))
-                    }
+                    value={role.roleKey}
                   />
-                  {role.label}
+                  <span className="grid gap-0.5">
+                    <span className="font-medium">{role.label}</span>
+                    <span className="text-[12px] leading-4 text-muted-foreground">
+                      {getSessionWorkspacePermissionRoleSummary(role.roleKey, state, workspaceId)}
+                    </span>
+                  </span>
                 </label>
               ))}
-            </div>
+            </RadioGroup>
             <div className="rounded-[var(--clair-radius-md)] border bg-[var(--emr-surface-muted)] px-3 py-2 text-[13px] leading-5 text-muted-foreground">
-              {getEffectivePermissionSummary(editingRoles)}
+              {getSessionWorkspacePermissionRoleSummary(
+                editingPermissionRoleKey,
+                state,
+                workspaceId
+              )}
             </div>
             {roleChangeError ? (
               <p role="alert" className="text-[13px] text-[var(--emr-status-danger-text)]">
@@ -837,10 +1146,10 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
               variant="outline"
               onClick={() => {
                 setEditingMembership(null);
-                setEditingRoles([]);
+                setEditingPermissionRoleKey("general");
               }}
             >
-              역할 수정 닫기
+              권한 수정 닫기
             </Button>
             <Button type="button" onClick={handleRoleChangeReview}>
               변경 검토
@@ -851,15 +1160,22 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
 
       <Dialog open={confirmRoleChangeOpen} onOpenChange={setConfirmRoleChangeOpen}>
         <EmrConfirmDialogContent
-          title="역할 변경 확인"
+          title="권한 역할 변경 확인"
           description={
             <>
-              선택한 역할은 즉시 session-only 멤버십에 반영됩니다. 변경 후 권한은{" "}
-              <strong>{getEffectivePermissionSummary(editingRoles)}</strong>입니다.
+              선택한 권한 역할은 즉시 session-only 멤버십에 반영됩니다. 변경 후 권한은{" "}
+              <strong>
+                {getSessionWorkspacePermissionRoleSummary(
+                  editingPermissionRoleKey,
+                  state,
+                  workspaceId
+                )}
+              </strong>
+              입니다.
             </>
           }
           cancelLabel="취소"
-          confirmLabel={submittingRoleChange ? "서버 확인 중" : "역할 변경"}
+          confirmLabel={submittingRoleChange ? "서버 확인 중" : "권한 역할 변경"}
           onCancel={() => setConfirmRoleChangeOpen(false)}
           onConfirm={handleRoleChangeConfirm}
         />
@@ -898,12 +1214,25 @@ const canManageMembers = session?.role === "hospital_admin" || session?.role ===
 
 function getMembershipMutationErrorMessage(reason: string) {
   if (reason === "last_admin_protected") {
-    return "최소 1명의 활성 병원관리자가 필요합니다.";
+    return "최소 1명의 활성 소유자가 필요합니다.";
   }
   if (reason === "invalid_roles") {
     return "하나 이상의 역할을 선택하세요.";
   }
   return "멤버십 변경 대상을 찾을 수 없습니다.";
+}
+
+function getCustomRoleErrorMessage(reason: string) {
+  if (reason === "empty_label") return "커스텀 역할 이름을 입력하세요.";
+  if (reason === "empty_permissions") return "하나 이상의 권한을 선택하세요.";
+  if (reason === "owner_only_permission") return "소유자 전용 권한은 커스텀 역할에 넣을 수 없습니다.";
+  return "선택할 수 없는 권한이 포함되어 있습니다.";
+}
+
+function getCustomJobPositionErrorMessage(reason: string) {
+  if (reason === "empty_label") return "커스텀 직무 이름을 입력하세요.";
+  if (reason === "duplicate_position") return "이미 있는 직무입니다.";
+  return "직무를 추가할 수 없습니다.";
 }
 
 function getDemoInvitationActorId(role: string) {

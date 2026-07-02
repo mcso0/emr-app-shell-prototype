@@ -10,6 +10,10 @@ async function postInvitation(
     actor?: string;
     email?: string;
     roles?: string[];
+    permissionRoleId?: string;
+    jobPositionId?: string;
+    permissionRoleKey?: string;
+    jobPositionKey?: string;
     workspaceId?: string;
   }
 ) {
@@ -20,6 +24,10 @@ async function postInvitation(
       data: {
         email: options.email ?? "VET@HANBIT.TEST",
         roles: options.roles ?? ["vet", "front_desk"],
+        permissionRoleId: options.permissionRoleId,
+        jobPositionId: options.jobPositionId,
+        permissionRoleKey: options.permissionRoleKey,
+        jobPositionKey: options.jobPositionKey,
         title: "진료팀장",
         department: "진료팀",
       },
@@ -52,6 +60,27 @@ test("workspace invitation route creates pending invitation for hospital admin",
   expect(json.emailDelivery).toBe("not_sent_approval_gated");
   expect(json.inviteLink).toBe("not_generated_approval_gated");
   expect(JSON.stringify(json)).not.toMatch(/token|otp|magic.?link/i);
+});
+
+test("workspace invitation route carries permission role and job position keys", async ({
+  request,
+}) => {
+  const response = await postInvitation(request, {
+    actor: "user-admin",
+    email: "admin@hanbit.test",
+    roles: ["hospital_admin"],
+    permissionRoleKey: "admin",
+    jobPositionKey: "veterinarian",
+  });
+
+  expect(response.status()).toBe(201);
+  const json = await response.json();
+  expect(json.invitation).toMatchObject({
+    email: "admin@hanbit.test",
+    invitedRoles: ["hospital_admin"],
+    permissionRoleKey: "admin",
+    jobPositionKey: "veterinarian",
+  });
 });
 
 test("workspace invitation route blocks duplicate pending and active member email on the server", async ({
@@ -123,21 +152,51 @@ test("workspace invitation persistence boundary stays server-only", () => {
     "src/features/auth/workspace-invitation-email-delivery.ts",
     "utf8"
   );
-  const migrationSource = readFileSync(
-    "supabase/migrations/20260518122000_workspace_invitation_create_transaction.sql",
-    "utf8"
-  );
+  const migrationSource = [
+    readFileSync(
+      "supabase/migrations/20260518122000_workspace_invitation_create_transaction.sql",
+      "utf8"
+    ),
+    readFileSync(
+      "supabase/migrations/20260702110000_workspace_invitation_role_job_dual_write.sql",
+      "utf8"
+    ),
+    readFileSync(
+      "supabase/migrations/20260702130000_workspace_invitation_role_job_key_lookup.sql",
+      "utf8"
+    ),
+  ].join("\n");
 
   expect(routeSource).toContain("createWorkspaceInvitation");
   expect(routeSource).toContain("readServerSession");
   expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
   expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
+  expect(routeSource).toContain("permissionRoleId");
+  expect(routeSource).toContain("jobPositionId");
+  expect(routeSource).toContain("permissionRoleKey");
+  expect(routeSource).toContain("jobPositionKey");
   expect(serverSource).toContain('import "server-only"');
   expect(serverSource).not.toMatch(/sessionStorage|localStorage|window\\./);
+  expect(serverSource).toContain("permissionRoleId");
+  expect(serverSource).toContain("jobPositionId");
+  expect(serverSource).toContain("permissionRoleKey");
+  expect(serverSource).toContain("jobPositionKey");
+  expect(serverSource).toContain("p_permission_role_id");
+  expect(serverSource).toContain("p_job_position_id");
+  expect(serverSource).toContain("p_permission_role_key");
+  expect(serverSource).toContain("p_job_position_key");
   expect(`${serverSource}\n${emailDeliverySource}`).toContain("not_sent_approval_gated");
   expect(`${serverSource}\n${emailDeliverySource}`).toContain("not_generated_approval_gated");
   expect(serverSource).not.toMatch(/inviteToken|rawToken|magicLink|otp/i);
   expect(migrationSource).toContain("clair_create_workspace_invitation");
+  expect(migrationSource).toContain("p_permission_role_id");
+  expect(migrationSource).toContain("p_job_position_id");
+  expect(migrationSource).toContain("p_permission_role_key");
+  expect(migrationSource).toContain("p_job_position_key");
+  expect(migrationSource).toContain("role.role_key = p_permission_role_key");
+  expect(migrationSource).toContain("position.position_key = p_job_position_key");
+  expect(migrationSource).toContain("workspace_invitation_permission_role_assignments");
+  expect(migrationSource).toContain("workspace_invitation_job_position_assignments");
   expect(migrationSource).toContain("role_permission:manage");
   expect(migrationSource).toContain("duplicate_pending_invitation");
   expect(migrationSource).toContain("active_membership_exists");

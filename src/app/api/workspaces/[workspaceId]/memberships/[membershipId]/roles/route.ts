@@ -51,7 +51,9 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
   if (rateLimitResponse) return rateLimitResponse;
 
   const body = await readJsonBody(request);
-  const nextRoles = Array.isArray(body.roles) ? body.roles : [];
+  const nextRoles = Array.isArray(body.roles) ? body.roles.filter(isString) : [];
+  const permissionRoleKey = getOptionalBodyString(body.permissionRoleKey);
+  const jobPositionKey = getOptionalBodyString(body.jobPositionKey);
 
   if (identity.source === "supabase_session") {
     const client = await createClient();
@@ -67,6 +69,8 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
       p_workspace_id: workspaceId,
       p_membership_id: membershipId,
       p_next_roles: nextRoles,
+      p_permission_role_key: permissionRoleKey,
+      p_job_position_key: jobPositionKey,
     });
 
     if (error) {
@@ -80,9 +84,14 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
       return Response.json({ ok: false, denialReason }, { status });
     }
 
-    const updatedRoles = Array.isArray((data as { roles?: unknown }).roles)
-      ? (data as { roles: unknown[] }).roles
+    const mutationData = isRecord(data) ? data : {};
+    const updatedRoles = Array.isArray(mutationData.roles)
+      ? mutationData.roles.filter(isString)
       : nextRoles;
+    const updatedPermissionRoleKey =
+      getOptionalBodyString(mutationData.permissionRoleKey) ?? permissionRoleKey;
+    const updatedJobPositionKey =
+      getOptionalBodyString(mutationData.jobPositionKey) ?? jobPositionKey;
     const audit = await emitLiveMutationAuditEvent({
       auditGateway: createSupabaseLiveAuditAppendGateway(
         client as unknown as SupabaseLiveAuditAppendRpcClient
@@ -94,7 +103,11 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
         targetType: "membership",
         targetId: membershipId,
         requestId: getAuditRequestId(request),
-        after: { roles: updatedRoles },
+        after: {
+          roles: updatedRoles,
+          permissionRoleKey: updatedPermissionRoleKey,
+          jobPositionKey: updatedJobPositionKey,
+        },
         metadata: { source: "workspace-membership-role-route" },
       },
     });
@@ -108,6 +121,8 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
         workspaceId,
         targetMembershipId: membershipId,
         updatedRoles,
+        permissionRoleKey: updatedPermissionRoleKey,
+        jobPositionKey: updatedJobPositionKey,
         enforcedBy: "server-permission-resolver",
       },
       { status: 200 }
@@ -130,7 +145,7 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
         targetType: "membership",
         targetId: membershipId,
         requestId: getAuditRequestId(request),
-        after: { roles: result.updatedRoles },
+        after: { roles: result.updatedRoles, permissionRoleKey, jobPositionKey },
         metadata: { source: "workspace-membership-role-route" },
       },
     });
@@ -139,14 +154,35 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
     }
   }
 
-  return Response.json(result, { status: result.status });
+  return Response.json(
+    result.ok
+      ? {
+          ...result,
+          permissionRoleKey,
+          jobPositionKey,
+        }
+      : result,
+    { status: result.status }
+  );
 }
 
-async function readJsonBody(request: Request): Promise<{ roles?: unknown }> {
+async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
   try {
     const value = (await request.json()) as unknown;
-    return value && typeof value === "object" ? value : {};
+    return isRecord(value) ? value : {};
   } catch {
     return {};
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function getOptionalBodyString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
 }

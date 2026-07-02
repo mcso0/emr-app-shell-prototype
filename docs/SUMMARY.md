@@ -41,7 +41,7 @@
 - [EMR Domain Entity Map](product/domain/emr-domain-entity-map.md)
 - [Order Fulfillment Handoff](product/domain/order-fulfillment-handoff.md)
 - [Workspace Auth and Permissions](product/domain/workspace-auth-permissions.md)
-- [Role Permission Source Map](product/domain/role-permission-source-map.md)
+- [Role / Job Position Source Map](product/domain/role-permission-source-map.md)
 - [Decision Log Index](product/decisions/decision-log-index.md)
 - [Demo Data](product/demo-data/README.md)
 

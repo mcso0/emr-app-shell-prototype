@@ -2,6 +2,7 @@ import { mockPermissionSeeds } from "@/mocks/emr-domain";
 import type { PermissionId, PermissionResource } from "@/types/emr-domain";
 
 export type WorkspaceRoleId = "hospital_admin" | "vet" | "technician" | "front_desk";
+export type WorkspacePermissionRoleType = "owner" | "admin" | "standard" | "custom";
 export type WorkspacePermissionUserStatus = "active" | "inactive" | "suspended" | "invited";
 export type WorkspaceMembershipStatus = "active" | "inactive" | "suspended" | "pending";
 
@@ -16,7 +17,23 @@ export type WorkspaceMembership = {
   workspaceId: string;
   userId: string;
   roles: WorkspaceRoleId[];
+  permissionRole?: WorkspaceAssignedPermissionRole;
+  jobPosition?: WorkspaceAssignedJobPosition;
   status: WorkspaceMembershipStatus;
+};
+
+export type WorkspaceAssignedPermissionRole = {
+  id?: string;
+  key: string;
+  label: string;
+  roleType: WorkspacePermissionRoleType;
+  permissionIds: PermissionId[] | ["*"];
+};
+
+export type WorkspaceAssignedJobPosition = {
+  id?: string;
+  key: string;
+  label: string;
 };
 
 export type WorkspaceRolePermissionPolicy = {
@@ -47,8 +64,11 @@ export type WorkspacePermissionResolution = {
   workspaceId: string;
   membershipId: string | null;
   assignedRoles: WorkspaceRoleId[];
+  assignedPermissionRole?: WorkspaceAssignedPermissionRole;
+  jobPosition?: WorkspaceAssignedJobPosition;
   effectivePermissionIds: PermissionId[];
   hasFullWorkspaceAccess: boolean;
+  hasOwnerWorkspaceAccess: boolean;
 };
 
 export type WorkspacePermissionRequest = {
@@ -165,24 +185,23 @@ export function resolveWorkspacePermission(
     return denied("workspace_membership_inactive", request.sessionUserId, membership);
   }
 
-  const assignedRoles = normalizeRoles(membership.roles);
-  const effectivePermissionIds = resolveEffectivePermissionIds(
+  const permissionContext = resolveMembershipPermissionContext(
     adapter,
     request.workspaceId,
-    assignedRoles
+    membership
   );
-  const hasFullWorkspaceAccess = assignedRoles.includes("hospital_admin");
 
-  if (request.requiredPermission && !effectivePermissionIds.includes(request.requiredPermission)) {
+  if (
+    request.requiredPermission &&
+    !permissionContext.effectivePermissionIds.includes(request.requiredPermission)
+  ) {
     return {
       allowed: false,
       denialReason: "permission_missing",
       userId: request.sessionUserId,
       workspaceId: request.workspaceId,
       membershipId: membership.id,
-      assignedRoles,
-      effectivePermissionIds,
-      hasFullWorkspaceAccess,
+      ...permissionContext,
     };
   }
 
@@ -191,9 +210,7 @@ export function resolveWorkspacePermission(
     userId: request.sessionUserId,
     workspaceId: request.workspaceId,
     membershipId: membership.id,
-    assignedRoles,
-    effectivePermissionIds,
-    hasFullWorkspaceAccess,
+    ...permissionContext,
   };
 }
 
@@ -296,6 +313,58 @@ function resolveEffectivePermissionIds(
   ).sort();
 }
 
+function resolveMembershipPermissionContext(
+  adapter: WorkspacePermissionAdapter,
+  workspaceId: string,
+  membership: WorkspaceMembership
+): Pick<
+  WorkspacePermissionResolution,
+  | "assignedRoles"
+  | "assignedPermissionRole"
+  | "jobPosition"
+  | "effectivePermissionIds"
+  | "hasFullWorkspaceAccess"
+  | "hasOwnerWorkspaceAccess"
+> {
+  const assignedRoles = normalizeRoles(membership.roles);
+  const effectivePermissionIds = membership.permissionRole
+    ? resolvePermissionRolePermissionIds(membership.permissionRole)
+    : resolveEffectivePermissionIds(adapter, workspaceId, assignedRoles);
+  const hasFullWorkspaceAccess = membership.permissionRole
+    ? hasWildcardPermission(membership.permissionRole.permissionIds)
+    : assignedRoles.includes("hospital_admin");
+  const hasOwnerWorkspaceAccess = membership.permissionRole
+    ? membership.permissionRole.roleType === "owner"
+    : assignedRoles.includes("hospital_admin");
+
+  return {
+    assignedRoles,
+    effectivePermissionIds,
+    hasFullWorkspaceAccess,
+    hasOwnerWorkspaceAccess,
+    ...(membership.permissionRole ? { assignedPermissionRole: membership.permissionRole } : {}),
+    ...(membership.jobPosition ? { jobPosition: membership.jobPosition } : {}),
+  };
+}
+
+function resolvePermissionRolePermissionIds(
+  permissionRole: WorkspaceAssignedPermissionRole
+): PermissionId[] {
+  if (hasWildcardPermission(permissionRole.permissionIds)) {
+    return allPermissionIds;
+  }
+
+  return Array.from(
+    new Set(permissionRole.permissionIds.filter((permissionId) => {
+      return allPermissionIdSet.has(permissionId);
+    }))
+  ).sort();
+}
+
+function hasWildcardPermission(permissionIds: PermissionId[] | ["*"]): permissionIds is ["*"] {
+  return permissionIds.length === 1 && permissionIds[0] === "*";
+}
+
 function normalizeRoles(roles: WorkspaceRoleId[]): WorkspaceRoleId[] {
   return Array.from(new Set(roles));
 }
@@ -314,10 +383,13 @@ function createPermissionResultFactory(
     userId,
     workspaceId: request.workspaceId,
     membershipId: membership?.id ?? null,
-    assignedRoles: membership ? normalizeRoles(membership.roles) : [],
-    effectivePermissionIds: membership
-      ? resolveEffectivePermissionIds(adapter, request.workspaceId, membership.roles)
-      : [],
-    hasFullWorkspaceAccess: membership?.roles.includes("hospital_admin") ?? false,
+    ...(membership
+      ? resolveMembershipPermissionContext(adapter, request.workspaceId, membership)
+      : {
+          assignedRoles: [],
+          effectivePermissionIds: [],
+          hasFullWorkspaceAccess: false,
+          hasOwnerWorkspaceAccess: false,
+        }),
   });
 }

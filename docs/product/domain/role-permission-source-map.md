@@ -9,9 +9,10 @@ doc_type: domain-map
 tags: [domain, roles, permissions, workspace-auth]
 related_work:
   - DEN-178
+  - AUTH-PR-044
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-20
+last_updated: 2026-07-02
 ---
 
 # Role And Permission Source Map
@@ -22,24 +23,35 @@ This document normalizes where CLAiR EMR role and permission truth lives. Use it
 
 The canonical product source for roles and workspace permissions is [Workspace Auth and Permission Domain](workspace-auth-permissions.md).
 
-Current MVP canonical roles:
+Current MVP permission roles:
 
-- `hospital_admin`
-- `vet`
-- `technician`
-- `front_desk`
+- `소유자`
+- `관리자`
+- `일반`
+- `커스텀 역할`
+
+Current MVP default job positions / 기본 직무:
+
+- `병원장`
+- `수의사`
+- `테크니션`
+- `데스크`
+
+`게스트` is excluded from MVP permission roles. Guest-style limited read access requires a later privacy and chart-scope decision.
 
 Known legacy or compatibility names:
 
-- `nurse` should map conceptually to `technician` until the implementation is renamed or aliased.
-- `billing_admin` is not a canonical MVP role. Billing authority should be assigned through approved MVP roles until a separate billing role is approved.
+- `hospital_admin` maps to owner/admin compatibility during additive migration and must keep last-active-owner safety intact.
+- `vet`, `technician`, and `front_desk` are legacy role strings. They may inform default backfill, but the product model treats `수의사`, `테크니션`, and `데스크` as job positions rather than permission roles.
+- `nurse` should map conceptually to `technician` compatibility data only.
+- `billing_admin` is not a canonical MVP role. Billing authority should be assigned through approved permission roles or custom roles until a separate billing role is approved.
 
 ## Source Responsibilities
 
 | Source | Owns | Does not own |
 | --- | --- | --- |
-| Product role/permission docs | Role meanings, user-facing matrix, policy decisions, approval gates | Implementation details or hidden client-only checks |
-| App DB / membership records | Active workspace membership, assigned roles, membership status | Password identity or user-editable profile authority |
+| Product role/permission docs | Permission role meanings, job position meanings, user-facing matrix, policy decisions, approval gates | Implementation details or hidden client-only checks |
+| App DB / membership records | Active workspace membership, assigned permission role, job position, membership status | Password identity or user-editable profile authority |
 | Permission resolver | Effective permission union, denial reasons, server-side authorization decision | Product policy invention |
 | Client UI | Helpful visibility, disabled states, labels, explanation | Final security enforcement |
 | Audit events | Evidence of sensitive mutations and denials | Raw secrets, tokens, full clinical note bodies |
@@ -48,9 +60,11 @@ Known legacy or compatibility names:
 
 - Workspace membership is the authorization source.
 - Personal profile is never the authorization source.
-- Effective permissions are additive union of all active roles.
-- MVP roles are allow-only. Do not add deny rules without a product decision.
-- Every active workspace must retain at least one active `hospital_admin`.
+- Permission role and job position / 직무 are separate concepts.
+- Job position / 직무 is display/filter metadata and is never the authorization source.
+- MVP permission roles are allow-only. Do not add deny rules without a product decision.
+- Every active workspace must retain at least one active `소유자`.
+- Custom roles cannot grant owner-only authority, wildcard authority, or cross-workspace authority.
 - Role/permission policy changes require explicit 승욱 approval.
 
 ## Required Link Targets
@@ -70,8 +84,8 @@ Use these docs instead of rediscovering the same policy:
 Before any role/permission change, answer:
 
 1. Is this a label, UX, resolver, DB, or policy change?
-2. Does it alter canonical role names or the permission matrix?
-3. Does it affect `hospital_admin` authority or last-admin protection?
+2. Does it alter canonical permission roles, default job positions, or the permission matrix?
+3. Does it affect `소유자` authority or last-owner protection?
 4. Does it change who can mutate chart, order, billing, audit, or membership state?
 5. Is explicit 승욱 approval required by launch gates?
 

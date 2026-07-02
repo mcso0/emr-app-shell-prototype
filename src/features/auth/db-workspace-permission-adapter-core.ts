@@ -1,7 +1,10 @@
 import type { PermissionId } from "@/types/emr-domain";
 import type {
+  WorkspaceAssignedJobPosition,
+  WorkspaceAssignedPermissionRole,
   WorkspaceMembership,
   WorkspacePermissionAdapter,
+  WorkspacePermissionRoleType,
   WorkspacePermissionUser,
   WorkspaceRoleId,
   WorkspaceRolePermissionPolicy,
@@ -28,6 +31,24 @@ export type WorkspacePermissionDbPolicyRow = {
   permissions: { allowed?: string[] } | null;
 };
 
+export type WorkspacePermissionDbRoleAssignmentRow = {
+  workspace_id: string;
+  membership_id: string;
+  permission_role_id: string;
+  role_key: string;
+  label: string;
+  role_type: string;
+  permissions: { allowed?: string[] } | null;
+};
+
+export type WorkspacePermissionDbJobPositionAssignmentRow = {
+  workspace_id: string;
+  membership_id: string;
+  job_position_id: string;
+  position_key: string;
+  label: string;
+};
+
 export type WorkspacePermissionDbGateway = {
   listMemberships(
     workspaceId: string,
@@ -35,6 +56,14 @@ export type WorkspacePermissionDbGateway = {
   ): Promise<WorkspacePermissionDbMembershipRow[]>;
   listUsers(userIds: string[]): Promise<WorkspacePermissionDbUserRow[]>;
   listPermissionPolicies(workspaceId: string): Promise<WorkspacePermissionDbPolicyRow[]>;
+  listPermissionRoleAssignments(
+    workspaceId: string,
+    membershipIds: string[]
+  ): Promise<WorkspacePermissionDbRoleAssignmentRow[]>;
+  listJobPositionAssignments(
+    workspaceId: string,
+    membershipIds: string[]
+  ): Promise<WorkspacePermissionDbJobPositionAssignmentRow[]>;
 };
 
 export type WorkspacePermissionDbAdapterInput = {
@@ -42,6 +71,8 @@ export type WorkspacePermissionDbAdapterInput = {
   users: WorkspacePermissionDbUserRow[];
   memberships: WorkspacePermissionDbMembershipRow[];
   permissionPolicies?: WorkspacePermissionDbPolicyRow[];
+  permissionRoleAssignments?: WorkspacePermissionDbRoleAssignmentRow[];
+  jobPositionAssignments?: WorkspacePermissionDbJobPositionAssignmentRow[];
 };
 
 export async function loadWorkspacePermissionAdapterFromDb({
@@ -57,14 +88,22 @@ export async function loadWorkspacePermissionAdapterFromDb({
 }): Promise<WorkspacePermissionAdapter> {
   const memberships = await gateway.listMemberships(workspaceId, sessionUserId);
   const userIds = Array.from(new Set([sessionUserId, ...memberships.map((row) => row.user_id)]));
+  const membershipIds = memberships.map((row) => row.id);
   const users = await gateway.listUsers(userIds);
   const permissionPolicies = await gateway.listPermissionPolicies(workspaceId);
+  const permissionRoleAssignments = await gateway.listPermissionRoleAssignments(
+    workspaceId,
+    membershipIds
+  );
+  const jobPositionAssignments = await gateway.listJobPositionAssignments(workspaceId, membershipIds);
 
   return createWorkspacePermissionAdapterFromDbRows({
     now,
     users,
     memberships,
     permissionPolicies,
+    permissionRoleAssignments,
+    jobPositionAssignments,
   });
 }
 
@@ -73,14 +112,29 @@ export function createWorkspacePermissionAdapterFromDbRows({
   users,
   memberships,
   permissionPolicies = [],
+  permissionRoleAssignments = [],
+  jobPositionAssignments = [],
 }: WorkspacePermissionDbAdapterInput): WorkspacePermissionAdapter {
+  const permissionRolesByMembershipId = mapPermissionRoleAssignmentsByMembershipId(
+    permissionRoleAssignments
+  );
+  const jobPositionsByMembershipId = mapJobPositionAssignmentsByMembershipId(jobPositionAssignments);
+
   return {
     now,
     users: users.map(mapDbUser),
-    memberships: memberships.map(mapDbMembership).filter(Boolean) as WorkspaceMembership[],
+    memberships: memberships
+      .map((membership) => {
+        return mapDbMembership(
+          membership,
+          permissionRolesByMembershipId.get(membership.id),
+          jobPositionsByMembershipId.get(membership.id)
+        );
+      })
+      .filter(isWorkspaceMembership),
     permissionPolicies: permissionPolicies
       .map(mapDbPermissionPolicy)
-      .filter(Boolean) as WorkspaceRolePermissionPolicy[],
+      .filter(isWorkspaceRolePermissionPolicy),
   };
 }
 
@@ -92,10 +146,14 @@ function mapDbUser(row: WorkspacePermissionDbUserRow): WorkspacePermissionUser {
   };
 }
 
-function mapDbMembership(row: WorkspacePermissionDbMembershipRow): WorkspaceMembership | null {
+function mapDbMembership(
+  row: WorkspacePermissionDbMembershipRow,
+  permissionRole?: WorkspaceAssignedPermissionRole,
+  jobPosition?: WorkspaceAssignedJobPosition
+): WorkspaceMembership | null {
   const roles = (row.roles ?? []).filter(isWorkspaceRoleId);
 
-  if (roles.length === 0 && row.status === "active") {
+  if (roles.length === 0 && !permissionRole && row.status === "active") {
     return null;
   }
 
@@ -105,6 +163,8 @@ function mapDbMembership(row: WorkspacePermissionDbMembershipRow): WorkspaceMemb
     userId: row.user_id,
     roles,
     status: mapMembershipStatus(row.status),
+    ...(permissionRole ? { permissionRole } : {}),
+    ...(jobPosition ? { jobPosition } : {}),
   };
 }
 
@@ -123,6 +183,57 @@ function mapDbPermissionPolicy(
     permissionIds: allowed.includes("*")
       ? ["*"]
       : (allowed.filter(isPermissionIdLike) as PermissionId[]),
+  };
+}
+
+function mapPermissionRoleAssignmentsByMembershipId(
+  rows: WorkspacePermissionDbRoleAssignmentRow[]
+): Map<string, WorkspaceAssignedPermissionRole> {
+  const assignments = new Map<string, WorkspaceAssignedPermissionRole>();
+
+  for (const row of rows) {
+    const assignment = mapDbPermissionRoleAssignment(row);
+    if (assignment) {
+      assignments.set(row.membership_id, assignment);
+    }
+  }
+
+  return assignments;
+}
+
+function mapJobPositionAssignmentsByMembershipId(
+  rows: WorkspacePermissionDbJobPositionAssignmentRow[]
+): Map<string, WorkspaceAssignedJobPosition> {
+  const assignments = new Map<string, WorkspaceAssignedJobPosition>();
+
+  for (const row of rows) {
+    assignments.set(row.membership_id, {
+      id: row.job_position_id,
+      key: row.position_key,
+      label: row.label,
+    });
+  }
+
+  return assignments;
+}
+
+function mapDbPermissionRoleAssignment(
+  row: WorkspacePermissionDbRoleAssignmentRow
+): WorkspaceAssignedPermissionRole | null {
+  if (!isWorkspacePermissionRoleType(row.role_type)) {
+    return null;
+  }
+
+  const allowed = row.permissions?.allowed ?? [];
+
+  return {
+    id: row.permission_role_id,
+    key: row.role_key,
+    label: row.label,
+    roleType: row.role_type,
+    permissionIds: allowed.includes("*")
+      ? ["*"]
+      : allowed.filter(isPermissionIdLike),
   };
 }
 
@@ -151,6 +262,25 @@ function isWorkspaceRoleId(role: string): role is WorkspaceRoleId {
   );
 }
 
+function isWorkspacePermissionRoleType(value: string): value is WorkspacePermissionRoleType {
+  return (
+    value === "owner" ||
+    value === "admin" ||
+    value === "standard" ||
+    value === "custom"
+  );
+}
+
 function isPermissionIdLike(permissionId: string): permissionId is PermissionId {
   return permissionId.includes(":");
+}
+
+function isWorkspaceMembership(value: WorkspaceMembership | null): value is WorkspaceMembership {
+  return value !== null;
+}
+
+function isWorkspaceRolePermissionPolicy(
+  value: WorkspaceRolePermissionPolicy | null
+): value is WorkspaceRolePermissionPolicy {
+  return value !== null;
 }
