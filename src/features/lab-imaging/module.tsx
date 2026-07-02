@@ -2353,6 +2353,10 @@ export function LabContentAside({ workspaceId }: ShellComponentProps) {
     });
   };
 
+  if (!detail) {
+    return null;
+  }
+
   return (
     <EmrContentAsidePanel id="lab-content-aside">
       <EmrContentAsideHeader
@@ -2780,9 +2784,20 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
   }, [detail?.result.id, queryLabResultId, selectLabResult, selectedLabResultId]);
 
   if (!effectiveDetail) {
+    const hasLabWorkItems = fulfillmentQueue.workItems.length > 0;
+
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
-        검사 대기열에서 항목을 선택해 주세요.
+        <EmrEmptyState
+          kind={hasLabWorkItems ? "no-scope-result" : "upstream-pending"}
+          priority="supporting"
+          surface="content"
+          title={
+            hasLabWorkItems
+              ? "검사 대기열에서 항목을 선택해 주세요"
+              : "오늘 임상병리검사 요청이 없습니다"
+          }
+        />
       </div>
     );
   }
@@ -3054,6 +3069,10 @@ export function ImagingContentAside({ workspaceId }: ShellComponentProps) {
     });
   };
 
+  if (!detail) {
+    return null;
+  }
+
   return (
     <EmrContentAsidePanel id="imaging-content-aside">
       <EmrContentAsideHeader
@@ -3306,9 +3325,20 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
   }, [detail?.study.id, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
 
   if (!detail) {
+    const hasImagingWorkItems = fulfillmentQueue.workItems.length > 0;
+
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
-        영상 대기열에서 항목을 선택해 주세요.
+        <EmrEmptyState
+          kind={hasImagingWorkItems ? "no-scope-result" : "upstream-pending"}
+          priority="supporting"
+          surface="content"
+          title={
+            hasImagingWorkItems
+              ? "영상 대기열에서 항목을 선택해 주세요"
+              : "오늘 영상검사 요청이 없습니다"
+          }
+        />
       </div>
     );
   }

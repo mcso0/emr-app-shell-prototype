@@ -15,6 +15,7 @@ import {
 } from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup } from "@/components/emr/content-history-list";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import {
   EmrInstructionHeaderStack,
   EmrInstructionHistoryToggle,
@@ -2308,7 +2309,9 @@ export function BillingContentAside() {
     useState(false);
   const guardianId = detail?.guardian?.id;
   const workspaceId = detail?.invoice.workspaceId;
-  const hasCoGuardianContext = hasGuardianCoGuardianContext(guardianId);
+  const hasCoGuardianContext = guardianId
+    ? hasGuardianCoGuardianContext(guardianId)
+    : false;
   const [serverLedgerRows, setServerLedgerRows] =
     useState<GuardianCheckoutLedgerRowSnapshot[]>();
   useEffect(() => {
@@ -2337,14 +2340,23 @@ export function BillingContentAside() {
   }, [actorHeaders, guardianId, includeCoGuardianInvoices, workspaceId]);
   const localLedgerRows = useMemo(
     () =>
-      getBillingGuardianLedgerRows({
-        guardianId,
-        includeCoGuardianInvoices,
-        invoiceLines,
-        invoices,
-        payments,
-      }),
-    [guardianId, includeCoGuardianInvoices, invoiceLines, invoices, payments],
+      guardianId && workspaceId
+        ? getBillingGuardianLedgerRows({
+            guardianId,
+            includeCoGuardianInvoices,
+            invoiceLines,
+            invoices,
+            payments,
+          })
+        : [],
+    [
+      guardianId,
+      includeCoGuardianInvoices,
+      invoiceLines,
+      invoices,
+      payments,
+      workspaceId,
+    ],
   );
   const ledgerRows = useMemo(() => {
     if (!serverLedgerRows?.length) return localLedgerRows;
@@ -2394,6 +2406,8 @@ export function BillingContentAside() {
       return next.size ? next : new Set(["all"]);
     });
   };
+
+  if (!detail) return null;
 
   return (
     <EmrContentAsidePanel id="billing-content-aside">
@@ -2818,9 +2832,20 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
   }, [invoices, queryInvoiceId, selectInvoice, selectedInvoiceId, setFilter]);
 
   if (!effectiveDetail) {
+    const hasBillingRows = invoices.length > 0;
+
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
-        수납 목록에서 청구서를 선택해 주세요.
+        <EmrEmptyState
+          kind={hasBillingRows ? "no-scope-result" : "upstream-pending"}
+          surface="content"
+          priority="supporting"
+          title={
+            hasBillingRows
+              ? "수납 목록에서 청구서를 선택해 주세요"
+              : "오늘 수납 대기 건이 없습니다"
+          }
+        />
       </div>
     );
   }

@@ -44,6 +44,62 @@ async function grantCheongdamWorkspaceAccess(page: Page) {
   );
 }
 
+test("lab no-work empty state hides history aside", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "fulfillment-work-item-persistence",
+          workItems: [],
+        }),
+      });
+    }
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=history&right=closed`
+  );
+
+  await expect(page.locator("#lab-content-aside")).toHaveCount(0);
+  await expect(page.locator('section[data-surface="content"]')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "오늘 임상병리검사 요청이 없습니다" })).toBeVisible();
+});
+
+test("imaging no-work empty state hides history aside", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "fulfillment-work-item-persistence",
+          workItems: [],
+        }),
+      });
+    }
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/imaging?modulePanel=open&aside=history&right=closed`
+  );
+
+  await expect(page.locator("#imaging-content-aside")).toHaveCount(0);
+  await expect(page.locator('section[data-surface="content"]')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "오늘 영상검사 요청이 없습니다" })).toBeVisible();
+});
+
 test("lab workspace renders result input, equipment receipts, and attachments", async ({ page }) => {
   await page.goto("/w/clair-demo/lab?modulePanel=open");
 
@@ -325,7 +381,10 @@ test("imaging workspace renders reading, impression, and attachment flow", async
     .evaluate((element) => element.closest("[data-testid^='imaging-queue-status-']")?.getAttribute("data-testid"));
 
   expect(cocoQueueGroupTestId).toBeTruthy();
-  const cocoQueueGroup = sidePanel.getByTestId(cocoQueueGroupTestId!);
+  if (!cocoQueueGroupTestId) {
+    throw new Error("Imaging queue group test id was not found.");
+  }
+  const cocoQueueGroup = sidePanel.getByTestId(cocoQueueGroupTestId);
   const cocoQueueGroupToggle = cocoQueueGroup.getByRole("button", { name: /접기/ }).first();
   await expect(cocoQueueGroupToggle).toHaveAttribute("aria-expanded", "true");
   await cocoQueueGroupToggle.click();
@@ -404,11 +463,24 @@ test("imaging history aside keeps title count separate from evenly spaced action
   expect(actionMetrics.map((metric) => metric?.label)).toEqual(actionLabels);
   expect(titleBox).not.toBeNull();
   expect(collapseBox).not.toBeNull();
-  expect(titleBox!.x + titleBox!.width).toBeLessThan(collapseBox!.x);
+  if (!titleBox || !collapseBox) {
+    throw new Error("Imaging aside title or collapse button bounds were not available.");
+  }
+  expect(titleBox.x + titleBox.width).toBeLessThan(collapseBox.x);
 
-  const actionGaps = actionMetrics.slice(1).map((metric, index) => {
-    return metric!.left - actionMetrics[index]!.right;
-  });
+  const resolvedActionMetrics = actionMetrics.filter((metric) => metric !== null);
+
+  const actionGaps: number[] = [];
+  for (let index = 1; index < resolvedActionMetrics.length; index += 1) {
+    const currentMetric = resolvedActionMetrics[index];
+    const previousMetric = resolvedActionMetrics[index - 1];
+
+    if (!currentMetric || !previousMetric) {
+      throw new Error("Imaging aside action bounds were not available.");
+    }
+
+    actionGaps.push(currentMetric.left - previousMetric.right);
+  }
 
   expect(actionGaps[0]).toBeGreaterThan(0);
   for (const gap of actionGaps) {

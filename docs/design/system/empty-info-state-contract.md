@@ -1,7 +1,7 @@
 ---
 status: "approved"
 area: "design-system"
-updated: "2026-07-01"
+updated: "2026-07-02"
 linear_issue: "DEN-434"
 linear_project: "공통 UX/UI 기준 정리 및 화면 적용"
 source_docs:
@@ -109,7 +109,7 @@ As of `DESIGN-SYSTEM-PR-070`, `EmrEmptyState` covers the shared empty-state laye
 | Surface | Current default | `EmrEmptyState` adoption rule | Action ownership |
 | --- | --- | --- | --- |
 | Queue side panel | Keep `EmrQueueEmptyState` compact by default | Do not replace with the standard 64px icon pattern until a queue-specific compact variant is approved. Queue empty states should stay quiet and list-local. | Queue may own only local recovery such as clearing search or filters. It should not own screen-level create/navigation actions when content is also empty. |
-| Content body | Preferred first pilot surface | Use `surface="content"` when the main work area has no selected object, no upstream work, or no scope result. This is the right surface for screen-level next steps. | Content body owns the single primary decision when queue and content are both empty. |
+| Content body | Adopt for main operational absence states | Use `surface="content"` when the main work area has no selected object, no upstream work object, or no scope result. When no upstream work object exists in the operational modules that have adopted this pattern, render the design-system content empty state in the main content surface and suppress the content aside/history panel. | Content body carries the primary information/action weight for the screen-level absence state. Queue/list placeholders remain compact supporting states and do not own the primary screen-level action. |
 | Table body | Preferred second pilot surface | Use `surface="table"` for no rows, no filter results, or no search results inside table/list bodies when the table layout can preserve header/scroll alignment. Keep very dense tables on the existing empty row until spacing is verified. | Table owns local recovery such as reset filters. It should not trigger source workflow navigation unless the whole content surface is table-only. |
 | Drawer/detail panel | Adopt selectively | Use `surface="drawer"` for selected-object absence or passive detail guidance. Use `EmrInlineAlert` instead for permission blockers, read failures, failed saves, or degraded data. | Drawer should not own primary workflow creation. It may own close, retry, or local selection guidance. |
 | Widget/card | Adopt selectively | Use `surface="widget"` for dashboard cards and small summaries only when the copy needs an icon and repeated structure. Plain one-line widget empty copy is still allowed. | Widget actions stay secondary unless the widget is explicitly a launcher. |
@@ -128,6 +128,10 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 | Chart order table | `src/features/chart/module.tsx` order table empty row | `EmrEmptyState` table pilot for filter/category-empty order rows | Adopted as the first table-body pilot on 2026-07-01. It keeps local recovery copy and no CTA until a table-local reset action is wired. |
 | Customer tables | `src/features/customer/module.tsx` `CustomerDataTable` | `EmrEmptyState` table surface for no-data and filter-empty rows | Adopted as a table-body follow-up after the chart pilot. Search/filter/reset behavior remains owned by `CustomerDataTable`; drawer/profile behavior is unchanged. |
 | Hospital admin tables | `src/features/hospital-admin/module.tsx` | Order catalog uses `EmrEmptyState` table surface for no-data and filter/search-empty rows; audit log keeps its existing local empty row | Order catalog adopted as a table-body follow-up after the chart pilot. Audit log remains a later surface because it has a different review context. |
+| Dispensing/treatment content body | `src/features/dispensing/module.tsx` | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the history aside | Adopted for the operational content surface. Shared queue panels remain on compact queue placeholders. Selected work item states keep their detail/history surfaces where applicable. |
+| Lab content body | `src/features/lab-imaging/module.tsx` lab branch | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the lab history aside | Adopted for the operational content surface. Lab result table empty, permission, retry, save, and catalog states remain separate. Selected detail states keep their aside/history where applicable. |
+| Imaging content body | `src/features/lab-imaging/module.tsx` imaging branch | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the imaging history aside | Adopted for the operational content surface. Shared queue panels remain compact. Selected detail states keep their aside/history where applicable. |
+| Billing content body | `src/features/billing/module.tsx` | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the billing history aside | Adopted for the operational content surface without changing checkout, ledger, payment, or API state handling. Selected invoice states keep their aside/history where applicable. |
 | Home and notification widgets | `src/features/home/components/*`, `src/features/notifications/global-notification-drawer.tsx` | Small dashed-card or one-line empty messages | Adopt only when repeated widget structure needs icon/copy/action. Plain text may remain. |
 | Reception profile drawer | `src/features/reception/profile-drawer.tsx` | Not-found, no linked item, no history, and permission-like copy | Do not bulk replace. Classify each case as drawer empty, info box, inline alert, or field/toast feedback first. |
 | Lab/imaging detail content | `src/features/lab-imaging/module.tsx` | Lab result input table uses `EmrEmptyState` for true-empty result rows; linked result, preview, permission, save, and retry states remain separate | True-empty lab result rows adopted as a table-body follow-up. Permission/save failure and retry states remain `EmrInlineAlert` or feature-local recovery UI. |
@@ -152,6 +156,13 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 - `src/features/hospital-admin/module.tsx` order catalog empty row now uses `EmrEmptyState` with `surface="table"` for catalog no-data and filter/search-empty results.
 - `src/features/lab-imaging/module.tsx` `LabResultInputSection` now uses `EmrEmptyState` with `surface="table"` for true-empty lab result rows. Live fulfillment empty rows use `kind="upstream-pending"`; non-live true-empty rows use `kind="no-data"`.
 - Hospital Admin audit-log empty rows, shared queue panels, billing queue/content, home widgets, reception profile drawer states, permission/error/retry/loading/save states, and imaging fallback states were intentionally left unchanged.
+
+## 2026-07-02 Operational Content Adoption
+
+- Dispensing/treatment, lab, imaging, and billing main content no-upstream-work branches now use `EmrEmptyState` with `surface="content"` and suppress the corresponding content aside/history panel.
+- Queue/list placeholders in those modules remain compact supporting states through the existing queue components. They were not replaced by content-surface empty states.
+- No-selection content branches also use the content-surface empty state, while selected work item/detail/invoice states keep their aside/history surfaces where applicable.
+- Loading, permission, error, retry, save, checkout, catalog, result-table, and API state handling remain outside this content empty-state adoption.
 
 ## Implementation Acceptance Criteria
 
