@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
+import {
+  loadWorkspacePermissionAdapterFromDb,
+  type WorkspacePermissionDbGateway,
+} from "../src/features/auth/db-workspace-permission-adapter-core";
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
   createMockReceptionCalendarReadGateway,
@@ -134,6 +138,46 @@ test("reception calendar read core enforces active workspace membership and rece
     ok: false,
     status: 403,
     denialReason: "permission_missing",
+  });
+});
+
+test("reception calendar read core authorizes through legacy DB roles when additive assignments are absent", async () => {
+  const calls: string[] = [];
+  const permissionAdapter = await loadWorkspacePermissionAdapterFromDb({
+    now: "2026-07-02T00:00:00.000Z",
+    workspaceId: "clair-demo",
+    sessionUserId: "user-front-desk",
+    gateway: createLegacyReceptionViewPermissionGateway(calls),
+  });
+
+  const result = await readReceptionDayCalendar({
+    actorUserId: "user-front-desk",
+    date: "2026-05-01",
+    workspaceId: "clair-demo",
+    permissionAdapter,
+    gateway: createMockReceptionCalendarReadGateway({
+      records: [{ appointment, encounter, queueEntry }],
+    }),
+  });
+
+  expect(calls).toEqual([
+    "memberships:clair-demo:user-front-desk",
+    "users:user-front-desk",
+    "policies:clair-demo",
+    "permissionRoles:clair-demo:membership-front-desk",
+    "jobPositions:clair-demo:membership-front-desk",
+  ]);
+  expect(result).toMatchObject({
+    ok: true,
+    status: 200,
+    enforcedBy: "reception-calendar-read",
+    records: [
+      {
+        appointment: { id: appointment.id },
+        encounter: { id: encounter.id },
+        queueEntry: { id: queueEntry.id },
+      },
+    ],
   });
 });
 
@@ -280,6 +324,9 @@ test("reception calendar read route stays server-owned and avoids secret-shaped 
   expect(routeSource).toContain("resolveRoleUpdateActorIdentity");
   expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
   expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
+  expect(routeSource.indexOf("loadWorkspacePermissionAdapterFromDb")).toBeLessThan(
+    routeSource.indexOf("readReceptionDayCalendar")
+  );
   expect(serverSource).toContain('import "server-only"');
   expect(`${routeSource}\n${serverSource}`).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
 });
@@ -313,4 +360,48 @@ test("reception day calendar reader migration keeps appointment and walk-in rows
 
 async function expectJson(response: { json(): Promise<unknown> }, expected: Record<string, unknown>) {
   await expect(response.json()).resolves.toMatchObject(expected);
+}
+
+function createLegacyReceptionViewPermissionGateway(calls: string[]): WorkspacePermissionDbGateway {
+  return {
+    async listMemberships(workspaceId, userId) {
+      calls.push(`memberships:${workspaceId}:${userId}`);
+      return [
+        {
+          id: "membership-front-desk",
+          workspace_id: workspaceId,
+          user_id: userId,
+          roles: ["front_desk"],
+          status: "active",
+        },
+      ];
+    },
+    async listUsers(userIds) {
+      calls.push(`users:${userIds.join(",")}`);
+      return userIds.map((id) => ({
+        id,
+        status: "active",
+        display_name: "Front Desk",
+      }));
+    },
+    async listPermissionPolicies(workspaceId) {
+      calls.push(`policies:${workspaceId}`);
+      return [
+        {
+          workspace_id: workspaceId,
+          scope: "role",
+          target_role: "front_desk",
+          permissions: { allowed: ["reception:view"] },
+        },
+      ];
+    },
+    async listPermissionRoleAssignments(workspaceId, membershipIds) {
+      calls.push(`permissionRoles:${workspaceId}:${membershipIds.join(",")}`);
+      return [];
+    },
+    async listJobPositionAssignments(workspaceId, membershipIds) {
+      calls.push(`jobPositions:${workspaceId}:${membershipIds.join(",")}`);
+      return [];
+    },
+  };
 }

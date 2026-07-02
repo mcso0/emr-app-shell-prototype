@@ -9,19 +9,31 @@ import type {
 
 type SupabaseQueryResult<Row> = PromiseLike<{
   data: Row[] | null;
-  error: { message?: string } | null;
+  error: SupabaseReadError | null;
 }>;
 
 type SupabaseQueryBuilder<Row> = {
   eq(column: string, value: string): SupabaseQueryBuilder<Row>;
   in(column: string, values: string[]): SupabaseQueryBuilder<Row>;
   select(columns: string): SupabaseQueryBuilder<Row>;
-  then<TResult1 = { data: Row[] | null; error: { message?: string } | null }, TResult2 = never>(
+  then<TResult1 = { data: Row[] | null; error: SupabaseReadError | null }, TResult2 = never>(
     onfulfilled?:
-      | ((value: { data: Row[] | null; error: { message?: string } | null }) => TResult1 | PromiseLike<TResult1>)
+      | ((value: { data: Row[] | null; error: SupabaseReadError | null }) => TResult1 | PromiseLike<TResult1>)
       | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): PromiseLike<TResult1 | TResult2>;
+};
+
+type SupabaseReadError = {
+  readonly code?: string;
+  readonly message?: string;
+  readonly details?: string;
+  readonly hint?: string;
+};
+
+type AdditiveAssignmentSchema = {
+  readonly assignmentTable: string;
+  readonly embeddedRelation: string;
 };
 
 type SupabasePermissionRoleAssignmentRow = {
@@ -92,14 +104,18 @@ export function createSupabaseWorkspacePermissionGateway(
     async listPermissionRoleAssignments(workspaceId, membershipIds) {
       if (membershipIds.length === 0) return [];
 
-      const rows = await selectRows(
+      const rows = await selectOptionalAdditiveAssignmentRows(
         client
           .from("workspace_membership_permission_role_assignments")
           .select(
             "workspace_id, membership_id, permission_role_id, workspace_permission_roles(role_key, label, role_type, permissions)"
           )
           .eq("workspace_id", workspaceId)
-          .in("membership_id", membershipIds)
+          .in("membership_id", membershipIds),
+        {
+          assignmentTable: "workspace_membership_permission_role_assignments",
+          embeddedRelation: "workspace_permission_roles",
+        }
       );
 
       return rows.map(mapPermissionRoleAssignment).filter(isDbRoleAssignmentRow);
@@ -107,14 +123,18 @@ export function createSupabaseWorkspacePermissionGateway(
     async listJobPositionAssignments(workspaceId, membershipIds) {
       if (membershipIds.length === 0) return [];
 
-      const rows = await selectRows(
+      const rows = await selectOptionalAdditiveAssignmentRows(
         client
           .from("workspace_membership_job_position_assignments")
           .select(
             "workspace_id, membership_id, job_position_id, workspace_job_positions(position_key, label)"
           )
           .eq("workspace_id", workspaceId)
-          .in("membership_id", membershipIds)
+          .in("membership_id", membershipIds),
+        {
+          assignmentTable: "workspace_membership_job_position_assignments",
+          embeddedRelation: "workspace_job_positions",
+        }
       );
 
       return rows.map(mapJobPositionAssignment).filter(isDbJobPositionAssignmentRow);
@@ -126,10 +146,61 @@ async function selectRows<Row>(query: SupabaseQueryResult<Row>) {
   const { data, error } = await query;
 
   if (error) {
-    throw new Error(error.message ?? "supabase_permission_gateway_read_failed");
+    throwSupabaseReadError(error);
   }
 
   return data ?? [];
+}
+
+async function selectOptionalAdditiveAssignmentRows<Row>(
+  query: SupabaseQueryResult<Row>,
+  schema: AdditiveAssignmentSchema
+) {
+  const { data, error } = await query;
+
+  if (!error) {
+    return data ?? [];
+  }
+
+  if (isMissingAdditiveAssignmentSchemaError(error, schema)) {
+    return [];
+  }
+
+  throwSupabaseReadError(error);
+}
+
+function isMissingAdditiveAssignmentSchemaError(
+  error: SupabaseReadError,
+  schema: AdditiveAssignmentSchema
+) {
+  const errorText = [error.code, error.message, error.details, error.hint]
+    .filter(isNonEmptyString)
+    .join("\n")
+    .toLowerCase();
+  const assignmentTable = schema.assignmentTable.toLowerCase();
+  const embeddedRelation = schema.embeddedRelation.toLowerCase();
+  const mentionsTargetSchema =
+    errorText.includes(assignmentTable) || errorText.includes(embeddedRelation);
+  const hasMissingSchemaCode =
+    error.code === undefined ||
+    error.code === "PGRST200" ||
+    error.code === "PGRST205" ||
+    error.code === "42P01";
+  const hasMissingSchemaText =
+    errorText.includes("schema cache") ||
+    errorText.includes("could not find the table") ||
+    errorText.includes("could not find a relationship") ||
+    errorText.includes("does not exist");
+
+  return mentionsTargetSchema && hasMissingSchemaCode && hasMissingSchemaText;
+}
+
+function isNonEmptyString(value: string | undefined): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function throwSupabaseReadError(error: SupabaseReadError): never {
+  throw new Error(error.message ?? "supabase_permission_gateway_read_failed");
 }
 
 function mapPermissionRoleAssignment(

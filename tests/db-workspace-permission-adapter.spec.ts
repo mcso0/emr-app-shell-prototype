@@ -351,3 +351,96 @@ test("Supabase workspace permission gateway reads scoped membership, users, poli
     "workspace_membership_job_position_assignments:in:membership_id=membership-live"
   );
 });
+
+test("Supabase workspace permission gateway treats missing additive assignment schema as empty", async () => {
+  const client = createSupabaseErrorClient({
+    workspace_membership_permission_role_assignments: {
+      code: "PGRST205",
+      message:
+        "Could not find the table 'public.workspace_membership_permission_role_assignments' in the schema cache",
+    },
+    workspace_membership_job_position_assignments: {
+      code: "PGRST200",
+      message:
+        "Could not find a relationship between 'workspace_membership_job_position_assignments' and 'workspace_job_positions' in the schema cache",
+      details: "Searched for a foreign key relationship in the schema cache",
+    },
+  });
+  const gateway = createSupabaseWorkspacePermissionGateway(client);
+
+  await expect(
+    gateway.listPermissionRoleAssignments("clair-demo", ["membership-live"])
+  ).resolves.toEqual([]);
+  await expect(
+    gateway.listJobPositionAssignments("clair-demo", ["membership-live"])
+  ).resolves.toEqual([]);
+});
+
+test("Supabase workspace permission gateway keeps generic additive assignment errors fail-closed", async () => {
+  const client = createSupabaseErrorClient({
+    workspace_membership_permission_role_assignments: {
+      code: "57014",
+      message: "canceling statement due to statement timeout",
+    },
+    workspace_membership_job_position_assignments: {
+      message: "permission denied for table workspace_membership_job_position_assignments",
+    },
+  });
+  const gateway = createSupabaseWorkspacePermissionGateway(client);
+
+  await expect(
+    gateway.listPermissionRoleAssignments("clair-demo", ["membership-live"])
+  ).rejects.toThrow("canceling statement due to statement timeout");
+  await expect(
+    gateway.listJobPositionAssignments("clair-demo", ["membership-live"])
+  ).rejects.toThrow("permission denied for table workspace_membership_job_position_assignments");
+});
+
+type GatewayTable =
+  | "user_memberships"
+  | "users"
+  | "permission_policies"
+  | "workspace_membership_permission_role_assignments"
+  | "workspace_membership_job_position_assignments";
+
+type GatewaySupabaseError = {
+  readonly code?: string;
+  readonly message?: string;
+  readonly details?: string;
+  readonly hint?: string;
+};
+
+function createSupabaseErrorClient(
+  errors: Partial<Record<GatewayTable, GatewaySupabaseError>>
+): SupabaseWorkspacePermissionClient {
+  const client = {
+    from(table: GatewayTable) {
+      const builder = {
+        select() {
+          return builder;
+        },
+        eq() {
+          return builder;
+        },
+        in() {
+          return builder;
+        },
+        then<TResult1 = { data: never[] | null; error: GatewaySupabaseError | null }, TResult2 = never>(
+          onfulfilled?:
+            | ((value: { data: never[] | null; error: GatewaySupabaseError | null }) => TResult1 | PromiseLike<TResult1>)
+            | null,
+          onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+        ): PromiseLike<TResult1 | TResult2> {
+          const error = errors[table] ?? {
+            message: `unexpected table read: ${table}`,
+          };
+          return Promise.resolve({ data: null, error }).then(onfulfilled, onrejected);
+        },
+      };
+
+      return builder;
+    },
+  };
+
+  return client;
+}
