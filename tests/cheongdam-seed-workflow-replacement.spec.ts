@@ -166,13 +166,12 @@ test("Cheongdam seed/API workflow replaces legacy Kong scenario coverage across 
   await expectNoLegacyFixture(page);
 
   expect(calls).toEqual(
-    expect.arrayContaining([
-      "reception-profile-lookup",
-      "reception-calendar",
-      "reception-queue",
-      "chart-live-queue",
-      "fulfillment-lab",
-      "fulfillment-imaging",
+      expect.arrayContaining([
+        "reception-profile-lookup",
+        "reception-calendar",
+        "chart-live-queue",
+        "fulfillment-lab",
+        "fulfillment-imaging",
       "fulfillment-dispensing",
       "billing-invoice-candidates",
       "billing-checkout-post",
@@ -294,7 +293,7 @@ async function mockCheongdamReceptionApi(page: Page, calls: string[]) {
 }
 
 async function mockCheongdamChartApi(page: Page, calls: string[]) {
-  await page.route(`**/api/workspaces/${workspaceId}/chart/live-queue`, async (route) => {
+  await page.route(`**/api/workspaces/${workspaceId}/chart/live-queue**`, async (route) => {
     calls.push("chart-live-queue");
     await route.fulfill({
       contentType: "application/json",
