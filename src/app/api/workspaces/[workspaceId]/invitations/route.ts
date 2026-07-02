@@ -71,6 +71,8 @@ export async function POST(request: Request, { params }: WorkspaceInvitationRout
     input: {
       email: getBodyString(body.email),
       roles: Array.isArray(body.roles) ? body.roles.filter(isString) : [],
+      permissionRoleId: getOptionalBodyString(body.permissionRoleId),
+      jobPositionId: getOptionalBodyString(body.jobPositionId),
       title: getBodyString(body.title),
       department: getBodyString(body.department),
       expiresAt: typeof body.expiresAt === "string" ? body.expiresAt : null,
@@ -100,6 +102,10 @@ async function readJsonBody(request: Request): Promise<Record<string, unknown>> 
 
 function getBodyString(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function getOptionalBodyString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function isString(value: unknown): value is string {

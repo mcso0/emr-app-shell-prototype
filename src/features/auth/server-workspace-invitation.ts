@@ -25,6 +25,8 @@ import {
 export type WorkspaceInvitationRouteInput = {
   email: string;
   roles: string[];
+  permissionRoleId?: string | null;
+  jobPositionId?: string | null;
   title: string;
   department: string;
   expiresAt?: string | null;
@@ -34,6 +36,8 @@ export type WorkspaceInvitationWrite = {
   workspaceId: string;
   email: string;
   roles: SessionWorkspaceRole[];
+  permissionRoleId: string | null;
+  jobPositionId: string | null;
   title: string | null;
   department: string | null;
   invitedByUserId: string;
@@ -160,6 +164,8 @@ export async function createWorkspaceInvitation({
     workspaceId,
     email: invitation.email,
     roles: invitation.invitedRoles,
+    permissionRoleId: input.permissionRoleId ?? null,
+    jobPositionId: input.jobPositionId ?? null,
     title: invitation.title,
     department: invitation.department,
     invitedByUserId: actorUserId,
@@ -221,6 +227,8 @@ export function createSupabaseWorkspaceInvitationGateway(
         p_workspace_id: write.workspaceId,
         p_email: write.email,
         p_invited_roles: write.roles,
+        p_permission_role_id: write.permissionRoleId,
+        p_job_position_id: write.jobPositionId,
         p_title: write.title,
         p_department: write.department,
         p_expires_at: write.expiresAt,

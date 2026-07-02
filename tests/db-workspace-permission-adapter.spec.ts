@@ -58,6 +58,68 @@ test("DB-backed permission adapter maps membership and role policy rows into res
   expect(result.effectivePermissionIds).toEqual(["billing:issue", "chart:update"]);
 });
 
+test("DB-backed permission adapter prefers permission-role assignments over legacy roles", async () => {
+  const adapter = createWorkspacePermissionAdapterFromDbRows({
+    now: "2026-07-02T00:00:00.000Z",
+    users: [
+      {
+        id: "user-custom",
+        status: "active",
+        display_name: "Custom Member",
+      },
+    ],
+    memberships: [
+      {
+        id: "membership-custom",
+        workspace_id: "workspace-a",
+        user_id: "user-custom",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
+    permissionRoleAssignments: [
+      {
+        workspace_id: "workspace-a",
+        membership_id: "membership-custom",
+        permission_role_id: "role-readonly",
+        role_key: "chart_readonly",
+        label: "차트 열람",
+        role_type: "custom",
+        permissions: { allowed: ["chart:view"] },
+      },
+    ],
+    jobPositionAssignments: [
+      {
+        workspace_id: "workspace-a",
+        membership_id: "membership-custom",
+        job_position_id: "position-veterinarian",
+        position_key: "veterinarian",
+        label: "수의사",
+      },
+    ],
+  });
+
+  expect(adapter.memberships[0].permissionRole).toMatchObject({
+    key: "chart_readonly",
+    label: "차트 열람",
+    roleType: "custom",
+  });
+  expect(adapter.memberships[0].jobPosition).toMatchObject({
+    key: "veterinarian",
+    label: "수의사",
+  });
+
+  const denied = resolveWorkspacePermission(adapter, {
+    sessionUserId: "user-custom",
+    workspaceId: "workspace-a",
+    requiredPermission: "chart:update",
+  });
+
+  expect(denied.allowed).toBe(false);
+  expect(denied.denialReason).toBe("permission_missing");
+  expect(denied.effectivePermissionIds).toEqual(["chart:view"]);
+});
+
 test("DB-backed permission loader uses a narrow gateway and keeps server-only boundaries", async () => {
   const calls: string[] = [];
   const adapter = await loadWorkspacePermissionAdapterFromDb({
@@ -85,6 +147,32 @@ test("DB-backed permission loader uses a narrow gateway and keeps server-only bo
         calls.push(`policies:${workspaceId}`);
         return [];
       },
+      async listPermissionRoleAssignments(workspaceId, membershipIds) {
+        calls.push(`permissionRoles:${workspaceId}:${membershipIds.join(",")}`);
+        return [
+          {
+            workspace_id: workspaceId,
+            membership_id: "membership-live",
+            permission_role_id: "role-owner",
+            role_key: "owner",
+            label: "소유자",
+            role_type: "owner",
+            permissions: { allowed: ["*"] },
+          },
+        ];
+      },
+      async listJobPositionAssignments(workspaceId, membershipIds) {
+        calls.push(`jobPositions:${workspaceId}:${membershipIds.join(",")}`);
+        return [
+          {
+            workspace_id: workspaceId,
+            membership_id: "membership-live",
+            job_position_id: "position-director",
+            position_key: "hospital_director",
+            label: "병원장",
+          },
+        ];
+      },
     },
   });
 
@@ -92,11 +180,15 @@ test("DB-backed permission loader uses a narrow gateway and keeps server-only bo
     "memberships:workspace-a:user-live",
     "users:user-live",
     "policies:workspace-a",
+    "permissionRoles:workspace-a:membership-live",
+    "jobPositions:workspace-a:membership-live",
   ]);
   expect(adapter.memberships[0]).toMatchObject({
     workspaceId: "workspace-a",
     userId: "user-live",
     roles: ["hospital_admin"],
+    permissionRole: { key: "owner", label: "소유자", roleType: "owner" },
+    jobPosition: { key: "hospital_director", label: "병원장" },
   });
 
   const source = readFileSync(
@@ -113,10 +205,16 @@ test("DB-backed permission loader uses a narrow gateway and keeps server-only bo
   expect(supabaseGatewaySource).not.toMatch(/sessionStorage|localStorage|window\\./);
 });
 
-test("Supabase workspace permission gateway reads scoped membership, users, and policies", async () => {
+test("Supabase workspace permission gateway reads scoped membership, users, policies, and assignments", async () => {
   const calls: string[] = [];
   const client = {
-    from(table: "user_memberships" | "users" | "permission_policies") {
+    from(table:
+      | "user_memberships"
+      | "users"
+      | "permission_policies"
+      | "workspace_membership_permission_role_assignments"
+      | "workspace_membership_job_position_assignments"
+    ) {
       const filters: string[] = [];
       const builder = {
         select(columns: string) {
@@ -160,6 +258,46 @@ test("Supabase workspace permission gateway reads scoped membership, users, and 
             );
           }
 
+          if (table === "workspace_membership_permission_role_assignments") {
+            return Promise.resolve(
+              resolve({
+                data: [
+                  {
+                    workspace_id: "clair-demo",
+                    membership_id: "membership-live",
+                    permission_role_id: "role-owner",
+                    workspace_permission_roles: {
+                      role_key: "owner",
+                      label: "소유자",
+                      role_type: "owner",
+                      permissions: { allowed: ["*"] },
+                    },
+                  },
+                ],
+                error: null,
+              })
+            );
+          }
+
+          if (table === "workspace_membership_job_position_assignments") {
+            return Promise.resolve(
+              resolve({
+                data: [
+                  {
+                    workspace_id: "clair-demo",
+                    membership_id: "membership-live",
+                    job_position_id: "position-director",
+                    workspace_job_positions: {
+                      position_key: "hospital_director",
+                      label: "병원장",
+                    },
+                  },
+                ],
+                error: null,
+              })
+            );
+          }
+
           return Promise.resolve(
             resolve({
               data: [
@@ -186,9 +324,30 @@ test("Supabase workspace permission gateway reads scoped membership, users, and 
   await expect(gateway.listMemberships("clair-demo", "user-live")).resolves.toHaveLength(1);
   await expect(gateway.listUsers(["user-live"])).resolves.toHaveLength(1);
   await expect(gateway.listPermissionPolicies("clair-demo")).resolves.toHaveLength(1);
+  await expect(gateway.listPermissionRoleAssignments("clair-demo", ["membership-live"])).resolves.toEqual([
+    expect.objectContaining({
+      membership_id: "membership-live",
+      role_key: "owner",
+      label: "소유자",
+      role_type: "owner",
+    }),
+  ]);
+  await expect(gateway.listJobPositionAssignments("clair-demo", ["membership-live"])).resolves.toEqual([
+    expect.objectContaining({
+      membership_id: "membership-live",
+      position_key: "hospital_director",
+      label: "병원장",
+    }),
+  ]);
 
   expect(calls).toContain("user_memberships:eq:workspace_id=clair-demo");
   expect(calls).toContain("user_memberships:eq:user_id=user-live");
   expect(calls).toContain("users:in:id=user-live");
   expect(calls).toContain("permission_policies:eq:workspace_id=clair-demo");
+  expect(calls).toContain(
+    "workspace_membership_permission_role_assignments:in:membership_id=membership-live"
+  );
+  expect(calls).toContain(
+    "workspace_membership_job_position_assignments:in:membership_id=membership-live"
+  );
 });

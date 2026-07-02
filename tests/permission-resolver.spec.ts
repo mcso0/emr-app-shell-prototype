@@ -40,6 +40,111 @@ test("hospital admin receives full workspace permissions from active membership"
   );
 });
 
+test("permission role assignment is authoritative when present and legacy roles remain fallback", () => {
+  const adapter = createMockWorkspacePermissionAdapter({
+    now,
+    users: [
+      { id: "user-custom", status: "active", displayName: "김하늘" },
+      { id: "user-legacy", status: "active", displayName: "이도윤" },
+    ],
+    memberships: [
+      {
+        id: "membership-custom",
+        workspaceId: "workspace-a",
+        userId: "user-custom",
+        roles: ["vet"],
+        permissionRole: {
+          id: "role-chart-readonly",
+          key: "chart_readonly",
+          label: "차트 열람",
+          roleType: "custom",
+          permissionIds: ["chart:view"],
+        },
+        jobPosition: {
+          id: "position-veterinarian",
+          key: "veterinarian",
+          label: "수의사",
+        },
+        status: "active",
+      },
+      {
+        id: "membership-legacy",
+        workspaceId: "workspace-a",
+        userId: "user-legacy",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
+  });
+
+  const customView = resolveWorkspacePermission(adapter, {
+    sessionUserId: "user-custom",
+    workspaceId: "workspace-a",
+    requiredPermission: "chart:view",
+  });
+  const customUpdate = resolveWorkspacePermission(adapter, {
+    sessionUserId: "user-custom",
+    workspaceId: "workspace-a",
+    requiredPermission: "chart:update",
+  });
+  const legacyUpdate = resolveWorkspacePermission(adapter, {
+    sessionUserId: "user-legacy",
+    workspaceId: "workspace-a",
+    requiredPermission: "chart:update",
+  });
+
+  expect(customView.allowed).toBe(true);
+  expect(customView.assignedPermissionRole).toMatchObject({
+    key: "chart_readonly",
+    label: "차트 열람",
+    roleType: "custom",
+  });
+  expect(customView.jobPosition).toMatchObject({ key: "veterinarian", label: "수의사" });
+  expect(customView.assignedRoles).toEqual(["vet"]);
+  expect(customView.effectivePermissionIds).toEqual(["chart:view"]);
+  expect(customView.hasFullWorkspaceAccess).toBe(false);
+  expect(customView.hasOwnerWorkspaceAccess).toBe(false);
+
+  expect(customUpdate.allowed).toBe(false);
+  expect(customUpdate.denialReason).toBe("permission_missing");
+  expect(legacyUpdate.allowed).toBe(true);
+});
+
+test("owner permission role grants owner/full workspace flags without requiring legacy hospital_admin", () => {
+  const adapter = createMockWorkspacePermissionAdapter({
+    now,
+    users: [{ id: "user-owner", status: "active", displayName: "박서진" }],
+    memberships: [
+      {
+        id: "membership-owner",
+        workspaceId: "workspace-a",
+        userId: "user-owner",
+        roles: ["front_desk"],
+        permissionRole: {
+          id: "role-owner",
+          key: "owner",
+          label: "소유자",
+          roleType: "owner",
+          permissionIds: ["*"],
+        },
+        status: "active",
+      },
+    ],
+  });
+
+  const result = resolveWorkspacePermission(adapter, {
+    sessionUserId: "user-owner",
+    workspaceId: "workspace-a",
+    requiredPermission: "role_permission:manage",
+  });
+
+  expect(result.allowed).toBe(true);
+  expect(result.assignedPermissionRole).toMatchObject({ key: "owner", label: "소유자" });
+  expect(result.hasFullWorkspaceAccess).toBe(true);
+  expect(result.hasOwnerWorkspaceAccess).toBe(true);
+  expect(result.effectivePermissionIds).toEqual(expect.arrayContaining(["role_permission:manage"]));
+});
+
 test("multi-role membership grants additive permissions without admin escalation", () => {
   const adapter = createMockWorkspacePermissionAdapter({
     now,
