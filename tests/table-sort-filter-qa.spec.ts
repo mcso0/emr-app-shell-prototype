@@ -100,21 +100,36 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     const orderArea = page.locator("section").filter({
       has: page.getByRole("tablist", { name: "처방/오더 분류" }),
     }).last();
+    const chartOrderRows = orderArea.locator('[data-testid^="chart-order-row-"]');
+    const chartOrderEmptyState = orderArea.locator(
+      'section[data-kind="no-filter-results"][data-surface="table"]',
+    );
+    const chartOrderLoadingState = orderArea.getByText("오더 정보를 불러오는 중", {
+      exact: true,
+    });
     await orderArea.getByRole("tab", { name: /임상/ }).click();
+    await expect(chartOrderLoadingState).toHaveCount(0, { timeout: 15_000 });
+    await expect(chartOrderRows.first()).toBeVisible();
     await orderArea.getByRole("button", { name: "오더 필터 설정" }).click();
     let popover = page.locator('[data-slot="popover-content"]');
     await popover.getByRole("combobox", { name: "필터 필드" }).click();
     await page.getByRole("option", { name: "상태" }).click();
     await popover.getByRole("combobox", { name: "필터 값" }).first().click();
     await page.getByRole("option", { name: "요청", exact: true }).click();
-    await expect(orderArea).toContainText("분류나 필터를 바꾸면 오더가 다시 보입니다.");
+    await expect(
+      orderArea.getByRole("button", { name: "오더 필터 1개 설정" }),
+    ).toBeVisible();
+    await expect(chartOrderEmptyState).toBeVisible();
+    await expect(chartOrderEmptyState).toContainText(
+      "분류나 필터를 바꾸면 오더가 다시 보입니다.",
+    );
     await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
       (button as HTMLButtonElement).click();
     });
     await popover.getByRole("button", { name: "필터 닫기" }).evaluate((button) => {
       (button as HTMLButtonElement).click();
     });
-    await expect(orderArea.locator('[data-testid^="chart-order-row-"]').first()).toBeVisible();
+    await expect(chartOrderRows.first()).toBeVisible();
 
     await page.goto("/w/clair-demo/customer?modulePanel=open");
     const patientTable = page.getByTestId("customer-patient-table");
@@ -130,9 +145,17 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await page.getByRole("option", { name: "성별" }).click();
     await popover.getByRole("combobox", { name: "필터 값" }).nth(1).click();
     await page.getByRole("option", { name: "암컷", exact: true }).click();
-    await expect(patientTable).toContainText("조건에 맞는 동물 정보가 없습니다.");
-    await patientTable.getByRole("button", { name: "동물 필터 2개 설정" }).click();
+    const patientEmptyState = patientTable.locator(
+      'section[data-kind="no-filter-results"][data-surface="table"]'
+    );
+    await expect(patientEmptyState).toBeVisible();
+    await expect(patientEmptyState).toContainText("조건에 맞는 동물 정보가 없습니다");
+    await expect(patientEmptyState).toContainText("조건을 바꾸면 숨겨진 정보가 다시 보입니다.");
     popover = page.locator('[data-slot="popover-content"]').last();
+    if ((await popover.getByRole("button", { name: "초기화" }).count()) === 0) {
+      await patientTable.getByRole("button", { name: "동물 필터 2개 설정" }).click();
+      popover = page.locator('[data-slot="popover-content"]').last();
+    }
     await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
       (button as HTMLButtonElement).click();
     });
@@ -149,9 +172,17 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await popover.getByLabel("필터 필드").last().click();
     await page.getByRole("option", { name: "판매금액" }).click();
     await popover.getByRole("textbox", { name: "필터 값" }).fill("999999");
-    await expect(orderTable).toContainText("조건에 맞는 Order가 없습니다.");
-    await page.getByRole("button", { name: "오더 필터 1개 설정" }).click();
+    const orderEmptyState = orderTable.locator(
+      'section[data-kind="no-filter-results"][data-surface="table"]'
+    );
+    await expect(orderEmptyState).toBeVisible();
+    await expect(orderEmptyState).toContainText("조건에 맞는 Order가 없습니다");
+    await expect(orderEmptyState).toContainText("조건을 초기화하면 숨겨진 Order가 다시 보입니다.");
     popover = page.locator('[data-slot="popover-content"]').last();
+    if ((await popover.getByRole("button", { name: "초기화" }).count()) === 0) {
+      await page.getByRole("button", { name: "오더 필터 1개 설정" }).click();
+      popover = page.locator('[data-slot="popover-content"]').last();
+    }
     await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
       (button as HTMLButtonElement).click();
     });

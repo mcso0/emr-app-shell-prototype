@@ -48,6 +48,10 @@ import {
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
+import {
+  EmrEmptyState,
+  type EmrEmptyStateKind,
+} from "@/components/emr/empty-state";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
@@ -1780,12 +1784,14 @@ function getDatedQueueEmptyStateTitle({
 function LabResultInputSection({
   assigneeName,
   catalogStatus = "idle",
+  emptyRowsKind = "no-data",
   onCatalogRetry,
   onSave,
   result,
 }: {
   assigneeName: string;
   catalogStatus?: LabResultSheetCatalogStatus;
+  emptyRowsKind?: Extract<EmrEmptyStateKind, "no-data" | "upstream-pending">;
   onCatalogRetry?: () => void;
   onSave?: (rows: LabResultRow[]) => Promise<LabResultSaveOutcome>;
   result: LabResult;
@@ -2036,9 +2042,16 @@ function LabResultInputSection({
               <TableRow className="border-border bg-card hover:bg-card">
                 <TableCell
                   colSpan={6}
-                  className="h-24 text-center emr-text-dense font-medium text-muted-foreground"
+                  className="h-32 px-3 py-6"
                 >
-                  표시할 검사 결과가 없습니다.
+                  <div className="flex justify-center">
+                    <EmrEmptyState
+                      surface="table"
+                      kind={emptyRowsKind}
+                      title="검사 결과 항목이 없습니다"
+                      description="결과지 항목이 연결되면 입력할 수 있습니다."
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ) : null}
@@ -2898,6 +2911,7 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
           <LabResultInputSection
             assigneeName={assignment.assigneeName}
             catalogStatus={detail?.result.rows.length === 0 ? catalogRowsState.status : "idle"}
+            emptyRowsKind={fulfillmentWorkItem ? "upstream-pending" : "no-data"}
             result={displayDetail.result}
             onCatalogRetry={catalogRowsState.retry}
             onSave={saveResultRows}
