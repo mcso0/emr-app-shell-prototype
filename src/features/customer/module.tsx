@@ -6,6 +6,7 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
@@ -423,10 +424,15 @@ function CustomerDataTable<TRow extends { id: string }>({
   const someRowsSelected = visibleRows.some((row) => visibleRowSelection.has(row.id)) && !allRowsSelected;
   const visibleCountLabel = activeFilterCount > 0 ? `${visibleRows.length}/${rows.length}건` : `${countLabel}건`;
   const scopeLabel = query || activeFilterCount > 0 ? `표시 ${title}` : `전체 ${title}`;
-  const emptyMessage =
-    rows.length > 0 && visibleRows.length === 0
-      ? `조건에 맞는 ${title} 정보가 없습니다.`
-      : emptyLabel;
+  const hasFilterHiddenRows = rows.length > 0 && visibleRows.length === 0;
+  const emptyStateKind = hasFilterHiddenRows ? "no-filter-results" : "no-data";
+  const emptyStatePriority = hasFilterHiddenRows ? "local-recovery" : "supporting";
+  const emptyStateTitle = hasFilterHiddenRows
+    ? `조건에 맞는 ${title} 정보가 없습니다`
+    : emptyLabel.replace(/\.$/, "");
+  const emptyStateDescription = hasFilterHiddenRows
+    ? "조건을 바꾸면 숨겨진 정보가 다시 보입니다."
+    : "등록되면 이 표에 표시됩니다.";
 
   const toggleAllRows = () => {
     setRowSelection((current) => {
@@ -694,8 +700,16 @@ function CustomerDataTable<TRow extends { id: string }>({
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={visibleColumns.length + 2} className="h-28 text-center text-muted-foreground">
-                {emptyMessage}
+              <TableCell colSpan={visibleColumns.length + 2} className="h-36">
+                <div className="flex justify-center px-4 py-6">
+                  <EmrEmptyState
+                    kind={emptyStateKind}
+                    priority={emptyStatePriority}
+                    surface="table"
+                    title={emptyStateTitle}
+                    description={emptyStateDescription}
+                  />
+                </div>
               </TableCell>
             </TableRow>
           )}

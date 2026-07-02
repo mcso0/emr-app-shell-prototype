@@ -7,6 +7,7 @@ import {
   CdsActionsCopyIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import {
   EmrModuleListSidePanel,
   EmrModuleListSidePanelBadge,
@@ -968,6 +969,15 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const selectedVisibleCount = visibleOrderIds.filter((id) => selectedOrderIds.includes(id)).length;
   const allVisibleSelected = visibleOrderIds.length > 0 && selectedVisibleCount === visibleOrderIds.length;
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+  const hasCatalogRows = orders.length > 0;
+  const orderEmptyStateKind = hasCatalogRows ? "no-filter-results" : "no-data";
+  const orderEmptyStatePriority = hasCatalogRows ? "local-recovery" : "supporting";
+  const orderEmptyStateTitle = hasCatalogRows
+    ? "조건에 맞는 Order가 없습니다"
+    : "등록된 Order가 없습니다";
+  const orderEmptyStateDescription = hasCatalogRows
+    ? "조건을 초기화하면 숨겨진 Order가 다시 보입니다."
+    : "Order가 등록되면 이 표에 표시됩니다.";
   const handleOrderSort = (key: HospitalOrderTableSortKey) => {
     setOrderSortState((current) => {
       if (current?.key !== key) return { direction: "asc", key };
@@ -1358,8 +1368,16 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
               }) : null}
               {catalogReadStatus !== "loading" && visibleOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
-                    조건에 맞는 Order가 없습니다.
+                  <TableCell colSpan={9} className="h-36">
+                    <div className="flex justify-center px-4 py-6">
+                      <EmrEmptyState
+                        kind={orderEmptyStateKind}
+                        priority={orderEmptyStatePriority}
+                        surface="table"
+                        title={orderEmptyStateTitle}
+                        description={orderEmptyStateDescription}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : null}

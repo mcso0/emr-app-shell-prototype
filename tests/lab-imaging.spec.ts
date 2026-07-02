@@ -155,6 +155,98 @@ test("Cheongdam lab workspace renders live fulfillment rows without legacy resul
   await expect(page.getByText("모카").first()).toBeVisible();
 });
 
+test("lab workspace renders shared empty state for true-empty live result rows", async ({
+  page,
+}) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  const liveWorkItem = {
+    assignedToUserId: null,
+    createdAt: "2026-06-14T01:20:00.000Z",
+    encounterId: "encounter-cheongdam-lab-empty",
+    id: "work-cheongdam-lab-empty",
+    orderId: "order-cheongdam-lab-empty",
+    queueType: "lab",
+    requestedByUserId: "user-vet",
+    sourceSnapshot: {
+      detail: { breed: "푸들", age: "3세" },
+      guardianName: "정보호",
+      instruction: "결과지 연결 대기",
+      orderDisplayName: "CBC 검사",
+      patientName: "모카",
+      requestingVetName: "김민준",
+      serviceItemId: "svc-live-empty-cbc",
+    },
+    status: "requested",
+    updatedAt: "2026-06-14T01:20:00.000Z",
+    workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+  };
+  let catalogRequestCount = 0;
+
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items**`,
+    async (route) => {
+      const url = new URL(route.request().url());
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "fulfillment-work-item-persistence",
+          workItems: url.searchParams.get("queueType") === "lab" ? [liveWorkItem] : [],
+        }),
+      });
+    }
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab-imaging/result-sheet-catalog?*`,
+    async (route) => {
+      catalogRequestCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          catalogItemId: "catalog-cheongdam-empty-cbc",
+          enforcedBy: "lab-result-sheet-catalog-read",
+          items: [],
+        }),
+      });
+    }
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=closed&labResultId=live-lab-${liveWorkItem.id}`
+  );
+
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
+  await expect(page.getByText("모카").first()).toBeVisible();
+  await expect(page.getByTestId("lab-result-catalog-status")).toContainText(
+    "연결된 결과지 항목이 없습니다.",
+  );
+  await expect(page.getByTestId("lab-result-catalog-status")).not.toContainText(
+    /권한|불러오지 못했습니다/,
+  );
+  await expect(page.getByTestId("lab-result-catalog-retry-button")).toHaveCount(0);
+  expect(catalogRequestCount).toBeGreaterThan(0);
+
+  const resultInputTable = page
+    .locator('[data-slot="lab-result-scroll-area"] table')
+    .filter({ has: page.getByRole("columnheader", { name: "결과값" }) });
+  await expect(resultInputTable).toHaveCount(1);
+  const emptyState = resultInputTable.locator('tbody section[data-surface="table"]');
+  await expect(emptyState).toHaveAttribute("data-kind", "upstream-pending");
+  await expect(emptyState).toContainText("검사 결과 항목이 없습니다");
+  await expect(emptyState).toContainText("결과지 항목이 연결되면 입력할 수 있습니다.");
+  await expect(page.getByText("표시할 검사 결과가 없습니다.")).toHaveCount(0);
+  await emptyState.screenshot({
+    path: ".omo/evidence/empty-state-screen-adoption/browser/t4-lab-true-empty.png",
+  });
+});
+
 test("lab workspace shows equipment receipts in the right panel", async ({ page }) => {
   await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed&right=open");
 

@@ -126,11 +126,11 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 | Shared order queues | `src/components/emr/order-queue-side-panel.tsx`, `src/features/lab-imaging/module.tsx`, `src/features/billing/module.tsx` | `조건에 맞는 ... 업무가 없습니다` or `... 업무가 없습니다` through queue wrappers | Keep existing queue wrapper; use future compact variant only after visual QA. |
 | Chart content body | `src/features/chart/module.tsx` `EmptyChartState` | `EmrEmptyState` content pilot for selected patient absence in the main content area | Adopted as the first content-body pilot on 2026-07-01. It stays passive because queue selection is the next step. If queue is also empty in a future flow, content should own any source-workflow CTA. |
 | Chart order table | `src/features/chart/module.tsx` order table empty row | `EmrEmptyState` table pilot for filter/category-empty order rows | Adopted as the first table-body pilot on 2026-07-01. It keeps local recovery copy and no CTA until a table-local reset action is wired. |
-| Customer tables | `src/features/customer/module.tsx` `CustomerDataTable` | `동물 정보가 없습니다`, `보호자 정보가 없습니다`, filtered empty copy | Good table pilot candidate because the table already centralizes empty copy. |
-| Hospital admin tables | `src/features/hospital-admin/module.tsx` | Order catalog and audit log empty rows | Adopt later; table density and loading/permission states should be separated first. |
+| Customer tables | `src/features/customer/module.tsx` `CustomerDataTable` | `EmrEmptyState` table surface for no-data and filter-empty rows | Adopted as a table-body follow-up after the chart pilot. Search/filter/reset behavior remains owned by `CustomerDataTable`; drawer/profile behavior is unchanged. |
+| Hospital admin tables | `src/features/hospital-admin/module.tsx` | Order catalog uses `EmrEmptyState` table surface for no-data and filter/search-empty rows; audit log keeps its existing local empty row | Order catalog adopted as a table-body follow-up after the chart pilot. Audit log remains a later surface because it has a different review context. |
 | Home and notification widgets | `src/features/home/components/*`, `src/features/notifications/global-notification-drawer.tsx` | Small dashed-card or one-line empty messages | Adopt only when repeated widget structure needs icon/copy/action. Plain text may remain. |
 | Reception profile drawer | `src/features/reception/profile-drawer.tsx` | Not-found, no linked item, no history, and permission-like copy | Do not bulk replace. Classify each case as drawer empty, info box, inline alert, or field/toast feedback first. |
-| Lab/imaging detail content | `src/features/lab-imaging/module.tsx` | Linked result missing, preview missing, permission and save states | Use `EmrInlineAlert` for permission/save failure. Use `EmrEmptyState` only for true empty content. |
+| Lab/imaging detail content | `src/features/lab-imaging/module.tsx` | Lab result input table uses `EmrEmptyState` for true-empty result rows; linked result, preview, permission, save, and retry states remain separate | True-empty lab result rows adopted as a table-body follow-up. Permission/save failure and retry states remain `EmrInlineAlert` or feature-local recovery UI. |
 
 ## Initial Implementation Order
 
@@ -145,6 +145,13 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 - `src/features/chart/module.tsx` `EmptyChartState` now uses `EmrEmptyState` with `surface="content"` and `kind="no-scope-result"`.
 - `src/features/chart/module.tsx` order table no-result row now uses `EmrEmptyState` with `surface="table"` and `kind="no-filter-results"`.
 - Queue side panels were intentionally left on the existing compact queue placeholder contract.
+
+## 2026-07-02 Table Surface Adoption
+
+- `src/features/customer/module.tsx` `CustomerDataTable` now uses `EmrEmptyState` with `surface="table"` for no-data and filter-empty animal/guardian table rows.
+- `src/features/hospital-admin/module.tsx` order catalog empty row now uses `EmrEmptyState` with `surface="table"` for catalog no-data and filter/search-empty results.
+- `src/features/lab-imaging/module.tsx` `LabResultInputSection` now uses `EmrEmptyState` with `surface="table"` for true-empty lab result rows. Live fulfillment empty rows use `kind="upstream-pending"`; non-live true-empty rows use `kind="no-data"`.
+- Hospital Admin audit-log empty rows, shared queue panels, billing queue/content, home widgets, reception profile drawer states, permission/error/retry/loading/save states, and imaging fallback states were intentionally left unchanged.
 
 ## Implementation Acceptance Criteria
 
