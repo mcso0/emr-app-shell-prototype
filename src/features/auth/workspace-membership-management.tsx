@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CdsPeopleUserPlusIcon } from "@/components/cds-icons/people-and-places";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Field,
@@ -17,6 +18,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -47,7 +56,6 @@ import {
   validateWorkspaceInvitationInput,
   type SessionWorkspaceInvitation,
   type SessionWorkspaceMembership,
-  type SessionWorkspaceRole,
   type SessionWorkspacesState,
   type WorkspaceInvitationFieldErrors,
   deactivateSessionWorkspaceMembership,
@@ -139,6 +147,44 @@ function getRowJobPositionKey(row: MembershipRow) {
   return "front_desk";
 }
 
+function getMembershipDisplayName(membership: SessionWorkspaceMembership) {
+  return membership.displayName || membership.email || membership.userSessionId;
+}
+
+function getMembershipPermissionRoleKey(membership: SessionWorkspaceMembership) {
+  if (membership.permissionRoleKey) return membership.permissionRoleKey;
+  return membership.roles.includes("hospital_admin") ? "owner" : "general";
+}
+
+function getMembershipJobPositionKey(membership: SessionWorkspaceMembership) {
+  if (membership.jobPositionKey) return membership.jobPositionKey;
+  if (membership.roles.includes("vet")) return "veterinarian";
+  if (membership.roles.includes("technician")) return "technician";
+  if (membership.roles.includes("hospital_admin")) return "hospital_director";
+  return "front_desk";
+}
+
+function formatMembershipDate(value: string | null | undefined) {
+  return value ? value.slice(0, 10) : "-";
+}
+
+function MembershipDetailItem({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: string;
+}) {
+  return (
+    <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2">
+      <dt className="text-[12px] leading-4 text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 break-words text-[13px] font-medium leading-5 text-[var(--emr-text-primary)]">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
 export function WorkspaceMembershipManagement({
   workspaceId,
 }: WorkspaceMembershipManagementProps) {
@@ -148,9 +194,13 @@ export function WorkspaceMembershipManagement({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [statusReadState, setStatusReadState] =
     useState<"idle" | "loading" | "error">("idle");
+  const [inviteSheetOpen, setInviteSheetOpen] = useState(false);
   const [submittingInvitation, setSubmittingInvitation] = useState(false);
   const [selectedPermissionRoleKey, setSelectedPermissionRoleKey] = useState("general");
   const [selectedJobPositionKey, setSelectedJobPositionKey] = useState("front_desk");
+  const [selectedMembership, setSelectedMembership] = useState<SessionWorkspaceMembership | null>(
+    null
+  );
   const [editingMembership, setEditingMembership] = useState<SessionWorkspaceMembership | null>(
     null
   );
@@ -338,6 +388,7 @@ export function WorkspaceMembershipManagement({
       setFieldErrors({});
       setSelectedPermissionRoleKey("general");
       setSelectedJobPositionKey("front_desk");
+      setInviteSheetOpen(false);
       form.reset();
     } catch {
       const invitation = createSessionWorkspaceInvitation(input, workspaceId, {
@@ -348,6 +399,7 @@ export function WorkspaceMembershipManagement({
       setFieldErrors({});
       setSelectedPermissionRoleKey("general");
       setSelectedJobPositionKey("front_desk");
+      setInviteSheetOpen(false);
       form.reset();
     } finally {
       setSubmittingInvitation(false);
@@ -368,7 +420,8 @@ export function WorkspaceMembershipManagement({
         setSubmitError("초대 재발송 권한 또는 서버 상태를 확인해 주세요.");
         return;
       }
-    } catch {
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
       // Mock fallback state still supports local demo operation.
     }
 
@@ -389,7 +442,8 @@ export function WorkspaceMembershipManagement({
         setSubmitError("초대 취소 권한 또는 서버 상태를 확인해 주세요.");
         return;
       }
-    } catch {
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
       // Mock fallback state still supports local demo operation.
     }
 
@@ -410,7 +464,8 @@ export function WorkspaceMembershipManagement({
         setSubmitError("초대 수락 시뮬레이션 상태를 확인해 주세요.");
         return;
       }
-    } catch {
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
       // Mock fallback state still supports local demo operation.
     }
 
@@ -636,8 +691,26 @@ export function WorkspaceMembershipManagement({
 
     updateState(result.state);
     setDeactivatingMembership(null);
+    setSelectedMembership(null);
     setDeactivationError(null);
   }
+
+  const selectedMembershipPermissionRoleKey = selectedMembership
+    ? getMembershipPermissionRoleKey(selectedMembership)
+    : "general";
+  const selectedMembershipJobPositionKey = selectedMembership
+    ? getMembershipJobPositionKey(selectedMembership)
+    : "front_desk";
+  const selectedMembershipPermissionRoleLabel = getSessionWorkspacePermissionRoleLabel(
+    selectedMembershipPermissionRoleKey,
+    state,
+    workspaceId
+  );
+  const selectedMembershipJobPositionLabel = getSessionWorkspaceJobPositionLabel(
+    selectedMembershipJobPositionKey,
+    state,
+    workspaceId
+  );
 
   if (!hydrated) {
     return (
@@ -658,40 +731,37 @@ export function WorkspaceMembershipManagement({
               확인합니다.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-[13px]">
-            <Badge variant="secondary">활성 {activeMembers.length}명</Badge>
-            <Badge variant="outline">대기 {pendingInvitations.length}건</Badge>
-            <Badge variant="outline">비활성 {inactiveMembers.length}명</Badge>
+          <div className="flex flex-wrap items-center justify-end gap-2 text-[13px]">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Badge variant="secondary">활성 {activeMembers.length}명</Badge>
+              <Badge variant="outline">대기 {pendingInvitations.length}건</Badge>
+              <Badge variant="outline">비활성 {inactiveMembers.length}명</Badge>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!canManageMembers}
+              onClick={() => setInviteSheetOpen(true)}
+            >
+              <CdsPeopleUserPlusIcon data-icon="inline-start" aria-hidden="true" />
+              직원 초대
+            </Button>
           </div>
         </div>
       </section>
 
-      <section className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:overflow-hidden">
-        <form
-          className="min-h-0 shrink-0 border-b bg-card p-4 lg:shrink lg:overflow-y-auto lg:border-b-0 lg:border-r"
-          onSubmit={handleSubmit}
-        >
-          <FieldGroup>
-            <div>
-              <h2 className="text-[15px] font-semibold">직원 초대</h2>
-              <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
-                실제 이메일 발송 없이 초대 상태만 저장합니다.
+      <section className="min-h-0 flex-1 overflow-hidden">
+        <ScrollArea className="h-full min-h-0 bg-[var(--emr-surface-workspace)]">
+          <div className="p-4">
+            {statusReadState === "loading" ? (
+              <p className="mb-3 rounded-[var(--clair-radius-md)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[12px] text-muted-foreground">
+                서버 상태를 불러오는 중입니다.
               </p>
-            </div>
-
-            {!canManageMembers ? (
+            ) : statusReadState === "error" ? (
               <p
                 role="alert"
-                className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-warning-text)]"
+                className="mb-3 rounded-[var(--clair-radius-md)] border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-3 py-2 text-[12px] text-[var(--emr-status-warning-text)]"
               >
-                병원관리자만 직원을 초대하거나 멤버십을 변경할 수 있습니다.
-              </p>
-            ) : null}
-
-            {statusReadState === "loading" ? (
-              <p className="text-[12px] text-muted-foreground">서버 상태를 불러오는 중입니다.</p>
-            ) : statusReadState === "error" ? (
-              <p role="alert" className="text-[12px] text-[var(--emr-status-warning-text)]">
                 서버 상태를 읽지 못해 브라우저 임시 상태를 표시합니다.
               </p>
             ) : null}
@@ -699,284 +769,50 @@ export function WorkspaceMembershipManagement({
             {submitError ? (
               <p
                 role="alert"
-                className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]"
+                className="mb-3 rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]"
               >
                 {submitError}
               </p>
             ) : null}
 
-            <Field>
-              <FieldLabel htmlFor="workspace-invitation-email">초대 이메일</FieldLabel>
-              <Input
-                id="workspace-invitation-email"
-                name="email"
-                type="email"
-                placeholder="staff@hos.kr"
-                disabled={!canManageMembers || submittingInvitation}
-                aria-invalid={Boolean(fieldErrors.email)}
-              />
-              {fieldErrors.email ? (
-                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
-                  {fieldErrors.email}
-                </FieldError>
-              ) : null}
-            </Field>
-
-            <FieldSet className="gap-2">
-              <FieldLegend className="mb-0 text-[13px]">권한 역할</FieldLegend>
-              <FieldDescription className="hidden text-[12px] sm:block">
-                할 수 있는 작업 범위를 정합니다. 커스텀 역할은 아래에서 추가합니다.
-              </FieldDescription>
-              <RadioGroup
-                aria-label="권한 역할"
-                className="gap-2"
-                value={selectedPermissionRoleKey}
-                onValueChange={(value) => {
-                  setSelectedPermissionRoleKey(String(value));
-                  setFieldErrors((current) => ({ ...current, permissionRoleKey: undefined }));
-                }}
-              >
-                {permissionRoles.map((role) => (
-                  <label
-                    key={role.roleKey}
-                    className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
-                  >
-                    <Radio
-                      aria-label={role.label}
-                      value={role.roleKey}
-                      disabled={!canManageMembers || submittingInvitation}
-                    />
-                    <span className="grid gap-0.5">
-                      <span className="font-medium">{role.label}</span>
-                      <span className="hidden text-[12px] leading-4 text-muted-foreground sm:inline">
-                        {getSessionWorkspacePermissionRoleSummary(role.roleKey, state, workspaceId)}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </RadioGroup>
-              <p className="hidden text-[12px] leading-5 text-muted-foreground sm:block">
-                커스텀 역할
-                {customPermissionRoles.length === 0
-                  ? "은 아직 없습니다. 필요한 권한만 골라 추가할 수 있습니다."
-                  : ` ${customPermissionRoles.length}개를 사용할 수 있습니다.`}
-              </p>
-              {fieldErrors.permissionRoleKey || fieldErrors.roles ? (
-                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
-                  {fieldErrors.permissionRoleKey ?? fieldErrors.roles}
-                </FieldError>
-              ) : null}
-            </FieldSet>
-
-            <FieldSet className="gap-2">
-              <FieldLegend className="mb-0 text-[13px]">직무</FieldLegend>
-              <FieldDescription className="hidden text-[12px] sm:block">
-                병원 안에서의 직무입니다. 권한 판단에는 사용하지 않습니다.
-              </FieldDescription>
-              <RadioGroup
-                aria-label="직무"
-                className="grid grid-cols-2 gap-2"
-                value={selectedJobPositionKey}
-                onValueChange={(value) => {
-                  setSelectedJobPositionKey(String(value));
-                  setFieldErrors((current) => ({ ...current, jobPositionKey: undefined }));
-                }}
-              >
-                {jobPositions.map((position) => (
-                  <label
-                    key={position.positionKey}
-                    className="flex items-center gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
-                  >
-                    <Radio
-                      aria-label={position.label}
-                      value={position.positionKey}
-                      disabled={!canManageMembers || submittingInvitation}
-                    />
-                    {position.label}
-                  </label>
-                ))}
-              </RadioGroup>
-              {fieldErrors.jobPositionKey ? (
-                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
-                  {fieldErrors.jobPositionKey}
-                </FieldError>
-              ) : null}
-            </FieldSet>
-
-            <Field>
-              <FieldLabel htmlFor="workspace-invitation-title">직책</FieldLabel>
-              <Input
-                id="workspace-invitation-title"
-                name="title"
-                placeholder="진료팀장"
-                disabled={!canManageMembers || submittingInvitation}
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="workspace-invitation-department">부서</FieldLabel>
-              <Input
-                id="workspace-invitation-department"
-                name="department"
-                placeholder="진료팀"
-                disabled={!canManageMembers || submittingInvitation}
-              />
-            </Field>
-
-            <div className="grid gap-3 border-t border-[var(--emr-line-hairline)] pt-4">
-              <div>
-                <h3 className="text-[13px] font-semibold">권한 역할 설정</h3>
-                <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
-                  소유자 전용 권한은 커스텀 역할에서 선택할 수 없습니다.
-                </p>
-              </div>
-              <Field>
-                <FieldLabel htmlFor="workspace-custom-role-name">커스텀 역할 이름</FieldLabel>
-                <Input
-                  id="workspace-custom-role-name"
-                  value={customRoleName}
-                  placeholder="검사 보조"
-                  disabled={!canManageMembers || submittingInvitation}
-                  onChange={(event) => {
-                    setCustomRoleName(event.target.value);
-                    setCustomRoleError(null);
-                  }}
-                />
-              </Field>
-              <div className="grid gap-2">
-                {SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG.map((permission) => (
-                  <label
-                    key={permission.id}
-                    className="flex items-center gap-2 text-[13px] text-[var(--emr-text-primary)]"
-                  >
-                    <Checkbox
-                      aria-label={permission.label}
-                      checked={customRolePermissionIds.includes(permission.id)}
-                      disabled={!canManageMembers || submittingInvitation}
-                      onCheckedChange={(checked) =>
-                        handleCustomRolePermissionToggle(permission.id, Boolean(checked))
-                      }
-                    />
-                    {permission.label}
-                  </label>
-                ))}
-              </div>
-              {customRoleError ? (
-                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
-                  {customRoleError}
-                </FieldError>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={!canManageMembers || submittingInvitation}
-                  onClick={handleCustomRoleSubmit}
-                >
-                  커스텀 역할 저장
-                </Button>
-                {editingCustomRoleKey ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingCustomRoleKey(null);
-                      setCustomRoleName("");
-                      setCustomRolePermissionIds([]);
-                      setCustomRoleError(null);
-                    }}
-                  >
-                    편집 취소
-                  </Button>
-                ) : null}
-              </div>
-              {customPermissionRoles.length > 0 ? (
-                <div className="grid gap-1">
-                  {customPermissionRoles.map((role) => (
-                    <div
-                      key={role.roleKey}
-                      className="flex items-center justify-between gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] px-3 py-2 text-[12px]"
-                    >
-                      <span className="min-w-0 truncate">{role.label}</span>
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => handleCustomRoleEdit(role.roleKey)}
-                      >
-                        수정
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="grid gap-3 border-t border-[var(--emr-line-hairline)] pt-4">
-              <div>
-                <h3 className="text-[13px] font-semibold">직무 설정</h3>
-                <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
-                  기본 직무 외 병원별 직무를 추가합니다.
-                </p>
-              </div>
-              <Field>
-                <FieldLabel htmlFor="workspace-custom-job-position-name">
-                  커스텀 직무 이름
-                </FieldLabel>
-                <Input
-                  id="workspace-custom-job-position-name"
-                  value={customJobPositionName}
-                  placeholder="CS"
-                  disabled={!canManageMembers || submittingInvitation}
-                  onChange={(event) => {
-                    setCustomJobPositionName(event.target.value);
-                    setCustomJobPositionError(null);
-                  }}
-                />
-              </Field>
-              {customJobPositionError ? (
-                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
-                  {customJobPositionError}
-                </FieldError>
-              ) : null}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={!canManageMembers || submittingInvitation}
-                onClick={handleCustomJobPositionSubmit}
-              >
-                직무 추가
-              </Button>
-            </div>
-
-            <Button type="submit" disabled={!canManageMembers || submittingInvitation}>
-              {submittingInvitation ? "초대 저장 중" : "초대 만들기"}
-            </Button>
-          </FieldGroup>
-        </form>
-
-        <ScrollArea className="min-h-0 bg-[var(--emr-surface-workspace)]">
-          <div className="p-4">
-            <Table minWidth={660} className="table-fixed text-[13px]">
+            <Table minWidth={720} className="table-fixed text-[13px]">
               <TableHeader className="bg-[var(--emr-surface-muted)]">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[170px]">이메일</TableHead>
+                  <TableHead className="w-[190px]">이메일</TableHead>
                   <TableHead className="w-[80px]">권한 역할</TableHead>
                   <TableHead className="w-[80px]">직무</TableHead>
                   <TableHead className="w-[75px]">상태</TableHead>
-                  <TableHead className="w-[100px]">직책/부서</TableHead>
-                  <TableHead className="w-[155px] text-right">작업</TableHead>
+                  <TableHead className="w-[120px]">직책/부서</TableHead>
+                  <TableHead className="w-[175px] text-right">작업</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {workspaceRows.map((row) => {
                   const pending = row.rowType === "invitation" && row.status === "pending";
+                  const selectable = row.rowType === "member";
 
                   return (
-                    <TableRow key={`${row.rowType}-${row.id}`} className="bg-card">
+                    <TableRow
+                      key={`${row.rowType}-${row.id}`}
+                      aria-label={selectable ? `${getRowEmail(row)} 상세 보기` : undefined}
+                      className={
+                        selectable
+                          ? "cursor-pointer bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-[-2px]"
+                          : "bg-card"
+                      }
+                      data-state={selectedMembership?.id === row.id ? "selected" : undefined}
+                      tabIndex={selectable ? 0 : undefined}
+                      onClick={() => {
+                        if (row.rowType === "member") setSelectedMembership(row);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (row.rowType !== "member") return;
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        setSelectedMembership(row);
+                      }}
+                    >
                       <TableCell className="font-semibold">{getRowEmail(row)}</TableCell>
                       <TableCell>
                         {getSessionWorkspacePermissionRoleLabel(
@@ -1013,7 +849,10 @@ export function WorkspaceMembershipManagement({
                               size="xs"
                               variant="outline"
                               disabled={!canManageMembers}
-                              onClick={() => handleResend(row.id)}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleResend(row.id);
+                              }}
                             >
                               초대 재발송
                             </Button>
@@ -1022,7 +861,10 @@ export function WorkspaceMembershipManagement({
                               size="xs"
                               variant="outline"
                               disabled={!canManageMembers}
-                              onClick={() => handleAccept(row.id)}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleAccept(row.id);
+                              }}
                             >
                               수락 시뮬레이션
                             </Button>
@@ -1031,7 +873,10 @@ export function WorkspaceMembershipManagement({
                               size="xs"
                               variant="ghost"
                               disabled={!canManageMembers}
-                              onClick={() => handleCancel(row.id)}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleCancel(row.id);
+                              }}
                             >
                               초대 취소
                             </Button>
@@ -1042,22 +887,12 @@ export function WorkspaceMembershipManagement({
                               type="button"
                               size="xs"
                               variant="outline"
-                              disabled={!canManageMembers || row.status !== "active"}
-                              onClick={() => openRoleEditor(row)}
-                            >
-                              권한 수정
-                            </Button>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="ghost"
-                              disabled={!canManageMembers || row.status !== "active"}
-                              onClick={() => {
-                                setDeactivationError(null);
-                                setDeactivatingMembership(row);
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedMembership(row);
                               }}
                             >
-                              비활성화
+                              상세 보기
                             </Button>
                           </div>
                         ) : (
@@ -1079,6 +914,422 @@ export function WorkspaceMembershipManagement({
           </div>
         </ScrollArea>
       </section>
+
+      <Sheet open={inviteSheetOpen} onOpenChange={setInviteSheetOpen}>
+        <SheetContent className="w-[min(520px,calc(100vw-1rem))] gap-0 p-0 sm:max-w-[520px]">
+          <SheetHeader className="border-b border-[var(--emr-line-hairline)] px-5 py-4">
+            <SheetTitle className="text-[16px] leading-6">직원 초대</SheetTitle>
+            <SheetDescription className="text-[12px] leading-5">
+              실제 이메일 발송 없이 초대 상태만 저장합니다.
+            </SheetDescription>
+          </SheetHeader>
+          <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+            <ScrollArea className="min-h-0 flex-1">
+              <FieldGroup className="p-4">
+                {!canManageMembers ? (
+                  <p
+                    role="alert"
+                    className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-warning-text)]"
+                  >
+                    병원관리자만 직원을 초대하거나 멤버십을 변경할 수 있습니다.
+                  </p>
+                ) : null}
+
+                {submitError ? (
+                  <p
+                    role="alert"
+                    className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]"
+                  >
+                    {submitError}
+                  </p>
+                ) : null}
+
+                <Field>
+                  <FieldLabel htmlFor="workspace-invitation-email">초대 이메일</FieldLabel>
+                  <Input
+                    id="workspace-invitation-email"
+                    name="email"
+                    type="email"
+                    placeholder="staff@hos.kr"
+                    disabled={!canManageMembers || submittingInvitation}
+                    aria-invalid={Boolean(fieldErrors.email)}
+                  />
+                  {fieldErrors.email ? (
+                    <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
+                      {fieldErrors.email}
+                    </FieldError>
+                  ) : null}
+                </Field>
+
+                <FieldSet className="gap-2">
+                  <FieldLegend className="mb-0 text-[13px]">권한 역할</FieldLegend>
+                  <FieldDescription className="hidden text-[12px] sm:block">
+                    할 수 있는 작업 범위를 정합니다. 커스텀 역할은 아래에서 추가합니다.
+                  </FieldDescription>
+                  <RadioGroup
+                    aria-label="권한 역할"
+                    className="gap-2"
+                    value={selectedPermissionRoleKey}
+                    onValueChange={(value) => {
+                      setSelectedPermissionRoleKey(String(value));
+                      setFieldErrors((current) => ({ ...current, permissionRoleKey: undefined }));
+                    }}
+                  >
+                    {permissionRoles.map((role) => (
+                      <label
+                        key={role.roleKey}
+                        className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
+                      >
+                        <Radio
+                          aria-label={role.label}
+                          value={role.roleKey}
+                          disabled={!canManageMembers || submittingInvitation}
+                        />
+                        <span className="grid gap-0.5">
+                          <span className="font-medium">{role.label}</span>
+                          <span className="hidden text-[12px] leading-4 text-muted-foreground sm:inline">
+                            {getSessionWorkspacePermissionRoleSummary(role.roleKey, state, workspaceId)}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </RadioGroup>
+                  <p className="hidden text-[12px] leading-5 text-muted-foreground sm:block">
+                    커스텀 역할
+                    {customPermissionRoles.length === 0
+                      ? "은 아직 없습니다. 필요한 권한만 골라 추가할 수 있습니다."
+                      : ` ${customPermissionRoles.length}개를 사용할 수 있습니다.`}
+                  </p>
+                  {fieldErrors.permissionRoleKey || fieldErrors.roles ? (
+                    <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
+                      {fieldErrors.permissionRoleKey ?? fieldErrors.roles}
+                    </FieldError>
+                  ) : null}
+                </FieldSet>
+
+                <FieldSet className="gap-2">
+                  <FieldLegend className="mb-0 text-[13px]">직무</FieldLegend>
+                  <FieldDescription className="hidden text-[12px] sm:block">
+                    병원 안에서의 직무입니다. 권한 판단에는 사용하지 않습니다.
+                  </FieldDescription>
+                  <RadioGroup
+                    aria-label="직무"
+                    className="grid grid-cols-2 gap-2"
+                    value={selectedJobPositionKey}
+                    onValueChange={(value) => {
+                      setSelectedJobPositionKey(String(value));
+                      setFieldErrors((current) => ({ ...current, jobPositionKey: undefined }));
+                    }}
+                  >
+                    {jobPositions.map((position) => (
+                      <label
+                        key={position.positionKey}
+                        className="flex items-center gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
+                      >
+                        <Radio
+                          aria-label={position.label}
+                          value={position.positionKey}
+                          disabled={!canManageMembers || submittingInvitation}
+                        />
+                        {position.label}
+                      </label>
+                    ))}
+                  </RadioGroup>
+                  {fieldErrors.jobPositionKey ? (
+                    <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
+                      {fieldErrors.jobPositionKey}
+                    </FieldError>
+                  ) : null}
+                </FieldSet>
+
+                <Field>
+                  <FieldLabel htmlFor="workspace-invitation-title">직책</FieldLabel>
+                  <Input
+                    id="workspace-invitation-title"
+                    name="title"
+                    placeholder="진료팀장"
+                    disabled={!canManageMembers || submittingInvitation}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="workspace-invitation-department">부서</FieldLabel>
+                  <Input
+                    id="workspace-invitation-department"
+                    name="department"
+                    placeholder="진료팀"
+                    disabled={!canManageMembers || submittingInvitation}
+                  />
+                </Field>
+
+                <div className="grid gap-3 border-t border-[var(--emr-line-hairline)] pt-4">
+                  <div>
+                    <h3 className="text-[13px] font-semibold">권한 역할 설정</h3>
+                    <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
+                      소유자 전용 권한은 커스텀 역할에서 선택할 수 없습니다.
+                    </p>
+                  </div>
+                  <Field>
+                    <FieldLabel htmlFor="workspace-custom-role-name">커스텀 역할 이름</FieldLabel>
+                    <Input
+                      id="workspace-custom-role-name"
+                      value={customRoleName}
+                      placeholder="검사 보조"
+                      disabled={!canManageMembers || submittingInvitation}
+                      onChange={(event) => {
+                        setCustomRoleName(event.target.value);
+                        setCustomRoleError(null);
+                      }}
+                    />
+                  </Field>
+                  <div className="grid gap-2">
+                    {SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG.map((permission) => (
+                      <label
+                        key={permission.id}
+                        className="flex items-center gap-2 text-[13px] text-[var(--emr-text-primary)]"
+                      >
+                        <Checkbox
+                          aria-label={permission.label}
+                          checked={customRolePermissionIds.includes(permission.id)}
+                          disabled={!canManageMembers || submittingInvitation}
+                          onCheckedChange={(checked) =>
+                            handleCustomRolePermissionToggle(permission.id, Boolean(checked))
+                          }
+                        />
+                        {permission.label}
+                      </label>
+                    ))}
+                  </div>
+                  {customRoleError ? (
+                    <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
+                      {customRoleError}
+                    </FieldError>
+                  ) : null}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!canManageMembers || submittingInvitation}
+                      onClick={handleCustomRoleSubmit}
+                    >
+                      커스텀 역할 저장
+                    </Button>
+                    {editingCustomRoleKey ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingCustomRoleKey(null);
+                          setCustomRoleName("");
+                          setCustomRolePermissionIds([]);
+                          setCustomRoleError(null);
+                        }}
+                      >
+                        편집 취소
+                      </Button>
+                    ) : null}
+                  </div>
+                  {customPermissionRoles.length > 0 ? (
+                    <div className="grid gap-1">
+                      {customPermissionRoles.map((role) => (
+                        <div
+                          key={role.roleKey}
+                          className="flex items-center justify-between gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] px-3 py-2 text-[12px]"
+                        >
+                          <span className="min-w-0 truncate">{role.label}</span>
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => handleCustomRoleEdit(role.roleKey)}
+                          >
+                            수정
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-3 border-t border-[var(--emr-line-hairline)] pt-4">
+                  <div>
+                    <h3 className="text-[13px] font-semibold">직무 설정</h3>
+                    <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
+                      기본 직무 외 병원별 직무를 추가합니다.
+                    </p>
+                  </div>
+                  <Field>
+                    <FieldLabel htmlFor="workspace-custom-job-position-name">
+                      커스텀 직무 이름
+                    </FieldLabel>
+                    <Input
+                      id="workspace-custom-job-position-name"
+                      value={customJobPositionName}
+                      placeholder="CS"
+                      disabled={!canManageMembers || submittingInvitation}
+                      onChange={(event) => {
+                        setCustomJobPositionName(event.target.value);
+                        setCustomJobPositionError(null);
+                      }}
+                    />
+                  </Field>
+                  {customJobPositionError ? (
+                    <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
+                      {customJobPositionError}
+                    </FieldError>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!canManageMembers || submittingInvitation}
+                    onClick={handleCustomJobPositionSubmit}
+                  >
+                    직무 추가
+                  </Button>
+                </div>
+              </FieldGroup>
+            </ScrollArea>
+            <SheetFooter className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={submittingInvitation}
+                onClick={() => setInviteSheetOpen(false)}
+              >
+                닫기
+              </Button>
+              <Button type="submit" disabled={!canManageMembers || submittingInvitation}>
+                {submittingInvitation ? "초대 저장 중" : "초대 만들기"}
+              </Button>
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={Boolean(selectedMembership)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedMembership(null);
+        }}
+      >
+        <SheetContent className="w-[min(460px,calc(100vw-1rem))] gap-0 p-0 sm:max-w-[460px]">
+          <SheetHeader className="border-b border-[var(--emr-line-hairline)] px-5 py-4">
+            <SheetTitle className="text-[16px] leading-6">
+              {selectedMembership ? getMembershipDisplayName(selectedMembership) : "구성원 상세"}
+            </SheetTitle>
+            <SheetDescription className="text-[12px] leading-5">
+              기본 정보와 권한 역할을 확인합니다. 개인 프로필 정보는 본인 프로필에서 관리합니다.
+            </SheetDescription>
+          </SheetHeader>
+
+          {selectedMembership ? (
+            <>
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="grid gap-4 p-4">
+                  <section className="grid gap-2">
+                    <h3 className="text-[13px] font-semibold">기본 정보</h3>
+                    <dl className="grid gap-2">
+                      <MembershipDetailItem
+                        label="이름"
+                        value={getMembershipDisplayName(selectedMembership)}
+                      />
+                      <MembershipDetailItem
+                        label="이메일"
+                        value={selectedMembership.email ?? "-"}
+                      />
+                      <MembershipDetailItem
+                        label="사용자 ID"
+                        value={selectedMembership.userSessionId}
+                      />
+                      <MembershipDetailItem label="상태" value={selectedMembership.status} />
+                      <MembershipDetailItem label="직책" value={selectedMembership.title ?? "-"} />
+                      <MembershipDetailItem
+                        label="부서"
+                        value={selectedMembership.department ?? "-"}
+                      />
+                    </dl>
+                  </section>
+
+                  <section className="grid gap-2">
+                    <h3 className="text-[13px] font-semibold">권한 및 직무</h3>
+                    <dl className="grid gap-2">
+                      <MembershipDetailItem
+                        label="권한 역할"
+                        value={selectedMembershipPermissionRoleLabel}
+                      />
+                      <MembershipDetailItem
+                        label="권한 설명"
+                        value={getSessionWorkspacePermissionRoleSummary(
+                          selectedMembershipPermissionRoleKey,
+                          state,
+                          workspaceId
+                        )}
+                      />
+                      <MembershipDetailItem label="직무" value={selectedMembershipJobPositionLabel} />
+                    </dl>
+                  </section>
+
+                  <section className="grid gap-2">
+                    <h3 className="text-[13px] font-semibold">멤버십 이력</h3>
+                    <dl className="grid gap-2">
+                      <MembershipDetailItem
+                        label="생성일"
+                        value={formatMembershipDate(selectedMembership.createdAt)}
+                      />
+                      <MembershipDetailItem
+                        label="활성화일"
+                        value={formatMembershipDate(selectedMembership.activatedAt)}
+                      />
+                      <MembershipDetailItem
+                        label="비활성화일"
+                        value={formatMembershipDate(selectedMembership.deactivatedAt)}
+                      />
+                    </dl>
+                  </section>
+                </div>
+              </ScrollArea>
+
+              <SheetFooter className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 sm:flex-row sm:justify-end">
+                {!canManageMembers ? (
+                  <p className="text-[12px] leading-5 text-muted-foreground">
+                    일반 계정은 이 페이지에서 조회만 가능합니다. 본인 정보는 프로필에서 변경하세요.
+                  </p>
+                ) : selectedMembership.status !== "active" ? (
+                  <p className="text-[12px] leading-5 text-muted-foreground">
+                    비활성 구성원은 현재 화면에서 권한을 수정할 수 없습니다.
+                  </p>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedMembership(null);
+                        openRoleEditor(selectedMembership);
+                      }}
+                    >
+                      권한 수정
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setDeactivationError(null);
+                        setDeactivatingMembership(selectedMembership);
+                      }}
+                    >
+                      비활성화
+                    </Button>
+                  </>
+                )}
+              </SheetFooter>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
 
       <Dialog
         open={Boolean(editingMembership)}
