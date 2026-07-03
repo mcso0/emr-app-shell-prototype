@@ -343,10 +343,11 @@ test("chart consultation CTA moves from call to start before chart completion", 
     workspaceId,
     patientId: "patient-choco-call-flow",
     guardianId: "guardian-choi-dohyun",
+    appointmentId: "appointment-choco-call-flow",
     primaryVeterinarianId: "user-vet",
     encounterNo: "E-260625-0001",
     chiefComplaint: "보호자 요청 - 피부 가려움 재상담",
-    visitPurpose: "현장 접수",
+    visitPurpose: "피부 재진",
     receptionMemo: "최근 식욕 저하, 산책 후 발 핥음 증가",
     status: "waiting",
     checkedInAt: "2026-06-25T14:15:00+09:00",
@@ -516,13 +517,19 @@ test("chart consultation CTA moves from call to start before chart completion", 
   const lockedState = page.getByTestId("chart-start-locked-state");
   await expect(lockedState).toContainText("진료 시작 전입니다");
   await expect(lockedState).toContainText(
-    "초코를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다",
+    "초코 호출 후 차트와 오더 입력을 시작할 수 있습니다",
   );
   await expect(lockedState).toContainText("접수 정보");
   await expect(lockedState).toContainText("방문목적");
-  await expect(lockedState).toContainText("현장 접수");
+  await expect(lockedState).toContainText("피부 재진");
   await expect(lockedState).toContainText("예약 메모");
   await expect(lockedState).toContainText("보호자 요청 - 피부 가려움 재상담");
+  await expect(lockedState).toContainText("접수 유형");
+  await expect(lockedState).toContainText("예약");
+  await expect(lockedState).toContainText("접수 시각");
+  await expect(lockedState).toContainText("14:15 접수");
+  await expect(lockedState).toContainText("담당 수의사");
+  await expect(lockedState).toContainText("청담 원장");
   await expect(lockedState).toContainText("접수 메모");
   await expect(lockedState).toContainText("최근 식욕 저하, 산책 후 발 핥음 증가");
   await expect(lockedState).toContainText("주의사항");
@@ -1401,9 +1408,18 @@ test("chart queue selection changes the selected encounter", async ({
   const lockedState = page.getByTestId("chart-start-locked-state");
   await expect(lockedState).toContainText("진료 시작 전입니다");
   await expect(lockedState).toContainText(
-    "하루를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다",
+    "하루 호출 후 차트와 오더 입력을 시작할 수 있습니다",
   );
   await expect(lockedState).toContainText("접수 정보");
+  await expect(lockedState).toContainText("방문목적");
+  await expect(lockedState).toContainText("예방접종");
+  await expect(lockedState).not.toContainText("예약 메모");
+  await expect(lockedState).toContainText("접수 유형");
+  await expect(lockedState).toContainText("외래");
+  await expect(lockedState).toContainText("접수 시각");
+  await expect(lockedState).toContainText("16:05 접수");
+  await expect(lockedState).toContainText("담당 수의사");
+  await expect(lockedState).toContainText("이수지");
   await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
   await expect(page.getByText("기본 SOAP")).toHaveCount(0);
   expect(

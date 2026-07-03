@@ -5589,6 +5589,16 @@ function getChartPrecallReceptionMemo(bundle: ChartBundle) {
   return bundle.encounter.receptionMemo ?? "접수 메모 없음";
 }
 
+function getChartPrecallReceptionType(bundle: ChartBundle) {
+  return bundle.encounter.appointmentId ? "예약" : "외래";
+}
+
+function getChartPrecallCheckedInTime(bundle: ChartBundle) {
+  return `${getShortClockTime(
+    bundle.encounter.checkedInAt ?? bundle.encounter.createdAt,
+  )} 접수`;
+}
+
 function getChartPrecallCautionText(bundle: ChartBundle) {
   return bundle.patient.handlingCautionLocked ? "핸들링 주의" : "주의사항 없음";
 }
@@ -5609,6 +5619,8 @@ function ChartStartLockedState({
   queueStatus?: WaitingQueueEntry["status"];
 }) {
   const isCalled = queueStatus === "called";
+  const isCallable = !isCalled;
+  const isReservation = Boolean(bundle.encounter.appointmentId);
   const veterinarianName = getChartBundleVeterinarianName(bundle);
 
   return (
@@ -5617,18 +5629,18 @@ function ChartStartLockedState({
         className="mx-auto grid w-full max-w-5xl gap-3"
         data-testid="chart-start-locked-state"
       >
-        <section className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[linear-gradient(180deg,rgba(239,246,255,0.78),rgba(255,255,255,0))] p-4">
+        <section className="grid grid-cols-1 items-start gap-3 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[linear-gradient(180deg,rgba(239,246,255,0.78),rgba(255,255,255,0))] p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-4">
           <div className="min-w-0">
             <div className="emr-text-title font-semibold text-foreground">
               진료 시작 전입니다
             </div>
             <p className="mt-1 emr-text-dense text-muted-foreground">
               {isCalled
-                ? "현재 호출된 환자 상태를 확인한 뒤 진료 흐름을 새로고침해 주세요."
-                : `${bundle.patient.name}를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다`}
+                ? "이미 호출된 환자입니다. 진료 화면이 열리지 않으면 상태를 새로고침해 주세요."
+                : `${bundle.patient.name} 호출 후 차트와 오더 입력을 시작할 수 있습니다`}
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
             {detailPending ? <ChartDetailPendingIndicator /> : null}
             <Button
               className="bg-card"
@@ -5637,7 +5649,7 @@ function ChartStartLockedState({
             >
               접수 정보 보기
             </Button>
-            {!isCalled ? (
+            {isCallable ? (
               <Button disabled={primaryActionBusy} onClick={onRequestCall}>
                 호출하기
               </Button>
@@ -5649,32 +5661,34 @@ function ChartStartLockedState({
           className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
           aria-label="접수 정보"
         >
-          <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] px-4 py-3">
+          <div className="flex min-h-12 items-center border-b border-[var(--emr-line-hairline)] px-4 py-3">
             <div className="emr-text-section font-semibold text-foreground">
               접수 정보
-            </div>
-            <div className="flex flex-wrap justify-end gap-2">
-              <Badge variant="secondary" className="rounded-md px-2">
-                {bundle.encounter.appointmentId ? "예약" : "외래"}
-              </Badge>
-              <Badge variant="secondary" className="rounded-md px-2">
-                {getShortClockTime(
-                  bundle.encounter.checkedInAt ?? bundle.encounter.createdAt,
-                )} 접수
-              </Badge>
-              <Badge variant="secondary" className="rounded-md px-2">
-                {veterinarianName}
-              </Badge>
             </div>
           </div>
           <dl className="grid">
             <ChartPrecallIntakeRow
               label="방문목적"
               value={getChartPrecallVisitPurpose(bundle)}
+              priority
+            />
+            {isReservation ? (
+              <ChartPrecallIntakeRow
+                label="예약 메모"
+                value={getChartPrecallReservationMemo(bundle)}
+              />
+            ) : null}
+            <ChartPrecallIntakeRow
+              label="접수 유형"
+              value={getChartPrecallReceptionType(bundle)}
             />
             <ChartPrecallIntakeRow
-              label="예약 메모"
-              value={getChartPrecallReservationMemo(bundle)}
+              label="접수 시각"
+              value={getChartPrecallCheckedInTime(bundle)}
+            />
+            <ChartPrecallIntakeRow
+              label="담당 수의사"
+              value={veterinarianName}
             />
             <ChartPrecallIntakeRow
               label="접수 메모"
@@ -5696,17 +5710,36 @@ function ChartStartLockedState({
 
 function ChartPrecallIntakeRow({
   label,
+  priority = false,
   value,
 }: {
   label: string;
+  priority?: boolean;
   value: ReactNode;
 }) {
   return (
-    <div className="grid min-h-12 grid-cols-[minmax(7rem,10rem)_minmax(0,1fr)] border-b border-[var(--emr-line-hairline)] last:border-b-0">
-      <dt className="flex items-center bg-[var(--emr-surface-muted)] px-4 py-3 emr-text-dense font-semibold text-muted-foreground">
+    <div
+      className={cn(
+        "grid min-h-12 grid-cols-[minmax(7rem,10rem)_minmax(0,1fr)] border-b border-[var(--emr-line-hairline)] last:border-b-0",
+        priority && "bg-[var(--emr-accent-subtle)]",
+      )}
+    >
+      <dt
+        className={cn(
+          "flex items-center px-4 py-3 emr-text-dense font-semibold",
+          priority
+            ? "bg-[var(--emr-accent-subtle)] text-[var(--emr-text-primary)]"
+            : "bg-[var(--emr-surface-muted)] text-muted-foreground",
+        )}
+      >
         {label}
       </dt>
-      <dd className="m-0 flex min-w-0 items-center px-4 py-3 emr-text-dense font-medium text-foreground">
+      <dd
+        className={cn(
+          "m-0 flex min-w-0 items-center px-4 py-3 emr-text-dense text-foreground",
+          priority ? "font-semibold" : "font-medium",
+        )}
+      >
         {value}
       </dd>
     </div>
