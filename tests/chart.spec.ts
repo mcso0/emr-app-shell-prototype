@@ -621,6 +621,106 @@ test("chart consultation CTA moves from call to start before chart completion", 
   ).toBeEnabled();
 });
 
+test("chart renders legacy called consultation queue rows as in consultation", async ({
+  page,
+}) => {
+  const workspaceId = "clair-demo";
+  const encounterId = "encounter-legacy-called-flow";
+  const encounter = {
+    id: encounterId,
+    workspaceId,
+    patientId: "patient-legacy-called-flow",
+    guardianId: "guardian-legacy-called-flow",
+    primaryVeterinarianId: "user-vet",
+    encounterNo: "E-260625-LEGACY",
+    chiefComplaint: "호출 상태 호환 확인",
+    visitPurpose: "현장 접수",
+    receptionMemo: "called 상태가 진료중으로 보이는지 확인",
+    status: "waiting",
+    checkedInAt: "2026-06-25T14:15:00+09:00",
+    createdAt: "2026-06-25T14:15:00+09:00",
+    updatedAt: "2026-06-25T14:15:00+09:00",
+  };
+  const queueEntry = {
+    id: "queue-legacy-called-consultation",
+    workspaceId,
+    encounterId,
+    queueType: "consultation",
+    status: "called",
+    priority: "normal",
+    sortOrder: 1,
+    enteredAt: "2026-06-25T14:15:00+09:00",
+    calledAt: "2026-06-25T05:20:00.000Z",
+  };
+
+  await page.route("**/api/workspaces/clair-demo/chart/live-queue**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        queue: [
+          {
+            encounter,
+            patient: {
+              id: "patient-legacy-called-flow",
+              patientNo: "CD-P-CALLED",
+              workspaceId,
+              name: "초코",
+              species: "dog",
+              breed: "Pomeranian",
+              estimatedAgeText: "9세",
+              sex: "male",
+              neutered: true,
+              handlingCautionLocked: false,
+              status: "active",
+              createdAt: "2026-06-25T14:00:00+09:00",
+              updatedAt: "2026-06-25T14:00:00+09:00",
+            },
+            primaryGuardian: {
+              id: "guardian-legacy-called-flow",
+              workspaceId,
+              name: "최도현",
+              mobilePhone: "010-0000-0000",
+              createdAt: "2026-06-25T14:00:00+09:00",
+              updatedAt: "2026-06-25T14:00:00+09:00",
+            },
+            queueEntry,
+            veterinarianName: "청담 원장",
+          },
+        ],
+        enforcedBy: "chart-live-queue-read",
+      }),
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/chart/completion**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        completion: {
+          encounterId,
+          workspaceId,
+          status: encounter.status,
+          updatedAt: encounter.updatedAt,
+        },
+      }),
+    });
+  });
+
+  await page.goto(
+    "/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=" + encounterId,
+  );
+
+  await expect(page.getByTestId("chart-completion-status")).toContainText(
+    "진료중",
+  );
+  await expect(page.getByText("호출됨")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "진료 시작" })).toHaveCount(0);
+  await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
+});
+
 test("chart side panel date navigator refetches the selected operating date", async ({
   page,
 }) => {

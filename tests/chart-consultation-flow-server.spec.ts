@@ -13,6 +13,11 @@ const workspaceId = "clair-demo";
 const encounterId = "encounter-waiting-consultation";
 const migrationPath = "supabase/migrations/20260627183000_chart_cta_direct_start_flow.sql";
 const migration = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+const calledRetirementMigrationPath =
+  "supabase/migrations/20260703090000_chart_consultation_called_status_retirement.sql";
+const calledRetirementMigration = existsSync(calledRetirementMigrationPath)
+  ? readFileSync(calledRetirementMigrationPath, "utf8")
+  : "";
 const roomId = "room-consult-1";
 
 const baseEncounter: Encounter = {
@@ -254,6 +259,27 @@ test("consultation direct-start migration stores room snapshots and return RPC",
   expect(migration).toContain("grant execute on function public.clair_call_consultation_queue(text, text, uuid, text) to authenticated");
   expect(migration).toContain("grant execute on function public.clair_return_consultation_to_waiting(text, text, uuid) to authenticated");
   expect(migration).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET|real patient/i);
+});
+
+test("consultation called-retirement migration prevents new called queue rows", () => {
+  expect(calledRetirementMigration).toContain(
+    "create or replace function public.clair_call_consultation_queue",
+  );
+  expect(calledRetirementMigration).toContain("p_room_id text");
+  expect(calledRetirementMigration).toContain("status = 'in_consultation'");
+  expect(calledRetirementMigration).toContain("status = 'in_progress'");
+  expect(calledRetirementMigration).toContain("where queue_type = 'consultation'");
+  expect(calledRetirementMigration).toContain("and status = 'called'");
+  expect(calledRetirementMigration).toContain(
+    "grant execute on function public.clair_call_consultation_queue(text, text, uuid, text) to authenticated",
+  );
+  expect(calledRetirementMigration).toContain(
+    "grant execute on function public.clair_call_consultation_queue(text, text, uuid) to authenticated",
+  );
+  expect(calledRetirementMigration).not.toContain("status = 'called',");
+  expect(calledRetirementMigration).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
 });
 
 test("consultation flow route stays server-owned and secret-free", () => {

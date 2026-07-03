@@ -60,12 +60,6 @@ const chartQueueStatuses: OrderQueueStatusDefinition[] = [
     sortOrder: 10,
   },
   {
-    id: "called",
-    label: "호출됨",
-    colorToken: "--emr-status-warning-text",
-    sortOrder: 20,
-  },
-  {
     id: "waiting",
     label: "호출 대기",
     colorToken: "--emr-status-neutral-text",
@@ -222,7 +216,7 @@ export const getChartQueueItems = (): OrderQueueItem[] =>
     assigneeName: veterinarianName,
     startedAt: encounter.startedAt ? getShortTime(encounter.startedAt) : undefined,
     time: getShortTime(queueEntry.enteredAt),
-    statusId: queueEntry.status,
+    statusId: queueEntry.status === "called" ? "in_progress" : queueEntry.status,
     waitMinutes: queueEntry.status === "waiting" ? getWaitMinutes(queueEntry.enteredAt) : undefined,
   }));
 

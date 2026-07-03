@@ -568,10 +568,13 @@ function getConsultationWorkflowStatusText(
   if (isChartReadyForBilling(encounter)) return "작성완료 / 수납대기";
   if (encounter.status === "completed") return "수납완료";
   if (encounter.status === "ordered") return "오더 진행중";
-  if (encounter.status === "in_consultation" || queueEntry?.status === "in_progress") {
+  if (
+    encounter.status === "in_consultation" ||
+    queueEntry?.status === "in_progress" ||
+    queueEntry?.status === "called"
+  ) {
     return "진료중";
   }
-  if (queueEntry?.status === "called") return "호출됨";
   if (queueEntry?.status === "waiting") return "호출 대기";
   return getChartCompletionStatusText(encounter);
 }
@@ -584,7 +587,8 @@ function canCompleteChartFromWorkflow(
   return (
     encounter.status === "in_consultation" ||
     encounter.status === "ordered" ||
-    queueEntry?.status === "in_progress"
+    queueEntry?.status === "in_progress" ||
+    queueEntry?.status === "called"
   );
 }
 
@@ -908,7 +912,7 @@ function mapLiveChartQueueRecordToItem(
     requesterName: record.veterinarianName ?? "담당 미정",
     assigneeName: record.veterinarianName,
     startedAt: getShortClockTime(record.encounter.startedAt),
-    statusId: record.queueEntry.status,
+    statusId: record.queueEntry.status === "called" ? "in_progress" : record.queueEntry.status,
     time: getShortClockTime(record.queueEntry.enteredAt),
   };
 }
@@ -6510,7 +6514,8 @@ export function ChartContent({
         : null;
   const canUseConsultationSecondaryActions =
     currentBundle.encounter.status === "in_consultation" ||
-    effectiveQueueEntry?.status === "in_progress";
+    effectiveQueueEntry?.status === "in_progress" ||
+    effectiveQueueEntry?.status === "called";
   const hasChartWorkContent =
     hasSavedSoapContent(effectiveLatestSoap) ||
     diagnosisRows.length > 0 ||

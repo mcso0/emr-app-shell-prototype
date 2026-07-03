@@ -24,7 +24,7 @@ Refine the post-reception consultation workflow so patient call requires a consu
 - Require `roomId` for the `chart/consultation-flow` `call` action.
 - Store the selected synthetic consultation room snapshot in the local call event.
 - Replace implementation-oriented call dialog copy with product UX copy and a two-column label/field form.
-- Hide chart completion and editing surfaces while encounter/queue are `waiting/waiting` or `waiting/called`.
+- Hide chart completion and editing surfaces while encounter/queue are `waiting/waiting`.
 - Server-block SOAP, diagnosis, order draft, and order action mutations before `in_consultation` or `ordered`.
 - Add focused server and UI regression coverage.
 
@@ -39,9 +39,9 @@ Refine the post-reception consultation workflow so patient call requires a consu
 
 - The call dialog shows patient/guardian, reception time, veterinarian, and required consultation-room dropdown.
 - The call button stays disabled until a room is selected.
-- Calling stores `called`, `called_at`, and a room snapshot in the call event.
-- Called work still keeps chart input/order/completion locked and shows only `진료 시작`.
-- After start, encounter is `in_consultation`, queue is `in_progress`, and chart editing/completion are available.
+- Calling stores encounter `in_consultation`, queue `in_progress`, `called_at`, and a room snapshot in the call event.
+- Called queue status is retained only as a backward-compatible DB value; the chart room-selection flow does not create or display it.
+- After call, chart editing/completion are available.
 - Direct pre-start chart mutation attempts return `409 stale_status`.
 
 ## Verification
