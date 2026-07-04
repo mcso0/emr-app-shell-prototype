@@ -1,7 +1,7 @@
 ---
 status: "approved"
 area: "design-system"
-updated: "2026-07-02"
+updated: "2026-07-05"
 linear_issue: "DEN-434"
 linear_project: "공통 UX/UI 기준 정리 및 화면 적용"
 source_docs:
@@ -132,7 +132,7 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 | Lab content body | `src/features/lab-imaging/module.tsx` lab branch | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the lab history aside | Adopted for the operational content surface. Lab result table empty, permission, retry, save, and catalog states remain separate. Selected detail states keep their aside/history where applicable. |
 | Imaging content body | `src/features/lab-imaging/module.tsx` imaging branch | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the imaging history aside | Adopted for the operational content surface. Shared queue panels remain compact. Selected detail states keep their aside/history where applicable. |
 | Billing content body | `src/features/billing/module.tsx` | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the billing history aside | Adopted for the operational content surface without changing checkout, ledger, payment, or API state handling. Selected invoice states keep their aside/history where applicable. |
-| Home and notification widgets | `src/features/home/components/*`, `src/features/notifications/global-notification-drawer.tsx` | Small dashed-card or one-line empty messages | Adopt only when repeated widget structure needs icon/copy/action. Plain text may remain. |
+| Home and notification widgets | `src/features/home/components/*`, `src/features/notifications/global-notification-drawer.tsx` | Home work-status source-empty now uses `EmrEmptyState` in the main board and `EmrQueueEmptyState` in the side panel; small notification/widget empty messages remain local | Adopt Home work-status source-empty through the operational queue-empty contract. Keep unrelated notification/widget one-line empties local until repeated structure needs icon/copy/action. |
 | Reception profile drawer | `src/features/reception/profile-drawer.tsx` | Not-found, no linked item, no history, and permission-like copy | Do not bulk replace. Classify each case as drawer empty, info box, inline alert, or field/toast feedback first. |
 | Lab/imaging detail content | `src/features/lab-imaging/module.tsx` | Lab result input table uses `EmrEmptyState` for true-empty result rows; linked result, preview, permission, save, and retry states remain separate | True-empty lab result rows adopted as a table-body follow-up. Permission/save failure and retry states remain `EmrInlineAlert` or feature-local recovery UI. |
 
@@ -163,6 +163,15 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 - Queue/list placeholders in those modules remain compact supporting states through the existing queue components. They were not replaced by content-surface empty states.
 - No-selection content branches also use the content-surface empty state, while selected work item/detail/invoice states keep their aside/history surfaces where applicable.
 - Loading, permission, error, retry, save, checkout, catalog, result-table, and API state handling remain outside this content empty-state adoption.
+
+## 2026-07-05 Queue-Empty Content Contract
+
+- Operational queue screens distinguish source-empty from visible-empty. Source-empty means the queue has zero work items before search, sort, or filter. Visible-empty means work exists but the current query or filters hide it.
+- Source-empty states show the domain-specific no-work message in both the compact queue panel and the main content body, for example `진료 업무가 없습니다`, `검사 업무가 없습니다`, `영상 업무가 없습니다`, `조제/처치 업무가 없습니다`, and `수납 업무가 없습니다`.
+- When source work exists but no item is selected, the main content body keeps the selection guidance state instead of auto-selecting the first queue item.
+- Source-empty queue panels keep search available so the user's query is preserved, but sort and filter controls are disabled because they cannot change an empty source queue.
+- The main content body owns the screen-level refresh action for source-empty operational states. Queue side panels remain compact supporting placeholders.
+- Home work-status surfaces now use the same source-empty principle for `원내 업무가 없습니다` when the hospital work source has zero tasks.
 
 ## Implementation Acceptance Criteria
 

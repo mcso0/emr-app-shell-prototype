@@ -11,6 +11,7 @@ import {
 } from "@/components/icons";
 import {
   CdsActionsListFilterIcon,
+  CdsActionsRefreshCcwIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
@@ -628,8 +629,13 @@ export function DispensingSidePanel({
       return;
     }
 
-    if (queryEncounterId || !items.length || items.some((item) => item.id === selectedQueueItemIds.dispensing)) return;
-    setSelectedQueueItem("dispensing", items[0].id);
+    if (queryEncounterId) {
+      setSelectedQueueItem("dispensing", "");
+      return;
+    }
+    if (!selectedQueueItemIds.dispensing) return;
+    if (items.some((item) => item.id === selectedQueueItemIds.dispensing)) return;
+    setSelectedQueueItem("dispensing", "");
   }, [
     fulfillmentQueue.workItems,
     items,
@@ -689,7 +695,8 @@ export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps)
     selectedQueueItemIds,
   } =
     useLayoutStore();
-  const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
@@ -699,7 +706,7 @@ export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps)
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
     (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
 
-  if (!selectedQueueItem && !allowLegacyFixtureFallback) return null;
+  if (!selectedQueueItem) return null;
 
   return (
     <EmrPatientContextBar
@@ -757,7 +764,8 @@ export function DispensingContentAside({ moduleId, workspaceId }: ShellComponent
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
-  const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
@@ -767,7 +775,7 @@ export function DispensingContentAside({ moduleId, workspaceId }: ShellComponent
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
     (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
 
-  if (!selectedQueueItem && !allowLegacyFixtureFallback) return null;
+  if (!selectedQueueItem) return null;
 
   const historyLabel = `${getDispensingInstructionType(selectedQueueItem)} 이력`;
   const visibleHistoryGroups = allowLegacyFixtureFallback ? historyGroups : [];
@@ -1210,7 +1218,8 @@ export function DispensingContent({
   workspaceId,
 }: ShellComponentProps) {
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
-  const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const currentWorkspaceQueueItems = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
@@ -1342,21 +1351,41 @@ function DispensingContentBody({
     );
   };
 
-  if (!selectedQueueItem && !allowLegacyFixtureFallback) {
-    const emptyStateKind = queueItemCount === 0 ? "upstream-pending" : "no-scope-result";
-    const emptyStateTitle =
-      queueItemCount === 0
-        ? "오늘 조제/처치 요청이 없습니다"
-        : "조제/처치 대기열에서 항목을 선택해 주세요";
+  if (!selectedQueueItem) {
+    const sourceQueueItemCount = fulfillmentQueue.sourceTotalCount ?? queueItemCount;
+    const hasQueueItems = sourceQueueItemCount > 0;
 
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)]">
         <EmrEmptyState
-          kind={emptyStateKind}
+          kind={hasQueueItems ? "no-scope-result" : "upstream-pending"}
           priority="supporting"
           surface="content"
+          description={
+            hasQueueItems
+              ? "대기열에서 조제/처치 업무를 선택하면 상세가 표시됩니다."
+              : "오늘 표시할 조제/처치 업무가 없습니다."
+          }
+          primaryAction={
+            hasQueueItems ? undefined : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-card"
+                disabled={fulfillmentQueue.status === "loading"}
+                onClick={() => void fulfillmentQueue.refresh()}
+              >
+                <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+                새로고침
+              </Button>
+            )
+          }
           testId="dispensing-content-empty-state"
-          title={emptyStateTitle}
+          title={
+            hasQueueItems
+              ? "조제/처치 대기열에서 항목을 선택해 주세요"
+              : "조제/처치 업무가 없습니다"
+          }
         />
       </div>
     );

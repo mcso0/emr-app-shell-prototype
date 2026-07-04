@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
+  CdsActionsRefreshCcwIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
@@ -1056,34 +1057,12 @@ function getLiveLabDetail(labResultId: string, workItems: FulfillmentWorkItem[])
   };
 }
 
-function getFirstLiveLabDetail(workItems: FulfillmentWorkItem[]): LabDetail | null {
-  const firstItem = createLiveLabItems(workItems)[0];
-  if (!firstItem) return null;
-
-  return {
-    ...firstItem,
-    allEquipmentReceipts: [],
-    attachments: [],
-    equipmentReceipts: [],
-  };
-}
-
 function getLiveImagingDetail(imagingStudyId: string, workItems: FulfillmentWorkItem[]): ImagingDetail | null {
   const item = createLiveImagingItems(workItems).find(({ study }) => study.id === imagingStudyId);
   if (!item) return null;
 
   return {
     ...item,
-    attachments: [],
-  };
-}
-
-function getFirstLiveImagingDetail(workItems: FulfillmentWorkItem[]): ImagingDetail | null {
-  const firstItem = createLiveImagingItems(workItems)[0];
-  if (!firstItem) return null;
-
-  return {
-    ...firstItem,
     attachments: [],
   };
 }
@@ -1187,15 +1166,15 @@ function getLabDetailFromSearchParams(
   const queryLabResultId = searchParams.get("labResultId") ?? scenario?.labResultId;
   const effectiveLabResultId = queryLabResultId ?? selectedLabResultId;
   const liveDetail = getLiveLabDetail(effectiveLabResultId, workItems);
-  const liveFallbackDetail = isLiveAuthRuntime() ? getFirstLiveLabDetail(workItems) : null;
 
   return {
     detail:
       liveDetail ??
-      liveFallbackDetail ??
       (options.allowMockFallback === false || isLiveAuthRuntime()
         ? null
-        : getLabDetail(effectiveLabResultId) ?? getLabDetail("lab-result-coco-cbc")),
+        : effectiveLabResultId
+          ? getLabDetail(effectiveLabResultId)
+          : null),
     queryLabResultId,
   };
 }
@@ -1210,15 +1189,15 @@ function getImagingDetailFromSearchParams(
   const queryImagingStudyId = searchParams.get("imagingStudyId") ?? scenario?.imagingStudyId;
   const effectiveImagingStudyId = queryImagingStudyId ?? selectedImagingStudyId;
   const liveDetail = getLiveImagingDetail(effectiveImagingStudyId, workItems);
-  const liveFallbackDetail = isLiveAuthRuntime() ? getFirstLiveImagingDetail(workItems) : null;
 
   return {
     detail:
       liveDetail ??
-      liveFallbackDetail ??
       (options.allowMockFallback === false || isLiveAuthRuntime()
         ? null
-        : getImagingDetail(effectiveImagingStudyId) ?? getImagingDetail("imaging-coco-thorax")),
+        : effectiveImagingStudyId
+          ? getImagingDetail(effectiveImagingStudyId)
+          : null),
     queryImagingStudyId,
   };
 }
@@ -1294,13 +1273,19 @@ function getImagingWorkItemSearchText(item: ImagingWorkItem) {
     .join(" ");
 }
 
-function QueueActions({ onSearch }: { onSearch?: () => void }) {
+function QueueActions({
+  disabled = false,
+  onSearch,
+}: {
+  disabled?: boolean;
+  onSearch?: () => void;
+}) {
   return (
     <>
-      <EmrListHeaderIconButton ariaLabel="정렬">
+      <EmrListHeaderIconButton ariaLabel="정렬" disabled={disabled}>
         <CdsUtilitiesSortIcon className="size-4" />
       </EmrListHeaderIconButton>
-      <EmrListHeaderIconButton ariaLabel="필터">
+      <EmrListHeaderIconButton ariaLabel="필터" disabled={disabled}>
         <CdsActionsListFilterIcon className="size-4" />
       </EmrListHeaderIconButton>
       <EmrListHeaderIconButton ariaLabel="검색" onClick={onSearch}>
@@ -1475,8 +1460,9 @@ export function LabSidePanel({
       return;
     }
 
-    if (!items.length || items.some((item) => item.result.id === selectedLabResultId)) return;
-    selectLabResult(items[0].result.id);
+    if (!selectedLabResultId) return;
+    if (items.some((item) => item.result.id === selectedLabResultId)) return;
+    selectLabResult("");
   }, [items, queryLabResultId, selectLabResult, selectedLabResultId]);
   function handleSelectLabResult(resultId: string) {
     if (onNavigateWorkspaceSurface) {
@@ -1496,7 +1482,7 @@ export function LabSidePanel({
   }
   const effectiveSelectedLabResultId = items.some((item) => item.result.id === selectedLabResultId)
     ? selectedLabResultId
-    : items[0]?.result.id;
+    : undefined;
   const filteredItems = useMemo(
     () => items.filter((item) => matchesQueueSearch(getLabWorkItemSearchText(item), searchQuery)),
     [items, searchQuery]
@@ -1512,9 +1498,12 @@ export function LabSidePanel({
     [filteredItems]
   );
   const resultCount = filteredItems.length;
+  const sourceItemCount = fulfillmentQueue.summary?.totalCount ?? items.length;
+  const sourceHasItems = sourceItemCount > 0;
+  const queueControlsDisabled = !sourceHasItems;
   const emptyStateTitle = getDatedQueueEmptyStateTitle({
     emptyObjectLabel: "검사 업무",
-    filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
+    filtered: sourceHasItems,
     selectedDate,
     todayDate,
   });
@@ -1570,12 +1559,17 @@ export function LabSidePanel({
           query: searchQuery,
           resultCount,
         }}
-        headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
+        headerActions={
+          <QueueActions
+            disabled={queueControlsDisabled}
+            onSearch={() => setSearchActive(true)}
+          />
+        }
       />
       <EmrSubpanelBody density="queue">
         {showLabQueueLoadingState ? (
           <EmrQueueLoadingState title="임상병리 검사 정보를 불러오는 중입니다" />
-        ) : resultCount === 0 && searchQuery.trim() ? (
+        ) : sourceHasItems && resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="검사 대기열 항목"
             query={searchQuery}
@@ -1638,8 +1632,9 @@ export function ImagingSidePanel({
       return;
     }
 
-    if (!items.length || items.some((item) => item.study.id === selectedImagingStudyId)) return;
-    selectImagingStudy(items[0].study.id);
+    if (!selectedImagingStudyId) return;
+    if (items.some((item) => item.study.id === selectedImagingStudyId)) return;
+    selectImagingStudy("");
   }, [items, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
   function handleSelectImagingStudy(studyId: string) {
     if (onNavigateWorkspaceSurface) {
@@ -1659,7 +1654,7 @@ export function ImagingSidePanel({
   }
   const effectiveSelectedImagingStudyId = items.some((item) => item.study.id === selectedImagingStudyId)
     ? selectedImagingStudyId
-    : items[0]?.study.id;
+    : undefined;
   const filteredItems = useMemo(
     () => items.filter((item) => matchesQueueSearch(getImagingWorkItemSearchText(item), searchQuery)),
     [items, searchQuery]
@@ -1675,9 +1670,12 @@ export function ImagingSidePanel({
     [filteredItems]
   );
   const resultCount = filteredItems.length;
+  const sourceItemCount = fulfillmentQueue.summary?.totalCount ?? items.length;
+  const sourceHasItems = sourceItemCount > 0;
+  const queueControlsDisabled = !sourceHasItems;
   const emptyStateTitle = getDatedQueueEmptyStateTitle({
     emptyObjectLabel: "영상 업무",
-    filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
+    filtered: sourceHasItems,
     selectedDate,
     todayDate,
   });
@@ -1733,12 +1731,17 @@ export function ImagingSidePanel({
           query: searchQuery,
           resultCount,
         }}
-        headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
+        headerActions={
+          <QueueActions
+            disabled={queueControlsDisabled}
+            onSearch={() => setSearchActive(true)}
+          />
+        }
       />
       <EmrSubpanelBody density="queue">
         {showImagingQueueLoadingState ? (
           <EmrQueueLoadingState title="영상검사 정보를 불러오는 중입니다" />
-        ) : resultCount === 0 && searchQuery.trim() ? (
+        ) : sourceHasItems && resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="영상 대기열 항목"
             query={searchQuery}
@@ -2676,7 +2679,8 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
-  const fulfillmentQueue = useFulfillmentQueue("lab");
+  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const fulfillmentQueue = useFulfillmentQueue("lab", selectedDate);
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(
     searchParams,
     selectedLabResultId,
@@ -2776,15 +2780,13 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
   useEffect(() => {
     if (queryLabResultId && queryLabResultId !== selectedLabResultId) {
       selectLabResult(queryLabResultId);
-      return;
     }
-    if (!queryLabResultId && detail?.result.id && detail.result.id !== selectedLabResultId) {
-      selectLabResult(detail.result.id);
-    }
-  }, [detail?.result.id, queryLabResultId, selectLabResult, selectedLabResultId]);
+  }, [queryLabResultId, selectLabResult, selectedLabResultId]);
 
   if (!effectiveDetail) {
-    const hasLabWorkItems = fulfillmentQueue.workItems.length > 0;
+    const labWorkItemCount =
+      fulfillmentQueue.summary?.totalCount ?? fulfillmentQueue.workItems.length;
+    const hasLabWorkItems = labWorkItemCount > 0;
 
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
@@ -2792,10 +2794,29 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
           kind={hasLabWorkItems ? "no-scope-result" : "upstream-pending"}
           priority="supporting"
           surface="content"
+          description={
+            hasLabWorkItems
+              ? "대기열에서 검사 업무를 선택하면 상세가 표시됩니다."
+              : "오늘 표시할 검사 업무가 없습니다."
+          }
+          primaryAction={
+            hasLabWorkItems ? undefined : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-card"
+                disabled={fulfillmentQueue.status === "loading"}
+                onClick={() => void fulfillmentQueue.refresh()}
+              >
+                <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+                새로고침
+              </Button>
+            )
+          }
           title={
             hasLabWorkItems
               ? "검사 대기열에서 항목을 선택해 주세요"
-              : "오늘 임상병리검사 요청이 없습니다"
+              : "검사 업무가 없습니다"
           }
         />
       </div>
@@ -2942,7 +2963,8 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
 function useCurrentImagingDetail(workspaceId: string) {
   const searchParams = useSearchParams();
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
-  const fulfillmentQueue = useFulfillmentQueue("imaging");
+  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
 
   return getImagingDetailFromSearchParams(
     searchParams,
@@ -3255,7 +3277,8 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
   const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
-  const fulfillmentQueue = useFulfillmentQueue("imaging");
+  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
   const { detail, queryImagingStudyId } = getImagingDetailFromSearchParams(
     searchParams,
     selectedImagingStudyId,
@@ -3317,15 +3340,13 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
   useEffect(() => {
     if (queryImagingStudyId && queryImagingStudyId !== selectedImagingStudyId) {
       selectImagingStudy(queryImagingStudyId);
-      return;
     }
-    if (!queryImagingStudyId && detail?.study.id && detail.study.id !== selectedImagingStudyId) {
-      selectImagingStudy(detail.study.id);
-    }
-  }, [detail?.study.id, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
+  }, [queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
 
   if (!detail) {
-    const hasImagingWorkItems = fulfillmentQueue.workItems.length > 0;
+    const imagingWorkItemCount =
+      fulfillmentQueue.summary?.totalCount ?? fulfillmentQueue.workItems.length;
+    const hasImagingWorkItems = imagingWorkItemCount > 0;
 
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
@@ -3333,10 +3354,29 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
           kind={hasImagingWorkItems ? "no-scope-result" : "upstream-pending"}
           priority="supporting"
           surface="content"
+          description={
+            hasImagingWorkItems
+              ? "대기열에서 영상 업무를 선택하면 상세가 표시됩니다."
+              : "오늘 표시할 영상 업무가 없습니다."
+          }
+          primaryAction={
+            hasImagingWorkItems ? undefined : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-card"
+                disabled={fulfillmentQueue.status === "loading"}
+                onClick={() => void fulfillmentQueue.refresh()}
+              >
+                <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+                새로고침
+              </Button>
+            )
+          }
           title={
             hasImagingWorkItems
               ? "영상 대기열에서 항목을 선택해 주세요"
-              : "오늘 영상검사 요청이 없습니다"
+              : "영상 업무가 없습니다"
           }
         />
       </div>
