@@ -24,6 +24,7 @@ export type SegmentedControlItem<TValue extends string> = {
    * currently visible data set.
    */
   count?: number;
+  disabled?: boolean;
   /**
    * Optional browser tooltip for extra context.
    */
@@ -47,6 +48,7 @@ export type SegmentedControlProps<TValue extends string> = {
    * Additional classes for the outer group.
    */
   className?: string;
+  disabled?: boolean;
   /**
    * Additional classes for each item button.
    */
@@ -81,6 +83,7 @@ export function SegmentedControl<TValue extends string>({
   items,
   "aria-label": ariaLabel,
   className,
+  disabled = false,
   itemClassName,
   size = "xs",
   variant = "pill",
@@ -114,6 +117,7 @@ export function SegmentedControl<TValue extends string>({
     >
       {items.map((item) => {
         const active = item.value === value;
+        const itemDisabled = disabled || item.disabled === true;
 
         return (
           <button
@@ -121,6 +125,7 @@ export function SegmentedControl<TValue extends string>({
             type="button"
             aria-label={item.ariaLabel}
             aria-pressed={active}
+            disabled={itemDisabled}
             title={item.title}
             className={cn(
               "inline-flex shrink-0 items-center justify-center border transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
@@ -138,9 +143,13 @@ export function SegmentedControl<TValue extends string>({
                       tabsItemSizeClassName,
                       "emr-text-metadata rounded-[var(--emr-radius-control)] border-transparent bg-transparent font-medium text-[var(--clair-color-atomic-neutral-600)] hover:bg-[var(--emr-state-hover)]",
                     ]),
+              itemDisabled && "cursor-not-allowed opacity-45 hover:bg-transparent",
               itemClassName
             )}
-            onClick={() => onValueChange(item.value)}
+            onClick={() => {
+              if (itemDisabled) return;
+              onValueChange(item.value);
+            }}
           >
             {item.label}
             {typeof item.count === "number" ? (

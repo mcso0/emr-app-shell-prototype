@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { CdsActionsRefreshCcwIcon } from "@/components/cds-icons/actions-and-controls";
 import { ChevronDownIcon, ChevronRightIcon } from "@/components/icons";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import {
   EmrSidePanelCard,
   EmrSidePanelCardAction,
@@ -20,6 +22,7 @@ import {
 import {
   EmrSubpanel,
   EmrSubpanelBody,
+  EmrQueueEmptyState,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
 import {
@@ -245,6 +248,7 @@ function groupNextActions(tasks: HomeTask[]) {
 }
 
 export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
+  const router = useRouter();
   const [activeOperationMode, setActiveOperationMode] = useState<HomeOperationMode>("flow");
   const [activeAssigneeFilter, setActiveAssigneeFilter] = useState<HomeAssigneeFilter>(allFilterLabel);
   const [activeWorkStatusFilter, setActiveWorkStatusFilter] = useState<HomeWorkStatusFilter>("all");
@@ -256,6 +260,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
   const closeTaskDetail = useHomeWorkspaceStore((state) => state.closeTaskDetail);
   const clearSelection = useHomeWorkspaceStore((state) => state.clearSelection);
   const tasks = data.hospitalTasks;
+  const hasHospitalTasks = tasks.length > 0;
   const myTaskIds = useMemo(() => new Set(data.tasks.map((task) => task.id)), [data.tasks]);
   const operationModeItems = useMemo<Array<SegmentedControlItem<HomeOperationMode>>>(
     () => [
@@ -344,6 +349,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
               value={activeOperationMode}
               items={operationModeItems}
               aria-label="업무 현황 운영 모드"
+              disabled={!hasHospitalTasks}
               variant="pill"
               className="max-w-full gap-2 overflow-x-auto"
               itemClassName="h-8 min-h-8 rounded-full px-4 text-[13px] font-semibold leading-5"
@@ -360,6 +366,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
               <HomeFilterSelect
                 label="담당자"
                 ariaLabel="담당자 필터"
+                disabled={!hasHospitalTasks}
                 value={activeAssigneeFilter}
                 items={assigneeFilterItems}
                 onValueChange={(value) => {
@@ -370,6 +377,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
               <HomeWorkstreamMultiSelect
                 label="업무"
                 columns={data.columns}
+                disabled={!hasHospitalTasks}
                 tasks={scopedTasks}
                 selectedFilters={activeWorkstreamFilters}
                 onSelectedFiltersChange={(filters) => {
@@ -380,6 +388,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
               <HomeFilterSelect
                 label="업무 상태"
                 ariaLabel="업무 상태 필터"
+                disabled={!hasHospitalTasks}
                 value={activeWorkStatusFilter}
                 items={workStatusFilterItems}
                 onValueChange={(value) => {
@@ -391,6 +400,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
                 <Checkbox
                   aria-label="지연만 보기"
                   checked={delayedOnly}
+                  disabled={!hasHospitalTasks}
                   onCheckedChange={(checked) => {
                     setDelayedOnly(checked === true);
                     clearSelection();
@@ -405,15 +415,38 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
         <div className="relative min-h-0 overflow-hidden">
           <div className="h-full min-h-0 overflow-x-auto pb-2">
             <div className="grid h-full min-h-[620px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
-              {visibleColumns.map((column) => (
-                <HomeKanbanColumn
-                  key={column.id}
-                  column={column}
-                  selectedTaskId={selectedTaskId}
-                  tasks={filteredTasks.filter((task) => task.kanbanColumn === column.id)}
-                  onSelectTask={selectTask}
-                />
-              ))}
+              {hasHospitalTasks ? (
+                visibleColumns.map((column) => (
+                  <HomeKanbanColumn
+                    key={column.id}
+                    column={column}
+                    selectedTaskId={selectedTaskId}
+                    tasks={filteredTasks.filter((task) => task.kanbanColumn === column.id)}
+                    onSelectTask={selectTask}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full grid h-full min-h-[420px] place-items-center">
+                  <EmrEmptyState
+                    kind="upstream-pending"
+                    priority="supporting"
+                    surface="content"
+                    title="원내 업무가 없습니다"
+                    description="오늘 표시할 원내 업무가 없습니다."
+                    primaryAction={
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-card"
+                        onClick={() => router.refresh()}
+                      >
+                        <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+                        새로고침
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -474,29 +507,35 @@ export function HomeHospitalStatusSidePanel({
           onCollapse={() => setModulePanelOpen(false)}
         />
         <EmrSubpanelBody>
-        <div className="grid gap-3 pt-1">
-          {groupedActions.map((group) => (
-            <div key={group.id} className="grid gap-1.5">
-              <div className="flex h-8 items-center justify-between px-1">
-                <span className="emr-text-section font-semibold text-[var(--emr-sidepanel-list-title-text)]">{group.label}</span>
-                <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] px-1.5 emr-text-status">
-                  {group.tasks.length}
-                </Badge>
+          <div className="grid gap-3 pt-1">
+            {groupedActions.length > 0 ? (
+              groupedActions.map((group) => (
+                <div key={group.id} className="grid gap-1.5">
+                  <div className="flex h-8 items-center justify-between px-1">
+                    <span className="emr-text-section font-semibold text-[var(--emr-sidepanel-list-title-text)]">{group.label}</span>
+                    <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] px-1.5 emr-text-status">
+                      {group.tasks.length}
+                    </Badge>
+                  </div>
+                  <div className="grid gap-2">
+                    {group.tasks.slice(0, 4).map((task, index) => (
+                      <NextActionSidePanelCard
+                        key={`${group.id}-${task.id}`}
+                        rank={index + 1}
+                        selected={selectedTaskId === task.id}
+                        task={task}
+                        onSelect={() => selectTask(task.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="grid min-h-[220px] place-items-center">
+                <EmrQueueEmptyState title="원내 업무가 없습니다" />
               </div>
-              <div className="grid gap-2">
-                {group.tasks.slice(0, 4).map((task, index) => (
-                  <NextActionSidePanelCard
-                    key={`${group.id}-${task.id}`}
-                    rank={index + 1}
-                    selected={selectedTaskId === task.id}
-                    task={task}
-                    onSelect={() => selectTask(task.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+            )}
+          </div>
         </EmrSubpanelBody>
       </EmrSubpanel>
     </div>
@@ -666,12 +705,14 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function HomeWorkstreamMultiSelect({
   columns,
+  disabled = false,
   label,
   onSelectedFiltersChange,
   selectedFilters,
   tasks,
 }: {
   columns: HomeKanbanColumn[];
+  disabled?: boolean;
   label: string;
   onSelectedFiltersChange: (value: HomeWorkstreamFilter[]) => void;
   selectedFilters: HomeWorkstreamFilter[];
@@ -697,7 +738,11 @@ function HomeWorkstreamMultiSelect({
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="업무 필터"
-          className="flex h-7 w-[112px] items-center justify-between gap-1 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-2 text-left text-[12px] font-semibold leading-4 text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+          disabled={disabled}
+          className={cn(
+            "flex h-7 w-[112px] items-center justify-between gap-1 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-2 text-left text-[12px] font-semibold leading-4 text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
+            disabled && "cursor-not-allowed opacity-45 hover:bg-card",
+          )}
         >
           <span className="min-w-0 truncate">{displayLabel}</span>
           <ChevronDownIcon className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -759,6 +804,7 @@ function HomeWorkstreamMultiSelect({
 
 function HomeFilterSelect({
   ariaLabel,
+  disabled = false,
   displayLabel,
   items,
   label,
@@ -766,6 +812,7 @@ function HomeFilterSelect({
   value,
 }: {
   ariaLabel: string;
+  disabled?: boolean;
   displayLabel?: string;
   items: Array<{ value: string; label: string }>;
   label: string;
@@ -778,6 +825,7 @@ function HomeFilterSelect({
     <div className="flex items-center gap-1.5">
       <span className="text-[12px] font-medium leading-4 text-muted-foreground">{label}</span>
       <Select
+        disabled={disabled}
         value={value}
         onValueChange={(nextValue) => {
           if (nextValue) onValueChange(nextValue);

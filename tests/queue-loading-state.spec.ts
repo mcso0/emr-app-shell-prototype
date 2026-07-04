@@ -86,7 +86,7 @@ async function delayRouteUntilAsserted(page: Page, url: string) {
 }
 
 async function getQueueStateIconBoxSize(page: Page, stateText: string) {
-  return page.getByText(stateText, { exact: true }).evaluate((textElement) => {
+  return page.locator("aside").first().getByText(stateText, { exact: true }).evaluate((textElement) => {
     const iconElement = textElement.previousElementSibling;
     if (!iconElement) return null;
 
@@ -99,14 +99,14 @@ async function getQueueStateIconBoxSize(page: Page, stateText: string) {
 }
 
 async function getQueueStateIconRootTagName(page: Page, stateText: string) {
-  return page.getByText(stateText, { exact: true }).evaluate((textElement) => {
+  return page.locator("aside").first().getByText(stateText, { exact: true }).evaluate((textElement) => {
     const iconElement = textElement.previousElementSibling;
     return iconElement?.firstElementChild?.tagName ?? null;
   });
 }
 
 async function getQueueStateIconTextGap(page: Page, stateText: string) {
-  return page.getByText(stateText, { exact: true }).evaluate((textElement) => {
+  return page.locator("aside").first().getByText(stateText, { exact: true }).evaluate((textElement) => {
     const iconElement = textElement.previousElementSibling;
     if (!iconElement) return null;
 
@@ -222,7 +222,14 @@ test("chart queue loading uses the shared side-panel body motion state", async (
   await expectQueueStateSpacing(page, "진료차트 정보를 불러오는 중입니다");
 
   await liveQueueRoute.release();
-  await expect(page.getByText("진료 업무가 없습니다", { exact: true })).toBeVisible();
+  const chartSidePanel = page.locator("aside").first();
+
+  await expect(chartSidePanel.getByText("진료 업무가 없습니다", { exact: true })).toBeVisible();
+  await expect(page.getByText("진료 업무가 없습니다", { exact: true })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "새로고침", exact: true })).toBeVisible();
+  await expect(chartSidePanel.getByTestId("order-queue-sort-control")).toBeDisabled();
+  await expect(chartSidePanel.getByTestId("order-queue-filter-control")).toBeDisabled();
+  await expect(chartSidePanel.getByTestId("order-queue-search-control")).toBeEnabled();
   await expectQueueStateSpacing(page, "진료 업무가 없습니다");
 });
 
@@ -246,6 +253,14 @@ test("queue panels keep visible queue rows ahead of background loading states", 
   expect(orderQueuePanel).toContain(
     "const showLoadingState = loading && groupedItems.length === 0;",
   );
+  expect(orderQueuePanel).toContain(
+    "const queueControlsDisabled = !sourceHasItems;",
+  );
+  expect(orderQueuePanel).toContain(
+    ") : sourceHasItems && searchQuery.trim() ? (",
+  );
+  expect(chartModule).toContain("title={queueEmpty ? \"진료 업무가 없습니다\" : \"환자를 선택해 주세요\"}");
+  expect(chartModule).toContain("clearStoredSelectedChartEncounterId(workspaceId);");
   expect(labImagingModule).toContain(
     'const showLabQueueLoadingState = fulfillmentQueue.status === "loading" && resultCount === 0;',
   );

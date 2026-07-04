@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import guardianPersonIcon from "@/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg";
 import {
   CdsActionsListFilterIcon,
+  CdsActionsRefreshCcwIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
@@ -1359,6 +1360,7 @@ export function BillingSidePanel({
   const emptyStateTitle = baseRowCount > 0
     ? "조건에 맞는 수납 업무가 없습니다"
     : "수납 업무가 없습니다";
+  const queueControlsDisabled = baseRowCount === 0;
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -1411,9 +1413,18 @@ export function BillingSidePanel({
         selectedDate={selectedDate}
         todayDate={todayDate}
         todayLabel={selectedDate === todayDate ? "오늘" : undefined}
-        onDateChange={selectDate}
-        onNext={() => selectDate(addDaysToIsoDate(selectedDate, 1))}
-        onPrevious={() => selectDate(addDaysToIsoDate(selectedDate, -1))}
+        onDateChange={(date) => {
+          selectDate(date);
+          selectInvoice("");
+        }}
+        onNext={() => {
+          selectDate(addDaysToIsoDate(selectedDate, 1));
+          selectInvoice("");
+        }}
+        onPrevious={() => {
+          selectDate(addDaysToIsoDate(selectedDate, -1));
+          selectInvoice("");
+        }}
       />
       <EmrListHeader
         label="전체"
@@ -1434,12 +1445,14 @@ export function BillingSidePanel({
             <EmrListHeaderIconButton
               ariaLabel="정렬"
               data-testid="billing-queue-sort-control"
+              disabled={queueControlsDisabled}
             >
               <CdsUtilitiesSortIcon className="size-4" />
             </EmrListHeaderIconButton>
             <EmrListHeaderIconButton
               ariaLabel="필터"
               data-testid="billing-queue-filter-control"
+              disabled={queueControlsDisabled}
             >
               <CdsActionsListFilterIcon className="size-4" />
             </EmrListHeaderIconButton>
@@ -1454,7 +1467,7 @@ export function BillingSidePanel({
         }
       />
       <EmrSubpanelBody density="queue">
-        {totalRowCount === 0 && searchQuery.trim() ? (
+        {baseRowCount > 0 && totalRowCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="수납 대기열 항목"
             query={searchQuery}
@@ -2695,7 +2708,7 @@ function BillingCheckoutStateNotice({
   );
 }
 
-export function BillingContent({ hasRightPanel }: ShellComponentProps) {
+export function BillingContent({ hasRightPanel, workspaceId }: ShellComponentProps) {
   const {
     apiState,
     detail,
@@ -2739,6 +2752,7 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     useState<BillingApiRequestState>(billingApiIdleState);
   const [checkoutReloadKey, setCheckoutReloadKey] = useState(0);
   const retryCheckout = () => setCheckoutReloadKey((current) => current + 1);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const effectiveDetail = useMemo(
     () =>
       detail
@@ -2832,7 +2846,7 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
   }, [invoices, queryInvoiceId, selectInvoice, selectedInvoiceId, setFilter]);
 
   if (!effectiveDetail) {
-    const hasBillingRows = invoices.length > 0;
+    const hasBillingRows = legacySalesDemo && invoices.length > 0;
 
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
@@ -2840,10 +2854,28 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
           kind={hasBillingRows ? "no-scope-result" : "upstream-pending"}
           surface="content"
           priority="supporting"
+          description={
+            hasBillingRows
+              ? "대기열에서 수납 업무를 선택하면 상세가 표시됩니다."
+              : "오늘 표시할 수납 업무가 없습니다."
+          }
+          primaryAction={
+            hasBillingRows ? undefined : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-card"
+                onClick={apiState.retrySnapshots}
+              >
+                <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+                새로고침
+              </Button>
+            )
+          }
           title={
             hasBillingRows
               ? "수납 목록에서 청구서를 선택해 주세요"
-              : "오늘 수납 대기 건이 없습니다"
+              : "수납 업무가 없습니다"
           }
         />
       </div>

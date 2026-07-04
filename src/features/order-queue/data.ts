@@ -295,7 +295,9 @@ export const getOrderQueueItems = (moduleId: string) =>
   moduleOrderQueueItems[moduleId] ?? buildModuleQueueItems(moduleId);
 
 export const getSelectedOrderQueueItem = (moduleId: string, selectedItemId?: string) => {
+  if (!selectedItemId) return null;
+
   const items = getOrderQueueItems(moduleId);
 
-  return items.find((item) => item.id === selectedItemId) ?? items[0] ?? null;
+  return items.find((item) => item.id === selectedItemId) ?? null;
 };

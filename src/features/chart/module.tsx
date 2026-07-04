@@ -15,6 +15,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
+  CdsActionsRefreshCcwIcon,
   CdsActionsRotateCcwIcon,
   CdsActionsSaveIcon,
   CdsActionsTrash2Icon,
@@ -838,6 +839,12 @@ function saveSelectedChartEncounterId(workspaceId: string, encounterId: string) 
   );
 }
 
+function clearStoredSelectedChartEncounterId(workspaceId: string) {
+  if (typeof window === "undefined") return;
+
+  window.sessionStorage.removeItem(getSelectedEncounterStorageKey(workspaceId));
+}
+
 function chooseRecoverableLiveEncounterId({
   currentEncounterId,
   explicitEncounterId,
@@ -864,7 +871,7 @@ function chooseRecoverableLiveEncounterId({
     return storedEncounterId;
   }
 
-  return records[0]?.encounter.id ?? null;
+  return null;
 }
 
 function getChartHistoryRowsForBundle(bundle: ChartBundle): ChartHistoryRow[] {
@@ -942,6 +949,7 @@ function useScenarioEncounterSync() {
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
+  const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryEncounterId =
@@ -955,6 +963,7 @@ function useScenarioEncounterSync() {
     queryEncounterId !== null && queryEncounterBundle !== null;
 
   useEffect(() => {
+    if (liveQueueStatus === "ready" && liveQueueRecords.length === 0) return;
     if (!queryEncounterId || !hasValidQueryEncounter) return;
     if (lastAppliedQueryEncounterId.current === queryEncounterId) return;
 
@@ -965,6 +974,7 @@ function useScenarioEncounterSync() {
   }, [
     hasValidQueryEncounter,
     liveQueueRecords,
+    liveQueueStatus,
     queryEncounterId,
     selectEncounter,
     selectedEncounterId,
@@ -1000,7 +1010,12 @@ export function ChartSidePanel({
   );
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
-  const { setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
+  const {
+    clearModuleRefreshAction,
+    setModulePanelOpen,
+    setModuleRefreshAction,
+    setSelectedQueueItem,
+  } = useLayoutStore();
   const {
     hydrated: authHydrated,
     session: authSession,
@@ -1095,19 +1110,6 @@ export function ChartSidePanel({
     const currentExplicitQueryEncounterId = explicitQueryEncounterIdRef.current;
     const currentSelectedEncounterId = selectedEncounterIdRef.current;
 
-    if (
-      currentExplicitQueryEncounterId &&
-      !result.queue.some(
-        (record) => record.encounter.id === currentExplicitQueryEncounterId,
-      )
-    ) {
-      saveSelectedChartEncounterId(workspaceId, currentExplicitQueryEncounterId);
-      if (currentSelectedEncounterId !== currentExplicitQueryEncounterId) {
-        selectEncounter(currentExplicitQueryEncounterId);
-      }
-      return;
-    }
-
     const nextSelectedEncounterId = chooseRecoverableLiveEncounterId({
       currentEncounterId: currentSelectedEncounterId,
       explicitEncounterId: currentExplicitQueryEncounterId,
@@ -1120,12 +1122,20 @@ export function ChartSidePanel({
       if (currentSelectedEncounterId !== nextSelectedEncounterId) {
         selectEncounter(nextSelectedEncounterId);
       }
+      return;
+    }
+
+    clearStoredSelectedChartEncounterId(workspaceId);
+    setSelectedQueueItem("treatment", "");
+    if (currentSelectedEncounterId) {
+      selectEncounter("");
     }
   }, [
     actorHeaders,
     selectedDate,
     selectEncounter,
     setLiveQueueState,
+    setSelectedQueueItem,
     workspaceId,
   ]);
 
@@ -1142,6 +1152,21 @@ export function ChartSidePanel({
   });
 
   useEffect(() => {
+    setModuleRefreshAction("treatment", {
+      isRefreshing: liveQueueStatus === "loading",
+      label: "진료 대기열 새로고침",
+      onRefresh: refreshLiveQueue,
+    });
+
+    return () => clearModuleRefreshAction("treatment");
+  }, [
+    clearModuleRefreshAction,
+    liveQueueStatus,
+    refreshLiveQueue,
+    setModuleRefreshAction,
+  ]);
+
+  useEffect(() => {
     if (!explicitQueryEncounterId) return;
     if (selectedEncounterId === explicitQueryEncounterId) return;
     saveSelectedChartEncounterId(workspaceId, explicitQueryEncounterId);
@@ -1154,17 +1179,18 @@ export function ChartSidePanel({
   ]);
 
   useEffect(() => {
-    if (liveQueueStatus !== "ready" || liveItems.length === 0) return;
+    if (liveQueueStatus !== "ready") return;
+    if (!selectedEncounterId) return;
     if (liveItems.some((item) => item.id === selectedEncounterId)) return;
-    if (explicitQueryEncounterId) return;
-    saveSelectedChartEncounterId(workspaceId, liveItems[0].id);
-    selectEncounter(liveItems[0].id);
+    clearStoredSelectedChartEncounterId(workspaceId);
+    setSelectedQueueItem("treatment", "");
+    selectEncounter("");
   }, [
-    explicitQueryEncounterId,
     liveItems,
     liveQueueStatus,
     selectEncounter,
     selectedEncounterId,
+    setSelectedQueueItem,
     workspaceId,
   ]);
 
@@ -1208,6 +1234,8 @@ export function ChartSidePanel({
       onCollapse={() => setModulePanelOpen(false)}
       onDateChange={(date) => {
         selectDate(date);
+        clearStoredSelectedChartEncounterId(workspaceId);
+        setSelectedQueueItem("treatment", "");
         if (selectedEncounterId) selectEncounter("");
       }}
       onSelectItem={selectWorkspaceEncounter}
@@ -5749,15 +5777,41 @@ function ChartPrecallIntakeRow({
   );
 }
 
-function EmptyChartState() {
+function EmptyChartState({
+  onRefresh,
+  queueEmpty = false,
+  refreshing = false,
+}: {
+  onRefresh?: () => void | Promise<void>;
+  queueEmpty?: boolean;
+  refreshing?: boolean;
+}) {
   return (
     <div className="flex h-full items-center justify-center px-6 py-10">
       <EmrEmptyState
-        kind="no-scope-result"
+        kind={queueEmpty ? "upstream-pending" : "no-scope-result"}
         priority="supporting"
         surface="content"
-        title="환자를 선택해 주세요"
-        description="대기열에서 환자를 선택하면 차트가 표시됩니다."
+        title={queueEmpty ? "진료 업무가 없습니다" : "환자를 선택해 주세요"}
+        description={
+          queueEmpty
+            ? "오늘 표시할 진료 업무가 없습니다."
+            : "대기열에서 환자를 선택하면 차트가 표시됩니다."
+        }
+        primaryAction={
+          queueEmpty && onRefresh ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-card"
+              disabled={refreshing}
+              onClick={() => void onRefresh()}
+            >
+              <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+              새로고침
+            </Button>
+          ) : undefined
+        }
       />
     </div>
   );
@@ -5837,10 +5891,13 @@ export function ChartContent({
   const pendingConsultationCallEncounterId = useChartStore(
     (state) => state.pendingConsultationCallEncounterId,
   );
+  const selectEncounter = useChartStore((state) => state.selectEncounter);
   const clearPendingConsultationCall = useChartStore(
     (state) => state.clearPendingConsultationCall,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
+  const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
+  const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
   const updateLiveQueueRecord = useChartStore((state) => state.updateLiveQueueRecord);
   const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
@@ -5850,7 +5907,12 @@ export function ChartContent({
     isLegacySalesDemoWorkspace(workspaceId) &&
     (allowStoreMockFallback ||
       selectedEncounterId === demoScenarioEncounterId);
-  const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
+  const {
+    contentAsideOpen,
+    moduleRefreshActions,
+    setContentAsideOpen,
+    setSelectedQueueItem,
+  } = useLayoutStore();
   const {
     hydrated: authHydrated,
     session: authSession,
@@ -5871,6 +5933,7 @@ export function ChartContent({
     () => getDemoActorHeader(authSession),
     [authSession],
   );
+  const { selectedDate } = useSelectedOperatingDate(workspaceId);
   const [persistedSoapState, setPersistedSoapState] = useState<{
     encounterId?: string;
     soapNote?: SoapNote | null;
@@ -6302,6 +6365,52 @@ export function ChartContent({
       status: "saved",
     });
   };
+  const refreshLiveQueueFromContent = useCallback(async () => {
+    setLiveQueueState({ status: "loading" });
+
+    const result = await loadChartLiveQueue({
+      actorHeaders,
+      date: selectedDate,
+      workspaceId,
+    });
+
+    if (!result.ok) {
+      setLiveQueueState({
+        error: result.denialReason ?? result.error ?? "db_read_failed",
+        status: "error",
+      });
+      return;
+    }
+
+    result.queue.forEach((record) => {
+      saveChartLiveEncounterHandoff({
+        encounter: record.encounter,
+        patient: record.patient,
+        primaryGuardian: record.primaryGuardian,
+        veterinarianName: record.veterinarianName,
+      });
+    });
+    setLiveQueueState({ records: result.queue, status: "ready" });
+
+    if (
+      selectedEncounterId &&
+      result.queue.some((record) => record.encounter.id === selectedEncounterId)
+    ) {
+      return;
+    }
+
+    clearStoredSelectedChartEncounterId(workspaceId);
+    setSelectedQueueItem("treatment", "");
+    if (selectedEncounterId) selectEncounter("");
+  }, [
+    actorHeaders,
+    selectedDate,
+    selectEncounter,
+    selectedEncounterId,
+    setLiveQueueState,
+    setSelectedQueueItem,
+    workspaceId,
+  ]);
 
   useEffect(() => {
     hydrateAuthSession();
@@ -6527,7 +6636,18 @@ export function ChartContent({
     };
   }, [isChartResizing]);
 
-  if (!bundle || !effectiveBundle) return <EmptyChartState />;
+  if (!bundle || !effectiveBundle) {
+    const refreshAction = moduleRefreshActions.treatment;
+    const queueEmpty = liveQueueStatus === "ready" && liveQueueRecords.length === 0;
+
+    return (
+      <EmptyChartState
+        queueEmpty={queueEmpty}
+        refreshing={refreshAction?.isRefreshing ?? liveQueueStatus === "loading"}
+        onRefresh={refreshAction?.onRefresh ?? refreshLiveQueueFromContent}
+      />
+    );
+  }
 
   const currentBundle = effectiveBundle;
   const consultationCallRooms = getConsultationCallRooms();

@@ -79,6 +79,11 @@ function normalizeCandidate(candidate) {
 
   value = value.replace(/[.,;:!?]+$/g, "");
 
+  const markdownLineReference = value.match(/^(docs\/.+\.md):\d+(?:-\d+)?$/);
+  if (markdownLineReference) {
+    value = markdownLineReference[1];
+  }
+
   if (!value.startsWith("docs/")) {
     return null;
   }

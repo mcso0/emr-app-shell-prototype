@@ -259,12 +259,18 @@ export function EmrOrderQueueSidePanel({
         .sort((a, b) => compareOrderQueueItems(a, b, sortKey)),
     [resolvedStatuses, scopedItems, searchQuery, sortKey]
   );
-  const effectiveSelectedItemId = selectedItemId ?? visibleItems[0]?.id;
+  const sourceItemCount = sourceTotalCount ?? items.length;
+  const sourceHasItems = sourceItemCount > 0;
+  const queueControlsDisabled = !sourceHasItems;
+  const effectiveSelectedItemId =
+    selectedItemId && visibleItems.some((item) => item.id === selectedItemId)
+      ? selectedItemId
+      : undefined;
   const isToday = Boolean(selectedDate && todayDate && selectedDate === todayDate);
   const displayDateLabel = selectedDate ? formatKoreanOperatingDateLabel(selectedDate) : dateLabel;
   const emptyStateTitle = getOrderQueueEmptyStateTitle({
     emptyObjectLabel,
-    filtered: (sourceTotalCount ?? items.length) > 0,
+    filtered: sourceHasItems,
     selectedDate,
     todayDate,
   });
@@ -274,10 +280,9 @@ export function EmrOrderQueueSidePanel({
   }, []);
   const handleDateChange = useCallback(
     (date: string) => {
-      closeSearch();
       onDateChange?.(date);
     },
-    [closeSearch, onDateChange],
+    [onDateChange],
   );
   const groupedItems = resolvedStatuses
     .map((status) => ({
@@ -290,6 +295,7 @@ export function EmrOrderQueueSidePanel({
     <SegmentedControl
       aria-label={filterAriaLabel}
       className="shrink-0"
+      disabled={queueControlsDisabled}
       items={typeFilterPlacement === "list-header" ? countedFilterItems : filterItems}
       value={filter}
       variant="tabs"
@@ -352,8 +358,13 @@ export function EmrOrderQueueSidePanel({
         }}
         headerActions={
           <>
-            <OrderQueueSortMenu sortKey={sortKey} onSortKeyChange={setSortKey} />
+            <OrderQueueSortMenu
+              disabled={queueControlsDisabled}
+              sortKey={sortKey}
+              onSortKeyChange={setSortKey}
+            />
             <OrderQueueFilterMenu
+              disabled={queueControlsDisabled}
               filter={detailFilter}
               statuses={resolvedStatuses}
               onFilterChange={setDetailFilter}
@@ -388,7 +399,7 @@ export function EmrOrderQueueSidePanel({
               status={status}
             />
           );
-        }) : searchQuery.trim() ? (
+        }) : sourceHasItems && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="대기열 항목"
             query={searchQuery}
@@ -422,9 +433,11 @@ function getOrderQueueEmptyStateTitle({
 }
 
 function OrderQueueSortMenu({
+  disabled = false,
   onSortKeyChange,
   sortKey,
 }: {
+  disabled?: boolean;
   onSortKeyChange: (value: OrderQueueSortKey) => void;
   sortKey: OrderQueueSortKey;
 }) {
@@ -436,6 +449,7 @@ function OrderQueueSortMenu({
             ariaLabel="대기열 정렬"
             data-sort-key={sortKey}
             data-testid="order-queue-sort-control"
+            disabled={disabled}
           >
             <CdsUtilitiesSortIcon aria-hidden="true" className="size-4" />
           </EmrListHeaderIconButton>
@@ -456,10 +470,12 @@ function OrderQueueSortMenu({
 }
 
 function OrderQueueFilterMenu({
+  disabled = false,
   filter,
   onFilterChange,
   statuses,
 }: {
+  disabled?: boolean;
   filter: OrderQueueDetailFilter;
   onFilterChange: (value: OrderQueueDetailFilter) => void;
   statuses: OrderQueueStatusDefinition[];
@@ -472,6 +488,7 @@ function OrderQueueFilterMenu({
             ariaLabel="대기열 필터"
             data-filter={filter}
             data-testid="order-queue-filter-control"
+            disabled={disabled}
           />
         }
       >
