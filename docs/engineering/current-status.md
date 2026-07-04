@@ -6,12 +6,12 @@ This is the short startup status for new Codex sessions and human review. It sho
 
 ## Agent Compact Summary
 
-- Current target: Product MVP.
-- The app is a veterinary EMR SaaS prototype with outpatient workflows from reception through billing.
-- The product has moved beyond a pure static demo: many auth, workspace, local-first DB/RLS, persistence, audit, billing, and customer-management foundations have been implemented in local-first form.
-- Remote Supabase validation, production-demo deployment, DB/API hardening, migration/RLS work, and server-side enforcement may now be scoped for synthetic/demo data under active Linear/work items. Real customer data, real provider/payment side effects, and final compliance/legal review are not complete.
-- Client-only permission gating is not complete security. Treat server/API/DB/RLS enforcement as the required security boundary.
-- Use concise English for agent-facing plans and handoff notes. Keep user-facing result reviews in Korean unless requested otherwise.
+* Current target: Product MVP.
+* The app is a veterinary EMR SaaS prototype with outpatient workflows from reception through billing.
+* The product has moved beyond a pure static demo: many auth, workspace, local-first DB/RLS, persistence, audit, billing, and customer-management foundations have been implemented in local-first form.
+* Remote Supabase validation, production-demo deployment, DB/API hardening, migration/RLS work, and server-side enforcement may now be scoped for synthetic/demo data under active Linear/work items. Real customer data, real provider/payment side effects, and final compliance/legal review are not complete.
+* Client-only permission gating is not complete security. Treat server/API/DB/RLS enforcement as the required security boundary.
+* Use concise English for agent-facing plans and handoff notes. Keep user-facing result reviews in Korean unless requested otherwise.
 
 ## Current Working Target
 
@@ -19,29 +19,29 @@ The current target is **Product MVP**.
 
 The MVP direction is to keep the connected outpatient workflow visible while replacing demo-only assumptions with product-ready boundaries:
 
-- login and workspace entry
-- role and permission based UX backed by server-side enforcement boundaries
-- workspace-scoped data access
-- reception, chart, order, billing, customer, hospital-admin, and audit workflows moving from session-only mock toward local-first persistence
-- Cheongdam seed workspace (`workspace-clair-cheongdam`) used as the default synthetic operating proof, with legacy Sales Demo paths treated as cleanup candidates rather than preservation requirements
+* login and workspace entry
+* role and permission based UX backed by server-side enforcement boundaries
+* workspace-scoped data access
+* reception, chart, order, billing, customer, hospital-admin, and audit workflows moving from session-only mock toward local-first persistence
+* Cheongdam seed workspace (`workspace-clair-cheongdam`) used as the default synthetic operating proof, with legacy Sales Demo paths treated as cleanup candidates rather than preservation requirements
 
 ## Current Product State
 
 The app currently has usable prototype screens for:
 
-| Area | Current state |
-| --- | --- |
-| Home | Operational dashboard and work-status view with session-only mock data |
-| Reception and appointment | Reception queue, walk-in intake, patient/guardian registration, local-first encounter path foundations, and first-pass API-backed queue/calendar/profile hydration through existing reception routes |
-| Customer management | Guardian/patient profile, relationship management, and soft delete/restore persistence boundaries |
-| Chart | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, downstream fulfillment lifecycle readback, local-first persistence checkpoints, and first-pass live queue API adoption in the chart side panel |
-| Lab and imaging | Workspace screens exist; DEN-238 connects queue status context and status mutation to the shared fulfillment route. UI PR 2 adds lab result-sheet catalog read adoption for live lab work items and a local/dev result-entry server boundary. DEN-452 adds local/dev/test DB tables, RLS policies, RPCs, and API wiring for durable lab result value persistence. DEN-453 distinguishes catalog loading/empty/error/permission states and save retry/permission states in the visible lab result UI. Provider integrations and remote Supabase replay remain outside current completion claims |
-| Dispensing/treatment | Workspace screen exists; DEN-239 connects queue status context and status mutation to the shared fulfillment route, and UI PR 2 covers treatment/dispensing route-boundary status transitions. DEN-456 adds visible execution-screen readback from `order_fulfillment_work_items`, server-backed status mutation, permission/failure states, and focused UI regression coverage. Cheongdam cleanup work should prevent legacy fixture fallback from hiding seed/API readback gaps |
-| Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, guardian checkout, fulfillment completion candidate sync, and amount-integrity regression foundations. UI PR 2 covers checkout route consumption in visible billing UI. DEN-454 makes the selected billing demo path API-primary for invoice-line, payment-status, and checkout-session snapshots, and DEN-455 adds visible loading, permission, retryable failure, empty, and checkout retry states while mock fallback remains |
-| Inpatient | Session-only ward board and detail surface |
-| Hospital admin | Order catalog persistence foundation and membership/invitation management surfaces |
-| Audit | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface |
-| Auth/workspace | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, and local DB/RLS foundations |
+| Area                      | Current state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home                      | Operational dashboard and work-status view with session-only mock data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Reception and appointment | Reception queue, walk-in intake, patient/guardian registration, local-first encounter path foundations, and first-pass API-backed queue/calendar/profile hydration through existing reception routes                                                                                                                                                                                                                                                                                                                                                                                           |
+| Customer management       | Guardian/patient profile, relationship management, and soft delete/restore persistence boundaries                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Chart                     | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, downstream fulfillment lifecycle readback, local-first persistence checkpoints, and first-pass live queue API adoption in the chart side panel                                                                                                                                                                                                                                                                                                                                                                     |
+| Lab and imaging           | Workspace screens exist; DEN-238 connects queue status context and status mutation to the shared fulfillment route. UI PR 2 adds lab result-sheet catalog read adoption for live lab work items and a local/dev result-entry server boundary. DEN-452 adds local/dev/test DB tables, RLS policies, RPCs, and API wiring for durable lab result value persistence. DEN-453 distinguishes catalog loading/empty/error/permission states and save retry/permission states in the visible lab result UI. Provider integrations and remote Supabase replay remain outside current completion claims |
+| Dispensing/treatment      | Workspace screen exists; DEN-239 connects queue status context and status mutation to the shared fulfillment route, and UI PR 2 covers treatment/dispensing route-boundary status transitions. DEN-456 adds visible execution-screen readback from `order_fulfillment_work_items`, server-backed status mutation, permission/failure states, and focused UI regression coverage. Cheongdam cleanup work should prevent legacy fixture fallback from hiding seed/API readback gaps                                                                                                              |
+| Billing                   | Invoice candidate, invoice line edit, billing confirmation, payment state, guardian checkout, fulfillment completion candidate sync, and amount-integrity regression foundations. UI PR 2 covers checkout route consumption in visible billing UI. DEN-454 makes the selected billing demo path API-primary for invoice-line, payment-status, and checkout-session snapshots, and DEN-455 adds visible loading, permission, retryable failure, empty, and checkout retry states while mock fallback remains                                                                                    |
+| Inpatient                 | Session-only ward board and detail surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Hospital admin            | Order catalog persistence foundation and membership/invitation management surfaces                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Audit                     | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Auth/workspace            | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, and local DB/RLS foundations                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 Project 08 `Clinical Order Fulfillment Handoff Persistence` is ready for representative Human Review after DEN-235 through DEN-242. It verifies the local-first chart-confirmed order handoff through downstream fulfillment queues, lifecycle readback, and billing candidate readback. Its original remote staging replay was approval-gated at closeout; the current operating policy now allows scoped synthetic/demo remote validation under an active work item unless it triggers the cost/security/real-data/destructive-operation gates below.
 
@@ -53,38 +53,38 @@ The latest detailed change history before this split is in [MVP Current Status H
 
 Do not claim these as done without a scoped work item and verification evidence:
 
-- remote Supabase validation
-- production-demo deploy and production monitoring
-- real hospital/customer data import or storage
-- final clinical/business domain RLS replay for every live table
-- payment provider, receipt, refund, accounting, or settlement integrations
-- real email, KakaoTalk, PACS, device, Excel, or external provider integrations
-- legal/compliance certification
-- full lab/imaging/dispensing durable live persistence across every screen and complete mock-store removal
-- final launch-readiness signoff
+* remote Supabase validation
+* production-demo deploy and production monitoring
+* real hospital/customer data import or storage
+* final clinical/business domain RLS replay for every live table
+* payment provider, receipt, refund, accounting, or settlement integrations
+* real email, KakaoTalk, PACS, device, Excel, or external provider integrations
+* legal/compliance certification
+* full lab/imaging/dispensing durable live persistence across every screen and complete mock-store removal
+* final launch-readiness signoff
 
 ## Guardrails
 
-- Do not treat client-only permission checks, hidden buttons, or mock role labels as complete security.
-- Scoped synthetic/demo-data Supabase, migration, RLS, server/API, and production-demo deployment work is allowed when the active Linear issue or work item includes it.
-- Stop for explicit approval before meaningful cost, secret/security exposure, private repo/public exposure, real customer/patient/guardian/payment/identity data, destructive or hard-to-rollback remote data changes, real external email/KakaoTalk/payment/provider side effects, or real external-user launch.
-- Do not let mock fallback or legacy Sales Demo paths silently mask Cheongdam seed/API failures; legacy Sales Demo removal is now explicitly scoped through DEMO-DATA-PR-002.
-- Use synthetic demo data only. Do not introduce real patient, guardian, hospital, payment, or identity data.
-- For Next.js application code, read the relevant guide in `node_modules/next/dist/docs/` before coding.
-- For docs, planning, and Linear work, use `docs/_meta/agent-rag-map.md` to choose the smallest source-doc set.
+* Do not treat client-only permission checks, hidden buttons, or mock role labels as complete security.
+* Scoped synthetic/demo-data Supabase, migration, RLS, server/API, and production-demo deployment work is allowed when the active Linear issue or work item includes it.
+* Stop for explicit approval before meaningful cost, secret/security exposure, private repo/public exposure, real customer/patient/guardian/payment/identity data, destructive or hard-to-rollback remote data changes, real external email/KakaoTalk/payment/provider side effects, or real external-user launch.
+* Do not let mock fallback or legacy Sales Demo paths silently mask Cheongdam seed/API failures; legacy Sales Demo removal is now explicitly scoped through DEMO-DATA-PR-002.
+* Use synthetic demo data only. Do not introduce real patient, guardian, hospital, payment, or identity data.
+* For Next.js application code, read the relevant guide in `node_modules/next/dist/docs/` before coding.
+* For docs, planning, and Linear work, use `docs/_meta/agent-rag-map.md` to choose the smallest source-doc set.
 
 ## Current Verification Baseline
 
 Use the active work item for exact verification commands. Recent relevant verification categories include:
 
-- `npm run docs:check` for docs path/reference changes
-- `npm run lint`, `npx tsc --noEmit`, and `npm run build` for implementation changes
-- focused Playwright specs for touched workflows
-- `tests/ui-demo-api-wiring-e2e.spec.ts` for current reception/chart/downstream API wiring and synthetic outpatient route-boundary proof
-- `tests/fulfillment-handoff-replay.spec.ts` for chart confirmation through downstream fulfillment, lifecycle, and billing readback
-- `docs/engineering/testing/api-backed-demo-runbook.md` for the current command set and failure interpretation for the synthetic API-backed demo
-- focused server/API regression specs for auth, workspace, billing, customer, audit, and persistence boundaries
-- secret scans and migration/static checks when auth, DB, RLS, or env handling changes
+* `npm run docs:check` for docs path/reference changes
+* `npm run lint`, `npx tsc --noEmit`, and `npm run build` for implementation changes
+* focused Playwright specs for touched workflows
+* `tests/ui-demo-api-wiring-e2e.spec.ts` for current reception/chart/downstream API wiring and synthetic outpatient route-boundary proof
+* `tests/fulfillment-handoff-replay.spec.ts` for chart confirmation through downstream fulfillment, lifecycle, and billing readback
+* `docs/engineering/testing/api-backed-demo-runbook.md` for the current command set and failure interpretation for the synthetic API-backed demo
+* focused server/API regression specs for auth, workspace, billing, customer, audit, and persistence boundaries
+* secret scans and migration/static checks when auth, DB, RLS, or env handling changes
 
 Do not assume the full suite has been run for a new task unless the current work item records it.
 
@@ -96,28 +96,28 @@ The docs navigation improvement project `CLAiR EMR GitBook/docs 운영 고도화
 
 Completed or in Human Review:
 
-- DEN-171: GitBook docs home and sidebar map
-- DEN-172: Agent RAG map and startup reading rules
-- DEN-173: split this status document into compact summary and preserved history
-- DEN-174: SaaS operating map
-- DEN-175: Product MVP scope and non-goals
-- DEN-176: outpatient workflow state model
-- DEN-177: EMR domain entity map
-- DEN-178: role/permission source normalization
-- DEN-179: mock/live boundary map
-- DEN-180: persistence and data security checklist
-- DEN-181: Product MVP QA scenario pack
-- DEN-182: launch readiness checklist
-- DEN-183: decision log index and GitBook handoff
+* DEN-171: GitBook docs home and sidebar map
+* DEN-172: Agent RAG map and startup reading rules
+* DEN-173: split this status document into compact summary and preserved history
+* DEN-174: SaaS operating map
+* DEN-175: Product MVP scope and non-goals
+* DEN-176: outpatient workflow state model
+* DEN-177: EMR domain entity map
+* DEN-178: role/permission source normalization
+* DEN-179: mock/live boundary map
+* DEN-180: persistence and data security checklist
+* DEN-181: Product MVP QA scenario pack
+* DEN-182: launch readiness checklist
+* DEN-183: decision log index and GitBook handoff
 
 Current work:
 
-- Representative Human Review of the baseline docs operating system.
-- GitBook/docs navigation improvement through DEN-252 through DEN-257 is completed in Linear. Manual GitBook site setup or access changes still require a separate explicit request from 승욱.
+* Representative Human Review of the baseline docs operating system.
+* GitBook/docs navigation improvement through DEN-252 through DEN-257 is completed in Linear. Manual GitBook site setup or access changes still require a separate explicit request from 승욱.
 
 Upcoming baseline docs in this project:
 
-- None. The current baseline set is ready for Human Review.
+* None. The current baseline set is ready for Human Review.
 
 ## Recommended Next Work
 
@@ -129,14 +129,14 @@ For product/live-MVP work outside this docs project, review the current Linear p
 
 ## Related Docs
 
-- Human docs portal: [Docs Portal](../index.md)
-- Codex startup guide: [Agent Start Here](../agent-start-here.md)
-- Agent reading map: [Agent RAG Map](../_meta/agent-rag-map.md)
-- Detailed status history: [MVP Current Status History](current-status-history.md)
-- Engineering docs: [Engineering README](README.md)
-- Auth transition roadmap: [MVP Auth Transition Roadmap](auth-security/mvp-auth-transition-roadmap.md)
-- Auth/login package index: [Auth Login README](auth-security/auth-login/README.md)
-- API-backed demo runbook: [API-Backed Demo Runbook](testing/api-backed-demo-runbook.md)
-- Demo completion readiness report: [DEN-461 Demo Readiness Closeout](../completed/engineering/2026-06-11-den-461-demo-readiness-closeout-report.html)
-- Testing gap analysis: [MVP Gap Analysis](testing/mvp-gap-analysis.md)
-- Work index: [Work Index](../work/index.md)
+* Human docs portal: [Docs Portal](../)
+* Codex startup guide: [Agent Start Here](../agent-start-here.md)
+* Agent reading map: [Agent RAG Map](../_meta/agent-rag-map.md)
+* Detailed status history: [MVP Current Status History](current-status-history.md)
+* Engineering docs: [Engineering README](./)
+* Auth transition roadmap: [MVP Auth Transition Roadmap](auth-security/mvp-auth-transition-roadmap.md)
+* Auth/login package index: [Auth Login README](auth-security/auth-login/)
+* API-backed demo runbook: [API-Backed Demo Runbook](https://github.com/mcso0/emr-app-shell-prototype/blob/main/docs/engineering/testing/api-backed-demo-runbook.md)
+* Demo completion readiness report: [DEN-461 Demo Readiness Closeout](https://github.com/mcso0/emr-app-shell-prototype/blob/main/docs/completed/engineering/2026-06-11-den-461-demo-readiness-closeout-report.html)
+* Testing gap analysis: [MVP Gap Analysis](testing/mvp-gap-analysis.md)
+* Work index: [Work Index](../work/index.md)
