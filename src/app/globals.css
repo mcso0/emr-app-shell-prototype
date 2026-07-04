@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "shadcn/tailwind.css";
 @import "tw-animate-css";
 @import "pretendard/dist/web/variable/pretendardvariable.css";
 @import "../styles/tokens/shadcn.css";

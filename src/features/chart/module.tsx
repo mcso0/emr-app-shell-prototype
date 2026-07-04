@@ -4330,7 +4330,10 @@ function ChartOrderCatalogDialog({
           >
             {statusText}
           </div>
-          <ScrollArea className="h-[420px] rounded-[var(--emr-radius-control)] border">
+          <ScrollArea
+            className="h-[420px] rounded-[var(--emr-radius-control)] border"
+            viewportClassName="scroll-fade-y scroll-fade-8"
+          >
             <div className="grid divide-y">
               {visibleCandidates.map((row) => {
                 const sourceKey = getChartCatalogSourceKey(row);
