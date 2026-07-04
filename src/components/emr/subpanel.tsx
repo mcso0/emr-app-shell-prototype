@@ -44,6 +44,7 @@ type EmrSubpanelProps = {
 type EmrSubpanelBodyProps = EmrSubpanelProps & {
   contentClassName?: string;
   density?: "default" | "queue";
+  viewportClassName?: string;
 };
 
 type EmrSubpanelTitleProps = {
@@ -728,6 +729,7 @@ export function EmrSubpanelBody({
   className,
   contentClassName,
   density = "default",
+  viewportClassName,
 }: EmrSubpanelBodyProps) {
   const insetClassName =
     density === "queue"
@@ -735,7 +737,10 @@ export function EmrSubpanelBody({
       : "emr-density-panel-inset";
 
   return (
-    <ScrollArea className={cn("min-h-0 flex-1", className)}>
+    <ScrollArea
+      className={cn("min-h-0 flex-1", className)}
+      viewportClassName={viewportClassName}
+    >
       <div className={cn(insetClassName, "emr-density-stack-md flex min-h-full flex-col", contentClassName)}>
         {children}
       </div>
