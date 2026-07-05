@@ -107,6 +107,48 @@ async function clearWorkspaceTabs(page: Page) {
   });
 }
 
+async function mockResetWorkspaceTabsSession(page: Page) {
+  const route = "/w/clair-demo/home?modulePanel=open";
+  const payload = {
+    ok: true,
+    status: 200,
+    payload: {
+      activeTabId: "tab-app-shell-reset",
+      tabs: [
+        {
+          id: "tab-app-shell-reset",
+          title: "원내 현황",
+          closable: false,
+          history: [route],
+          historyIndex: 0,
+          moduleId: "home",
+          surfaceType: "module",
+          surfaceId: "home",
+          dedupeKey: "clair-demo:module:home",
+          lastRoute: route,
+          updatedAt: "2026-06-25T09:00:00.000Z",
+        },
+      ],
+    },
+    enforcedBy: "workspace-tabs-session",
+  };
+
+  await page.route("**/api/workspaces/clair-demo/app-shell/workspace-tabs", async (route) => {
+    const method = route.request().method();
+
+    if (method !== "GET" && method !== "PUT") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: payload,
+      status: 200,
+    });
+  });
+}
+
 function getWorkspaceTablist(page: Page) {
   return page.getByRole("tablist", { name: "열린 업무 탭" });
 }
@@ -188,6 +230,8 @@ test("global command palette searches and opens patient context", async ({ page 
 test("global command palette opens patient guardian registration from any workspace module", async ({
   page,
 }) => {
+  await mockResetWorkspaceTabsSession(page);
+  await clearWorkspaceTabs(page);
   await page.goto("/w/clair-demo/billing?modulePanel=open&aside=closed");
 
   await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
@@ -196,6 +240,23 @@ test("global command palette opens patient guardian registration from any worksp
   await expect(page.getByRole("heading", { name: "신규 등록" })).toBeVisible();
   await expect(page.getByText("환자/보호자 모두 신규 등록")).toBeVisible();
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing\?modulePanel=open&aside=closed/);
+});
+
+test("global command palette opens new reception drawer from any workspace module", async ({
+  page,
+}) => {
+  await mockResetWorkspaceTabsSession(page);
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=closed");
+
+  await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
+  await page.locator("#command-result-action-new-reception").click();
+
+  await expect
+    .poll(() => new URL(page.url()).pathname)
+    .toBe("/w/clair-demo/billing");
+  await expect(page.getByTestId("workspace-drawer")).toContainText("접수 생성");
+  await expect(page.getByTestId("walk-in-reception-dialog")).toBeVisible();
 });
 
 test("global command palette opens today's reception schedule", async ({

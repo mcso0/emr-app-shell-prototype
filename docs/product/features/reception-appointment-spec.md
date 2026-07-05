@@ -5,9 +5,10 @@ area: product
 doc_type: feature
 related_work:
   - "docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md"
+  - "docs/work/reception/RECEPTION-QA-PR-009-command-new-reception-flow.md"
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-03
+last_updated: 2026-07-05
 ---
 
 # Reception / Appointment Feature Spec
@@ -45,6 +46,7 @@ last_updated: 2026-05-03
 
 - 오늘 예약과 현장 접수 환자를 같은 업무 화면에서 확인한다.
 - 예약이 없어도 보호자/환자를 선택해 현장 접수할 수 있다.
+- 전역 command palette의 `신규 진료 접수` action은 현재 workspace module 위에서 현장 접수 drawer를 열 수 있어야 하며, 단순히 접수/예약 화면으로 이동하는 것으로 대체하지 않는다.
 - 예약 환자를 도착 시 접수 처리하고 진료 대기열로 연결한다.
 - 접수 처리 시 encounter 생성 또는 기존 appointment와 encounter 연결 기준을 명확히 한다.
 - 담당 수의사가 지정된 대기와 미지정 대기를 구분한다.
@@ -157,6 +159,17 @@ last_updated: 2026-05-03
 5. 접수 저장 시 appointment 없이 encounter가 생성된다.
 6. 생성된 encounter는 진료대기 상태로 대기열에 표시된다.
 
+### 1-A. 전역 신규 진료 접수
+
+1. 직원이 어느 workspace module에서든 global command palette를 연다.
+2. `신규 진료 접수` action을 선택한다.
+3. 현재 module을 유지한 채 CLAiR right drawer가 열리고, 현장 접수 form이 표시된다.
+4. 직원은 기존 현장 접수와 같은 입력값으로 보호자/동물, 방문 목적, 진료과, 담당 수의사, 소요 시간, 메모, 체중을 입력한다.
+5. `생성`을 누르면 walk-in encounter와 reception queue row가 생성된다.
+6. 생성 완료 후 화면은 자동으로 접수/예약 화면으로 강제 이동하지 않는다.
+7. 성공 toast는 `접수 확인하기` action을 제공한다.
+8. 직원이 toast action을 누르면 접수/예약 화면으로 이동하고, 생성한 encounter가 대기열에서 선택되며 `접수 상세` drawer로 열린다.
+
 ### 2. 예약 환자 접수 처리
 
 1. 데스크 직원이 오늘 예약 목록 또는 캘린더에서 예약 건을 선택한다.
@@ -199,6 +212,7 @@ last_updated: 2026-05-03
 5. 수의사는 대기열에서 본인 담당 또는 미지정 환자를 확인하고 진료 화면으로 이어갈 수 있다.
 6. 예약 변경, 취소, 노쇼는 접수/대기열 연결보다 후순위지만 MVP 상태 모델 안에 포함된다.
 7. 상태 변경은 이후 audit log와 DB/API persistence로 연결 가능한 이벤트 정보를 남길 수 있어야 한다.
+8. 전역 `신규 진료 접수` action은 현재 화면을 떠나지 않고 현장 접수 drawer를 열며, 생성 완료 toast의 `접수 확인하기` action은 생성 encounter를 선택한 접수/예약 상세 상태로 이동한다.
 
 ## Data And API Planning Notes
 
@@ -210,6 +224,9 @@ last_updated: 2026-05-03
 - Later API boundaries should provide reads for today appointments, effective encounters, queue rows, and patient/guardian search.
 - Later write boundaries should cover create appointment, update appointment, cancel appointment, mark no-show, check-in appointment, create walk-in encounter, assign veterinarian, and update queue status.
 - Session-only calendar task creation may carry a planned start time in frontend state before persistence work exists. Persisting this time live requires a separate schema/API contract such as `scheduledStartAt` or `plannedStartAt`.
+- Global command entry must reuse the same walk-in creation API and store application path as the reception toolbar `접수하기` drawer. Do not create a local-only command shortcut that bypasses `POST /api/workspaces/[workspaceId]/reception/walk-in-encounters`.
+- The success toast navigation target should be shareable URL state, such as `modulePanel=open`, `drawer=reception-encounter:<encounterId>`, and the generated encounter/patient selection query needed by the reception module.
+- Same-day duplicate reception warnings, unsaved drawer dirty guards, and persistent notification follow-ups are useful exceptions but remain outside this implementation slice unless a later work item scopes them.
 
 ## Source Documents
 

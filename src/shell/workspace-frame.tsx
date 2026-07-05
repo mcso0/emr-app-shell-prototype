@@ -7,6 +7,7 @@ import {
   GuardianProfileDrawer,
   PatientProfileDrawer,
 } from "@/features/reception/profile-drawer";
+import { ReceptionDrawer } from "@/features/reception/module";
 import type { ModuleDefinition } from "@/types/emr";
 import { Button } from "@/components/ui/button";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -39,11 +40,19 @@ export function WorkspaceFrame({
   const ModuleDrawer = moduleDefinition.drawer;
   const isPatientDrawer = activeDrawer?.type === "patient" || activeDrawer?.type === "reception-patient";
   const isGuardianDrawer = activeDrawer?.type === "guardian" || activeDrawer?.type === "reception-guardian";
+  const isReceptionDrawer =
+    activeDrawer?.type === "reception-appointment" ||
+    activeDrawer?.type === "reception-appointment-check-in-form" ||
+    activeDrawer?.type === "reception-draft-task" ||
+    activeDrawer?.type === "reception-encounter" ||
+    activeDrawer?.type === "reception-form" ||
+    activeDrawer?.type === "reception-reservation-form";
   const CommonProfileDrawer = isPatientDrawer
     ? PatientProfileDrawer
     : isGuardianDrawer
       ? GuardianProfileDrawer
       : undefined;
+  const EffectiveModuleDrawer = isReceptionDrawer ? ReceptionDrawer : ModuleDrawer;
   const drawerTitle =
     isPatientDrawer
         ? "환자 정보"
@@ -159,7 +168,7 @@ export function WorkspaceFrame({
         </div>
 
         <AnimatePresence>
-          {activeDrawer && (CommonProfileDrawer || ModuleDrawer) ? (
+          {activeDrawer && (CommonProfileDrawer || EffectiveModuleDrawer) ? (
             <motion.aside
               key={drawerMotionKey}
               initial={{ x: 480, opacity: 0 }}
@@ -201,8 +210,8 @@ export function WorkspaceFrame({
                 ) : (
                   <GuardianProfileDrawer guardianId={activeDrawer.id} />
                 )
-              ) : ModuleDrawer ? (
-                <ModuleDrawer {...slotProps} />
+              ) : EffectiveModuleDrawer ? (
+                <EffectiveModuleDrawer {...slotProps} />
               ) : null}
             </motion.aside>
           ) : null}
