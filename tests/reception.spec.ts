@@ -601,11 +601,11 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
       }),
     )
     .toEqual({
-      height: 40,
-      paddingBottom: "0px",
-      paddingLeft: "0px",
-      paddingRight: "0px",
-      paddingTop: "0px",
+      height: 56,
+      paddingBottom: "8px",
+      paddingLeft: "8px",
+      paddingRight: "8px",
+      paddingTop: "8px",
     });
   await expect
     .poll(() =>
