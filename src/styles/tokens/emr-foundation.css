@@ -288,8 +288,8 @@
   --emr-sidepanel-task-card-action-border: var(--clair-color-atomic-neutral-200);
   --emr-calendar-toolbar-height: 58px;
   --emr-calendar-toolbar-padding-x: var(--clair-spacing-16);
-  --emr-calendar-lane-header-cell-height: var(--clair-spacing-40);
-  --emr-calendar-lane-header-cell-padding: 0px;
+  --emr-calendar-lane-header-cell-height: 56px;
+  --emr-calendar-lane-header-cell-padding: var(--clair-spacing-8);
   --emr-calendar-lane-header-height: var(--clair-spacing-40);
   --emr-calendar-lane-header-radius: var(--clair-radius-atomic-8);
   --emr-calendar-lane-header-padding: var(--clair-spacing-8);
