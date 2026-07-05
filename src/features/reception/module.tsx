@@ -4711,6 +4711,7 @@ function DayScheduleBoard({
   const dayScheduleHeight = dayScheduleHours.length * dayScheduleHourRowHeight;
   const currentTimeOffset = getDayCurrentTimeOffset(currentOperatingMinutes);
   const scheduleGridTemplateColumns = `56px repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`;
+  const scheduleBoardMinWidth = `max(100%, calc(56px + ${selectedVeterinarians.length} * 180px))`;
   const assignmentVeterinarianIds = new Set(
     assignmentVeterinarians.map((veterinarian) => veterinarian.id),
   );
@@ -4727,63 +4728,73 @@ function DayScheduleBoard({
 
   return (
     <div
-      className="flex min-h-[720px] flex-col bg-card"
+      className="h-full min-h-[720px] overflow-x-auto overflow-y-hidden bg-card"
       data-testid="reception-day-calendar"
     >
       <div
-        className="sticky top-0 z-40 grid border-b bg-card shadow-xs"
-        style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
+        className="flex h-full min-h-0 flex-col"
+        style={{ minWidth: scheduleBoardMinWidth }}
       >
-        <div className="h-[var(--emr-calendar-lane-header-cell-height)] border-r" />
-        {selectedVeterinarians.map((veterinarian) => (
-          <div
-            key={veterinarian.id}
-            data-testid="veterinarian-lane-header-cell"
-            className="h-[var(--emr-calendar-lane-header-cell-height)] border-r p-[var(--emr-calendar-lane-header-cell-padding)] last:border-r-0"
-          >
-            <VeterinarianLaneHeader
-              toneIndex={getVeterinarianToneIndex(
-                veterinarian,
-                selectedVeterinarians,
-              )}
-              veterinarian={veterinarian}
-            />
-          </div>
-        ))}
-      </div>
-      {unassignedWalkIns.length ? (
         <div
-          className="sticky top-[var(--emr-calendar-lane-header-cell-height)] z-30 grid border-b bg-card/95 shadow-xs backdrop-blur"
-          data-testid="unassigned-walkin-row"
+          className="grid shrink-0 border-b bg-card shadow-xs"
+          data-testid="reception-day-calendar-lane-header"
           style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
         >
-          <div className="flex h-12 items-center justify-center border-r bg-muted/70 emr-text-micro font-medium text-muted-foreground">
-            미지정
-          </div>
-          <div
-            className="flex min-w-0 items-center gap-2 overflow-x-auto px-2 py-1.5"
-            style={{ gridColumn: "2 / -1" }}
-          >
-            {unassignedWalkIns.map((draft) => (
-              <ScheduleWalkInQueueCard
-                key={draft.encounter.id}
-                displayMode="unassignedCompact"
-                draft={draft}
-                veterinarians={selectedVeterinarians}
-                onClearCalendarTransientSelection={
-                  onClearCalendarTransientSelection
-                }
-                onSelectEncounter={onSelectEncounter}
+          <div className="h-[var(--emr-calendar-lane-header-cell-height)] border-r" />
+          {selectedVeterinarians.map((veterinarian) => (
+            <div
+              key={veterinarian.id}
+              data-testid="veterinarian-lane-header-cell"
+              className="h-[var(--emr-calendar-lane-header-cell-height)] border-r p-[var(--emr-calendar-lane-header-cell-padding)] last:border-r-0"
+            >
+              <VeterinarianLaneHeader
+                toneIndex={getVeterinarianToneIndex(
+                  veterinarian,
+                  selectedVeterinarians,
+                )}
+                veterinarian={veterinarian}
               />
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      ) : null}
+        {unassignedWalkIns.length ? (
+          <div
+            className="grid shrink-0 border-b bg-card/95 shadow-xs backdrop-blur"
+            data-testid="unassigned-walkin-row"
+            style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
+          >
+            <div className="flex h-12 items-center justify-center border-r bg-muted/70 emr-text-micro font-medium text-muted-foreground">
+              미지정
+            </div>
+            <div
+              className="flex min-w-0 items-center gap-2 overflow-x-auto px-2 py-1.5"
+              style={{ gridColumn: "2 / -1" }}
+            >
+              {unassignedWalkIns.map((draft) => (
+                <ScheduleWalkInQueueCard
+                  key={draft.encounter.id}
+                  displayMode="unassignedCompact"
+                  draft={draft}
+                  veterinarians={selectedVeterinarians}
+                  onClearCalendarTransientSelection={
+                    onClearCalendarTransientSelection
+                  }
+                  onSelectEncounter={onSelectEncounter}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
 
-      <div
-        className="relative grid flex-1"
-        style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
-      >
+        <ScrollArea
+          className="min-h-0 flex-1"
+          data-testid="reception-day-calendar-body-scroll"
+          viewportClassName="scroll-fade-y scroll-fade-8"
+        >
+          <div
+            className="relative grid"
+            style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
+          >
         {dayScheduleHours.map((hour, index) =>
           isBusinessHourRow(hour) ? null : (
             <div
@@ -4954,6 +4965,8 @@ function DayScheduleBoard({
             })}
           </div>
         </div>
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
@@ -4990,6 +5003,7 @@ function WeekScheduleBoard({
   const activeDayIndex = weekDays.findIndex((day) => day.active);
   const dayColumnWidth = "calc((100% - 56px) / 7)";
   const weekScheduleHeight = dayScheduleHours.length * dayScheduleHourRowHeight;
+  const weekScheduleMinWidth = "max(100%, 1120px)";
   const walkInDrafts = draftCheckIns.filter(
     (draft) =>
       draft.receptionType === "walk_in" &&
@@ -4998,41 +5012,48 @@ function WeekScheduleBoard({
 
   return (
     <div
-      className="flex min-h-[720px] min-w-[1120px] flex-col bg-card"
+      className="h-full min-h-[720px] overflow-x-auto overflow-y-hidden bg-card"
       data-testid="reception-week-calendar"
     >
       <div
-        className="sticky top-0 z-30 grid border-b bg-card shadow-xs"
-        style={{ gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))" }}
+        className="flex h-full min-h-0 flex-col"
+        style={{ minWidth: weekScheduleMinWidth }}
       >
-        <div className="border-r" />
-        {weekDays.map((day) => (
-          <div
-            key={`${day.label}-${day.day}-header`}
-            className={cn(
-              "flex h-16 flex-col items-center justify-center border-r last:border-r-0",
-              day.active && "bg-[var(--emr-status-info-bg)]/60",
-            )}
-          >
-            <span className="emr-text-micro text-muted-foreground">
-              {day.label}
-            </span>
-            <span
+        <div
+          className="grid shrink-0 border-b bg-card shadow-xs"
+          data-testid="reception-week-calendar-header"
+          style={{ gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))" }}
+        >
+          <div className="border-r" />
+          {weekDays.map((day) => (
+            <div
+              key={`${day.label}-${day.day}-header`}
               className={cn(
-                "mt-1 flex size-7 items-center justify-center rounded-full emr-text-body font-semibold",
-                day.active && "bg-primary text-primary-foreground",
+                "flex h-16 flex-col items-center justify-center border-r last:border-r-0",
+                day.active && "bg-[var(--emr-status-info-bg)]/60",
               )}
             >
-              {day.day}
-            </span>
-          </div>
-        ))}
-      </div>
+              <span className="emr-text-micro text-muted-foreground">
+                {day.label}
+              </span>
+              <span
+                className={cn(
+                  "mt-1 flex size-7 items-center justify-center rounded-full emr-text-body font-semibold",
+                  day.active && "bg-primary text-primary-foreground",
+                )}
+              >
+                {day.day}
+              </span>
+            </div>
+          ))}
+        </div>
 
-      <div
-        className="relative flex-1"
-        style={{ minHeight: weekScheduleHeight }}
-      >
+        <ScrollArea
+          className="min-h-0 flex-1"
+          data-testid="reception-week-calendar-body-scroll"
+          viewportClassName="scroll-fade-y scroll-fade-8"
+        >
+          <div className="relative" style={{ minHeight: weekScheduleHeight }}>
         {activeDayIndex >= 0 ? (
           <CalendarCurrentTimeIndicator
             currentOperatingMinutes={currentOperatingMinutes}
@@ -5170,6 +5191,8 @@ function WeekScheduleBoard({
             />
           ))}
         </div>
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
@@ -5584,9 +5607,14 @@ function ReceptionScheduleBoard({
         onTouchMoveCapture={markCalendarUserScrolled}
         onWheelCapture={markCalendarUserScrolled}
       >
-        <ScrollArea className="h-full">
-          {calendarBoard}
-        </ScrollArea>
+        {calendarResourceState === "ready" &&
+        (view === "day" || view === "week") ? (
+          calendarBoard
+        ) : (
+          <ScrollArea className="h-full">
+            {calendarBoard}
+          </ScrollArea>
+        )}
       </section>
     </div>
   );
