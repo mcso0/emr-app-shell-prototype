@@ -48,6 +48,7 @@ figma/figma-captures/
 
 # Local brainstorming artifacts
 .superpowers/
+.unknowns/
 .gstack/
 .worktrees/
 _workspace/
