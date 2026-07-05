@@ -259,6 +259,68 @@ test("global command palette opens new reception drawer from any workspace modul
   await expect(page.getByTestId("walk-in-reception-dialog")).toBeVisible();
 });
 
+test("global command palette renders Cheongdam API-backed search results", async ({ page }) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  await page.route(`**/api/workspaces/${workspaceId}/command/search?**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        query: "해피",
+        filter: "all",
+        enforcedBy: "command-search",
+        sourceState: { patientGuardian: "ready", reception: "ready" },
+        results: [
+          {
+            id: "patient-patient-cheongdam-happy",
+            kind: "patient",
+            title: "해피",
+            subtitle: "CD-P-0001 · 말티즈 · 박보호 · 010-4911-0001",
+            badge: "환자",
+            href: `/w/${workspaceId}/reception?modulePanel=open&patientId=patient-cheongdam-happy&drawer=reception-patient%3Apatient-cheongdam-happy`,
+            lookupItem: {
+              patient: {
+                id: "patient-cheongdam-happy",
+                workspaceId,
+                patientNo: "CD-P-0001",
+                name: "해피",
+                species: "dog",
+                breed: "말티즈",
+                sex: "female",
+                neutered: true,
+                handlingCautionLocked: true,
+                status: "active",
+                createdAt: "2026-07-05T09:00:00+09:00",
+                updatedAt: "2026-07-05T09:00:00+09:00",
+              },
+              primaryGuardian: {
+                id: "guardian-cheongdam-protector",
+                workspaceId,
+                name: "박보호",
+                mobilePhone: "010-4911-0001",
+                createdAt: "2026-07-05T09:00:00+09:00",
+                updatedAt: "2026-07-05T09:00:00+09:00",
+              },
+            },
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/home?modulePanel=open`);
+  await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
+  await page.getByRole("textbox", { name: "통합 검색" }).fill("해피");
+
+  const patientResult = page.getByRole("button", { name: /해피.*환자/ });
+  await expect(patientResult).toBeVisible();
+  await patientResult.click();
+
+  await expect(page).toHaveURL(/drawer=reception-patient%3Apatient-cheongdam-happy/);
+  await expect(page).not.toHaveURL(/patient-kong/);
+});
+
 test("global command palette opens today's reception schedule", async ({
   page,
 }) => {

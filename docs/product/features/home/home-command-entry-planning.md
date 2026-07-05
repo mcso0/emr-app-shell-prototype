@@ -228,6 +228,22 @@ Recommended behavior:
 
 상태 chip은 클릭 시 해당 필터 또는 lens로 이동한다.
 
+## Global Command Search v1
+
+The global command palette is a staff work-entry tool, not a legacy demo fixture browser. Search v1 covers:
+
+- quick actions, always available without a server search
+- patient and guardian lookup through the workspace-scoped reception lookup API
+- today's reception appointments and active encounter queue items through the reception queue read path
+
+Search v1 intentionally excludes chart, billing, lab, imaging, dispensing, and treatment global search. Those should be added later through source-owned read models instead of scraping client fixtures.
+
+Mock/live boundary:
+
+- `clair-demo` may keep explicit local demo/mock fallback for compatibility tests.
+- `workspace-clair-cheongdam` must use seeded API/Supabase-backed data and must not fall back to Kong/Nabi/Coco legacy daily-work fixtures.
+- Source failures, permission denial, and empty results must be visible as distinct command palette states.
+
 ### Main Lens
 
 본문 기본값은 `내 업무`다.
