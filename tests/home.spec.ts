@@ -250,6 +250,35 @@ test("home panels fill the desktop content height together", async ({ page }) =>
   expect(boardBox!.height).toBeGreaterThan(980);
 });
 
+test("home empty work-status state is centered in the content surface", async ({ page }) => {
+  await page.setViewportSize({ width: 1555, height: 1000 });
+  await useMockRole(page, "front_desk");
+  await page.goto(
+    "/w/workspace-clair-cheongdam/home?encounterId=78703ebf-8f10-415d-9520-8deafcb55657&modulePanel=open"
+  );
+
+  const emptySurface = page.getByTestId("home-kanban-empty-state-surface");
+  const emptyState = page.getByTestId("home-kanban-empty-state");
+
+  await expect(emptySurface).toBeVisible();
+  await expect(emptyState.getByRole("heading", { name: "원내 업무가 없습니다" })).toBeVisible();
+
+  const surfaceBox = await emptySurface.boundingBox();
+  const emptyBox = await emptyState.boundingBox();
+
+  expect(surfaceBox).not.toBeNull();
+  expect(emptyBox).not.toBeNull();
+  expect(emptyBox!.width).toBeLessThan(surfaceBox!.width / 2);
+
+  const surfaceCenterX = surfaceBox!.x + surfaceBox!.width / 2;
+  const surfaceCenterY = surfaceBox!.y + surfaceBox!.height / 2;
+  const emptyCenterX = emptyBox!.x + emptyBox!.width / 2;
+  const emptyCenterY = emptyBox!.y + emptyBox!.height / 2;
+
+  expect(Math.abs(emptyCenterX - surfaceCenterX)).toBeLessThanOrEqual(4);
+  expect(Math.abs(emptyCenterY - surfaceCenterY)).toBeLessThanOrEqual(6);
+});
+
 const roleCases: Array<{
   role: MockRole;
   expectedTask: string;
