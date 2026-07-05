@@ -167,55 +167,6 @@ export function WorkspaceFrame({
           </div>
         </div>
 
-        <AnimatePresence>
-          {activeDrawer && (CommonProfileDrawer || EffectiveModuleDrawer) ? (
-            <motion.aside
-              key={drawerMotionKey}
-              initial={{ x: 480, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 480, opacity: 0 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-line-default)] bg-card shadow-2xl"
-              data-testid="workspace-drawer"
-              style={{
-                width: `min(100%, ${drawerWidth}px)`,
-                zIndex: SHELL_LAYOUT.drawer.zIndex,
-              }}
-            >
-              {shouldShowShellDrawerHeader ? (
-                <div className="flex h-12 items-center justify-between border-b px-4">
-                  <div>
-                    <div className="flex min-w-0 items-baseline gap-2">
-                      <span className="text-sm font-semibold">{drawerTitle}</span>
-                      {drawerSubtitle ? (
-                        <span className="truncate text-[11px] text-muted-foreground">
-                          {drawerSubtitle}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="상세 닫기"
-                    onClick={() => setActiveDrawer(null)}
-                  >
-                    <CloseIcon />
-                  </Button>
-                </div>
-              ) : null}
-              {CommonProfileDrawer && activeDrawer ? (
-                isPatientDrawer ? (
-                  <PatientProfileDrawer patientId={activeDrawer.id} />
-                ) : (
-                  <GuardianProfileDrawer guardianId={activeDrawer.id} />
-                )
-              ) : EffectiveModuleDrawer ? (
-                <EffectiveModuleDrawer {...slotProps} />
-              ) : null}
-            </motion.aside>
-          ) : null}
-        </AnimatePresence>
       </section>
 
       <aside
@@ -236,6 +187,58 @@ export function WorkspaceFrame({
           {RightPanel && rightPanelOpen ? <RightPanel {...slotProps} /> : null}
         </div>
       </aside>
+
+      <AnimatePresence>
+        {activeDrawer && (CommonProfileDrawer || EffectiveModuleDrawer) ? (
+          <motion.aside
+            key={drawerMotionKey}
+            initial={{ x: 480, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 480, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-line-default)] bg-card shadow-2xl"
+            data-testid="workspace-drawer"
+            style={{
+              gridColumn: "1 / -1",
+              gridRow: "1 / -1",
+              width: `min(100%, ${drawerWidth}px)`,
+              zIndex: SHELL_LAYOUT.drawer.zIndex,
+            }}
+          >
+            {shouldShowShellDrawerHeader ? (
+              <div className="flex h-12 items-center justify-between border-b px-4">
+                <div>
+                  <div className="flex min-w-0 items-baseline gap-2">
+                    <span className="text-sm font-semibold">{drawerTitle}</span>
+                    {drawerSubtitle ? (
+                      <span className="truncate text-[11px] text-muted-foreground">
+                        {drawerSubtitle}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="상세 닫기"
+                  onClick={() => setActiveDrawer(null)}
+                >
+                  <CloseIcon />
+                </Button>
+              </div>
+            ) : null}
+            {CommonProfileDrawer && activeDrawer ? (
+              isPatientDrawer ? (
+                <PatientProfileDrawer patientId={activeDrawer.id} />
+              ) : (
+                <GuardianProfileDrawer guardianId={activeDrawer.id} />
+              )
+            ) : EffectiveModuleDrawer ? (
+              <EffectiveModuleDrawer {...slotProps} />
+            ) : null}
+          </motion.aside>
+        ) : null}
+      </AnimatePresence>
     </main>
   );
 }

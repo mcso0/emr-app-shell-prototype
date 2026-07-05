@@ -59,6 +59,7 @@ Make the global command palette `신규 진료 접수` action start the same dra
 | --- | --- |
 | User clicks `신규 진료 접수` in command palette | Palette closes and the walk-in reception drawer opens on the current workspace module. |
 | Current module is not `reception` | Stay on the current module path and render the reception create drawer through the shell. |
+| Current module has right-panel content open | Render the drawer from the outer workspace right edge, above content and right-panel layers, not between content and the right panel. |
 | User cancels before create | Close the drawer. Do not create queue/calendar data. |
 | User submits invalid or unauthorized create | Keep the drawer open and show the existing field/server error feedback. |
 | Create succeeds | Apply the created encounter to reception state and show success toast. |
@@ -70,6 +71,7 @@ Make the global command palette `신규 진료 접수` action start the same dra
 | Case | Decision |
 | --- | --- |
 | Command click from a module without its own drawer | Render the shared reception drawer through the shell instead of navigating first. |
+| Command click from a module with content/right panels open | Drawer is a shell overlay with drawer-level z-order. It must cover the open right panel from the workspace's far-right edge. |
 | Missing required form fields | Keep existing disabled create / field feedback behavior. |
 | Permission, validation, or server failure | Keep the drawer open and reuse the existing walk-in route error toast. |
 | Created encounter is not immediately visible after navigation | URL carries `encounterId` and `patientId`; reception route selection/read retry owns readback. Do not show an empty success state. |
@@ -86,6 +88,15 @@ Make the global command palette `신규 진료 접수` action start the same dra
 - Passed: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 npx playwright test tests/reception.spec.ts -g "server-backed walk-in encounter sends minimal reception payload" --reporter=line`.
 - Passed: `npm run docs:check`.
 - Partial: the broader reception grep had 8 passing tests and 5 existing failures outside this command/toast slice: calendar compact card vertical gap tolerance, two Cheongdam walk-in tests with disabled create button, one compact walk-in card text expectation, and one duplicate `patient-card-patient-haru` strict-mode expectation.
+
+### 2026-07-05 Drawer Layer Follow-up
+
+- Scope: fixed the shell drawer layer placement so global `신규 진료 접수` opens from the outer workspace right edge and covers an open right panel.
+- Regression coverage: app-shell command test now starts from billing with `right=open`, verifies the drawer z-index, right-edge alignment, and right-panel hit-test coverage.
+- Passed: `npm run lint -- src/shell/workspace-frame.tsx tests/app-shell.spec.ts`.
+- Passed: `npx tsc --noEmit --pretty false --incremental false`.
+- Passed: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3103 npx playwright test tests/app-shell.spec.ts -g "global command palette" --reporter=line`.
+- Passed: `npm run docs:check`.
 
 ## Handoff Notes
 
