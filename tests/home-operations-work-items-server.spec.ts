@@ -160,6 +160,138 @@ test("supabase home operations gateway calls the aggregate RPC and maps rows", a
   });
 });
 
+test("supabase home operations gateway falls back to existing live readers when aggregate RPC is missing", async () => {
+  const calls: string[] = [];
+  const gateway = createSupabaseHomeOperationsWorkItemGateway({
+    async rpc(functionName, args) {
+      calls.push(functionName);
+      if (functionName === "clair_list_home_operations_work_items") {
+        return { data: null, error: { message: "function does not exist" } };
+      }
+      expect(functionName).toBe("clair_list_reception_day_calendar");
+      expect(args).toMatchObject({
+        p_workspace_id: workspaceId,
+        p_day: operatingDate,
+      });
+      return {
+        error: null,
+        data: [
+          {
+            appointment: {
+              id: "00000000-0000-4000-8000-000000000011",
+              workspaceId,
+              patientId: "00000000-0000-4000-8000-000000000021",
+              guardianId: "00000000-0000-4000-8000-000000000031",
+              scheduledStartAt: `${operatingDate}T10:00:00+09:00`,
+              status: "confirmed",
+              visitPurpose: "예방접종",
+            },
+            patient: {
+              id: "00000000-0000-4000-8000-000000000021",
+              name: "나나",
+            },
+            primaryGuardian: {
+              id: "00000000-0000-4000-8000-000000000031",
+              name: "김보호",
+            },
+          },
+        ],
+      };
+    },
+    from(tableName) {
+      expect(tableName).toBe("order_fulfillment_work_items");
+      return {
+        select() {
+          return {
+            eq() {
+              return {
+                async limit() {
+                  return {
+                    error: null,
+                    data: [
+                      {
+                        id: "00000000-0000-4000-8000-000000000041",
+                        workspace_id: workspaceId,
+                        queue_type: "lab",
+                        status: "requested",
+                        priority: "normal",
+                        encounter_id: "00000000-0000-4000-8000-000000000051",
+                        source_snapshot: {
+                          orderDisplayName: "CBC 검사",
+                          patientName: "나나",
+                          guardianName: "김보호",
+                        },
+                        created_at: `${operatingDate}T10:20:00+09:00`,
+                        updated_at: `${operatingDate}T10:20:00+09:00`,
+                      },
+                      {
+                        id: "00000000-0000-4000-8000-000000000042",
+                        workspace_id: workspaceId,
+                        queue_type: "lab",
+                        status: "requested",
+                        priority: "normal",
+                        encounter_id: "00000000-0000-4000-8000-000000000052",
+                        source_snapshot: {
+                          orderDisplayName: "미래 검사",
+                        },
+                        created_at: "2026-07-06T10:20:00+09:00",
+                        updated_at: "2026-07-06T10:20:00+09:00",
+                      },
+                      {
+                        id: "00000000-0000-4000-8000-000000000043",
+                        workspace_id: workspaceId,
+                        queue_type: "lab",
+                        status: "completed",
+                        priority: "normal",
+                        encounter_id: "00000000-0000-4000-8000-000000000053",
+                        source_snapshot: {
+                          orderDisplayName: "과거 완료 검사",
+                        },
+                        created_at: "2026-07-04T10:20:00+09:00",
+                        updated_at: "2026-07-04T10:20:00+09:00",
+                      },
+                    ],
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  });
+
+  const result = await gateway.listHomeOperationsWorkItems({
+    actorUserId,
+    includeCancelled: false,
+    includeCompleted: false,
+    operatingDate,
+    scope: "all",
+    workspaceId,
+  });
+
+  expect(calls).toEqual([
+    "clair_list_home_operations_work_items",
+    "clair_list_reception_day_calendar",
+  ]);
+  expect(result).toMatchObject({
+    ok: true,
+    sourceStatus: "live",
+    items: [
+      {
+        id: "appointment:00000000-0000-4000-8000-000000000011",
+        sourceType: "appointment",
+        title: "나나 예약 확인",
+      },
+      {
+        id: "lab:00000000-0000-4000-8000-000000000041",
+        sourceType: "lab",
+        title: "CBC 검사",
+      },
+    ],
+  });
+});
+
 test("home operations migration is additive and exposes read-only aggregate RPC", () => {
   expect(migration).toContain(
     "create or replace function public.clair_list_home_operations_work_items",

@@ -68,3 +68,4 @@ Handed to human review on 2026-07-05.
 - Added focused server and Playwright coverage for the new contract.
 - Completion report: `docs/completed/home/2026-07-05-home-operations-live-work-items-report.html`.
 - Remote DB execution was attempted but not applied because this environment has no Supabase project link or access token.
+- Follow-up production hotfix: when the aggregate RPC is not present in remote Supabase yet, the server read path falls back to existing live reception-calendar and fulfillment readers without restoring Home mock fallback.
