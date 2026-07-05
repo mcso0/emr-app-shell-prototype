@@ -60,6 +60,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -76,7 +77,11 @@ import {
   type CustomerWorkBadge,
 } from "@/features/customer/data";
 import { useMockAuthStore } from "@/features/auth/session-store";
-import { useCustomerStore, type CustomerListMode } from "@/features/customer/store";
+import {
+  useCustomerStore,
+  type CustomerListMode,
+  type CustomerProfileReadStatus,
+} from "@/features/customer/store";
 import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import type { ReceptionPatientGuardianLookupResponse } from "@/features/reception/patient-guardian-lookup";
@@ -125,6 +130,7 @@ type CustomerTableFilterOption = {
   label: string;
   value: string;
 };
+type CustomerTableReadStatus = Extract<CustomerProfileReadStatus, "ready" | "error">;
 
 const badgeClassName: Record<CustomerWorkBadge["tone"], string> = {
   blue:
@@ -172,7 +178,9 @@ type CustomerDataTableProps<TRow extends { id: string }> = {
   isActiveRow: (row: TRow) => boolean;
   minTableWidthClassName: string;
   minTableWidth: number;
+  loading?: boolean;
   onOpenRow: (row: TRow) => void;
+  readStatus?: CustomerTableReadStatus;
   rowTestId: (row: TRow) => string;
   rows: TRow[];
   title: string;
@@ -232,6 +240,21 @@ type CustomerRowActionFeedback = {
 
 function getCustomerWorkspaceId(value?: string | string[]) {
   return resolveWorkspaceRouteParam(value);
+}
+
+function isCustomerProfileReadLoading({
+  status,
+  workspaceId,
+  workspaceIdForState,
+}: {
+  status: CustomerProfileReadStatus;
+  workspaceId: string;
+  workspaceIdForState: string | null;
+}) {
+  if (!isPreparedEmptyClinicWorkspace(workspaceId)) return false;
+  if (workspaceIdForState !== workspaceId) return true;
+
+  return status === "idle" || status === "loading";
 }
 
 function compareCustomerTableValues(left: CustomerTableSortValue, right: CustomerTableSortValue) {
@@ -373,9 +396,11 @@ function CustomerDataTable<TRow extends { id: string }>({
   emptyLabel,
   getRowLabel,
   isActiveRow,
+  loading = false,
   minTableWidthClassName,
   minTableWidth,
   onOpenRow,
+  readStatus = "ready",
   rowTestId,
   rows,
   title,
@@ -422,6 +447,7 @@ function CustomerDataTable<TRow extends { id: string }>({
   const selectedCount = visibleRowSelection.size;
   const allRowsSelected = visibleRows.length > 0 && visibleRows.every((row) => visibleRowSelection.has(row.id));
   const someRowsSelected = visibleRows.some((row) => visibleRowSelection.has(row.id)) && !allRowsSelected;
+  const initialLoading = loading && rows.length === 0;
   const visibleCountLabel = activeFilterCount > 0 ? `${visibleRows.length}/${rows.length}건` : `${countLabel}건`;
   const scopeLabel = query || activeFilterCount > 0 ? `표시 ${title}` : `전체 ${title}`;
   const hasFilterHiddenRows = rows.length > 0 && visibleRows.length === 0;
@@ -486,11 +512,21 @@ function CustomerDataTable<TRow extends { id: string }>({
   };
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-card" data-testid={testId}>
+    <div className="relative flex min-h-[480px] flex-1 flex-col overflow-hidden bg-card" data-testid={testId}>
       <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-card px-4 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="emr-text-body font-semibold">{scopeLabel}</span>
-          <Badge variant="secondary">{visibleCountLabel}</Badge>
+          <Badge variant="secondary" className="min-w-10 justify-center">
+            {initialLoading ? (
+              <Skeleton
+                aria-label={`${title} 정보 불러오는 중`}
+                className="h-3 w-7 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]"
+                data-testid={`${testId}-count-skeleton`}
+              />
+            ) : (
+              visibleCountLabel
+            )}
+          </Badge>
         </div>
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
           <CustomerSearchInput
@@ -593,10 +629,11 @@ function CustomerDataTable<TRow extends { id: string }>({
       ) : null}
       <Table
         aria-label={`${title} 고객관리 테이블`}
+        containerClassName="min-h-[360px] flex-1"
         density={density}
         layout="scroll"
         minWidth={minTableWidth}
-        className={minTableWidthClassName}
+        className={cn(minTableWidthClassName, "h-full")}
       >
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-border hover:bg-transparent">
@@ -652,7 +689,14 @@ function CustomerDataTable<TRow extends { id: string }>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {visibleRows.length ? (
+          {initialLoading ? (
+            <CustomerTableSkeletonRows
+              colSpan={visibleColumns.length + 2}
+              rowCount={6}
+              testId={`${testId}-skeleton-row`}
+              visibleColumnCount={visibleColumns.length}
+            />
+          ) : visibleRows.length ? (
             visibleRows.map((row) => {
               const active = isActiveRow(row);
               const selected = visibleRowSelection.has(row.id);
@@ -698,9 +742,24 @@ function CustomerDataTable<TRow extends { id: string }>({
                 </TableRow>
               );
             })
+          ) : readStatus === "error" ? (
+            <TableRow className="h-full hover:bg-transparent">
+              <TableCell colSpan={visibleColumns.length + 2} className="h-full min-h-36">
+                <div className="flex justify-center px-4 py-6">
+                  <EmrInlineAlert
+                    severity="warning"
+                    title={`${title} 정보를 불러오지 못했습니다`}
+                    className="max-w-[360px] emr-text-metadata"
+                    testId={`${testId}-read-error`}
+                  >
+                    잠시 후 다시 진입하면 최신 고객 정보를 다시 확인할 수 있습니다.
+                  </EmrInlineAlert>
+                </div>
+              </TableCell>
+            </TableRow>
           ) : (
-            <TableRow>
-              <TableCell colSpan={visibleColumns.length + 2} className="h-36">
+            <TableRow className="h-full hover:bg-transparent">
+              <TableCell colSpan={visibleColumns.length + 2} className="h-full min-h-36">
                 <div className="flex justify-center px-4 py-6">
                   <EmrEmptyState
                     kind={emptyStateKind}
@@ -716,11 +775,9 @@ function CustomerDataTable<TRow extends { id: string }>({
         </TableBody>
       </Table>
       <div className="flex h-11 items-center justify-between border-t px-4 emr-text-metadata font-medium text-muted-foreground">
-        <span>총 {visibleRows.length}건</span>
+        <span>{initialLoading ? "총 불러오는 중" : `총 ${visibleRows.length}건`}</span>
         <div className="flex items-center gap-2">
-          <span>
-            {visibleRows.length ? `1-${visibleRows.length}` : "0"} / {visibleRows.length}
-          </span>
+          <span>{initialLoading ? "- / -" : `${visibleRows.length ? `1-${visibleRows.length}` : "0"} / ${visibleRows.length}`}</span>
           <Button type="button" variant="outline" size="sm" className="h-7 bg-card" disabled>
             이전
           </Button>
@@ -745,6 +802,52 @@ function CustomerDataTable<TRow extends { id: string }>({
   );
 }
 
+function getCustomerSkeletonWidth(index: number) {
+  const widths = ["w-24", "w-32", "w-20", "w-16", "w-28", "w-36", "w-24", "w-28"];
+
+  return widths[index % widths.length];
+}
+
+function CustomerTableSkeletonRows({
+  colSpan,
+  rowCount,
+  testId,
+  visibleColumnCount,
+}: {
+  colSpan: number;
+  rowCount: number;
+  testId: string;
+  visibleColumnCount: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: rowCount }, (_, rowIndex) => (
+        <TableRow key={`${testId}-${rowIndex}`} className="h-12 hover:bg-transparent" data-testid={testId}>
+          <EmrTableSelectionCell className="w-12">
+            <Skeleton className="size-4 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
+          </EmrTableSelectionCell>
+          {Array.from({ length: visibleColumnCount }, (_, columnIndex) => (
+            <TableCell key={`${testId}-${rowIndex}-${columnIndex}`} className="h-12">
+              <Skeleton
+                className={cn(
+                  "h-4 max-w-full rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]",
+                  getCustomerSkeletonWidth(columnIndex),
+                )}
+              />
+            </TableCell>
+          ))}
+          <TableCell className="w-12">
+            <Skeleton className="ml-auto size-7 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+        </TableRow>
+      ))}
+      <TableRow className="sr-only">
+        <TableCell colSpan={colSpan}>고객 정보를 불러오는 중입니다.</TableCell>
+      </TableRow>
+    </>
+  );
+}
+
 export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getCustomerWorkspaceId(params.workspaceId);
@@ -753,6 +856,7 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const patients = usePatientProfileStore((state) => state.patients);
+  const profileReadState = useCustomerStore((state) => state.profileReadState);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["master"]));
   const patientCount = useMemo(
@@ -780,6 +884,11 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
     guardian: guardianCount,
     patient: patientCount,
   };
+  const profileReadLoading = isCustomerProfileReadLoading({
+    status: profileReadState.status,
+    workspaceId,
+    workspaceIdForState: profileReadState.workspaceId,
+  });
   const toggleSection = (sectionId: string) => {
     setOpenSections((current) => {
       const next = new Set(current);
@@ -806,7 +915,13 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
           type: "leaf" as const,
           id: item.value,
           active: listMode === item.value,
-          count: <EmrModuleListSidePanelBadge>{customerCounts[item.value]}</EmrModuleListSidePanelBadge>,
+          count: (
+            <CustomerSidePanelCountBadge
+              count={customerCounts[item.value]}
+              loading={profileReadLoading && item.value !== "deleted" && customerCounts[item.value] === 0}
+              label={item.label}
+            />
+          ),
           icon: <Icon className="size-4 shrink-0" />,
           label: item.label,
           onClick: () => setListMode(item.value),
@@ -837,6 +952,30 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
       openSectionIds={openSections}
       testId="customer-side-panel"
     />
+  );
+}
+
+function CustomerSidePanelCountBadge({
+  count,
+  label,
+  loading,
+}: {
+  count: number;
+  label: string;
+  loading: boolean;
+}) {
+  return (
+    <EmrModuleListSidePanelBadge>
+      {loading ? (
+        <Skeleton
+          aria-label={`${label} 수 불러오는 중`}
+          className="h-3 w-4 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]"
+          data-testid={`customer-side-panel-${label}-count-skeleton`}
+        />
+      ) : (
+        count
+      )}
+    </EmrModuleListSidePanelBadge>
   );
 }
 
@@ -879,18 +1018,21 @@ function CustomerSearchInput({
 }
 
 function CustomerToolbar({
+  loading,
   listMode,
   patientCount,
   guardianCount,
 }: {
   guardianCount: number;
   listMode: CustomerListMode;
+  loading: boolean;
   patientCount: number;
 }) {
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const activeCount = listMode === "patient" ? patientCount : listMode === "guardian" ? guardianCount : 0;
   const activeLabel =
     listMode === "patient" ? "동물" : listMode === "guardian" ? "보호자" : "삭제된 보호자/동물";
+  const countLoading = loading && listMode !== "deleted" && activeCount === 0;
 
   return (
     <div className="shrink-0 border-b bg-card px-4 py-3" data-testid="customer-page-header">
@@ -906,7 +1048,15 @@ function CustomerToolbar({
         }
         badge={
           <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
-            {activeCount}
+            {countLoading ? (
+              <Skeleton
+                aria-label={`${activeLabel} 수 불러오는 중`}
+                className="h-3 w-5 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]"
+                data-testid="customer-page-header-count-skeleton"
+              />
+            ) : (
+              activeCount
+            )}
           </Badge>
         }
         actions={
@@ -914,7 +1064,9 @@ function CustomerToolbar({
         }
       />
       <span className="sr-only">
-        {listMode === "patient" ? `동물 ${patientCount}` : `보호자 ${guardianCount}`}
+        {countLoading
+          ? `${activeLabel} 정보를 불러오는 중`
+          : `${activeLabel} ${activeCount}`}
       </span>
     </div>
   );
@@ -950,7 +1102,15 @@ function DeletedCustomerContent() {
   );
 }
 
-function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
+function PatientTable({
+  loading,
+  readStatus,
+  rows,
+}: {
+  loading: boolean;
+  readStatus: CustomerTableReadStatus;
+  rows: CustomerPatientRow[];
+}) {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const columns = useMemo<Array<CustomerTableColumn<CustomerPatientRow>>>(
@@ -1070,9 +1230,11 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         activeDrawer?.id === row.id &&
         (activeDrawer.type === "patient" || activeDrawer.type === "reception-patient")
       }
+      loading={loading}
       minTableWidthClassName={customerTableWidthClassNames.patient}
       minTableWidth={customerTableMinWidths.patient}
       onOpenRow={(row) => setActiveDrawer({ type: "patient", id: row.id })}
+      readStatus={readStatus}
       rowTestId={(row) => `customer-patient-row-${row.id}`}
       rows={rows}
       title="동물"
@@ -1081,7 +1243,15 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
   );
 }
 
-function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
+function GuardianTable({
+  loading,
+  readStatus,
+  rows,
+}: {
+  loading: boolean;
+  readStatus: CustomerTableReadStatus;
+  rows: CustomerGuardianRow[];
+}) {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const columns = useMemo<Array<CustomerTableColumn<CustomerGuardianRow>>>(
@@ -1162,9 +1332,11 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
         activeDrawer?.id === row.id &&
         (activeDrawer.type === "guardian" || activeDrawer.type === "reception-guardian")
       }
+      loading={loading}
       minTableWidthClassName={customerTableWidthClassNames.guardian}
       minTableWidth={customerTableMinWidths.guardian}
       onOpenRow={(row) => setActiveDrawer({ type: "guardian", id: row.id })}
+      readStatus={readStatus}
       rowTestId={(row) => `customer-guardian-row-${row.id}`}
       rows={rows}
       title="보호자"
@@ -1178,6 +1350,8 @@ export function CustomerContent() {
   const workspaceId = getCustomerWorkspaceId(params.workspaceId);
   const listMode = useCustomerStore((state) => state.listMode);
   const query = useCustomerStore((state) => state.query);
+  const profileReadState = useCustomerStore((state) => state.profileReadState);
+  const setProfileReadState = useCustomerStore((state) => state.setProfileReadState);
   const authSession = useMockAuthStore((state) => state.session);
   const applyPatientGuardianLookupItem = usePatientProfileStore(
     (state) => state.applyPatientGuardianLookupItem,
@@ -1186,9 +1360,13 @@ export function CustomerContent() {
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const patients = usePatientProfileStore((state) => state.patients);
   useEffect(() => {
-    if (!isPreparedEmptyClinicWorkspace(workspaceId)) return;
+    if (!isPreparedEmptyClinicWorkspace(workspaceId)) {
+      setProfileReadState({ status: "ready", workspaceId });
+      return;
+    }
 
     let cancelled = false;
+    setProfileReadState({ status: "loading", workspaceId });
 
     async function loadSeededCustomerProfiles() {
       try {
@@ -1205,11 +1383,18 @@ export function CustomerContent() {
         const result =
           (await response.json()) as ReceptionPatientGuardianLookupResponse;
 
-        if (cancelled || !response.ok || !result.ok) return;
+        if (cancelled) return;
+        if (!response.ok || !result.ok) {
+          setProfileReadState({ status: "error", workspaceId });
+          return;
+        }
 
         result.patients.forEach((item) => applyPatientGuardianLookupItem(item));
+        setProfileReadState({ status: "ready", workspaceId });
       } catch {
-        // Keep the workspace-filtered empty state if live customer seed read fails.
+        if (!cancelled) {
+          setProfileReadState({ status: "error", workspaceId });
+        }
       }
     }
 
@@ -1218,7 +1403,7 @@ export function CustomerContent() {
     return () => {
       cancelled = true;
     };
-  }, [applyPatientGuardianLookupItem, authSession?.id, workspaceId]);
+  }, [applyPatientGuardianLookupItem, authSession?.id, setProfileReadState, workspaceId]);
   const patientRows = useMemo(
     () =>
       filterCustomerRows(
@@ -1235,18 +1420,40 @@ export function CustomerContent() {
       ),
     [guardians, patientGuardians, patients, query, workspaceId]
   );
+  const customerProfileLoading = isCustomerProfileReadLoading({
+    status: profileReadState.status,
+    workspaceId,
+    workspaceIdForState: profileReadState.workspaceId,
+  });
+  const tableReadStatus: CustomerTableReadStatus =
+    profileReadState.workspaceId === workspaceId && profileReadState.status === "error"
+      ? "error"
+      : "ready";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="customer-workspace">
       <CustomerToolbar
+        loading={customerProfileLoading}
         listMode={listMode}
         patientCount={patientRows.length}
         guardianCount={guardianRows.length}
       />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex min-h-full flex-col">
-          {listMode === "patient" ? <PatientTable rows={patientRows} /> : null}
-          {listMode === "guardian" ? <GuardianTable rows={guardianRows} /> : null}
+          {listMode === "patient" ? (
+            <PatientTable
+              loading={customerProfileLoading}
+              readStatus={tableReadStatus}
+              rows={patientRows}
+            />
+          ) : null}
+          {listMode === "guardian" ? (
+            <GuardianTable
+              loading={customerProfileLoading}
+              readStatus={tableReadStatus}
+              rows={guardianRows}
+            />
+          ) : null}
           {listMode === "deleted" ? <DeletedCustomerContent /> : null}
         </div>
       </ScrollArea>

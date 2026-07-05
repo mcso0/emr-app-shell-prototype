@@ -1186,6 +1186,11 @@ test("customer table uses compact scope controls and checkbox bulk selection", a
   await expect(table.getByRole("textbox", { name: "고객관리 검색" })).toBeVisible();
   await expect(table).toContainText("전체 동물");
   await expect(table).not.toContainText("0 / 5 선택");
+  const workspaceBox = await page.getByTestId("customer-workspace").boundingBox();
+  const tableBox = await table.boundingBox();
+  expectRect(workspaceBox);
+  expectRect(tableBox);
+  expect(tableBox!.height).toBeGreaterThan(workspaceBox!.height * 0.65);
 
   await page.getByRole("checkbox", { name: "코코 선택" }).click();
   await expect(page.getByText("선택한 동물 1개")).toBeVisible();

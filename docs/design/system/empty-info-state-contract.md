@@ -126,7 +126,7 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 | Shared order queues | `src/components/emr/order-queue-side-panel.tsx`, `src/features/lab-imaging/module.tsx`, `src/features/billing/module.tsx` | `조건에 맞는 ... 업무가 없습니다` or `... 업무가 없습니다` through queue wrappers | Keep existing queue wrapper; use future compact variant only after visual QA. |
 | Chart content body | `src/features/chart/module.tsx` `EmptyChartState` | `EmrEmptyState` content pilot for selected patient absence in the main content area | Adopted as the first content-body pilot on 2026-07-01. It stays passive because queue selection is the next step. If queue is also empty in a future flow, content should own any source-workflow CTA. |
 | Chart order table | `src/features/chart/module.tsx` order table empty row | `EmrEmptyState` table pilot for filter/category-empty order rows | Adopted as the first table-body pilot on 2026-07-01. It keeps local recovery copy and no CTA until a table-local reset action is wired. |
-| Customer tables | `src/features/customer/module.tsx` `CustomerDataTable` | `EmrEmptyState` table surface for no-data and filter-empty rows | Adopted as a table-body follow-up after the chart pilot. Search/filter/reset behavior remains owned by `CustomerDataTable`; drawer/profile behavior is unchanged. |
+| Customer tables | `src/features/customer/module.tsx` `CustomerDataTable` | `EmrEmptyState` table surface for no-data and filter-empty rows; skeleton rows for unresolved initial profile reads | Adopted as a table-body follow-up after the chart pilot. Search/filter/reset behavior remains owned by `CustomerDataTable`; drawer/profile behavior is unchanged. |
 | Hospital admin tables | `src/features/hospital-admin/module.tsx` | Order catalog uses `EmrEmptyState` table surface for no-data and filter/search-empty rows; audit log keeps its existing local empty row | Order catalog adopted as a table-body follow-up after the chart pilot. Audit log remains a later surface because it has a different review context. |
 | Dispensing/treatment content body | `src/features/dispensing/module.tsx` | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the history aside | Adopted for the operational content surface. Shared queue panels remain on compact queue placeholders. Selected work item states keep their detail/history surfaces where applicable. |
 | Lab content body | `src/features/lab-imaging/module.tsx` lab branch | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the lab history aside | Adopted for the operational content surface. Lab result table empty, permission, retry, save, and catalog states remain separate. Selected detail states keep their aside/history where applicable. |
@@ -172,6 +172,13 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 - Source-empty queue panels keep search available so the user's query is preserved, but sort and filter controls are disabled because they cannot change an empty source queue.
 - The main content body owns the screen-level refresh action for source-empty operational states. Queue side panels remain compact supporting placeholders.
 - Home work-status surfaces now use the same source-empty principle for `원내 업무가 없습니다` when the hospital work source has zero tasks.
+
+## 2026-07-05 Table Loading Read-State Pilot
+
+- Customer management table surfaces now distinguish unresolved initial profile reads from true-empty tables.
+- Table surfaces must not use `EmrEmptyState` or `0건` count copy while the source read is still unresolved; use skeleton rows and unresolved count placeholders instead.
+- True-empty and filter-empty rows remain `EmrEmptyState` table states only after the source read resolves.
+- Existing visible rows should stay visible during background refresh; skeleton rows are for initial loading when no rows are available yet.
 
 ## Implementation Acceptance Criteria
 
