@@ -50,3 +50,7 @@ Separate customer-management table loading from true-empty table states so Cheon
 - `npx tsc --noEmit`
 - `npx playwright test tests/customer.spec.ts tests/hospital-admin.spec.ts --grep "customer|skeleton|hospital admin order table shows skeleton" --reporter=line`
 - `npm run docs:check`
+
+## Follow-Up Notes
+
+- 2026-07-05: Added a pre-paint customer read-state sync so a stale SPA `ready` state with empty Cheongdam rows cannot briefly render the table empty copy before the lookup effect marks the read as loading.
