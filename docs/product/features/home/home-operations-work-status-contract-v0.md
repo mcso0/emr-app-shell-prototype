@@ -15,6 +15,7 @@ related_docs:
   - "docs/engineering/data-model/order-fulfillment-handoff-contract.md"
 related_work:
   - "docs/work/home/HOME-PR-011-home-operations-live-work-items.md"
+  - "docs/work/home/HOME-PR-012-home-operations-source-to-home-parity.md"
 supersedes: []
 superseded_by: []
 last_updated: 2026-07-05
@@ -35,6 +36,13 @@ HOME-PR-011 implements the first live read path for Cheongdam/prepared-clinic Ho
 - Source coverage: appointments/reception queue, consultation-like queue states, order fulfillment work items, and billing/invoice work candidates.
 - Home UI consumes the API for non-legacy workspaces and does not fall back to mock operations data on read failure.
 - Inpatient work remains v2.
+
+HOME-PR-012 adds source-to-Home parity verification:
+
+- Regression coverage creates reservation, chart-order fulfillment, and billing source work before reading Home operations.
+- Home cards are verified by the same queue-card information contract used by source queues: primary text, secondary text, status label, time label, owner/queue label, drawer summary, and source navigation path.
+- The replay path is scoped to deliberate local/demo identity. Cheongdam/prepared-clinic Home operations remain mockless and must not hide read errors as empty work.
+- `접수` remains a source-writer gap until the product creation rule is decided; do not invent Home-only reception cards.
 
 ## Users
 
@@ -290,6 +298,7 @@ HOME-PR-011 completed the first implementation pass for:
 Remaining follow-up:
 
 - `partial` source-read handling when the aggregate is split into independently failure-tolerant source adapters.
+- Actual `접수` queue writer and creation rule, if the product decides registration itself should generate a distinct Home card.
 - Source-specific `long_stay` thresholds after SLA policy is approved.
 - Chart/order urgent-request authoring UI.
 - Inpatient operations v2.

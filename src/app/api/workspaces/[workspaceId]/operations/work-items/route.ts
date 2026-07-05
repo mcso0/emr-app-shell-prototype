@@ -9,10 +9,13 @@ import {
   type SupabaseWorkspacePermissionClient,
 } from "@/features/auth/supabase-workspace-permission-gateway";
 import {
+  createDemoHomeOperationsPermissionAdapter,
+  createDemoHomeOperationsWorkItemGateway,
   createSupabaseHomeOperationsWorkItemGateway,
   readHomeOperationsWorkItems,
   type SupabaseHomeOperationsWorkItemsRpcClient,
 } from "@/features/home/server-home-operations-work-items";
+import { isLegacySalesDemoWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -50,6 +53,9 @@ export async function GET(request: Request, { params }: RouteContext) {
   }
 
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const canUseDemoGateway =
+    identity.source === "demo_header_mock_mode" &&
+    isLegacySalesDemoWorkspace(workspaceId);
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
         gateway: createSupabaseWorkspacePermissionGateway(
@@ -58,7 +64,9 @@ export async function GET(request: Request, { params }: RouteContext) {
         workspaceId,
         sessionUserId: identity.actorUserId,
       })
-    : undefined;
+    : canUseDemoGateway
+      ? createDemoHomeOperationsPermissionAdapter()
+      : undefined;
   const result = await readHomeOperationsWorkItems({
     actorUserId: identity.actorUserId,
     workspaceId,
@@ -73,7 +81,9 @@ export async function GET(request: Request, { params }: RouteContext) {
       ? createSupabaseHomeOperationsWorkItemGateway(
           client as unknown as SupabaseHomeOperationsWorkItemsRpcClient,
         )
-      : undefined,
+      : canUseDemoGateway
+        ? createDemoHomeOperationsWorkItemGateway()
+        : undefined,
   });
 
   return Response.json(result, { status: result.status });

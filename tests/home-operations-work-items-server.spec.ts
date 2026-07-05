@@ -199,7 +199,102 @@ test("supabase home operations gateway falls back to existing live readers when 
       };
     },
     from(tableName) {
-      expect(tableName).toBe("order_fulfillment_work_items");
+      const rowsByTable: Record<string, unknown[]> = {
+        order_fulfillment_work_items: [
+          {
+            id: "00000000-0000-4000-8000-000000000041",
+            workspace_id: workspaceId,
+            queue_type: "lab",
+            status: "requested",
+            priority: "normal",
+            encounter_id: "00000000-0000-4000-8000-000000000051",
+            source_snapshot: {
+              orderDisplayName: "CBC 검사",
+              patientName: "나나",
+              guardianName: "김보호",
+            },
+            created_at: `${operatingDate}T10:20:00+09:00`,
+            updated_at: `${operatingDate}T10:20:00+09:00`,
+          },
+          {
+            id: "00000000-0000-4000-8000-000000000042",
+            workspace_id: workspaceId,
+            queue_type: "lab",
+            status: "requested",
+            priority: "normal",
+            encounter_id: "00000000-0000-4000-8000-000000000052",
+            source_snapshot: {
+              orderDisplayName: "미래 검사",
+            },
+            created_at: "2026-07-06T10:20:00+09:00",
+            updated_at: "2026-07-06T10:20:00+09:00",
+          },
+          {
+            id: "00000000-0000-4000-8000-000000000043",
+            workspace_id: workspaceId,
+            queue_type: "lab",
+            status: "completed",
+            priority: "normal",
+            encounter_id: "00000000-0000-4000-8000-000000000053",
+            source_snapshot: {
+              orderDisplayName: "과거 완료 검사",
+            },
+            created_at: "2026-07-04T10:20:00+09:00",
+            updated_at: "2026-07-04T10:20:00+09:00",
+          },
+        ],
+        invoices: [
+          {
+            id: "00000000-0000-4000-8000-000000000061",
+            workspace_id: workspaceId,
+            encounter_id: "00000000-0000-4000-8000-000000000051",
+            guardian_id: "00000000-0000-4000-8000-000000000031",
+            invoice_no: "INV-TEST-001",
+            status: "draft",
+            payment_state: "none",
+            total_amount: 35000,
+            created_at: `${operatingDate}T10:30:00+09:00`,
+          },
+        ],
+        invoice_lines: [
+          {
+            id: "00000000-0000-4000-8000-000000000071",
+            workspace_id: workspaceId,
+            invoice_id: "00000000-0000-4000-8000-000000000061",
+            order_id: "00000000-0000-4000-8000-000000000081",
+            billing_candidate_id: "00000000-0000-4000-8000-000000000091",
+            description: "CBC 검사",
+            quantity: 1,
+            unit_price: 35000,
+            line_total: 35000,
+            created_at: `${operatingDate}T10:30:00+09:00`,
+            updated_at: `${operatingDate}T10:30:00+09:00`,
+          },
+        ],
+        encounters: [
+          {
+            id: "00000000-0000-4000-8000-000000000051",
+            workspace_id: workspaceId,
+            patient_id: "00000000-0000-4000-8000-000000000021",
+            guardian_id: "00000000-0000-4000-8000-000000000031",
+            reception_type: "appointment",
+          },
+        ],
+        patients: [
+          {
+            id: "00000000-0000-4000-8000-000000000021",
+            workspace_id: workspaceId,
+            name: "나나",
+          },
+        ],
+        guardians: [
+          {
+            id: "00000000-0000-4000-8000-000000000031",
+            workspace_id: workspaceId,
+            name: "김보호",
+          },
+        ],
+      };
       return {
         select() {
           return {
@@ -208,49 +303,7 @@ test("supabase home operations gateway falls back to existing live readers when 
                 async limit() {
                   return {
                     error: null,
-                    data: [
-                      {
-                        id: "00000000-0000-4000-8000-000000000041",
-                        workspace_id: workspaceId,
-                        queue_type: "lab",
-                        status: "requested",
-                        priority: "normal",
-                        encounter_id: "00000000-0000-4000-8000-000000000051",
-                        source_snapshot: {
-                          orderDisplayName: "CBC 검사",
-                          patientName: "나나",
-                          guardianName: "김보호",
-                        },
-                        created_at: `${operatingDate}T10:20:00+09:00`,
-                        updated_at: `${operatingDate}T10:20:00+09:00`,
-                      },
-                      {
-                        id: "00000000-0000-4000-8000-000000000042",
-                        workspace_id: workspaceId,
-                        queue_type: "lab",
-                        status: "requested",
-                        priority: "normal",
-                        encounter_id: "00000000-0000-4000-8000-000000000052",
-                        source_snapshot: {
-                          orderDisplayName: "미래 검사",
-                        },
-                        created_at: "2026-07-06T10:20:00+09:00",
-                        updated_at: "2026-07-06T10:20:00+09:00",
-                      },
-                      {
-                        id: "00000000-0000-4000-8000-000000000043",
-                        workspace_id: workspaceId,
-                        queue_type: "lab",
-                        status: "completed",
-                        priority: "normal",
-                        encounter_id: "00000000-0000-4000-8000-000000000053",
-                        source_snapshot: {
-                          orderDisplayName: "과거 완료 검사",
-                        },
-                        created_at: "2026-07-04T10:20:00+09:00",
-                        updated_at: "2026-07-04T10:20:00+09:00",
-                      },
-                    ],
+                    data: rowsByTable[tableName] ?? [],
                   };
                 },
               };
@@ -287,6 +340,12 @@ test("supabase home operations gateway falls back to existing live readers when 
         id: "lab:00000000-0000-4000-8000-000000000041",
         sourceType: "lab",
         title: "CBC 검사",
+      },
+      {
+        id: "billing:00000000-0000-4000-8000-000000000061",
+        sourceType: "billing",
+        title: "INV-TEST-001 수납 요청",
+        queueCardSecondLineText: "오더 1건 · 35,000원",
       },
     ],
   });

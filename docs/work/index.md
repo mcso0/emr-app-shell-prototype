@@ -142,6 +142,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | HOME-PR-009                 | human_review | home                 | P0       | Project 17 / DEN-431 | `docs/work/home/HOME-PR-009-den-431-home-shell-sidepanel.md`                                           |
 | HOME-PR-010                 | human_review | home                 | P0       | Project 17 / DEN-432 | `docs/work/home/HOME-PR-010-den-432-home-internal-status-labels.md`                                    |
 | HOME-PR-011                 | human_review | home                 | P0       | User request / Home operations live work items | `docs/work/home/HOME-PR-011-home-operations-live-work-items.md`                     |
+| HOME-PR-012                 | human_review | home                 | P0       | User request / Home operations source-to-Home parity | `docs/work/home/HOME-PR-012-home-operations-source-to-home-parity.md`          |
 | NOTIFICATION-PR-001         | human_review | notifications        | P0       | Project 20 / DEN-395 | `docs/work/notifications/NOTIFICATION-PR-001-v0-contract-fixture-schema.md`                            |
 | NOTIFICATION-PR-002         | human_review | notifications        | P0       | Project 20 / DEN-396 | `docs/work/notifications/NOTIFICATION-PR-002-event-matrix-ux-badge-toast-policy.md`                    |
 | NOTIFICATION-PR-003         | human_review | notifications        | P0       | Project 20 / DEN-397 | `docs/work/notifications/NOTIFICATION-PR-003-shell-drawer-foundation.md`                               |
