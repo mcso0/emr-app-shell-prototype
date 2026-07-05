@@ -58,6 +58,7 @@ import {
   ExcelFileIcon,
 } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -473,12 +474,16 @@ function VeterinarianLaneHeader({
         ],
       )}
     >
-      <span
+      <Avatar
         data-testid="veterinarian-lane-avatar"
-        className="flex size-[var(--emr-calendar-lane-avatar-size)] shrink-0 items-center justify-center rounded-[var(--emr-calendar-lane-avatar-radius)] bg-[var(--emr-surface-panel)] text-[16px] font-bold leading-none text-[var(--clair-color-atomic-gray-500)]"
+        roundness="roundrect"
+        size="sm"
+        className="after:border-0"
       >
-        {veterinarian.initial}
-      </span>
+        <AvatarFallback className="bg-[var(--emr-surface-panel)] font-medium text-[var(--clair-color-atomic-gray-500)]">
+          {veterinarian.initial}
+        </AvatarFallback>
+      </Avatar>
       <span className="min-w-0 truncate text-[15px] font-semibold leading-5 [letter-spacing:0]">
         {veterinarian.name}
       </span>
