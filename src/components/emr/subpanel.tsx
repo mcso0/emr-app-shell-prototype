@@ -117,6 +117,8 @@ type EmrListItemProps = {
   variant?: "default" | "outline";
 };
 
+type EmrQueueStatePlacement = "body-center" | "panel-center";
+
 const emrDatePickerWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const emrDateNavigatorClassName =
   "flex h-[calc(var(--clair-control-height-md)+var(--clair-spacing-8)*2)] shrink-0 items-center justify-between gap-[var(--clair-spacing-6)] px-[var(--clair-spacing-12)]";
@@ -498,9 +500,11 @@ export function EmrListHeaderIconButton({
 }
 
 export function EmrListSearchEmptyState(props: {
+  className?: string;
   motionIcon?: ReactNode;
   objectLabel?: string;
   onClear: () => void;
+  placement?: EmrQueueStatePlacement;
   query: string;
 }) {
   const motionIcon = props.motionIcon ?? (
@@ -513,7 +517,9 @@ export function EmrListSearchEmptyState(props: {
 
   return (
     <EmrQueueEmptyState
+      className={props.className}
       icon={motionIcon}
+      placement={props.placement}
       title="검색 결과가 없습니다"
       data-testid="emr-list-search-empty-state"
     />
@@ -521,18 +527,24 @@ export function EmrListSearchEmptyState(props: {
 }
 
 export function EmrQueueLoadingState({
+  className,
+  placement,
   title = "업무 정보를 불러오는 중입니다",
 }: {
+  className?: string;
+  placement?: EmrQueueStatePlacement;
   title?: string;
 }) {
   return (
     <EmrQueueEmptyState
+      className={className}
       icon={
         <EmrMotionIcon
           animationData={queueLoadingMotionIcon}
           className="size-10 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
         />
       }
+      placement={placement}
       title={title}
       data-testid="emr-queue-loading-state"
     />
@@ -544,6 +556,7 @@ export function EmrQueueEmptyState({
   className,
   icon,
   iconClassName,
+  placement = "body-center",
   title,
   ...props
 }: {
@@ -551,12 +564,14 @@ export function EmrQueueEmptyState({
   className?: string;
   icon?: ReactNode;
   iconClassName?: string;
+  placement?: EmrQueueStatePlacement;
   title?: ReactNode;
 } & ComponentProps<"div">) {
   return (
     <div
       className={cn(
         "flex min-h-[220px] flex-1 flex-col items-center justify-center px-4 py-8 text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
+        placement === "panel-center" && "-translate-y-[72px]",
         className,
       )}
       {...props}
