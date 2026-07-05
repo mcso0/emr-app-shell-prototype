@@ -3,7 +3,15 @@ import { cn } from "@/lib/utils";
 import type { HomeNextAction, HomeTask } from "@/features/home/home.types";
 
 function isUrgentTask(task: HomeTask) {
-  return task.status === "overdue" || task.priority === "urgent";
+  return (
+    task.priority === "urgent" ||
+    task.status === "overdue" ||
+    task.attentionSignals?.some((signal) =>
+      signal === "urgent" ||
+      signal === "re_requested" ||
+      signal === "assignment_missing"
+    ) === true
+  );
 }
 
 export function HomeTaskDecisionBadge({
@@ -32,7 +40,7 @@ export function HomeTaskStatusBadge({
       variant={
         isUrgentTask(task)
           ? "destructive"
-          : task.status === "inProgress"
+          : task.status === "inProgress" || task.status === "in_progress"
             ? "default"
             : "secondary"
       }
@@ -66,7 +74,7 @@ export function HomeTaskDecisionPill({
         "rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4",
         isUrgentTask(task)
           ? "bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]"
-          : task.assignment === "roleQueue"
+          : task.assignment === "roleQueue" || task.assignment === "assignmentMissing"
             ? "bg-[var(--emr-status-warning-bg)] text-foreground"
             : "bg-muted text-muted-foreground"
       )}

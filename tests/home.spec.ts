@@ -17,6 +17,7 @@ const roleLabels: Record<MockRole, string> = {
   nurse: "간호사",
   vet: "수의사",
 };
+const cheongdamWorkspaceId = "workspace-clair-cheongdam";
 
 async function useMockRole(page: Page, role: MockRole) {
   await page.addInitScript(
@@ -36,6 +37,23 @@ async function useMockRole(page: Page, role: MockRole) {
   );
 }
 
+async function mockCheongdamHomeOperations(
+  page: Page,
+  body: Record<string, unknown>,
+  status = 200,
+) {
+  await page.route(
+    `**/api/workspaces/${cheongdamWorkspaceId}/operations/work-items?**`,
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: body,
+        status,
+      });
+    },
+  );
+}
+
 test("home renders one unified desktop work-status workspace", async ({ page }) => {
   await useMockRole(page, "vet");
   await page.goto("/w/clair-demo/home");
@@ -50,13 +68,15 @@ test("home renders one unified desktop work-status workspace", async ({ page }) 
   const operationModeFilter = page.getByRole("group", { name: "업무 현황 운영 모드" });
 
   await expect(operationModeFilter.getByRole("button", { name: "전체 흐름 17" })).toHaveAttribute("aria-pressed", "true");
-  await expect(operationModeFilter.getByRole("button", { name: "내 담당 4" })).toBeVisible();
-  await expect(operationModeFilter.getByRole("button", { name: "배정 필요 10" })).toBeVisible();
-  await expect(operationModeFilter.getByRole("button", { name: "지연 해소 5" })).toBeVisible();
+  await expect(operationModeFilter.getByRole("button", { name: "내 업무 보기 4" })).toBeVisible();
+  await expect(operationModeFilter.getByRole("button", { name: "배정 누락 0" })).toBeVisible();
+  await expect(operationModeFilter.getByRole("button", { name: "긴급/재요청 5" })).toBeVisible();
   await expect(page.getByLabel("담당자 필터")).toBeVisible();
   await expect(page.getByLabel("업무 필터")).toBeVisible();
   await expect(page.getByLabel("업무 상태 필터")).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: /지연만 보기/ })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /완료 포함/ })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /취소 포함/ })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /오래 머문 업무만 보기/ })).toBeVisible();
 
   await expect(page.getByRole("tablist", { name: "홈 보기" })).toHaveCount(0);
   await expect(page.getByTestId("home-dashboard")).toHaveCount(0);
@@ -97,8 +117,7 @@ test("home unified board renders workstream columns and status groups", async ({
   await expect(page.getByTestId("home-kanban-column-chart").getByRole("heading", { name: "진료" })).toBeVisible();
   await expect(page.getByTestId("home-kanban-column-lab").getByRole("heading", { name: "임상병리검사" })).toBeVisible();
   await expect(page.getByText("콩이 CBC 결과 확인").first()).toBeVisible();
-  await expect(page.getByTestId("home-kanban-status-waiting-overdue")).toContainText("지연");
-  await expect(page.getByTestId("home-kanban-status-waiting-requested")).toContainText("요청");
+  await expect(page.getByTestId("home-kanban-status-waiting-waiting")).toContainText("대기");
 });
 
 test("home opens selected work in a non-modal right detail panel", async ({ page }) => {
@@ -144,7 +163,7 @@ test("home filters kanban work by assignee, workstream, and work status", async 
 
   await page.keyboard.press("Escape");
   await page.getByLabel("업무 상태 필터").click();
-  await page.getByRole("option", { name: "지연" }).click();
+  await page.getByRole("option", { name: "오래 머묾" }).click();
 
   await expect(page.getByTestId("home-kanban-task-hospital-billing-unpaid")).toBeVisible();
   await expect(page.getByTestId("home-kanban-task-billing-coco-payment")).toHaveCount(0);
@@ -170,7 +189,7 @@ test("operation mode filters move populated workstreams before empty columns", a
     "home-kanban-column-billing",
   ]);
 
-  await page.getByRole("group", { name: "업무 현황 운영 모드" }).getByRole("button", { name: "지연 해소 5" }).click();
+  await page.getByRole("group", { name: "업무 현황 운영 모드" }).getByRole("button", { name: "긴급/재요청 5" }).click();
 
   await expect.poll(columnOrder).toEqual([
     "home-kanban-column-waiting",
@@ -253,8 +272,30 @@ test("home panels fill the desktop content height together", async ({ page }) =>
 test("home empty work-status state is centered in the content surface", async ({ page }) => {
   await page.setViewportSize({ width: 1555, height: 1000 });
   await useMockRole(page, "front_desk");
+  await mockCheongdamHomeOperations(page, {
+    ok: true,
+    workspaceId: cheongdamWorkspaceId,
+    operatingDate: "2026-07-05",
+    sourceStatus: "empty",
+    items: [],
+    summary: {
+      totalVisible: 0,
+      mineCount: 0,
+      bySourceType: {},
+      byProgressState: {},
+      byAttentionSignal: {},
+      byAssignmentState: {
+        personal: 0,
+        teamQueue: 0,
+        assignmentMissing: 0,
+      },
+      completedCount: 0,
+      cancelledCount: 0,
+    },
+    generatedAt: "2026-07-05T09:00:00+09:00",
+  });
   await page.goto(
-    "/w/workspace-clair-cheongdam/home?encounterId=78703ebf-8f10-415d-9520-8deafcb55657&modulePanel=open"
+    `/w/${cheongdamWorkspaceId}/home?encounterId=78703ebf-8f10-415d-9520-8deafcb55657&modulePanel=open`
   );
 
   const emptySurface = page.getByTestId("home-kanban-empty-state-surface");
@@ -267,7 +308,7 @@ test("home empty work-status state is centered in the content surface", async ({
   await expect(page.getByLabel("담당자 필터")).toHaveCount(0);
   await expect(page.getByLabel("업무 필터")).toHaveCount(0);
   await expect(page.getByLabel("업무 상태 필터")).toHaveCount(0);
-  await expect(page.getByRole("checkbox", { name: /지연만 보기/ })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: /오래 머문 업무만 보기/ })).toHaveCount(0);
 
   const surfaceBox = await emptySurface.boundingBox();
   const emptyBox = await emptyState.boundingBox();
@@ -303,6 +344,32 @@ test("home empty work-status state is centered in the content surface", async ({
 
   expect(Math.abs(sidePanelEmptyCenterX - sidePanelSurfaceCenterX)).toBeLessThanOrEqual(4);
   expect(Math.abs(sidePanelEmptyCenterY - sidePanelSurfaceCenterY)).toBeLessThanOrEqual(6);
+});
+
+test("home operations read failure does not render as no work", async ({ page }) => {
+  await useMockRole(page, "front_desk");
+  await mockCheongdamHomeOperations(
+    page,
+    {
+      ok: false,
+      workspaceId: cheongdamWorkspaceId,
+      operatingDate: "2026-07-05",
+      sourceStatus: "error",
+      error: {
+        code: "db_read_failed",
+        message: "원내 현황 데이터를 불러오지 못했습니다.",
+        retryable: true,
+      },
+    },
+    500,
+  );
+
+  await page.goto(`/w/${cheongdamWorkspaceId}/home?modulePanel=open`);
+
+  await expect(page.getByTestId("home-kanban-error-state")).toContainText("원내 현황을 불러오지 못했습니다");
+  await expect(page.getByTestId("home-side-panel-error-state")).toContainText("데이터 연결 실패");
+  await expect(page.getByTestId("home-kanban-empty-state")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "업무 현황" })).toHaveCount(0);
 });
 
 const roleCases: Array<{
@@ -342,7 +409,7 @@ test("home kanban task actions reuse the side-panel hover action pattern", async
   const action = page.getByTestId("home-kanban-task-action-vet-kong-lab-review");
   const column = page.getByTestId("home-kanban-column-chart");
 
-  await expect(page.getByTestId("home-kanban-status-chart-assigned")).toContainText("배정");
+  await expect(page.getByTestId("home-kanban-status-chart-waiting")).toContainText("대기");
   await expect(task).toBeVisible();
   await expect(task.getByRole("button", { name: "검사 큐 열기" })).toHaveCount(0);
   await expect(action).toHaveCSS("opacity", "0");
@@ -357,7 +424,7 @@ test("home kanban task actions reuse the side-panel hover action pattern", async
   await expect(task).toBeVisible();
   await expect.poll(async () => (await column.boundingBox())?.height ?? 0).toBeGreaterThan(500);
 
-  await column.getByRole("button", { name: "배정 접기" }).click();
+  await column.getByRole("button", { name: "대기 접기" }).click();
 
   await expect(task).toHaveCount(0);
 });

@@ -5,9 +5,10 @@ area: product
 doc_type: product-rules
 related_docs:
   - "docs/product/features/home/home-command-entry-planning.md"
+  - "docs/product/features/home/home-operations-work-status-contract-v0.md"
 related_work:
   - "docs/work/home/HOME-PR-001-role-command-home-foundation.md"
-last_updated: "2026-05-09"
+last_updated: "2026-07-05"
 ---
 
 # Home Work Generation Rules v0
@@ -15,6 +16,8 @@ last_updated: "2026-05-09"
 ## Purpose
 
 이 문서는 홈 화면의 `내 업무`에 어떤 항목을 올릴지 정의한다.
+
+2026-07-05 note: this document remains the personal `내 업무` generation reference. For the hospital-wide `원내 현황` operations board, common status contract, work type generation table, and DB/API read-model direction, use `home-operations-work-status-contract-v0.md`.
 
 홈의 `내 업무`는 사용자가 볼 수 있는 모든 정보가 아니라, 사용자에게 요청되었거나 사용자가 담당자로 지정된 action이다.
 
