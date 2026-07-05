@@ -87,7 +87,8 @@
           <li>전역 커맨드 액션명을 <code>오늘 접수/예약 보기</code>로 변경했다.</li>
           <li>커맨드 실행 시 <code>/w/{workspaceId}/reception?modulePanel=open&amp;date={todayOperatingDate}</code>로 이동한다.</li>
           <li>접수/예약 모듈은 URL의 <code>date</code>를 검증하고 유효한 경우 선택 운영일로 반영한다.</li>
-          <li>잘못된 <code>date</code>는 화면을 깨뜨리지 않고 기본 운영일로 fallback한다.</li>
+          <li>잘못된 <code>date</code>는 화면을 깨뜨리지 않고 기본 운영일로 정규화한다.</li>
+          <li>사이드 캘린더나 오늘 버튼으로 날짜를 바꿀 때도 URL의 <code>date</code>를 함께 갱신한다.</li>
           <li>라우트 날짜 적용 시 캘린더 드래그와 임시 선택 상태를 정리한다.</li>
         </ul>
       </section>
@@ -104,11 +105,11 @@
       <section>
         <h2>검증</h2>
         <ul>
-          <li><code>npm run lint -- src/shell/global-command-palette.tsx src/features/reception/module.tsx tests/app-shell.spec.ts tests/reception.spec.ts</code> 통과, 기존 warning 6건 유지.</li>
+          <li><code>npm run lint -- src/features/reception/module.tsx tests/reception.spec.ts tests/app-shell.spec.ts</code> 통과, 기존 warning 6건 유지.</li>
           <li><code>npx tsc --noEmit --pretty false</code> 통과.</li>
+          <li><code>npx playwright test tests/reception.spec.ts -g "route date|selected operating date|topbar refresh|normalizes" --reporter=line</code> 통과.</li>
           <li><code>npx playwright test tests/app-shell.spec.ts -g "global command palette" --reporter=line</code> 통과.</li>
-          <li><code>npx playwright test tests/reception.spec.ts -g "route date|selected operating date|topbar refresh" --reporter=line</code> 통과.</li>
-          <li><code>npm run docs:check</code> 통과.</li>
+          <li><code>npm run docs:check</code> 및 <code>git diff --check</code> 통과.</li>
         </ul>
       </section>
 
