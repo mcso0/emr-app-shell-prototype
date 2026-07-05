@@ -302,15 +302,42 @@ test("Cheongdam work modules do not render legacy active-work fixtures", async (
 test("Cheongdam shell search and notifications do not expose legacy daily work", async ({
   page,
 }) => {
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/command/search?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          query: "해피",
+          filter: "all",
+          enforcedBy: "command-search",
+          sourceState: { patientGuardian: "ready", reception: "ready" },
+          results: [
+            {
+              id: "patient-patient-cheongdam-happy",
+              kind: "patient",
+              title: "해피",
+              subtitle: "CD-P-0001 · 박보호",
+              badge: "환자",
+              href: `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception?modulePanel=open&patientId=patient-cheongdam-happy&drawer=reception-patient%3Apatient-cheongdam-happy`,
+            },
+          ],
+        }),
+      });
+    },
+  );
   await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/home`);
 
   await expect(page.getByTestId("global-notification-badge")).toHaveCount(0);
 
-  await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
-  await page.getByLabel("통합 검색", { exact: true }).fill("콩이");
+  await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
+  await page.getByLabel("통합 검색", { exact: true }).fill("해피");
 
-  await expect(page.getByText("검색 결과가 없습니다.")).toBeVisible();
-  await expect(page.locator('[id^="command-result-patient-"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /해피.*환자/ })).toBeVisible();
+  await expect(page.getByText("콩이")).toHaveCount(0);
+  await expect(page.locator("#command-result-patient-patient-kong")).toHaveCount(0);
   await expect(page.locator('[id^="command-result-appointment-"]')).toHaveCount(0);
   await expect(page.locator('[id^="command-result-encounter-"]')).toHaveCount(0);
 });

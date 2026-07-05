@@ -18,30 +18,30 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { SegmentedControl, type SegmentedControlItem } from "@/components/ui/segmented-control";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  mockAppointments,
-  mockEncounters,
-  mockGuardians,
-  mockPatientGuardians,
-  mockPatients,
-  mockStaffUsers,
-  mockWaitingQueueEntries,
-} from "@/mocks/emr-domain";
 import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
-import { getStatusLabel } from "@/lib/emr-domain/status-labels";
-import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
-import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
+import { useMockAuthStore } from "@/features/auth/session-store";
+import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
+import {
+  shouldRunCommandSearch,
+} from "@/features/command/command-search";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { AppIcon } from "@/components/icons";
-import type { Appointment, Encounter, EmrId, Guardian, Patient } from "@/types/emr-domain";
+import type {
+  CommandSearchFilter,
+  CommandSearchResponse,
+  CommandSearchResult,
+  CommandSearchSourceState,
+} from "@/features/command/command-search";
+import type { EmrId } from "@/types/emr-domain";
 
 type CommandItemKind = "action" | "patient" | "guardian" | "appointment" | "encounter";
-type CommandFilter = "all" | "patient" | "guardian" | "phone" | "chart" | "vet" | "technician" | "desk";
+type CommandFilter = CommandSearchFilter;
 type CommandAction = "open-new-reception" | "open-patient-guardian-registration";
 
 type CommandItem = {
   action?: CommandAction;
+  searchResult?: CommandSearchResult;
   id: string;
   kind: CommandItemKind;
   title: string;
@@ -59,7 +59,14 @@ type CommandSection = {
   items: CommandItem[];
 };
 
+type CommandSearchClientState =
+  | { status: "idle"; results: CommandSearchResult[]; sourceState?: CommandSearchSourceState }
+  | { status: "loading"; results: CommandSearchResult[]; sourceState?: CommandSearchSourceState }
+  | { status: "ready"; results: CommandSearchResult[]; sourceState: CommandSearchSourceState }
+  | { status: "error"; results: CommandSearchResult[]; sourceState?: CommandSearchSourceState };
+
 const MAX_ITEMS_PER_SECTION = 6;
+const COMMAND_SEARCH_DEBOUNCE_MS = 180;
 const COMMAND_DIALOG_CLASS_NAME =
   "h-[min(680px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-line-subtle)] bg-card p-0 shadow-[var(--clair-shadow-xl)] sm:max-w-[720px]";
 const COMMAND_RESULT_ROW_CLASS_NAME =
@@ -103,7 +110,7 @@ const quickActionSpecs = [
   },
   {
     id: "today-appointments",
-    title: "오늘 접수/예약 보기",
+    title: "오늘 예약 보기",
     subtitle: "접수/예약 캘린더와 대기 목록을 엽니다.",
     badge: "View",
     icon: ClockIcon,
@@ -134,199 +141,38 @@ function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function formatShortTime(value?: string) {
-  if (!value) return "";
-  return value.slice(11, 16);
-}
-
-function getPrimaryGuardian(patientId: EmrId) {
-  const guardianId = mockPatientGuardians.find(
-    (link) => link.patientId === patientId && link.isPrimary
-  )?.guardianId;
-
-  return guardianId ? mockGuardians.find((guardian) => guardian.id === guardianId) : undefined;
-}
-
-function getPatientNamesForGuardian(guardianId: EmrId) {
-  const patientIds = new Set(
-    mockPatientGuardians
-      .filter((link) => link.guardianId === guardianId)
-      .map((link) => link.patientId)
-  );
-
-  return mockPatients
-    .filter((patient) => patientIds.has(patient.id))
-    .map((patient) => patient.name);
-}
-
-function getStaffName(userId?: EmrId) {
-  return userId ? mockStaffUsers.find((staff) => staff.id === userId)?.name : undefined;
-}
-
-function getStaffRole(userId?: EmrId) {
-  return userId ? mockStaffUsers.find((staff) => staff.id === userId)?.role : undefined;
-}
-
-function getPatient(patientId: EmrId) {
-  return mockPatients.find((patient) => patient.id === patientId);
-}
-
-function getGuardian(guardianId?: EmrId, patientId?: EmrId) {
-  if (guardianId) return mockGuardians.find((guardian) => guardian.id === guardianId);
-  return patientId ? getPrimaryGuardian(patientId) : undefined;
-}
-
 function createHref(workspaceId: string, moduleId: string, params?: Record<string, string>) {
   const searchParams = new URLSearchParams({ modulePanel: "open", ...(params ?? {}) });
   return `/w/${workspaceId}/${moduleId}?${searchParams.toString()}`;
 }
 
-function patientKeywords(patient: Patient, guardian?: Guardian) {
-  return [
-    patient.name,
-    patient.patientNo,
-    patient.breed,
-    patient.microchipNo,
-    patient.patientRegistrationNo,
-    guardian?.name,
-    guardian?.mobilePhone,
-    guardian?.phone,
-  ].filter(Boolean) as string[];
+function getSearchResultIcon(kind: CommandSearchResult["kind"]) {
+  if (kind === "appointment") return CalendarIcon;
+  if (kind === "encounter") return ClockIcon;
+  return UserIcon;
 }
 
-function buildPatientItem(workspaceId: string, patient: Patient): CommandItem {
-  const guardian = getPrimaryGuardian(patient.id);
-  const summary = [patient.breed, guardian?.name, guardian?.mobilePhone].filter(Boolean).join(" · ");
-
+function buildSearchResultItem(result: CommandSearchResult): CommandItem {
   return {
-    id: `patient-${patient.id}`,
-    kind: "patient",
-    title: patient.name,
-    subtitle: summary || patient.patientNo,
-    href: createHref(workspaceId, "reception", {
-      patientId: patient.id,
-      drawer: `reception-patient:${patient.id}`,
-    }),
-    badge: "환자",
-    icon: UserIcon,
-    keywords: patientKeywords(patient, guardian),
-    filterKeywords: {
-      patient: [patient.name, patient.breed, patient.microchipNo, patient.patientRegistrationNo].filter(Boolean) as string[],
-      guardian: [guardian?.name].filter(Boolean) as string[],
-      phone: [guardian?.mobilePhone, guardian?.phone].filter(Boolean) as string[],
-      chart: [patient.patientNo, patient.patientRegistrationNo].filter(Boolean) as string[],
-    },
+    id: result.id,
+    kind: result.kind,
+    title: result.title,
+    subtitle: result.subtitle,
+    href: result.href,
+    badge: result.badge,
+    icon: getSearchResultIcon(result.kind),
+    keywords: [result.title, result.subtitle, result.badge].filter(Boolean) as string[],
+    searchResult: result,
   };
 }
 
-function buildGuardianItem(workspaceId: string, guardian: Guardian): CommandItem {
-  const patientNames = getPatientNamesForGuardian(guardian.id);
-
-  return {
-    id: `guardian-${guardian.id}`,
-    kind: "guardian",
-    title: guardian.name,
-    subtitle: [guardian.mobilePhone, patientNames.join(", ")].filter(Boolean).join(" · "),
-    href: createHref(workspaceId, "reception", {
-      drawer: `reception-guardian:${guardian.id}`,
-    }),
-    badge: "보호자",
-    icon: UserIcon,
-    keywords: [guardian.name, guardian.mobilePhone, guardian.phone, guardian.email, ...patientNames].filter(
-      Boolean
-    ) as string[],
-    filterKeywords: {
-      patient: patientNames,
-      guardian: [guardian.name, guardian.email].filter(Boolean) as string[],
-      phone: [guardian.mobilePhone, guardian.phone].filter(Boolean) as string[],
-    },
-  };
-}
-
-function buildAppointmentItem(workspaceId: string, appointment: Appointment): CommandItem | null {
-  const patient = getPatient(appointment.patientId);
-  const guardian = getGuardian(appointment.guardianId, appointment.patientId);
-  if (!patient) return null;
-  const assignedVetName = getStaffName(appointment.assignedVeterinarianId);
-  const createdByName = getStaffName(appointment.createdByUserId);
-
-  return {
-    id: `appointment-${appointment.id}`,
-    kind: "appointment",
-    title: `${patient.name} · ${appointment.visitPurpose ?? "예약"}`,
-    subtitle: `${formatShortTime(appointment.scheduledStartAt)} · ${guardian?.name ?? "보호자 미지정"} · ${assignedVetName ?? "담당 미정"}`,
-    href: createHref(workspaceId, "reception", {
-      patientId: patient.id,
-      drawer: `reception-appointment:${appointment.id}`,
-    }),
-    badge: getStatusLabel("appointment", appointment.status),
-    icon: CalendarIcon,
-    keywords: [
-      patient.name,
-      patient.patientNo,
-      guardian?.name,
-      guardian?.mobilePhone,
-      appointment.visitPurpose,
-      appointment.symptomNote,
-      assignedVetName,
-      createdByName,
-    ].filter(Boolean) as string[],
-    filterKeywords: {
-      patient: [patient.name, appointment.visitPurpose, appointment.symptomNote].filter(Boolean) as string[],
-      guardian: [guardian?.name].filter(Boolean) as string[],
-      phone: [guardian?.mobilePhone, guardian?.phone].filter(Boolean) as string[],
-      chart: [patient.patientNo, patient.patientRegistrationNo].filter(Boolean) as string[],
-      vet: appointment.assignedVeterinarianId ? [assignedVetName].filter(Boolean) as string[] : [],
-      desk: getStaffRole(appointment.createdByUserId) === "desk" ? [createdByName].filter(Boolean) as string[] : [],
-    },
-  };
-}
-
-function buildEncounterItem(workspaceId: string, encounter: Encounter): CommandItem | null {
-  const patient = getPatient(encounter.patientId);
-  const guardian = getGuardian(encounter.guardianId, encounter.patientId);
-  if (!patient) return null;
-
-  const queueEntry = mockWaitingQueueEntries.find((entry) => entry.encounterId === encounter.id);
-  const primaryVetName = getStaffName(encounter.primaryVeterinarianId);
-
-  return {
-    id: `encounter-${encounter.id}`,
-    kind: "encounter",
-    title: `${patient.name} · ${encounter.chiefComplaint ?? encounter.visitPurpose ?? "접수"}`,
-    subtitle: `${formatShortTime(encounter.checkedInAt ?? encounter.createdAt)} · ${
-      guardian?.name ?? "보호자 미지정"
-    } · ${encounter.encounterNo}`,
-    href: createHref(workspaceId, "reception", {
-      patientId: patient.id,
-      encounterId: encounter.id,
-      drawer: `reception-encounter:${encounter.id}`,
-    }),
-    badge: queueEntry ? getStatusLabel("queue", queueEntry.status) : getStatusLabel("encounter", encounter.status),
-    icon: ClockIcon,
-    keywords: [
-      patient.name,
-      patient.patientNo,
-      guardian?.name,
-      guardian?.mobilePhone,
-      encounter.encounterNo,
-      encounter.chiefComplaint,
-      encounter.visitPurpose,
-      primaryVetName,
-    ].filter(Boolean) as string[],
-    filterKeywords: {
-      patient: [patient.name, encounter.chiefComplaint, encounter.visitPurpose].filter(Boolean) as string[],
-      guardian: [guardian?.name].filter(Boolean) as string[],
-      phone: [guardian?.mobilePhone, guardian?.phone].filter(Boolean) as string[],
-      chart: [patient.patientNo, patient.patientRegistrationNo, encounter.encounterNo].filter(Boolean) as string[],
-      vet: encounter.primaryVeterinarianId ? [primaryVetName].filter(Boolean) as string[] : [],
-    },
-  };
-}
-
-function buildCommandSections(workspaceId: string, query: string, filter: CommandFilter): CommandSection[] {
+function buildCommandSections(
+  workspaceId: string,
+  query: string,
+  filter: CommandFilter,
+  searchResults: CommandSearchResult[],
+): CommandSection[] {
   const normalizedQuery = normalizeText(query);
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const matchesFilter = (item: CommandItem) => {
     if (filter === "all") return true;
     const filterKeywords = item.filterKeywords?.[filter] ?? [];
@@ -354,37 +200,24 @@ function buildCommandSections(workspaceId: string, query: string, filter: Comman
       vet: action.moduleId === "treatment" ? [...action.keywords, action.title, action.subtitle] : [],
     },
   }));
-  const patientItems = preparedEmptyClinic
-    ? []
-    : mockPatients.map((patient) => buildPatientItem(workspaceId, patient));
-  const guardianItems = preparedEmptyClinic
-    ? []
-    : mockGuardians.map((guardian) => buildGuardianItem(workspaceId, guardian));
-  const appointmentItems = preparedEmptyClinic
-    ? []
-    : mockAppointments
-        .filter((appointment) => appointment.scheduledStartAt.startsWith("2026-05-01"))
-        .map((appointment) => buildAppointmentItem(workspaceId, appointment))
-        .filter((item): item is CommandItem => Boolean(item));
-  const activeEncounterItems = preparedEmptyClinic
-    ? []
-    : mockEncounters
-        .filter((encounter) =>
-          ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
-        )
-        .map((encounter) => buildEncounterItem(workspaceId, encounter))
-        .filter((item): item is CommandItem => Boolean(item));
+  const resultItems = searchResults.map(buildSearchResultItem);
+  const patientGuardianItems = resultItems.filter(
+    (item) => item.kind === "patient" || item.kind === "guardian",
+  );
+  const receptionItems = resultItems.filter(
+    (item) => item.kind === "appointment" || item.kind === "encounter",
+  );
   const sections: CommandSection[] = [
     { id: "actions", title: "빠른 실행", items: limitItems(quickActions, 5) },
     {
-      id: "today",
-      title: normalizedQuery ? "예약/접수" : "오늘 업무",
-      items: limitItems([...appointmentItems, ...activeEncounterItems], 6),
-    },
-    {
       id: "people",
       title: "환자/보호자",
-      items: limitItems([...patientItems, ...guardianItems], normalizedQuery ? 6 : 4),
+      items: limitItems(patientGuardianItems, normalizedQuery ? 6 : 4),
+    },
+    {
+      id: "today",
+      title: normalizedQuery ? "예약/접수" : "오늘 업무",
+      items: limitItems(receptionItems, 6),
     },
   ];
 
@@ -406,14 +239,35 @@ export function GlobalCommandPalette({
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const authSession = useMockAuthStore((state) => state.session);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<CommandFilter>("all");
-  const sections = useMemo(() => buildCommandSections(workspaceId, query, activeFilter), [activeFilter, query, workspaceId]);
+  const [searchState, setSearchState] = useState<CommandSearchClientState>({
+    status: "idle",
+    results: [],
+  });
+  const applyPatientGuardianLookupItem = usePatientProfileStore(
+    (state) => state.applyPatientGuardianLookupItem,
+  );
+  const sections = useMemo(
+    () => buildCommandSections(workspaceId, query, activeFilter, searchState.results),
+    [activeFilter, query, searchState.results, workspaceId],
+  );
   const flattenedItems = useMemo(() => flattenSections(sections), [sections]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [registrationOpenRequestKey, setRegistrationOpenRequestKey] = useState(0);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const queryCanSearch = shouldRunCommandSearch(query);
+  const hasDynamicResults = searchState.results.length > 0;
+  const sourceState = searchState.sourceState;
+  const hasPartialIssue = Boolean(
+    sourceState &&
+      (sourceState.patientGuardian === "error" ||
+        sourceState.patientGuardian === "permission_denied" ||
+        sourceState.reception === "error" ||
+        sourceState.reception === "permission_denied"),
+  );
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -434,18 +288,87 @@ export function GlobalCommandPalette({
     return () => window.cancelAnimationFrame(focusTimer);
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !queryCanSearch) {
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      setSearchState((current) => ({
+        status: "loading",
+        results: current.results,
+        sourceState: current.sourceState,
+      }));
+
+      async function loadCommandSearch() {
+        try {
+          const params = new URLSearchParams({
+            query: query.trim(),
+            filter: activeFilter,
+          });
+          const headers = authSession?.id
+            ? { "x-clair-demo-session-user-id": authSession.id }
+            : undefined;
+          const response = await fetch(
+            `/api/workspaces/${encodeURIComponent(workspaceId)}/command/search?${params.toString()}`,
+            {
+              cache: "no-store",
+              headers,
+              signal: controller.signal,
+            },
+          );
+          const result = (await response.json()) as CommandSearchResponse;
+
+          if (cancelled) return;
+
+          if (!response.ok || !result.ok) {
+            setSearchState({ status: "error", results: [] });
+            return;
+          }
+
+          setSearchState({
+            status: "ready",
+            results: result.results,
+            sourceState: result.sourceState,
+          });
+        } catch (error) {
+          if (
+            !cancelled &&
+            !(error instanceof DOMException && error.name === "AbortError")
+          ) {
+            setSearchState({ status: "error", results: [] });
+          }
+        }
+      }
+
+      void loadCommandSearch();
+    }, COMMAND_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [activeFilter, authSession?.id, open, query, queryCanSearch, workspaceId]);
+
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) {
       setQuery("");
       setActiveFilter("all");
       setActiveIndex(0);
+      setSearchState({ status: "idle", results: [] });
     }
   };
 
   const handleQueryChange = (nextQuery: string) => {
     setQuery(nextQuery);
     setActiveIndex(0);
+    if (!shouldRunCommandSearch(nextQuery)) {
+      setSearchState({ status: "idle", results: [] });
+    }
   };
 
   const handleFilterChange = (nextFilter: CommandFilter) => {
@@ -465,6 +388,10 @@ export function GlobalCommandPalette({
 
   const runCommand = (item: CommandItem) => {
     handleOpenChange(false);
+    if (item.searchResult?.lookupItem) {
+      applyPatientGuardianLookupItem(item.searchResult.lookupItem);
+    }
+
     if (item.action === "open-new-reception") {
       setActiveDrawer({ type: "reception-form", id: "walk-in" });
       return;
@@ -475,14 +402,7 @@ export function GlobalCommandPalette({
       return;
     }
 
-    const href =
-      item.id === "action-today-appointments"
-        ? createHref(workspaceId, "reception", {
-            date: getWorkspaceOperatingDate(workspaceId),
-          })
-        : item.href;
-
-    router.push(href, { scroll: false });
+    router.push(item.href, { scroll: false });
   };
 
   const moveActiveIndex = (direction: 1 | -1) => {
@@ -607,18 +527,48 @@ export function GlobalCommandPalette({
           </div>
           <div className="min-h-0 overflow-y-auto px-2 py-2" role="listbox" aria-label="통합 검색 결과">
             {sections.length ? (
-              sections.map((section, sectionIndex) => (
-                <div key={section.id}>
-                  <CommandSectionView
-                    activeIndex={activeIndex}
-                    flattenedItems={flattenedItems}
-                    section={section}
-                    onRunCommand={runCommand}
-                    onSetActiveIndex={setActiveIndex}
-                  />
-                  {sectionIndex < sections.length - 1 ? <Separator className="my-1" /> : null}
-                </div>
-              ))
+              <>
+                {searchState.status === "loading" ? (
+                  <div className="mx-2 mb-1 rounded-[8px] border border-[var(--emr-line-hairline)] bg-muted/50 px-3 py-2 text-[12px] text-muted-foreground">
+                    검색 중
+                  </div>
+                ) : null}
+                {searchState.status === "error" ? (
+                  <div className="mx-2 mb-1 rounded-[8px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] font-medium text-destructive">
+                    검색 결과를 불러오지 못했어.
+                  </div>
+                ) : null}
+                {hasPartialIssue && searchState.status === "ready" ? (
+                  <div className="mx-2 mb-1 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800">
+                    일부 결과를 불러오지 못했어.
+                  </div>
+                ) : null}
+                {sections.map((section, sectionIndex) => (
+                  <div key={section.id}>
+                    <CommandSectionView
+                      activeIndex={activeIndex}
+                      flattenedItems={flattenedItems}
+                      section={section}
+                      onRunCommand={runCommand}
+                      onSetActiveIndex={setActiveIndex}
+                    />
+                    {sectionIndex < sections.length - 1 ? <Separator className="my-1" /> : null}
+                  </div>
+                ))}
+                {queryCanSearch && searchState.status === "ready" && !hasDynamicResults ? (
+                  <div className="flex min-h-28 flex-col items-center justify-center gap-2 px-6 text-center">
+                    <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <SearchIcon className="size-4" aria-hidden="true" />
+                    </div>
+                    <div className="text-sm font-medium text-foreground">
+                      검색 결과가 없습니다.
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      동물명, 보호자명, 전화번호 또는 차트번호로 다시 검색해 주세요.
+                    </div>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <div className="flex min-h-40 flex-col items-center justify-center gap-2 px-6 text-center">
                 <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
