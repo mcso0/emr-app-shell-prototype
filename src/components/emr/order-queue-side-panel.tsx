@@ -381,7 +381,7 @@ export function EmrOrderQueueSidePanel({
       />
       <EmrSubpanelBody density="queue">
         {showLoadingState ? (
-          <EmrQueueLoadingState title={loadingTitle} />
+          <EmrQueueLoadingState placement="panel-center" title={loadingTitle} />
         ) : groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
           const collapsed = collapsedStatusIds.has(status.id);
 
@@ -402,11 +402,12 @@ export function EmrOrderQueueSidePanel({
         }) : sourceHasItems && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="대기열 항목"
+            placement="panel-center"
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
         ) : (
-          <EmrQueueEmptyState title={emptyStateTitle} />
+          <EmrQueueEmptyState placement="panel-center" title={emptyStateTitle} />
         )}
       </EmrSubpanelBody>
     </EmrSubpanel>

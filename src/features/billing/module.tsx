@@ -1470,11 +1470,12 @@ export function BillingSidePanel({
         {baseRowCount > 0 && totalRowCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="수납 대기열 항목"
+            placement="panel-center"
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
         ) : totalRowCount === 0 ? (
-          <EmrQueueEmptyState title={emptyStateTitle} />
+          <EmrQueueEmptyState placement="panel-center" title={emptyStateTitle} />
         ) : groupedRows.map((group) => (
           <BillingQueueGroup
             key={group.value}
