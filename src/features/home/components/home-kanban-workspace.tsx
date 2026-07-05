@@ -413,10 +413,10 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
         </div>
 
         <div className="relative min-h-0 overflow-hidden">
-          <div className="h-full min-h-0 overflow-x-auto pb-2">
-            <div className="grid h-full min-h-[620px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
-              {hasHospitalTasks ? (
-                visibleColumns.map((column) => (
+          {hasHospitalTasks ? (
+            <div className="h-full min-h-0 overflow-x-auto pb-2">
+              <div className="grid h-full min-h-[620px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
+                {visibleColumns.map((column) => (
                   <HomeKanbanColumn
                     key={column.id}
                     column={column}
@@ -424,31 +424,35 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
                     tasks={filteredTasks.filter((task) => task.kanbanColumn === column.id)}
                     onSelectTask={selectTask}
                   />
-                ))
-              ) : (
-                <div className="col-span-full grid h-full min-h-[420px] place-items-center">
-                  <EmrEmptyState
-                    kind="upstream-pending"
-                    priority="supporting"
-                    surface="content"
-                    title="원내 업무가 없습니다"
-                    description="오늘 표시할 원내 업무가 없습니다."
-                    primaryAction={
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-card"
-                        onClick={() => router.refresh()}
-                      >
-                        <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
-                        새로고침
-                      </Button>
-                    }
-                  />
-                </div>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div
+              className="grid h-full min-h-[620px] min-w-full place-items-center pb-2"
+              data-testid="home-kanban-empty-state-surface"
+            >
+              <EmrEmptyState
+                kind="upstream-pending"
+                priority="supporting"
+                surface="content"
+                testId="home-kanban-empty-state"
+                title="원내 업무가 없습니다"
+                description="오늘 표시할 원내 업무가 없습니다."
+                primaryAction={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-card"
+                    onClick={() => router.refresh()}
+                  >
+                    <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+                    새로고침
+                  </Button>
+                }
+              />
+            </div>
+          )}
         </div>
 
         </div>
