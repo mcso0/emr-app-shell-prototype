@@ -71,7 +71,7 @@ test("hospital admin order management opens with category and subcategory naviga
   expect(Math.round(topItemMetrics.iconLabelGap)).toBe(8);
   const disabledTopItemColors = await page
     .getByTestId("hospital-admin-side-panel")
-    .getByRole("button", { name: /근무표/ })
+    .getByRole("button", { name: /진료과 분리운영/ })
     .evaluate((trigger) => {
       const icon = trigger.querySelector('[data-emr-module-list-item-icon="true"]');
       const label = trigger.querySelector(".emr-text-dense");
@@ -117,6 +117,30 @@ test("hospital admin order management opens with category and subcategory naviga
   await page.getByRole("button", { name: /처방/ }).click();
   await expect(page.getByRole("heading", { name: "처방" })).toBeVisible();
   await expect(page.getByTestId("hospital-order-row-ord-med-maropitant")).toBeVisible();
+});
+
+test("hospital admin settings hub opens planned static management screens", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  const plannedScreens = [
+    { button: "병원기본설정", heading: "병원기본설정", testId: "hospital-admin-settings-screen" },
+    { button: "역할별 업무 관리", heading: "역할별 업무 관리", testId: "hospital-admin-roles-screen" },
+    { button: "공간/시간 관리", heading: "공간/시간 관리", testId: "hospital-admin-space-time-screen" },
+    { button: "근무표", heading: "근무표", testId: "hospital-admin-schedule-screen" },
+    { button: "바이탈 관리", heading: "바이탈 관리", testId: "hospital-admin-vitals-screen" },
+  ];
+
+  for (const screen of plannedScreens) {
+    await sidePanel.getByRole("button", { name: new RegExp(screen.button) }).click();
+    await expect(page.getByTestId(screen.testId)).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: screen.heading, exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "시안 저장" }).click();
+    await expect(page.getByTestId(screen.testId)).toContainText("방금 시안 저장");
+  }
+
+  await expect(sidePanel.getByRole("button", { name: /진료과 분리운영/ })).toBeDisabled();
+  await expect(sidePanel.getByRole("button", { name: /차트 템플릿/ })).toBeDisabled();
 });
 
 test("hospital admin order table uses shared header and cell text primitives", async ({ page }) => {
@@ -241,7 +265,7 @@ test("hospital admin order drawer switches rows and closes from outside click", 
   await expect(page.getByTestId("hospital-order-drawer").last()).toContainText("일시중지 예시");
   await expect(page.getByTestId("hospital-order-row-ord-paused-example")).toHaveAttribute("data-focused", "true");
 
-  await page.getByLabel("오더 검색").click();
+  await page.getByRole("heading", { level: 1, name: "임상병리 검사" }).click({ position: { x: 4, y: 4 } });
   await expect(page.getByTestId("hospital-order-drawer")).toHaveCount(0);
 });
 

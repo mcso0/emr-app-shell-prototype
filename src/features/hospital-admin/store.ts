@@ -4,7 +4,6 @@ import { create } from "zustand";
 import {
   createEmptyHospitalOrderDraft,
   getDefaultSubcategoryId,
-  hospitalOrderCategories,
   hospitalOrderSeedItems,
   type HospitalOrderBillingFilter,
   type HospitalOrderCatalogItem,
@@ -15,8 +14,18 @@ import {
   type HospitalOrderWorkTypeFilter,
 } from "@/features/hospital-admin/data";
 
+export type HospitalAdminSection =
+  | "audit"
+  | "members"
+  | "orders"
+  | "roles"
+  | "schedule"
+  | "settings"
+  | "space-time"
+  | "vitals";
+
 type HospitalAdminStore = {
-  activeSection: "orders" | "members" | "audit";
+  activeSection: HospitalAdminSection;
   billingFilter: HospitalOrderBillingFilter;
   focusedOrderId: string | null;
   orders: HospitalOrderCatalogItem[];
@@ -30,7 +39,7 @@ type HospitalAdminStore = {
   createOrder: (draft?: Partial<HospitalOrderDraft>) => HospitalOrderCatalogItem;
   deleteOrder: (orderId: string) => void;
   duplicateOrder: (orderId: string) => HospitalOrderCatalogItem | null;
-  setActiveSection: (section: "orders" | "members" | "audit") => void;
+  setActiveSection: (section: HospitalAdminSection) => void;
   setBillingFilter: (filter: HospitalOrderBillingFilter) => void;
   setFocusedOrderId: (orderId: string | null) => void;
   setOrders: (orders: HospitalOrderCatalogItem[]) => void;

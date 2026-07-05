@@ -1611,7 +1611,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
   await expect(forwardButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(workspaceTabsBar.getByRole("button", { name: "알림" })).toHaveCSS("width", "32px");
   await expect(workspaceTabsBar.getByRole("button", { name: "도움말" })).toHaveCSS("width", "32px");
-  await expect(workspaceTabsBar.getByRole("button", { name: "설정" })).toHaveCSS("width", "32px");
+  await expect(workspaceTabsBar.getByRole("button", { name: "설정" })).toHaveCount(0);
   await expect(workspaceTabsBar.getByRole("button", { name: /프로필 메뉴/ })).toHaveCSS("width", "48px");
   await expect(workspaceTabsBar.getByRole("button", { name: /프로필 메뉴/ })).toHaveCSS(
     "background-color",
@@ -1665,7 +1665,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       historyGap: "4px",
       historyRightDelta: 0,
       leadingShift: 0,
-      navigationWidth: 354,
+      navigationWidth: 346,
       tablistLeftDelta: 0,
       topbarGap: 10,
       state: "open",
