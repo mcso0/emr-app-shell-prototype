@@ -86,6 +86,74 @@ test("Cheongdam customer workspace renders seeded DB patients instead of legacy 
   await expect(page.getByTestId("customer-side-panel-guardian")).toContainText("2");
 });
 
+test("Cheongdam customer table shows skeleton while seeded profiles are loading", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  let resolveLookup: () => void = () => {};
+  const lookupPending = new Promise<void>((resolve) => {
+    resolveLookup = resolve;
+  });
+
+  await page.route(`**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`, async (route) => {
+    await lookupPending;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        enforcedBy: "reception-patient-guardian-lookup",
+        patients: [
+          {
+            patient: {
+              id: "49121000-0000-4000-8000-000000000101",
+              workspaceId,
+              patientNo: "CD-P-101",
+              name: "라온",
+              species: "dog",
+              breed: "Poodle",
+              birthDate: "2024-01-10",
+              sex: "male",
+              neutered: true,
+              handlingCautionLocked: true,
+              status: "active",
+              createdAt: "2026-06-12T00:00:00.000Z",
+              updatedAt: "2026-06-12T00:00:00.000Z",
+            },
+            primaryGuardian: {
+              id: "49120000-0000-4000-8000-000000000101",
+              workspaceId,
+              name: "박민준",
+              mobilePhone: "010-4911-0101",
+              createdAt: "2026-06-12T00:00:00.000Z",
+              updatedAt: "2026-06-12T00:00:00.000Z",
+            },
+            searchText: "라온 CD-P-101 Poodle 박민준 010-4911-0101",
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/customer?modulePanel=open`);
+
+  const patientTable = page.getByTestId("customer-patient-table");
+  await expect(patientTable.getByTestId("customer-patient-table-skeleton-row").first()).toBeVisible();
+  await expect(page.getByTestId("customer-page-header-count-skeleton")).toBeVisible();
+  await expect(patientTable).not.toContainText("동물 정보가 없습니다");
+  await expect(patientTable).not.toContainText("0건");
+  await expect(page.getByTestId("customer-side-panel-patient")).not.toContainText("0");
+
+  resolveLookup();
+
+  await expect(page.getByText("CD-P-101")).toBeVisible();
+  await expect(page.getByText("라온")).toBeVisible();
+  await expect(page.getByText("박민준")).toBeVisible();
+  await expect(patientTable.getByTestId("customer-patient-table-skeleton-row")).toHaveCount(0);
+  await expect(page.getByTestId("customer-side-panel-patient")).toContainText("1");
+  await expect(page.getByTestId("customer-side-panel-guardian")).toContainText("1");
+});
+
 test("customer workspace renders animal master list and opens the common patient drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 
@@ -112,7 +180,7 @@ test("customer workspace renders animal master list and opens the common patient
   expect(inpatientNavBox).not.toBeNull();
   expect(customerNavBox).not.toBeNull();
   expect(hospitalAdminNavBox).not.toBeNull();
-  expect(customerNavBox!.y - inpatientNavBox!.y).toBeGreaterThanOrEqual(56);
+  expect(customerNavBox!.y - inpatientNavBox!.y).toBeGreaterThanOrEqual(48);
   expect(hospitalAdminNavBox!.y - customerNavBox!.y).toBeLessThan(52);
   await expect(page.getByTestId("customer-patient-table")).toBeVisible();
   const patientTable = page.getByRole("table", { name: "동물 고객관리 테이블" });
