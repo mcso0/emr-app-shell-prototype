@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import {
   CdsActionsPlusIcon,
@@ -2873,11 +2873,15 @@ function getRegistrationRouteErrorMessage(
 
 function PatientGuardianRegistrationButton({
   label = "환자/보호자 등록",
+  openRequestKey,
   onPatientReady,
+  renderTrigger = true,
   size = "sm",
 }: {
   label?: string;
+  openRequestKey?: number;
   onPatientReady: (patientId: EmrId) => void;
+  renderTrigger?: boolean;
   size?: ComponentProps<typeof Button>["size"];
 }) {
   const applyPatientGuardianRegistration = usePatientProfileStore(
@@ -2904,6 +2908,7 @@ function PatientGuardianRegistrationButton({
   const [selectedGuardianId, setSelectedGuardianId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<RegistrationStep>("mode");
+  const previousOpenRequestKeyRef = useRef(openRequestKey);
 
   const selectedGuardian = guardians.find((guardian) => guardian.id === selectedGuardianId);
   const duplicateGuardian = guardianDraft.mobilePhone
@@ -2971,6 +2976,14 @@ function PatientGuardianRegistrationButton({
     isGuardianDraftDirty(guardianDraft) ||
     isPatientDraftDirty(patientDraft) ||
     Boolean(guardianQuery || selectedGuardianId);
+
+  useEffect(() => {
+    if (openRequestKey === undefined) return;
+    if (previousOpenRequestKeyRef.current === openRequestKey) return;
+
+    previousOpenRequestKeyRef.current = openRequestKey;
+    setOpen(true);
+  }, [openRequestKey]);
 
   const reset = () => {
     setErrors({});
@@ -3189,16 +3202,18 @@ function PatientGuardianRegistrationButton({
 
   return (
     <>
-      <Button
-        aria-label={label}
-        variant="outline"
-        size={size}
-        className="bg-card px-3 font-semibold"
-        onClick={() => setOpen(true)}
-      >
-        <CdsActionsPlusIcon data-icon="inline-start" />
-        {label}
-      </Button>
+      {renderTrigger ? (
+        <Button
+          aria-label={label}
+          variant="outline"
+          size={size}
+          className="bg-card px-3 font-semibold"
+          onClick={() => setOpen(true)}
+        >
+          <CdsActionsPlusIcon data-icon="inline-start" />
+          {label}
+        </Button>
+      ) : null}
       <Dialog open={open} onOpenChange={setOpenSafely}>
         <DialogContent
           className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[680px]"

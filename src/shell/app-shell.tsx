@@ -274,7 +274,9 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       setRightPanelOpen(nextRightPanelOpen);
     }
     if (drawer) {
-      const [type, id] = drawer.split(":");
+      const separatorIndex = drawer.indexOf(":");
+      const type = separatorIndex >= 0 ? drawer.slice(0, separatorIndex) : "";
+      const id = separatorIndex >= 0 ? drawer.slice(separatorIndex + 1) : "";
       if (type && id) {
         const nextDrawer =
           currentLayoutState.activeDrawer?.type === type && currentLayoutState.activeDrawer.id === id

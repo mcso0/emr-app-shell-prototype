@@ -4,7 +4,7 @@ status: draft
 area: design
 doc_type: ux-flow
 related_feature: PRODUCT-FEATURE-RECEPTION-APPOINTMENT
-last_updated: 2026-05-05
+last_updated: 2026-07-05
 ---
 
 # Reception / Appointment UX Flow
@@ -51,6 +51,7 @@ last_updated: 2026-05-05
 
 - 향후 등록 진입점은 `docs/design/screens/reception/planning/unified-registration-entry.md`의 통합 등록 기획을 기준으로 단계적으로 검토한다.
 - `환자/보호자 등록`은 등록 케이스 선택을 먼저 수행하고, 신규 보호자+환자 또는 기존 보호자+신규 환자 flow로 이어진다.
+- 전역 command palette의 `환자/보호자 등록` action도 동일한 등록 dialog를 열어야 하며, reception 화면으로 단순 이동하는 것으로 대체하지 않는다.
 - 신규 동물 등록의 품종은 종별 후보를 autocomplete로 추천하되 직접 입력도 허용한다.
 - 보호자 검색 후보는 입력 필드 하단에 상시 노출하지 않고, 검색 field focus/typing 시 popover list로 보여준다.
 - 신규 동물 등록의 종 선택은 일반 동물병원에서 다루는 소동물 범주를 포함하고, 성별은 미상/수컷/암컷/중성화 수컷/중성화 암컷을 구분한다.
@@ -80,7 +81,7 @@ last_updated: 2026-05-05
 
 ## Primary Flow 1-A: 환자/보호자 등록 통합 경로
 
-1. 데스크 직원이 `환자/보호자 등록`을 선택한다.
+1. 데스크 직원이 접수/예약 toolbar 또는 전역 command palette에서 `환자/보호자 등록`을 선택한다.
 2. `환자/보호자 모두 신규 등록` 또는 `기존 보호자에 신규 환자 등록` 중 하나를 선택한다.
 3. 신규 보호자 branch는 보호자 정보와 개인정보 동의를 입력한 뒤 환자 정보 입력으로 이어진다.
 4. 기존 보호자 branch는 보호자를 검색/선택한 뒤 환자 정보 입력으로 이어진다.
@@ -93,6 +94,17 @@ last_updated: 2026-05-05
 - 최종 확인 전 취소된 draft는 store에 저장되지 않는다.
 - dirty 상태로 닫기/취소하면 이탈 확인 dialog를 보여준다.
 - 등록 완료 후 자동 접수로 이동하지 않는다.
+- 등록은 현재 workspace module 위에서 dialog로 시작할 수 있어야 하며, 접수 생성은 성공 toast의 `진료 접수` 후속 액션으로만 이어진다.
+
+### Exception Handling
+
+- 전역 command에서 등록을 시작하면 command palette는 닫히고 `신규 등록` dialog만 남아야 한다.
+- chart, billing, lab, customer, home 등 reception 외 module에서 시작해도 현재 module context를 유지한 채 등록 dialog를 연다.
+- 필수값 누락, 잘못된 날짜/나이, 기존 보호자 미선택, 중복 마이크로칩은 다음 단계 또는 commit을 막고 field-level feedback을 보여준다.
+- 같은 휴대전화의 보호자가 이미 있으면 새 보호자 생성은 차단하고 기존 보호자 연결 branch로 유도한다.
+- 같은 보호자 아래 동일 동물명은 경고를 보여주되, 최종 확인 전 사용자가 판단할 수 있게 한다.
+- 권한 없음, inactive user, workspace membership 오류, 서버 저장 실패는 draft를 유지한 상태에서 재시도 가능한 오류로 보여준다.
+- dirty draft가 있는 상태에서 닫기, 취소, module 이동을 시도하면 이탈 확인 dialog를 거친다.
 
 ## Primary Flow 2: 예약 환자 접수 처리
 
@@ -153,6 +165,8 @@ last_updated: 2026-05-05
 - 담당 수의사 없음: 미지정 상태로 접수 가능하지만 대기열에서 구분한다.
 - 중복 접수 가능성: 같은 환자의 당일 active encounter가 있으면 확인한다.
 - 중복 보호자 가능성: 같은 휴대전화 보호자가 있으면 새 보호자 생성은 차단한다.
+- 전역 등록 진입 실패: command palette action이 reception 이동만 하고 dialog를 열지 않으면 regression으로 본다.
+- 등록 저장 실패: draft를 보존하고 오류 메시지와 재시도 경로를 제공한다.
 - 취소/노쇼 항목: 기본 운영 흐름을 방해하지 않되 이력 접근은 가능해야 한다.
 
 ## Verification Ideas
@@ -161,4 +175,6 @@ last_updated: 2026-05-05
 - 예약확정 항목을 접수 처리하면 접수완료와 진료대기 상태가 반영된다.
 - 담당 수의사 미지정 접수가 가능하고 목록에서 미지정으로 보인다.
 - 접수/예약 검색은 보호자명, 환자명, 방문 목적을 찾는다.
+- 전역 command palette의 `환자/보호자 등록` action은 어느 workspace module에서든 통합 등록 dialog를 연다.
+- 등록 예외 케이스는 필수값, 중복, 권한/서버 실패, dirty draft 이탈 확인을 포함한다.
 - 취소 또는 노쇼 항목은 접수 처리 액션을 노출하지 않는다.

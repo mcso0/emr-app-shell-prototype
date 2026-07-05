@@ -11,7 +11,7 @@ source_docs:
   - "docs/design/screens/reception/planning/unified-registration-entry.md"
 dependencies:
   - "RECEPTION-PR-003"
-updated: "2026-05-05"
+updated: "2026-07-05"
 ---
 
 # Reception Unified Registration Entry
@@ -26,7 +26,7 @@ updated: "2026-05-05"
 - PR size: one reception UX PR including the selected Epic 1-3 MVP simulation scope.
 - Scope: unified registration entry, branch-first guardian/patient registration, local draft confirmation, patient age/birthdate and mix breed UX, smart walk-in check-in purpose chips, revisit auto-check, KakaoTalk send simulation, focused tests, docs.
 - Out of scope: live DB/API persistence, tablet/e-sign provider, KakaoTalk provider, full breed catalog, calendar drag-and-drop, appointment mutation persistence.
-- Done criteria: toolbar removes `환자 등록`/`보호자 등록`, `환자/보호자 등록` opens case selection, final confirmation commits only after review, duplicate microchip is blocked, duplicate patient name warning appears, success toast provides patient detail and check-in actions, check-in message simulation is test-visible.
+- Done criteria: toolbar removes `환자 등록`/`보호자 등록`, `환자/보호자 등록` opens case selection, global command registration opens the same dialog from any module, final confirmation commits only after review, duplicate microchip is blocked, duplicate patient name warning appears, permission/server failures preserve the draft, success toast provides patient detail and check-in actions, check-in message simulation is test-visible.
 - Source docs: unified registration planning doc, reception UX flow, current status.
 - Verification: focused lint, TypeScript, reception Playwright suite, docs check.
 - Status/dependencies: done; builds on registration quality UX.
@@ -38,3 +38,8 @@ updated: "2026-05-05"
 - `npx tsc --noEmit`
 - `npx playwright test tests/reception.spec.ts --reporter=line`
 - `npm run docs:check`
+
+## Follow-up Notes
+
+- 2026-07-05: Browser review follow-up connected the global command palette `환자/보호자 등록` action to the same branch-first registration dialog used by the reception/customer toolbar entry. The action now opens registration from any workspace module instead of only navigating to reception. Focused verification: `npm run lint -- src/shell/global-command-palette.tsx src/features/reception/profile-drawer.tsx src/shell/app-shell.tsx tests/app-shell.spec.ts`, `npx tsc --noEmit`, and `npx playwright test tests/app-shell.spec.ts -g "global command palette" --reporter=line`.
+- 2026-07-05: Browser review follow-up also clarified exception cases for the global command registration entry. The plan now covers non-reception module launch, command palette handoff, dirty draft preservation, required-field/date/age validation, duplicate guardian phone, missing existing guardian selection, duplicate patient signals, permission/server failures, and success-toast follow-up behavior.
