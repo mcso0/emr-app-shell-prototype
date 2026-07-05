@@ -24,6 +24,7 @@ import { usePatientProfileStore } from "@/features/reception/patient-profile-sto
 import {
   shouldRunCommandSearch,
 } from "@/features/command/command-search";
+import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { AppIcon } from "@/components/icons";
@@ -35,7 +36,7 @@ import type {
 } from "@/features/command/command-search";
 import type { EmrId } from "@/types/emr-domain";
 
-type CommandItemKind = "action" | "patient" | "guardian" | "appointment" | "encounter";
+type CommandItemKind = "action" | "patient" | "guardian" | "appointment" | "encounter" | "staff";
 type CommandFilter = CommandSearchFilter;
 type CommandAction = "open-new-reception" | "open-patient-guardian-registration";
 
@@ -191,7 +192,13 @@ function buildCommandSections(
     kind: "action",
     title: action.title,
     subtitle: action.subtitle,
-    href: createHref(workspaceId, action.moduleId),
+    href: createHref(
+      workspaceId,
+      action.moduleId,
+      action.id === "today-appointments"
+        ? { date: getWorkspaceOperatingDate(workspaceId) }
+        : undefined,
+    ),
     badge: action.badge,
     icon: action.icon,
     keywords: [...action.keywords, action.title, action.subtitle],
@@ -207,12 +214,18 @@ function buildCommandSections(
   const receptionItems = resultItems.filter(
     (item) => item.kind === "appointment" || item.kind === "encounter",
   );
+  const staffItems = resultItems.filter((item) => item.kind === "staff");
   const sections: CommandSection[] = [
     { id: "actions", title: "빠른 실행", items: limitItems(quickActions, 5) },
     {
       id: "people",
       title: "환자/보호자",
       items: limitItems(patientGuardianItems, normalizedQuery ? 6 : 4),
+    },
+    {
+      id: "staff",
+      title: "병원 구성원",
+      items: limitItems(staffItems, 6),
     },
     {
       id: "today",
@@ -266,7 +279,9 @@ export function GlobalCommandPalette({
       (sourceState.patientGuardian === "error" ||
         sourceState.patientGuardian === "permission_denied" ||
         sourceState.reception === "error" ||
-        sourceState.reception === "permission_denied"),
+        sourceState.reception === "permission_denied" ||
+        sourceState.staff === "error" ||
+        sourceState.staff === "permission_denied"),
   );
 
   useEffect(() => {
@@ -368,12 +383,25 @@ export function GlobalCommandPalette({
     setActiveIndex(0);
     if (!shouldRunCommandSearch(nextQuery)) {
       setSearchState({ status: "idle", results: [] });
+      return;
     }
+    setSearchState((current) => ({
+      status: "loading",
+      results: current.results,
+      sourceState: current.sourceState,
+    }));
   };
 
   const handleFilterChange = (nextFilter: CommandFilter) => {
     setActiveFilter(nextFilter);
     setActiveIndex(0);
+    if (queryCanSearch) {
+      setSearchState((current) => ({
+        status: "loading",
+        results: current.results,
+        sourceState: current.sourceState,
+      }));
+    }
   };
 
   const handleRegisteredPatientReady = (patientId: EmrId) => {
@@ -461,7 +489,7 @@ export function GlobalCommandPalette({
         {triggerVariant === "wide" ? (
           <>
             <span className="min-w-0 flex-1 truncate px-2 text-[12px] text-muted-foreground max-sm:hidden">
-              동물명 또는 보호자명으로 검색
+              동물/보호자/구성원 검색
             </span>
             <span className="inline-flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground max-sm:hidden">
               <CommandIcon className="size-3" aria-hidden="true" />
@@ -498,7 +526,7 @@ export function GlobalCommandPalette({
         >
           <DialogTitle className="sr-only">통합 검색과 빠른 실행</DialogTitle>
           <DialogDescription className="sr-only">
-            환자, 보호자, 예약, 접수와 주요 업무 화면을 검색하고 실행합니다.
+            환자, 보호자, 병원 구성원, 예약, 접수와 주요 업무 화면을 검색하고 실행합니다.
           </DialogDescription>
           <div className="flex h-13 items-center gap-2 border-b px-4">
             <SearchIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -508,7 +536,7 @@ export function GlobalCommandPalette({
               onChange={(event) => handleQueryChange(event.target.value)}
               onKeyDown={handleInputKeyDown}
               aria-label="통합 검색"
-              placeholder="동물명, 보호자명, 전화번호, 차트번호 검색"
+              placeholder="동물명, 보호자명, 구성원명, 전화번호, 차트번호 검색"
               className="h-12 border-0 bg-transparent px-0 text-[15px] shadow-none focus-visible:ring-0 md:text-[15px]"
             />
             <kbd className="rounded border border-border bg-muted px-1.5 py-1 text-[11px] font-medium leading-none text-muted-foreground">
@@ -526,23 +554,23 @@ export function GlobalCommandPalette({
             />
           </div>
           <div className="min-h-0 overflow-y-auto px-2 py-2" role="listbox" aria-label="통합 검색 결과">
+            {searchState.status === "loading" ? (
+              <div className="mx-2 mb-1 rounded-[8px] border border-[var(--emr-line-hairline)] bg-muted/50 px-3 py-2 text-[12px] text-muted-foreground">
+                검색 중
+              </div>
+            ) : null}
+            {searchState.status === "error" ? (
+              <div className="mx-2 mb-1 rounded-[8px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] font-medium text-destructive">
+                검색 결과를 불러오지 못했어.
+              </div>
+            ) : null}
+            {hasPartialIssue && searchState.status === "ready" ? (
+              <div className="mx-2 mb-1 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800">
+                일부 결과를 불러오지 못했어.
+              </div>
+            ) : null}
             {sections.length ? (
               <>
-                {searchState.status === "loading" ? (
-                  <div className="mx-2 mb-1 rounded-[8px] border border-[var(--emr-line-hairline)] bg-muted/50 px-3 py-2 text-[12px] text-muted-foreground">
-                    검색 중
-                  </div>
-                ) : null}
-                {searchState.status === "error" ? (
-                  <div className="mx-2 mb-1 rounded-[8px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] font-medium text-destructive">
-                    검색 결과를 불러오지 못했어.
-                  </div>
-                ) : null}
-                {hasPartialIssue && searchState.status === "ready" ? (
-                  <div className="mx-2 mb-1 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800">
-                    일부 결과를 불러오지 못했어.
-                  </div>
-                ) : null}
                 {sections.map((section, sectionIndex) => (
                   <div key={section.id}>
                     <CommandSectionView
@@ -564,12 +592,12 @@ export function GlobalCommandPalette({
                       검색 결과가 없습니다.
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      동물명, 보호자명, 전화번호 또는 차트번호로 다시 검색해 주세요.
+                      동물명, 보호자명, 구성원명, 전화번호 또는 차트번호로 다시 검색해 주세요.
                     </div>
                   </div>
                 ) : null}
               </>
-            ) : (
+            ) : searchState.status === "loading" ? null : (
               <div className="flex min-h-40 flex-col items-center justify-center gap-2 px-6 text-center">
                 <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <SearchIcon className="size-4" aria-hidden="true" />
@@ -578,7 +606,7 @@ export function GlobalCommandPalette({
                   검색 결과가 없습니다.
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  동물명, 보호자명, 전화번호 또는 차트번호로 다시 검색해 주세요.
+                  동물명, 보호자명, 구성원명, 전화번호 또는 차트번호로 다시 검색해 주세요.
                 </div>
               </div>
             )}

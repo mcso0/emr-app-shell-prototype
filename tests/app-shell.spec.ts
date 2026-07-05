@@ -305,7 +305,7 @@ test("global command palette renders Cheongdam API-backed search results", async
         query: "해피",
         filter: "all",
         enforcedBy: "command-search",
-        sourceState: { patientGuardian: "ready", reception: "ready" },
+        sourceState: { patientGuardian: "ready", reception: "ready", staff: "ready" },
         results: [
           {
             id: "patient-patient-cheongdam-happy",
@@ -354,6 +354,51 @@ test("global command palette renders Cheongdam API-backed search results", async
 
   await expect(page).toHaveURL(/drawer=reception-patient%3Apatient-cheongdam-happy/);
   await expect(page).not.toHaveURL(/patient-kong/);
+});
+
+test("global command palette shows loading instead of empty while Cheongdam search is pending", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  let releaseSearch: () => void = () => {};
+  const pendingSearch = new Promise<void>((resolve) => {
+    releaseSearch = resolve;
+  });
+
+  await page.route(`**/api/workspaces/${workspaceId}/command/search?**`, async (route) => {
+    await pendingSearch;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        query: "초",
+        filter: "all",
+        enforcedBy: "command-search",
+        sourceState: { patientGuardian: "ready", reception: "ready", staff: "ready" },
+        results: [
+          {
+            id: "staff-user-cheongdam-vet",
+            kind: "staff",
+            title: "초진수",
+            subtitle: "수의사 · 진료팀",
+            badge: "구성원",
+            href: `/w/${workspaceId}/hospital-admin?modulePanel=open&section=members`,
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/home?modulePanel=open`);
+  await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
+  await page.getByRole("textbox", { name: "통합 검색" }).fill("초");
+
+  await expect(page.getByText("검색 중")).toBeVisible();
+  await expect(page.getByText("검색 결과가 없습니다.")).toHaveCount(0);
+
+  releaseSearch();
+  await expect(page.getByRole("button", { name: /초진수.*구성원/ })).toBeVisible();
 });
 
 test("global command palette opens today's reception schedule", async ({

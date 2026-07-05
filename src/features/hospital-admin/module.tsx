@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
@@ -132,6 +133,16 @@ import type { OrderCatalogMutationInput } from "@/features/hospital-admin/server
 import type { ShellComponentProps } from "@/types/emr";
 
 const orderSetPlaceholderId = "order-set-placeholder";
+const hospitalAdminSections = new Set<HospitalAdminSection>([
+  "audit",
+  "members",
+  "orders",
+  "roles",
+  "schedule",
+  "settings",
+  "space-time",
+  "vitals",
+]);
 
 const statusFilterItems: Array<{ label: string; value: HospitalOrderStatusFilter }> = [
   { label: "전체", value: "all" },
@@ -1274,6 +1285,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
 }
 
 export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
+  const searchParams = useSearchParams();
   const { hydrated, hydrate, session } = useAuthClient();
   const activeSection = useHospitalAdminStore((state) => state.activeSection);
   const billingFilter = useHospitalAdminStore((state) => state.billingFilter);
@@ -1289,6 +1301,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const setActiveSection = useHospitalAdminStore((state) => state.setActiveSection);
   const setBillingFilter = useHospitalAdminStore((state) => state.setBillingFilter);
   const setFocusedOrderId = useHospitalAdminStore((state) => state.setFocusedOrderId);
   const setOrders = useHospitalAdminStore((state) => state.setOrders);
@@ -1323,6 +1336,17 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       )?.label ??
     selectedSubcategory?.label ??
     "Order 관리";
+  const requestedSection = searchParams.get("section");
+
+  useEffect(() => {
+    if (!requestedSection || !hospitalAdminSections.has(requestedSection as HospitalAdminSection)) {
+      return;
+    }
+
+    if (activeSection !== requestedSection) {
+      setActiveSection(requestedSection as HospitalAdminSection);
+    }
+  }, [activeSection, requestedSection, setActiveSection]);
 
   useEffect(() => {
     if (activeSection !== "members" || typeof window === "undefined") return;

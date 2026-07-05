@@ -313,7 +313,7 @@ test("Cheongdam shell search and notifications do not expose legacy daily work",
           query: "해피",
           filter: "all",
           enforcedBy: "command-search",
-          sourceState: { patientGuardian: "ready", reception: "ready" },
+          sourceState: { patientGuardian: "ready", reception: "ready", staff: "ready" },
           results: [
             {
               id: "patient-patient-cheongdam-happy",

@@ -8,6 +8,7 @@ import {
 import { searchCommand } from "../src/features/command/server-command-search-core";
 import type { ReceptionPatientGuardianLookupItem } from "../src/features/reception/patient-guardian-lookup";
 import type { ReceptionQueueReadRecord } from "../src/features/reception/reception-queue-read";
+import type { WorkspaceStaffMember } from "../src/features/staff/server-workspace-staff-core";
 import type { Guardian, Patient } from "../src/types/emr-domain";
 
 const workspaceId = "workspace-clair-cheongdam";
@@ -17,10 +18,10 @@ const now = "2026-07-05T09:00:00+09:00";
 test("command search normalizes query thresholds", () => {
   expect(normalizeCommandSearchQuery("  해피   박보호  ")).toBe("해피 박보호");
   expect(shouldRunCommandSearch("해")).toBe(true);
-  expect(shouldRunCommandSearch("h")).toBe(false);
+  expect(shouldRunCommandSearch("h")).toBe(true);
   expect(shouldRunCommandSearch("ha")).toBe(true);
   expect(shouldRunCommandSearch("010")).toBe(true);
-  expect(shouldRunCommandSearch("01")).toBe(false);
+  expect(shouldRunCommandSearch("0")).toBe(true);
 });
 
 test("command search returns seeded patient and guardian results from the lookup gateway", async () => {
@@ -38,7 +39,7 @@ test("command search returns seeded patient and guardian results from the lookup
   expect(result).toMatchObject({
     ok: true,
     status: 200,
-    sourceState: { patientGuardian: "ready", reception: "ready" },
+    sourceState: { patientGuardian: "ready", reception: "ready", staff: "ready" },
   });
   expect(result.ok && result.results.map((item) => item.id)).toEqual([
     "patient-patient-cheongdam-happy",
@@ -113,6 +114,51 @@ test("command search maps today appointment and encounter queue results", async 
   ]);
 });
 
+test("command search returns matching staff members and routes to member management", async () => {
+  const result = await searchCommand({
+    actorUserId,
+    workspaceId,
+    query: "김",
+    filter: "vet",
+    permissionAdapter: createCommandPermissionAdapter(["patient:view", "reception:view"]),
+    patientGuardianGateway: createPatientGateway([]),
+    receptionQueueGateway: createQueueGateway([]),
+    staffGateway: createStaffGateway([
+      {
+        id: "user-cheongdam-vet",
+        displayName: "김청담",
+        initial: "KD",
+        roles: ["vet"],
+        status: "active",
+        title: "수의사",
+        department: "진료팀",
+      },
+      {
+        id: "user-cheongdam-desk",
+        displayName: "박데스크",
+        roles: ["front_desk"],
+        status: "active",
+        title: "데스크",
+      },
+    ]),
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    status: 200,
+    sourceState: { patientGuardian: "skipped", reception: "ready", staff: "ready" },
+  });
+  expect(result.ok && result.results).toEqual([
+    expect.objectContaining({
+      id: "staff-user-cheongdam-vet",
+      kind: "staff",
+      title: "김청담",
+      badge: "구성원",
+      href: `/w/${workspaceId}/hospital-admin?modulePanel=open&section=members`,
+    }),
+  ]);
+});
+
 test("command search does not leak patient data when patient permission is missing", async () => {
   const result = await searchCommand({
     actorUserId,
@@ -125,7 +171,7 @@ test("command search does not leak patient data when patient permission is missi
 
   expect(result).toMatchObject({
     ok: true,
-    sourceState: { patientGuardian: "permission_denied", reception: "ready" },
+    sourceState: { patientGuardian: "permission_denied", reception: "ready", staff: "ready" },
   });
   expect(result.ok && result.results).toEqual([]);
 });
@@ -140,7 +186,7 @@ test("Cheongdam command search keeps legacy mock fixtures out of the default see
   expect(result).toMatchObject({
     ok: true,
     status: 200,
-    sourceState: { patientGuardian: "ready", reception: "ready" },
+    sourceState: { patientGuardian: "ready", reception: "ready", staff: "ready" },
   });
   expect(result.ok && result.results).toEqual([]);
 });
@@ -229,6 +275,14 @@ function createQueueGateway(queue: ReceptionQueueReadRecord[]) {
   return {
     async listReceptionQueue() {
       return { ok: true as const, queue };
+    },
+  };
+}
+
+function createStaffGateway(staff: WorkspaceStaffMember[]) {
+  return {
+    async listWorkspaceStaff() {
+      return { ok: true as const, staff };
     },
   };
 }

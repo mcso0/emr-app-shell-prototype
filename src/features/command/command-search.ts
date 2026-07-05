@@ -10,7 +10,12 @@ export type CommandSearchFilter =
   | "technician"
   | "desk";
 
-export type CommandSearchResultKind = "patient" | "guardian" | "appointment" | "encounter";
+export type CommandSearchResultKind =
+  | "patient"
+  | "guardian"
+  | "appointment"
+  | "encounter"
+  | "staff";
 
 export type CommandSearchSourceStatus = "ready" | "skipped" | "permission_denied" | "error";
 
@@ -27,6 +32,7 @@ export type CommandSearchResult = {
 export type CommandSearchSourceState = {
   patientGuardian: CommandSearchSourceStatus;
   reception: CommandSearchSourceStatus;
+  staff: CommandSearchSourceStatus;
 };
 
 export type CommandSearchResponse =
@@ -59,10 +65,5 @@ export function normalizeCommandSearchQuery(query: string) {
 
 export function shouldRunCommandSearch(query: string) {
   const normalized = normalizeCommandSearchQuery(query);
-  if (!normalized) return false;
-  if (/^\d+$/.test(normalized.replace(/\D/g, ""))) {
-    return normalized.replace(/\D/g, "").length >= 3;
-  }
-  if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(normalized)) return normalized.length >= 1;
-  return normalized.length >= 2;
+  return Boolean(normalized);
 }
