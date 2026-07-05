@@ -7,6 +7,14 @@ import {
 } from "../src/features/auth/db-workspace-permission-adapter-core";
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
+  createDemoLiveNotificationEventStore,
+  createDemoLiveNotificationStateStore,
+  markLiveNotificationRead,
+  readLiveNotifications,
+} from "../src/features/notifications/server-notifications-core";
+import type { GlobalNotification } from "../src/features/notifications/mock-notifications";
+import type { NotificationPersistenceGateway } from "../src/features/notifications/server-notification-persistence";
+import {
   createMockReceptionQueueReadGateway,
   createSupabaseReceptionQueueReadGateway,
   readReceptionQueue,
@@ -393,6 +401,222 @@ test("reception queue read keeps appointment-only rows separate from walk-in enc
   });
 });
 
+test("reception queue read emits waiting-over-30m notification through the live producer", async () => {
+  const notificationEventStore = createDemoLiveNotificationEventStore();
+  const notificationStateStore = createDemoLiveNotificationStateStore();
+  const longWaitingEncounter: Encounter = {
+    ...encounter,
+    id: "encounter-long-waiting-mango",
+    encounterNo: "E-LONG-WAIT",
+    patientId: "patient-mango",
+    status: "waiting",
+    checkedInAt: "2026-05-19T00:00:00.000Z",
+  };
+  const longWaitingQueueEntry: WaitingQueueEntry = {
+    ...queueEntry,
+    id: "queue-long-waiting-mango",
+    encounterId: longWaitingEncounter.id,
+    enteredAt: "2026-05-19T00:00:00.000Z",
+    status: "waiting",
+  };
+
+  const result = await readReceptionQueue({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    date: "2026-05-19",
+    gateway: createMockReceptionQueueReadGateway({
+      queue: [
+        {
+          kind: "encounter_queue",
+          encounter: longWaitingEncounter,
+          queueEntry: longWaitingQueueEntry,
+        },
+      ],
+    }),
+    notificationEventStore,
+    notificationStateStore,
+    now: "2026-05-19T00:35:00.000Z",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    emittedNotifications: {
+      waitingOver30m: 1,
+    },
+  });
+
+  const notifications = await readLiveNotifications({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    eventStore: notificationEventStore,
+    notifications: [],
+    stateStore: notificationStateStore,
+  });
+
+  expect(notifications).toMatchObject({
+    ok: true,
+    counts: {
+      badge: 1,
+      unread: 1,
+      important: 1,
+    },
+  });
+  expect(notifications.ok && notifications.notifications[0]).toMatchObject({
+    id: "notif-live-patient-mango-queue-long-waiting-mango-waiting-over-30m",
+    eventKey: "waiting_over_30m",
+    sourceRoute: "/w/clair-demo/reception?modulePanel=open&encounterId=encounter-long-waiting-mango",
+    title: "대기 35분 경과: patient-mango",
+    recipientKind: "role_queue",
+    recipientId: "desk",
+    workTypeLabel: "접수",
+  });
+
+  await markLiveNotificationRead({
+    actorUserId: "user-front-desk",
+    notificationId: "notif-live-patient-mango-queue-long-waiting-mango-waiting-over-30m",
+    workspaceId: "clair-demo",
+    eventStore: notificationEventStore,
+    notifications: [],
+    stateStore: notificationStateStore,
+  });
+
+  await readReceptionQueue({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    date: "2026-05-19",
+    gateway: createMockReceptionQueueReadGateway({
+      queue: [
+        {
+          kind: "encounter_queue",
+          encounter: longWaitingEncounter,
+          queueEntry: longWaitingQueueEntry,
+        },
+      ],
+    }),
+    notificationEventStore,
+    notificationStateStore,
+    now: "2026-05-19T00:36:00.000Z",
+  });
+
+  const afterRepeatedRead = await readLiveNotifications({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    eventStore: notificationEventStore,
+    notifications: [],
+    stateStore: notificationStateStore,
+  });
+  expect(afterRepeatedRead.ok && afterRepeatedRead.counts).toMatchObject({
+    badge: 0,
+    unread: 0,
+  });
+});
+
+test("reception queue read persists waiting-over-30m notification through the DB gateway", async () => {
+  const persistedEvents: Array<
+    Parameters<NotificationPersistenceGateway["emitNotificationEvent"]>[0]
+  > = [];
+  const notificationPersistenceGateway =
+    createRecordingNotificationPersistenceGateway(persistedEvents);
+  const longWaitingEncounter: Encounter = {
+    ...encounter,
+    id: "encounter-long-waiting-peach",
+    encounterNo: "E-LONG-WAIT-DB",
+    patientId: "patient-peach",
+    status: "waiting",
+    checkedInAt: "2026-05-19T00:00:00.000Z",
+  };
+  const longWaitingQueueEntry: WaitingQueueEntry = {
+    ...queueEntry,
+    id: "queue-long-waiting-peach",
+    encounterId: longWaitingEncounter.id,
+    enteredAt: "2026-05-19T00:00:00.000Z",
+    status: "waiting",
+  };
+
+  const result = await readReceptionQueue({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    date: "2026-05-19",
+    gateway: createMockReceptionQueueReadGateway({
+      queue: [
+        {
+          kind: "encounter_queue",
+          encounter: longWaitingEncounter,
+          queueEntry: longWaitingQueueEntry,
+        },
+      ],
+    }),
+    notificationEventScopeId: null,
+    notificationPersistenceGateway,
+    now: "2026-05-19T00:35:00.000Z",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    emittedNotifications: {
+      waitingOver30m: 1,
+    },
+  });
+  expect(persistedEvents).toEqual([
+    expect.objectContaining({
+      actorUserId: "user-front-desk",
+      badgeCount: true,
+      dedupeKey: "patient-peach-queue-long-waiting-peach-waiting_over_30m",
+      eventKey: "waiting_over_30m",
+      eventScopeId: null,
+      source: expect.objectContaining({
+        entity_id: "queue-long-waiting-peach",
+        kind: "reception_queue",
+        route: "/w/clair-demo/reception?modulePanel=open&encounterId=encounter-long-waiting-peach",
+      }),
+      workspaceId: "clair-demo",
+    }),
+  ]);
+});
+
+test("reception queue read keeps source read successful when DB notification persistence rejects", async () => {
+  const longWaitingEncounter: Encounter = {
+    ...encounter,
+    id: "encounter-long-waiting-plum",
+    encounterNo: "E-LONG-WAIT-DB-FAIL",
+    patientId: "patient-plum",
+    status: "waiting",
+    checkedInAt: "2026-05-19T00:00:00.000Z",
+  };
+  const longWaitingQueueEntry: WaitingQueueEntry = {
+    ...queueEntry,
+    id: "queue-long-waiting-plum",
+    encounterId: longWaitingEncounter.id,
+    enteredAt: "2026-05-19T00:00:00.000Z",
+    status: "waiting",
+  };
+
+  const result = await readReceptionQueue({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    date: "2026-05-19",
+    gateway: createMockReceptionQueueReadGateway({
+      queue: [
+        {
+          kind: "encounter_queue",
+          encounter: longWaitingEncounter,
+          queueEntry: longWaitingQueueEntry,
+        },
+      ],
+    }),
+    notificationPersistenceGateway: createThrowingNotificationPersistenceGateway(),
+    now: "2026-05-19T00:35:00.000Z",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    queue: [expect.objectContaining({ kind: "encounter_queue" })],
+    emittedNotifications: {
+      waitingOver30m: 0,
+    },
+  });
+});
+
 test("reception queue read route stays server-owned and avoids secret-shaped values", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/reception/queue/route.ts",
@@ -434,6 +658,79 @@ test("reception queue reader migration keeps queue rows workspace-scoped", () =>
 
 async function expectJson(response: { json(): Promise<unknown> }, expected: Record<string, unknown>) {
   await expect(response.json()).resolves.toMatchObject(expected);
+}
+
+function createRecordingNotificationPersistenceGateway(
+  persistedEvents: Array<
+    Parameters<NotificationPersistenceGateway["emitNotificationEvent"]>[0]
+  >,
+): NotificationPersistenceGateway {
+  return {
+    async emitNotificationEvent(event) {
+      persistedEvents.push(event);
+      return {
+        ok: true,
+        status: 200,
+        action: "created",
+        notification: { id: `persisted-${event.dedupeKey}` } as GlobalNotification,
+        enforcedBy: "notification-event-persistence-gateway",
+      };
+    },
+    async listNotificationEvents() {
+      return {
+        ok: true,
+        status: 200,
+        notifications: [],
+        enforcedBy: "notification-event-persistence-gateway",
+      };
+    },
+    async listNotificationUserStates() {
+      return {
+        ok: true,
+        status: 200,
+        states: [],
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+    async upsertNotificationUserState() {
+      return {
+        ok: true,
+        status: 200,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+  };
+}
+
+function createThrowingNotificationPersistenceGateway(): NotificationPersistenceGateway {
+  return {
+    async emitNotificationEvent() {
+      throw new Error("simulated notification persistence outage");
+    },
+    async listNotificationEvents() {
+      return {
+        ok: true,
+        status: 200,
+        notifications: [],
+        enforcedBy: "notification-event-persistence-gateway",
+      };
+    },
+    async listNotificationUserStates() {
+      return {
+        ok: true,
+        status: 200,
+        states: [],
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+    async upsertNotificationUserState() {
+      return {
+        ok: true,
+        status: 200,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+  };
 }
 
 function createLegacyReceptionViewPermissionGateway(calls: string[]): WorkspacePermissionDbGateway {

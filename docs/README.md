@@ -35,6 +35,7 @@ Use detailed history, completed reports, and archived plans only when the active
 | Product MVP scope                    | [Product MVP Scope](product/roadmap/product-mvp-scope.md)                                                                                                               |
 | Global notification center v0        | [Global Notification Center v0 Contract](product/features/notifications/global-notification-center-v0-contract.md)                                                      |
 | Global notification event policy     | [Global Notification Center v0 Event Policy](product/features/notifications/global-notification-center-v0-event-policy.md)                                              |
+| Global notification center v1 plan   | [Global Notification Center v1 Live Plan](product/features/notifications/global-notification-center-v1-live-plan.md)                                                    |
 | Outpatient workflow states           | [Outpatient Workflow State Model](product/domain/outpatient-workflow-state-model.md)                                                                                    |
 | Domain entity map                    | [EMR Domain Entity Map](product/domain/emr-domain-entity-map.md)                                                                                                        |
 | Role/permission source               | [Role Permission Source Map](product/domain/role-permission-source-map.md)                                                                                              |

@@ -1,4 +1,5 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
+import { demoClientSessionIdHeader } from "@/features/auth/demo-actor";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
@@ -8,6 +9,10 @@ import {
   createSupabaseWorkspacePermissionGateway,
   type SupabaseWorkspacePermissionClient,
 } from "@/features/auth/supabase-workspace-permission-gateway";
+import {
+  createSupabaseNotificationPersistenceGateway,
+  type SupabaseNotificationPersistenceRpcClient,
+} from "@/features/notifications/server-notification-persistence";
 import {
   createSupabaseReceptionQueueReadGateway,
   readReceptionQueue,
@@ -57,6 +62,16 @@ export async function GET(request: Request, { params }: RouteContext) {
   const result = await readReceptionQueue({
     actorUserId: identity.actorUserId,
     date,
+    emitWaitingNotifications: true,
+    notificationEventScopeId:
+      identity.source === "demo_header_mock_mode"
+        ? request.headers.get(demoClientSessionIdHeader)
+        : null,
+    notificationPersistenceGateway: client
+      ? createSupabaseNotificationPersistenceGateway(
+          client as unknown as SupabaseNotificationPersistenceRpcClient,
+        )
+      : undefined,
     permissionAdapter,
     workspaceId,
     gateway: client

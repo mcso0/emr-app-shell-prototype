@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notification v1 Event Producer Foundation Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #667085;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>알림 v1 Event Producer Foundation 작업 결과</h1>
+    <p class="meta">2026-07-05 · NOTIFICATION-PR-018 · synthetic/demo-data scope</p>
+
+    <h2>요청</h2>
+    <p>
+      알림 drawer가 live API를 읽는 단계 다음으로, source workflow 서버 코드가 안전하게
+      알림을 생성할 수 있는 내부 producer foundation을 추가하는 작업이었다.
+    </p>
+
+    <h2>결과</h2>
+    <ul>
+      <li>local/dev synthetic notification event store를 추가했다.</li>
+      <li>내부 서버 helper인 <code>emitLiveNotificationEvent</code>를 추가했다.</li>
+      <li>같은 <code>dedupeKey</code> 이벤트는 새 row를 늘리지 않고 기존 알림을 bump/update한다.</li>
+      <li>새 bumped event가 들어오면 이전 read/archive 상태를 지워 새 신호가 다시 unread로 보이게 했다.</li>
+      <li>생성된 알림도 기존 live reader의 workspace, recipient, source-route safety, safe DTO 경계를 그대로 통과한다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/features/notifications/server-notifications-core.ts</code></li>
+      <li><code>tests/notification-live-api-server.spec.ts</code></li>
+      <li><code>docs/product/features/notifications/global-notification-center-v1-live-plan.md</code></li>
+      <li><code>docs/work/notifications/NOTIFICATION-PR-018-v1-event-producer-foundation.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-live-api-server.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/app-shell.spec.ts -g "global notification"</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li>알림 관련 touched files 대상 <code>npx eslint</code> 통과</li>
+      <li><code>git diff --check</code> 통과</li>
+      <li><code>npm run lint</code>는 현재 작업 범위 밖의 <code>src/shell/global-command-palette.tsx</code> 변경에서 실패했다.</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      이번 작업은 producer foundation까지만 다룬다. 실제 reception/chart/lab/billing mutation wiring,
+      DB persistence, RLS replay, realtime delivery, external delivery, production deployment, real data 사용은
+      별도 승인된 후속 작업 범위다.
+    </p>
+  </body>
+</html>

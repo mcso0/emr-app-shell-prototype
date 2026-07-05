@@ -371,6 +371,13 @@ const planningMetadataBySlug: Partial<Record<string, ClairPlanningMetadata>> = {
     itemKind: "feature-spec",
     itemOrder: 10,
   },
+  "global-notification-center-v1-live-plan": {
+    category: "feature",
+    feature: "전역 알림",
+    featureOrder: 50,
+    itemKind: "feature-spec",
+    itemOrder: 10,
+  },
   "epics-readme": { category: "product", itemKind: "epic-index", itemOrder: 70 },
   "user-stories-readme": { category: "product", itemKind: "story-index", itemOrder: 80 },
 
@@ -602,6 +609,18 @@ export const prdDocRegistry = [
     sourcePath: "docs/product/features/auth/README.md",
     description: "Auth planning map for account, workspace entry, access permission, and member-management foundations.",
     tags: ["auth", "planning"],
+  }),
+  defineDoc({
+    slug: "global-notification-center-v1-live-plan",
+    title: "Global Notification Center v1 Live Plan",
+    area: "planning",
+    group: "Features",
+    section: "기능명세",
+    order: 25,
+    docType: "Feature",
+    sourcePath: "docs/product/features/notifications/global-notification-center-v1-live-plan.md",
+    description: "Product, UX flow, API, and implementation plan for live staff in-app notifications.",
+    tags: ["notifications", "app-shell", "api"],
   }),
   defineDoc({
     slug: "invite-email-delivery-recovery-policy-spec",

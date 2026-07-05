@@ -1,4 +1,5 @@
 import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import { demoClientSessionIdHeader } from "@/features/auth/demo-actor";
 import { resolveWorkspacePermission } from "@/features/auth/permission-resolver";
 import { readServerSession } from "@/features/auth/server-session-reader";
 import {
@@ -9,6 +10,16 @@ import {
   createSupabaseWorkspacePermissionGateway,
   type SupabaseWorkspacePermissionClient,
 } from "@/features/auth/supabase-workspace-permission-gateway";
+import {
+  emitLiveNotificationEvent,
+  type LiveNotificationEventInput,
+} from "@/features/notifications/server-notifications";
+import {
+  createSupabaseNotificationPersistenceGateway,
+  emitPersistedLiveNotificationEvent,
+  type NotificationPersistenceGateway,
+  type SupabaseNotificationPersistenceRpcClient,
+} from "@/features/notifications/server-notification-persistence";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -181,7 +192,21 @@ export async function POST(request: Request, { params }: RouteContext) {
       },
       workspaceId,
     });
-    return Response.json(result, { status: result.status });
+    const savedSnapshot = readSavedResultSnapshot(result);
+    if (!savedSnapshot) return Response.json(result, { status: result.status });
+
+    const emittedNotifications = await emitClinicalResultCompletedNotification({
+      actorUserId: identity.actorUserId,
+      eventScopeId: getDemoNotificationEventScopeId({ identity, request }),
+      notificationPersistenceGateway: createSupabaseNotificationPersistenceGateway(
+        client as unknown as SupabaseNotificationPersistenceRpcClient,
+      ),
+      snapshot: savedSnapshot,
+    });
+    return Response.json(
+      { ...result, emittedNotifications },
+      { status: result.status },
+    );
   }
 
   const snapshot = saveDemoLabResultEntry({
@@ -189,12 +214,18 @@ export async function POST(request: Request, { params }: RouteContext) {
     input: { ...input, resultId: input.resultId },
     workspaceId,
   });
+  const emittedNotifications = await emitClinicalResultCompletedNotification({
+    actorUserId: identity.actorUserId,
+    eventScopeId: getDemoNotificationEventScopeId({ identity, request }),
+    snapshot,
+  });
 
   return Response.json(
     {
       ok: true,
       status: 200,
       savedResult: snapshot,
+      emittedNotifications,
       enforcedBy: "lab-result-entry-server-boundary",
     },
     { status: 200 },
@@ -439,6 +470,129 @@ function readDemoLabResultEntry({
         (!workItemId || snapshot.workItemId === workItemId),
     ) ?? null
   );
+}
+
+async function emitClinicalResultCompletedNotification({
+  actorUserId,
+  eventScopeId,
+  notificationPersistenceGateway,
+  snapshot,
+}: {
+  actorUserId: string;
+  eventScopeId?: string | null;
+  notificationPersistenceGateway?: NotificationPersistenceGateway;
+  snapshot: LabResultEntrySnapshot;
+}): Promise<{
+  clinicalResultCompleted: number;
+  emissionIssues?: Array<{
+    eventKey: "clinical_result_completed";
+    reason: string;
+  }>;
+}> {
+  const event = buildClinicalResultCompletedNotificationEvent({
+    actorUserId,
+    eventScopeId,
+    snapshot,
+  });
+
+  if (notificationPersistenceGateway) {
+    const result = await emitPersistedLiveNotificationEvent({
+      event,
+      gateway: notificationPersistenceGateway,
+    });
+
+    if (result.ok) return { clinicalResultCompleted: 1 };
+
+    return {
+      clinicalResultCompleted: 0,
+      emissionIssues: [
+        {
+          eventKey: "clinical_result_completed",
+          reason:
+            result.denialReason ??
+            result.error ??
+            "notification_persistence_failed",
+        },
+      ],
+    };
+  }
+
+  emitLiveNotificationEvent({ event });
+  return { clinicalResultCompleted: 1 };
+}
+
+function buildClinicalResultCompletedNotificationEvent({
+  actorUserId,
+  eventScopeId,
+  snapshot,
+}: {
+  actorUserId: string;
+  eventScopeId?: string | null;
+  snapshot: LabResultEntrySnapshot;
+}): LiveNotificationEventInput {
+  const sourceRoute = `/w/${snapshot.workspaceId}/lab?modulePanel=open&labResultId=${encodeURIComponent(snapshot.resultId)}`;
+  const resultLabel = snapshot.orderId ?? snapshot.resultId;
+
+  return {
+    workspaceId: snapshot.workspaceId,
+    eventKey: "clinical_result_completed",
+    dedupeKey: `${snapshot.encounterId ?? snapshot.resultId}-${snapshot.orderId ?? snapshot.resultId}-clinical_result_completed`,
+    domain: "lab",
+    priority: "normal",
+    toastPolicy: "role_active",
+    title: "검사 결과가 도착했습니다",
+    preview: "담당 수의사 확인 대기 · 결과 화면에서 세부 수치를 확인하세요.",
+    detail:
+      "검사 결과 입력이 완료되었습니다. 담당 수의사는 원본 검사 결과 화면에서 세부 수치와 판정을 확인하세요.",
+    workTypeLabel: "검사",
+    sourceLabel: `임상병리검사 · ${resultLabel}`,
+    sourceActionLabel: "검사 결과 열기",
+    recipient: { kind: "role_queue", id: "vet", label: "수의사" },
+    source: {
+      kind: "lab_result",
+      route: sourceRoute,
+      entity_id: snapshot.resultId,
+    },
+    requiresAction: true,
+    badgeCount: true,
+    actorUserId,
+    eventScopeId,
+    occurredAt: snapshot.updatedAt,
+    issuedAtLabel: "방금 전",
+  };
+}
+
+function readSavedResultSnapshot(response: {
+  ok: boolean;
+  savedResult?: unknown;
+}): LabResultEntrySnapshot | null {
+  if (!response.ok) return null;
+  return isLabResultEntrySnapshot(response.savedResult) ? response.savedResult : null;
+}
+
+function isLabResultEntrySnapshot(value: unknown): value is LabResultEntrySnapshot {
+  if (!value || typeof value !== "object") return false;
+  const snapshot = value as Record<string, unknown>;
+
+  return (
+    typeof snapshot.actorUserId === "string" &&
+    typeof snapshot.createdAt === "string" &&
+    typeof snapshot.resultId === "string" &&
+    Array.isArray(snapshot.rows) &&
+    typeof snapshot.updatedAt === "string" &&
+    typeof snapshot.workspaceId === "string"
+  );
+}
+
+function getDemoNotificationEventScopeId({
+  identity,
+  request,
+}: {
+  identity: Extract<Awaited<ReturnType<typeof resolveRequestIdentity>>, { ok: true }>;
+  request: Request;
+}) {
+  if (identity.source !== "demo_header_mock_mode") return null;
+  return request.headers.get(demoClientSessionIdHeader);
 }
 
 async function readEntryBody(request: Request): Promise<LabResultEntryBody> {

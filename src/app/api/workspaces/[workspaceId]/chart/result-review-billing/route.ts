@@ -1,4 +1,5 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
+import { demoClientSessionIdHeader } from "@/features/auth/demo-actor";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
@@ -9,9 +10,18 @@ import {
   type SupabaseWorkspacePermissionClient,
 } from "@/features/auth/supabase-workspace-permission-gateway";
 import {
+  createSupabaseNotificationPersistenceGateway,
+  type SupabaseNotificationPersistenceRpcClient,
+} from "@/features/notifications/server-notification-persistence";
+import {
   createSupabaseInvoiceCandidateSyncGateway,
   type SupabaseInvoiceCandidateSyncRpcClient,
 } from "@/features/billing/server-invoice-candidate-sync";
+import {
+  createSupabaseLiveAuditAppendGateway,
+  type SupabaseLiveAuditAppendRpcClient,
+} from "@/features/audit/server-audit-log-persistence";
+import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import {
   createSupabaseFulfillmentWorkItemGateway,
   syncVetReviewedBillingCandidates,
@@ -71,7 +81,23 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     actorUserId: identity.actorUserId,
     workspaceId,
     input,
+    emitBillingReadyNotifications: true,
+    notificationEventScopeId:
+      identity.source === "demo_header_mock_mode"
+        ? request.headers.get(demoClientSessionIdHeader)
+        : null,
+    notificationPersistenceGateway: client
+      ? createSupabaseNotificationPersistenceGateway(
+          client as unknown as SupabaseNotificationPersistenceRpcClient,
+        )
+      : undefined,
     permissionAdapter,
+    auditGateway: client
+      ? createSupabaseLiveAuditAppendGateway(
+          client as unknown as SupabaseLiveAuditAppendRpcClient,
+        )
+      : undefined,
+    auditRequestId: getAuditRequestId(request),
     gateway: client
       ? createSupabaseFulfillmentWorkItemGateway(
           client as unknown as SupabaseFulfillmentWorkItemRpcClient,

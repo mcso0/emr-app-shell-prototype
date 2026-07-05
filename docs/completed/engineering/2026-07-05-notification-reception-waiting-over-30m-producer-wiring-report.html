@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reception Waiting-Over-30m Notification Producer Wiring Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #667085;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>접수 대기 30분 알림 Producer 연결 결과</h1>
+    <p class="meta">2026-07-05 · NOTIFICATION-PR-019 · synthetic/demo-data scope</p>
+
+    <h2>요청</h2>
+    <p>
+      알림 producer foundation을 실제 source workflow/read-model 신호에 연결하는 첫 번째 작업으로,
+      접수 대기 30분 이상 알림을 live notification producer에 연결했다.
+    </p>
+
+    <h2>결과</h2>
+    <ul>
+      <li>접수 queue read model이 30분 이상 대기 중인 consultation queue row를 평가한다.</li>
+      <li>접수 queue route에서 waiting-over-30m producer 경로를 명시적으로 켰다.</li>
+      <li>생성 알림은 desk role queue 대상으로 badge eligible 상태가 된다.</li>
+      <li>source action은 같은 workspace의 접수 화면 context로만 이동한다.</li>
+      <li>30분 threshold timestamp를 사용해 같은 대기 이벤트를 반복 read해도 계속 bump되거나 읽음 상태가 깨지지 않게 했다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/features/reception/server-reception-queue-read-core.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/reception/queue/route.ts</code></li>
+      <li><code>src/features/notifications/server-notifications-core.ts</code></li>
+      <li><code>tests/reception-queue-read-server.spec.ts</code></li>
+      <li><code>tests/notification-live-api-server.spec.ts</code></li>
+      <li><code>docs/product/features/notifications/global-notification-center-v1-live-plan.md</code></li>
+      <li><code>docs/work/notifications/NOTIFICATION-PR-019-reception-waiting-over-30m-producer-wiring.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/reception-queue-read-server.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-live-api-server.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/app-shell.spec.ts -g "global notification"</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li>접수/알림 관련 touched files 대상 <code>npx eslint</code> 통과</li>
+      <li><code>git diff --check</code> 통과</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      이번 작업은 접수 대기 30분 알림 연결까지만 다룬다. scheduler/background job 전환,
+      clinical result/recheck/billing-ready producer wiring, DB persistence, RLS replay, realtime delivery,
+      external delivery, production deployment, real data 사용은 후속 작업 범위다.
+    </p>
+  </body>
+</html>

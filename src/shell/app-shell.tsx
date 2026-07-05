@@ -7,18 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { getDemoActorHeaders } from "@/features/auth/demo-actor";
+import { useAuthClient } from "@/features/auth/auth-client";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
 import {
-  applyNotificationLocalState,
-  getInitialNotificationLocalState,
-  getWorkspaceScopedNotifications,
-  readNotificationLocalState,
-  resolveNotificationBadgeCount,
   type GlobalNotification,
-  type NotificationLocalState,
-  writeNotificationLocalState,
 } from "@/features/notifications/mock-notifications";
-import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import {
+  emptyLiveNotificationCounts,
+  fetchLiveNotificationSnapshot,
+  mutateLiveNotification,
+  type LiveNotificationCounts,
+  type LiveNotificationMutationAction,
+} from "@/features/notifications/live-notifications-client";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
 import {
@@ -47,6 +48,8 @@ type PendingDuplicateTabNavigation = {
   nextModuleId: string;
   existingTab: WorkspaceTab;
 };
+
+type NotificationRequestState = "idle" | "loading" | "ready" | "error" | "permission_denied";
 
 declare global {
   interface Window {
@@ -108,13 +111,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
-  const workspaceNotifications = useMemo(
-    () =>
-      isPreparedEmptyClinicWorkspace(workspaceId)
-        ? emptyGlobalNotifications
-        : getWorkspaceScopedNotifications(workspaceId),
-    [workspaceId]
-  );
   const navigationSearch = useMemo(
     () =>
       getCrossModuleNavigationSearch(search, {
@@ -128,23 +124,21 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const pendingTabRouteRef = useRef<string | null>(null);
   const tabsInitializedRef = useRef<string | null>(null);
   const urlStateReadyRef = useRef(false);
+  const { hydrated: authHydrated, session: authSession, hydrate: hydrateAuth } = useAuthClient();
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [notificationFallbackDetailId, setNotificationFallbackDetailId] = useState<string | null>(null);
-  const [notificationLocalState, setNotificationLocalState] = useState<NotificationLocalState>(() =>
-    getInitialNotificationLocalState(workspaceNotifications)
-  );
-  const [notificationLocalStateHydrated, setNotificationLocalStateHydrated] = useState(false);
+  const [notifications, setNotifications] = useState<GlobalNotification[]>(emptyGlobalNotifications);
+  const [notificationCounts, setNotificationCounts] =
+    useState<LiveNotificationCounts>(emptyLiveNotificationCounts);
+  const [notificationRequestState, setNotificationRequestState] =
+    useState<NotificationRequestState>("idle");
+  const [notificationErrorMessage, setNotificationErrorMessage] = useState<string | null>(null);
+  const [notificationReloadKey, setNotificationReloadKey] = useState(0);
   const [duplicateNavigation, setDuplicateNavigation] = useState<PendingDuplicateTabNavigation | null>(null);
   const [skipDuplicateWarning, setSkipDuplicateWarning] = useState(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
-  const notifications = useMemo(
-    () => applyNotificationLocalState(workspaceNotifications, notificationLocalState),
-    [notificationLocalState, workspaceNotifications]
-  );
-  const notificationBadgeCount = useMemo(
-    () => resolveNotificationBadgeCount(notifications),
-    [notifications]
-  );
+  const actorHeaders = useMemo(() => getDemoActorHeaders(authSession), [authSession]);
+  const notificationBadgeCount = notificationCounts.badge;
   const {
     activeTabId,
     activateTab,
@@ -186,6 +180,53 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }, []);
 
   useEffect(() => {
+    hydrateAuth();
+  }, [hydrateAuth]);
+
+  useEffect(() => {
+    if (!authHydrated) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    void Promise.resolve().then(() => {
+      if (cancelled) return null;
+      setNotificationRequestState((state) => (state === "ready" ? "ready" : "loading"));
+
+      return fetchLiveNotificationSnapshot({
+        actorHeaders,
+        signal: controller.signal,
+        workspaceId,
+      });
+    }).then((result) => {
+      if (!result) return;
+      if (cancelled) return;
+
+      if (result.ok) {
+        setNotifications(result.notifications);
+        setNotificationCounts(result.counts);
+        setNotificationErrorMessage(null);
+        setNotificationRequestState("ready");
+        return;
+      }
+
+      if (result.aborted) return;
+
+      setNotifications(emptyGlobalNotifications);
+      setNotificationCounts(emptyLiveNotificationCounts);
+      setNotificationErrorMessage(result.error.message);
+      setNotificationRequestState(
+        result.error.status === 401 || result.error.status === 403 ? "permission_denied" : "error"
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [actorHeaders, authHydrated, notificationReloadKey, workspaceId]);
+
+  useEffect(() => {
     if (tabsInitializedRef.current === workspaceId) return;
     void initialize({ workspaceId, route: currentRoute, moduleId: moduleDefinition.id });
     tabsInitializedRef.current = workspaceId;
@@ -211,23 +252,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   useLayoutEffect(() => {
     enterModule();
   }, [enterModule, moduleDefinition.id]);
-
-  useEffect(() => {
-    const hydrateTimer = window.setTimeout(() => {
-      setNotificationLocalState(readNotificationLocalState(window.localStorage, workspaceNotifications));
-      setNotificationLocalStateHydrated(true);
-    }, 0);
-
-    return () => {
-      window.clearTimeout(hydrateTimer);
-    };
-  }, [workspaceNotifications]);
-
-  useEffect(() => {
-    if (!notificationLocalStateHydrated) return;
-
-    writeNotificationLocalState(window.localStorage, notificationLocalState);
-  }, [notificationLocalState, notificationLocalStateHydrated]);
 
   useLayoutEffect(() => {
     urlStateReadyRef.current = false;
@@ -384,43 +408,70 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     navigateToTabRoute(createTab({ workspaceId, route, moduleId: "home" }));
   }
 
-  function handleMarkNotificationRead(notificationId: string) {
-    setNotificationLocalState((state) =>
-      state.readIds.includes(notificationId)
-        ? state
-        : { ...state, readIds: [...state.readIds, notificationId] }
-    );
+  function handleRetryNotifications() {
+    setNotificationReloadKey((key) => key + 1);
   }
 
-  function handleArchiveNotification(notificationId: string) {
-    setNotificationLocalState((state) => ({
-      readIds: state.readIds.includes(notificationId)
-        ? state.readIds
-        : [...state.readIds, notificationId],
-      archivedIds: state.archivedIds.includes(notificationId)
-        ? state.archivedIds
-        : [...state.archivedIds, notificationId],
-    }));
+  async function runNotificationMutation({
+    action,
+    notificationId,
+    silent = false,
+  }: {
+    action: LiveNotificationMutationAction;
+    notificationId?: string;
+    silent?: boolean;
+  }) {
+    const result = await mutateLiveNotification({
+      action,
+      actorHeaders,
+      notificationId,
+      workspaceId,
+    });
+
+    if (!result.ok) {
+      if (!result.aborted && !silent) {
+        toast.error(result.error.message);
+        setNotificationErrorMessage(result.error.message);
+        setNotificationRequestState(
+          result.error.status === 401 || result.error.status === 403 ? "permission_denied" : "error"
+        );
+      }
+
+      return false;
+    }
+
+    setNotificationCounts(result.counts);
+    setNotificationErrorMessage(null);
+    setNotificationRequestState("ready");
+    setNotificationReloadKey((key) => key + 1);
+    return true;
   }
 
-  function handleRestoreNotification(notificationId: string) {
-    setNotificationLocalState((state) => ({
-      ...state,
-      archivedIds: state.archivedIds.filter((id) => id !== notificationId),
-    }));
+  async function handleMarkNotificationRead(notificationId: string, options?: { silent?: boolean }) {
+    return runNotificationMutation({
+      action: "read",
+      notificationId,
+      silent: options?.silent,
+    });
   }
 
-  function handleMarkAllNotificationsRead() {
-    setNotificationLocalState((state) => {
-      const readIds = new Set(state.readIds);
+  async function handleArchiveNotification(notificationId: string) {
+    await runNotificationMutation({
+      action: "archive",
+      notificationId,
+    });
+  }
 
-      notifications.forEach((notification) => {
-        if (!notification.archived) {
-          readIds.add(notification.id);
-        }
-      });
+  async function handleRestoreNotification(notificationId: string) {
+    await runNotificationMutation({
+      action: "restore",
+      notificationId,
+    });
+  }
 
-      return { ...state, readIds: Array.from(readIds) };
+  async function handleMarkAllNotificationsRead() {
+    await runNotificationMutation({
+      action: "read-all",
     });
   }
 
@@ -428,11 +479,11 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     setNotificationFallbackDetailId(null);
   }
 
-  function handleOpenNotificationSource(notification: GlobalNotification) {
+  async function handleOpenNotificationSource(notification: GlobalNotification) {
     if (!notification.source.route) {
-      handleMarkNotificationRead(notification.id);
       setNotificationFallbackDetailId(notification.id);
       setNotificationDrawerOpen(true);
+      await handleMarkNotificationRead(notification.id, { silent: true });
       return;
     }
 
@@ -443,13 +494,15 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     const nextModuleId = getNotificationSourceModuleId(notification.source.route);
 
     if (!nextModuleId) {
-      handleMarkNotificationRead(notification.id);
       setNotificationFallbackDetailId(notification.id);
       setNotificationDrawerOpen(true);
+      await handleMarkNotificationRead(notification.id, { silent: true });
       return;
     }
 
-    handleMarkNotificationRead(notification.id);
+    const readSucceeded = await handleMarkNotificationRead(notification.id, { silent: true });
+    if (!readSucceeded) return;
+
     setNotificationFallbackDetailId(null);
     setNotificationDrawerOpen(false);
     handleNavigateModule(notification.source.route, nextModuleId);
@@ -523,7 +576,9 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       />
       <GlobalNotificationDrawer
         badgeCount={notificationBadgeCount}
+        errorMessage={notificationErrorMessage}
         fallbackDetailNotificationId={notificationFallbackDetailId}
+        loading={notificationRequestState === "loading"}
         notifications={notifications}
         open={notificationDrawerOpen}
         onArchiveNotification={handleArchiveNotification}
@@ -532,6 +587,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         onMarkNotificationRead={handleMarkNotificationRead}
         onOpenNotificationSource={handleOpenNotificationSource}
         onOpenChange={setNotificationDrawerOpen}
+        onRetry={handleRetryNotifications}
         onRestoreNotification={handleRestoreNotification}
       />
       <Dialog open={Boolean(duplicateNavigation)} onOpenChange={(open) => !open && setDuplicateNavigation(null)}>

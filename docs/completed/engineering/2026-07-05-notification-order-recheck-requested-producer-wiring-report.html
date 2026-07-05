@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Order Recheck-Requested Notification Producer Wiring Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #667085;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>오더 재확인 요청 알림 Producer 연결 결과</h1>
+    <p class="meta">2026-07-05 · NOTIFICATION-PR-022 · synthetic/demo-data scope</p>
+
+    <h2>요청</h2>
+    <p>
+      알림 v1 live producer를 명시적인 오더 재확인 요청 업무에 연결하기 위해, 임상 권한이
+      있는 사용자가 대상 역할 또는 사용자에게 재확인 사유를 전달하는 서버 경계를 추가했다.
+    </p>
+
+    <h2>결과</h2>
+    <ul>
+      <li><code>order-recheck-requests</code> route가 <code>order_recheck_requested</code> 알림만 생성한다.</li>
+      <li>generic create-notification API는 만들지 않았다.</li>
+      <li>요청 payload는 source domain/kind/entity/route, recipient, order label, requester label, reason을 필수로 검증한다.</li>
+      <li>요청자는 <code>chart:update</code> 또는 대상 도메인 completion 권한이 있어야 한다.</li>
+      <li>검사 담당자 같은 대상 role queue에는 알림이 보이고, front-desk에는 보이지 않는다.</li>
+      <li>front-desk actor는 재확인 요청 알림 자체를 만들 수 없다.</li>
+      <li>생성 알림은 high-priority, badge-eligible, actionable, role-active toast eligible 상태다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/app/api/workspaces/[workspaceId]/notifications/order-recheck-requests/route.ts</code></li>
+      <li><code>tests/order-recheck-notification-server.spec.ts</code></li>
+      <li><code>docs/product/features/notifications/global-notification-center-v1-live-plan.md</code></li>
+      <li><code>docs/work/notifications/NOTIFICATION-PR-022-order-recheck-requested-producer-wiring.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/order-recheck-notification-server.spec.ts</code> 통과</li>
+      <li><code>npx eslint src/app/api/workspaces/'[workspaceId]'/notifications/order-recheck-requests/route.ts tests/order-recheck-notification-server.spec.ts</code> 통과</li>
+      <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      이번 작업은 재확인 요청 알림 생성까지만 다룬다. 재확인 요청 자체의 durable storage,
+      order lifecycle의 <code>re_requested</code> 전환, assigned-user lookup, inpatient routing,
+      DB-backed notification persistence, RLS replay, realtime delivery, 외부 메시지 발송, production launch,
+      real data 사용은 후속 작업 범위다.
+    </p>
+  </body>
+</html>

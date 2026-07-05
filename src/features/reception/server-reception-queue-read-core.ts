@@ -4,6 +4,16 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import {
+  emitLiveNotificationEvent,
+  type LiveNotificationEventInput,
+  type LiveNotificationEventStore,
+  type LiveNotificationStateStore,
+} from "@/features/notifications/server-notifications";
+import {
+  emitPersistedLiveNotificationEvent,
+  type NotificationPersistenceGateway,
+} from "@/features/notifications/server-notification-persistence";
 import type {
   ReceptionQueueReadRecord,
   ReceptionQueueReadSummary,
@@ -33,6 +43,9 @@ export type ReceptionQueueReadResult =
       status: 200;
       queue: ReceptionQueueReadRecord[];
       summary: ReceptionQueueReadSummary;
+      emittedNotifications?: {
+        waitingOver30m: number;
+      };
       enforcedBy: "reception-queue-read";
     }
   | {
@@ -49,13 +62,25 @@ export type ReceptionQueueReadResult =
 export async function readReceptionQueue({
   actorUserId,
   date,
+  emitWaitingNotifications,
   gateway = createMockReceptionQueueReadGateway({ queue: [] }),
+  notificationEventStore,
+  notificationEventScopeId,
+  notificationPersistenceGateway,
+  notificationStateStore,
+  now,
   permissionAdapter = createDemoReceptionQueueReadPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
   date: string;
+  emitWaitingNotifications?: boolean;
   gateway?: ReceptionQueueReadGateway;
+  notificationEventStore?: LiveNotificationEventStore;
+  notificationEventScopeId?: string | null;
+  notificationPersistenceGateway?: NotificationPersistenceGateway;
+  notificationStateStore?: LiveNotificationStateStore;
+  now?: string;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<ReceptionQueueReadResult> {
@@ -77,6 +102,22 @@ export async function readReceptionQueue({
 
   if (!result.ok) return { ok: false, status: 500, error: result.error };
 
+  const shouldEmitWaitingNotifications =
+    emitWaitingNotifications ??
+    Boolean(notificationEventStore || notificationPersistenceGateway);
+  const emittedNotifications = shouldEmitWaitingNotifications
+    ? await emitWaitingOver30mNotifications({
+        actorUserId,
+        notificationEventStore,
+        notificationEventScopeId,
+        notificationPersistenceGateway,
+        notificationStateStore,
+        now: now ?? new Date().toISOString(),
+        queue: result.queue,
+        workspaceId,
+      })
+    : undefined;
+
   return {
     ok: true,
     status: 200,
@@ -86,7 +127,132 @@ export async function readReceptionQueue({
       queue: result.queue,
       workspaceId,
     }),
+    ...(emittedNotifications ? { emittedNotifications } : {}),
     enforcedBy: "reception-queue-read",
+  };
+}
+
+async function emitWaitingOver30mNotifications({
+  actorUserId,
+  notificationEventStore,
+  notificationEventScopeId,
+  notificationPersistenceGateway,
+  notificationStateStore,
+  now,
+  queue,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  notificationEventStore?: LiveNotificationEventStore;
+  notificationEventScopeId?: string | null;
+  notificationPersistenceGateway?: NotificationPersistenceGateway;
+  notificationStateStore?: LiveNotificationStateStore;
+  now: string;
+  queue: ReceptionQueueReadRecord[];
+  workspaceId: string;
+}) {
+  const nowMs = new Date(now).getTime();
+  if (Number.isNaN(nowMs)) return { waitingOver30m: 0 };
+
+  let waitingOver30m = 0;
+
+  for (const record of queue) {
+    if (record.kind !== "encounter_queue") continue;
+    if (record.queueEntry.status !== "waiting") continue;
+
+    const enteredAtMs = new Date(record.queueEntry.enteredAt).getTime();
+    if (Number.isNaN(enteredAtMs)) continue;
+
+    const waitingMinutes = Math.floor((nowMs - enteredAtMs) / 60000);
+    if (waitingMinutes < 30) continue;
+
+    const thresholdReachedAt = new Date(enteredAtMs + 30 * 60000).toISOString();
+    const patientLabel = record.patient?.name ?? record.encounter.patientId;
+    const event = buildWaitingOver30mNotificationEvent({
+      actorUserId,
+      notificationEventScopeId,
+      patientLabel,
+      record,
+      thresholdReachedAt,
+      waitingMinutes,
+      workspaceId,
+    });
+
+    if (notificationPersistenceGateway) {
+      const result = await safeEmitPersistedLiveNotificationEvent({
+        event,
+        gateway: notificationPersistenceGateway,
+      });
+      if (result.ok) waitingOver30m += 1;
+    } else {
+      emitLiveNotificationEvent({
+        event,
+        eventStore: notificationEventStore,
+        stateStore: notificationStateStore,
+      });
+      waitingOver30m += 1;
+    }
+  }
+
+  return { waitingOver30m };
+}
+
+async function safeEmitPersistedLiveNotificationEvent({
+  event,
+  gateway,
+}: {
+  event: LiveNotificationEventInput;
+  gateway: NotificationPersistenceGateway;
+}) {
+  try {
+    return await emitPersistedLiveNotificationEvent({ event, gateway });
+  } catch {
+    return { ok: false as const, status: 500 as const, error: "db_write_failed" as const };
+  }
+}
+
+function buildWaitingOver30mNotificationEvent({
+  actorUserId,
+  notificationEventScopeId,
+  patientLabel,
+  record,
+  thresholdReachedAt,
+  waitingMinutes,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  notificationEventScopeId?: string | null;
+  patientLabel: string;
+  record: Extract<ReceptionQueueReadRecord, { kind: "encounter_queue" }>;
+  thresholdReachedAt: string;
+  waitingMinutes: number;
+  workspaceId: string;
+}): LiveNotificationEventInput {
+  return {
+    workspaceId,
+    eventKey: "waiting_over_30m",
+    dedupeKey: `${record.encounter.patientId}-${record.queueEntry.id}-waiting_over_30m`,
+    domain: "reception",
+    priority: waitingMinutes >= 60 ? "urgent" : "high",
+    toastPolicy: "role_active",
+    title: `대기 ${waitingMinutes}분 경과: ${patientLabel}`,
+    preview: "데스크 안내 필요 · 보호자에게 예상 대기 시간을 안내해 주세요.",
+    detail: `${patientLabel} 보호자가 ${waitingMinutes}분째 대기 중입니다. 접수 화면에서 대기 상태를 확인하세요.`,
+    workTypeLabel: "접수",
+    sourceLabel: `접수 대기 · ${patientLabel}`,
+    sourceActionLabel: "접수 대기 열기",
+    recipient: { kind: "role_queue", id: "desk", label: "데스크 역할" },
+    source: {
+      kind: "reception_queue",
+      route: `/w/${workspaceId}/reception?modulePanel=open&encounterId=${encodeURIComponent(record.encounter.id)}`,
+      entity_id: record.queueEntry.id,
+    },
+    requiresAction: true,
+    badgeCount: true,
+    actorUserId,
+    eventScopeId: notificationEventScopeId,
+    occurredAt: thresholdReachedAt,
+    issuedAtLabel: "방금 전",
   };
 }
 

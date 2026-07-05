@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notification DB Event Persistence Foundation Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #667085;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>알림 DB 이벤트 Persistence Foundation 결과</h1>
+    <p class="meta">2026-07-05 · NOTIFICATION-PR-023 · local/dev/test scope</p>
+
+    <h2>요청</h2>
+    <p>
+      알림 v1 live producer가 서버 메모리 store에만 의존하지 않도록, 후속 route adoption에서 사용할
+      DB 이벤트 저장 계약과 사용자별 읽음/보관 상태 저장 기반을 추가했다.
+    </p>
+
+    <h2>결과</h2>
+    <ul>
+      <li><code>notification_events</code> 테이블을 추가해 workspace-scoped live notification event를 저장할 수 있게 했다.</li>
+      <li><code>notification_user_states</code> 테이블을 추가해 사용자별 read/archive 상태를 저장할 수 있게 했다.</li>
+      <li>두 테이블 모두 RLS를 켜고 active workspace member boundary를 사용한다.</li>
+      <li><code>clair_emit_notification_event</code>, <code>clair_list_notification_events</code>, <code>clair_list_notification_user_states</code>, <code>clair_upsert_notification_user_state</code> RPC 계약을 추가했다.</li>
+      <li>TypeScript Supabase gateway가 고정 RPC 이름으로 emit/list/state list/state upsert를 호출하고 stable error category로 매핑한다.</li>
+      <li>이번 slice는 visible notification route를 DB로 전환하지 않는다. 현재 drawer는 기존 live memory store를 계속 사용한다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>supabase/migrations/20260705133000_notification_event_persistence.sql</code></li>
+      <li><code>src/features/notifications/server-notification-persistence.ts</code></li>
+      <li><code>tests/notification-persistence-contract.spec.ts</code></li>
+      <li><code>docs/product/features/notifications/global-notification-center-v1-live-plan.md</code></li>
+      <li><code>docs/work/notifications/NOTIFICATION-PR-023-db-event-persistence-foundation.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-persistence-contract.spec.ts</code> 통과</li>
+      <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npx eslint src/features/notifications/server-notification-persistence.ts tests/notification-persistence-contract.spec.ts</code> 통과</li>
+      <li><code>git diff --check</code> 통과</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      DB migration remote 적용, 실제 route/producer의 DB gateway adoption, read/archive route의 DB state adoption,
+      realtime/SSE delivery, production monitoring, 외부 메시지/provider 연동, real data 사용은 후속 작업 범위다.
+    </p>
+  </body>
+</html>
