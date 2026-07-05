@@ -390,10 +390,43 @@ test("reception route date ignores invalid route date", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=open&date=bad");
   await Promise.all([calendarRead, queueRead]);
 
+  await expect(page).toHaveURL(/date=2026-05-01/);
   await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "오늘 26.05.01 (금) 선택됨" }),
   ).toBeVisible();
+});
+
+test("reception route date normalizes side panel date changes", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open&date=2026-05-01");
+  await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
+
+  const calendarRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/calendar/day") &&
+      request.url().includes("date=2026-05-08"),
+  );
+  const queueRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/queue") &&
+      request.url().includes("date=2026-05-08"),
+  );
+
+  await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
+  await Promise.all([calendarRead, queueRead]);
+
+  await expect(page).toHaveURL(
+    /\/w\/clair-demo\/reception\?modulePanel=open&date=2026-05-08/,
+  );
+  await expect(page.getByLabel("26.05.08 (금) 표시 중")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("appointment-card-appointment-coco-260501"),
+  ).toHaveCount(0);
 });
 
 test("reception selected operating date resets to today from global command", async ({
@@ -536,6 +569,7 @@ test("reception topbar refresh refetches the selected operating date", async ({
     .getByRole("button", { name: "오늘 일자로 이동" })
     .click();
   await Promise.all([todayCalendarRead, todayQueueRead]);
+  await expect(page).toHaveURL(/date=2026-05-01/);
   await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
   await expect(
     scheduleToolbar.getByRole("button", { name: "오늘 일자로 이동" }),

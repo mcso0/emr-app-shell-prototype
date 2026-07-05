@@ -10,7 +10,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
@@ -2617,6 +2617,7 @@ type ReceptionCardActionFeedback = {
 
 export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const params = useParams<{ workspaceId?: string | string[] }>();
+  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
@@ -2837,8 +2838,23 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       dispatchReceptionCalendarDragClear();
       setCalendarDraftSelection(undefined);
       setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
+      router.replace(
+        buildReceptionOperatingDateRoute({
+          operatingDate: nextOperatingDate,
+          pathname,
+          searchParams,
+        }),
+        { scroll: false },
+      );
     },
-    [setCalendarDraftSelection, setWorkspaceOperatingDate, workspaceId],
+    [
+      pathname,
+      router,
+      searchParams,
+      setCalendarDraftSelection,
+      setWorkspaceOperatingDate,
+      workspaceId,
+    ],
   );
   const handleRestoreQueueItem = useCallback(
     async (item: ReceptionQueueSideItem) => {
@@ -3812,6 +3828,23 @@ function PositionedScheduleCard({
 
 const receptionDatePickerWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function buildReceptionOperatingDateRoute({
+  operatingDate,
+  pathname,
+  searchParams,
+}: {
+  operatingDate: string;
+  pathname: string;
+  searchParams: { toString: () => string };
+}) {
+  const nextSearchParams = new URLSearchParams(searchParams.toString());
+
+  nextSearchParams.set("date", operatingDate);
+
+  const query = nextSearchParams.toString();
+  return `${pathname}${query ? `?${query}` : ""}`;
+}
 
 function parseIsoDateParts(date: string) {
   const match = isoDatePattern.exec(date);
@@ -5628,6 +5661,8 @@ function ReceptionScheduleBoard({
 
 export function ReceptionContent() {
   const params = useParams<{ workspaceId?: string | string[] }>();
+  const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const calendarViewByWorkspace = useReceptionStore(
@@ -5863,6 +5898,16 @@ export function ReceptionContent() {
     if (routeDateParam === null) return;
 
     const nextOperatingDate = routeOperatingDate ?? defaultOperatingDate;
+    if (routeDateParam !== nextOperatingDate) {
+      router.replace(
+        buildReceptionOperatingDateRoute({
+          operatingDate: nextOperatingDate,
+          pathname,
+          searchParams,
+        }),
+        { scroll: false },
+      );
+    }
     if (operatingDateOverride === nextOperatingDate) return;
 
     dispatchReceptionCalendarDragClear();
@@ -5871,8 +5916,11 @@ export function ReceptionContent() {
   }, [
     defaultOperatingDate,
     operatingDateOverride,
+    pathname,
     routeDateParam,
     routeOperatingDate,
+    router,
+    searchParams,
     setCalendarDraftSelection,
     setWorkspaceOperatingDate,
     workspaceId,
@@ -5881,6 +5929,14 @@ export function ReceptionContent() {
   const handleOperatingDateChange = (nextOperatingDate: string) => {
     clearCalendarTransientSelection();
     setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
+    router.replace(
+      buildReceptionOperatingDateRoute({
+        operatingDate: nextOperatingDate,
+        pathname,
+        searchParams,
+      }),
+      { scroll: false },
+    );
   };
   const handleCalendarViewChange = (nextView: ReceptionCalendarView) => {
     setWorkspaceCalendarView(workspaceId, nextView);

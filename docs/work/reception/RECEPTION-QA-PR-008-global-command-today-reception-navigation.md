@@ -11,7 +11,7 @@ tags:
   - "global-command"
   - "date-navigation"
   - "appointment-calendar"
-target_pr: "Browser Comment 1 / codex/reception-today-command-navigation"
+target_pr: "Browser Comment 1 / codex/reception-today-command-navigation + codex/reception-date-route-normalization-hotfix"
 source_docs:
   - "docs/agent-start-here.md"
   - "docs/engineering/current-status.md"
@@ -52,23 +52,25 @@ Make the global command palette's today reception action a deterministic shortcu
 - The command palette shows `오늘 접수/예약 보기`.
 - Clicking the action from another module navigates to `접수/예약` with module panel open and today's operating date in the URL.
 - Direct `date=YYYY-MM-DD` reception entry selects that date and reads calendar/queue data for that date.
-- Invalid `date` values fall back to the workspace operating date without breaking the screen.
+- Invalid `date` values normalize the URL to the workspace operating date without breaking the screen.
+- In-screen date changes keep the URL `date` synchronized with the selected operating date.
 - A stale non-today reception date resets to today when the global command is used.
 - Focused verification commands are recorded below.
 
 ## Verification
 
-- `npm run lint -- src/shell/global-command-palette.tsx src/features/reception/module.tsx tests/app-shell.spec.ts tests/reception.spec.ts` passed with existing `src/features/reception/module.tsx` unused-symbol warnings only.
+- `npm run lint -- src/features/reception/module.tsx tests/reception.spec.ts tests/app-shell.spec.ts` passed with existing `src/features/reception/module.tsx` unused-symbol warnings only.
 - `npx tsc --noEmit --pretty false` passed.
+- `npx playwright test tests/reception.spec.ts -g "route date|selected operating date|topbar refresh|normalizes" --reporter=line` passed.
 - `npx playwright test tests/app-shell.spec.ts -g "global command palette" --reporter=line` passed.
-- `npx playwright test tests/reception.spec.ts -g "route date|selected operating date|topbar refresh" --reporter=line` passed.
-- `npm run docs:check` passed.
+- `git diff --check` passed.
 
 ## Implementation Notes
 
 - The global command resolves the workspace operating date at click time and includes it as `date=YYYY-MM-DD` in the reception URL.
 - The reception module validates the route `date` with `isIsoOperatingDate`; invalid values fall back to the workspace operating date.
 - Applying a route date clears transient calendar drag/draft selection before syncing the workspace operating date store.
+- The hotfix normalizes invalid route dates and in-screen date changes with `router.replace(..., { scroll: false })`, preserving existing query params while updating only `date`.
 - No backend, migration, RPC, RLS, or new API work was needed. The existing calendar and queue read APIs already accept `date`.
 
 ## Handoff Notes
