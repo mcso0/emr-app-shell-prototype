@@ -330,87 +330,96 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
       <section className="flex h-full min-h-0 min-w-0 overflow-hidden bg-card">
         <div
           data-testid="home-kanban-board"
-          className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 p-4"
+          className={cn(
+            "grid h-full min-h-0 min-w-0 flex-1 p-4",
+            hasHospitalTasks
+              ? "grid-rows-[auto_auto_minmax(0,1fr)] gap-3"
+              : "grid-rows-[minmax(0,1fr)]"
+          )}
         >
-          <div className="flex min-h-9 min-w-0 items-center justify-between gap-4 max-sm:flex-col max-sm:items-start">
-            <div className="min-w-0">
-              <h1 className="text-[18px] font-bold leading-7 text-foreground">업무 현황</h1>
-            </div>
-          <div className="grid grid-cols-3 gap-2 text-right max-md:grid-cols-1">
-            <HomeBoardMetric label="미배정" value={`${tasks.filter((task) => task.assignment === "roleQueue").length}건`} tone="warning" />
-            <HomeBoardMetric label="지연/주의" value={`${getUrgentCount(tasks) + tasks.filter((task) => task.status === "overdue").length}건`} tone="danger" />
-            <HomeBoardMetric label="내 담당" value={`${data.tasks.length}건`} />
-          </div>
-        </div>
+          {hasHospitalTasks ? (
+            <>
+              <div className="flex min-h-9 min-w-0 items-center justify-between gap-4 max-sm:flex-col max-sm:items-start">
+                <div className="min-w-0">
+                  <h1 className="text-[18px] font-bold leading-7 text-foreground">업무 현황</h1>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-right max-md:grid-cols-1">
+                  <HomeBoardMetric label="미배정" value={`${tasks.filter((task) => task.assignment === "roleQueue").length}건`} tone="warning" />
+                  <HomeBoardMetric label="지연/주의" value={`${getUrgentCount(tasks) + tasks.filter((task) => task.status === "overdue").length}건`} tone="danger" />
+                  <HomeBoardMetric label="내 담당" value={`${data.tasks.length}건`} />
+                </div>
+              </div>
 
-        <div className="grid min-w-0 gap-2 border-b border-[var(--emr-line-hairline)] bg-card py-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <SegmentedControl
-              value={activeOperationMode}
-              items={operationModeItems}
-              aria-label="업무 현황 운영 모드"
-              disabled={!hasHospitalTasks}
-              variant="pill"
-              className="max-w-full gap-2 overflow-x-auto"
-              itemClassName="h-8 min-h-8 rounded-full px-4 text-[13px] font-semibold leading-5"
-              onValueChange={(mode) => {
-                setActiveOperationMode(mode);
-                setActiveAssigneeFilter(allFilterLabel);
-                setActiveWorkStatusFilter("all");
-                setActiveWorkstreamFilters([]);
-                setDelayedOnly(false);
-                clearSelection();
-              }}
-            />
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-              <HomeFilterSelect
-                label="담당자"
-                ariaLabel="담당자 필터"
-                disabled={!hasHospitalTasks}
-                value={activeAssigneeFilter}
-                items={assigneeFilterItems}
-                onValueChange={(value) => {
-                  setActiveAssigneeFilter(value as HomeAssigneeFilter);
-                  clearSelection();
-                }}
-              />
-              <HomeWorkstreamMultiSelect
-                label="업무"
-                columns={data.columns}
-                disabled={!hasHospitalTasks}
-                tasks={scopedTasks}
-                selectedFilters={activeWorkstreamFilters}
-                onSelectedFiltersChange={(filters) => {
-                  setActiveWorkstreamFilters(filters);
-                  clearSelection();
-                }}
-              />
-              <HomeFilterSelect
-                label="업무 상태"
-                ariaLabel="업무 상태 필터"
-                disabled={!hasHospitalTasks}
-                value={activeWorkStatusFilter}
-                items={workStatusFilterItems}
-                onValueChange={(value) => {
-                  setActiveWorkStatusFilter(value as HomeWorkStatusFilter);
-                  clearSelection();
-                }}
-              />
-              <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
-                <Checkbox
-                  aria-label="지연만 보기"
-                  checked={delayedOnly}
-                  disabled={!hasHospitalTasks}
-                  onCheckedChange={(checked) => {
-                    setDelayedOnly(checked === true);
-                    clearSelection();
-                  }}
-                />
-                지연만 보기
-              </label>
-            </div>
-          </div>
-        </div>
+              <div className="grid min-w-0 gap-2 border-b border-[var(--emr-line-hairline)] bg-card py-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <SegmentedControl
+                    value={activeOperationMode}
+                    items={operationModeItems}
+                    aria-label="업무 현황 운영 모드"
+                    disabled={!hasHospitalTasks}
+                    variant="pill"
+                    className="max-w-full gap-2 overflow-x-auto"
+                    itemClassName="h-8 min-h-8 rounded-full px-4 text-[13px] font-semibold leading-5"
+                    onValueChange={(mode) => {
+                      setActiveOperationMode(mode);
+                      setActiveAssigneeFilter(allFilterLabel);
+                      setActiveWorkStatusFilter("all");
+                      setActiveWorkstreamFilters([]);
+                      setDelayedOnly(false);
+                      clearSelection();
+                    }}
+                  />
+                  <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                    <HomeFilterSelect
+                      label="담당자"
+                      ariaLabel="담당자 필터"
+                      disabled={!hasHospitalTasks}
+                      value={activeAssigneeFilter}
+                      items={assigneeFilterItems}
+                      onValueChange={(value) => {
+                        setActiveAssigneeFilter(value as HomeAssigneeFilter);
+                        clearSelection();
+                      }}
+                    />
+                    <HomeWorkstreamMultiSelect
+                      label="업무"
+                      columns={data.columns}
+                      disabled={!hasHospitalTasks}
+                      tasks={scopedTasks}
+                      selectedFilters={activeWorkstreamFilters}
+                      onSelectedFiltersChange={(filters) => {
+                        setActiveWorkstreamFilters(filters);
+                        clearSelection();
+                      }}
+                    />
+                    <HomeFilterSelect
+                      label="업무 상태"
+                      ariaLabel="업무 상태 필터"
+                      disabled={!hasHospitalTasks}
+                      value={activeWorkStatusFilter}
+                      items={workStatusFilterItems}
+                      onValueChange={(value) => {
+                        setActiveWorkStatusFilter(value as HomeWorkStatusFilter);
+                        clearSelection();
+                      }}
+                    />
+                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
+                      <Checkbox
+                        aria-label="지연만 보기"
+                        checked={delayedOnly}
+                        disabled={!hasHospitalTasks}
+                        onCheckedChange={(checked) => {
+                          setDelayedOnly(checked === true);
+                          clearSelection();
+                        }}
+                      />
+                      지연만 보기
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
 
         <div className="relative min-h-0 overflow-hidden">
           {hasHospitalTasks ? (

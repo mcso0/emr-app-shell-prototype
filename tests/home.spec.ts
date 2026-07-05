@@ -262,6 +262,12 @@ test("home empty work-status state is centered in the content surface", async ({
 
   await expect(emptySurface).toBeVisible();
   await expect(emptyState.getByRole("heading", { name: "원내 업무가 없습니다" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "업무 현황" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "업무 현황 운영 모드" })).toHaveCount(0);
+  await expect(page.getByLabel("담당자 필터")).toHaveCount(0);
+  await expect(page.getByLabel("업무 필터")).toHaveCount(0);
+  await expect(page.getByLabel("업무 상태 필터")).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: /지연만 보기/ })).toHaveCount(0);
 
   const surfaceBox = await emptySurface.boundingBox();
   const emptyBox = await emptyState.boundingBox();
