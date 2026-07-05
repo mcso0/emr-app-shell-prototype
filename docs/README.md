@@ -1,125 +1,72 @@
-# Docs Home
+# Docs Portal
 
-This folder is the source of truth for product planning, implementation context, work tracking, and completion records for the EMR app shell prototype.
+This page is the human-facing entry point for the CLAiR EMR documentation portal. The repository `docs/` folder remains the source of truth. The internal `/docs` app route is the active read-only CLAiR Docs viewer for curated planning and study docs, and Linear is used for PR-sized work tracking. GitBook is no longer the active reader path.
 
-Start here:
+## Start Here
 
-1. `docs/index.md` for the human-facing docs portal.
-2. `docs/agent-start-here.md` for Codex startup routing.
-3. `docs/work/index.md` for PR-sized work tracking.
-4. The linked work item and its source documents.
+Read these first for most work:
 
-For human review, use the internal `/docs` app route as the read-only CLAiR Docs viewer over curated `docs/` Markdown. The legacy `/prd` route remains as a compatibility path for the original product-doc viewer. The repository `docs/` folder remains the source of truth. GitBook is no longer the active reader path; preserved GitBook files are inactive/deprecated history unless 승욱 explicitly revives that surface.
+1. [Agent Start Here](agent-start-here.md)
+2. [MVP Current Status](engineering/current-status.md)
+3. [Work Index](work/index.md)
+4. The active Linear issue or linked `docs/work/` item
 
-## Operating Model
+Use detailed history, completed reports, and archived plans only when the active task needs them.
 
-This repository uses docs as the lightweight replacement for ClickUp or Notion. Work is planned, scoped, and handed off in repo so a new chat or sub-agent can continue without hidden context.
+## Current Operating Model
 
-Agent operating rules live in `docs/_meta/`. Use them when deciding where a chat instruction should be recorded, how deeply it should be documented, how a document should move through its lifecycle, how reader-facing navigation should stay curated, and how to review completed work with the user.
+| Surface           | Role                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| Repo `docs/`      | Source of truth for product, design, engineering, work, and completion records                                |
+| `/docs` app route | Internal read-only CLAiR Docs viewer backed by curated `docs/` Markdown                                       |
+| `/prd` app route  | Legacy-compatible product-doc viewer path retained for existing links                                         |
+| GitBook           | Inactive/deprecated reader path preserved for history; do not treat it as active navigation or editing source |
+| Linear            | Work start point, status board, Human Review handoff, and PR-sized issue tracking                             |
+| Codex             | Reads only startup docs plus task-specific source docs to avoid token waste                                   |
 
-The repo borrows useful LLM Wiki practices without adding a separate wiki namespace by default. Use existing source-of-truth docs as the knowledge base, `docs/_meta/agent-rag-map.md` as the query router, `docs/_meta/intake-rules.md` as the ingest router, and local work items, closeouts, changelogs, and status history as distributed logs. Do not add generated summary layers that duplicate canonical product, design, engineering, work, or completed records unless 승욱 explicitly scopes that change.
+## Core Sources
 
-Canonical docs are organized by purpose:
+| Area                                 | Current entry                                                                                                                                                           |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Product target and status            | [MVP Current Status](engineering/current-status.md)                                                                                                                     |
+| System architecture overview         | [System Architecture Overview](https://github.com/mcso0/emr-app-shell-prototype/blob/main/docs/engineering/architecture/system-architecture-overview.md)                |
+| System architecture overview KO HTML | [CLAiR EMR System Architecture Overview](https://github.com/mcso0/emr-app-shell-prototype/blob/main/docs/engineering/architecture/system-architecture-overview.ko.html) |
+| Product operating map                | [SaaS Operating Map](product/service/clair-emr-saas-operating-map.md)                                                                                                   |
+| Product MVP scope                    | [Product MVP Scope](product/roadmap/product-mvp-scope.md)                                                                                                               |
+| Global notification center v0        | [Global Notification Center v0 Contract](product/features/notifications/global-notification-center-v0-contract.md)                                                      |
+| Global notification event policy     | [Global Notification Center v0 Event Policy](product/features/notifications/global-notification-center-v0-event-policy.md)                                              |
+| Outpatient workflow states           | [Outpatient Workflow State Model](product/domain/outpatient-workflow-state-model.md)                                                                                    |
+| Domain entity map                    | [EMR Domain Entity Map](product/domain/emr-domain-entity-map.md)                                                                                                        |
+| Role/permission source               | [Role Permission Source Map](product/domain/role-permission-source-map.md)                                                                                              |
+| Mock/live boundary                   | [Mock Live Boundary Map](engineering/architecture/mock-live-boundary-map.md)                                                                                            |
+| Persistence/data security            | [Persistence Data Security Checklist](engineering/auth-security/persistence-data-security-checklist.md)                                                                 |
+| Product MVP QA                       | [Product MVP QA Scenarios](engineering/testing/product-mvp-qa-scenario-pack.md)                                                                                         |
+| Launch readiness                     | [Launch Readiness Checklist](engineering/operations/launch-readiness-checklist.md)                                                                                      |
+| Decision log                         | [Decision Log Index](product/decisions/decision-log-index.md)                                                                                                           |
+| Detailed status history              | [MVP Current Status History](engineering/current-status-history.md)                                                                                                     |
+| Docs operating rules                 | [Docs Home](<README (1).md>), [Docs Meta](_meta/)                                                                                                                       |
+| Legacy GitBook operations            | [GitBook Private Operations Checklist](_meta/gitbook-private-operations-checklist.md), [GitBook Docs Site Creation Plan](_meta/gitbook-docs-site-creation-plan.md)      |
+| Codex reading rules                  | [Agent RAG Map](_meta/agent-rag-map.md)                                                                                                                                 |
+| Owner Safety OS                      | [Owner Safety OS](_meta/owner-safety-os.md), [Non-Developer Codex Workflow](_meta/non-developer-codex-workflow.md)                                                      |
+| Product docs                         | [Product Docs](product/)                                                                                                                                                |
+| Design docs                          | [Design Docs](design/)                                                                                                                                                  |
+| Engineering docs                     | [Engineering Docs](engineering/)                                                                                                                                        |
+| Study docs                           | [CLAiR Study Center](https://github.com/mcso0/emr-app-shell-prototype/blob/main/docs/study/README.md)                                                                   |
+| Work tracking                        | [Work Index](work/index.md), [Work Inbox](work/inbox.md)                                                                                                                |
+| Completion records                   | [Completed Docs](completed/)                                                                                                                                            |
+| Historical records                   | [Archive](archive/)                                                                                                                                                     |
 
-| Area | Purpose |
-|---|---|
-| `_meta/` | Docs taxonomy, lifecycle, intake routing, templates, and result review rules |
-| `business/` | Market, customer, sales, pricing, and metrics context |
-| `product/` | PRD, feature specs, epics, product decisions, and glossary |
-| `design/` | Reference screens, UX flows, design system notes, and UI QA |
-| `engineering/` | Architecture, data model, auth/security, API boundaries, and testing |
-| `study/` | 승욱's local study archive, curriculum, diagrams, glossary, and lesson notes |
-| `work/` | PR-sized work items, status board, inbox, and templates |
-| `completed/` | Closeout documents for finished work |
-| `archive/` | Historical plans and records that are no longer active guidance |
+## Reader Rules
 
-`docs/implementation/` is now a compatibility area with moved stubs. Do not add new source-of-truth documents there.
+* Keep `docs/` as the canonical source. Edit repo files, not GitBook copies.
+* Use `/docs` for read-only review of curated product, design, engineering, and study docs.
+* Keep `/prd` as a compatibility path for product-doc links until old references are migrated.
+* Keep current guidance visible through this portal and area README files.
+* Keep `archive/`, `completed/`, and long history documents out of the main reading path unless they are needed for a specific task.
+* Treat GitBook as inactive/deprecated by default.
+* Use [GitBook Private Operations Checklist](_meta/gitbook-private-operations-checklist.md) and [GitBook Docs Site Creation Plan](_meta/gitbook-docs-site-creation-plan.md) only if 승욱 explicitly revives GitBook.
+* Do not publish sensitive auth, security, database, or launch-readiness details publicly without a separate review.
 
-## Reader Surfaces
+## Baseline Docs Status
 
-| Surface | Current role |
-|---|---|
-| Repo `docs/` | Canonical source of truth and editing surface |
-| `/docs` app route | Internal read-only viewer for curated product, design, engineering, and study Markdown |
-| `/prd` app route | Legacy-compatible product-doc viewer path |
-| `docs/index.md` | Human and agent routing portal |
-| `docs/SUMMARY.md` | Legacy GitBook sidebar compatibility file, not active navigation |
-| GitBook | Inactive/deprecated reader path unless explicitly revived |
-
-## Work Lifecycle
-
-Work items are PR-sized by default. Vague ideas go to `docs/work/inbox.md` first and become work items only when goal, scope, done criteria, source docs, and verification are clear.
-
-Work item statuses:
-
-- `inbox`: not yet shaped into a PR-sized item
-- `backlog`: candidate work for later
-- `ready`: ready to start
-- `in_progress`: currently being worked
-- `blocked`: waiting on an external decision or artifact
-- `done`: completed and linked to a closeout when appropriate
-- `cancelled`: intentionally not doing it
-- `deferred`: intentionally postponed
-- `superseded`: replaced by another item
-
-Planning document statuses:
-
-- `draft`: early proposal
-- `review`: needs review or decision
-- `approved`: current implementation basis
-- `superseded`: replaced by a newer document
-- `deprecated`: retained only for historical context
-
-See `docs/_meta/lifecycle.md` for the full source-document lifecycle, including `deferred` and `archived`.
-
-## Intake Routing
-
-When the user gives a planning or work-management instruction in chat, route it through `docs/_meta/intake-rules.md`.
-
-After routing, use `docs/_meta/documentation-depth-rules.md` to avoid duplicate or overly deep records. In GitHub-backed work, PRs and issues should hold execution, review, CI, and merge context; `docs/` should hold current guidance, durable decisions, agent handoff, and archive-worthy context.
-
-Default routing:
-
-- Business model, customer, pricing, sales, or metrics context goes to `docs/business/`.
-- Product behavior, PRD, domain requirements, features, epics, stories, and roadmap go to `docs/product/`.
-- UX flows, screen-level behavior, design system notes, assets, and UI QA go to `docs/design/`.
-- Architecture, DB schema, auth/security, API boundaries, testing, and operations go to `docs/engineering/`.
-- PR-sized execution goes to `docs/work/`.
-- Completed work summaries go to `docs/completed/`.
-- Non-current historical guidance goes to `docs/archive/`.
-
-DB-related planning is split by audience: user-facing domain and data requirements live in `docs/product/domain/`; actual schema, ERD, migrations, RLS, indexes, and persistence plans live in `docs/engineering/data-model/`.
-
-## PR Creation Gate
-
-Before creating a PR or PR-scoped work item, the agent must confirm:
-
-1. Goal: one-sentence target for the PR
-2. PR size: whether it fits one PR or needs splitting
-3. Scope: included and explicitly excluded work
-4. Done criteria: user-facing, document-facing, and verification criteria
-5. Source docs: product, design, engineering, and previous work references
-6. Verification: commands and manual checks
-7. Status and dependencies: ready, blocked, deferred, and why
-8. Duplicate check: whether an existing work item should be updated instead
-
-If the answers are already clear from the conversation or docs, summarize them before starting. If they are unclear, ask before creating or changing the work item.
-
-## Deletion Policy
-
-Do not delete meaningful work history. Use `cancelled`, `deferred`, or `superseded` for work that should not proceed. Delete only accidental empty files, typos, or immediate duplicates with no decision value.
-
-## Moving Docs
-
-When a canonical document moves, leave a short moved stub at important old paths for at least one or two PRs. Update references to the new canonical path as part of the same change.
-
-Run `npm run docs:check` after docs path edits.
-
-## Link Checks
-
-- Internal docs path check: `npm run docs:check`
-- External link check: non-blocking `Docs External Link Check` GitHub Actions workflow using lychee
-
-## Result Reviews
-
-After finishing work, the agent must give the user a concise review following `docs/_meta/result-review-rules.md`: what changed, which files or docs changed, current status, verification result, and a useful next step.
+The `CLAiR EMR 문서 운영 체계 구축` Linear project baseline docs are now present and ready for Human Review.
