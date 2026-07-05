@@ -102,17 +102,17 @@
       <section>
         <h2>원격 DB 상태</h2>
         <ul>
-          <li>승인된 범위 안에서 원격 demo DB 적용을 시도했지만, 현재 실행 환경에 Supabase project link와 access token이 없어 적용하지 못했다.</li>
-          <li><code>npx supabase migration list --linked</code>는 project ref 없음으로 실패했다.</li>
-          <li><code>npx supabase projects list</code>는 access token 없음으로 실패했다.</li>
-          <li>따라서 원격 smoke test는 미실행이며, 마이그레이션은 로컬 파일과 정적/서버 테스트 기준으로 검증된 상태다.</li>
+          <li>초기 완료 시점에는 실행 환경에 Supabase project link와 access token이 없어 원격 demo DB 적용을 완료하지 못했다.</li>
+          <li>2026-07-05 후속 확인에서 승인된 <code>clair-emr-staging</code> Supabase project에 additive migration <code>home_operations_work_items_reader</code>를 적용했다.</li>
+          <li>Cheongdam synthetic smoke에서 <code>clair_list_home_operations_work_items</code> RPC가 <code>sourceStatus=live</code>와 총 7건을 반환하는 것을 확인했다.</li>
+          <li>반환된 업무 유형은 진료 3건, 임상병리 2건, 영상검사 1건, 처치 1건이다.</li>
         </ul>
       </section>
 
       <section>
         <h2>남은 범위</h2>
         <ul>
-          <li>Supabase CLI link/token이 준비된 환경에서 원격 demo DB migration과 Cheongdam smoke test를 재실행해야 한다.</li>
+          <li>원격 DB migration은 적용됐지만, 다른 Supabase 환경을 추가로 만들 경우 동일 migration 적용 여부를 다시 확인해야 한다.</li>
           <li>공식 지연 정책은 아직 만들지 않았고, v1은 <code>long_stay</code> 주의 신호만 사용한다.</li>
           <li>긴급 요청 생성 UI와 입원 업무 연동은 후속 작업이다.</li>
         </ul>
