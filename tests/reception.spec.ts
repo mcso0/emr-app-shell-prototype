@@ -149,6 +149,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
     page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" }),
   ).toBeVisible();
   const dateControl = page.getByTestId("reception-date-control");
+  const scheduleToolbar = page.getByTestId("schedule-toolbar");
   const selectedDateButton = dateControl.getByRole("button", {
     name: "26.05.01 (금) 날짜 선택",
   });
@@ -171,11 +172,32 @@ test("reception renders the first-path workspace instead of the placeholder", as
       "이전 날짜",
       "다음 날짜",
       "26.05.01 (금) 날짜 선택",
-      "오늘 일자로 이동",
     ]);
   await expect(
     dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
+  ).toHaveCount(0);
+  await expect(
+    scheduleToolbar.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeDisabled();
+  const [veterinarianFilterBox, todayShortcutBox, calendarViewTabsBox] =
+    await Promise.all([
+      scheduleToolbar
+        .getByRole("button", { name: /이수지 \+\d+/ })
+        .boundingBox(),
+      scheduleToolbar
+        .getByRole("button", { name: "오늘 일자로 이동" })
+        .boundingBox(),
+      calendarViewTabs.boundingBox(),
+    ]);
+  expect(veterinarianFilterBox).not.toBeNull();
+  expect(todayShortcutBox).not.toBeNull();
+  expect(calendarViewTabsBox).not.toBeNull();
+  expect(todayShortcutBox!.x).toBeGreaterThan(
+    veterinarianFilterBox!.x + veterinarianFilterBox!.width,
+  );
+  expect(todayShortcutBox!.x + todayShortcutBox!.width).toBeLessThan(
+    calendarViewTabsBox!.x,
+  );
   await selectedDateButton.click();
   await expect(page.getByText("2026년 5월")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -195,7 +217,6 @@ test("reception renders the first-path workspace instead of the placeholder", as
       "이전 주",
       "다음 주",
       "26.04.26 - 26.05.02 주 선택",
-      "오늘 일자로 이동",
     ]);
   await dateControl
     .getByRole("button", { name: "26.04.26 - 26.05.02 주 선택" })
@@ -220,7 +241,6 @@ test("reception renders the first-path workspace instead of the placeholder", as
       "이전 월",
       "다음 월",
       "26.05 월 선택",
-      "오늘 일자로 이동",
     ]);
   await dateControl.getByRole("button", { name: "26.05 월 선택" }).click();
   await expect(
@@ -413,6 +433,7 @@ test("reception topbar refresh refetches the selected operating date", async ({
   await page.goto("/w/clair-demo/reception");
 
   const dateControl = page.getByTestId("reception-date-control");
+  const scheduleToolbar = page.getByTestId("schedule-toolbar");
   const historyControls = page.getByTestId("workspace-history-controls");
   const refreshButton = historyControls.getByRole("button", {
     name: "접수/예약 새로고침",
@@ -428,6 +449,9 @@ test("reception topbar refresh refetches the selected operating date", async ({
   ).toHaveCount(0);
   await expect(
     dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
+  ).toHaveCount(0);
+  await expect(
+    scheduleToolbar.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeDisabled();
   await expect(refreshButton).toBeEnabled();
 
@@ -476,7 +500,7 @@ test("reception topbar refresh refetches the selected operating date", async ({
     page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
   ).toBeVisible();
   await expect(
-    dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
+    scheduleToolbar.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeEnabled();
   await expect(
     page.getByTestId("appointment-card-appointment-coco-260501"),
@@ -508,11 +532,13 @@ test("reception topbar refresh refetches the selected operating date", async ({
       request.url().includes("/reception/queue") &&
       request.url().includes("date=2026-05-01"),
   );
-  await dateControl.getByRole("button", { name: "오늘 일자로 이동" }).click();
+  await scheduleToolbar
+    .getByRole("button", { name: "오늘 일자로 이동" })
+    .click();
   await Promise.all([todayCalendarRead, todayQueueRead]);
   await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
   await expect(
-    dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
+    scheduleToolbar.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeDisabled();
 
   await page.route(
@@ -1599,6 +1625,7 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   await page.goto("/w/clair-demo/reception");
 
   const calendar = page.getByTestId("reception-day-calendar");
+  const scheduleToolbar = page.getByTestId("schedule-toolbar");
 
   await expect(
     calendar.getByText("이수지", { exact: true }).first(),
@@ -1609,7 +1636,30 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   await expect(calendar.getByText("SJ", { exact: true }).first()).toBeVisible();
   await expect(calendar.getByText("DY", { exact: true }).first()).toBeVisible();
 
-  const veterinarianButton = page.getByRole("button", { name: "이수지 +9" });
+  const veterinarianButton = scheduleToolbar.getByRole("button", {
+    name: "이수지 +9",
+  });
+  const todayShortcut = scheduleToolbar.getByRole("button", {
+    name: "오늘 일자로 이동",
+  });
+  const calendarViewTabs = scheduleToolbar.getByRole("group", {
+    name: "접수 캘린더 보기",
+  });
+  const [veterinarianBox, todayShortcutBox, calendarViewTabsBox] =
+    await Promise.all([
+      veterinarianButton.boundingBox(),
+      todayShortcut.boundingBox(),
+      calendarViewTabs.boundingBox(),
+    ]);
+  expect(veterinarianBox).not.toBeNull();
+  expect(todayShortcutBox).not.toBeNull();
+  expect(calendarViewTabsBox).not.toBeNull();
+  expect(todayShortcutBox!.x).toBeGreaterThan(
+    veterinarianBox!.x + veterinarianBox!.width,
+  );
+  expect(todayShortcutBox!.x + todayShortcutBox!.width).toBeLessThan(
+    calendarViewTabsBox!.x,
+  );
   await expect(async () => {
     await veterinarianButton.click();
     await expect(veterinarianButton).toHaveAttribute("aria-expanded", "true", {

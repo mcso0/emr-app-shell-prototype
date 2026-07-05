@@ -3923,18 +3923,13 @@ function addMonthsToIsoDate(date: string, months: number) {
 }
 
 function ReceptionScheduleDateControl({
-  onOperatingDateChange,
   operatingDate,
-  todayDate,
   view,
 }: {
-  onOperatingDateChange: (operatingDate: string) => void;
   operatingDate: string;
-  todayDate: string;
   view: ReceptionCalendarView;
 }) {
   const dateControlLabel = getReceptionDateControlLabels(operatingDate)[view];
-  const showingToday = operatingDate === todayDate;
 
   return (
     <div
@@ -3954,17 +3949,6 @@ function ReceptionScheduleDateControl({
         </span>
         {dateControlLabel.dateLabel}
       </span>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="bg-[var(--emr-surface-panel)] emr-text-metadata font-semibold"
-        aria-label="오늘 일자로 이동"
-        disabled={showingToday}
-        onClick={() => onOperatingDateChange(todayDate)}
-      >
-        오늘
-      </Button>
     </div>
   );
 }
@@ -4018,6 +4002,7 @@ function ScheduleToolbar({
     staffReadStatus === "loading" ||
     staffReadStatus === "idle" ||
     veterinarians.length === 0;
+  const showingToday = operatingDate === todayDate;
 
   return (
     <div
@@ -4026,9 +4011,7 @@ function ScheduleToolbar({
     >
       <div className="flex min-w-0 flex-wrap items-center gap-[var(--clair-spacing-16)]">
         <ReceptionScheduleDateControl
-          onOperatingDateChange={onOperatingDateChange}
           operatingDate={operatingDate}
-          todayDate={todayDate}
           view={view}
         />
         <Badge
@@ -4084,6 +4067,17 @@ function ScheduleToolbar({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="bg-[var(--emr-surface-panel)] emr-text-metadata font-semibold"
+          aria-label="오늘 일자로 이동"
+          disabled={showingToday}
+          onClick={() => onOperatingDateChange(todayDate)}
+        >
+          오늘
+        </Button>
         <SegmentedControl
           aria-label="접수 캘린더 보기"
           items={calendarViewItems}
