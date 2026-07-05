@@ -27,6 +27,7 @@ import {
   mockStaffUsers,
   mockWaitingQueueEntries,
 } from "@/mocks/emr-domain";
+import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
@@ -35,8 +36,10 @@ import type { Appointment, Encounter, EmrId, Guardian, Patient } from "@/types/e
 
 type CommandItemKind = "action" | "patient" | "guardian" | "appointment" | "encounter";
 type CommandFilter = "all" | "patient" | "guardian" | "phone" | "chart" | "vet" | "technician" | "desk";
+type CommandAction = "open-patient-guardian-registration";
 
 type CommandItem = {
+  action?: CommandAction;
   id: string;
   kind: CommandItemKind;
   title: string;
@@ -87,6 +90,7 @@ const quickActionSpecs = [
   },
   {
     id: "register-patient",
+    action: "open-patient-guardian-registration",
     title: "환자/보호자 등록",
     subtitle: "신규 보호자 또는 환자 master data를 등록합니다.",
     badge: "Action",
@@ -334,6 +338,7 @@ function buildCommandSections(workspaceId: string, query: string, filter: Comman
     items.filter((item) => matchesFilter(item) && matchesQuery(item)).slice(0, normalizedQuery ? MAX_ITEMS_PER_SECTION : defaultLimit);
   const quickActions: CommandItem[] = quickActionSpecs.map((action) => ({
     id: `action-${action.id}`,
+    action: "action" in action ? action.action : undefined,
     kind: "action",
     title: action.title,
     subtitle: action.subtitle,
@@ -404,6 +409,7 @@ export function GlobalCommandPalette({
   const sections = useMemo(() => buildCommandSections(workspaceId, query, activeFilter), [activeFilter, query, workspaceId]);
   const flattenedItems = useMemo(() => flattenSections(sections), [sections]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [registrationOpenRequestKey, setRegistrationOpenRequestKey] = useState(0);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -443,8 +449,23 @@ export function GlobalCommandPalette({
     setActiveIndex(0);
   };
 
+  const handleRegisteredPatientReady = (patientId: EmrId) => {
+    router.push(
+      createHref(workspaceId, "reception", {
+        drawer: `reception-form:walk-in:${patientId}`,
+        patientId,
+      }),
+      { scroll: false }
+    );
+  };
+
   const runCommand = (item: CommandItem) => {
-    setOpen(false);
+    handleOpenChange(false);
+    if (item.action === "open-patient-guardian-registration") {
+      setRegistrationOpenRequestKey((current) => current + 1);
+      return;
+    }
+
     router.push(item.href, { scroll: false });
   };
 
@@ -527,6 +548,11 @@ export function GlobalCommandPalette({
       ) : (
         triggerButton
       )}
+      <NewUnifiedRegistrationButton
+        openRequestKey={registrationOpenRequestKey}
+        renderTrigger={false}
+        onPatientReady={handleRegisteredPatientReady}
+      />
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent

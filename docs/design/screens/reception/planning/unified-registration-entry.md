@@ -6,7 +6,7 @@ doc_type: planning
 screen: reception
 related_feature: PRODUCT-FEATURE-RECEPTION-APPOINTMENT
 created: 2026-05-05
-last_updated: 2026-05-05
+last_updated: 2026-07-05
 ---
 
 # 접수/예약 통합 등록 진입 기획
@@ -21,10 +21,12 @@ Rationale: 이 진입점의 목적은 실제 접수 생성이 아니라 환자�
 
 2026-05-05 implementation decision: registration entry points are unified with a branch-first dialog, while the existing `진료 접수` shortcut remains available for staff who already know the patient to check in.
 
+2026-07-05 command entry decision: the global command palette `환자/보호자 등록` action opens the same branch-first registration dialog from any workspace module. It must not only navigate to the reception screen. Registration completion still does not auto-create reception; staff choose the success toast follow-up action when they want to proceed to check-in.
+
 ## Proposed Flow
 
 1. Case selection first
-   - `환자/보호자 등록` 버튼을 누르면 `신규 등록` dialog가 열린다.
+   - 접수/예약 toolbar 또는 global command palette에서 `환자/보호자 등록`을 선택하면 `신규 등록` dialog가 열린다.
    - 카드형 radio option으로 `환자/보호자 모두 신규 등록`, `기존 보호자에 신규 환자 등록` 중 하나를 선택한다.
 2. Branching
    - 환자/보호자 모두 신규 등록: 보호자 등록 1/2 → 환자 등록 2/2 → 등록 정보 확인 → commit.
@@ -39,6 +41,20 @@ Rationale: 이 진입점의 목적은 실제 접수 생성이 아니라 환자�
    - 입력값이 있는 상태에서 닫거나 취소하면 이탈 확인 dialog를 보여준다.
    - 확인 전 취소된 draft는 session store에 남기지 않는다.
 
+## Exception And Edge Cases
+
+- Global command outside reception: if staff run `환자/보호자 등록` from chart, billing, lab, customer, home, or another workspace module, the same `신규 등록` dialog opens over the current module. The command must not end as a route-only jump to reception.
+- Command palette handoff: selecting the action closes the command palette before opening registration, so two blocking dialogs are not stacked. Closing the registration dialog returns staff to the module where they started.
+- Existing dirty draft: if the registration dialog has unsaved input, closing or cancelling requires the existing dirty-draft confirmation. Re-running the command must not silently discard that draft or create a second registration dialog.
+- Missing required values: missing guardian name/mobile phone, patient name/species/breed/age or birth date blocks progression with field-level feedback.
+- Invalid date or age: impossible birth dates or inconsistent age/birth-date input block progression until corrected.
+- Duplicate guardian phone: a new guardian cannot be created with an existing guardian mobile phone; staff should choose the existing-guardian branch or open the existing guardian detail.
+- Existing guardian branch without selection: staff cannot continue or commit until a valid existing guardian is selected.
+- Duplicate patient signals: duplicate microchip blocks commit, and duplicate patient name under the same guardian shows a warning before final confirmation.
+- Permission or server failure: registration mutation failure, missing permission, inactive user, or workspace membership failure shows a visible error and keeps the draft available for correction or retry.
+- Success toast follow-up: registration success does not auto-create reception. `환자 상세 보기` opens the profile context, and `진료 접수` starts a reception drawer for the newly registered patient.
+- Module switch during registration: if staff intentionally navigate away or close the dialog with dirty input, the dirty-draft confirmation governs whether the draft is discarded.
+
 ## Epic 1: 통합 경로 신규 내원 객체 등록 및 접수
 
 User story: 리셉션 직원은 환자/보호자 등록 케이스를 먼저 선택하고, 시스템 가이드에 따라 보호자·환자 정보를 누락 없이 입력한 뒤 최종 확인에서 안전하게 등록한다.
@@ -46,6 +62,7 @@ User story: 리셉션 직원은 환자/보호자 등록 케이스를 먼저 선�
 Acceptance criteria:
 
 - 기존 `환자 등록`, `보호자 등록` 버튼을 제거하고 `환자/보호자 등록` 버튼 하나로 통합한다.
+- 전역 command palette의 `환자/보호자 등록` action은 현재 workspace module을 떠나지 않고 동일한 `신규 등록` dialog를 연다.
 - 첫 화면에서 `환자/보호자 모두 신규 등록`, `기존 보호자에 신규 환자 등록` 중 하나를 선택한다.
 - 신규 보호자 케이스는 보호자 등록 1/2, 환자 등록 2/2, 등록 정보 확인 순서로 진행한다.
 - 기존 보호자 케이스는 기존 보호자 검색/선택, 환자 등록, 등록 정보 확인 순서로 진행한다.
@@ -82,6 +99,7 @@ Acceptance criteria:
 ### RECEPTION-PR-004: Unified Registration Entry
 
 - Toolbar에서 `환자 등록`, `보호자 등록` 버튼을 `환자/보호자 등록` 단일 버튼으로 교체한다.
+- Global command palette의 `환자/보호자 등록` action은 toolbar와 동일한 dialog launcher를 사용한다.
 - 통합 등록 dialog의 첫 화면을 카드형 radio 선택 단계로 만든다.
 - 선택한 mode에 따라 `신규 보호자 등록 1/2` 또는 `기존 보호자 선택`으로 이동한다.
 - 보호자/환자 입력값은 component-local draft로 관리한다.
@@ -106,11 +124,14 @@ Acceptance criteria:
 ## Test Plan
 
 - toolbar에 `환자/보호자 등록`과 `진료 접수`가 보이고 `신규 접수/등록`은 보이지 않는다.
+- global command palette의 `환자/보호자 등록`을 어느 workspace module에서 실행해도 `신규 등록` dialog가 보이고 단순 reception 이동으로 끝나지 않는다.
 - `환자/보호자 모두 신규 등록` branch가 보호자 등록 1/2 → 환자 등록 2/2 → 등록 정보 확인 → 성공 toast로 이어진다.
 - `기존 보호자에 신규 환자 등록` branch가 기존 보호자 선택 → 환자 등록 → 등록 정보 확인 → 성공 toast로 이어진다.
 - 최종 확인 전 취소 시 보호자/환자가 생성되지 않는다.
 - dirty 상태에서 닫기/취소 시 이탈 확인 dialog가 보인다.
 - 필수값 누락 시 다음 단계로 이동하지 않는다.
+- 권한/서버 실패 시 draft가 유지되고 재시도 가능한 오류 메시지가 보인다.
+- global command handoff에서 command palette와 registration dialog가 동시에 열린 채로 겹치지 않는다.
 - 동물 나이와 생년월일이 서로 계산된다.
 - 동일 보호자 아래 동일 동물명 경고가 보인다.
 - 재진 환자는 진료 접수에서 재진 체크가 자동 활성화된다.

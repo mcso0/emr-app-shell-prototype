@@ -185,6 +185,19 @@ test("global command palette searches and opens patient context", async ({ page 
   await expect(page.getByText("환자 정보")).toBeVisible();
 });
 
+test("global command palette opens patient guardian registration from any workspace module", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=closed");
+
+  await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
+  await page.locator("#command-result-action-register-patient").click();
+
+  await expect(page.getByRole("heading", { name: "신규 등록" })).toBeVisible();
+  await expect(page.getByText("환자/보호자 모두 신규 등록")).toBeVisible();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/billing\?modulePanel=open&aside=closed/);
+});
+
 test("global notification bell opens right drawer with badge policy count", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=open");
 
