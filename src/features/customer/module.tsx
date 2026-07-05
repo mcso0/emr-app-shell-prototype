@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import {
   CdsActionsListFilterIcon,
@@ -1359,6 +1359,13 @@ export function CustomerContent() {
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const patients = usePatientProfileStore((state) => state.patients);
+
+  useLayoutEffect(() => {
+    if (!isPreparedEmptyClinicWorkspace(workspaceId)) return;
+
+    setProfileReadState({ status: "loading", workspaceId });
+  }, [setProfileReadState, workspaceId]);
+
   useEffect(() => {
     if (!isPreparedEmptyClinicWorkspace(workspaceId)) {
       setProfileReadState({ status: "ready", workspaceId });

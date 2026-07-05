@@ -154,6 +154,93 @@ test("Cheongdam customer table shows skeleton while seeded profiles are loading"
   await expect(page.getByTestId("customer-side-panel-guardian")).toContainText("1");
 });
 
+test("Cheongdam customer table does not flash empty copy on SPA re-entry with stale ready state", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  let lookupCallCount = 0;
+  let resolveLookup: () => void = () => {};
+  const lookupPending = new Promise<void>((resolve) => {
+    resolveLookup = resolve;
+  });
+
+  await page.route(`**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`, async (route) => {
+    lookupCallCount += 1;
+
+    if (lookupCallCount <= 2) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          enforcedBy: "reception-patient-guardian-lookup",
+          patients: [],
+        }),
+      });
+      return;
+    }
+
+    await lookupPending;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        enforcedBy: "reception-patient-guardian-lookup",
+        patients: [
+          {
+            patient: {
+              id: "49121000-0000-4000-8000-000000000202",
+              workspaceId,
+              patientNo: "CD-P-202",
+              name: "보름",
+              species: "cat",
+              breed: "Korean shorthair",
+              birthDate: "2023-03-14",
+              sex: "female",
+              neutered: true,
+              handlingCautionLocked: true,
+              status: "active",
+              createdAt: "2026-06-12T00:00:00.000Z",
+              updatedAt: "2026-06-12T00:00:00.000Z",
+            },
+            primaryGuardian: {
+              id: "49120000-0000-4000-8000-000000000202",
+              workspaceId,
+              name: "최서진",
+              mobilePhone: "010-4911-0202",
+              createdAt: "2026-06-12T00:00:00.000Z",
+              updatedAt: "2026-06-12T00:00:00.000Z",
+            },
+            searchText: "보름 CD-P-202 Korean shorthair 최서진 010-4911-0202",
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/customer?modulePanel=open`);
+
+  const patientTable = page.getByTestId("customer-patient-table");
+  await expect(patientTable).toContainText("동물 정보가 없습니다");
+
+  await page.getByRole("link", { name: "접수/예약" }).click();
+  await expect(page).toHaveURL(new RegExp(`/w/${workspaceId}/reception`));
+
+  await page.getByRole("link", { name: "고객관리" }).click();
+  await expect(patientTable.getByTestId("customer-patient-table-skeleton-row").first()).toBeVisible();
+  await expect(patientTable).not.toContainText("동물 정보가 없습니다");
+  await expect(patientTable).not.toContainText("0건");
+  await expect(page.getByTestId("customer-page-header-count-skeleton")).toBeVisible();
+  await expect(page.getByTestId("customer-side-panel-patient")).not.toContainText("0");
+
+  resolveLookup();
+
+  await expect(page.getByText("CD-P-202")).toBeVisible();
+  await expect(page.getByText("보름")).toBeVisible();
+  await expect(page.getByText("최서진")).toBeVisible();
+});
+
 test("customer workspace renders animal master list and opens the common patient drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 
