@@ -72,7 +72,7 @@
 ## Work
 
 * [Work Docs](work/README.md)
-* [Work Index](work/index.md)
+* [Work Index](README.md)
 * [Work Inbox](work/inbox.md)
 * [Open Questions](work/open-questions.md)
 
