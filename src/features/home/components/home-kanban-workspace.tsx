@@ -59,60 +59,74 @@ import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
 import type {
   HomeDashboardData,
   HomeKanbanColumn,
+  HomeOperationsAttentionSignal,
+  HomeOperationsProgressState,
   HomeTask,
-  HomeTaskStatus,
 } from "@/features/home/home.types";
 import { useLayoutStore } from "@/stores/layout-store";
 
 type HomeKanbanWorkspaceProps = {
   data: HomeDashboardData;
+  errorMessage?: string;
+  includeCancelled?: boolean;
+  includeCompleted?: boolean;
+  loading?: boolean;
+  sourceStatus?: "empty" | "error" | "live" | "partial" | "permission_denied";
+  onIncludeCancelledChange?: (value: boolean) => void;
+  onIncludeCompletedChange?: (value: boolean) => void;
+  onRefresh?: () => void;
 };
 
 type HomeAssigneeFilter = string;
-type HomeOperationMode = "flow" | "mine" | "assignment" | "delays" | "load";
-type HomeWorkStatusFilter = "all" | HomeTaskStatus | "urgent" | "high";
+type HomeOperationMode = "flow" | "mine" | "assignment" | "attention" | "load";
+type HomeWorkStatusFilter =
+  | "all"
+  | HomeOperationsAttentionSignal
+  | HomeOperationsProgressState;
 type HomeWorkstreamFilter = string;
 
 const allFilterLabel = "전체";
 const unassignedFilterLabel = "미지정";
 
-const statusLabel: Record<HomeTaskStatus, string> = {
-  assigned: "배정",
-  inProgress: "진행",
-  overdue: "지연",
-  requested: "요청",
+const statusLabel: Record<HomeOperationsProgressState, string> = {
+  waiting: "대기",
+  in_progress: "진행중",
+  completed: "완료",
+  cancelled: "취소",
 };
 
 const statusGroupItems: Array<{
-  id: HomeTaskStatus;
+  id: HomeOperationsProgressState;
   label: string;
 }> = [
   {
-    id: "overdue",
-    label: statusLabel.overdue,
+    id: "in_progress",
+    label: statusLabel.in_progress,
   },
   {
-    id: "requested",
-    label: statusLabel.requested,
+    id: "waiting",
+    label: statusLabel.waiting,
   },
   {
-    id: "assigned",
-    label: statusLabel.assigned,
+    id: "completed",
+    label: statusLabel.completed,
   },
   {
-    id: "inProgress",
-    label: statusLabel.inProgress,
+    id: "cancelled",
+    label: statusLabel.cancelled,
   },
 ];
 
 const workStatusFilterItems: Array<{ value: HomeWorkStatusFilter; label: string }> = [
   { value: "all", label: "전체" },
-  { value: "overdue", label: "지연" },
   { value: "urgent", label: "긴급" },
-  { value: "high", label: "주의" },
-  { value: "requested", label: "요청" },
-  { value: "assigned", label: "배정" },
-  { value: "inProgress", label: "진행" },
+  { value: "re_requested", label: "재요청" },
+  { value: "assignment_missing", label: "배정 누락" },
+  { value: "long_stay", label: "오래 머묾" },
+  { value: "waiting", label: statusLabel.waiting },
+  { value: "in_progress", label: statusLabel.in_progress },
+  { value: "completed", label: statusLabel.completed },
+  { value: "cancelled", label: statusLabel.cancelled },
 ];
 
 function getShortTime(value?: string) {
@@ -122,15 +136,13 @@ function getShortTime(value?: string) {
 }
 
 function getUrgentCount(tasks: HomeTask[]) {
-  return tasks.filter((task) => task.priority === "urgent" || task.priority === "high").length;
+  return tasks.filter(isAttentionTask).length;
 }
 
 function getModeCount(tasks: HomeTask[], mode: HomeOperationMode, myTaskIds: Set<string>) {
   if (mode === "mine") return tasks.filter((task) => myTaskIds.has(task.id)).length;
-  if (mode === "assignment") return tasks.filter((task) => task.assignment === "roleQueue").length;
-  if (mode === "delays") {
-    return tasks.filter((task) => task.status === "overdue" || task.priority === "urgent" || task.priority === "high").length;
-  }
+  if (mode === "assignment") return tasks.filter((task) => hasAttentionSignal(task, "assignment_missing")).length;
+  if (mode === "attention") return tasks.filter(isAttentionTask).length;
   if (mode === "load") return new Set(tasks.map((task) => getAssigneeLabel(task))).size;
 
   return tasks.length;
@@ -138,25 +150,27 @@ function getModeCount(tasks: HomeTask[], mode: HomeOperationMode, myTaskIds: Set
 
 function matchesOperationMode(task: HomeTask, mode: HomeOperationMode, myTaskIds: Set<string>) {
   if (mode === "mine") return myTaskIds.has(task.id);
-  if (mode === "assignment") return task.assignment === "roleQueue";
-  if (mode === "delays") return task.status === "overdue" || task.priority === "urgent" || task.priority === "high";
+  if (mode === "assignment") return hasAttentionSignal(task, "assignment_missing");
+  if (mode === "attention") return isAttentionTask(task);
 
   return true;
 }
 
 function matchesAssigneeFilter(task: HomeTask, filter: HomeAssigneeFilter) {
   if (filter === allFilterLabel) return true;
-  if (filter === unassignedFilterLabel) return task.assignment === "roleQueue" || getAssigneeLabel(task) === unassignedFilterLabel;
+  if (filter === unassignedFilterLabel) {
+    return task.assignment === "roleQueue" || task.assignment === "assignmentMissing" || getAssigneeLabel(task) === unassignedFilterLabel;
+  }
 
   return getAssigneeLabel(task) === filter;
 }
 
 function matchesWorkStatusFilter(task: HomeTask, filter: HomeWorkStatusFilter) {
   if (filter === "all") return true;
-  if (filter === "urgent") return task.priority === "urgent";
-  if (filter === "high") return task.priority === "high";
+  if (filter === "long_stay") return hasAttentionSignal(task, "long_stay") || task.status === "overdue";
+  if (isAttentionFilter(filter)) return hasAttentionSignal(task, filter);
 
-  return task.status === filter;
+  return getTaskProgressState(task) === filter;
 }
 
 function getRequesterLabel(task: HomeTask) {
@@ -168,32 +182,36 @@ function getRequesterLabel(task: HomeTask) {
 
 function getAssigneeLabel(task: HomeTask) {
   if (task.assigneeName) return task.assigneeName;
-  if (task.assignment === "roleQueue") return "미지정";
+  if (task.assignment === "assignmentMissing") return "배정 누락";
+  if (task.assignment === "roleQueue") return "팀 큐";
 
   return "나";
 }
 
 function getDecisionReason(task: HomeTask) {
-  if (task.status === "overdue") return "SLA 지연";
   if (task.priority === "urgent") return "긴급 확인";
+  if (hasAttentionSignal(task, "urgent")) return "긴급";
+  if (hasAttentionSignal(task, "re_requested")) return "재요청";
+  if (hasAttentionSignal(task, "assignment_missing")) return "배정 누락";
+  if (hasAttentionSignal(task, "long_stay") || task.status === "overdue") return "오래 머묾";
   if (task.priority === "high") return "주의 필요";
-  if (task.assignment === "roleQueue") return "담당 미배정";
-  if (task.status === "inProgress") return "진행 중";
+  if (task.assignment === "roleQueue") return "팀 큐 대기";
+  if (getTaskProgressState(task) === "in_progress") return "진행 중";
 
   return task.sourceLabel;
 }
 
 function getTimeSignal(task: HomeTask) {
-  if (task.status === "overdue") return `${getShortTime(task.dueAt ?? task.requestedAt)} 지연`;
+  if (hasAttentionSignal(task, "long_stay") || task.status === "overdue") return `${getShortTime(task.dueAt ?? task.requestedAt)} 오래 머묾`;
   if (task.dueAt) return `${getShortTime(task.dueAt)}까지`;
 
   return `${getShortTime(task.requestedAt)} 요청`;
 }
 
 function getModeDescription(mode: HomeOperationMode) {
-  if (mode === "mine") return "로그인 역할의 업무만 모아 바로 처리합니다.";
-  if (mode === "assignment") return "미배정 큐를 먼저 잡아 병목을 해소합니다.";
-  if (mode === "delays") return "지연, 긴급, 주의 업무만 추려 대응합니다.";
+  if (mode === "mine") return "내 업무와 처리 가능한 팀 큐 업무를 모아 봅니다.";
+  if (mode === "assignment") return "팀 큐도 개인 담당도 없는 배정 누락을 확인합니다.";
+  if (mode === "attention") return "긴급, 재요청, 오래 머문 업무를 먼저 확인합니다.";
   if (mode === "load") return "담당자별 업무량과 미배정 편중을 확인합니다.";
 
   return "접수부터 수납까지 전체 업무 흐름을 봅니다.";
@@ -212,21 +230,25 @@ function getTaskTypeLabel(task: HomeTask) {
 
 function getStatusDisplayLabel(task: HomeTask) {
   if (task.priority === "urgent") return "긴급";
-  if (task.status === "overdue") return "지연";
-  if (task.status === "inProgress") return "진행";
-  if (task.status === "assigned") return "배정";
+  if (hasAttentionSignal(task, "re_requested")) return "재요청";
+  if (hasAttentionSignal(task, "assignment_missing")) return "배정 누락";
+  if (hasAttentionSignal(task, "long_stay")) return "오래 머묾";
+  if (getTaskProgressState(task) === "in_progress") return "진행";
+  if (getTaskProgressState(task) === "completed") return "완료";
+  if (getTaskProgressState(task) === "cancelled") return "취소";
 
-  return "요청";
+  return "대기";
 }
 
 function sortNextActions(tasks: HomeTask[]) {
   return [...tasks].sort((first, second) => {
     const score = (task: HomeTask) => {
-      if (task.status === "overdue") return 0;
-      if (task.priority === "urgent") return 1;
-      if (task.priority === "high") return 2;
-      if (task.assignment === "roleQueue") return 3;
-      if (task.status === "inProgress") return 4;
+      if (task.priority === "urgent" || hasAttentionSignal(task, "urgent")) return 0;
+      if (hasAttentionSignal(task, "re_requested")) return 1;
+      if (hasAttentionSignal(task, "assignment_missing")) return 2;
+      if (task.isMyWork && isAttentionTask(task)) return 2.5;
+      if (hasAttentionSignal(task, "long_stay") || task.status === "overdue") return 3;
+      if (getTaskProgressState(task) === "in_progress") return 4;
 
       return 5;
     };
@@ -236,24 +258,72 @@ function sortNextActions(tasks: HomeTask[]) {
 }
 
 function groupNextActions(tasks: HomeTask[]) {
-  const urgent = tasks.filter((task) => task.status === "overdue");
-  const attention = tasks.filter((task) => task.status !== "overdue" && (task.priority === "urgent" || task.priority === "high"));
-  const assignment = tasks.filter((task) => task.assignment === "roleQueue");
+  const attention = tasks.filter((task) =>
+    task.priority === "urgent" ||
+    task.priority === "high" ||
+    hasAttentionSignal(task, "urgent") ||
+    hasAttentionSignal(task, "re_requested")
+  );
+  const assignment = tasks.filter((task) => hasAttentionSignal(task, "assignment_missing"));
+  const longStay = tasks.filter((task) => hasAttentionSignal(task, "long_stay") || task.status === "overdue");
 
   return [
-    { id: "overdue", label: "SLA 지연", tasks: urgent },
-    { id: "attention", label: "긴급/주의", tasks: attention },
-    { id: "assignment", label: "배정 필요", tasks: assignment },
+    { id: "attention", label: "긴급/재요청", tasks: attention },
+    { id: "assignment", label: "배정 누락", tasks: assignment },
+    { id: "long-stay", label: "오래 머문 업무", tasks: longStay },
   ].filter((group) => group.tasks.length > 0);
 }
 
-export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
+function hasAttentionSignal(task: HomeTask, signal: HomeOperationsAttentionSignal) {
+  return task.attentionSignals?.includes(signal) === true;
+}
+
+function isAttentionTask(task: HomeTask) {
+  return (
+    task.priority === "urgent" ||
+    task.priority === "high" ||
+    task.status === "overdue" ||
+    hasAttentionSignal(task, "urgent") ||
+    hasAttentionSignal(task, "re_requested") ||
+    hasAttentionSignal(task, "assignment_missing") ||
+    hasAttentionSignal(task, "long_stay")
+  );
+}
+
+function isAttentionFilter(filter: HomeWorkStatusFilter): filter is HomeOperationsAttentionSignal {
+  return (
+    filter === "urgent" ||
+    filter === "re_requested" ||
+    filter === "assignment_missing" ||
+    filter === "team_queue" ||
+    filter === "long_stay"
+  );
+}
+
+function getTaskProgressState(task: HomeTask): HomeOperationsProgressState {
+  if (task.progressState) return task.progressState;
+  if (task.status === "inProgress") return "in_progress";
+  if (task.status === "completed" || task.status === "cancelled") return task.status;
+  return "waiting";
+}
+
+export function HomeKanbanWorkspace({
+  data,
+  errorMessage,
+  includeCancelled = false,
+  includeCompleted = false,
+  loading = false,
+  sourceStatus = "live",
+  onIncludeCancelledChange,
+  onIncludeCompletedChange,
+  onRefresh,
+}: HomeKanbanWorkspaceProps) {
   const router = useRouter();
   const [activeOperationMode, setActiveOperationMode] = useState<HomeOperationMode>("flow");
   const [activeAssigneeFilter, setActiveAssigneeFilter] = useState<HomeAssigneeFilter>(allFilterLabel);
   const [activeWorkStatusFilter, setActiveWorkStatusFilter] = useState<HomeWorkStatusFilter>("all");
   const [activeWorkstreamFilters, setActiveWorkstreamFilters] = useState<HomeWorkstreamFilter[]>([]);
-  const [delayedOnly, setDelayedOnly] = useState(false);
+  const [attentionOnly, setAttentionOnly] = useState(false);
   const selectedTaskId = useHomeWorkspaceStore((state) => state.selectedTaskId);
   const detailOpen = useHomeWorkspaceStore((state) => state.detailOpen);
   const selectTask = useHomeWorkspaceStore((state) => state.selectTask);
@@ -261,13 +331,15 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
   const clearSelection = useHomeWorkspaceStore((state) => state.clearSelection);
   const tasks = data.hospitalTasks;
   const hasHospitalTasks = tasks.length > 0;
+  const blockingState = sourceStatus === "error" || sourceStatus === "permission_denied";
+  const hasBoardChrome = hasHospitalTasks && !blockingState;
   const myTaskIds = useMemo(() => new Set(data.tasks.map((task) => task.id)), [data.tasks]);
   const operationModeItems = useMemo<Array<SegmentedControlItem<HomeOperationMode>>>(
     () => [
       { value: "flow", label: "전체 흐름", count: getModeCount(tasks, "flow", myTaskIds) },
-      { value: "mine", label: "내 담당", count: getModeCount(tasks, "mine", myTaskIds) },
-      { value: "assignment", label: "배정 필요", count: getModeCount(tasks, "assignment", myTaskIds) },
-      { value: "delays", label: "지연 해소", count: getModeCount(tasks, "delays", myTaskIds) },
+      { value: "mine", label: "내 업무 보기", count: getModeCount(tasks, "mine", myTaskIds) },
+      { value: "assignment", label: "배정 누락", count: getModeCount(tasks, "assignment", myTaskIds) },
+      { value: "attention", label: "긴급/재요청", count: getModeCount(tasks, "attention", myTaskIds) },
       { value: "load", label: "팀 부하", count: getModeCount(tasks, "load", myTaskIds) },
     ],
     [myTaskIds, tasks]
@@ -279,7 +351,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
       operationModeTasks.some((item) => item.id === task.id) &&
       matchesAssigneeFilter(task, activeAssigneeFilter) &&
       matchesWorkStatusFilter(task, activeWorkStatusFilter) &&
-      (!delayedOnly || task.status === "overdue")
+      (!attentionOnly || hasAttentionSignal(task, "long_stay") || task.status === "overdue")
   );
   const filteredTasks = activeWorkstreamColumns.length > 0
     ? scopedTasks.filter((task) => activeWorkstreamColumns.some((column) => column.id === task.kanbanColumn))
@@ -308,7 +380,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
       new Set(
         data.hospitalTasks
           .map((task) => getAssigneeLabel(task))
-          .filter((assignee) => assignee !== "미지정")
+          .filter((assignee) => assignee !== "미지정" && assignee !== "팀 큐" && assignee !== "배정 누락")
       )
     ).sort((a, b) => a.localeCompare(b, "ko-KR"));
 
@@ -332,21 +404,21 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
           data-testid="home-kanban-board"
           className={cn(
             "grid h-full min-h-0 min-w-0 flex-1 p-4",
-            hasHospitalTasks
+            hasBoardChrome
               ? "grid-rows-[auto_auto_minmax(0,1fr)] gap-3"
               : "grid-rows-[minmax(0,1fr)]"
           )}
         >
-          {hasHospitalTasks ? (
+          {hasBoardChrome ? (
             <>
               <div className="flex min-h-9 min-w-0 items-center justify-between gap-4 max-sm:flex-col max-sm:items-start">
                 <div className="min-w-0">
                   <h1 className="text-[18px] font-bold leading-7 text-foreground">업무 현황</h1>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-right max-md:grid-cols-1">
-                  <HomeBoardMetric label="미배정" value={`${tasks.filter((task) => task.assignment === "roleQueue").length}건`} tone="warning" />
-                  <HomeBoardMetric label="지연/주의" value={`${getUrgentCount(tasks) + tasks.filter((task) => task.status === "overdue").length}건`} tone="danger" />
-                  <HomeBoardMetric label="내 담당" value={`${data.tasks.length}건`} />
+                  <HomeBoardMetric label="배정 누락" value={`${tasks.filter((task) => hasAttentionSignal(task, "assignment_missing")).length}건`} tone="warning" />
+                  <HomeBoardMetric label="주의 업무" value={`${getUrgentCount(tasks)}건`} tone="danger" />
+                  <HomeBoardMetric label="내 업무" value={`${data.tasks.length}건`} />
                 </div>
               </div>
 
@@ -365,7 +437,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
                       setActiveAssigneeFilter(allFilterLabel);
                       setActiveWorkStatusFilter("all");
                       setActiveWorkstreamFilters([]);
-                      setDelayedOnly(false);
+                      setAttentionOnly(false);
                       clearSelection();
                     }}
                   />
@@ -405,15 +477,39 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
                     />
                     <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
                       <Checkbox
-                        aria-label="지연만 보기"
-                        checked={delayedOnly}
-                        disabled={!hasHospitalTasks}
+                        aria-label="완료 포함"
+                        checked={includeCompleted}
+                        disabled={!hasHospitalTasks || !onIncludeCompletedChange}
                         onCheckedChange={(checked) => {
-                          setDelayedOnly(checked === true);
+                          onIncludeCompletedChange?.(checked === true);
                           clearSelection();
                         }}
                       />
-                      지연만 보기
+                      완료 포함
+                    </label>
+                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
+                      <Checkbox
+                        aria-label="취소 포함"
+                        checked={includeCancelled}
+                        disabled={!hasHospitalTasks || !onIncludeCancelledChange}
+                        onCheckedChange={(checked) => {
+                          onIncludeCancelledChange?.(checked === true);
+                          clearSelection();
+                        }}
+                      />
+                      취소 포함
+                    </label>
+                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
+                      <Checkbox
+                        aria-label="오래 머문 업무만 보기"
+                        checked={attentionOnly}
+                        disabled={!hasHospitalTasks}
+                        onCheckedChange={(checked) => {
+                          setAttentionOnly(checked === true);
+                          clearSelection();
+                        }}
+                      />
+                      오래 머묾
                     </label>
                   </div>
                 </div>
@@ -422,7 +518,13 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
           ) : null}
 
         <div className="relative min-h-0 overflow-hidden">
-          {hasHospitalTasks ? (
+          {blockingState ? (
+            <HomeOperationsState
+              errorMessage={errorMessage}
+              sourceStatus={sourceStatus}
+              onRefresh={onRefresh ?? (() => router.refresh())}
+            />
+          ) : hasHospitalTasks ? (
             <div className="h-full min-h-0 overflow-x-auto pb-2">
               <div className="grid h-full min-h-[620px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
                 {visibleColumns.map((column) => (
@@ -453,7 +555,8 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
                     size="sm"
                     variant="outline"
                     className="bg-card"
-                    onClick={() => router.refresh()}
+                    disabled={loading}
+                    onClick={onRefresh ?? (() => router.refresh())}
                   >
                     <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
                     새로고침
@@ -501,15 +604,69 @@ function HomeBoardMetric({
   );
 }
 
+function HomeOperationsState({
+  errorMessage,
+  onRefresh,
+  sourceStatus,
+}: {
+  errorMessage?: string;
+  onRefresh: () => void;
+  sourceStatus: "error" | "permission_denied";
+}) {
+  const permissionDenied = sourceStatus === "permission_denied";
+
+  return (
+    <div
+      className="grid h-full min-h-[620px] min-w-full place-items-center pb-2"
+      data-testid={permissionDenied ? "home-kanban-permission-state-surface" : "home-kanban-error-state-surface"}
+    >
+      <EmrEmptyState
+        kind={permissionDenied ? "no-permission" : "upstream-pending"}
+        priority="supporting"
+        surface="content"
+        testId={permissionDenied ? "home-kanban-permission-state" : "home-kanban-error-state"}
+        title={permissionDenied ? "원내 현황을 볼 수 없습니다" : "원내 현황을 불러오지 못했습니다"}
+        description={
+          permissionDenied
+            ? "현재 계정에는 원내 업무 현황 접근 권한이 없습니다."
+            : errorMessage ?? "업무 없음이 아니라 데이터 연결 상태를 확인해야 합니다."
+        }
+        primaryAction={
+          permissionDenied ? undefined : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-card"
+              onClick={onRefresh}
+            >
+              <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+              다시 시도
+            </Button>
+          )
+        }
+      />
+    </div>
+  );
+}
+
 export function HomeHospitalStatusSidePanel({
+  errorMessage,
+  loading = false,
+  onRefresh,
+  sourceStatus = "live",
   tasks,
 }: {
+  errorMessage?: string;
+  loading?: boolean;
+  sourceStatus?: "empty" | "error" | "live" | "partial" | "permission_denied";
   tasks: HomeTask[];
+  onRefresh?: () => void;
 }) {
-  const groupedActions = groupNextActions(sortNextActions(tasks).slice(0, 9));
+  const groupedActions = groupNextActions(sortNextActions(tasks));
   const selectedTaskId = useHomeWorkspaceStore((state) => state.selectedTaskId);
   const selectTask = useHomeWorkspaceStore((state) => state.selectTask);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const blockingState = sourceStatus === "error" || sourceStatus === "permission_denied";
 
   return (
     <div className="h-full min-h-0" data-testid="home-next-action-side-panel">
@@ -527,7 +684,14 @@ export function HomeHospitalStatusSidePanel({
             )}
             data-testid={groupedActions.length > 0 ? undefined : "home-side-panel-empty-state-surface"}
           >
-            {groupedActions.length > 0 ? (
+            {blockingState ? (
+              <HomeSidePanelState
+                errorMessage={errorMessage}
+                loading={loading}
+                sourceStatus={sourceStatus}
+                onRefresh={onRefresh}
+              />
+            ) : groupedActions.length > 0 ? (
               groupedActions.map((group) => (
                 <div key={group.id} className="grid gap-1.5">
                   <div className="flex h-8 items-center justify-between px-1">
@@ -559,6 +723,46 @@ export function HomeHospitalStatusSidePanel({
           </div>
         </EmrSubpanelBody>
       </EmrSubpanel>
+    </div>
+  );
+}
+
+function HomeSidePanelState({
+  errorMessage,
+  loading,
+  onRefresh,
+  sourceStatus,
+}: {
+  errorMessage?: string;
+  loading: boolean;
+  sourceStatus: "error" | "permission_denied";
+  onRefresh?: () => void;
+}) {
+  const permissionDenied = sourceStatus === "permission_denied";
+
+  return (
+    <div className="grid gap-2 text-center" data-testid={permissionDenied ? "home-side-panel-permission-state" : "home-side-panel-error-state"}>
+      <EmrQueueEmptyState
+        className="min-h-0"
+        title={permissionDenied ? "권한 부족" : "데이터 연결 실패"}
+      />
+      <p className="px-3 text-[12px] leading-5 text-muted-foreground">
+        {permissionDenied
+          ? "원내 현황을 볼 수 없습니다."
+          : errorMessage ?? "업무 없음으로 처리하지 않고 다시 확인이 필요합니다."}
+      </p>
+      {!permissionDenied && onRefresh ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="mx-auto h-8 bg-card"
+          disabled={loading}
+          onClick={onRefresh}
+        >
+          <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+          다시 시도
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -886,14 +1090,14 @@ function HomeKanbanColumn({
 }) {
   const reduceMotion = useReducedMotion();
   const [columnCollapsed, setColumnCollapsed] = useState(false);
-  const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<HomeTaskStatus>>(new Set());
+  const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<HomeOperationsProgressState>>(new Set());
   const groupedTasks = statusGroupItems
     .map((group) => ({
       ...group,
-      tasks: tasks.filter((task) => task.status === group.id),
+      tasks: tasks.filter((task) => getTaskProgressState(task) === group.id),
     }))
     .filter((group) => group.tasks.length > 0);
-  const toggleGroup = (status: HomeTaskStatus) => {
+  const toggleGroup = (status: HomeOperationsProgressState) => {
     setCollapsedStatusIds((current) => {
       const next = new Set(current);
 

@@ -799,7 +799,10 @@ export function getHomeMockData(role: UserRole, workspaceId: string): HomeDashbo
     hospitalName: "CLAiR 동물병원",
     todayLabel,
     columns: homeKanbanColumns,
-    tasks: roleTasks.map((task) => scopeHomeTask(task, workspaceId)),
+    tasks: roleTasks.map((task) => ({
+      ...scopeHomeTask(task, workspaceId),
+      isMyWork: true,
+    })),
     hospitalTasks: hospitalTasks.map((task) => scopeHomeTask(task, workspaceId)),
     notifications,
     quickStatus: createQuickStatus(roleTasks),

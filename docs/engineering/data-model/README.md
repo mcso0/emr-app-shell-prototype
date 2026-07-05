@@ -23,6 +23,7 @@ Canonical engineering data model documents live here. Use this README as the Git
 | Demo seed inventory/readback baseline for local/dev Supabase | `demo-seed-inventory-readback-contract.md` |
 | CLAiR system presets to workspace order catalog initialization and auto-merge | `order-catalog-preset-initialization-contract.md` |
 | Chart-confirmed order handoff into fulfillment queues and billing candidates | `order-fulfillment-handoff-contract.md` |
+| Home 원내 현황 operations aggregate API/read model | `home-operations-work-status-read-model.md` |
 | Guardian-centered combined checkout, payment allocation, and adjustment proposal | `billing-checkout-session-allocation-adjustment-model.md` |
 
 ## Current Files
@@ -33,6 +34,7 @@ Canonical engineering data model documents live here. Use this README as the Git
 | `emr-saas-db-structure-spec.en.md` | English companion reference for the DB structure draft. Keep it aligned when material schema guidance changes. |
 | `demo-seed-inventory-readback-contract.md` | Demo DB PR 1 contract for `clair-demo` seed inventory, local/dev readback checks, confirmed coverage, and known seed gaps. |
 | `billing-checkout-session-allocation-adjustment-model.md` | Approval-gated proposal for guardian checkout sessions, invoice/payment allocations, adjustment audit, and RPC transaction boundaries. |
+| `home-operations-work-status-read-model.md` | Implemented API/read-model contract for aggregating Home `원내 현황` operational work across reception, appointments, fulfillment, billing, and future inpatient sources. |
 | `order-catalog-preset-initialization-contract.md` | Engineering contract for CLAiR system presets, workspace catalog source tracking, idempotent initialization, automatic preset merge, customization protection, and DEN-282 implementation boundaries. |
 | `order-fulfillment-handoff-contract.md` | Engineering contract for order fulfillment route shape, source snapshot, status mapping, permission requirements, migration gate, and verification baseline. |
 

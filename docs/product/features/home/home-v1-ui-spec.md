@@ -6,12 +6,13 @@ doc_type: ui-spec
 related_docs:
   - "docs/product/features/home/home-v1-reference-research.md"
   - "docs/product/features/home/home-command-entry-planning.md"
+  - "docs/product/features/home/home-operations-work-status-contract-v0.md"
   - "docs/product/features/home/home-work-generation-rules-v0.md"
   - "docs/product/features/home/home-v1-epic-plan.md"
   - "docs/product/features/notifications/global-notification-center-v0-contract.md"
 related_work:
   - "docs/work/home/HOME-PR-001-role-command-home-foundation.md"
-last_updated: "2026-05-09"
+last_updated: "2026-07-05"
 ---
 
 # Home v1 UI Spec
@@ -25,6 +26,8 @@ Primary question:
 > 오늘/지금 내가 뭘 해야 하지?
 
 This UI spec translates the Home v1 epic plan and work generation rules into a screen structure.
+
+2026-07-05 update: the current `원내 현황` direction is a hospital-wide operations board, not only a personal `내 업무` timeline. Use `home-operations-work-status-contract-v0.md` as the current source for the operations board, common status contract, work type generation rules, and API/read-model direction. This older UI spec remains useful for personal `내 업무` card anatomy and entry-surface boundaries.
 
 Reference research:
 

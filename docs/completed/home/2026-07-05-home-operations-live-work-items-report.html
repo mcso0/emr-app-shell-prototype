@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>HOME-PR-011 원내 현황 실제 업무 연동 결과</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        background: #ffffff;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 30px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #eef2f7;
+      }
+      .eyebrow {
+        margin: 0 0 8px;
+        color: #516070;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .summary {
+        margin: 0;
+        color: #344256;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">HOME-PR-011 · 2026-07-05</p>
+      <h1>원내 현황 실제 업무 연동 결과</h1>
+      <p class="summary">
+        원내 현황이 단순 mock 화면이나 빈 상태가 아니라, 서버가 집계한 병원 전체 업무를 읽는 상황판으로 동작하도록 첫 live 연동을 구현했다.
+      </p>
+
+      <section>
+        <h2>요청</h2>
+        <ul>
+          <li>운영일 기준으로 병원 전체 업무를 원내 현황에 표시한다.</li>
+          <li>완료/취소 업무는 기본 숨김 처리하고 옵션으로만 포함한다.</li>
+          <li>업무가 진짜 없을 때만 empty state를 보이고, API 실패나 권한 부족을 빈 업무로 숨기지 않는다.</li>
+          <li>DB 작업은 additive/read-only 중심으로 진행하고 실제 고객 데이터 변경이나 destructive 작업은 하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>clair_list_home_operations_work_items</code> RPC를 추가해 접수/예약, 대기열, 오더 fulfillment, 수납 후보 업무를 Home 공통 상태로 집계한다.</li>
+          <li><code>GET /api/workspaces/[workspaceId]/operations/work-items</code> API를 추가했다.</li>
+          <li>Cheongdam/prepared-clinic Home은 mock fallback 없이 새 API를 사용한다.</li>
+          <li>업무 없음, 오류, 권한 부족, 완료/취소 포함, 내 업무 보기, 팀 큐/배정 누락 신호를 UI와 타입 계약에 연결했다.</li>
+          <li>카드 클릭은 상세 drawer를 열고, 실제 업무 화면 이동은 drawer/footer 또는 overflow 액션으로 유지했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx playwright test tests/home-operations-work-items-server.spec.ts tests/home.spec.ts --reporter=line</code> 통과</li>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run lint</code> 통과, 기존 warning 10건은 유지</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>원격 DB 상태</h2>
+        <ul>
+          <li>승인된 범위 안에서 원격 demo DB 적용을 시도했지만, 현재 실행 환경에 Supabase project link와 access token이 없어 적용하지 못했다.</li>
+          <li><code>npx supabase migration list --linked</code>는 project ref 없음으로 실패했다.</li>
+          <li><code>npx supabase projects list</code>는 access token 없음으로 실패했다.</li>
+          <li>따라서 원격 smoke test는 미실행이며, 마이그레이션은 로컬 파일과 정적/서버 테스트 기준으로 검증된 상태다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 범위</h2>
+        <ul>
+          <li>Supabase CLI link/token이 준비된 환경에서 원격 demo DB migration과 Cheongdam smoke test를 재실행해야 한다.</li>
+          <li>공식 지연 정책은 아직 만들지 않았고, v1은 <code>long_stay</code> 주의 신호만 사용한다.</li>
+          <li>긴급 요청 생성 UI와 입원 업무 연동은 후속 작업이다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

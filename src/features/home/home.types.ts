@@ -8,6 +8,10 @@ export type UserRole =
 export type HomeTaskPriority = "urgent" | "high" | "normal" | "low";
 
 export type HomeTaskStatus =
+  | "waiting"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
   | "requested"
   | "assigned"
   | "inProgress"
@@ -15,10 +19,12 @@ export type HomeTaskStatus =
 
 export type HomeTaskDomain =
   | "reception"
+  | "appointment"
   | "chart"
   | "lab"
   | "imaging"
   | "dispensing"
+  | "treatment"
   | "billing"
   | "inpatient";
 
@@ -35,6 +41,34 @@ export type HomeKanbanColumnId =
 export type HomeWorkspaceView = "home" | "hospital";
 
 export type HomeTaskAssignment = "assigned" | "roleQueue";
+export type HomeOperationsAssignmentState =
+  | "assignmentMissing"
+  | "assigned"
+  | "roleQueue";
+
+export type HomeOperationsProgressState =
+  | "waiting"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
+
+export type HomeOperationsAttentionSignal =
+  | "urgent"
+  | "re_requested"
+  | "assignment_missing"
+  | "team_queue"
+  | "long_stay";
+
+export type HomeOperationsSourceType =
+  | "reception"
+  | "appointment"
+  | "consultation"
+  | "lab"
+  | "imaging"
+  | "dispensing"
+  | "treatment"
+  | "billing"
+  | "inpatient";
 
 export type HomeWorkFilter =
   | "all"
@@ -62,7 +96,16 @@ export interface HomeTask {
   status: HomeTaskStatus;
   priority: HomeTaskPriority;
   domain: HomeTaskDomain;
-  assignment: HomeTaskAssignment;
+  assignment: HomeOperationsAssignmentState;
+  attentionSignals?: HomeOperationsAttentionSignal[];
+  isMyWork?: boolean;
+  operatingDate?: string;
+  permissionMode?: "full" | "hidden" | "redacted";
+  progressState?: HomeOperationsProgressState;
+  sourceId?: string;
+  sourceStatus?: string;
+  sourceType?: HomeOperationsSourceType;
+  teamQueueId?: string;
   roleQueueLabel?: string;
   recommendedAction: string;
   actionHref: string;
@@ -149,6 +192,77 @@ export interface HomeDashboardData {
   roleNextActions: HomeRoleNextActionHypothesis[];
   updatedAt: string;
 }
+
+export type HomeOperationsSummary = {
+  byAssignmentState: {
+    assignmentMissing: number;
+    personal: number;
+    teamQueue: number;
+  };
+  byAttentionSignal: Record<HomeOperationsAttentionSignal, number>;
+  byProgressState: Record<HomeOperationsProgressState, number>;
+  bySourceType: Record<HomeOperationsSourceType, number>;
+  cancelledCount: number;
+  completedCount: number;
+  mineCount: number;
+  totalVisible: number;
+};
+
+export type HomeOperationsWorkItem = {
+  assigneeName?: string;
+  assigneeUserId?: string;
+  attentionSignals: HomeOperationsAttentionSignal[];
+  drawerSummary?: string;
+  encounterId?: string;
+  guardianId?: string;
+  guardianName?: string;
+  id: string;
+  isMyWork?: boolean;
+  operatingDate: string;
+  patientId?: string;
+  patientName?: string;
+  permissionMode: "full" | "hidden" | "redacted";
+  progressState: HomeOperationsProgressState;
+  requestedAt: string;
+  sourceHref: string;
+  sourceId: string;
+  sourceStatus: string;
+  sourceType: HomeOperationsSourceType;
+  stateEnteredAt?: string;
+  teamQueueId?: string;
+  teamQueueLabel?: string;
+  title: string;
+  workspaceId: string;
+};
+
+export type HomeOperationsAccessIssue = {
+  code: string;
+  message: string;
+  sourceType?: HomeOperationsSourceType;
+};
+
+export type HomeOperationsWorkItemsResponse =
+  | {
+      ok: true;
+      accessIssues?: HomeOperationsAccessIssue[];
+      generatedAt: string;
+      items: HomeOperationsWorkItem[];
+      operatingDate: string;
+      sourceStatus: "empty" | "live" | "partial";
+      summary: HomeOperationsSummary;
+      workspaceId: string;
+    }
+  | {
+      ok: false;
+      error: {
+        code: string;
+        message: string;
+        retryable: boolean;
+      };
+      operatingDate: string;
+      sourceStatus: "error" | "permission_denied";
+      workspaceId: string;
+    };
 
 // Legacy component compatibility while Home v1 no longer renders the old
 // role-widget/alert dashboard by default.

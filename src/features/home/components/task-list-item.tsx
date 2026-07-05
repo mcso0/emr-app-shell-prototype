@@ -33,6 +33,7 @@ const priorityLabel: Record<HomeTaskPriority, string> = {
 };
 
 const domainLabel: Record<HomeTaskDomain, string> = {
+  appointment: "예약",
   billing: "수납",
   chart: "진료",
   dispensing: "조제/처치",
@@ -40,6 +41,7 @@ const domainLabel: Record<HomeTaskDomain, string> = {
   inpatient: "입원",
   lab: "검사",
   reception: "접수",
+  treatment: "처치",
 };
 
 function getTimeLabel(value?: string) {
