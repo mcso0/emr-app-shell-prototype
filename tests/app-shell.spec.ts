@@ -247,7 +247,7 @@ test("global command palette opens new reception drawer from any workspace modul
 }) => {
   await mockResetWorkspaceTabsSession(page);
   await clearWorkspaceTabs(page);
-  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=closed");
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=closed&right=open");
 
   await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
   await page.locator("#command-result-action-new-reception").click();
@@ -255,8 +255,43 @@ test("global command palette opens new reception drawer from any workspace modul
   await expect
     .poll(() => new URL(page.url()).pathname)
     .toBe("/w/clair-demo/billing");
-  await expect(page.getByTestId("workspace-drawer")).toContainText("접수 생성");
+  const drawer = page.getByTestId("workspace-drawer");
+  await expect(drawer).toContainText("접수 생성");
   await expect(page.getByTestId("walk-in-reception-dialog")).toBeVisible();
+  await expect(drawer).toHaveCSS("z-index", "40");
+
+  await expect
+    .poll(async () => {
+      const drawerBox = await drawer.boundingBox();
+      const frameBox = await page.getByTestId("workspace-frame").boundingBox();
+
+      if (!drawerBox || !frameBox) {
+        return Number.POSITIVE_INFINITY;
+      }
+
+      return Math.abs(
+        Math.round(drawerBox.x + drawerBox.width - (frameBox.x + frameBox.width)),
+      );
+    })
+    .toBeLessThanOrEqual(1);
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const drawerElement = document.querySelector("[data-testid='workspace-drawer']");
+        const rightPanelElement = document.querySelector(".emr-workspace-rightpanel-responsive");
+
+        if (!drawerElement || !rightPanelElement) {
+          return false;
+        }
+
+        const panelRect = rightPanelElement.getBoundingClientRect();
+        const topElement = document.elementFromPoint(panelRect.right - 12, panelRect.top + 64);
+
+        return topElement ? drawerElement.contains(topElement) : false;
+      }),
+    )
+    .toBe(true);
 });
 
 test("global command palette opens today's reception schedule", async ({
