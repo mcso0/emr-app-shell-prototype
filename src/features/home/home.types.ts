@@ -87,10 +87,13 @@ export interface HomeTask {
   patientName?: string;
   clientName?: string;
   encounterLabel?: string;
-  receptionType?: "예약" | "접수";
+  receptionType?: "예약" | "외래" | "접수";
   sourceLabel: string;
   requestedBy?: string;
   assigneeName?: string;
+  queueCardEventText?: string;
+  queueCardSecondLineBadgeLabel?: string;
+  queueCardSecondLineText?: string;
   requestedAt: string;
   dueAt?: string;
   status: HomeTaskStatus;
@@ -223,7 +226,12 @@ export type HomeOperationsWorkItem = {
   patientName?: string;
   permissionMode: "full" | "hidden" | "redacted";
   progressState: HomeOperationsProgressState;
+  queueCardEventText?: string;
+  queueCardSecondLineBadgeLabel?: string;
+  queueCardSecondLineText?: string;
+  receptionType?: "예약" | "외래" | "접수";
   requestedAt: string;
+  requesterName?: string;
   sourceHref: string;
   sourceId: string;
   sourceStatus: string;

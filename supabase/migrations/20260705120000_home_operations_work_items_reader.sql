@@ -50,12 +50,18 @@ begin
       coalesce(p.name || ' 예약 확인', '예약 확인') as title,
       p.name as patient_name,
       g.name as guardian_name,
+      '예약'::text as reception_type,
+      '예약'::text as requester_name,
+      case when a.status in ('cancelled', 'no_show') then to_char(a.updated_at at time zone 'Asia/Seoul', 'HH24:MI') || ' 취소' else to_char(a.scheduled_start_at at time zone 'Asia/Seoul', 'HH24:MI') || ' 예약' end as queue_card_event_text,
+      case when a.status in ('cancelled', 'no_show') then '취소' else '대기' end as queue_card_second_line_badge_label,
+      coalesce(a.visit_purpose, a.symptom_note, '예약 접수 상태를 확인합니다.') as queue_card_second_line_text,
       case
         when a.status in ('cancelled', 'no_show') then 'cancelled'
         when a.status = 'checked_in' then 'completed'
         else 'waiting'
       end as progress_state,
-      null::uuid as assignee_user_id,
+      a.assigned_veterinarian_id as assignee_user_id,
+      assigned_user.display_name as assignee_name,
       'reception'::text as team_queue_id,
       '접수팀 큐'::text as team_queue_label,
       a.scheduled_start_at as requested_at,
@@ -71,6 +77,8 @@ begin
     left join public.guardians g
       on g.workspace_id = a.workspace_id
      and g.id = a.guardian_id
+    left join public.users assigned_user
+      on assigned_user.id = a.assigned_veterinarian_id
     where a.workspace_id = p_workspace_id
       and (
         (a.scheduled_start_at >= v_start_at and a.scheduled_start_at < v_end_at)
@@ -102,6 +110,20 @@ begin
       end as title,
       p.name as patient_name,
       g.name as guardian_name,
+      case when e.appointment_id is not null then '예약' else '외래' end as reception_type,
+      '접수'::text as requester_name,
+      case
+        when w.status = 'cancelled' or e.status = 'cancelled' then to_char(coalesce(w.finished_at, w.entered_at) at time zone 'Asia/Seoul', 'HH24:MI') || ' 취소'
+        when w.queue_type in ('reception', 'consultation') then to_char(w.entered_at at time zone 'Asia/Seoul', 'HH24:MI') || case when e.appointment_id is not null then ' 예약' else ' 접수' end
+        else null
+      end as queue_card_event_text,
+      case
+        when w.queue_type = 'reception' then case when w.status = 'cancelled' or e.status = 'cancelled' then '취소' else '대기' end
+        when w.queue_type = 'consultation' then '방문목적'
+        when w.queue_type = 'treatment' then '처치'
+        else null
+      end as queue_card_second_line_badge_label,
+      coalesce(e.visit_purpose, e.chief_complaint, '접수 후 원내 대기 상태를 확인합니다.') as queue_card_second_line_text,
       case
         when w.status = 'cancelled' or e.status = 'cancelled' then 'cancelled'
         when w.status = 'done' or e.status in ('completed', 'ready_for_billing') then 'completed'
@@ -109,6 +131,7 @@ begin
         else 'waiting'
       end as progress_state,
       case when w.queue_type = 'consultation' then e.primary_veterinarian_id else null end as assignee_user_id,
+      case when w.queue_type = 'consultation' then assigned_user.display_name else null end as assignee_name,
       case
         when w.queue_type = 'billing' then 'billing'
         when w.queue_type = 'treatment' then 'treatment'
@@ -141,6 +164,8 @@ begin
     left join public.guardians g
       on g.workspace_id = e.workspace_id
      and g.id = e.guardian_id
+    left join public.users assigned_user
+      on assigned_user.id = e.primary_veterinarian_id
     where w.workspace_id = p_workspace_id
       and (
         (w.entered_at >= v_start_at and w.entered_at < v_end_at)
@@ -171,6 +196,27 @@ begin
       ) as title,
       coalesce(nullif(item.source_snapshot->>'patientName', ''), p.name) as patient_name,
       coalesce(nullif(item.source_snapshot->>'guardianName', ''), g.name) as guardian_name,
+      coalesce(
+        nullif(item.source_snapshot->>'receptionType', ''),
+        case when e.appointment_id is not null then '예약' else '외래' end
+      ) as reception_type,
+      coalesce(nullif(item.source_snapshot->>'requestingVetName', ''), requester.display_name) as requester_name,
+      null::text as queue_card_event_text,
+      case
+        when item.queue_type = 'lab' then coalesce(nullif(item.source_snapshot->>'orderDisplayName', ''), '임상병리 업무')
+        when item.queue_type = 'imaging' then coalesce(nullif(item.source_snapshot #>> '{detail,modality}', ''), '영상')
+        when item.queue_type = 'dispensing' then '조제'
+        else '처치'
+      end as queue_card_second_line_badge_label,
+      coalesce(
+        nullif(item.source_snapshot->>'orderDisplayName', ''),
+        case item.queue_type
+          when 'lab' then '임상병리 업무'
+          when 'imaging' then '영상 업무'
+          when 'dispensing' then '조제 업무'
+          else '처치 업무'
+        end
+      ) as queue_card_second_line_text,
       case
         when item.status = 'completed' then 'completed'
         when item.status = 'cancelled' then 'cancelled'
@@ -178,6 +224,7 @@ begin
         else 'waiting'
       end as progress_state,
       item.assigned_to_user_id as assignee_user_id,
+      assigned_user.display_name as assignee_name,
       item.queue_type::text as team_queue_id,
       case item.queue_type
         when 'lab' then '임상병리팀 큐'
@@ -205,6 +252,10 @@ begin
     left join public.guardians g
       on g.workspace_id = e.workspace_id
      and g.id = e.guardian_id
+    left join public.users requester
+      on requester.id = item.requested_by_user_id
+    left join public.users assigned_user
+      on assigned_user.id = item.assigned_to_user_id
     where item.workspace_id = p_workspace_id
       and (
         (item.created_at >= v_start_at and item.created_at < v_end_at)
@@ -218,14 +269,19 @@ begin
 
     select
       'billing'::text as source_type,
-      il.id::text as source_id,
+      i.id::text as source_id,
       concat(i.status, ':', i.payment_state)::text as source_status,
       i.encounter_id,
       e.patient_id,
       e.guardian_id,
-      coalesce(il.description, p.name || ' 수납 요청', '수납 요청') as title,
+      coalesce(i.invoice_no || ' 수납 요청', p.name || ' 수납 요청', '수납 요청') as title,
       p.name as patient_name,
       g.name as guardian_name,
+      case when e.appointment_id is not null then '예약' else '외래' end as reception_type,
+      '수납'::text as requester_name,
+      null::text as queue_card_event_text,
+      null::text as queue_card_second_line_badge_label,
+      '오더 ' || line_summary.line_count::text || '건 · ' || to_char(coalesce(i.total_amount, line_summary.total_amount), 'FM999,999,999,990') || '원' as queue_card_second_line_text,
       case
         when i.status = 'paid' or i.payment_state = 'paid' then 'completed'
         when i.status in ('voided', 'refunded') or i.payment_state = 'refunded' then 'cancelled'
@@ -233,18 +289,31 @@ begin
         else 'waiting'
       end as progress_state,
       null::uuid as assignee_user_id,
+      null::text as assignee_name,
       'billing'::text as team_queue_id,
       '수납팀 큐'::text as team_queue_label,
-      il.created_at as requested_at,
-      coalesce(i.paid_at, i.issued_at, il.updated_at, il.created_at) as state_entered_at,
-      (il.created_at at time zone 'Asia/Seoul')::date as source_operating_date,
+      line_summary.first_created_at as requested_at,
+      coalesce(i.paid_at, i.issued_at, line_summary.last_updated_at, line_summary.first_created_at) as state_entered_at,
+      (line_summary.first_created_at at time zone 'Asia/Seoul')::date as source_operating_date,
       '/w/' || p_workspace_id || '/billing?encounterId=' || i.encounter_id::text || '&modulePanel=open' as source_href,
       '청구 후보 또는 수납 진행 상태를 확인합니다.'::text as drawer_summary,
       'normal'::text as priority
-    from public.invoice_lines il
-    join public.invoices i
-      on i.workspace_id = il.workspace_id
-     and i.id = il.invoice_id
+    from public.invoices i
+    join lateral (
+      select
+        count(*)::int as line_count,
+        coalesce(sum(il.line_total), 0) as total_amount,
+        min(il.created_at) as first_created_at,
+        max(il.updated_at) as last_updated_at,
+        bool_or(coalesce(il.billing_candidate_id, o.billing_candidate_id) is not null) as has_billable_candidate
+      from public.invoice_lines il
+      left join public.orders o
+        on o.workspace_id = il.workspace_id
+       and o.id = il.order_id
+      where il.workspace_id = i.workspace_id
+        and il.invoice_id = i.id
+    ) line_summary
+      on line_summary.has_billable_candidate
     join public.encounters e
       on e.workspace_id = i.workspace_id
      and e.id = i.encounter_id
@@ -254,15 +323,11 @@ begin
     left join public.guardians g
       on g.workspace_id = e.workspace_id
      and g.id = e.guardian_id
-    left join public.orders o
-      on o.workspace_id = il.workspace_id
-     and o.id = il.order_id
-    where il.workspace_id = p_workspace_id
-      and coalesce(il.billing_candidate_id, o.billing_candidate_id) is not null
+    where i.workspace_id = p_workspace_id
       and (
-        (il.created_at >= v_start_at and il.created_at < v_end_at)
+        (line_summary.first_created_at >= v_start_at and line_summary.first_created_at < v_end_at)
         or (
-          il.created_at < v_start_at
+          line_summary.first_created_at < v_start_at
           and i.status not in ('paid', 'voided', 'refunded')
           and i.payment_state <> 'paid'
         )
@@ -308,9 +373,15 @@ begin
         'title', title,
         'patientName', patient_name,
         'guardianName', guardian_name,
+        'receptionType', reception_type,
         'progressState', progress_state,
+        'queueCardEventText', queue_card_event_text,
+        'queueCardSecondLineBadgeLabel', queue_card_second_line_badge_label,
+        'queueCardSecondLineText', queue_card_second_line_text,
         'attentionSignals', to_jsonb(attention_signals),
         'assigneeUserId', assignee_user_id,
+        'assigneeName', assignee_name,
+        'requesterName', requester_name,
         'teamQueueId', team_queue_id,
         'teamQueueLabel', team_queue_label,
         'requestedAt', requested_at,

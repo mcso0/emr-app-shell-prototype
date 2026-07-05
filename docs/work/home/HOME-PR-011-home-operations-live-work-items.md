@@ -69,3 +69,4 @@ Handed to human review on 2026-07-05.
 - Completion report: `docs/completed/home/2026-07-05-home-operations-live-work-items-report.html`.
 - Remote DB execution was attempted but not applied because this environment has no Supabase project link or access token.
 - Follow-up production hotfix: when the aggregate RPC is not present in remote Supabase yet, the server read path falls back to existing live reception-calendar and fulfillment readers without restoring Home mock fallback.
+- Follow-up UI correction: Home Kanban cards now use the same queue-card field contract as source modules, carry source card fields through the read model, group billing cards at invoice/work-item grain, and no longer inject Home-only `나`/status-decision labels into the card body.

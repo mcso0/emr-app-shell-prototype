@@ -289,7 +289,7 @@ async function listHomeOperationsWorkItemsFromExistingSources(
   if (client.from) {
     const fulfillment = await client
       .from("order_fulfillment_work_items")
-      .select("id, workspace_id, queue_type, status, priority, encounter_id, assigned_to_user_id, source_snapshot, created_at, updated_at, returned_at, completed_at, cancelled_at")
+      .select("id, workspace_id, queue_type, status, priority, encounter_id, requested_by_user_id, assigned_to_user_id, source_snapshot, created_at, updated_at, returned_at, completed_at, cancelled_at")
       .eq("workspace_id", input.workspaceId)
       .limit(200);
 
@@ -422,6 +422,10 @@ function mapAppointmentFallbackItem({
 
   const patientName = getString(patient?.name);
   const teamQueueId = "reception";
+  const drawerSummary =
+    getString(appointment.visitPurpose) ??
+    getString(appointment.symptomNote) ??
+    "예약 접수 상태를 확인합니다.";
   return {
     id: `appointment:${sourceId}`,
     workspaceId,
@@ -435,6 +439,12 @@ function mapAppointmentFallbackItem({
     patientName,
     guardianName: getString(guardian?.name),
     progressState,
+    queueCardEventText: progressState === "cancelled"
+      ? `${getSeoulShortTime(getString(appointment.updatedAt) ?? requestedAt)} 취소`
+      : `${getSeoulShortTime(requestedAt)} 예약`,
+    queueCardSecondLineBadgeLabel: progressState === "cancelled" ? "취소" : "대기",
+    queueCardSecondLineText: drawerSummary,
+    receptionType: "예약",
     attentionSignals: getFallbackAttentionSignals({
       priority: "normal",
       progressState,
@@ -447,10 +457,7 @@ function mapAppointmentFallbackItem({
     stateEnteredAt: getString(appointment.updatedAt) ?? requestedAt,
     operatingDate: toSeoulDate(requestedAt),
     sourceHref: `/w/${workspaceId}/reception?appointmentId=${sourceId}&modulePanel=open`,
-    drawerSummary:
-      getString(appointment.visitPurpose) ??
-      getString(appointment.symptomNote) ??
-      "예약 접수 상태를 확인합니다.",
+    drawerSummary,
     permissionMode: "full",
     teamQueueId,
     teamQueueLabel: "접수팀 큐",
@@ -502,6 +509,19 @@ function mapQueueFallbackItem({
         : "consultation";
   const teamQueueId = sourceType === "consultation" ? "consultation" : sourceType;
   const patientName = getString(patient?.name);
+  const receptionType = getString(encounter.appointmentId) || getString(encounter.appointment_id)
+    ? "예약"
+    : "외래";
+  const drawerSummary =
+    getString(encounter.visitPurpose) ??
+    getString(encounter.chiefComplaint) ??
+    "접수 후 원내 대기 상태를 확인합니다.";
+  const queueEventLabel = receptionType === "예약" ? "예약" : "접수";
+  const queueCardEventText = sourceType === "reception" || sourceType === "consultation"
+    ? progressState === "cancelled"
+      ? `${getSeoulShortTime(getString(queueEntry.finishedAt) ?? requestedAt)} 취소`
+      : `${getSeoulShortTime(requestedAt)} ${queueEventLabel}`
+    : undefined;
 
   return {
     id: `${sourceType}:${sourceId}`,
@@ -516,6 +536,10 @@ function mapQueueFallbackItem({
     patientName,
     guardianName: getString(guardian?.name),
     progressState,
+    queueCardEventText,
+    queueCardSecondLineBadgeLabel: getQueueFallbackSecondLineBadgeLabel(sourceType, progressState),
+    queueCardSecondLineText: drawerSummary,
+    receptionType,
     attentionSignals: getFallbackAttentionSignals({
       priority: getString(queueEntry.priority),
       progressState,
@@ -529,10 +553,7 @@ function mapQueueFallbackItem({
     stateEnteredAt: getString(queueEntry.finishedAt) ?? getString(queueEntry.calledAt) ?? requestedAt,
     operatingDate: toSeoulDate(requestedAt),
     sourceHref: getFallbackSourceHref({ encounterId, sourceType, workspaceId }),
-    drawerSummary:
-      getString(encounter.visitPurpose) ??
-      getString(encounter.chiefComplaint) ??
-      "접수 후 원내 대기 상태를 확인합니다.",
+    drawerSummary,
     permissionMode: "full",
     teamQueueId,
     teamQueueLabel: getFallbackTeamQueueLabel(sourceType),
@@ -603,6 +624,11 @@ function mapFulfillmentFallbackItem(
     getString(sourceSnapshot?.orderDisplayName) ??
     getString(sourceSnapshot?.billingName) ??
     getFallbackFulfillmentTitle(queueType);
+  const queueCardSecondLineBadgeLabel = getFulfillmentQueueCardSecondLineBadgeLabel(
+    queueType,
+    sourceSnapshot,
+    title,
+  );
 
   return {
     id: `${queueType}:${sourceId}`,
@@ -615,6 +641,9 @@ function mapFulfillmentFallbackItem(
     patientName: getString(sourceSnapshot?.patientName),
     guardianName: getString(sourceSnapshot?.guardianName),
     progressState,
+    queueCardSecondLineBadgeLabel,
+    queueCardSecondLineText: title,
+    receptionType: getSourceSnapshotReceptionType(sourceSnapshot),
     attentionSignals: getFallbackAttentionSignals({
       priority: getString(row.priority),
       progressState,
@@ -624,6 +653,7 @@ function mapFulfillmentFallbackItem(
       operatingDate,
     }),
     assigneeUserId: getString(row.assigned_to_user_id),
+    requesterName: getString(sourceSnapshot?.requestingVetName),
     requestedAt,
     stateEnteredAt:
       getString(row.returned_at) ??
@@ -728,6 +758,35 @@ function getQueueFallbackTitle(
   return patientName ? `${patientName} ${fallback}` : fallback;
 }
 
+function getQueueFallbackSecondLineBadgeLabel(
+  sourceType: HomeOperationsSourceType,
+  progressState: HomeOperationsProgressState,
+) {
+  if (sourceType === "appointment" || sourceType === "reception") {
+    return progressState === "cancelled" ? "취소" : "대기";
+  }
+  if (sourceType === "consultation") return "방문목적";
+  if (sourceType === "treatment") return "처치";
+
+  return undefined;
+}
+
+function getFulfillmentQueueCardSecondLineBadgeLabel(
+  sourceType: HomeOperationsSourceType,
+  sourceSnapshot: Record<string, unknown> | undefined,
+  title: string,
+) {
+  if (sourceType === "lab") return title;
+  if (sourceType === "imaging") {
+    const detail = getRecord(sourceSnapshot?.detail);
+    return getString(detail?.modality) ?? "영상";
+  }
+  if (sourceType === "dispensing") return "조제";
+  if (sourceType === "treatment") return "처치";
+
+  return undefined;
+}
+
 function getFallbackFulfillmentTitle(sourceType: HomeOperationsSourceType) {
   if (sourceType === "lab") return "임상병리 업무";
   if (sourceType === "imaging") return "영상 업무";
@@ -773,6 +832,17 @@ function toSeoulDate(value: string) {
     year: "numeric",
   });
   return formatter.format(date);
+}
+
+function getSeoulShortTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(11, 16) || "--:--";
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).format(date);
 }
 
 export function summarizeOperationsWorkItems(
@@ -887,9 +957,18 @@ function mapWorkItem(value: unknown): HomeOperationsWorkItem | null {
     patientName: getString(row.patientName) ?? getString(row.patient_name),
     guardianName: getString(row.guardianName) ?? getString(row.guardian_name),
     progressState,
+    queueCardEventText:
+      getString(row.queueCardEventText) ?? getString(row.queue_card_event_text),
+    queueCardSecondLineBadgeLabel:
+      getString(row.queueCardSecondLineBadgeLabel) ??
+      getString(row.queue_card_second_line_badge_label),
+    queueCardSecondLineText:
+      getString(row.queueCardSecondLineText) ?? getString(row.queue_card_second_line_text),
+    receptionType: getReceptionType(row.receptionType ?? row.reception_type),
     attentionSignals: getAttentionSignals(row.attentionSignals ?? row.attention_signals),
     assigneeUserId: getString(row.assigneeUserId) ?? getString(row.assignee_user_id),
     assigneeName: getString(row.assigneeName) ?? getString(row.assignee_name),
+    requesterName: getString(row.requesterName) ?? getString(row.requester_name),
     teamQueueId: getString(row.teamQueueId) ?? getString(row.team_queue_id),
     teamQueueLabel: getString(row.teamQueueLabel) ?? getString(row.team_queue_label),
     requestedAt,
@@ -1033,6 +1112,22 @@ function getAttentionSignals(value: unknown): HomeOperationsAttentionSignal[] {
 function getPermissionMode(value: unknown): HomeOperationsWorkItem["permissionMode"] {
   if (value === "hidden" || value === "redacted") return value;
   return "full";
+}
+
+function getReceptionType(value: unknown): HomeOperationsWorkItem["receptionType"] {
+  if (value === "예약" || value === "외래" || value === "접수") return value;
+  if (value === "appointment") return "예약";
+  if (value === "walk_in" || value === "reception") return "외래";
+  return undefined;
+}
+
+function getSourceSnapshotReceptionType(
+  sourceSnapshot?: Record<string, unknown>,
+): HomeOperationsWorkItem["receptionType"] {
+  return getReceptionType(
+    sourceSnapshot?.receptionType ??
+    sourceSnapshot?.reception_type,
+  ) ?? "외래";
 }
 
 function getString(value: unknown) {
