@@ -574,6 +574,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     .first();
   const laneHeader = calendar.getByTestId("veterinarian-lane-header").first();
   const laneAvatar = laneHeader.getByTestId("veterinarian-lane-avatar");
+  const laneAvatarFallback = laneAvatar.locator('[data-slot="avatar-fallback"]');
   const kongAppointment = page.getByTestId(
     "appointment-card-appointment-kong-260501",
   );
@@ -600,11 +601,11 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
       }),
     )
     .toEqual({
-      height: 64,
-      paddingBottom: "8px",
-      paddingLeft: "8px",
-      paddingRight: "8px",
-      paddingTop: "8px",
+      height: 40,
+      paddingBottom: "0px",
+      paddingLeft: "0px",
+      paddingRight: "0px",
+      paddingTop: "0px",
     });
   await expect
     .poll(() =>
@@ -626,9 +627,9 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     )
     .toEqual({
       backgroundColor: "rgb(49, 130, 206)",
-      borderRadius: "12px",
+      borderRadius: "8px",
       columnGap: "8px",
-      height: 48,
+      height: 40,
       paddingBottom: "8px",
       paddingLeft: "8px",
       paddingRight: "8px",
@@ -644,19 +645,39 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
           borderRadius: style.borderRadius,
           borderWidth: style.borderWidth,
           boxShadow: style.boxShadow,
-          color: style.color,
           height: Math.round(box.height),
           width: Math.round(box.width),
         };
       }),
     )
     .toEqual({
-      borderRadius: "8px",
+      borderRadius: "6px",
       borderWidth: "0px",
       boxShadow: "none",
+      height: 24,
+      width: 24,
+    });
+  await expect(laneAvatarFallback).toHaveText("SJ");
+  await expect
+    .poll(() =>
+      laneAvatarFallback.evaluate((fallback) => {
+        const style = getComputedStyle(fallback);
+
+        return {
+          backgroundColor: style.backgroundColor,
+          borderRadius: style.borderRadius,
+          color: style.color,
+          fontSize: style.fontSize,
+          fontWeight: style.fontWeight,
+        };
+      }),
+    )
+    .toEqual({
+      backgroundColor: "rgb(252, 252, 253)",
+      borderRadius: "6px",
       color: "rgb(113, 128, 150)",
-      height: 32,
-      width: 32,
+      fontSize: "12px",
+      fontWeight: "500",
     });
 
   const currentTimeLabel = calendar.getByTestId("day-current-time-label");
