@@ -277,6 +277,26 @@ test("home empty work-status state is centered in the content surface", async ({
 
   expect(Math.abs(emptyCenterX - surfaceCenterX)).toBeLessThanOrEqual(4);
   expect(Math.abs(emptyCenterY - surfaceCenterY)).toBeLessThanOrEqual(6);
+
+  const sidePanelEmptySurface = page.getByTestId("home-side-panel-empty-state-surface");
+  const sidePanelEmptyState = page.getByTestId("home-side-panel-empty-state");
+
+  await expect(sidePanelEmptySurface).toBeVisible();
+  await expect(sidePanelEmptyState).toContainText("원내 업무가 없습니다");
+
+  const sidePanelSurfaceBox = await sidePanelEmptySurface.boundingBox();
+  const sidePanelEmptyBox = await sidePanelEmptyState.boundingBox();
+
+  expect(sidePanelSurfaceBox).not.toBeNull();
+  expect(sidePanelEmptyBox).not.toBeNull();
+
+  const sidePanelSurfaceCenterX = sidePanelSurfaceBox!.x + sidePanelSurfaceBox!.width / 2;
+  const sidePanelSurfaceCenterY = sidePanelSurfaceBox!.y + sidePanelSurfaceBox!.height / 2;
+  const sidePanelEmptyCenterX = sidePanelEmptyBox!.x + sidePanelEmptyBox!.width / 2;
+  const sidePanelEmptyCenterY = sidePanelEmptyBox!.y + sidePanelEmptyBox!.height / 2;
+
+  expect(Math.abs(sidePanelEmptyCenterX - sidePanelSurfaceCenterX)).toBeLessThanOrEqual(4);
+  expect(Math.abs(sidePanelEmptyCenterY - sidePanelSurfaceCenterY)).toBeLessThanOrEqual(6);
 });
 
 const roleCases: Array<{

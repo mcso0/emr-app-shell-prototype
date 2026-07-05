@@ -511,7 +511,13 @@ export function HomeHospitalStatusSidePanel({
           onCollapse={() => setModulePanelOpen(false)}
         />
         <EmrSubpanelBody>
-          <div className="grid gap-3 pt-1">
+          <div
+            className={cn(
+              "pt-1",
+              groupedActions.length > 0 ? "grid gap-3" : "grid min-h-full flex-1 place-items-center"
+            )}
+            data-testid={groupedActions.length > 0 ? undefined : "home-side-panel-empty-state-surface"}
+          >
             {groupedActions.length > 0 ? (
               groupedActions.map((group) => (
                 <div key={group.id} className="grid gap-1.5">
@@ -535,9 +541,11 @@ export function HomeHospitalStatusSidePanel({
                 </div>
               ))
             ) : (
-              <div className="grid min-h-[220px] place-items-center">
-                <EmrQueueEmptyState title="원내 업무가 없습니다" />
-              </div>
+              <EmrQueueEmptyState
+                className="min-h-0"
+                data-testid="home-side-panel-empty-state"
+                title="원내 업무가 없습니다"
+              />
             )}
           </div>
         </EmrSubpanelBody>
