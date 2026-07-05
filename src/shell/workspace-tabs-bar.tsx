@@ -7,7 +7,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   HelpIcon,
-  SettingsIcon,
 } from "@/components/icons";
 import { EmrMotionIcon } from "@/components/emr/motion-icon";
 import { Button } from "@/components/ui/button";
@@ -375,9 +374,6 @@ export function WorkspaceTabsBar({
         </Button>
         <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="도움말">
           <HelpIcon className="size-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="설정">
-          <SettingsIcon className="size-4" />
         </Button>
         <AuthProfileMenu
           activityLabel={activityLabel}

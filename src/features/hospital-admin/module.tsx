@@ -115,7 +115,10 @@ import {
   type HospitalOrderWorkTypeFilter,
 } from "@/features/hospital-admin/data";
 import { WorkspaceMembershipManagement } from "@/features/auth/workspace-membership-management";
-import { useHospitalAdminStore } from "@/features/hospital-admin/store";
+import {
+  useHospitalAdminStore,
+  type HospitalAdminSection,
+} from "@/features/hospital-admin/store";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type {
@@ -274,15 +277,22 @@ type OrderMenuGroup = {
   label: string;
 };
 
-const hospitalAdminMenuItems = [
-  { label: "병원기본설정", icon: SettingsIcon },
-  { label: "병원구성원 관리", icon: UsersIcon },
-  { label: "감사 로그", icon: DocumentCheckIcon },
-  { label: "근무표", icon: CalendarIcon },
-  { label: "역할별 업무 관리", icon: GridIcon },
-  { label: "공간/시간 관리", icon: BuildingIcon },
+type HospitalAdminMenuItem = {
+  icon: typeof SettingsIcon;
+  label: string;
+  section?: HospitalAdminSection;
+  testId?: string;
+};
+
+const hospitalAdminMenuItems: HospitalAdminMenuItem[] = [
+  { label: "병원기본설정", icon: SettingsIcon, section: "settings", testId: "hospital-admin-menu-settings" },
+  { label: "병원구성원 관리", icon: UsersIcon, section: "members", testId: "hospital-admin-menu-members" },
+  { label: "감사 로그", icon: DocumentCheckIcon, section: "audit", testId: "hospital-admin-menu-audit" },
+  { label: "근무표", icon: CalendarIcon, section: "schedule", testId: "hospital-admin-menu-schedule" },
+  { label: "역할별 업무 관리", icon: GridIcon, section: "roles", testId: "hospital-admin-menu-roles" },
+  { label: "공간/시간 관리", icon: BuildingIcon, section: "space-time", testId: "hospital-admin-menu-space-time" },
   { label: "진료과 분리운영", icon: LayersIcon },
-  { label: "바이탈 관리", icon: ActivityIcon },
+  { label: "바이탈 관리", icon: ActivityIcon, section: "vitals", testId: "hospital-admin-menu-vitals" },
   { label: "차트 템플릿", icon: ClipboardListIcon },
   { label: "장비 관리", icon: DatabaseIcon },
   { label: "마약류 관리", icon: ShieldIcon },
@@ -726,6 +736,411 @@ function HospitalOrderSortableHeader({
   );
 }
 
+type HospitalAdminConceptSection = Exclude<
+  HospitalAdminSection,
+  "audit" | "members" | "orders"
+>;
+
+type HospitalAdminConceptField = {
+  label: string;
+  value: string;
+  kind?: "input" | "select" | "switch" | "textarea";
+  options?: string[];
+};
+
+type HospitalAdminConceptTable = {
+  columns: string[];
+  rows: string[][];
+  title: string;
+};
+
+type HospitalAdminConceptScreenConfig = {
+  badge: string;
+  breadcrumb: string;
+  description: string;
+  fields: HospitalAdminConceptField[];
+  highlights: Array<{ label: string; value: string }>;
+  impactItems: string[];
+  modelItems: string[];
+  section: HospitalAdminConceptSection;
+  table: HospitalAdminConceptTable;
+  title: string;
+};
+
+const hospitalAdminConceptScreens: Record<
+  HospitalAdminConceptSection,
+  HospitalAdminConceptScreenConfig
+> = {
+  settings: {
+    section: "settings",
+    title: "병원기본설정",
+    badge: "Phase 1",
+    breadcrumb: "병원관리 / 병원 기본 설정",
+    description: "워크스페이스 병원 프로필과 기본 운영값",
+    highlights: [
+      { label: "워크스페이스", value: "workspace-clair-cheongdam" },
+      { label: "대표번호", value: "02-6203-7582" },
+      { label: "운영시간", value: "평일 09:00-19:00" },
+      { label: "프로필 상태", value: "관리자 확인 필요" },
+    ],
+    fields: [
+      { label: "병원명", value: "VIP동물의료센터 청담점" },
+      { label: "워크스페이스 ID", value: "workspace-clair-cheongdam" },
+      { label: "주소", value: "서울 강남구 도산대로 000", kind: "textarea" },
+      { label: "대표 전화", value: "02-6203-7582" },
+      { label: "대표 연락처", value: "010-0000-7582" },
+      { label: "팩스", value: "02-6203-7583" },
+      { label: "대표자/원장명", value: "김청담" },
+      { label: "사업자등록번호", value: "000-00-00000" },
+      { label: "홈페이지", value: "https://clair-cheongdam.example" },
+      { label: "인스타그램", value: "@clair.cheongdam" },
+    ],
+    table: {
+      title: "운영시간 요약",
+      columns: ["요일", "진료", "점심", "예약"],
+      rows: [
+        ["월-금", "09:00-19:00", "13:00-14:00", "15분 단위"],
+        ["토", "09:00-17:00", "12:30-13:30", "20분 단위"],
+        ["일/공휴일", "응급 예약만", "-", "전화 확인"],
+      ],
+    },
+    impactItems: ["접수/예약 표시명", "영수증/청구서 병원 정보", "보호자 안내 문구", "향후 대외 문서"],
+    modelItems: ["workspace_hospital_profile", "workspace_operating_hours", "workspace_brand_assets"],
+  },
+  roles: {
+    section: "roles",
+    title: "역할별 업무 관리",
+    badge: "업무 기본값",
+    breadcrumb: "병원관리 / 역할별 업무 관리",
+    description: "권한 자체가 아니라 역할별 기본 담당 업무와 화면 접근 기준",
+    highlights: [
+      { label: "관리 역할", value: "5개" },
+      { label: "업무 그룹", value: "접수 · 진료 · 검사 · 수납" },
+      { label: "권한 연동", value: "구성원 관리와 분리" },
+      { label: "변경 감사", value: "필수" },
+    ],
+    fields: [
+      { label: "기본 접수 담당", value: "원무/접수", kind: "select", options: ["원무/접수", "병원관리자", "테크니션"] },
+      { label: "기본 차트 작성자", value: "수의사", kind: "select", options: ["수의사", "병원관리자"] },
+      { label: "검사 결과 입력", value: "테크니션", kind: "select", options: ["테크니션", "수의사", "병원관리자"] },
+      { label: "수납 마감 승인", value: "병원관리자", kind: "select", options: ["병원관리자", "원장/소유자"] },
+      { label: "Home 업무 생성", value: "true", kind: "switch" },
+      { label: "권한 상승 제한", value: "true", kind: "switch" },
+    ],
+    table: {
+      title: "역할별 기본 업무 매트릭스",
+      columns: ["역할", "기본 화면", "주요 업무", "승인/관리"],
+      rows: [
+        ["병원관리자", "병원관리 · Home", "구성원, 설정, 오더 관리", "역할/설정 변경"],
+        ["수의사", "진료/차트", "진료, 진단, 오더 확정", "차트 완료"],
+        ["테크니션", "검사 · 처치", "결과 입력, 처치 수행", "업무 완료"],
+        ["원무/접수", "접수/예약 · 고객관리", "접수, 예약, 보호자 안내", "예약 변경"],
+        ["수납 담당", "수납", "결제 상태, 영수증 처리", "마감 요청"],
+      ],
+    },
+    impactItems: ["Home 업무 추천", "기본 담당자 배정", "화면 접근 정책", "감사 로그 이벤트"],
+    modelItems: ["workspace_role_work_profiles", "permission_policies", "workspace_memberships"],
+  },
+  "space-time": {
+    section: "space-time",
+    title: "공간/시간 관리",
+    badge: "운영 캘린더",
+    breadcrumb: "병원관리 / 공간·시간 관리",
+    description: "진료 공간, 예약 단위, 운영시간을 한 곳에서 관리",
+    highlights: [
+      { label: "공간", value: "6개" },
+      { label: "기본 예약 간격", value: "15분" },
+      { label: "점심 차단", value: "13:00-14:00" },
+      { label: "예약 가능일", value: "30일" },
+    ],
+    fields: [
+      { label: "기본 예약 간격", value: "15분", kind: "select", options: ["10분", "15분", "20분", "30분"] },
+      { label: "예약 오픈 범위", value: "30일", kind: "select", options: ["14일", "30일", "60일", "90일"] },
+      { label: "점심시간 예약 차단", value: "true", kind: "switch" },
+      { label: "응급 슬롯 유지", value: "true", kind: "switch" },
+      { label: "공휴일 기본 정책", value: "전화 확인", kind: "select", options: ["휴무", "전화 확인", "응급 예약만"] },
+    ],
+    table: {
+      title: "공간 운영 상태",
+      columns: ["공간", "유형", "사용", "예약 단위"],
+      rows: [
+        ["진료실 1", "진료", "사용", "15분"],
+        ["진료실 2", "진료", "사용", "15분"],
+        ["처치실", "처치", "사용", "20분"],
+        ["임상병리실", "검사", "사용", "검사별"],
+        ["영상실", "영상", "사용", "30분"],
+        ["수술실", "수술", "제한", "수동 배정"],
+      ],
+    },
+    impactItems: ["접수/예약 캘린더", "진료실 배정", "검사실 큐", "Home 운영 상태"],
+    modelItems: ["workspace_rooms", "workspace_operating_hours", "appointment_slot_rules"],
+  },
+  schedule: {
+    section: "schedule",
+    title: "근무표",
+    badge: "인력 운영",
+    breadcrumb: "병원관리 / 근무표",
+    description: "직원별 근무 시간과 진료 가능 범위의 주간 시안",
+    highlights: [
+      { label: "이번 주 근무자", value: "8명" },
+      { label: "오전 커버리지", value: "정상" },
+      { label: "야간/응급", value: "수동 배정" },
+      { label: "미배정 슬롯", value: "2개" },
+    ],
+    fields: [
+      { label: "주간 시작 요일", value: "월요일", kind: "select", options: ["월요일", "일요일"] },
+      { label: "근무표 잠금", value: "금요일 18:00", kind: "select", options: ["목요일 18:00", "금요일 18:00", "일요일 12:00"] },
+      { label: "결원 경고", value: "true", kind: "switch" },
+      { label: "Home에 인력 부족 표시", value: "true", kind: "switch" },
+    ],
+    table: {
+      title: "주간 근무표",
+      columns: ["직원", "월", "화", "수", "목", "금"],
+      rows: [
+        ["김청담 원장", "09-18", "09-18", "휴무", "09-18", "09-17"],
+        ["이수지 수의사", "10-19", "10-19", "10-19", "휴무", "10-19"],
+        ["송하윤 테크니션", "09-18", "09-18", "09-18", "09-18", "휴무"],
+        ["최유나 원무", "08:30-17", "08:30-17", "12-20", "08:30-17", "08:30-17"],
+      ],
+    },
+    impactItems: ["예약 가능 인력", "담당자 자동 후보", "Home 업무 과부하", "휴무/결원 알림"],
+    modelItems: ["staff_shift_templates", "workspace_staff_schedules", "coverage_rules"],
+  },
+  vitals: {
+    section: "vitals",
+    title: "바이탈 관리",
+    badge: "임상 기준",
+    breadcrumb: "병원관리 / 바이탈 관리",
+    description: "차트와 입원 보드에서 쓰는 바이탈 정상 범위와 경고 기준",
+    highlights: [
+      { label: "종 기준", value: "개 · 고양이" },
+      { label: "경고 기준", value: "6개" },
+      { label: "차트 표시", value: "활성" },
+      { label: "입원 강조", value: "활성" },
+    ],
+    fields: [
+      { label: "기본 종", value: "개", kind: "select", options: ["개", "고양이"] },
+      { label: "차트 입력 시 경고", value: "true", kind: "switch" },
+      { label: "입원 보드 색상 강조", value: "true", kind: "switch" },
+      { label: "체중 변화 경고", value: "10% 이상", kind: "select", options: ["5% 이상", "10% 이상", "15% 이상"] },
+      { label: "통증 점수 기준", value: "5점 이상", kind: "select", options: ["4점 이상", "5점 이상", "6점 이상"] },
+    ],
+    table: {
+      title: "기본 바이탈 정상 범위",
+      columns: ["항목", "개", "고양이", "경고"],
+      rows: [
+        ["체온", "37.8-39.2℃", "38.0-39.3℃", "상/하한 초과"],
+        ["심박", "60-140 bpm", "140-220 bpm", "상/하한 초과"],
+        ["호흡", "10-30 rpm", "20-30 rpm", "상/하한 초과"],
+        ["CRT", "1-2초", "1-2초", "3초 이상"],
+        ["통증 점수", "0-4", "0-4", "5 이상"],
+      ],
+    },
+    impactItems: ["차트 바이탈 입력", "입원 보드 경고", "처치 전 체크", "퇴원 전 확인"],
+    modelItems: ["workspace_vital_rules", "species_vital_ranges", "vital_alert_policies"],
+  },
+};
+
+function HospitalAdminConceptFieldControl({ field }: { field: HospitalAdminConceptField }) {
+  if (field.kind === "switch") {
+    return (
+      <div className="flex h-9 items-center rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3">
+        <Switch defaultChecked={field.value === "true"} aria-label={field.label} />
+      </div>
+    );
+  }
+
+  if (field.kind === "select" && field.options?.length) {
+    return (
+      <Select defaultValue={field.value}>
+        <SelectTrigger aria-label={field.label} size="sm" className="bg-card">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {field.options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  if (field.kind === "textarea") {
+    return (
+      <Textarea
+        aria-label={field.label}
+        className="min-h-20 resize-none bg-card emr-text-dense"
+        defaultValue={field.value}
+      />
+    );
+  }
+
+  return (
+    <Input
+      aria-label={field.label}
+      className="h-9 bg-card emr-text-dense"
+      defaultValue={field.value}
+      readOnly={field.label === "워크스페이스 ID"}
+    />
+  );
+}
+
+function HospitalAdminConceptTable({ table }: { table: HospitalAdminConceptTable }) {
+  return (
+    <section className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
+      <div className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+        <h2 className="emr-text-panel-title font-semibold">{table.title}</h2>
+      </div>
+      <Table aria-label={table.title} density="compact">
+        <TableHeader className="bg-[var(--emr-surface-muted)]">
+          <TableRow>
+            {table.columns.map((column) => (
+              <TableHead key={column} className="emr-text-dense-label">
+                {column}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {table.rows.map((row) => (
+            <TableRow key={row.join("-")} className="bg-card">
+              {row.map((cell, index) => (
+                <TableCell key={`${cell}-${index}`} className={index === 0 ? "font-medium" : undefined}>
+                  {cell}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </section>
+  );
+}
+
+function HospitalAdminConceptScreen({
+  section,
+}: {
+  section: HospitalAdminConceptSection;
+}) {
+  const config = hospitalAdminConceptScreens[section];
+  const [savedLabel, setSavedLabel] = useState("시안 편집 중");
+
+  const handleSave = () => {
+    setSavedLabel("방금 시안 저장");
+    toast.success(`${config.title} 화면 시안 상태를 저장했습니다.`);
+  };
+
+  const handleReset = () => {
+    setSavedLabel("시안 편집 중");
+    toast.message(`${config.title} 시안을 초기 상태로 되돌렸습니다.`);
+  };
+
+  return (
+    <div
+      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
+      data-testid={`hospital-admin-${section}-screen`}
+    >
+      <section className="border-b bg-card px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-[20px] font-semibold leading-7">{config.title}</h1>
+              <Badge variant="secondary">{config.badge}</Badge>
+            </div>
+            <div className="mt-1 max-w-2xl emr-text-dense leading-5 text-muted-foreground">
+              {config.breadcrumb}
+            </div>
+            <div className="mt-1 emr-text-metadata text-muted-foreground">
+              {config.description} · {savedLabel}
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleReset}>
+              취소
+            </Button>
+            <Button size="sm" onClick={handleSave}>
+              시안 저장
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="grid gap-4 p-5">
+          <section className="grid gap-3 md:grid-cols-4">
+            {config.highlights.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card px-4 py-3"
+              >
+                <div className="emr-text-metadata text-muted-foreground">{item.label}</div>
+                <div className="mt-1 truncate text-[16px] font-semibold leading-6">{item.value}</div>
+              </div>
+            ))}
+          </section>
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid min-w-0 gap-4">
+              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
+                <div className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+                  <h2 className="emr-text-panel-title font-semibold">기본값</h2>
+                </div>
+                <div className="grid gap-4 p-4 md:grid-cols-2">
+                  {config.fields.map((field) => (
+                    <Field key={field.label} className={field.kind === "textarea" ? "md:col-span-2" : undefined}>
+                      <FieldLabel>{field.label}</FieldLabel>
+                      <FieldContent>
+                        <HospitalAdminConceptFieldControl field={field} />
+                      </FieldContent>
+                    </Field>
+                  ))}
+                </div>
+              </section>
+
+              <HospitalAdminConceptTable table={config.table} />
+            </div>
+
+            <aside className="grid content-start gap-4">
+              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
+                <div className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+                  <h2 className="emr-text-panel-title font-semibold">영향 범위</h2>
+                </div>
+                <div className="grid gap-2 p-3">
+                  {config.impactItems.map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)] px-3 py-2 emr-text-dense"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
+                <div className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+                  <h2 className="emr-text-panel-title font-semibold">향후 데이터</h2>
+                </div>
+                <div className="grid gap-2 p-3">
+                  {config.modelItems.map((item) => (
+                    <Badge key={item} variant="outline" className="w-fit rounded-md">
+                      {item}
+                    </Badge>
+                  ))}
+                </div>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
 export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
   const activeSection = useHospitalAdminStore((state) => state.activeSection);
   const orders = useHospitalAdminStore((state) => state.orders);
@@ -757,6 +1172,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
     },
     ...group.children.filter((item) => item.categoryId && item.subcategoryId).map((item) => {
       const active =
+        activeSection === "orders" &&
         item.categoryId === selectedCategoryId &&
         item.subcategoryId === selectedSubcategoryId;
 
@@ -784,26 +1200,24 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
   const sidePanelItems: EmrModuleListSidePanelItem[] = [
     ...hospitalAdminMenuItems.map((item) => {
       const Icon = item.icon;
-      const isMembers = item.label === "병원구성원 관리";
-      const isAudit = item.label === "감사 로그";
+      const nextSection = item.section;
 
       return {
         type: "button" as const,
         id: item.label,
-        active: (isMembers && activeSection === "members") || (isAudit && activeSection === "audit"),
-        disabled: !isMembers && !isAudit,
+        active: nextSection ? activeSection === nextSection : false,
+        disabled: !nextSection,
         icon: <Icon className="size-4 shrink-0" />,
         label: item.label,
-        onClick: isMembers
+        onClick: nextSection
           ? () => {
-              setActiveSection("members");
+              setActiveSection(nextSection);
               if (typeof window !== "undefined" && window.innerWidth < 768) {
                 setModulePanelOpen(false);
               }
             }
-          : isAudit
-            ? () => setActiveSection("audit")
-            : undefined,
+          : undefined,
+        testId: item.testId,
       };
     }),
     {
@@ -1045,6 +1459,16 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
 
   if (activeSection === "audit") {
     return <HospitalAdminAuditReview workspaceId={workspaceId} />;
+  }
+
+  if (
+    activeSection === "roles" ||
+    activeSection === "schedule" ||
+    activeSection === "settings" ||
+    activeSection === "space-time" ||
+    activeSection === "vitals"
+  ) {
+    return <HospitalAdminConceptScreen section={activeSection} />;
   }
 
   const openDrawer = (order: HospitalOrderCatalogItem) => {

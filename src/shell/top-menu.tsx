@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BellIcon,
   HelpIcon,
-  SettingsIcon,
   WorkspaceLogoMarkIcon,
 } from "@/components/icons";
 import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
@@ -125,9 +124,6 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
         </Button>
         <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="도움말">
           <HelpIcon />
-        </Button>
-        <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="설정">
-          <SettingsIcon />
         </Button>
         <AuthProfileMenu
           activityLabel={activityLabel}
