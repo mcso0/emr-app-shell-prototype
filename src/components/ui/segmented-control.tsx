@@ -153,7 +153,7 @@ export function SegmentedControl<TValue extends string>({
           >
             {item.label}
             {typeof item.count === "number" ? (
-              <span className="ml-0.5 tabular-nums">{item.count}</span>
+              <span className="ml-1 tabular-nums">{item.count}</span>
             ) : null}
           </button>
         );
