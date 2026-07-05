@@ -1307,6 +1307,102 @@ test("reception day calendar lays out overlapping same-veterinarian cards side b
   expect(cocoFrame.left).toBeGreaterThan(kongFrame.left + kongFrame.width);
 });
 
+test("reception day current-time line layers above schedule cards", async ({
+  page,
+}) => {
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/calendar/day?*",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          ok: true,
+          status: 200,
+          workspaceId: "clair-demo",
+          date: "2026-05-01",
+          records: [
+            {
+              appointment: {
+                id: "appointment-current-layer-260501",
+                workspaceId: "clair-demo",
+                patientId: "patient-kong",
+                guardianId: "guardian-kim-haneul",
+                assignedVeterinarianId: "user-vet-suji",
+                scheduledStartAt: "2026-05-01T10:30:00+09:00",
+                scheduledEndAt: "2026-05-01T11:15:00+09:00",
+                visitPurpose: "현재시간 레이어 확인",
+                symptomNote: "현재시간 라인과 겹치는 예약",
+                status: "confirmed",
+                createdByUserId: "user-desk-yuna",
+                createdAt: "2026-05-01T09:12:00+09:00",
+                updatedAt: "2026-05-01T09:28:00+09:00",
+              },
+            },
+          ],
+          enforcedBy: "reception-calendar-read",
+        },
+        status: 200,
+      });
+    },
+  );
+  await page.goto("/w/clair-demo/reception");
+
+  const calendar = page.getByTestId("reception-day-calendar");
+  const currentTimeIndicator = calendar.getByTestId(
+    "day-current-time-indicator",
+  );
+  const currentTimeLine = calendar.getByTestId("day-current-time-indicator-line");
+  const appointmentCard = calendar.getByTestId(
+    "appointment-card-appointment-current-layer-260501",
+  );
+
+  await expect(currentTimeIndicator).toHaveCSS("pointer-events", "none");
+  await expect(currentTimeIndicator).toHaveCSS("z-index", "35");
+  await expect(appointmentCard).toBeVisible();
+  await expect(appointmentCard).toContainText("10:30-11:15");
+
+  const layerCheck = await currentTimeLine.evaluate((line) => {
+    const indicator = line.closest<HTMLElement>(
+      '[data-testid="day-current-time-indicator"]',
+    );
+    const card = document.querySelector<HTMLElement>(
+      '[data-testid="appointment-card-appointment-current-layer-260501"]',
+    );
+
+    if (!indicator || !card) {
+      return { overlaps: false, topTestId: null };
+    }
+
+    const lineBox = line.getBoundingClientRect();
+    const cardBox = card.getBoundingClientRect();
+    const x = Math.max(lineBox.left, cardBox.left) + 12;
+    const y = lineBox.top + lineBox.height / 2;
+    const overlaps =
+      x >= cardBox.left &&
+      x <= cardBox.right &&
+      y >= cardBox.top &&
+      y <= cardBox.bottom;
+    const previousPointerEvents = indicator.style.pointerEvents;
+
+    indicator.style.pointerEvents = "auto";
+    const topElement = document.elementFromPoint(x, y) as HTMLElement | null;
+    indicator.style.pointerEvents = previousPointerEvents;
+
+    return {
+      overlaps,
+      topTestId:
+        topElement
+          ?.closest<HTMLElement>("[data-testid]")
+          ?.getAttribute("data-testid") ?? null,
+    };
+  });
+
+  expect(layerCheck).toEqual({
+    overlaps: true,
+    topTestId: "day-current-time-indicator-line",
+  });
+});
+
 test("reception day calendar initially centers the current-time marker", async ({
   page,
 }) => {
