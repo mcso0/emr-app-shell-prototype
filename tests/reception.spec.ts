@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 async function openWalkInReceptionForm(page: Page) {
   await page.getByTestId("schedule-check-in-button").click();
@@ -34,6 +34,26 @@ async function freezeBrowserClock(page: Page, iso: string) {
 
     window.Date = MockDate as DateConstructor;
   }, iso);
+}
+
+async function expectScrollFadeViewport(viewport: Locator) {
+  await expect(viewport).toHaveClass(/scroll-fade-y/);
+  await expect(viewport).toHaveClass(/scroll-fade-8/);
+
+  const maskState = await viewport.evaluate((element) => {
+    const style = getComputedStyle(element);
+
+    return {
+      maskImage: style.maskImage,
+      webkitMaskImage: style.webkitMaskImage,
+    };
+  });
+
+  expect(
+    [maskState.maskImage, maskState.webkitMaskImage].some(
+      (value) => value && value !== "none",
+    ),
+  ).toBe(true);
 }
 
 function getLocalDatePrefix(date = new Date()) {
@@ -532,6 +552,19 @@ test("reception week calendar initially centers the current-time marker", async 
 
   await page.getByRole("button", { name: "주" }).click();
 
+  const weekCalendar = page.getByTestId("reception-week-calendar");
+  const weekBodyViewport = weekCalendar
+    .getByTestId("reception-week-calendar-body-scroll")
+    .locator('[data-slot="scroll-area-viewport"]');
+  await expectScrollFadeViewport(weekBodyViewport);
+
+  const weekHeaderInsideFadeViewport = await weekCalendar
+    .getByTestId("reception-week-calendar-header")
+    .evaluate((header) =>
+      Boolean(header.closest('[data-testid="reception-week-calendar-body-scroll"]')),
+    );
+  expect(weekHeaderInsideFadeViewport).toBe(false);
+
   const currentTimeDistanceFromCenter = async () =>
     page.getByTestId("week-current-time-indicator").evaluate((indicator) => {
       const viewport = indicator.closest<HTMLElement>(
@@ -569,6 +602,9 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   await page.goto("/w/clair-demo/reception");
 
   const calendar = page.getByTestId("reception-day-calendar");
+  const dayBodyViewport = calendar
+    .getByTestId("reception-day-calendar-body-scroll")
+    .locator('[data-slot="scroll-area-viewport"]');
   const laneHeaderCell = calendar
     .getByTestId("veterinarian-lane-header-cell")
     .first();
@@ -584,6 +620,12 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   const haruNoShowAppointment = page.getByTestId(
     "appointment-card-appointment-haru-260501",
   );
+
+  await expectScrollFadeViewport(dayBodyViewport);
+  const laneHeaderInsideFadeViewport = await laneHeaderCell.evaluate((cell) =>
+    Boolean(cell.closest('[data-testid="reception-day-calendar-body-scroll"]')),
+  );
+  expect(laneHeaderInsideFadeViewport).toBe(false);
 
   await expect
     .poll(() =>
@@ -1126,7 +1168,7 @@ test("reception day calendar keeps unassigned walk-ins sticky as compact neutral
   await expect(unassignedCard).toHaveCSS("height", "30px");
 
   const cardTone = await unassignedCard.evaluate((card) => {
-    const badge = card.querySelector("span:not([aria-hidden])");
+    const badge = card.querySelector(`[data-testid="${card.getAttribute("data-testid")}-badge"]`);
     const cardStyle = getComputedStyle(card);
     const badgeStyle = badge ? getComputedStyle(badge) : null;
     const resolveColor = (
@@ -1158,15 +1200,15 @@ test("reception day calendar keeps unassigned walk-ins sticky as compact neutral
   expect(cardTone.badgeBackground).toBe(cardTone.expectedBadgeBackground);
   expect(cardTone.badgeColor).toBe(cardTone.expectedBadgeColor);
 
-  const stickyMetrics = await unassignedCard.evaluate(async (card) => {
+  const unassignedRowMetrics = await unassignedCard.evaluate(async (card) => {
     const unassignedRow =
       card.closest<HTMLElement>('[data-testid="unassigned-walkin-row"]') ??
       card.parentElement?.parentElement;
     const laneHeaderRow = unassignedRow?.previousElementSibling as
       | HTMLElement
       | undefined;
-    const viewport = card.closest<HTMLElement>(
-      '[data-slot="scroll-area-viewport"]',
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-testid="reception-day-calendar-body-scroll"] [data-slot="scroll-area-viewport"]',
     );
 
     if (!unassignedRow || !laneHeaderRow || !viewport) return null;
@@ -1190,15 +1232,17 @@ test("reception day calendar keeps unassigned walk-ins sticky as compact neutral
       afterGap: Math.round((afterRowBox.top - afterHeaderBox.bottom) * 100) / 100,
       beforeGap:
         Math.round((beforeRowBox.top - beforeHeaderBox.bottom) * 100) / 100,
-      rowPosition: getComputedStyle(unassignedRow).position,
+      rowInsideFadeViewport: Boolean(
+        unassignedRow.closest('[data-testid="reception-day-calendar-body-scroll"]'),
+      ),
     };
   });
 
-  if (!stickyMetrics) throw new Error("Expected unassigned row sticky metrics");
+  if (!unassignedRowMetrics) throw new Error("Expected unassigned row metrics");
 
-  expect(stickyMetrics.rowPosition).toBe("sticky");
-  expect(Math.abs(stickyMetrics.beforeGap)).toBeLessThanOrEqual(1);
-  expect(Math.abs(stickyMetrics.afterGap)).toBeLessThanOrEqual(1);
+  expect(unassignedRowMetrics.rowInsideFadeViewport).toBe(false);
+  expect(Math.abs(unassignedRowMetrics.beforeGap)).toBeLessThanOrEqual(1);
+  expect(Math.abs(unassignedRowMetrics.afterGap)).toBeLessThanOrEqual(1);
 });
 
 test("reception day calendar lays out overlapping same-veterinarian cards side by side", async ({
