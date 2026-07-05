@@ -1568,15 +1568,19 @@ export function LabSidePanel({
       />
       <EmrSubpanelBody density="queue">
         {showLabQueueLoadingState ? (
-          <EmrQueueLoadingState title="임상병리 검사 정보를 불러오는 중입니다" />
+          <EmrQueueLoadingState
+            placement="panel-center"
+            title="임상병리 검사 정보를 불러오는 중입니다"
+          />
         ) : sourceHasItems && resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="검사 대기열 항목"
+            placement="panel-center"
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
         ) : resultCount === 0 ? (
-          <EmrQueueEmptyState title={emptyStateTitle} />
+          <EmrQueueEmptyState placement="panel-center" title={emptyStateTitle} />
         ) : groups.map((group) => (
           <LabQueueGroup
             key={group.status}
@@ -1740,15 +1744,19 @@ export function ImagingSidePanel({
       />
       <EmrSubpanelBody density="queue">
         {showImagingQueueLoadingState ? (
-          <EmrQueueLoadingState title="영상검사 정보를 불러오는 중입니다" />
+          <EmrQueueLoadingState
+            placement="panel-center"
+            title="영상검사 정보를 불러오는 중입니다"
+          />
         ) : sourceHasItems && resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="영상 대기열 항목"
+            placement="panel-center"
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
         ) : resultCount === 0 ? (
-          <EmrQueueEmptyState title={emptyStateTitle} />
+          <EmrQueueEmptyState placement="panel-center" title={emptyStateTitle} />
         ) : groups.map((group) => (
           <ImagingQueueGroup
             key={group.status}
