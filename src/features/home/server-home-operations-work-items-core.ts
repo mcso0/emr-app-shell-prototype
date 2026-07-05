@@ -4,8 +4,29 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import {
+  createMockInvoiceCandidateSyncGateway,
+  type BillingInvoiceCandidateLine,
+  type InvoiceCandidateSyncGateway,
+} from "@/features/billing/server-invoice-candidate-sync-core";
+import {
+  createMockFulfillmentWorkItemGateway,
+  type FulfillmentQueueType,
+  type FulfillmentWorkItem,
+} from "@/features/fulfillment/server-fulfillment-work-item-core";
+import {
+  createMockReceptionCalendarReadGateway,
+} from "@/features/reception/server-reception-calendar-read-core";
+import type { ReceptionCalendarReadRecord } from "@/features/reception/reception-calendar-read";
 import { getWorkspaceOperatingDate, isIsoOperatingDate } from "@/lib/emr-domain/demo-date";
+import {
+  mockEncounters,
+  mockGuardians,
+  mockInvoices,
+  mockPatients,
+} from "@/mocks/emr-domain";
 import type { PermissionId } from "@/types/emr-domain";
+import type { Encounter, Invoice } from "@/types/emr-domain";
 import type {
   HomeOperationsAccessIssue,
   HomeOperationsAttentionSignal,
@@ -84,6 +105,13 @@ const attentionSignals: HomeOperationsAttentionSignal[] = [
   "assignment_missing",
   "team_queue",
   "long_stay",
+];
+
+const fulfillmentQueueTypes: FulfillmentQueueType[] = [
+  "lab",
+  "imaging",
+  "dispensing",
+  "treatment",
 ];
 
 export async function readHomeOperationsWorkItems({
@@ -205,6 +233,221 @@ export async function readHomeOperationsWorkItems({
   };
 }
 
+async function listBillingFallbackItemsFromTables(
+  client: SupabaseHomeOperationsWorkItemsRpcClient,
+  input: {
+    includeCancelled: boolean;
+    includeCompleted: boolean;
+    operatingDate: string;
+    workspaceId: string;
+  },
+): Promise<{ ok: true; items: HomeOperationsWorkItem[] } | { ok: false }> {
+  const [invoices, invoiceLines, encounters, patients, guardians] = await Promise.all([
+    listWorkspaceRows(
+      client,
+      "invoices",
+      "id, workspace_id, encounter_id, guardian_id, invoice_no, status, subtotal_amount, discount_amount, tax_amount, total_amount, issued_at, paid_at, payment_state, created_at",
+      input.workspaceId,
+      200,
+    ),
+    listWorkspaceRows(
+      client,
+      "invoice_lines",
+      "id, workspace_id, invoice_id, order_id, description, quantity, unit_price, line_total, billing_candidate_id, created_at, updated_at",
+      input.workspaceId,
+      500,
+    ),
+    listWorkspaceRows(
+      client,
+      "encounters",
+      "id, workspace_id, patient_id, guardian_id, appointment_id, reception_type",
+      input.workspaceId,
+      300,
+    ),
+    listWorkspaceRows(
+      client,
+      "patients",
+      "id, workspace_id, name",
+      input.workspaceId,
+      300,
+    ),
+    listWorkspaceRows(
+      client,
+      "guardians",
+      "id, workspace_id, name",
+      input.workspaceId,
+      300,
+    ),
+  ]);
+
+  if (!invoices.ok || !invoiceLines.ok || !encounters.ok || !patients.ok || !guardians.ok) {
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    items: mapBillingFallbackItemsFromRows({
+      encounters: encounters.rows,
+      guardians: guardians.rows,
+      input,
+      invoiceLines: invoiceLines.rows,
+      invoices: invoices.rows,
+      patients: patients.rows,
+    }),
+  };
+}
+
+async function listWorkspaceRows(
+  client: SupabaseHomeOperationsWorkItemsRpcClient,
+  tableName: string,
+  columns: string,
+  workspaceId: string,
+  limit: number,
+): Promise<{ ok: true; rows: unknown[] } | { ok: false }> {
+  if (!client.from) return { ok: false };
+
+  const { data, error } = await client
+    .from(tableName)
+    .select(columns)
+    .eq("workspace_id", workspaceId)
+    .limit(limit);
+  if (error) return { ok: false };
+  return { ok: true, rows: data ?? [] };
+}
+
+function mapBillingFallbackItemsFromRows({
+  encounters,
+  guardians,
+  input,
+  invoiceLines,
+  invoices,
+  patients,
+}: {
+  encounters: unknown[];
+  guardians: unknown[];
+  input: {
+    includeCancelled: boolean;
+    includeCompleted: boolean;
+    operatingDate: string;
+    workspaceId: string;
+  };
+  invoiceLines: unknown[];
+  invoices: unknown[];
+  patients: unknown[];
+}): HomeOperationsWorkItem[] {
+  const encounterById = new Map(
+    recordsById(encounters).map((record) => [getString(record.id), record]),
+  );
+  const patientById = new Map(
+    recordsById(patients).map((record) => [getString(record.id), record]),
+  );
+  const guardianById = new Map(
+    recordsById(guardians).map((record) => [getString(record.id), record]),
+  );
+  const linesByInvoiceId = new Map<string, Record<string, unknown>[]>();
+
+  for (const line of recordsById(invoiceLines)) {
+    const invoiceId = getString(line.invoice_id) ?? getString(line.invoiceId);
+    if (!invoiceId) continue;
+    const lines = linesByInvoiceId.get(invoiceId) ?? [];
+    lines.push(line);
+    linesByInvoiceId.set(invoiceId, lines);
+  }
+
+  const items: HomeOperationsWorkItem[] = [];
+  for (const invoice of recordsById(invoices)) {
+    const invoiceId = getString(invoice.id);
+    const encounterId = getString(invoice.encounter_id) ?? getString(invoice.encounterId);
+    if (!invoiceId || !encounterId) continue;
+
+    const lines = linesByInvoiceId.get(invoiceId) ?? [];
+    const hasBillingCandidate = lines.some(
+      (line) =>
+        Boolean(getString(line.billing_candidate_id) ?? getString(line.billingCandidateId)) ||
+        Boolean(getString(line.order_id) ?? getString(line.orderId)),
+    );
+    if (!hasBillingCandidate) continue;
+
+    const requestedAt =
+      getEarliestIso(lines.map((line) => getString(line.created_at) ?? getString(line.createdAt))) ??
+      getString(invoice.created_at) ??
+      getString(invoice.createdAt);
+    if (!requestedAt) continue;
+
+    const status = getString(invoice.status) ?? "draft";
+    const paymentState = getString(invoice.payment_state) ?? getString(invoice.paymentState);
+    const progressState = getBillingProgressState({ paymentState, status });
+    if (!shouldIncludeOperatingDate(progressState, requestedAt, input.operatingDate)) continue;
+    if (!shouldIncludeProgress(progressState, input.includeCompleted, input.includeCancelled)) continue;
+
+    const encounter = encounterById.get(encounterId);
+    const patientId = getString(encounter?.patient_id) ?? getString(encounter?.patientId);
+    const guardianId =
+      getString(encounter?.guardian_id) ??
+      getString(encounter?.guardianId) ??
+      getString(invoice.guardian_id) ??
+      getString(invoice.guardianId);
+    const patient = patientById.get(patientId);
+    const guardian = guardianById.get(guardianId);
+    const totalAmount =
+      getNumber(invoice.total_amount) ??
+      getNumber(invoice.totalAmount) ??
+      lines.reduce((sum, line) => sum + (getNumber(line.line_total) ?? getNumber(line.lineTotal) ?? 0), 0);
+    const invoiceNo = getString(invoice.invoice_no) ?? getString(invoice.invoiceNo) ?? invoiceId;
+    const stateEnteredAt =
+      getString(invoice.paid_at) ??
+      getString(invoice.paidAt) ??
+      getString(invoice.issued_at) ??
+      getString(invoice.issuedAt) ??
+      getLatestIso(lines.map((line) => getString(line.updated_at) ?? getString(line.updatedAt))) ??
+      requestedAt;
+
+    items.push({
+      id: `billing:${invoiceId}`,
+      workspaceId: input.workspaceId,
+      sourceType: "billing",
+      sourceId: invoiceId,
+      sourceStatus: `${status}:${paymentState ?? "none"}`,
+      encounterId,
+      patientId,
+      guardianId,
+      title: `${invoiceNo} 수납 요청`,
+      patientName: getString(patient?.name),
+      guardianName: getString(guardian?.name),
+      progressState,
+      queueCardSecondLineText: `오더 ${lines.length}건 · ${formatKrwAmount(totalAmount)}원`,
+      receptionType: getReceptionType(
+        getString(encounter?.reception_type) ??
+        getString(encounter?.receptionType) ??
+        (getString(encounter?.appointment_id) ? "appointment" : undefined),
+      ) ?? "외래",
+      attentionSignals: getFallbackAttentionSignals({
+        priority: "normal",
+        progressState,
+        requestedAt,
+        sourceStatus: status,
+        teamQueueId: "billing",
+        operatingDate: input.operatingDate,
+      }),
+      requesterName: "수납",
+      requestedAt,
+      stateEnteredAt,
+      operatingDate: toSeoulDate(requestedAt),
+      sourceHref: getFallbackSourceHref({
+        encounterId,
+        sourceType: "billing",
+        workspaceId: input.workspaceId,
+      }),
+      drawerSummary: "청구 후보 또는 수납 진행 상태를 확인합니다.",
+      permissionMode: "full",
+      teamQueueId: "billing",
+      teamQueueLabel: getFallbackTeamQueueLabel("billing"),
+    });
+  }
+
+  return items;
+}
+
 export type SupabaseHomeOperationsWorkItemsRpcClient = {
   rpc(
     functionName: string,
@@ -257,6 +500,104 @@ export function createSupabaseHomeOperationsWorkItemGateway(
   };
 }
 
+export function createDemoHomeOperationsPermissionAdapter() {
+  return createMockWorkspacePermissionAdapter({
+    users: [
+      { id: "playwright-default-session", status: "active" },
+      { id: "user-admin", status: "active" },
+      { id: "user-front-desk", status: "active" },
+      { id: "user-vet", status: "active" },
+      { id: "user-tech", status: "active" },
+    ],
+    memberships: [
+      {
+        id: "membership-playwright-admin",
+        workspaceId: "clair-demo",
+        userId: "playwright-default-session",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-admin",
+        workspaceId: "clair-demo",
+        userId: "user-admin",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-front-desk",
+        workspaceId: "clair-demo",
+        userId: "user-front-desk",
+        roles: ["front_desk"],
+        status: "active",
+      },
+      {
+        id: "membership-vet",
+        workspaceId: "clair-demo",
+        userId: "user-vet",
+        roles: ["vet"],
+        status: "active",
+      },
+      {
+        id: "membership-tech",
+        workspaceId: "clair-demo",
+        userId: "user-tech",
+        roles: ["technician"],
+        status: "active",
+      },
+    ],
+  });
+}
+
+export function createDemoHomeOperationsWorkItemGateway(): HomeOperationsWorkItemGateway {
+  const calendarGateway = createMockReceptionCalendarReadGateway();
+  const fulfillmentGateway = createMockFulfillmentWorkItemGateway();
+  const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway();
+
+  return {
+    async listHomeOperationsWorkItems(input) {
+      const generatedAt = new Date().toISOString();
+      const items: HomeOperationsWorkItem[] = [];
+
+      const calendar = await calendarGateway.listReceptionDay({
+        date: input.operatingDate,
+        workspaceId: input.workspaceId,
+      });
+      if (calendar.ok) {
+        items.push(
+          ...mapCalendarFallbackItems(
+            calendar.records.map(enrichDemoCalendarRecord),
+            input,
+          ),
+        );
+      }
+
+      for (const queueType of fulfillmentQueueTypes) {
+        const fulfillment = await fulfillmentGateway.listWorkItems({
+          queueType,
+          workspaceId: input.workspaceId,
+        });
+        if (!fulfillment.ok) continue;
+
+        items.push(
+          ...fulfillment.workItems
+            .map((workItem) => mapDemoFulfillmentWorkItem(workItem, input))
+            .filter((item): item is HomeOperationsWorkItem => Boolean(item)),
+        );
+      }
+
+      items.push(...await listDemoBillingItems(input, invoiceCandidateGateway));
+
+      return {
+        ok: true,
+        generatedAt,
+        items: sortOperationsItems(deduplicateOperationsItems(items)),
+        sourceStatus: items.length > 0 ? "live" : "empty",
+      };
+    },
+  };
+}
+
 async function listHomeOperationsWorkItemsFromExistingSources(
   client: SupabaseHomeOperationsWorkItemsRpcClient,
   input: {
@@ -301,10 +642,26 @@ async function listHomeOperationsWorkItemsFromExistingSources(
     } else {
       items.push(...mapFulfillmentFallbackItems(fulfillment.data ?? [], input));
     }
+
+    const billing = await listBillingFallbackItemsFromTables(client, input);
+    if (!billing.ok) {
+      accessIssues.push({
+        code: "billing_read_failed",
+        message: "수납 업무를 불러오지 못했습니다.",
+        sourceType: "billing",
+      });
+    } else {
+      items.push(...billing.items);
+    }
   } else {
     accessIssues.push({
       code: "fulfillment_reader_unavailable",
       message: "오더 기반 업무 리더를 사용할 수 없습니다.",
+    });
+    accessIssues.push({
+      code: "billing_reader_unavailable",
+      message: "수납 업무 리더를 사용할 수 없습니다.",
+      sourceType: "billing",
     });
   }
 
@@ -668,6 +1025,314 @@ function mapFulfillmentFallbackItem(
     teamQueueId: queueType,
     teamQueueLabel: getFallbackTeamQueueLabel(queueType),
   };
+}
+
+function enrichDemoCalendarRecord(
+  record: ReceptionCalendarReadRecord,
+): ReceptionCalendarReadRecord {
+  const patientId = record.appointment?.patientId ?? record.encounter?.patientId;
+  const guardianId = record.appointment?.guardianId ?? record.encounter?.guardianId;
+
+  return {
+    ...record,
+    patient: record.patient ?? mockPatients.find(
+      (patient) =>
+        patient.id === patientId &&
+        patient.workspaceId === (
+          record.appointment?.workspaceId ??
+          record.encounter?.workspaceId
+        ),
+    ),
+    primaryGuardian: record.primaryGuardian ?? mockGuardians.find(
+      (guardian) =>
+        guardian.id === guardianId &&
+        guardian.workspaceId === (
+          record.appointment?.workspaceId ??
+          record.encounter?.workspaceId
+        ),
+    ),
+  };
+}
+
+function mapDemoFulfillmentWorkItem(
+  workItem: FulfillmentWorkItem,
+  {
+    includeCancelled,
+    includeCompleted,
+    operatingDate,
+    workspaceId,
+  }: {
+    includeCancelled: boolean;
+    includeCompleted: boolean;
+    operatingDate: string;
+    workspaceId: string;
+  },
+): HomeOperationsWorkItem | null {
+  const queueType = getSourceType(workItem.queueType);
+  if (!queueType) return null;
+
+  const progressState = workItem.status === "completed"
+    ? "completed"
+    : workItem.status === "cancelled"
+      ? "cancelled"
+      : workItem.status === "in_progress"
+        ? "in_progress"
+        : "waiting";
+  if (!shouldIncludeOperatingDate(progressState, workItem.createdAt, operatingDate)) {
+    return null;
+  }
+  if (!shouldIncludeProgress(progressState, includeCompleted, includeCancelled)) {
+    return null;
+  }
+
+  const encounter = findDemoEncounter(workspaceId, workItem.encounterId);
+  const patient = encounter ? findDemoPatient(workspaceId, encounter.patientId) : undefined;
+  const guardian = encounter?.guardianId
+    ? findDemoGuardian(workspaceId, encounter.guardianId)
+    : undefined;
+  const sourceSnapshot = workItem.sourceSnapshot as unknown as Record<string, unknown>;
+  const title =
+    workItem.sourceSnapshot.orderDisplayName ??
+    getFallbackFulfillmentTitle(queueType);
+
+  return {
+    id: `${queueType}:${workItem.id}`,
+    workspaceId,
+    sourceType: queueType,
+    sourceId: workItem.id,
+    sourceStatus: workItem.status,
+    encounterId: workItem.encounterId,
+    patientId: encounter?.patientId,
+    guardianId: encounter?.guardianId,
+    title,
+    patientName: workItem.sourceSnapshot.patientName ?? patient?.name,
+    guardianName: workItem.sourceSnapshot.guardianName ?? guardian?.name,
+    progressState,
+    queueCardSecondLineBadgeLabel: getFulfillmentQueueCardSecondLineBadgeLabel(
+      queueType,
+      sourceSnapshot,
+      title,
+    ),
+    queueCardSecondLineText: title,
+    receptionType: getSourceSnapshotReceptionType(sourceSnapshot) ??
+      getReceptionType(encounter?.receptionType),
+    attentionSignals: getFallbackAttentionSignals({
+      priority: workItem.priority,
+      progressState,
+      requestedAt: workItem.createdAt,
+      sourceStatus: workItem.status,
+      teamQueueId: queueType,
+      operatingDate,
+    }),
+    assigneeUserId: workItem.assignedToUserId ?? undefined,
+    requesterName: workItem.sourceSnapshot.requestingVetName,
+    requestedAt: workItem.createdAt,
+    stateEnteredAt:
+      workItem.returnedAt ??
+      workItem.completedAt ??
+      workItem.cancelledAt ??
+      workItem.updatedAt ??
+      workItem.createdAt,
+    operatingDate: toSeoulDate(workItem.createdAt),
+    sourceHref: getFallbackSourceHref({
+      encounterId: workItem.encounterId,
+      sourceType: queueType,
+      workspaceId,
+    }),
+    drawerSummary: workItem.sourceSnapshot.instruction ?? "오더 기반 업무 상태를 확인합니다.",
+    permissionMode: "full",
+    teamQueueId: queueType,
+    teamQueueLabel: getFallbackTeamQueueLabel(queueType),
+  };
+}
+
+async function listDemoBillingItems(
+  {
+    includeCancelled,
+    includeCompleted,
+    operatingDate,
+    workspaceId,
+  }: {
+    includeCancelled: boolean;
+    includeCompleted: boolean;
+    operatingDate: string;
+    workspaceId: string;
+  },
+  invoiceCandidateGateway: Pick<InvoiceCandidateSyncGateway, "listInvoiceCandidates">,
+): Promise<HomeOperationsWorkItem[]> {
+  const items: HomeOperationsWorkItem[] = [];
+
+  for (const encounter of mockEncounters.filter((item) => item.workspaceId === workspaceId)) {
+    const result = await invoiceCandidateGateway.listInvoiceCandidates({
+      encounterId: encounter.id,
+      workspaceId,
+    });
+    if (!result.ok) continue;
+
+    const candidatesByInvoiceId = groupCandidatesByInvoiceId(result.candidates);
+    for (const [invoiceId, candidates] of candidatesByInvoiceId) {
+      const invoice = mockInvoices.find(
+        (item) => item.id === invoiceId && item.workspaceId === workspaceId,
+      );
+      if (!invoice) continue;
+
+      const item = mapBillingCandidatesToHomeItem({
+        candidates,
+        encounter,
+        includeCancelled,
+        includeCompleted,
+        invoice,
+        operatingDate,
+        workspaceId,
+      });
+      if (item) items.push(item);
+    }
+  }
+
+  return items;
+}
+
+function mapBillingCandidatesToHomeItem({
+  candidates,
+  encounter,
+  includeCancelled,
+  includeCompleted,
+  invoice,
+  operatingDate,
+  workspaceId,
+}: {
+  candidates: BillingInvoiceCandidateLine[];
+  encounter: Encounter;
+  includeCancelled: boolean;
+  includeCompleted: boolean;
+  invoice: Invoice;
+  operatingDate: string;
+  workspaceId: string;
+}): HomeOperationsWorkItem | null {
+  if (!candidates.length) return null;
+
+  const progressState = getBillingProgressState({
+    paymentState: invoice.paymentState,
+    status: invoice.status,
+  });
+  const requestedAt = invoice.createdAt;
+  if (!shouldIncludeOperatingDate(progressState, requestedAt, operatingDate)) return null;
+  if (!shouldIncludeProgress(progressState, includeCompleted, includeCancelled)) return null;
+
+  const patient = findDemoPatient(workspaceId, encounter.patientId);
+  const guardian = encounter.guardianId
+    ? findDemoGuardian(workspaceId, encounter.guardianId)
+    : undefined;
+  const totalAmount = candidates.reduce(
+    (sum, candidate) => sum + candidate.lineTotal,
+    0,
+  );
+  const stateEnteredAt =
+    invoice.paidAt ??
+    invoice.issuedAt ??
+    candidates
+      .map((candidate) => candidate.syncedAt)
+      .sort()
+      .at(-1) ??
+    requestedAt;
+
+  return {
+    id: `billing:${invoice.id}`,
+    workspaceId,
+    sourceType: "billing",
+    sourceId: invoice.id,
+    sourceStatus: `${invoice.status}:${invoice.paymentState ?? "none"}`,
+    encounterId: encounter.id,
+    patientId: encounter.patientId,
+    guardianId: encounter.guardianId,
+    title: `${invoice.invoiceNo} 수납 요청`,
+    patientName: patient?.name,
+    guardianName: guardian?.name,
+    progressState,
+    queueCardSecondLineText: `오더 ${candidates.length}건 · ${formatKrwAmount(totalAmount)}원`,
+    receptionType: getReceptionType(encounter.receptionType) ?? "외래",
+    attentionSignals: getFallbackAttentionSignals({
+      priority: "normal",
+      progressState,
+      requestedAt,
+      sourceStatus: invoice.status,
+      teamQueueId: "billing",
+      operatingDate,
+    }),
+    requesterName: "수납",
+    requestedAt,
+    stateEnteredAt,
+    operatingDate: toSeoulDate(requestedAt),
+    sourceHref: getFallbackSourceHref({
+      encounterId: encounter.id,
+      sourceType: "billing",
+      workspaceId,
+    }),
+    drawerSummary: "청구 후보 또는 수납 진행 상태를 확인합니다.",
+    permissionMode: "full",
+    teamQueueId: "billing",
+    teamQueueLabel: getFallbackTeamQueueLabel("billing"),
+  };
+}
+
+function groupCandidatesByInvoiceId(candidates: BillingInvoiceCandidateLine[]) {
+  const grouped = new Map<string, BillingInvoiceCandidateLine[]>();
+  for (const candidate of candidates) {
+    const rows = grouped.get(candidate.invoiceId) ?? [];
+    rows.push(candidate);
+    grouped.set(candidate.invoiceId, rows);
+  }
+  return grouped;
+}
+
+function getBillingProgressState({
+  paymentState,
+  status,
+}: {
+  paymentState?: string;
+  status?: string;
+}): HomeOperationsProgressState {
+  if (status === "paid" || paymentState === "paid") return "completed";
+  if (status === "voided" || status === "refunded" || paymentState === "refunded") {
+    return "cancelled";
+  }
+  if (status === "issued" || paymentState === "unpaid" || paymentState === "failed") {
+    return "in_progress";
+  }
+  return "waiting";
+}
+
+function findDemoEncounter(workspaceId: string, encounterId?: string) {
+  if (!encounterId) return undefined;
+  return mockEncounters.find(
+    (encounter) =>
+      encounter.id === encounterId &&
+      encounter.workspaceId === workspaceId,
+  );
+}
+
+function findDemoPatient(workspaceId: string, patientId?: string) {
+  if (!patientId) return undefined;
+  return mockPatients.find(
+    (patient) =>
+      patient.id === patientId &&
+      patient.workspaceId === workspaceId,
+  );
+}
+
+function findDemoGuardian(workspaceId: string, guardianId?: string) {
+  if (!guardianId) return undefined;
+  return mockGuardians.find(
+    (guardian) =>
+      guardian.id === guardianId &&
+      guardian.workspaceId === workspaceId,
+  );
+}
+
+function formatKrwAmount(value: number) {
+  return Math.round(value)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function getFallbackAttentionSignals({
@@ -1136,8 +1801,35 @@ function getString(value: unknown) {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function getNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function getEarliestIso(values: Array<string | undefined>) {
+  return values
+    .filter((value): value is string => Boolean(value))
+    .sort()[0];
+}
+
+function getLatestIso(values: Array<string | undefined>) {
+  return values
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+}
+
 function getRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
+}
+
+function recordsById(values: unknown[]) {
+  return values.filter(
+    (value): value is Record<string, unknown> =>
+      Boolean(getRecord(value)),
+  );
 }

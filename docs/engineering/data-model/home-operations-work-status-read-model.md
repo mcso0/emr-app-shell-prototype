@@ -14,6 +14,7 @@ related_docs:
   - "docs/engineering/data-model/order-fulfillment-handoff-contract.md"
 related_work:
   - "docs/work/home/HOME-PR-011-home-operations-live-work-items.md"
+  - "docs/work/home/HOME-PR-012-home-operations-source-to-home-parity.md"
 last_updated: 2026-07-05
 ---
 
@@ -34,6 +35,16 @@ The first implementation uses an additive Supabase RPC plus a Next.js read endpo
 - Sources: appointments, reception/waiting queue entries, `order_fulfillment_work_items`, and billing invoice/invoice-line candidates.
 - The route computes `isMyWork` from personal assignment plus processable team queues, and uses `scope=mine` to filter the response.
 - The Home client uses this route for non-legacy workspaces and does not use mock fallback for read failures.
+
+## Verified In HOME-PR-012
+
+HOME-PR-012 adds source replay coverage without introducing Home-only dummy data:
+
+- Reservation work is created through the reception appointment API, then read back through Home operations as `sourceType: "appointment"`.
+- Lab, imaging, dispensing, and treatment work are created through chart order confirmation and fulfillment readers, then read back by exact fulfillment `sourceId`.
+- Billing work is created through invoice candidate sync and read back at invoice/work-item grain.
+- The RPC-missing source fallback now includes billing source tables where available, alongside reception-calendar and fulfillment readers.
+- The local `clair-demo` replay gateway is only selected for deliberate demo/mock identity. Cheongdam/prepared-clinic workspaces still require live API-backed reads and must surface read failures.
 
 ## Endpoint
 

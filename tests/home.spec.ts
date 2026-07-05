@@ -355,6 +355,29 @@ test("home live operations cards match source queue card fields", async ({ page 
     sourceStatus: "live",
     items: [
       {
+        id: "appointment:appointment-live-001",
+        workspaceId: cheongdamWorkspaceId,
+        sourceType: "appointment",
+        sourceId: "appointment-live-001",
+        sourceStatus: "confirmed",
+        patientName: "나나",
+        guardianName: "이하린",
+        title: "나나 예약 확인",
+        progressState: "waiting",
+        receptionType: "예약",
+        queueCardEventText: "10:00 예약",
+        queueCardSecondLineBadgeLabel: "대기",
+        queueCardSecondLineText: "예방접종",
+        attentionSignals: ["team_queue"],
+        requestedAt: "2026-07-05T10:00:00+09:00",
+        operatingDate: "2026-07-05",
+        sourceHref: `/w/${cheongdamWorkspaceId}/reception?appointmentId=appointment-live-001&modulePanel=open`,
+        drawerSummary: "예약 접수 상태를 확인합니다.",
+        permissionMode: "full",
+        teamQueueId: "reception",
+        teamQueueLabel: "접수팀 큐",
+      },
+      {
         id: "consultation:encounter-live-001",
         workspaceId: cheongdamWorkspaceId,
         sourceType: "consultation",
@@ -377,6 +400,98 @@ test("home live operations cards match source queue card fields", async ({ page 
         permissionMode: "full",
         teamQueueId: "consultation",
         teamQueueLabel: "진료 큐",
+      },
+      {
+        id: "lab:fulfill-live-lab-001",
+        workspaceId: cheongdamWorkspaceId,
+        sourceType: "lab",
+        sourceId: "fulfill-live-lab-001",
+        sourceStatus: "requested",
+        encounterId: "encounter-live-001",
+        patientName: "구름",
+        guardianName: "문지아",
+        title: "CBC 검사",
+        progressState: "waiting",
+        receptionType: "외래",
+        queueCardSecondLineBadgeLabel: "CBC 검사",
+        queueCardSecondLineText: "CBC 검사",
+        attentionSignals: ["team_queue"],
+        requestedAt: "2026-07-05T11:13:00+09:00",
+        operatingDate: "2026-07-05",
+        sourceHref: `/w/${cheongdamWorkspaceId}/lab?encounterId=encounter-live-001&modulePanel=open`,
+        drawerSummary: "오더 기반 업무 상태를 확인합니다.",
+        permissionMode: "full",
+        teamQueueId: "lab",
+        teamQueueLabel: "임상병리팀 큐",
+      },
+      {
+        id: "imaging:fulfill-live-imaging-001",
+        workspaceId: cheongdamWorkspaceId,
+        sourceType: "imaging",
+        sourceId: "fulfill-live-imaging-001",
+        sourceStatus: "requested",
+        encounterId: "encounter-live-001",
+        patientName: "구름",
+        guardianName: "문지아",
+        title: "복부 초음파",
+        progressState: "waiting",
+        receptionType: "외래",
+        queueCardSecondLineBadgeLabel: "초음파",
+        queueCardSecondLineText: "복부 초음파",
+        attentionSignals: ["team_queue"],
+        requestedAt: "2026-07-05T11:14:00+09:00",
+        operatingDate: "2026-07-05",
+        sourceHref: `/w/${cheongdamWorkspaceId}/imaging?encounterId=encounter-live-001&modulePanel=open`,
+        drawerSummary: "오더 기반 업무 상태를 확인합니다.",
+        permissionMode: "full",
+        teamQueueId: "imaging",
+        teamQueueLabel: "영상팀 큐",
+      },
+      {
+        id: "dispensing:fulfill-live-dispensing-001",
+        workspaceId: cheongdamWorkspaceId,
+        sourceType: "dispensing",
+        sourceId: "fulfill-live-dispensing-001",
+        sourceStatus: "requested",
+        encounterId: "encounter-live-001",
+        patientName: "구름",
+        guardianName: "문지아",
+        title: "Maropitant 16mg T",
+        progressState: "waiting",
+        receptionType: "외래",
+        queueCardSecondLineBadgeLabel: "조제",
+        queueCardSecondLineText: "Maropitant 16mg T",
+        attentionSignals: ["team_queue"],
+        requestedAt: "2026-07-05T11:15:00+09:00",
+        operatingDate: "2026-07-05",
+        sourceHref: `/w/${cheongdamWorkspaceId}/dispensing?encounterId=encounter-live-001&modulePanel=open`,
+        drawerSummary: "오더 기반 업무 상태를 확인합니다.",
+        permissionMode: "full",
+        teamQueueId: "dispensing",
+        teamQueueLabel: "조제팀 큐",
+      },
+      {
+        id: "treatment:fulfill-live-treatment-001",
+        workspaceId: cheongdamWorkspaceId,
+        sourceType: "treatment",
+        sourceId: "fulfill-live-treatment-001",
+        sourceStatus: "requested",
+        encounterId: "encounter-live-001",
+        patientName: "구름",
+        guardianName: "문지아",
+        title: "피하 수액 처치",
+        progressState: "waiting",
+        receptionType: "외래",
+        queueCardSecondLineBadgeLabel: "처치",
+        queueCardSecondLineText: "피하 수액 처치",
+        attentionSignals: ["team_queue"],
+        requestedAt: "2026-07-05T11:16:00+09:00",
+        operatingDate: "2026-07-05",
+        sourceHref: `/w/${cheongdamWorkspaceId}/dispensing?encounterId=encounter-live-001&modulePanel=open`,
+        drawerSummary: "오더 기반 업무 상태를 확인합니다.",
+        permissionMode: "full",
+        teamQueueId: "treatment",
+        teamQueueLabel: "처치팀 큐",
       },
       {
         id: "billing:invoice-live-001",
@@ -403,7 +518,7 @@ test("home live operations cards match source queue card fields", async ({ page 
       },
     ],
     summary: {
-      totalVisible: 2,
+      totalVisible: 7,
       mineCount: 0,
       bySourceType: {},
       byProgressState: {},
@@ -421,6 +536,12 @@ test("home live operations cards match source queue card fields", async ({ page 
 
   await page.goto(`/w/${cheongdamWorkspaceId}/home?modulePanel=open`);
 
+  const appointmentCard = page.getByTestId("home-kanban-task-appointment:appointment-live-001");
+  await expect(appointmentCard).toContainText("예약");
+  await expect(appointmentCard).toContainText("나나");
+  await expect(appointmentCard).toContainText("예방접종");
+  await expect(appointmentCard).toContainText("10:00 예약");
+
   const card = page.getByTestId("home-kanban-task-consultation:encounter-live-001");
 
   await expect(card).toContainText("외래");
@@ -432,6 +553,22 @@ test("home live operations cards match source queue card fields", async ({ page 
   await expect(card).toContainText("미지정");
   await expect(card).not.toContainText("나");
   await expect(card).not.toContainText("카드에는 이 문구");
+
+  const labCard = page.getByTestId("home-kanban-task-lab:fulfill-live-lab-001");
+  await expect(labCard).toContainText("CBC 검사");
+  await expect(labCard).toContainText("구름");
+
+  const imagingCard = page.getByTestId("home-kanban-task-imaging:fulfill-live-imaging-001");
+  await expect(imagingCard).toContainText("초음파");
+  await expect(imagingCard).toContainText("복부 초음파");
+
+  const dispensingCard = page.getByTestId("home-kanban-task-dispensing:fulfill-live-dispensing-001");
+  await expect(dispensingCard).toContainText("조제");
+  await expect(dispensingCard).toContainText("Maropitant 16mg T");
+
+  const treatmentCard = page.getByTestId("home-kanban-task-treatment:fulfill-live-treatment-001");
+  await expect(treatmentCard).toContainText("처치");
+  await expect(treatmentCard).toContainText("피하 수액 처치");
 
   const billingCard = page.getByTestId("home-kanban-task-billing:invoice-live-001");
 
