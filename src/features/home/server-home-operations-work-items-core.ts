@@ -207,16 +207,16 @@ export async function readHomeOperationsWorkItems({
 
 export type SupabaseHomeOperationsWorkItemsRpcClient = {
   rpc(
-    functionName: "clair_list_home_operations_work_items",
-    args: {
-      p_actor_user_id: string;
-      p_include_cancelled: boolean;
-      p_include_completed: boolean;
-      p_operating_date: string;
-      p_scope: HomeOperationsScope;
-      p_workspace_id: string;
-    },
+    functionName: string,
+    args: Record<string, unknown>,
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  from?(tableName: string): {
+    select(columns: string): {
+      eq(column: string, value: string): {
+        limit(count: number): Promise<{ data: unknown[] | null; error: { message?: string } | null }>;
+      };
+    };
+  };
 };
 
 export function createSupabaseHomeOperationsWorkItemGateway(
@@ -240,9 +240,84 @@ export function createSupabaseHomeOperationsWorkItemGateway(
         p_include_cancelled: includeCancelled,
       });
 
-      if (error) return { ok: false, error: "db_read_failed", retryable: true };
+      if (error) {
+        const fallback = await listHomeOperationsWorkItemsFromExistingSources(client, {
+          actorUserId,
+          includeCancelled,
+          includeCompleted,
+          operatingDate,
+          scope,
+          workspaceId,
+        });
+        if (fallback.ok) return fallback;
+        return { ok: false, error: "db_read_failed", retryable: true };
+      }
       return mapRpcResponse(data);
     },
+  };
+}
+
+async function listHomeOperationsWorkItemsFromExistingSources(
+  client: SupabaseHomeOperationsWorkItemsRpcClient,
+  input: {
+    actorUserId: string;
+    includeCancelled: boolean;
+    includeCompleted: boolean;
+    operatingDate: string;
+    scope: HomeOperationsScope;
+    workspaceId: string;
+  },
+): Promise<HomeOperationsGatewayResult> {
+  const generatedAt = new Date().toISOString();
+  const accessIssues: HomeOperationsAccessIssue[] = [];
+  const items: HomeOperationsWorkItem[] = [];
+
+  const calendar = await client.rpc("clair_list_reception_day_calendar", {
+    p_workspace_id: input.workspaceId,
+    p_day: input.operatingDate,
+  });
+  if (calendar.error) {
+    accessIssues.push({
+      code: "reception_calendar_read_failed",
+      message: "접수/예약 업무를 불러오지 못했습니다.",
+      sourceType: "reception",
+    });
+  } else {
+    items.push(...mapCalendarFallbackItems(calendar.data, input));
+  }
+
+  if (client.from) {
+    const fulfillment = await client
+      .from("order_fulfillment_work_items")
+      .select("id, workspace_id, queue_type, status, priority, encounter_id, assigned_to_user_id, source_snapshot, created_at, updated_at, returned_at, completed_at, cancelled_at")
+      .eq("workspace_id", input.workspaceId)
+      .limit(200);
+
+    if (fulfillment.error) {
+      accessIssues.push({
+        code: "fulfillment_read_failed",
+        message: "오더 기반 업무를 불러오지 못했습니다.",
+      });
+    } else {
+      items.push(...mapFulfillmentFallbackItems(fulfillment.data ?? [], input));
+    }
+  } else {
+    accessIssues.push({
+      code: "fulfillment_reader_unavailable",
+      message: "오더 기반 업무 리더를 사용할 수 없습니다.",
+    });
+  }
+
+  if (items.length === 0 && accessIssues.length > 0) {
+    return { ok: false, error: "db_read_failed", retryable: true };
+  }
+
+  return {
+    ok: true,
+    generatedAt,
+    items: sortOperationsItems(deduplicateOperationsItems(items)),
+    sourceStatus: accessIssues.length > 0 ? "partial" : items.length > 0 ? "live" : "empty",
+    ...(accessIssues.length > 0 ? { accessIssues } : {}),
   };
 }
 
@@ -254,6 +329,450 @@ export function createMockHomeOperationsWorkItemGateway(
       return response;
     },
   };
+}
+
+function mapCalendarFallbackItems(
+  value: unknown,
+  {
+    includeCancelled,
+    includeCompleted,
+    operatingDate,
+    workspaceId,
+  }: {
+    includeCancelled: boolean;
+    includeCompleted: boolean;
+    operatingDate: string;
+    workspaceId: string;
+  },
+): HomeOperationsWorkItem[] {
+  if (!Array.isArray(value)) return [];
+
+  const items: HomeOperationsWorkItem[] = [];
+  for (const recordValue of value) {
+    if (!recordValue || typeof recordValue !== "object") continue;
+    const record = recordValue as Record<string, unknown>;
+    const appointment = getRecord(record.appointment);
+    const encounter = getRecord(record.encounter);
+    const patient = getRecord(record.patient);
+    const guardian = getRecord(record.primaryGuardian);
+    const queueEntry = getRecord(record.queueEntry);
+
+    if (appointment) {
+      const appointmentItem = mapAppointmentFallbackItem({
+        appointment,
+        encounter,
+        guardian,
+        includeCancelled,
+        includeCompleted,
+        operatingDate,
+        patient,
+        workspaceId,
+      });
+      if (appointmentItem) items.push(appointmentItem);
+    }
+
+    if (queueEntry && encounter) {
+      const queueItem = mapQueueFallbackItem({
+        encounter,
+        guardian,
+        includeCancelled,
+        includeCompleted,
+        operatingDate,
+        patient,
+        queueEntry,
+        workspaceId,
+      });
+      if (queueItem) items.push(queueItem);
+    }
+  }
+
+  return items;
+}
+
+function mapAppointmentFallbackItem({
+  appointment,
+  encounter,
+  guardian,
+  includeCancelled,
+  includeCompleted,
+  operatingDate,
+  patient,
+  workspaceId,
+}: {
+  appointment: Record<string, unknown>;
+  encounter?: Record<string, unknown>;
+  guardian?: Record<string, unknown>;
+  includeCancelled: boolean;
+  includeCompleted: boolean;
+  operatingDate: string;
+  patient?: Record<string, unknown>;
+  workspaceId: string;
+}): HomeOperationsWorkItem | null {
+  const sourceId = getString(appointment.id);
+  const sourceStatus = getString(appointment.status) ?? "unknown";
+  const requestedAt = getString(appointment.scheduledStartAt) ?? getString(appointment.createdAt);
+  if (!sourceId || !requestedAt) return null;
+
+  const progressState = sourceStatus === "checked_in"
+    ? "completed"
+    : sourceStatus === "cancelled" || sourceStatus === "no_show"
+      ? "cancelled"
+      : "waiting";
+  if (!shouldIncludeProgress(progressState, includeCompleted, includeCancelled)) return null;
+
+  const patientName = getString(patient?.name);
+  const teamQueueId = "reception";
+  return {
+    id: `appointment:${sourceId}`,
+    workspaceId,
+    sourceType: "appointment",
+    sourceId,
+    sourceStatus,
+    encounterId: getString(encounter?.id),
+    patientId: getString(appointment.patientId),
+    guardianId: getString(appointment.guardianId),
+    title: patientName ? `${patientName} 예약 확인` : "예약 확인",
+    patientName,
+    guardianName: getString(guardian?.name),
+    progressState,
+    attentionSignals: getFallbackAttentionSignals({
+      priority: "normal",
+      progressState,
+      requestedAt,
+      sourceStatus,
+      teamQueueId,
+      operatingDate,
+    }),
+    requestedAt,
+    stateEnteredAt: getString(appointment.updatedAt) ?? requestedAt,
+    operatingDate: toSeoulDate(requestedAt),
+    sourceHref: `/w/${workspaceId}/reception?appointmentId=${sourceId}&modulePanel=open`,
+    drawerSummary:
+      getString(appointment.visitPurpose) ??
+      getString(appointment.symptomNote) ??
+      "예약 접수 상태를 확인합니다.",
+    permissionMode: "full",
+    teamQueueId,
+    teamQueueLabel: "접수팀 큐",
+  };
+}
+
+function mapQueueFallbackItem({
+  encounter,
+  guardian,
+  includeCancelled,
+  includeCompleted,
+  operatingDate,
+  patient,
+  queueEntry,
+  workspaceId,
+}: {
+  encounter: Record<string, unknown>;
+  guardian?: Record<string, unknown>;
+  includeCancelled: boolean;
+  includeCompleted: boolean;
+  operatingDate: string;
+  patient?: Record<string, unknown>;
+  queueEntry: Record<string, unknown>;
+  workspaceId: string;
+}): HomeOperationsWorkItem | null {
+  const sourceId = getString(queueEntry.id);
+  const encounterId = getString(encounter.id);
+  const sourceStatus = getString(queueEntry.status) ?? "unknown";
+  const requestedAt = getString(queueEntry.enteredAt);
+  const queueType = getString(queueEntry.queueType) ?? "consultation";
+  if (!sourceId || !encounterId || !requestedAt) return null;
+
+  const encounterStatus = getString(encounter.status);
+  const progressState = sourceStatus === "cancelled" || encounterStatus === "cancelled"
+    ? "cancelled"
+    : sourceStatus === "done" || encounterStatus === "completed" || encounterStatus === "ready_for_billing"
+      ? "completed"
+      : sourceStatus === "called" || sourceStatus === "in_progress" || encounterStatus === "in_consultation" || encounterStatus === "ordered"
+        ? "in_progress"
+        : "waiting";
+  if (!shouldIncludeProgress(progressState, includeCompleted, includeCancelled)) return null;
+
+  const sourceType = queueType === "billing"
+    ? "billing"
+    : queueType === "treatment"
+      ? "treatment"
+      : queueType === "reception"
+        ? "reception"
+        : "consultation";
+  const teamQueueId = sourceType === "consultation" ? "consultation" : sourceType;
+  const patientName = getString(patient?.name);
+
+  return {
+    id: `${sourceType}:${sourceId}`,
+    workspaceId,
+    sourceType,
+    sourceId,
+    sourceStatus,
+    encounterId,
+    patientId: getString(encounter.patientId),
+    guardianId: getString(encounter.guardianId),
+    title: getQueueFallbackTitle(sourceType, patientName),
+    patientName,
+    guardianName: getString(guardian?.name),
+    progressState,
+    attentionSignals: getFallbackAttentionSignals({
+      priority: getString(queueEntry.priority),
+      progressState,
+      requestedAt,
+      sourceStatus,
+      teamQueueId,
+      operatingDate,
+    }),
+    assigneeUserId: sourceType === "consultation" ? getString(encounter.primaryVeterinarianId) : undefined,
+    requestedAt,
+    stateEnteredAt: getString(queueEntry.finishedAt) ?? getString(queueEntry.calledAt) ?? requestedAt,
+    operatingDate: toSeoulDate(requestedAt),
+    sourceHref: getFallbackSourceHref({ encounterId, sourceType, workspaceId }),
+    drawerSummary:
+      getString(encounter.visitPurpose) ??
+      getString(encounter.chiefComplaint) ??
+      "접수 후 원내 대기 상태를 확인합니다.",
+    permissionMode: "full",
+    teamQueueId,
+    teamQueueLabel: getFallbackTeamQueueLabel(sourceType),
+  };
+}
+
+function mapFulfillmentFallbackItems(
+  rows: unknown[],
+  {
+    includeCancelled,
+    includeCompleted,
+    operatingDate,
+    workspaceId,
+  }: {
+    includeCancelled: boolean;
+    includeCompleted: boolean;
+    operatingDate: string;
+    workspaceId: string;
+  },
+): HomeOperationsWorkItem[] {
+  return rows
+    .map((row) =>
+      mapFulfillmentFallbackItem(row, {
+        includeCancelled,
+        includeCompleted,
+        operatingDate,
+        workspaceId,
+      }),
+    )
+    .filter((item): item is HomeOperationsWorkItem => Boolean(item));
+}
+
+function mapFulfillmentFallbackItem(
+  rowValue: unknown,
+  {
+    includeCancelled,
+    includeCompleted,
+    operatingDate,
+    workspaceId,
+  }: {
+    includeCancelled: boolean;
+    includeCompleted: boolean;
+    operatingDate: string;
+    workspaceId: string;
+  },
+): HomeOperationsWorkItem | null {
+  if (!rowValue || typeof rowValue !== "object") return null;
+  const row = rowValue as Record<string, unknown>;
+  const sourceId = getString(row.id);
+  const queueType = getSourceType(row.queue_type);
+  const sourceStatus = getString(row.status) ?? "unknown";
+  const requestedAt = getString(row.created_at);
+  const encounterId = getString(row.encounter_id);
+  if (!sourceId || !queueType || !requestedAt || !encounterId) return null;
+
+  const progressState = sourceStatus === "completed"
+    ? "completed"
+    : sourceStatus === "cancelled"
+      ? "cancelled"
+      : sourceStatus === "in_progress"
+        ? "in_progress"
+        : "waiting";
+  if (!shouldIncludeOperatingDate(progressState, requestedAt, operatingDate)) return null;
+  if (!shouldIncludeProgress(progressState, includeCompleted, includeCancelled)) return null;
+
+  const sourceSnapshot = getRecord(row.source_snapshot);
+  const title =
+    getString(sourceSnapshot?.orderDisplayName) ??
+    getString(sourceSnapshot?.billingName) ??
+    getFallbackFulfillmentTitle(queueType);
+
+  return {
+    id: `${queueType}:${sourceId}`,
+    workspaceId,
+    sourceType: queueType,
+    sourceId,
+    sourceStatus,
+    encounterId,
+    title,
+    patientName: getString(sourceSnapshot?.patientName),
+    guardianName: getString(sourceSnapshot?.guardianName),
+    progressState,
+    attentionSignals: getFallbackAttentionSignals({
+      priority: getString(row.priority),
+      progressState,
+      requestedAt,
+      sourceStatus,
+      teamQueueId: queueType,
+      operatingDate,
+    }),
+    assigneeUserId: getString(row.assigned_to_user_id),
+    requestedAt,
+    stateEnteredAt:
+      getString(row.returned_at) ??
+      getString(row.completed_at) ??
+      getString(row.cancelled_at) ??
+      getString(row.updated_at) ??
+      requestedAt,
+    operatingDate: toSeoulDate(requestedAt),
+    sourceHref: getFallbackSourceHref({ encounterId, sourceType: queueType, workspaceId }),
+    drawerSummary: getString(sourceSnapshot?.instruction) ?? "오더 기반 업무 상태를 확인합니다.",
+    permissionMode: "full",
+    teamQueueId: queueType,
+    teamQueueLabel: getFallbackTeamQueueLabel(queueType),
+  };
+}
+
+function getFallbackAttentionSignals({
+  operatingDate,
+  priority,
+  progressState,
+  requestedAt,
+  sourceStatus,
+  teamQueueId,
+}: {
+  operatingDate: string;
+  priority?: string;
+  progressState: HomeOperationsProgressState;
+  requestedAt: string;
+  sourceStatus: string;
+  teamQueueId?: string;
+}): HomeOperationsAttentionSignal[] {
+  const signals: HomeOperationsAttentionSignal[] = [];
+  if (priority === "urgent") signals.push("urgent");
+  if (sourceStatus === "returned" || sourceStatus === "re_requested") signals.push("re_requested");
+  if (teamQueueId) signals.push("team_queue");
+  else signals.push("assignment_missing");
+  if (progressState !== "completed" && progressState !== "cancelled" && toSeoulDate(requestedAt) < operatingDate) {
+    signals.push("long_stay");
+  }
+  return signals;
+}
+
+function shouldIncludeProgress(
+  progressState: HomeOperationsProgressState,
+  includeCompleted: boolean,
+  includeCancelled: boolean,
+) {
+  if (progressState === "completed" && !includeCompleted) return false;
+  if (progressState === "cancelled" && !includeCancelled) return false;
+  return true;
+}
+
+function shouldIncludeOperatingDate(
+  progressState: HomeOperationsProgressState,
+  requestedAt: string,
+  operatingDate: string,
+) {
+  const sourceOperatingDate = toSeoulDate(requestedAt);
+  if (sourceOperatingDate === operatingDate) return true;
+  return (
+    sourceOperatingDate < operatingDate &&
+    progressState !== "completed" &&
+    progressState !== "cancelled"
+  );
+}
+
+function sortOperationsItems(items: HomeOperationsWorkItem[]) {
+  return [...items].sort((first, second) => {
+    const score = (item: HomeOperationsWorkItem) => {
+      if (item.attentionSignals.includes("urgent")) return 0;
+      if (item.attentionSignals.includes("re_requested")) return 1;
+      if (item.attentionSignals.includes("assignment_missing")) return 2;
+      if (item.progressState === "in_progress") return 3;
+      if (item.progressState === "waiting") return 4;
+      if (item.progressState === "completed") return 5;
+      return 6;
+    };
+    return score(first) - score(second) || first.requestedAt.localeCompare(second.requestedAt);
+  });
+}
+
+function deduplicateOperationsItems(items: HomeOperationsWorkItem[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+function getQueueFallbackTitle(
+  sourceType: HomeOperationsSourceType,
+  patientName?: string,
+) {
+  const fallback = sourceType === "billing"
+    ? "수납 대기"
+    : sourceType === "treatment"
+      ? "처치 대기"
+      : sourceType === "reception"
+        ? "접수 확인"
+        : "진료 대기";
+  return patientName ? `${patientName} ${fallback}` : fallback;
+}
+
+function getFallbackFulfillmentTitle(sourceType: HomeOperationsSourceType) {
+  if (sourceType === "lab") return "임상병리 업무";
+  if (sourceType === "imaging") return "영상 업무";
+  if (sourceType === "dispensing") return "조제 업무";
+  return "처치 업무";
+}
+
+function getFallbackTeamQueueLabel(sourceType: HomeOperationsSourceType) {
+  if (sourceType === "appointment" || sourceType === "reception") return "접수팀 큐";
+  if (sourceType === "consultation") return "진료 큐";
+  if (sourceType === "lab") return "임상병리팀 큐";
+  if (sourceType === "imaging") return "영상팀 큐";
+  if (sourceType === "dispensing") return "조제팀 큐";
+  if (sourceType === "billing") return "수납팀 큐";
+  return "처치팀 큐";
+}
+
+function getFallbackSourceHref({
+  encounterId,
+  sourceType,
+  workspaceId,
+}: {
+  encounterId: string;
+  sourceType: HomeOperationsSourceType;
+  workspaceId: string;
+}) {
+  if (sourceType === "lab") return `/w/${workspaceId}/lab?encounterId=${encounterId}&modulePanel=open`;
+  if (sourceType === "imaging") return `/w/${workspaceId}/imaging?encounterId=${encounterId}&modulePanel=open`;
+  if (sourceType === "dispensing" || sourceType === "treatment") {
+    return `/w/${workspaceId}/dispensing?encounterId=${encounterId}&modulePanel=open`;
+  }
+  if (sourceType === "billing") return `/w/${workspaceId}/billing?encounterId=${encounterId}&modulePanel=open`;
+  return `/w/${workspaceId}/treatment?encounterId=${encounterId}&modulePanel=open`;
+}
+
+function toSeoulDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+  });
+  return formatter.format(date);
 }
 
 export function summarizeOperationsWorkItems(
@@ -520,4 +1039,10 @@ function getString(value: unknown) {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function getRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
