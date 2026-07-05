@@ -188,6 +188,7 @@ import {
   getOperatingMinutesFromIso,
   getWorkspaceOperatingDate,
   getWorkspaceOperatingNow,
+  isIsoOperatingDate,
 } from "@/lib/emr-domain/demo-date";
 import {
   isLegacySalesDemoWorkspace,
@@ -2673,7 +2674,14 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     (state) => state.operatingDateByWorkspace[workspaceId],
   );
   const calendarView = calendarViewByWorkspace[workspaceId] ?? "day";
-  const operatingDate = operatingDateOverride ?? defaultOperatingDate;
+  const routeDateParam = searchParams.get("date");
+  const routeOperatingDate = isIsoOperatingDate(routeDateParam)
+    ? routeDateParam
+    : undefined;
+  const operatingDate =
+    routeDateParam === null
+      ? (operatingDateOverride ?? defaultOperatingDate)
+      : (routeOperatingDate ?? defaultOperatingDate);
   const miniCalendarWeekStartDate =
     calendarView === "week" ? getStartOfWeekIsoDate(operatingDate) : undefined;
   const miniCalendarWeekEndDate = miniCalendarWeekStartDate
@@ -5725,7 +5733,14 @@ export function ReceptionContent() {
   const operatingDateOverride = useReceptionStore(
     (state) => state.operatingDateByWorkspace[workspaceId],
   );
-  const operatingDate = operatingDateOverride ?? defaultOperatingDate;
+  const routeDateParam = searchParams.get("date");
+  const routeOperatingDate = isIsoOperatingDate(routeDateParam)
+    ? routeDateParam
+    : undefined;
+  const operatingDate =
+    routeDateParam === null
+      ? (operatingDateOverride ?? defaultOperatingDate)
+      : (routeOperatingDate ?? defaultOperatingDate);
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
   const veterinarians = liveStaffSourceEnabled
@@ -5850,6 +5865,25 @@ export function ReceptionContent() {
     dispatchReceptionCalendarDragClear();
     setCalendarDraftSelection(undefined);
   }
+  useEffect(() => {
+    if (routeDateParam === null) return;
+
+    const nextOperatingDate = routeOperatingDate ?? defaultOperatingDate;
+    if (operatingDateOverride === nextOperatingDate) return;
+
+    dispatchReceptionCalendarDragClear();
+    setCalendarDraftSelection(undefined);
+    setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
+  }, [
+    defaultOperatingDate,
+    operatingDateOverride,
+    routeDateParam,
+    routeOperatingDate,
+    setCalendarDraftSelection,
+    setWorkspaceOperatingDate,
+    workspaceId,
+  ]);
+
   const handleOperatingDateChange = (nextOperatingDate: string) => {
     clearCalendarTransientSelection();
     setWorkspaceOperatingDate(workspaceId, nextOperatingDate);

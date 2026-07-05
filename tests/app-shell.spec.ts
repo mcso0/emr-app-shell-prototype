@@ -198,6 +198,22 @@ test("global command palette opens patient guardian registration from any worksp
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing\?modulePanel=open&aside=closed/);
 });
 
+test("global command palette opens today's reception schedule", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=closed");
+
+  await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
+  await page.locator("#command-result-action-today-appointments").click();
+
+  await expect(page).toHaveURL(
+    /\/w\/clair-demo\/reception\?modulePanel=open&date=2026-05-01/,
+  );
+  await expect(
+    page.getByRole("button", { name: "오늘 26.05.01 (금) 선택됨" }),
+  ).toBeVisible();
+});
+
 test("global notification bell opens right drawer with badge policy count", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=open");
 

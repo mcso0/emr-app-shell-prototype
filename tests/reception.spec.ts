@@ -329,6 +329,84 @@ test("reception renders the first-path workspace instead of the placeholder", as
   );
 });
 
+test("reception route date selects requested operating date", async ({
+  page,
+}) => {
+  const calendarRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/calendar/day") &&
+      request.url().includes("date=2026-05-08"),
+  );
+  const queueRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/queue") &&
+      request.url().includes("date=2026-05-08"),
+  );
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open&date=2026-05-08");
+  await Promise.all([calendarRead, queueRead]);
+
+  await expect(page.getByLabel("26.05.08 (금) 표시 중")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("appointment-card-appointment-coco-260501"),
+  ).toHaveCount(0);
+});
+
+test("reception route date ignores invalid route date", async ({ page }) => {
+  const calendarRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/calendar/day") &&
+      request.url().includes("date=2026-05-01"),
+  );
+  const queueRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/queue") &&
+      request.url().includes("date=2026-05-01"),
+  );
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open&date=bad");
+  await Promise.all([calendarRead, queueRead]);
+
+  await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "오늘 26.05.01 (금) 선택됨" }),
+  ).toBeVisible();
+});
+
+test("reception selected operating date resets to today from global command", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open&date=2026-05-08");
+  await expect(page.getByLabel("26.05.08 (금) 표시 중")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
+  const calendarRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/calendar/day") &&
+      request.url().includes("date=2026-05-01"),
+  );
+  const queueRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/queue") &&
+      request.url().includes("date=2026-05-01"),
+  );
+
+  await page.locator("#command-result-action-today-appointments").click();
+  await Promise.all([calendarRead, queueRead]);
+
+  await expect(page).toHaveURL(/date=2026-05-01/);
+  await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "오늘 26.05.01 (금) 선택됨" }),
+  ).toBeVisible();
+});
+
 test("reception topbar refresh refetches the selected operating date", async ({
   page,
 }) => {
@@ -381,15 +459,21 @@ test("reception topbar refresh refetches the selected operating date", async ({
   await refreshButton.click();
   await Promise.all([manualCalendarRead, manualQueueRead]);
 
-  const nextDayRead = page.waitForRequest(
+  const pickedDayCalendarRead = page.waitForRequest(
     (request) =>
       request.url().includes("/reception/calendar/day") &&
-      request.url().includes("date=2026-05-02"),
+      request.url().includes("date=2026-05-08"),
   );
-  await dateControl.getByRole("button", { name: "다음 날짜" }).click();
-  await nextDayRead;
+  const pickedDayQueueRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/queue") &&
+      request.url().includes("date=2026-05-08"),
+  );
+  await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
+  await Promise.all([pickedDayCalendarRead, pickedDayQueueRead]);
+  await expect(page.getByLabel("26.05.08 (금) 표시 중")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "26.05.02 (토) 날짜 선택" }),
+    page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
   ).toBeVisible();
   await expect(
     dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
@@ -398,33 +482,35 @@ test("reception topbar refresh refetches the selected operating date", async ({
     page.getByTestId("appointment-card-appointment-coco-260501"),
   ).toHaveCount(0);
 
-  await dateControl
-    .getByRole("button", { name: "26.05.02 (토) 날짜 선택" })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "오늘 26.05.01 (금) 선택" }),
-  ).toBeVisible();
-  const pickedDayRead = page.waitForRequest(
+  const selectedDateRefreshCalendarRead = page.waitForRequest(
     (request) =>
       request.url().includes("/reception/calendar/day") &&
       request.url().includes("date=2026-05-08"),
   );
-  await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
-  await pickedDayRead;
-  await expect(
-    page.getByRole("button", { name: "26.05.08 (금) 날짜 선택" }),
-  ).toBeVisible();
+  const selectedDateRefreshQueueRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/queue") &&
+      request.url().includes("date=2026-05-08"),
+  );
+  await refreshButton.click();
+  await Promise.all([
+    selectedDateRefreshCalendarRead,
+    selectedDateRefreshQueueRead,
+  ]);
 
-  const todayRead = page.waitForRequest(
+  const todayCalendarRead = page.waitForRequest(
     (request) =>
       request.url().includes("/reception/calendar/day") &&
       request.url().includes("date=2026-05-01"),
   );
+  const todayQueueRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/queue") &&
+      request.url().includes("date=2026-05-01"),
+  );
   await dateControl.getByRole("button", { name: "오늘 일자로 이동" }).click();
-  await todayRead;
-  await expect(
-    page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" }),
-  ).toBeVisible();
+  await Promise.all([todayCalendarRead, todayQueueRead]);
+  await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
   await expect(
     dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeDisabled();
@@ -446,7 +532,7 @@ test("reception topbar refresh refetches the selected operating date", async ({
   );
   await refreshButton.click();
   await expect(
-    page.getByText("접수/예약 새로고침에 실패했습니다."),
+    page.getByText("접수/예약 새로고침에 실패했습니다.").first(),
   ).toBeVisible();
 });
 

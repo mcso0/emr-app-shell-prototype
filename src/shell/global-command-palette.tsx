@@ -30,6 +30,7 @@ import {
 import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
 import type { AppIcon } from "@/components/icons";
 import type { Appointment, Encounter, EmrId, Guardian, Patient } from "@/types/emr-domain";
@@ -100,7 +101,7 @@ const quickActionSpecs = [
   },
   {
     id: "today-appointments",
-    title: "오늘 예약 보기",
+    title: "오늘 접수/예약 보기",
     subtitle: "접수/예약 캘린더와 대기 목록을 엽니다.",
     badge: "View",
     icon: ClockIcon,
@@ -466,7 +467,14 @@ export function GlobalCommandPalette({
       return;
     }
 
-    router.push(item.href, { scroll: false });
+    const href =
+      item.id === "action-today-appointments"
+        ? createHref(workspaceId, "reception", {
+            date: getWorkspaceOperatingDate(workspaceId),
+          })
+        : item.href;
+
+    router.push(href, { scroll: false });
   };
 
   const moveActiveIndex = (direction: 1 | -1) => {
