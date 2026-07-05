@@ -66,6 +66,7 @@ last_updated: 2026-07-05
 - 현장 접수 또는 예약 접수 처리 시 사용하는 입력 영역.
 - 현재 존재하는 reference image는 `docs/design/assets/reference-screens/reception/reception-form-drawer.png`뿐이다.
 - 필드 밀도와 footer action hierarchy는 이 reference를 참고하되, pixel-perfect 기준으로 보지 않는다.
+- 전역 command palette의 `신규 진료 접수` action도 이 drawer를 사용한다. 현재 module을 떠나는 단순 navigation이 아니라, 같은 workspace shell 위에서 drawer workflow를 시작해야 한다.
 
 ## Primary Flow 1: 현장 접수
 
@@ -105,6 +106,27 @@ last_updated: 2026-07-05
 - 같은 보호자 아래 동일 동물명은 경고를 보여주되, 최종 확인 전 사용자가 판단할 수 있게 한다.
 - 권한 없음, inactive user, workspace membership 오류, 서버 저장 실패는 draft를 유지한 상태에서 재시도 가능한 오류로 보여준다.
 - dirty draft가 있는 상태에서 닫기, 취소, module 이동을 시도하면 이탈 확인 dialog를 거친다.
+
+## Primary Flow 1-B: 전역 신규 진료 접수
+
+1. 직원이 현재 module에서 전역 command palette를 연다.
+2. `신규 진료 접수` action을 선택한다.
+3. 현재 module은 유지되고, 우측 drawer에 현장 접수 form이 열린다.
+4. 직원은 보호자/동물 검색, 방문 목적, 진료과, 담당 수의사, 체중, 소요 시간, 메모를 입력한다.
+5. `생성`을 누르면 기존 현장 접수 API/store 경로로 walk-in encounter와 queue row가 생성된다.
+6. 생성 성공 시 drawer는 닫히고 성공 toast가 표시된다.
+7. toast의 `접수 확인하기` action을 누르면 접수/예약 화면으로 이동한다.
+8. 이동 후 생성한 접수 건이 대기열에서 선택되어 있고 `접수 상세` drawer가 열린다.
+
+### Required UI Feedback
+
+- `신규 진료 접수` action은 어느 workspace module에서 실행해도 no-op이면 안 된다.
+- initial click은 접수/예약 화면으로 강제 이동하지 않는다.
+- 생성 성공 toast는 생성된 접수를 확인하는 명확한 action을 제공한다.
+- toast action navigation은 dirty-state guard와 shell URL state 복원 규칙을 따라야 한다.
+- 생성 후 접수/예약 화면으로 이동했을 때 대기열 선택, 환자 선택, encounter drawer가 같은 생성 건을 가리켜야 한다.
+- 생성 건 readback이 아직 늦으면 빈 상세가 아니라 기존 접수/예약 재조회 또는 실패 피드백을 보여야 한다.
+- 같은 환자 당일 중복 접수 의심 확인과 작성 중 이탈 확인은 별도 후속 UX로 다룬다.
 
 ## Primary Flow 2: 예약 환자 접수 처리
 
@@ -177,4 +199,5 @@ last_updated: 2026-07-05
 - 접수/예약 검색은 보호자명, 환자명, 방문 목적을 찾는다.
 - 전역 command palette의 `환자/보호자 등록` action은 어느 workspace module에서든 통합 등록 dialog를 연다.
 - 등록 예외 케이스는 필수값, 중복, 권한/서버 실패, dirty draft 이탈 확인을 포함한다.
+- 전역 command palette의 `신규 진료 접수` action은 어느 workspace module에서든 현장 접수 drawer를 열고, 생성 완료 toast의 `접수 확인하기` action으로 생성 encounter를 선택한 접수/예약 drawer 상태에 진입한다.
 - 취소 또는 노쇼 항목은 접수 처리 액션을 노출하지 않는다.

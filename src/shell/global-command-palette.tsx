@@ -32,12 +32,13 @@ import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
+import { useLayoutStore } from "@/stores/layout-store";
 import type { AppIcon } from "@/components/icons";
 import type { Appointment, Encounter, EmrId, Guardian, Patient } from "@/types/emr-domain";
 
 type CommandItemKind = "action" | "patient" | "guardian" | "appointment" | "encounter";
 type CommandFilter = "all" | "patient" | "guardian" | "phone" | "chart" | "vet" | "technician" | "desk";
-type CommandAction = "open-patient-guardian-registration";
+type CommandAction = "open-new-reception" | "open-patient-guardian-registration";
 
 type CommandItem = {
   action?: CommandAction;
@@ -82,6 +83,7 @@ const commandFilterItems: Array<SegmentedControlItem<CommandFilter>> = [
 const quickActionSpecs = [
   {
     id: "new-reception",
+    action: "open-new-reception",
     title: "신규 진료 접수",
     subtitle: "접수/예약 화면에서 새 내원 접수를 시작합니다.",
     badge: "Action",
@@ -411,6 +413,7 @@ export function GlobalCommandPalette({
   const flattenedItems = useMemo(() => flattenSections(sections), [sections]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [registrationOpenRequestKey, setRegistrationOpenRequestKey] = useState(0);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -462,6 +465,11 @@ export function GlobalCommandPalette({
 
   const runCommand = (item: CommandItem) => {
     handleOpenChange(false);
+    if (item.action === "open-new-reception") {
+      setActiveDrawer({ type: "reception-form", id: "walk-in" });
+      return;
+    }
+
     if (item.action === "open-patient-guardian-registration") {
       setRegistrationOpenRequestKey((current) => current + 1);
       return;

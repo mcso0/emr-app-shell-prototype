@@ -7908,6 +7908,7 @@ function ReceptionDraftTaskDrawer({
 
 export function ReceptionDrawer() {
   const params = useParams<{ workspaceId?: string | string[] }>();
+  const router = useRouter();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
@@ -8091,6 +8092,24 @@ export function ReceptionDrawer() {
               walkIn.encounter.primaryVeterinarianId,
               veterinarians,
             ),
+          });
+          toast.success("접수를 생성했습니다.", {
+            action: {
+              label: "접수 확인하기",
+              onClick: () => {
+                const searchParams = new URLSearchParams({
+                  modulePanel: "open",
+                  drawer: `reception-encounter:${walkIn.encounter.id}`,
+                  encounterId: walkIn.encounter.id,
+                  patientId: patient.id,
+                });
+
+                router.push(
+                  `/w/${encodeURIComponent(workspaceId)}/reception?${searchParams.toString()}`,
+                  { scroll: false },
+                );
+              },
+            },
           });
         }}
       />

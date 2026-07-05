@@ -4524,7 +4524,24 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
     memo: "보호자가 계단 보행을 걱정함",
     plannedStartAt: "2026-05-01T10:45:00+09:00",
   });
-  const dubuCard = page.getByTestId("patient-card-patient-dubu");
+  await expect(page.getByRole("button", { name: "접수 확인하기" })).toBeVisible();
+  await page.getByRole("button", { name: "접수 확인하기" }).click();
+
+  await expect(page).toHaveURL(
+    /\/w\/clair-demo\/reception\?.*encounterId=encounter-live-walkin-dubu/,
+  );
+  await expect(page).toHaveURL(
+    /drawer=reception-encounter%3Aencounter-live-walkin-dubu/,
+  );
+  await expect(page.getByTestId("workspace-drawer")).toContainText("접수 상세");
+  await expect(page.getByTestId("workspace-drawer")).toContainText(
+    "보행 재검 및 통증 상담",
+  );
+  await page.getByRole("button", { name: "상세 닫기" }).click();
+
+  const dubuCard = page
+    .getByTestId("patient-card-patient-dubu")
+    .filter({ hasText: "보행 재검 및 통증 상담" });
   await expect(dubuCard).toContainText("두부");
   await expect(dubuCard).toContainText("보행 재검 및 통증 상담");
   await expect(dubuCard).toContainText("김도윤");
