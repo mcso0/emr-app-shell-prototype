@@ -67,6 +67,7 @@ Handed to human review on 2026-07-05.
 - Removed Home operations mock fallback for non-legacy workspaces.
 - Added focused server and Playwright coverage for the new contract.
 - Completion report: `docs/completed/home/2026-07-05-home-operations-live-work-items-report.html`.
-- Remote DB execution was attempted but not applied because this environment has no Supabase project link or access token.
-- Follow-up production hotfix: when the aggregate RPC is not present in remote Supabase yet, the server read path falls back to existing live reception-calendar and fulfillment readers without restoring Home mock fallback.
+- Initial remote DB execution was attempted but not applied because the earlier environment had no Supabase project link or access token.
+- Follow-up remote DB application on 2026-07-05: applied additive migration `home_operations_work_items_reader` to the approved `clair-emr-staging` Supabase project. Read-only Cheongdam smoke confirmed the aggregate RPC returns `sourceStatus=live`, total 7 active items, including consultation 3, lab 2, imaging 1, and treatment 1.
+- Follow-up production hotfix: when the aggregate RPC is not present in a remote Supabase environment yet, the server read path falls back to existing live reception-calendar and fulfillment readers without restoring Home mock fallback.
 - Follow-up UI correction: Home Kanban cards now use the same queue-card field contract as source modules, carry source card fields through the read model, group billing cards at invoice/work-item grain, and no longer inject Home-only `나`/status-decision labels into the card body.
