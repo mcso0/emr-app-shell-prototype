@@ -2211,7 +2211,7 @@ function CalendarCurrentTimeIndicator({
     <div
       data-testid={testId}
       className={cn(
-        "pointer-events-none absolute z-20 flex items-center",
+        "pointer-events-none absolute z-[35] flex items-center",
         className,
       )}
       style={style}
