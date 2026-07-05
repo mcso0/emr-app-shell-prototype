@@ -77,5 +77,5 @@ export function ReceptionPanelStateMessage({
 }
 
 export function ReceptionEmptyState({ children }: { children: React.ReactNode }) {
-  return <EmrQueueEmptyState>{children}</EmrQueueEmptyState>;
+  return <EmrQueueEmptyState placement="panel-center">{children}</EmrQueueEmptyState>;
 }

@@ -3000,7 +3000,10 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         viewportClassName="scroll-fade-y scroll-fade-8"
       >
         {showQueueLoadingState ? (
-          <EmrQueueLoadingState title="접수/예약 정보를 불러오는 중입니다" />
+          <EmrQueueLoadingState
+            placement="panel-center"
+            title="접수/예약 정보를 불러오는 중입니다"
+          />
         ) : visibleQueueGroups.length ? (
           visibleQueueGroups.map((group) => (
             <ReceptionQueueSideGroup
@@ -3067,6 +3070,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         ) : searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="접수/예약 항목"
+            placement="panel-center"
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
