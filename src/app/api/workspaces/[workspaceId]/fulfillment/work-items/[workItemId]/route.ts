@@ -1,4 +1,5 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
+import { demoClientSessionIdHeader } from "@/features/auth/demo-actor";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
@@ -8,6 +9,10 @@ import {
   createSupabaseWorkspacePermissionGateway,
   type SupabaseWorkspacePermissionClient,
 } from "@/features/auth/supabase-workspace-permission-gateway";
+import {
+  createSupabaseNotificationPersistenceGateway,
+  type SupabaseNotificationPersistenceRpcClient,
+} from "@/features/notifications/server-notification-persistence";
 import {
   createSupabaseFulfillmentWorkItemGateway,
   updateFulfillmentWorkItem,
@@ -81,6 +86,16 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     workspaceId,
     workItemId,
     input,
+    emitBillingReadyNotifications: true,
+    notificationEventScopeId:
+      identity.source === "demo_header_mock_mode"
+        ? request.headers.get(demoClientSessionIdHeader)
+        : null,
+    notificationPersistenceGateway: client
+      ? createSupabaseNotificationPersistenceGateway(
+          client as unknown as SupabaseNotificationPersistenceRpcClient,
+        )
+      : undefined,
     permissionAdapter,
     gateway: client
       ? createSupabaseFulfillmentWorkItemGateway(

@@ -24,16 +24,20 @@ type NotificationFilter = "all" | "unread" | "requires_action" | "archived";
 
 type GlobalNotificationDrawerProps = {
   badgeCount: number;
+  errorMessage?: string | null;
   fallbackDetailNotificationId: string | null;
+  loading?: boolean;
   notifications: GlobalNotification[];
   open: boolean;
-  onArchiveNotification: (notificationId: string) => void;
+  stateNotice?: string;
+  onArchiveNotification: (notificationId: string) => void | Promise<unknown>;
   onCloseFallbackDetail: () => void;
-  onMarkAllRead: () => void;
-  onMarkNotificationRead: (notificationId: string) => void;
+  onMarkAllRead: () => void | Promise<unknown>;
+  onMarkNotificationRead: (notificationId: string) => void | Promise<unknown>;
   onOpenChange: (open: boolean) => void;
-  onOpenNotificationSource: (notification: GlobalNotification) => void;
-  onRestoreNotification: (notificationId: string) => void;
+  onOpenNotificationSource: (notification: GlobalNotification) => void | Promise<unknown>;
+  onRestoreNotification: (notificationId: string) => void | Promise<unknown>;
+  onRetry?: () => void;
 };
 
 const filterLabels: Record<NotificationFilter, string> = {
@@ -64,7 +68,12 @@ function getFilteredNotifications(notifications: GlobalNotification[], filter: N
 function getFilterItems(notifications: GlobalNotification[]): Array<SegmentedControlItem<NotificationFilter>> {
   return (["all", "unread", "requires_action", "archived"] as NotificationFilter[]).map((filter) => ({
     value: filter,
-    label: filterLabels[filter],
+    label: (
+      <>
+        {filterLabels[filter]}
+        {" "}
+      </>
+    ),
     count: getFilteredNotifications(notifications, filter).length,
   }));
 }
@@ -232,9 +241,12 @@ function NotificationFallbackDetail({
 
 export function GlobalNotificationDrawer({
   badgeCount,
+  errorMessage,
   fallbackDetailNotificationId,
+  loading = false,
   notifications,
   open,
+  stateNotice = "v1 알림의 읽음/보관 상태는 서버 API에 저장됩니다. 다른 브라우저에서도 같은 사용자 상태로 동기화됩니다.",
   onArchiveNotification,
   onCloseFallbackDetail,
   onMarkAllRead,
@@ -242,6 +254,7 @@ export function GlobalNotificationDrawer({
   onOpenChange,
   onOpenNotificationSource,
   onRestoreNotification,
+  onRetry,
 }: GlobalNotificationDrawerProps) {
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const unreadCount = useMemo(() => resolveNotificationUnreadCount(notifications), [notifications]);
@@ -304,11 +317,24 @@ export function GlobalNotificationDrawer({
           </Button>
         </div>
         <p
-          data-testid="global-notification-local-state-disclaimer"
+          data-testid="global-notification-state-notice"
           className="border-b border-[var(--emr-line-hairline)] px-4 py-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]"
         >
-          v0 역할 큐 알림의 읽음/보관 상태는 현재 브라우저에만 저장됩니다. 다른 사용자나 다른 브라우저와 동기화되지 않습니다.
+          {stateNotice}
         </p>
+        {errorMessage ? (
+          <div
+            data-testid="global-notification-error-state"
+            className="flex min-w-0 items-start justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-status-warning-bg)] px-4 py-3 text-[12px] leading-5"
+          >
+            <p className="min-w-0 text-[var(--emr-status-warning-text)]">{errorMessage}</p>
+            {onRetry ? (
+              <Button type="button" size="xs" variant="outline" onClick={onRetry}>
+                다시 시도
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         {fallbackDetailNotification ? (
           <NotificationFallbackDetail
             notification={fallbackDetailNotification}
@@ -318,6 +344,14 @@ export function GlobalNotificationDrawer({
 
         <ScrollArea className="min-h-0 flex-1">
           <div data-testid="global-notification-drawer-list">
+            {loading ? (
+              <p
+                data-testid="global-notification-loading-state"
+                className="px-4 py-8 text-center text-[12px] leading-5 text-[var(--emr-text-tertiary)]"
+              >
+                알림을 불러오는 중입니다.
+              </p>
+            ) : null}
             {visibleNotifications.map((notification) => (
               <NotificationRow
                 key={notification.id}
@@ -328,7 +362,7 @@ export function GlobalNotificationDrawer({
                 onRestore={onRestoreNotification}
               />
             ))}
-            {visibleNotifications.length === 0 ? (
+            {!loading && visibleNotifications.length === 0 ? (
               <p className="px-4 py-8 text-center text-[12px] leading-5 text-[var(--emr-text-tertiary)]">
                 표시할 알림이 없습니다.
               </p>

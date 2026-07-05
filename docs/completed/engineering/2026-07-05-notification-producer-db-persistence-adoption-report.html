@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notification Producer DB Persistence Adoption Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+        margin: 40px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        color: #101828;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Notification Producer DB Persistence Adoption Report</h1>
+    <p>
+      NOTIFICATION-PR-025 connects selected Supabase-session notification producers to the
+      notification DB persistence gateway while preserving demo-header mock-mode in-memory
+      behavior.
+    </p>
+
+    <h2>What Changed</h2>
+    <ul>
+      <li><code>order_recheck_requested</code> now emits through the DB persistence gateway for Supabase-session actors.</li>
+      <li><code>clinical_result_completed</code> now emits through the DB persistence gateway after Supabase lab result save succeeds.</li>
+      <li>Demo-header mock-mode producers continue to use the scoped in-memory event store.</li>
+      <li>Lab result save remains authoritative if notification emission fails; the response reports a bounded emission issue category.</li>
+      <li>Direct-user recheck recipients must be active members of the same workspace.</li>
+    </ul>
+
+    <h2>Security Boundary</h2>
+    <ul>
+      <li>Removed direct authenticated table grants for notification event/state tables.</li>
+      <li>Added RPC actor checks so <code>p_actor_user_id</code> must match <code>auth.uid()</code>.</li>
+      <li>Filtered event-list RPC output by recipient and source-domain visibility.</li>
+      <li>Restricted user-state RPCs to the current actor, current actor state scope, and visible notifications.</li>
+      <li>Added producer emit authorization checks and DB-backed bump read/archive-state clearing.</li>
+    </ul>
+
+    <h2>Verification</h2>
+    <ul>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-persistence-contract.spec.ts tests/order-recheck-notification-server.spec.ts tests/lab-result-entry-notification-server.spec.ts tests/notification-live-api-server.spec.ts</code> passed with 22 tests.</li>
+      <li><code>npx tsc --noEmit --pretty false</code> passed.</li>
+      <li>Targeted ESLint for notification producer/persistence files and tests passed.</li>
+      <li><code>npm run docs:check</code> passed.</li>
+      <li><code>git diff --check</code> passed.</li>
+    </ul>
+
+    <h2>Not Covered</h2>
+    <ul>
+      <li>Remote Supabase migration execution, staging/live replay, production deploy, and monitoring were not run.</li>
+      <li>Reception waiting-over-30m and billing waiting-ready producer DB adoption remain follow-up slices.</li>
+      <li>Realtime/SSE delivery, external channels, provider/device/PACS integrations, and real data are still out of scope.</li>
+    </ul>
+  </body>
+</html>

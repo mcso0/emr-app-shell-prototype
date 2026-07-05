@@ -5,7 +5,6 @@ import type { MouseEvent, ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition } from "framer-motion";
 import {
-  BellGnbIcon,
   SidebarGnbIcon,
 } from "@/components/gnb-icons";
 import { CdsGnbHeadphonesGnbIcon } from "@/components/cds-icons/gnb";
@@ -144,12 +143,6 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
             workspaceId={workspaceId}
           />
         </RailLayoutItem>
-        <RailActionItem
-          icon={BellGnbIcon}
-          iconClassName="h-[17.3px] w-[17.6px]"
-          label="알림"
-          transition={railLayoutTransition}
-        />
         <NavDivider transition={railLayoutTransition} />
         <NavSection
           activeModuleId={activeModuleId}

@@ -1,5 +1,3 @@
-"use client";
-
 import { LEGACY_SALES_DEMO_WORKSPACE_ID } from "@/lib/emr-domain/demo-workspaces";
 
 export type GlobalNotification = {

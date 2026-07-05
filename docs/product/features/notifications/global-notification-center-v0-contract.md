@@ -4,6 +4,7 @@ status: approved
 area: product
 doc_type: feature-contract
 related_docs:
+  - "docs/product/features/notifications/global-notification-center-v1-live-plan.md"
   - "docs/product/features/notifications/global-notification-center-v0-event-policy.md"
   - "docs/product/features/home/home-command-entry-planning.md"
   - "docs/product/features/home/home-v1-ui-spec.md"
@@ -25,7 +26,7 @@ related_work:
   - "docs/work/notifications/NOTIFICATION-PR-013-focused-state-regression-tests.md"
   - "https://linear.app/deny-93/issue/DEN-395/00-01-align-notification-v0-implementation-contract-and-fixture-schema"
   - "https://linear.app/deny-93/issue/DEN-396/00-02-finalize-event-matrix-ux-writing-rules-and-badgetoast-policy"
-last_updated: "2026-06-03"
+last_updated: "2026-07-05"
 ---
 
 # Global Notification Center v0 Contract
@@ -40,7 +41,7 @@ v0 uses a right-side drawer opened from the app shell notification button. It le
 
 | Area | v0 contract |
 |---|---|
-| Surface | Right-side drawer from the app shell notification button |
+| Surface | Right-side drawer from the app shell top-bar notification button; notifications are not a left nav rail item |
 | Storage | Synthetic fixtures plus `localStorage` read/archive state |
 | Badge count | `unread && badge_count === true` only |
 | Primary action | Navigate the current tab to the source workflow |

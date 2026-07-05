@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 
+import { createMockLiveAuditAppendGateway } from "../src/features/audit/server-audit-log-persistence-core";
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import { createMockInvoiceCandidateSyncGateway } from "../src/features/billing/server-invoice-candidate-sync-core";
 import { createMockChartOrderLifecycleGateway } from "../src/features/chart/server-order-lifecycle-persistence-core";
@@ -12,6 +13,13 @@ import {
   syncFulfillmentWorkItemsFromOrders,
   updateFulfillmentWorkItem,
 } from "../src/features/fulfillment/server-fulfillment-work-item-core";
+import {
+  createDemoLiveNotificationEventStore,
+  createDemoLiveNotificationStateStore,
+  readLiveNotifications,
+} from "../src/features/notifications/server-notifications-core";
+import type { GlobalNotification } from "../src/features/notifications/mock-notifications";
+import type { NotificationPersistenceGateway } from "../src/features/notifications/server-notification-persistence";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
@@ -26,6 +34,55 @@ const migration = existsSync(migrationPath)
 test("fulfillment work item routes sync from chart orders, read by queue, and mutate lifecycle", async ({
   request,
 }) => {
+  const clientSessionId = "fulfillment-work-item-route-notification";
+  const statusRank = {
+    requested: 0,
+    accepted: 1,
+    in_progress: 2,
+    completed: 3,
+    cancelled: 3,
+    returned: -1,
+  } as const;
+  async function readCurrentWorkItemStatus() {
+    const response = await request.get(
+      `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing&encounterId=${encounterId}`,
+      { headers: { "x-clair-demo-session-user-id": "user-tech" } },
+    );
+    expect(response.status()).toBe(200);
+    const body = (await response.json()) as {
+      ok: true;
+      workItems: Array<{ id: string; status: keyof typeof statusRank }>;
+    };
+
+    return body.workItems.find((item) => item.id === workItemId)?.status;
+  }
+  async function transitionOrReadCurrent({
+    body,
+    target,
+  }: {
+    body: Record<string, unknown>;
+    target: keyof typeof statusRank;
+  }) {
+    const response = await request.patch(
+      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
+      {
+        data: body,
+        headers: { "x-clair-demo-session-user-id": "user-tech" },
+      },
+    );
+    if (response.status() === 200) return target;
+    if (response.status() === 409) {
+      const currentStatus = await readCurrentWorkItemStatus();
+      expect(currentStatus).toBeDefined();
+      expect(statusRank[currentStatus!]).toBeGreaterThanOrEqual(
+        statusRank[target],
+      );
+      return currentStatus!;
+    }
+
+    expect(response.status()).toBe(200);
+    return target;
+  }
   const unauthenticated = await request.post(
     `/api/workspaces/${workspaceId}/fulfillment/work-items/sync-from-orders`,
     { data: { encounterId, orderIds: [orderId] } },
@@ -139,15 +196,10 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
   }
 
   if (currentWorkItemStatus === "requested") {
-    const accepted = await request.patch(
-      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
-      {
-        data: { status: "accepted", assignedToUserId: "user-tech" },
-        headers: { "x-clair-demo-session-user-id": "user-tech" },
-      },
-    );
-    expect(accepted.status()).toBe(200);
-    currentWorkItemStatus = "accepted";
+    currentWorkItemStatus = await transitionOrReadCurrent({
+      body: { status: "accepted", assignedToUserId: "user-tech" },
+      target: "accepted",
+    });
   }
 
   if (currentWorkItemStatus === "accepted") {
@@ -164,15 +216,14 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
       denialReason: "invalid_transition",
     });
 
-    const inProgress = await request.patch(
-      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
-      {
-        data: { status: "in_progress" },
-        headers: { "x-clair-demo-session-user-id": "user-tech" },
-      },
-    );
-    expect(inProgress.status()).toBe(200);
-    currentWorkItemStatus = "in_progress";
+    currentWorkItemStatus = await transitionOrReadCurrent({
+      body: { status: "in_progress" },
+      target: "in_progress",
+    });
+  }
+
+  if (currentWorkItemStatus === "completed") {
+    return;
   }
 
   expect(currentWorkItemStatus).toBe("in_progress");
@@ -181,7 +232,10 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
     `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
     {
       data: { status: "completed" },
-      headers: { "x-clair-demo-session-user-id": "user-tech" },
+      headers: {
+        "x-clair-demo-client-session-id": clientSessionId,
+        "x-clair-demo-session-user-id": "user-tech",
+      },
     },
   );
   expect(completed.status()).toBe(200);
@@ -229,6 +283,36 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
       (candidate) => candidate.orderId === orderId,
     ),
   ).toBe(true);
+
+  const notifications = await request.get(
+    `/api/workspaces/${workspaceId}/notifications?filter=all&limit=50`,
+    {
+      headers: {
+        "x-clair-demo-client-session-id": clientSessionId,
+        "x-clair-demo-session-user-id": "user-front-desk",
+      },
+    },
+  );
+  expect(notifications.status()).toBe(200);
+  const notificationBody = (await notifications.json()) as {
+    ok: true;
+    notifications: Array<{
+      badgeCount: boolean;
+      eventKey: string;
+      sourceEntityId: string | null;
+      sourceRoute: string | null;
+    }>;
+  };
+  expect(notificationBody.notifications).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        badgeCount: false,
+        eventKey: "billing_waiting_ready",
+        sourceEntityId: `billcand-${orderId}`,
+        sourceRoute: `/w/${workspaceId}/billing?modulePanel=open&encounterId=${encounterId}`,
+      }),
+    ]),
+  );
 });
 
 test("fulfillment core enforces chart sync permission and workspace encounter scope", async () => {
@@ -604,6 +688,239 @@ test("fulfillment completion syncs order lifecycle and billing candidates from s
   });
 });
 
+test("fulfillment completion emits drawer-only billing-ready notification after candidate sync", async () => {
+  const timestamp = () => "2026-05-26T14:40:00.000Z";
+  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const lifecycleGateway = createMockChartOrderLifecycleGateway(
+    undefined,
+    timestamp,
+  );
+  const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(
+    undefined,
+    timestamp,
+  );
+  const notificationEventStore = createDemoLiveNotificationEventStore();
+  const notificationStateStore = createDemoLiveNotificationStateStore();
+
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "accepted", assignedToUserId: "user-tech" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+  });
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "in_progress" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+  });
+
+  const completed = await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "completed" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+    notificationEventStore,
+    notificationStateStore,
+    emitBillingReadyNotifications: true,
+  });
+
+  expect(completed).toMatchObject({
+    ok: true,
+    downstreamSync: {
+      billingCandidateCount: 1,
+      billingReadyNotificationCount: 1,
+    },
+  });
+
+  const frontDeskFeed = await readLiveNotifications({
+    actorUserId: "user-front-desk",
+    eventStore: notificationEventStore,
+    filter: "all",
+    notifications: [],
+    stateStore: notificationStateStore,
+    workspaceId,
+  });
+
+  expect(frontDeskFeed).toMatchObject({
+    ok: true,
+    counts: {
+      badge: 0,
+      unread: 1,
+    },
+    notifications: [
+      expect.objectContaining({
+        badgeCount: false,
+        dedupeKey: `${encounterId}-${orderId}-billing_waiting_ready`,
+        eventKey: "billing_waiting_ready",
+        sourceEntityId: `billcand-${orderId}`,
+        sourceRoute: `/w/${workspaceId}/billing?modulePanel=open&encounterId=${encounterId}`,
+        toastPolicy: "drawer_only",
+      }),
+    ],
+  });
+
+  const techFeed = await readLiveNotifications({
+    actorUserId: "user-tech",
+    eventStore: notificationEventStore,
+    filter: "all",
+    notifications: [],
+    stateStore: notificationStateStore,
+    workspaceId,
+  });
+
+  expect(techFeed).toMatchObject({
+    ok: true,
+    notifications: [],
+  });
+});
+
+test("fulfillment completion persists billing-ready notification through the DB gateway", async () => {
+  const timestamp = () => "2026-05-26T14:40:00.000Z";
+  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const lifecycleGateway = createMockChartOrderLifecycleGateway(
+    undefined,
+    timestamp,
+  );
+  const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(
+    undefined,
+    timestamp,
+  );
+  const persistedEvents: Array<
+    Parameters<NotificationPersistenceGateway["emitNotificationEvent"]>[0]
+  > = [];
+  const notificationPersistenceGateway =
+    createRecordingNotificationPersistenceGateway(persistedEvents);
+
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "accepted", assignedToUserId: "user-tech" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+  });
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "in_progress" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+  });
+
+  const completed = await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "completed" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+    notificationEventScopeId: null,
+    notificationPersistenceGateway,
+    emitBillingReadyNotifications: true,
+  });
+
+  expect(completed).toMatchObject({
+    ok: true,
+    downstreamSync: {
+      billingCandidateCount: 1,
+      billingReadyNotificationCount: 1,
+    },
+  });
+  expect(persistedEvents).toEqual([
+    expect.objectContaining({
+      actorUserId: "user-tech",
+      badgeCount: false,
+      dedupeKey: `${encounterId}-${orderId}-billing_waiting_ready`,
+      eventKey: "billing_waiting_ready",
+      eventScopeId: null,
+      recipient: expect.objectContaining({ id: "billing", kind: "role_queue" }),
+      source: expect.objectContaining({
+        entity_id: `billcand-${orderId}`,
+        kind: "billing_candidate",
+        route: `/w/${workspaceId}/billing?modulePanel=open&encounterId=${encounterId}`,
+      }),
+      toastPolicy: "drawer_only",
+      workspaceId,
+    }),
+  ]);
+});
+
+test("fulfillment completion keeps source mutation successful when DB notification persistence rejects", async () => {
+  const timestamp = () => "2026-05-26T14:40:00.000Z";
+  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const lifecycleGateway = createMockChartOrderLifecycleGateway(
+    undefined,
+    timestamp,
+  );
+  const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(
+    undefined,
+    timestamp,
+  );
+
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "accepted", assignedToUserId: "user-tech" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+  });
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "in_progress" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+  });
+
+  const completed = await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "completed" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+    notificationPersistenceGateway: createThrowingNotificationPersistenceGateway(),
+    emitBillingReadyNotifications: true,
+  });
+
+  expect(completed).toMatchObject({
+    ok: true,
+    downstreamSync: {
+      billingCandidateCount: 1,
+      billingReadyNotificationCount: 0,
+      lifecycleStatus: "completed",
+    },
+  });
+
+  const candidates = await invoiceCandidateGateway.listInvoiceCandidates({
+    encounterId,
+    workspaceId,
+  });
+  expect(candidates).toMatchObject({
+    ok: true,
+    candidates: expect.arrayContaining([expect.objectContaining({ orderId })]),
+  });
+});
+
 test("fulfillment completion holds lab and imaging billing until vet review", async () => {
   const timestamp = () => "2026-05-26T14:40:00.000Z";
   const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
@@ -615,6 +932,9 @@ test("fulfillment completion holds lab and imaging billing until vet review", as
     undefined,
     timestamp,
   );
+  const notificationEventStore = createDemoLiveNotificationEventStore();
+  const notificationStateStore = createDemoLiveNotificationStateStore();
+  const auditGateway = createMockLiveAuditAppendGateway();
   const labOrderId = "order-kong-cbc";
 
   const completed = await updateFulfillmentWorkItem({
@@ -638,20 +958,62 @@ test("fulfillment completion holds lab and imaging billing until vet review", as
 
   const reviewed = await syncVetReviewedBillingCandidates({
     actorUserId: "user-vet",
+    auditGateway,
+    auditNow: timestamp,
+    auditRequestId: "req-vet-review-billing",
+    emitBillingReadyNotifications: true,
     gateway,
     input: {
       encounterId: "encounter-kong-260501",
       orderIds: [labOrderId],
     },
     invoiceCandidateGateway,
+    notificationEventStore,
+    notificationStateStore,
     workspaceId,
   });
   expect(reviewed).toMatchObject({
     ok: true,
+    auditEventCount: 1,
     billingCandidates: [expect.objectContaining({ orderId: labOrderId })],
     enforcedBy: "fulfillment-vet-review-billing-gate",
+    emittedNotifications: { billingWaitingReady: 1 },
     reviewedWorkItems: [expect.objectContaining({ orderId: labOrderId })],
     status: 200,
+  });
+  expect(auditGateway.events).toEqual([
+    expect.objectContaining({
+      actorUserId: "user-vet",
+      encounterId: "encounter-kong-260501",
+      eventType: "billing.invoice_candidate_generated",
+      requestId: "req-vet-review-billing",
+      targetType: "invoice",
+      metadata: expect.objectContaining({
+        source: "fulfillment-vet-review-billing-gate",
+        workItemId: `fulfill-${labOrderId}`,
+      }),
+    }),
+  ]);
+
+  const frontDeskFeed = await readLiveNotifications({
+    actorUserId: "user-front-desk",
+    eventStore: notificationEventStore,
+    filter: "all",
+    notifications: [],
+    stateStore: notificationStateStore,
+    workspaceId,
+  });
+  expect(frontDeskFeed).toMatchObject({
+    ok: true,
+    notifications: [
+      expect.objectContaining({
+        badgeCount: false,
+        dedupeKey: `encounter-kong-260501-${labOrderId}-billing_waiting_ready`,
+        eventKey: "billing_waiting_ready",
+        sourceEntityId: `billcand-${labOrderId}`,
+        sourceRoute: `/w/${workspaceId}/billing?modulePanel=open&encounterId=encounter-kong-260501`,
+      }),
+    ],
   });
 
   const directSync = await invoiceCandidateGateway.syncInvoiceCandidates({
@@ -680,6 +1042,120 @@ test("fulfillment completion holds lab and imaging billing until vet review", as
     denialReason: "invalid_review_gate",
     status: 409,
   });
+});
+
+test("vet-reviewed billing sync persists billing-ready notification through the DB gateway", async () => {
+  const timestamp = () => "2026-05-26T14:40:00.000Z";
+  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(
+    undefined,
+    timestamp,
+  );
+  const auditGateway = createMockLiveAuditAppendGateway();
+  const persistedEvents: Array<
+    Parameters<NotificationPersistenceGateway["emitNotificationEvent"]>[0]
+  > = [];
+  const notificationPersistenceGateway =
+    createRecordingNotificationPersistenceGateway(persistedEvents);
+  const labOrderId = "order-kong-cbc";
+
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    gateway,
+    input: { status: "completed" },
+    invoiceCandidateGateway,
+    lifecycleGateway: createMockChartOrderLifecycleGateway(undefined, timestamp),
+    workItemId: `fulfill-${labOrderId}`,
+    workspaceId,
+  });
+
+  const reviewed = await syncVetReviewedBillingCandidates({
+    actorUserId: "user-vet",
+    auditGateway,
+    auditNow: timestamp,
+    auditRequestId: "req-vet-review-billing-persisted",
+    emitBillingReadyNotifications: true,
+    gateway,
+    input: {
+      encounterId: "encounter-kong-260501",
+      orderIds: [labOrderId],
+    },
+    invoiceCandidateGateway,
+    notificationEventScopeId: null,
+    notificationPersistenceGateway,
+    workspaceId,
+  });
+
+  expect(reviewed).toMatchObject({
+    ok: true,
+    emittedNotifications: { billingWaitingReady: 1 },
+  });
+  expect(persistedEvents).toEqual([
+    expect.objectContaining({
+      actorUserId: "user-vet",
+      badgeCount: false,
+      dedupeKey: `encounter-kong-260501-${labOrderId}-billing_waiting_ready`,
+      eventKey: "billing_waiting_ready",
+      eventScopeId: null,
+      source: expect.objectContaining({
+        entity_id: `billcand-${labOrderId}`,
+        kind: "billing_candidate",
+        route: `/w/${workspaceId}/billing?modulePanel=open&encounterId=encounter-kong-260501`,
+      }),
+      workspaceId,
+    }),
+  ]);
+});
+
+test("vet-reviewed billing sync keeps audit and candidate success when DB notification persistence rejects", async () => {
+  const timestamp = () => "2026-05-26T14:40:00.000Z";
+  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(
+    undefined,
+    timestamp,
+  );
+  const auditGateway = createMockLiveAuditAppendGateway();
+  const labOrderId = "order-kong-cbc";
+
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    gateway,
+    input: { status: "completed" },
+    invoiceCandidateGateway,
+    lifecycleGateway: createMockChartOrderLifecycleGateway(undefined, timestamp),
+    workItemId: `fulfill-${labOrderId}`,
+    workspaceId,
+  });
+
+  const reviewed = await syncVetReviewedBillingCandidates({
+    actorUserId: "user-vet",
+    auditGateway,
+    auditNow: timestamp,
+    auditRequestId: "req-vet-review-billing-persisted-failure",
+    emitBillingReadyNotifications: true,
+    gateway,
+    input: {
+      encounterId: "encounter-kong-260501",
+      orderIds: [labOrderId],
+    },
+    invoiceCandidateGateway,
+    notificationPersistenceGateway: createThrowingNotificationPersistenceGateway(),
+    workspaceId,
+  });
+
+  expect(reviewed).toMatchObject({
+    ok: true,
+    auditEventCount: 1,
+    billingCandidates: [expect.objectContaining({ orderId: labOrderId })],
+    emittedNotifications: { billingWaitingReady: 0 },
+  });
+  expect(auditGateway.events).toEqual([
+    expect.objectContaining({
+      actorUserId: "user-vet",
+      eventType: "billing.invoice_candidate_generated",
+      requestId: "req-vet-review-billing-persisted-failure",
+    }),
+  ]);
 });
 
 test("fulfillment Supabase gateway preserves actor, workspace, encounter, selected orders, and transition payload", async () => {
@@ -953,4 +1429,77 @@ async function expectJson(
 ) {
   const body = await response.json();
   expect(body).toMatchObject(expected);
+}
+
+function createRecordingNotificationPersistenceGateway(
+  persistedEvents: Array<
+    Parameters<NotificationPersistenceGateway["emitNotificationEvent"]>[0]
+  >,
+): NotificationPersistenceGateway {
+  return {
+    async emitNotificationEvent(event) {
+      persistedEvents.push(event);
+      return {
+        ok: true,
+        status: 200,
+        action: "created",
+        notification: { id: `persisted-${event.dedupeKey}` } as GlobalNotification,
+        enforcedBy: "notification-event-persistence-gateway",
+      };
+    },
+    async listNotificationEvents() {
+      return {
+        ok: true,
+        status: 200,
+        notifications: [],
+        enforcedBy: "notification-event-persistence-gateway",
+      };
+    },
+    async listNotificationUserStates() {
+      return {
+        ok: true,
+        status: 200,
+        states: [],
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+    async upsertNotificationUserState() {
+      return {
+        ok: true,
+        status: 200,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+  };
+}
+
+function createThrowingNotificationPersistenceGateway(): NotificationPersistenceGateway {
+  return {
+    async emitNotificationEvent() {
+      throw new Error("simulated notification persistence outage");
+    },
+    async listNotificationEvents() {
+      return {
+        ok: true,
+        status: 200,
+        notifications: [],
+        enforcedBy: "notification-event-persistence-gateway",
+      };
+    },
+    async listNotificationUserStates() {
+      return {
+        ok: true,
+        status: 200,
+        states: [],
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+    async upsertNotificationUserState() {
+      return {
+        ok: true,
+        status: 200,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+  };
 }

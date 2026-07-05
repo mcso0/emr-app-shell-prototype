@@ -25,6 +25,16 @@ import {
   mockPatients,
 } from "@/mocks/emr-domain";
 import {
+  emitLiveNotificationEvent,
+  type LiveNotificationEventInput,
+  type LiveNotificationEventStore,
+  type LiveNotificationStateStore,
+} from "@/features/notifications/server-notifications";
+import {
+  emitPersistedLiveNotificationEvent,
+  type NotificationPersistenceGateway,
+} from "@/features/notifications/server-notification-persistence";
+import {
   getOperatingDateFromIso,
   isIsoOperatingDate,
 } from "@/lib/emr-domain/demo-date";
@@ -134,6 +144,7 @@ export type FulfillmentVetReviewBillingInput = {
 export type FulfillmentDownstreamSyncSummary = {
   auditEventCount: number;
   billingCandidateCount: number;
+  billingReadyNotificationCount?: number;
   billingSkippedReason?:
     | "billing_reflection_disabled"
     | "encounter_unavailable"
@@ -254,8 +265,12 @@ export type FulfillmentVetReviewBillingResult =
   | {
       ok: true;
       status: 200;
+      auditEventCount: number;
       billingCandidates: BillingInvoiceCandidateLine[];
       enforcedBy: "fulfillment-vet-review-billing-gate";
+      emittedNotifications?: {
+        billingWaitingReady: number;
+      };
       reviewedWorkItems: FulfillmentWorkItem[];
     }
   | {
@@ -442,10 +457,15 @@ export async function updateFulfillmentWorkItem({
   auditGateway,
   auditNow,
   auditRequestId,
+  emitBillingReadyNotifications,
   invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(),
   gateway = createMockFulfillmentWorkItemGateway(),
   input,
   lifecycleGateway = createMockChartOrderLifecycleGateway(),
+  notificationEventStore,
+  notificationEventScopeId,
+  notificationPersistenceGateway,
+  notificationStateStore,
   permissionAdapter = createDemoFulfillmentPermissionAdapter(),
   workItemId,
   workspaceId,
@@ -454,6 +474,7 @@ export async function updateFulfillmentWorkItem({
   auditGateway?: LiveMutationAuditOptions["auditGateway"];
   auditNow?: LiveMutationAuditOptions["auditNow"];
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
+  emitBillingReadyNotifications?: boolean;
   gateway?: Pick<
     FulfillmentWorkItemGateway,
     "listWorkItems" | "updateWorkItem"
@@ -467,6 +488,10 @@ export async function updateFulfillmentWorkItem({
     ChartOrderLifecycleGateway,
     "saveOrderLifecycleStatus"
   >;
+  notificationEventStore?: LiveNotificationEventStore;
+  notificationEventScopeId?: string | null;
+  notificationPersistenceGateway?: NotificationPersistenceGateway;
+  notificationStateStore?: LiveNotificationStateStore;
   permissionAdapter?: WorkspacePermissionAdapter;
   workItemId: string | null | undefined;
   workspaceId: string;
@@ -518,8 +543,13 @@ export async function updateFulfillmentWorkItem({
     auditGateway,
     auditNow,
     auditRequestId,
+    emitBillingReadyNotifications,
     invoiceCandidateGateway,
     lifecycleGateway,
+    notificationEventStore,
+    notificationEventScopeId,
+    notificationPersistenceGateway,
+    notificationStateStore,
     requestedStatus: normalized.status as FulfillmentWorkItemStatus,
     updatedWorkItem: result.workItems[0],
     workspaceId,
@@ -537,19 +567,35 @@ export async function updateFulfillmentWorkItem({
 
 export async function syncVetReviewedBillingCandidates({
   actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
+  emitBillingReadyNotifications,
   gateway = createMockFulfillmentWorkItemGateway(),
   input,
   invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(),
+  notificationEventStore,
+  notificationEventScopeId,
+  notificationPersistenceGateway,
+  notificationStateStore,
   permissionAdapter = createDemoFulfillmentPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
+  emitBillingReadyNotifications?: boolean;
   gateway?: Pick<FulfillmentWorkItemGateway, "listWorkItems">;
   input: FulfillmentVetReviewBillingInput;
   invoiceCandidateGateway?: Pick<
     InvoiceCandidateSyncGateway,
     "syncInvoiceCandidates"
   >;
+  notificationEventStore?: LiveNotificationEventStore;
+  notificationEventScopeId?: string | null;
+  notificationPersistenceGateway?: NotificationPersistenceGateway;
+  notificationStateStore?: LiveNotificationStateStore;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<FulfillmentVetReviewBillingResult> {
@@ -630,11 +676,46 @@ export async function syncVetReviewedBillingCandidates({
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
+  const auditResult = await emitVetReviewedBillingAuditEvents({
+    actorUserId,
+    auditGateway,
+    auditNow,
+    auditRequestId,
+    billingCandidates: billingResult.candidates,
+    reviewItemByOrderId,
+    workspaceId,
+  });
+  if (!auditResult.ok)
+    return { ok: false, status: 500, error: "db_write_failed" };
+
+  const billingWaitingReadyNotificationCount = emitBillingReadyNotifications
+    ? await emitBillingWaitingReadyNotifications({
+        actorUserId,
+        billingCandidates: billingResult.candidates,
+        notificationEventStore,
+        notificationEventScopeId,
+        notificationPersistenceGateway,
+        notificationStateStore,
+        sourceWorkItems: normalized.orderIds.map(
+          (orderId) => reviewItemByOrderId.get(orderId)!,
+        ),
+        workspaceId,
+      })
+    : 0;
+
   return {
     ok: true,
     status: 200,
+    auditEventCount: auditResult.eventCount,
     billingCandidates: billingResult.candidates,
     enforcedBy: "fulfillment-vet-review-billing-gate",
+    ...(emitBillingReadyNotifications
+      ? {
+          emittedNotifications: {
+            billingWaitingReady: billingWaitingReadyNotificationCount,
+          },
+        }
+      : {}),
     reviewedWorkItems: normalized.orderIds.map(
       (orderId) => reviewItemByOrderId.get(orderId)!,
     ),
@@ -1238,8 +1319,13 @@ async function syncDownstreamFromFulfillmentUpdate({
   auditGateway,
   auditNow,
   auditRequestId,
+  emitBillingReadyNotifications,
   invoiceCandidateGateway,
   lifecycleGateway,
+  notificationEventStore,
+  notificationEventScopeId,
+  notificationPersistenceGateway,
+  notificationStateStore,
   requestedStatus,
   updatedWorkItem,
   workspaceId,
@@ -1248,6 +1334,7 @@ async function syncDownstreamFromFulfillmentUpdate({
   auditGateway?: LiveMutationAuditOptions["auditGateway"];
   auditNow?: LiveMutationAuditOptions["auditNow"];
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
+  emitBillingReadyNotifications?: boolean;
   invoiceCandidateGateway: Pick<
     InvoiceCandidateSyncGateway,
     "syncInvoiceCandidates"
@@ -1256,6 +1343,10 @@ async function syncDownstreamFromFulfillmentUpdate({
     ChartOrderLifecycleGateway,
     "saveOrderLifecycleStatus"
   >;
+  notificationEventStore?: LiveNotificationEventStore;
+  notificationEventScopeId?: string | null;
+  notificationPersistenceGateway?: NotificationPersistenceGateway;
+  notificationStateStore?: LiveNotificationStateStore;
   requestedStatus: FulfillmentWorkItemStatus;
   updatedWorkItem: FulfillmentWorkItem | undefined;
   workspaceId: string;
@@ -1338,7 +1429,221 @@ async function syncDownstreamFromFulfillmentUpdate({
     return { ok: false, status: 500, error: "db_write_failed" };
   summary.auditEventCount = auditResult.eventCount;
 
+  if (emitBillingReadyNotifications) {
+    const billingReadyNotificationCount = await emitBillingWaitingReadyNotifications({
+      actorUserId,
+      billingCandidates,
+      notificationEventStore,
+      notificationEventScopeId,
+      notificationPersistenceGateway,
+      notificationStateStore,
+      sourceWorkItems: updatedWorkItem ? [updatedWorkItem] : [],
+      workspaceId,
+    });
+    summary.billingReadyNotificationCount = billingReadyNotificationCount;
+  }
+
   return { ok: true, summary };
+}
+
+async function emitVetReviewedBillingAuditEvents({
+  actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
+  billingCandidates,
+  reviewItemByOrderId,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
+  billingCandidates: BillingInvoiceCandidateLine[];
+  reviewItemByOrderId: Map<string, FulfillmentWorkItem>;
+  workspaceId: string;
+}) {
+  let eventCount = 0;
+
+  for (const candidate of billingCandidates) {
+    const workItem = reviewItemByOrderId.get(candidate.orderId);
+    const audit = await emitLiveMutationAuditEvent({
+      auditGateway,
+      auditNow,
+      input: {
+        workspaceId,
+        actorUserId,
+        eventType: "billing.invoice_candidate_generated",
+        targetType: "invoice",
+        targetId: candidate.invoiceId,
+        encounterId: workItem?.encounterId,
+        requestId: auditRequestId,
+        after: {
+          billingCandidateId: candidate.billingCandidateId,
+          lineTotal: candidate.lineTotal,
+          orderId: candidate.orderId,
+        },
+        metadata: {
+          source: "fulfillment-vet-review-billing-gate",
+          ...(workItem
+            ? {
+                queueType: workItem.queueType,
+                workItemId: workItem.id,
+              }
+            : {}),
+        },
+      },
+    });
+    if (!audit.ok) return { ok: false as const };
+    eventCount += 1;
+  }
+
+  return { ok: true as const, eventCount };
+}
+
+async function emitBillingWaitingReadyNotifications({
+  actorUserId,
+  billingCandidates,
+  notificationEventStore,
+  notificationEventScopeId,
+  notificationPersistenceGateway,
+  notificationStateStore,
+  sourceWorkItems,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  billingCandidates: BillingInvoiceCandidateLine[];
+  notificationEventStore?: LiveNotificationEventStore;
+  notificationEventScopeId?: string | null;
+  notificationPersistenceGateway?: NotificationPersistenceGateway;
+  notificationStateStore?: LiveNotificationStateStore;
+  sourceWorkItems: FulfillmentWorkItem[];
+  workspaceId: string;
+}) {
+  if (!billingCandidates.length) return 0;
+
+  const workItemByOrderId = new Map(
+    sourceWorkItems.map((workItem) => [workItem.orderId, workItem]),
+  );
+  let emittedCount = 0;
+
+  for (const candidate of billingCandidates) {
+    const workItem = workItemByOrderId.get(candidate.orderId);
+    const patientLabel = trimToUndefined(workItem?.sourceSnapshot.patientName);
+    const orderLabel =
+      trimToUndefined(workItem?.sourceSnapshot.orderDisplayName) ??
+      trimToUndefined(candidate.description) ??
+      "완료 오더";
+
+    const event = buildBillingWaitingReadyNotificationEvent({
+      actorUserId,
+      candidate,
+      notificationEventScopeId,
+      orderLabel,
+      patientLabel,
+      workItem,
+      workspaceId,
+    });
+
+    if (notificationPersistenceGateway) {
+      const result = await safeEmitPersistedLiveNotificationEvent({
+        event,
+        gateway: notificationPersistenceGateway,
+      });
+      if (result.ok) emittedCount += 1;
+    } else {
+      emitLiveNotificationEvent({
+        event,
+        eventStore: notificationEventStore,
+        stateStore: notificationStateStore,
+      });
+      emittedCount += 1;
+    }
+  }
+
+  return emittedCount;
+}
+
+async function safeEmitPersistedLiveNotificationEvent({
+  event,
+  gateway,
+}: {
+  event: LiveNotificationEventInput;
+  gateway: NotificationPersistenceGateway;
+}) {
+  try {
+    return await emitPersistedLiveNotificationEvent({ event, gateway });
+  } catch {
+    return { ok: false as const, status: 500 as const, error: "db_write_failed" as const };
+  }
+}
+
+function buildBillingWaitingReadyNotificationEvent({
+  actorUserId,
+  candidate,
+  notificationEventScopeId,
+  orderLabel,
+  patientLabel,
+  workItem,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  candidate: BillingInvoiceCandidateLine;
+  notificationEventScopeId?: string | null;
+  orderLabel: string;
+  patientLabel?: string;
+  workItem?: FulfillmentWorkItem;
+  workspaceId: string;
+}): LiveNotificationEventInput {
+  return {
+    workspaceId,
+    eventKey: "billing_waiting_ready",
+    dedupeKey: `${workItem?.encounterId ?? candidate.invoiceId}-${candidate.orderId}-billing_waiting_ready`,
+    domain: "billing",
+    priority: "reference",
+    toastPolicy: "drawer_only",
+    title: patientLabel
+      ? `${patientLabel} 수납 준비가 완료되었습니다`
+      : "수납 준비가 완료되었습니다",
+    preview: "완료된 오더가 수납 후보에 반영되었습니다.",
+    detail: `${orderLabel} 오더가 수납 후보에 반영되었습니다. 수납 화면에서 보호자 안내 준비를 확인하세요.`,
+    workTypeLabel: "수납",
+    sourceLabel: "수납 · 후보 목록",
+    sourceActionLabel: "수납 후보 열기",
+    recipient: { kind: "role_queue", id: "billing", label: "수납" },
+    source: {
+      kind: "billing_candidate",
+      route: buildBillingCandidateNotificationRoute({
+        candidate,
+        encounterId: workItem?.encounterId,
+        workspaceId,
+      }),
+      entity_id: candidate.billingCandidateId,
+    },
+    requiresAction: false,
+    badgeCount: false,
+    actorUserId,
+    eventScopeId: notificationEventScopeId,
+    occurredAt: candidate.syncedAt,
+    issuedAtLabel: "방금 전",
+  };
+}
+
+function buildBillingCandidateNotificationRoute({
+  candidate,
+  encounterId,
+  workspaceId,
+}: {
+  candidate: BillingInvoiceCandidateLine;
+  encounterId?: string;
+  workspaceId: string;
+}) {
+  const baseRoute = `/w/${workspaceId}/billing?modulePanel=open`;
+  if (encounterId) {
+    return `${baseRoute}&encounterId=${encodeURIComponent(encounterId)}`;
+  }
+
+  return `${baseRoute}&invoiceId=${encodeURIComponent(candidate.invoiceId)}`;
 }
 
 async function saveLifecycleWithBridge({

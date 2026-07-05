@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notification v1 Visible Drawer Live API Adoption Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #667085;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>알림 v1 Visible Drawer Live API 채택 결과</h1>
+    <p class="meta">2026-07-05 · NOTIFICATION-PR-017 · synthetic/demo-data scope</p>
+
+    <h2>요청</h2>
+    <p>
+      상단 bell 버튼과 오른쪽 알림 drawer를 실제 live notification API에 연결하고,
+      읽음/보관 상태를 브라우저 localStorage가 아니라 서버 API 상태로 검증하는 작업이었다.
+    </p>
+
+    <h2>결과</h2>
+    <ul>
+      <li>AppShell 알림 drawer가 active/archived 알림 목록을 서버 API에서 읽도록 연결했다.</li>
+      <li>top-bar badge와 drawer count summary가 서버 counts를 사용한다.</li>
+      <li>읽음, 전체 읽음, 보관, 복구가 모두 서버 mutation route를 호출한다.</li>
+      <li>source navigation은 서버가 안전화한 source route만 사용하고, route가 null이면 fallback detail을 보여준다.</li>
+      <li>v0 브라우저 localStorage 문구를 v1 API-backed 상태 문구로 교체했다.</li>
+      <li>demo E2E 격리를 위해 read/archive 상태를 demo browser session별로 분리했다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/shell/app-shell.tsx</code></li>
+      <li><code>src/features/notifications/live-notifications-client.ts</code></li>
+      <li><code>src/features/notifications/global-notification-drawer.tsx</code></li>
+      <li><code>src/features/notifications/server-notifications-core.ts</code></li>
+      <li><code>src/features/notifications/server-notifications-route.ts</code></li>
+      <li><code>tests/app-shell.spec.ts</code></li>
+      <li><code>tests/notification-live-api-server.spec.ts</code></li>
+      <li><code>docs/product/features/notifications/global-notification-center-v1-live-plan.md</code></li>
+      <li><code>docs/work/notifications/NOTIFICATION-PR-017-v1-visible-drawer-live-api-adoption.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-live-api-server.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/app-shell.spec.ts -g "global notification"</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run lint</code> 통과, 기존 warning만 남음</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      이번 작업은 visible drawer의 live API 채택까지다. DB migration, RLS replay,
+      realtime delivery, notification event producer, Kakao/SMS/email/browser push,
+      production deployment, real data 사용은 별도 승인된 작업 범위가 필요하다.
+    </p>
+  </body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notification Remaining Producer DB Persistence Adoption Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+        margin: 40px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        color: #101828;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Notification Remaining Producer DB Persistence Adoption Report</h1>
+    <p>
+      NOTIFICATION-PR-026 connects the remaining approved phase-1 notification
+      producers to the notification DB persistence gateway while preserving
+      demo-header mock-mode in-memory behavior.
+    </p>
+
+    <h2>What Changed</h2>
+    <ul>
+      <li><code>waiting_over_30m</code> now emits through the DB persistence gateway when the reception queue route runs with a Supabase-session actor.</li>
+      <li><code>billing_waiting_ready</code> now emits through the DB persistence gateway after fulfillment completion creates billing candidates.</li>
+      <li>Vet-reviewed lab/imaging billing sync now emits <code>billing_waiting_ready</code> through the DB persistence gateway after candidate sync and audit emission succeed.</li>
+      <li>Demo-header mock-mode producers continue to use the existing scoped in-memory event store.</li>
+      <li>Notification write failures stay non-authoritative after the source read or mutation succeeds; emitted counts only include successfully persisted or emitted events.</li>
+      <li>Notification persistence rejection coverage now proves reception reads, fulfillment completion, and vet-reviewed billing sync remain successful when notification writes fail.</li>
+    </ul>
+
+    <h2>Security Boundary</h2>
+    <ul>
+      <li>Supabase-session producer routes create the notification persistence gateway from the request Supabase client instead of using browser-local state.</li>
+      <li>Demo event scope ids are only passed for demo-header mock-mode; Supabase-session events use the DB event scope boundary.</li>
+      <li>Existing recipient, source-domain visibility, and DB RPC actor checks remain the persistence boundary for delivered notification rows.</li>
+    </ul>
+
+    <h2>Verification</h2>
+    <ul>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-persistence-contract.spec.ts tests/reception-queue-read-server.spec.ts tests/fulfillment-work-item-server.spec.ts tests/notification-live-api-server.spec.ts</code> passed with 48 tests.</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/app-shell.spec.ts -g "global notification"</code> passed with 8 tests.</li>
+      <li><code>npx tsc --noEmit --pretty false</code> passed.</li>
+      <li>Targeted ESLint for touched notification, reception, fulfillment, route, and test files passed.</li>
+      <li><code>npm run docs:check</code> passed.</li>
+      <li><code>git diff --check</code> passed.</li>
+    </ul>
+
+    <h2>Not Covered</h2>
+    <ul>
+      <li>Remote Supabase migration execution, staging/live replay, production deploy, and monitoring were not run.</li>
+      <li>Background scheduler ownership for reception waiting alerts remains out of scope.</li>
+      <li>Standalone billing invoice-candidate PATCH notification emission remains out of scope.</li>
+      <li>Realtime/SSE delivery, external channels, provider/device/PACS integrations, and real data are still out of scope.</li>
+      <li>Full <code>tests/app-shell.spec.ts</code> was not used as the formal gate because unrelated dispensing and compact layout cases failed during a broader exploratory run.</li>
+    </ul>
+  </body>
+</html>

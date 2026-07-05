@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Billing Waiting-Ready Notification Producer Wiring Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #667085;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>수납 준비 알림 Producer 연결 결과</h1>
+    <p class="meta">2026-07-05 · NOTIFICATION-PR-020 · synthetic/demo-data scope</p>
+
+    <h2>요청</h2>
+    <p>
+      알림 v1 live producer를 실제 업무 신호에 더 연결하기 위해, 완료된 오더가 수납 후보로
+      반영되는 순간을 직원용 알림으로 연결했다.
+    </p>
+
+    <h2>결과</h2>
+    <ul>
+      <li>fulfillment 완료 후 billing candidate sync가 성공하면 <code>billing_waiting_ready</code> 알림을 생성한다.</li>
+      <li>lab/imaging 오더는 vet review gate를 통과해 수납 후보가 생긴 뒤 같은 알림을 생성한다.</li>
+      <li>생성 알림은 billing role queue 대상으로 drawer-only, non-badge, reference-priority 상태다.</li>
+      <li>source action은 같은 workspace의 수납 후보 context로만 이동한다.</li>
+      <li>알림 payload에는 환자/오더 식별용 label과 candidate id만 사용하고 금액, 결제 상세, 보호자 연락처는 담지 않았다.</li>
+      <li>source-domain view permission이 없는 사용자는 role queue가 맞아도 알림 row/source route를 받지 못한다.</li>
+      <li>synthetic/dev producer 이벤트는 demo client session으로 scope할 수 있게 해 테스트 간 drawer count 오염을 막고, scoped bump는 같은 client session의 state만 갱신한다.</li>
+      <li>vet review로 수납 후보가 생성되는 경로도 audit event를 남긴 뒤 알림을 생성한다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/features/fulfillment/server-fulfillment-work-item-core.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/fulfillment/work-items/[workItemId]/route.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/chart/result-review-billing/route.ts</code></li>
+      <li><code>tests/fulfillment-work-item-server.spec.ts</code></li>
+      <li><code>docs/product/features/notifications/global-notification-center-v1-live-plan.md</code></li>
+      <li><code>docs/work/notifications/NOTIFICATION-PR-020-billing-waiting-ready-producer-wiring.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/fulfillment-work-item-server.spec.ts -g "billing-ready notification|holds lab and imaging|fulfillment work item routes"</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/fulfillment-work-item-server.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-live-api-server.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/reception-queue-read-server.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/app-shell.spec.ts -g "global notification"</code> 통과</li>
+      <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li>알림/fulfillment/reception 관련 touched files 대상 <code>npx eslint</code> 통과</li>
+      <li><code>git diff --check</code> 통과</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      이번 작업은 fulfillment/vet-review가 만든 수납 후보 알림까지만 다룬다. standalone billing candidate
+      PATCH 알림, clinical result completion, explicit recheck request, DB persistence, RLS replay, realtime delivery,
+      외부 메시지/결제 제공자 연동, production launch, real data 사용은 후속 작업 범위다.
+    </p>
+  </body>
+</html>

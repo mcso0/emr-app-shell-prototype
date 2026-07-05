@@ -418,11 +418,33 @@ test("global command palette opens today's reception schedule", async ({
 });
 
 test("global notification bell opens right drawer with badge policy count", async ({ page }) => {
+  const notificationRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/api/workspaces/clair-demo/notifications")) {
+      notificationRequests.push(`${request.method()} ${url.pathname}${url.search}`);
+    }
+  });
+
   await page.goto("/w/clair-demo/reception?modulePanel=open");
 
   const notificationButton = page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ });
   await expect(notificationButton).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByTestId("global-notification-badge")).toHaveText("7");
+  await expect
+    .poll(() =>
+      notificationRequests.some((entry) =>
+        entry.includes("GET /api/workspaces/clair-demo/notifications?filter=all"),
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      notificationRequests.some((entry) =>
+        entry.includes("GET /api/workspaces/clair-demo/notifications?filter=archived"),
+      ),
+    )
+    .toBe(true);
 
   await notificationButton.click();
 
@@ -504,47 +526,50 @@ test("global notification drawer all-read action clears badge-count notification
   await expect(page.getByRole("button", { name: "알림 센터 열기" })).toBeVisible();
 });
 
-test("global notification drawer persists local read and archive state with contract keys", async ({ page }) => {
-  const readStateKey = "clair.notifications.v0.read";
-  const archiveStateKey = "clair.notifications.v0.archive";
+test("global notification drawer persists API read and archive state for the current demo browser session", async ({ page }) => {
   const urgentNotificationId = "notif-order-urgent-handoff-kong-cbc";
-  const initiallyArchivedNotificationId = "notif-imaging-completed-choco";
+  const notificationRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/api/workspaces/clair-demo/notifications")) {
+      notificationRequests.push(`${request.method()} ${url.pathname}${url.search}`);
+    }
+  });
 
   await page.goto("/w/clair-demo/reception?modulePanel=open");
-  await page.evaluate(
-    ({ readKey, archiveKey }) => {
-      window.localStorage.setItem(readKey, JSON.stringify(["missing-notification"]));
-      window.localStorage.setItem(archiveKey, "not-json");
-    },
-    { readKey: readStateKey, archiveKey: archiveStateKey }
-  );
-  await page.reload();
-
   await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
   const drawer = page.getByRole("dialog", { name: "알림" });
   const urgentRow = drawer.getByTestId(`global-notification-row-${urgentNotificationId}`);
 
-  await expect(drawer.getByTestId("global-notification-local-state-disclaimer")).toHaveText(
-    "v0 역할 큐 알림의 읽음/보관 상태는 현재 브라우저에만 저장됩니다. 다른 사용자나 다른 브라우저와 동기화되지 않습니다."
+  await expect(drawer.getByTestId("global-notification-state-notice")).toHaveText(
+    "v1 알림의 읽음/보관 상태는 서버 API에 저장됩니다. 다른 브라우저에서도 같은 사용자 상태로 동기화됩니다."
   );
 
   await urgentRow.getByRole("button", { name: "콩이 CBC 재확인이 필요합니다 읽음 처리" }).click();
+  await expect
+    .poll(() =>
+      notificationRequests.some((entry) =>
+        entry.includes(`POST /api/workspaces/clair-demo/notifications/${urgentNotificationId}/read`),
+      ),
+    )
+    .toBe(true);
   await urgentRow.getByRole("button", { name: "콩이 CBC 재확인이 필요합니다 보관" }).click();
+  await expect
+    .poll(() =>
+      notificationRequests.some((entry) =>
+        entry.includes(`POST /api/workspaces/clair-demo/notifications/${urgentNotificationId}/archive`),
+      ),
+    )
+    .toBe(true);
 
   await expect
-    .poll(async () =>
-      page.evaluate(
-        ({ readKey, archiveKey }) => ({
-          readIds: JSON.parse(window.localStorage.getItem(readKey) ?? "[]"),
-          archivedIds: JSON.parse(window.localStorage.getItem(archiveKey) ?? "[]"),
-        }),
-        { readKey: readStateKey, archiveKey: archiveStateKey }
-      )
+    .poll(() =>
+      page.evaluate(() => ({
+        archived: window.localStorage.getItem("clair.notifications.v0.archive"),
+        read: window.localStorage.getItem("clair.notifications.v0.read"),
+      })),
     )
-    .toEqual({
-      readIds: [urgentNotificationId],
-      archivedIds: [initiallyArchivedNotificationId, urgentNotificationId],
-    });
+    .toEqual({ archived: null, read: null });
 
   await page.reload();
   await expect(page.getByRole("button", { name: /알림 센터 열기, 중요 알림 6개/ })).toBeVisible();

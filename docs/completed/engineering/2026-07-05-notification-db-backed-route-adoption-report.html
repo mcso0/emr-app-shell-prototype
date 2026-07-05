@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notification DB-Backed Route Adoption Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #667085;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>알림 DB-backed Route Adoption 결과</h1>
+    <p class="meta">2026-07-05 · NOTIFICATION-PR-024 · Supabase-session route scope</p>
+
+    <h2>요청</h2>
+    <p>
+      알림 v1 DB persistence foundation을 실제 notification route 경계에 연결해, Supabase-session actor가
+      알림 목록과 읽음/보관 상태를 DB gateway를 통해 다루도록 했다.
+    </p>
+
+    <h2>결과</h2>
+    <ul>
+      <li>Supabase-session notification route actor에 notification persistence gateway를 붙였다.</li>
+      <li>목록/count route는 persisted event와 persisted user state를 읽는다.</li>
+      <li>read/archive/restore/read-all route는 user state를 DB RPC로 저장한다.</li>
+      <li>demo-header mock mode는 기존 scoped in-memory store를 계속 사용한다.</li>
+      <li>기존 DTO mapping, role recipient filter, source permission filter, badge count, safe source route 규칙은 그대로 재사용한다.</li>
+      <li>state list RPC를 보강해 persisted read/archive 상태가 다음 list response에 반영될 수 있게 했다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/features/notifications/server-notification-persistence.ts</code></li>
+      <li><code>src/features/notifications/server-notifications-route.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/notifications/route.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/notifications/counts/route.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/notifications/[notificationId]/read/route.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/notifications/[notificationId]/archive/route.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/notifications/[notificationId]/restore/route.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/notifications/read-all/route.ts</code></li>
+      <li><code>supabase/migrations/20260705133000_notification_event_persistence.sql</code></li>
+      <li><code>tests/notification-persistence-contract.spec.ts</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-persistence-contract.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/notification-live-api-server.spec.ts</code> 통과</li>
+      <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+      <li>notification route/persistence 대상 <code>npx eslint</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>git diff --check</code> 통과</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      remote Supabase migration execution, staging/live replay, production deploy, demo-header memory store 교체,
+      producer-side DB adoption, realtime/SSE delivery, 외부 메시지/provider 연동, real data 사용은 후속 작업 범위다.
+    </p>
+  </body>
+</html>
