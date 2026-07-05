@@ -108,13 +108,13 @@ function mapOperationsItemToHomeTask(item: HomeOperationsWorkItem): HomeTask {
     patientName: item.patientName,
     clientName: item.guardianName,
     encounterLabel: item.encounterId,
-    receptionType: item.sourceType === "appointment"
-      ? "예약"
-      : item.sourceType === "reception"
-        ? "접수"
-        : undefined,
+    receptionType: getReceptionTypeLabel(item),
     sourceLabel,
+    requestedBy: item.requesterName,
     assigneeName: item.assigneeName,
+    queueCardEventText: item.queueCardEventText,
+    queueCardSecondLineBadgeLabel: item.queueCardSecondLineBadgeLabel,
+    queueCardSecondLineText: item.queueCardSecondLineText,
     requestedAt: item.requestedAt,
     dueAt: item.stateEnteredAt ?? item.requestedAt,
     status: item.progressState,
@@ -143,6 +143,15 @@ function mapOperationsItemToHomeTask(item: HomeOperationsWorkItem): HomeTask {
     actionHref: item.sourceHref,
     actionLabel: `${sourceLabel} 보러가기`,
   };
+}
+
+function getReceptionTypeLabel(item: HomeOperationsWorkItem): HomeTask["receptionType"] {
+  if (item.receptionType) return item.receptionType;
+  if (item.sourceType === "appointment") return "예약";
+  if (item.sourceType === "reception") return "외래";
+  if (item.sourceType === "inpatient") return undefined;
+
+  return "외래";
 }
 
 function getKanbanColumnId(sourceType: HomeOperationsSourceType): HomeKanbanColumnId {

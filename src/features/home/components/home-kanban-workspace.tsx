@@ -27,6 +27,7 @@ import {
 } from "@/components/emr/subpanel";
 import {
   EmrTaskQueueCard,
+  getTaskQueueEventKindFromStatus,
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
 import { Badge } from "@/components/ui/badge";
@@ -185,7 +186,7 @@ function getAssigneeLabel(task: HomeTask) {
   if (task.assignment === "assignmentMissing") return "배정 누락";
   if (task.assignment === "roleQueue") return "팀 큐";
 
-  return "나";
+  return "미지정";
 }
 
 function getDecisionReason(task: HomeTask) {
@@ -1218,7 +1219,6 @@ function HomeKanbanTaskCard({
 }) {
   return (
     <EmrTaskQueueCard
-      className="min-h-[108px]"
       item={getHomeTaskQueueCardItem(task)}
       selected={selected}
       onSelect={onSelect}
@@ -1227,18 +1227,72 @@ function HomeKanbanTaskCard({
 }
 
 function getHomeTaskQueueCardItem(task: HomeTask): EmrTaskQueueCardItem {
+  const eventText = task.queueCardEventText ?? getQueueCardEventText(task);
+
   return {
     actionAriaLabel: `${task.title} 더보기`,
     actionTestId: `home-kanban-task-action-${task.id}`,
-    assigneeName: getAssigneeLabel(task),
-    eventActorName: getRequesterLabel(task),
-    eventText: `${getStatusDisplayLabel(task)} · ${getTimeSignal(task)}`,
-    eventTime: getShortTime(task.dueAt),
+    assigneeName: task.assigneeName,
+    eventActorName: getQueueCardEventActorName(task),
+    eventKind: getTaskQueueEventKindFromStatus(task.sourceStatus ?? task.status),
+    eventText,
+    eventTime: getShortTime(task.requestedAt),
     guardianName: task.clientName ?? "보호자 미지정",
     patientName: task.patientName ?? "환자 미지정",
-    receptionType: task.receptionType ?? getTaskTypeLabel(task),
-    secondLineBadgeLabel: getDecisionReason(task),
-    secondLineText: task.title,
+    receptionType: getQueueCardReceptionType(task),
+    secondLineBadgeLabel:
+      task.queueCardSecondLineBadgeLabel ?? getQueueCardSecondLineBadgeLabel(task),
+    secondLineText: task.queueCardSecondLineText ?? getQueueCardSecondLineText(task),
     testId: `home-kanban-task-${task.id}`,
   };
+}
+
+function getQueueCardReceptionType(task: HomeTask) {
+  if (task.receptionType) return task.receptionType;
+  if (task.sourceType === "appointment") return "예약";
+  if (task.sourceType === "inpatient") return getTaskTypeLabel(task);
+
+  return "외래";
+}
+
+function getQueueCardEventActorName(task: HomeTask) {
+  if (task.requestedBy) return task.requestedBy;
+  if (task.sourceType === "appointment") return "예약";
+  if (task.sourceType === "reception" || task.sourceType === "consultation") return "접수";
+  if (task.sourceType === "billing") return "수납";
+
+  return "요청자 미정";
+}
+
+function getQueueCardEventText(task: HomeTask) {
+  const time = getShortTime(task.requestedAt);
+  if (task.sourceType === "appointment") return `${time} 예약`;
+  if (task.sourceType === "reception") return `${time} 접수`;
+  if (task.sourceType === "consultation") {
+    return `${time} ${getQueueCardReceptionType(task) === "예약" ? "예약" : "접수"}`;
+  }
+
+  return undefined;
+}
+
+function getQueueCardSecondLineBadgeLabel(task: HomeTask) {
+  if (task.sourceType === "appointment" || task.sourceType === "reception") {
+    return getTaskProgressState(task) === "cancelled" ? "취소" : "대기";
+  }
+  if (task.sourceType === "consultation") return "방문목적";
+  if (task.sourceType === "billing") return undefined;
+
+  return task.sourceLabel;
+}
+
+function getQueueCardSecondLineText(task: HomeTask) {
+  if (
+    task.sourceType === "appointment" ||
+    task.sourceType === "reception" ||
+    task.sourceType === "consultation"
+  ) {
+    return task.recommendedAction || task.title;
+  }
+
+  return task.title;
 }

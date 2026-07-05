@@ -346,6 +346,103 @@ test("home empty work-status state is centered in the content surface", async ({
   expect(Math.abs(sidePanelEmptyCenterY - sidePanelSurfaceCenterY)).toBeLessThanOrEqual(6);
 });
 
+test("home live operations cards match source queue card fields", async ({ page }) => {
+  await useMockRole(page, "front_desk");
+  await mockCheongdamHomeOperations(page, {
+    ok: true,
+    workspaceId: cheongdamWorkspaceId,
+    operatingDate: "2026-07-05",
+    sourceStatus: "live",
+    items: [
+      {
+        id: "consultation:encounter-live-001",
+        workspaceId: cheongdamWorkspaceId,
+        sourceType: "consultation",
+        sourceId: "encounter-live-001",
+        sourceStatus: "waiting",
+        encounterId: "encounter-live-001",
+        patientName: "구름",
+        guardianName: "문지아",
+        title: "구름 진료 대기",
+        progressState: "waiting",
+        receptionType: "외래",
+        queueCardEventText: "11:11 접수",
+        queueCardSecondLineBadgeLabel: "방문목적",
+        queueCardSecondLineText: "피부 상담",
+        attentionSignals: ["team_queue"],
+        requestedAt: "2026-07-05T11:11:00+09:00",
+        operatingDate: "2026-07-05",
+        sourceHref: `/w/${cheongdamWorkspaceId}/treatment?encounterId=encounter-live-001&modulePanel=open`,
+        drawerSummary: "카드에는 이 문구가 직접 보이면 안 됨",
+        permissionMode: "full",
+        teamQueueId: "consultation",
+        teamQueueLabel: "진료 큐",
+      },
+      {
+        id: "billing:invoice-live-001",
+        workspaceId: cheongdamWorkspaceId,
+        sourceType: "billing",
+        sourceId: "invoice-live-001",
+        sourceStatus: "draft:unpaid",
+        encounterId: "encounter-live-001",
+        patientName: "구름",
+        guardianName: "문지아",
+        title: "INV-001 수납 요청",
+        progressState: "waiting",
+        receptionType: "외래",
+        queueCardSecondLineText: "오더 2건 · 24,000원",
+        attentionSignals: ["team_queue"],
+        requestedAt: "2026-07-05T11:12:00+09:00",
+        operatingDate: "2026-07-05",
+        sourceHref: `/w/${cheongdamWorkspaceId}/billing?encounterId=encounter-live-001&modulePanel=open`,
+        drawerSummary: "청구 후보 또는 수납 진행 상태를 확인합니다.",
+        permissionMode: "full",
+        requesterName: "수납",
+        teamQueueId: "billing",
+        teamQueueLabel: "수납팀 큐",
+      },
+    ],
+    summary: {
+      totalVisible: 2,
+      mineCount: 0,
+      bySourceType: {},
+      byProgressState: {},
+      byAttentionSignal: {},
+      byAssignmentState: {
+        personal: 0,
+        teamQueue: 1,
+        assignmentMissing: 0,
+      },
+      completedCount: 0,
+      cancelledCount: 0,
+    },
+    generatedAt: "2026-07-05T11:20:00+09:00",
+  });
+
+  await page.goto(`/w/${cheongdamWorkspaceId}/home?modulePanel=open`);
+
+  const card = page.getByTestId("home-kanban-task-consultation:encounter-live-001");
+
+  await expect(card).toContainText("외래");
+  await expect(card).toContainText("구름");
+  await expect(card).toContainText("문지아");
+  await expect(card).toContainText("방문목적");
+  await expect(card).toContainText("피부 상담");
+  await expect(card).toContainText("11:11 접수");
+  await expect(card).toContainText("미지정");
+  await expect(card).not.toContainText("나");
+  await expect(card).not.toContainText("카드에는 이 문구");
+
+  const billingCard = page.getByTestId("home-kanban-task-billing:invoice-live-001");
+
+  await expect(billingCard).toContainText("외래");
+  await expect(billingCard).toContainText("구름");
+  await expect(billingCard).toContainText("문지아");
+  await expect(billingCard).toContainText("오더 2건 · 24,000원");
+  await expect(billingCard).toContainText("11:12 수납 요청");
+  await expect(billingCard).not.toContainText("나");
+});
+
 test("home operations read failure does not render as no work", async ({ page }) => {
   await useMockRole(page, "front_desk");
   await mockCheongdamHomeOperations(
