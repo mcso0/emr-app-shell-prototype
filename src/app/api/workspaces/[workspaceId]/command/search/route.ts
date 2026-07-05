@@ -16,6 +16,10 @@ import {
   createSupabaseReceptionQueueReadGateway,
   type SupabaseReceptionQueueReadRpcClient,
 } from "@/features/reception/server-reception-queue-read";
+import {
+  createSupabaseWorkspaceStaffReadGateway,
+  type SupabaseWorkspaceStaffClient,
+} from "@/features/staff/server-workspace-staff";
 import { searchCommand } from "@/features/command/server-command-search";
 import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
 import { createClient } from "@/lib/supabase/server";
@@ -73,6 +77,11 @@ export async function GET(request: Request, { params }: RouteContext) {
     receptionQueueGateway: client
       ? createSupabaseReceptionQueueReadGateway(
           client as unknown as SupabaseReceptionQueueReadRpcClient,
+        )
+      : undefined,
+    staffGateway: client
+      ? createSupabaseWorkspaceStaffReadGateway(
+          client as unknown as SupabaseWorkspaceStaffClient,
         )
       : undefined,
     workspaceId,

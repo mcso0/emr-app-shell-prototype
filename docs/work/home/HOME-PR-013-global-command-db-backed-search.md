@@ -18,15 +18,17 @@ updated: "2026-07-05"
 
 ## Goal
 
-Connect the global command palette search input to a workspace-scoped server/API read path so Cheongdam seeded patient and reception data can appear without reintroducing legacy Sales Demo fixtures.
+Connect the global command palette search input to a workspace-scoped server/API read path so Cheongdam seeded patient, staff, and reception data can appear without reintroducing legacy Sales Demo fixtures.
 
 ## Scope
 
 - Add `GET /api/workspaces/[workspaceId]/command/search?query=&filter=`.
 - Reuse the existing reception patient/guardian lookup gateway for patient and guardian results.
+- Reuse the existing workspace staff read gateway for hospital member results.
 - Reuse the reception queue reader for today's appointment and encounter results.
 - Keep quick actions immediately visible in the palette.
 - Add loading, empty, error, partial-source, and permission-source UI states.
+- Treat any non-empty query as searchable and prevent stale ready-empty state from appearing while a new query is loading.
 - Keep `clair-demo` mock fallback limited to explicit demo/mock identity.
 - Keep Cheongdam/prepared-clinic search mockless for legacy fixture data.
 
@@ -41,6 +43,7 @@ Connect the global command palette search input to a workspace-scoped server/API
 
 - Typing a valid search term in the global command palette calls the command search API.
 - Cheongdam can render API-backed patient/guardian search results.
+- Cheongdam can render API-backed hospital staff/member search results.
 - Legacy `patient-kong` and old Sales Demo daily work do not appear in Cheongdam command search.
 - Permission denial and source read errors do not render as a false empty state.
 - Result clicks navigate to the existing reception drawer URL contracts.
@@ -52,6 +55,13 @@ Connect the global command palette search input to a workspace-scoped server/API
 - Added the command search route under `src/app/api/workspaces/[workspaceId]/command/search/route.ts`.
 - Updated `src/shell/global-command-palette.tsx` to fetch API results with debounce, abort stale requests, preserve quick actions, and merge live lookup profiles before navigation.
 - Updated Cheongdam shell regression expectations from "no search result ever" to "no legacy fixture result, API-backed seeded result allowed."
+
+### 2026-07-05 Follow-Up Result
+
+- Added hospital staff/member search through the existing `workspace-staff-read` server path and `staff` source state.
+- Allowed one-character command queries.
+- Fixed the stale empty-state flash by switching the palette to `loading` immediately on query/filter changes.
+- Added a `section=members` URL handoff so staff results open 병원관리 구성원 관리.
 
 ## Verification
 
@@ -67,6 +77,16 @@ Connect the global command palette search input to a workspace-scoped server/API
 - Passed: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/command-search-server.spec.ts --reporter=line`.
 - Passed: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/app-shell.spec.ts -g "global command palette" --reporter=line`.
 - Passed: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/demo-reality-start-state.spec.ts -g "Cheongdam shell search" --reporter=line`.
+- Passed: `npx tsc --noEmit --pretty false --incremental false`.
+- Passed: target `npm run lint`.
+- Passed: `npm run docs:check`.
+- Passed: `git diff --check`.
+
+### 2026-07-05 Follow-Up Verification
+
+- Passed: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3112 npx playwright test tests/command-search-server.spec.ts --reporter=line`.
+- Passed: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3112 npx playwright test tests/app-shell.spec.ts -g "global command palette" --reporter=line`.
+- Passed: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3112 npx playwright test tests/demo-reality-start-state.spec.ts -g "Cheongdam shell search" --reporter=line`.
 - Passed: `npx tsc --noEmit --pretty false --incremental false`.
 - Passed: target `npm run lint`.
 - Passed: `npm run docs:check`.

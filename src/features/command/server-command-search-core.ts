@@ -12,13 +12,19 @@ import {
   createMockReceptionQueueReadGateway,
   type ReceptionQueueReadGateway,
 } from "@/features/reception/server-reception-queue-read-core";
+import {
+  createMockWorkspaceStaffReadGateway,
+  readWorkspaceStaff,
+  type WorkspaceStaffMember,
+  type WorkspaceStaffReadGateway,
+} from "@/features/staff/server-workspace-staff-core";
 import type { ReceptionQueueReadRecord } from "@/features/reception/reception-queue-read";
 import type { ReceptionPatientGuardianLookupItem } from "@/features/reception/patient-guardian-lookup";
 import type {
   CommandSearchFilter,
   CommandSearchResponse,
   CommandSearchResult,
-  CommandSearchSourceStatus,
+  CommandSearchSourceState,
 } from "@/features/command/command-search";
 import {
   normalizeCommandSearchQuery,
@@ -56,6 +62,7 @@ export async function searchCommand({
   permissionAdapter = createDemoCommandSearchPermissionAdapter(),
   query,
   receptionQueueGateway = createMockReceptionQueueReadGateway(),
+  staffGateway = createMockWorkspaceStaffReadGateway(),
   workspaceId,
 }: {
   actorUserId: string | null;
@@ -65,6 +72,7 @@ export async function searchCommand({
   permissionAdapter?: WorkspacePermissionAdapter;
   query: string;
   receptionQueueGateway?: ReceptionQueueReadGateway;
+  staffGateway?: WorkspaceStaffReadGateway;
   workspaceId: string;
 }): Promise<CommandSearchResultEnvelope> {
   const normalizedFilter = normalizeCommandSearchFilter(filter);
@@ -95,15 +103,16 @@ export async function searchCommand({
       query: normalizedQuery,
       filter: normalizedFilter,
       results: [],
-      sourceState: { patientGuardian: "skipped", reception: "skipped" },
+      sourceState: { patientGuardian: "skipped", reception: "skipped", staff: "skipped" },
       enforcedBy: "command-search",
     };
   }
 
-  const sourceState: {
-    patientGuardian: CommandSearchSourceStatus;
-    reception: CommandSearchSourceStatus;
-  } = { patientGuardian: "skipped", reception: "skipped" };
+  const sourceState: CommandSearchSourceState = {
+    patientGuardian: "skipped",
+    reception: "skipped",
+    staff: "skipped",
+  };
   const results: CommandSearchResult[] = [];
 
   if (shouldSearchPeople(normalizedFilter)) {
@@ -165,6 +174,31 @@ export async function searchCommand({
           }),
         );
       }
+    }
+  }
+
+  if (shouldSearchStaff(normalizedFilter)) {
+    const staffResult = await readWorkspaceStaff({
+      actorUserId,
+      gateway: staffGateway,
+      permissionAdapter,
+      workspaceId,
+    });
+
+    if (!staffResult.ok) {
+      sourceState.staff = staffResult.status === 401 || staffResult.status === 403
+        ? "permission_denied"
+        : "error";
+    } else {
+      sourceState.staff = "ready";
+      results.push(
+        ...buildStaffResults({
+          filter: normalizedFilter,
+          query: normalizedQuery,
+          staff: staffResult.staff,
+          workspaceId,
+        }),
+      );
     }
   }
 
@@ -248,6 +282,10 @@ function shouldSearchReception(filter: CommandSearchFilter) {
   return ["all", "patient", "guardian", "phone", "chart", "vet", "desk"].includes(filter);
 }
 
+function shouldSearchStaff(filter: CommandSearchFilter) {
+  return ["all", "vet", "technician", "desk"].includes(filter);
+}
+
 function buildPeopleResults({
   filter,
   lookupItems,
@@ -301,6 +339,35 @@ function buildPeopleResults({
   }
 
   return [...patientResults, ...Array.from(guardianMap.values()).slice(0, maxResultsPerKind)];
+}
+
+function buildStaffResults({
+  filter,
+  query,
+  staff,
+  workspaceId,
+}: {
+  filter: CommandSearchFilter;
+  query: string;
+  staff: WorkspaceStaffMember[];
+  workspaceId: string;
+}): CommandSearchResult[] {
+  return staff
+    .filter((member) => matchesStaffFilter(member, filter))
+    .filter((member) => matchesCommandQuery(getStaffSearchText(member), query))
+    .slice(0, maxResultsPerKind)
+    .map((member): CommandSearchResult => ({
+      id: `staff-${member.id}`,
+      kind: "staff",
+      title: member.displayName,
+      subtitle: [member.title, member.department, getStaffRoleLabels(member).join(", ")]
+        .filter(Boolean)
+        .join(" · "),
+      href: createHref(workspaceId, "hospital-admin", {
+        section: "members",
+      }),
+      badge: "구성원",
+    }));
 }
 
 function buildReceptionResults({
@@ -361,6 +428,35 @@ function buildReceptionResults({
         ...(patient ? { lookupItem: { patient, ...(record.primaryGuardian ? { primaryGuardian: record.primaryGuardian } : {}) } } : {}),
       };
     });
+}
+
+function matchesStaffFilter(member: WorkspaceStaffMember, filter: CommandSearchFilter) {
+  if (filter === "all") return true;
+  if (filter === "desk") return member.roles.includes("front_desk");
+  if (filter === "vet" || filter === "technician") return member.roles.includes(filter);
+  return false;
+}
+
+function getStaffRoleLabels(member: WorkspaceStaffMember) {
+  const roleLabels: Record<string, string> = {
+    front_desk: "데스크",
+    hospital_admin: "관리자",
+    technician: "테크니션",
+    vet: "수의사",
+  };
+
+  return member.roles.map((role) => roleLabels[role] ?? role);
+}
+
+function getStaffSearchText(member: WorkspaceStaffMember) {
+  return [
+    member.displayName,
+    member.initial,
+    member.title,
+    member.department,
+    ...member.roles,
+    ...getStaffRoleLabels(member),
+  ].filter(Boolean).join(" ");
 }
 
 function getPatientSearchText(patient: Patient, guardian?: Guardian) {

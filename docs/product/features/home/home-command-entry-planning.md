@@ -234,9 +234,15 @@ The global command palette is a staff work-entry tool, not a legacy demo fixture
 
 - quick actions, always available without a server search
 - patient and guardian lookup through the workspace-scoped reception lookup API
+- active hospital staff/member lookup through the workspace staff read path
 - today's reception appointments and active encounter queue items through the reception queue read path
 
 Search v1 intentionally excludes chart, billing, lab, imaging, dispensing, and treatment global search. Those should be added later through source-owned read models instead of scraping client fixtures.
+
+Search interaction rules:
+
+- Any non-empty query, including one Korean/English/numeric character, may trigger server search.
+- While a new query or filter is pending, the palette must show a loading state instead of carrying over a stale empty result state.
 
 Mock/live boundary:
 
