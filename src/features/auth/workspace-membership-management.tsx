@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -190,6 +190,7 @@ export function WorkspaceMembershipManagement({
 }: WorkspaceMembershipManagementProps) {
   const { hydrated, hydrate, session } = useAuthClient();
   const [state, setState] = useState<SessionWorkspacesState>(getBrowserWorkspaceState);
+  const stateRef = useRef(state);
   const [fieldErrors, setFieldErrors] = useState<WorkspaceInvitationFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [statusReadState, setStatusReadState] =
@@ -224,50 +225,8 @@ export function WorkspaceMembershipManagement({
   }, [hydrate]);
 
   useEffect(() => {
-    if (!hydrated || !session) return;
-
-    let canceled = false;
-
-    async function loadPersistedMembershipStatus() {
-      setStatusReadState("loading");
-
-      try {
-        const response = await fetch(`/api/workspaces/${workspaceId}/memberships`, {
-          headers:
-            session?.role === "supabase"
-              ? undefined
-              : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session?.role ?? "") },
-        });
-        const result = await response.json() as WorkspaceMembershipStatusRouteResponse;
-
-        if (canceled) return;
-
-        if (!response.ok || !result.ok) {
-          setStatusReadState("error");
-          return;
-        }
-
-        if (result.memberships.length > 0 || result.invitations.length > 0) {
-          updateState(
-            mergePersistedWorkspaceMembershipStatus(state, workspaceId, {
-              memberships: result.memberships,
-              invitations: result.invitations,
-            })
-          );
-        }
-
-        setStatusReadState("idle");
-      } catch {
-        if (!canceled) setStatusReadState("error");
-      }
-    }
-
-    void loadPersistedMembershipStatus();
-
-    return () => {
-      canceled = true;
-    };
-  }, [hydrated, session?.id, session?.role, workspaceId]);
+    stateRef.current = state;
+  }, [state]);
 
   const workspaceRows = useMemo<MembershipRow[]>(() => {
     const memberships = state.memberships
@@ -303,7 +262,8 @@ export function WorkspaceMembershipManagement({
     (invitation) => invitation.workspaceId === workspaceId && invitation.status === "pending"
   );
 
-  function updateState(nextState: SessionWorkspacesState) {
+  const updateState = useCallback((nextState: SessionWorkspacesState) => {
+    stateRef.current = nextState;
     setState(nextState);
     if (session) {
       persistSessionWorkspacesState(
@@ -314,7 +274,54 @@ export function WorkspaceMembershipManagement({
       );
       window.dispatchEvent(new Event("clair.sessionWorkspaces.v1"));
     }
-  }
+  }, [session]);
+
+  useEffect(() => {
+    if (!hydrated || !session) return;
+
+    const activeSession = session;
+    let canceled = false;
+
+    async function loadPersistedMembershipStatus() {
+      setStatusReadState("loading");
+
+      try {
+        const response = await fetch(`/api/workspaces/${workspaceId}/memberships`, {
+          headers:
+            activeSession.role === "supabase"
+              ? undefined
+              : { "x-clair-demo-session-user-id": getDemoInvitationActorId(activeSession.role) },
+        });
+        const result = await response.json() as WorkspaceMembershipStatusRouteResponse;
+
+        if (canceled) return;
+
+        if (!response.ok || !result.ok) {
+          setStatusReadState("error");
+          return;
+        }
+
+        if (result.memberships.length > 0 || result.invitations.length > 0) {
+          updateState(
+            mergePersistedWorkspaceMembershipStatus(stateRef.current, workspaceId, {
+              memberships: result.memberships,
+              invitations: result.invitations,
+            })
+          );
+        }
+
+        setStatusReadState("idle");
+      } catch {
+        if (!canceled) setStatusReadState("error");
+      }
+    }
+
+    void loadPersistedMembershipStatus();
+
+    return () => {
+      canceled = true;
+    };
+  }, [hydrated, session, updateState, workspaceId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

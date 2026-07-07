@@ -546,7 +546,7 @@ export function LoginForm() {
                     />
                   </span>
                   <div className="flex flex-col gap-2">
-                    <h1 className="emr-text-dialog-title font-bold text-[var(--emr-text-primary)]">
+                    <h1 className="emr-text-dialog-title font-semibold text-[var(--emr-text-primary)]">
                       {isInviteOtpLogin ? "초대 이메일 인증" : "CLAiR EMR 로그인"}
                     </h1>
                     {!isDefaultPasswordLogin ? (
@@ -582,7 +582,7 @@ export function LoginForm() {
                     className="gap-2"
                     data-invalid={emailFieldError ? "true" : undefined}
                   >
-                    <FieldLabel htmlFor="mock-email" className="emr-text-body font-bold">
+                    <FieldLabel htmlFor="mock-email" className="emr-text-body font-semibold">
                       이메일
                     </FieldLabel>
                     <Input
@@ -717,7 +717,7 @@ export function LoginForm() {
                       data-invalid={passwordFieldError ? "true" : undefined}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <FieldLabel htmlFor="mock-password" className="emr-text-body font-bold">
+                        <FieldLabel htmlFor="mock-password" className="emr-text-body font-semibold">
                           비밀번호
                         </FieldLabel>
                         <span
