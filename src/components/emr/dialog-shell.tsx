@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-export type EmrDialogShellVariant = "confirm" | "form" | "wide-form";
+export type EmrDialogShellVariant =
+  | "confirm"
+  | "form"
+  | "wide-form"
+  | "registration-form"
+  | "registration-confirm";
 
 type EmrDialogShellLayout = {
   contentClassName: string;
@@ -46,9 +51,28 @@ export const emrDialogShellLayouts = {
     footerClassName:
       "-mx-0 -mb-0 items-center justify-end rounded-none border-t bg-[var(--emr-surface-panel)] px-8 py-4 sm:justify-end",
   },
+  "registration-form": {
+    contentClassName:
+      "grid min-h-[min(714px,calc(100vh-5rem))] max-h-[min(714px,calc(100vh-5rem))] grid-rows-[auto_minmax(0,1fr)_64px] gap-0 overflow-hidden p-0 sm:max-w-[440px]",
+    headerClassName: "px-4 pb-0 pt-4",
+    bodyClassName: "min-h-0 overflow-y-auto px-4 pb-0 pt-3",
+    footerClassName:
+      "-mx-0 -mb-0 min-h-16 items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-4 py-4 sm:justify-between",
+  },
+  "registration-confirm": {
+    contentClassName:
+      "grid min-h-[min(292px,calc(100vh-5rem))] max-h-[min(292px,calc(100vh-5rem))] grid-rows-[auto_minmax(0,1fr)_64px] gap-0 overflow-hidden p-0 sm:max-w-[440px]",
+    headerClassName: "px-4 pb-0 pt-4",
+    bodyClassName: "min-h-0 overflow-y-auto px-4 pb-0 pt-3",
+    footerClassName:
+      "-mx-0 -mb-0 min-h-16 items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-4 py-4 sm:justify-between",
+  },
 } as const satisfies Record<EmrDialogShellVariant, EmrDialogShellLayout>;
 
-export type EmrDialogShellProps = Omit<ComponentPropsWithoutRef<typeof DialogContent>, "children"> & {
+export type EmrDialogShellProps = Omit<
+  ComponentPropsWithoutRef<typeof DialogContent>,
+  "children" | "title"
+> & {
   title: ReactNode;
   variant?: EmrDialogShellVariant;
   children?: ReactNode;

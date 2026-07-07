@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-05-22"
+updated: "2026-07-08"
 linear_issue: "DEN-205"
 linear_project: "CLAiR EMR UI/UX Consistency & Affordance Hardening"
 source_docs:
@@ -34,6 +34,8 @@ import { EmrDialogShell } from "@/components/emr/dialog-shell";
 | `confirm` | `420px` | short confirmation, state-changing CTA, destructive-feeling session action | compact body, no internal scroll by default | secondary action before primary action |
 | `form` | `520px` | compact create/edit forms and membership-like forms | max viewport height with scrollable body | sticky shell footer inside dialog grid |
 | `wide-form` | `680px` | registration, profile, and multi-section forms | max viewport height with scrollable body | sticky shell footer inside dialog grid |
+| `registration-form` | `440px` | CDS V2 patient/guardian registration step forms | fixed design height with scrollable body fallback | 64px shell footer, cancel left and step action right |
+| `registration-confirm` | `440px` | CDS V2 patient/guardian registration review step | fixed compact design height with scrollable body fallback | 64px shell footer, cancel left and register action right |
 
 Do not create local dialog widths unless the workflow needs a documented
 exception. Prefer variant selection before adding `className` overrides.
