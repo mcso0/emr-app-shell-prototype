@@ -58,7 +58,11 @@ const roleQueueLabels: Record<string, string> = {
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { workspaceId } = await params;
-  const actor = await resolveNotificationRouteActor({ request, workspaceId });
+  const actor = await resolveNotificationRouteActor({
+    request,
+    workspaceId,
+    mutationRateLimitOperation: "notification_order_recheck_request",
+  });
 
   if (!actor.ok) return actor.response;
 

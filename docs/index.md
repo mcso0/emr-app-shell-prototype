@@ -40,6 +40,7 @@ Use detailed history, completed reports, and archived plans only when the active
 | Domain entity map | [EMR Domain Entity Map](product/domain/emr-domain-entity-map.md) |
 | Role/permission source | [Role Permission Source Map](product/domain/role-permission-source-map.md) |
 | Mock/live boundary | [Mock Live Boundary Map](engineering/architecture/mock-live-boundary-map.md) |
+| Application security review | [Application Security Review Checklist](engineering/auth-security/application-security-review-checklist.md) |
 | Persistence/data security | [Persistence Data Security Checklist](engineering/auth-security/persistence-data-security-checklist.md) |
 | Product MVP QA | [Product MVP QA Scenarios](engineering/testing/product-mvp-qa-scenario-pack.md) |
 | Launch readiness | [Launch Readiness Checklist](engineering/operations/launch-readiness-checklist.md) |
