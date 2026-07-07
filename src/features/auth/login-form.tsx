@@ -798,7 +798,7 @@ export function LoginForm() {
                   <>
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-[var(--clair-spacing-16)] text-center emr-text-body text-muted-foreground">
                       <span className="h-px bg-[var(--emr-line-hairline)]" aria-hidden="true" />
-                      <span>or</span>
+                      <span>또는</span>
                       <span className="h-px bg-[var(--emr-line-hairline)]" aria-hidden="true" />
                     </div>
 
