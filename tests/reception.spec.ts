@@ -2501,6 +2501,155 @@ test("server-backed reception day calendar read hydrates appointments and walk-i
   ).toContainText("오세아");
 });
 
+test("reception calendar card summaries show only visit purpose or reservation memo", async ({
+  page,
+}) => {
+  let requested = false;
+
+  await page.route("**/reception/calendar/day**", async (route) => {
+    requested = true;
+    const date = new URL(route.request().url()).searchParams.get("date");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        workspaceId: "clair-demo",
+        date,
+        records: [
+          {
+            encounter: {
+              id: "encounter-calendar-summary",
+              workspaceId: "clair-demo",
+              patientId: "patient-nabi",
+              guardianId: "guardian-oh-sea",
+              primaryVeterinarianId: "user-vet-suji",
+              encounterNo: "E-SUMMARY-001",
+              receptionType: "walk_in",
+              department: "영상의학과 · 방사선종양학과",
+              durationMinutes: 90,
+              chiefComplaint: "방문 목적 텍스트 에어리어 내용",
+              visitPurpose: "방문 목적 텍스트 에어리어 내용",
+              receptionMemo: "접수 메모는 캘린더 카드에서 숨김",
+              status: "waiting",
+              checkedInAt: "2026-05-01T15:00:00+09:00",
+              createdAt: "2026-05-01T15:00:00+09:00",
+              updatedAt: "2026-05-01T15:00:00+09:00",
+            },
+            patient: {
+              id: "patient-nabi",
+              workspaceId: "clair-demo",
+              patientNo: "P-260414-0002",
+              name: "나비",
+              species: "cat",
+              breed: "Korean Shorthair",
+              sex: "female",
+              handlingCautionLocked: false,
+              status: "active",
+              createdAt: "2026-04-01T00:00:00+09:00",
+              updatedAt: "2026-04-01T00:00:00+09:00",
+            },
+            primaryGuardian: {
+              id: "guardian-oh-sea",
+              workspaceId: "clair-demo",
+              name: "오세아",
+              mobilePhone: "010-2000-0002",
+              createdAt: "2026-04-01T00:00:00+09:00",
+              updatedAt: "2026-04-01T00:00:00+09:00",
+            },
+            queueEntry: {
+              id: "queue-calendar-summary",
+              workspaceId: "clair-demo",
+              encounterId: "encounter-calendar-summary",
+              queueType: "consultation",
+              status: "waiting",
+              priority: "normal",
+              sortOrder: 1,
+              enteredAt: "2026-05-01T15:00:00+09:00",
+            },
+          },
+          {
+            appointment: {
+              id: "appointment-calendar-summary",
+              workspaceId: "clair-demo",
+              patientId: "patient-coco",
+              guardianId: "guardian-lee-jieun",
+              assignedVeterinarianId: "user-vet-suji",
+              scheduledStartAt: "2026-05-01T17:00:00+09:00",
+              scheduledEndAt: "2026-05-01T18:30:00+09:00",
+              visitPurpose: "예약 메모 텍스트 에어리어 내용",
+              symptomNote: "증상 상세는 예약 카드에서 숨김",
+              status: "confirmed",
+              createdByUserId: "user-desk-yuna",
+              createdAt: "2026-05-01T16:40:00+09:00",
+              updatedAt: "2026-05-01T16:40:00+09:00",
+            },
+            patient: {
+              id: "patient-coco",
+              workspaceId: "clair-demo",
+              patientNo: "P-260501-0001",
+              name: "코코",
+              species: "dog",
+              breed: "Maltese",
+              sex: "female",
+              handlingCautionLocked: false,
+              status: "active",
+              createdAt: "2026-04-01T00:00:00+09:00",
+              updatedAt: "2026-04-01T00:00:00+09:00",
+            },
+            primaryGuardian: {
+              id: "guardian-lee-jieun",
+              workspaceId: "clair-demo",
+              name: "이지은",
+              mobilePhone: "010-1000-0001",
+              createdAt: "2026-04-01T00:00:00+09:00",
+              updatedAt: "2026-04-01T00:00:00+09:00",
+            },
+          },
+        ],
+        enforcedBy: "reception-calendar-read",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/reception");
+
+  await expect.poll(() => requested).toBe(true);
+  const walkInDescription = page.getByTestId(
+    "walkin-card-encounter-calendar-summary-description",
+  );
+  await expect(walkInDescription).toContainText(
+    "방문 목적 텍스트 에어리어 내용",
+  );
+  await expect(walkInDescription).not.toContainText("영상의학과");
+  await expect(walkInDescription).not.toContainText("접수 메모");
+  await expect(walkInDescription).not.toContainText("이수지");
+
+  const appointmentDescription = page.getByTestId(
+    "appointment-card-appointment-calendar-summary-description",
+  );
+  await expect(appointmentDescription).toContainText(
+    "예약 메모 텍스트 에어리어 내용",
+  );
+  await expect(appointmentDescription).not.toContainText(
+    "증상 상세는 예약 카드에서 숨김",
+  );
+
+  const summaryMetrics = await walkInDescription.evaluate((description) => {
+    const box = description.getBoundingClientRect();
+    const style = getComputedStyle(description);
+
+    return {
+      lineClamp:
+        style.getPropertyValue("-webkit-line-clamp") || style.webkitLineClamp,
+      maxVisualHeight: Math.round(box.height),
+    };
+  });
+  expect(summaryMetrics.lineClamp).toBe("2");
+  expect(summaryMetrics.maxVisualHeight).toBeLessThanOrEqual(36);
+});
+
 test("reception day and week calendars place walk-in cards by actual start minute and duration", async ({
   page,
 }) => {

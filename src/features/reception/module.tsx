@@ -3629,8 +3629,8 @@ function ScheduleAppointmentCard({
 }) {
   const patient = getAppointmentPatient(appointment, profileDataset);
   const guardian = getAppointmentGuardian(appointment, profileDataset);
-  const visitPurpose = appointment.visitPurpose ?? "내원";
-  const visitDetail = appointment.symptomNote ?? visitPurpose;
+  const reservationMemo = appointment.visitPurpose ?? appointment.symptomNote;
+  const appointmentSummary = reservationMemo ?? "예약";
   const noShow =
     appointment.status === "no_show" || appointment.status === "cancelled";
   const checkedIn = appointment.status === "checked_in";
@@ -3655,7 +3655,7 @@ function ScheduleAppointmentCard({
         veterinarians,
       )}
       accentTestId={`appointment-accent-${appointment.id}`}
-      ariaLabel={`${getStatusLabel("appointment", appointment.status)} ${patientLabel} · ${visitPurpose}`}
+      ariaLabel={`${getStatusLabel("appointment", appointment.status)} ${patientLabel} · ${appointmentSummary}`}
       badgeType={noShow ? "노쇼" : "예약"}
       calendarBadgeToneClassName={
         noShow
@@ -3673,14 +3673,16 @@ function ScheduleAppointmentCard({
               veterinarians,
             )
       }
-      description={cardType === "default" && !noShow ? visitDetail : undefined}
+      description={
+        cardType === "default" && !noShow ? reservationMemo : undefined
+      }
       disabled={appointment.status !== "confirmed" && !checkedIn}
       fillHeight={fillHeight}
       guardianLabel={guardianLabel}
       onPointerDown={onClearCalendarTransientSelection}
       onClick={onSelect}
       patientLabel={patientLabel}
-      purposeLabel={visitPurpose}
+      purposeLabel={appointmentSummary}
       purposeTestId={`appointment-purpose-${appointment.id}`}
       testId={`appointment-card-${appointment.id}`}
       timeLabel={timeLabel}
@@ -3719,11 +3721,8 @@ function ScheduleWalkInQueueCard({
   const guardian =
     guardians.find((item) => item.id === primaryGuardianId) ??
     getMockPatientBundle(draft.encounter.patientId)?.primaryGuardian;
-  const veterinarianName = getStaffDisplayName(
-    draft.encounter.primaryVeterinarianId,
-    veterinarians,
-  );
-  const visitPurpose = draft.encounter.chiefComplaint ?? "현장 접수";
+  const visitPurpose =
+    draft.encounter.visitPurpose ?? draft.encounter.chiefComplaint ?? "현장 접수";
   const scheduledStartAt = getDraftScheduleStartAt(draft);
   const patientLabel = patient?.name ?? "환자 미지정";
   const guardianLabel = guardian?.name ?? "보호자 미지정";
@@ -3732,14 +3731,6 @@ function ScheduleWalkInQueueCard({
       draft.durationMinutes ?? getDurationMinutesFromLabel(defaultWalkInDuration),
     startAt: scheduledStartAt,
   });
-  const description = [
-    visitPurpose,
-    draft.department ?? defaultWalkInDepartment,
-    draft.memo,
-    veterinarianName,
-  ]
-    .filter(Boolean)
-    .join(" · ");
   const unassignedCompact = displayMode === "unassignedCompact";
   const durationMinutes =
     draft.durationMinutes ?? getDurationMinutesFromLabel(defaultWalkInDuration) ?? 30;
@@ -3779,7 +3770,7 @@ function ScheduleWalkInQueueCard({
       className={
         unassignedCompact ? "w-[min(360px,100%)] !flex-none" : undefined
       }
-      description={cardType === "default" ? description : undefined}
+      description={cardType === "default" ? visitPurpose : undefined}
       fillHeight={fillHeight}
       guardianLabel={guardianLabel}
       onPointerDown={onClearCalendarTransientSelection}
