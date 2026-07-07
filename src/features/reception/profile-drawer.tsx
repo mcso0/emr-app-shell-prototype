@@ -13,7 +13,7 @@ import {
 } from "@/components/cds-icons/navigation";
 import { BoneIcon, UserIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -3217,12 +3217,15 @@ function PatientGuardianRegistrationButton({
       {renderTrigger ? (
         <DropdownMenu>
           <DropdownMenuTrigger
-            aria-label={label}
-            className={buttonVariants({
-              variant: "outline",
-              size,
-              className: "bg-card px-3 font-semibold",
-            })}
+            render={
+              <Button
+                aria-label={label}
+                type="button"
+                variant="outline"
+                size={size}
+                className="px-3 font-semibold"
+              />
+            }
           >
             <CdsActionsPlusIcon data-icon="inline-start" />
             {label}

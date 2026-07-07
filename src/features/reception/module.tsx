@@ -3831,11 +3831,14 @@ function ScheduleToolbar({
         <DropdownMenu>
           <DropdownMenuTrigger
             data-testid="schedule-check-in-button"
-            className={buttonVariants({
-              variant: "outline",
-              size: "default",
-              className: "bg-card px-3 font-semibold",
-            })}
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="default"
+                className="px-3 font-semibold"
+              />
+            }
           >
             <CdsActionsPlusIcon data-icon="inline-start" />
             접수/예약
