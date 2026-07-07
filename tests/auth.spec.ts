@@ -190,6 +190,10 @@ test("root starts at login", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
   await expect(page.getByPlaceholder("이메일을 입력해주세요")).toBeFocused();
   await expect(page.getByPlaceholder("비밀번호를 입력해주세요")).toBeVisible();
+  await expect(page.getByRole("button", { name: "인증번호로 로그인" })).toBeDisabled();
+  await expect(page.getByText("계정이 필요하신가요?")).toBeVisible();
+  await expect(page.getByText("관리자에게 문의")).toBeVisible();
+  await expect(page.getByText("OTP로 로그인 하기")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "MVP 테스트 옵션" })).toBeVisible();
   await expect(page.getByText("현재는 Supabase Auth 연결 전 mock session으로 진입합니다.")).toBeVisible();
   await expect(page.getByTestId("mock-session-status")).toBeVisible();
