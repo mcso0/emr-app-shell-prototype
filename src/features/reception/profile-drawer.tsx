@@ -3345,7 +3345,7 @@ function PatientGuardianRegistrationButton({
                       <Input
                         aria-label="보호자명"
                         className={emrRegistrationControlClassName}
-                        placeholder="보호자명을 입력해주세요"
+                        placeholder="이름을 입력해주세요"
                         value={guardianDraft.name}
                         onValueChange={(name) =>
                           setGuardianDraft((current) => ({ ...current, name }))
@@ -3356,7 +3356,7 @@ function PatientGuardianRegistrationButton({
                       <Input
                         aria-label="보호자 생년월일"
                         className={emrRegistrationControlClassName}
-                        placeholder="YYYY-MM-DD"
+                        placeholder="yyyy-MM-dd"
                         value={guardianDraft.birthDate}
                         onValueChange={(birthDate) =>
                           setGuardianDraft((current) => ({
@@ -3414,7 +3414,7 @@ function PatientGuardianRegistrationButton({
                           <Input
                             aria-label="기본 주소"
                             className={emrRegistrationControlClassName}
-                            placeholder="도로명 또는 지번 주소를 입력해주세요"
+                            placeholder="도로명 또는 지번 주소 입력"
                             value={guardianDraft.addressRoad}
                             onValueChange={(addressRoad) =>
                               setGuardianDraft((current) => ({ ...current, addressRoad }))
@@ -3425,7 +3425,7 @@ function PatientGuardianRegistrationButton({
                           <Input
                             aria-label="상세 주소"
                             className={emrRegistrationControlClassName}
-                            placeholder="상세주소를 입력해주세요"
+                            placeholder="상세 주소 입력"
                             value={guardianDraft.addressDetail}
                             onValueChange={(addressDetail) =>
                               setGuardianDraft((current) => ({ ...current, addressDetail }))
@@ -3436,10 +3436,10 @@ function PatientGuardianRegistrationButton({
                     </EmrRegistrationFieldRow>
                   </EmrRegistrationSection>
                   <EmrRegistrationSection title="메모 및 개인정보 동의">
-                    <EmrRegistrationFieldRow label="보호자 메모" labelWidth="narrow">
+                    <EmrRegistrationFieldRow label="보호자 메모">
                       <Textarea
                         className={emrRegistrationTextareaClassName}
-                        placeholder="특이사항이나 요청사항을 입력해주세요"
+                        placeholder="특이사항 및 요청사항 입력"
                         value={guardianDraft.memo}
                         onChange={(event) =>
                           setGuardianDraft((current) => ({
@@ -3451,20 +3451,12 @@ function PatientGuardianRegistrationButton({
                     </EmrRegistrationFieldRow>
                     <EmrRegistrationSignatureConsentCard
                       error={errors.privacyConsent}
-                      marketingConsent={guardianDraft.marketingConsent}
-                      privacyConsent={guardianDraft.privacyConsent}
                       signatureStatus={guardianDraft.signatureStatus}
                       onCompleteSignature={() =>
                         setGuardianDraft((current) => ({
                           ...current,
                           privacyConsent: true,
                           signatureStatus: "completed",
-                        }))
-                      }
-                      onMarketingConsentChange={(marketingConsent) =>
-                        setGuardianDraft((current) => ({
-                          ...current,
-                          marketingConsent,
                         }))
                       }
                       onRequestSignature={() =>
@@ -3847,10 +3839,10 @@ function PatientGuardianRegistrationButton({
                     </EmrRegistrationFieldRow>
                   </EmrRegistrationSection>
                   <EmrRegistrationSection title="메모">
-                    <EmrRegistrationFieldRow label="환자 메모" labelWidth="narrow">
+                    <EmrRegistrationFieldRow label="환자 메모">
                       <Textarea
                         className={emrRegistrationTextareaClassName}
-                        placeholder="특이사항이나 요청사항을 입력해주세요"
+                        placeholder="특이사항 및 요청사항 입력"
                         value={patientDraft.specialNote}
                         onChange={(event) =>
                           setPatientDraft((current) => ({
