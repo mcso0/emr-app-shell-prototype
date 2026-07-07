@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { getAuthRuntimeMode } from "../src/lib/supabase/config";
 import {
@@ -88,6 +88,14 @@ function setOptionalEnv(key: string, value: string | undefined) {
 async function fillLoginCredentials(page: Page) {
   await page.getByPlaceholder("이메일을 입력해주세요").fill("front@clair.local");
   await page.getByPlaceholder("비밀번호를 입력해주세요").fill("local-pass-1");
+}
+
+async function expectTransparentButtonBackground(button: Locator) {
+  const backgroundColor = await button.evaluate(
+    (element) => getComputedStyle(element).backgroundColor
+  );
+
+  expect(backgroundColor).toBe("rgba(0, 0, 0, 0)");
 }
 
 test("auth runtime mode matrix keeps mock fallback and Supabase session sources explicit", () => {
@@ -257,12 +265,24 @@ test("login password field toggles text visibility", async ({ page }) => {
   await passwordInput.fill("local-pass-1");
   await expect(passwordInput).toHaveAttribute("type", "password");
 
-  await page.getByRole("button", { name: "비밀번호 보기" }).click();
+  const showPasswordButton = page.getByRole("button", { name: "비밀번호 보기" });
+  await expect(showPasswordButton).toHaveAttribute("aria-pressed", "false");
+  await expectTransparentButtonBackground(showPasswordButton);
+
+  await showPasswordButton.hover();
+  await expectTransparentButtonBackground(showPasswordButton);
+
+  await showPasswordButton.click();
   await expect(passwordInput).toHaveAttribute("type", "text");
 
-  const visibleToggleIcon = page
-    .getByRole("button", { name: "비밀번호 숨기기" })
-    .locator("svg");
+  const hidePasswordButton = page.getByRole("button", { name: "비밀번호 숨기기" });
+  await expect(hidePasswordButton).toHaveAttribute("aria-pressed", "true");
+  await expectTransparentButtonBackground(hidePasswordButton);
+
+  await hidePasswordButton.focus();
+  await expectTransparentButtonBackground(hidePasswordButton);
+
+  const visibleToggleIcon = hidePasswordButton.locator("svg");
   await expect(visibleToggleIcon).toBeVisible();
   await expect(visibleToggleIcon.locator("clipPath")).toHaveCount(0);
 
@@ -278,7 +298,7 @@ test("login password field toggles text visibility", async ({ page }) => {
   expect(visibleIconBox.width).toBeGreaterThan(0);
   expect(visibleIconBox.height).toBeGreaterThan(0);
 
-  await page.getByRole("button", { name: "비밀번호 숨기기" }).click();
+  await hidePasswordButton.click();
   await expect(passwordInput).toHaveAttribute("type", "password");
 });
 

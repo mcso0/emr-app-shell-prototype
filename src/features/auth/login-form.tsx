@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import {
@@ -11,7 +12,8 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { CheckIcon, WorkspaceLogoMarkIcon } from "@/components/icons";
+import loginLogoMark from "../../../logo/logo48*48.svg";
+import { CheckIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -70,6 +72,8 @@ const loginSupportPanelClassName =
 const isProductionRuntime = process.env.NODE_ENV === "production";
 const loginEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const loginCredentialErrorMessage = "이메일 또는 비밀번호를 확인해 주세요.";
+const getLoginAssetSrc = (asset: string | { src?: string }) =>
+  typeof asset === "string" ? asset : asset.src ?? "";
 
 type LoginFieldErrors = {
   readonly email?: string | undefined;
@@ -529,13 +533,16 @@ export function LoginForm() {
             <LoginDialogForm onSubmit={handleSubmit}>
               <FieldGroup className="gap-[var(--clair-spacing-24)]">
                 <div className="flex flex-col items-center gap-[var(--clair-spacing-16)] text-center">
-                  <span className="flex size-11 items-center justify-center text-[var(--emr-accent)]">
-                    <WorkspaceLogoMarkIcon
+                  <span className="flex size-12 items-center justify-center">
+                    <Image
+                      src={getLoginAssetSrc(loginLogoMark)}
+                      alt=""
+                      width={48}
+                      height={48}
+                      unoptimized
                       aria-hidden="true"
-                      style={{
-                        height: "var(--clair-control-height-xl)",
-                        width: "var(--clair-control-height-xl)",
-                      }}
+                      className="size-12 shrink-0 object-contain"
+                      draggable={false}
                     />
                   </span>
                   <div className="flex flex-col gap-2">
@@ -747,9 +754,10 @@ export function LoginForm() {
                             aria-label={
                               isPasswordVisible ? "비밀번호 숨기기" : "비밀번호 보기"
                             }
+                            aria-pressed={isPasswordVisible}
                             disabled={isSubmitting}
                             onClick={() => setIsPasswordVisible((current) => !current)}
-                            className="absolute top-1/2 right-[var(--clair-spacing-8)] flex h-[var(--clair-control-height-md)] w-[var(--clair-control-height-md)] -translate-y-1/2 items-center justify-center rounded-[var(--emr-radius-control)] text-muted-foreground transition-colors hover:bg-[var(--emr-surface-muted)] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:text-[var(--emr-text-disabled)]"
+                            className="absolute top-1/2 right-[var(--clair-spacing-8)] flex h-[var(--clair-control-height-md)] w-[var(--clair-control-height-md)] -translate-y-1/2 items-center justify-center rounded-[var(--emr-radius-control)] bg-transparent text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground active:bg-transparent focus-visible:bg-transparent focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:outline-none aria-pressed:bg-transparent aria-pressed:text-foreground disabled:pointer-events-none disabled:bg-transparent disabled:text-[var(--emr-text-disabled)] disabled:hover:bg-transparent"
                           >
                             {isPasswordVisible ? (
                               <PasswordEyeOffIcon size={18} />
