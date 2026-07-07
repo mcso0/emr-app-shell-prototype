@@ -13,7 +13,7 @@ import {
 } from "@/components/cds-icons/navigation";
 import { BoneIcon, UserIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -23,6 +23,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import {
   Field as FormField,
@@ -3018,6 +3024,12 @@ function PatientGuardianRegistrationButton({
 
     requestClose();
   };
+  const startRegistration = (nextMode: RegistrationMode) => {
+    reset();
+    setMode(nextMode);
+    setStep(nextMode === "new_guardian_patient" ? "guardian" : "patient");
+    setOpen(true);
+  };
   const validateGuardianStep = () => {
     const nextErrors: RegistrationErrors = {};
     const normalizedPhone = normalizeGuardianPhone(guardianDraft.mobilePhone);
@@ -3203,16 +3215,34 @@ function PatientGuardianRegistrationButton({
   return (
     <>
       {renderTrigger ? (
-        <Button
-          aria-label={label}
-          variant="outline"
-          size={size}
-          className="bg-card px-3 font-semibold"
-          onClick={() => setOpen(true)}
-        >
-          <CdsActionsPlusIcon data-icon="inline-start" />
-          {label}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={label}
+            className={buttonVariants({
+              variant: "outline",
+              size,
+              className: "bg-card px-3 font-semibold",
+            })}
+          >
+            <CdsActionsPlusIcon data-icon="inline-start" />
+            {label}
+            <CdsNavigationChevronDownIcon data-icon="inline-end" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem
+              className="h-8 cursor-pointer"
+              onClick={() => startRegistration("new_guardian_patient")}
+            >
+              신규 환자/보호자 등록
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="h-8 cursor-pointer"
+              onClick={() => startRegistration("existing_guardian_patient")}
+            >
+              기존 보호자에 환자 추가
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : null}
       <Dialog open={open} onOpenChange={setOpenSafely}>
         <DialogContent
