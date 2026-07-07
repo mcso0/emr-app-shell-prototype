@@ -457,6 +457,8 @@ test("supabase adapter keeps local demo fallback and public env boundary", () =>
   expect(authClient).toContain("signInWithMockRole");
   expect(loginForm).toContain("invalid_credentials");
   expect(loginForm).toContain("이메일 또는 비밀번호를 확인해 주세요.");
+  expect(loginForm).toContain("setLoginError(loginCredentialErrorMessage)");
+  expect(loginForm).not.toContain("setFieldErrors({ password: loginCredentialErrorMessage })");
   expect(loginForm).toContain("비밀번호 보기");
   expect(supabaseConfig).toContain("NEXT_PUBLIC_AUTH_MODE");
   expect(supabaseConfig).toContain("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");

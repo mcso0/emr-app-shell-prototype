@@ -73,6 +73,7 @@ const loginSupportPanelClassName =
 const isProductionRuntime = process.env.NODE_ENV === "production";
 const loginEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const loginCredentialErrorMessage = "이메일 또는 비밀번호를 확인해 주세요.";
+const loginEmailNotFoundErrorMessage = "등록된 계정 이메일을 확인해 주세요.";
 const getLoginAssetSrc = (asset: string | { src?: string }) =>
   typeof asset === "string" ? asset : asset.src ?? "";
 
@@ -506,10 +507,17 @@ export function LoginForm() {
         usesSupabaseProvider &&
         isInvalidLoginCredentialError(caught)
       ) {
-        setLoginError(null);
-        setFieldErrors({ password: loginCredentialErrorMessage });
+        setLoginError(loginCredentialErrorMessage);
+        setFieldErrors({});
         setIsSubmitting(false);
-        queueLoginFieldFocus(form, "password");
+        return;
+      }
+
+      if (!isInviteOtpLogin && errorMessage === "mock-demo-account-not-found") {
+        setLoginError(null);
+        setFieldErrors({ email: loginEmailNotFoundErrorMessage });
+        setIsSubmitting(false);
+        queueLoginFieldFocus(form, "email");
         return;
       }
 
@@ -523,7 +531,7 @@ export function LoginForm() {
           : usesSupabaseProvider
           ? "Supabase 로그인 처리 중 문제가 발생했습니다. 계정 정보와 환경 설정을 확인하세요."
           : errorMessage === "mock-demo-account-not-found"
-            ? "스테이징 테스트 계정을 확인할 수 없습니다. 제공된 계정 이메일을 다시 확인하세요."
+            ? loginEmailNotFoundErrorMessage
           : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
       );
       setIsSubmitting(false);
