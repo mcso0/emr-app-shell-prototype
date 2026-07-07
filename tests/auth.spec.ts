@@ -221,6 +221,10 @@ test("login form guides empty submit and shows inline validation after user inpu
   await expect(passwordInput).not.toHaveAttribute("aria-invalid", "true");
 
   await emailInput.fill("1");
+  await expect(emailInput).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("올바른 이메일 주소를 입력해 주세요.")).toBeVisible();
+  await expect(page.getByText("비밀번호를 입력해 주세요.")).toHaveCount(0);
+
   await passwordInput.fill("local-pass-1");
   await loginButton.click();
 
@@ -255,6 +259,24 @@ test("login password field toggles text visibility", async ({ page }) => {
 
   await page.getByRole("button", { name: "비밀번호 보기" }).click();
   await expect(passwordInput).toHaveAttribute("type", "text");
+
+  const visibleToggleIcon = page
+    .getByRole("button", { name: "비밀번호 숨기기" })
+    .locator("svg");
+  await expect(visibleToggleIcon).toBeVisible();
+  await expect(visibleToggleIcon.locator("clipPath")).toHaveCount(0);
+
+  const visibleIconBox = await visibleToggleIcon.locator("path").first().evaluate((path) => {
+    const box = path.getBoundingClientRect();
+
+    return {
+      height: box.height,
+      width: box.width,
+    };
+  });
+
+  expect(visibleIconBox.width).toBeGreaterThan(0);
+  expect(visibleIconBox.height).toBeGreaterThan(0);
 
   await page.getByRole("button", { name: "비밀번호 숨기기" }).click();
   await expect(passwordInput).toHaveAttribute("type", "password");
