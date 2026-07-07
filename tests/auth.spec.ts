@@ -182,10 +182,9 @@ test("root starts at login", async ({ page }) => {
   await page.goto("/");
 
   await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByRole("heading", { name: "CLAiR EMR에 로그인" })).toBeVisible();
-  await expect(page.getByText("병원 워크스페이스에 접속하려면 계정 정보를 입력하세요.")).toBeVisible();
-  await expect(page.getByPlaceholder("name@hospital.com")).toBeVisible();
-  await expect(page.getByPlaceholder("비밀번호")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
+  await expect(page.getByPlaceholder("이메일을 입력해주세요")).toBeVisible();
+  await expect(page.getByPlaceholder("비밀번호를 입력해주세요")).toBeVisible();
   await expect(page.getByRole("heading", { name: "MVP 테스트 옵션" })).toBeVisible();
   await expect(page.getByText("현재는 Supabase Auth 연결 전 mock session으로 진입합니다.")).toBeVisible();
   await expect(page.getByTestId("mock-session-status")).toBeVisible();
@@ -209,7 +208,7 @@ test("login creates a localStorage-backed session and opens the requested worksp
     "/login?next=%2Fw%2Fclair-demo%2Fbilling%3FmodulePanel%3Dopen%26aside%3Dclosed"
   );
 
-  await expect(page.getByRole("heading", { name: "CLAiR EMR에 로그인" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
   await expect(page.getByTestId("mock-session-status")).toContainText("로그인 전");
 
   await page.getByRole("button", { name: /수의사/ }).click();
@@ -249,7 +248,7 @@ test("login ignores unsafe next redirects and opens the MVP default workspace", 
 test("login without next opens the MVP default workspace", async ({ page }) => {
   await page.goto("/login");
 
-  await expect(page.getByRole("heading", { name: "CLAiR EMR에 로그인" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
 
   await page.getByRole("button", { name: /프론트 데스크/ }).click();
   await page.getByRole("button", { name: "로그인" }).click();

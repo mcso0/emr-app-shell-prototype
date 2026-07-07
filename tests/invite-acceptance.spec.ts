@@ -283,7 +283,7 @@ test("invite account setup pages preserve invite context", async ({ page }) => {
     `/login?reason=invite_existing_account&inviteEmail=vet%40hanbit.test&next=${encodeURIComponent(invitePath)}`,
   );
   await expect(
-    page.getByRole("heading", { name: "CLAiR EMR에 로그인" }),
+    page.getByRole("heading", { name: "로그인" }),
   ).toBeVisible();
   await expect(page.getByTestId("auth-session-notice")).toContainText(
     "초대받은 이메일로 로그인하세요.",
