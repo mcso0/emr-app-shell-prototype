@@ -771,14 +771,14 @@ export function LoginForm() {
                       variant="outline"
                       size="xl"
                       disabled
-                      title="OTP 로그인은 준비 중입니다."
+                      title="인증번호 로그인은 준비 중입니다."
                       className="w-full disabled:opacity-100"
                     >
-                      OTP로 로그인 하기
+                      인증번호로 로그인
                     </Button>
 
                     <p className="text-center emr-text-body text-muted-foreground">
-                      회원가입이 필요하다면?{" "}
+                      계정이 필요하신가요?{" "}
                       <span className="font-medium underline underline-offset-4">
                         관리자에게 문의
                       </span>
