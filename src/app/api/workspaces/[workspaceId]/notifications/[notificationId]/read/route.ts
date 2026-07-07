@@ -11,7 +11,11 @@ type RouteContext = {
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { notificationId, workspaceId } = await params;
-  const actor = await resolveNotificationRouteActor({ request, workspaceId });
+  const actor = await resolveNotificationRouteActor({
+    request,
+    workspaceId,
+    mutationRateLimitOperation: "notification_read",
+  });
 
   if (!actor.ok) return actor.response;
 

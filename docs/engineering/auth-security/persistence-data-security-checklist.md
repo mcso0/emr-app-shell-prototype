@@ -7,7 +7,7 @@ related_work:
   - DEN-180
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-20T00:00:00.000Z
+last_updated: 2026-07-07T00:00:00.000Z
 ---
 
 # Persistence Data Security Checklist
@@ -52,6 +52,7 @@ Use this checklist before claiming any CLAiR EMR workflow is persistent, live-ca
 
 ## Related Docs
 
+* [Application Security Review Checklist](application-security-review-checklist.md)
 * [Mock And Live Boundary Map](../architecture/mock-live-boundary-map.md)
 * [SaaS Launch Approval Gates](https://github.com/mcso0/emr-app-shell-prototype/blob/main/docs/engineering/auth-security/auth-login/saas-launch-approval-gates.md)
 * [Auth DB Env Secret Verification Gates](https://github.com/mcso0/emr-app-shell-prototype/blob/main/docs/engineering/auth-security/auth-login/auth-db-env-secret-verification-gates.md)

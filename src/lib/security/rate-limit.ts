@@ -25,6 +25,13 @@ export type RateLimitOptions = {
   store?: Map<string, RateLimitRecord>;
 };
 
+export type RequestRateLimitOptions = {
+  request: Request;
+  keyParts: Array<string | null | undefined>;
+  limit?: number;
+  windowMs?: number;
+};
+
 const defaultMutationStore = new Map<string, RateLimitRecord>();
 const defaultMutationLimit = 60;
 const defaultWindowMs = 60_000;
@@ -67,16 +74,33 @@ export function enforceWorkspaceMutationRateLimit({
   workspaceId?: string | null;
   operation: string;
 }): Response | null {
-  const decision = checkRateLimit({
+  return enforceRequestRateLimit({
+    request,
     keyParts: [
       "workspace-live-mutation",
       operation,
       actorUserId,
       workspaceId ?? "self",
-      getClientFingerprint(request),
     ],
   });
+}
 
+export function enforceRequestRateLimit({
+  request,
+  keyParts,
+  limit,
+  windowMs,
+}: RequestRateLimitOptions): Response | null {
+  const decision = checkRateLimit({
+    keyParts: [...keyParts, getClientFingerprint(request)],
+    limit,
+    windowMs,
+  });
+
+  return buildRateLimitResponse(decision);
+}
+
+function buildRateLimitResponse(decision: RateLimitDecision) {
   if (decision.allowed) return null;
 
   return Response.json(

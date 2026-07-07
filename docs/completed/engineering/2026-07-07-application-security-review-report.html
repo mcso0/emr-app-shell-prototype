@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Application Security Review Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #667085;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>애플리케이션 보안 체크리스트와 1차 검수 결과</h1>
+    <p class="meta">2026-07-07 · checklist-based first pass · synthetic/demo-data scope</p>
+
+    <h2>요청</h2>
+    <p>
+      보안 실수 체크리스트를 CLAiR EMR 프로젝트 기준 문서로 만들고, 그 체크리스트를
+      기준으로 현재 프로젝트를 1차 검수하는 작업이었다.
+    </p>
+
+    <h2>결과</h2>
+    <ul>
+      <li>재사용 가능한 애플리케이션 보안 검수 체크리스트를 추가했다.</li>
+      <li>체크리스트 기반 2026-07-07 1차 검수 스냅샷을 작성했다.</li>
+      <li>시크릿, 브라우저 노출 env, 서버 세션, demo header, rate limit, Supabase local config, dependency advisory를 확인했다.</li>
+      <li>후속 조치로 rate-limit 누락 후보를 보강하고 dependency advisory를 해소했다.</li>
+      <li>문서 포털과 Engineering README, SUMMARY 내비게이션에 새 문서를 연결했다.</li>
+    </ul>
+
+    <h2>핵심 검수 결과</h2>
+    <ul>
+      <li><code>npm run security:secrets</code>는 통과했다. 2900개 tracked 파일에서 시크릿이 발견되지 않았다.</li>
+      <li>클라이언트 공개 env는 Supabase public URL과 publishable key 중심으로 분리되어 있었다.</li>
+      <li>서버 세션은 Supabase <code>auth.getClaims()</code> 기반으로 확인한다.</li>
+      <li>초기 검수에서 46개 mutating route 중 7개 route가 rate-limit 후속 확인 대상으로 잡혔다.</li>
+      <li>후속 조치 후 초대 재요청, 랩 결과 입력, 알림 mutation route는 shared limiter를 통과한다.</li>
+      <li><code>npm audit --json</code>와 <code>npm audit --audit-level=moderate --json</code>는 현재 0 vulnerabilities로 통과한다.</li>
+      <li>운영/production-demo rate limit 저장소는 managed Redis-compatible shared store로 결정했고, 실제 provision은 별도 승인 게이트로 남겼다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>docs/engineering/auth-security/application-security-review-checklist.md</code></li>
+      <li><code>docs/engineering/auth-security/application-security-review-2026-07-07.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/workspace-live-api-rate-limiting.md</code></li>
+      <li><code>docs/engineering/auth-security/persistence-data-security-checklist.md</code></li>
+      <li><code>docs/engineering/README.md</code></li>
+      <li><code>docs/index.md</code></li>
+      <li><code>docs/SUMMARY.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+      <li><code>git diff --check</code> 통과</li>
+      <li><code>npx playwright test tests/workspace-rate-limit-server.spec.ts</code> 통과</li>
+      <li><code>npm audit --json</code> 통과. 현재 0 vulnerabilities.</li>
+      <li><code>npm run lint</code> 통과. 기존 경고 9개는 남아 있다.</li>
+      <li><code>npx tsc --noEmit</code>, <code>npm run build</code>, <code>npm run build-storybook</code> 통과</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      이번 검수는 전체 침투 테스트나 원격 Supabase/production 검수가 아니다. 실제 follow-up은
+      production-grade rate-limit shared storage 구현, demo header live-mode 회귀 확인,
+      Supabase production auth 정책 검토 순서가 적절하다.
+    </p>
+  </body>
+</html>

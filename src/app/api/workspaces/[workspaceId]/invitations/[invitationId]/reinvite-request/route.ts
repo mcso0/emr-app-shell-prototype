@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveInviteAcceptanceRecord } from "@/features/auth/invite-acceptance-model";
 import { readServerInviteAcceptanceRecord } from "@/features/auth/server-invite-acceptance";
+import { enforceRequestRateLimit } from "@/lib/security/rate-limit";
 
 type ReinviteRequestBody = {
   email?: unknown;
@@ -21,6 +22,17 @@ export async function POST(
   const body = (await request.json().catch(() => ({}))) as ReinviteRequestBody;
   const email =
     typeof body.email === "string" ? body.email.trim().toLowerCase() : null;
+
+  const rateLimitResponse = enforceRequestRateLimit({
+    request,
+    keyParts: [
+      "workspace-invitation-reinvite-request",
+      workspaceId,
+      invitationId,
+      email,
+    ],
+  });
+  if (rateLimitResponse) return rateLimitResponse;
 
   const localRecord = resolveInviteAcceptanceRecord({
     invitationId,

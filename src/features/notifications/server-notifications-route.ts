@@ -15,6 +15,7 @@ import {
   type NotificationPersistenceGateway,
   type SupabaseNotificationPersistenceRpcClient,
 } from "@/features/notifications/server-notification-persistence";
+import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 export type NotificationRouteActorContext =
@@ -32,9 +33,11 @@ export type NotificationRouteActorContext =
     };
 
 export async function resolveNotificationRouteActor({
+  mutationRateLimitOperation,
   request,
   workspaceId,
 }: {
+  mutationRateLimitOperation?: string;
   request: Request;
   workspaceId: string;
 }): Promise<NotificationRouteActorContext> {
@@ -59,6 +62,16 @@ export async function resolveNotificationRouteActor({
       ),
     };
   }
+
+  const rateLimitResponse = mutationRateLimitOperation
+    ? enforceWorkspaceMutationRateLimit({
+        request,
+        actorUserId: identity.actorUserId,
+        workspaceId,
+        operation: mutationRateLimitOperation,
+      })
+    : null;
+  if (rateLimitResponse) return { ok: false, response: rateLimitResponse };
 
   if (identity.source !== "supabase_session") {
     return {

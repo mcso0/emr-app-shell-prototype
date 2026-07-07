@@ -20,6 +20,7 @@ import {
   type NotificationPersistenceGateway,
   type SupabaseNotificationPersistenceRpcClient,
 } from "@/features/notifications/server-notification-persistence";
+import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -139,6 +140,14 @@ export async function POST(request: Request, { params }: RouteContext) {
   const identity = await resolveRequestIdentity(request);
 
   if (!identity.ok) return Response.json(identity.body, { status: 401 });
+
+  const rateLimitResponse = enforceWorkspaceMutationRateLimit({
+    request,
+    actorUserId: identity.actorUserId,
+    workspaceId,
+    operation: "lab_result_entry_save",
+  });
+  if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readEntryBody(request);
   if (!input.resultId || !input.rows.length) {
