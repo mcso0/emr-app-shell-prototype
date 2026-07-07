@@ -38,6 +38,9 @@ export function WorkspaceFrame({
   const Content = moduleDefinition.content;
   const RightPanel = moduleDefinition.rightPanel;
   const ModuleDrawer = moduleDefinition.drawer;
+  const routeReceptionDrawerToRightPanel =
+    moduleDefinition.id === "reception" && Boolean(RightPanel);
+  const instantRightPanel = moduleDefinition.id === "reception";
   const isPatientDrawer = activeDrawer?.type === "patient" || activeDrawer?.type === "reception-patient";
   const isGuardianDrawer = activeDrawer?.type === "guardian" || activeDrawer?.type === "reception-guardian";
   const isReceptionDrawer =
@@ -52,7 +55,13 @@ export function WorkspaceFrame({
     : isGuardianDrawer
       ? GuardianProfileDrawer
       : undefined;
-  const EffectiveModuleDrawer = isReceptionDrawer ? ReceptionDrawer : ModuleDrawer;
+  const EffectiveModuleDrawer =
+    isReceptionDrawer && !routeReceptionDrawerToRightPanel
+      ? ReceptionDrawer
+      : ModuleDrawer;
+  const shouldRenderWorkspaceDrawer =
+    Boolean(activeDrawer && (CommonProfileDrawer || EffectiveModuleDrawer)) &&
+    !(routeReceptionDrawerToRightPanel && isReceptionDrawer);
   const drawerTitle =
     isPatientDrawer
         ? "환자 정보"
@@ -93,8 +102,10 @@ export function WorkspaceFrame({
     contentAsideWidth,
     SHELL_LAYOUT.contentAside.minWidth
   );
+  const resolvedRightPanelWidth =
+    moduleDefinition.rightPanelWidth ?? rightPanelWidth;
   const effectiveRightPanelWidth = Math.max(
-    rightPanelWidth,
+    resolvedRightPanelWidth,
     SHELL_LAYOUT.rightPanel.defaultWidth
   );
   const rightPanelGap =
@@ -114,7 +125,8 @@ export function WorkspaceFrame({
   return (
     <main
       className={cn(
-        "emr-workspace-frame-responsive relative grid min-h-0 gap-x-[var(--clair-workspace-right-panel-gap)] transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]",
+        "emr-workspace-frame-responsive relative grid min-h-0 gap-x-[var(--clair-workspace-right-panel-gap)] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]",
+        !instantRightPanel && "transition-[grid-template-columns]",
         rightPanelDetached
           ? "overflow-visible bg-transparent"
           : "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] shadow-xs"
@@ -171,7 +183,8 @@ export function WorkspaceFrame({
 
       <aside
         className={cn(
-          "emr-workspace-rightpanel-responsive min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] transition-opacity duration-150 max-md:hidden",
+          "emr-workspace-rightpanel-responsive min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:hidden",
+          !instantRightPanel && "transition-opacity duration-150",
           RightPanel &&
             rightPanelOpen &&
             (rightPanelDetached
@@ -182,14 +195,14 @@ export function WorkspaceFrame({
       >
         <div
           className="flex h-full w-full flex-col"
-          style={{ minWidth: rightPanelOpen ? SHELL_LAYOUT.rightPanel.defaultWidth : 0 }}
+          style={{ minWidth: rightPanelOpen ? effectiveRightPanelWidth : 0 }}
         >
           {RightPanel && rightPanelOpen ? <RightPanel {...slotProps} /> : null}
         </div>
       </aside>
 
       <AnimatePresence>
-        {activeDrawer && (CommonProfileDrawer || EffectiveModuleDrawer) ? (
+        {shouldRenderWorkspaceDrawer ? (
           <motion.aside
             key={drawerMotionKey}
             initial={{ x: 480, opacity: 0 }}

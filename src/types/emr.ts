@@ -28,6 +28,7 @@ export type ModuleDefinition = {
   content: ComponentType<ShellComponentProps>;
   rightPanel?: ComponentType<ShellComponentProps>;
   rightPanelGap?: boolean;
+  rightPanelWidth?: number;
   defaultContentAsideOpen?: boolean;
   defaultRightPanelOpen?: boolean;
   drawer?: ComponentType<ShellComponentProps>;

@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentProps,
   type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
@@ -16,12 +17,24 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
   CdsActionsSearchIcon,
+  CdsActionsTrash2Icon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsFilesCalendarIcon,
+  CdsFilesClockIcon,
   CdsFilesMoreHorizontalIcon,
   CdsFilesReceptionCalendarIcon,
 } from "@/components/cds-icons/files-and-layout";
+import {
+  CdsMedicalActivityIcon,
+  CdsMedicalClipboardPenIcon,
+  CdsMedicalHeartPulseIcon,
+  CdsMedicalPawPrintIcon,
+  CdsMedicalStethoscopeIcon,
+  CdsMedicalThermometerIcon,
+} from "@/components/cds-icons/medical-and-domain";
+import { CdsNavigationSidebarIcon } from "@/components/cds-icons/navigation";
+import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
   EmrListHeader,
@@ -199,7 +212,7 @@ import type {
   Patient,
   PatientGuardian,
 } from "@/types/emr-domain";
-import type { ShellComponentProps } from "@/types/emr";
+import type { DrawerState, ShellComponentProps } from "@/types/emr";
 
 const allVeterinarians = mockStaffUsers.filter(
   (user) => user.role === "veterinarian",
@@ -210,6 +223,80 @@ const allVeterinarians = mockStaffUsers.filter(
   role: "veterinarian" as const,
 }));
 const defaultVeterinarian = allVeterinarians[0];
+type ReceptionDrawerPresentation = "drawer" | "side-panel";
+
+const receptionRightPanelDrawerTypes = new Set([
+  "reception-appointment",
+  "reception-appointment-check-in-form",
+  "reception-draft-task",
+  "reception-encounter",
+  "reception-form",
+  "reception-reservation-form",
+]);
+
+const isReceptionRightPanelDrawer = (
+  drawer: DrawerState,
+): drawer is NonNullable<DrawerState> =>
+  Boolean(drawer && receptionRightPanelDrawerTypes.has(drawer.type));
+
+const getReceptionDrawerSurfaceClassName = (
+  presentation: ReceptionDrawerPresentation,
+) =>
+  cn(
+    "flex flex-col",
+    presentation === "side-panel" ? "h-full" : "h-[calc(100%-48px)]",
+  );
+
+type ReceptionSidePanelVitalId =
+  | "weight"
+  | "temperature"
+  | "respiration"
+  | "heartRate"
+  | "bloodPressure";
+
+const receptionSidePanelVitalOptions: Array<{
+  defaultValue: string;
+  icon: ReactNode;
+  id: ReceptionSidePanelVitalId;
+  label: string;
+  unit: string;
+}> = [
+  {
+    defaultValue: "",
+    icon: <CdsMedicalActivityIcon className="size-3.5" />,
+    id: "weight",
+    label: "체중",
+    unit: "Kg",
+  },
+  {
+    defaultValue: "38.5",
+    icon: <CdsMedicalThermometerIcon className="size-3.5" />,
+    id: "temperature",
+    label: "체온",
+    unit: "°C",
+  },
+  {
+    defaultValue: "20",
+    icon: <CdsMedicalActivityIcon className="size-3.5" />,
+    id: "respiration",
+    label: "호흡수",
+    unit: "rpm",
+  },
+  {
+    defaultValue: "88",
+    icon: <CdsMedicalHeartPulseIcon className="size-3.5" />,
+    id: "heartRate",
+    label: "심박수",
+    unit: "bpm",
+  },
+  {
+    defaultValue: "",
+    icon: <CdsMedicalHeartPulseIcon className="size-3.5" />,
+    id: "bloodPressure",
+    label: "혈압",
+    unit: "mmHg",
+  },
+];
 const veterinarianHeaderToneClasses = [
   "border-[var(--clair-color-atomic-blue-500)] bg-[var(--clair-color-atomic-blue-500)]",
   "border-[var(--clair-color-atomic-forest-green-500)] bg-[var(--clair-color-atomic-forest-green-500)]",
@@ -2463,6 +2550,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   );
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const authSession = useMockAuthStore((state) => state.session);
   const setModulePanelOpen = useLayoutStore(
     (state) => state.setModulePanelOpen,
@@ -2844,6 +2932,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
                 selectPatient(item.patient.id);
                 if (item.encounter) {
                   selectEncounter(item.encounter.id);
+                  setRightPanelOpen(true);
                   setActiveDrawer({
                     type: "reception-encounter",
                     id: item.encounter.id,
@@ -2853,6 +2942,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
 
                 if (item.appointment) {
                   selectAppointment(item.appointment.id);
+                  setRightPanelOpen(true);
                   setActiveDrawer({
                     type: "reception-appointment",
                     id: item.appointment.id,
@@ -3736,6 +3826,8 @@ function ScheduleToolbar({
     staffReadStatus === "idle" ||
     veterinarians.length === 0;
   const showingToday = operatingDate === todayDate;
+  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
 
   return (
     <div
@@ -3859,6 +3951,10 @@ function ScheduleToolbar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <div
+          aria-hidden="true"
+          className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]"
+        />
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label="더보기"
@@ -3881,6 +3977,18 @@ function ScheduleToolbar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {!rightPanelOpen ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="h-8"
+            aria-label="우측 사이드 패널 열기"
+            onClick={() => setRightPanelOpen(true)}
+          >
+            <CdsNavigationSidebarIcon />
+          </Button>
+        ) : null}
       </div>
     </div>
   );
@@ -5449,6 +5557,7 @@ export function ReceptionContent() {
     (state) => state.clearModuleRefreshAction,
   );
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const setModuleRefreshAction = useLayoutStore(
     (state) => state.setModuleRefreshAction,
   );
@@ -5598,6 +5707,13 @@ export function ReceptionContent() {
     dispatchReceptionCalendarDragClear();
     setCalendarDraftSelection(undefined);
   }
+  const openReceptionRightPanelDrawer = useCallback(
+    (drawer: NonNullable<DrawerState>) => {
+      setRightPanelOpen(true);
+      setActiveDrawer(drawer);
+    },
+    [setActiveDrawer, setRightPanelOpen],
+  );
   useEffect(() => {
     if (routeDateParam === null) return;
 
@@ -5648,27 +5764,30 @@ export function ReceptionContent() {
   const handleSelectAppointment = (appointment: Appointment) => {
     clearCalendarTransientSelection();
     selectAppointment(appointment.id);
-    setActiveDrawer({ type: "reception-appointment", id: appointment.id });
+    openReceptionRightPanelDrawer({
+      type: "reception-appointment",
+      id: appointment.id,
+    });
   };
   const handleSelectEncounterFromSchedule = (draft: ReceptionDraftCheckIn) => {
     clearCalendarTransientSelection();
     selectPatient(draft.encounter.patientId);
     selectEncounter(draft.encounter.id);
-    setActiveDrawer({
+    openReceptionRightPanelDrawer({
       type: "reception-encounter",
       id: draft.encounter.id,
     });
   };
   const openWalkInDialog = () => {
     setCalendarDraftSelection(undefined);
-    setActiveDrawer({
+    openReceptionRightPanelDrawer({
       type: "reception-form",
       id: "walk-in",
     });
   };
   const openReservationDialog = () => {
     setCalendarDraftSelection(undefined);
-    setActiveDrawer({
+    openReceptionRightPanelDrawer({
       type: "reception-reservation-form",
       id: "new",
     });
@@ -5691,7 +5810,7 @@ export function ReceptionContent() {
 
     setCalendarDraftSelection({ ...draft, id });
     if (draftOperatingDate > defaultOperatingDate) {
-      setActiveDrawer({
+      openReceptionRightPanelDrawer({
         type: "reception-reservation-form",
         id,
         subtitle: `${formatShortOperatingDate(draftOperatingDate)} · ${getShortTime(
@@ -5701,7 +5820,7 @@ export function ReceptionContent() {
       return;
     }
 
-    setActiveDrawer({
+    openReceptionRightPanelDrawer({
       type: "reception-draft-task",
       id,
       subtitle: `${getShortTime(draft.plannedStartAt)} · ${draft.durationMinutes}분`,
@@ -5958,7 +6077,7 @@ export function ReceptionContent() {
         onUnifiedPatientReady={(patientId) => {
           selectPatient(patientId);
           setCalendarDraftSelection(undefined);
-          setActiveDrawer({
+          openReceptionRightPanelDrawer({
             type: "reception-form",
             id: `walk-in:${patientId}`,
           });
@@ -6063,6 +6182,7 @@ function ReceptionWalkInFormDrawer({
   onCreate,
   operatingDate,
   patientSummaries,
+  presentation = "drawer",
   veterinarians,
   workspaceId,
 }: {
@@ -6075,6 +6195,7 @@ function ReceptionWalkInFormDrawer({
   ) => void;
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
+  presentation?: ReceptionDrawerPresentation;
   veterinarians: Veterinarian[];
   workspaceId: string;
 }) {
@@ -6286,7 +6407,7 @@ function ReceptionWalkInFormDrawer({
 
   return (
     <div
-      className="flex h-[calc(100%-48px)] flex-col"
+      className={getReceptionDrawerSurfaceClassName(presentation)}
       data-testid="walk-in-reception-dialog"
     >
       <ScrollArea className="min-h-0 flex-1">
@@ -6598,6 +6719,7 @@ function ReceptionReservationFormDrawer({
   onCreate,
   operatingDate,
   patientSummaries,
+  presentation = "drawer",
   todayDate,
   veterinarians,
   workspaceId,
@@ -6611,6 +6733,7 @@ function ReceptionReservationFormDrawer({
   onCreate: (appointment: Appointment) => void;
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
+  presentation?: ReceptionDrawerPresentation;
   todayDate: string;
   veterinarians: Veterinarian[];
   workspaceId: string;
@@ -6797,7 +6920,7 @@ function ReceptionReservationFormDrawer({
 
   return (
     <div
-      className="flex h-[calc(100%-48px)] flex-col"
+      className={getReceptionDrawerSurfaceClassName(presentation)}
       data-testid="reservation-create-drawer"
     >
       <ScrollArea className="min-h-0 flex-1">
@@ -7046,6 +7169,7 @@ function ReceptionAppointmentCheckInFormDrawer({
   guardian,
   onCheckIn,
   patient,
+  presentation = "drawer",
   veterinarians,
   workspaceId,
 }: {
@@ -7054,6 +7178,7 @@ function ReceptionAppointmentCheckInFormDrawer({
   guardian?: Guardian;
   onCheckIn: (checkIn: ReceptionAppointmentCheckInRecord, weightKg?: number) => void;
   patient: Patient;
+  presentation?: ReceptionDrawerPresentation;
   veterinarians: Veterinarian[];
   workspaceId: string;
 }) {
@@ -7151,7 +7276,7 @@ function ReceptionAppointmentCheckInFormDrawer({
 
   return (
     <div
-      className="flex h-[calc(100%-48px)] flex-col"
+      className={getReceptionDrawerSurfaceClassName(presentation)}
       data-testid="appointment-check-in-form-drawer"
     >
       <ScrollArea className="min-h-0 flex-1">
@@ -7321,10 +7446,12 @@ function ReceptionAppointmentCheckInFormDrawer({
 
 function ReceptionDraftTaskDrawer({
   patientSummaries,
+  presentation = "drawer",
   selection,
   veterinarians = allVeterinarians,
 }: {
   patientSummaries: ReceptionPatientSummary[];
+  presentation?: ReceptionDrawerPresentation;
   selection: ReceptionCalendarDraftSelection;
   veterinarians?: Veterinarian[];
 }) {
@@ -7438,7 +7565,7 @@ function ReceptionDraftTaskDrawer({
 
   return (
     <div
-      className="flex h-[calc(100%-48px)] flex-col"
+      className={getReceptionDrawerSurfaceClassName(presentation)}
       data-testid="reception-draft-task-drawer"
     >
       <ScrollArea className="min-h-0 flex-1">
@@ -7660,7 +7787,682 @@ function ReceptionDraftTaskDrawer({
   );
 }
 
-export function ReceptionDrawer() {
+export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
+  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+  const title = getReceptionRightPanelTitle(activeDrawer);
+
+  return (
+    <div
+      className="flex h-full min-h-0 flex-col bg-card"
+      aria-label={`${moduleLabel} 우측 사이드 패널`}
+      data-testid="reception-right-panel"
+    >
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--emr-line-default)] px-4">
+        <div className="min-w-0 truncate text-[15px] font-semibold text-foreground">
+          {title}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="우측 사이드 패널 닫기"
+          onClick={() => setRightPanelOpen(false)}
+        >
+          <CdsNavigationSidebarIcon />
+        </Button>
+      </header>
+      {isReceptionRightPanelDrawer(activeDrawer) ? (
+        <ReceptionDrawer presentation="side-panel" />
+      ) : (
+        <ReceptionRightPanelEmptyState />
+      )}
+    </div>
+  );
+}
+
+function getReceptionRightPanelTitle(drawer: DrawerState) {
+  if (drawer?.type === "reception-appointment") return "예약 상세";
+  if (drawer?.type === "reception-encounter") return "접수 상세";
+  if (drawer?.type === "reception-reservation-form") return "예약 생성";
+  if (
+    drawer?.type === "reception-form" ||
+    drawer?.type === "reception-draft-task" ||
+    drawer?.type === "reception-appointment-check-in-form"
+  ) {
+    return "접수 생성";
+  }
+
+  return "접수 상세";
+}
+
+function ReceptionRightPanelEmptyState() {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center px-6">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <span className="flex size-10 items-center justify-center rounded-[var(--emr-radius-control)] border border-[var(--emr-line-default)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-secondary)]">
+          <CdsFilesReceptionCalendarIcon className="size-5" />
+        </span>
+        <p className="emr-text-dense font-semibold text-[var(--emr-text-secondary)]">
+          접수/예약 건을 선택해주세요
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ReceptionSidePanelSection({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <section className="border-b border-[var(--emr-line-default)] py-4 last:border-b-0">
+      <h3 className="mb-3 emr-text-metadata font-medium text-[var(--emr-text-placeholder)]">
+        {title}
+      </h3>
+      <div className="flex flex-col gap-2.5">{children}</div>
+    </section>
+  );
+}
+
+function ReceptionSidePanelField({
+  align = "center",
+  children,
+  icon,
+  label,
+}: {
+  align?: "center" | "start";
+  children: ReactNode;
+  icon: ReactNode;
+  label: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "grid min-w-0 grid-cols-[96px_minmax(0,1fr)] gap-3",
+        align === "center" ? "items-center" : "items-start",
+      )}
+    >
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-2 emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]",
+          align === "start" && "pt-2",
+        )}
+      >
+        <span className="flex size-4 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)]">
+          {icon}
+        </span>
+        <span className="min-w-0 truncate">{label}</span>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function ReceptionSidePanelInput({
+  className,
+  unit,
+  ...props
+}: InputPropsWithUnit) {
+  return (
+    <div className="relative min-w-0">
+      <Input
+        {...props}
+        className={cn(
+          "h-8 bg-card emr-text-dense font-semibold",
+          unit && "pr-12",
+          className,
+        )}
+      />
+      {unit ? (
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]">
+          {unit}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+type InputPropsWithUnit = ComponentProps<typeof Input> & {
+  unit?: string;
+};
+
+function getReceptionSidePanelWeightInputValue(weightKg?: number) {
+  if (typeof weightKg !== "number" || !Number.isFinite(weightKg)) return "";
+
+  return Number.isInteger(weightKg) ? `${weightKg}` : `${weightKg}`;
+}
+
+function ReceptionVitalField({
+  editDraft,
+  editMode,
+  onRemove,
+  onUpdateExtraVital,
+  option,
+  removable,
+  value,
+  setEditDraft,
+}: {
+  editDraft: ReceptionEncounterUpdateInput;
+  editMode: boolean;
+  onRemove: () => void;
+  onUpdateExtraVital: (id: ReceptionSidePanelVitalId, value: string) => void;
+  option: (typeof receptionSidePanelVitalOptions)[number];
+  removable: boolean;
+  value: string;
+  setEditDraft: (
+    updater: (current: ReceptionEncounterUpdateInput) => ReceptionEncounterUpdateInput,
+  ) => void;
+}) {
+  const inputValue =
+    option.id === "weight"
+      ? editMode
+        ? getReceptionSidePanelWeightInputValue(editDraft.weightKg)
+        : value
+      : value;
+
+  return (
+    <ReceptionSidePanelField icon={option.icon} label={option.label}>
+      <div className="flex min-w-0 items-center gap-2">
+        <ReceptionSidePanelInput
+          aria-label={option.label}
+          readOnly={!editMode}
+          inputMode={option.id === "bloodPressure" ? "text" : "decimal"}
+          value={inputValue}
+          unit={option.unit}
+          onChange={(event) => {
+            if (!editMode) return;
+            const nextValue = event.target.value;
+
+            if (option.id !== "weight") {
+              onUpdateExtraVital(option.id, nextValue);
+              return;
+            }
+
+            const nextWeight = parseWeightKgInput(nextValue);
+            setEditDraft((current) => ({
+              ...current,
+              weightKg: nextValue.trim() ? nextWeight : undefined,
+            }));
+          }}
+        />
+        {editMode && removable ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="size-8 text-[var(--emr-text-tertiary)]"
+            aria-label={`${option.label} 삭제`}
+            onClick={onRemove}
+          >
+            <CdsActionsTrash2Icon className="size-3.5" />
+          </Button>
+        ) : null}
+      </div>
+    </ReceptionSidePanelField>
+  );
+}
+
+function ReceptionAddVitalMenu({
+  onAdd,
+  options,
+}: {
+  onAdd: (id: ReceptionSidePanelVitalId) => void;
+  options: typeof receptionSidePanelVitalOptions;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (options.length === 0) return null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            className="h-8 w-full border-dashed bg-card emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]"
+          >
+            <CdsActionsPlusIcon className="size-3.5" />
+            바이탈 추가
+          </Button>
+        }
+      />
+      <PopoverContent align="end" sideOffset={6} className="w-[244px] p-1.5">
+        <div className="flex flex-col gap-1">
+          {options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="flex h-8 w-full items-center gap-2 rounded-[var(--emr-radius-control)] px-2 text-left emr-text-dense font-semibold text-foreground hover:bg-[var(--emr-state-hover)] focus-visible:bg-[var(--emr-state-hover)] focus-visible:outline-none"
+              onClick={() => {
+                onAdd(option.id);
+                setOpen(false);
+              }}
+            >
+              <span className="flex size-4 items-center justify-center text-[var(--emr-text-secondary)]">
+                {option.icon}
+              </span>
+              <span>{option.label}</span>
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ReceptionSidePanelDetail({
+  canCancelSelectedEncounter,
+  canEditSelectedEncounter,
+  checkInDisabled,
+  departmentValue,
+  editDraft,
+  editMode,
+  editSubmitting,
+  guardian,
+  memoLabel,
+  onCancelOpen,
+  onCheckInOrCreate,
+  onClose,
+  onEditOpen,
+  onSave,
+  patient,
+  patientWeightLabel,
+  primaryActionLabel,
+  receptionDate,
+  receptionDurationMinutes,
+  receptionStartAt,
+  selectedAppointment,
+  selectedEncounter,
+  setEditDraft,
+  veterinarianName,
+  veterinarians,
+  visitReason,
+}: {
+  canCancelSelectedEncounter?: boolean;
+  canEditSelectedEncounter?: boolean;
+  checkInDisabled: boolean;
+  departmentValue: string;
+  editDraft: ReceptionEncounterUpdateInput;
+  editMode: boolean;
+  editSubmitting: boolean;
+  guardian?: Guardian;
+  memoLabel: string;
+  onCancelOpen: () => void;
+  onCheckInOrCreate: () => void;
+  onClose: () => void;
+  onEditOpen: () => void;
+  onSave: () => void;
+  patient: Patient;
+  patientWeightLabel: string;
+  primaryActionLabel?: string;
+  receptionDate: string;
+  receptionDurationMinutes: number;
+  receptionStartAt?: string;
+  selectedAppointment?: Appointment;
+  selectedEncounter?: Encounter;
+  setEditDraft: (
+    updater: (current: ReceptionEncounterUpdateInput) => ReceptionEncounterUpdateInput,
+  ) => void;
+  veterinarianName: string;
+  veterinarians: Veterinarian[];
+  visitReason: string;
+}) {
+  const [selectedVitalIds, setSelectedVitalIds] = useState<
+    ReceptionSidePanelVitalId[]
+  >(["weight"]);
+  const [extraVitalValues, setExtraVitalValues] = useState<
+    Partial<Record<ReceptionSidePanelVitalId, string>>
+  >({});
+
+  const selectedVitalOptions = receptionSidePanelVitalOptions.filter((option) =>
+    selectedVitalIds.includes(option.id),
+  );
+  const availableVitalOptions = receptionSidePanelVitalOptions.filter(
+    (option) => !selectedVitalIds.includes(option.id),
+  );
+  const canRemoveVital = selectedVitalIds.length > 1;
+  const appointmentStatusLabel = selectedAppointment
+    ? getStatusLabel("appointment", selectedAppointment.status)
+    : undefined;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="px-4">
+          {appointmentStatusLabel ? (
+            <div className="pt-3">
+              <Badge
+                size="sm"
+                variant="secondary"
+                className="rounded-[var(--clair-radius-atomic-6)] emr-text-micro font-semibold"
+              >
+                {appointmentStatusLabel}
+              </Badge>
+            </div>
+          ) : editMode ? (
+            <div className="pt-3">
+              <Badge
+                size="sm"
+                variant="secondary"
+                className="rounded-[var(--clair-radius-atomic-6)] emr-text-micro font-semibold"
+              >
+                수정 중
+              </Badge>
+            </div>
+          ) : null}
+
+          <ReceptionSidePanelSection title="환자/보호자">
+            <ReceptionSidePanelField
+              icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
+              label="동물명"
+            >
+              <ReceptionSidePanelInput
+                readOnly
+                value={`${patient.name} · ${getSpeciesLabel(patient.species)}${
+                  patient.breed ? ` · ${patient.breed}` : ""
+                }`}
+              />
+            </ReceptionSidePanelField>
+            <ReceptionSidePanelField
+              icon={<CdsPeopleUserIcon className="size-3.5" />}
+              label="보호자명"
+            >
+              <ReceptionSidePanelInput
+                readOnly
+                value={`${guardian?.name ?? "보호자 미지정"}${
+                  guardian?.mobilePhone ? ` · ${guardian.mobilePhone}` : ""
+                }`}
+              />
+            </ReceptionSidePanelField>
+          </ReceptionSidePanelSection>
+
+          <ReceptionSidePanelSection title="바이탈">
+            {selectedVitalOptions.map((option) => (
+              <ReceptionVitalField
+                key={option.id}
+                editDraft={editDraft}
+                editMode={editMode}
+                option={option}
+                removable={canRemoveVital}
+                setEditDraft={setEditDraft}
+                value={
+                  option.id === "weight"
+                    ? patientWeightLabel.replace(/\s*kg$/i, "")
+                    : (extraVitalValues[option.id] ?? option.defaultValue)
+                }
+                onRemove={() =>
+                  setSelectedVitalIds((current) =>
+                    current.length > 1
+                      ? current.filter((id) => id !== option.id)
+                      : current,
+                  )
+                }
+                onUpdateExtraVital={(id, nextValue) =>
+                  setExtraVitalValues((current) => ({
+                    ...current,
+                    [id]: nextValue,
+                  }))
+                }
+              />
+            ))}
+            {editMode ? (
+              <ReceptionAddVitalMenu
+                options={availableVitalOptions}
+                onAdd={(id) =>
+                  setSelectedVitalIds((current) =>
+                    current.includes(id) ? current : [...current, id],
+                  )
+                }
+              />
+            ) : null}
+          </ReceptionSidePanelSection>
+
+          <ReceptionSidePanelSection title="진료과/담당의">
+            <ReceptionSidePanelField
+              icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
+              label="진료과"
+            >
+              {editMode ? (
+                <Select
+                  value={editDraft.department ?? defaultWalkInDepartment}
+                  onValueChange={(value) =>
+                    setEditDraft((current) => ({
+                      ...current,
+                      department: value ?? undefined,
+                    }))
+                  }
+                >
+                  <SelectTrigger aria-label="진료과" size="sm" className="w-full bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-[224px]">
+                    <SelectGroup>
+                      <SelectItem value="영상의학과 · 방사선종양학과">
+                        영상의학과 · 방사선종양학과
+                      </SelectItem>
+                      <SelectItem value="내과">내과</SelectItem>
+                      <SelectItem value="외과">외과</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <ReceptionSidePanelInput readOnly value={departmentValue} />
+              )}
+            </ReceptionSidePanelField>
+            <ReceptionSidePanelField
+              icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
+              label="담당의"
+            >
+              {editMode ? (
+                <Select
+                  value={editDraft.primaryVeterinarianId ?? unassignedVeterinarianValue}
+                  onValueChange={(value) =>
+                    setEditDraft((current) => ({
+                      ...current,
+                      primaryVeterinarianId: value ?? undefined,
+                    }))
+                  }
+                >
+                  <SelectTrigger aria-label="담당의" size="sm" className="w-full bg-card">
+                    <span className="flex min-w-0 flex-1 truncate text-left">
+                      {getReceptionVeterinarianSelectLabel(
+                        editDraft.primaryVeterinarianId ??
+                          unassignedVeterinarianValue,
+                        veterinarians,
+                      )}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-[224px]">
+                    <SelectGroup>
+                      <SelectItem value={unassignedVeterinarianValue}>
+                        수의사 미지정
+                      </SelectItem>
+                      {veterinarians.map((veterinarian) => (
+                        <SelectItem key={veterinarian.id} value={veterinarian.id}>
+                          {veterinarian.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <ReceptionSidePanelInput readOnly value={veterinarianName} />
+              )}
+            </ReceptionSidePanelField>
+          </ReceptionSidePanelSection>
+
+          <ReceptionSidePanelSection title="접수일자/시간">
+            <ReceptionSidePanelField
+              icon={<CdsFilesCalendarIcon className="size-3.5" />}
+              label="접수일"
+            >
+              <ReceptionSidePanelInput readOnly value={receptionDate} />
+            </ReceptionSidePanelField>
+            <ReceptionSidePanelField
+              icon={<CdsFilesClockIcon className="size-3.5" />}
+              label="접수시간"
+            >
+              <ReceptionSidePanelInput
+                readOnly
+                value={receptionStartAt ? getShortTime(receptionStartAt) : "-"}
+              />
+            </ReceptionSidePanelField>
+            <ReceptionSidePanelField
+              icon={<CdsMedicalActivityIcon className="size-3.5" />}
+              label="예상소요시간"
+            >
+              {editMode ? (
+                <Select
+                  value={`${editDraft.durationMinutes ?? receptionDurationMinutes}분`}
+                  onValueChange={(value) =>
+                    setEditDraft((current) => ({
+                      ...current,
+                      durationMinutes: value
+                        ? getDurationMinutesFromLabel(value)
+                        : undefined,
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    aria-label="예상소요시간"
+                    size="sm"
+                    className="w-full bg-card"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-[224px]">
+                    <SelectGroup>
+                      {receptionDurationOptions.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <ReceptionSidePanelInput
+                  readOnly
+                  value={getReceptionDrawerDurationLabel({
+                    appointment: selectedAppointment,
+                    encounter: selectedEncounter,
+                  })}
+                />
+              )}
+            </ReceptionSidePanelField>
+          </ReceptionSidePanelSection>
+
+          <ReceptionSidePanelSection title="방문목적">
+            <ReceptionSidePanelField
+              align="start"
+              icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
+              label="방문목적"
+            >
+              <Textarea
+                readOnly={!editMode}
+                value={editMode ? (editDraft.visitPurpose ?? "") : visitReason}
+                placeholder="방문목적을 입력해주세요"
+                className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                onChange={(event) =>
+                  setEditDraft((current) => ({
+                    ...current,
+                    visitPurpose: event.target.value,
+                  }))
+                }
+              />
+            </ReceptionSidePanelField>
+            {memoLabel ? (
+              <ReceptionSidePanelField
+                align="start"
+                icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
+                label={memoLabel}
+              >
+                <Textarea
+                  readOnly={!editMode}
+                  value={
+                    editMode
+                      ? (editDraft.memo ?? "")
+                      : (selectedEncounter?.receptionMemo ??
+                        selectedAppointment?.symptomNote ??
+                        "")
+                  }
+                  placeholder={`${memoLabel}를 입력해주세요`}
+                  className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                  onChange={(event) =>
+                    setEditDraft((current) => ({
+                      ...current,
+                      memo: event.target.value,
+                    }))
+                  }
+                />
+              </ReceptionSidePanelField>
+            ) : null}
+          </ReceptionSidePanelSection>
+        </div>
+      </ScrollArea>
+      <footer className="mt-auto flex h-[65px] shrink-0 items-center justify-between gap-2 border-t border-[var(--emr-line-default)] bg-card px-4">
+        <div>
+          {canCancelSelectedEncounter ? (
+            <Button
+              type="button"
+              variant="destructive"
+              className="h-9 bg-[var(--emr-status-danger-bg)]"
+              onClick={onCancelOpen}
+              data-testid="reception-encounter-cancel-open"
+            >
+              접수 취소
+            </Button>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" className="h-9" onClick={onClose}>
+            {editMode ? "취소" : "닫기"}
+          </Button>
+          {editMode ? (
+            <Button
+              type="button"
+              className="h-9"
+              onClick={onSave}
+              disabled={editSubmitting}
+              data-testid="reception-encounter-edit-save"
+            >
+              {editSubmitting ? "저장 중" : "저장"}
+            </Button>
+          ) : canEditSelectedEncounter ? (
+            <Button
+              type="button"
+              className="h-9"
+              onClick={onEditOpen}
+              data-testid="reception-encounter-edit-open"
+            >
+              수정하기
+            </Button>
+          ) : primaryActionLabel ? (
+            <Button
+              type="button"
+              className="h-9"
+              disabled={checkInDisabled}
+              onClick={onCheckInOrCreate}
+            >
+              {primaryActionLabel}
+            </Button>
+          ) : null}
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export function ReceptionDrawer({
+  presentation = "drawer",
+}: {
+  presentation?: ReceptionDrawerPresentation;
+} = {}) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const router = useRouter();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
@@ -7819,6 +8621,7 @@ export function ReceptionDrawer() {
         initialPatientId={initialPatientId}
         operatingDate={operatingDate}
         patientSummaries={patientSummaries}
+        presentation={presentation}
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCreate={(input, walkIn, selectedSummary) => {
@@ -7853,6 +8656,7 @@ export function ReceptionDrawer() {
               onClick: () => {
                 const searchParams = new URLSearchParams({
                   modulePanel: "open",
+                  right: "open",
                   drawer: `reception-encounter:${walkIn.encounter.id}`,
                   encounterId: walkIn.encounter.id,
                   patientId: patient.id,
@@ -7893,6 +8697,7 @@ export function ReceptionDrawer() {
         initialVeterinarianId={reservationDraftSelection?.primaryVeterinarianId}
         operatingDate={operatingDate}
         patientSummaries={patientSummaries}
+        presentation={presentation}
         todayDate={getWorkspaceOperatingDate(workspaceId)}
         veterinarians={veterinarians}
         workspaceId={workspaceId}
@@ -7918,6 +8723,7 @@ export function ReceptionDrawer() {
     return (
       <ReceptionDraftTaskDrawer
         patientSummaries={patientSummaries}
+        presentation={presentation}
         selection={calendarDraftSelection}
         veterinarians={veterinarians}
       />
@@ -8145,6 +8951,7 @@ export function ReceptionDrawer() {
         currentOperatingMinutes={currentOperatingMinutes}
         guardian={guardian}
         patient={patient}
+        presentation={presentation}
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCheckIn={(checkIn, weightKg) => {
@@ -8168,6 +8975,132 @@ export function ReceptionDrawer() {
           });
         }}
       />
+    );
+  }
+
+  if (presentation === "side-panel") {
+    return (
+      <>
+        <ReceptionSidePanelDetail
+          key={patient.id}
+          canCancelSelectedEncounter={Boolean(canCancelSelectedEncounter)}
+          canEditSelectedEncounter={Boolean(canEditSelectedEncounter)}
+          checkInDisabled={Boolean(
+            selectedAppointment && selectedAppointment.status !== "confirmed",
+          )}
+          departmentValue={departmentValue}
+          editDraft={editDraft}
+          editMode={editMode}
+          editSubmitting={editSubmitting}
+          guardian={guardian}
+          memoLabel={memoLabel}
+          patient={patient}
+          patientWeightLabel={patientWeightLabel}
+          primaryActionLabel={
+            selectedAppointment || !selectedEncounter
+              ? selectedAppointment
+                ? "접수하기"
+                : "생성"
+              : undefined
+          }
+          receptionDate={receptionDate}
+          receptionDurationMinutes={receptionDurationMinutes}
+          receptionStartAt={receptionStartAt}
+          selectedAppointment={selectedAppointment}
+          selectedEncounter={selectedEncounter}
+          setEditDraft={setEditDraft}
+          veterinarianName={veterinarianName}
+          veterinarians={veterinarians}
+          visitReason={visitReason}
+          onCancelOpen={() => setCancelConfirmOpen(true)}
+          onCheckInOrCreate={() => {
+            if (selectedAppointment) {
+              setActiveDrawer({
+                type: "reception-appointment-check-in-form",
+                id: selectedAppointment.id,
+              });
+              return;
+            }
+
+            createWalkInCheckIn({
+              guardianId: guardian?.id,
+              patientId: patient.id,
+              primaryVeterinarianId:
+                veterinarians[0]?.id ?? defaultVeterinarian?.id,
+              visitPurpose: "현장 접수",
+              workspaceId,
+            });
+            setActiveDrawer(null);
+          }}
+          onClose={() => {
+            if (editMode) {
+              setEditMode(false);
+              setEditDraft(getSelectedEncounterEditDraft());
+              return;
+            }
+            setActiveDrawer(null);
+          }}
+          onEditOpen={() => setEditConfirmOpen(true)}
+          onSave={() => {
+            void handleSaveSelectedEncounter();
+          }}
+        />
+        <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>접수를 취소할까요?</DialogTitle>
+              <DialogDescription>
+                취소하면 접수 캘린더에서는 사라지고 대기열에는 취소 상태로 남습니다.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setCancelConfirmOpen(false)}
+                disabled={cancelSubmitting}
+              >
+                닫기
+              </Button>
+              <Button
+                variant="outline"
+                className="border-[var(--emr-status-danger-border)] text-[var(--emr-status-danger-text)] hover:bg-[var(--emr-status-danger-bg)]"
+                disabled={cancelSubmitting}
+                onClick={() => {
+                  void handleCancelSelectedEncounter();
+                }}
+                data-testid="reception-encounter-cancel-confirm"
+              >
+                {cancelSubmitting ? "취소 중" : "접수 취소"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={editConfirmOpen} onOpenChange={setEditConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>접수 정보를 수정하시겠습니까?</DialogTitle>
+              <DialogDescription>
+                환자와 접수일자는 변경하지 않고, 접수 세부 정보만 수정합니다.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditConfirmOpen(false)}>
+                닫기
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditDraft(getSelectedEncounterEditDraft());
+                  setEditConfirmOpen(false);
+                  setEditMode(true);
+                }}
+                data-testid="reception-encounter-edit-confirm"
+              >
+                수정하기
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 

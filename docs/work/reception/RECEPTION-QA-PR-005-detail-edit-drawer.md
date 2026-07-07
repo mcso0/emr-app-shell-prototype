@@ -20,7 +20,7 @@ source_docs:
 dependencies:
   - "RECEPTION-QA-PR-001"
   - "RECEPTION-QA-PR-004"
-updated: "2026-06-16"
+updated: "2026-07-08"
 ---
 
 # Reception Detail Drawer Hierarchy and Editable Encounter Update
@@ -84,6 +84,21 @@ Follow-up verification from DEN-518 cleared the earlier rendered-test caveat:
 
 - `npx playwright test tests/reception-encounter-update-server.spec.ts tests/reception-mutation-permissions-server.spec.ts --reporter=line`: covered the route request test after the fixture was corrected to use an editable encounter.
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/reception.spec.ts --reporter=line`: 49 passed, including rendered drawer and shared queue/calendar entry coverage.
+
+Follow-up side-panel implementation on 2026-07-08:
+
+- Reception detail now renders as the workspace right panel instead of the global overlay drawer, so the calendar keeps its own width and is not covered.
+- The reception toolbar keeps the more action, adds a divider and right-panel toggle, and hides that toggle while the panel is open because the panel header owns the close/toggle control.
+- Side-panel detail/edit mode uses structured field rows with label icons, Figma-aligned visit-purpose textarea height, non-animated panel open/close behavior, and edit-mode footer actions without the extra `수정하기` action.
+- Vital fields remain data-driven in the UI: weight is shown by default, additional vitals can be selected from a menu, selected vitals can be removed when more than one is present, and the add action hides once all options are selected.
+- This follow-up keeps the existing encounter update boundary intact and does not add a DB/API contract for new vital types.
+
+Focused verification:
+
+- `npm run lint`: passed
+- `npx tsc --noEmit --pretty false`: passed
+- `git diff --check -- src/features/reception/module.tsx src/shell/workspace-frame.tsx src/shell/app-shell.tsx src/modules/registry.ts src/types/emr.ts`: passed
+- Manual Playwright verification against local dev server covered closed/open panel layout, no drawer overlay, toolbar button behavior, detail mode, edit mode, textarea height, add-vital menu width, and vital delete spacing/visibility.
 
 ## Handoff Notes
 
