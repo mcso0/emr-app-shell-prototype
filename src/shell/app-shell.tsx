@@ -260,6 +260,13 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     const aside = urlParams.get("aside") ?? urlParams.get("context");
     const right = urlParams.get("right");
     const drawer = urlParams.get("drawer");
+    const receptionRightPanelDrawerFromUrl =
+      drawer?.startsWith("reception-appointment:") ||
+      drawer?.startsWith("reception-appointment-check-in-form:") ||
+      drawer?.startsWith("reception-draft-task:") ||
+      drawer?.startsWith("reception-encounter:") ||
+      drawer?.startsWith("reception-form:") ||
+      drawer?.startsWith("reception-reservation-form:");
     const pendingUrlState: PendingUrlState = { search };
     const currentLayoutState = useLayoutStore.getState();
     const moduleHasSidePanel = Boolean(moduleDefinition.sidePanel);
@@ -291,7 +298,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       }
       setRightPanelOpen(nextRightPanelOpen);
     } else if (moduleDefinition.rightPanel) {
-      const nextRightPanelOpen = moduleDefinition.defaultRightPanelOpen ?? true;
+      const nextRightPanelOpen =
+        moduleDefinition.id === "reception" && receptionRightPanelDrawerFromUrl
+          ? true
+          : (moduleDefinition.defaultRightPanelOpen ?? true);
       if (currentLayoutState.rightPanelOpen !== nextRightPanelOpen) {
         pendingUrlState.rightPanelOpen = nextRightPanelOpen;
       }
@@ -327,6 +337,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     moduleDefinition.defaultContentAsideOpen,
     moduleDefinition.defaultRightPanelOpen,
     moduleDefinition.contentAside,
+    moduleDefinition.id,
     moduleDefinition.sidePanel,
     moduleDefinition.rightPanel,
   ]);

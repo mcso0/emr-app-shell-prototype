@@ -60,7 +60,7 @@ import {
 import { HomeContent, HomeSidePanel } from "@/features/home/module";
 import {
   ReceptionContent,
-  ReceptionDrawer,
+  ReceptionRightPanel,
   ReceptionSidePanel,
 } from "@/features/reception/module";
 
@@ -78,7 +78,9 @@ export const modules: ModuleDefinition[] = [
     icon: BuildingIcon,
     sidePanel: ReceptionSidePanel,
     content: ReceptionContent,
-    drawer: ReceptionDrawer,
+    rightPanel: ReceptionRightPanel,
+    rightPanelWidth: 380,
+    defaultRightPanelOpen: false,
   },
   {
     id: "treatment",
