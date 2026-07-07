@@ -195,28 +195,65 @@ test("root starts at login", async ({ page }) => {
   await expect(page.getByTestId("mock-session-status")).toBeVisible();
 });
 
-test("login form focuses email and shows inline validation for invalid input", async ({ page }) => {
+test("login form guides empty submit and shows inline validation after user input", async ({
+  page,
+}) => {
   await page.goto("/login");
 
   const emailInput = page.getByLabel("이메일");
-  const passwordInput = page.getByLabel("비밀번호");
+  const passwordInput = page.locator("#mock-password");
+  const loginButton = page.getByRole("button", { name: "로그인", exact: true });
 
   await expect(emailInput).toBeFocused();
 
+  await page.locator("main").click({ position: { x: 12, y: 12 } });
+  await expect(page.getByText("이메일을 입력해 주세요.")).toHaveCount(0);
+  await expect(emailInput).not.toHaveAttribute("aria-invalid", "true");
+
+  await loginButton.click();
+  await expect(emailInput).toBeFocused();
+  await expect(page.getByText("이메일을 입력해 주세요.")).toHaveCount(0);
+  await expect(emailInput).not.toHaveAttribute("aria-invalid", "true");
+  await expect(passwordInput).not.toHaveAttribute("aria-invalid", "true");
+
   await emailInput.fill("1");
-  await page.getByRole("button", { name: "로그인", exact: true }).click();
+  await passwordInput.fill("local-pass-1");
+  await loginButton.click();
 
   await expect(emailInput).toBeFocused();
   await expect(emailInput).toHaveAttribute("aria-invalid", "true");
-  await expect(passwordInput).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByText("올바른 이메일 주소를 입력해 주세요.")).toBeVisible();
-  await expect(page.getByText("비밀번호를 입력해 주세요.")).toBeVisible();
+  await expect(page.getByText("비밀번호를 입력해 주세요.")).toHaveCount(0);
 
   await emailInput.fill("front@clair.local");
+  await passwordInput.fill("");
+  await loginButton.click();
+
+  await expect(passwordInput).toBeFocused();
+  await expect(passwordInput).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("비밀번호를 입력해 주세요.")).toBeVisible();
+
   await passwordInput.fill("local-pass-1");
 
   await expect(page.getByText("올바른 이메일 주소를 입력해 주세요.")).toHaveCount(0);
   await expect(page.getByText("비밀번호를 입력해 주세요.")).toHaveCount(0);
+});
+
+test("login password field toggles text visibility", async ({ page }) => {
+  await page.goto("/login");
+
+  const passwordInput = page.locator("#mock-password");
+
+  await expect(page.getByRole("button", { name: "비밀번호 보기" })).toHaveCount(0);
+
+  await passwordInput.fill("local-pass-1");
+  await expect(passwordInput).toHaveAttribute("type", "password");
+
+  await page.getByRole("button", { name: "비밀번호 보기" }).click();
+  await expect(passwordInput).toHaveAttribute("type", "text");
+
+  await page.getByRole("button", { name: "비밀번호 숨기기" }).click();
+  await expect(passwordInput).toHaveAttribute("type", "password");
 });
 
 test("workspace routes require login and preserve the requested URL", async ({ page }) => {
@@ -365,12 +402,16 @@ test("auth UI components use the auth client boundary", () => {
 
 test("supabase adapter keeps local demo fallback and public env boundary", () => {
   const authClient = readFileSync("src/features/auth/auth-client.ts", "utf8");
+  const loginForm = readFileSync("src/features/auth/login-form.tsx", "utf8");
   const supabaseConfig = readFileSync("src/lib/supabase/config.ts", "utf8");
   const browserClient = readFileSync("src/lib/supabase/client.ts", "utf8");
   const proxy = readFileSync("src/proxy.ts", "utf8");
 
   expect(authClient).toContain("signInWithPassword");
   expect(authClient).toContain("signInWithMockRole");
+  expect(loginForm).toContain("invalid_credentials");
+  expect(loginForm).toContain("이메일 또는 비밀번호를 확인해 주세요.");
+  expect(loginForm).toContain("비밀번호 보기");
   expect(supabaseConfig).toContain("NEXT_PUBLIC_AUTH_MODE");
   expect(supabaseConfig).toContain("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
   expect(browserClient).toContain("createBrowserClient");
