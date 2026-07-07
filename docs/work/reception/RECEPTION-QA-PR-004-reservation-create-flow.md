@@ -19,7 +19,7 @@ source_docs:
   - "docs/work/reception/RECEPTION-QA-PR-003-create-drawer-weight.md"
 dependencies:
   - "RECEPTION-QA-PR-003"
-updated: "2026-06-16"
+updated: "2026-07-08"
 ---
 
 # Reception Reservation Creation and Appointment Check-In Flow
@@ -110,6 +110,13 @@ Turn the `+ 접수/예약 > 예약하기` entry point from a placeholder toast i
 - Root cause was display/readback coupling, not creation persistence: `appointments.patient_id` and `appointments.guardian_id` were saved correctly, but `clair_list_reception_day_calendar(...)` returned only appointment IDs without embedded `patient` / `primaryGuardian` records, and the calendar appointment card looked up names through mock-only appointment helpers.
 - Calendar appointment cards now receive the live `ReceptionProfileDataset` and resolve appointment patient/guardian names from live profile state first, with mock fallback preserved for legacy demo data.
 - The calendar reader function now embeds patient and primary guardian objects for appointment and walk-in records. Scoped staging readback for appointment `2c7bcd75-348b-48ff-9073-1240dda16e5d` returned `초코` / `최도현` from `public.clair_list_reception_day_calendar('workspace-clair-cheongdam', date '2026-06-27')`.
+
+## 2026-07-08 Side Panel Follow-up
+
+- Reservation creation now uses the reception right side panel presentation when opened from the toolbar, URL, or future-date calendar draft.
+- The side-panel presentation uses the same 380px one-column icon-labeled row grammar as reception detail while preserving reservation-specific controls for reservation date, time, duration, veterinarian, weight, and memo.
+- Existing appointment create API payloads, occupied-slot disabling, closed-day/business-hour validation, and post-create transition to reservation detail remain unchanged.
+- Focused UI coverage now checks the reservation creation side panel and stable date-picker controls without depending on the old global workspace drawer shell.
 
 ## Result
 

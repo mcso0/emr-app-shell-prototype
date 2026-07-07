@@ -4037,10 +4037,12 @@ function EmptyReceptionSlotButton({
 }
 
 function ReceptionReservationDatePicker({
+  compact = false,
   minDate,
   onChange,
   value,
 }: {
+  compact?: boolean;
   minDate: string;
   onChange: (value: string) => void;
   value: string;
@@ -4070,8 +4072,11 @@ function ReceptionReservationDatePicker({
           <Button
             type="button"
             variant="outline"
-            size="lg"
-            className="w-full justify-between bg-card px-2.5 text-left font-normal"
+            size={compact ? "sm" : "lg"}
+            className={cn(
+              "w-full justify-between bg-card px-2.5 text-left font-normal",
+              compact && "h-8 emr-text-dense font-semibold",
+            )}
             aria-label="예약일"
           />
         }
@@ -6405,6 +6410,371 @@ function ReceptionWalkInFormDrawer({
     setActiveDrawer(null);
   };
 
+  if (presentation === "side-panel") {
+    return (
+      <div
+        className={getReceptionDrawerSurfaceClassName(presentation)}
+        data-testid="walk-in-reception-dialog"
+      >
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="px-4">
+            {timeBlockMessage ? (
+              <div className="pt-4">
+                <EmrInlineAlert
+                  severity="warning"
+                  title="접수 가능 시간이 아닙니다"
+                  testId="walk-in-time-block-alert"
+                >
+                  {timeBlockMessage}
+                </EmrInlineAlert>
+              </div>
+            ) : null}
+
+            <ReceptionSidePanelSection title="환자/보호자">
+              <ReceptionSidePanelField
+                icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
+                label="동물명"
+              >
+                <div
+                  className="relative"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      setPatientLookupOpen(false);
+                    }
+                  }}
+                >
+                  <CdsActionsSearchIcon
+                    className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    aria-label="환자 검색"
+                    autoComplete="off"
+                    className="h-8 bg-card pl-8 pr-8 emr-text-dense font-semibold"
+                    placeholder="환자를 선택해주세요"
+                    value={lookupQuery}
+                    onFocus={() => setPatientLookupOpen(true)}
+                    onValueChange={(value) => {
+                      setLookupQuery(value);
+                      if (
+                        selectedLookupSummary &&
+                        value !==
+                          getReceptionPatientOptionLabel(
+                            selectedLookupSummary,
+                          )
+                      ) {
+                        setPatientId("");
+                        setSelectedLookupSummary(null);
+                      }
+                      setPatientLookupOpen(true);
+                    }}
+                  />
+                  {lookupQuery ? (
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                      aria-label="검색어 초기화"
+                      onClick={() => {
+                        setLookupQuery("");
+                        setPatientId("");
+                        setSelectedLookupSummary(null);
+                        setWeightKg("");
+                        setPatientLookupOpen(true);
+                      }}
+                    >
+                      <CircleCloseFillIcon
+                        className="size-4"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  ) : null}
+                  {shouldShowPatientLookup ? (
+                    <div
+                      role="listbox"
+                      aria-label="검색 결과"
+                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+                    >
+                      {lookupState === "loading" ? (
+                        <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
+                          DB 환자 검색 중입니다.
+                        </div>
+                      ) : null}
+                      {lookupState === "error" ? (
+                        <div className="px-2.5 py-2 emr-text-dense text-[var(--emr-status-danger-text)]">
+                          환자 검색을 불러오지 못했습니다.
+                        </div>
+                      ) : null}
+                      {lookupState === "idle" &&
+                      !lookupMatchesSelectedPatient &&
+                      selectablePatientSummaries.length === 0 ? (
+                        <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
+                          검색 결과가 없습니다.
+                        </div>
+                      ) : null}
+                      {selectablePatientSummaries.map((summary) => {
+                        const selected = summary.patient.id === patientId;
+                        const optionLabel =
+                          getReceptionPatientOptionLabel(summary);
+
+                        return (
+                          <button
+                            key={summary.patient.id}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectPatientSummary(summary)}
+                          >
+                            <span className="truncate emr-text-dense font-semibold text-foreground">
+                              {optionLabel}
+                            </span>
+                            <span className="truncate emr-text-metadata text-muted-foreground">
+                              {summary.primaryGuardian?.mobilePhone ??
+                                "보호자 연락처 미등록"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              </ReceptionSidePanelField>
+
+              <ReceptionSidePanelField
+                icon={<CdsPeopleUserIcon className="size-3.5" />}
+                label="보호자명"
+              >
+                <ReceptionSidePanelInput
+                  readOnly
+                  placeholder="환자 선택 시 표기됩니다"
+                  value={
+                    guardian
+                      ? `${guardian.name}${
+                          guardian.mobilePhone ? ` · ${guardian.mobilePhone}` : ""
+                        }`
+                      : ""
+                  }
+                />
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+
+            <ReceptionSidePanelSection title="바이탈">
+              <ReceptionSidePanelField
+                icon={<CdsMedicalActivityIcon className="size-3.5" />}
+                label="체중"
+              >
+                <div className="min-w-0">
+                  <ReceptionSidePanelInput
+                    aria-label="체중"
+                    disabled={!patient}
+                    inputMode="decimal"
+                    placeholder="체중을 입력해주세요"
+                    unit="Kg"
+                    value={weightKg}
+                    aria-invalid={weightInvalid || undefined}
+                    className={
+                      weightInvalid
+                        ? "border-[var(--emr-status-danger-border)]"
+                        : ""
+                    }
+                    onValueChange={(value) =>
+                      setWeightKg(value.replace(/[^\d.]/g, ""))
+                    }
+                  />
+                  {weightInvalid ? (
+                    <p className="mt-1 emr-text-micro font-medium text-destructive">
+                      체중은 0보다 큰 숫자로 입력해 주세요.
+                    </p>
+                  ) : null}
+                </div>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+
+            <ReceptionSidePanelSection title="진료과/담당의">
+              <ReceptionSidePanelField
+                icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
+                label="진료과"
+              >
+                <Select
+                  value={department}
+                  onValueChange={(value) => value && setDepartment(value)}
+                >
+                  <SelectTrigger aria-label="진료과" size="sm" className="w-full bg-card">
+                    <SelectValue placeholder="진료과를 선택해주세요" />
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-[224px]">
+                    <SelectGroup>
+                      <SelectItem value="영상의학과 · 방사선종양학과">
+                        영상의학과 · 방사선종양학과
+                      </SelectItem>
+                      <SelectItem value="내과">내과</SelectItem>
+                      <SelectItem value="외과">외과</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </ReceptionSidePanelField>
+              <ReceptionSidePanelField
+                icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
+                label="담당의"
+              >
+                <Select
+                  value={effectiveVeterinarianId}
+                  onValueChange={(value) => value && setVeterinarianId(value)}
+                >
+                  <SelectTrigger aria-label="담당의" size="sm" className="w-full bg-card">
+                    <span className="flex min-w-0 flex-1 truncate text-left">
+                      {getReceptionVeterinarianSelectLabel(
+                        effectiveVeterinarianId,
+                        veterinarians,
+                      )}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-[224px]">
+                    <SelectGroup>
+                      <SelectItem value={unassignedVeterinarianValue}>
+                        수의사 미지정
+                      </SelectItem>
+                      {veterinarians.map((veterinarian) => (
+                        <SelectItem
+                          key={veterinarian.id}
+                          value={veterinarian.id}
+                        >
+                          {veterinarian.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+
+            <ReceptionSidePanelSection title="접수일자/시간">
+              <ReceptionSidePanelField
+                icon={<CdsFilesCalendarIcon className="size-3.5" />}
+                label="접수일"
+              >
+                <ReceptionSidePanelInput
+                  readOnly
+                  aria-label="접수일"
+                  value={formatShortOperatingDate(operatingDate)}
+                />
+              </ReceptionSidePanelField>
+              <ReceptionSidePanelField
+                icon={<CdsFilesClockIcon className="size-3.5" />}
+                label="접수시간"
+              >
+                <ReceptionSidePanelInput
+                  readOnly
+                  aria-label="진료시간"
+                  value={getShortTime(plannedStartAt)}
+                />
+              </ReceptionSidePanelField>
+              <ReceptionSidePanelField
+                icon={<CdsMedicalActivityIcon className="size-3.5" />}
+                label="예상소요시간"
+              >
+                <Select
+                  value={duration}
+                  onValueChange={(value) => value && setDuration(value)}
+                >
+                  <SelectTrigger
+                    aria-label="예상시간"
+                    size="sm"
+                    className="w-full bg-card"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-[224px]">
+                    <SelectGroup>
+                      {receptionDurationOptions.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+
+            <ReceptionSidePanelSection title="방문목적">
+              <ReceptionSidePanelField
+                align="start"
+                icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
+                label="방문목적"
+              >
+                <Textarea
+                  aria-label="방문 목적"
+                  className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                  placeholder="방문목적을 입력해주세요"
+                  value={visitPurpose}
+                  onChange={(event) => setVisitPurpose(event.target.value)}
+                />
+              </ReceptionSidePanelField>
+              <ReceptionSidePanelField
+                align="start"
+                icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
+                label="접수 메모"
+              >
+                <Textarea
+                  aria-label="접수 메모"
+                  className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                  placeholder="접수 메모를 입력해주세요"
+                  value={memo}
+                  onChange={(event) => setMemo(event.target.value)}
+                />
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+          </div>
+        </ScrollArea>
+        <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t bg-card px-4 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={sendKakaoMessage}
+            aria-label="카카오톡 발송"
+            className="h-9 w-fit gap-2 px-2 text-[var(--emr-text-secondary)] aria-pressed:bg-accent aria-pressed:text-foreground"
+            onClick={() => setSendKakaoMessage((current) => !current)}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "flex size-4 items-center justify-center rounded-[4px] border transition-colors",
+                sendKakaoMessage
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-input text-transparent",
+              )}
+            >
+              <CheckIcon className="size-3" />
+            </span>
+            <span>카카오톡 발송</span>
+          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-9"
+              onClick={close}
+              disabled={submitting}
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              className="h-9"
+              onClick={create}
+              disabled={!canCreate || Boolean(timeBlockMessage) || submitting}
+            >
+              {submitting ? "생성 중" : "생성"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={getReceptionDrawerSurfaceClassName(presentation)}
@@ -6917,6 +7287,320 @@ function ReceptionReservationFormDrawer({
     setCalendarDraftSelection(undefined);
     toast.success("예약을 생성했습니다.");
   };
+
+  if (presentation === "side-panel") {
+    return (
+      <div
+        className={getReceptionDrawerSurfaceClassName(presentation)}
+        data-testid="reservation-create-drawer"
+      >
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="px-4">
+            <ReceptionSidePanelSection title="환자/보호자">
+              <ReceptionSidePanelField
+                icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
+                label="동물명"
+              >
+                <div
+                  className="relative"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      setPatientLookupOpen(false);
+                    }
+                  }}
+                >
+                  <CdsActionsSearchIcon
+                    className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    aria-label="환자 검색"
+                    autoComplete="off"
+                    className="h-8 bg-card pl-8 pr-8 emr-text-dense font-semibold"
+                    placeholder="환자를 선택해주세요"
+                    value={patientLookup.lookupQuery}
+                    onFocus={() => setPatientLookupOpen(true)}
+                    onValueChange={(value) => {
+                      patientLookup.updateLookupQuery(value);
+                      setPatientLookupOpen(true);
+                    }}
+                  />
+                  {patientLookup.lookupQuery ? (
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                      aria-label="환자 선택 초기화"
+                      onClick={() => {
+                        patientLookup.clearPatientSelection();
+                        setWeightKg("");
+                        setPatientLookupOpen(true);
+                      }}
+                    >
+                      <CircleCloseFillIcon
+                        className="size-4"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  ) : null}
+                  {shouldShowPatientLookup ? (
+                    <div
+                      role="listbox"
+                      aria-label="검색 결과"
+                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+                    >
+                      <ReceptionPatientLookupStateMessage
+                        lookupActive={patientLookup.lookupActive}
+                        lookupState={patientLookup.lookupState}
+                        resultCount={
+                          patientLookup.selectablePatientSummaries.length
+                        }
+                      />
+                      {patientLookup.selectablePatientSummaries.map(
+                        (summary) => {
+                          const selected =
+                            summary.patient.id === patientLookup.patientId;
+                          const optionLabel =
+                            getReceptionPatientOptionLabel(summary);
+
+                          return (
+                            <button
+                              key={summary.patient.id}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                patientLookup.selectPatientSummary(summary);
+                                setPatientLookupOpen(false);
+                              }}
+                            >
+                              <span className="truncate emr-text-dense font-semibold text-foreground">
+                                {optionLabel}
+                              </span>
+                              <span className="truncate emr-text-metadata text-muted-foreground">
+                                {summary.primaryGuardian?.mobilePhone ??
+                                  "보호자 연락처 미등록"}
+                              </span>
+                            </button>
+                          );
+                        },
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              </ReceptionSidePanelField>
+
+              <ReceptionSidePanelField
+                icon={<CdsPeopleUserIcon className="size-3.5" />}
+                label="보호자명"
+              >
+                <ReceptionSidePanelInput
+                  readOnly
+                  placeholder="환자 선택 시 표기됩니다"
+                  value={
+                    selectedGuardian
+                      ? `${selectedGuardian.name}${
+                          selectedGuardian.mobilePhone
+                            ? ` · ${selectedGuardian.mobilePhone}`
+                            : ""
+                        }`
+                      : ""
+                  }
+                />
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+
+            <ReceptionSidePanelSection title="바이탈">
+              <ReceptionSidePanelField
+                icon={<CdsMedicalActivityIcon className="size-3.5" />}
+                label="체중"
+              >
+                <div className="min-w-0">
+                  <ReceptionSidePanelInput
+                    aria-label="체중"
+                    disabled={!selectedPatient}
+                    inputMode="decimal"
+                    placeholder="체중을 입력해주세요"
+                    unit="Kg"
+                    value={weightKg}
+                    aria-invalid={weightInvalid || undefined}
+                    className={
+                      weightInvalid
+                        ? "border-[var(--emr-status-danger-border)]"
+                        : ""
+                    }
+                    onValueChange={setWeightKg}
+                  />
+                  {weightInvalid ? (
+                    <p className="mt-1 emr-text-micro font-medium text-destructive">
+                      체중은 0보다 큰 숫자로 입력해 주세요.
+                    </p>
+                  ) : null}
+                </div>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+
+            <ReceptionSidePanelSection title="담당의">
+              <ReceptionSidePanelField
+                icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
+                label="담당의"
+              >
+                <Select
+                  value={veterinarianId}
+                  onValueChange={(value) => value && setVeterinarianId(value)}
+                >
+                  <SelectTrigger
+                    aria-label="담당의"
+                    size="sm"
+                    className="w-full bg-card"
+                  >
+                    <span className="flex min-w-0 flex-1 truncate text-left">
+                      {getReceptionVeterinarianSelectLabel(
+                        veterinarianId,
+                        veterinarians,
+                      )}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-[224px]">
+                    <SelectGroup>
+                      <SelectItem value={unassignedVeterinarianValue}>
+                        수의사 미지정
+                      </SelectItem>
+                      {veterinarians.map((veterinarian) => (
+                        <SelectItem key={veterinarian.id} value={veterinarian.id}>
+                          {veterinarian.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+
+            <ReceptionSidePanelSection title="예약일자/시간">
+              <ReceptionSidePanelField
+                icon={<CdsFilesCalendarIcon className="size-3.5" />}
+                label="예약일"
+              >
+                <ReceptionReservationDatePicker
+                  compact
+                  minDate={todayDate}
+                  value={date}
+                  onChange={setDate}
+                />
+              </ReceptionSidePanelField>
+              <ReceptionSidePanelField
+                icon={<CdsFilesClockIcon className="size-3.5" />}
+                label="예약시간"
+              >
+                <div className="min-w-0">
+                  <Select
+                    value={String(timeMinutes)}
+                    onValueChange={(value) => setTimeMinutes(Number(value))}
+                    disabled={closedDay}
+                  >
+                    <SelectTrigger
+                      aria-label="예약시간"
+                      size="sm"
+                      className="w-full bg-card"
+                    >
+                      <span className="flex min-w-0 flex-1 truncate text-left">
+                        {selectedTimeOption?.label ??
+                          getScheduleTimeLabelFromMinutes(timeMinutes)}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent align="end" className="min-w-[224px]">
+                      <SelectGroup>
+                        {timeOptions.map((option) => (
+                          <SelectItem
+                            key={option.minutes}
+                            value={String(option.minutes)}
+                            disabled={option.disabled}
+                          >
+                            {option.label}
+                            {option.reason ? ` · ${option.reason}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {reservationTimeHelper ? (
+                    <p className="mt-1 emr-text-micro font-medium text-[var(--emr-text-secondary)]">
+                      {reservationTimeHelper}
+                    </p>
+                  ) : null}
+                </div>
+              </ReceptionSidePanelField>
+              <ReceptionSidePanelField
+                icon={<CdsMedicalActivityIcon className="size-3.5" />}
+                label="예상소요시간"
+              >
+                <Select
+                  value={duration}
+                  onValueChange={(value) => value && setDuration(value)}
+                >
+                  <SelectTrigger
+                    aria-label="예상시간"
+                    size="sm"
+                    className="w-full bg-card"
+                  >
+                    <span className="flex min-w-0 flex-1 truncate text-left">
+                      {duration}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-[224px]">
+                    <SelectGroup>
+                      {durationOptions.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+
+            <ReceptionSidePanelSection title="예약 메모">
+              <ReceptionSidePanelField
+                align="start"
+                icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
+                label="예약 메모"
+              >
+                <Textarea
+                  aria-label="예약 메모"
+                  className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                  placeholder="예약 메모를 입력해주세요"
+                  value={memo}
+                  onChange={(event) => setMemo(event.target.value)}
+                />
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+          </div>
+        </ScrollArea>
+        <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t bg-card px-4 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-9"
+            onClick={close}
+            disabled={submitting}
+          >
+            취소
+          </Button>
+          <Button
+            type="button"
+            className="h-9"
+            onClick={create}
+            disabled={!canCreate || submitting}
+          >
+            {submitting ? "생성 중" : "생성"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

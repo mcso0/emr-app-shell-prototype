@@ -21,7 +21,7 @@ source_docs:
 dependencies:
   - "RECEPTION-QA-PR-001"
   - "RECEPTION-QA-PR-002"
-updated: "2026-06-16"
+updated: "2026-07-08"
 ---
 
 # Reception Creation Drawer and Patient Weight Write Contract
@@ -96,6 +96,13 @@ Turn the first reception QA creation issue into a real DB/API-backed walk-in cre
 - DEN-516 should implement real reservation slot availability and holiday/business-hour validation before making `예약하기` create data.
 - DEN-517 detail drawer work should keep the new `접수 상세` shell title and use patient `weightKg` rather than hard-coded `0.00 kg`.
 - The patient weight contract is now a real API/RPC field; do not reintroduce local-only hard-coded recent-weight maps.
+
+## 2026-07-08 Side Panel Follow-up
+
+- Walk-in reception creation now uses the reception right side panel presentation when opened from the toolbar or URL, matching the reception detail side-panel field structure.
+- The side-panel presentation uses one-column icon-labeled rows for patient/guardian, weight, department/veterinarian, reception date/time, visit purpose, and reception memo so the 380px panel is not using the old drawer grid.
+- Existing walk-in create API, patient weight lookup/writeback, business-hour blocking, and Kakao send toggle behavior remain unchanged.
+- Focused UI coverage now asserts the side-panel surface instead of the removed global workspace drawer for the walk-in creation path.
 
 ## Result
 
