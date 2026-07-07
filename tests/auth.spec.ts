@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { getAuthRuntimeMode } from "../src/lib/supabase/config";
 import {
   canEditOrders,
@@ -188,7 +188,19 @@ test("auth gate uses workspace shell skeleton while checking access", () => {
 
   expect(source).toContain("auth-gate-shell-skeleton");
   expect(source).toContain("AuthGateShellSkeleton");
+  expect(source).toContain("@/components/ui/skeleton");
+  expect(source).not.toContain("WorkspaceEntryLoadingScreen");
   expect(source).not.toContain("로그인 확인 중");
+  expect(existsSync("src/app/w/[workspaceId]/[module]/loading.tsx")).toBe(false);
+});
+
+test("logo loading is scoped to post-login workspace entry", () => {
+  const loginForm = readFileSync("src/features/auth/login-form.tsx", "utf8");
+  const authGate = readFileSync("src/features/auth/auth-gate.tsx", "utf8");
+
+  expect(loginForm).toContain("login-workspace-entry-loading");
+  expect(loginForm).toContain("WorkspaceEntryLoadingScreen");
+  expect(authGate).not.toContain("WorkspaceEntryLoadingScreen");
 });
 
 test("root starts at login", async ({ page }) => {
