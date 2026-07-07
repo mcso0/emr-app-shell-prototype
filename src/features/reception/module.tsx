@@ -3832,8 +3832,9 @@ function ScheduleToolbar({
           <DropdownMenuTrigger
             data-testid="schedule-check-in-button"
             className={buttonVariants({
+              variant: "outline",
               size: "default",
-              className: "font-semibold",
+              className: "bg-card px-3 font-semibold",
             })}
           >
             <CdsActionsPlusIcon data-icon="inline-start" />

@@ -6,14 +6,14 @@ doc_type: planning
 screen: reception
 related_feature: PRODUCT-FEATURE-RECEPTION-APPOINTMENT
 created: 2026-05-05
-last_updated: 2026-07-05
+last_updated: 2026-07-07
 ---
 
 # 접수/예약 통합 등록 진입 기획
 
 ## Summary
 
-접수/예약 toolbar의 `환자 등록`, `보호자 등록` 두 진입점을 하나의 `환자/보호자 등록` 버튼으로 단일화한다. 사용자는 먼저 등록 케이스를 선택하고, 시스템은 선택한 케이스에 맞춰 보호자/환자 정보를 draft로 받은 뒤 `등록 정보 확인`에서 최종 commit한다.
+접수/예약 toolbar의 `환자 등록`, `보호자 등록` 두 진입점을 하나의 환자/보호자 master-data 등록 진입점으로 단일화한다. toolbar에서는 드롭다운 메뉴로 등록 케이스를 먼저 고르고, 시스템은 선택한 케이스에 맞춰 보호자/환자 정보를 draft로 받은 뒤 `등록 정보 확인`에서 최종 commit한다.
 
 Recommended label: `환자/보호자 등록`
 
@@ -23,11 +23,14 @@ Rationale: 이 진입점의 목적은 실제 접수 생성이 아니라 환자�
 
 2026-07-05 command entry decision: the global command palette `환자/보호자 등록` action opens the same branch-first registration dialog from any workspace module. It must not only navigate to the reception screen. Registration completion still does not auto-create reception; staff choose the success toast follow-up action when they want to proceed to check-in.
 
+2026-07-07 toolbar entry decision: the reception toolbar `신규 동물/보호자` button is an outline dropdown trigger with a chevron. Its menu uses compact labels, `신규 환자/보호자 등록` and `기존 보호자에 환자 추가`, and each item opens the matching registration branch directly. The first `신규 등록` mode-selection screen remains available for global command entry.
+
 ## Proposed Flow
 
 1. Case selection first
-   - 접수/예약 toolbar 또는 global command palette에서 `환자/보호자 등록`을 선택하면 `신규 등록` dialog가 열린다.
-   - 카드형 radio option으로 `환자/보호자 모두 신규 등록`, `기존 보호자에 신규 환자 등록` 중 하나를 선택한다.
+   - 접수/예약 toolbar에서 `신규 동물/보호자` dropdown을 열면 `신규 환자/보호자 등록`, `기존 보호자에 환자 추가` 중 하나를 선택한다.
+   - toolbar menu selection opens the matching branch directly, without showing the first `신규 등록` mode-selection screen.
+   - global command palette에서 `환자/보호자 등록`을 선택하면 기존처럼 `신규 등록` dialog가 열리고, 카드형 radio option으로 `환자/보호자 모두 신규 등록`, `기존 보호자에 신규 환자 등록` 중 하나를 선택한다.
 2. Branching
    - 환자/보호자 모두 신규 등록: 보호자 등록 1/2 → 환자 등록 2/2 → 등록 정보 확인 → commit.
    - 기존 보호자에 신규 환자 등록: 기존 보호자 검색/선택 → 환자 등록 → 등록 정보 확인 → commit.
@@ -98,9 +101,10 @@ Acceptance criteria:
 
 ### RECEPTION-PR-004: Unified Registration Entry
 
-- Toolbar에서 `환자 등록`, `보호자 등록` 버튼을 `환자/보호자 등록` 단일 버튼으로 교체한다.
+- Toolbar에서 `환자 등록`, `보호자 등록` 버튼을 `신규 동물/보호자` 단일 dropdown button으로 교체한다.
 - Global command palette의 `환자/보호자 등록` action은 toolbar와 동일한 dialog launcher를 사용한다.
-- 통합 등록 dialog의 첫 화면을 카드형 radio 선택 단계로 만든다.
+- Toolbar dropdown의 `신규 환자/보호자 등록`, `기존 보호자에 환자 추가`는 통합 등록 dialog의 matching branch를 직접 연다.
+- Global command palette entry keeps the first card-radio mode selection screen.
 - 선택한 mode에 따라 `신규 보호자 등록 1/2` 또는 `기존 보호자 선택`으로 이동한다.
 - 보호자/환자 입력값은 component-local draft로 관리한다.
 - `등록 정보 확인`에서만 `addGuardian`, `addPatient`를 호출한다.
@@ -123,7 +127,8 @@ Acceptance criteria:
 
 ## Test Plan
 
-- toolbar에 `환자/보호자 등록`과 `진료 접수`가 보이고 `신규 접수/등록`은 보이지 않는다.
+- toolbar에 `신규 동물/보호자` dropdown과 `접수/예약` dropdown이 보이고 `신규 접수/등록`은 보이지 않는다.
+- `신규 동물/보호자` dropdown menu shows `신규 환자/보호자 등록` and `기존 보호자에 환자 추가`.
 - global command palette의 `환자/보호자 등록`을 어느 workspace module에서 실행해도 `신규 등록` dialog가 보이고 단순 reception 이동으로 끝나지 않는다.
 - `환자/보호자 모두 신규 등록` branch가 보호자 등록 1/2 → 환자 등록 2/2 → 등록 정보 확인 → 성공 toast로 이어진다.
 - `기존 보호자에 신규 환자 등록` branch가 기존 보호자 선택 → 환자 등록 → 등록 정보 확인 → 성공 toast로 이어진다.

@@ -1840,10 +1840,15 @@ test("patient guardian registration creates a new guardian and patient after con
   await page
     .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
-  await expect(page.getByRole("heading", { name: "신규 등록" })).toBeVisible();
-  await expect(page.getByText("환자/보호자 모두 신규 등록")).toBeVisible();
-  await expect(page.getByText("기존 보호자에 신규 환자 등록")).toBeVisible();
-  await page.getByRole("button", { name: "다음" }).click();
+  await expect(
+    page.getByRole("menuitem", { name: "신규 환자/보호자 등록" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("menuitem", { name: "기존 보호자에 환자 추가" }),
+  ).toBeVisible();
+  await page
+    .getByRole("menuitem", { name: "신규 환자/보호자 등록" })
+    .click();
 
   await expect(
     page.getByRole("heading", { name: "신규 보호자 등록" }),
@@ -1973,7 +1978,9 @@ test("server-backed patient guardian registration sends minimal reception payloa
   await page
     .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
-  await page.getByRole("button", { name: "다음" }).click();
+  await page
+    .getByRole("menuitem", { name: "신규 환자/보호자 등록" })
+    .click();
   await page.getByLabel("보호자명").fill("김새봄");
   await page.getByLabel("보호자 휴대전화").fill("010-2222-3333");
   await page.getByRole("button", { name: "태블릿 서명 요청" }).click();
@@ -2017,8 +2024,9 @@ test("patient guardian registration links an existing guardian to a new patient"
   await page
     .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
-  await page.getByText("기존 보호자에 신규 환자 등록").click();
-  await page.getByRole("button", { name: "다음" }).click();
+  await page
+    .getByRole("menuitem", { name: "기존 보호자에 환자 추가" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "기존 보호자에 신규 환자 등록" }),
   ).toBeVisible();
@@ -2071,8 +2079,9 @@ test("registration remains 40px while reception drawer controls align 36px", asy
   await page
     .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
-  await page.getByText("기존 보호자에 신규 환자 등록").click();
-  await page.getByRole("button", { name: "다음" }).click();
+  await page
+    .getByRole("menuitem", { name: "기존 보호자에 환자 추가" })
+    .click();
   const registrationDialog = page.getByLabel("기존 보호자에 신규 환자 등록");
   await expect(registrationDialog.getByText("동물 정보")).toBeVisible();
 
@@ -2186,8 +2195,9 @@ test("patient guardian registration blocks duplicate microchips and warns duplic
   await page
     .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
-  await page.getByText("기존 보호자에 신규 환자 등록").click();
-  await page.getByRole("button", { name: "다음" }).click();
+  await page
+    .getByRole("menuitem", { name: "기존 보호자에 환자 추가" })
+    .click();
   await page.getByLabel("기존 보호자 검색").fill("이지은");
   await page.getByRole("option", { name: /이지은/ }).click();
   await page.getByLabel("환자명").fill("코코");
@@ -2215,7 +2225,9 @@ test("patient guardian registration asks before leaving dirty drafts", async ({
   await page
     .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
-  await page.getByRole("button", { name: "다음" }).click();
+  await page
+    .getByRole("menuitem", { name: "신규 환자/보호자 등록" })
+    .click();
   await page.getByLabel("보호자명").fill("임시보호자");
   await page.getByRole("button", { exact: true, name: "취소" }).click();
 
