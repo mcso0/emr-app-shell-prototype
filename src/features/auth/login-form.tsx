@@ -23,10 +23,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  CdsAlertsEyeIcon,
-  CdsAlertsEyeOffIcon,
-} from "@/components/cds-icons/alerts-and-status";
+import { CdsAlertsEyeIcon } from "@/components/cds-icons/alerts-and-status";
 import {
   InputOTP,
   InputOTPGroup,
@@ -91,6 +88,46 @@ function LoginDialogForm({ children, onSubmit }: LoginDialogFormProps) {
         {children}
       </form>
     </div>
+  );
+}
+
+function PasswordEyeOffIcon({ size = 18 }: { readonly size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3 3L21 21"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10.6 10.6A2 2 0 0 0 13.4 13.4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.75 5.17A9.5 9.5 0 0 1 12 4.9C16.4 4.9 19.66 8 21.2 12C20.72 13.25 19.97 14.39 19 15.36"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.47 6.47C4.8 7.6 3.54 9.45 2.8 12C4.34 16 7.6 19.1 12 19.1C13.3 19.1 14.52 18.83 15.63 18.35"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -277,12 +314,11 @@ export function LoginForm() {
   function handleDefaultEmailChange(event: ChangeEvent<HTMLInputElement>) {
     if (loginError) setLoginError(null);
     if (!isDefaultPasswordLogin) return;
-    if (!fieldErrors.email && fieldErrors.password !== loginCredentialErrorMessage) return;
 
     const email = event.currentTarget.value.trim();
     setFieldErrors((current) => ({
       ...current,
-      email: getLoginEmailError(email),
+      email: email ? getLoginEmailError(email) : undefined,
       password:
         current.password === loginCredentialErrorMessage
           ? undefined
@@ -716,7 +752,7 @@ export function LoginForm() {
                             className="absolute top-1/2 right-[var(--clair-spacing-8)] flex h-[var(--clair-control-height-md)] w-[var(--clair-control-height-md)] -translate-y-1/2 items-center justify-center rounded-[var(--emr-radius-control)] text-muted-foreground transition-colors hover:bg-[var(--emr-surface-muted)] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:text-[var(--emr-text-disabled)]"
                           >
                             {isPasswordVisible ? (
-                              <CdsAlertsEyeOffIcon aria-hidden="true" size={18} />
+                              <PasswordEyeOffIcon size={18} />
                             ) : (
                               <CdsAlertsEyeIcon aria-hidden="true" size={18} />
                             )}
