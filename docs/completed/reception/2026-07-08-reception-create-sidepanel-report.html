@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>접수/예약 생성 우측 사이드패널 전환 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #111827;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 32px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #ffffff;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        line-height: 1.35;
+      }
+
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      .meta {
+        color: #6b7280;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>접수/예약 생성 우측 사이드패널 전환</h1>
+      <p class="meta">2026-07-08 · Reception QA side-panel follow-up</p>
+
+      <h2>요청</h2>
+      <p>
+        접수 상세에 이어 접수 생성과 예약 생성도 피그마 시안과 같은 우측
+        사이드패널 문법으로 맞추고, 기존 생성 계약은 유지한다.
+      </p>
+
+      <h2>변경 사항</h2>
+      <ul>
+        <li>
+          접수 생성 폼을 380px 우측 사이드패널에 맞는 1열 아이콘 라벨 구조로
+          전환했다.
+        </li>
+        <li>
+          예약 생성 폼도 동일한 사이드패널 문법으로 정리하고 예약일, 예약시간,
+          예상소요시간, 담당의, 체중, 메모 입력을 유지했다.
+        </li>
+        <li>
+          기존 <code>POST /reception/walk-in-encounters</code>,
+          <code>POST /reception/appointments</code> API payload와 검증 흐름은
+          변경하지 않았다.
+        </li>
+        <li>
+          관련 Playwright 회귀 테스트를 global drawer 기준에서 right panel 기준으로
+          갱신했다.
+        </li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li><code>npm run lint</code> 통과</li>
+        <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+        <li>
+          <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 npx playwright test tests/reception.spec.ts --grep "walk-in reception drawer removes helper chrome|reservation create drawer uses DB-backed patient lookup states|reception creates a reservation through the unified check-in menu|reception creates a walk-in waiting row" --reporter=line</code>
+          통과
+        </li>
+        <li>
+          수동 Playwright 확인으로 접수 생성/예약 생성 모두 <code>workspace-drawer</code>
+          없이 <code>reception-right-panel</code> 380px 안에 렌더링되는 것을 확인했다.
+        </li>
+      </ul>
+
+      <h2>주의 사항</h2>
+      <p>
+        이번 작업은 화면 표시 방식 정렬이 목적이다. 새로운 바이탈 저장 필드,
+        예약 API 계약, DB/RPC 변경, 원격 Supabase 작업은 포함하지 않았다.
+      </p>
+    </main>
+  </body>
+</html>

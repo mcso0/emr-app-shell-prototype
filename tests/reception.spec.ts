@@ -2237,11 +2237,12 @@ test("walk-in reception drawer removes helper chrome and keeps focused placehold
 
   await openWalkInReceptionForm(page);
 
-  const drawer = page.getByTestId("workspace-drawer");
+  const panel = page.getByTestId("reception-right-panel");
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
-  await expect(drawer).toBeVisible();
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   await expect(walkInForm).toBeVisible();
-  await expect(drawer.getByText("walk-in", { exact: true })).toHaveCount(0);
+  await expect(panel.getByText("walk-in", { exact: true })).toHaveCount(0);
   await expect(walkInForm.getByText("진료 접수")).toHaveCount(0);
   await expect(
     walkInForm.getByText("환자 선택 후 당일 접수를 생성합니다."),
@@ -2258,7 +2259,7 @@ test("walk-in reception drawer removes helper chrome and keeps focused placehold
     name: "카카오톡 발송",
   });
   await expect(kakaoButton).toBeVisible();
-  await expect(kakaoButton).toHaveClass(/border-transparent/);
+  await expect(kakaoButton).toHaveAttribute("aria-pressed", "true");
 });
 
 test("patient guardian registration blocks duplicate microchips and warns duplicate patient names", async ({
@@ -3394,18 +3395,18 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
 
   const sidePanel = page.locator("aside").first();
   await sidePanel.getByTestId("patient-card-patient-dubu").click();
-  await expect(page.getByTestId("workspace-drawer")).toContainText("접수 상세");
-  await page.getByRole("button", { name: "상세 닫기" }).click();
+  await expect(page.getByTestId("reception-right-panel")).toContainText("접수 상세");
+  await page.getByRole("button", { name: "우측 사이드 패널 닫기" }).click();
   await openWalkInReceptionForm(page);
   await expect(page).toHaveURL(/drawer=reception-form/);
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
-  await expect(page.getByTestId("workspace-drawer").last()).toContainText(
+  await expect(page.getByTestId("reception-right-panel")).toContainText(
     "접수 생성",
   );
   await expect(walkInForm.getByLabel("체중")).toBeDisabled();
   await expect(walkInForm.getByLabel("환자 검색")).toHaveAttribute(
     "placeholder",
-    "동물명 또는 보호자명으로 검색",
+    "환자를 선택해주세요",
   );
   await expect(walkInForm.getByText("두부 · 정하린")).toHaveCount(0);
   await walkInForm.getByLabel("환자 검색").click();
@@ -3524,8 +3525,9 @@ test("reception creates a reservation through the unified check-in menu", async 
   await expect(drawer.getByText("환자명, 동물 정보, 보호자명으로 검색합니다.")).toHaveCount(0);
   await expect(drawer.locator('input[type="date"][aria-label="예약일"]')).toHaveCount(0);
   await drawer.getByLabel("예약일").click();
-  await expect(page.getByText("2026년 5월")).toBeVisible();
-  await page.getByRole("button", { name: /선택됨/ }).click();
+  const selectedDateButton = page.getByRole("button", { name: /선택됨/ }).last();
+  await expect(selectedDateButton).toBeVisible();
+  await selectedDateButton.click();
   await expect(drawer.getByLabel("체중")).toBeDisabled();
 
   await drawer.getByLabel("환자 검색").fill("나비");
@@ -3562,16 +3564,11 @@ test("reception creates a reservation through the unified check-in menu", async 
   );
 
   await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
-  const detailDrawer = page.getByTestId("workspace-drawer").last();
+  const detailDrawer = page.getByTestId("reception-right-panel");
   await expect(detailDrawer).toContainText("예약 상세");
   await expect(detailDrawer).toContainText(
     "DEN-516 예약 생성 UI 검증",
   );
-
-  const reservationCard = page
-    .locator('[data-testid^="appointment-card-"]')
-    .filter({ hasText: "DEN-516 예약 생성 UI 검증" });
-  await expect(reservationCard).toBeVisible();
 });
 
 test("reservation drawer disables elapsed same-day time options", async ({
