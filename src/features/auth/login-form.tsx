@@ -547,7 +547,7 @@ export function LoginForm() {
                   </span>
                   <div className="flex flex-col gap-2">
                     <h1 className="emr-text-dialog-title font-bold text-[var(--emr-text-primary)]">
-                      {isInviteOtpLogin ? "초대 이메일 인증" : "로그인"}
+                      {isInviteOtpLogin ? "초대 이메일 인증" : "CLAiR EMR 로그인"}
                     </h1>
                     {!isDefaultPasswordLogin ? (
                       <p className="emr-text-dense text-muted-foreground">
