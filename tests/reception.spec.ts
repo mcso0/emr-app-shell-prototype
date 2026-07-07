@@ -1872,7 +1872,6 @@ test("patient guardian registration creates a new guardian and patient after con
   ).toBeVisible();
   await page.getByRole("button", { name: "태블릿 서명 요청" }).click();
   await page.getByRole("button", { name: "서명 완료 처리" }).click();
-  await page.getByRole("checkbox", { name: "마케팅 수신 동의" }).check();
   await page.getByRole("button", { name: "다음" }).click();
 
   await expect(
@@ -2069,6 +2068,81 @@ test("patient guardian registration links an existing guardian to a new patient"
   await page.getByRole("button", { name: "등록" }).click();
 
   await expect(page.getByText("환자 등록이 완료되었습니다.")).toBeVisible();
+});
+
+test("guardian registration dialog aligns CDS V2 label and field columns", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/w/clair-demo/reception");
+
+  await page
+    .getByRole("button", { name: "신규 동물/보호자", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "신규 환자/보호자 등록" })
+    .click();
+
+  const dialog = page.getByRole("dialog", { name: "신규 보호자 등록" });
+  await expect(dialog).toBeVisible();
+  await dialog.evaluate((element) =>
+    Promise.all(
+      element
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
+
+  const metrics = await dialog.evaluate((element) => {
+    const dialogRect = element.getBoundingClientRect();
+    const dialogStyle = getComputedStyle(element);
+    const round = (value: number) => Math.round(value);
+    const getByLabelText = (text: string) =>
+      [...element.querySelectorAll("label")].find(
+        (label) => label.textContent?.trim() === text,
+      );
+    const getByPlaceholder = (placeholder: string) =>
+      [...element.querySelectorAll("input, textarea")].find(
+        (control) => control.getAttribute("placeholder") === placeholder,
+      );
+    const getByButtonText = (text: string) =>
+      [...element.querySelectorAll("button")].find(
+        (button) => button.textContent?.trim() === text,
+      );
+    const rect = (target: Element | undefined) => {
+      if (!target) return null;
+      const targetRect = target.getBoundingClientRect();
+
+      return {
+        h: round(targetRect.height),
+        relX: round(targetRect.left - dialogRect.left),
+        w: round(targetRect.width),
+      };
+    };
+
+    return {
+      addressButton: rect(getByButtonText("주소 검색")),
+      dialog: {
+        h: round(Number.parseFloat(dialogStyle.height)),
+        w: round(Number.parseFloat(dialogStyle.width)),
+      },
+      iconCount: element.querySelectorAll("label svg").length,
+      label: rect(getByLabelText("보호자명")),
+      memoTextarea: rect(getByPlaceholder("특이사항 및 요청사항 입력")),
+      nameInput: rect(getByPlaceholder("이름을 입력해주세요")),
+      signatureButton: rect(getByButtonText("태블릿 서명 요청")),
+    };
+  });
+
+  expect(metrics).toMatchObject({
+    addressButton: { h: 32, relX: 343, w: 81 },
+    dialog: { h: 714, w: 440 },
+    iconCount: 7,
+    label: { h: 32, relX: 16, w: 128 },
+    memoTextarea: { h: 76, relX: 156, w: 268 },
+    nameInput: { h: 32, relX: 156, w: 268 },
+    signatureButton: { h: 32, relX: 156, w: 122 },
+  });
 });
 
 test("registration uses CDS V2 32px controls while reception drawer controls align 36px", async ({

@@ -1,9 +1,24 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ElementType, ReactNode } from "react";
+import {
+  CdsCommunicationMailIcon,
+  CdsCommunicationPhoneIcon,
+} from "@/components/cds-icons/communication-and-media";
+import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
+import {
+  CdsFilesCalendarIcon,
+  CdsFilesFileTextIcon,
+} from "@/components/cds-icons/files-and-layout";
+import {
+  CdsMedicalClipboardPenIcon,
+  CdsMedicalNotebookTextIcon,
+  CdsMedicalPawPrintIcon,
+  CdsMedicalScanLineIcon,
+} from "@/components/cds-icons/medical-and-domain";
+import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field as FormField,
   FieldError,
@@ -20,6 +35,40 @@ export type EmrRegistrationSignatureStatus = "idle" | "pending" | "completed";
 
 export const emrRegistrationControlClassName = "h-[var(--clair-control-height-md)] bg-card";
 export const emrRegistrationTextareaClassName = "h-[76px] min-h-[76px] resize-none bg-card";
+
+type EmrRegistrationLabelIcon = ElementType<{
+  className?: string;
+  color?: string;
+  size?: number;
+}>;
+
+const registrationFieldIconByLabel: Record<string, EmrRegistrationLabelIcon> = {
+  보호자명: CdsPeopleUserIcon,
+  "보호자 검색": CdsPeopleUserIcon,
+  환자명: CdsMedicalPawPrintIcon,
+  종류: CdsMedicalPawPrintIcon,
+  품종: CdsMedicalPawPrintIcon,
+  "추가 품종": CdsMedicalPawPrintIcon,
+  성별: CdsPeopleUserIcon,
+  나이: CdsFilesCalendarIcon,
+  생년월일: CdsFilesCalendarIcon,
+  전화번호: CdsCommunicationPhoneIcon,
+  이메일: CdsCommunicationMailIcon,
+  주소: CdsPeopleMapPinIcon,
+  "보호자 메모": CdsMedicalNotebookTextIcon,
+  "환자 메모": CdsMedicalNotebookTextIcon,
+  마이크로칩: CdsMedicalScanLineIcon,
+  동물등록번호: CdsFilesFileTextIcon,
+  "전자 서명": CdsMedicalClipboardPenIcon,
+};
+
+function getRegistrationFieldIcon(label: ReactNode, icon?: ReactNode) {
+  if (icon) return icon;
+  if (typeof label !== "string") return <CdsContentEdit2Icon className="size-[15px]" />;
+
+  const Icon = registrationFieldIconByLabel[label] ?? CdsContentEdit2Icon;
+  return <Icon className="size-[15px]" />;
+}
 
 export function EmrRegistrationDialogShell({
   children,
@@ -117,7 +166,7 @@ export function EmrRegistrationSection({
     <>
       {separated ? <Separator /> : null}
       <FieldSet className={cn("gap-3", className)}>
-        <FieldLegend className="flex h-6 items-center emr-text-dense font-bold text-[var(--emr-text-tertiary)]">
+        <FieldLegend className="flex h-6 items-center text-[13px] font-medium leading-[18px] text-[var(--emr-text-placeholder)]">
           {title}
         </FieldLegend>
         <div className="grid gap-3">{children}</div>
@@ -131,37 +180,34 @@ export function EmrRegistrationFieldRow({
   className,
   controlClassName,
   error,
+  icon,
   label,
-  labelWidth = "default",
   required,
 }: {
   children: ReactNode;
   className?: string;
   controlClassName?: string;
   error?: string;
+  icon?: ReactNode;
   label: ReactNode;
-  labelWidth?: "default" | "narrow";
   required?: boolean;
 }) {
   return (
     <FormField
       className={cn(
-        "grid min-h-8 items-start gap-3",
-        labelWidth === "narrow"
-          ? "grid-cols-[108px_minmax(0,1fr)]"
-          : "grid-cols-[128px_minmax(0,1fr)]",
+        "grid min-h-8 grid-cols-[128px_minmax(0,1fr)] items-start",
         className
       )}
+      data-required={required || undefined}
       data-invalid={Boolean(error) || undefined}
+      style={{ gap: "var(--clair-spacing-12)" }}
     >
-      <FieldLabel className="flex h-8 min-w-0 items-center gap-2 emr-text-dense font-bold text-foreground">
-        <span
-          aria-hidden="true"
-          className="size-[15px] shrink-0 rounded-[5px] border border-input bg-card"
-        />
+      <FieldLabel className="flex h-8 min-w-0 items-center gap-2 text-[14px] font-medium leading-5 text-foreground">
+        <span aria-hidden="true" className="flex size-[15px] shrink-0 items-center justify-center text-[var(--emr-text-tertiary)]">
+          {getRegistrationFieldIcon(label, icon)}
+        </span>
         <span className="min-w-0 truncate">
           {label}
-          {required ? <span className="ml-0.5 text-[var(--emr-text-danger)]">*</span> : null}
         </span>
       </FieldLabel>
       <div className={cn("min-w-0", controlClassName)}>
@@ -199,7 +245,7 @@ export function EmrRegistrationAddressControls({
   road: ReactNode;
 }) {
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-3">
       <div className="grid grid-cols-[minmax(0,175px)_81px] gap-3">
         {postalCode}
         <Button
@@ -256,79 +302,36 @@ export function EmrRegistrationSwitchLabel({
 
 export function EmrRegistrationSignatureConsentCard({
   error,
-  marketingConsent,
-  privacyConsent,
   signatureStatus,
   onCompleteSignature,
-  onMarketingConsentChange,
   onRequestSignature,
 }: {
   error?: string;
-  marketingConsent: boolean;
-  privacyConsent: boolean;
   signatureStatus: EmrRegistrationSignatureStatus;
   onCompleteSignature: () => void;
-  onMarketingConsentChange: (checked: boolean) => void;
   onRequestSignature: () => void;
 }) {
-  const statusLabel =
-    signatureStatus === "completed" ? "서명 완료" : signatureStatus === "pending" ? "서명 대기" : "미요청";
+  const actionLabel =
+    signatureStatus === "completed"
+      ? "서명 완료"
+      : signatureStatus === "pending"
+        ? "서명 완료 처리"
+        : "태블릿 서명 요청";
+  const handleClick = signatureStatus === "pending" ? onCompleteSignature : onRequestSignature;
 
   return (
-    <div data-invalid={Boolean(error) || undefined}>
-      <div className="grid rounded-lg border border-[var(--emr-line-hairline)] bg-card p-2">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[12px] font-bold leading-4 text-foreground">전자서명</div>
-            <div className="mt-0.5 text-[11px] font-medium leading-[15px] text-[var(--emr-text-tertiary)]">
-              개인정보 수집 동의는 태블릿 서명 완료 후 등록할 수 있습니다.
-            </div>
-          </div>
-          <Badge
-            variant={signatureStatus === "completed" ? "default" : "outline"}
-            className="h-5 shrink-0 rounded-full bg-card px-2 text-[11px] font-bold"
-          >
-            {statusLabel}
-          </Badge>
-        </div>
-        <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          {signatureStatus !== "completed" ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-[var(--clair-control-height-md)] px-2 text-[12px] font-bold"
-              onClick={onRequestSignature}
-            >
-              태블릿 서명 요청
-            </Button>
-          ) : null}
-          {signatureStatus === "pending" ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-[var(--clair-control-height-md)] px-2 text-[12px] font-bold"
-              onClick={onCompleteSignature}
-            >
-              서명 완료 처리
-            </Button>
-          ) : null}
-          <label className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold leading-4 text-[var(--emr-text-secondary)]">
-            <Checkbox checked={privacyConsent} disabled />
-            <span className="whitespace-nowrap">개인정보 수집 동의</span>
-          </label>
-          <label className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold leading-4 text-[var(--emr-text-secondary)]">
-            <Checkbox
-              checked={marketingConsent}
-              onCheckedChange={(checked) => onMarketingConsentChange(Boolean(checked))}
-            />
-            <span className="whitespace-nowrap">마케팅 수신 동의</span>
-          </label>
-        </div>
-      </div>
-      {error ? <FieldError className="mt-1 emr-text-metadata leading-4">{error}</FieldError> : null}
-    </div>
+    <EmrRegistrationFieldRow error={error} label="전자 서명">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-[var(--clair-control-height-md)] w-[122px] px-2 text-[12px] font-bold"
+        disabled={signatureStatus === "completed"}
+        onClick={handleClick}
+      >
+        {actionLabel}
+      </Button>
+    </EmrRegistrationFieldRow>
   );
 }
 
