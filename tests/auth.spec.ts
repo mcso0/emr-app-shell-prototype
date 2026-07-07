@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { getAuthRuntimeMode } from "../src/lib/supabase/config";
 import {
@@ -83,6 +83,11 @@ function setOptionalEnv(key: string, value: string | undefined) {
   }
 
   process.env[key] = value;
+}
+
+async function fillLoginCredentials(page: Page) {
+  await page.getByPlaceholder("이메일을 입력해주세요").fill("front@clair.local");
+  await page.getByPlaceholder("비밀번호를 입력해주세요").fill("local-pass-1");
 }
 
 test("auth runtime mode matrix keeps mock fallback and Supabase session sources explicit", () => {
@@ -183,11 +188,35 @@ test("root starts at login", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
-  await expect(page.getByPlaceholder("이메일을 입력해주세요")).toBeVisible();
+  await expect(page.getByPlaceholder("이메일을 입력해주세요")).toBeFocused();
   await expect(page.getByPlaceholder("비밀번호를 입력해주세요")).toBeVisible();
   await expect(page.getByRole("heading", { name: "MVP 테스트 옵션" })).toBeVisible();
   await expect(page.getByText("현재는 Supabase Auth 연결 전 mock session으로 진입합니다.")).toBeVisible();
   await expect(page.getByTestId("mock-session-status")).toBeVisible();
+});
+
+test("login form focuses email and shows inline validation for invalid input", async ({ page }) => {
+  await page.goto("/login");
+
+  const emailInput = page.getByLabel("이메일");
+  const passwordInput = page.getByLabel("비밀번호");
+
+  await expect(emailInput).toBeFocused();
+
+  await emailInput.fill("1");
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+
+  await expect(emailInput).toBeFocused();
+  await expect(emailInput).toHaveAttribute("aria-invalid", "true");
+  await expect(passwordInput).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("올바른 이메일 주소를 입력해 주세요.")).toBeVisible();
+  await expect(page.getByText("비밀번호를 입력해 주세요.")).toBeVisible();
+
+  await emailInput.fill("front@clair.local");
+  await passwordInput.fill("local-pass-1");
+
+  await expect(page.getByText("올바른 이메일 주소를 입력해 주세요.")).toHaveCount(0);
+  await expect(page.getByText("비밀번호를 입력해 주세요.")).toHaveCount(0);
 });
 
 test("workspace routes require login and preserve the requested URL", async ({ page }) => {
@@ -213,7 +242,8 @@ test("login creates a localStorage-backed session and opens the requested worksp
 
   await page.getByRole("button", { name: /수의사/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
   await expect(page.getByRole("heading", { name: "수납", exact: true })).toBeVisible();
@@ -239,9 +269,10 @@ test("login ignores unsafe next redirects and opens the MVP default workspace", 
   await page.goto("/login?next=https%3A%2F%2Fevil.example%2Fsteal");
 
   await page.getByRole("button", { name: /프론트 데스크/ }).click();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await expect(page).toHaveURL(/\/w\/workspace-clair-cheongdam\/reception/);
   await expect(page).not.toHaveURL(/evil\.example/);
 });
 
@@ -251,9 +282,10 @@ test("login without next opens the MVP default workspace", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
 
   await page.getByRole("button", { name: /프론트 데스크/ }).click();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await expect(page).toHaveURL(/\/w\/workspace-clair-cheongdam\/reception/);
   await expect(page.getByRole("group", { name: "접수 목록 유형" })).toBeVisible();
   await expect(page.getByRole("button", { name: /코코 · 이지은/ })).toBeVisible();
 });
@@ -263,16 +295,15 @@ test("logout clears mock session from both browser stores", async ({ page }) => 
 
   await page.getByRole("button", { name: /수납 관리자/ }).click();
   await page.getByLabel("이번 탭만").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await expect(page).toHaveURL(/\/w\/workspace-clair-cheongdam\/reception/);
   await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
   await page.getByTestId("top-menu-mock-user").click();
   await page.getByRole("menuitem", { name: "로그아웃" }).click();
   await expect(page).toHaveURL(/\/login\?reason=signed_out/);
-  await expect(page.getByTestId("auth-session-notice")).toContainText(
-    "안전하게 로그아웃되었습니다."
-  );
+  await expect(page.getByTestId("auth-session-notice")).toHaveCount(0);
 
   await page.goto("/login");
   await page.evaluate(
@@ -310,7 +341,8 @@ test("app shell displays the selected mock role after login", async ({ page }) =
 
   await page.getByRole("button", { name: /간호사/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
   await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
@@ -412,7 +444,8 @@ test("login exposes pending and provider error states without creating a session
 }) => {
   await page.goto("/login?mockProviderError=1");
 
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await expect(page.getByRole("button", { name: "로그인 중" })).toBeDisabled();
   await expect(page.locator("form").getByRole("alert")).toContainText(
@@ -445,7 +478,8 @@ test("workspace creation validates required fields before creating state", async
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await expect(page).toHaveURL(/\/workspace\/new/);
   await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
@@ -464,7 +498,8 @@ test("hospital admin can create and select a route-backed workspace", async ({
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await expect(page.getByRole("heading", { name: "워크스페이스 만들기" })).toBeVisible();
   await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
@@ -519,7 +554,8 @@ test("workspace route blocks session workspaces without active membership", asyn
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
 
   const session = await page.evaluate((key) => {
@@ -586,7 +622,8 @@ test("hospital admin can manage route-backed member invitations", async ({
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
   await page.getByLabel("대표/관리자 이름").fill("김승욱");
@@ -713,7 +750,8 @@ test("pending invitations can be canceled in session-only state", async ({
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
   await page.getByLabel("대표/관리자 이름").fill("김승욱");
@@ -745,7 +783,8 @@ test("non-admin roles cannot manage workspace invitations", async ({ page }) => 
 
   await page.getByRole("button", { name: /수의사/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
   await page.getByRole("button", { name: "병원구성원 관리" }).click();
 
   await expect(page.getByRole("heading", { name: "구성원 및 초대" })).toBeVisible();
@@ -760,7 +799,8 @@ test("hospital admin can add safe custom permission roles and custom job positio
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
   await page.getByLabel("대표/관리자 이름").fill("김승욱");
@@ -808,7 +848,8 @@ test("hospital admin can edit active member permission role with permission summ
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
   await page.getByLabel("대표/관리자 이름").fill("김승욱");
@@ -887,7 +928,8 @@ test("role management UI blocks last active workspace owner demotion and deactiv
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
   await page.getByLabel("대표/관리자 이름").fill("김승욱");

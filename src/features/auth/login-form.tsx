@@ -2,7 +2,15 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FocusEvent,
+  type FormEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { CheckIcon, WorkspaceLogoMarkIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +67,12 @@ const loginFormClassName = "flex w-full flex-col gap-[var(--clair-spacing-24)]";
 const loginSupportPanelClassName =
   "rounded-[var(--clair-radius-lg)] border border-border bg-[var(--emr-surface-panel)] p-4 shadow-[var(--clair-shadow-sm)]";
 const isProductionRuntime = process.env.NODE_ENV === "production";
+const loginEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type LoginFieldErrors = {
+  readonly email?: string;
+  readonly password?: string;
+};
 
 type LoginDialogFormProps = {
   readonly children: ReactNode;
@@ -68,7 +82,7 @@ type LoginDialogFormProps = {
 function LoginDialogForm({ children, onSubmit }: LoginDialogFormProps) {
   return (
     <div className="mx-auto w-full max-w-[440px] rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-[var(--clair-spacing-32)] shadow-[var(--clair-shadow-lg)] sm:min-w-[440px]">
-      <form onSubmit={onSubmit} className={loginFormClassName}>
+      <form onSubmit={onSubmit} noValidate className={loginFormClassName}>
         {children}
       </form>
     </div>
@@ -109,14 +123,6 @@ function getAuthSessionNotice(reason: string | null) {
     } as const;
   }
 
-  if (reason === "signed_out") {
-    return {
-      title: "안전하게 로그아웃되었습니다.",
-      description: "다시 접속하려면 계정 정보로 로그인하세요.",
-      tone: "success",
-    } as const;
-  }
-
   if (reason === "unauthorized") {
     return {
       title: "이 워크스페이스에 접근할 권한이 없습니다.",
@@ -136,6 +142,50 @@ function isInviteOtpReason(reason: string | null) {
   return reason === "invite_email_otp";
 }
 
+function getLoginEmailError(email: string) {
+  if (!email) return "이메일을 입력해 주세요.";
+  if (!loginEmailPattern.test(email)) return "올바른 이메일 주소를 입력해 주세요.";
+
+  return undefined;
+}
+
+function getLoginPasswordError(password: string) {
+  if (!password) return "비밀번호를 입력해 주세요.";
+
+  return undefined;
+}
+
+function getDefaultLoginFieldErrors(email: string, password: string): LoginFieldErrors {
+  return {
+    email: getLoginEmailError(email),
+    password: getLoginPasswordError(password),
+  };
+}
+
+function hasLoginFieldErrors(errors: LoginFieldErrors) {
+  return Boolean(errors.email || errors.password);
+}
+
+function focusFirstInvalidLoginField(
+  form: HTMLFormElement,
+  errors: LoginFieldErrors
+) {
+  const fieldName = errors.email ? "email" : errors.password ? "password" : null;
+  if (!fieldName) return;
+
+  const element = form.elements.namedItem(fieldName);
+  if (!(element instanceof HTMLInputElement)) return;
+
+  element.focus();
+  if (fieldName === "email") element.select();
+}
+
+function isBlurToSubmitButton(event: FocusEvent<HTMLInputElement>) {
+  const nextTarget = event.relatedTarget;
+
+  return nextTarget instanceof HTMLButtonElement && nextTarget.type === "submit";
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -143,6 +193,7 @@ export function LoginForm() {
   const [storageMode, setStorageMode] = useState<MockSessionStorageMode>("session");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [inviteOtpSent, setInviteOtpSent] = useState(false);
   const [inviteOtpStatus, setInviteOtpStatus] = useState<string | null>(null);
   const [inviteOtpToken, setInviteOtpToken] = useState("");
@@ -173,10 +224,102 @@ export function LoginForm() {
   const showsInviteSupportPanel =
     (isInviteLogin || isInviteOtpLogin) && !isProductionRuntime;
   const safeInviteNext = getSafeInviteNextHref(searchParams.get("next"));
+  const emailFieldError = fieldErrors.email;
+  const passwordFieldError = fieldErrors.password;
+  const emailErrorId = "mock-email-error";
+  const passwordErrorId = "mock-password-error";
+  const emailDescriptionId = !isDefaultPasswordLogin
+    ? "mock-email-description"
+    : undefined;
+  const emailDescribedBy = emailFieldError ? emailErrorId : emailDescriptionId;
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  function handleDefaultEmailFocus(event: FocusEvent<HTMLInputElement>) {
+    if (!isDefaultPasswordLogin || event.currentTarget.value) return;
+
+    event.currentTarget.select();
+  }
+
+  function handleDefaultEmailBlur(event: FocusEvent<HTMLInputElement>) {
+    if (!isDefaultPasswordLogin) return;
+    if (isBlurToSubmitButton(event)) return;
+
+    const email = event.currentTarget.value.trim();
+    setFieldErrors((current) => ({
+      ...current,
+      email: getLoginEmailError(email),
+    }));
+  }
+
+  function handleDefaultEmailChange(event: ChangeEvent<HTMLInputElement>) {
+    if (loginError) setLoginError(null);
+    if (!isDefaultPasswordLogin || !fieldErrors.email) return;
+
+    const email = event.currentTarget.value.trim();
+    setFieldErrors((current) => ({
+      ...current,
+      email: getLoginEmailError(email),
+    }));
+  }
+
+  function handleDefaultPasswordBlur(event: FocusEvent<HTMLInputElement>) {
+    if (!isDefaultPasswordLogin) return;
+    if (isBlurToSubmitButton(event)) return;
+
+    const password = event.currentTarget.value;
+    setFieldErrors((current) => ({
+      ...current,
+      password: getLoginPasswordError(password),
+    }));
+  }
+
+  function handleDefaultPasswordChange(event: ChangeEvent<HTMLInputElement>) {
+    if (loginError) setLoginError(null);
+    if (!isDefaultPasswordLogin || !fieldErrors.password) return;
+
+    const password = event.currentTarget.value;
+    setFieldErrors((current) => ({
+      ...current,
+      password: getLoginPasswordError(password),
+    }));
+  }
+
+  function validateDefaultLoginInputs(
+    form: HTMLFormElement,
+    email: string,
+    password: string
+  ) {
+    const shouldValidateDefaultLogin =
+      isDefaultPasswordLogin &&
+      (usesSupabaseProvider || isProductionRuntime || Boolean(email || password));
+    if (!shouldValidateDefaultLogin) return true;
+
+    const nextFieldErrors = getDefaultLoginFieldErrors(email, password);
+    if (!hasLoginFieldErrors(nextFieldErrors)) {
+      setFieldErrors({});
+      return true;
+    }
+
+    setFieldErrors(nextFieldErrors);
+    focusFirstInvalidLoginField(form, nextFieldErrors);
+    return false;
+  }
+
+  function handleLoginButtonClick(event: MouseEvent<HTMLButtonElement>) {
+    const form = event.currentTarget.form;
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
+    if (!validateDefaultLoginInputs(form, email, password)) {
+      event.preventDefault();
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -187,9 +330,15 @@ export function LoginForm() {
     const nextInvitePasswordConfirm = String(formData.get("invite-password-confirm") ?? "");
     const token = String(formData.get("otp-token") ?? "").trim();
 
-    setIsSubmitting(true);
     setLoginError(null);
     setInviteOtpStatus(null);
+
+    if (!validateDefaultLoginInputs(event.currentTarget, email, password)) {
+      return;
+    }
+
+    setFieldErrors({});
+    setIsSubmitting(true);
 
     try {
       if (isInviteOtpLogin) {
@@ -341,9 +490,7 @@ export function LoginForm() {
                     data-testid="auth-session-notice"
                     className={cn(
                       "rounded-[var(--clair-radius-md)] border px-3 py-2 text-[13px] leading-5",
-                      authSessionNotice.tone === "success"
-                        ? "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]"
-                        : authSessionNotice.tone === "danger"
+                      authSessionNotice.tone === "danger"
                           ? "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]"
                           : "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]"
                     )}
@@ -356,7 +503,10 @@ export function LoginForm() {
                 ) : null}
 
                 <div className="grid gap-[var(--clair-spacing-24)]">
-                  <Field className="gap-2">
+                  <Field
+                    className="gap-2"
+                    data-invalid={emailFieldError ? "true" : undefined}
+                  >
                     <FieldLabel htmlFor="mock-email" className="emr-text-body font-bold">
                       이메일
                     </FieldLabel>
@@ -367,14 +517,21 @@ export function LoginForm() {
                       placeholder="이메일을 입력해주세요"
                       defaultValue={inviteEmail ?? undefined}
                       autoComplete="email"
+                      autoFocus={isDefaultPasswordLogin && !inviteEmail}
                       disabled={isSubmitting}
                       readOnly={isInviteOtpLogin}
-                      aria-describedby={
-                        isDefaultPasswordLogin ? undefined : "mock-email-description"
-                      }
+                      aria-describedby={emailDescribedBy}
+                      aria-invalid={emailFieldError ? true : undefined}
+                      onFocus={handleDefaultEmailFocus}
+                      onBlur={handleDefaultEmailBlur}
+                      onChange={handleDefaultEmailChange}
                       className="h-[var(--clair-control-height-xl)] rounded-[var(--emr-radius-control)] bg-background px-[var(--clair-spacing-16)] emr-text-body"
                     />
-                    {!isDefaultPasswordLogin ? (
+                    {emailFieldError ? (
+                      <FieldError id={emailErrorId} className="emr-text-body">
+                        {emailFieldError}
+                      </FieldError>
+                    ) : !isDefaultPasswordLogin ? (
                       <FieldDescription id="mock-email-description" className="emr-text-metadata">
                         {isInviteOtpLogin && inviteEmail
                           ? `${inviteEmail} 주소로 인증 코드를 보냅니다.`
@@ -481,7 +638,10 @@ export function LoginForm() {
                       ) : null}
                     </>
                   ) : (
-                    <Field className="gap-2">
+                    <Field
+                      className="gap-2"
+                      data-invalid={passwordFieldError ? "true" : undefined}
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <FieldLabel htmlFor="mock-password" className="emr-text-body font-bold">
                           비밀번호
@@ -501,8 +661,17 @@ export function LoginForm() {
                         placeholder="비밀번호를 입력해주세요"
                         autoComplete="current-password"
                         disabled={isSubmitting}
+                        aria-describedby={passwordFieldError ? passwordErrorId : undefined}
+                        aria-invalid={passwordFieldError ? true : undefined}
+                        onBlur={handleDefaultPasswordBlur}
+                        onChange={handleDefaultPasswordChange}
                         className="h-[var(--clair-control-height-xl)] rounded-[var(--emr-radius-control)] bg-background px-[var(--clair-spacing-16)] emr-text-body"
                       />
+                      {passwordFieldError ? (
+                        <FieldError id={passwordErrorId} className="emr-text-body">
+                          {passwordFieldError}
+                        </FieldError>
+                      ) : null}
                     </Field>
                   )}
                 </div>
@@ -513,7 +682,13 @@ export function LoginForm() {
                   </FieldError>
                 ) : null}
 
-                <Button type="submit" size="xl" className="w-full" disabled={isSubmitting}>
+                <Button
+                  type="submit"
+                  size="xl"
+                  className="w-full"
+                  disabled={isSubmitting}
+                  onClick={handleLoginButtonClick}
+                >
                   {isInviteOtpLogin
                     ? isSubmitting
                       ? "처리 중"
