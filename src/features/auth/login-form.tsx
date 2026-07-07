@@ -72,6 +72,8 @@ const loginSupportPanelClassName =
 const isProductionRuntime = process.env.NODE_ENV === "production";
 const loginEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const loginCredentialErrorMessage = "이메일 또는 비밀번호를 확인해 주세요.";
+const getLoginAssetSrc = (asset: string | { src?: string }) =>
+  typeof asset === "string" ? asset : asset.src ?? "";
 
 type LoginFieldErrors = {
   readonly email?: string | undefined;
@@ -533,7 +535,7 @@ export function LoginForm() {
                 <div className="flex flex-col items-center gap-[var(--clair-spacing-16)] text-center">
                   <span className="flex size-12 items-center justify-center">
                     <Image
-                      src={loginLogoMark}
+                      src={getLoginAssetSrc(loginLogoMark)}
                       alt=""
                       width={48}
                       height={48}
