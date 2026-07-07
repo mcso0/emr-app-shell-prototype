@@ -24,6 +24,10 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
+  CdsAlertsEyeIcon,
+  CdsAlertsEyeOffIcon,
+} from "@/components/cds-icons/alerts-and-status";
+import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
@@ -68,10 +72,11 @@ const loginSupportPanelClassName =
   "rounded-[var(--clair-radius-lg)] border border-border bg-[var(--emr-surface-panel)] p-4 shadow-[var(--clair-shadow-sm)]";
 const isProductionRuntime = process.env.NODE_ENV === "production";
 const loginEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const loginCredentialErrorMessage = "이메일 또는 비밀번호를 확인해 주세요.";
 
 type LoginFieldErrors = {
-  readonly email?: string;
-  readonly password?: string;
+  readonly email?: string | undefined;
+  readonly password?: string | undefined;
 };
 
 type LoginDialogFormProps = {
@@ -173,6 +178,10 @@ function focusFirstInvalidLoginField(
   const fieldName = errors.email ? "email" : errors.password ? "password" : null;
   if (!fieldName) return;
 
+  focusLoginField(form, fieldName);
+}
+
+function focusLoginField(form: HTMLFormElement, fieldName: "email" | "password") {
   const element = form.elements.namedItem(fieldName);
   if (!(element instanceof HTMLInputElement)) return;
 
@@ -180,10 +189,30 @@ function focusFirstInvalidLoginField(
   if (fieldName === "email") element.select();
 }
 
-function isBlurToSubmitButton(event: FocusEvent<HTMLInputElement>) {
-  const nextTarget = event.relatedTarget;
+function queueLoginFieldFocus(form: HTMLFormElement, fieldName: "email" | "password") {
+  window.requestAnimationFrame(() => focusLoginField(form, fieldName));
+}
 
-  return nextTarget instanceof HTMLButtonElement && nextTarget.type === "submit";
+function getCaughtErrorCode(caught: unknown) {
+  if (!(caught instanceof Error)) return null;
+  if ("code" in caught && typeof caught.code === "string") return caught.code;
+
+  return null;
+}
+
+function getCaughtErrorMessage(caught: unknown) {
+  return caught instanceof Error ? caught.message : null;
+}
+
+function isInvalidLoginCredentialError(caught: unknown) {
+  const errorCode = getCaughtErrorCode(caught);
+  const errorMessage = getCaughtErrorMessage(caught);
+
+  return (
+    errorCode === "invalid_credentials" ||
+    errorMessage === "invalid_credentials" ||
+    errorMessage === "Invalid login credentials"
+  );
 }
 
 export function LoginForm() {
@@ -194,6 +223,8 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
+  const [passwordValue, setPasswordValue] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [inviteOtpSent, setInviteOtpSent] = useState(false);
   const [inviteOtpStatus, setInviteOtpStatus] = useState<string | null>(null);
   const [inviteOtpToken, setInviteOtpToken] = useState("");
@@ -243,44 +274,28 @@ export function LoginForm() {
     event.currentTarget.select();
   }
 
-  function handleDefaultEmailBlur(event: FocusEvent<HTMLInputElement>) {
-    if (!isDefaultPasswordLogin) return;
-    if (isBlurToSubmitButton(event)) return;
-
-    const email = event.currentTarget.value.trim();
-    setFieldErrors((current) => ({
-      ...current,
-      email: getLoginEmailError(email),
-    }));
-  }
-
   function handleDefaultEmailChange(event: ChangeEvent<HTMLInputElement>) {
     if (loginError) setLoginError(null);
-    if (!isDefaultPasswordLogin || !fieldErrors.email) return;
+    if (!isDefaultPasswordLogin) return;
+    if (!fieldErrors.email && fieldErrors.password !== loginCredentialErrorMessage) return;
 
     const email = event.currentTarget.value.trim();
     setFieldErrors((current) => ({
       ...current,
       email: getLoginEmailError(email),
-    }));
-  }
-
-  function handleDefaultPasswordBlur(event: FocusEvent<HTMLInputElement>) {
-    if (!isDefaultPasswordLogin) return;
-    if (isBlurToSubmitButton(event)) return;
-
-    const password = event.currentTarget.value;
-    setFieldErrors((current) => ({
-      ...current,
-      password: getLoginPasswordError(password),
+      password:
+        current.password === loginCredentialErrorMessage
+          ? undefined
+          : current.password,
     }));
   }
 
   function handleDefaultPasswordChange(event: ChangeEvent<HTMLInputElement>) {
+    const password = event.currentTarget.value;
+    setPasswordValue(password);
     if (loginError) setLoginError(null);
     if (!isDefaultPasswordLogin || !fieldErrors.password) return;
 
-    const password = event.currentTarget.value;
     setFieldErrors((current) => ({
       ...current,
       password: getLoginPasswordError(password),
@@ -292,10 +307,13 @@ export function LoginForm() {
     email: string,
     password: string
   ) {
-    const shouldValidateDefaultLogin =
-      isDefaultPasswordLogin &&
-      (usesSupabaseProvider || isProductionRuntime || Boolean(email || password));
-    if (!shouldValidateDefaultLogin) return true;
+    if (!isDefaultPasswordLogin) return true;
+
+    if (!email && !password) {
+      setFieldErrors({});
+      focusLoginField(form, "email");
+      return false;
+    }
 
     const nextFieldErrors = getDefaultLoginFieldErrors(email, password);
     if (!hasLoginFieldErrors(nextFieldErrors)) {
@@ -323,7 +341,8 @@ export function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const nextInvitePassword = String(formData.get("invite-password") ?? "");
@@ -333,7 +352,7 @@ export function LoginForm() {
     setLoginError(null);
     setInviteOtpStatus(null);
 
-    if (!validateDefaultLoginInputs(event.currentTarget, email, password)) {
+    if (!validateDefaultLoginInputs(form, email, password)) {
       return;
     }
 
@@ -435,17 +454,30 @@ export function LoginForm() {
 
       router.replace(getSafeNextHref(searchParams.get("next")));
     } catch (caught) {
-      const errorCode = caught instanceof Error ? caught.message : null;
+      const errorMessage = getCaughtErrorMessage(caught);
+
+      if (
+        !isInviteOtpLogin &&
+        usesSupabaseProvider &&
+        isInvalidLoginCredentialError(caught)
+      ) {
+        setLoginError(null);
+        setFieldErrors({ password: loginCredentialErrorMessage });
+        setIsSubmitting(false);
+        queueLoginFieldFocus(form, "password");
+        return;
+      }
+
       setLoginError(
         isInviteOtpLogin
-          ? errorCode === "invite-password-too-short"
+          ? errorMessage === "invite-password-too-short"
             ? "비밀번호는 8자 이상으로 설정해 주세요."
-            : errorCode === "invite-password-mismatch"
+            : errorMessage === "invite-password-mismatch"
               ? "비밀번호 확인이 일치하지 않습니다."
               : "초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
           : usesSupabaseProvider
           ? "Supabase 로그인 처리 중 문제가 발생했습니다. 계정 정보와 환경 설정을 확인하세요."
-          : errorCode === "mock-demo-account-not-found"
+          : errorMessage === "mock-demo-account-not-found"
             ? "스테이징 테스트 계정을 확인할 수 없습니다. 제공된 계정 이메일을 다시 확인하세요."
           : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
       );
@@ -523,7 +555,6 @@ export function LoginForm() {
                       aria-describedby={emailDescribedBy}
                       aria-invalid={emailFieldError ? true : undefined}
                       onFocus={handleDefaultEmailFocus}
-                      onBlur={handleDefaultEmailBlur}
                       onChange={handleDefaultEmailChange}
                       className="h-[var(--clair-control-height-xl)] rounded-[var(--emr-radius-control)] bg-background px-[var(--clair-spacing-16)] emr-text-body"
                     />
@@ -654,19 +685,44 @@ export function LoginForm() {
                           비밀번호 찾기
                         </span>
                       </div>
-                      <Input
-                        id="mock-password"
-                        type="password"
-                        name="password"
-                        placeholder="비밀번호를 입력해주세요"
-                        autoComplete="current-password"
-                        disabled={isSubmitting}
-                        aria-describedby={passwordFieldError ? passwordErrorId : undefined}
-                        aria-invalid={passwordFieldError ? true : undefined}
-                        onBlur={handleDefaultPasswordBlur}
-                        onChange={handleDefaultPasswordChange}
-                        className="h-[var(--clair-control-height-xl)] rounded-[var(--emr-radius-control)] bg-background px-[var(--clair-spacing-16)] emr-text-body"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="mock-password"
+                          type={isPasswordVisible ? "text" : "password"}
+                          name="password"
+                          placeholder="비밀번호를 입력해주세요"
+                          autoComplete="current-password"
+                          disabled={isSubmitting}
+                          value={passwordValue}
+                          aria-describedby={passwordFieldError ? passwordErrorId : undefined}
+                          aria-invalid={passwordFieldError ? true : undefined}
+                          onChange={handleDefaultPasswordChange}
+                          className={cn(
+                            "h-[var(--clair-control-height-xl)] rounded-[var(--emr-radius-control)] bg-background px-[var(--clair-spacing-16)] emr-text-body",
+                            passwordValue
+                              ? "pr-[calc(var(--clair-spacing-16)+var(--clair-control-height-md))]"
+                              : undefined
+                          )}
+                        />
+                        {passwordValue ? (
+                          <button
+                            type="button"
+                            aria-controls="mock-password"
+                            aria-label={
+                              isPasswordVisible ? "비밀번호 숨기기" : "비밀번호 보기"
+                            }
+                            disabled={isSubmitting}
+                            onClick={() => setIsPasswordVisible((current) => !current)}
+                            className="absolute top-1/2 right-[var(--clair-spacing-8)] flex h-[var(--clair-control-height-md)] w-[var(--clair-control-height-md)] -translate-y-1/2 items-center justify-center rounded-[var(--emr-radius-control)] text-muted-foreground transition-colors hover:bg-[var(--emr-surface-muted)] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:text-[var(--emr-text-disabled)]"
+                          >
+                            {isPasswordVisible ? (
+                              <CdsAlertsEyeOffIcon aria-hidden="true" size={18} />
+                            ) : (
+                              <CdsAlertsEyeIcon aria-hidden="true" size={18} />
+                            )}
+                          </button>
+                        ) : null}
+                      </div>
                       {passwordFieldError ? (
                         <FieldError id={passwordErrorId} className="emr-text-body">
                           {passwordFieldError}
