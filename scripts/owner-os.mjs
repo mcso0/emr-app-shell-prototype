@@ -36,7 +36,6 @@ function main() {
 }
 
 function buildIntake(request) {
-  const normalized = request.toLowerCase();
   const gated = /(supabase|production|deploy|rls|payment|email|provider|실데이터|배포|결제|권한)/i.test(request);
   const test = /(test|lint|build|ci|검증|테스트|실패|로그)/i.test(request);
   const linear = /(linear|리니어|issue|project|이슈|프로젝트)/i.test(request);

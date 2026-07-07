@@ -2323,12 +2323,12 @@ function SoapPanel({
     (section) => section.id === resetSoapId,
   );
 
-  const updateSectionOverride = (section: SoapSectionState) => {
+  const updateSectionOverride = useCallback((section: SoapSectionState) => {
     setSectionOverrides((currentOverrides) => ({
       ...currentOverrides,
       [section.id]: section,
     }));
-  };
+  }, []);
 
   const updateActiveSoapContent = (content: string) => {
     if (writeDisabled) return;
@@ -2341,7 +2341,7 @@ function SoapPanel({
     }
   };
 
-  const persistDefaultSoapContent = async (
+  const persistDefaultSoapContent = useCallback(async (
     content: string,
     mode: "autosave" | "manual_save",
   ) => {
@@ -2379,7 +2379,15 @@ function SoapPanel({
         result.soapNote.updatedAt,
       version: defaultSection.version + 1,
     });
-  };
+  }, [
+    actorHeaders,
+    defaultSection,
+    encounterId,
+    onPersistedSoapNote,
+    updateSectionOverride,
+    workspaceId,
+    writeDisabled,
+  ]);
 
   useEffect(() => {
     latestDefaultContentRef.current = defaultSection.content;
@@ -2398,7 +2406,7 @@ function SoapPanel({
     }, 800);
 
     return () => window.clearTimeout(timerId);
-  }, [pendingDefaultContent]);
+  }, [pendingDefaultContent, persistDefaultSoapContent]);
 
   const addSystemSoap = (systemLabel: string, shouldActivate: boolean) => {
     if (writeDisabled) return;

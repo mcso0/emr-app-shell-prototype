@@ -19,7 +19,6 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsFilesCalendarIcon,
-  CdsFilesClockIcon,
   CdsFilesMoreHorizontalIcon,
   CdsFilesReceptionCalendarIcon,
 } from "@/components/cds-icons/files-and-layout";
@@ -34,21 +33,12 @@ import {
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
-import {
-  EmrSidePanelCard,
-  EmrSidePanelIdentityLine,
-  EmrSidePanelMetaBadge,
-  EmrSidePanelStatusBadge,
-  EmrSidePanelTypeBadge,
-  emrSidePanelCardActionButtonClassName,
-} from "@/components/emr/side-panel-card";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrSidePanelMiniCalendar } from "@/components/emr/side-panel-mini-calendar";
 import {
   EmrTaskQueueCard,
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
-import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -101,7 +91,6 @@ import {
   getAppointmentPatient,
   getAppointmentGuardian,
   getEffectiveEncounters,
-  getFilteredReceptionPatients,
   getReceptionPatientSummaries,
   getReceptionQueueRows,
   getTodayAppointments,
@@ -1947,52 +1936,6 @@ const getMinutesInDayFromDateTime = (dateTime?: string) => {
   return getOperatingMinutesFromIso(dateTime);
 };
 
-const getWaitMinutesFromTime = (
-  dateTime?: string,
-  currentOperatingMinutes = legacyDayCurrentTimeMinutes,
-) => {
-  const minutesInDay = getMinutesInDayFromDateTime(dateTime);
-
-  if (minutesInDay === undefined) return undefined;
-
-  return Math.max(0, currentOperatingMinutes - minutesInDay);
-};
-
-const getWaitingTimeTextClassName = (waitingMinutes?: number) => {
-  if (waitingMinutes === undefined || waitingMinutes < 30) {
-    return "text-[var(--emr-text-secondary)]";
-  }
-
-  if (waitingMinutes >= 90) {
-    return "text-destructive";
-  }
-
-  if (waitingMinutes >= 60) {
-    return "text-[var(--emr-status-warning-text)]";
-  }
-
-  return "text-[var(--emr-status-warning-text)]";
-};
-
-const getReceptionSideListSortTime = (summary: ReceptionPatientSummary) => {
-  const dateTime =
-    summary.activeEncounter?.checkedInAt ??
-    summary.latestAppointment?.scheduledStartAt;
-  const minutesInDay = getMinutesInDayFromDateTime(dateTime);
-
-  return minutesInDay ?? Number.MAX_SAFE_INTEGER;
-};
-
-const sortReceptionSideListItems = (items: ReceptionPatientSummary[]) =>
-  items
-    .map((summary, index) => ({
-      index,
-      sortTime: getReceptionSideListSortTime(summary),
-      summary,
-    }))
-    .sort((a, b) => a.sortTime - b.sortTime || a.index - b.index)
-    .map(({ summary }) => summary);
-
 const getAppointmentDurationLabel = (appointment: Appointment) => {
   if (!appointment.scheduledEndAt) return "15분";
 
@@ -2479,137 +2422,6 @@ const getAppointmentTone = (status: Appointment["status"]) => {
   return "default";
 };
 
-function PatientCard({
-  currentOperatingMinutes,
-  onOpenChart,
-  onUnavailableAction,
-  selected,
-  summary,
-  onSelect,
-}: {
-  currentOperatingMinutes: number;
-  onOpenChart: (summary: ReceptionPatientSummary) => void;
-  onUnavailableAction: (feedback: ReceptionCardActionFeedback) => void;
-  selected: boolean;
-  summary: ReceptionPatientSummary;
-  onSelect: () => void;
-}) {
-  const guardianName = summary.primaryGuardian?.name ?? "보호자 미지정";
-  const receptionType =
-    summary.activeDraftCheckIn?.receptionType === "walk_in"
-      ? "외래"
-      : summary.latestAppointment
-        ? "예약"
-        : "외래";
-  const visitText =
-    summary.activeEncounter?.chiefComplaint ??
-    summary.latestAppointment?.symptomNote ??
-    summary.latestAppointment?.visitPurpose ??
-    "접수할 내원 목적을 확인해 주세요.";
-  const waitingMinutes = getWaitMinutesFromTime(
-    summary.activeEncounter?.checkedInAt,
-    currentOperatingMinutes,
-  );
-  const timeContent = summary.activeEncounter?.checkedInAt ? (
-    <>
-      <span>{getShortTime(summary.activeEncounter.checkedInAt)} 접수</span>
-      {waitingMinutes !== undefined ? (
-        <span
-          className={cn(
-            "ml-1 shrink-0 emr-text-micro font-semibold leading-none",
-            getWaitingTimeTextClassName(waitingMinutes),
-          )}
-        >
-          ({waitingMinutes}분 대기)
-        </span>
-      ) : null}
-    </>
-  ) : (
-    <span>
-      {summary.latestAppointment
-        ? `${getShortTime(summary.latestAppointment.scheduledStartAt)} 예약`
-        : "시간 미정"}
-    </span>
-  );
-  const veterinarianName = summary.veterinarianName ?? "수의사 미지정";
-
-  return (
-    <EmrSidePanelCard
-      selectionVariant="modulePanel"
-      selected={selected}
-      testId={`patient-card-${summary.patient.id}`}
-      onSelect={onSelect}
-    >
-      <EmrSidePanelIdentityLine
-        patientName={summary.patient.name}
-        guardianName={guardianName}
-        typeBadge={<EmrSidePanelTypeBadge label={receptionType} />}
-        action={
-          <EmrRowActionMenu
-            ariaLabel={`${summary.patient.name} 카드 작업`}
-            contentClassName="w-56"
-            items={[
-              {
-                key: "open",
-                label: "접수 상세 보기",
-                description: "현재 drawer 열기",
-                onSelect,
-              },
-              {
-                key: "chart",
-                label: "차트 보러가기",
-                description: summary.activeEncounter
-                  ? "진료/차트 탭에서 열기"
-                  : "접수 생성 후 이동 가능",
-                onSelect: () => {
-                  if (summary.activeEncounter) {
-                    onOpenChart(summary);
-                    return;
-                  }
-
-                  onUnavailableAction({
-                    title: "먼저 접수를 생성해야 해",
-                    body: `${summary.patient.name}은 아직 진행 중인 encounter가 없어서 차트로 넘길 live 접수 id가 없어.`,
-                  });
-                },
-              },
-              {
-                key: "message",
-                label: "카카오톡 발송",
-                description: "외부 발송 미연동",
-                onSelect: () =>
-                  onUnavailableAction({
-                    title: "카카오톡 발송은 아직 연결되지 않았어",
-                    body: "실제 카카오톡, 문자, 이메일 발송은 이번 MVP 범위 밖이야. 접수 카드에서는 환자/보호자 맥락만 확인해.",
-                  }),
-              },
-            ]}
-            testId={`reception-card-action-${summary.patient.id}`}
-            triggerClassName={emrSidePanelCardActionButtonClassName}
-          />
-        }
-      />
-      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 pl-1 emr-text-dense-label font-medium text-muted-foreground">
-        <span className="min-w-0 flex-1 truncate">{visitText}</span>
-      </div>
-      <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
-      <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
-        <EmrSidePanelMetaBadge
-          label="수의사"
-          maxWidthClassName="max-w-[120px]"
-          value={veterinarianName}
-        />
-        <EmrSidePanelStatusBadge
-          icon={<CdsFilesClockIcon className="size-3.5" aria-hidden="true" />}
-          maxWidthClassName="max-w-none"
-        >
-          {timeContent}
-        </EmrSidePanelStatusBadge>
-      </div>
-    </EmrSidePanelCard>
-  );
-}
-
 type ReceptionCardActionFeedback = {
   body: ReactNode;
   title: string;
@@ -2668,7 +2480,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const setWorkspaceOperatingDate = useReceptionStore(
     (state) => state.setWorkspaceOperatingDate,
   );
-  const scenario = getDemoScenarioFromParams(searchParams);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
   const operatingDateOverride = useReceptionStore(
@@ -2700,39 +2511,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         id: veterinarian.id,
       })),
     [veterinarians],
-  );
-  const querySelectedPatientId =
-    searchParams.get("patientId") ?? scenario?.patientId;
-  const patientSummaries = useMemo(
-    () =>
-      getReceptionPatientSummaries(
-        draftCheckIns,
-        {
-          guardians,
-          patientGuardians,
-          patients,
-        },
-        {
-          allowMockStaffFallback: !liveStaffSourceEnabled,
-          operatingDate,
-          staffMembers: veterinarianStaffMembers,
-          workspaceId,
-        },
-      ),
-    [
-      draftCheckIns,
-      guardians,
-      liveStaffSourceEnabled,
-      operatingDate,
-      patientGuardians,
-      patients,
-      veterinarianStaffMembers,
-      workspaceId,
-    ],
-  );
-  const filteredPatients = useMemo(
-    () => getFilteredReceptionPatients(patientSummaries, searchQuery),
-    [patientSummaries, searchQuery],
   );
   const queueAppointments = useMemo(
     () =>
@@ -3440,10 +3218,6 @@ function getReceptionQueueSideStatusOrder(statusGroup: ReceptionQueueSideStatusG
   return statusGroup === "waiting" ? 0 : 1;
 }
 
-function isCancelledReceptionQueueDraft(draft: ReceptionDraftCheckIn) {
-  return draft.encounter.status === "cancelled" || draft.queueEntry.status === "cancelled";
-}
-
 function isCancelledReceptionQueueRow(row: ReturnType<typeof getReceptionQueueRows>[number]) {
   return row.encounter.status === "cancelled" || row.queueEntry.status === "cancelled";
 }
@@ -3527,31 +3301,6 @@ function isReceptionQueueSideItemPast(
   return itemMinutes < currentOperatingMinutes;
 }
 
-function isReceptionSideCardSelected(
-  summary: ReceptionPatientSummary,
-  activeDrawer: { type: string; id: string } | null,
-  querySelectedPatientId?: string | null,
-) {
-  if (!activeDrawer)
-    return Boolean(
-      querySelectedPatientId && summary.patient.id === querySelectedPatientId,
-    );
-
-  if (activeDrawer.type === "reception-encounter") {
-    return summary.activeEncounter?.id === activeDrawer.id;
-  }
-
-  if (activeDrawer.type === "reception-appointment") {
-    return summary.latestAppointment?.id === activeDrawer.id;
-  }
-
-  if (activeDrawer.type === "reception-patient") {
-    return summary.patient.id === activeDrawer.id;
-  }
-
-  return false;
-}
-
 function buildChartRoute({
   encounterId,
   patientId,
@@ -3570,46 +3319,6 @@ function buildChartRoute({
   });
 
   return `/w/${encodeURIComponent(workspaceId)}/treatment?${query.toString()}`;
-}
-
-function getReceptionSideListItems(
-  summaries: ReceptionPatientSummary[],
-  mode: ReceptionSideListMode,
-) {
-  if (mode === "reception") {
-    return sortReceptionSideListItems(
-      summaries.filter(isReceptionOutpatientSideListItem),
-    );
-  }
-
-  if (mode === "appointment") {
-    return sortReceptionSideListItems(
-      summaries.filter(isReceptionReservationSideListItem),
-    );
-  }
-
-  return sortReceptionSideListItems(
-    summaries.filter(
-      (summary) => summary.activeEncounter || summary.latestAppointment,
-    ),
-  );
-}
-
-function isReceptionOutpatientSideListItem(summary: ReceptionPatientSummary) {
-  return Boolean(summary.activeEncounter);
-}
-
-function isReceptionReservationSideListItem(summary: ReceptionPatientSummary) {
-  const appointmentStatus = summary.latestAppointment?.status;
-  const hasCalendarReservation =
-    appointmentStatus === "confirmed" ||
-    appointmentStatus === "checked_in" ||
-    appointmentStatus === "no_show";
-  const hasAppointmentOriginReception =
-    summary.activeDraftCheckIn?.receptionType === "appointment" ||
-    Boolean(summary.activeEncounter?.appointmentId);
-
-  return hasCalendarReservation || hasAppointmentOriginReception;
 }
 
 function ScheduleAppointmentCard({
