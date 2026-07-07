@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CDS V2 Registration Dialog Draft</title>
+    <style>
+      :root {
+        --emr-bg: #f6f7f9;
+        --emr-surface: #ffffff;
+        --emr-surface-panel: #fcfcfd;
+        --emr-surface-muted: #fafafa;
+        --emr-line: #e5e5e5;
+        --emr-line-muted: #f5f5f5;
+        --emr-text: #171717;
+        --emr-text-secondary: #525252;
+        --emr-text-tertiary: #737373;
+        --emr-text-muted: #a3a3a3;
+        --emr-danger: #dc2626;
+        --emr-info-bg: #eff8ff;
+        --emr-info-text: #175cd3;
+        --emr-success-bg: #ecfdf3;
+        --emr-success-text: #067647;
+        --emr-shadow: 0 20px 70px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
+        --dialog-width: 440px;
+        --dialog-large-height: 714px;
+        --dialog-confirm-height: 292px;
+        --radius-dialog: 12px;
+        --radius-control: 8px;
+        --font: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        background: var(--emr-bg);
+        color: var(--emr-text);
+        font-family: var(--font);
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      .app-shell {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        grid-template-columns: 56px 324px 1fr;
+        grid-template-rows: 52px 1fr;
+        background: #f8fafc;
+      }
+
+      .topbar {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-bottom: 1px solid #e9edf2;
+        background: rgba(255, 255, 255, 0.92);
+        padding: 0 18px;
+      }
+
+      .brand-dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(145deg, #58b7ff, #2476d8);
+      }
+
+      .topbar-title,
+      .topbar-pill,
+      .side-title,
+      .day-title,
+      .mini-line,
+      .card-line {
+        border-radius: 999px;
+        background: #e8eef5;
+      }
+
+      .topbar-title {
+        width: 148px;
+        height: 16px;
+      }
+
+      .topbar-pill {
+        width: 120px;
+        height: 28px;
+        margin-left: 60px;
+      }
+
+      .rail {
+        grid-row: 2;
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        gap: 14px;
+        background: #0f172a;
+        padding-top: 14px;
+      }
+
+      .rail-item {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .rail-item.active {
+        background: rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+      }
+
+      .side-panel {
+        grid-row: 2;
+        border-right: 1px solid #e9edf2;
+        background: rgba(255, 255, 255, 0.86);
+        padding: 20px;
+      }
+
+      .side-title {
+        width: 92px;
+        height: 22px;
+        margin-bottom: 24px;
+      }
+
+      .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 11px;
+        margin-bottom: 26px;
+      }
+
+      .date-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #edf2f7;
+      }
+
+      .date-dot.hot {
+        background: #ef4444;
+      }
+
+      .side-card {
+        display: grid;
+        gap: 12px;
+        border: 1px solid #eef2f7;
+        border-radius: 12px;
+        background: #fff;
+        padding: 16px;
+      }
+
+      .card-line {
+        height: 12px;
+      }
+
+      .card-line.short {
+        width: 42%;
+      }
+
+      .workspace {
+        grid-row: 2;
+        min-width: 0;
+        padding: 24px 24px 0;
+      }
+
+      .day-title {
+        width: 180px;
+        height: 24px;
+        margin-bottom: 20px;
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .lane {
+        min-height: calc(100vh - 112px);
+        border-left: 1px solid #edf1f5;
+      }
+
+      .lane-head {
+        height: 48px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+      }
+
+      .lane:nth-child(1) .lane-head,
+      .lane:nth-child(3) .lane-head {
+        background: #1479c9;
+      }
+
+      .lane:nth-child(2) .lane-head,
+      .lane:nth-child(5) .lane-head {
+        background: #2d9a5b;
+      }
+
+      .lane:nth-child(4) .lane-head {
+        background: #c85f18;
+      }
+
+      .lane:nth-child(6) .lane-head {
+        background: #d83842;
+      }
+
+      .appointment {
+        height: 96px;
+        border-radius: 12px;
+        background: #e9f5fc;
+        margin: 16px 10px;
+      }
+
+      .prototype-overlay {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(244, 246, 248, 0.7);
+        backdrop-filter: blur(6px);
+      }
+
+      .prototype-toolbar {
+        position: fixed;
+        top: 18px;
+        left: 50%;
+        z-index: 5;
+        display: flex;
+        transform: translateX(-50%);
+        gap: 4px;
+        border: 1px solid rgba(229, 229, 229, 0.9);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        padding: 4px;
+      }
+
+      .prototype-toolbar button {
+        height: 30px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--emr-text-secondary);
+        cursor: pointer;
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .prototype-toolbar button[aria-pressed="true"] {
+        background: #171717;
+        color: #fff;
+      }
+
+      .dialog-stage {
+        position: relative;
+        width: min(100vw, 1480px);
+        height: min(100vh, 860px);
+      }
+
+      .dialog {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        display: none;
+        width: var(--dialog-width);
+        overflow: hidden;
+        transform: translate(-50%, -50%);
+        border: 1px solid var(--emr-line);
+        border-radius: var(--radius-dialog);
+        background: var(--emr-surface);
+        box-shadow: var(--emr-shadow);
+      }
+
+      .dialog.active {
+        display: grid;
+        grid-template-rows: 1fr 64px;
+      }
+
+      .dialog.large {
+        height: var(--dialog-large-height);
+      }
+
+      .dialog.confirm {
+        height: var(--dialog-confirm-height);
+      }
+
+      .dialog.all {
+        display: grid;
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+        box-shadow: var(--emr-shadow);
+      }
+
+      .all-grid {
+        position: absolute;
+        inset: 98px 52px auto;
+        display: none;
+        grid-template-columns: repeat(3, var(--dialog-width));
+        align-items: start;
+        justify-content: center;
+        gap: 32px;
+      }
+
+      .all-grid.active {
+        display: grid;
+      }
+
+      .dialog-wrap {
+        min-height: 0;
+        padding: 16px;
+      }
+
+      .dialog-body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .dialog-header {
+        display: flex;
+        min-height: 24px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .dialog-title-row {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dialog-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 24px;
+      }
+
+      .step-badge {
+        display: inline-flex;
+        height: 24px;
+        align-items: center;
+        border-radius: 7px;
+        background: #f5f5f5;
+        color: var(--emr-text-secondary);
+        padding: 0 8px;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .icon-button {
+        display: inline-grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--emr-text-secondary);
+        cursor: pointer;
+      }
+
+      .icon-button:hover {
+        background: #f5f5f5;
+      }
+
+      .section {
+        display: grid;
+        gap: 12px;
+      }
+
+      .section-title {
+        height: 24px;
+        display: flex;
+        align-items: center;
+        color: var(--emr-text-tertiary);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 18px;
+      }
+
+      .separator {
+        height: 1px;
+        background: var(--emr-line);
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 128px 268px;
+        align-items: start;
+        gap: 12px;
+        min-height: 32px;
+      }
+
+      .field-label {
+        display: flex;
+        height: 32px;
+        align-items: center;
+        gap: 8px;
+        color: var(--emr-text);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 20px;
+      }
+
+      .label-icon {
+        width: 15px;
+        height: 15px;
+        flex: 0 0 auto;
+        border: 1px solid #d4d4d4;
+        border-radius: 5px;
+        background: linear-gradient(180deg, #fff, #f5f5f5);
+      }
+
+      .required {
+        color: var(--emr-danger);
+      }
+
+      .control-stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      .input,
+      .textarea,
+      .select {
+        width: 100%;
+        border: 1px solid var(--emr-line);
+        border-radius: var(--radius-control);
+        background: #fff;
+        color: var(--emr-text);
+        outline: none;
+      }
+
+      .input,
+      .select {
+        height: 32px;
+        padding: 0 10px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .input::placeholder,
+      .textarea::placeholder {
+        color: var(--emr-text-muted);
+        font-weight: 600;
+      }
+
+      .textarea {
+        height: 76px;
+        resize: none;
+        padding: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 18px;
+      }
+
+      .select {
+        appearance: none;
+        background-image: linear-gradient(45deg, transparent 50%, #8a8f98 50%),
+          linear-gradient(135deg, #8a8f98 50%, transparent 50%);
+        background-position: calc(100% - 15px) 13px, calc(100% - 10px) 13px;
+        background-size: 5px 5px, 5px 5px;
+        background-repeat: no-repeat;
+      }
+
+      .input-with-button {
+        display: grid;
+        grid-template-columns: 175px 81px;
+        gap: 12px;
+      }
+
+      .search-control {
+        position: relative;
+      }
+
+      .search-control .input {
+        padding-left: 34px;
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 11px;
+        top: 50%;
+        width: 14px;
+        height: 14px;
+        transform: translateY(-50%);
+        border: 2px solid var(--emr-text-muted);
+        border-radius: 50%;
+      }
+
+      .search-icon::after {
+        position: absolute;
+        right: -5px;
+        bottom: -4px;
+        width: 6px;
+        height: 2px;
+        content: "";
+        transform: rotate(45deg);
+        border-radius: 99px;
+        background: var(--emr-text-muted);
+      }
+
+      .inline-control {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .inline-inputs {
+        display: grid;
+        grid-template-columns: 97px 97px;
+        gap: 12px;
+      }
+
+      .unit-input {
+        position: relative;
+      }
+
+      .unit-input .input {
+        padding-right: 34px;
+        text-align: right;
+      }
+
+      .unit-input span {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--emr-text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .switch-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 54px;
+        justify-content: flex-end;
+        color: var(--emr-text-secondary);
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .switch {
+        position: relative;
+        width: 28px;
+        height: 16px;
+        border-radius: 999px;
+        background: #e5e7eb;
+      }
+
+      .switch::after {
+        position: absolute;
+        left: 2px;
+        top: 2px;
+        width: 12px;
+        height: 12px;
+        content: "";
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+      }
+
+      .signature-box {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        border: 1px solid var(--emr-line);
+        border-radius: var(--radius-control);
+        padding: 10px 12px;
+      }
+
+      .signature-title {
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .signature-note {
+        margin-top: 4px;
+        color: var(--emr-text-tertiary);
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 15px;
+      }
+
+      .signature-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 2px;
+      }
+
+      .check-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--emr-text-secondary);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .checkbox {
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--emr-line);
+        border-radius: 4px;
+        background: #fff;
+      }
+
+      .btn {
+        display: inline-flex;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-control);
+        border: 0;
+        cursor: pointer;
+        gap: 4px;
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .btn.primary {
+        background: #171717;
+        color: #fff;
+      }
+
+      .btn.outline {
+        border: 1px solid var(--emr-line);
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--emr-text);
+      }
+
+      .btn.ghost {
+        background: transparent;
+        color: var(--emr-text);
+      }
+
+      .btn.muted {
+        background: #f5f5f5;
+        color: var(--emr-text-secondary);
+      }
+
+      .status-badge {
+        display: inline-flex;
+        height: 20px;
+        align-items: center;
+        border: 1px solid var(--emr-line);
+        border-radius: 999px;
+        color: var(--emr-text-secondary);
+        padding: 0 8px;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .dialog-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 1px solid var(--emr-line);
+        background: var(--emr-surface-panel);
+        padding: 16px;
+      }
+
+      .footer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .summary-cell {
+        display: flex;
+        height: 54px;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid var(--emr-line-muted);
+        border-radius: 12px;
+        background: var(--emr-surface-muted);
+        padding: 16px;
+      }
+
+      .summary-icon {
+        display: grid;
+        width: 22px;
+        height: 22px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 50%;
+        color: currentColor;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .summary-icon.guardian {
+        background: var(--emr-info-bg);
+        color: var(--emr-info-text);
+      }
+
+      .summary-icon.patient {
+        background: var(--emr-success-bg);
+        color: var(--emr-success-text);
+      }
+
+      .summary-copy {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+
+      .summary-name {
+        color: var(--emr-text);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .summary-detail {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--emr-text-secondary);
+        font-size: 13px;
+        font-weight: 600;
+        text-overflow: ellipsis;
+      }
+
+      .summary-dot {
+        color: var(--emr-text-muted);
+      }
+
+      .hidden-title {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 920px) {
+        body {
+          overflow: auto;
+        }
+
+        .prototype-overlay {
+          min-height: 100vh;
+          place-items: start center;
+          padding: 72px 16px 32px;
+        }
+
+        .dialog-stage {
+          width: 100%;
+          height: auto;
+        }
+
+        .dialog,
+        .dialog.active {
+          position: relative;
+          left: auto;
+          top: auto;
+          width: min(100%, var(--dialog-width));
+          transform: none;
+        }
+
+        .dialog.large,
+        .dialog.confirm {
+          height: auto;
+          min-height: auto;
+        }
+
+        .all-grid.active {
+          position: relative;
+          inset: auto;
+          grid-template-columns: 1fr;
+          padding-top: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell" aria-hidden="true">
+      <header class="topbar">
+        <div class="brand-dot"></div>
+        <div class="topbar-title"></div>
+        <div class="topbar-pill"></div>
+      </header>
+      <nav class="rail">
+        <div class="rail-item"></div>
+        <div class="rail-item"></div>
+        <div class="rail-item active"></div>
+        <div class="rail-item"></div>
+        <div class="rail-item"></div>
+        <div class="rail-item"></div>
+      </nav>
+      <aside class="side-panel">
+        <div class="side-title"></div>
+        <div class="calendar">
+          <span class="date-dot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot hot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot"></span><span class="date-dot"></span><span class="date-dot"></span>
+          <span class="date-dot"></span>
+        </div>
+        <div class="side-card">
+          <div class="card-line short"></div>
+          <div class="card-line"></div>
+          <div class="card-line"></div>
+        </div>
+      </aside>
+      <main class="workspace">
+        <div class="day-title"></div>
+        <div class="calendar-grid">
+          <section class="lane"><div class="lane-head"></div><div class="appointment"></div></section>
+          <section class="lane"><div class="lane-head"></div></section>
+          <section class="lane"><div class="lane-head"></div></section>
+          <section class="lane"><div class="lane-head"></div></section>
+          <section class="lane"><div class="lane-head"></div></section>
+          <section class="lane"><div class="lane-head"></div></section>
+        </div>
+      </main>
+    </div>
+
+    <div class="prototype-overlay">
+      <div class="prototype-toolbar" aria-label="시안 선택">
+        <button type="button" data-target="guardian" aria-pressed="true">보호자</button>
+        <button type="button" data-target="patient" aria-pressed="false">환자</button>
+        <button type="button" data-target="confirm" aria-pressed="false">확인</button>
+        <button type="button" data-target="all" aria-pressed="false">전체</button>
+      </div>
+
+      <div class="dialog-stage">
+        <section class="dialog large active" data-dialog="guardian" aria-labelledby="guardian-title">
+          <div class="dialog-wrap">
+            <div class="dialog-body">
+              <header class="dialog-header">
+                <div class="dialog-title-row">
+                  <h1 class="dialog-title" id="guardian-title">신규 보호자 등록</h1>
+                  <span class="step-badge">1/2 보호자</span>
+                </div>
+                <button class="icon-button" type="button" aria-label="신규 보호자 등록 닫기">×</button>
+              </header>
+
+              <section class="section">
+                <div class="section-title">보호자 정보</div>
+                <div class="field-row">
+                  <label class="field-label" for="guardian-name"><span class="label-icon"></span>보호자명 <span class="required">*</span></label>
+                  <input class="input" id="guardian-name" placeholder="보호자명을 입력해주세요" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="guardian-birth"><span class="label-icon"></span>생년월일</label>
+                  <input class="input" id="guardian-birth" placeholder="YYYY-MM-DD" />
+                </div>
+              </section>
+
+              <div class="separator"></div>
+
+              <section class="section">
+                <div class="section-title">연락처 및 주소</div>
+                <div class="field-row">
+                  <label class="field-label" for="guardian-mobile"><span class="label-icon"></span>전화번호 <span class="required">*</span></label>
+                  <input class="input" id="guardian-mobile" placeholder="휴대폰 번호를 입력해주세요" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="guardian-email"><span class="label-icon"></span>이메일</label>
+                  <input class="input" id="guardian-email" placeholder="example@email.com" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="guardian-postal"><span class="label-icon"></span>주소</label>
+                  <div class="control-stack">
+                    <div class="input-with-button">
+                      <input class="input" id="guardian-postal" placeholder="우편번호" />
+                      <button class="btn muted" type="button">주소 검색</button>
+                    </div>
+                    <input class="input" placeholder="도로명 또는 지번 주소를 입력해주세요" />
+                    <input class="input" placeholder="상세주소를 입력해주세요" />
+                  </div>
+                </div>
+              </section>
+
+              <div class="separator"></div>
+
+              <section class="section">
+                <div class="section-title">메모 및 개인정보 동의</div>
+                <div class="field-row">
+                  <label class="field-label" for="guardian-memo"><span class="label-icon"></span>보호자 메모</label>
+                  <textarea class="textarea" id="guardian-memo" placeholder="특이사항이나 요청사항을 입력해주세요"></textarea>
+                </div>
+                <div class="field-row">
+                  <label class="field-label"><span class="label-icon"></span>전자 서명</label>
+                  <button class="btn outline" type="button">태블릿 서명 요청</button>
+                </div>
+              </section>
+            </div>
+          </div>
+          <footer class="dialog-footer">
+            <button class="btn ghost" type="button">취소</button>
+            <div class="footer-actions">
+              <button class="btn outline" type="button">이전</button>
+              <button class="btn primary" type="button">다음</button>
+            </div>
+          </footer>
+        </section>
+
+        <section class="dialog large" data-dialog="patient" aria-labelledby="patient-title">
+          <div class="dialog-wrap">
+            <div class="dialog-body">
+              <header class="dialog-header">
+                <div class="dialog-title-row">
+                  <h1 class="dialog-title" id="patient-title">신규 환자 등록</h1>
+                  <span class="step-badge">2/2 환자</span>
+                </div>
+                <button class="icon-button" type="button" aria-label="신규 환자 등록 닫기">×</button>
+              </header>
+
+              <section class="section">
+                <div class="section-title">환자 정보</div>
+                <div class="field-row">
+                  <label class="field-label" for="patient-name"><span class="label-icon"></span>환자명 <span class="required">*</span></label>
+                  <input class="input" id="patient-name" placeholder="환자명을 입력해주세요" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="patient-species"><span class="label-icon"></span>종류 <span class="required">*</span></label>
+                  <select class="select" id="patient-species">
+                    <option>강아지</option>
+                    <option>고양이</option>
+                    <option>기타</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <div class="field-label"><span class="label-icon"></span>품종 <span class="required">*</span></div>
+                  <div class="inline-control">
+                    <div class="search-control" style="width: 206px">
+                      <span class="search-icon"></span>
+                      <input class="input" placeholder="주 품종을 선택해주세요" />
+                    </div>
+                    <label class="switch-label"><span class="switch"></span>믹스</label>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="patient-sex"><span class="label-icon"></span>성별</label>
+                  <select class="select" id="patient-sex">
+                    <option>미상</option>
+                    <option>수컷</option>
+                    <option>암컷</option>
+                    <option>중성화 수컷</option>
+                    <option>중성화 암컷</option>
+                  </select>
+                </div>
+              </section>
+
+              <div class="separator"></div>
+
+              <section class="section">
+                <div class="section-title">추가 정보</div>
+                <div class="field-row">
+                  <div class="field-label"><span class="label-icon"></span>나이 <span class="required">*</span></div>
+                  <div class="inline-control">
+                    <div class="inline-inputs">
+                      <div class="unit-input"><input class="input" value="0" /><span>년</span></div>
+                      <div class="unit-input"><input class="input" value="0" /><span>개월</span></div>
+                    </div>
+                    <label class="switch-label"><span class="switch"></span>추정</label>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="patient-birth"><span class="label-icon"></span>생년월일</label>
+                  <input class="input" id="patient-birth" placeholder="YYYY-MM-DD" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="patient-microchip"><span class="label-icon"></span>마이크로칩</label>
+                  <input class="input" id="patient-microchip" placeholder="15자리 마이크로칩 번호" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="patient-regno"><span class="label-icon"></span>동물등록번호</label>
+                  <input class="input" id="patient-regno" placeholder="동물등록번호" />
+                </div>
+              </section>
+
+              <div class="separator"></div>
+
+              <section class="section">
+                <div class="section-title">메모</div>
+                <div class="field-row">
+                  <label class="field-label" for="patient-memo"><span class="label-icon"></span>환자 메모</label>
+                  <textarea class="textarea" id="patient-memo" placeholder="특이사항이나 요청사항을 입력해주세요"></textarea>
+                </div>
+              </section>
+            </div>
+          </div>
+          <footer class="dialog-footer">
+            <button class="btn ghost" type="button">취소</button>
+            <div class="footer-actions">
+              <button class="btn outline" type="button">이전</button>
+              <button class="btn primary" type="button">다음</button>
+            </div>
+          </footer>
+        </section>
+
+        <section class="dialog confirm" data-dialog="confirm" aria-labelledby="confirm-title">
+          <div class="dialog-wrap">
+            <div class="dialog-body">
+              <header class="dialog-header">
+                <div class="dialog-title-row">
+                  <h1 class="dialog-title" id="confirm-title">등록 정보 확인</h1>
+                  <span class="step-badge">확인</span>
+                </div>
+                <button class="icon-button" type="button" aria-label="등록 정보 확인 닫기">×</button>
+              </header>
+
+              <section class="section">
+                <div class="section-title">신규 보호자/환자</div>
+                <div class="summary-cell">
+                  <div class="summary-icon guardian">人</div>
+                  <div class="summary-copy">
+                    <span class="summary-name">김보호</span>
+                    <span class="summary-detail">1990.01.01</span>
+                    <span class="summary-dot">·</span>
+                    <span class="summary-detail">010-0000-0000</span>
+                  </div>
+                  <span class="status-badge">보호자</span>
+                </div>
+                <div class="summary-cell">
+                  <div class="summary-icon patient">⌁</div>
+                  <div class="summary-copy">
+                    <span class="summary-name">초코</span>
+                    <span class="summary-detail">강아지</span>
+                    <span class="summary-dot">·</span>
+                    <span class="summary-detail">말티즈</span>
+                    <span class="summary-dot">·</span>
+                    <span class="summary-detail">12살 6개월</span>
+                  </div>
+                  <span class="status-badge">환자</span>
+                </div>
+              </section>
+            </div>
+          </div>
+          <footer class="dialog-footer">
+            <button class="btn ghost" type="button">취소</button>
+            <div class="footer-actions">
+              <button class="btn outline" type="button">이전</button>
+              <button class="btn primary" type="button">등록</button>
+            </div>
+          </footer>
+        </section>
+
+        <div class="all-grid" data-dialog="all" aria-label="전체 다이얼로그 시안">
+          <section class="dialog large all" aria-labelledby="all-guardian-title">
+            <div class="dialog-wrap">
+              <div class="dialog-body">
+                <header class="dialog-header">
+                  <div class="dialog-title-row">
+                    <h1 class="dialog-title" id="all-guardian-title">신규 보호자 등록</h1>
+                    <span class="step-badge">1/2 보호자</span>
+                  </div>
+                  <button class="icon-button" type="button" aria-label="닫기">×</button>
+                </header>
+                <section class="section">
+                  <div class="section-title">보호자 정보</div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>보호자명 <span class="required">*</span></div><input class="input" placeholder="보호자명을 입력해주세요" /></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>생년월일</div><input class="input" placeholder="YYYY-MM-DD" /></div>
+                </section>
+                <div class="separator"></div>
+                <section class="section">
+                  <div class="section-title">연락처 및 주소</div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>전화번호 <span class="required">*</span></div><input class="input" placeholder="휴대폰 번호를 입력해주세요" /></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>이메일</div><input class="input" placeholder="example@email.com" /></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>주소</div><div class="control-stack"><div class="input-with-button"><input class="input" placeholder="우편번호" /><button class="btn muted" type="button">주소 검색</button></div><input class="input" placeholder="도로명 또는 지번 주소를 입력해주세요" /><input class="input" placeholder="상세주소를 입력해주세요" /></div></div>
+                </section>
+                <div class="separator"></div>
+                <section class="section">
+                  <div class="section-title">메모 및 개인정보 동의</div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>보호자 메모</div><textarea class="textarea" placeholder="특이사항이나 요청사항을 입력해주세요"></textarea></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>전자 서명</div><button class="btn outline" type="button">태블릿 서명 요청</button></div>
+                </section>
+              </div>
+            </div>
+            <footer class="dialog-footer"><button class="btn ghost" type="button">취소</button><div class="footer-actions"><button class="btn outline" type="button">이전</button><button class="btn primary" type="button">다음</button></div></footer>
+          </section>
+
+          <section class="dialog large all" aria-labelledby="all-patient-title">
+            <div class="dialog-wrap">
+              <div class="dialog-body">
+                <header class="dialog-header">
+                  <div class="dialog-title-row">
+                    <h1 class="dialog-title" id="all-patient-title">신규 환자 등록</h1>
+                    <span class="step-badge">2/2 환자</span>
+                  </div>
+                  <button class="icon-button" type="button" aria-label="닫기">×</button>
+                </header>
+                <section class="section">
+                  <div class="section-title">환자 정보</div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>환자명 <span class="required">*</span></div><input class="input" placeholder="환자명을 입력해주세요" /></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>종류 <span class="required">*</span></div><select class="select"><option>강아지</option></select></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>품종 <span class="required">*</span></div><div class="inline-control"><div class="search-control" style="width: 206px"><span class="search-icon"></span><input class="input" placeholder="주 품종을 선택해주세요" /></div><label class="switch-label"><span class="switch"></span>믹스</label></div></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>성별</div><select class="select"><option>미상</option></select></div>
+                </section>
+                <div class="separator"></div>
+                <section class="section">
+                  <div class="section-title">추가 정보</div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>나이 <span class="required">*</span></div><div class="inline-control"><div class="inline-inputs"><div class="unit-input"><input class="input" value="0" /><span>년</span></div><div class="unit-input"><input class="input" value="0" /><span>개월</span></div></div><label class="switch-label"><span class="switch"></span>추정</label></div></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>생년월일</div><input class="input" placeholder="YYYY-MM-DD" /></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>마이크로칩</div><input class="input" placeholder="15자리 마이크로칩 번호" /></div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>동물등록번호</div><input class="input" placeholder="동물등록번호" /></div>
+                </section>
+                <div class="separator"></div>
+                <section class="section">
+                  <div class="section-title">메모</div>
+                  <div class="field-row"><div class="field-label"><span class="label-icon"></span>환자 메모</div><textarea class="textarea" placeholder="특이사항이나 요청사항을 입력해주세요"></textarea></div>
+                </section>
+              </div>
+            </div>
+            <footer class="dialog-footer"><button class="btn ghost" type="button">취소</button><div class="footer-actions"><button class="btn outline" type="button">이전</button><button class="btn primary" type="button">다음</button></div></footer>
+          </section>
+
+          <section class="dialog confirm all" aria-labelledby="all-confirm-title">
+            <div class="dialog-wrap">
+              <div class="dialog-body">
+                <header class="dialog-header">
+                  <div class="dialog-title-row">
+                    <h1 class="dialog-title" id="all-confirm-title">등록 정보 확인</h1>
+                    <span class="step-badge">확인</span>
+                  </div>
+                  <button class="icon-button" type="button" aria-label="닫기">×</button>
+                </header>
+                <section class="section">
+                  <div class="section-title">신규 보호자/환자</div>
+                  <div class="summary-cell"><div class="summary-icon guardian">人</div><div class="summary-copy"><span class="summary-name">김보호</span><span class="summary-detail">1990.01.01</span><span class="summary-dot">·</span><span class="summary-detail">010-0000-0000</span></div><span class="status-badge">보호자</span></div>
+                  <div class="summary-cell"><div class="summary-icon patient">⌁</div><div class="summary-copy"><span class="summary-name">초코</span><span class="summary-detail">강아지</span><span class="summary-dot">·</span><span class="summary-detail">말티즈</span><span class="summary-dot">·</span><span class="summary-detail">12살 6개월</span></div><span class="status-badge">환자</span></div>
+                </section>
+              </div>
+            </div>
+            <footer class="dialog-footer"><button class="btn ghost" type="button">취소</button><div class="footer-actions"><button class="btn outline" type="button">이전</button><button class="btn primary" type="button">등록</button></div></footer>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const controls = Array.from(document.querySelectorAll("[data-target]"));
+      const dialogs = Array.from(document.querySelectorAll("[data-dialog]"));
+
+      controls.forEach((control) => {
+        control.addEventListener("click", () => {
+          const target = control.dataset.target;
+
+          controls.forEach((item) => {
+            item.setAttribute("aria-pressed", String(item === control));
+          });
+
+          dialogs.forEach((dialog) => {
+            dialog.classList.toggle("active", dialog.dataset.dialog === target);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

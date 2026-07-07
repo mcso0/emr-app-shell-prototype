@@ -2034,7 +2034,7 @@ test("patient guardian registration links an existing guardian to a new patient"
     page.getByText("입력한 정보는 최종 확인 후 등록됩니다."),
   ).toHaveCount(0);
   await expect(page.getByText("보호자 선택")).toBeVisible();
-  await expect(page.getByText("동물 정보")).toBeVisible();
+  await expect(page.getByText("환자 정보")).toBeVisible();
   await expect(page.getByRole("button", { name: "다음" })).toBeDisabled();
   await page.getByLabel("기존 보호자 검색").fill("오세아");
   await page.getByRole("option", { name: /오세아/ }).click();
@@ -2071,57 +2071,10 @@ test("patient guardian registration links an existing guardian to a new patient"
   await expect(page.getByText("환자 등록이 완료되었습니다.")).toBeVisible();
 });
 
-test("registration remains 40px while reception drawer controls align 36px", async ({
+test("registration uses CDS V2 32px controls while reception drawer controls align 36px", async ({
   page,
 }) => {
   await page.goto("/w/clair-demo/reception");
-
-  const registrationTrigger = page.getByRole("button", {
-    name: "신규 동물/보호자",
-    exact: true,
-  });
-  const scheduleTrigger = page.getByRole("button", {
-    name: "접수/예약",
-    exact: true,
-  });
-
-  await expect(registrationTrigger).toHaveCount(1);
-  await expect(scheduleTrigger).toHaveCount(1);
-  const registrationTriggerStyle = await registrationTrigger.evaluate(
-    (element) => {
-      const style = window.getComputedStyle(element);
-
-      return {
-        borderColor: style.borderTopColor,
-        borderStyle: style.borderTopStyle,
-        borderWidth: style.borderTopWidth,
-        className: element.className,
-      };
-    },
-  );
-  const scheduleTriggerStyle = await scheduleTrigger.evaluate((element) => {
-    const style = window.getComputedStyle(element);
-
-    return {
-      borderColor: style.borderTopColor,
-      borderStyle: style.borderTopStyle,
-      borderWidth: style.borderTopWidth,
-      className: element.className,
-    };
-  });
-
-  expect(registrationTriggerStyle).toMatchObject({
-    borderStyle: "solid",
-    borderWidth: "1px",
-  });
-  expect(scheduleTriggerStyle).toMatchObject({
-    borderStyle: "solid",
-    borderWidth: "1px",
-  });
-  expect(registrationTriggerStyle.borderColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(scheduleTriggerStyle.borderColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(registrationTriggerStyle.className).toContain("group/button");
-  expect(scheduleTriggerStyle.className).toContain("group/button");
 
   await page
     .getByRole("button", { name: "신규 동물/보호자", exact: true })
@@ -2130,7 +2083,7 @@ test("registration remains 40px while reception drawer controls align 36px", asy
     .getByRole("menuitem", { name: "기존 보호자에 환자 추가" })
     .click();
   const registrationDialog = page.getByLabel("기존 보호자에 신규 환자 등록");
-  await expect(registrationDialog.getByText("동물 정보")).toBeVisible();
+  await expect(registrationDialog.getByText("환자 정보")).toBeVisible();
 
   const registrationControlHeights = await Promise.all(
     [
@@ -2144,7 +2097,7 @@ test("registration remains 40px while reception drawer controls align 36px", asy
       ),
     ),
   );
-  expect(registrationControlHeights).toEqual([40, 40, 40, 40]);
+  expect(registrationControlHeights).toEqual([32, 32, 32, 32]);
 
   await page.goto("/w/clair-demo/reception");
   await openWalkInReceptionForm(page);

@@ -16,6 +16,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  EmrRegistrationAddressControls,
+  EmrRegistrationAgeControls,
+  EmrRegistrationDialogShell,
+  EmrRegistrationFieldRow,
+  EmrRegistrationFooter,
+  EmrRegistrationInlineControl,
+  EmrRegistrationSection,
+  EmrRegistrationSignatureConsentCard,
+  EmrRegistrationSummaryItem,
+  EmrRegistrationSwitchLabel,
+  emrRegistrationControlClassName,
+  emrRegistrationTextareaClassName,
+} from "@/components/emr/registration-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -371,20 +385,24 @@ const formatAgeNumberInput = (value: string) => value.replace(/\D/g, "").slice(0
 
 function AgePartInput({
   ariaLabel,
+  className,
+  inputClassName,
   onValueChange,
   unit,
   value,
 }: {
   ariaLabel: string;
+  className?: string;
+  inputClassName?: string;
   onValueChange: (value: string) => void;
   unit: "년" | "개월";
   value: string;
 }) {
   return (
-    <div className="relative min-w-0">
+    <div className={cn("relative min-w-0", className)}>
       <Input
         aria-label={ariaLabel}
-        className="h-10 bg-card pr-10 text-right"
+        className={cn("h-10 bg-card pr-10 text-right", inputClassName)}
         inputMode="numeric"
         placeholder="0"
         value={value}
@@ -3211,6 +3229,39 @@ function PatientGuardianRegistrationButton({
     ? getGuardianPatientCount(selectedGuardian.id, patientGuardians)
     : 0;
   const stepBadge = getRegistrationStepBadge({ mode, step });
+  const dialogTitle =
+    step === "mode"
+      ? "신규 등록"
+      : step === "guardian"
+        ? "신규 보호자 등록"
+        : step === "patient"
+          ? mode === "existing_guardian_patient"
+            ? "기존 보호자에 신규 환자 등록"
+            : "신규 환자 등록"
+          : "등록 정보 확인";
+  const dialogKind = step === "guardian" || step === "patient" ? "form" : "confirm";
+  const goPreviousStep = () => {
+    setErrors({});
+    if (step === "guardian") setStep("mode");
+    if (step === "patient") {
+      setStep(mode === "new_guardian_patient" ? "guardian" : "mode");
+    }
+    if (step === "confirm") setStep("patient");
+  };
+  const continueRegistration = () => {
+    if (step === "mode") goNextFromMode();
+    if (step === "guardian") goNextFromGuardian();
+    if (step === "patient") goNextFromPatient();
+    if (step === "confirm") commitRegistration();
+  };
+  const patientAgeSummary = patientDraft.birthDate
+    ? getAgeTextFromBirthDate(patientDraft.birthDate)
+    : [
+        patientDraft.ageYears && `${patientDraft.ageYears}년`,
+        patientDraft.ageMonths && `${patientDraft.ageMonths}개월`,
+      ]
+        .filter(Boolean)
+        .join(" ");
 
   return (
     <>
@@ -3248,41 +3299,22 @@ function PatientGuardianRegistrationButton({
         </DropdownMenu>
       ) : null}
       <Dialog open={open} onOpenChange={setOpenSafely}>
-        <DialogContent
-          className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[680px]"
-          showCloseButton={false}
+        <EmrRegistrationDialogShell
+          closeAriaLabel="환자/보호자 창 닫기"
+          footer={
+            <EmrRegistrationFooter
+              nextDisabled={!canGoNext || submitting}
+              nextLabel={step === "confirm" ? (submitting ? "등록 중" : "등록") : "다음"}
+              showPrevious={step !== "mode"}
+              onCancel={requestClose}
+              onNext={continueRegistration}
+              onPrevious={goPreviousStep}
+            />
+          }
+          kind={dialogKind}
+          stepLabel={stepBadge}
+          title={dialogTitle}
         >
-          <DialogHeader className="px-8 pb-4 pt-7">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <DialogTitle className="text-[22px] font-bold leading-7 text-foreground">
-                  {step === "mode"
-                    ? "신규 등록"
-                    : step === "guardian"
-                      ? "신규 보호자 등록"
-                      : step === "patient"
-                        ? mode === "existing_guardian_patient"
-                          ? "기존 보호자에 신규 환자 등록"
-                          : "신규 환자 등록"
-                        : "등록 정보 확인"}
-                </DialogTitle>
-                {stepBadge ? (
-                  <Badge variant="secondary" className="h-6 rounded-md px-2 emr-text-metadata font-semibold">
-                    {stepBadge}
-                  </Badge>
-                ) : null}
-              </div>
-              <RegistrationDialogCloseButton
-                ariaLabel="환자/보호자 창 닫기"
-                onClick={requestClose}
-              />
-            </div>
-            <DialogDescription className="sr-only">
-              환자/보호자 등록 양식입니다.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-7">
-            <div className="flex flex-col gap-6 px-1 pb-6 pt-3">
               {step === "mode" ? (
                 <RadioGroup
                   aria-label="등록 유형 선택"
@@ -3308,421 +3340,365 @@ function PatientGuardianRegistrationButton({
 
               {step === "guardian" ? (
                 <>
-                  <RegistrationFormSection separated={false} title="기본 정보">
-                    <div className="grid grid-cols-2 gap-x-7 gap-y-5">
-                      <RegistrationFormField
-                        error={errors.guardianName}
-                        label="이름"
-                        required
-                      >
-                        <Input
-                          aria-label="보호자명"
-                          className="h-10 bg-card"
-                          placeholder="이름을 입력해주세요"
-                          value={guardianDraft.name}
-                          onValueChange={(name) =>
-                            setGuardianDraft((current) => ({ ...current, name }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <RegistrationFormField error={errors.guardianBirthDate} label="생년월일">
-                        <Input
-                          aria-label="보호자 생년월일"
-                          className="h-10 bg-card"
-                          placeholder="YYYY-MM-DD"
-                          value={guardianDraft.birthDate}
-                          onValueChange={(birthDate) =>
-                            setGuardianDraft((current) => ({
-                              ...current,
-                              birthDate: formatBirthDateInput(birthDate),
-                            }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <RegistrationFormField
-                        className="col-span-2"
-                        error={errors.guardianMobilePhone}
-                        label="휴대폰 번호"
-                        required
-                      >
-                        <Input
-                          aria-label="보호자 휴대전화"
-                          className="h-10 bg-card"
-                          inputMode="numeric"
-                          placeholder="휴대폰 번호를 입력해주세요"
-                          value={guardianDraft.mobilePhone}
-                          onValueChange={(mobilePhone) =>
-                            setGuardianDraft((current) => ({
-                              ...current,
-                              mobilePhone: formatKoreanPhoneNumber(mobilePhone),
-                            }))
-                          }
-                        />
-                      </RegistrationFormField>
-                    </div>
-                  </RegistrationFormSection>
-                  <RegistrationFormSection title="연락처 및 주소">
-                    <div className="grid grid-cols-2 gap-x-7 gap-y-5">
-                      <RegistrationFormField label="추가 연락처">
-                        <Input
-                          className="h-10 bg-card"
-                          inputMode="numeric"
-                          placeholder="010-0000-0000"
-                          value={guardianDraft.phone}
-                          onValueChange={(phone) =>
-                            setGuardianDraft((current) => ({
-                              ...current,
-                              phone: formatKoreanPhoneNumber(phone),
-                            }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <RegistrationFormField label="이메일">
-                        <Input
-                          className="h-10 bg-card"
-                          placeholder="example@email.com"
-                          value={guardianDraft.email}
-                          onValueChange={(email) =>
-                            setGuardianDraft((current) => ({ ...current, email }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <RegistrationFormField className="col-span-2" label="주소">
-                        <KoreanAddressFields
-                          detail={guardianDraft.addressDetail}
-                          postalCode={guardianDraft.addressPostalCode}
-                          road={guardianDraft.addressRoad}
-                          onDetailChange={(addressDetail) =>
-                            setGuardianDraft((current) => ({ ...current, addressDetail }))
-                          }
-                          onPostalCodeChange={(addressPostalCode) =>
-                            setGuardianDraft((current) => ({ ...current, addressPostalCode }))
-                          }
-                          onRoadChange={(addressRoad) =>
-                            setGuardianDraft((current) => ({ ...current, addressRoad }))
-                          }
-                        />
-                      </RegistrationFormField>
-                    </div>
-                  </RegistrationFormSection>
-                  <RegistrationFormSection title="메모 및 동의">
-                    <div className="grid gap-6">
-                      <RegistrationFormField label="메모">
-                        <Textarea
-                          className="min-h-[88px] resize-none bg-card"
-                          placeholder="특이사항이나 요청사항을 입력해주세요"
-                          value={guardianDraft.memo}
-                          onChange={(event) =>
-                            setGuardianDraft((current) => ({
-                              ...current,
-                              memo: event.target.value,
-                            }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <div className="rounded-lg border bg-card p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="emr-text-dense font-semibold text-foreground">
-                              전자서명
-                            </div>
-                            <div className="mt-1 emr-text-metadata text-muted-foreground">
-                              개인정보 수집 동의는 태블릿 서명 완료 후 등록할 수 있습니다.
-                            </div>
-                          </div>
-                          <Badge
-                            variant={
-                              guardianDraft.signatureStatus === "completed"
-                                ? "default"
-                                : "outline"
-                            }
-                          >
-                            {guardianDraft.signatureStatus === "completed"
-                              ? "서명 완료"
-                              : guardianDraft.signatureStatus === "pending"
-                                ? "서명 대기"
-                                : "미요청"}
-                          </Badge>
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
+                  <EmrRegistrationSection separated={false} title="보호자 정보">
+                    <EmrRegistrationFieldRow error={errors.guardianName} label="보호자명" required>
+                      <Input
+                        aria-label="보호자명"
+                        className={emrRegistrationControlClassName}
+                        placeholder="보호자명을 입력해주세요"
+                        value={guardianDraft.name}
+                        onValueChange={(name) =>
+                          setGuardianDraft((current) => ({ ...current, name }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow error={errors.guardianBirthDate} label="생년월일">
+                      <Input
+                        aria-label="보호자 생년월일"
+                        className={emrRegistrationControlClassName}
+                        placeholder="YYYY-MM-DD"
+                        value={guardianDraft.birthDate}
+                        onValueChange={(birthDate) =>
+                          setGuardianDraft((current) => ({
+                            ...current,
+                            birthDate: formatBirthDateInput(birthDate),
+                          }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                  </EmrRegistrationSection>
+                  <EmrRegistrationSection title="연락처 및 주소">
+                    <EmrRegistrationFieldRow error={errors.guardianMobilePhone} label="전화번호" required>
+                      <Input
+                        aria-label="보호자 휴대전화"
+                        className={emrRegistrationControlClassName}
+                        inputMode="numeric"
+                        placeholder="휴대폰 번호를 입력해주세요"
+                        value={guardianDraft.mobilePhone}
+                        onValueChange={(mobilePhone) =>
+                          setGuardianDraft((current) => ({
+                            ...current,
+                            mobilePhone: formatKoreanPhoneNumber(mobilePhone),
+                          }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow label="이메일">
+                      <Input
+                        className={emrRegistrationControlClassName}
+                        placeholder="example@email.com"
+                        value={guardianDraft.email}
+                        onValueChange={(email) =>
+                          setGuardianDraft((current) => ({ ...current, email }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow label="주소">
+                      <EmrRegistrationAddressControls
+                        postalCode={
+                          <Input
+                            aria-label="우편번호"
+                            className={emrRegistrationControlClassName}
+                            inputMode="numeric"
+                            placeholder="우편번호"
+                            value={guardianDraft.addressPostalCode}
+                            onValueChange={(value) =>
                               setGuardianDraft((current) => ({
                                 ...current,
-                                signatureStatus: "pending",
+                                addressPostalCode: value.replace(/\D/g, "").slice(0, 5),
                               }))
                             }
-                          >
-                            태블릿 서명 요청
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            disabled={guardianDraft.signatureStatus !== "pending"}
-                            onClick={() =>
-                              setGuardianDraft((current) => ({
-                                ...current,
-                                privacyConsent: true,
-                                signatureStatus: "completed",
-                              }))
+                          />
+                        }
+                        road={
+                          <Input
+                            aria-label="기본 주소"
+                            className={emrRegistrationControlClassName}
+                            placeholder="도로명 또는 지번 주소를 입력해주세요"
+                            value={guardianDraft.addressRoad}
+                            onValueChange={(addressRoad) =>
+                              setGuardianDraft((current) => ({ ...current, addressRoad }))
                             }
-                          >
-                            서명 완료 처리
-                          </Button>
-                          <label className="flex items-center gap-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
-                            <Checkbox checked={guardianDraft.privacyConsent} disabled />
-                            개인정보 수집 동의
-                          </label>
-                          <label className="flex items-center gap-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
-                            <Checkbox
-                              checked={guardianDraft.marketingConsent}
-                              onCheckedChange={(marketingConsent) =>
-                                setGuardianDraft((current) => ({
-                                  ...current,
-                                  marketingConsent: Boolean(marketingConsent),
-                                }))
-                              }
-                            />
-                            마케팅 수신 동의
-                          </label>
-                        </div>
-                        {errors.privacyConsent ? (
-                          <div className="mt-3 emr-text-metadata font-medium text-[var(--emr-status-danger-text)]">
-                            {errors.privacyConsent}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </RegistrationFormSection>
+                          />
+                        }
+                        detail={
+                          <Input
+                            aria-label="상세 주소"
+                            className={emrRegistrationControlClassName}
+                            placeholder="상세주소를 입력해주세요"
+                            value={guardianDraft.addressDetail}
+                            onValueChange={(addressDetail) =>
+                              setGuardianDraft((current) => ({ ...current, addressDetail }))
+                            }
+                          />
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                  </EmrRegistrationSection>
+                  <EmrRegistrationSection title="메모 및 개인정보 동의">
+                    <EmrRegistrationFieldRow label="보호자 메모" labelWidth="narrow">
+                      <Textarea
+                        className={emrRegistrationTextareaClassName}
+                        placeholder="특이사항이나 요청사항을 입력해주세요"
+                        value={guardianDraft.memo}
+                        onChange={(event) =>
+                          setGuardianDraft((current) => ({
+                            ...current,
+                            memo: event.target.value,
+                          }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationSignatureConsentCard
+                      error={errors.privacyConsent}
+                      marketingConsent={guardianDraft.marketingConsent}
+                      privacyConsent={guardianDraft.privacyConsent}
+                      signatureStatus={guardianDraft.signatureStatus}
+                      onCompleteSignature={() =>
+                        setGuardianDraft((current) => ({
+                          ...current,
+                          privacyConsent: true,
+                          signatureStatus: "completed",
+                        }))
+                      }
+                      onMarketingConsentChange={(marketingConsent) =>
+                        setGuardianDraft((current) => ({
+                          ...current,
+                          marketingConsent,
+                        }))
+                      }
+                      onRequestSignature={() =>
+                        setGuardianDraft((current) => ({
+                          ...current,
+                          signatureStatus: "pending",
+                        }))
+                      }
+                    />
+                  </EmrRegistrationSection>
                 </>
               ) : null}
 
               {step === "patient" ? (
                 <>
                   {mode === "existing_guardian_patient" ? (
-                    <RegistrationFormSection separated={false} title="보호자 선택">
-                      <div className="grid gap-3">
-                        <RegistrationFormField
-                          error={errors.selectedGuardianId}
-                          label="보호자 검색"
-                          required
-                        >
-                          <Popover open={guardianPopoverOpen} onOpenChange={setGuardianPopoverOpen}>
-                            <PopoverTrigger
-                              nativeButton={false}
-                              render={<div className="relative" />}
-                            >
-                              <CdsActionsSearchIcon
-                                aria-hidden="true"
-                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
-                              />
-                              <Input
-                                aria-label="기존 보호자 검색"
-                                className="h-10 bg-card pl-9"
-                                placeholder="보호자명 또는 휴대전화 검색"
-                                value={guardianQuery}
-                                onFocus={() => setGuardianPopoverOpen(true)}
-                                onValueChange={(query) => {
-                                  setGuardianQuery(query);
-                                  setGuardianPopoverOpen(true);
-                                  if (selectedGuardian && query !== selectedGuardianSearchDisplay) {
-                                    setSelectedGuardianId("");
-                                    setPatientDraft((current) => ({
-                                      ...current,
-                                      existingGuardianId: "",
-                                      guardianMobilePhone: "",
-                                      guardianName: "",
-                                    }));
-                                  }
-                                }}
-                              />
-                            </PopoverTrigger>
-                            <PopoverContent
-                              align="start"
-                              className="max-h-72 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
-                              initialFocus={false}
-                            >
-                              <div role="listbox" aria-label="기존 보호자 목록" className="grid gap-1">
-                                {guardianMatches.length ? (
-                                  guardianMatches.map((guardian) => {
-                                    const guardianDisplay = getGuardianSearchDisplay(
-                                      guardian,
-                                      patients,
-                                      patientGuardians
-                                    );
+                    <EmrRegistrationSection separated={false} title="보호자 선택">
+                      <EmrRegistrationFieldRow
+                        error={errors.selectedGuardianId}
+                        label="보호자 검색"
+                        required
+                      >
+                        <Popover open={guardianPopoverOpen} onOpenChange={setGuardianPopoverOpen}>
+                          <PopoverTrigger
+                            nativeButton={false}
+                            render={<div className="relative" />}
+                          >
+                            <CdsActionsSearchIcon
+                              aria-hidden="true"
+                              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
+                            />
+                            <Input
+                              aria-label="기존 보호자 검색"
+                              className={cn(emrRegistrationControlClassName, "pl-9")}
+                              placeholder="보호자명 또는 휴대전화 검색"
+                              value={guardianQuery}
+                              onFocus={() => setGuardianPopoverOpen(true)}
+                              onValueChange={(query) => {
+                                setGuardianQuery(query);
+                                setGuardianPopoverOpen(true);
+                                if (selectedGuardian && query !== selectedGuardianSearchDisplay) {
+                                  setSelectedGuardianId("");
+                                  setPatientDraft((current) => ({
+                                    ...current,
+                                    existingGuardianId: "",
+                                    guardianMobilePhone: "",
+                                    guardianName: "",
+                                  }));
+                                }
+                              }}
+                            />
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="start"
+                            className="max-h-72 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
+                            initialFocus={false}
+                          >
+                            <div role="listbox" aria-label="기존 보호자 목록" className="grid gap-1">
+                              {guardianMatches.length ? (
+                                guardianMatches.map((guardian) => {
+                                  const guardianDisplay = getGuardianSearchDisplay(
+                                    guardian,
+                                    patients,
+                                    patientGuardians
+                                  );
 
-                                    return (
-                                      <button
-                                        key={guardian.id}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={selectedGuardianId === guardian.id}
-                                        className={cn(
-                                          "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)]",
-                                          selectedGuardianId === guardian.id &&
-                                            "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
-                                        )}
-                                        onMouseDown={(event) => event.preventDefault()}
-                                        onClick={() => {
-                                          setGuardianQuery(guardianDisplay);
-                                          setSelectedGuardianId(guardian.id);
-                                          setPatientDraft((current) => ({
-                                            ...current,
-                                            existingGuardianId: guardian.id,
-                                            guardianMobilePhone: guardian.mobilePhone ?? "",
-                                            guardianName: guardian.name,
-                                          }));
-                                          setErrors((current) => ({
-                                            ...current,
-                                            selectedGuardianId: undefined,
-                                          }));
-                                          setGuardianPopoverOpen(false);
-                                        }}
-                                      >
-                                        <span className="min-w-0 truncate">
-                                          <span className="emr-text-dense font-semibold">
-                                            {guardian.name}
-                                          </span>
-                                          <span className="ml-1 emr-text-metadata text-muted-foreground">
-                                            {guardian.mobilePhone ?? "연락처 미입력"} ·{" "}
-                                            {getGuardianPatientSummary(guardian.id, patients, patientGuardians)}
-                                          </span>
+                                  return (
+                                    <button
+                                      key={guardian.id}
+                                      type="button"
+                                      role="option"
+                                      aria-selected={selectedGuardianId === guardian.id}
+                                      className={cn(
+                                        "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)]",
+                                        selectedGuardianId === guardian.id &&
+                                          "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
+                                      )}
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => {
+                                        setGuardianQuery(guardianDisplay);
+                                        setSelectedGuardianId(guardian.id);
+                                        setPatientDraft((current) => ({
+                                          ...current,
+                                          existingGuardianId: guardian.id,
+                                          guardianMobilePhone: guardian.mobilePhone ?? "",
+                                          guardianName: guardian.name,
+                                        }));
+                                        setErrors((current) => ({
+                                          ...current,
+                                          selectedGuardianId: undefined,
+                                        }));
+                                        setGuardianPopoverOpen(false);
+                                      }}
+                                    >
+                                      <span className="min-w-0 truncate">
+                                        <span className="emr-text-dense font-semibold">
+                                          {guardian.name}
                                         </span>
-                                        <Badge variant={selectedGuardianId === guardian.id ? "default" : "outline"}>
-                                          {selectedGuardianId === guardian.id ? "선택됨" : "기존 보호자"}
-                                        </Badge>
-                                      </button>
-                                    );
-                                  })
-                                ) : (
-                                  <div className="px-2.5 py-2 emr-text-metadata text-muted-foreground">
-                                    일치하는 보호자가 없습니다.
-                                  </div>
-                                )}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </RegistrationFormField>
-                        {selectedGuardian ? (
-                          <details className="group rounded-lg border bg-[var(--emr-surface-muted)] p-3" open>
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 emr-text-dense font-semibold text-foreground">
-                              <span className="flex min-w-0 items-center gap-2">
-                                <span className="truncate">
-                                  {selectedGuardian.name} 보호자의 동물
-                                </span>
-                                <Badge variant="outline" className="shrink-0">
-                                  {selectedGuardianPatients.length}마리
-                                </Badge>
-                              </span>
-                              <CdsNavigationChevronDownIcon
-                                className="size-4 shrink-0 text-[var(--emr-text-tertiary)] transition-transform group-open:rotate-180"
-                                aria-hidden="true"
-                              />
-                            </summary>
-                            <div className="mt-3 grid gap-2">
-                              {selectedGuardianPatients.length ? (
-                                selectedGuardianPatients.map((patient) => (
-                                  <div
-                                    key={patient.id}
-                                    className="flex min-w-0 items-center gap-2 rounded-md border bg-card px-3 py-2"
-                                  >
-                                    <span className="shrink-0 emr-text-dense font-semibold text-foreground">
-                                      {patient.name}
-                                    </span>
-                                    <span className="truncate emr-text-metadata text-muted-foreground">
-                                      {[patient.breed, getPatientSexLabel(patient), getPatientDisplayAge(patient)]
-                                        .filter(Boolean)
-                                        .join(" · ")}
-                                    </span>
-                                  </div>
-                                ))
+                                        <span className="ml-1 emr-text-metadata text-muted-foreground">
+                                          {guardian.mobilePhone ?? "연락처 미입력"} ·{" "}
+                                          {getGuardianPatientSummary(guardian.id, patients, patientGuardians)}
+                                        </span>
+                                      </span>
+                                      <Badge variant={selectedGuardianId === guardian.id ? "default" : "outline"}>
+                                        {selectedGuardianId === guardian.id ? "선택됨" : "기존 보호자"}
+                                      </Badge>
+                                    </button>
+                                  );
+                                })
                               ) : (
-                                <div className="rounded-md border bg-card px-3 py-2 emr-text-metadata text-muted-foreground">
-                                  연결된 동물이 없습니다.
+                                <div className="px-2.5 py-2 emr-text-metadata text-muted-foreground">
+                                  일치하는 보호자가 없습니다.
                                 </div>
                               )}
                             </div>
-                          </details>
-                        ) : null}
-                      </div>
-                    </RegistrationFormSection>
-                  ) : null}
-                  <RegistrationFormSection
-                    separated={mode === "existing_guardian_patient"}
-                    title="동물 정보"
-                  >
-                    <div className="grid grid-cols-2 gap-x-7 gap-y-5">
-                      <RegistrationFormField error={errors.patientName} label="동물 이름" required>
-                        <Input
-                          aria-label="환자명"
-                          className="h-10 bg-card"
-                          placeholder="동물 이름을 입력해주세요"
-                          value={patientDraft.name}
-                          onValueChange={(name) =>
-                            setPatientDraft((current) => ({ ...current, name }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <RegistrationFormField label="동물 종류" required>
-                        <Select
-                          value={patientDraft.species}
-                          onValueChange={(species) =>
-                            setPatientDraft((current) => {
-                              const nextSpecies = species as Species;
-                              const mixBreed = getMixBreedSuggestion(nextSpecies);
-
-                              return {
-                                ...current,
-                                breed:
-                                  current.isMixed && mixBreed ? mixBreed : current.breed,
-                                species: nextSpecies,
-                              };
-                            })
-                          }
-                        >
-                          <SelectTrigger aria-label="종" size="xl" className="w-full bg-card">
-                            <span className="flex flex-1 text-left">
-                              {getNewPatientSpeciesLabel(patientDraft.species)}
+                          </PopoverContent>
+                        </Popover>
+                      </EmrRegistrationFieldRow>
+                      {selectedGuardian ? (
+                        <details className="group rounded-lg border bg-[var(--emr-surface-muted)] p-3" open>
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 emr-text-dense font-semibold text-foreground">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="truncate">
+                                {selectedGuardian.name} 보호자의 동물
+                              </span>
+                              <Badge variant="outline" className="shrink-0">
+                                {selectedGuardianPatients.length}마리
+                              </Badge>
                             </span>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {newPatientSpeciesOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </RegistrationFormField>
-                      <RegistrationFormField
-                        error={errors.breed}
-                        label="주 품종"
-                        required
-                        actions={
-                          <label className="flex items-center gap-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
-                            <Switch
-                              checked={patientDraft.isMixed}
-                              onCheckedChange={(isMixed) =>
-                                setPatientDraft((current) => ({
-                                  ...current,
-                                  breed: isMixed
-                                    ? getMixBreedSuggestion(current.species) || current.breed
-                                    : current.breed,
-                                  isMixed,
-                                }))
-                              }
+                            <CdsNavigationChevronDownIcon
+                              className="size-4 shrink-0 text-[var(--emr-text-tertiary)] transition-transform group-open:rotate-180"
+                              aria-hidden="true"
                             />
+                          </summary>
+                          <div className="mt-3 grid gap-2">
+                            {selectedGuardianPatients.length ? (
+                              selectedGuardianPatients.map((patient) => (
+                                <div
+                                  key={patient.id}
+                                  className="flex min-w-0 items-center gap-2 rounded-md border bg-card px-3 py-2"
+                                >
+                                  <span className="shrink-0 emr-text-dense font-semibold text-foreground">
+                                    {patient.name}
+                                  </span>
+                                  <span className="truncate emr-text-metadata text-muted-foreground">
+                                    {[patient.breed, getPatientSexLabel(patient), getPatientDisplayAge(patient)]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="rounded-md border bg-card px-3 py-2 emr-text-metadata text-muted-foreground">
+                                연결된 동물이 없습니다.
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                      ) : null}
+                    </EmrRegistrationSection>
+                  ) : null}
+                  <EmrRegistrationSection
+                    separated={mode === "existing_guardian_patient"}
+                    title="환자 정보"
+                  >
+                    <EmrRegistrationFieldRow error={errors.patientName} label="환자명" required>
+                      <Input
+                        aria-label="환자명"
+                        className={emrRegistrationControlClassName}
+                        placeholder="환자명을 입력해주세요"
+                        value={patientDraft.name}
+                        onValueChange={(name) =>
+                          setPatientDraft((current) => ({ ...current, name }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow label="종류" required>
+                      <Select
+                        value={patientDraft.species}
+                        onValueChange={(species) =>
+                          setPatientDraft((current) => {
+                            const nextSpecies = species as Species;
+                            const mixBreed = getMixBreedSuggestion(nextSpecies);
+
+                            return {
+                              ...current,
+                              breed:
+                                current.isMixed && mixBreed ? mixBreed : current.breed,
+                              species: nextSpecies,
+                            };
+                          })
+                        }
+                      >
+                        <SelectTrigger aria-label="종" className="w-full bg-card">
+                          <span className="flex flex-1 text-left">
+                            {getNewPatientSpeciesLabel(patientDraft.species)}
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {newPatientSpeciesOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow error={errors.breed} label="품종" required>
+                      <EmrRegistrationInlineControl
+                        className="grid grid-cols-[minmax(0,206px)_50px]"
+                        control={
+                          <EmrRegistrationSwitchLabel
+                            control={
+                              <Switch
+                                checked={patientDraft.isMixed}
+                                onCheckedChange={(isMixed) =>
+                                  setPatientDraft((current) => ({
+                                    ...current,
+                                    breed: isMixed
+                                      ? getMixBreedSuggestion(current.species) || current.breed
+                                      : current.breed,
+                                    isMixed,
+                                  }))
+                                }
+                              />
+                            }
+                          >
                             믹스
-                          </label>
+                          </EmrRegistrationSwitchLabel>
                         }
                       >
                         <BreedAutocomplete
                           ariaLabel="품종"
-                          className="h-10 bg-card"
+                          className={emrRegistrationControlClassName}
                           placeholder="주 품종을 선택해주세요"
                           species={patientDraft.species}
                           value={patientDraft.breed}
@@ -3730,69 +3706,54 @@ function PatientGuardianRegistrationButton({
                             setPatientDraft((current) => ({ ...current, breed }))
                           }
                         />
-                      </RegistrationFormField>
-                      <RegistrationFormField label="성별">
-                        <Select
-                          value={patientDraft.sex}
-                          onValueChange={(sex) =>
-                            setPatientDraft((current) => ({
-                              ...current,
-                              sex: sex as NewPatientSexValue,
-                            }))
-                          }
-                        >
-                          <SelectTrigger aria-label="성별" size="xl" className="w-full bg-card">
-                            <span className="flex flex-1 text-left">
-                              {getNewPatientSexLabel(patientDraft.sex)}
-                            </span>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {newPatientSexOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </RegistrationFormField>
-                      {patientDraft.isMixed ? (
-                        <RegistrationFormField className="col-span-2" label="추가 품종">
-                          <BreedMultiSelect
-                            ariaLabel="추가 품종"
-                            className="min-h-10 bg-card"
-                            placeholder="믹스의 경우 추가 품종을 선택해주세요"
-                            species={patientDraft.species}
-                            value={patientDraft.additionalBreed}
-                            onValueChange={(additionalBreed) =>
-                              setPatientDraft((current) => ({ ...current, additionalBreed }))
-                            }
-                          />
-                        </RegistrationFormField>
-                      ) : null}
-                    </div>
-                  </RegistrationFormSection>
-                  <RegistrationFormSection title="추가 정보">
-                    <div className="grid grid-cols-2 gap-x-7 gap-y-5">
-                      <RegistrationFormField
-                        error={errors.age}
-                        label="동물 나이"
-                        required
-                        actions={
-                          <label className="flex items-center gap-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
-                            <Switch
-                              size="sm"
-                              checked={patientDraft.estimatedAge}
-                              onCheckedChange={(estimatedAge) =>
-                                setPatientDraft((current) => ({ ...current, estimatedAge }))
-                              }
-                            />
-                            추정
-                          </label>
+                      </EmrRegistrationInlineControl>
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow label="성별">
+                      <Select
+                        value={patientDraft.sex}
+                        onValueChange={(sex) =>
+                          setPatientDraft((current) => ({
+                            ...current,
+                            sex: sex as NewPatientSexValue,
+                          }))
                         }
                       >
-                        <div className="grid grid-cols-2 gap-2">
+                        <SelectTrigger aria-label="성별" className="w-full bg-card">
+                          <span className="flex flex-1 text-left">
+                            {getNewPatientSexLabel(patientDraft.sex)}
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {newPatientSexOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </EmrRegistrationFieldRow>
+                    {patientDraft.isMixed ? (
+                      <EmrRegistrationFieldRow label="추가 품종">
+                        <BreedMultiSelect
+                          ariaLabel="추가 품종"
+                          className="min-h-[var(--clair-control-height-md)] bg-card"
+                          placeholder="믹스의 경우 추가 품종을 선택해주세요"
+                          species={patientDraft.species}
+                          value={patientDraft.additionalBreed}
+                          onValueChange={(additionalBreed) =>
+                            setPatientDraft((current) => ({ ...current, additionalBreed }))
+                          }
+                        />
+                      </EmrRegistrationFieldRow>
+                    ) : null}
+                  </EmrRegistrationSection>
+                  <EmrRegistrationSection title="추가 정보">
+                    <EmrRegistrationFieldRow error={errors.age} label="나이" required>
+                      <EmrRegistrationAgeControls
+                        years={
                           <AgePartInput
                             ariaLabel="나이 년"
+                            inputClassName="h-[var(--clair-control-height-md)]"
                             unit="년"
                             value={patientDraft.ageYears}
                             onValueChange={(ageYears) =>
@@ -3806,8 +3767,11 @@ function PatientGuardianRegistrationButton({
                               }))
                             }
                           />
+                        }
+                        months={
                           <AgePartInput
                             ariaLabel="나이 개월"
+                            inputClassName="h-[var(--clair-control-height-md)]"
                             unit="개월"
                             value={patientDraft.ageMonths}
                             onValueChange={(ageMonths) =>
@@ -3821,177 +3785,126 @@ function PatientGuardianRegistrationButton({
                               }))
                             }
                           />
-                        </div>
-                      </RegistrationFormField>
-                      <RegistrationFormField label="생년월일">
-                        <Input
-                          aria-label="생년월일"
-                          className="h-10 bg-card"
-                          placeholder="YYYY-MM-DD"
-                          value={patientDraft.birthDate}
-                          onValueChange={(birthDate) =>
-                            setPatientDraft((current) => ({
-                              ...current,
-                              ageMonths: "",
-                              ageYears: "",
-                              birthDate: formatBirthDateInput(birthDate),
-                            }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <RegistrationFormField
-                        error={errors.microchipNo}
-                        label="마이크로칩"
-                      >
-                        <Input
-                          aria-label="마이크로칩"
-                          className="h-10 bg-card"
-                          inputMode="numeric"
-                          placeholder="15자리 마이크로칩 번호"
-                          value={patientDraft.microchipNo}
-                          onValueChange={(microchipNo) =>
-                            setPatientDraft((current) => ({ ...current, microchipNo }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <RegistrationFormField label="동물등록번호">
-                        <Input
-                          aria-label="동물등록번호"
-                          className="h-10 bg-card"
-                          placeholder="동물등록번호"
-                          value={patientDraft.patientRegistrationNo}
-                          onValueChange={(patientRegistrationNo) =>
-                            setPatientDraft((current) => ({
-                              ...current,
-                              patientRegistrationNo,
-                            }))
-                          }
-                        />
-                      </RegistrationFormField>
-                      <RegistrationFormField className="col-span-2" label="메모">
-                        <Textarea
-                          className="min-h-[88px] resize-none bg-card"
-                          placeholder="특이사항이나 요청사항을 입력해주세요"
-                          value={patientDraft.specialNote}
-                          onChange={(event) =>
-                            setPatientDraft((current) => ({
-                              ...current,
-                              specialNote: event.target.value,
-                            }))
-                          }
-                        />
-                      </RegistrationFormField>
-                    </div>
+                        }
+                        estimate={
+                          <EmrRegistrationSwitchLabel
+                            control={
+                              <Switch
+                                size="sm"
+                                checked={patientDraft.estimatedAge}
+                                onCheckedChange={(estimatedAge) =>
+                                  setPatientDraft((current) => ({ ...current, estimatedAge }))
+                                }
+                              />
+                            }
+                          >
+                            추정
+                          </EmrRegistrationSwitchLabel>
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow label="생년월일">
+                      <Input
+                        aria-label="생년월일"
+                        className={emrRegistrationControlClassName}
+                        placeholder="YYYY-MM-DD"
+                        value={patientDraft.birthDate}
+                        onValueChange={(birthDate) =>
+                          setPatientDraft((current) => ({
+                            ...current,
+                            ageMonths: "",
+                            ageYears: "",
+                            birthDate: formatBirthDateInput(birthDate),
+                          }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow error={errors.microchipNo} label="마이크로칩">
+                      <Input
+                        aria-label="마이크로칩"
+                        className={emrRegistrationControlClassName}
+                        inputMode="numeric"
+                        placeholder="15자리 마이크로칩 번호"
+                        value={patientDraft.microchipNo}
+                        onValueChange={(microchipNo) =>
+                          setPatientDraft((current) => ({ ...current, microchipNo }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                    <EmrRegistrationFieldRow label="동물등록번호">
+                      <Input
+                        aria-label="동물등록번호"
+                        className={emrRegistrationControlClassName}
+                        placeholder="동물등록번호"
+                        value={patientDraft.patientRegistrationNo}
+                        onValueChange={(patientRegistrationNo) =>
+                          setPatientDraft((current) => ({
+                            ...current,
+                            patientRegistrationNo,
+                          }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
+                  </EmrRegistrationSection>
+                  <EmrRegistrationSection title="메모">
+                    <EmrRegistrationFieldRow label="환자 메모" labelWidth="narrow">
+                      <Textarea
+                        className={emrRegistrationTextareaClassName}
+                        placeholder="특이사항이나 요청사항을 입력해주세요"
+                        value={patientDraft.specialNote}
+                        onChange={(event) =>
+                          setPatientDraft((current) => ({
+                            ...current,
+                            specialNote: event.target.value,
+                          }))
+                        }
+                      />
+                    </EmrRegistrationFieldRow>
                     {duplicatePatientName ? (
                       <div className="rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 emr-text-metadata font-medium text-[var(--emr-status-warning-text)]">
                         동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다. 실제 중복 여부를 확인해 주세요.
                       </div>
                     ) : null}
-                  </RegistrationFormSection>
+                  </EmrRegistrationSection>
                 </>
               ) : null}
 
               {step === "confirm" ? (
-                <div className="grid gap-3">
-                  <section className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]">
-                      <UserIcon className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="emr-text-dense font-semibold text-muted-foreground">보호자</span>
-                        <span className="truncate text-[16px] font-bold text-foreground">
-                          {mode === "new_guardian_patient"
-                            ? guardianDraft.name
-                            : selectedGuardian?.name}
-                        </span>
-                      </div>
-                      <div className="mt-1 truncate emr-text-metadata text-muted-foreground">
-                        {[
-                          mode === "new_guardian_patient"
-                            ? guardianDraft.mobilePhone
-                            : selectedGuardian?.mobilePhone ?? "연락처 미입력",
-                          mode === "new_guardian_patient"
-                            ? guardianDraft.birthDate || "생년월일 미입력"
-                            : selectedGuardianPatientCount
-                              ? `연결 환자 ${selectedGuardianPatientCount}마리`
-                              : "연결 환자 없음",
-                        ].join(" · ")}
-                      </div>
-                    </div>
-                  </section>
-                  <section className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]">
-                      <BoneIcon className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="emr-text-dense font-semibold text-muted-foreground">환자</span>
-                        <span className="truncate text-[16px] font-bold text-foreground">
-                          {patientDraft.name}
-                        </span>
-                      </div>
-                      <div className="mt-1 truncate emr-text-metadata text-muted-foreground">
-                        {[
-                          getNewPatientSpeciesLabel(patientDraft.species),
-                          patientDraft.breed || "품종 미입력",
-                          patientDraft.birthDate
-                            ? getAgeTextFromBirthDate(patientDraft.birthDate)
-                            : [
-                                patientDraft.ageYears && `${patientDraft.ageYears}년`,
-                                patientDraft.ageMonths && `${patientDraft.ageMonths}개월`,
-                              ]
-                                .filter(Boolean)
-                                .join(" "),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </div>
-                    </div>
-                  </section>
-                  <div className="rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-3 emr-text-metadata font-medium text-[var(--emr-status-info-text)]">
-                    등록을 누르면 위 정보가 현재 session 데이터에 저장됩니다.
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </ScrollArea>
-          <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-card px-8 py-4 sm:justify-between">
-            <Button variant="ghost" className="px-4 font-semibold" onClick={requestClose}>
-              취소
-            </Button>
-            <div className="flex shrink-0 items-center gap-2">
-              {step !== "mode" ? (
-                <Button
-                  variant="outline"
-                  className="px-4 font-semibold"
-                  onClick={() => {
-                    setErrors({});
-                    if (step === "guardian") setStep("mode");
-                    if (step === "patient") {
-                      setStep(mode === "new_guardian_patient" ? "guardian" : "mode");
+                <EmrRegistrationSection separated={false} title="신규 보호자/환자">
+                  <EmrRegistrationSummaryItem
+                    badge="보호자"
+                    details={[
+                      mode === "new_guardian_patient"
+                        ? guardianDraft.mobilePhone
+                        : selectedGuardian?.mobilePhone ?? "연락처 미입력",
+                      mode === "new_guardian_patient"
+                        ? guardianDraft.birthDate || "생년월일 미입력"
+                        : selectedGuardianPatientCount
+                          ? `연결 환자 ${selectedGuardianPatientCount}마리`
+                          : "연결 환자 없음",
+                    ]}
+                    icon={<UserIcon className="size-3.5" />}
+                    title={
+                      mode === "new_guardian_patient"
+                        ? guardianDraft.name
+                        : selectedGuardian?.name ?? "보호자 미지정"
                     }
-                    if (step === "confirm") setStep("patient");
-                  }}
-                >
-                  이전
-                </Button>
+                    tone="guardian"
+                  />
+                  <EmrRegistrationSummaryItem
+                    badge="환자"
+                    details={[
+                      getNewPatientSpeciesLabel(patientDraft.species),
+                      patientDraft.breed || "품종 미입력",
+                      patientAgeSummary || "나이 미입력",
+                    ]}
+                    icon={<BoneIcon className="size-3.5" />}
+                    title={patientDraft.name}
+                    tone="patient"
+                  />
+                </EmrRegistrationSection>
               ) : null}
-              <Button
-                className="px-5 font-semibold"
-                disabled={!canGoNext || submitting}
-                onClick={() => {
-                  if (step === "mode") goNextFromMode();
-                  if (step === "guardian") goNextFromGuardian();
-                  if (step === "patient") goNextFromPatient();
-                  if (step === "confirm") commitRegistration();
-                }}
-              >
-                {step === "confirm" ? (submitting ? "등록 중" : "등록") : "다음"}
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
+        </EmrRegistrationDialogShell>
       </Dialog>
 
       <Dialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
