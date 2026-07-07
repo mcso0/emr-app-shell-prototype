@@ -64,3 +64,7 @@ The reference direction is a quiet centered login card on a broad neutral canvas
 ## Closeout
 
 - `docs/completed/design/2026-05-24-den-277-login-production-entry-polish-report.html`
+
+## Follow-up Notes
+
+- 2026-07-07: Added a logo-only animated workspace entry loading screen for post-login route transition and protected workspace access checks. No auth provider, session, permission, Supabase, or redirect policy behavior was changed.

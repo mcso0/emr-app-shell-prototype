@@ -14,6 +14,7 @@ import {
 } from "react";
 import loginLogoMark from "../../../logo/logo48*48.svg";
 import { CheckIcon } from "@/components/icons";
+import { WorkspaceEntryLoadingScreen } from "@/components/emr/workspace-entry-loading-screen";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -262,6 +263,7 @@ export function LoginForm() {
   const [selectedRole, setSelectedRole] = useState<MockAuthRole>("front_desk");
   const [storageMode, setStorageMode] = useState<MockSessionStorageMode>("session");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEnteringWorkspace, setIsEnteringWorkspace] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [passwordValue, setPasswordValue] = useState("");
@@ -425,6 +427,7 @@ export function LoginForm() {
             throw new Error("invite-otp-token-invalid");
           }
 
+          setIsEnteringWorkspace(true);
           router.replace(safeInviteNext);
           return;
         }
@@ -492,9 +495,11 @@ export function LoginForm() {
         });
       }
 
+      setIsEnteringWorkspace(true);
       router.replace(getSafeNextHref(searchParams.get("next")));
     } catch (caught) {
       const errorMessage = getCaughtErrorMessage(caught);
+      setIsEnteringWorkspace(false);
 
       if (
         !isInviteOtpLogin &&
@@ -523,6 +528,10 @@ export function LoginForm() {
       );
       setIsSubmitting(false);
     }
+  }
+
+  if (isEnteringWorkspace) {
+    return <WorkspaceEntryLoadingScreen data-testid="login-workspace-entry-loading" />;
   }
 
   return (
