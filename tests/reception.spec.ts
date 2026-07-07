@@ -2076,6 +2076,53 @@ test("registration remains 40px while reception drawer controls align 36px", asy
 }) => {
   await page.goto("/w/clair-demo/reception");
 
+  const registrationTrigger = page.getByRole("button", {
+    name: "신규 동물/보호자",
+    exact: true,
+  });
+  const scheduleTrigger = page.getByRole("button", {
+    name: "접수/예약",
+    exact: true,
+  });
+
+  await expect(registrationTrigger).toHaveCount(1);
+  await expect(scheduleTrigger).toHaveCount(1);
+  const registrationTriggerStyle = await registrationTrigger.evaluate(
+    (element) => {
+      const style = window.getComputedStyle(element);
+
+      return {
+        borderColor: style.borderTopColor,
+        borderStyle: style.borderTopStyle,
+        borderWidth: style.borderTopWidth,
+        className: element.className,
+      };
+    },
+  );
+  const scheduleTriggerStyle = await scheduleTrigger.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+
+    return {
+      borderColor: style.borderTopColor,
+      borderStyle: style.borderTopStyle,
+      borderWidth: style.borderTopWidth,
+      className: element.className,
+    };
+  });
+
+  expect(registrationTriggerStyle).toMatchObject({
+    borderStyle: "solid",
+    borderWidth: "1px",
+  });
+  expect(scheduleTriggerStyle).toMatchObject({
+    borderStyle: "solid",
+    borderWidth: "1px",
+  });
+  expect(registrationTriggerStyle.borderColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(scheduleTriggerStyle.borderColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(registrationTriggerStyle.className).toContain("group/button");
+  expect(scheduleTriggerStyle.className).toContain("group/button");
+
   await page
     .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
