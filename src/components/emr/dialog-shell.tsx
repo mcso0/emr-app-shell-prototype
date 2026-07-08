@@ -113,7 +113,7 @@ export function EmrDialogShell({
       {...props}
       data-variant={variant}
       showCloseButton={false}
-      className={cn("relative", layout.contentClassName, className)}
+      className={cn(layout.contentClassName, className)}
     >
       <DialogHeader className={cn(layout.headerClassName, headerClassName)}>
         <div className="min-w-0 pr-10">

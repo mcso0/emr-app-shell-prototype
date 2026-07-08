@@ -2143,7 +2143,11 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
       addressButton: rect(getByButtonText("주소 검색")),
       closeButton: rect(closeButton ?? undefined),
       dialog: {
+        centerX: round(dialogRect.left + dialogRect.width / 2),
+        centerY: round(dialogRect.top + dialogRect.height / 2),
         h: round(Number.parseFloat(dialogStyle.height)),
+        viewportCenterX: round(window.innerWidth / 2),
+        viewportCenterY: round(window.innerHeight / 2),
         w: round(Number.parseFloat(dialogStyle.width)),
       },
       iconCount: element.querySelectorAll("label svg").length,
@@ -2158,7 +2162,14 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
   expect(metrics).toMatchObject({
     addressButton: { h: 32, relX: 343, w: 81 },
     closeButton: { h: 32, relY: 10, right: 10, w: 32 },
-    dialog: { h: 714, w: 440 },
+    dialog: {
+      centerX: 960,
+      centerY: 540,
+      h: 714,
+      viewportCenterX: 960,
+      viewportCenterY: 540,
+      w: 440,
+    },
     iconCount: 7,
     label: { h: 32, relX: 16, w: 128 },
     memoTextarea: { h: 76, relX: 156, w: 268 },
