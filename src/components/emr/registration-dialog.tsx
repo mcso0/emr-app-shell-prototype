@@ -245,12 +245,18 @@ export function EmrRegistrationInlineControl({
 
 export function EmrRegistrationAddressControls({
   detail,
+  onSearchAddress,
   postalCode,
   road,
+  searchError,
+  searchLoading,
 }: {
   detail: ReactNode;
+  onSearchAddress?: () => void;
   postalCode: ReactNode;
   road: ReactNode;
+  searchError?: string;
+  searchLoading?: boolean;
 }) {
   return (
     <div className="grid gap-3">
@@ -260,12 +266,19 @@ export function EmrRegistrationAddressControls({
           type="button"
           variant="outline"
           className="w-[81px]"
+          disabled={searchLoading}
+          onClick={onSearchAddress}
         >
-          주소 검색
+          {searchLoading ? "검색 중" : "주소 검색"}
         </Button>
       </div>
       {road}
       {detail}
+      {searchError ? (
+        <div className="emr-text-metadata leading-4 text-[var(--emr-status-danger-text)]">
+          {searchError}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,8 +1,45 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+type MockKakaoPostcodeResult = {
+  readonly address: string;
+  readonly autoJibunAddress: string;
+  readonly autoRoadAddress: string;
+  readonly jibunAddress: string;
+  readonly roadAddress: string;
+  readonly userSelectedType: string;
+  readonly zonecode: string;
+};
+
 async function openWalkInReceptionForm(page: Page) {
   await page.getByTestId("schedule-check-in-button").click();
   await page.getByRole("menuitem", { name: "접수하기" }).click();
+}
+
+async function mockKakaoPostcodeSearch(page: Page, result: MockKakaoPostcodeResult) {
+  await page.addInitScript((mockResult: MockKakaoPostcodeResult) => {
+    type MockPostcodeOptions = {
+      readonly oncomplete: (data: MockKakaoPostcodeResult) => void;
+    };
+
+    class MockPostcode {
+      readonly options: MockPostcodeOptions;
+
+      constructor(options: MockPostcodeOptions) {
+        this.options = options;
+      }
+
+      open() {
+        this.options.oncomplete(mockResult);
+      }
+    }
+
+    Object.defineProperty(window, "kakao", {
+      configurable: true,
+      value: {
+        Postcode: MockPostcode,
+      },
+    });
+  }, result);
 }
 
 async function submitAppointmentCheckInForm(page: Page) {
@@ -1912,6 +1949,15 @@ test("server-backed patient guardian registration sends minimal reception payloa
   page,
 }) => {
   let capturedBody: Record<string, unknown> | null = null;
+  await mockKakaoPostcodeSearch(page, {
+    address: "서울 강남구 테헤란로 152",
+    autoJibunAddress: "",
+    autoRoadAddress: "",
+    jibunAddress: "서울 강남구 역삼동 737",
+    roadAddress: "서울 강남구 테헤란로 152",
+    userSelectedType: "R",
+    zonecode: "06000",
+  });
 
   await page.route(
     "**/api/workspaces/clair-demo/reception/patient-guardian-registration",
@@ -1980,8 +2026,16 @@ test("server-backed patient guardian registration sends minimal reception payloa
   await page
     .getByRole("menuitem", { name: "신규 환자/보호자 등록" })
     .click();
+  const registrationDialog = page.getByRole("dialog", { name: "신규 보호자 등록" });
   await page.getByLabel("보호자명").fill("김새봄");
+  await page.getByLabel("보호자 생년월일").fill("19931123");
   await page.getByLabel("보호자 휴대전화").fill("010-2222-3333");
+  await registrationDialog.getByRole("button", { name: "주소 검색" }).click();
+  await expect(registrationDialog.getByLabel("우편번호")).toHaveValue("06000");
+  await expect(registrationDialog.getByLabel("기본 주소")).toHaveValue(
+    "서울 강남구 테헤란로 152",
+  );
+  await registrationDialog.getByLabel("상세 주소").fill("5층");
   await page.getByRole("button", { name: "태블릿 서명 요청" }).click();
   await page.getByRole("button", { name: "서명 완료 처리" }).click();
   await page.getByRole("button", { name: "다음" }).click();
@@ -2000,6 +2054,7 @@ test("server-backed patient guardian registration sends minimal reception payloa
   expect(capturedBody).toMatchObject({
     mode: "new_guardian_patient",
     guardian: {
+      address: "(06000) 서울 강남구 테헤란로 152 5층",
       name: "김새봄",
       mobilePhone: "010-2222-3333",
       privacyConsent: true,

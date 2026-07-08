@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { useParams } from "next/navigation";
 import {
   CdsActionsPlusIcon,
@@ -86,6 +94,7 @@ import type {
   ReceptionPatientGuardianRegistrationInput,
   ReceptionPatientGuardianRegistrationResponse,
 } from "@/features/reception/patient-guardian-registration";
+import { useKakaoAddressSearch } from "@/features/reception/use-kakao-address-search";
 import type {
   CustomerGuardianProfileUpdateInput,
   CustomerGuardianProfileUpdateResult,
@@ -94,6 +103,7 @@ import type {
   CustomerPatientProfileUpdateInput,
   CustomerPatientProfileUpdateResult,
 } from "@/features/customer/server-patient-profile";
+import type { KakaoPostcodeSelectedAddress } from "@/lib/kakao-postcode";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import {
@@ -694,15 +704,21 @@ export function RegistrationFormSection({
 
 function KoreanAddressFields({
   detail,
+  onSearchAddress,
   postalCode,
   road,
+  searchError,
+  searchLoading,
   onDetailChange,
   onPostalCodeChange,
   onRoadChange,
 }: {
   detail: string;
+  onSearchAddress?: () => void;
   postalCode: string;
   road: string;
+  searchError?: string;
+  searchLoading?: boolean;
   onDetailChange: (value: string) => void;
   onPostalCodeChange: (value: string) => void;
   onRoadChange: (value: string) => void;
@@ -718,8 +734,15 @@ function KoreanAddressFields({
           value={postalCode}
           onValueChange={(value) => onPostalCodeChange(value.replace(/\D/g, "").slice(0, 5))}
         />
-        <Button type="button" variant="secondary" size="sm" className="h-8 px-2.5 emr-text-metadata font-semibold">
-          주소 검색
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="h-8 px-2.5 emr-text-metadata font-semibold"
+          disabled={searchLoading}
+          onClick={onSearchAddress}
+        >
+          {searchLoading ? "검색 중" : "주소 검색"}
         </Button>
       </div>
       <Input
@@ -736,6 +759,11 @@ function KoreanAddressFields({
         value={detail}
         onValueChange={onDetailChange}
       />
+      {searchError ? (
+        <div className="emr-text-metadata leading-4 text-[var(--emr-status-danger-text)]">
+          {searchError}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2267,6 +2295,17 @@ function NewGuardianDialog({
     marketingConsent: false,
     signatureStatus: "idle" as "idle" | "pending" | "completed",
   });
+  const handleAddressSelect = useCallback((address: KakaoPostcodeSelectedAddress) => {
+    setDraft((current) => ({
+      ...current,
+      addressPostalCode: address.postalCode,
+      addressRoad: address.baseAddress,
+    }));
+  }, []);
+  const guardianAddressSearch = useKakaoAddressSearch({
+    enabled: open,
+    onSelectAddress: handleAddressSelect,
+  });
 
   const reset = () => {
     setDraft({
@@ -2449,8 +2488,11 @@ function NewGuardianDialog({
                 <RegistrationFormField className="col-span-2" label="주소">
                   <KoreanAddressFields
                     detail={draft.addressDetail}
+                    onSearchAddress={guardianAddressSearch.openAddressSearch}
                     postalCode={draft.addressPostalCode}
                     road={draft.addressRoad}
+                    searchError={guardianAddressSearch.errorMessage}
+                    searchLoading={guardianAddressSearch.isLoading}
                     onDetailChange={(addressDetail) =>
                       setDraft((current) => ({ ...current, addressDetail }))
                     }
@@ -2933,6 +2975,20 @@ function PatientGuardianRegistrationButton({
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<RegistrationStep>("mode");
   const previousOpenRequestKeyRef = useRef(openRequestKey);
+  const handleGuardianAddressSelect = useCallback(
+    (address: KakaoPostcodeSelectedAddress) => {
+      setGuardianDraft((current) => ({
+        ...current,
+        addressPostalCode: address.postalCode,
+        addressRoad: address.baseAddress,
+      }));
+    },
+    []
+  );
+  const guardianAddressSearch = useKakaoAddressSearch({
+    enabled: open && mode === "new_guardian_patient" && step === "guardian",
+    onSelectAddress: handleGuardianAddressSelect,
+  });
 
   const selectedGuardian = guardians.find((guardian) => guardian.id === selectedGuardianId);
   const duplicateGuardian = guardianDraft.mobilePhone
@@ -3398,6 +3454,7 @@ function PatientGuardianRegistrationButton({
                     </EmrRegistrationFieldRow>
                     <EmrRegistrationFieldRow label="주소">
                       <EmrRegistrationAddressControls
+                        onSearchAddress={guardianAddressSearch.openAddressSearch}
                         postalCode={
                           <Input
                             aria-label="우편번호"
@@ -3435,6 +3492,8 @@ function PatientGuardianRegistrationButton({
                             }
                           />
                         }
+                        searchError={guardianAddressSearch.errorMessage}
+                        searchLoading={guardianAddressSearch.isLoading}
                       />
                     </EmrRegistrationFieldRow>
                   </EmrRegistrationSection>
