@@ -1625,6 +1625,11 @@ const formatReceptionSidePanelDate = (date: string) => {
   return `${year}.${month}.${day}`;
 };
 
+const formatReceptionSidePanelDateFromDateTime = (dateTime?: string) => {
+  const operatingDate = getOperatingDateFromIso(dateTime);
+  return operatingDate ? formatReceptionSidePanelDate(operatingDate) : "-";
+};
+
 const formatReceptionSidePanelTime = (dateTime?: string) => {
   const minutes = getOperatingMinutesFromIso(dateTime);
   if (minutes === undefined) return "-";
@@ -4119,7 +4124,8 @@ function ReceptionReservationDatePicker({
             size={compact ? "sm" : "lg"}
             className={cn(
               "w-full justify-between bg-card px-2.5 text-left font-normal",
-              compact && "h-8 emr-text-dense font-semibold",
+              compact &&
+                "h-[var(--clair-control-height-md)] bg-[var(--emr-reception-create-field-bg)] emr-control-text font-medium text-[var(--clair-color-atomic-neutral-800)]",
             )}
             aria-label="예약일"
           />
@@ -6715,7 +6721,16 @@ function ReceptionWalkInFormDrawer({
                     aria-label="담당의"
                     className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium data-placeholder:text-[var(--clair-color-atomic-neutral-500)]"
                   >
-                    <SelectValue placeholder="담당의를 선택해주세요" />
+                    {veterinarianId ? (
+                      <span className="flex min-w-0 flex-1 truncate text-left">
+                        {getReceptionVeterinarianSelectLabel(
+                          veterinarianId,
+                          veterinarians,
+                        )}
+                      </span>
+                    ) : (
+                      <SelectValue placeholder="담당의를 선택해주세요" />
+                    )}
                   </SelectTrigger>
                   <SelectContent
                     align="end"
@@ -7207,9 +7222,7 @@ function ReceptionReservationFormDrawer({
       ? initialVeterinarianId
       : undefined;
   const [veterinarianId, setVeterinarianId] = useState(
-    initialKnownVeterinarianId ??
-      veterinarians[0]?.id ??
-      unassignedVeterinarianValue,
+    initialKnownVeterinarianId ?? "",
   );
   const patientLookup = useReceptionPatientLookup({
     authSessionId: authSession?.id,
@@ -7313,6 +7326,7 @@ function ReceptionReservationFormDrawer({
 
   useEffect(() => {
     if (
+      !veterinarianId ||
       veterinarianId === unassignedVeterinarianValue ||
       veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
     ) {
@@ -7320,7 +7334,7 @@ function ReceptionReservationFormDrawer({
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setVeterinarianId(veterinarians[0]?.id ?? unassignedVeterinarianValue);
+    setVeterinarianId("");
   }, [veterinarianId, veterinarians]);
 
   useEffect(() => {
@@ -7369,11 +7383,12 @@ function ReceptionReservationFormDrawer({
         data-testid="reservation-create-drawer"
       >
         <ScrollArea className="min-h-0 flex-1">
-          <div className="px-4">
-            <ReceptionSidePanelSection title="환자/보호자">
+          <div className="flex flex-col gap-[var(--clair-spacing-16)] p-[var(--clair-spacing-16)]">
+            <ReceptionSidePanelSection title="환자/보호자" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
                 label="동물명"
+                variant="create"
               >
                 <div
                   className="relative"
@@ -7384,13 +7399,13 @@ function ReceptionReservationFormDrawer({
                   }}
                 >
                   <CdsActionsSearchIcon
-                    className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
+                    className="pointer-events-none absolute left-[var(--clair-spacing-10)] top-1/2 size-[var(--clair-spacing-16)] -translate-y-1/2 text-[var(--clair-color-atomic-neutral-500)]"
                     aria-hidden="true"
                   />
                   <Input
                     aria-label="환자 검색"
                     autoComplete="off"
-                    className="h-8 bg-card pl-8 pr-8 emr-text-dense font-semibold"
+                    className="bg-[var(--emr-reception-create-field-bg)] pl-[var(--clair-spacing-32)] pr-[var(--clair-spacing-32)] font-medium"
                     placeholder="환자를 선택해주세요"
                     value={patientLookup.lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
@@ -7402,7 +7417,7 @@ function ReceptionReservationFormDrawer({
                   {patientLookup.lookupQuery ? (
                     <button
                       type="button"
-                      className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="absolute right-[var(--clair-spacing-8)] top-1/2 flex size-[var(--clair-spacing-20)] -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
                       aria-label="환자 선택 초기화"
                       onClick={() => {
                         patientLookup.clearPatientSelection();
@@ -7468,10 +7483,12 @@ function ReceptionReservationFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsPeopleUserIcon className="size-3.5" />}
                 label="보호자명"
+                variant="create"
               >
                 <ReceptionSidePanelInput
                   readOnly
                   placeholder="환자 선택 시 표기됩니다"
+                  variant="create"
                   value={
                     selectedGuardian
                       ? `${selectedGuardian.name}${
@@ -7484,11 +7501,13 @@ function ReceptionReservationFormDrawer({
                 />
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="바이탈">
+            <ReceptionSidePanelSection title="바이탈" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsMedicalActivityIcon className="size-3.5" />}
                 label="체중"
+                variant="create"
               >
                 <div className="min-w-0">
                   <ReceptionSidePanelInput
@@ -7498,13 +7517,16 @@ function ReceptionReservationFormDrawer({
                     placeholder="체중을 입력해주세요"
                     unit="Kg"
                     value={weightKg}
+                    variant="create"
                     aria-invalid={weightInvalid || undefined}
                     className={
                       weightInvalid
                         ? "border-[var(--emr-status-danger-border)]"
                         : ""
                     }
-                    onValueChange={setWeightKg}
+                    onValueChange={(value) =>
+                      setWeightKg(value.replace(/[^\d.]/g, ""))
+                    }
                   />
                   {weightInvalid ? (
                     <p className="mt-1 emr-text-micro font-medium text-destructive">
@@ -7513,12 +7535,20 @@ function ReceptionReservationFormDrawer({
                   ) : null}
                 </div>
               </ReceptionSidePanelField>
+              <ReceptionSidePanelAddVitalButton
+                disabled={!selectedPatient}
+                onClick={() => {
+                  toast.info("추가 바이탈 입력은 후속 작업에서 연결됩니다.");
+                }}
+              />
             </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="담당의">
+            <ReceptionSidePanelSection title="담당의" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
                 label="담당의"
+                variant="create"
               >
                 <Select
                   value={veterinarianId}
@@ -7526,17 +7556,23 @@ function ReceptionReservationFormDrawer({
                 >
                   <SelectTrigger
                     aria-label="담당의"
-                    size="sm"
-                    className="w-full bg-card"
+                    className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium data-placeholder:text-[var(--clair-color-atomic-neutral-500)]"
                   >
-                    <span className="flex min-w-0 flex-1 truncate text-left">
-                      {getReceptionVeterinarianSelectLabel(
-                        veterinarianId,
-                        veterinarians,
-                      )}
-                    </span>
+                    {veterinarianId ? (
+                      <span className="flex min-w-0 flex-1 truncate text-left">
+                        {getReceptionVeterinarianSelectLabel(
+                          veterinarianId,
+                          veterinarians,
+                        )}
+                      </span>
+                    ) : (
+                      <SelectValue placeholder="담당의를 선택해주세요" />
+                    )}
                   </SelectTrigger>
-                  <SelectContent align="end" className="min-w-[224px]">
+                  <SelectContent
+                    align="end"
+                    className="min-w-[var(--emr-reception-create-select-content-min-width)]"
+                  >
                     <SelectGroup>
                       <SelectItem value={unassignedVeterinarianValue}>
                         수의사 미지정
@@ -7551,11 +7587,13 @@ function ReceptionReservationFormDrawer({
                 </Select>
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="예약일자/시간">
+            <ReceptionSidePanelSection title="예약 정보" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsFilesCalendarIcon className="size-3.5" />}
                 label="예약일"
+                variant="create"
               >
                 <ReceptionReservationDatePicker
                   compact
@@ -7567,6 +7605,7 @@ function ReceptionReservationFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsFilesClockIcon className="size-3.5" />}
                 label="예약시간"
+                variant="create"
               >
                 <div className="min-w-0">
                   <Select
@@ -7576,15 +7615,17 @@ function ReceptionReservationFormDrawer({
                   >
                     <SelectTrigger
                       aria-label="예약시간"
-                      size="sm"
-                      className="w-full bg-card"
+                      className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium"
                     >
                       <span className="flex min-w-0 flex-1 truncate text-left">
                         {selectedTimeOption?.label ??
                           getScheduleTimeLabelFromMinutes(timeMinutes)}
                       </span>
                     </SelectTrigger>
-                    <SelectContent align="end" className="min-w-[224px]">
+                    <SelectContent
+                      align="end"
+                      className="min-w-[var(--emr-reception-create-select-content-min-width)]"
+                    >
                       <SelectGroup>
                         {timeOptions.map((option) => (
                           <SelectItem
@@ -7609,21 +7650,24 @@ function ReceptionReservationFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsMedicalActivityIcon className="size-3.5" />}
                 label="예상소요시간"
+                variant="create"
               >
                 <Select
                   value={duration}
                   onValueChange={(value) => value && setDuration(value)}
                 >
                   <SelectTrigger
-                    aria-label="예상시간"
-                    size="sm"
-                    className="w-full bg-card"
+                    aria-label="예상소요시간"
+                    className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium"
                   >
                     <span className="flex min-w-0 flex-1 truncate text-left">
                       {duration}
                     </span>
                   </SelectTrigger>
-                  <SelectContent align="end" className="min-w-[224px]">
+                  <SelectContent
+                    align="end"
+                    className="min-w-[var(--emr-reception-create-select-content-min-width)]"
+                  >
                     <SelectGroup>
                       {durationOptions.map((item) => (
                         <SelectItem key={item} value={item}>
@@ -7635,16 +7679,18 @@ function ReceptionReservationFormDrawer({
                 </Select>
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="예약 메모">
+            <ReceptionSidePanelSection title="예약 메모" variant="create">
               <ReceptionSidePanelField
                 align="start"
                 icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
                 label="예약 메모"
+                variant="create"
               >
                 <Textarea
                   aria-label="예약 메모"
-                  className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                  className="min-h-[var(--emr-reception-create-textarea-min-height)] resize-none bg-[var(--emr-reception-create-field-bg)] font-medium"
                   placeholder="예약 메모를 입력해주세요"
                   value={memo}
                   onChange={(event) => setMemo(event.target.value)}
@@ -7653,24 +7699,25 @@ function ReceptionReservationFormDrawer({
             </ReceptionSidePanelSection>
           </div>
         </ScrollArea>
-        <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t bg-card px-4 py-3">
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-9"
-            onClick={close}
-            disabled={submitting}
-          >
-            취소
-          </Button>
-          <Button
-            type="button"
-            className="h-9"
-            onClick={create}
-            disabled={!canCreate || submitting}
-          >
-            {submitting ? "생성 중" : "생성"}
-          </Button>
+        <div className="mt-auto flex shrink-0 items-center justify-end gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]">
+          <div className="flex shrink-0 items-center gap-[var(--clair-spacing-8)]">
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-[var(--emr-text-secondary)]"
+              onClick={close}
+              disabled={submitting}
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              onClick={create}
+              disabled={!canCreate || submitting}
+            >
+              {submitting ? "생성 중" : "생성"}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -8773,6 +8820,7 @@ function ReceptionVitalField({
   option,
   removable,
   value,
+  variant = "default",
   setEditDraft,
 }: {
   editDraft: ReceptionEncounterUpdateInput;
@@ -8782,6 +8830,7 @@ function ReceptionVitalField({
   option: (typeof receptionSidePanelVitalOptions)[number];
   removable: boolean;
   value: string;
+  variant?: ReceptionSidePanelLayoutVariant;
   setEditDraft: (
     updater: (current: ReceptionEncounterUpdateInput) => ReceptionEncounterUpdateInput,
   ) => void;
@@ -8794,7 +8843,7 @@ function ReceptionVitalField({
       : value;
 
   return (
-    <ReceptionSidePanelField icon={option.icon} label={option.label}>
+    <ReceptionSidePanelField icon={option.icon} label={option.label} variant={variant}>
       <div className="flex min-w-0 items-center gap-2">
         <ReceptionSidePanelInput
           aria-label={option.label}
@@ -8802,6 +8851,7 @@ function ReceptionVitalField({
           inputMode={option.id === "bloodPressure" ? "text" : "decimal"}
           value={inputValue}
           unit={option.unit}
+          variant={variant}
           onChange={(event) => {
             if (!editMode) return;
             const nextValue = event.target.value;
@@ -8958,13 +9008,36 @@ function ReceptionSidePanelDetail({
   const appointmentStatusLabel = selectedAppointment
     ? getStatusLabel("appointment", selectedAppointment.status)
     : undefined;
+  const detailVariant: ReceptionSidePanelLayoutVariant = selectedAppointment
+    ? "create"
+    : "default";
+  const usesCreateDetailLayout = detailVariant === "create";
+  const detailDateLabel = selectedAppointment ? "예약일" : "접수일";
+  const detailTimeLabel = selectedAppointment ? "예약시간" : "접수시간";
+  const detailTimeSectionTitle = selectedAppointment
+    ? "예약 정보"
+    : "접수일자/시간";
+  const detailDateValue = selectedAppointment
+    ? formatReceptionSidePanelDateFromDateTime(selectedAppointment.scheduledStartAt)
+    : receptionDate;
+  const detailTimeValue = selectedAppointment
+    ? formatReceptionSidePanelTime(selectedAppointment.scheduledStartAt)
+    : receptionStartAt
+      ? getShortTime(receptionStartAt)
+      : "-";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="min-h-0 flex-1">
-        <div className="px-4">
+        <div
+          className={
+            usesCreateDetailLayout
+              ? "flex flex-col gap-[var(--clair-spacing-16)] p-[var(--clair-spacing-16)]"
+              : "px-4"
+          }
+        >
           {appointmentStatusLabel ? (
-            <div className="pt-3">
+            <div className={usesCreateDetailLayout ? "" : "pt-3"}>
               <Badge
                 size="sm"
                 variant="secondary"
@@ -8985,13 +9058,15 @@ function ReceptionSidePanelDetail({
             </div>
           ) : null}
 
-          <ReceptionSidePanelSection title="환자/보호자">
+          <ReceptionSidePanelSection title="환자/보호자" variant={detailVariant}>
             <ReceptionSidePanelField
               icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
               label="동물명"
+              variant={detailVariant}
             >
               <ReceptionSidePanelInput
                 readOnly
+                variant={detailVariant}
                 value={`${patient.name} · ${getSpeciesLabel(patient.species)}${
                   patient.breed ? ` · ${patient.breed}` : ""
                 }`}
@@ -9000,17 +9075,20 @@ function ReceptionSidePanelDetail({
             <ReceptionSidePanelField
               icon={<CdsPeopleUserIcon className="size-3.5" />}
               label="보호자명"
+              variant={detailVariant}
             >
               <ReceptionSidePanelInput
                 readOnly
+                variant={detailVariant}
                 value={`${guardian?.name ?? "보호자 미지정"}${
                   guardian?.mobilePhone ? ` · ${guardian.mobilePhone}` : ""
                 }`}
               />
             </ReceptionSidePanelField>
           </ReceptionSidePanelSection>
+          {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
 
-          <ReceptionSidePanelSection title="바이탈">
+          <ReceptionSidePanelSection title="바이탈" variant={detailVariant}>
             {selectedVitalOptions.map((option) => (
               <ReceptionVitalField
                 key={option.id}
@@ -9019,6 +9097,7 @@ function ReceptionSidePanelDetail({
                 option={option}
                 removable={canRemoveVital}
                 setEditDraft={setEditDraft}
+                variant={detailVariant}
                 value={
                   option.id === "weight"
                     ? patientWeightLabel.replace(/\s*kg$/i, "")
@@ -9050,11 +9129,13 @@ function ReceptionSidePanelDetail({
               />
             ) : null}
           </ReceptionSidePanelSection>
+          {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
 
-          <ReceptionSidePanelSection title="진료과/담당의">
+          <ReceptionSidePanelSection title="진료과/담당의" variant={detailVariant}>
             <ReceptionSidePanelField
               icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
               label="진료과"
+              variant={detailVariant}
             >
               {editMode ? (
                 <Select
@@ -9080,12 +9161,17 @@ function ReceptionSidePanelDetail({
                   </SelectContent>
                 </Select>
               ) : (
-                <ReceptionSidePanelInput readOnly value={departmentValue} />
+                <ReceptionSidePanelInput
+                  readOnly
+                  value={departmentValue}
+                  variant={detailVariant}
+                />
               )}
             </ReceptionSidePanelField>
             <ReceptionSidePanelField
               icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
               label="담당의"
+              variant={detailVariant}
             >
               {editMode ? (
                 <Select
@@ -9120,30 +9206,48 @@ function ReceptionSidePanelDetail({
                   </SelectContent>
                 </Select>
               ) : (
-                <ReceptionSidePanelInput readOnly value={veterinarianName} />
+                <ReceptionSidePanelInput
+                  readOnly
+                  value={veterinarianName}
+                  variant={detailVariant}
+                />
               )}
             </ReceptionSidePanelField>
           </ReceptionSidePanelSection>
+          {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
 
-          <ReceptionSidePanelSection title="접수일자/시간">
+          <ReceptionSidePanelSection
+            title={detailTimeSectionTitle}
+            variant={detailVariant}
+          >
             <ReceptionSidePanelField
               icon={<CdsFilesCalendarIcon className="size-3.5" />}
-              label="접수일"
-            >
-              <ReceptionSidePanelInput readOnly value={receptionDate} />
-            </ReceptionSidePanelField>
-            <ReceptionSidePanelField
-              icon={<CdsFilesClockIcon className="size-3.5" />}
-              label="접수시간"
+              label={detailDateLabel}
+              variant={detailVariant}
             >
               <ReceptionSidePanelInput
                 readOnly
-                value={receptionStartAt ? getShortTime(receptionStartAt) : "-"}
+                aria-label={detailDateLabel}
+                value={detailDateValue}
+                variant={detailVariant}
+              />
+            </ReceptionSidePanelField>
+            <ReceptionSidePanelField
+              icon={<CdsFilesClockIcon className="size-3.5" />}
+              label={detailTimeLabel}
+              variant={detailVariant}
+            >
+              <ReceptionSidePanelInput
+                readOnly
+                aria-label={detailTimeLabel}
+                value={detailTimeValue}
+                variant={detailVariant}
               />
             </ReceptionSidePanelField>
             <ReceptionSidePanelField
               icon={<CdsMedicalActivityIcon className="size-3.5" />}
               label="예상소요시간"
+              variant={detailVariant}
             >
               {editMode ? (
                 <Select
@@ -9181,22 +9285,30 @@ function ReceptionSidePanelDetail({
                     appointment: selectedAppointment,
                     encounter: selectedEncounter,
                   })}
+                  variant={detailVariant}
                 />
               )}
             </ReceptionSidePanelField>
           </ReceptionSidePanelSection>
+          {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
 
-          <ReceptionSidePanelSection title="방문목적">
+          <ReceptionSidePanelSection title="방문목적" variant={detailVariant}>
             <ReceptionSidePanelField
               align="start"
               icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
               label="방문목적"
+              variant={detailVariant}
             >
               <Textarea
                 readOnly={!editMode}
                 value={editMode ? (editDraft.visitPurpose ?? "") : visitReason}
                 placeholder="방문목적을 입력해주세요"
-                className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                className={cn(
+                  "min-h-[var(--emr-reception-create-textarea-min-height)] resize-none",
+                  usesCreateDetailLayout
+                    ? "bg-[var(--emr-reception-create-field-bg)] font-medium"
+                    : "bg-card emr-text-dense font-semibold",
+                )}
                 onChange={(event) =>
                   setEditDraft((current) => ({
                     ...current,
@@ -9210,6 +9322,7 @@ function ReceptionSidePanelDetail({
                 align="start"
                 icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
                 label={memoLabel}
+                variant={detailVariant}
               >
                 <Textarea
                   readOnly={!editMode}
@@ -9221,7 +9334,12 @@ function ReceptionSidePanelDetail({
                         "")
                   }
                   placeholder={`${memoLabel}를 입력해주세요`}
-                  className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                  className={cn(
+                    "min-h-[var(--emr-reception-create-textarea-min-height)] resize-none",
+                    usesCreateDetailLayout
+                      ? "bg-[var(--emr-reception-create-field-bg)] font-medium"
+                      : "bg-card emr-text-dense font-semibold",
+                  )}
                   onChange={(event) =>
                     setEditDraft((current) => ({
                       ...current,
@@ -9234,7 +9352,14 @@ function ReceptionSidePanelDetail({
           </ReceptionSidePanelSection>
         </div>
       </ScrollArea>
-      <footer className="mt-auto flex h-[65px] shrink-0 items-center justify-between gap-2 border-t border-[var(--emr-line-default)] bg-card px-4">
+      <footer
+        className={cn(
+          "mt-auto flex shrink-0 items-center border-t border-[var(--emr-line-default)] bg-card",
+          usesCreateDetailLayout
+            ? "justify-end gap-[var(--clair-spacing-8)] p-[var(--clair-spacing-16)]"
+            : "h-[65px] justify-between gap-2 px-4",
+        )}
+      >
         <div>
           {canCancelSelectedEncounter ? (
             <Button
@@ -9249,7 +9374,16 @@ function ReceptionSidePanelDetail({
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" className="h-9" onClick={onClose}>
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              usesCreateDetailLayout
+                ? "text-[var(--emr-text-secondary)]"
+                : "h-9",
+            )}
+            onClick={onClose}
+          >
             {editMode ? "취소" : "닫기"}
           </Button>
           {editMode ? (
@@ -9274,7 +9408,7 @@ function ReceptionSidePanelDetail({
           ) : primaryActionLabel ? (
             <Button
               type="button"
-              className="h-9"
+              className={usesCreateDetailLayout ? undefined : "h-9"}
               disabled={checkInDisabled}
               onClick={onCheckInOrCreate}
             >

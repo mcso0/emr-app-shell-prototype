@@ -2365,7 +2365,7 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
   });
 });
 
-test("registration uses CDS V2 32px controls while reception drawer controls align 36px", async ({
+test("registration and reception create side panels use CDS V2 32px controls", async ({
   page,
 }) => {
   await page.goto("/w/clair-demo/reception");
@@ -2423,9 +2423,9 @@ test("registration uses CDS V2 32px controls while reception drawer controls ali
     "36px",
   );
 
-  await page.goto("/w/clair-demo/reception");
-  await page.getByTestId("schedule-check-in-button").click();
-  await page.getByRole("menuitem", { name: "예약하기" }).click();
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-reservation-form%3Anew",
+  );
   const reservationDrawer = page.getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
 
@@ -2436,14 +2436,20 @@ test("registration uses CDS V2 32px controls while reception drawer controls ali
       reservationDrawer.getByLabel("예약일"),
       reservationDrawer.getByRole("combobox", { name: "담당의" }),
       reservationDrawer.getByRole("combobox", { name: "예약시간" }),
-      reservationDrawer.getByRole("combobox", { name: "예상시간" }),
+      reservationDrawer.getByRole("combobox", { name: "예상소요시간" }),
     ].map((control) =>
       control.evaluate((element) =>
         Math.round(element.getBoundingClientRect().height),
       ),
     ),
   );
-  expect(reservationControlHeights).toEqual([36, 36, 36, 36, 36, 36]);
+  expect(reservationControlHeights).toEqual([32, 32, 32, 32, 32, 32]);
+  await expect(
+    reservationDrawer.getByRole("button", { name: "바이탈 추가" }),
+  ).toBeDisabled();
+  await expect(reservationDrawer.getByRole("combobox", { name: "담당의" })).toContainText(
+    "담당의를 선택해주세요",
+  );
   await expect(reservationDrawer.getByLabel("예약 메모")).not.toHaveCSS(
     "height",
     "36px",
@@ -3805,6 +3811,8 @@ test("reception creates a reservation through the unified check-in menu", async 
   await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
   const detailDrawer = page.getByTestId("reception-right-panel");
   await expect(detailDrawer).toContainText("예약 상세");
+  await expect(detailDrawer.getByLabel("예약일")).toHaveValue("2026.05.01");
+  await expect(detailDrawer.getByLabel("예약시간")).toHaveValue("오후 12:00");
   await expect(detailDrawer).toContainText(
     "DEN-516 예약 생성 UI 검증",
   );
@@ -5529,6 +5537,8 @@ test("reservation create drawer uses DB-backed patient lookup states", async ({
 test("Cheongdam reservation create omits mock veterinarian fallback when staff lookup fails", async ({
   page,
 }) => {
+  await freezeBrowserClock(page, "2026-06-17T08:50:00+09:00");
+
   let appointmentCreateCount = 0;
   let latestAppointmentBody: Record<string, unknown> | undefined;
 
@@ -5659,7 +5669,7 @@ test("Cheongdam reservation create omits mock veterinarian fallback when staff l
   const reservationDrawer = page.getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
   await expect(reservationDrawer.getByLabel("담당의")).toContainText(
-    "수의사 미지정",
+    "담당의를 선택해주세요",
   );
   await reservationDrawer.getByLabel("환자 검색").fill("초코");
   await page.getByRole("option", { name: /초코.*최도현/ }).click();
@@ -5676,7 +5686,7 @@ test("Cheongdam reservation create omits mock veterinarian fallback when staff l
   });
 });
 
-test("Cheongdam reservation create uses UUID veterinarian and renders calendar readback", async ({
+test("Cheongdam reservation create uses UUID veterinarian and renders detail readback", async ({
   page,
 }) => {
   await freezeBrowserClock(page, "2026-06-25T23:50:00+09:00");
@@ -5834,9 +5844,12 @@ test("Cheongdam reservation create uses UUID veterinarian and renders calendar r
   await expect(reservationDrawer.getByLabel("체중")).toHaveValue("12.00");
 
   await reservationDrawer.getByLabel("예약일").click();
-  await page.getByRole("button", { name: /26\.06\.26.*선택/ }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /26\.06\.26.*선택/ })
+    .click();
   await expect(reservationDrawer.getByLabel("예약시간")).toContainText("09:00");
-  await expect(reservationDrawer.getByLabel("예상시간")).toContainText("30분");
+  await expect(reservationDrawer.getByLabel("예상소요시간")).toContainText("30분");
 
   await reservationDrawer.getByLabel("예약 메모").fill("구름 09시 예약");
   await reservationDrawer.getByRole("button", { name: "생성" }).click();
@@ -5851,20 +5864,16 @@ test("Cheongdam reservation create uses UUID veterinarian and renders calendar r
     weightKg: 12,
   });
   await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  const detailPanel = page.getByTestId("reception-right-panel");
+  await expect(detailPanel).toContainText("예약 상세");
+  await expect(detailPanel.getByLabel("예약일")).toHaveValue("2026.06.26");
+  await expect(detailPanel.getByLabel("예약시간")).toHaveValue("오전 9:00");
   await expect(
-    page.locator('[data-testid^="appointment-card-"]').filter({
-      hasText: "구름 09시 예약",
-    }),
-  ).toBeVisible();
-
-  await page.goto("/w/workspace-clair-cheongdam/reception?modulePanel=open");
-  await page.getByRole("button", { name: /26\.06\.25.*날짜 선택/ }).click();
-  await page.getByRole("button", { name: /26\.06\.26.*선택/ }).click();
+    detailPanel.getByPlaceholder("방문목적을 입력해주세요"),
+  ).toHaveValue("구름 09시 예약");
   await expect(
-    page.locator('[data-testid^="appointment-card-"]').filter({
-      hasText: "구름 09시 예약",
-    }),
-  ).toBeVisible();
+    detailPanel.getByPlaceholder("예약 메모를 입력해주세요"),
+  ).toHaveValue("구름 09시 예약");
 });
 
 test("reception draft task drawer uses DB-backed patient lookup states", async ({
@@ -6892,12 +6901,9 @@ test("reception creates a future dragged calendar range as a reservation", async
     "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501",
   );
   await expect(page.getByText("예약 상세").first()).toBeVisible();
-  await page
-    .getByTestId("reception-date-control")
-    .getByRole("button", { name: "다음 날짜" })
-    .click();
+  await page.getByTestId("side-panel-mini-calendar-day-2026-05-02").click();
   await expect(
-    page.getByRole("button", { name: "26.05.02 (토) 날짜 선택" }),
+    page.getByTestId("side-panel-mini-calendar-day-2026-05-02"),
   ).toBeVisible();
 
   const emptySlot = page.getByTestId("day-empty-slot-10-user-vet-suji");
@@ -6950,9 +6956,7 @@ test("reception creates a future dragged calendar range as a reservation", async
   }, dragEndPoint);
 
   const reservationDrawer = page
-    .getByRole("complementary")
-    .filter({ hasText: "예약 생성" })
-    .filter({ hasText: "26.05.02 · 10:00" })
+    .getByTestId("reception-right-panel")
     .getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
   await expect(reservationDrawer.getByText("접수 생성")).toHaveCount(0);
@@ -6960,7 +6964,7 @@ test("reception creates a future dragged calendar range as a reservation", async
   await expect(reservationDrawer.getByLabel("예약일")).toContainText("26.05.02");
   await expect(reservationDrawer.getByLabel("예약시간")).toContainText("10:00");
   const durationText =
-    (await reservationDrawer.getByLabel("예상시간").textContent()) ?? "";
+    (await reservationDrawer.getByLabel("예상소요시간").textContent()) ?? "";
   const expectedDurationMinutes = Number(durationText.match(/\d+/)?.[0]);
   expect(expectedDurationMinutes).toBeGreaterThan(30);
   await expect(reservationDrawer.getByLabel("담당의")).toContainText("이수지");
@@ -6992,9 +6996,7 @@ test("reception creates a future dragged calendar range as a reservation", async
   );
   await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
   await expect(
-    page
-      .locator('[data-testid^="appointment-card-"]')
-      .filter({ hasText: "미래 드래그 예약 생성" }),
+    page.getByTestId("appointment-card-appointment-future-drag-den516"),
   ).toBeVisible();
 });
 
