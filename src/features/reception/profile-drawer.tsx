@@ -35,6 +35,7 @@ import {
   EmrRegistrationSummaryItem,
   EmrRegistrationCheckboxLabel,
   emrRegistrationControlClassName,
+  emrRegistrationDialogOverlayClassName,
   emrRegistrationTextareaClassName,
 } from "@/components/emr/registration-dialog";
 import {
@@ -3967,8 +3968,10 @@ function PatientGuardianRegistrationButton({
           cancelLabel="계속 작성"
           confirmLabel="취소하고 나가기"
           closeAriaLabel="입력 취소 확인 닫기"
+          motion="none"
           onCancel={() => setConfirmCloseOpen(false)}
           onConfirm={closeWithoutSaving}
+          overlayClassName={emrRegistrationDialogOverlayClassName}
         />
       </Dialog>
     </>
