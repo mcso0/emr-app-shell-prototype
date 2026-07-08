@@ -39,7 +39,7 @@ export function EmrConfirmDialogContent({
 }: EmrConfirmDialogContentProps) {
   return (
     <DialogContent
-      className={cn("relative overflow-hidden p-0 sm:max-w-[420px]", className)}
+      className={cn("overflow-hidden p-0 sm:max-w-[420px]", className)}
       showCloseButton={false}
     >
       <DialogHeader className="px-6 pb-3 pt-6">
