@@ -56,6 +56,54 @@ async function expectScrollFadeViewport(viewport: Locator) {
   ).toBe(true);
 }
 
+async function expectRegistrationDialogsWithoutDimOrZoom(page: Page) {
+  const contentClassNames = await page
+    .locator('[data-slot="dialog-content"]')
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("class") ?? ""),
+    );
+
+  expect(contentClassNames.length).toBeGreaterThan(0);
+
+  for (const className of contentClassNames) {
+    expect(className).not.toContain("zoom-in-95");
+    expect(className).not.toContain("zoom-out-95");
+    expect(className).not.toContain("data-open:animate-in");
+    expect(className).not.toContain("data-closed:animate-out");
+  }
+
+  const overlayStates = await page
+    .locator('[data-slot="dialog-overlay"]')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+
+        return {
+          backdropFilter:
+            style.getPropertyValue("backdrop-filter") ||
+            style.getPropertyValue("-webkit-backdrop-filter") ||
+            "none",
+          backgroundColor: style.backgroundColor,
+          className: element.getAttribute("class") ?? "",
+        };
+      }),
+    );
+
+  expect(overlayStates.length).toBeGreaterThan(0);
+
+  for (const state of overlayStates) {
+    expect(state.className).toContain("bg-transparent");
+    expect(state.className).not.toContain("bg-black/10");
+    expect(state.className).not.toContain("backdrop-blur-xs");
+    expect(["", "none"]).toContain(state.backdropFilter);
+    expect([
+      "rgba(0, 0, 0, 0)",
+      "oklab(0 0 0 / 0)",
+      "transparent",
+    ]).toContain(state.backgroundColor);
+  }
+}
+
 function getLocalDatePrefix(date = new Date()) {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
@@ -1906,6 +1954,84 @@ test("patient guardian registration creates a new guardian and patient after con
     page.getByText("환자/보호자 등록이 완료되었습니다."),
   ).toBeVisible();
   await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
+});
+
+test("patient guardian registration dialogs close without zoom motion or dim backdrop", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+
+  const registrationOptions = [
+    {
+      heading: "신규 보호자 등록",
+      menuItem: "신규 환자/보호자 등록",
+    },
+    {
+      heading: "기존 보호자에 신규 환자 등록",
+      menuItem: "기존 보호자에 환자 추가",
+    },
+  ];
+  const closePaths: {
+    name: string;
+    close: (page: Page, dialog: Locator) => Promise<void>;
+  }[] = [
+    {
+      name: "close button",
+      close: async (page) => {
+        await page.getByRole("button", { name: "환자/보호자 창 닫기" }).click();
+      },
+    },
+    {
+      name: "cancel button",
+      close: async (_page, dialog) => {
+        await dialog.getByRole("button", { name: "취소" }).click();
+      },
+    },
+    {
+      name: "outside click",
+      close: async (page) => {
+        await page.locator('[data-slot="dialog-overlay"]').first().click({
+          position: { x: 16, y: 16 },
+        });
+      },
+    },
+  ];
+
+  for (const registrationOption of registrationOptions) {
+    for (const closePath of closePaths) {
+      await test.step(`${registrationOption.menuItem} - ${closePath.name}`, async () => {
+        await page.goto("/w/workspace-clair-cheongdam/reception?modulePanel=open");
+        await page
+          .getByRole("button", { name: "신규 동물/보호자", exact: true })
+          .click();
+        await page
+          .getByRole("menuitem", {
+            name: registrationOption.menuItem,
+            exact: true,
+          })
+          .click();
+
+        const registrationDialog = page
+          .locator('[data-slot="dialog-content"]')
+          .filter({ hasText: registrationOption.heading })
+          .last();
+
+        await expect(
+          page.getByRole("heading", { name: registrationOption.heading }),
+        ).toBeVisible();
+        await expectRegistrationDialogsWithoutDimOrZoom(page);
+
+        await closePath.close(page, registrationDialog);
+        await expect(
+          page.getByRole("dialog", { name: "입력을 취소할까요?" }),
+        ).toBeVisible();
+        await expectRegistrationDialogsWithoutDimOrZoom(page);
+
+        await page.getByRole("button", { name: "취소하고 나가기" }).click();
+        await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
+      });
+    }
+  }
 });
 
 test("server-backed patient guardian registration sends minimal reception payload", async ({

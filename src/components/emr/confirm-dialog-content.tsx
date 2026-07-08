@@ -12,6 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
+type EmrConfirmDialogPresentationProps = Pick<
+  ComponentProps<typeof DialogContent>,
+  "motion" | "overlayClassName"
+>;
+
 type EmrConfirmDialogContentProps = {
   cancelLabel: string;
   confirmLabel: string;
@@ -23,7 +28,7 @@ type EmrConfirmDialogContentProps = {
   confirmButtonVariant?: ComponentProps<typeof Button>["variant"];
   onCancel: () => void;
   onConfirm: () => void;
-};
+} & EmrConfirmDialogPresentationProps;
 
 export function EmrConfirmDialogContent({
   cancelLabel,
@@ -33,13 +38,17 @@ export function EmrConfirmDialogContent({
   confirmButtonVariant,
   confirmLabel,
   description,
+  motion,
   onCancel,
   onConfirm,
+  overlayClassName,
   title,
 }: EmrConfirmDialogContentProps) {
   return (
     <DialogContent
       className={cn("overflow-hidden p-0 sm:max-w-[420px]", className)}
+      motion={motion}
+      overlayClassName={overlayClassName}
       showCloseButton={false}
     >
       <DialogHeader className="px-6 pb-3 pt-6">

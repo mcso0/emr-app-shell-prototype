@@ -36,6 +36,8 @@ export type EmrRegistrationSignatureStatus = "idle" | "pending" | "completed";
 
 export const emrRegistrationControlClassName = "h-[var(--clair-control-height-md)] bg-card";
 export const emrRegistrationTextareaClassName = "h-[76px] min-h-[76px] resize-none bg-card";
+export const emrRegistrationDialogOverlayClassName =
+  "bg-transparent supports-backdrop-filter:backdrop-blur-none";
 
 type EmrRegistrationLabelIcon = ElementType<{
   className?: string;
@@ -93,6 +95,8 @@ export function EmrRegistrationDialogShell({
       closeAriaLabel={closeAriaLabel}
       description={description}
       footer={footer}
+      motion="none"
+      overlayClassName={emrRegistrationDialogOverlayClassName}
       showCloseButton
       title={
         <span className="flex min-w-0 items-center gap-2">
