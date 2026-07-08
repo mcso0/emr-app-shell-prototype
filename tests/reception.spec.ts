@@ -2097,9 +2097,11 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
     const dialogRect = element.getBoundingClientRect();
     const dialogStyle = getComputedStyle(element);
     const round = (value: number) => Math.round(value);
+    const normalizeLabelText = (value: string | undefined) =>
+      value?.replace(/\*/g, "").trim();
     const getByLabelText = (text: string) =>
       [...element.querySelectorAll("label")].find(
-        (label) => label.textContent?.trim() === text,
+        (label) => normalizeLabelText(label.textContent ?? undefined) === text,
       );
     const getByPlaceholder = (placeholder: string) =>
       [...element.querySelectorAll("input, textarea")].find(
@@ -2109,6 +2111,10 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
       [...element.querySelectorAll("button")].find(
         (button) => button.textContent?.trim() === text,
       );
+    const closeButton = element.querySelector(
+      'button[aria-label="환자/보호자 창 닫기"]',
+    );
+    const title = element.querySelector('[data-slot="dialog-title"]');
     const rect = (target: Element | undefined) => {
       if (!target) return null;
       const targetRect = target.getBoundingClientRect();
@@ -2116,12 +2122,26 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
       return {
         h: round(targetRect.height),
         relX: round(targetRect.left - dialogRect.left),
+        relY: round(targetRect.top - dialogRect.top),
+        right: round(dialogRect.right - targetRect.right),
         w: round(targetRect.width),
+      };
+    };
+    const textStyle = (target: Element | null) => {
+      if (!target) return null;
+      const style = getComputedStyle(target);
+
+      return {
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        letterSpacing: style.letterSpacing,
+        lineHeight: style.lineHeight,
       };
     };
 
     return {
       addressButton: rect(getByButtonText("주소 검색")),
+      closeButton: rect(closeButton ?? undefined),
       dialog: {
         h: round(Number.parseFloat(dialogStyle.height)),
         w: round(Number.parseFloat(dialogStyle.width)),
@@ -2131,17 +2151,25 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
       memoTextarea: rect(getByPlaceholder("특이사항 및 요청사항 입력")),
       nameInput: rect(getByPlaceholder("이름을 입력해주세요")),
       signatureButton: rect(getByButtonText("태블릿 서명 요청")),
+      title: textStyle(title),
     };
   });
 
   expect(metrics).toMatchObject({
     addressButton: { h: 32, relX: 343, w: 81 },
+    closeButton: { h: 32, relY: 10, right: 10, w: 32 },
     dialog: { h: 714, w: 440 },
     iconCount: 7,
     label: { h: 32, relX: 16, w: 128 },
     memoTextarea: { h: 76, relX: 156, w: 268 },
     nameInput: { h: 32, relX: 156, w: 268 },
     signatureButton: { h: 32, relX: 156, w: 122 },
+    title: {
+      fontSize: "16px",
+      fontWeight: "600",
+      letterSpacing: "normal",
+      lineHeight: "24px",
+    },
   });
 });
 

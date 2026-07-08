@@ -46,7 +46,8 @@ Every EMR dialog should expose:
 
 - visible or screen-reader title through `DialogTitle`
 - optional description when the decision or form consequence is not obvious
-- close icon with a Korean `aria-label`
+- compact `16px / 24px / 600` title typography through `emr-text-dialog-title`
+- absolute close icon with a Korean `aria-label`, placed `10px` from the top and right of the dialog surface
 - body content owned by the feature
 - footer actions in the order `secondaryAction`, then `primaryAction`
 - optional `footerMeta` for low-priority state, count, or mock/live boundary copy

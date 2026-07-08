@@ -431,7 +431,7 @@
   --emr-type-size-body: 14px;
   --emr-type-size-compact-title: 15px;
   --emr-type-size-panel-title: 16px;
-  --emr-type-size-dialog-title: 18px;
+  --emr-type-size-dialog-title: 16px;
   --emr-type-leading-micro: 16px;
   --emr-type-leading-metadata: 16px;
   --emr-type-leading-dense: 18px;
@@ -442,6 +442,7 @@
   --emr-type-tracking-metadata: 0.3px;
   --emr-type-tracking-section: 0.196px;
   --emr-type-tracking-status: 0.025em;
+  --emr-dialog-close-offset: 10px;
 
   --emr-state-hover: var(--clair-color-atomic-black-alpha-6);
   --emr-state-active: var(--clair-color-atomic-black-alpha-8);

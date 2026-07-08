@@ -113,37 +113,35 @@ export function EmrDialogShell({
       {...props}
       data-variant={variant}
       showCloseButton={false}
-      className={cn(layout.contentClassName, className)}
+      className={cn("relative", layout.contentClassName, className)}
     >
       <DialogHeader className={cn(layout.headerClassName, headerClassName)}>
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0">
-            <DialogTitle className="emr-text-dialog-title font-bold text-[var(--emr-text-primary)]">
-              {title}
-            </DialogTitle>
-            {description ? (
-              <DialogDescription className="mt-2 leading-5 text-[var(--emr-text-tertiary)]">
-                {description}
-              </DialogDescription>
-            ) : null}
-          </div>
-          {showCloseButton ? (
-            <DialogClose
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-8 shrink-0 rounded-md text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"
-                  aria-label={closeAriaLabel}
-                />
-              }
-            >
-              <CdsActionsXIcon className="size-4" />
-            </DialogClose>
+        <div className="min-w-0 pr-10">
+          <DialogTitle className="emr-text-dialog-title font-semibold text-[var(--emr-text-primary)]">
+            {title}
+          </DialogTitle>
+          {description ? (
+            <DialogDescription className="mt-2 leading-5 text-[var(--emr-text-tertiary)]">
+              {description}
+            </DialogDescription>
           ) : null}
         </div>
       </DialogHeader>
+      {showCloseButton ? (
+        <DialogClose
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="absolute right-[var(--emr-dialog-close-offset)] top-[var(--emr-dialog-close-offset)] size-8 rounded-md text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"
+              aria-label={closeAriaLabel}
+            />
+          }
+        >
+          <CdsActionsXIcon className="size-4" />
+        </DialogClose>
+      ) : null}
       <div className={cn(layout.bodyClassName, bodyClassName)}>{children}</div>
       {hasFooter ? (
         <DialogFooter className={cn(layout.footerClassName, footerClassName)}>
