@@ -25,7 +25,7 @@ import {
   EmrRegistrationSection,
   EmrRegistrationSignatureConsentCard,
   EmrRegistrationSummaryItem,
-  EmrRegistrationSwitchLabel,
+  EmrRegistrationCheckboxLabel,
   emrRegistrationControlClassName,
   emrRegistrationTextareaClassName,
 } from "@/components/emr/registration-dialog";
@@ -3058,7 +3058,9 @@ function PatientGuardianRegistrationButton({
     } else if (normalizedPhone.length < 10) {
       nextErrors.guardianMobilePhone = "휴대전화 번호를 10자리 이상 입력해 주세요.";
     }
-    if (guardianDraft.birthDate && !isValidRegistrationBirthDate(guardianDraft.birthDate)) {
+    if (!guardianDraft.birthDate.trim()) {
+      nextErrors.guardianBirthDate = "생년월일은 필수입니다.";
+    } else if (!isValidRegistrationBirthDate(guardianDraft.birthDate)) {
       nextErrors.guardianBirthDate = "생년월일은 YYYY-MM-DD 형식의 실제 날짜로 입력해 주세요.";
     }
     if (duplicateGuardian) nextErrors.guardianMobilePhone = "이미 등록된 보호자입니다.";
@@ -3079,6 +3081,7 @@ function PatientGuardianRegistrationButton({
     if (!patientDraft.breed.trim()) nextErrors.breed = "품종은 필수입니다.";
     if (!patientDraft.birthDate && !patientDraft.ageYears && !patientDraft.ageMonths) {
       nextErrors.age = "나이 또는 생년월일은 필수입니다.";
+      nextErrors.birthDate = "나이 또는 생년월일은 필수입니다.";
     }
     if (duplicateMicrochip) nextErrors.microchipNo = "이미 등록된 마이크로칩 번호입니다.";
 
@@ -3352,7 +3355,7 @@ function PatientGuardianRegistrationButton({
                         }
                       />
                     </EmrRegistrationFieldRow>
-                    <EmrRegistrationFieldRow error={errors.guardianBirthDate} label="생년월일">
+                    <EmrRegistrationFieldRow error={errors.guardianBirthDate} label="생년월일" required>
                       <Input
                         aria-label="보호자 생년월일"
                         className={emrRegistrationControlClassName}
@@ -3668,24 +3671,24 @@ function PatientGuardianRegistrationButton({
                       <EmrRegistrationInlineControl
                         className="grid grid-cols-[minmax(0,206px)_50px]"
                         control={
-                          <EmrRegistrationSwitchLabel
+                          <EmrRegistrationCheckboxLabel
                             control={
-                              <Switch
+                              <Checkbox
                                 checked={patientDraft.isMixed}
                                 onCheckedChange={(isMixed) =>
                                   setPatientDraft((current) => ({
                                     ...current,
-                                    breed: isMixed
+                                    breed: Boolean(isMixed)
                                       ? getMixBreedSuggestion(current.species) || current.breed
                                       : current.breed,
-                                    isMixed,
+                                    isMixed: Boolean(isMixed),
                                   }))
                                 }
                               />
                             }
                           >
                             믹스
-                          </EmrRegistrationSwitchLabel>
+                          </EmrRegistrationCheckboxLabel>
                         }
                       >
                         <BreedAutocomplete
@@ -3700,7 +3703,7 @@ function PatientGuardianRegistrationButton({
                         />
                       </EmrRegistrationInlineControl>
                     </EmrRegistrationFieldRow>
-                    <EmrRegistrationFieldRow label="성별">
+                    <EmrRegistrationFieldRow label="성별" required>
                       <Select
                         value={patientDraft.sex}
                         onValueChange={(sex) =>
@@ -3779,23 +3782,25 @@ function PatientGuardianRegistrationButton({
                           />
                         }
                         estimate={
-                          <EmrRegistrationSwitchLabel
+                          <EmrRegistrationCheckboxLabel
                             control={
-                              <Switch
-                                size="sm"
+                              <Checkbox
                                 checked={patientDraft.estimatedAge}
                                 onCheckedChange={(estimatedAge) =>
-                                  setPatientDraft((current) => ({ ...current, estimatedAge }))
+                                  setPatientDraft((current) => ({
+                                    ...current,
+                                    estimatedAge: Boolean(estimatedAge),
+                                  }))
                                 }
                               />
                             }
                           >
                             추정
-                          </EmrRegistrationSwitchLabel>
+                          </EmrRegistrationCheckboxLabel>
                         }
                       />
                     </EmrRegistrationFieldRow>
-                    <EmrRegistrationFieldRow label="생년월일">
+                    <EmrRegistrationFieldRow error={errors.birthDate} label="생년월일" required>
                       <Input
                         aria-label="생년월일"
                         className={emrRegistrationControlClassName}
@@ -3864,35 +3869,32 @@ function PatientGuardianRegistrationButton({
               {step === "confirm" ? (
                 <EmrRegistrationSection separated={false} title="신규 보호자/환자">
                   <EmrRegistrationSummaryItem
-                    badge="보호자"
                     details={[
-                      mode === "new_guardian_patient"
-                        ? guardianDraft.mobilePhone
-                        : selectedGuardian?.mobilePhone ?? "연락처 미입력",
                       mode === "new_guardian_patient"
                         ? guardianDraft.birthDate || "생년월일 미입력"
                         : selectedGuardianPatientCount
                           ? `연결 환자 ${selectedGuardianPatientCount}마리`
                           : "연결 환자 없음",
+                      mode === "new_guardian_patient"
+                        ? guardianDraft.mobilePhone
+                        : selectedGuardian?.mobilePhone ?? "연락처 미입력",
                     ]}
-                    icon={<UserIcon className="size-3.5" />}
+                    icon={<UserIcon className="size-[22px]" />}
                     title={
                       mode === "new_guardian_patient"
                         ? guardianDraft.name
                         : selectedGuardian?.name ?? "보호자 미지정"
                     }
-                    tone="guardian"
                   />
                   <EmrRegistrationSummaryItem
-                    badge="환자"
                     details={[
                       getNewPatientSpeciesLabel(patientDraft.species),
                       patientDraft.breed || "품종 미입력",
                       patientAgeSummary || "나이 미입력",
+                      ...(patientDraft.sex === "unknown" ? [] : [getNewPatientSexLabel(patientDraft.sex)]),
                     ]}
-                    icon={<BoneIcon className="size-3.5" />}
+                    icon={<BoneIcon className="size-[22px]" />}
                     title={patientDraft.name}
-                    tone="patient"
                   />
                 </EmrRegistrationSection>
               ) : null}
