@@ -286,6 +286,12 @@
   --emr-sidepanel-task-card-action-radius: var(--clair-radius-atomic-4);
   --emr-sidepanel-task-card-action-bg: var(--clair-color-atomic-common-100);
   --emr-sidepanel-task-card-action-border: var(--clair-color-atomic-neutral-200);
+  --emr-reception-create-field-label-width: 108px;
+  --emr-reception-create-field-icon-size: 15px;
+  --emr-reception-create-field-bg: var(--clair-color-atomic-common-100);
+  --emr-reception-create-textarea-min-height: 76px;
+  --emr-reception-create-select-content-min-width: 224px;
+  --emr-reception-create-add-vital-bg: var(--clair-color-atomic-white-alpha-4);
   --emr-calendar-toolbar-height: 58px;
   --emr-calendar-toolbar-padding-x: var(--clair-spacing-16);
   --emr-calendar-lane-header-cell-height: 56px;

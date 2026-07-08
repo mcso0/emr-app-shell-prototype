@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { AppIcon } from "@/components/icons";
 
 export type DrawerState = {
@@ -16,6 +16,18 @@ export type ShellComponentProps = {
   onNavigateWorkspaceSurface?: (href: string, moduleId: string) => void;
 };
 
+export type WorkspaceSlotAvailability = {
+  readonly hasContentAside?: boolean;
+  readonly hasRightPanel?: boolean;
+};
+
+export type WorkspaceSlotAvailabilityProviderProps = ShellComponentProps & {
+  readonly children: (availability: WorkspaceSlotAvailability) => ReactNode;
+};
+
+export type WorkspaceSlotAvailabilityProvider =
+  ComponentType<WorkspaceSlotAvailabilityProviderProps>;
+
 export type PanelState = "open" | "closed";
 
 export type ModuleDefinition = {
@@ -27,6 +39,7 @@ export type ModuleDefinition = {
   contentAside?: ComponentType<ShellComponentProps>;
   content: ComponentType<ShellComponentProps>;
   rightPanel?: ComponentType<ShellComponentProps>;
+  slotAvailabilityProvider?: WorkspaceSlotAvailabilityProvider;
   rightPanelGap?: boolean;
   rightPanelWidth?: number;
   defaultContentAsideOpen?: boolean;

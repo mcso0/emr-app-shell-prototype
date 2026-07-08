@@ -2185,16 +2185,16 @@ test("registration uses CDS V2 32px controls while reception drawer controls ali
       walkInForm.getByRole("combobox", { name: "진료과" }),
       walkInForm.getByRole("combobox", { name: "담당의" }),
       walkInForm.getByLabel("접수일"),
-      walkInForm.getByLabel("진료시간"),
-      walkInForm.getByRole("combobox", { name: "예상시간" }),
+      walkInForm.getByLabel("접수시간"),
+      walkInForm.getByRole("combobox", { name: "예상소요시간" }),
     ].map((control) =>
       control.evaluate((element) =>
         Math.round(element.getBoundingClientRect().height),
       ),
     ),
   );
-  expect(walkInControlHeights).toEqual([36, 36, 36, 36, 36, 36, 36]);
-  await expect(walkInForm.getByLabel("방문 목적")).not.toHaveCSS(
+  expect(walkInControlHeights).toEqual([32, 32, 32, 32, 32, 32, 32]);
+  await expect(walkInForm.getByLabel("방문목적")).not.toHaveCSS(
     "height",
     "36px",
   );
@@ -2250,16 +2250,20 @@ test("walk-in reception drawer removes helper chrome and keeps focused placehold
   await expect(
     walkInForm.getByText("환자명, 동물 정보, 보호자명으로 검색합니다."),
   ).toHaveCount(0);
-  await expect(walkInForm.getByLabel("방문 목적")).toHaveAttribute(
+  await expect(walkInForm.getByLabel("방문목적")).toHaveAttribute(
     "placeholder",
     "방문목적을 입력해주세요",
   );
 
-  const kakaoButton = walkInForm.getByRole("button", {
-    name: "카카오톡 발송",
-  });
-  await expect(kakaoButton).toBeVisible();
-  await expect(kakaoButton).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    walkInForm.getByRole("button", { name: "카카오톡 발송" }),
+  ).toHaveCount(0);
+  await expect(walkInForm.getByRole("combobox", { name: "진료과" })).toContainText(
+    "진료과를 선택해주세요",
+  );
+  await expect(walkInForm.getByRole("combobox", { name: "담당의" })).toContainText(
+    "담당의를 선택해주세요",
+  );
 });
 
 test("patient guardian registration blocks duplicate microchips and warns duplicate patient names", async ({
@@ -3404,6 +3408,18 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
     "접수 생성",
   );
   await expect(walkInForm.getByLabel("체중")).toBeDisabled();
+  await expect(
+    walkInForm.getByRole("button", { name: "바이탈 추가" }),
+  ).toBeDisabled();
+  await expect(walkInForm.getByRole("combobox", { name: "진료과" })).toContainText(
+    "진료과를 선택해주세요",
+  );
+  await expect(walkInForm.getByRole("combobox", { name: "담당의" })).toContainText(
+    "담당의를 선택해주세요",
+  );
+  await expect(
+    walkInForm.getByRole("button", { name: "카카오톡 발송" }),
+  ).toHaveCount(0);
   await expect(walkInForm.getByLabel("환자 검색")).toHaveAttribute(
     "placeholder",
     "환자를 선택해주세요",
@@ -3413,13 +3429,16 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await walkInForm.getByLabel("환자 검색").fill("두부");
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
   await expect(walkInForm.getByLabel("체중")).toBeEnabled();
+  await expect(
+    walkInForm.getByRole("button", { name: "바이탈 추가" }),
+  ).toBeEnabled();
   await expect(walkInForm.getByLabel("체중")).toHaveValue("8.40");
   await walkInForm.getByLabel("체중").fill("8.65");
-  await expect(walkInForm.getByLabel("방문 목적")).toBeVisible();
+  await expect(walkInForm.getByLabel("방문목적")).toBeVisible();
   await expect(
     walkInForm.getByRole("button", { name: "태그 추가" }),
   ).toHaveCount(0);
-  await walkInForm.getByLabel("방문 목적").fill("재활 · 보행 재검 및 통증 상담");
+  await walkInForm.getByLabel("방문목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
@@ -4092,7 +4111,7 @@ test("Cheongdam walk-in keeps a selected DB lookup patient when the display labe
   await expect(walkInForm.getByText("검색 결과가 없습니다.")).toHaveCount(0);
   await expect.poll(() => lookupRequests).toBeGreaterThanOrEqual(2);
 
-  await walkInForm.getByLabel("방문 목적").fill("첫 내원 상담");
+  await walkInForm.getByLabel("방문목적").fill("첫 내원 상담");
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
   await expect.poll(() => createBody?.patientId).toBe(patientId);
@@ -4699,7 +4718,7 @@ test("Cheongdam walk-in create failure does not say the selected DB patient is m
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await walkInForm.getByLabel("환자 검색").fill("토리");
   await page.getByRole("option", { name: /토리.*심도겸/ }).click();
-  await walkInForm.getByLabel("방문 목적").fill("구토");
+  await walkInForm.getByLabel("방문목적").fill("구토");
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
   await expect(page.getByText("접수를 생성할 수 없습니다.")).toBeVisible();
@@ -4822,11 +4841,11 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
   await expect(walkInForm.getByLabel("체중")).toHaveValue("8.40");
   await walkInForm.getByLabel("체중").fill("8.65");
-  await walkInForm.getByLabel("방문 목적").fill("재활 · 보행 재검 및 통증 상담");
+  await walkInForm.getByLabel("방문목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("담당의").click();
   await page.getByRole("option", { name: "김도윤" }).click();
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
-  await expect(walkInForm.getByLabel("진료시간")).toHaveValue("10:45");
+  await expect(walkInForm.getByLabel("접수시간")).toHaveValue("오전 10:45");
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
   expect(capturedBody).toMatchObject({
@@ -4849,11 +4868,11 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
   await expect(page).toHaveURL(
     /drawer=reception-encounter%3Aencounter-live-walkin-dubu/,
   );
-  await expect(page.getByTestId("workspace-drawer")).toContainText("접수 상세");
-  await expect(page.getByTestId("workspace-drawer")).toContainText(
+  const detailPanel = page.getByTestId("reception-right-panel");
+  await expect(detailPanel).toContainText("접수 상세");
+  await expect(detailPanel).toContainText(
     "보행 재검 및 통증 상담",
   );
-  await page.getByRole("button", { name: "상세 닫기" }).click();
 
   const dubuCard = page
     .getByTestId("patient-card-patient-dubu")
@@ -4863,8 +4882,14 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
   await expect(dubuCard).toContainText("김도윤");
 
   await dubuCard.hover();
-  await dubuCard.getByRole("button", { name: "두부 카드 작업" }).click();
-  await page.getByText("차트 보러가기", { exact: true }).click();
+  await page
+    .getByTestId("reception-card-action-encounter-live-walkin-dubu")
+    .click();
+  await page
+    .getByTestId(
+      "reception-queue-action-chart-encounter-encounter-live-walkin-dubu",
+    )
+    .click();
 
   await expect(page).toHaveURL(
     /\/w\/clair-demo\/treatment\?.*encounterId=encounter-live-walkin-dubu/,
@@ -5010,7 +5035,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await walkInForm.getByLabel("환자 검색").click();
   await walkInForm.getByLabel("환자 검색").fill("두부");
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
-  await walkInForm.getByLabel("방문 목적").fill("DEN-65 reload walk-in");
+  await walkInForm.getByLabel("방문목적").fill("DEN-65 reload walk-in");
   await walkInForm.getByLabel("담당의").click();
   await page.getByRole("option", { name: "김도윤" }).click();
   await walkInForm.getByRole("button", { name: "생성" }).click();
@@ -5070,11 +5095,14 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
 test("reception walk-in dialog uses DB-backed patient lookup states", async ({
   page,
 }) => {
+  const lookupQueries: string[] = [];
+
   await page.route(
     "**/api/workspaces/clair-demo/reception/patient-guardian-lookup?query=*",
     async (route) => {
       const url = new URL(route.request().url());
-      const query = url.searchParams.get("query");
+      const query = url.searchParams.get("query") ?? "";
+      lookupQueries.push(query);
 
       if (query === "오류") {
         await route.fulfill({
@@ -5143,10 +5171,18 @@ test("reception walk-in dialog uses DB-backed patient lookup states", async ({
   await expect(page.getByRole("listbox", { name: "검색 결과" })).toHaveCount(0);
   await walkInForm.getByLabel("환자 검색").fill("루");
   await expect(page.getByRole("listbox", { name: "검색 결과" })).toBeVisible();
+  await expect.poll(() => lookupQueries.includes("루")).toBe(true);
+
+  lookupQueries.length = 0;
+  await walkInForm.getByLabel("환자 검색").fill("");
+  await walkInForm.getByLabel("환자 검색").fill("루");
   await walkInForm.getByLabel("환자 검색").fill("루나");
   await expect(page.getByRole("option", { name: /루나.*박지유/ })).toBeVisible();
+  await expect.poll(() => lookupQueries).toEqual(["루나"]);
   await page.getByRole("option", { name: /루나.*박지유/ }).click();
   await expect(walkInForm.getByLabel("환자 검색")).toHaveValue(/루나/);
+  await page.waitForTimeout(350);
+  expect(lookupQueries).toEqual(["루나"]);
 
   await walkInForm.getByLabel("환자 검색").fill("없는");
   await expect(
@@ -5242,13 +5278,24 @@ test("reservation create drawer uses DB-backed patient lookup states", async ({
   const reservationDrawer = page.getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
 
+  await reservationDrawer.getByLabel("환자 검색").fill("초");
+  await expect(
+    page.getByRole("option", { name: /초코.*최도현/ }),
+  ).toBeVisible();
+  await expect.poll(() => lookupQueries.includes("초")).toBe(true);
+
+  lookupQueries.length = 0;
+  await reservationDrawer.getByLabel("환자 검색").fill("");
+  await reservationDrawer.getByLabel("환자 검색").fill("초");
   await reservationDrawer.getByLabel("환자 검색").fill("초코");
   await expect(
     page.getByRole("option", { name: /초코.*최도현/ }),
   ).toBeVisible();
-  await expect.poll(() => lookupQueries.includes("초코")).toBe(true);
+  await expect.poll(() => lookupQueries).toEqual(["초코"]);
   await page.getByRole("option", { name: /초코.*최도현/ }).click();
   await expect(reservationDrawer.getByLabel("환자 검색")).toHaveValue(/초코/);
+  await page.waitForTimeout(350);
+  expect(lookupQueries).toEqual(["초코"]);
 
   await reservationDrawer.getByLabel("환자 검색").fill("없는");
   await expect(page.getByText("검색 결과가 없습니다.")).toBeVisible();
@@ -6809,12 +6856,12 @@ test("reception walk-in keeps selected veterinarian and form details", async ({
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await expect(walkInForm.getByLabel("환자 검색")).toHaveAttribute(
     "placeholder",
-    "동물명 또는 보호자명으로 검색",
+    "환자를 선택해주세요",
   );
   await walkInForm.getByLabel("환자 검색").click();
   await walkInForm.getByLabel("환자 검색").fill("하루");
   await page.getByRole("option", { name: /하루.*강서윤/ }).click();
-  await walkInForm.getByLabel("방문 목적").fill("예방접종 전 건강 확인");
+  await walkInForm.getByLabel("방문목적").fill("예방접종 전 건강 확인");
   await walkInForm
     .getByLabel("접수 메모")
     .fill("기존 노쇼 예약과 별도 현장 접수");
@@ -6822,7 +6869,9 @@ test("reception walk-in keeps selected veterinarian and form details", async ({
   await page.getByRole("option", { name: "김도윤" }).click();
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
-  const haruCard = page.getByTestId("patient-card-patient-haru");
+  const haruCard = page
+    .getByTestId("patient-card-patient-haru")
+    .filter({ hasText: "김도윤" });
   await expect(haruCard).toContainText("하루");
   await expect(haruCard).toContainText("예방접종 전 건강 확인");
   await expect(haruCard).toContainText("김도윤");

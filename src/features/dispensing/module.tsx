@@ -78,7 +78,13 @@ import {
   type OrderTableGroup,
 } from "@/features/dispensing/data";
 import { mockStaffUsers } from "@/mocks/emr-domain";
-import type { Order, OrderQueueItem, ShellComponentProps, TechnicianUser } from "@/types/emr";
+import type {
+  Order,
+  OrderQueueItem,
+  ShellComponentProps,
+  TechnicianUser,
+  WorkspaceSlotAvailabilityProviderProps,
+} from "@/types/emr";
 import type { EmrTableDensity } from "@/components/emr/table-density";
 
 type OrderGroupFilter = "all" | "oral" | "other";
@@ -137,6 +143,17 @@ type DispensingContentBodyProps = Pick<
   queueItemCount: number;
   selectedQueueItem: OrderQueueItem | null;
 };
+
+export function DispensingSlotAvailabilityProvider({
+  children,
+  moduleId,
+}: WorkspaceSlotAvailabilityProviderProps) {
+  const selectedQueueItemId = useLayoutStore(
+    (state) => state.selectedQueueItemIds[moduleId],
+  );
+
+  return children({ hasContentAside: Boolean(selectedQueueItemId) });
+}
 
 function splitHistoryItem(item: string) {
   const [category, ...rest] = item.split(" ");

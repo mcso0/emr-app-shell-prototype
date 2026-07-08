@@ -8,7 +8,10 @@ import {
   PatientProfileDrawer,
 } from "@/features/reception/profile-drawer";
 import { ReceptionDrawer } from "@/features/reception/module";
-import type { ModuleDefinition } from "@/types/emr";
+import type {
+  ModuleDefinition,
+  WorkspaceSlotAvailabilityProviderProps,
+} from "@/types/emr";
 import { Button } from "@/components/ui/button";
 import { useLayoutStore } from "@/stores/layout-store";
 import { cn } from "@/lib/utils";
@@ -19,6 +22,12 @@ type WorkspaceFrameProps = {
   onNavigateWorkspaceSurface?: (href: string, moduleId: string) => void;
   workspaceId: string;
 };
+
+function DefaultSlotAvailabilityProvider({
+  children,
+}: WorkspaceSlotAvailabilityProviderProps) {
+  return children({});
+}
 
 export function WorkspaceFrame({
   moduleDefinition,
@@ -38,6 +47,8 @@ export function WorkspaceFrame({
   const Content = moduleDefinition.content;
   const RightPanel = moduleDefinition.rightPanel;
   const ModuleDrawer = moduleDefinition.drawer;
+  const SlotAvailabilityProvider =
+    moduleDefinition.slotAvailabilityProvider ?? DefaultSlotAvailabilityProvider;
   const routeReceptionDrawerToRightPanel =
     moduleDefinition.id === "reception" && Boolean(RightPanel);
   const instantRightPanel = moduleDefinition.id === "reception";
@@ -108,150 +119,169 @@ export function WorkspaceFrame({
     resolvedRightPanelWidth,
     SHELL_LAYOUT.rightPanel.defaultWidth
   );
-  const rightPanelGap =
-    moduleDefinition.rightPanelGap && RightPanel && rightPanelOpen
-      ? SHELL_LAYOUT.shell.gap
-      : 0;
-  const rightPanelDetached = rightPanelGap > 0;
-  const slotProps = {
+  const baseSlotProps = {
     workspaceId,
     moduleId: moduleDefinition.id,
     moduleLabel: moduleDefinition.label,
-    hasContentAside: Boolean(ContentAside),
-    hasRightPanel: Boolean(RightPanel),
     onNavigateWorkspaceSurface,
   };
 
   return (
-    <main
-      className={cn(
-        "emr-workspace-frame-responsive relative grid min-h-0 gap-x-[var(--clair-workspace-right-panel-gap)] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]",
-        !instantRightPanel && "transition-[grid-template-columns]",
-        rightPanelDetached
-          ? "overflow-visible bg-transparent"
-          : "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] shadow-xs"
-      )}
-      data-content-aside-open={ContentAside && contentAsideOpen ? "true" : "false"}
-      data-right-panel-open={RightPanel && rightPanelOpen ? "true" : "false"}
-      style={{
-        "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
-          RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"
-        }`,
-        "--clair-workspace-right-panel-gap": `${rightPanelGap}px`,
-      } as CSSProperties}
-    >
-      <section
-        className={cn(
-          "relative flex min-h-0 min-w-0 flex-col bg-[var(--emr-surface-workspace)]",
-          rightPanelDetached &&
-            "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] shadow-xs"
-        )}
-      >
-        {Header ? <Header {...slotProps} /> : null}
-        <div
-          className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 [grid-template-columns:var(--clair-workspace-content-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
-          style={{
-            "--clair-workspace-content-columns": `${
-              ContentAside && contentAsideOpen ? `${effectiveContentAsideWidth}px` : "0px"
-            } minmax(0, 1fr)`,
-          } as CSSProperties}
-        >
-          <aside
+    <SlotAvailabilityProvider {...baseSlotProps}>
+      {(availability) => {
+        const hasContentAside =
+          Boolean(ContentAside) && (availability.hasContentAside ?? true);
+        const hasRightPanel =
+          Boolean(RightPanel) && (availability.hasRightPanel ?? true);
+        const contentAsideVisible = hasContentAside && contentAsideOpen;
+        const rightPanelVisible = hasRightPanel && rightPanelOpen;
+        const rightPanelGap =
+          moduleDefinition.rightPanelGap && rightPanelVisible
+            ? SHELL_LAYOUT.shell.gap
+            : 0;
+        const rightPanelDetached = rightPanelGap > 0;
+        const slotProps = {
+          ...baseSlotProps,
+          hasContentAside,
+          hasRightPanel,
+        };
+
+        return (
+          <main
             className={cn(
-              "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-content-panel)] max-md:hidden",
-              ContentAside && contentAsideOpen && "border-r border-[var(--emr-line-default)]"
+              "emr-workspace-frame-responsive relative grid min-h-0 gap-x-[var(--clair-workspace-right-panel-gap)] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]",
+              !instantRightPanel && "transition-[grid-template-columns]",
+              rightPanelDetached
+                ? "overflow-visible bg-transparent"
+                : "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] shadow-xs"
             )}
-          >
-            <div
-              className="h-full"
-              style={{
-                minWidth: SHELL_LAYOUT.contentAside.minWidth,
-                width: effectiveContentAsideWidth,
-              }}
-            >
-              {ContentAside ? (
-                <ContentAside {...slotProps} />
-              ) : null}
-            </div>
-          </aside>
-          <div className="min-h-0 min-w-0 overflow-hidden">
-            <Content {...slotProps} />
-          </div>
-        </div>
-
-      </section>
-
-      <aside
-        className={cn(
-          "emr-workspace-rightpanel-responsive min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:hidden",
-          !instantRightPanel && "transition-opacity duration-150",
-          RightPanel &&
-            rightPanelOpen &&
-            (rightPanelDetached
-              ? "rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] shadow-xs"
-              : "border-l border-[var(--emr-line-default)]"),
-          RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
-        )}
-      >
-        <div
-          className="flex h-full w-full flex-col"
-          style={{ minWidth: rightPanelOpen ? effectiveRightPanelWidth : 0 }}
-        >
-          {RightPanel && rightPanelOpen ? <RightPanel {...slotProps} /> : null}
-        </div>
-      </aside>
-
-      <AnimatePresence>
-        {shouldRenderWorkspaceDrawer ? (
-          <motion.aside
-            key={drawerMotionKey}
-            initial={{ x: 480, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 480, opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-line-default)] bg-card shadow-2xl"
-            data-testid="workspace-drawer"
+            data-content-aside-open={contentAsideVisible ? "true" : "false"}
+            data-right-panel-open={rightPanelVisible ? "true" : "false"}
             style={{
-              gridColumn: "1 / -1",
-              gridRow: "1 / -1",
-              width: `min(100%, ${drawerWidth}px)`,
-              zIndex: SHELL_LAYOUT.drawer.zIndex,
-            }}
+              "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
+                rightPanelVisible ? `${effectiveRightPanelWidth}px` : "0px"
+              }`,
+              "--clair-workspace-right-panel-gap": `${rightPanelGap}px`,
+            } as CSSProperties}
           >
-            {shouldShowShellDrawerHeader ? (
-              <div className="flex h-12 items-center justify-between border-b px-4">
-                <div>
-                  <div className="flex min-w-0 items-baseline gap-2">
-                    <span className="text-sm font-semibold">{drawerTitle}</span>
-                    {drawerSubtitle ? (
-                      <span className="truncate text-[11px] text-muted-foreground">
-                        {drawerSubtitle}
-                      </span>
+            <section
+              className={cn(
+                "relative flex min-h-0 min-w-0 flex-col bg-[var(--emr-surface-workspace)]",
+                rightPanelDetached &&
+                  "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] shadow-xs"
+              )}
+            >
+              {Header ? <Header {...slotProps} /> : null}
+              <div
+                className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 [grid-template-columns:var(--clair-workspace-content-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+                style={{
+                  "--clair-workspace-content-columns": `${
+                    contentAsideVisible
+                      ? `${effectiveContentAsideWidth}px`
+                      : "0px"
+                  } minmax(0, 1fr)`,
+                } as CSSProperties}
+              >
+                <aside
+                  className={cn(
+                    "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-content-panel)] max-md:hidden",
+                    contentAsideVisible && "border-r border-[var(--emr-line-default)]"
+                  )}
+                >
+                  <div
+                    className="h-full"
+                    style={{
+                      minWidth: contentAsideVisible
+                        ? SHELL_LAYOUT.contentAside.minWidth
+                        : 0,
+                      width: contentAsideVisible ? effectiveContentAsideWidth : 0,
+                    }}
+                  >
+                    {ContentAside && contentAsideVisible ? (
+                      <ContentAside {...slotProps} />
                     ) : null}
                   </div>
+                </aside>
+                <div className="min-h-0 min-w-0 overflow-hidden">
+                  <Content {...slotProps} />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="상세 닫기"
-                  onClick={() => setActiveDrawer(null)}
-                >
-                  <CloseIcon />
-                </Button>
               </div>
-            ) : null}
-            {CommonProfileDrawer && activeDrawer ? (
-              isPatientDrawer ? (
-                <PatientProfileDrawer patientId={activeDrawer.id} />
-              ) : (
-                <GuardianProfileDrawer guardianId={activeDrawer.id} />
-              )
-            ) : EffectiveModuleDrawer ? (
-              <EffectiveModuleDrawer {...slotProps} />
-            ) : null}
-          </motion.aside>
-        ) : null}
-      </AnimatePresence>
-    </main>
+
+            </section>
+
+            <aside
+              className={cn(
+                "emr-workspace-rightpanel-responsive min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:hidden",
+                !instantRightPanel && "transition-opacity duration-150",
+                rightPanelVisible &&
+                  (rightPanelDetached
+                    ? "rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] shadow-xs"
+                    : "border-l border-[var(--emr-line-default)]"),
+                !rightPanelVisible && "pointer-events-none opacity-0"
+              )}
+            >
+              <div
+                className="flex h-full w-full flex-col"
+                style={{ minWidth: rightPanelVisible ? effectiveRightPanelWidth : 0 }}
+              >
+                {RightPanel && rightPanelVisible ? <RightPanel {...slotProps} /> : null}
+              </div>
+            </aside>
+
+            <AnimatePresence>
+              {shouldRenderWorkspaceDrawer ? (
+                <motion.aside
+                  key={drawerMotionKey}
+                  initial={{ x: 480, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 480, opacity: 0 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-line-default)] bg-card shadow-2xl"
+                  data-testid="workspace-drawer"
+                  style={{
+                    gridColumn: "1 / -1",
+                    gridRow: "1 / -1",
+                    width: `min(100%, ${drawerWidth}px)`,
+                    zIndex: SHELL_LAYOUT.drawer.zIndex,
+                  }}
+                >
+                  {shouldShowShellDrawerHeader ? (
+                    <div className="flex h-12 items-center justify-between border-b px-4">
+                      <div>
+                        <div className="flex min-w-0 items-baseline gap-2">
+                          <span className="text-sm font-semibold">{drawerTitle}</span>
+                          {drawerSubtitle ? (
+                            <span className="truncate text-[11px] text-muted-foreground">
+                              {drawerSubtitle}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="상세 닫기"
+                        onClick={() => setActiveDrawer(null)}
+                      >
+                        <CloseIcon />
+                      </Button>
+                    </div>
+                  ) : null}
+                  {CommonProfileDrawer && activeDrawer ? (
+                    isPatientDrawer ? (
+                      <PatientProfileDrawer patientId={activeDrawer.id} />
+                    ) : (
+                      <GuardianProfileDrawer guardianId={activeDrawer.id} />
+                    )
+                  ) : EffectiveModuleDrawer ? (
+                    <EffectiveModuleDrawer {...slotProps} />
+                  ) : null}
+                </motion.aside>
+              ) : null}
+            </AnimatePresence>
+          </main>
+        );
+      }}
+    </SlotAvailabilityProvider>
   );
 }

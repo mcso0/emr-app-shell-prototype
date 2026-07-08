@@ -1,6 +1,19 @@
 -- DEN-57: reception patient/guardian lookup reader.
 -- Local-first only. Remote Supabase application remains approval-gated.
 
+create index if not exists patients_workspace_status_lower_name_prefix_idx
+  on public.patients (workspace_id, status, lower(name) text_pattern_ops);
+
+create index if not exists guardians_workspace_lower_name_prefix_idx
+  on public.guardians (workspace_id, lower(name) text_pattern_ops);
+
+create index if not exists guardians_workspace_mobile_phone_normalized_prefix_idx
+  on public.guardians (workspace_id, mobile_phone_normalized text_pattern_ops)
+  where mobile_phone_normalized is not null and mobile_phone_normalized <> '';
+
+create index if not exists patient_guardians_workspace_patient_primary_lookup_idx
+  on public.patient_guardians (workspace_id, patient_id, is_primary);
+
 create or replace function public.clair_search_reception_patient_guardian_lookup(
   p_workspace_id text,
   p_query text default '',
@@ -17,7 +30,7 @@ as $$
       nullif(lower(trim(coalesce(p_query, ''))), '') as query_text,
       greatest(1, least(coalesce(p_limit, 25), 50)) as row_limit
   ),
-  scoped_patients as (
+  base_patients as not materialized (
     select
       p.*,
       g.id as guardian_id,
@@ -32,6 +45,15 @@ as $$
       g.memo as guardian_memo,
       g.created_at as guardian_created_at,
       g.updated_at as guardian_updated_at,
+      lower(p.name) as patient_name_key,
+      lower(coalesce(p.patient_no, '')) as patient_no_key,
+      lower(coalesce(p.breed, '')) as breed_key,
+      lower(coalesce(p.microchip_no, '')) as microchip_key,
+      lower(coalesce(p.patient_registration_no, '')) as patient_registration_key,
+      lower(coalesce(g.name, '')) as guardian_name_key,
+      lower(coalesce(g.mobile_phone, '')) as guardian_mobile_phone_key,
+      lower(coalesce(g.mobile_phone_normalized, '')) as guardian_mobile_phone_normalized_key,
+      lower(coalesce(g.phone, '')) as guardian_phone_key,
       lower(
         concat_ws(
           ' ',
@@ -54,29 +76,78 @@ as $$
     left join public.guardians g
       on g.workspace_id = p.workspace_id
      and g.id = pg.guardian_id
-    cross join normalized_input input
     where p.workspace_id = p_workspace_id
       and p.status = 'active'
       and private.clair_is_active_workspace_member(p_workspace_id)
-      and (
-        input.query_text is null
-        or lower(
-          concat_ws(
-            ' ',
-            p.name,
-            p.patient_no,
-            p.breed,
-            p.microchip_no,
-            p.patient_registration_no,
-            g.name,
-            g.mobile_phone,
-            g.mobile_phone_normalized,
-            g.phone
-          )
-        ) like '%' || input.query_text || '%'
-      )
-    order by p.name asc, p.patient_no asc
+  ),
+  ranked_prefix_patients as (
+    select
+      base.*,
+      case
+        when input.query_text is null then 1
+        when base.patient_name_key = input.query_text
+          or base.guardian_name_key = input.query_text
+          or base.patient_no_key = input.query_text
+          or base.guardian_mobile_phone_key = input.query_text
+          or base.guardian_mobile_phone_normalized_key = input.query_text
+          or base.guardian_phone_key = input.query_text
+        then 0
+        else 1
+      end as match_rank
+    from base_patients base
+    cross join normalized_input input
+    where input.query_text is null
+      or base.patient_name_key = input.query_text
+      or base.guardian_name_key = input.query_text
+      or base.patient_no_key = input.query_text
+      or base.guardian_mobile_phone_key = input.query_text
+      or base.guardian_mobile_phone_normalized_key = input.query_text
+      or base.guardian_phone_key = input.query_text
+      or base.patient_name_key like input.query_text || '%'
+      or base.guardian_name_key like input.query_text || '%'
+      or base.patient_no_key like input.query_text || '%'
+      or base.microchip_key like input.query_text || '%'
+      or base.patient_registration_key like input.query_text || '%'
+      or base.guardian_mobile_phone_key like input.query_text || '%'
+      or base.guardian_mobile_phone_normalized_key like input.query_text || '%'
+      or base.guardian_phone_key like input.query_text || '%'
+  ),
+  prefix_patients as (
+    select *
+    from ranked_prefix_patients
+    order by match_rank asc, name asc, patient_no asc
     limit (select row_limit from normalized_input)
+  ),
+  prefix_count as (
+    select count(*) as row_count from prefix_patients
+  ),
+  ranked_contains_patients as (
+    select
+      base.*,
+      2 as match_rank
+    from base_patients base
+    cross join normalized_input input
+    cross join prefix_count
+    where input.query_text is not null
+      and length(input.query_text) >= 2
+      and prefix_count.row_count < input.row_limit
+      and base.search_text like '%' || input.query_text || '%'
+      and not exists (
+        select 1
+        from prefix_patients prefix
+        where prefix.id = base.id
+      )
+    order by base.name asc, base.patient_no asc
+    limit (
+      select input.row_limit - prefix_count.row_count
+      from normalized_input input
+      cross join prefix_count
+    )
+  ),
+  scoped_patients as (
+    select * from prefix_patients
+    union all
+    select * from ranked_contains_patients
   )
   select coalesce(
     jsonb_agg(
@@ -124,6 +195,7 @@ as $$
         end,
         'searchText', search_text
       )
+      order by match_rank asc, name asc, patient_no asc
     ),
     '[]'::jsonb
   )
