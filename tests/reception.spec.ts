@@ -93,7 +93,7 @@ async function expectScrollFadeViewport(viewport: Locator) {
   ).toBe(true);
 }
 
-async function expectRegistrationDialogsWithoutDimOrZoom(page: Page) {
+async function expectRegistrationDialogsWithDimAndWithoutZoom(page: Page) {
   const contentClassNames = await page
     .locator('[data-slot="dialog-content"]')
     .evaluateAll((elements) =>
@@ -129,15 +129,15 @@ async function expectRegistrationDialogsWithoutDimOrZoom(page: Page) {
   expect(overlayStates.length).toBeGreaterThan(0);
 
   for (const state of overlayStates) {
-    expect(state.className).toContain("bg-transparent");
-    expect(state.className).not.toContain("bg-black/10");
+    expect(state.className).toContain("bg-black/10");
+    expect(state.className).not.toContain("bg-transparent");
     expect(state.className).not.toContain("backdrop-blur-xs");
     expect(["", "none"]).toContain(state.backdropFilter);
     expect([
       "rgba(0, 0, 0, 0)",
       "oklab(0 0 0 / 0)",
       "transparent",
-    ]).toContain(state.backgroundColor);
+    ]).not.toContain(state.backgroundColor);
   }
 }
 
@@ -1993,7 +1993,7 @@ test("patient guardian registration creates a new guardian and patient after con
   await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
 });
 
-test("patient guardian registration dialogs close without zoom motion or dim backdrop", async ({
+test("patient guardian registration dialogs keep dim backdrop without zoom motion", async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -2056,13 +2056,13 @@ test("patient guardian registration dialogs close without zoom motion or dim bac
         await expect(
           page.getByRole("heading", { name: registrationOption.heading }),
         ).toBeVisible();
-        await expectRegistrationDialogsWithoutDimOrZoom(page);
+        await expectRegistrationDialogsWithDimAndWithoutZoom(page);
 
         await closePath.close(page, registrationDialog);
         await expect(
           page.getByRole("dialog", { name: "입력을 취소할까요?" }),
         ).toBeVisible();
-        await expectRegistrationDialogsWithoutDimOrZoom(page);
+        await expectRegistrationDialogsWithDimAndWithoutZoom(page);
 
         await page.getByRole("button", { name: "취소하고 나가기" }).click();
         await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
