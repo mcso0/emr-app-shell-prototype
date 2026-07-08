@@ -87,7 +87,10 @@ import { cn } from "@/lib/utils";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
-import type { ShellComponentProps } from "@/types/emr";
+import type {
+  ShellComponentProps,
+  WorkspaceSlotAvailabilityProviderProps,
+} from "@/types/emr";
 import type {
   InvoiceLine,
   InvoiceStatus,
@@ -814,6 +817,57 @@ function createLiveCandidateBillingDetail({
     payments: [],
     requestedByName: "이수지",
   };
+}
+
+function useBillingSelectedDetailAvailability() {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const searchParams = useSearchParams();
+  const invoiceLines = useBillingStore((state) => state.invoiceLines);
+  const invoices = useBillingStore((state) => state.invoices);
+  const payments = useBillingStore((state) => state.payments);
+  const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
+  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
+
+  if (queryEncounterId) return true;
+
+  const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
+  const workspaceInvoices = legacySalesDemo ? invoices : emptyBillingInvoices;
+  const workspaceInvoiceLines = legacySalesDemo
+    ? invoiceLines
+    : emptyBillingInvoiceLines;
+  const workspacePayments = legacySalesDemo ? payments : emptyBillingPayments;
+  const detail =
+    getBillingDetail(
+      effectiveInvoiceId,
+      workspaceInvoices,
+      workspaceInvoiceLines,
+      workspacePayments,
+    ) ??
+    (legacySalesDemo
+      ? getBillingDetail(
+          "invoice-coco-260501",
+          workspaceInvoices,
+          workspaceInvoiceLines,
+          workspacePayments,
+        )
+      : null);
+
+  return Boolean(detail);
+}
+
+export function BillingSlotAvailabilityProvider({
+  children,
+}: WorkspaceSlotAvailabilityProviderProps) {
+  const hasSelectedDetail = useBillingSelectedDetailAvailability();
+
+  return children({
+    hasContentAside: hasSelectedDetail,
+    hasRightPanel: hasSelectedDetail,
+  });
 }
 
 function useBillingWorkspaceData() {

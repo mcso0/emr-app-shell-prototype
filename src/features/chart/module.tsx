@@ -169,7 +169,11 @@ import type {
   EmrTableDensity,
   EmrTableHeaderInteraction,
 } from "@/components/emr/table-density";
-import type { OrderQueueItem, ShellComponentProps } from "@/types/emr";
+import type {
+  OrderQueueItem,
+  ShellComponentProps,
+  WorkspaceSlotAvailabilityProviderProps,
+} from "@/types/emr";
 import type { ChartOrderCatalogSearchRow } from "@/features/hospital-admin/server-order-catalog";
 import type {
   Diagnosis,
@@ -795,6 +799,38 @@ function getSelectedBundle(
   );
 }
 
+function useSelectedChartBundle(workspaceId: string) {
+  const selectedEncounterId = useChartStore(
+    (state) => state.selectedEncounterId,
+  );
+  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
+  const allowStoreMockFallback = useChartStore(
+    (state) => state.liveQueueStatus !== "ready",
+  );
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
+  const allowMockFallback =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
+
+  return getSelectedBundle(selectedEncounterId, liveQueueRecords, {
+    allowMockFallback,
+  });
+}
+
+export function ChartSlotAvailabilityProvider({
+  children,
+  workspaceId,
+}: WorkspaceSlotAvailabilityProviderProps) {
+  const bundle = useSelectedChartBundle(workspaceId);
+  const hasSelectedDetail = Boolean(bundle);
+
+  return children({
+    hasContentAside: hasSelectedDetail,
+    hasRightPanel: hasSelectedDetail,
+  });
+}
+
 function resolveChartBundleVeterinarianName(bundle: ChartBundle) {
   return (
     bundle.veterinarianName ??
@@ -1317,18 +1353,10 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
 }
 
 export function ChartContentAside({ workspaceId }: ShellComponentProps) {
+  const bundle = useSelectedChartBundle(workspaceId);
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
-  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus !== "ready",
-  );
-  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
-  const allowMockFallback =
-    isLegacySalesDemoWorkspace(workspaceId) &&
-    (allowStoreMockFallback ||
-      selectedEncounterId === demoScenarioEncounterId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
@@ -1336,9 +1364,6 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<
     Set<string>
   >(() => new Set());
-  const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
-    allowMockFallback,
-  });
   const historyRows = useMemo(
     () => (bundle ? getChartHistoryRowsForBundle(bundle) : []),
     [bundle],
@@ -3199,22 +3224,8 @@ function AssessmentHistory({
 }
 
 export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
-  const selectedEncounterId = useChartStore(
-    (state) => state.selectedEncounterId,
-  );
-  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus !== "ready",
-  );
-  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
-  const allowMockFallback =
-    isLegacySalesDemoWorkspace(workspaceId) &&
-    (allowStoreMockFallback ||
-      selectedEncounterId === demoScenarioEncounterId);
+  const bundle = useSelectedChartBundle(workspaceId);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
-  const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
-    allowMockFallback,
-  });
   const historyRows = useMemo(
     () => (bundle ? getChartHistoryRowsForBundle(bundle) : []),
     [bundle],

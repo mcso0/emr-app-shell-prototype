@@ -17,6 +17,7 @@ import {
   ChartHeader,
   ChartRightPanel,
   ChartSidePanel,
+  ChartSlotAvailabilityProvider,
 } from "@/features/chart/module";
 import {
   BillingContent,
@@ -24,6 +25,7 @@ import {
   BillingHeader,
   BillingRightPanel,
   BillingSidePanel,
+  BillingSlotAvailabilityProvider,
 } from "@/features/billing/module";
 import {
   DispensingContent,
@@ -31,6 +33,7 @@ import {
   DispensingDrawer,
   DispensingHeader,
   DispensingSidePanel,
+  DispensingSlotAvailabilityProvider,
 } from "@/features/dispensing/module";
 import {
   ImagingContentAside,
@@ -39,10 +42,12 @@ import {
   ImagingHeader,
   ImagingRightPanel,
   ImagingSidePanel,
+  ImagingSlotAvailabilityProvider,
   LabContent,
   LabHeader,
   LabRightPanel,
   LabSidePanel,
+  LabSlotAvailabilityProvider,
 } from "@/features/lab-imaging/module";
 import {
   InpatientContent,
@@ -91,6 +96,7 @@ export const modules: ModuleDefinition[] = [
     contentAside: ChartContentAside,
     content: ChartContent,
     rightPanel: ChartRightPanel,
+    slotAvailabilityProvider: ChartSlotAvailabilityProvider,
     defaultRightPanelOpen: false,
   },
   {
@@ -102,6 +108,7 @@ export const modules: ModuleDefinition[] = [
     contentAside: LabContentAside,
     content: LabContent,
     rightPanel: LabRightPanel,
+    slotAvailabilityProvider: LabSlotAvailabilityProvider,
     rightPanelGap: true,
     defaultContentAsideOpen: true,
     defaultRightPanelOpen: false,
@@ -115,6 +122,7 @@ export const modules: ModuleDefinition[] = [
     contentAside: ImagingContentAside,
     content: ImagingContent,
     rightPanel: ImagingRightPanel,
+    slotAvailabilityProvider: ImagingSlotAvailabilityProvider,
     defaultContentAsideOpen: true,
     defaultRightPanelOpen: true,
   },
@@ -126,6 +134,7 @@ export const modules: ModuleDefinition[] = [
     contentHeader: DispensingHeader,
     contentAside: DispensingContentAside,
     content: DispensingContent,
+    slotAvailabilityProvider: DispensingSlotAvailabilityProvider,
     drawer: DispensingDrawer,
   },
   {
@@ -145,6 +154,7 @@ export const modules: ModuleDefinition[] = [
     contentAside: BillingContentAside,
     content: BillingContent,
     rightPanel: BillingRightPanel,
+    slotAvailabilityProvider: BillingSlotAvailabilityProvider,
     defaultRightPanelOpen: true,
   },
   {

@@ -646,6 +646,8 @@ const mapLookupItemToReceptionPatientSummary = (
 
 type ReceptionPatientLookupState = "idle" | "loading" | "error";
 
+const receptionPatientLookupDebounceMs = 275;
+
 function useReceptionPatientLookup({
   authSessionId,
   patientSummaries,
@@ -664,6 +666,8 @@ function useReceptionPatientLookup({
   const [patientId, setPatientId] = useState("");
   const [selectedLookupSummary, setSelectedLookupSummary] =
     useState<ReceptionPatientSummary>();
+  const lookupRequestSeqRef = useRef(0);
+  const lastSuccessfulLookupKeyRef = useRef("");
   const lookupActive = lookupQuery.trim().length > 0;
   const lookupPatientSummaries = useMemo(
     () => lookupResults.map(mapLookupItemToReceptionPatientSummary),
@@ -696,16 +700,29 @@ function useReceptionPatientLookup({
   useEffect(() => {
     const query = lookupQuery.trim();
     if (!query) {
+      lastSuccessfulLookupKeyRef.current = "";
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLookupResults([]);
       setLookupState("idle");
       return;
     }
 
+    if (selectedSummary && query === selectedPatientLabel.trim()) {
+      return;
+    }
+
+    const lookupKey = `${workspaceId}\u0000${authSessionId ?? ""}\u0000${query}`;
+    if (lookupKey === lastSuccessfulLookupKeyRef.current) {
+      return;
+    }
+
     let cancelled = false;
     const controller = new AbortController();
+    const requestSeq = lookupRequestSeqRef.current + 1;
+    lookupRequestSeqRef.current = requestSeq;
 
     async function loadLookup() {
+      if (cancelled || requestSeq !== lookupRequestSeqRef.current) return;
       setLookupState("loading");
 
       try {
@@ -723,7 +740,7 @@ function useReceptionPatientLookup({
         const result =
           (await response.json()) as ReceptionPatientGuardianLookupResponse;
 
-        if (cancelled) return;
+        if (cancelled || requestSeq !== lookupRequestSeqRef.current) return;
 
         if (!response.ok || !result.ok) {
           setLookupResults([]);
@@ -733,9 +750,11 @@ function useReceptionPatientLookup({
 
         setLookupResults(result.patients);
         setLookupState("idle");
+        lastSuccessfulLookupKeyRef.current = lookupKey;
       } catch (error) {
         if (
           !cancelled &&
+          requestSeq === lookupRequestSeqRef.current &&
           !(error instanceof DOMException && error.name === "AbortError")
         ) {
           setLookupResults([]);
@@ -744,13 +763,22 @@ function useReceptionPatientLookup({
       }
     }
 
-    void loadLookup();
+    const debounceTimer = window.setTimeout(() => {
+      void loadLookup();
+    }, receptionPatientLookupDebounceMs);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(debounceTimer);
       controller.abort();
     };
-  }, [authSessionId, lookupQuery, workspaceId]);
+  }, [
+    authSessionId,
+    lookupQuery,
+    selectedPatientLabel,
+    selectedSummary,
+    workspaceId,
+  ]);
 
   const updateLookupQuery = useCallback(
     (value: string) => {
@@ -1590,6 +1618,23 @@ const getWalkInTimeBlockMessage = (
 
 const getShortTime = (dateTime?: string) => {
   return formatOperatingShortTime(dateTime);
+};
+
+const formatReceptionSidePanelDate = (date: string) => {
+  const [year = "0000", month = "00", day = "00"] = date.split("-");
+  return `${year}.${month}.${day}`;
+};
+
+const formatReceptionSidePanelTime = (dateTime?: string) => {
+  const minutes = getOperatingMinutesFromIso(dateTime);
+  if (minutes === undefined) return "-";
+
+  const hours = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const period = hours >= 12 ? "오후" : "오전";
+  const hour12 = hours % 12 || 12;
+
+  return `${period} ${hour12}:${String(minute).padStart(2, "0")}`;
 };
 
 const getShortDate = (dateTime?: string) => {
@@ -2918,7 +2963,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
                   veterinarianName: item.veterinarianName,
                 });
                 selectEncounter(item.encounter.id);
-                setActiveDrawer(null);
                 router.push(
                   buildChartRoute({
                     encounterId: item.encounter.id,
@@ -6206,13 +6250,11 @@ function ReceptionWalkInFormDrawer({
 }) {
   const authSession = useMockAuthStore((state) => state.session);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const [department, setDepartment] = useState(defaultWalkInDepartment);
+  const [department, setDepartment] = useState("");
   const [duration, setDuration] = useState(defaultWalkInDuration);
   const [memo, setMemo] = useState("");
   const [patientId, setPatientId] = useState(initialPatientId ?? "");
-  const [veterinarianId, setVeterinarianId] = useState(
-    unassignedVeterinarianValue,
-  );
+  const [veterinarianId, setVeterinarianId] = useState("");
   const [patientLookupOpen, setPatientLookupOpen] = useState(false);
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<
@@ -6223,6 +6265,8 @@ function ReceptionWalkInFormDrawer({
   const [lookupState, setLookupState] = useState<"idle" | "loading" | "error">(
     "idle",
   );
+  const lookupRequestSeqRef = useRef(0);
+  const lastSuccessfulLookupKeyRef = useRef("");
   const [submitting, setSubmitting] = useState(false);
   const [visitPurpose, setVisitPurpose] = useState("");
   const [weightKg, setWeightKg] = useState("");
@@ -6295,16 +6339,29 @@ function ReceptionWalkInFormDrawer({
   useEffect(() => {
     const query = lookupQuery.trim();
     if (!query) {
+      lastSuccessfulLookupKeyRef.current = "";
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLookupResults([]);
       setLookupState("idle");
       return;
     }
 
+    if (selectedSummary && query === patientOptionText.trim()) {
+      return;
+    }
+
+    const lookupKey = `${workspaceId}\u0000${authSession?.id ?? ""}\u0000${query}`;
+    if (lookupKey === lastSuccessfulLookupKeyRef.current) {
+      return;
+    }
+
     let cancelled = false;
     const controller = new AbortController();
+    const requestSeq = lookupRequestSeqRef.current + 1;
+    lookupRequestSeqRef.current = requestSeq;
 
     async function loadLookup() {
+      if (cancelled || requestSeq !== lookupRequestSeqRef.current) return;
       setLookupState("loading");
 
       try {
@@ -6322,7 +6379,7 @@ function ReceptionWalkInFormDrawer({
         const result =
           (await response.json()) as ReceptionPatientGuardianLookupResponse;
 
-        if (cancelled) return;
+        if (cancelled || requestSeq !== lookupRequestSeqRef.current) return;
 
         if (!response.ok || !result.ok) {
           setLookupResults([]);
@@ -6332,9 +6389,11 @@ function ReceptionWalkInFormDrawer({
 
         setLookupResults(result.patients);
         setLookupState("idle");
+        lastSuccessfulLookupKeyRef.current = lookupKey;
       } catch (error) {
         if (
           !cancelled &&
+          requestSeq === lookupRequestSeqRef.current &&
           !(error instanceof DOMException && error.name === "AbortError")
         ) {
           setLookupResults([]);
@@ -6343,13 +6402,22 @@ function ReceptionWalkInFormDrawer({
       }
     }
 
-    void loadLookup();
+    const debounceTimer = window.setTimeout(() => {
+      void loadLookup();
+    }, receptionPatientLookupDebounceMs);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(debounceTimer);
       controller.abort();
     };
-  }, [authSession?.id, lookupQuery, workspaceId]);
+  }, [
+    authSession?.id,
+    lookupQuery,
+    patientOptionText,
+    selectedSummary,
+    workspaceId,
+  ]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -6379,7 +6447,7 @@ function ReceptionWalkInFormDrawer({
     }
 
     const input: WalkInReceptionInput = {
-      department,
+      department: department || defaultWalkInDepartment,
       durationMinutes,
       guardianId: guardian?.id,
       guardianMobilePhone: guardian?.mobilePhone,
@@ -6388,7 +6456,7 @@ function ReceptionWalkInFormDrawer({
       patientName: patient.name,
       plannedStartAt,
       primaryVeterinarianId: selectedVeterinarianId,
-      sendKakaoMessage,
+      sendKakaoMessage: presentation === "side-panel" ? false : sendKakaoMessage,
       visitPurpose: trimmedVisitPurpose,
       weightKg: parsedWeightKg,
     };
@@ -6417,9 +6485,9 @@ function ReceptionWalkInFormDrawer({
         data-testid="walk-in-reception-dialog"
       >
         <ScrollArea className="min-h-0 flex-1">
-          <div className="px-4">
+          <div className="flex flex-col gap-[var(--clair-spacing-16)] p-[var(--clair-spacing-16)]">
             {timeBlockMessage ? (
-              <div className="pt-4">
+              <div>
                 <EmrInlineAlert
                   severity="warning"
                   title="접수 가능 시간이 아닙니다"
@@ -6430,10 +6498,11 @@ function ReceptionWalkInFormDrawer({
               </div>
             ) : null}
 
-            <ReceptionSidePanelSection title="환자/보호자">
+            <ReceptionSidePanelSection title="환자/보호자" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
                 label="동물명"
+                variant="create"
               >
                 <div
                   className="relative"
@@ -6444,13 +6513,13 @@ function ReceptionWalkInFormDrawer({
                   }}
                 >
                   <CdsActionsSearchIcon
-                    className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
+                    className="pointer-events-none absolute left-[var(--clair-spacing-10)] top-1/2 size-[var(--clair-spacing-16)] -translate-y-1/2 text-[var(--clair-color-atomic-neutral-500)]"
                     aria-hidden="true"
                   />
                   <Input
                     aria-label="환자 검색"
                     autoComplete="off"
-                    className="h-8 bg-card pl-8 pr-8 emr-text-dense font-semibold"
+                    className="bg-[var(--emr-reception-create-field-bg)] pl-[var(--clair-spacing-32)] pr-[var(--clair-spacing-32)] font-medium"
                     placeholder="환자를 선택해주세요"
                     value={lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
@@ -6472,7 +6541,7 @@ function ReceptionWalkInFormDrawer({
                   {lookupQuery ? (
                     <button
                       type="button"
-                      className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="absolute right-[var(--clair-spacing-8)] top-1/2 flex size-[var(--clair-spacing-20)] -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
                       aria-label="검색어 초기화"
                       onClick={() => {
                         setLookupQuery("");
@@ -6544,10 +6613,12 @@ function ReceptionWalkInFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsPeopleUserIcon className="size-3.5" />}
                 label="보호자명"
+                variant="create"
               >
                 <ReceptionSidePanelInput
                   readOnly
                   placeholder="환자 선택 시 표기됩니다"
+                  variant="create"
                   value={
                     guardian
                       ? `${guardian.name}${
@@ -6558,11 +6629,13 @@ function ReceptionWalkInFormDrawer({
                 />
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="바이탈">
+            <ReceptionSidePanelSection title="바이탈" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsMedicalActivityIcon className="size-3.5" />}
                 label="체중"
+                variant="create"
               >
                 <div className="min-w-0">
                   <ReceptionSidePanelInput
@@ -6572,6 +6645,7 @@ function ReceptionWalkInFormDrawer({
                     placeholder="체중을 입력해주세요"
                     unit="Kg"
                     value={weightKg}
+                    variant="create"
                     aria-invalid={weightInvalid || undefined}
                     className={
                       weightInvalid
@@ -6589,21 +6663,35 @@ function ReceptionWalkInFormDrawer({
                   ) : null}
                 </div>
               </ReceptionSidePanelField>
+              <ReceptionSidePanelAddVitalButton
+                disabled={!patient}
+                onClick={() => {
+                  toast.info("추가 바이탈 입력은 후속 작업에서 연결됩니다.");
+                }}
+              />
             </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="진료과/담당의">
+            <ReceptionSidePanelSection title="진료과/담당의" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
                 label="진료과"
+                variant="create"
               >
                 <Select
                   value={department}
                   onValueChange={(value) => value && setDepartment(value)}
                 >
-                  <SelectTrigger aria-label="진료과" size="sm" className="w-full bg-card">
+                  <SelectTrigger
+                    aria-label="진료과"
+                    className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium data-placeholder:text-[var(--clair-color-atomic-neutral-500)]"
+                  >
                     <SelectValue placeholder="진료과를 선택해주세요" />
                   </SelectTrigger>
-                  <SelectContent align="end" className="min-w-[224px]">
+                  <SelectContent
+                    align="end"
+                    className="min-w-[var(--emr-reception-create-select-content-min-width)]"
+                  >
                     <SelectGroup>
                       <SelectItem value="영상의학과 · 방사선종양학과">
                         영상의학과 · 방사선종양학과
@@ -6617,20 +6705,22 @@ function ReceptionWalkInFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
                 label="담당의"
+                variant="create"
               >
                 <Select
-                  value={effectiveVeterinarianId}
+                  value={veterinarianId}
                   onValueChange={(value) => value && setVeterinarianId(value)}
                 >
-                  <SelectTrigger aria-label="담당의" size="sm" className="w-full bg-card">
-                    <span className="flex min-w-0 flex-1 truncate text-left">
-                      {getReceptionVeterinarianSelectLabel(
-                        effectiveVeterinarianId,
-                        veterinarians,
-                      )}
-                    </span>
+                  <SelectTrigger
+                    aria-label="담당의"
+                    className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium data-placeholder:text-[var(--clair-color-atomic-neutral-500)]"
+                  >
+                    <SelectValue placeholder="담당의를 선택해주세요" />
                   </SelectTrigger>
-                  <SelectContent align="end" className="min-w-[224px]">
+                  <SelectContent
+                    align="end"
+                    className="min-w-[var(--emr-reception-create-select-content-min-width)]"
+                  >
                     <SelectGroup>
                       <SelectItem value={unassignedVeterinarianValue}>
                         수의사 미지정
@@ -6648,44 +6738,52 @@ function ReceptionWalkInFormDrawer({
                 </Select>
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="접수일자/시간">
+            <ReceptionSidePanelSection title="접수 정보" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsFilesCalendarIcon className="size-3.5" />}
                 label="접수일"
+                variant="create"
               >
                 <ReceptionSidePanelInput
                   readOnly
                   aria-label="접수일"
-                  value={formatShortOperatingDate(operatingDate)}
+                  value={formatReceptionSidePanelDate(operatingDate)}
+                  variant="create"
                 />
               </ReceptionSidePanelField>
               <ReceptionSidePanelField
                 icon={<CdsFilesClockIcon className="size-3.5" />}
                 label="접수시간"
+                variant="create"
               >
                 <ReceptionSidePanelInput
                   readOnly
-                  aria-label="진료시간"
-                  value={getShortTime(plannedStartAt)}
+                  aria-label="접수시간"
+                  value={formatReceptionSidePanelTime(plannedStartAt)}
+                  variant="create"
                 />
               </ReceptionSidePanelField>
               <ReceptionSidePanelField
                 icon={<CdsMedicalActivityIcon className="size-3.5" />}
                 label="예상소요시간"
+                variant="create"
               >
                 <Select
                   value={duration}
                   onValueChange={(value) => value && setDuration(value)}
                 >
                   <SelectTrigger
-                    aria-label="예상시간"
-                    size="sm"
-                    className="w-full bg-card"
+                    aria-label="예상소요시간"
+                    className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium"
                   >
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent align="end" className="min-w-[224px]">
+                  <SelectContent
+                    align="end"
+                    className="min-w-[var(--emr-reception-create-select-content-min-width)]"
+                  >
                     <SelectGroup>
                       {receptionDurationOptions.map((item) => (
                         <SelectItem key={item} value={item}>
@@ -6696,17 +6794,15 @@ function ReceptionWalkInFormDrawer({
                   </SelectContent>
                 </Select>
               </ReceptionSidePanelField>
-            </ReceptionSidePanelSection>
-
-            <ReceptionSidePanelSection title="방문목적">
               <ReceptionSidePanelField
                 align="start"
                 icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
                 label="방문목적"
+                variant="create"
               >
                 <Textarea
-                  aria-label="방문 목적"
-                  className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                  aria-label="방문목적"
+                  className="min-h-[var(--emr-reception-create-textarea-min-height)] resize-none bg-[var(--emr-reception-create-field-bg)] font-medium"
                   placeholder="방문목적을 입력해주세요"
                   value={visitPurpose}
                   onChange={(event) => setVisitPurpose(event.target.value)}
@@ -6716,10 +6812,11 @@ function ReceptionWalkInFormDrawer({
                 align="start"
                 icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
                 label="접수 메모"
+                variant="create"
               >
                 <Textarea
                   aria-label="접수 메모"
-                  className="min-h-[76px] resize-none bg-card emr-text-dense font-semibold"
+                  className="min-h-[var(--emr-reception-create-textarea-min-height)] resize-none bg-[var(--emr-reception-create-field-bg)] font-medium"
                   placeholder="접수 메모를 입력해주세요"
                   value={memo}
                   onChange={(event) => setMemo(event.target.value)}
@@ -6728,34 +6825,12 @@ function ReceptionWalkInFormDrawer({
             </ReceptionSidePanelSection>
           </div>
         </ScrollArea>
-        <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t bg-card px-4 py-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-pressed={sendKakaoMessage}
-            aria-label="카카오톡 발송"
-            className="h-9 w-fit gap-2 px-2 text-[var(--emr-text-secondary)] aria-pressed:bg-accent aria-pressed:text-foreground"
-            onClick={() => setSendKakaoMessage((current) => !current)}
-          >
-            <span
-              aria-hidden="true"
-              className={cn(
-                "flex size-4 items-center justify-center rounded-[4px] border transition-colors",
-                sendKakaoMessage
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-input text-transparent",
-              )}
-            >
-              <CheckIcon className="size-3" />
-            </span>
-            <span>카카오톡 발송</span>
-          </Button>
-          <div className="flex shrink-0 items-center gap-2">
+        <div className="mt-auto flex shrink-0 items-center justify-end gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]">
+          <div className="flex shrink-0 items-center gap-[var(--clair-spacing-8)]">
             <Button
               type="button"
               variant="ghost"
-              className="h-9"
+              className="text-[var(--emr-text-secondary)]"
               onClick={close}
               disabled={submitting}
             >
@@ -6763,7 +6838,6 @@ function ReceptionWalkInFormDrawer({
             </Button>
             <Button
               type="button"
-              className="h-9"
               onClick={create}
               disabled={!canCreate || Boolean(timeBlockMessage) || submitting}
             >
@@ -8483,7 +8557,7 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
       data-testid="reception-right-panel"
     >
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--emr-line-default)] px-4">
-        <div className="min-w-0 truncate text-[15px] font-semibold text-foreground">
+        <div className="min-w-0 truncate emr-text-panel-title font-semibold text-foreground">
           {title}
         </div>
         <Button
@@ -8535,13 +8609,30 @@ function ReceptionRightPanelEmptyState() {
   );
 }
 
+type ReceptionSidePanelLayoutVariant = "default" | "create";
+
 function ReceptionSidePanelSection({
   children,
   title,
+  variant = "default",
 }: {
   children: ReactNode;
   title: string;
+  variant?: ReceptionSidePanelLayoutVariant;
 }) {
+  if (variant === "create") {
+    return (
+      <section className="flex flex-col gap-[var(--clair-spacing-12)]">
+        <h3 className="flex h-[var(--clair-spacing-24)] items-center emr-text-dense-label font-medium text-[var(--clair-color-atomic-neutral-400)]">
+          {title}
+        </h3>
+        <div className="flex flex-col gap-[var(--clair-spacing-12)]">
+          {children}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="border-b border-[var(--emr-line-default)] py-4 last:border-b-0">
       <h3 className="mb-3 emr-text-metadata font-medium text-[var(--emr-text-placeholder)]">
@@ -8552,31 +8643,51 @@ function ReceptionSidePanelSection({
   );
 }
 
+function ReceptionSidePanelDivider() {
+  return <div aria-hidden="true" className="h-px bg-[var(--emr-line-default)]" />;
+}
+
 function ReceptionSidePanelField({
   align = "center",
   children,
   icon,
   label,
+  variant = "default",
 }: {
   align?: "center" | "start";
   children: ReactNode;
   icon: ReactNode;
   label: string;
+  variant?: ReceptionSidePanelLayoutVariant;
 }) {
+  const isCreate = variant === "create";
+
   return (
     <div
       className={cn(
-        "grid min-w-0 grid-cols-[96px_minmax(0,1fr)] gap-3",
+        isCreate
+          ? "grid min-w-0 grid-cols-[var(--emr-reception-create-field-label-width)_minmax(0,1fr)] gap-[var(--clair-spacing-12)]"
+          : "grid min-w-0 grid-cols-[96px_minmax(0,1fr)] gap-3",
         align === "center" ? "items-center" : "items-start",
       )}
     >
       <div
         className={cn(
-          "flex min-w-0 items-center gap-2 emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]",
-          align === "start" && "pt-2",
+          isCreate
+            ? "flex min-w-0 items-center gap-[var(--clair-spacing-8)] emr-text-section font-medium text-[var(--clair-color-atomic-neutral-500)]"
+            : "flex min-w-0 items-center gap-2 emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]",
+          align === "start" &&
+            (isCreate ? "pt-[var(--clair-spacing-6)]" : "pt-2"),
         )}
       >
-        <span className="flex size-4 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)]">
+        <span
+          className={cn(
+            "flex shrink-0 items-center justify-center",
+            isCreate
+              ? "size-[var(--emr-reception-create-field-icon-size)] text-[var(--clair-color-atomic-neutral-500)]"
+              : "size-4 text-[var(--emr-text-tertiary)]",
+          )}
+        >
           {icon}
         </span>
         <span className="min-w-0 truncate">{label}</span>
@@ -8589,20 +8700,32 @@ function ReceptionSidePanelField({
 function ReceptionSidePanelInput({
   className,
   unit,
+  variant = "default",
   ...props
 }: InputPropsWithUnit) {
+  const isCreate = variant === "create";
+
   return (
     <div className="relative min-w-0">
       <Input
         {...props}
         className={cn(
-          "h-8 bg-card emr-text-dense font-semibold",
+          isCreate
+            ? "bg-[var(--emr-reception-create-field-bg)] font-medium text-[var(--clair-color-atomic-neutral-800)]"
+            : "h-8 bg-card emr-text-dense font-semibold",
           unit && "pr-12",
           className,
         )}
       />
       {unit ? (
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]">
+        <span
+          className={cn(
+            "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2",
+            isCreate
+              ? "emr-control-text font-medium text-[var(--clair-color-atomic-neutral-400)]"
+              : "emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]",
+          )}
+        >
           {unit}
         </span>
       ) : null}
@@ -8612,12 +8735,34 @@ function ReceptionSidePanelInput({
 
 type InputPropsWithUnit = ComponentProps<typeof Input> & {
   unit?: string;
+  variant?: ReceptionSidePanelLayoutVariant;
 };
 
 function getReceptionSidePanelWeightInputValue(weightKg?: number) {
   if (typeof weightKg !== "number" || !Number.isFinite(weightKg)) return "";
 
   return Number.isInteger(weightKg) ? `${weightKg}` : `${weightKg}`;
+}
+
+function ReceptionSidePanelAddVitalButton({
+  disabled = false,
+  onClick,
+}: {
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      disabled={disabled}
+      className="h-[var(--clair-control-height-md)] w-full border-dashed border-[var(--emr-line-default)] bg-[var(--emr-reception-create-add-vital-bg)] emr-control-text font-medium text-[var(--clair-color-atomic-neutral-500)] shadow-none hover:bg-[var(--emr-state-hover)] hover:text-[var(--clair-color-atomic-neutral-800)] hover:shadow-none active:shadow-none disabled:bg-[var(--emr-reception-create-add-vital-bg)] disabled:text-[var(--clair-color-atomic-neutral-500)] disabled:shadow-none"
+      onClick={onClick}
+    >
+      <CdsActionsPlusIcon className="size-[var(--clair-spacing-16)]" />
+      바이탈 추가
+    </Button>
+  );
 }
 
 function ReceptionVitalField({

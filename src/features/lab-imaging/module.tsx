@@ -117,7 +117,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
-import type { ShellComponentProps } from "@/types/emr";
+import type {
+  ShellComponentProps,
+  WorkspaceSlotAvailabilityProviderProps,
+} from "@/types/emr";
 import type {
   EmrAttachment,
   EmrOrder,
@@ -2285,6 +2288,19 @@ function useCurrentLabDetail(workspaceId: string) {
   );
 }
 
+export function LabSlotAvailabilityProvider({
+  children,
+  workspaceId,
+}: WorkspaceSlotAvailabilityProviderProps) {
+  const { detail } = useCurrentLabDetail(workspaceId);
+  const hasSelectedDetail = Boolean(detail);
+
+  return children({
+    hasContentAside: hasSelectedDetail,
+    hasRightPanel: hasSelectedDetail,
+  });
+}
+
 export function LabHeader({ workspaceId }: ShellComponentProps) {
   const { detail } = useCurrentLabDetail(workspaceId);
 
@@ -2429,9 +2445,12 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
 
     return detail.allEquipmentReceipts.filter((receipt) => receipt.orderId === detail.order?.id);
   }, [detail]);
+
+  if (!detail) return null;
+
   const visibleReceipts = linkedReceipts;
-  const hasEnteredRows = Boolean(detail?.result.rows.some((row) => row.value));
-  const latestReceiptDate = visibleReceipts[0]?.receivedAt ?? detail?.result.receivedAt;
+  const hasEnteredRows = detail.result.rows.some((row) => row.value);
+  const latestReceiptDate = visibleReceipts[0]?.receivedAt ?? detail.result.receivedAt;
   const receiptOperatingDate = latestReceiptDate?.slice(0, 10);
   const dateLabel = receiptOperatingDate ? formatKoreanOperatingDateLabel(receiptOperatingDate) : "-";
   const defaultExpandedReceiptId = visibleReceipts[0]?.id;
@@ -2982,6 +3001,19 @@ function useCurrentImagingDetail(workspaceId: string) {
   );
 }
 
+export function ImagingSlotAvailabilityProvider({
+  children,
+  workspaceId,
+}: WorkspaceSlotAvailabilityProviderProps) {
+  const { detail } = useCurrentImagingDetail(workspaceId);
+  const hasSelectedDetail = Boolean(detail);
+
+  return children({
+    hasContentAside: hasSelectedDetail,
+    hasRightPanel: hasSelectedDetail,
+  });
+}
+
 export function ImagingHeader({ hasRightPanel, workspaceId }: ShellComponentProps) {
   const { detail } = useCurrentImagingDetail(workspaceId);
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
@@ -3508,13 +3540,7 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
     [workspaceId],
   );
 
-  if (!detail) {
-    return (
-      <div className="flex h-full items-center justify-center p-4 emr-text-dense text-muted-foreground">
-        영상 대기열에서 항목을 선택해 주세요.
-      </div>
-    );
-  }
+  if (!detail) return null;
 
   const sameEncounterLabItems = labItems.filter((item) => item.encounter.id === detail.encounter.id);
   const sameEncounterImagingItems = imagingItems.filter((item) => item.encounter.id === detail.encounter.id);

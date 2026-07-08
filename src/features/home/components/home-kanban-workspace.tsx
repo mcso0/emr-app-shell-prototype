@@ -570,7 +570,7 @@ export function HomeKanbanWorkspace({
 
         </div>
 
-        {detailOpen ? (
+        {detailOpen && selectedTask ? (
           <TaskDetailPanel
             activeMode={activeOperationMode}
             task={selectedTask}
@@ -822,20 +822,9 @@ function TaskDetailPanel({
 }: {
   activeMode: HomeOperationMode;
   onClose: () => void;
-  task?: HomeTask;
+  task: HomeTask;
 }) {
   const router = useRouter();
-
-  if (!task) {
-    return (
-      <aside
-        className="grid h-full w-[420px] shrink-0 content-center border-l border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-6 text-center text-[13px] leading-5 text-muted-foreground"
-        data-testid="home-work-status-detail"
-      >
-        선택한 업무가 없습니다.
-      </aside>
-    );
-  }
 
   return (
     <aside
