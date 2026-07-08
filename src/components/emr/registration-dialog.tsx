@@ -5,6 +5,7 @@ import {
   CdsCommunicationMailIcon,
   CdsCommunicationPhoneIcon,
 } from "@/components/cds-icons/communication-and-media";
+import { CdsActionsPinIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
 import {
   CdsFilesCalendarIcon,
@@ -16,7 +17,7 @@ import {
   CdsMedicalPawPrintIcon,
   CdsMedicalScanLineIcon,
 } from "@/components/cds-icons/medical-and-domain";
-import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
+import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,7 +55,7 @@ const registrationFieldIconByLabel: Record<string, EmrRegistrationLabelIcon> = {
   생년월일: CdsFilesCalendarIcon,
   전화번호: CdsCommunicationPhoneIcon,
   이메일: CdsCommunicationMailIcon,
-  주소: CdsPeopleMapPinIcon,
+  주소: CdsActionsPinIcon,
   "보호자 메모": CdsMedicalNotebookTextIcon,
   "환자 메모": CdsMedicalNotebookTextIcon,
   마이크로칩: CdsMedicalScanLineIcon,
@@ -166,7 +167,7 @@ export function EmrRegistrationSection({
     <>
       {separated ? <Separator /> : null}
       <FieldSet className={cn("gap-3", className)}>
-        <FieldLegend className="flex h-6 items-center text-[13px] font-medium leading-[18px] text-[var(--emr-text-placeholder)]">
+        <FieldLegend className="flex h-6 items-center !text-[13px] font-medium leading-[18px] text-[var(--emr-text-placeholder)]">
           {title}
         </FieldLegend>
         <div className="grid gap-3">{children}</div>
@@ -202,12 +203,19 @@ export function EmrRegistrationFieldRow({
       data-invalid={Boolean(error) || undefined}
       style={{ gap: "var(--clair-spacing-12)" }}
     >
-      <FieldLabel className="flex h-8 min-w-0 items-center gap-2 text-[14px] font-medium leading-5 text-foreground">
-        <span aria-hidden="true" className="flex size-[15px] shrink-0 items-center justify-center text-[var(--emr-text-tertiary)]">
+      <FieldLabel className="flex h-8 min-w-0 items-center gap-2 text-[14px] font-medium leading-5 text-[var(--clair-color-atomic-neutral-500)]">
+        <span aria-hidden="true" className="flex size-[15px] shrink-0 items-center justify-center text-[var(--clair-color-atomic-neutral-500)]">
           {getRegistrationFieldIcon(label, icon)}
         </span>
-        <span className="min-w-0 truncate">
-          {label}
+        <span className="inline-flex min-w-0 items-baseline gap-0.5">
+          <span className="min-w-0 truncate">
+            {label}
+          </span>
+          {required ? (
+            <span aria-hidden="true" className="shrink-0 text-[var(--emr-text-danger)]">
+              *
+            </span>
+          ) : null}
         </span>
       </FieldLabel>
       <div className={cn("min-w-0", controlClassName)}>
@@ -250,9 +258,8 @@ export function EmrRegistrationAddressControls({
         {postalCode}
         <Button
           type="button"
-          variant="secondary"
-          size="sm"
-          className="h-[var(--clair-control-height-md)] px-2.5 font-semibold"
+          variant="outline"
+          className="w-[81px]"
         >
           주소 검색
         </Button>
@@ -285,7 +292,7 @@ export function EmrRegistrationAgeControls({
   );
 }
 
-export function EmrRegistrationSwitchLabel({
+export function EmrRegistrationCheckboxLabel({
   children,
   control,
 }: {
@@ -293,7 +300,7 @@ export function EmrRegistrationSwitchLabel({
   control: ReactNode;
 }) {
   return (
-    <span className="inline-flex min-w-[54px] shrink-0 items-center justify-end gap-1.5 whitespace-nowrap emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
+    <span className="inline-flex min-w-[50px] shrink-0 items-center justify-end gap-1.5 whitespace-nowrap emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
       {control}
       {children}
     </span>
@@ -320,12 +327,11 @@ export function EmrRegistrationSignatureConsentCard({
   const handleClick = signatureStatus === "pending" ? onCompleteSignature : onRequestSignature;
 
   return (
-    <EmrRegistrationFieldRow error={error} label="전자 서명">
+    <EmrRegistrationFieldRow error={error} label="전자 서명" required>
       <Button
         type="button"
         variant="outline"
-        size="sm"
-        className="h-[var(--clair-control-height-md)] w-[122px] px-2 text-[12px] font-bold"
+        className="w-[122px]"
         disabled={signatureStatus === "completed"}
         onClick={handleClick}
       >
@@ -336,54 +342,43 @@ export function EmrRegistrationSignatureConsentCard({
 }
 
 export function EmrRegistrationSummaryItem({
-  badge,
   details,
   icon,
-  tone,
   title,
 }: {
-  badge: ReactNode;
   details: ReactNode[];
   icon: ReactNode;
-  tone: "guardian" | "patient";
   title: ReactNode;
 }) {
   return (
-    <section className="flex h-[54px] min-w-0 items-center gap-3 rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4">
-      <div
-        className={cn(
-          "flex size-6 shrink-0 items-center justify-center rounded-full",
-          tone === "guardian"
-            ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
-            : "bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]"
-        )}
-      >
-        {icon}
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 emr-text-dense font-semibold text-[var(--emr-text-secondary)]">
-            {badge}
-          </span>
-          <span className="min-w-0 truncate text-[16px] font-bold leading-5 text-foreground">
+    <section className="flex h-[54px] min-w-0 items-center gap-[10px] rounded-[12px] border border-[var(--clair-color-atomic-neutral-100)] bg-[var(--clair-color-atomic-neutral-50)] p-4">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <span aria-hidden="true" className="flex size-[22px] shrink-0 items-center justify-center text-[var(--clair-color-atomic-sky-500)]">
+          {icon}
+        </span>
+        <div className="flex min-w-0 flex-1 items-start gap-2 text-[14px] font-medium leading-5 tracking-[0.014em]">
+          <span className="shrink-0 text-[var(--clair-color-atomic-neutral-800)]">
             {title}
           </span>
-        </div>
-        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="flex min-w-0 flex-1 items-center gap-1 text-[var(--clair-color-atomic-neutral-500)]">
           {details.map((detail, index) => (
             <span key={index} className="contents">
               {index > 0 ? (
-                <span className="shrink-0 emr-text-metadata text-[var(--emr-text-tertiary)]">
+                <span className="shrink-0">
                   ·
                 </span>
               ) : null}
-              <span className="min-w-0 truncate emr-text-metadata text-[var(--emr-text-secondary)]">
+              <span className="min-w-0 truncate">
                 {detail}
               </span>
             </span>
           ))}
+          </span>
         </div>
       </div>
+      <span className="flex h-5 w-[34px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--clair-color-atomic-sky-50)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.025em] text-[var(--clair-color-atomic-sky-600)]">
+        신규
+      </span>
     </section>
   );
 }
