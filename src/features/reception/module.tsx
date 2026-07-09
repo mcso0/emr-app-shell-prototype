@@ -8936,6 +8936,42 @@ function ReceptionAddVitalMenu({
   );
 }
 
+function ReceptionAppointmentBeforeCheckInNotice({
+  disabled,
+  onCheckIn,
+}: {
+  disabled: boolean;
+  onCheckIn: () => void;
+}) {
+  return (
+    <section
+      role="status"
+      data-testid="reservation-before-check-in-notice"
+      className="flex min-h-[var(--clair-spacing-64)] items-center justify-between gap-[var(--clair-spacing-12)] rounded-[var(--emr-radius-control)] border border-[var(--emr-line-default)] bg-[var(--clair-color-static-white)] px-[var(--clair-spacing-12)] py-[var(--clair-spacing-8)]"
+    >
+      <div className="min-w-0">
+        <p className="emr-text-body font-semibold text-[var(--emr-text-primary)]">
+          접수 전, 예약 건입니다
+        </p>
+        <p className="mt-[var(--clair-spacing-4)] emr-text-dense font-medium text-[var(--emr-text-tertiary)]">
+          보호자 방문 시, 접수 할 수 있습니다.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0"
+        disabled={disabled}
+        onClick={onCheckIn}
+        data-testid="reservation-before-check-in-notice-action"
+      >
+        접수하기
+      </Button>
+    </section>
+  );
+}
+
 function ReceptionSidePanelDetail({
   canCancelSelectedEncounter,
   canEditSelectedEncounter,
@@ -9038,13 +9074,10 @@ function ReceptionSidePanelDetail({
           }
         >
           {appointmentReadyForCheckIn ? (
-            <EmrInlineAlert
-              severity="info"
-              testId="reservation-before-check-in-notice"
-              title="접수 전입니다."
-            >
-              보호자 내원 시 아래 접수하기로 접수를 등록하세요.
-            </EmrInlineAlert>
+            <ReceptionAppointmentBeforeCheckInNotice
+              disabled={checkInDisabled}
+              onCheckIn={onCheckInOrCreate}
+            />
           ) : editMode ? (
             <div className="pt-3">
               <Badge
@@ -10002,9 +10035,7 @@ export function ReceptionDrawer({
           patientWeightLabel={patientWeightLabel}
           primaryActionLabel={
             selectedAppointment
-              ? selectedAppointment.status === "confirmed"
-                ? "접수하기"
-                : undefined
+              ? undefined
               : !selectedEncounter
                 ? "생성"
                 : undefined

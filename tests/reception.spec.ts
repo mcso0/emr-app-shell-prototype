@@ -43,7 +43,7 @@ async function mockKakaoPostcodeSearch(page: Page, result: MockKakaoPostcodeResu
 }
 
 async function openAppointmentCheckInConfirm(page: Page) {
-  await page.getByRole("button", { name: "접수하기" }).last().click();
+  await page.getByTestId("reservation-before-check-in-notice-action").click();
   const dialog = page
     .getByRole("dialog")
     .filter({ hasText: "예약을 접수 확정하시겠습니까?" })
@@ -3316,10 +3316,16 @@ test("reception check-in converts a confirmed appointment into a waiting encount
 
   await nabiAppointment.click();
   const detailPanel = page.getByTestId("reception-right-panel");
-  await expect(detailPanel).toContainText("접수 전입니다.");
-  await expect(detailPanel).toContainText(
-    "보호자 내원 시 아래 접수하기로 접수를 등록하세요.",
+  const beforeCheckInNotice = detailPanel.getByTestId(
+    "reservation-before-check-in-notice",
   );
+  await expect(beforeCheckInNotice).toContainText("접수 전, 예약 건입니다");
+  await expect(beforeCheckInNotice).toContainText(
+    "보호자 방문 시, 접수 할 수 있습니다.",
+  );
+  await expect(
+    beforeCheckInNotice.getByTestId("reservation-before-check-in-notice-action"),
+  ).toBeVisible();
   await expect(detailPanel).not.toContainText("예약확정");
   await submitAppointmentCheckInConfirm(page);
 
@@ -3407,10 +3413,16 @@ test("server-backed appointment check-in sends the appointment transition reques
   );
   await nabiAppointment.click();
   const detailPanel = page.getByTestId("reception-right-panel");
-  await expect(detailPanel).toContainText("접수 전입니다.");
-  await expect(detailPanel).toContainText(
-    "보호자 내원 시 아래 접수하기로 접수를 등록하세요.",
+  const beforeCheckInNotice = detailPanel.getByTestId(
+    "reservation-before-check-in-notice",
   );
+  await expect(beforeCheckInNotice).toContainText("접수 전, 예약 건입니다");
+  await expect(beforeCheckInNotice).toContainText(
+    "보호자 방문 시, 접수 할 수 있습니다.",
+  );
+  await expect(
+    beforeCheckInNotice.getByTestId("reservation-before-check-in-notice-action"),
+  ).toBeVisible();
   await expect(detailPanel).not.toContainText("예약확정");
   const cancelDialog = await openAppointmentCheckInConfirm(page);
   await expect(cancelDialog).toContainText(
@@ -3423,7 +3435,7 @@ test("server-backed appointment check-in sends the appointment transition reques
 
   expect(requested).toBe(true);
   await expect(page.getByText("예약 건 접수가 완료되었습니다")).toBeVisible();
-  await expect(detailPanel).not.toContainText("접수 전입니다.");
+  await expect(detailPanel).not.toContainText("접수 전, 예약 건입니다");
   await expect(
     detailPanel.getByRole("button", { name: "접수하기" }),
   ).toHaveCount(0);

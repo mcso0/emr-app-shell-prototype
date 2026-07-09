@@ -121,10 +121,11 @@ Turn the `+ 접수/예약 > 예약하기` entry point from a placeholder toast i
 ## 2026-07-09 Reservation Detail Check-In Confirmation Follow-up
 
 - Reservation detail side panel no longer shows the appointment status badge for confirmed reservations.
-- Confirmed reservations now show an `EmrInlineAlert` info box that explains the reservation is not checked in yet and points staff to the `접수하기` action.
-- The side-panel `접수하기` action now opens an `EmrConfirmDialogContent` confirmation dialog and calls `POST /api/workspaces/[workspaceId]/reception/appointments/[appointmentId]/check-in` only when staff confirms `접수`.
+- Confirmed reservations now show a neutral, token-driven pre-check-in notice row matching the Figma reference node `27629:20534`: title/subtitle copy on the left and an outline `접수하기` CTA on the right.
+- The notice-row `접수하기` action now opens an `EmrConfirmDialogContent` confirmation dialog and calls `POST /api/workspaces/[workspaceId]/reception/appointments/[appointmentId]/check-in` only when staff confirms `접수`.
 - The side-panel confirmation path uses the existing check-in route without a form payload, then applies the returned appointment, encounter, and queue row through the existing reception store/readback flow.
-- Focused UI coverage now checks badge removal, pre-check-in notice visibility, cancel-without-request behavior, payload-less confirmed check-in, and post-success CTA/notice removal.
+- Reservation detail no longer duplicates the confirmed-reservation `접수하기` CTA in the footer; the Figma-aligned notice row owns that action while walk-in creation keeps the footer `생성` action.
+- Focused UI coverage now checks badge removal, pre-check-in notice visibility/copy/action, cancel-without-request behavior, payload-less confirmed check-in, and post-success CTA/notice removal.
 
 Verification:
 
@@ -134,6 +135,7 @@ Verification:
 - `npm run build`: passed with the pre-existing Turbopack NFT warning from `next.config.mjs` / `src/lib/prd-viewer/doc-reader.ts`
 - `npm run docs:check`: 765 docs/agent markdown files passed
 - `npx playwright test tests/reception.spec.ts --grep "reception check-in converts a confirmed appointment into a waiting encounter|server-backed appointment check-in sends the appointment transition request|appointment check-in persistence regression reloads from queue and calendar reads" --reporter=line`: 3 passed
+- Manual Playwright render check after mock front-desk login: notice row measured 348x64px in the side panel, white background, 8px radius, token border, 14px title, 13px subtitle, and 28px outline CTA.
 - `git diff --check`: passed
 
 ## Result
