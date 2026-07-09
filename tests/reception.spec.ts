@@ -42,11 +42,20 @@ async function mockKakaoPostcodeSearch(page: Page, result: MockKakaoPostcodeResu
   }, result);
 }
 
-async function submitAppointmentCheckInForm(page: Page) {
+async function openAppointmentCheckInConfirm(page: Page) {
   await page.getByRole("button", { name: "접수하기" }).last().click();
-  const form = page.getByTestId("appointment-check-in-form-drawer").last();
-  await expect(form).toBeVisible();
-  await form.getByRole("button", { name: "생성" }).click();
+  const dialog = page
+    .getByRole("dialog")
+    .filter({ hasText: "예약을 접수 확정하시겠습니까?" })
+    .last();
+  await expect(dialog).toBeVisible();
+
+  return dialog;
+}
+
+async function submitAppointmentCheckInConfirm(page: Page) {
+  const dialog = await openAppointmentCheckInConfirm(page);
+  await dialog.getByRole("button", { exact: true, name: "접수" }).click();
 }
 
 async function freezeBrowserClock(page: Page, iso: string) {
@@ -3306,7 +3315,13 @@ test("reception check-in converts a confirmed appointment into a waiting encount
   await expect(nabiAppointment).not.toContainText("예약확정");
 
   await nabiAppointment.click();
-  await submitAppointmentCheckInForm(page);
+  const detailPanel = page.getByTestId("reception-right-panel");
+  await expect(detailPanel).toContainText("접수 전입니다.");
+  await expect(detailPanel).toContainText(
+    "보호자 내원 시 아래 접수하기로 접수를 등록하세요.",
+  );
+  await expect(detailPanel).not.toContainText("예약확정");
+  await submitAppointmentCheckInConfirm(page);
 
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
@@ -3328,11 +3343,8 @@ test("server-backed appointment check-in sends the appointment transition reques
     async (route) => {
       requested = true;
       expect(route.request().method()).toBe("POST");
-      expect(route.request().postDataJSON()).toMatchObject({
-        durationMinutes: 15,
-        visitPurpose: "피부 재진",
-        weightKg: 4.8,
-      });
+      expect(route.request().postData()).toBeNull();
+      expect(route.request().headers()["content-type"]).toBeUndefined();
       await route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -3394,10 +3406,27 @@ test("server-backed appointment check-in sends the appointment transition reques
     "appointment-card-appointment-nabi-260501",
   );
   await nabiAppointment.click();
-  await submitAppointmentCheckInForm(page);
+  const detailPanel = page.getByTestId("reception-right-panel");
+  await expect(detailPanel).toContainText("접수 전입니다.");
+  await expect(detailPanel).toContainText(
+    "보호자 내원 시 아래 접수하기로 접수를 등록하세요.",
+  );
+  await expect(detailPanel).not.toContainText("예약확정");
+  const cancelDialog = await openAppointmentCheckInConfirm(page);
+  await expect(cancelDialog).toContainText(
+    "나비/오세아의 예약을 접수 확정하시겠습니까?",
+  );
+  await cancelDialog.getByRole("button", { exact: true, name: "취소" }).click();
+  expect(requested).toBe(false);
+
+  await submitAppointmentCheckInConfirm(page);
 
   expect(requested).toBe(true);
   await expect(page.getByText("예약 건 접수가 완료되었습니다")).toBeVisible();
+  await expect(detailPanel).not.toContainText("접수 전입니다.");
+  await expect(
+    detailPanel.getByRole("button", { name: "접수하기" }),
+  ).toHaveCount(0);
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
   await expect(page.getByTestId("patient-card-patient-nabi")).toContainText(
@@ -3513,7 +3542,7 @@ test("appointment check-in persistence regression reloads from queue and calenda
     "appointment-card-appointment-nabi-260501",
   );
   await nabiAppointment.click();
-  await submitAppointmentCheckInForm(page);
+  await submitAppointmentCheckInConfirm(page);
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
 
