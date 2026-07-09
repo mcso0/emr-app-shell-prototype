@@ -45,6 +45,7 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
+import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrSidePanelMiniCalendar } from "@/components/emr/side-panel-mini-calendar";
@@ -9006,9 +9007,8 @@ function ReceptionSidePanelDetail({
     (option) => !selectedVitalIds.includes(option.id),
   );
   const canRemoveVital = selectedVitalIds.length > 1;
-  const appointmentStatusLabel = selectedAppointment
-    ? getStatusLabel("appointment", selectedAppointment.status)
-    : undefined;
+  const appointmentReadyForCheckIn =
+    selectedAppointment?.status === "confirmed";
   const detailVariant: ReceptionSidePanelLayoutVariant = selectedAppointment
     ? "create"
     : "default";
@@ -9037,16 +9037,14 @@ function ReceptionSidePanelDetail({
               : "px-4"
           }
         >
-          {appointmentStatusLabel ? (
-            <div className={usesCreateDetailLayout ? "" : "pt-3"}>
-              <Badge
-                size="sm"
-                variant="secondary"
-                className="rounded-[var(--clair-radius-atomic-6)] emr-text-micro font-semibold"
-              >
-                {appointmentStatusLabel}
-              </Badge>
-            </div>
+          {appointmentReadyForCheckIn ? (
+            <EmrInlineAlert
+              severity="info"
+              testId="reservation-before-check-in-notice"
+              title="접수 전입니다."
+            >
+              보호자 내원 시 아래 접수하기로 접수를 등록하세요.
+            </EmrInlineAlert>
           ) : editMode ? (
             <div className="pt-3">
               <Badge
@@ -9480,6 +9478,10 @@ export function ReceptionDrawer({
   const [editConfirmOpen, setEditConfirmOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [appointmentCheckInConfirmOpen, setAppointmentCheckInConfirmOpen] =
+    useState(false);
+  const [appointmentCheckInSubmitting, setAppointmentCheckInSubmitting] =
+    useState(false);
   const [editDraft, setEditDraft] = useState<ReceptionEncounterUpdateInput>({});
   const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
     Veterinarian[]
@@ -9823,6 +9825,60 @@ export function ReceptionDrawer({
     visitPurpose: visitReason,
     weightKg: patient?.weightKg,
   });
+  const applyAppointmentCheckInResult = (
+    checkIn: ReceptionAppointmentCheckInRecord,
+    weightKg?: number,
+  ) => {
+    if (!patient) return;
+
+    const nextPatient =
+      weightKg === undefined ? patient : { ...patient, weightKg };
+
+    applyAppointmentCheckIn({ appointment: checkIn.appointment, checkIn });
+    if (weightKg !== undefined) {
+      updatePatient(patient.id, { weightKg });
+    }
+    requestReceptionReadRetry();
+    saveChartLiveEncounterHandoff({
+      encounter: checkIn.encounter,
+      patient: nextPatient,
+      primaryGuardian: guardian,
+      veterinarianName: getStaffDisplayName(
+        checkIn.encounter.primaryVeterinarianId,
+        veterinarians,
+      ),
+    });
+    setActiveDrawer({
+      type: "reception-encounter",
+      id: checkIn.encounter.id,
+    });
+  };
+  const handleConfirmAppointmentCheckIn = async () => {
+    if (
+      !selectedAppointment ||
+      selectedAppointment.status !== "confirmed" ||
+      appointmentCheckInSubmitting
+    ) {
+      return;
+    }
+
+    setAppointmentCheckInSubmitting(true);
+    const result = await submitAppointmentCheckIn({
+      actorRole: authSession?.role,
+      appointmentId: selectedAppointment.id,
+      workspaceId,
+    });
+    setAppointmentCheckInSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(getAppointmentCheckInRouteErrorMessage(result));
+      return;
+    }
+
+    applyAppointmentCheckInResult(result.checkIn);
+    setAppointmentCheckInConfirmOpen(false);
+    toast.success("예약 건 접수가 완료되었습니다");
+  };
   const handleCancelSelectedEncounter = async () => {
     if (!selectedEncounter || cancelSubmitting) return;
 
@@ -9919,24 +9975,7 @@ export function ReceptionDrawer({
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCheckIn={(checkIn, weightKg) => {
-          applyAppointmentCheckIn({ appointment: selectedAppointment, checkIn });
-          if (weightKg !== undefined) {
-            updatePatient(patient.id, { weightKg });
-          }
-          requestReceptionReadRetry();
-          saveChartLiveEncounterHandoff({
-            encounter: checkIn.encounter,
-            patient: weightKg === undefined ? patient : { ...patient, weightKg },
-            primaryGuardian: guardian,
-            veterinarianName: getStaffDisplayName(
-              checkIn.encounter.primaryVeterinarianId,
-              veterinarians,
-            ),
-          });
-          setActiveDrawer({
-            type: "reception-encounter",
-            id: checkIn.encounter.id,
-          });
+          applyAppointmentCheckInResult(checkIn, weightKg);
         }}
       />
     );
@@ -9950,7 +9989,8 @@ export function ReceptionDrawer({
           canCancelSelectedEncounter={Boolean(canCancelSelectedEncounter)}
           canEditSelectedEncounter={Boolean(canEditSelectedEncounter)}
           checkInDisabled={Boolean(
-            selectedAppointment && selectedAppointment.status !== "confirmed",
+            (selectedAppointment && selectedAppointment.status !== "confirmed") ||
+              appointmentCheckInSubmitting,
           )}
           departmentValue={departmentValue}
           editDraft={editDraft}
@@ -9961,11 +10001,13 @@ export function ReceptionDrawer({
           patient={patient}
           patientWeightLabel={patientWeightLabel}
           primaryActionLabel={
-            selectedAppointment || !selectedEncounter
-              ? selectedAppointment
+            selectedAppointment
+              ? selectedAppointment.status === "confirmed"
                 ? "접수하기"
-                : "생성"
-              : undefined
+                : undefined
+              : !selectedEncounter
+                ? "생성"
+                : undefined
           }
           receptionDate={receptionDate}
           receptionDurationMinutes={receptionDurationMinutes}
@@ -9979,10 +10021,9 @@ export function ReceptionDrawer({
           onCancelOpen={() => setCancelConfirmOpen(true)}
           onCheckInOrCreate={() => {
             if (selectedAppointment) {
-              setActiveDrawer({
-                type: "reception-appointment-check-in-form",
-                id: selectedAppointment.id,
-              });
+              if (selectedAppointment.status === "confirmed") {
+                setAppointmentCheckInConfirmOpen(true);
+              }
               return;
             }
 
@@ -10063,6 +10104,31 @@ export function ReceptionDrawer({
               </Button>
             </DialogFooter>
           </DialogContent>
+        </Dialog>
+        <Dialog
+          open={appointmentCheckInConfirmOpen}
+          onOpenChange={(open) => {
+            if (appointmentCheckInSubmitting) return;
+            setAppointmentCheckInConfirmOpen(open);
+          }}
+        >
+          <EmrConfirmDialogContent
+            title={`${patient.name}/${guardian?.name ?? "보호자 미지정"}의 예약을 접수 확정하시겠습니까?`}
+            description="접수하면 예약이 진료 대기 접수로 전환됩니다."
+            cancelLabel="취소"
+            confirmLabel={appointmentCheckInSubmitting ? "접수 중" : "접수"}
+            confirmDisabled={
+              appointmentCheckInSubmitting ||
+              selectedAppointment?.status !== "confirmed"
+            }
+            onCancel={() => {
+              if (appointmentCheckInSubmitting) return;
+              setAppointmentCheckInConfirmOpen(false);
+            }}
+            onConfirm={() => {
+              void handleConfirmAppointmentCheckIn();
+            }}
+          />
         </Dialog>
       </>
     );
