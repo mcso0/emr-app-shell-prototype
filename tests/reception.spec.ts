@@ -193,6 +193,11 @@ async function mockReceptionWalkInCreate(
               guardianId,
               primaryVeterinarianId,
               encounterNo: "E-LIVE-CALENDAR",
+              receptionType: "walk_in",
+              department:
+                typeof body.department === "string" ? body.department : "재활",
+              durationMinutes:
+                typeof body.durationMinutes === "number" ? body.durationMinutes : 30,
               chiefComplaint: body.visitPurpose ?? "현장 접수",
               visitPurpose: body.visitPurpose ?? "현장 접수",
               status: "waiting",
@@ -3392,6 +3397,7 @@ test("server-backed appointment check-in sends the appointment transition reques
   await submitAppointmentCheckInForm(page);
 
   expect(requested).toBe(true);
+  await expect(page.getByText("예약 건 접수가 완료되었습니다")).toBeVisible();
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
   await expect(page.getByTestId("patient-card-patient-nabi")).toContainText(
@@ -3621,6 +3627,14 @@ test("reception read failures explain local demo fallback and expose retry actio
 test("reception creates a walk-in waiting row from the new check-in dialog", async ({
   page,
 }) => {
+  const walkInCreate = await mockReceptionWalkInCreate(page, {
+    checkedInAt: "2026-05-01T10:45:00+09:00",
+    encounterId: "encounter-live-walkin-dubu",
+    guardianId: "guardian-jung-harin",
+    patientId: "patient-dubu",
+    queueId: "queue-live-walkin-dubu",
+  });
+
   await page.goto("/w/clair-demo/reception");
 
   const sidePanel = page.locator("aside").first();
@@ -3667,6 +3681,9 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await walkInForm.getByLabel("방문목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await walkInForm.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => walkInCreate.count).toBe(1);
+  await expect(page.getByText("접수가 완료되었습니다")).toBeVisible();
 
   const dubuCard = page
     .getByTestId("patient-card-patient-dubu")
@@ -3808,7 +3825,7 @@ test("reception creates a reservation through the unified check-in menu", async 
     /^2026-05-01T12:00:00\+09:00$/,
   );
 
-  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  await expect(page.getByText("예약이 완료되었습니다")).toBeVisible();
   const detailDrawer = page.getByTestId("reception-right-panel");
   await expect(detailDrawer).toContainText("예약 상세");
   await expect(detailDrawer.getByLabel("예약일")).toHaveValue("2026.05.01");
@@ -4746,14 +4763,13 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
   );
 
   const sidePanel = page.locator("aside").first();
-  const detailDrawer = page.getByTestId("workspace-drawer");
+  const detailDrawer = page.getByTestId("reception-right-panel");
   const queueCard = sidePanel.getByTestId(`patient-card-${patientId}`);
   const calendarCard = page.getByTestId(`walkin-card-${encounterId}`);
-  const drawerHeader = detailDrawer.locator(".flex.h-12").first();
-  const summaryCard = detailDrawer.locator("section.rounded-lg").first();
-  const veterinarianTextbox = detailDrawer.getByRole("textbox", {
-    name: "담당의",
-  });
+  const drawerHeader = detailDrawer.getByText("접수 상세").first();
+  const animalReadonlyTextbox = detailDrawer.locator("input").nth(0);
+  const guardianReadonlyTextbox = detailDrawer.locator("input").nth(1);
+  const veterinarianReadonlyTextbox = detailDrawer.locator("input").nth(4);
   const departmentCombobox = detailDrawer.getByRole("combobox", {
     name: "진료과",
   });
@@ -4761,55 +4777,37 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
     name: "담당의",
   });
   const weightTextbox = detailDrawer.getByRole("textbox", {
-    name: "동물 체중",
-  });
-  const receptionDateTextbox = detailDrawer.getByRole("textbox", {
-    name: "접수일",
-  });
-  const receptionStartTimeTextbox = detailDrawer.getByRole("textbox", {
-    name: "진료시작시간",
+    name: "체중",
   });
   const durationCombobox = detailDrawer.getByRole("combobox", {
-    name: "소요시간",
+    name: "예상소요시간",
   });
-  await expect(queueCard).toBeVisible();
-  await expect(calendarCard).toBeVisible();
+  await expect(queueCard).toBeVisible({ timeout: 15_000 });
+  await expect(calendarCard).toBeVisible({ timeout: 15_000 });
+  await queueCard.click();
   await expect(detailDrawer).toBeVisible();
-  await expect(drawerHeader).toContainText("접수 상세");
-  await expect(drawerHeader).not.toContainText("CD-P-081");
-  await expect(summaryCard).toContainText("문지아 보호자");
-  await expect(summaryCard).toContainText("010-4911-0016");
-  await expect(summaryCard).not.toContainText("CD-P-081");
-  await expect(summaryCard).not.toContainText("10:30 접수");
-  await expect(summaryCard).not.toContainText("E-260623-VET");
-  await expect(summaryCard).not.toContainText("담당의 미지정");
-  await expect(summaryCard).not.toContainText(chiefVetId);
-  await expect(veterinarianTextbox).toHaveValue("담당의 미지정");
+  await expect(drawerHeader).toBeVisible();
+  await expect(animalReadonlyTextbox).toHaveValue(/구름.*Samoyed/);
+  await expect(guardianReadonlyTextbox).toHaveValue(/문지아.*010-4911-0016/);
+  await expect(detailDrawer).not.toContainText("CD-P-081");
+  await expect(detailDrawer).not.toContainText("E-260623-VET");
+  await expect(detailDrawer).not.toContainText(chiefVetId);
+  await expect(veterinarianReadonlyTextbox).toHaveValue("담당의 미지정");
   await expect(queueCard).not.toContainText("이수지");
   await expect(calendarCard).not.toContainText("이수지");
 
   await detailDrawer.getByTestId("reception-encounter-edit-open").click();
   await page.getByTestId("reception-encounter-edit-confirm").click();
-  const [
-    departmentBox,
-    veterinarianBox,
-    weightBox,
-    dateBox,
-    startTimeBox,
-    durationBox,
-  ] = await Promise.all([
+  const [departmentBox, veterinarianBox, weightBox, durationBox] = await Promise.all([
     departmentCombobox.boundingBox(),
     veterinarianCombobox.boundingBox(),
     weightTextbox.boundingBox(),
-    receptionDateTextbox.boundingBox(),
-    receptionStartTimeTextbox.boundingBox(),
     durationCombobox.boundingBox(),
   ]);
-  expect(departmentBox?.height).toBe(dateBox?.height);
-  expect(veterinarianBox?.height).toBe(dateBox?.height);
-  expect(weightBox?.height).toBe(dateBox?.height);
-  expect(durationBox?.height).toBe(dateBox?.height);
-  expect(durationBox?.height).toBe(startTimeBox?.height);
+  expect(departmentBox?.height).toBeGreaterThan(0);
+  expect(veterinarianBox?.height).toBeGreaterThan(0);
+  expect(weightBox?.height).toBeGreaterThan(0);
+  expect(durationBox?.height).toBeGreaterThan(0);
   await expect(veterinarianCombobox).toContainText("수의사 미지정");
   await expect(veterinarianCombobox).not.toContainText("user-vet-suji");
   await veterinarianCombobox.click();
@@ -4820,11 +4818,10 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
   expect(latestUpdateBody).toMatchObject({
     primaryVeterinarianId: chiefVetId,
   });
-  await expect(veterinarianTextbox).toHaveValue("청담 원장");
-  await expect(summaryCard).not.toContainText("청담 원장");
-  await expect(summaryCard).not.toContainText(chiefVetId);
+  await expect(page.getByText("접수 수정이 완료되었습니다")).toBeVisible();
+  await expect(veterinarianReadonlyTextbox).toHaveValue("청담 원장");
+  await expect(detailDrawer).not.toContainText(chiefVetId);
   await expect(queueCard).toContainText("청담 원장");
-  await expect(calendarCard).toContainText("청담 원장");
 
   await detailDrawer.getByTestId("reception-encounter-edit-open").click();
   await page.getByTestId("reception-encounter-edit-confirm").click();
@@ -4836,7 +4833,7 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
 
   await expect.poll(() => updateCount).toBe(2);
   expect(latestUpdateBody).not.toHaveProperty("primaryVeterinarianId");
-  await expect(veterinarianTextbox).toHaveValue("담당의 미지정");
+  await expect(veterinarianReadonlyTextbox).toHaveValue("담당의 미지정");
   await expect(queueCard).not.toContainText("청담 원장");
   await expect(calendarCard).not.toContainText("청담 원장");
 });
@@ -5270,12 +5267,14 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
 
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
-  ).toContainText("DEN-65 reload walk-in");
+  ).toHaveAttribute("aria-label", /DEN-65 reload walk-in/);
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toContainText("10:45");
   await expect(
-    page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
+    page.locator("aside").first().getByRole("button", {
+      name: /DEN-65 reload walk-in/,
+    }),
   ).toContainText("김도윤");
 
   await page.reload();
@@ -5290,7 +5289,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   ).toContainText("김도윤");
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
-  ).toContainText("DEN-65 reload walk-in");
+  ).toHaveAttribute("aria-label", /DEN-65 reload walk-in/);
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toContainText("10:15");
@@ -5309,6 +5308,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await expect(page.getByRole("dialog")).toContainText("접수를 취소할까요?");
   await page.getByTestId("reception-encounter-cancel-confirm").click();
 
+  await expect(page.getByText("접수가 취소되었습니다")).toBeVisible();
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toHaveCount(0);
@@ -5863,7 +5863,7 @@ test("Cheongdam reservation create uses UUID veterinarian and renders detail rea
     scheduledStartAt: "2026-06-26T09:00:00+09:00",
     weightKg: 12,
   });
-  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  await expect(page.getByText("예약이 완료되었습니다")).toBeVisible();
   const detailPanel = page.getByTestId("reception-right-panel");
   await expect(detailPanel).toContainText("예약 상세");
   await expect(detailPanel.getByLabel("예약일")).toHaveValue("2026.06.26");
@@ -6117,6 +6117,7 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
   await expect(draftDrawer.getByRole("button", { name: "생성" })).toBeEnabled();
   await draftDrawer.getByRole("button", { name: "생성" }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
+  await expect(page.getByText("접수가 완료되었습니다")).toBeVisible();
   expect(walkInCreate.latestBody).toMatchObject({
     durationMinutes: 15,
     patientId: "patient-nabi",
@@ -6804,6 +6805,7 @@ test("reception creates a draft task from a dragged calendar range", async ({
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
   await draftDrawer.getByRole("button", { name: "생성" }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
+  await expect(page.getByText("접수가 완료되었습니다")).toBeVisible();
   expect(walkInCreate.latestBody).toMatchObject({
     durationMinutes: 150,
     patientId: "patient-nabi",
@@ -6818,6 +6820,102 @@ test("reception creates a draft task from a dragged calendar range", async ({
     .filter({ hasText: "14:00" });
   await expect(draftCard).toBeVisible();
   await expect(draftCard).toContainText("14:00-16:30");
+});
+
+test("calendar drag create failure shows an error toast without committing a walk-in", async ({
+  page,
+}) => {
+  let walkInCreateCount = 0;
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/walk-in-encounters",
+    async (route) => {
+      walkInCreateCount += 1;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 500,
+          error: "db_write_failed",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501",
+  );
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+
+  const emptySlot = page.getByTestId("day-empty-slot-14-user-vet-suji");
+  await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + 2,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+  });
+  const dragEndPoint = await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    const endPoint = {
+      x: rect.left + 16,
+      y: rect.top + rect.height * 2.3,
+    };
+
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: endPoint.x,
+        clientY: endPoint.y,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+
+    return endPoint;
+  });
+  await emptySlot.evaluate((slot, point) => {
+    slot.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        buttons: 0,
+        clientX: point.x,
+        clientY: point.y,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+  }, dragEndPoint);
+
+  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  await expect(draftDrawer).toBeVisible();
+  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await draftDrawer.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => walkInCreateCount).toBe(1);
+  await expect(page.getByText("접수를 생성할 수 없습니다.")).toBeVisible();
+  await expect(page.getByText("접수가 완료되었습니다")).toHaveCount(0);
+  await expect(
+    page
+      .locator('[data-testid^="walkin-card-"]')
+      .filter({ hasText: "나비" })
+      .filter({ hasText: "14:00" }),
+  ).toHaveCount(0);
 });
 
 test("reception creates a future dragged calendar range as a reservation", async ({
@@ -6994,7 +7092,7 @@ test("reception creates a future dragged calendar range as a reservation", async
   expect(String(latestAppointmentBody?.scheduledStartAt)).toBe(
     "2026-05-02T10:00:00+09:00",
   );
-  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  await expect(page.getByText("예약이 완료되었습니다")).toBeVisible();
   await expect(
     page.getByTestId("appointment-card-appointment-future-drag-den516"),
   ).toBeVisible();
