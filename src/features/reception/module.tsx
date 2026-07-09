@@ -7373,7 +7373,7 @@ function ReceptionReservationFormDrawer({
 
     onCreate(result.appointment);
     setCalendarDraftSelection(undefined);
-    toast.success("예약을 생성했습니다.");
+    toast.success("예약이 완료되었습니다");
   };
 
   if (presentation === "side-panel") {
@@ -8076,7 +8076,7 @@ function ReceptionAppointmentCheckInFormDrawer({
     }
 
     onCheckIn(result.checkIn, parsedWeightKg);
-    toast.success("예약 건을 접수했습니다.");
+    toast.success("예약 건 접수가 완료되었습니다");
   };
 
   return (
@@ -8366,6 +8366,7 @@ function ReceptionDraftTaskDrawer({
     });
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
+    toast.success("접수가 완료되었습니다");
   };
 
   return (
@@ -9613,7 +9614,7 @@ export function ReceptionDrawer({
               veterinarians,
             ),
           });
-          toast.success("접수를 생성했습니다.", {
+          toast.success("접수가 완료되었습니다", {
             action: {
               label: "접수 확인하기",
               onClick: () => {
@@ -9845,7 +9846,7 @@ export function ReceptionDrawer({
     requestReceptionReadRetry();
     setCancelConfirmOpen(false);
     setActiveDrawer(null);
-    toast.success("접수 취소가 완료되었습니다.");
+    toast.success("접수가 취소되었습니다");
   };
   const handleSaveSelectedEncounter = async () => {
     if (!selectedEncounter || !patient || editSubmitting) return;
@@ -9893,7 +9894,7 @@ export function ReceptionDrawer({
       ),
     });
     setEditMode(false);
-    toast.success("접수 정보를 수정했습니다.");
+    toast.success("접수 수정이 완료되었습니다");
   };
 
   if (!patient) {
