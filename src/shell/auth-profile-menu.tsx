@@ -43,7 +43,7 @@ export function AuthProfileMenu({
             "!h-[var(--emr-topbar-control-size)] !w-[var(--emr-topbar-profile-width)] !gap-[var(--emr-topbar-tab-inner-gap)] !border !border-[var(--emr-topbar-profile-border)] !bg-[var(--emr-topbar-profile-bg)] !p-[var(--clair-spacing-4)] !text-[var(--emr-topbar-icon)] !shadow-[var(--clair-shadow-xs)] hover:!border-[var(--emr-topbar-profile-border)] hover:!bg-[var(--emr-topbar-tab-hover-bg)] aria-expanded:!border-[var(--emr-topbar-profile-border)] aria-expanded:!bg-[var(--emr-topbar-tab-hover-bg)] aria-expanded:[&_svg[data-slot=profile-chevron]]:rotate-180",
         })}
       >
-        <span className="relative flex size-[var(--clair-spacing-24)] shrink-0 items-center justify-center rounded-full border border-[var(--emr-topbar-profile-avatar-border)] bg-[var(--emr-topbar-profile-avatar-bg)] text-[var(--emr-type-size-micro)] font-medium leading-[var(--emr-type-leading-metadata)] tracking-[var(--emr-type-tracking-status)] ![color:var(--emr-topbar-profile-avatar-text)]">
+        <span className="relative flex size-[var(--clair-spacing-24)] shrink-0 items-center justify-center rounded-full border border-[var(--emr-topbar-profile-avatar-border)] bg-[var(--emr-topbar-profile-avatar-bg)] text-[var(--emr-type-size-micro)] font-medium leading-[var(--emr-type-leading-micro)] tracking-[var(--emr-type-tracking-micro)] ![color:var(--emr-topbar-profile-avatar-text)]">
           {userInitial}
           <span className="absolute bottom-px right-px size-[var(--clair-spacing-6)] rounded-full border border-[var(--emr-topbar-profile-bg)] bg-[var(--emr-status-success-text)]" />
         </span>
