@@ -5917,7 +5917,7 @@ test("Cheongdam reservation create uses UUID veterinarian and renders detail rea
   ).toHaveValue("구름 09시 예약");
 });
 
-test("reception draft task drawer uses DB-backed patient lookup states", async ({
+test("calendar reception creation uses the shared DB-backed patient lookup", async ({
   page,
 }) => {
   const lookupQueries: string[] = [];
@@ -5991,25 +5991,23 @@ test("reception draft task drawer uses DB-backed patient lookup states", async (
   await page.goto("/w/clair-demo/reception?modulePanel=open");
   await page.getByTestId("day-empty-slot-14-user-vet-suji").click();
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
-  await expect(draftDrawer).toBeVisible();
+  const sharedWalkInForm = page.getByTestId("walk-in-reception-dialog").last();
+  await expect(sharedWalkInForm).toBeVisible();
 
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
-  await page.getByLabel("접수 환자 검색어").fill("루나");
+  await sharedWalkInForm.getByLabel("환자 검색").fill("루나");
   await expect(
     page.getByRole("option", { name: /루나.*박지유/ }),
   ).toBeVisible();
   await expect.poll(() => lookupQueries.includes("루나")).toBe(true);
   await page.getByRole("option", { name: /루나.*박지유/ }).click();
-  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
-    "루나",
+  await expect(sharedWalkInForm.getByLabel("환자 검색")).toHaveValue(
+    /루나 .* 박지유/,
   );
 
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
-  await page.getByLabel("접수 환자 검색어").fill("없는");
+  await sharedWalkInForm.getByLabel("환자 검색").fill("없는");
   await expect(page.getByText("검색 결과가 없습니다.")).toBeVisible();
 
-  await page.getByLabel("접수 환자 검색어").fill("오류");
+  await sharedWalkInForm.getByLabel("환자 검색").fill("오류");
   await expect(
     page.getByText("환자 검색을 불러오지 못했습니다."),
   ).toBeVisible();
@@ -6073,34 +6071,32 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
   expect(quarterSlotInsets.right).toBe(0);
   await quarterSlot.click();
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
   await expect(draftDrawer.getByText("접수구분")).toHaveCount(0);
   await expect(
     draftDrawer.getByText("진료 시간 안에서 예약 가능한 시간을 선택합니다."),
   ).toHaveCount(0);
-  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
-    "보호자/동물 선택",
-  );
+  await expect(draftDrawer.getByLabel("환자 검색")).toHaveValue("");
   await expect(draftDrawer.getByRole("button", { name: "생성" })).toBeDisabled();
   await expect(draftDrawer.getByLabel("담당의")).toContainText("이수지");
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:15");
-  await expect(draftDrawer.getByLabel("소요시간")).toContainText("15분");
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 2:15");
+  await expect(draftDrawer.getByLabel("예상소요시간")).toContainText("15분");
   const draftControlMetrics = await draftDrawer.evaluate((drawer) => {
     const getControl = (label: string) =>
       drawer.querySelector(`[aria-label="${label}"]`);
-    const patient = getControl("보호자 및 동물검색")?.getBoundingClientRect();
+    const patient = getControl("환자 검색")?.getBoundingClientRect();
     const weight = getControl("체중")?.getBoundingClientRect();
-    const visitPurpose = getControl("방문 목적")?.getBoundingClientRect();
-    const memo = getControl("접수/예약 메모")?.getBoundingClientRect();
+    const visitPurpose = getControl("방문목적")?.getBoundingClientRect();
+    const memo = getControl("접수 메모")?.getBoundingClientRect();
 
     return {
       controlHeights: [
-        "보호자 및 동물검색",
+        "환자 검색",
         "체중",
         "담당의",
-        "진료시작시간",
-        "소요시간",
+        "접수시간",
+        "예상소요시간",
       ].map((label) =>
         Math.round(getControl(label)?.getBoundingClientRect().height ?? 0),
       ),
@@ -6110,7 +6106,7 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
         visitPurpose && memo ? Math.abs(visitPurpose.height - memo.height) : null,
     };
   });
-  expect(draftControlMetrics.controlHeights).toEqual([36, 36, 36, 36, 36]);
+  expect(draftControlMetrics.controlHeights).toEqual([32, 32, 32, 32, 32]);
   expect(draftControlMetrics.patientWeightWidthDelta).not.toBeNull();
   expect(draftControlMetrics.patientWeightWidthDelta ?? 999).toBeLessThanOrEqual(
     1,
@@ -6150,11 +6146,12 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
       .filter({ hasText: "14:15" }),
   ).toHaveCount(0);
 
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await draftDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
-  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
-    "나비",
+  await expect(draftDrawer.getByLabel("환자 검색")).toHaveValue(
+    /나비 .* 오세아/,
   );
+  await draftDrawer.getByLabel("방문목적").fill("현장 접수");
   await expect(draftDrawer.getByRole("button", { name: "생성" })).toBeEnabled();
   await draftDrawer.getByRole("button", { name: "생성" }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
@@ -6323,63 +6320,26 @@ test("reception clears the draft schedule card on cancel or another selection", 
   );
 
   await quarterSlot.click();
-  let draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  let draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
   await expect(calendarDraftCard).toBeVisible();
 
   await draftDrawer.getByRole("button", { name: "취소" }).click();
   await expect(calendarDraftCard).toHaveCount(0);
-  await expect(page).not.toHaveURL(/drawer=reception-draft-task/);
+  await expect(page).not.toHaveURL(/drawer=reception-form/);
 
   await quarterSlot.click();
-  draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
   await expect(calendarDraftCard).toBeVisible();
-  await page.evaluate(() => {
-    const drawer = document.querySelector('[data-testid="workspace-drawer"]');
-    const drawerHost = drawer?.parentElement;
-
-    if (!drawerHost) throw new Error("Expected workspace drawer host");
-
-    (
-      window as unknown as { __workspaceDrawerRemovals: number }
-    ).__workspaceDrawerRemovals = 0;
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.removedNodes) {
-          if (!(node instanceof HTMLElement)) continue;
-          if (
-            node.matches('[data-testid="workspace-drawer"]') ||
-            node.querySelector('[data-testid="workspace-drawer"]')
-          ) {
-            (
-              window as unknown as { __workspaceDrawerRemovals: number }
-            ).__workspaceDrawerRemovals += 1;
-          }
-        }
-      }
-    });
-    observer.observe(drawerHost, { childList: true });
-    (
-      window as unknown as { __workspaceDrawerObserver: MutationObserver }
-    ).__workspaceDrawerObserver = observer;
-  });
 
   await page.getByTestId("day-empty-slot-15-user-vet-suji-slot-1500").click();
   const replacementDraftCard = page.locator(
     '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m900"]',
   );
-  draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("15:00");
-  await expect(page.getByTestId("workspace-drawer")).toHaveCount(1);
-  await page.waitForTimeout(250);
-  expect(
-    await page.evaluate(
-      () =>
-        (window as unknown as { __workspaceDrawerRemovals?: number })
-          .__workspaceDrawerRemovals ?? 0,
-    ),
-  ).toBe(0);
+  draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 3:00");
+  await expect(page.getByTestId("reception-right-panel")).toBeVisible();
   await expect(calendarDraftCard).toHaveCount(0);
   await expect(replacementDraftCard).toBeVisible();
   await expect(
@@ -6407,18 +6367,13 @@ test("reception clears the draft schedule card when the draft drawer shell close
 
   await quarterSlot.click();
   await expect(
-    page.getByTestId("reception-draft-task-drawer").last(),
+    page.getByTestId("walk-in-reception-dialog").last(),
   ).toBeVisible();
   await expect(calendarDraftCard).toBeVisible();
 
-  await page
-    .getByTestId("workspace-drawer")
-    .last()
-    .getByRole("button", { name: "상세 닫기" })
-    .click();
-
-  await expect(page).not.toHaveURL(/drawer=reception-draft-task/);
+  await page.getByRole("button", { name: "우측 사이드 패널 닫기" }).click();
   await expect(calendarDraftCard).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
 });
 
 test("reception clears an active drag preview immediately when selecting an existing schedule", async ({
@@ -6479,7 +6434,7 @@ test("reception clears an active drag preview immediately when selecting an exis
   );
 
   await appointmentCard.click();
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(page.getByText("예약 상세").first()).toBeVisible();
 });
 
@@ -6584,7 +6539,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
   );
   await expect(outsideBusinessSlot).toHaveAttribute("aria-disabled", "true");
   await outsideBusinessSlot.click({ force: true });
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -6594,7 +6549,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
   );
   await expect(elapsedSlot).toHaveAttribute("aria-disabled", "true");
   await elapsedSlot.click({ force: true });
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -6604,9 +6559,9 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
   );
   await expect(lunchSlot).toHaveAttribute("aria-disabled", "false");
   await lunchSlot.click();
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("12:15");
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 12:15");
   await draftDrawer.getByRole("button", { name: "취소" }).click();
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
@@ -6662,7 +6617,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
     );
   });
 
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -6717,7 +6672,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
     );
   });
 
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -6832,21 +6787,21 @@ test("reception creates a draft task from a dragged calendar range", async ({
     );
   }, dragEndPoint);
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
-  await expect(draftDrawer.getByLabel("소요시간")).toContainText("150분");
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 2:00");
+  await expect(draftDrawer.getByLabel("예상소요시간")).toContainText("150분");
   const calendarDraftCard = page.locator(
     '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m840"]',
   );
   await expect(calendarDraftCard).toBeVisible();
   await expect(calendarDraftCard).toContainText("14:00 - 16:30");
 
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await draftDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await draftDrawer.getByLabel("방문목적").fill("현장 접수");
   await draftDrawer.getByRole("button", { name: "생성" }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
-  await expect(page.getByText("접수가 완료되었습니다")).toBeVisible();
   expect(walkInCreate.latestBody).toMatchObject({
     durationMinutes: 150,
     patientId: "patient-nabi",
@@ -6942,10 +6897,11 @@ test("calendar drag create failure shows an error toast without committing a wal
     );
   }, dragEndPoint);
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await draftDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await draftDrawer.getByLabel("방문목적").fill("현장 접수");
   await draftDrawer.getByRole("button", { name: "생성" }).click();
 
   await expect.poll(() => walkInCreateCount).toBe(1);
@@ -7197,13 +7153,13 @@ test("reception normalizes a reverse dragged calendar range", async ({
     );
   });
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   const calendarDraftCard = page.locator(
     '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m840"]',
   );
   await expect(draftDrawer).toBeVisible();
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
-  await expect(draftDrawer.getByLabel("소요시간")).toContainText("90분");
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 2:00");
+  await expect(draftDrawer.getByLabel("예상소요시간")).toContainText("90분");
   await expect(calendarDraftCard).toBeVisible();
   await expect(calendarDraftCard).toContainText("14:00 - 15:30");
 });
