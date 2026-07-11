@@ -2,19 +2,20 @@
 id: PRODUCT-FEATURE-HOSPITAL-ADMIN-SETTINGS-HUB
 type: Product Requirement
 title: "Hospital Admin Settings Hub"
-description: "Defines the 병원관리 settings-hub IA, target screens, screen responsibilities, and phase-1 data/API follow-up boundaries."
+description: "Defines the 병원관리 settings-hub IA, including the session-only interactive 근무표 boundary."
 status: draft
 area: product
 doc_type: feature-plan
 tags: [hospital-admin, settings, workspace, roles, schedule, vitals]
 related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md"
-last_updated: 2026-07-05
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-flex-schedule-session-ui.md"
+last_updated: 2026-07-11
 ---
 
 # Hospital Admin Settings Hub
 
-Updated: 2026-07-05
+Updated: 2026-07-11
 
 ## Product Position
 
@@ -30,7 +31,7 @@ Top-bar settings must not duplicate hospital settings. Top-bar account/profile c
 | `병원구성원 관리` | Staff invites, member status, job position, permission-role assignment | Existing screen remains; improve IA and connect its role language to 역할별 업무 관리 |
 | `역할별 업무 관리` | Role work profiles: default work scopes, screen access expectations, default assignee behavior | Not a raw permission editor; it complements 구성원 관리 |
 | `공간/시간 관리` | Rooms, appointment intervals, operating hours, blocked times, emergency slots | Static/mock screen first |
-| `근무표` | Staff weekly coverage and schedule templates | Static/mock screen first |
+| `근무표` | Weekly shift editing, daily role coverage, personal schedule, and approval requests | Interactive session-only screen; persistence remains a later scope |
 | `바이탈 관리` | Workspace clinical vital thresholds and alert policy | Static/mock screen first |
 | `감사 로그` | Minimal administrator review of high-value mutation events | Keep as a minimal independent screen; do not remove from MVP |
 
@@ -125,17 +126,17 @@ Phase 1 may display role work profiles and default operational routing without c
 
 | Item | Spec |
 | --- | --- |
-| Purpose | Show staff coverage and schedule templates that affect appointments and Home work load. |
-| Primary user | Hospital admin, operations manager. |
-| Scenario | Admin reviews weekly coverage, locks the upcoming week, and identifies unassigned slots. |
-| Information structure | Coverage highlights, schedule settings, weekly staff grid, impact/data side rail. |
-| Fields/components | Week start, lock time, vacancy alerts, Home staffing signal, staff/day grid. |
-| Default state | Synthetic weekly schedule. |
-| Empty state | Show no schedule template configured and keep manual assignment available. |
-| Permission state | Admin-only edit; staff may later read own schedule. |
-| Save/cancel flow | Explicit save; future edits need conflict validation and audit. |
-| Data/API follow-up | `staff_shift_templates`, `workspace_staff_schedules`, `coverage_rules`. |
-| Screen direction | Dense weekly grid with coverage indicators, not full workforce-management suite. |
+| Purpose | Let the hospital operate one weekly schedule: edit staff shifts, inspect daily role coverage, and resolve staff requests before publication. |
+| Primary user | Hospital admin/operations manager; staff self-service view is simulated as a second surface. |
+| Scenario | Admin creates or adjusts shifts, identifies unassigned work and coverage gaps, then reviews requests and publishes a conflict-free week. |
+| Information structure | Header with publication state, admin/personal surface switch, week/day view switch, weekly grid, daily timeline, staff detail sheet, and publish review dialog. |
+| Fields/components | `SegmentedControl`, `Sheet`, `Dialog`, `EmrRowActionMenu`, confirmation dialog, role filter, staff/day matrix, unassigned row, availability/request panels. |
+| Default state | Synthetic Cheongdam weekly schedule with an availability conflict, two coverage gaps, unassigned shifts, and pending requests. |
+| Empty state | `ScheduleDataState` supports empty/loading/error/read-only messages; the live screen starts in ready state. |
+| Permission state | Client-side session model presents admin editing and personal self-service only; it does not claim server authorization. |
+| Save/cancel flow | Shift CRUD immediately changes session state and marks a published schedule as `재게시 필요`; publish is blocked until conflicts and coverage gaps are resolved. Approved requests alone modify shifts. |
+| Data/API follow-up | `staff_shift_templates`, `workspace_staff_schedules`, coverage rules, availability, request/audit records, admin/staff RLS, notification delivery. |
+| Screen direction | Flex-inspired operational calendar: quiet, dense, time-aware, with text labels in addition to low-saturation green/yellow/blue/purple states. |
 
 ### 바이탈 관리
 

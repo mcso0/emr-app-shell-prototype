@@ -127,7 +127,6 @@ test("hospital admin settings hub opens planned static management screens", asyn
     { button: "병원기본설정", heading: "병원기본설정", testId: "hospital-admin-settings-screen" },
     { button: "역할별 업무 관리", heading: "역할별 업무 관리", testId: "hospital-admin-roles-screen" },
     { button: "공간/시간 관리", heading: "공간/시간 관리", testId: "hospital-admin-space-time-screen" },
-    { button: "근무표", heading: "근무표", testId: "hospital-admin-schedule-screen" },
     { button: "바이탈 관리", heading: "바이탈 관리", testId: "hospital-admin-vitals-screen" },
   ];
 
@@ -141,6 +140,79 @@ test("hospital admin settings hub opens planned static management screens", asyn
 
   await expect(sidePanel.getByRole("button", { name: /진료과 분리운영/ })).toBeDisabled();
   await expect(sidePanel.getByRole("button", { name: /차트 템플릿/ })).toBeDisabled();
+});
+
+test("hospital schedule supports editing, personal requests, approval, and publish review", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  await sidePanel.getByRole("button", { name: "근무표" }).click();
+
+  await expect(page.getByTestId("hospital-admin-schedule-screen")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "근무표" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "근무표 보기" }).getByRole("button", { name: "주간 편성" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("hospital-schedule-weekly-grid")).toBeVisible();
+  await expect(page.getByText("박수지").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "+ 근무" }).click();
+  await expect(page.getByRole("heading", { name: "근무 추가" })).toBeVisible();
+  await page.getByLabel("근무명").fill("야간 검사 보강");
+  await page.getByRole("button", { name: "저장" }).click();
+  await expect(page.getByText("야간 검사 보강").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "야간 검사 보강 작업" }).click();
+  await page.getByText("삭제", { exact: true }).click();
+  await expect(page.getByRole("heading", { name: "근무를 삭제할까?" })).toBeVisible();
+  await page.getByRole("button", { name: "삭제" }).last().click();
+  await expect(page.getByText("야간 검사 보강")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "일간 커버리지" }).click();
+  await expect(page.getByTestId("hospital-schedule-daily-coverage")).toBeVisible();
+
+  await page.getByRole("button", { name: "게시하기" }).click();
+  const publishDialog = page.getByRole("dialog");
+  await expect(publishDialog.getByRole("heading", { name: "게시 전 충돌 검토" })).toBeVisible();
+  await expect(publishDialog.getByRole("button", { name: "게시" })).toBeDisabled();
+  await page.getByRole("button", { name: "닫기" }).click();
+
+  await page.getByRole("button", { name: "내 근무" }).click();
+  await expect(page.getByTestId("hospital-schedule-personal")).toBeVisible();
+  await page.getByRole("button", { name: "휴무·변경 요청" }).click();
+  await page.getByLabel("사유").fill("개인 일정으로 오후 휴무 요청");
+  await page.getByRole("button", { name: "요청 제출" }).click();
+  await expect(page.getByTestId("hospital-schedule-personal")).toContainText("개인 일정으로 오후 휴무 요청");
+  await expect(page.getByTestId("hospital-schedule-personal")).toContainText("승인 대기");
+
+  await page.getByRole("button", { name: "관리자 근무표" }).click();
+  await page.getByRole("button", { name: /승인 대기 요청/ }).click();
+  await expect(page.getByRole("heading", { name: "박수지 일정" })).toBeVisible();
+  await page.getByRole("button", { name: "승인" }).first().click();
+  await expect(page.getByTestId("hospital-admin-schedule-screen")).toContainText("재게시 필요");
+});
+
+test.describe("hospital schedule on mobile", () => {
+  test("uses an employee day list instead of shrinking the weekly matrix", async ({ page }) => {
+    await page.goto("/w/clair-demo/orders?modulePanel=open");
+    await page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: "근무표" }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await expect(page.getByTestId("hospital-schedule-mobile-day-list")).toBeVisible();
+    await expect(page.getByTestId("hospital-schedule-weekly-grid")).toBeHidden();
+    await expect(page.getByTestId("hospital-schedule-mobile-day-list")).toContainText("김도윤");
+  });
+});
+
+test("hospital schedule restores keyboard focus after closing the shift sheet", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: "근무표" }).click();
+
+  const addShift = page.getByRole("button", { name: "+ 근무" });
+  await addShift.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "근무 추가" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "근무 추가" })).toHaveCount(0);
+  await expect(addShift).toBeFocused();
 });
 
 test("hospital admin order table uses shared header and cell text primitives", async ({ page }) => {
