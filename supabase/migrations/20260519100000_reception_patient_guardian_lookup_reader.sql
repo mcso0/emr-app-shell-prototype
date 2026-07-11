@@ -166,7 +166,10 @@ as $$
           'neutered', neutered,
           'microchipNo', microchip_no,
           'patientRegistrationNo', patient_registration_no,
-          'weightKg', weight_kg,
+          -- `weight_kg` is introduced by the later customer schema delta.
+          -- Keep this original reader replayable from the reception foundation;
+          -- the later reader migration replaces this placeholder with the value.
+          'weightKg', null::numeric,
           'allergyNote', allergy_note,
           'specialNote', special_note,
           'handlingCautionNote', handling_caution_note,

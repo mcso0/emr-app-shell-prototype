@@ -3,7 +3,7 @@ id: ENGINEERING-TESTING-API-BACKED-DEMO-RUNBOOK
 status: active
 area: engineering
 doc_type: runbook
-last_updated: 2026-06-11
+last_updated: 2026-07-11
 related_work:
   - DEN-457
   - DEN-458
@@ -81,6 +81,30 @@ Failure interpretation:
 - `environment_gap`: local tooling or local DB is missing. Typical causes are Docker Desktop not running, Supabase CLI not installed, `psql` not installed, or the local DB is not started/reset.
 - `remote_guard`: the DB URL does not point to a local host. Do not bypass this for remote/prod replay without explicit approval.
 - `seed_gap` or SQL baseline failure: the synthetic seed/readback contract regressed.
+
+## Fresh Migration Replay Check
+
+Run this before adding a forward migration that depends on workspace membership,
+role, job-position, or synthetic Cheongdam roster tables:
+
+```bash
+npx supabase start
+npx supabase db reset --local --yes
+npx supabase migration list --local
+```
+
+The reset must apply the full ordered migration directory and `supabase/seed.sql`
+without a foreign-key or missing-column failure. Use the focused static checks
+alongside it when the replay-sensitive migrations change:
+
+```bash
+npx playwright test tests/reception-patient-guardian-lookup-server.spec.ts tests/supabase-fresh-replay-ordering.spec.ts --reporter=line
+```
+
+This is a local, synthetic-data check only. Historical-file corrections made to
+preserve fresh replay do not alter an already-applied remote database; remote
+migration-history reconciliation and schema push remain explicit approval-gated
+operations.
 
 ## Focused Regression Commands
 

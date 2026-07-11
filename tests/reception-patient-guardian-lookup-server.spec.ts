@@ -263,7 +263,8 @@ test("reception lookup reader migration keeps the query workspace-scoped", () =>
   expect(migrationSource).toContain("create or replace function public.clair_search_reception_patient_guardian_lookup");
   expect(migrationSource).toContain("private.clair_is_active_workspace_member(p_workspace_id)");
   expect(migrationSource).toContain("p.workspace_id = p_workspace_id");
-  expect(migrationSource).toContain("'weightKg', weight_kg");
+  expect(migrationSource).toContain("'weightKg', null::numeric");
+  expect(migrationSource).not.toContain("'weightKg', weight_kg");
   expect(migrationSource).toContain("patients_workspace_status_lower_name_prefix_idx");
   expect(migrationSource).toContain("guardians_workspace_lower_name_prefix_idx");
   expect(migrationSource).toContain("guardians_workspace_mobile_phone_normalized_prefix_idx");
