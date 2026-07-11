@@ -119,13 +119,12 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.getByTestId("hospital-order-row-ord-med-maropitant")).toBeVisible();
 });
 
-test("hospital admin settings hub opens planned static management screens", async ({ page }) => {
+test("hospital admin settings hub opens static screens and role management", async ({ page }) => {
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
   const sidePanel = page.getByTestId("hospital-admin-side-panel");
   const plannedScreens = [
     { button: "병원기본설정", heading: "병원기본설정", testId: "hospital-admin-settings-screen" },
-    { button: "역할별 업무 관리", heading: "역할별 업무 관리", testId: "hospital-admin-roles-screen" },
     { button: "공간/시간 관리", heading: "공간/시간 관리", testId: "hospital-admin-space-time-screen" },
     { button: "바이탈 관리", heading: "바이탈 관리", testId: "hospital-admin-vitals-screen" },
   ];
@@ -137,6 +136,10 @@ test("hospital admin settings hub opens planned static management screens", asyn
     await page.getByRole("button", { name: "시안 저장" }).click();
     await expect(page.getByTestId(screen.testId)).toContainText("방금 시안 저장");
   }
+
+  await sidePanel.getByRole("button", { name: "역할별 업무 관리" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "역할 및 권한" })).toBeVisible();
+  await expect(page.getByText("권한 역할", { exact: true }).first()).toBeVisible();
 
   await expect(sidePanel.getByRole("button", { name: /진료과 분리운영/ })).toBeDisabled();
   await expect(sidePanel.getByRole("button", { name: /차트 템플릿/ })).toBeDisabled();
