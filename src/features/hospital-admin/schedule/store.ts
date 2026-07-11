@@ -214,11 +214,11 @@ export const useHospitalScheduleStore = create<HospitalScheduleStore>()((set, ge
 
       const leaving = target.kind !== "leave";
 
-      const shifts = state.shifts.map((shift) =>
+      const shifts: HospitalScheduleShift[] = state.shifts.map((shift) =>
           shift.id === shiftId
             ? {
                 ...shift,
-                kind: leaving ? "leave" : "clinical",
+                kind: leaving ? ("leave" as const) : ("clinical" as const),
                 workLabel: leaving ? "휴무" : "진료",
                 locationLabel: leaving ? null : "진료실 A",
             }
@@ -233,7 +233,7 @@ export const useHospitalScheduleStore = create<HospitalScheduleStore>()((set, ge
     }),
   updateShift: (shiftId, draft) =>
     set((state) => {
-      const shifts = state.shifts.map((shift) =>
+      const shifts: HospitalScheduleShift[] = state.shifts.map((shift) =>
         shift.id === shiftId ? { ...shift, ...draft, id: shiftId } : shift,
       );
       const updatedShift = shifts.find((shift) => shift.id === shiftId);

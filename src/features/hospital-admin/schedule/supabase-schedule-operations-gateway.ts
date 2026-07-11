@@ -188,8 +188,13 @@ function readAvailability(value: unknown): HospitalScheduleStaff["unavailableByW
     if (!Number.isInteger(day) || day < 0 || day > 6) continue;
     const validRanges = asArray(rawRanges)
       .map((range) => asRecord(range))
-      .filter((range) => isMinute(range.startMinutes) && isMinute(range.endMinutes) && range.endMinutes > range.startMinutes)
-      .map((range) => ({ startMinutes: range.startMinutes as number, endMinutes: range.endMinutes as number }));
+      .map((range) => ({ startMinutes: range.startMinutes, endMinutes: range.endMinutes }))
+      .filter(
+        (range): range is { startMinutes: number; endMinutes: number } =>
+          isMinute(range.startMinutes) &&
+          isMinute(range.endMinutes) &&
+          range.endMinutes > range.startMinutes,
+      );
     if (validRanges.length) ranges[day] = validRanges;
   }
   return ranges;

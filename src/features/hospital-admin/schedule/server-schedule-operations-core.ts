@@ -49,7 +49,7 @@ export type HospitalScheduleOperation =
 
 type PersistedOperation = Exclude<
   HospitalScheduleOperation,
-  { type: "assignment_suggestions" }
+  { type: "assignment_suggestions" | "payroll_preview" }
 >;
 
 export type HospitalScheduleOperationsGateway = {
@@ -75,7 +75,7 @@ type OperationSuccess =
   | {
       ok: true;
       status: 200 | 201;
-      action: HospitalScheduleOperation["type"];
+      action: Exclude<HospitalScheduleOperation["type"], "assignment_suggestions" | "payroll_preview">;
       id?: string | null;
     }
   | {
@@ -184,7 +184,7 @@ export function createDemoHospitalScheduleOperationsGateway(): HospitalScheduleO
     { staffId: "staff-suji", clockInMinutes: 9 * 60, clockOutMinutes: 17 * 60 },
   ];
   const staffProfiles = seed.staff.map((staff) => ({
-    id: staff.id,
+    staffId: staff.id,
     hourlyRateCents: staff.id === "staff-suji" ? 2_500 : 2_000,
   }));
 

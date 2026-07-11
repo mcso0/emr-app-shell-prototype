@@ -93,7 +93,9 @@ test("admin can request assisted assignment and create a payroll preview", async
   });
 
   expect(suggestions).toMatchObject({ ok: true, status: 200, action: "assignment_suggestions" });
-  expect(suggestions.ok && suggestions.suggestions[0]).toMatchObject({ staffId: "staff-jiho" });
+  expect(
+    suggestions.ok && suggestions.action === "assignment_suggestions" && suggestions.suggestions[0],
+  ).toMatchObject({ staffId: "staff-jiho" });
 
   const payroll = await executeHospitalScheduleOperation({
     actorUserId: "user-admin",
