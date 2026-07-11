@@ -136,7 +136,7 @@ test("hospital admin settings hub opens static screens and role management", asy
     await expect(page.getByTestId(screen.testId)).toContainText("방금 시안 저장");
   }
 
-  await sidePanel.getByRole("button", { name: "역할별 업무 관리" }).click();
+  await sidePanel.getByRole("button", { name: "역할 및 권한" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "역할 및 권한" })).toBeVisible();
   await expect(page.getByText("권한 역할", { exact: true }).first()).toBeVisible();
 
@@ -341,6 +341,95 @@ test("hospital schedule restores keyboard focus after closing the shift sheet", 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: "근무 추가" })).toHaveCount(0);
   await expect(addShift).toBeFocused();
+test("hospital admin role and permission screen replaces the static role-work concept", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  await sidePanel.getByRole("button", { name: "역할 및 권한" }).click();
+
+  const screen = page.getByTestId("hospital-admin-role-permission-screen");
+  await expect(screen).toBeVisible();
+  await expect(screen.getByRole("heading", { name: "역할 및 권한", exact: true })).toBeVisible();
+  await expect(screen.getByRole("tab", { name: "권한 역할" })).toHaveAttribute("aria-selected", "true");
+  await expect(screen.getByRole("tab", { name: "직무" })).toBeVisible();
+  await expect(screen.getByRole("tab", { name: "업무 기본값" })).toBeVisible();
+  await expect(screen.getByText("향후 데이터")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "시안 저장" })).toHaveCount(0);
+  await expect(screen.getByRole("button", { name: "역할 편집" })).toHaveCount(0);
+  await expect(screen.getByRole("checkbox", { name: /워크스페이스 삭제/ })).toBeDisabled();
+  await expect(screen.getByText("소유자 전용").first()).toBeVisible();
+});
+
+test("hospital admin saves role work defaults locally without changing permissions", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: "역할 및 권한" }).click();
+
+  const screen = page.getByTestId("hospital-admin-role-permission-screen");
+  await screen.getByRole("tab", { name: "업무 기본값" }).click();
+  await expect(screen.getByText("권한과 분리된 설정")).toBeVisible();
+
+  await screen.getByLabel("기본 접수 담당").click();
+  await page.getByRole("option", { name: "수의사" }).click();
+  await expect(screen.getByRole("button", { name: "저장" })).toBeVisible();
+  await screen.getByRole("button", { name: "저장" }).click();
+  await expect(screen.getByRole("status")).toContainText("이 브라우저의 업무 기본값을 저장했습니다.");
+
+  await page.reload();
+  await page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: "역할 및 권한" }).click();
+  await screen.getByRole("tab", { name: "업무 기본값" }).click();
+  await expect(screen.getByLabel("기본 접수 담당")).toContainText("수의사");
+});
+
+test("hospital admin syncs saved work defaults to another browser tab", async ({ page, context }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: "역할 및 권한" }).click();
+  const firstScreen = page.getByTestId("hospital-admin-role-permission-screen");
+  await firstScreen.getByRole("tab", { name: "업무 기본값" }).click();
+
+  const secondPage = await context.newPage();
+  await secondPage.goto("/w/clair-demo/orders?modulePanel=open");
+  await secondPage
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "역할 및 권한" })
+    .click();
+  const secondScreen = secondPage.getByTestId("hospital-admin-role-permission-screen");
+  await secondScreen.getByRole("tab", { name: "업무 기본값" }).click();
+
+  await firstScreen.getByLabel("기본 접수 담당").click();
+  await page.getByRole("option", { name: "수의사" }).click();
+  await firstScreen.getByRole("button", { name: "저장" }).click();
+
+  await expect(secondScreen.getByLabel("기본 접수 담당")).toContainText("수의사");
+  await secondPage.close();
+});
+
+test("hospital admin role screen stays compact and keyboard-safe", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  if ((await sidePanel.count()) === 0) {
+    await page.getByRole("button", { name: "사이드 패널 펼치기" }).click();
+  }
+  await sidePanel.getByRole("button", { name: "역할 및 권한" }).click();
+
+  const screen = page.getByTestId("hospital-admin-role-permission-screen");
+  await expect(
+    screen.evaluate((element) => element.scrollWidth <= document.documentElement.clientWidth)
+  ).resolves.toBe(true);
+
+  await screen.getByRole("button", { name: "새 커스텀 역할" }).click();
+  const roleDialog = page.getByRole("dialog", { name: "새 커스텀 역할" });
+  await expect(roleDialog).toBeVisible();
+  await roleDialog.getByRole("button", { name: "역할 저장" }).click();
+  await expect(roleDialog.getByRole("alert")).toContainText("커스텀 역할 이름을 입력하세요.");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "새 커스텀 역할" })).toHaveCount(0);
+
+  await screen.getByRole("tab", { name: "권한 역할" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(screen.getByRole("tab", { name: "직무" })).toBeFocused();
 });
 
 test("hospital admin order table uses shared header and cell text primitives", async ({ page }) => {

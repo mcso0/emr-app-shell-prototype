@@ -432,6 +432,23 @@ export function getSessionWorkspacePermissionRoleSummary(
   return `${role.permissionIds.length}개 권한으로 구성`;
 }
 
+export function getSessionWorkspaceEffectivePermissionRoleKey(
+  membership: Pick<SessionWorkspaceMembership, "permissionRoleKey" | "roles">
+) {
+  if (membership.permissionRoleKey) return membership.permissionRoleKey;
+  return membership.roles.includes("hospital_admin") ? "owner" : "general";
+}
+
+export function getSessionWorkspaceEffectiveJobPositionKey(
+  membership: Pick<SessionWorkspaceMembership, "jobPositionKey" | "roles">
+) {
+  if (membership.jobPositionKey) return membership.jobPositionKey;
+  if (membership.roles.includes("vet")) return "veterinarian";
+  if (membership.roles.includes("technician")) return "technician";
+  if (membership.roles.includes("hospital_admin")) return "hospital_director";
+  return "front_desk";
+}
+
 export function getSessionWorkspaceLegacyRolesForAssignment({
   permissionRoleKey,
   jobPositionKey,

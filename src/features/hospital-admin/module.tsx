@@ -119,7 +119,7 @@ import { WorkspaceMembershipManagement } from "@/features/auth/workspace-members
 import { HospitalBasicSettingsScreen } from "@/features/hospital-admin/settings/hospital-basic-settings-screen";
 import { useHospitalBasicSettingsStore } from "@/features/hospital-admin/settings/hospital-basic-settings-store";
 import { HospitalScheduleScreen } from "@/features/hospital-admin/schedule/hospital-schedule-screen";
-import { WorkspaceRolePermissionManagement } from "@/features/auth/workspace-role-permission-management";
+import { RolePermissionManagementScreen } from "@/features/hospital-admin/role-permission-management/screen";
 import {
   useHospitalAdminStore,
   type HospitalAdminSection,
@@ -304,7 +304,7 @@ const hospitalAdminMenuItems: HospitalAdminMenuItem[] = [
   { label: "병원구성원 관리", icon: UsersIcon, section: "members", testId: "hospital-admin-menu-members" },
   { label: "감사 로그", icon: DocumentCheckIcon, section: "audit", testId: "hospital-admin-menu-audit" },
   { label: "근무표", icon: CalendarIcon, section: "schedule", testId: "hospital-admin-menu-schedule" },
-  { label: "역할별 업무 관리", icon: GridIcon, section: "roles", testId: "hospital-admin-menu-roles" },
+  { label: "역할 및 권한", icon: GridIcon, section: "roles", testId: "hospital-admin-menu-roles" },
   { label: "공간/시간 관리", icon: BuildingIcon, section: "space-time", testId: "hospital-admin-menu-space-time" },
   { label: "진료과 분리운영", icon: LayersIcon },
   { label: "바이탈 관리", icon: ActivityIcon, section: "vitals", testId: "hospital-admin-menu-vitals" },
@@ -753,7 +753,7 @@ function HospitalOrderSortableHeader({
 
 type HospitalAdminConceptSection = Exclude<
   HospitalAdminSection,
-  "audit" | "members" | "orders" | "schedule" | "settings"
+  "audit" | "members" | "orders" | "roles" | "schedule" | "settings"
 >;
 
 type HospitalAdminConceptField = {
@@ -786,39 +786,41 @@ const hospitalAdminConceptScreens: Record<
   HospitalAdminConceptSection,
   HospitalAdminConceptScreenConfig
 > = {
-  roles: {
-    section: "roles",
-    title: "역할별 업무 관리",
-    badge: "업무 기본값",
-    breadcrumb: "병원관리 / 역할별 업무 관리",
-    description: "권한 자체가 아니라 역할별 기본 담당 업무와 화면 접근 기준",
+  settings: {
+    section: "settings",
+    title: "병원기본설정",
+    badge: "Phase 1",
+    breadcrumb: "병원관리 / 병원 기본 설정",
+    description: "워크스페이스 병원 프로필과 기본 운영값",
     highlights: [
-      { label: "관리 역할", value: "5개" },
-      { label: "업무 그룹", value: "접수 · 진료 · 검사 · 수납" },
-      { label: "권한 연동", value: "구성원 관리와 분리" },
-      { label: "변경 감사", value: "필수" },
+      { label: "워크스페이스", value: "workspace-clair-cheongdam" },
+      { label: "대표번호", value: "02-6203-7582" },
+      { label: "운영시간", value: "평일 09:00-19:00" },
+      { label: "프로필 상태", value: "관리자 확인 필요" },
     ],
     fields: [
-      { label: "기본 접수 담당", value: "원무/접수", kind: "select", options: ["원무/접수", "병원관리자", "테크니션"] },
-      { label: "기본 차트 작성자", value: "수의사", kind: "select", options: ["수의사", "병원관리자"] },
-      { label: "검사 결과 입력", value: "테크니션", kind: "select", options: ["테크니션", "수의사", "병원관리자"] },
-      { label: "수납 마감 승인", value: "병원관리자", kind: "select", options: ["병원관리자", "원장/소유자"] },
-      { label: "Home 업무 생성", value: "true", kind: "switch" },
-      { label: "권한 상승 제한", value: "true", kind: "switch" },
+      { label: "병원명", value: "VIP동물의료센터 청담점" },
+      { label: "워크스페이스 ID", value: "workspace-clair-cheongdam" },
+      { label: "주소", value: "서울 강남구 도산대로 000", kind: "textarea" },
+      { label: "대표 전화", value: "02-6203-7582" },
+      { label: "대표 연락처", value: "010-0000-7582" },
+      { label: "팩스", value: "02-6203-7583" },
+      { label: "대표자/원장명", value: "김청담" },
+      { label: "사업자등록번호", value: "000-00-00000" },
+      { label: "홈페이지", value: "https://clair-cheongdam.example" },
+      { label: "인스타그램", value: "@clair.cheongdam" },
     ],
     table: {
-      title: "역할별 기본 업무 매트릭스",
-      columns: ["역할", "기본 화면", "주요 업무", "승인/관리"],
+      title: "운영시간 요약",
+      columns: ["요일", "진료", "점심", "예약"],
       rows: [
-        ["병원관리자", "병원관리 · Home", "구성원, 설정, 오더 관리", "역할/설정 변경"],
-        ["수의사", "진료/차트", "진료, 진단, 오더 확정", "차트 완료"],
-        ["테크니션", "검사 · 처치", "결과 입력, 처치 수행", "업무 완료"],
-        ["원무/접수", "접수/예약 · 고객관리", "접수, 예약, 보호자 안내", "예약 변경"],
-        ["수납 담당", "수납", "결제 상태, 영수증 처리", "마감 요청"],
+        ["월-금", "09:00-19:00", "13:00-14:00", "15분 단위"],
+        ["토", "09:00-17:00", "12:30-13:30", "20분 단위"],
+        ["일/공휴일", "응급 예약만", "-", "전화 확인"],
       ],
     },
-    impactItems: ["Home 업무 추천", "기본 담당자 배정", "화면 접근 정책", "감사 로그 이벤트"],
-    modelItems: ["workspace_role_work_profiles", "permission_policies", "workspace_memberships"],
+    impactItems: ["접수/예약 표시명", "영수증/청구서 병원 정보", "보호자 안내 문구", "향후 대외 문서"],
+    modelItems: ["workspace_hospital_profile", "workspace_operating_hours", "workspace_brand_assets"],
   },
   "space-time": {
     section: "space-time",
@@ -1444,11 +1446,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   }, [hydrated, session, setOrders, workspaceId]);
 
   if (activeSection === "members") {
-    return <WorkspaceMembershipManagement workspaceId={workspaceId} />;
-  }
-
-  if (activeSection === "roles") {
-    return <WorkspaceRolePermissionManagement workspaceId={workspaceId} />;
+    return (
+      <WorkspaceMembershipManagement
+        workspaceId={workspaceId}
+        onOpenRoleManagement={() => setActiveSection("roles")}
+      />
+    );
   }
 
   if (activeSection === "audit") {
@@ -1461,6 +1464,15 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
 
   if (activeSection === "schedule") {
     return <HospitalScheduleScreen workspaceId={workspaceId} />;
+  }
+
+  if (activeSection === "roles") {
+    return (
+      <RolePermissionManagementScreen
+        workspaceId={workspaceId}
+        onOpenMemberManagement={() => setActiveSection("members")}
+      />
+    );
   }
 
   if (

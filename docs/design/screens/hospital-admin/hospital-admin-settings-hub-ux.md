@@ -12,6 +12,7 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-flex-schedule-session-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-005-hospital-basic-settings-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-006-role-permission-management-ui.md"
 last_updated: 2026-07-11
 ---
 
@@ -31,7 +32,7 @@ Do not introduce a separate settings route, landing page, or marketing-style set
 flowchart LR
   A["병원관리 side panel"] --> B["병원기본설정"]
   A --> C["병원구성원 관리"]
-  A --> D["역할별 업무 관리"]
+  A --> D["역할 및 권한"]
   A --> E["공간/시간 관리"]
   A --> F["근무표"]
   A --> G["바이탈 관리"]
@@ -46,7 +47,7 @@ flowchart LR
 - Keep account/profile settings under the profile menu.
 - Open each target item from the existing hospital-admin side panel.
 - Hide save controls until the user changes an editable value. Show one fixed bottom change bar with save and revert actions while a draft is dirty.
-- Use explicit `취소` and `시안 저장` controls for static screen-only mocks; use add/edit/approval/publish controls for `근무표`.
+- Use explicit `취소` and `시안 저장` controls for static screen-only mocks, add/edit/approval/publish controls for `근무표`, and role-specific save/cancel with local dirty state for `역할 및 권한`.
 - Mark future data/API needs in docs, not as noisy in-app explanation.
 - Preserve `Order 관리` side-panel child navigation and drawer behavior.
 
@@ -55,8 +56,8 @@ flowchart LR
 | Screen | Primary pattern | Secondary pattern | Notes |
 | --- | --- | --- | --- |
 | 병원기본설정 | Read-only identity + editable contact cards | Day-by-day operating-hours editor + exception dialogs | Dedicated session-local implementation; no development metadata in the visible UI |
-| 병원구성원 관리 | Existing table + invite/edit sheets | Role/job controls | Keep existing screen; improve language and relation to role work profiles later |
-| 역할별 업무 관리 | Role-work matrix | Default assignment controls | Distinguish from raw permission editing |
+| 병원구성원 관리 | Existing table + invite/edit sheets | Role/job assignment controls | Assign people here and link to definitions in `역할 및 권한` |
+| 역할 및 권한 | Role list + grouped permission detail | Job-position and work-default tabs | Separate authorization, job metadata, and operational defaults |
 | 공간/시간 관리 | Room/status table | Scheduling rule controls | Avoid full calendar editor in this phase |
 | 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Supabase mode uses route/RPC persistence; mock mode remains explicit session-only fallback |
 | 바이탈 관리 | Vital range table | Alert policy controls | No clinical automation claim |
@@ -86,15 +87,15 @@ flowchart LR
 1. Admin selects `병원구성원 관리`.
 2. Existing member management surface opens.
 3. Admin can invite, edit role/job position, or deactivate members through existing mock/local flows.
-4. Later pass should align labels with `역할별 업무 관리` definitions.
+4. Role/job catalog creation is not embedded in the invitation form; the flow links to `역할 및 권한`.
 
-### 역할별 업무 관리
+### 역할 및 권한
 
-1. Admin selects `역할별 업무 관리`.
-2. Screen shows default role work profiles and work matrix.
-3. Admin reviews default assignment controls.
-4. Admin saves mock state.
-5. Future implementation connects these profiles to Home work generation and assignment defaults.
+1. Admin selects `역할 및 권한`.
+2. `권한 역할` opens with `관리자` selected in a stable role-list/detail split view.
+3. System roles are read-only; custom roles use only the safe allow-list and explain locked owner-only powers.
+4. `직무` manages job labels without changing screen/action permissions.
+5. `업무 기본값` saves only browser-local defaults and states that it does not change authorization.
 
 ### 공간/시간 관리
 
@@ -128,14 +129,15 @@ flowchart LR
 
 ## Screen-Only Implementation Checklist
 
-- Enable target side-panel items: `병원기본설정`, `근무표`, `역할별 업무 관리`, `공간/시간 관리`, `바이탈 관리`.
+- Enable target side-panel items: `병원기본설정`, `근무표`, `역할 및 권한`, `공간/시간 관리`, `바이탈 관리`.
 - Keep out-of-scope items disabled: `진료과 분리운영`, `차트 템플릿`, `장비 관리`, `마약류 관리`, `Order 세트`, `프린터 설정`, `데이터랩`.
 - Preserve existing `병원구성원 관리`, `감사 로그`, and `Order 관리` behavior.
-- Add test IDs for new screens.
+- Add test IDs for new screens and stable role/tab/detail contracts.
 - Verify top-bar gear button is removed.
 - Verify the dedicated basic-settings screen keeps save hidden initially, surfaces the change bar after an edit, and preserves its session snapshot across hospital-admin navigation.
 - Verify read-only identity, copy feedback, schedule propagation, exception CRUD, validation focus, and compact single-column layout.
 - Verify static target screens can perform mock `시안 저장`; verify `근무표` CRUD, request approval, conflict review, and publish state separately.
+- Verify every new target screen opens from the side panel. `역할 및 권한` must not use `시안 저장`.
 
 ## Future Development Spec Backlog
 

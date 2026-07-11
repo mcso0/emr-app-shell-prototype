@@ -9,7 +9,7 @@ test("role management handoff regression matrix covers UI, server, and DB guards
 
   expect(authSpec).toContain("hospital admin can edit active member permission role");
   expect(authSpec).toContain("role management UI blocks last active workspace owner");
-  expect(authSpec).toContain("hospital admin can add safe custom permission roles");
+  expect(authSpec).toContain("hospital admin manages custom role and job catalogs outside the invitation sheet");
   expect(authSpec).toContain("non-admin roles cannot manage workspace invitations");
   expect(serverSpec).toContain("role update server boundary denies missing, inactive, and unauthorized actors");
   expect(serverSpec).toContain("role update server boundary denies cross-workspace admin access");
@@ -40,7 +40,9 @@ test("role management live handoff keeps route and DB boundaries discoverable", 
   expect(roleRoute).toContain("p_permission_role_key");
   expect(roleRoute).toContain("p_job_position_key");
   expect(membershipManagement).toContain("permissionRoleKey: editingPermissionRoleKey");
-  expect(membershipManagement).toContain("jobPositionKey: editingMembership.jobPositionKey");
+  expect(membershipManagement).toContain(
+    "jobPositionKey: getSessionWorkspaceEffectiveJobPositionKey(editingMembership)"
+  );
   expect(statusRoute).toContain("clair_update_workspace_membership_status");
   expect(dbWriteMigration).toContain("protect_last_active_hospital_admin");
   expect(dbWriteMigration).toContain("audit hook");

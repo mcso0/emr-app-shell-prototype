@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { CdsPeopleUserPlusIcon } from "@/components/cds-icons/people-and-places";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -49,14 +48,13 @@ import {
 } from "@/components/ui/table";
 import { useAuthClient } from "@/features/auth/auth-client";
 import {
-  SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG,
   acceptSessionWorkspaceInvitation,
   appendSessionWorkspaceInvitation,
   cancelSessionWorkspaceInvitation,
-  createOrUpdateSessionWorkspaceCustomPermissionRole,
   createEmptySessionWorkspacesState,
-  createSessionWorkspaceCustomJobPosition,
   createSessionWorkspaceInvitation,
+  getSessionWorkspaceEffectiveJobPositionKey,
+  getSessionWorkspaceEffectivePermissionRoleKey,
   getSessionWorkspaceJobPositionLabel,
   getSessionWorkspaceJobPositions,
   getSessionWorkspaceLegacyRolesForAssignment,
@@ -78,6 +76,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 
 type WorkspaceMembershipManagementProps = {
+  onOpenRoleManagement?: () => void;
   workspaceId: string;
 };
 
@@ -144,42 +143,23 @@ function getRowEmail(row: MembershipRow) {
   return row.email ?? row.userSessionId;
 }
 
-function getRowRoles(row: MembershipRow) {
-  if (row.rowType === "invitation") return row.invitedRoles;
-  return row.roles;
-}
-
 function getRowPermissionRoleKey(row: MembershipRow) {
-  const roleKey = row.rowType === "invitation" ? row.permissionRoleKey : row.permissionRoleKey;
-  if (roleKey) return roleKey;
-  return getRowRoles(row).includes("hospital_admin") ? "owner" : "general";
+  if (row.rowType === "member") return getSessionWorkspaceEffectivePermissionRoleKey(row);
+  if (row.permissionRoleKey) return row.permissionRoleKey;
+  return row.invitedRoles.includes("hospital_admin") ? "owner" : "general";
 }
 
 function getRowJobPositionKey(row: MembershipRow) {
-  const positionKey = row.rowType === "invitation" ? row.jobPositionKey : row.jobPositionKey;
-  if (positionKey) return positionKey;
-  const roles = getRowRoles(row);
-  if (roles.includes("vet")) return "veterinarian";
-  if (roles.includes("technician")) return "technician";
-  if (roles.includes("hospital_admin")) return "hospital_director";
+  if (row.rowType === "member") return getSessionWorkspaceEffectiveJobPositionKey(row);
+  if (row.jobPositionKey) return row.jobPositionKey;
+  if (row.invitedRoles.includes("vet")) return "veterinarian";
+  if (row.invitedRoles.includes("technician")) return "technician";
+  if (row.invitedRoles.includes("hospital_admin")) return "hospital_director";
   return "front_desk";
 }
 
 function getMembershipDisplayName(membership: SessionWorkspaceMembership) {
   return membership.displayName || membership.email || membership.userSessionId;
-}
-
-function getMembershipPermissionRoleKey(membership: SessionWorkspaceMembership) {
-  if (membership.permissionRoleKey) return membership.permissionRoleKey;
-  return membership.roles.includes("hospital_admin") ? "owner" : "general";
-}
-
-function getMembershipJobPositionKey(membership: SessionWorkspaceMembership) {
-  if (membership.jobPositionKey) return membership.jobPositionKey;
-  if (membership.roles.includes("vet")) return "veterinarian";
-  if (membership.roles.includes("technician")) return "technician";
-  if (membership.roles.includes("hospital_admin")) return "hospital_director";
-  return "front_desk";
 }
 
 function formatMembershipDate(value: string | null | undefined) {
@@ -204,6 +184,7 @@ function MembershipDetailItem({
 }
 
 export function WorkspaceMembershipManagement({
+  onOpenRoleManagement,
   workspaceId,
 }: WorkspaceMembershipManagementProps) {
   const { hydrated, hydrate, session } = useAuthClient();
@@ -228,12 +209,6 @@ export function WorkspaceMembershipManagement({
   const [roleChangeError, setRoleChangeError] = useState<string | null>(null);
   const [submittingRoleChange, setSubmittingRoleChange] = useState(false);
   const [confirmRoleChangeOpen, setConfirmRoleChangeOpen] = useState(false);
-  const [customRoleName, setCustomRoleName] = useState("");
-  const [customRolePermissionIds, setCustomRolePermissionIds] = useState<string[]>([]);
-  const [editingCustomRoleKey, setEditingCustomRoleKey] = useState<string | null>(null);
-  const [customRoleError, setCustomRoleError] = useState<string | null>(null);
-  const [customJobPositionName, setCustomJobPositionName] = useState("");
-  const [customJobPositionError, setCustomJobPositionError] = useState<string | null>(null);
   const [deactivatingMembership, setDeactivatingMembership] =
     useState<SessionWorkspaceMembership | null>(null);
   const [deactivationError, setDeactivationError] = useState<string | null>(null);
@@ -275,7 +250,6 @@ export function WorkspaceMembershipManagement({
     () => getSessionWorkspaceJobPositions(state, workspaceId),
     [state, workspaceId]
   );
-  const customPermissionRoles = permissionRoles.filter((role) => role.roleType === "custom");
 
   const activeMembers = state.memberships.filter(
     (membership) => membership.workspaceId === workspaceId && membership.status === "active"
@@ -292,7 +266,7 @@ export function WorkspaceMembershipManagement({
     (membership) => membership.workspaceId === workspaceId && membership.status === "soft_deleted"
   );
   const activeOwnerCount = activeMembers.filter(
-    (membership) => getMembershipPermissionRoleKey(membership) === "owner" || membership.roles.includes("hospital_admin")
+    (membership) => getSessionWorkspaceEffectivePermissionRoleKey(membership) === "owner"
   ).length;
   const currentActorId = session ? getDemoInvitationActorId(session.role) : null;
   const jobFilterOptions = Array.from(
@@ -552,7 +526,7 @@ export function WorkspaceMembershipManagement({
 
   function openRoleEditor(membership: SessionWorkspaceMembership) {
     setEditingMembership(membership);
-    setEditingPermissionRoleKey(membership.permissionRoleKey ?? "general");
+    setEditingPermissionRoleKey(getSessionWorkspaceEffectivePermissionRoleKey(membership));
     setRoleChangeError(null);
     setConfirmRoleChangeOpen(false);
   }
@@ -562,7 +536,7 @@ export function WorkspaceMembershipManagement({
 
     const editingRoles = getSessionWorkspaceLegacyRolesForAssignment({
       permissionRoleKey: editingPermissionRoleKey,
-      jobPositionKey: editingMembership.jobPositionKey,
+      jobPositionKey: getSessionWorkspaceEffectiveJobPositionKey(editingMembership),
     });
     const result = updateSessionWorkspaceMembershipRoles(
       state,
@@ -570,7 +544,7 @@ export function WorkspaceMembershipManagement({
       {
         roles: editingRoles,
         permissionRoleKey: editingPermissionRoleKey,
-        jobPositionKey: editingMembership.jobPositionKey,
+        jobPositionKey: getSessionWorkspaceEffectiveJobPositionKey(editingMembership),
       }
     );
 
@@ -591,7 +565,7 @@ export function WorkspaceMembershipManagement({
     try {
       const editingRoles = getSessionWorkspaceLegacyRolesForAssignment({
         permissionRoleKey: editingPermissionRoleKey,
-        jobPositionKey: editingMembership.jobPositionKey,
+        jobPositionKey: getSessionWorkspaceEffectiveJobPositionKey(editingMembership),
       });
       const response = await fetch(
         `/api/workspaces/${workspaceId}/memberships/${editingMembership.id}/roles`,
@@ -606,7 +580,7 @@ export function WorkspaceMembershipManagement({
           body: JSON.stringify({
             roles: editingRoles,
             permissionRoleKey: editingPermissionRoleKey,
-            jobPositionKey: editingMembership.jobPositionKey,
+            jobPositionKey: getSessionWorkspaceEffectiveJobPositionKey(editingMembership),
           }),
         }
       );
@@ -631,7 +605,7 @@ export function WorkspaceMembershipManagement({
 
     const editingRoles = getSessionWorkspaceLegacyRolesForAssignment({
       permissionRoleKey: editingPermissionRoleKey,
-      jobPositionKey: editingMembership.jobPositionKey,
+      jobPositionKey: getSessionWorkspaceEffectiveJobPositionKey(editingMembership),
     });
     const result = updateSessionWorkspaceMembershipRoles(
       state,
@@ -639,7 +613,7 @@ export function WorkspaceMembershipManagement({
       {
         roles: editingRoles,
         permissionRoleKey: editingPermissionRoleKey,
-        jobPositionKey: editingMembership.jobPositionKey,
+        jobPositionKey: getSessionWorkspaceEffectiveJobPositionKey(editingMembership),
       }
     );
 
@@ -654,67 +628,6 @@ export function WorkspaceMembershipManagement({
     setEditingPermissionRoleKey("general");
     setRoleChangeError(null);
     setConfirmRoleChangeOpen(false);
-  }
-
-  function handleCustomRolePermissionToggle(permissionId: string, checked: boolean) {
-    setCustomRolePermissionIds((current) =>
-      checked
-        ? Array.from(new Set([...current, permissionId]))
-        : current.filter((item) => item !== permissionId)
-    );
-    setCustomRoleError(null);
-  }
-
-  function handleCustomRoleSubmit() {
-    if (!canManageMembers) return;
-
-    const result = createOrUpdateSessionWorkspaceCustomPermissionRole(state, {
-      workspaceId,
-      roleKey: editingCustomRoleKey,
-      label: customRoleName,
-      permissionIds: customRolePermissionIds,
-    });
-
-    if (!result.success) {
-      setCustomRoleError(getCustomRoleErrorMessage(result.reason));
-      return;
-    }
-
-    updateState(result.state);
-    setSelectedPermissionRoleKey(result.role.roleKey);
-    setCustomRoleName("");
-    setCustomRolePermissionIds([]);
-    setEditingCustomRoleKey(null);
-    setCustomRoleError(null);
-  }
-
-  function handleCustomRoleEdit(roleKey: string) {
-    const role = customPermissionRoles.find((item) => item.roleKey === roleKey);
-    if (!role) return;
-
-    setEditingCustomRoleKey(role.roleKey);
-    setCustomRoleName(role.label);
-    setCustomRolePermissionIds(role.permissionIds);
-    setCustomRoleError(null);
-  }
-
-  function handleCustomJobPositionSubmit() {
-    if (!canManageMembers) return;
-
-    const result = createSessionWorkspaceCustomJobPosition(state, {
-      workspaceId,
-      label: customJobPositionName,
-    });
-
-    if (!result.success) {
-      setCustomJobPositionError(getCustomJobPositionErrorMessage(result.reason));
-      return;
-    }
-
-    updateState(result.state);
-    setSelectedJobPositionKey(result.position.positionKey);
-    setCustomJobPositionName("");
-    setCustomJobPositionError(null);
   }
 
   async function handleDeactivationConfirm() {
@@ -887,7 +800,10 @@ export function WorkspaceMembershipManagement({
       ];
     }
     const selfAction = row.userSessionId === currentActorId;
-    const lastOwner = row.status === "active" && activeOwnerCount <= 1 && (getMembershipPermissionRoleKey(row) === "owner" || row.roles.includes("hospital_admin"));
+    const lastOwner =
+      row.status === "active" &&
+      activeOwnerCount <= 1 &&
+      getSessionWorkspaceEffectivePermissionRoleKey(row) === "owner";
     const protectionDescription = selfAction ? "본인 구성원 기록은 이 화면에서 변경할 수 없습니다." : lastOwner ? "다른 활성 소유자를 지정한 후 진행할 수 있습니다." : undefined;
     if (row.status === "soft_deleted") {
       return [{ key: "restore", label: "복구", description: "복구 후 비활성 상태로 전환됩니다.", onSelect: () => void handleRestore(row), disabled: !canManageMembers }];
@@ -906,10 +822,10 @@ export function WorkspaceMembershipManagement({
   }
 
   const selectedMembershipPermissionRoleKey = selectedMembership
-    ? getMembershipPermissionRoleKey(selectedMembership)
+    ? getSessionWorkspaceEffectivePermissionRoleKey(selectedMembership)
     : "general";
   const selectedMembershipJobPositionKey = selectedMembership
-    ? getMembershipJobPositionKey(selectedMembership)
+    ? getSessionWorkspaceEffectiveJobPositionKey(selectedMembership)
     : "front_desk";
   const selectedMembershipPermissionRoleLabel = getSessionWorkspacePermissionRoleLabel(
     selectedMembershipPermissionRoleKey,
@@ -1127,7 +1043,7 @@ export function WorkspaceMembershipManagement({
                 <FieldSet className="gap-2">
                   <FieldLegend className="mb-0 text-[13px]">권한 역할</FieldLegend>
                   <FieldDescription className="hidden text-[12px] sm:block">
-                    할 수 있는 작업 범위를 정합니다. 새 역할은 역할 및 권한 화면에서 관리합니다.
+                    할 수 있는 작업 범위를 정합니다. 커스텀 역할은 역할 및 권한에서 관리합니다.
                   </FieldDescription>
                   <RadioGroup
                     aria-label="권한 역할"
@@ -1158,6 +1074,20 @@ export function WorkspaceMembershipManagement({
                     ))}
                   </RadioGroup>
                   <p className="hidden text-[12px] leading-5 text-muted-foreground sm:block">등록된 역할만 선택할 수 있습니다.</p>
+                  {onOpenRoleManagement ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="w-fit px-0"
+                      onClick={() => {
+                        setInviteSheetOpen(false);
+                        onOpenRoleManagement();
+                      }}
+                    >
+                      역할 및 권한에서 관리
+                    </Button>
+                  ) : null}
                   {fieldErrors.permissionRoleKey || fieldErrors.roles ? (
                     <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                       {fieldErrors.permissionRoleKey ?? fieldErrors.roles}
@@ -1222,134 +1152,6 @@ export function WorkspaceMembershipManagement({
                   />
                 </Field>
 
-                <div className="hidden" aria-hidden="true">
-                  <div>
-                    <h3 className="text-[13px] font-semibold">권한 역할 설정</h3>
-                    <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
-                      소유자 전용 권한은 커스텀 역할에서 선택할 수 없습니다.
-                    </p>
-                  </div>
-                  <Field>
-                    <FieldLabel htmlFor="workspace-custom-role-name">커스텀 역할 이름</FieldLabel>
-                    <Input
-                      id="workspace-custom-role-name"
-                      value={customRoleName}
-                      placeholder="검사 보조"
-                      disabled={!canManageMembers || submittingInvitation}
-                      onChange={(event) => {
-                        setCustomRoleName(event.target.value);
-                        setCustomRoleError(null);
-                      }}
-                    />
-                  </Field>
-                  <div className="grid gap-2">
-                    {SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG.map((permission) => (
-                      <label
-                        key={permission.id}
-                        className="flex items-center gap-2 text-[13px] text-[var(--emr-text-primary)]"
-                      >
-                        <Checkbox
-                          aria-label={permission.label}
-                          checked={customRolePermissionIds.includes(permission.id)}
-                          disabled={!canManageMembers || submittingInvitation}
-                          onCheckedChange={(checked) =>
-                            handleCustomRolePermissionToggle(permission.id, Boolean(checked))
-                          }
-                        />
-                        {permission.label}
-                      </label>
-                    ))}
-                  </div>
-                  {customRoleError ? (
-                    <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
-                      {customRoleError}
-                    </FieldError>
-                  ) : null}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={!canManageMembers || submittingInvitation}
-                      onClick={handleCustomRoleSubmit}
-                    >
-                      커스텀 역할 저장
-                    </Button>
-                    {editingCustomRoleKey ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingCustomRoleKey(null);
-                          setCustomRoleName("");
-                          setCustomRolePermissionIds([]);
-                          setCustomRoleError(null);
-                        }}
-                      >
-                        편집 취소
-                      </Button>
-                    ) : null}
-                  </div>
-                  {customPermissionRoles.length > 0 ? (
-                    <div className="grid gap-1">
-                      {customPermissionRoles.map((role) => (
-                        <div
-                          key={role.roleKey}
-                          className="flex items-center justify-between gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] px-3 py-2 text-[12px]"
-                        >
-                          <span className="min-w-0 truncate">{role.label}</span>
-                          <Button
-                            type="button"
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => handleCustomRoleEdit(role.roleKey)}
-                          >
-                            수정
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="grid gap-3 border-t border-[var(--emr-line-hairline)] pt-4">
-                  <div>
-                    <h3 className="text-[13px] font-semibold">직무 설정</h3>
-                    <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
-                      기본 직무 외 병원별 직무를 추가합니다.
-                    </p>
-                  </div>
-                  <Field>
-                    <FieldLabel htmlFor="workspace-custom-job-position-name">
-                      커스텀 직무 이름
-                    </FieldLabel>
-                    <Input
-                      id="workspace-custom-job-position-name"
-                      value={customJobPositionName}
-                      placeholder="CS"
-                      disabled={!canManageMembers || submittingInvitation}
-                      onChange={(event) => {
-                        setCustomJobPositionName(event.target.value);
-                        setCustomJobPositionError(null);
-                      }}
-                    />
-                  </Field>
-                  {customJobPositionError ? (
-                    <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
-                      {customJobPositionError}
-                    </FieldError>
-                  ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={!canManageMembers || submittingInvitation}
-                    onClick={handleCustomJobPositionSubmit}
-                  >
-                    직무 추가
-                  </Button>
-                </div>
               </FieldGroup>
             </ScrollArea>
             <SheetFooter className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 sm:flex-row sm:justify-end">
@@ -1671,19 +1473,6 @@ function getMembershipMutationErrorMessage(reason: string) {
     return "하나 이상의 역할을 선택하세요.";
   }
   return "멤버십 변경 대상을 찾을 수 없습니다.";
-}
-
-function getCustomRoleErrorMessage(reason: string) {
-  if (reason === "empty_label") return "커스텀 역할 이름을 입력하세요.";
-  if (reason === "empty_permissions") return "하나 이상의 권한을 선택하세요.";
-  if (reason === "owner_only_permission") return "소유자 전용 권한은 커스텀 역할에 넣을 수 없습니다.";
-  return "선택할 수 없는 권한이 포함되어 있습니다.";
-}
-
-function getCustomJobPositionErrorMessage(reason: string) {
-  if (reason === "empty_label") return "커스텀 직무 이름을 입력하세요.";
-  if (reason === "duplicate_position") return "이미 있는 직무입니다.";
-  return "직무를 추가할 수 없습니다.";
 }
 
 function getDemoInvitationActorId(role: string) {
