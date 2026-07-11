@@ -15,12 +15,14 @@ Turn the current static hospital-admin schedule concept into an operational sche
 
 ## Chosen Direction
 
-Use an operations-first weekly staff grid with contextual editing and an employee detail sheet.
+Use a Flex-inspired hybrid schedule with contextual editing and an employee detail sheet.
 
-- The weekly grid is the default admin view because it shows assignment and coverage together.
+- The default admin view is a staff-by-seven-day weekly matrix modeled on Flex shift management: avatar and staff metadata stay on the left, while compact pastel shift-type blocks occupy the date cells.
+- A secondary daily timeline follows Flex's colleague schedule view and shows each staff member's working span across an hourly axis so coverage gaps are visible.
 - A shift can be created from an empty cell or the primary `근무 추가` action.
 - A shift card opens an edit sheet with duplicate, delete, and absence actions.
 - Selecting a staff member opens an employee sheet with weekly hours, availability, personal schedule, and requests.
+- Employee self-service uses a personal time-block calendar inspired by Flex's work and leave calendar.
 - Draft and published states are explicit. Publishing is a separate action from saving an individual shift.
 - Coverage gaps, conflicts, and pending requests appear as an actionable status strip instead of decorative summary cards.
 
@@ -30,15 +32,17 @@ Use an operations-first weekly staff grid with contextual editing and an employe
 
 1. Page title, current schedule state, and publication action.
 2. Week navigation, today shortcut, view options, role filter, and staff search.
-3. Actionable status strip for vacancies, conflicts, and pending requests.
-4. Staff-by-day weekly grid with a dedicated unassigned row.
-5. Contextual shift editor sheet and employee detail sheet.
-6. Schedule policy settings moved to a secondary settings dialog.
+3. Week/day segmented view control, role filter, and staff search.
+4. Actionable status strip for vacancies, conflicts, and pending requests.
+5. Staff-by-day weekly matrix with a dedicated unassigned row.
+6. Staff-by-hour daily timeline for coverage review.
+7. Contextual shift editor sheet and employee detail sheet.
+8. Schedule policy settings moved to a secondary settings dialog.
 
 ### Employee self-service
 
 1. Next shift and weekly hours summary.
-2. Personal weekly schedule.
+2. Personal weekly time-block calendar.
 3. Availability and recurring constraints.
 4. Leave and shift-change requests with visible status.
 
@@ -64,10 +68,11 @@ Use an operations-first weekly staff grid with contextual editing and an employe
 
 ## Visual Direction
 
-- Use the existing CLAiR neutral palette, spacing rhythm, and rounded controls.
-- Follow Linear/Codex principles: restrained surfaces, dense but legible rows, contextual actions, and one strong primary action.
-- Use color only for schedule meaning and exceptions; do not turn each shift into a saturated card.
-- Prefer borders, type weight, and spacing over nested card containers.
+- Use the existing CLAiR neutral palette, spacing rhythm, and rounded controls as the base.
+- Translate Flex's visual system into CLAiR: bright canvas, subtle gray grid lines, staff avatars, compact metadata, and low-saturation mint, yellow, blue, and lavender schedule blocks.
+- Keep Flex's information pattern, not its branding. CLAiR typography, control height, radius, icon source, and accessibility contract remain authoritative.
+- Use short text labels with color so schedule meaning never depends on icons or color alone.
+- Prefer borders, type weight, whitespace, and one primary action over nested card containers.
 
 ## Existing Component Mapping
 
@@ -96,4 +101,3 @@ Use an operations-first weekly staff grid with contextual editing and an employe
 - Keyboard and screen-reader checks for grid, sheet, and dialogs.
 - Desktop weekly grid and mobile day-list visual checks.
 - E2E flow for admin publish and employee request approval.
-

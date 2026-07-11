@@ -23,7 +23,15 @@
       --red: #991b1b;
       --red-soft: #fef2f2;
       --violet: #6d28d9;
-      --violet-soft: #f5f3ff;
+      --violet-soft: #f4efff;
+      --flex-mint: #dff5ef;
+      --flex-mint-line: #b8dfd4;
+      --flex-yellow: #fff3bd;
+      --flex-yellow-line: #eadb90;
+      --flex-blue: #e8efff;
+      --flex-blue-line: #c8d6f5;
+      --flex-lilac: #f0e5ff;
+      --flex-lilac-line: #d9c4ef;
       --radius: 10px;
       --shadow: 0 16px 44px rgb(24 24 27 / 9%);
     }
@@ -74,6 +82,10 @@
     .number { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; border-radius: 7px; background: #18181b; color: white; font-size: 12px; font-weight: 760; }
     .source-list li { margin: 9px 0; }
     .source-list a { font-weight: 650; }
+    .reference-gallery { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; margin-top: 16px; }
+    .reference-shot { overflow: hidden; margin: 0; border: 1px solid var(--line); border-radius: 12px; background: #111; }
+    .reference-shot img { display: block; width: 100%; height: 310px; object-fit: contain; background: #111; }
+    .reference-shot figcaption { padding: 12px 14px; border-top: 1px solid #2d2d30; background: var(--paper); color: #52525b; font-size: 12px; }
     .component-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
     .component-list code { padding: 5px 8px; border: 1px solid var(--line); background: var(--paper); }
 
@@ -99,6 +111,9 @@
     .btn.icon { width: 34px; padding: 0; }
     .btn:focus-visible, .view-tab:focus-visible, .shift:focus-visible, .employee-button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fcfcfd; }
+    .view-switch { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+    .mode-button { min-height: 27px; padding: 0 9px; border: 0; border-radius: 5px; background: transparent; color: var(--subtle); font-size: 12px; font-weight: 680; cursor: pointer; }
+    .mode-button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgb(24 24 27 / 10%); }
     .date-title { min-width: 145px; text-align: center; font-size: 13px; font-weight: 720; }
     .select-like { display: inline-flex; align-items: center; min-height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--paper); color: #3f3f46; font-size: 13px; }
     .status-strip { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 24px; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; background: var(--amber-soft); color: #78350f; font-size: 13px; }
@@ -122,14 +137,29 @@
     .shift + .shift { margin-top: 5px; }
     .shift strong { display: block; color: #27272a; font-size: 12px; }
     .shift span { display: block; margin-top: 1px; color: var(--subtle); font-size: 10px; }
-    .shift.clinical { border-color: #bfdbfe; background: #eff6ff; }
-    .shift.support { border-color: #ddd6fe; background: var(--violet-soft); }
-    .shift.warning { border-color: #fcd34d; background: var(--amber-soft); }
+    .shift.clinical { border-color: var(--flex-mint-line); background: var(--flex-mint); }
+    .shift.support { border-color: var(--flex-blue-line); background: var(--flex-blue); }
+    .shift.warning { border-color: var(--flex-yellow-line); background: var(--flex-yellow); }
+    .shift.leave { border-color: var(--flex-lilac-line); background: var(--flex-lilac); }
     .shift.off { border-style: dashed; background: var(--paper); color: var(--subtle); }
     .empty-cell { display: flex; align-items: center; justify-content: center; min-height: 65px; border: 1px dashed transparent; border-radius: 7px; color: #a1a1aa; font-size: 11px; cursor: pointer; }
     .empty-cell:hover { border-color: var(--line-strong); background: var(--soft-2); color: #52525b; }
     .unassigned-row .schedule-cell { min-height: 62px; background: #fffdf5; }
     .unassigned-row .employee-cell { color: var(--amber); font-size: 12px; font-weight: 720; }
+    .schedule-mode { display: none; }
+    .schedule-mode.active { display: block; }
+    .daily-wrap { overflow: auto; padding: 0 24px 24px; }
+    .daily-timeline { min-width: 980px; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); }
+    .timeline-row { display: grid; grid-template-columns: 168px 1fr; min-height: 64px; border-top: 1px solid var(--line); }
+    .timeline-row:first-child { border-top: 0; }
+    .timeline-person { display: flex; align-items: center; gap: 9px; padding: 9px; border-right: 1px solid var(--line); background: #fcfcfd; }
+    .timeline-track { position: relative; min-height: 64px; background-image: linear-gradient(to right, var(--line) 1px, transparent 1px); background-size: calc(100% / 16) 100%; }
+    .timeline-hours { display: grid; grid-template-columns: repeat(16, 1fr); color: var(--subtle); font-size: 10px; }
+    .timeline-hours span { padding: 7px 4px; border-right: 1px solid var(--line); }
+    .timeline-block { position: absolute; top: 10px; height: 43px; padding: 6px 8px; overflow: hidden; border: 1px solid var(--flex-mint-line); border-radius: 7px; background: var(--flex-mint); color: #245047; font-size: 11px; white-space: nowrap; }
+    .timeline-block.support { border-color: var(--flex-blue-line); background: var(--flex-blue); color: #334f87; }
+    .timeline-block.leave { border-color: var(--flex-lilac-line); background: var(--flex-lilac); color: #674594; }
+    .coverage-note { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--soft-2); color: #52525b; font-size: 12px; }
 
     .sheet-backdrop { position: absolute; inset: 0; display: none; justify-content: flex-end; background: rgb(24 24 27 / 18%); z-index: 4; }
     .sheet-backdrop.open { display: flex; }
@@ -161,6 +191,13 @@
     .week-item .day { color: #52525b; font-size: 12px; font-weight: 680; }
     .week-item .time { font-size: 13px; font-weight: 670; }
     .week-item .role { color: var(--subtle); font-size: 11px; }
+    .personal-calendar { display: grid; grid-template-columns: 46px repeat(5, 1fr); min-height: 360px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
+    .personal-calendar > div { position: relative; border-right: 1px solid var(--line); background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px); background-size: 100% 45px; }
+    .personal-calendar > div:last-child { border-right: 0; }
+    .personal-calendar .time-axis { color: var(--subtle); font-size: 9px; text-align: center; }
+    .calendar-day-head { height: 32px; padding-top: 7px; border-bottom: 1px solid var(--line); background: var(--soft-2); color: #52525b; font-size: 11px; font-weight: 680; text-align: center; }
+    .calendar-block { position: absolute; right: 6px; left: 6px; padding: 7px; overflow: hidden; border: 1px solid var(--flex-mint-line); border-radius: 7px; background: var(--flex-mint); color: #245047; font-size: 10px; }
+    .calendar-block.leave { border-color: var(--flex-lilac-line); background: var(--flex-lilac); color: #674594; }
     .request-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
     .request-row:first-of-type { border-top: 0; }
     .request-row strong { display: block; font-size: 13px; }
@@ -176,7 +213,7 @@
 
     @media (max-width: 840px) {
       .report { padding: 32px 16px 72px; }
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .grid-2, .grid-3, .reference-gallery { grid-template-columns: 1fr; }
       .app-head, .toolbar, .status-strip { align-items: stretch; flex-direction: column; }
       .employee-layout { grid-template-columns: 1fr; }
       .flow { grid-template-columns: 1fr; }
@@ -189,9 +226,9 @@
 <body>
   <main class="report">
     <div class="eyebrow">CLAiR EMR · Hospital admin · UX/UI audit</div>
-    <h1>근무표는 정적인 설정표가 아니라<br />이번 주 인력을 운영하는 작업 화면이어야 한다.</h1>
-    <p class="lede">현재 화면은 설정 값과 읽기 전용 표를 보여주지만, 관리자가 근무를 추가·수정·삭제하거나 직원별 일정을 관리할 진입점이 없다. To‑Be는 <strong>주간 편성 → 충돌 확인 → 게시 → 직원 확인·변경 요청</strong>이 한 흐름으로 이어지는 운영형 근무표다.</p>
-    <div class="notice"><strong>범위:</strong> 2026-07-11 배포 화면을 직접 확인하고 현재 구현·제품 문서·공개 근무표 서비스 문서를 함께 검토했다. 아래 시안은 관리자 편성과 직원 셀프서비스를 포함한다. 실제 앱 코드, DB/API, 권한, 알림은 변경하지 않았다.</div>
+    <h1>Flex처럼 직관적으로 보고,<br />병원 운영에 맞게 깊게 편성한다.</h1>
+    <p class="lede">현재 화면의 정적인 표를 Flex의 구성원 중심 캘린더 경험으로 재구성했다. To‑Be는 <strong>주간 매트릭스에서 편성하고 → 일간 타임라인에서 커버리지를 확인하고 → 직원 개인 캘린더에서 요청을 관리</strong>하는 하이브리드 근무표다.</p>
+    <div class="notice"><strong>범위:</strong> 2026-07-11 CLAiR 배포 화면과 Flex 공식 근태관리 공개 화면·가이드를 직접 확인했다. Flex의 정보 구조와 상호작용 원칙을 참고했지만 브랜드를 복제하지 않았고, CLAiR 컴포넌트·토큰·접근성 계약을 유지했다. 실제 앱 코드, DB/API, 권한, 알림은 변경하지 않았다.</div>
 
     <section class="section">
       <h2>1. 현재 화면 근거</h2>
@@ -223,21 +260,26 @@
     </section>
 
     <section class="section">
-      <h2>3. 레퍼런스에서 확인한 배치 원칙</h2>
-      <div class="grid grid-2">
-        <article class="card principle"><span class="number">1</span><div><h3>그리드 안에서 바로 추가</h3><p class="muted small">When I Work는 주간 셀의 `Add a shift`에서 템플릿 또는 새 근무를 선택하게 한다. 날짜와 사람의 맥락을 유지해 입력을 줄이는 방식이다.</p><a class="small" href="https://help.wheniwork.com/articles/scheduling-a-shift/" target="_blank" rel="noreferrer">When I Work · Scheduling a Shift</a></div></article>
-        <article class="card principle"><span class="number">2</span><div><h3>초안 작성과 직원 공개를 분리</h3><p class="muted small">Deputy는 근무를 만든 뒤 별도의 `Publish` 단계에서 직원 공개와 알림 방식을 선택한다. 운영 중 실수로 미완성 근무표가 노출되는 것을 막는다.</p><a class="small" href="https://help.deputy.com/hc/en-au/articles/4688713423759-Schedule-overview" target="_blank" rel="noreferrer">Deputy · Schedule overview</a></div></article>
-        <article class="card principle"><span class="number">3</span><div><h3>전체 근무표와 내 근무를 분리</h3><p class="muted small">Sling은 Full Schedule, My Schedule, Available shifts를 구분한다. 관리자의 편성 업무와 직원의 개인 확인·지원 업무가 다른 목적이기 때문이다.</p><a class="small" href="https://support.getsling.com/en/articles/5232837-my-schedule" target="_blank" rel="noreferrer">Sling · My schedule</a></div></article>
-        <article class="card principle"><span class="number">4</span><div><h3>개인 화면에서 확인과 요청을 완료</h3><p class="muted small">When I Work의 My Schedule은 개인 근무 확인, OpenShift, 일정 동기화, 휴무·교대 관련 기능을 한곳에 모은다. 직원이 관리자 화면을 해석할 필요가 없다.</p><a class="small" href="https://help.wheniwork.com/articles/viewing-your-personal-schedule-computer/" target="_blank" rel="noreferrer">When I Work · Personal Schedule</a></div></article>
-        <article class="card principle"><span class="number">5</span><div><h3>행동은 선택 대상 가까이에</h3><p class="muted small">Linear는 보드와 목록에서 선택, 우클릭, 명령 메뉴, 단축키가 같은 행동 모델을 공유한다. 근무 카드도 클릭·행 메뉴·키보드로 같은 편집을 열도록 설계할 수 있다.</p><a class="small" href="https://linear.app/docs/conceptual-model" target="_blank" rel="noreferrer">Linear · Concepts</a></div></article>
-        <article class="card principle"><span class="number">6</span><div><h3>밀도는 높이고 표면은 절제</h3><p class="muted small">Linear는 뷰 옵션으로 레이아웃·그룹·표시 정보를 조절하고, Codex는 집중된 작업 공간에서 여러 작업을 전환한다. CLAiR은 카드 수를 줄이고 그리드·패널·상태에만 시각적 무게를 준다.</p><a class="small" href="https://linear.app/docs/display-options" target="_blank" rel="noreferrer">Linear · Display options</a> · <a class="small" href="https://openai.com/index/introducing-the-codex-app/" target="_blank" rel="noreferrer">OpenAI · Codex app</a></div></article>
+      <h2>3. Flex에서 확인한 핵심 패턴</h2>
+      <div class="reference-gallery">
+        <figure class="reference-shot"><img src="https://static.flex.team/v2/landing-2024/service/time-tracking/card2.png" alt="Flex 구성원 근무 화면. 구성원 행과 시간축 위에 근무·외근·연차가 파스텔 막대로 표시된다." /><figcaption><strong>구성원 근무 조회</strong> · 사진·이름·직군·근무시간을 왼쪽에 고정하고, 오른쪽 시간축에서 동료의 근무·외근·연차를 비교한다.</figcaption></figure>
+        <figure class="reference-shot"><img src="https://static.flex.team/v2/landing-2024/service/time-tracking/card10-a.png" alt="Flex 교대근무 화면. 직원과 날짜의 매트릭스에 근무 유형이 작은 색상 코드로 표시된다." /><figcaption><strong>교대근무 매트릭스</strong> · 직원 × 날짜를 높은 밀도로 보여주고, 근무 유형을 짧은 색상 코드로 구분한다.</figcaption></figure>
       </div>
-      <div class="callout"><strong>CLAiR에 적용하는 기준:</strong> 근무표 제품의 검증된 구조는 가져오되, 급여·출퇴근·자동 최적화까지 확장하지 않는다. 이번 화면의 핵심은 병원 관리자에게는 편성과 게시, 직원에게는 확인과 요청을 명확히 제공하는 것이다.</div>
+      <div class="grid grid-2" style="margin-top:16px">
+        <article class="card principle"><span class="number">1</span><div><h3>구성원이 탐색의 시작점</h3><p class="muted small">Flex는 직원 사진·이름·직무·총 근무시간을 일정과 같은 행에 둔다. CLAiR도 직원 행을 단순 라벨이 아니라 개인 일정과 요청으로 들어가는 진입점으로 사용한다.</p></div></article>
+        <article class="card principle"><span class="number">2</span><div><h3>목적에 따라 시간 해상도를 바꾼다</h3><p class="muted small">교대근무는 월간 매트릭스로 패턴을 보고, 구성원 근무는 시간축으로 실제 근무 범위를 본다. CLAiR은 주간 매트릭스와 일간 타임라인을 전환해 편성과 커버리지 검토를 분리한다.</p></div></article>
+        <article class="card principle"><span class="number">3</span><div><h3>근무 유형은 낮은 채도의 블록</h3><p class="muted small">민트·노랑·파랑·라일락을 넓은 흰 캔버스와 얇은 그리드 위에 사용한다. 상태를 빠르게 찾되 화면이 경고판처럼 보이지 않는다.</p></div></article>
+        <article class="card principle"><span class="number">4</span><div><h3>개인 일정은 캘린더로 직접 입력</h3><p class="muted small">Flex는 근무·외근·휴가를 시간 블록으로 배치한다. 직원용 `내 근무`도 목록보다 주간 시간 캘린더를 우선해 변경 전후를 공간적으로 이해하게 한다.</p></div></article>
+        <article class="card principle"><span class="number">5</span><div><h3>정책과 일상 업무를 분리</h3><p class="muted small">근무 유형·휴가·승인 정책은 설정하고, 일상 화면은 입력·조회·요청에 집중한다. CLAiR의 주간 시작·잠금·경고도 별도 설정으로 이동한다.</p></div></article>
+        <article class="card principle"><span class="number">6</span><div><h3>병원 운영 정보는 보강한다</h3><p class="muted small">Flex에는 없는 진료실·직군 커버리지·야간/응급 배정을 CLAiR이 추가한다. Flex를 복제하는 것이 아니라 병원 운영 의사결정에 맞게 확장하는 부분이다.</p></div></article>
+      </div>
+      <div class="callout"><strong>적용 경계:</strong> Flex의 구성원 중심 캘린더와 교대근무 시각화는 가져오지만 급여·출퇴근 기록·근로기준법 자동화는 이번 범위에서 제외한다. 초안과 직원 게시를 분리하는 안전장치는 Deputy의 게시 패턴을 보조 근거로 유지한다.</div>
+      <p class="small"><a href="https://flex.team/landing/service/time-tracking" target="_blank" rel="noreferrer">Flex 공식 근태 관리</a> · <a href="https://updatenotes.flex.team/ko/articles/10300806-23-10-10-%EC%83%88%EB%A1%9C%EC%9A%B4-%EA%B5%AC%EC%84%B1%EC%9B%90-%ED%94%84%EB%A1%9C%ED%95%84-%EC%BA%98%EB%A6%B0%EB%8D%94-%ED%8E%B8%EB%A6%AC%ED%95%9C-%EA%B7%BC%EB%AC%B4-%EC%9E%85%EB%A0%A5%EA%B3%BC-%EC%8A%B9%EC%9D%B8-%EB%AA%A8%EB%B0%94%EC%9D%BC-%EC%95%B1-%EA%B0%9C%EC%84%A0" target="_blank" rel="noreferrer">Flex 구성원 프로필·캘린더 업데이트</a></p>
     </section>
 
     <section class="section">
       <h2>4. To‑Be 인터랙티브 시안</h2>
-      <p class="muted">상단 탭을 전환해 관리자 편성 화면과 직원용 내 근무 화면을 볼 수 있어. `근무 추가`, 근무 카드, 직원 이름을 누르면 우측 편집 패널이 열린다.</p>
+      <p class="muted">관리자 화면 안에서 `주간 편성`과 `일간 커버리지`를 전환할 수 있고, 상단 탭에서 직원용 개인 캘린더로 이동할 수 있어. `근무 추가`, 근무 블록, 직원 이름을 누르면 우측 편집 패널이 열린다.</p>
       <div class="prototype-shell">
         <div class="prototype-nav">
           <div class="prototype-tabs" role="tablist" aria-label="근무표 시안 화면">
@@ -254,9 +296,10 @@
             </header>
             <div class="toolbar">
               <div class="toolbar-group"><button class="btn icon" type="button" aria-label="이전 주">‹</button><span class="date-title">7월 7일 – 7월 13일</span><button class="btn icon" type="button" aria-label="다음 주">›</button><button class="btn" type="button">오늘</button></div>
-              <div class="toolbar-group"><span class="select-like">전체 직군</span><span class="select-like">전체 상태</span><button class="btn" type="button">보기 옵션</button></div>
+              <div class="toolbar-group"><div class="view-switch" aria-label="관리자 근무표 보기"><button class="mode-button" type="button" aria-pressed="true" data-mode="weekly-mode">주간 편성</button><button class="mode-button" type="button" aria-pressed="false" data-mode="daily-mode">일간 커버리지</button></div><span class="select-like">전체 직군</span><button class="btn" type="button">보기 옵션</button></div>
             </div>
             <div class="status-strip"><div class="status-items"><span><strong>미배정 2</strong>건</span><span><strong>일정 충돌 1</strong>건</span><span><strong>대기 요청 3</strong>건</span></div><button class="link-button" type="button">문제만 보기</button></div>
+            <div class="schedule-mode active" id="weekly-mode">
             <div class="schedule-wrap">
               <div class="schedule" aria-label="2026년 7월 둘째 주 근무표">
                 <div class="schedule-row schedule-head"><div class="schedule-cell">직원 · 주간 합계</div><div class="schedule-cell">월 7</div><div class="schedule-cell today">화 8 · 오늘</div><div class="schedule-cell">수 9</div><div class="schedule-cell">목 10</div><div class="schedule-cell">금 11</div><div class="schedule-cell">토 12</div><div class="schedule-cell">일 13</div></div>
@@ -267,13 +310,27 @@
                 <div class="schedule-row"><div class="schedule-cell employee-cell"><span class="avatar">최</span><button class="employee-button open-employee" type="button"><strong>최유나 원무</strong><span>접수 · 39.5시간</span></button></div><div class="schedule-cell"><button class="shift open-shift" type="button"><strong>08:30–17:00</strong><span>접수</span></button></div><div class="schedule-cell"><button class="shift open-shift" type="button"><strong>08:30–17:00</strong><span>접수</span></button></div><div class="schedule-cell"><button class="shift open-shift" type="button"><strong>12:00–20:00</strong><span>접수</span></button></div><div class="schedule-cell"><button class="shift open-shift" type="button"><strong>08:30–17:00</strong><span>접수</span></button></div><div class="schedule-cell"><button class="shift open-shift" type="button"><strong>08:30–17:00</strong><span>접수</span></button></div><div class="schedule-cell"><button class="empty-cell open-shift" type="button">+ 근무 추가</button></div><div class="schedule-cell"><button class="empty-cell open-shift" type="button">+ 근무 추가</button></div></div>
               </div>
             </div>
+            </div>
+            <div class="schedule-mode" id="daily-mode">
+              <div class="daily-wrap">
+                <div class="daily-timeline" aria-label="7월 8일 직원별 일간 커버리지">
+                  <div class="timeline-row"><div class="timeline-person"><strong>직원 · 7월 8일</strong></div><div class="timeline-hours"><span>07</span><span>08</span><span>09</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span></div></div>
+                  <div class="timeline-row"><div class="timeline-person"><span class="avatar">김</span><button class="employee-button open-employee" type="button"><strong>김청담 원장</strong><span>수의사 · 8시간</span></button></div><div class="timeline-track"><button class="timeline-block open-shift" type="button" style="left:12.5%;width:56.25%">진료 · 09:00–18:00</button></div></div>
+                  <div class="timeline-row"><div class="timeline-person"><span class="avatar">이</span><button class="employee-button open-employee" type="button"><strong>이수지 수의사</strong><span>수의사 · 8시간</span></button></div><div class="timeline-track"><button class="timeline-block open-shift" type="button" style="left:18.75%;width:56.25%">진료 · 10:00–19:00</button></div></div>
+                  <div class="timeline-row"><div class="timeline-person"><span class="avatar">송</span><button class="employee-button open-employee" type="button"><strong>송하윤 테크니션</strong><span>테크니션 · 8시간</span></button></div><div class="timeline-track"><button class="timeline-block support open-shift" type="button" style="left:12.5%;width:56.25%">검사·처치 · 09:00–18:00</button></div></div>
+                  <div class="timeline-row"><div class="timeline-person"><span class="avatar">최</span><button class="employee-button open-employee" type="button"><strong>최유나 원무</strong><span>접수 · 8.5시간</span></button></div><div class="timeline-track"><button class="timeline-block open-shift" type="button" style="left:9.4%;width:53.1%">접수 · 08:30–17:00</button></div></div>
+                  <div class="timeline-row"><div class="timeline-person"><span class="avatar">박</span><button class="employee-button open-employee" type="button"><strong>박지호 테크니션</strong><span>연차 · 하루 종일</span></button></div><div class="timeline-track"><button class="timeline-block leave open-shift" type="button" style="left:6.25%;width:87.5%">연차 · 하루 종일</button></div></div>
+                  <div class="coverage-note"><span><strong>진료 커버리지</strong> 09:00–19:00 · 정상</span><span><strong>접수 공백</strong> 17:00–18:00 · 1시간</span></div>
+                </div>
+              </div>
+            </div>
           </section>
 
           <section class="screen employee-view" id="employee-screen" role="tabpanel">
             <div class="employee-layout">
               <aside class="profile-card"><div class="profile-avatar">이</div><h3>이수지 수의사</h3><p class="profile-meta">진료팀 · 정규직<br />이번 주 40시간</p><div class="stats"><div class="stat"><strong>5</strong><span>근무</span></div><div class="stat"><strong>1</strong><span>휴무</span></div><div class="stat"><strong>1</strong><span>대기 요청</span></div></div><button class="btn primary" type="button" style="width:100%;margin-top:14px">휴무·변경 요청</button></aside>
               <div class="content-stack">
-                <section class="panel"><div class="panel-head"><div><h3>내 근무</h3><p class="muted small">7월 7일 – 7월 13일</p></div><span class="pill ok">게시됨 · 7월 4일</span></div><div class="week-list"><div class="week-item"><span class="day">월 7</span><span><span class="time">10:00–19:00</span><br /><span class="role">진료 · 진료실 2</span></span><span class="pill">확정</span></div><div class="week-item"><span class="day">화 8</span><span><span class="time">10:00–19:00</span><br /><span class="role">진료 · 진료실 2</span></span><span class="pill">오늘</span></div><div class="week-item"><span class="day">수 9</span><span><span class="time">10:00–19:00</span><br /><span class="role">진료 · 진료실 2</span></span><span class="pill">확정</span></div><div class="week-item"><span class="day">목 10</span><span><span class="time">휴무</span><br /><span class="role">정기 휴무</span></span><span></span></div><div class="week-item"><span class="day">금 11</span><span><span class="time">10:00–19:00</span><br /><span class="role">변경 요청 검토 중</span></span><span class="pill draft">대기</span></div></div></section>
+                <section class="panel"><div class="panel-head"><div><h3>내 근무 캘린더</h3><p class="muted small">7월 7일 – 7월 13일 · 근무 블록을 눌러 상세 확인</p></div><span class="pill ok">게시됨 · 7월 4일</span></div><div class="personal-calendar" aria-label="이수지 수의사 주간 개인 근무 캘린더"><div class="time-axis"><div class="calendar-day-head">시간</div><div style="padding-top:36px">09</div><div style="padding-top:32px">12</div><div style="padding-top:32px">15</div><div style="padding-top:32px">18</div></div><div><div class="calendar-day-head">월 7</div><button class="calendar-block open-shift" type="button" style="top:77px;height:202px">진료<br />10:00–19:00</button></div><div><div class="calendar-day-head">화 8</div><button class="calendar-block open-shift" type="button" style="top:77px;height:202px">진료<br />10:00–19:00</button></div><div><div class="calendar-day-head">수 9</div><button class="calendar-block open-shift" type="button" style="top:77px;height:202px">진료<br />10:00–19:00</button></div><div><div class="calendar-day-head">목 10</div><button class="calendar-block leave" type="button" style="top:40px;height:300px">휴무<br />하루 종일</button></div><div><div class="calendar-day-head">금 11</div><button class="calendar-block open-shift" type="button" style="top:77px;height:202px">진료<br />10:00–19:00<br />변경 요청 중</button></div></div></section>
                 <section class="panel"><div class="panel-head"><div><h3>근무 가능 시간</h3><p class="muted small">관리자가 편성할 때 충돌을 확인해.</p></div><button class="btn" type="button">수정 요청</button></div><div class="week-list"><div class="week-item"><span class="day">월–수</span><span class="time">09:00–20:00</span><span class="role">가능</span></div><div class="week-item"><span class="day">목요일</span><span class="time">근무 불가</span><span class="role">정기</span></div><div class="week-item"><span class="day">금요일</span><span class="time">10:00–18:00</span><span class="role">가능</span></div></div></section>
                 <section class="panel"><div class="panel-head"><div><h3>내 요청</h3><p class="muted small">휴무와 근무 변경 상태를 확인해.</p></div><button class="btn" type="button">새 요청</button></div><div class="request-row"><div><strong>7월 11일 18:00 퇴근 요청</strong><span>개인 일정 · 7월 2일 제출</span></div><span class="pill draft">검토 중</span></div><div class="request-row"><div><strong>7월 24일 휴무</strong><span>연차 · 6월 25일 제출</span></div><span class="pill ok">승인</span></div></section>
               </div>
@@ -317,9 +374,9 @@
       <h2>7. CLAiR/shadcn 컴포넌트 매핑</h2>
       <div class="grid grid-2">
         <article class="card"><h3>기존 CLAiR 패턴</h3><p class="muted small">병원관리 탐색과 테이블·행동 패턴을 유지해 다른 모듈과 학습 비용을 맞춘다.</p><div class="component-list"><code>EmrModuleListSidePanel</code><code>EmrRowActionMenu</code><code>EmrEmptyState</code><code>EmrConfirmDialogContent</code><code>EmrTable primitives</code></div></article>
-        <article class="card"><h3>shadcn 기반 구성</h3><p class="muted small">새로운 독자 UI 프레임워크 없이 이미 사용 중인 기본 컴포넌트로 구현 가능하다.</p><div class="component-list"><code>Button</code><code>Badge</code><code>Sheet</code><code>Dialog</code><code>Popover</code><code>Select</code><code>Input</code><code>Tabs</code><code>ScrollArea</code><code>Tooltip</code><code>Switch</code><code>Textarea</code></div></article>
+        <article class="card"><h3>shadcn 기반 구성</h3><p class="muted small">새로운 독자 UI 프레임워크 없이 이미 사용 중인 기본 컴포넌트로 구현 가능하다.</p><div class="component-list"><code>Button</code><code>Badge</code><code>Sheet</code><code>Dialog</code><code>Popover</code><code>Select</code><code>Input</code><code>Tabs</code><code>ToggleGroup</code><code>ScrollArea</code><code>Tooltip</code><code>Switch</code><code>Textarea</code></div></article>
       </div>
-      <div class="callout"><strong>구현 원칙:</strong> 주간 그리드의 의미와 키보드 탐색은 공통 `EmrScheduleGrid` 계약으로 분리할 가치가 있지만, 실제 구현 전에는 이 패턴을 병원관리 근무표 한 화면에서 검증해야 한다. 새 공통 컴포넌트 API는 별도 research/proposal 범위로 결정한다.</div>
+      <div class="callout"><strong>구현 원칙:</strong> Flex를 시각적으로 복제하지 않는다. 주간 매트릭스·일간 타임라인·개인 캘린더가 같은 근무 데이터를 다른 해상도로 보여주는 하나의 계약이어야 한다. 실제 구현 전에는 병원관리 한 화면에서 검증하고, 새 공통 `EmrScheduleGrid` API는 별도 research/proposal 범위로 결정한다.</div>
     </section>
 
     <section class="section">
@@ -337,6 +394,8 @@
       <ul>
         <li>현재 화면과 구현: <code>src/features/hospital-admin/module.tsx</code>의 <code>hospitalAdminConceptScreens.schedule</code> 및 <code>HospitalAdminConceptScreen</code>.</li>
         <li>제품 계약: <code>docs/product/features/hospital-admin/hospital-admin-settings-hub-plan.md</code>, <code>docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md</code>.</li>
+        <li><a href="https://flex.team/landing/service/time-tracking" target="_blank" rel="noreferrer">Flex 공식 · 근태 관리</a>: 시간 블록 기반 근무·휴가 입력, 구성원 일정 비교, 교대근무 매트릭스, 근무 유형과 승인 정책.</li>
+        <li><a href="https://updatenotes.flex.team/ko/articles/10300806-23-10-10-%EC%83%88%EB%A1%9C%EC%9A%B4-%EA%B5%AC%EC%84%B1%EC%9B%90-%ED%94%84%EB%A1%9C%ED%95%84-%EC%BA%98%EB%A6%B0%EB%8D%94-%ED%8E%B8%EB%A6%AC%ED%95%9C-%EA%B7%BC%EB%AC%B4-%EC%9E%85%EB%A0%A5%EA%B3%BC-%EC%8A%B9%EC%9D%B8-%EB%AA%A8%EB%B0%94%EC%9D%BC-%EC%95%B1-%EA%B0%9C%EC%84%A0" target="_blank" rel="noreferrer">Flex 업데이트 · 구성원 프로필과 캘린더</a>: 구성원 일정 종류와 대상 선택, 근무 입력과 승인 경험.</li>
         <li><a href="https://help.deputy.com/hc/en-au/articles/4688713423759-Schedule-overview" target="_blank" rel="noreferrer">Deputy Help · Schedule overview</a>: 근무 생성, 미배정/오픈 근무, 반복·복제·일괄 편집, 게시 단계.</li>
         <li><a href="https://help.wheniwork.com/articles/scheduling-a-shift/" target="_blank" rel="noreferrer">When I Work · Scheduling a Shift</a>: 그리드 셀에서 근무 추가, 템플릿·사용자 지정 근무, 담당자·시간·직무·휴게 입력.</li>
         <li><a href="https://help.wheniwork.com/articles/viewing-your-personal-schedule-computer/" target="_blank" rel="noreferrer">When I Work · Viewing Your Personal Schedule</a>: 개인 근무 조회, OpenShift, 일정 동기화와 셀프서비스.</li>
@@ -352,6 +411,8 @@
     const tabs = document.querySelectorAll('.view-tab');
     const screens = document.querySelectorAll('.screen');
     const sheetBackdrops = document.querySelectorAll('.sheet-backdrop');
+    const modeButtons = document.querySelectorAll('.mode-button');
+    const scheduleModes = document.querySelectorAll('.schedule-mode');
 
     function closeSheets() {
       sheetBackdrops.forEach((sheet) => sheet.classList.remove('open'));
@@ -363,6 +424,16 @@
         screens.forEach((screen) => screen.classList.remove('active'));
         tab.setAttribute('aria-selected', 'true');
         document.getElementById(tab.dataset.screen).classList.add('active');
+        closeSheets();
+      });
+    });
+
+    modeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        modeButtons.forEach((item) => item.setAttribute('aria-pressed', 'false'));
+        scheduleModes.forEach((mode) => mode.classList.remove('active'));
+        button.setAttribute('aria-pressed', 'true');
+        document.getElementById(button.dataset.mode).classList.add('active');
         closeSheets();
       });
     });
