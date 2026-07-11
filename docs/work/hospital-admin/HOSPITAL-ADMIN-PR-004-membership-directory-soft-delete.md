@@ -36,6 +36,10 @@ area: hospital-admin
 * 이미 migration history에 기록된 migration 파일을 수정해 기존 환경을 바꾸지 않는다.
 * 원격 migration history 정합화가 완료되기 전에는 원격 스키마 push를 진행하지 않는다.
 
+## 구현 계획
+
+* [Membership, Permission Role, and Job Position Lifecycle Implementation Plan](../../superpowers/plans/2026-07-11-membership-role-job-lifecycle.md)
+
 ## 검증
 
 * archive route 권한·본인 조작·복구·마지막 소유자 계약 테스트

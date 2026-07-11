@@ -3,7 +3,7 @@ id: PRODUCT-DOMAIN-MEMBERSHIP-ROLE-JOB-LIFECYCLE
 type: Domain Contract
 title: Membership, Permission Role, and Job Position Lifecycle
 description: Defines the approved lifecycle, authorization, restoration, and history-preservation rules for hospital members, permission roles, job positions, and invitations.
-status: human_review
+status: approved
 area: product
 doc_type: domain-contract
 related_work:
