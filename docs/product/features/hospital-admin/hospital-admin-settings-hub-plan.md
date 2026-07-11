@@ -12,6 +12,7 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-flex-schedule-session-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-005-hospital-basic-settings-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-006-role-permission-management-ui.md"
 last_updated: 2026-07-11
 ---
 
@@ -30,8 +31,8 @@ Top-bar settings must not duplicate hospital settings. Top-bar account/profile c
 | Area | Responsibility | Phase 1 decision |
 | --- | --- | --- |
 | `병원기본설정` | Workspace-owned hospital identity, editable contact, operating hours, and date exceptions | Dedicated session-local UI implemented; later connect to hospital profile API |
-| `병원구성원 관리` | Staff invites, member status, job position, permission-role assignment | Existing screen remains; improve IA and connect its role language to 역할별 업무 관리 |
-| `역할별 업무 관리` | Role work profiles: default work scopes, screen access expectations, default assignee behavior | Not a raw permission editor; it complements 구성원 관리 |
+| `병원구성원 관리` | Staff invites, member status, and assigning one permission role and one job position to a person | Keep people assignment here; role/job catalog definitions live in `역할 및 권한` |
+| `역할 및 권한` | Permission-role definitions, grouped effective permissions, job-position catalog, and local work defaults | System roles are inspectable/read-only; custom roles are allow-only within the approved catalog |
 | `공간/시간 관리` | Rooms, appointment intervals, operating hours, blocked times, emergency slots | Static/mock screen first |
 | `근무표` | Weekly shift editing, daily role coverage, personal schedule, and approval requests | Supabase mode persists through route/RPC/RLS; mock mode intentionally remains session-only |
 | `바이탈 관리` | Workspace clinical vital thresholds and alert policy | Static/mock screen first |
@@ -46,17 +47,18 @@ Top-bar settings must not duplicate hospital settings. Top-bar account/profile c
 - filters for member, chart, order, billing, and settings events
 - no full clinical note or sensitive payload storage in the visible row
 
-## Role Work Management Decision
+## Role And Permission Management Decision
 
-`역할별 업무 관리` is not the same as `병원구성원 관리`.
+`역할 및 권한` is not the same as `병원구성원 관리`.
 
 | Concept | Managed in | Meaning |
 | --- | --- | --- |
 | Who is this person? | `병원구성원 관리` | Member, invite, status, job position, permission role |
-| What can this role generally do? | Permission policy layer | Server/API/DB enforcement and grant ceiling |
-| What work should this role usually own? | `역할별 업무 관리` | Default work area, Home work generation, assignment defaults, operational coverage |
+| What can this role do? | `역할 및 권한 > 권한 역할` | System-role inspection, custom allow-only permissions, and assigned-member context |
+| What hospital job does this person hold? | `역할 및 권한 > 직무` | Job-position catalog used for display and filtering, never authorization |
+| What work should a position usually own? | `역할 및 권한 > 업무 기본값` | Local-first default operational ownership, never authorization |
 
-Phase 1 may display role work profiles and default operational routing without claiming final server-side permission enforcement from this screen.
+The role screen is an explanation and local-first management surface, not the security boundary. Persisted authorization remains a server/API/DB responsibility.
 
 ## Screen Specs
 
@@ -83,30 +85,30 @@ Phase 1 may display role work profiles and default operational routing without c
 | Purpose | Manage staff invitation, member state, job position, and permission role assignment. |
 | Primary user | Hospital admin. |
 | Scenario | Admin invites staff, assigns job position/permission role, edits active member role, deactivates a member without breaking last-admin protection. |
-| Information structure | Existing member table, invite sheet, role edit dialog, custom permission-role/job-position controls. |
+| Information structure | Existing member table, invite sheet, and role edit dialog. Role/job catalog creation moves to `역할 및 권한`. |
 | Fields/components | Email, permission role, job position, status, invitation state, safe custom role permissions. |
 | Default state | Current route-backed member/invitation management surface. |
 | Empty state | No members should never happen for active workspace; no pending invites can show an empty invite row. |
 | Permission state | Non-admin cannot invite or change memberships. |
 | Save/cancel flow | Explicit create/update/deactivate confirmations; last-admin protection remains mandatory. |
-| Data/API follow-up | Existing membership/invitation APIs plus role-work profile read hints from `역할별 업무 관리`. |
-| Screen direction | Keep existing table/dialog surface, but clarify relationship to role work profiles. |
+| Data/API follow-up | Existing membership/invitation APIs plus links to the selected role/job definition. |
+| Screen direction | Keep the people-first table and assignment flow; do not duplicate role-definition editing. |
 
-### 역할별 업무 관리
+### 역할 및 권한
 
 | Item | Spec |
 | --- | --- |
-| Purpose | Define role work profiles: default work areas, default assignment, Home work generation, and escalation expectations. |
+| Purpose | Explain and manage permission roles, job positions, and permission-independent work defaults without mixing their meanings. |
 | Primary user | Hospital admin or owner. |
-| Scenario | Admin checks that technicians receive lab/treatment work, front desk receives reception/customer work, and vets own chart/order confirmation. |
-| Information structure | Role highlights, default assignment controls, role-work matrix, impact/data side rail. |
-| Fields/components | Default reception owner, chart author role, lab result input role, billing close approval, Home work generation toggle, escalation limit toggle. |
-| Default state | Five synthetic operational roles. |
-| Empty state | If no role profiles exist, show canonical role presets. |
-| Permission state | Admin-only edit; non-admin no access. |
-| Save/cancel flow | Explicit save; future persistence must audit changes. |
-| Data/API follow-up | `workspace_role_work_profiles`, `permission_policies`, `workspace_memberships`, role-work read model for Home. |
-| Screen direction | Matrix-first admin surface, not a free-form ACL editor. |
+| Scenario | Admin selects a role, reads its effective permissions, creates an allow-only custom role, checks assigned members, manages job labels, and separately sets work defaults. |
+| Information structure | `권한 역할`, `직무`, and `업무 기본값` tabs; role list/detail split view. |
+| Fields/components | Role name, assigned-member count, grouped permission rows, locked owner-only rows, job catalog, local work-default fields, and contextual save/cancel. |
+| Default state | `관리자` selected; system roles are read-only and custom roles expose approved permissions only. |
+| Empty state | System roles remain visible; a custom-role action explains the available safe catalog. |
+| Permission state | Client UI can restrict mutations, but server enforcement remains authoritative. |
+| Save/cancel flow | Custom role and work-default edits save only to the local/session boundary in this PR. |
+| Data/API follow-up | Live catalog API/RPC/RLS and an approved work-default contract remain follow-up work. |
+| Screen direction | Quiet split view; no KPI strip, phase badges, future-data rail, or database table names in product UI. |
 
 ### 공간/시간 관리
 

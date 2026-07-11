@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>역할 및 권한 관리 UI 완료 보고</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: #f7f8fa; color: #1f2937; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 880px; margin: 0 auto; padding: 48px 24px 72px; }
+      .eyebrow { color: #6b7280; font-size: 13px; }
+      h1 { margin: 8px 0 12px; font-size: 30px; letter-spacing: -0.04em; }
+      h2 { margin: 0 0 12px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      section { margin-top: 16px; padding: 22px 24px; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; }
+      .status { display: inline-block; margin-top: 6px; padding: 5px 10px; border-radius: 999px; background: #e8f3ff; color: #0b5cad; font-size: 12px; font-weight: 700; }
+      .risk { border-color: #f4d6a5; background: #fffbeb; }
+      code { padding: 2px 5px; border-radius: 4px; background: #f3f4f6; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">HOSPITAL-ADMIN-PR-006 · 2026-07-11</p>
+      <h1>역할 및 권한 관리 UI</h1>
+      <p>정적인 역할별 업무 관리 화면을 실제 관리 흐름이 보이는 전용 화면으로 교체했다. 역할의 권한, 배정 구성원, 직무, 업무 기본값을 한곳에서 확인하고 필요한 항목만 로컬에서 관리할 수 있다.</p>
+      <span class="status">현재 상태: Human Review</span>
+
+      <section>
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li><code>권한 역할</code>, <code>직무</code>, <code>업무 기본값</code> 탭을 추가했다.</li>
+          <li>시스템 역할은 잠금 상태로 조회만 가능하고, 커스텀 역할은 안전 권한 목록 안에서만 편집된다.</li>
+          <li>구성원 초대 화면은 사람에게 기존 역할과 직무를 배정하는 일만 맡는다.</li>
+          <li>업무 기본값은 워크스페이스별 브라우저 저장이며 실제 권한이나 업무 배정에는 영향을 주지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>확인한 항목</h2>
+        <ul>
+          <li>레거시 소유자 역할 편집 초기값, 권한 그룹화, 시스템 역할 잠금, 허용되지 않은 권한 차단을 회귀 테스트로 확인했다.</li>
+          <li>초대 화면에서 생성 UI가 사라지고, 전용 화면에서 만든 커스텀 역할과 직무를 다시 배정할 수 있음을 확인했다.</li>
+          <li>데스크톱과 390px 폭 화면에서 탭, 다이얼로그, 시트, Escape 복귀를 확인했다.</li>
+          <li>집중 Playwright, ESLint, TypeScript, build, 문서 검사와 diff whitespace 검사를 통과했다.</li>
+        </ul>
+      </section>
+
+      <section class="risk">
+        <h2>남은 경계와 다음 단계</h2>
+        <p>이번 변경은 서버 권한을 바꾸지 않는다. 특히 오래된 <code>hospital_admin</code> 데이터에 소유자 구분 키가 없는 경우의 의미는 클라이언트 호환 규칙에 의존한다. 명시적인 소유자 데이터와 서버 강제는 <code>AUTH-PR-044</code>에서 처리해야 한다.</p>
+      </section>
+    </main>
+  </body>
+</html>

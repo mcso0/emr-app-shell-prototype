@@ -119,7 +119,7 @@ import { WorkspaceMembershipManagement } from "@/features/auth/workspace-members
 import { HospitalBasicSettingsScreen } from "@/features/hospital-admin/settings/hospital-basic-settings-screen";
 import { useHospitalBasicSettingsStore } from "@/features/hospital-admin/settings/hospital-basic-settings-store";
 import { HospitalScheduleScreen } from "@/features/hospital-admin/schedule/hospital-schedule-screen";
-import { WorkspaceRolePermissionManagement } from "@/features/auth/workspace-role-permission-management";
+import { RolePermissionManagementScreen } from "@/features/hospital-admin/role-permission-management/screen";
 import {
   useHospitalAdminStore,
   type HospitalAdminSection,
@@ -304,7 +304,7 @@ const hospitalAdminMenuItems: HospitalAdminMenuItem[] = [
   { label: "병원구성원 관리", icon: UsersIcon, section: "members", testId: "hospital-admin-menu-members" },
   { label: "감사 로그", icon: DocumentCheckIcon, section: "audit", testId: "hospital-admin-menu-audit" },
   { label: "근무표", icon: CalendarIcon, section: "schedule", testId: "hospital-admin-menu-schedule" },
-  { label: "역할별 업무 관리", icon: GridIcon, section: "roles", testId: "hospital-admin-menu-roles" },
+  { label: "역할 및 권한", icon: GridIcon, section: "roles", testId: "hospital-admin-menu-roles" },
   { label: "공간/시간 관리", icon: BuildingIcon, section: "space-time", testId: "hospital-admin-menu-space-time" },
   { label: "진료과 분리운영", icon: LayersIcon },
   { label: "바이탈 관리", icon: ActivityIcon, section: "vitals", testId: "hospital-admin-menu-vitals" },
@@ -753,7 +753,7 @@ function HospitalOrderSortableHeader({
 
 type HospitalAdminConceptSection = Exclude<
   HospitalAdminSection,
-  "audit" | "members" | "orders" | "schedule" | "settings"
+  "audit" | "members" | "orders" | "roles" | "schedule" | "settings"
 >;
 
 type HospitalAdminConceptField = {
@@ -786,40 +786,6 @@ const hospitalAdminConceptScreens: Record<
   HospitalAdminConceptSection,
   HospitalAdminConceptScreenConfig
 > = {
-  roles: {
-    section: "roles",
-    title: "역할별 업무 관리",
-    badge: "업무 기본값",
-    breadcrumb: "병원관리 / 역할별 업무 관리",
-    description: "권한 자체가 아니라 역할별 기본 담당 업무와 화면 접근 기준",
-    highlights: [
-      { label: "관리 역할", value: "5개" },
-      { label: "업무 그룹", value: "접수 · 진료 · 검사 · 수납" },
-      { label: "권한 연동", value: "구성원 관리와 분리" },
-      { label: "변경 감사", value: "필수" },
-    ],
-    fields: [
-      { label: "기본 접수 담당", value: "원무/접수", kind: "select", options: ["원무/접수", "병원관리자", "테크니션"] },
-      { label: "기본 차트 작성자", value: "수의사", kind: "select", options: ["수의사", "병원관리자"] },
-      { label: "검사 결과 입력", value: "테크니션", kind: "select", options: ["테크니션", "수의사", "병원관리자"] },
-      { label: "수납 마감 승인", value: "병원관리자", kind: "select", options: ["병원관리자", "원장/소유자"] },
-      { label: "Home 업무 생성", value: "true", kind: "switch" },
-      { label: "권한 상승 제한", value: "true", kind: "switch" },
-    ],
-    table: {
-      title: "역할별 기본 업무 매트릭스",
-      columns: ["역할", "기본 화면", "주요 업무", "승인/관리"],
-      rows: [
-        ["병원관리자", "병원관리 · Home", "구성원, 설정, 오더 관리", "역할/설정 변경"],
-        ["수의사", "진료/차트", "진료, 진단, 오더 확정", "차트 완료"],
-        ["테크니션", "검사 · 처치", "결과 입력, 처치 수행", "업무 완료"],
-        ["원무/접수", "접수/예약 · 고객관리", "접수, 예약, 보호자 안내", "예약 변경"],
-        ["수납 담당", "수납", "결제 상태, 영수증 처리", "마감 요청"],
-      ],
-    },
-    impactItems: ["Home 업무 추천", "기본 담당자 배정", "화면 접근 정책", "감사 로그 이벤트"],
-    modelItems: ["workspace_role_work_profiles", "permission_policies", "workspace_memberships"],
-  },
   "space-time": {
     section: "space-time",
     title: "공간/시간 관리",
@@ -1444,11 +1410,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   }, [hydrated, session, setOrders, workspaceId]);
 
   if (activeSection === "members") {
-    return <WorkspaceMembershipManagement workspaceId={workspaceId} />;
-  }
-
-  if (activeSection === "roles") {
-    return <WorkspaceRolePermissionManagement workspaceId={workspaceId} />;
+    return (
+      <WorkspaceMembershipManagement
+        workspaceId={workspaceId}
+        onOpenRoleManagement={() => setActiveSection("roles")}
+      />
+    );
   }
 
   if (activeSection === "audit") {
@@ -1461,6 +1428,15 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
 
   if (activeSection === "schedule") {
     return <HospitalScheduleScreen workspaceId={workspaceId} />;
+  }
+
+  if (activeSection === "roles") {
+    return (
+      <RolePermissionManagementScreen
+        workspaceId={workspaceId}
+        onOpenMemberManagement={() => setActiveSection("members")}
+      />
+    );
   }
 
   if (
