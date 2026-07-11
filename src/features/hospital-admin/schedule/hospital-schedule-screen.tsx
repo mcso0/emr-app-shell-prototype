@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
@@ -41,9 +42,15 @@ import {
   WarningIcon,
 } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { useAuthClient } from "@/features/auth/auth-client";
 import { getCoverageIssues, getScheduleConflicts, getWeekDates, formatScheduleMinutes } from "./model";
 import {
+  createHospitalSchedulePersistenceAdapter,
+  readPersistedHospitalSchedule,
+} from "./schedule-persistence-client";
+import {
   hospitalScheduleShiftKinds,
+  setHospitalSchedulePersistenceAdapter,
   useHospitalScheduleStore,
   type HospitalScheduleShiftDraft,
 } from "./store";
@@ -711,7 +718,8 @@ function StaffDetailSheet({ staffId, onClose }: { staffId: string | null; onClos
   );
 }
 
-export function HospitalScheduleScreen() {
+export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string }) {
+  const { hydrated, hydrate, session } = useAuthClient();
   const surface = useHospitalScheduleStore((state) => state.surface);
   const setSurface = useHospitalScheduleStore((state) => state.setSurface);
   const viewMode = useHospitalScheduleStore((state) => state.viewMode);
@@ -727,6 +735,8 @@ export function HospitalScheduleScreen() {
   const coverageRules = useHospitalScheduleStore((state) => state.coverageRules);
   const publication = useHospitalScheduleStore((state) => state.publication);
   const settings = useHospitalScheduleStore((state) => state.settings);
+  const hydrateRemoteSchedule = useHospitalScheduleStore((state) => state.hydrateRemoteSchedule);
+  const setDataState = useHospitalScheduleStore((state) => state.setDataState);
   const setSettings = useHospitalScheduleStore((state) => state.setSettings);
   const publish = useHospitalScheduleStore((state) => state.publish);
   const [shiftSheet, setShiftSheet] = useState<ShiftSheetState>(null);
@@ -741,6 +751,50 @@ export function HospitalScheduleScreen() {
   const publishBlocked = conflicts.length > 0 || coverageIssues.length > 0;
   const dates = getWeekDates(weekStart);
   const pendingRequests = requests.filter((request) => request.status === "pending");
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (session?.role !== "supabase") {
+      setHospitalSchedulePersistenceAdapter(null);
+      return;
+    }
+
+    let cancelled = false;
+    const refresh = async () => {
+      const remote = await readPersistedHospitalSchedule({ workspaceId });
+      if (!remote || cancelled) {
+        if (!cancelled) setDataState("ready");
+        return;
+      }
+      hydrateRemoteSchedule(remote);
+    };
+
+    setDataState("loading");
+    setHospitalSchedulePersistenceAdapter(
+      createHospitalSchedulePersistenceAdapter({
+        workspaceId,
+        onRefreshed: refresh,
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : "근무표 저장에 실패했어.");
+        },
+      }),
+    );
+    void refresh().catch((error: unknown) => {
+      if (!cancelled) {
+        setDataState("error");
+        toast.error(error instanceof Error ? error.message : "근무표를 불러오지 못했어.");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      setHospitalSchedulePersistenceAdapter(null);
+    };
+  }, [hydrateRemoteSchedule, hydrated, session?.role, setDataState, workspaceId]);
 
   const moveActiveDate = (direction: -1 | 1) => {
     const currentIndex = dates.indexOf(activeDate);
@@ -760,7 +814,7 @@ export function HospitalScheduleScreen() {
                 {publication.state === "published" ? "게시됨" : publication.state === "changed" ? "재게시 필요" : "초안"}
               </Badge>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">편성, 커버리지, 개인 일정을 하나의 세션 근무표에서 관리해.</p>
+            <p className="mt-1 text-sm text-muted-foreground">편성, 커버리지, 개인 일정을 한 곳에서 관리해. Supabase 연결 시 변경 내용은 안전하게 저장돼.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}><SettingsIcon aria-hidden="true" /> 설정</Button>

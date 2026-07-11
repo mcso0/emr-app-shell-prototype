@@ -2,7 +2,7 @@
 id: PRODUCT-FEATURE-HOSPITAL-ADMIN-SETTINGS-HUB
 type: Product Requirement
 title: "Hospital Admin Settings Hub"
-description: "Defines the 병원관리 settings-hub IA, including session-only 병원기본설정 and interactive 근무표 boundaries."
+description: "Defines the 병원관리 settings-hub IA, including session-only 병원기본설정 and persisted interactive 근무표 boundaries."
 status: implemented
 area: product
 doc_type: feature-plan
@@ -11,6 +11,7 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-flex-schedule-session-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-005-hospital-basic-settings-ui.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
 last_updated: 2026-07-11
 ---
 
@@ -32,7 +33,7 @@ Top-bar settings must not duplicate hospital settings. Top-bar account/profile c
 | `병원구성원 관리` | Staff invites, member status, job position, permission-role assignment | Existing screen remains; improve IA and connect its role language to 역할별 업무 관리 |
 | `역할별 업무 관리` | Role work profiles: default work scopes, screen access expectations, default assignee behavior | Not a raw permission editor; it complements 구성원 관리 |
 | `공간/시간 관리` | Rooms, appointment intervals, operating hours, blocked times, emergency slots | Static/mock screen first |
-| `근무표` | Weekly shift editing, daily role coverage, personal schedule, and approval requests | Interactive session-only screen; persistence remains a later scope |
+| `근무표` | Weekly shift editing, daily role coverage, personal schedule, and approval requests | Supabase mode persists through route/RPC/RLS; mock mode intentionally remains session-only |
 | `바이탈 관리` | Workspace clinical vital thresholds and alert policy | Static/mock screen first |
 | `감사 로그` | Minimal administrator review of high-value mutation events | Keep as a minimal independent screen; do not remove from MVP |
 
@@ -135,8 +136,8 @@ Phase 1 may display role work profiles and default operational routing without c
 | Default state | Synthetic Cheongdam weekly schedule with an availability conflict, two coverage gaps, unassigned shifts, and pending requests. |
 | Empty state | `ScheduleDataState` supports empty/loading/error/read-only messages; the live screen starts in ready state. |
 | Permission state | Client-side session model presents admin editing and personal self-service only; it does not claim server authorization. |
-| Save/cancel flow | Shift CRUD immediately changes session state and marks a published schedule as `재게시 필요`; publish is blocked until conflicts and coverage gaps are resolved. Approved requests alone modify shifts. |
-| Data/API follow-up | `staff_shift_templates`, `workspace_staff_schedules`, coverage rules, availability, request/audit records, admin/staff RLS, notification delivery. |
+| Save/cancel flow | In Supabase mode, shift CRUD is optimistically shown then refreshed from the route-backed snapshot; publish is blocked in the UI until conflicts and coverage gaps are resolved. Approved requests alone modify shifts. Mock mode stays browser-session-only. |
+| Data/API boundary | `hospital_schedule_*` tables provide workspace-scoped profiles, weeks, shifts, requests, time-clock, payroll preview, and in-app schedule notifications. Remote migration, real employee/payroll data, and external delivery remain later scope. |
 | Screen direction | Flex-inspired operational calendar: quiet, dense, time-aware, with text labels in addition to low-saturation green/yellow/blue/purple states. |
 
 ### 바이탈 관리

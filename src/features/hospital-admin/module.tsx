@@ -1460,7 +1460,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   }
 
   if (activeSection === "schedule") {
-    return <HospitalScheduleScreen />;
+    return <HospitalScheduleScreen workspaceId={workspaceId} />;
   }
 
   if (
