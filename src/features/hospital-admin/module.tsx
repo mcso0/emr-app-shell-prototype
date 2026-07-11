@@ -116,6 +116,7 @@ import {
   type HospitalOrderWorkTypeFilter,
 } from "@/features/hospital-admin/data";
 import { WorkspaceMembershipManagement } from "@/features/auth/workspace-membership-management";
+import { HospitalScheduleScreen } from "@/features/hospital-admin/schedule/hospital-schedule-screen";
 import { WorkspaceRolePermissionManagement } from "@/features/auth/workspace-role-permission-management";
 import {
   useHospitalAdminStore,
@@ -750,7 +751,7 @@ function HospitalOrderSortableHeader({
 
 type HospitalAdminConceptSection = Exclude<
   HospitalAdminSection,
-  "audit" | "members" | "orders"
+  "audit" | "members" | "orders" | "schedule"
 >;
 
 type HospitalAdminConceptField = {
@@ -886,37 +887,6 @@ const hospitalAdminConceptScreens: Record<
     },
     impactItems: ["접수/예약 캘린더", "진료실 배정", "검사실 큐", "Home 운영 상태"],
     modelItems: ["workspace_rooms", "workspace_operating_hours", "appointment_slot_rules"],
-  },
-  schedule: {
-    section: "schedule",
-    title: "근무표",
-    badge: "인력 운영",
-    breadcrumb: "병원관리 / 근무표",
-    description: "직원별 근무 시간과 진료 가능 범위의 주간 시안",
-    highlights: [
-      { label: "이번 주 근무자", value: "8명" },
-      { label: "오전 커버리지", value: "정상" },
-      { label: "야간/응급", value: "수동 배정" },
-      { label: "미배정 슬롯", value: "2개" },
-    ],
-    fields: [
-      { label: "주간 시작 요일", value: "월요일", kind: "select", options: ["월요일", "일요일"] },
-      { label: "근무표 잠금", value: "금요일 18:00", kind: "select", options: ["목요일 18:00", "금요일 18:00", "일요일 12:00"] },
-      { label: "결원 경고", value: "true", kind: "switch" },
-      { label: "Home에 인력 부족 표시", value: "true", kind: "switch" },
-    ],
-    table: {
-      title: "주간 근무표",
-      columns: ["직원", "월", "화", "수", "목", "금"],
-      rows: [
-        ["김청담 원장", "09-18", "09-18", "휴무", "09-18", "09-17"],
-        ["이수지 수의사", "10-19", "10-19", "10-19", "휴무", "10-19"],
-        ["송하윤 테크니션", "09-18", "09-18", "09-18", "09-18", "휴무"],
-        ["최유나 원무", "08:30-17", "08:30-17", "12-20", "08:30-17", "08:30-17"],
-      ],
-    },
-    impactItems: ["예약 가능 인력", "담당자 자동 후보", "Home 업무 과부하", "휴무/결원 알림"],
-    modelItems: ["staff_shift_templates", "workspace_staff_schedules", "coverage_rules"],
   },
   vitals: {
     section: "vitals",
@@ -1490,8 +1460,11 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     return <HospitalAdminAuditReview workspaceId={workspaceId} />;
   }
 
+  if (activeSection === "schedule") {
+    return <HospitalScheduleScreen />;
+  }
+
   if (
-    activeSection === "schedule" ||
     activeSection === "settings" ||
     activeSection === "space-time" ||
     activeSection === "vitals"
