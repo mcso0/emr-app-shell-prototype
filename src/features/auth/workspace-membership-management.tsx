@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CdsPeopleUserPlusIcon } from "@/components/cds-icons/people-and-places";
@@ -16,8 +17,20 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { LineTabs } from "@/components/ui/line-tabs";
+import { EmrPageHeader } from "@/components/emr/page-header";
+import { EmrRowActionMenu, type EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -59,6 +72,7 @@ import {
   type SessionWorkspacesState,
   type WorkspaceInvitationFieldErrors,
   deactivateSessionWorkspaceMembership,
+  updateSessionWorkspaceMembershipStatus,
   updateSessionWorkspaceMembershipRoles,
 } from "@/features/auth/workspace-session";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
@@ -76,6 +90,7 @@ type InvitationRow = SessionWorkspaceInvitation & {
 };
 
 type MembershipRow = MemberRow | InvitationRow;
+type MembershipDirectoryTab = "all" | "pending" | "inactive" | "deleted";
 
 type WorkspaceInvitationRouteResponse =
   | {
@@ -117,7 +132,10 @@ function getBrowserWorkspaceState() {
 }
 
 function getStatusLabel(row: MembershipRow) {
-  if (row.rowType === "invitation") return row.status;
+  if (row.rowType === "invitation") return row.status === "pending" ? "초대 대기" : row.status;
+  if (row.status === "soft_deleted") return "삭제됨";
+  if (row.status === "inactive") return "비활성";
+  if (row.status === "active") return "활성";
   return row.status;
 }
 
@@ -193,6 +211,7 @@ export function WorkspaceMembershipManagement({
   const stateRef = useRef(state);
   const [fieldErrors, setFieldErrors] = useState<WorkspaceInvitationFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [editingInvitation, setEditingInvitation] = useState<SessionWorkspaceInvitation | null>(null);
   const [statusReadState, setStatusReadState] =
     useState<"idle" | "loading" | "error">("idle");
   const [inviteSheetOpen, setInviteSheetOpen] = useState(false);
@@ -218,6 +237,14 @@ export function WorkspaceMembershipManagement({
   const [deactivatingMembership, setDeactivatingMembership] =
     useState<SessionWorkspaceMembership | null>(null);
   const [deactivationError, setDeactivationError] = useState<string | null>(null);
+  const [directoryTab, setDirectoryTab] = useState<MembershipDirectoryTab>("all");
+  const [memberQuery, setMemberQuery] = useState("");
+  const [jobFilter, setJobFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [archivingMembership, setArchivingMembership] = useState<SessionWorkspaceMembership | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [submittingArchive, setSubmittingArchive] = useState(false);
   const canManageMembers = session?.role === "hospital_admin" || session?.role === "supabase";
 
   useEffect(() => {
@@ -261,6 +288,33 @@ export function WorkspaceMembershipManagement({
   const pendingInvitations = state.invitations.filter(
     (invitation) => invitation.workspaceId === workspaceId && invitation.status === "pending"
   );
+  const softDeletedMembers = state.memberships.filter(
+    (membership) => membership.workspaceId === workspaceId && membership.status === "soft_deleted"
+  );
+  const activeOwnerCount = activeMembers.filter(
+    (membership) => getMembershipPermissionRoleKey(membership) === "owner" || membership.roles.includes("hospital_admin")
+  ).length;
+  const currentActorId = session ? getDemoInvitationActorId(session.role) : null;
+  const jobFilterOptions = Array.from(
+    new Set(workspaceRows.map((row) => getSessionWorkspaceJobPositionLabel(getRowJobPositionKey(row), state, workspaceId)))
+  );
+  const departmentFilterOptions = Array.from(
+    new Set(workspaceRows.map((row) => row.department).filter((department): department is string => Boolean(department)))
+  );
+  const visibleRows = workspaceRows.filter((row) => {
+    const query = memberQuery.trim().toLowerCase();
+    const matchesQuery = !query || [getRowEmail(row), row.rowType === "member" ? row.displayName ?? "" : ""].some((value) => value.toLowerCase().includes(query));
+    const matchesJob = jobFilter === "all" || getSessionWorkspaceJobPositionLabel(getRowJobPositionKey(row), state, workspaceId) === jobFilter;
+    const matchesDepartment = departmentFilter === "all" || row.department === departmentFilter;
+    const matchesTab = directoryTab === "all"
+      ? row.rowType === "invitation" || row.status !== "soft_deleted"
+      : directoryTab === "pending"
+        ? row.rowType === "invitation" && row.status === "pending"
+        : directoryTab === "inactive"
+          ? row.rowType === "member" && (row.status === "inactive" || row.status === "suspended")
+          : row.rowType === "member" && row.status === "soft_deleted";
+    return matchesQuery && matchesJob && matchesDepartment && matchesTab;
+  });
 
   const updateState = useCallback((nextState: SessionWorkspacesState) => {
     stateRef.current = nextState;
@@ -286,7 +340,7 @@ export function WorkspaceMembershipManagement({
       setStatusReadState("loading");
 
       try {
-        const response = await fetch(`/api/workspaces/${workspaceId}/memberships`, {
+        const response = await fetch(`/api/workspaces/${workspaceId}/memberships?includeDeleted=true`, {
           headers:
             activeSession.role === "supabase"
               ? undefined
@@ -345,6 +399,23 @@ export function WorkspaceMembershipManagement({
 
     if (!validation.valid) {
       setFieldErrors(validation.fieldErrors);
+      return;
+    }
+
+    if (editingInvitation) {
+      const now = new Date().toISOString();
+      updateState({
+        ...state,
+        invitations: state.invitations.map((invitation) =>
+          invitation.id === editingInvitation.id
+            ? { ...invitation, ...input, title: input.title || null, department: input.department || null, updatedAt: now }
+            : invitation
+        ),
+        updatedAt: now,
+      });
+      setEditingInvitation(null);
+      setFieldErrors({});
+      setInviteSheetOpen(false);
       return;
     }
 
@@ -702,6 +773,138 @@ export function WorkspaceMembershipManagement({
     setDeactivationError(null);
   }
 
+  async function handleMembershipActivation(membership: SessionWorkspaceMembership) {
+    if (!session) return;
+
+    const response = await fetch(
+      `/api/workspaces/${workspaceId}/memberships/${membership.id}/status`,
+      {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          ...(session.role === "supabase"
+            ? {}
+            : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session.role) }),
+        },
+        body: JSON.stringify({ status: "active" }),
+      }
+    );
+    const result = await response.json() as { ok?: boolean };
+    if (!response.ok || !result.ok) {
+      setDeactivationError("구성원을 다시 활성화하지 못했습니다.");
+      return;
+    }
+
+    const local = updateSessionWorkspaceMembershipStatus(state, membership.id, "active");
+    if (local.success) updateState(local.state);
+  }
+
+  async function handleArchiveConfirm() {
+    if (!archivingMembership || !session) return;
+    const reason = archiveReason.trim();
+    if (!reason) {
+      setArchiveError("구성원 삭제 사유를 입력하세요.");
+      return;
+    }
+
+    setSubmittingArchive(true);
+    setArchiveError(null);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/memberships/${archivingMembership.id}/archive`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            ...(session.role === "supabase"
+              ? {}
+              : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session.role) }),
+          },
+          body: JSON.stringify({ action: "soft_delete", reason }),
+        }
+      );
+      const result = await response.json() as { ok?: boolean; denialReason?: string };
+      if (!response.ok || !result.ok) {
+        setArchiveError(
+          result.denialReason === "self_action_protected"
+            ? "본인 구성원 기록은 삭제할 수 없습니다."
+            : result.denialReason === "last_admin_protected"
+              ? "다른 활성 소유자를 지정한 후 삭제할 수 있습니다."
+              : "구성원 삭제 권한 또는 상태를 확인해 주세요."
+        );
+        return;
+      }
+      const local = updateSessionWorkspaceMembershipStatus(
+        state,
+        archivingMembership.id,
+        "soft_deleted",
+        { deletedAt: new Date().toISOString(), deletedByUserId: currentActorId, deletedReason: reason, restoredAt: null, restoredByUserId: null }
+      );
+      if (local.success) updateState(local.state);
+      setSelectedMembership(null);
+      setArchivingMembership(null);
+      setArchiveReason("");
+    } catch {
+      setArchiveError("구성원 삭제 요청을 완료하지 못했습니다.");
+    } finally {
+      setSubmittingArchive(false);
+    }
+  }
+
+  async function handleRestore(membership: SessionWorkspaceMembership) {
+    if (!session) return;
+    const response = await fetch(`/api/workspaces/${workspaceId}/memberships/${membership.id}/archive`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(session.role === "supabase"
+          ? {}
+          : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session.role) }),
+      },
+      body: JSON.stringify({ action: "restore" }),
+    });
+    const result = await response.json() as { ok?: boolean };
+    if (!response.ok || !result.ok) {
+      setDeactivationError("구성원을 복구하지 못했습니다.");
+      return;
+    }
+    const local = updateSessionWorkspaceMembershipStatus(
+      state,
+      membership.id,
+      "inactive",
+      { restoredAt: new Date().toISOString(), restoredByUserId: currentActorId }
+    );
+    if (local.success) updateState(local.state);
+  }
+
+  function getRowActions(row: MembershipRow): EmrRowActionMenuItem[] {
+    if (row.rowType === "invitation") {
+      return [
+        { key: "edit-invitation", label: "초대 정보 수정", description: "역할·직무·소속 정보를 수정합니다.", onSelect: () => { setEditingInvitation(row); setSelectedPermissionRoleKey(getRowPermissionRoleKey(row)); setSelectedJobPositionKey(getRowJobPositionKey(row)); setInviteSheetOpen(true); }, disabled: !canManageMembers },
+        { key: "resend", label: "초대 재발송", onSelect: () => handleResend(row.id), disabled: !canManageMembers },
+        { key: "accept", label: "수락 시뮬레이션", onSelect: () => handleAccept(row.id), disabled: !canManageMembers },
+        { key: "cancel", label: "초대 취소", onSelect: () => handleCancel(row.id), disabled: !canManageMembers, variant: "destructive" },
+      ];
+    }
+    const selfAction = row.userSessionId === currentActorId;
+    const lastOwner = row.status === "active" && activeOwnerCount <= 1 && (getMembershipPermissionRoleKey(row) === "owner" || row.roles.includes("hospital_admin"));
+    const protectionDescription = selfAction ? "본인 구성원 기록은 이 화면에서 변경할 수 없습니다." : lastOwner ? "다른 활성 소유자를 지정한 후 진행할 수 있습니다." : undefined;
+    if (row.status === "soft_deleted") {
+      return [{ key: "restore", label: "복구", description: "복구 후 비활성 상태로 전환됩니다.", onSelect: () => void handleRestore(row), disabled: !canManageMembers }];
+    }
+    if (row.status === "inactive" || row.status === "suspended") {
+      return [
+        { key: "activate", label: "다시 활성화", onSelect: () => void handleMembershipActivation(row), disabled: !canManageMembers || selfAction, description: protectionDescription },
+        { key: "soft-delete", label: "구성원 삭제", description: protectionDescription ?? "삭제됨 탭에서 복구할 수 있습니다.", onSelect: () => { setArchiveError(null); setArchiveReason(""); setArchivingMembership(row); }, disabled: !canManageMembers || selfAction || lastOwner, variant: "destructive" },
+      ];
+    }
+    return [
+      { key: "edit", label: "권한·직무 수정", onSelect: () => openRoleEditor(row), disabled: !canManageMembers },
+      { key: "deactivate", label: "비활성화", description: protectionDescription, onSelect: () => { setDeactivationError(null); setDeactivatingMembership(row); }, disabled: !canManageMembers || selfAction || lastOwner },
+      { key: "soft-delete", label: "구성원 삭제", description: protectionDescription ?? "삭제됨 탭에서 복구할 수 있습니다.", onSelect: () => { setArchiveError(null); setArchiveReason(""); setArchivingMembership(row); }, disabled: !canManageMembers || selfAction || lastOwner, variant: "destructive" },
+    ];
+  }
+
   const selectedMembershipPermissionRoleKey = selectedMembership
     ? getMembershipPermissionRoleKey(selectedMembership)
     : "general";
@@ -730,31 +933,16 @@ export function WorkspaceMembershipManagement({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto bg-[var(--emr-surface-workspace)] lg:overflow-hidden">
       <section className="border-b bg-card px-5 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-[20px] font-semibold leading-7">구성원 및 초대</h1>
-            <p className="mt-1 hidden max-w-2xl text-[13px] leading-5 text-muted-foreground sm:block">
-              병원관리자가 직원을 이메일로 초대하고, 역할과 멤버십 상태를 session-only로
-              확인합니다.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 text-[13px]">
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Badge variant="secondary">활성 {activeMembers.length}명</Badge>
-              <Badge variant="outline">대기 {pendingInvitations.length}건</Badge>
-              <Badge variant="outline">비활성 {inactiveMembers.length}명</Badge>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              disabled={!canManageMembers}
-              onClick={() => setInviteSheetOpen(true)}
-            >
+        <EmrPageHeader
+          title="병원 구성원"
+          actions={
+            <Button type="button" size="sm" disabled={!canManageMembers} onClick={() => { setSelectedMembership(null); setInviteSheetOpen(true); }}>
               <CdsPeopleUserPlusIcon data-icon="inline-start" aria-hidden="true" />
               직원 초대
             </Button>
-          </div>
-        </div>
+          }
+        />
+        <p className="mt-1 text-[13px] leading-5 text-muted-foreground">구성원의 소속과 권한을 확인하고 초대를 관리해.</p>
       </section>
 
       <section className="min-h-0 flex-1 overflow-hidden">
@@ -773,6 +961,32 @@ export function WorkspaceMembershipManagement({
               </p>
             ) : null}
 
+            <div className="mb-4 flex flex-col gap-3">
+              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_160px_160px]">
+                <Input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="이름 또는 이메일 검색" aria-label="구성원 검색" />
+                <Select value={jobFilter} onValueChange={(value) => setJobFilter(value ?? "all")}>
+                  <SelectTrigger><SelectValue placeholder="모든 직무" /></SelectTrigger>
+                  <SelectContent><SelectGroup><SelectItem value="all">모든 직무</SelectItem>{jobFilterOptions.map((label) => <SelectItem key={label} value={label}>{label}</SelectItem>)}</SelectGroup></SelectContent>
+                </Select>
+                <Select value={departmentFilter} onValueChange={(value) => setDepartmentFilter(value ?? "all")}>
+                  <SelectTrigger><SelectValue placeholder="모든 부서" /></SelectTrigger>
+                  <SelectContent><SelectGroup><SelectItem value="all">모든 부서</SelectItem>{departmentFilterOptions.map((label) => <SelectItem key={label} value={label}>{label}</SelectItem>)}</SelectGroup></SelectContent>
+                </Select>
+              </div>
+              <LineTabs
+                aria-label="구성원 상태"
+                size="default"
+                value={directoryTab}
+                onValueChange={setDirectoryTab}
+                items={[
+                  { value: "all", label: "전체", count: activeMembers.length + inactiveMembers.length + pendingInvitations.length },
+                  { value: "pending", label: "초대 대기", count: pendingInvitations.length },
+                  { value: "inactive", label: "비활성", count: inactiveMembers.length },
+                  { value: "deleted", label: "삭제됨", count: softDeletedMembers.length },
+                ]}
+              />
+            </div>
+
             {submitError ? (
               <p
                 role="alert"
@@ -782,19 +996,32 @@ export function WorkspaceMembershipManagement({
               </p>
             ) : null}
 
-            <Table minWidth={720} className="table-fixed text-[13px]">
+            <div className="flex flex-col gap-2 md:hidden">
+              {statusReadState === "loading" ? Array.from({ length: 4 }, (_, index) => <Skeleton key={`member-card-skeleton-${index}`} className="h-24 w-full" />) : visibleRows.map((row) => (
+                <button key={`member-card-${row.rowType}-${row.id}`} type="button" className="rounded-md border bg-card p-3 text-left" onClick={() => row.rowType === "member" && setSelectedMembership(row)}>
+                  <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><Avatar className="size-8"><AvatarFallback>{(row.rowType === "member" ? getMembershipDisplayName(row) : getRowEmail(row)).slice(0, 1)}</AvatarFallback></Avatar><div className="min-w-0"><p className="truncate text-sm font-semibold">{row.rowType === "member" ? getMembershipDisplayName(row) : getRowEmail(row)}</p><p className="truncate text-xs text-muted-foreground">{getRowEmail(row)}</p></div></div><span onClick={(event) => event.stopPropagation()}><EmrRowActionMenu ariaLabel={`${getRowEmail(row)} 작업`} items={getRowActions(row)} /></span></div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{getSessionWorkspaceJobPositionLabel(getRowJobPositionKey(row), state, workspaceId)}</span><span>·</span><span>{row.department ?? "소속 미지정"}</span><Badge variant="outline">{getSessionWorkspacePermissionRoleLabel(getRowPermissionRoleKey(row), state, workspaceId)}</Badge><Badge variant={row.status === "soft_deleted" ? "destructive" : "outline"}>{getStatusLabel(row)}</Badge></div>
+                  {row.rowType === "member" && row.status === "soft_deleted" ? <p className="mt-2 text-xs text-muted-foreground">삭제 사유: {row.deletedReason ?? "-"} · 검토 예정일: {row.deletedAt ? formatMembershipDate(new Date(new Date(row.deletedAt).getTime() + 90 * 86400000).toISOString()) : "-"}</p> : null}
+                </button>
+              ))}
+              {statusReadState !== "loading" && visibleRows.length === 0 ? <p className="rounded-md border bg-card p-6 text-center text-sm text-muted-foreground">현재 조건에 맞는 구성원이 없습니다.</p> : null}
+            </div>
+
+            <Table minWidth={720} className="hidden table-fixed text-[13px] md:table">
               <TableHeader className="bg-[var(--emr-surface-muted)]">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[190px]">이메일</TableHead>
-                  <TableHead className="w-[80px]">권한 역할</TableHead>
-                  <TableHead className="w-[80px]">직무</TableHead>
-                  <TableHead className="w-[75px]">상태</TableHead>
-                  <TableHead className="w-[120px]">직책/부서</TableHead>
-                  <TableHead className="w-[175px] text-right">작업</TableHead>
+                  <TableHead className="w-[240px]">구성원</TableHead>
+                  <TableHead className="w-[150px]">조직 정보</TableHead>
+                  <TableHead className="w-[110px]">권한</TableHead>
+                  <TableHead className="w-[110px]">최근 로그인</TableHead>
+                  <TableHead className="w-[90px]">상태</TableHead>
+                  <TableHead className="w-[52px] text-right"><span className="sr-only">작업</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {workspaceRows.map((row) => {
+                {statusReadState === "loading" ? Array.from({ length: 5 }, (_, index) => (
+                  <TableRow key={`member-skeleton-${index}`}><TableCell><Skeleton className="h-9 w-44" /></TableCell><TableCell><Skeleton className="h-4 w-24" /></TableCell><TableCell><Skeleton className="h-5 w-12" /></TableCell><TableCell><Skeleton className="h-4 w-16" /></TableCell><TableCell><Skeleton className="h-5 w-14" /></TableCell><TableCell /></TableRow>
+                )) : visibleRows.map((row) => {
                   const pending = row.rowType === "invitation" && row.status === "pending";
                   const selectable = row.rowType === "member";
 
@@ -820,99 +1047,27 @@ export function WorkspaceMembershipManagement({
                         setSelectedMembership(row);
                       }}
                     >
-                      <TableCell className="font-semibold">{getRowEmail(row)}</TableCell>
                       <TableCell>
-                        {getSessionWorkspacePermissionRoleLabel(
-                          getRowPermissionRoleKey(row),
-                          state,
-                          workspaceId
-                        )}
+                        <div className="flex min-w-0 items-center gap-2.5"><Avatar className="size-8"><AvatarFallback>{(row.rowType === "member" ? getMembershipDisplayName(row) : getRowEmail(row)).slice(0, 1)}</AvatarFallback></Avatar><div className="min-w-0"><p className="truncate font-semibold">{row.rowType === "member" ? getMembershipDisplayName(row) : getRowEmail(row)}</p><p className="truncate text-[12px] text-muted-foreground">{getRowEmail(row)}</p></div></div>
                       </TableCell>
                       <TableCell>
-                        {getSessionWorkspaceJobPositionLabel(
-                          getRowJobPositionKey(row),
-                          state,
-                          workspaceId
-                        )}
+                        <div>{getSessionWorkspaceJobPositionLabel(getRowJobPositionKey(row), state, workspaceId)}</div><div className="text-[12px] text-muted-foreground">{[row.department, row.title].filter(Boolean).join(" · ") || "소속 미지정"}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={pending ? "secondary" : "outline"}>
-                          {getStatusLabel(row)}
-                        </Badge>
-                        {row.rowType === "invitation" && row.resendCount > 0 ? (
-                          <span className="ml-2 text-[12px] text-muted-foreground">
-                            재발송 {row.resendCount}회
-                          </span>
-                        ) : null}
+                        <Badge variant="outline">{getSessionWorkspacePermissionRoleLabel(getRowPermissionRoleKey(row), state, workspaceId)}</Badge>
                       </TableCell>
-                      <TableCell className="truncate">
-                        {[row.title, row.department].filter(Boolean).join(" · ") || "-"}
+                      <TableCell className="text-muted-foreground">{row.rowType === "member" ? formatMembershipDate(row.lastLoginAt) === "-" ? "로그인 기록 없음" : formatMembershipDate(row.lastLoginAt) : "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={pending ? "secondary" : row.status === "soft_deleted" ? "destructive" : "outline"}>{getStatusLabel(row)}</Badge>
                       </TableCell>
-                      <TableCell className="whitespace-normal text-right">
-                        {pending ? (
-                          <div className="flex flex-wrap justify-end gap-1">
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="outline"
-                              disabled={!canManageMembers}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleResend(row.id);
-                              }}
-                            >
-                              초대 재발송
-                            </Button>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="outline"
-                              disabled={!canManageMembers}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleAccept(row.id);
-                              }}
-                            >
-                              수락 시뮬레이션
-                            </Button>
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="ghost"
-                              disabled={!canManageMembers}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleCancel(row.id);
-                              }}
-                            >
-                              초대 취소
-                            </Button>
-                          </div>
-                        ) : row.rowType === "member" ? (
-                          <div className="flex flex-wrap justify-end gap-1">
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="outline"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setSelectedMembership(row);
-                              }}
-                            >
-                              상세 보기
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-[12px] text-muted-foreground">초대 기록</span>
-                        )}
-                      </TableCell>
+                      <TableCell className="text-right"><EmrRowActionMenu ariaLabel={`${getRowEmail(row)} 작업`} items={getRowActions(row)} /></TableCell>
                     </TableRow>
                   );
                 })}
-                {workspaceRows.length === 0 ? (
+                {statusReadState !== "loading" && visibleRows.length === 0 ? (
                   <TableRow className="bg-card">
                     <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      아직 이 워크스페이스에 표시할 구성원이 없습니다.
+                      현재 조건에 맞는 구성원이 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : null}
@@ -922,15 +1077,15 @@ export function WorkspaceMembershipManagement({
         </ScrollArea>
       </section>
 
-      <Sheet open={inviteSheetOpen} onOpenChange={setInviteSheetOpen}>
+      <Sheet open={inviteSheetOpen} onOpenChange={(open) => { setInviteSheetOpen(open); if (!open) setEditingInvitation(null); }}>
         <SheetContent className="w-[min(520px,calc(100vw-1rem))] gap-0 p-0 sm:max-w-[520px]">
           <SheetHeader className="border-b border-[var(--emr-line-hairline)] px-5 py-4">
-            <SheetTitle className="text-[16px] leading-6">직원 초대</SheetTitle>
+            <SheetTitle className="text-[16px] leading-6">{editingInvitation ? "초대 정보 수정" : "직원 초대"}</SheetTitle>
             <SheetDescription className="text-[12px] leading-5">
               실제 이메일 발송 없이 초대 상태만 저장합니다.
             </SheetDescription>
           </SheetHeader>
-          <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+          <form key={editingInvitation?.id ?? "new"} className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
             <ScrollArea className="min-h-0 flex-1">
               <FieldGroup className="p-4">
                 {!canManageMembers ? (
@@ -958,6 +1113,7 @@ export function WorkspaceMembershipManagement({
                     name="email"
                     type="email"
                     placeholder="staff@hos.kr"
+                    defaultValue={editingInvitation?.email ?? ""}
                     disabled={!canManageMembers || submittingInvitation}
                     aria-invalid={Boolean(fieldErrors.email)}
                   />
@@ -971,7 +1127,7 @@ export function WorkspaceMembershipManagement({
                 <FieldSet className="gap-2">
                   <FieldLegend className="mb-0 text-[13px]">권한 역할</FieldLegend>
                   <FieldDescription className="hidden text-[12px] sm:block">
-                    할 수 있는 작업 범위를 정합니다. 커스텀 역할은 아래에서 추가합니다.
+                    할 수 있는 작업 범위를 정합니다. 새 역할은 역할 및 권한 화면에서 관리합니다.
                   </FieldDescription>
                   <RadioGroup
                     aria-label="권한 역할"
@@ -1001,12 +1157,7 @@ export function WorkspaceMembershipManagement({
                       </label>
                     ))}
                   </RadioGroup>
-                  <p className="hidden text-[12px] leading-5 text-muted-foreground sm:block">
-                    커스텀 역할
-                    {customPermissionRoles.length === 0
-                      ? "은 아직 없습니다. 필요한 권한만 골라 추가할 수 있습니다."
-                      : ` ${customPermissionRoles.length}개를 사용할 수 있습니다.`}
-                  </p>
+                  <p className="hidden text-[12px] leading-5 text-muted-foreground sm:block">등록된 역할만 선택할 수 있습니다.</p>
                   {fieldErrors.permissionRoleKey || fieldErrors.roles ? (
                     <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                       {fieldErrors.permissionRoleKey ?? fieldErrors.roles}
@@ -1055,6 +1206,7 @@ export function WorkspaceMembershipManagement({
                     id="workspace-invitation-title"
                     name="title"
                     placeholder="진료팀장"
+                    defaultValue={editingInvitation?.title ?? ""}
                     disabled={!canManageMembers || submittingInvitation}
                   />
                 </Field>
@@ -1065,11 +1217,12 @@ export function WorkspaceMembershipManagement({
                     id="workspace-invitation-department"
                     name="department"
                     placeholder="진료팀"
+                    defaultValue={editingInvitation?.department ?? ""}
                     disabled={!canManageMembers || submittingInvitation}
                   />
                 </Field>
 
-                <div className="grid gap-3 border-t border-[var(--emr-line-hairline)] pt-4">
+                <div className="hidden" aria-hidden="true">
                   <div>
                     <h3 className="text-[13px] font-semibold">권한 역할 설정</h3>
                     <p className="mt-1 hidden text-[12px] leading-5 text-muted-foreground sm:block">
@@ -1209,7 +1362,7 @@ export function WorkspaceMembershipManagement({
                 닫기
               </Button>
               <Button type="submit" disabled={!canManageMembers || submittingInvitation}>
-                {submittingInvitation ? "초대 저장 중" : "초대 만들기"}
+                {submittingInvitation ? "저장 중" : editingInvitation ? "초대 정보 저장" : "초대 만들기"}
               </Button>
             </SheetFooter>
           </form>
@@ -1294,6 +1447,20 @@ export function WorkspaceMembershipManagement({
                         label="비활성화일"
                         value={formatMembershipDate(selectedMembership.deactivatedAt)}
                       />
+                      <MembershipDetailItem
+                        label="삭제일"
+                        value={formatMembershipDate(selectedMembership.deletedAt)}
+                      />
+                      <MembershipDetailItem
+                        label="삭제 사유"
+                        value={selectedMembership.deletedReason || "-"}
+                      />
+                      {selectedMembership.deletedAt ? (
+                        <MembershipDetailItem
+                          label="검토 예정일"
+                          value={formatMembershipDate(new Date(new Date(selectedMembership.deletedAt).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString())}
+                        />
+                      ) : null}
                     </dl>
                   </section>
                 </div>
@@ -1304,6 +1471,10 @@ export function WorkspaceMembershipManagement({
                   <p className="text-[12px] leading-5 text-muted-foreground">
                     일반 계정은 이 페이지에서 조회만 가능합니다. 본인 정보는 프로필에서 변경하세요.
                   </p>
+                ) : selectedMembership.status === "soft_deleted" ? (
+                  <Button type="button" variant="outline" onClick={() => void handleRestore(selectedMembership)}>
+                    복구
+                  </Button>
                 ) : selectedMembership.status !== "active" ? (
                   <p className="text-[12px] leading-5 text-muted-foreground">
                     비활성 구성원은 현재 화면에서 권한을 수정할 수 없습니다.
@@ -1459,6 +1630,28 @@ export function WorkspaceMembershipManagement({
           onCancel={() => setDeactivatingMembership(null)}
           onConfirm={handleDeactivationConfirm}
         />
+      </Dialog>
+
+      <Dialog open={Boolean(archivingMembership)} onOpenChange={(open) => { if (!open) setArchivingMembership(null); }}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>구성원 삭제</DialogTitle>
+            <DialogDescription>
+              {archivingMembership?.displayName ?? archivingMembership?.email} 구성원의 접근을 해제하고 삭제됨 탭으로 이동합니다. 기록은 유지되며 복구하면 비활성 상태로 돌아옵니다.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field data-invalid={Boolean(archiveError)}>
+              <FieldLabel htmlFor="workspace-membership-delete-reason">삭제 사유</FieldLabel>
+              <Input id="workspace-membership-delete-reason" value={archiveReason} onChange={(event) => setArchiveReason(event.target.value)} placeholder="예: 퇴사 처리" aria-invalid={Boolean(archiveError)} />
+              {archiveError ? <FieldError>{archiveError}</FieldError> : <FieldDescription>90일 후 영구 삭제 검토 필요로 표시되지만 자동 삭제되지는 않습니다.</FieldDescription>}
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setArchivingMembership(null)}>취소</Button>
+            <Button type="button" variant="destructive" disabled={submittingArchive} onClick={() => void handleArchiveConfirm()}>{submittingArchive ? "삭제 중" : "구성원 삭제"}</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {deactivationError ? (

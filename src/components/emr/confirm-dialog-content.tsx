@@ -12,6 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
+type EmrConfirmDialogPresentationProps = Pick<
+  ComponentProps<typeof DialogContent>,
+  "motion" | "overlayClassName"
+>;
+
 type EmrConfirmDialogContentProps = {
   cancelLabel: string;
   confirmLabel: string;
@@ -23,7 +28,7 @@ type EmrConfirmDialogContentProps = {
   confirmButtonVariant?: ComponentProps<typeof Button>["variant"];
   onCancel: () => void;
   onConfirm: () => void;
-};
+} & EmrConfirmDialogPresentationProps;
 
 export function EmrConfirmDialogContent({
   cancelLabel,
@@ -33,35 +38,39 @@ export function EmrConfirmDialogContent({
   confirmButtonVariant,
   confirmLabel,
   description,
+  motion,
   onCancel,
   onConfirm,
+  overlayClassName,
   title,
 }: EmrConfirmDialogContentProps) {
   return (
     <DialogContent
       className={cn("overflow-hidden p-0 sm:max-w-[420px]", className)}
+      motion={motion}
+      overlayClassName={overlayClassName}
       showCloseButton={false}
     >
       <DialogHeader className="px-6 pb-3 pt-6">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <DialogTitle className="emr-text-dialog-title font-bold text-[var(--emr-text-primary)]">
+        <div className="min-w-0 pr-10">
+          <DialogTitle className="emr-text-dialog-title font-semibold text-[var(--emr-text-primary)]">
             {title}
           </DialogTitle>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="size-8 shrink-0 rounded-md text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"
-            aria-label={closeAriaLabel}
-            onClick={onCancel}
-          >
-            <CdsActionsXIcon className="size-4" />
-          </Button>
         </div>
         <DialogDescription className="leading-5 text-[var(--emr-text-tertiary)]">
           {description}
         </DialogDescription>
       </DialogHeader>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="absolute right-[var(--emr-dialog-close-offset)] top-[var(--emr-dialog-close-offset)] size-8 rounded-md text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"
+        aria-label={closeAriaLabel}
+        onClick={onCancel}
+      >
+        <CdsActionsXIcon className="size-4" />
+      </Button>
       <DialogFooter className="-mx-0 -mb-0 items-center justify-end rounded-none border-t bg-[var(--emr-surface-panel)] px-6 py-4 sm:justify-end">
         <Button variant="outline" onClick={onCancel}>
           {cancelLabel}

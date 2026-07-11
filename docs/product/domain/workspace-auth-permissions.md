@@ -173,6 +173,11 @@ Open product detail for later implementation:
 * Invitations can use default job positions or a hospital-created custom job position.
 * Invitations can use default permission roles or a hospital-created custom permission role when the inviter has permission to assign it.
 * Membership states should include at least `pending`, `active`, and `inactive`.
+* `inactive` means workspace access is disabled while the membership record remains operationally visible and can be reactivated.
+* `soft_deleted` means workspace access is disabled and the membership is excluded from the default directory. It remains in the `삭제됨` tab with deletion actor, reason, and date for restoration.
+* Restoring a soft-deleted membership must return it to `inactive`, never directly to active access.
+* Soft deletion requires a reason, must be server-authorized, and must not be available for the acting user's own membership or the last active owner.
+* The directory may show a 90-day review date after soft deletion, but there is no automatic removal in MVP. Permanent record removal and platform user-account removal require separate approval and scope.
 * Pending invitations can be resent or canceled.
 * Duplicate active memberships in the same workspace are not allowed.
 * Duplicate pending invitations for the same email/workspace should be blocked or resolved by resend.
