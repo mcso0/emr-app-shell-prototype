@@ -70,7 +70,12 @@ export type WorkspaceCustomPermissionRoleMutationResult =
     }
   | {
       success: false;
-      reason: "empty_label" | "empty_permissions" | "invalid_permission" | "owner_only_permission";
+      reason:
+        | "empty_label"
+        | "empty_permissions"
+        | "invalid_permission"
+        | "owner_only_permission"
+        | "system_role_immutable";
       state: SessionWorkspacesState;
     };
 
@@ -82,7 +87,15 @@ export type WorkspaceCustomJobPositionMutationResult =
     }
   | {
       success: false;
-      reason: "empty_label" | "duplicate_position";
+      reason: "empty_label" | "duplicate_position" | "custom_job_position_missing" | "system_job_immutable";
+      state: SessionWorkspacesState;
+    };
+
+export type WorkspaceCustomPermissionRoleDeleteResult =
+  | { success: true; state: SessionWorkspacesState }
+  | {
+      success: false;
+      reason: "custom_role_missing" | "system_role_immutable" | "role_referenced";
       state: SessionWorkspacesState;
     };
 
@@ -496,7 +509,11 @@ export function validateWorkspaceCreationInput(
 export function validateWorkspaceInvitationInput(
   input: WorkspaceInvitationInput,
   state: SessionWorkspacesState,
-  workspaceId: string
+  workspaceId: string,
+  catalog?: {
+    permissionRoleKeys?: Iterable<string>;
+    jobPositionKeys?: Iterable<string>;
+  }
 ): WorkspaceInvitationValidationResult {
   const fieldErrors: WorkspaceInvitationFieldErrors = {};
   const email = normalizeWorkspaceInviteEmail(input.email);
@@ -514,10 +531,12 @@ export function validateWorkspaceInvitationInput(
   const permissionRoleKey = input.permissionRoleKey ?? inferPermissionRoleKeyFromRoles(input.roles);
   const jobPositionKey = input.jobPositionKey ?? inferJobPositionKeyFromRoles(input.roles);
   const availableRoleKeys = new Set(
-    getSessionWorkspacePermissionRoles(state, workspaceId).map((role) => role.roleKey)
+    catalog?.permissionRoleKeys ??
+      getSessionWorkspacePermissionRoles(state, workspaceId).map((role) => role.roleKey)
   );
   const availableJobPositionKeys = new Set(
-    getSessionWorkspaceJobPositions(state, workspaceId).map((position) => position.positionKey)
+    catalog?.jobPositionKeys ??
+      getSessionWorkspaceJobPositions(state, workspaceId).map((position) => position.positionKey)
   );
 
   if (!availableRoleKeys.has(permissionRoleKey)) {
@@ -657,6 +676,7 @@ export function createOrUpdateSessionWorkspaceCustomPermissionRole(
     workspaceId: string;
     roleKey?: string | null;
     label: string;
+    description?: string;
     permissionIds: string[];
   },
   now = new Date().toISOString()
@@ -684,11 +704,20 @@ export function createOrUpdateSessionWorkspaceCustomPermissionRole(
   }
 
   const existingRoles = state.permissionRoles ?? [];
+  const existingRole = input.roleKey
+    ? getSessionWorkspacePermissionRoles(state, input.workspaceId).find(
+        (role) => role.roleKey === input.roleKey
+      )
+    : null;
+  if (existingRole?.isSystem) {
+    return { success: false, reason: "system_role_immutable", state };
+  }
   const roleKey = input.roleKey ?? createCustomCatalogKey(label, existingRoles.map((role) => role.roleKey));
   const role: SessionWorkspacePermissionRole = {
     workspaceId: input.workspaceId,
     roleKey,
     label,
+    description: input.description?.trim() || undefined,
     roleType: "custom",
     permissionIds: requestedPermissionIds,
     isSystem: false,
@@ -717,6 +746,7 @@ export function createSessionWorkspaceCustomJobPosition(
   input: {
     workspaceId: string;
     label: string;
+    description?: string;
   },
   now = new Date().toISOString()
 ): WorkspaceCustomJobPositionMutationResult {
@@ -742,6 +772,7 @@ export function createSessionWorkspaceCustomJobPosition(
       existingPositions.map((item) => item.positionKey)
     ),
     label,
+    description: input.description?.trim() || undefined,
     isSystem: false,
     isActive: true,
     sortOrder: 100 + existingPositions.length,
@@ -753,6 +784,115 @@ export function createSessionWorkspaceCustomJobPosition(
     state: {
       ...state,
       jobPositions: [...existingPositions, position],
+      updatedAt: now,
+    },
+  };
+}
+
+export function updateSessionWorkspaceCustomJobPosition(
+  state: SessionWorkspacesState,
+  input: {
+    workspaceId: string;
+    positionKey: string;
+    label: string;
+    description?: string;
+  },
+  now = new Date().toISOString()
+): WorkspaceCustomJobPositionMutationResult {
+  const position = getSessionWorkspaceJobPositions(state, input.workspaceId).find(
+    (item) => item.positionKey === input.positionKey
+  );
+  if (!position) return { success: false, reason: "custom_job_position_missing", state };
+  if (position.isSystem) return { success: false, reason: "system_job_immutable", state };
+
+  const label = input.label.trim();
+  if (!label) return { success: false, reason: "empty_label", state };
+
+  const duplicate = getSessionWorkspaceJobPositions(state, input.workspaceId).some(
+    (item) => item.positionKey !== input.positionKey && item.label === label
+  );
+  if (duplicate) return { success: false, reason: "duplicate_position", state };
+
+  const updatedPosition: SessionWorkspaceJobPosition = {
+    ...position,
+    label,
+    description: input.description?.trim() || undefined,
+  };
+  return {
+    success: true,
+    position: updatedPosition,
+    state: {
+      ...state,
+      jobPositions: (state.jobPositions ?? []).map((item) =>
+        item.workspaceId === input.workspaceId && item.positionKey === input.positionKey
+          ? updatedPosition
+          : item
+      ),
+      updatedAt: now,
+    },
+  };
+}
+
+export function archiveSessionWorkspaceCustomJobPosition(
+  state: SessionWorkspacesState,
+  input: { workspaceId: string; positionKey: string },
+  now = new Date().toISOString()
+): WorkspaceCustomJobPositionMutationResult {
+  const position = getSessionWorkspaceJobPositions(state, input.workspaceId).find(
+    (item) => item.positionKey === input.positionKey
+  );
+  if (!position) return { success: false, reason: "custom_job_position_missing", state };
+  if (position.isSystem) return { success: false, reason: "system_job_immutable", state };
+
+  const archivedPosition: SessionWorkspaceJobPosition = { ...position, isActive: false };
+  return {
+    success: true,
+    position: archivedPosition,
+    state: {
+      ...state,
+      jobPositions: (state.jobPositions ?? []).map((item) =>
+        item.workspaceId === input.workspaceId && item.positionKey === input.positionKey
+          ? archivedPosition
+          : item
+      ),
+      updatedAt: now,
+    },
+  };
+}
+
+export function deleteSessionWorkspaceCustomPermissionRole(
+  state: SessionWorkspacesState,
+  input: { workspaceId: string; roleKey: string },
+  now = new Date().toISOString()
+): WorkspaceCustomPermissionRoleDeleteResult {
+  const role = getSessionWorkspacePermissionRoles(state, input.workspaceId).find(
+    (item) => item.roleKey === input.roleKey
+  );
+  if (!role) return { success: false, reason: "custom_role_missing", state };
+  if (role.isSystem) return { success: false, reason: "system_role_immutable", state };
+
+  const referencedByMembership = state.memberships.some(
+    (membership) =>
+      membership.workspaceId === input.workspaceId &&
+      getSessionWorkspaceEffectivePermissionRoleKey(membership) === input.roleKey
+  );
+  const referencedByInvitation = state.invitations.some(
+    (invitation) =>
+      invitation.workspaceId === input.workspaceId &&
+      (invitation.permissionRoleKey === input.roleKey ||
+        (!invitation.permissionRoleKey && invitation.invitedRoles.includes("hospital_admin") && input.roleKey === "owner"))
+  );
+  if (referencedByMembership || referencedByInvitation) {
+    return { success: false, reason: "role_referenced", state };
+  }
+
+  return {
+    success: true,
+    state: {
+      ...state,
+      permissionRoles: (state.permissionRoles ?? []).filter(
+        (item) => !(item.workspaceId === input.workspaceId && item.roleKey === input.roleKey)
+      ),
       updatedAt: now,
     },
   };

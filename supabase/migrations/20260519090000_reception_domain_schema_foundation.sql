@@ -40,6 +40,7 @@ create table if not exists public.patients (
   breed text,
   birth_date date,
   estimated_age_text text,
+  weight_kg numeric(6,2),
   sex text not null default 'unknown'
     check (sex in ('male', 'female', 'unknown')),
   neutered boolean,

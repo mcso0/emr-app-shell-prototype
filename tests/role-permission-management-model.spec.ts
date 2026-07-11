@@ -12,6 +12,12 @@ import type {
   SessionWorkspacePermissionRole,
   SessionWorkspacesState,
 } from "../src/features/auth/workspace-session";
+import {
+  archiveSessionWorkspaceCustomJobPosition,
+  deleteSessionWorkspaceCustomPermissionRole,
+  updateSessionWorkspaceCustomJobPosition,
+  validateWorkspaceInvitationInput,
+} from "../src/features/auth/workspace-session";
 
 const workspaceId = "workspace-a";
 
@@ -113,4 +119,65 @@ test("custom role drafts reject owner-only and unknown permissions while keeping
     valid: false,
     reason: "invalid_permission",
   });
+});
+
+test("mock-session catalog keeps custom role deletion and job archive separate from system rows", () => {
+  const initial: SessionWorkspacesState = {
+    ...state,
+    permissionRoles: [customRole],
+    jobPositions: [
+      {
+        workspaceId,
+        positionKey: "custom_coordinator",
+        label: "CS 코디네이터",
+        isSystem: false,
+        isActive: true,
+        sortOrder: 100,
+      },
+    ],
+  };
+
+  const updatedJob = updateSessionWorkspaceCustomJobPosition(initial, {
+    workspaceId,
+    positionKey: "custom_coordinator",
+    label: "고객 코디네이터",
+  });
+  expect(updatedJob.success).toBe(true);
+
+  const archivedJob = archiveSessionWorkspaceCustomJobPosition(updatedJob.state, {
+    workspaceId,
+    positionKey: "custom_coordinator",
+  });
+  expect(archivedJob).toMatchObject({ success: true });
+  expect(archivedJob.state.jobPositions).toEqual(
+    expect.arrayContaining([expect.objectContaining({ positionKey: "custom_coordinator", isActive: false })])
+  );
+
+  const deletedRole = deleteSessionWorkspaceCustomPermissionRole(archivedJob.state, {
+    workspaceId,
+    roleKey: customRole.roleKey,
+  });
+  expect(deletedRole).toMatchObject({ success: true });
+  expect(deletedRole.state.permissionRoles).toEqual([]);
+});
+
+test("server catalog keys are accepted when assigning a newly created role or job", () => {
+  expect(
+    validateWorkspaceInvitationInput(
+      {
+        email: "new-staff@clair.local",
+        roles: ["front_desk"],
+        permissionRoleKey: "custom_lab_assistant",
+        jobPositionKey: "custom_coordinator",
+        title: "검사 보조",
+        department: "검사",
+      },
+      state,
+      workspaceId,
+      {
+        permissionRoleKeys: ["owner", "admin", "general", "custom_lab_assistant"],
+        jobPositionKeys: ["front_desk", "custom_coordinator"],
+      }
+    )
+  ).toEqual({ valid: true, fieldErrors: {} });
 });
