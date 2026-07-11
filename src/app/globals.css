@@ -259,7 +259,7 @@
   .emr-text-micro {
     font-size: var(--emr-type-size-micro);
     line-height: var(--emr-type-leading-micro);
-    letter-spacing: var(--emr-type-tracking-normal);
+    letter-spacing: var(--emr-type-tracking-micro);
   }
 
   .emr-text-metadata {
@@ -277,7 +277,7 @@
   .emr-text-dense {
     font-size: var(--emr-type-size-dense);
     line-height: var(--emr-type-leading-dense);
-    letter-spacing: var(--emr-type-tracking-normal);
+    letter-spacing: var(--emr-type-tracking-dense);
   }
 
   .emr-text-dense-label {
@@ -289,7 +289,7 @@
   .emr-text-body {
     font-size: var(--emr-type-size-body);
     line-height: var(--emr-type-leading-body);
-    letter-spacing: var(--emr-type-tracking-normal);
+    letter-spacing: var(--emr-type-tracking-body);
   }
 
   .emr-text-section {
@@ -300,20 +300,20 @@
 
   .emr-text-compact-title {
     font-size: var(--emr-type-size-compact-title);
-    line-height: var(--emr-type-leading-body);
-    letter-spacing: var(--emr-type-tracking-normal);
+    line-height: var(--emr-type-leading-compact-title);
+    letter-spacing: var(--emr-type-tracking-compact-title);
   }
 
   .emr-text-panel-title {
     font-size: var(--emr-type-size-panel-title);
-    line-height: var(--emr-type-leading-title);
-    letter-spacing: var(--emr-type-tracking-normal);
+    line-height: var(--emr-type-leading-panel-title);
+    letter-spacing: var(--emr-type-tracking-panel-title);
   }
 
   .emr-text-dialog-title {
     font-size: var(--emr-type-size-dialog-title);
-    line-height: var(--emr-type-leading-title);
-    letter-spacing: var(--emr-type-tracking-normal);
+    line-height: var(--emr-type-leading-dialog-title);
+    letter-spacing: var(--emr-type-tracking-dialog-title);
   }
 
   .emr-control-radius {
@@ -323,7 +323,7 @@
   .emr-control-text {
     font-size: var(--emr-type-size-body);
     line-height: var(--emr-type-leading-body);
-    letter-spacing: var(--emr-type-tracking-dense-label);
+    letter-spacing: var(--emr-type-tracking-body);
   }
 
   .emr-control-text-compact {

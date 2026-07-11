@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLAiR EMR Flex 기반 근무표 구현 결과</title>
+  <style>
+    :root { --bg:#f6f7f8; --paper:#fff; --ink:#18181b; --sub:#65656d; --line:#e5e7eb; --blue:#2563eb; --green:#166534; --yellow:#92400e; --soft:#f4f4f5; }
+    * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif; }
+    main { max-width:980px; margin:0 auto; padding:52px 24px 88px; } h1 { margin:6px 0 10px; font-size:clamp(30px,5vw,46px); line-height:1.15; letter-spacing:-.045em; } h2 { margin-top:40px; font-size:21px; letter-spacing:-.025em; } p { margin:7px 0; } .eyebrow { color:var(--blue); font-size:12px; font-weight:760; letter-spacing:.08em; text-transform:uppercase; } .lede { max-width:760px; color:var(--sub); font-size:18px; }
+    .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; } .card { padding:18px; border:1px solid var(--line); border-radius:12px; background:var(--paper); } .card strong { display:block; margin-bottom:5px; } .muted { color:var(--sub); font-size:13px; }
+    table { width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border:1px solid var(--line); border-radius:12px; background:var(--paper); } th,td { padding:13px 14px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; } th { background:#fafafa; color:var(--sub); font-size:12px; } tr:last-child td { border-bottom:0; }
+    .ok { color:var(--green); font-weight:700; } .caution { color:var(--yellow); font-weight:700; } code { padding:2px 5px; border-radius:5px; background:var(--soft); font-size:.9em; } ul { padding-left:20px; } li { margin:7px 0; }
+    @media (max-width:700px) { .grid { grid-template-columns:1fr; } main { padding-top:34px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Implementation closeout · 2026-07-11</div>
+    <h1>Flex 감성의 근무표를<br />실제 조작 가능한 화면으로 전환했어.</h1>
+    <p class="lede">정적인 주간 표를 관리자 편성, 일간 커버리지, 직원 개인 일정으로 나눴고, 근무 변경 요청은 승인될 때만 편성에 반영되도록 만들었어.</p>
+
+    <h2>무엇이 달라졌나</h2>
+    <div class="grid">
+      <section class="card"><strong>관리자 편성</strong><p class="muted">직원 × 7일 매트릭스, 미배정 행, 역할 필터, 근무 추가·수정·복제·휴무 전환·삭제.</p></section>
+      <section class="card"><strong>커버리지 확인</strong><p class="muted">직원 행과 시간축으로 진료·검사·접수 공백을 확인하고 게시 전 차단.</p></section>
+      <section class="card"><strong>직원 요청</strong><p class="muted">개인 일정에서 휴무·변경 요청을 만들고, 관리자 시트에서 승인·반려.</p></section>
+    </div>
+
+    <h2>운영 흐름</h2>
+    <table>
+      <thead><tr><th>상황</th><th>화면 동작</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td>근무를 편성</td><td>주간 편성에서 근무 블록을 열거나 <code>+ 근무</code>로 추가</td><td>무엇을 어디서 수정하는지 바로 보임</td></tr>
+        <tr><td>인력 공백 확인</td><td>일간 커버리지와 게시 전 검토에서 시간·역할 공백을 텍스트로 표시</td><td>색만 보고 판단하지 않아도 됨</td></tr>
+        <tr><td>직원 변경 요청</td><td><code>내 근무</code> → 요청 제출 → 관리자 승인</td><td>승인 전에는 기존 편성이 바뀌지 않음</td></tr>
+        <tr><td>게시</td><td>가능 시간 충돌이나 커버리지 공백이 있으면 게시 버튼 비활성화</td><td>불완전한 근무표가 확정되는 것을 예방</td></tr>
+      </tbody>
+    </table>
+
+    <h2>구현 범위와 검증</h2>
+    <ul>
+      <li><span class="ok">구현됨</span> 합성 Cheongdam 데이터, Zustand 세션 상태, 관리자/개인 화면, 반응형 모바일 날짜 목록, 키보드로 닫히는 Sheet/Dialog.</li>
+      <li><span class="ok">검증됨</span> 주간 날짜, 가능 시간 충돌, 커버리지 공백, 승인 반영 모델 테스트와 CRUD·요청·게시 차단·모바일 Playwright 흐름.</li>
+      <li><span class="caution">후속 범위</span> DB/API/RLS, 실제 권한, 영구 저장, 자동 배정, 출퇴근·급여, 알림은 포함하지 않음.</li>
+    </ul>
+
+    <h2>변경한 기준 문서</h2>
+    <p class="muted"><code>Hospital Admin Settings Hub UX</code>, <code>Hospital Admin Settings Hub</code>, <code>MVP Current Status</code>, <code>HOSPITAL-ADMIN-PR-003</code></p>
+    <p class="muted">다음 권장 단계: 합성 세션 계약을 API/RLS 설계로 승격하기 전에, 실제 병원 역할별 승인 정책과 커버리지 기준을 확정.</p>
+  </main>
+</body>
+</html>

@@ -1,5 +1,5 @@
 ---
-id: "HOSPITAL-ADMIN-PR-003"
+id: "HOSPITAL-ADMIN-PR-005"
 status: "implemented"
 area: "hospital-admin"
 priority: "P0"

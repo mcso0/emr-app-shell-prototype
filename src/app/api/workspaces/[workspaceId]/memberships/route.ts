@@ -37,6 +37,7 @@ export type MembershipRouteDependencies<Client extends object> = {
   readWorkspaceMembershipStatus(input: {
     actorUserId: string | null;
     workspaceId: string;
+    includeDeleted?: boolean;
     permissionAdapter?: WorkspacePermissionAdapter;
     gateway?: WorkspaceMembershipStatusGateway;
   }): Promise<WorkspaceMembershipStatusResult>;
@@ -44,12 +45,17 @@ export type MembershipRouteDependencies<Client extends object> = {
 
 export async function GET(request: Request, { params }: RouteContext) {
   const { workspaceId } = await params;
-  return handleMembershipStatusGet(request, { workspaceId }, await getMembershipRouteDependencies());
+  const includeDeleted = new URL(request.url).searchParams.get("includeDeleted") === "true";
+  return handleMembershipStatusGet(
+    request,
+    { workspaceId, includeDeleted },
+    await getMembershipRouteDependencies()
+  );
 }
 
 export async function handleMembershipStatusGet<Client extends object>(
   request: Request,
-  { workspaceId }: { workspaceId: string },
+  { workspaceId, includeDeleted = false }: { workspaceId: string; includeDeleted?: boolean },
   dependencies: MembershipRouteDependencies<Client>
 ) {
   const serverSession = await dependencies.readServerSession();
@@ -105,6 +111,7 @@ export async function handleMembershipStatusGet<Client extends object>(
     permissionAdapter,
     workspaceId,
     gateway,
+    includeDeleted,
   });
 
   return Response.json(result, { status: result.status });

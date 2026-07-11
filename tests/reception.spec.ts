@@ -1,15 +1,61 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+type MockKakaoPostcodeResult = {
+  readonly address: string;
+  readonly autoJibunAddress: string;
+  readonly autoRoadAddress: string;
+  readonly jibunAddress: string;
+  readonly roadAddress: string;
+  readonly userSelectedType: string;
+  readonly zonecode: string;
+};
+
 async function openWalkInReceptionForm(page: Page) {
   await page.getByTestId("schedule-check-in-button").click();
   await page.getByRole("menuitem", { name: "접수하기" }).click();
 }
 
-async function submitAppointmentCheckInForm(page: Page) {
-  await page.getByRole("button", { name: "접수하기" }).last().click();
-  const form = page.getByTestId("appointment-check-in-form-drawer").last();
-  await expect(form).toBeVisible();
-  await form.getByRole("button", { name: "생성" }).click();
+async function mockKakaoPostcodeSearch(page: Page, result: MockKakaoPostcodeResult) {
+  await page.addInitScript((mockResult: MockKakaoPostcodeResult) => {
+    type MockPostcodeOptions = {
+      readonly oncomplete: (data: MockKakaoPostcodeResult) => void;
+    };
+
+    class MockPostcode {
+      readonly options: MockPostcodeOptions;
+
+      constructor(options: MockPostcodeOptions) {
+        this.options = options;
+      }
+
+      open() {
+        this.options.oncomplete(mockResult);
+      }
+    }
+
+    Object.defineProperty(window, "kakao", {
+      configurable: true,
+      value: {
+        Postcode: MockPostcode,
+      },
+    });
+  }, result);
+}
+
+async function openAppointmentCheckInConfirm(page: Page) {
+  await page.getByTestId("reservation-before-check-in-notice-action").click();
+  const dialog = page
+    .getByRole("dialog")
+    .filter({ hasText: "예약을 접수 확정하시겠습니까?" })
+    .last();
+  await expect(dialog).toBeVisible();
+
+  return dialog;
+}
+
+async function submitAppointmentCheckInConfirm(page: Page) {
+  const dialog = await openAppointmentCheckInConfirm(page);
+  await dialog.getByRole("button", { exact: true, name: "접수" }).click();
 }
 
 async function freezeBrowserClock(page: Page, iso: string) {
@@ -54,6 +100,54 @@ async function expectScrollFadeViewport(viewport: Locator) {
       (value) => value && value !== "none",
     ),
   ).toBe(true);
+}
+
+async function expectRegistrationDialogsWithDimAndWithoutZoom(page: Page) {
+  const contentClassNames = await page
+    .locator('[data-slot="dialog-content"]')
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("class") ?? ""),
+    );
+
+  expect(contentClassNames.length).toBeGreaterThan(0);
+
+  for (const className of contentClassNames) {
+    expect(className).not.toContain("zoom-in-95");
+    expect(className).not.toContain("zoom-out-95");
+    expect(className).not.toContain("data-open:animate-in");
+    expect(className).not.toContain("data-closed:animate-out");
+  }
+
+  const overlayStates = await page
+    .locator('[data-slot="dialog-overlay"]')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+
+        return {
+          backdropFilter:
+            style.getPropertyValue("backdrop-filter") ||
+            style.getPropertyValue("-webkit-backdrop-filter") ||
+            "none",
+          backgroundColor: style.backgroundColor,
+          className: element.getAttribute("class") ?? "",
+        };
+      }),
+    );
+
+  expect(overlayStates.length).toBeGreaterThan(0);
+
+  for (const state of overlayStates) {
+    expect(state.className).toContain("bg-black/10");
+    expect(state.className).not.toContain("bg-transparent");
+    expect(state.className).not.toContain("backdrop-blur-xs");
+    expect(["", "none"]).toContain(state.backdropFilter);
+    expect([
+      "rgba(0, 0, 0, 0)",
+      "oklab(0 0 0 / 0)",
+      "transparent",
+    ]).not.toContain(state.backgroundColor);
+  }
 }
 
 function getLocalDatePrefix(date = new Date()) {
@@ -108,6 +202,11 @@ async function mockReceptionWalkInCreate(
               guardianId,
               primaryVeterinarianId,
               encounterNo: "E-LIVE-CALENDAR",
+              receptionType: "walk_in",
+              department:
+                typeof body.department === "string" ? body.department : "재활",
+              durationMinutes:
+                typeof body.durationMinutes === "number" ? body.durationMinutes : 30,
               chiefComplaint: body.visitPurpose ?? "현장 접수",
               visitPurpose: body.visitPurpose ?? "현장 접수",
               status: "waiting",
@@ -1908,10 +2007,97 @@ test("patient guardian registration creates a new guardian and patient after con
   await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
 });
 
+test("patient guardian registration dialogs keep dim backdrop without zoom motion", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+
+  const registrationOptions = [
+    {
+      heading: "신규 보호자 등록",
+      menuItem: "신규 환자/보호자 등록",
+    },
+    {
+      heading: "기존 보호자에 신규 환자 등록",
+      menuItem: "기존 보호자에 환자 추가",
+    },
+  ];
+  const closePaths: {
+    name: string;
+    close: (page: Page, dialog: Locator) => Promise<void>;
+  }[] = [
+    {
+      name: "close button",
+      close: async (page) => {
+        await page.getByRole("button", { name: "환자/보호자 창 닫기" }).click();
+      },
+    },
+    {
+      name: "cancel button",
+      close: async (_page, dialog) => {
+        await dialog.getByRole("button", { name: "취소" }).click();
+      },
+    },
+    {
+      name: "outside click",
+      close: async (page) => {
+        await page.locator('[data-slot="dialog-overlay"]').first().click({
+          position: { x: 16, y: 16 },
+        });
+      },
+    },
+  ];
+
+  for (const registrationOption of registrationOptions) {
+    for (const closePath of closePaths) {
+      await test.step(`${registrationOption.menuItem} - ${closePath.name}`, async () => {
+        await page.goto("/w/workspace-clair-cheongdam/reception?modulePanel=open");
+        await page
+          .getByRole("button", { name: "신규 동물/보호자", exact: true })
+          .click();
+        await page
+          .getByRole("menuitem", {
+            name: registrationOption.menuItem,
+            exact: true,
+          })
+          .click();
+
+        const registrationDialog = page
+          .locator('[data-slot="dialog-content"]')
+          .filter({ hasText: registrationOption.heading })
+          .last();
+
+        await expect(
+          page.getByRole("heading", { name: registrationOption.heading }),
+        ).toBeVisible();
+        await expectRegistrationDialogsWithDimAndWithoutZoom(page);
+
+        await closePath.close(page, registrationDialog);
+        await expect(
+          page.getByRole("dialog", { name: "입력을 취소할까요?" }),
+        ).toBeVisible();
+        await expectRegistrationDialogsWithDimAndWithoutZoom(page);
+
+        await page.getByRole("button", { name: "취소하고 나가기" }).click();
+        await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
+      });
+    }
+  }
+});
+
 test("server-backed patient guardian registration sends minimal reception payload", async ({
   page,
 }) => {
   let capturedBody: Record<string, unknown> | null = null;
+  await mockKakaoPostcodeSearch(page, {
+    address: "서울 강남구 테헤란로 152",
+    autoJibunAddress: "",
+    autoRoadAddress: "",
+    jibunAddress: "서울 강남구 역삼동 737",
+    roadAddress: "서울 강남구 테헤란로 152",
+    userSelectedType: "R",
+    zonecode: "06000",
+  });
 
   await page.route(
     "**/api/workspaces/clair-demo/reception/patient-guardian-registration",
@@ -1980,8 +2166,16 @@ test("server-backed patient guardian registration sends minimal reception payloa
   await page
     .getByRole("menuitem", { name: "신규 환자/보호자 등록" })
     .click();
+  const registrationDialog = page.getByRole("dialog", { name: "신규 보호자 등록" });
   await page.getByLabel("보호자명").fill("김새봄");
+  await page.getByLabel("보호자 생년월일").fill("19931123");
   await page.getByLabel("보호자 휴대전화").fill("010-2222-3333");
+  await registrationDialog.getByRole("button", { name: "주소 검색" }).click();
+  await expect(registrationDialog.getByLabel("우편번호")).toHaveValue("06000");
+  await expect(registrationDialog.getByLabel("기본 주소")).toHaveValue(
+    "서울 강남구 테헤란로 152",
+  );
+  await registrationDialog.getByLabel("상세 주소").fill("5층");
   await page.getByRole("button", { name: "태블릿 서명 요청" }).click();
   await page.getByRole("button", { name: "서명 완료 처리" }).click();
   await page.getByRole("button", { name: "다음" }).click();
@@ -2000,6 +2194,7 @@ test("server-backed patient guardian registration sends minimal reception payloa
   expect(capturedBody).toMatchObject({
     mode: "new_guardian_patient",
     guardian: {
+      address: "(06000) 서울 강남구 테헤란로 152 5층",
       name: "김새봄",
       mobilePhone: "010-2222-3333",
       privacyConsent: true,
@@ -2097,9 +2292,11 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
     const dialogRect = element.getBoundingClientRect();
     const dialogStyle = getComputedStyle(element);
     const round = (value: number) => Math.round(value);
+    const normalizeLabelText = (value: string | undefined) =>
+      value?.replace(/\*/g, "").trim();
     const getByLabelText = (text: string) =>
       [...element.querySelectorAll("label")].find(
-        (label) => label.textContent?.trim() === text,
+        (label) => normalizeLabelText(label.textContent ?? undefined) === text,
       );
     const getByPlaceholder = (placeholder: string) =>
       [...element.querySelectorAll("input, textarea")].find(
@@ -2109,6 +2306,10 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
       [...element.querySelectorAll("button")].find(
         (button) => button.textContent?.trim() === text,
       );
+    const closeButton = element.querySelector(
+      'button[aria-label="환자/보호자 창 닫기"]',
+    );
+    const title = element.querySelector('[data-slot="dialog-title"]');
     const rect = (target: Element | undefined) => {
       if (!target) return null;
       const targetRect = target.getBoundingClientRect();
@@ -2116,14 +2317,32 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
       return {
         h: round(targetRect.height),
         relX: round(targetRect.left - dialogRect.left),
+        relY: round(targetRect.top - dialogRect.top),
+        right: round(dialogRect.right - targetRect.right),
         w: round(targetRect.width),
+      };
+    };
+    const textStyle = (target: Element | null) => {
+      if (!target) return null;
+      const style = getComputedStyle(target);
+
+      return {
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        letterSpacing: style.letterSpacing,
+        lineHeight: style.lineHeight,
       };
     };
 
     return {
       addressButton: rect(getByButtonText("주소 검색")),
+      closeButton: rect(closeButton ?? undefined),
       dialog: {
+        centerX: round(dialogRect.left + dialogRect.width / 2),
+        centerY: round(dialogRect.top + dialogRect.height / 2),
         h: round(Number.parseFloat(dialogStyle.height)),
+        viewportCenterX: round(window.innerWidth / 2),
+        viewportCenterY: round(window.innerHeight / 2),
         w: round(Number.parseFloat(dialogStyle.width)),
       },
       iconCount: element.querySelectorAll("label svg").length,
@@ -2131,21 +2350,36 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
       memoTextarea: rect(getByPlaceholder("특이사항 및 요청사항 입력")),
       nameInput: rect(getByPlaceholder("이름을 입력해주세요")),
       signatureButton: rect(getByButtonText("태블릿 서명 요청")),
+      title: textStyle(title),
     };
   });
 
   expect(metrics).toMatchObject({
     addressButton: { h: 32, relX: 343, w: 81 },
-    dialog: { h: 714, w: 440 },
+    closeButton: { h: 32, relY: 10, right: 10, w: 32 },
+    dialog: {
+      centerX: 960,
+      centerY: 540,
+      h: 714,
+      viewportCenterX: 960,
+      viewportCenterY: 540,
+      w: 440,
+    },
     iconCount: 7,
     label: { h: 32, relX: 16, w: 128 },
     memoTextarea: { h: 76, relX: 156, w: 268 },
     nameInput: { h: 32, relX: 156, w: 268 },
     signatureButton: { h: 32, relX: 156, w: 122 },
+    title: {
+      fontSize: "16px",
+      fontWeight: "600",
+      letterSpacing: "normal",
+      lineHeight: "24px",
+    },
   });
 });
 
-test("registration uses CDS V2 32px controls while reception drawer controls align 36px", async ({
+test("registration and reception create side panels use CDS V2 32px controls", async ({
   page,
 }) => {
   await page.goto("/w/clair-demo/reception");
@@ -2203,9 +2437,9 @@ test("registration uses CDS V2 32px controls while reception drawer controls ali
     "36px",
   );
 
-  await page.goto("/w/clair-demo/reception");
-  await page.getByTestId("schedule-check-in-button").click();
-  await page.getByRole("menuitem", { name: "예약하기" }).click();
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-reservation-form%3Anew",
+  );
   const reservationDrawer = page.getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
 
@@ -2216,14 +2450,20 @@ test("registration uses CDS V2 32px controls while reception drawer controls ali
       reservationDrawer.getByLabel("예약일"),
       reservationDrawer.getByRole("combobox", { name: "담당의" }),
       reservationDrawer.getByRole("combobox", { name: "예약시간" }),
-      reservationDrawer.getByRole("combobox", { name: "예상시간" }),
+      reservationDrawer.getByRole("combobox", { name: "예상소요시간" }),
     ].map((control) =>
       control.evaluate((element) =>
         Math.round(element.getBoundingClientRect().height),
       ),
     ),
   );
-  expect(reservationControlHeights).toEqual([36, 36, 36, 36, 36, 36]);
+  expect(reservationControlHeights).toEqual([32, 32, 32, 32, 32, 32]);
+  await expect(
+    reservationDrawer.getByRole("button", { name: "바이탈 추가" }),
+  ).toBeDisabled();
+  await expect(reservationDrawer.getByRole("combobox", { name: "담당의" })).toContainText(
+    "담당의를 선택해주세요",
+  );
   await expect(reservationDrawer.getByLabel("예약 메모")).not.toHaveCSS(
     "height",
     "36px",
@@ -3075,7 +3315,19 @@ test("reception check-in converts a confirmed appointment into a waiting encount
   await expect(nabiAppointment).not.toContainText("예약확정");
 
   await nabiAppointment.click();
-  await submitAppointmentCheckInForm(page);
+  const detailPanel = page.getByTestId("reception-right-panel");
+  const beforeCheckInNotice = detailPanel.getByTestId(
+    "reservation-before-check-in-notice",
+  );
+  await expect(beforeCheckInNotice).toContainText("접수 전, 예약 건입니다");
+  await expect(beforeCheckInNotice).toContainText(
+    "보호자 방문 시, 접수 할 수 있습니다.",
+  );
+  await expect(
+    beforeCheckInNotice.getByTestId("reservation-before-check-in-notice-action"),
+  ).toBeVisible();
+  await expect(detailPanel).not.toContainText("예약확정");
+  await submitAppointmentCheckInConfirm(page);
 
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
@@ -3097,11 +3349,8 @@ test("server-backed appointment check-in sends the appointment transition reques
     async (route) => {
       requested = true;
       expect(route.request().method()).toBe("POST");
-      expect(route.request().postDataJSON()).toMatchObject({
-        durationMinutes: 15,
-        visitPurpose: "피부 재진",
-        weightKg: 4.8,
-      });
+      expect(route.request().postData()).toBeNull();
+      expect(route.request().headers()["content-type"]).toBeUndefined();
       await route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -3163,9 +3412,33 @@ test("server-backed appointment check-in sends the appointment transition reques
     "appointment-card-appointment-nabi-260501",
   );
   await nabiAppointment.click();
-  await submitAppointmentCheckInForm(page);
+  const detailPanel = page.getByTestId("reception-right-panel");
+  const beforeCheckInNotice = detailPanel.getByTestId(
+    "reservation-before-check-in-notice",
+  );
+  await expect(beforeCheckInNotice).toContainText("접수 전, 예약 건입니다");
+  await expect(beforeCheckInNotice).toContainText(
+    "보호자 방문 시, 접수 할 수 있습니다.",
+  );
+  await expect(
+    beforeCheckInNotice.getByTestId("reservation-before-check-in-notice-action"),
+  ).toBeVisible();
+  await expect(detailPanel).not.toContainText("예약확정");
+  const cancelDialog = await openAppointmentCheckInConfirm(page);
+  await expect(cancelDialog).toContainText(
+    "나비/오세아의 예약을 접수 확정하시겠습니까?",
+  );
+  await cancelDialog.getByRole("button", { exact: true, name: "취소" }).click();
+  expect(requested).toBe(false);
+
+  await submitAppointmentCheckInConfirm(page);
 
   expect(requested).toBe(true);
+  await expect(page.getByText("예약 건 접수가 완료되었습니다")).toBeVisible();
+  await expect(detailPanel).not.toContainText("접수 전, 예약 건입니다");
+  await expect(
+    detailPanel.getByRole("button", { name: "접수하기" }),
+  ).toHaveCount(0);
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
   await expect(page.getByTestId("patient-card-patient-nabi")).toContainText(
@@ -3281,7 +3554,7 @@ test("appointment check-in persistence regression reloads from queue and calenda
     "appointment-card-appointment-nabi-260501",
   );
   await nabiAppointment.click();
-  await submitAppointmentCheckInForm(page);
+  await submitAppointmentCheckInConfirm(page);
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
 
@@ -3395,6 +3668,14 @@ test("reception read failures explain local demo fallback and expose retry actio
 test("reception creates a walk-in waiting row from the new check-in dialog", async ({
   page,
 }) => {
+  const walkInCreate = await mockReceptionWalkInCreate(page, {
+    checkedInAt: "2026-05-01T10:45:00+09:00",
+    encounterId: "encounter-live-walkin-dubu",
+    guardianId: "guardian-jung-harin",
+    patientId: "patient-dubu",
+    queueId: "queue-live-walkin-dubu",
+  });
+
   await page.goto("/w/clair-demo/reception");
 
   const sidePanel = page.locator("aside").first();
@@ -3441,6 +3722,9 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await walkInForm.getByLabel("방문목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await walkInForm.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => walkInCreate.count).toBe(1);
+  await expect(page.getByText("접수가 완료되었습니다")).toBeVisible();
 
   const dubuCard = page
     .getByTestId("patient-card-patient-dubu")
@@ -3582,9 +3866,11 @@ test("reception creates a reservation through the unified check-in menu", async 
     /^2026-05-01T12:00:00\+09:00$/,
   );
 
-  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  await expect(page.getByText("예약이 완료되었습니다")).toBeVisible();
   const detailDrawer = page.getByTestId("reception-right-panel");
   await expect(detailDrawer).toContainText("예약 상세");
+  await expect(detailDrawer.getByLabel("예약일")).toHaveValue("2026.05.01");
+  await expect(detailDrawer.getByLabel("예약시간")).toHaveValue("오후 12:00");
   await expect(detailDrawer).toContainText(
     "DEN-516 예약 생성 UI 검증",
   );
@@ -4518,14 +4804,13 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
   );
 
   const sidePanel = page.locator("aside").first();
-  const detailDrawer = page.getByTestId("workspace-drawer");
+  const detailDrawer = page.getByTestId("reception-right-panel");
   const queueCard = sidePanel.getByTestId(`patient-card-${patientId}`);
   const calendarCard = page.getByTestId(`walkin-card-${encounterId}`);
-  const drawerHeader = detailDrawer.locator(".flex.h-12").first();
-  const summaryCard = detailDrawer.locator("section.rounded-lg").first();
-  const veterinarianTextbox = detailDrawer.getByRole("textbox", {
-    name: "담당의",
-  });
+  const drawerHeader = detailDrawer.getByText("접수 상세").first();
+  const animalReadonlyTextbox = detailDrawer.locator("input").nth(0);
+  const guardianReadonlyTextbox = detailDrawer.locator("input").nth(1);
+  const veterinarianReadonlyTextbox = detailDrawer.locator("input").nth(4);
   const departmentCombobox = detailDrawer.getByRole("combobox", {
     name: "진료과",
   });
@@ -4533,55 +4818,37 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
     name: "담당의",
   });
   const weightTextbox = detailDrawer.getByRole("textbox", {
-    name: "동물 체중",
-  });
-  const receptionDateTextbox = detailDrawer.getByRole("textbox", {
-    name: "접수일",
-  });
-  const receptionStartTimeTextbox = detailDrawer.getByRole("textbox", {
-    name: "진료시작시간",
+    name: "체중",
   });
   const durationCombobox = detailDrawer.getByRole("combobox", {
-    name: "소요시간",
+    name: "예상소요시간",
   });
-  await expect(queueCard).toBeVisible();
-  await expect(calendarCard).toBeVisible();
+  await expect(queueCard).toBeVisible({ timeout: 15_000 });
+  await expect(calendarCard).toBeVisible({ timeout: 15_000 });
+  await queueCard.click();
   await expect(detailDrawer).toBeVisible();
-  await expect(drawerHeader).toContainText("접수 상세");
-  await expect(drawerHeader).not.toContainText("CD-P-081");
-  await expect(summaryCard).toContainText("문지아 보호자");
-  await expect(summaryCard).toContainText("010-4911-0016");
-  await expect(summaryCard).not.toContainText("CD-P-081");
-  await expect(summaryCard).not.toContainText("10:30 접수");
-  await expect(summaryCard).not.toContainText("E-260623-VET");
-  await expect(summaryCard).not.toContainText("담당의 미지정");
-  await expect(summaryCard).not.toContainText(chiefVetId);
-  await expect(veterinarianTextbox).toHaveValue("담당의 미지정");
+  await expect(drawerHeader).toBeVisible();
+  await expect(animalReadonlyTextbox).toHaveValue(/구름.*Samoyed/);
+  await expect(guardianReadonlyTextbox).toHaveValue(/문지아.*010-4911-0016/);
+  await expect(detailDrawer).not.toContainText("CD-P-081");
+  await expect(detailDrawer).not.toContainText("E-260623-VET");
+  await expect(detailDrawer).not.toContainText(chiefVetId);
+  await expect(veterinarianReadonlyTextbox).toHaveValue("담당의 미지정");
   await expect(queueCard).not.toContainText("이수지");
   await expect(calendarCard).not.toContainText("이수지");
 
   await detailDrawer.getByTestId("reception-encounter-edit-open").click();
   await page.getByTestId("reception-encounter-edit-confirm").click();
-  const [
-    departmentBox,
-    veterinarianBox,
-    weightBox,
-    dateBox,
-    startTimeBox,
-    durationBox,
-  ] = await Promise.all([
+  const [departmentBox, veterinarianBox, weightBox, durationBox] = await Promise.all([
     departmentCombobox.boundingBox(),
     veterinarianCombobox.boundingBox(),
     weightTextbox.boundingBox(),
-    receptionDateTextbox.boundingBox(),
-    receptionStartTimeTextbox.boundingBox(),
     durationCombobox.boundingBox(),
   ]);
-  expect(departmentBox?.height).toBe(dateBox?.height);
-  expect(veterinarianBox?.height).toBe(dateBox?.height);
-  expect(weightBox?.height).toBe(dateBox?.height);
-  expect(durationBox?.height).toBe(dateBox?.height);
-  expect(durationBox?.height).toBe(startTimeBox?.height);
+  expect(departmentBox?.height).toBeGreaterThan(0);
+  expect(veterinarianBox?.height).toBeGreaterThan(0);
+  expect(weightBox?.height).toBeGreaterThan(0);
+  expect(durationBox?.height).toBeGreaterThan(0);
   await expect(veterinarianCombobox).toContainText("수의사 미지정");
   await expect(veterinarianCombobox).not.toContainText("user-vet-suji");
   await veterinarianCombobox.click();
@@ -4592,11 +4859,10 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
   expect(latestUpdateBody).toMatchObject({
     primaryVeterinarianId: chiefVetId,
   });
-  await expect(veterinarianTextbox).toHaveValue("청담 원장");
-  await expect(summaryCard).not.toContainText("청담 원장");
-  await expect(summaryCard).not.toContainText(chiefVetId);
+  await expect(page.getByText("접수 수정이 완료되었습니다")).toBeVisible();
+  await expect(veterinarianReadonlyTextbox).toHaveValue("청담 원장");
+  await expect(detailDrawer).not.toContainText(chiefVetId);
   await expect(queueCard).toContainText("청담 원장");
-  await expect(calendarCard).toContainText("청담 원장");
 
   await detailDrawer.getByTestId("reception-encounter-edit-open").click();
   await page.getByTestId("reception-encounter-edit-confirm").click();
@@ -4608,7 +4874,7 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
 
   await expect.poll(() => updateCount).toBe(2);
   expect(latestUpdateBody).not.toHaveProperty("primaryVeterinarianId");
-  await expect(veterinarianTextbox).toHaveValue("담당의 미지정");
+  await expect(veterinarianReadonlyTextbox).toHaveValue("담당의 미지정");
   await expect(queueCard).not.toContainText("청담 원장");
   await expect(calendarCard).not.toContainText("청담 원장");
 });
@@ -5042,12 +5308,14 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
 
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
-  ).toContainText("DEN-65 reload walk-in");
+  ).toHaveAttribute("aria-label", /DEN-65 reload walk-in/);
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toContainText("10:45");
   await expect(
-    page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
+    page.locator("aside").first().getByRole("button", {
+      name: /DEN-65 reload walk-in/,
+    }),
   ).toContainText("김도윤");
 
   await page.reload();
@@ -5062,7 +5330,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   ).toContainText("김도윤");
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
-  ).toContainText("DEN-65 reload walk-in");
+  ).toHaveAttribute("aria-label", /DEN-65 reload walk-in/);
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toContainText("10:15");
@@ -5081,6 +5349,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await expect(page.getByRole("dialog")).toContainText("접수를 취소할까요?");
   await page.getByTestId("reception-encounter-cancel-confirm").click();
 
+  await expect(page.getByText("접수가 취소되었습니다")).toBeVisible();
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toHaveCount(0);
@@ -5309,6 +5578,8 @@ test("reservation create drawer uses DB-backed patient lookup states", async ({
 test("Cheongdam reservation create omits mock veterinarian fallback when staff lookup fails", async ({
   page,
 }) => {
+  await freezeBrowserClock(page, "2026-06-17T08:50:00+09:00");
+
   let appointmentCreateCount = 0;
   let latestAppointmentBody: Record<string, unknown> | undefined;
 
@@ -5439,7 +5710,7 @@ test("Cheongdam reservation create omits mock veterinarian fallback when staff l
   const reservationDrawer = page.getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
   await expect(reservationDrawer.getByLabel("담당의")).toContainText(
-    "수의사 미지정",
+    "담당의를 선택해주세요",
   );
   await reservationDrawer.getByLabel("환자 검색").fill("초코");
   await page.getByRole("option", { name: /초코.*최도현/ }).click();
@@ -5456,7 +5727,7 @@ test("Cheongdam reservation create omits mock veterinarian fallback when staff l
   });
 });
 
-test("Cheongdam reservation create uses UUID veterinarian and renders calendar readback", async ({
+test("Cheongdam reservation create uses UUID veterinarian and renders detail readback", async ({
   page,
 }) => {
   await freezeBrowserClock(page, "2026-06-25T23:50:00+09:00");
@@ -5614,9 +5885,12 @@ test("Cheongdam reservation create uses UUID veterinarian and renders calendar r
   await expect(reservationDrawer.getByLabel("체중")).toHaveValue("12.00");
 
   await reservationDrawer.getByLabel("예약일").click();
-  await page.getByRole("button", { name: /26\.06\.26.*선택/ }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /26\.06\.26.*선택/ })
+    .click();
   await expect(reservationDrawer.getByLabel("예약시간")).toContainText("09:00");
-  await expect(reservationDrawer.getByLabel("예상시간")).toContainText("30분");
+  await expect(reservationDrawer.getByLabel("예상소요시간")).toContainText("30분");
 
   await reservationDrawer.getByLabel("예약 메모").fill("구름 09시 예약");
   await reservationDrawer.getByRole("button", { name: "생성" }).click();
@@ -5630,24 +5904,20 @@ test("Cheongdam reservation create uses UUID veterinarian and renders calendar r
     scheduledStartAt: "2026-06-26T09:00:00+09:00",
     weightKg: 12,
   });
-  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  await expect(page.getByText("예약이 완료되었습니다")).toBeVisible();
+  const detailPanel = page.getByTestId("reception-right-panel");
+  await expect(detailPanel).toContainText("예약 상세");
+  await expect(detailPanel.getByLabel("예약일")).toHaveValue("2026.06.26");
+  await expect(detailPanel.getByLabel("예약시간")).toHaveValue("오전 9:00");
   await expect(
-    page.locator('[data-testid^="appointment-card-"]').filter({
-      hasText: "구름 09시 예약",
-    }),
-  ).toBeVisible();
-
-  await page.goto("/w/workspace-clair-cheongdam/reception?modulePanel=open");
-  await page.getByRole("button", { name: /26\.06\.25.*날짜 선택/ }).click();
-  await page.getByRole("button", { name: /26\.06\.26.*선택/ }).click();
+    detailPanel.getByPlaceholder("방문목적을 입력해주세요"),
+  ).toHaveValue("구름 09시 예약");
   await expect(
-    page.locator('[data-testid^="appointment-card-"]').filter({
-      hasText: "구름 09시 예약",
-    }),
-  ).toBeVisible();
+    detailPanel.getByPlaceholder("예약 메모를 입력해주세요"),
+  ).toHaveValue("구름 09시 예약");
 });
 
-test("reception draft task drawer uses DB-backed patient lookup states", async ({
+test("calendar reception creation uses the shared DB-backed patient lookup", async ({
   page,
 }) => {
   const lookupQueries: string[] = [];
@@ -5721,25 +5991,23 @@ test("reception draft task drawer uses DB-backed patient lookup states", async (
   await page.goto("/w/clair-demo/reception?modulePanel=open");
   await page.getByTestId("day-empty-slot-14-user-vet-suji").click();
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
-  await expect(draftDrawer).toBeVisible();
+  const sharedWalkInForm = page.getByTestId("walk-in-reception-dialog").last();
+  await expect(sharedWalkInForm).toBeVisible();
 
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
-  await page.getByLabel("접수 환자 검색어").fill("루나");
+  await sharedWalkInForm.getByLabel("환자 검색").fill("루나");
   await expect(
     page.getByRole("option", { name: /루나.*박지유/ }),
   ).toBeVisible();
   await expect.poll(() => lookupQueries.includes("루나")).toBe(true);
   await page.getByRole("option", { name: /루나.*박지유/ }).click();
-  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
-    "루나",
+  await expect(sharedWalkInForm.getByLabel("환자 검색")).toHaveValue(
+    /루나 .* 박지유/,
   );
 
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
-  await page.getByLabel("접수 환자 검색어").fill("없는");
+  await sharedWalkInForm.getByLabel("환자 검색").fill("없는");
   await expect(page.getByText("검색 결과가 없습니다.")).toBeVisible();
 
-  await page.getByLabel("접수 환자 검색어").fill("오류");
+  await sharedWalkInForm.getByLabel("환자 검색").fill("오류");
   await expect(
     page.getByText("환자 검색을 불러오지 못했습니다."),
   ).toBeVisible();
@@ -5803,34 +6071,32 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
   expect(quarterSlotInsets.right).toBe(0);
   await quarterSlot.click();
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
   await expect(draftDrawer.getByText("접수구분")).toHaveCount(0);
   await expect(
     draftDrawer.getByText("진료 시간 안에서 예약 가능한 시간을 선택합니다."),
   ).toHaveCount(0);
-  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
-    "보호자/동물 선택",
-  );
+  await expect(draftDrawer.getByLabel("환자 검색")).toHaveValue("");
   await expect(draftDrawer.getByRole("button", { name: "생성" })).toBeDisabled();
   await expect(draftDrawer.getByLabel("담당의")).toContainText("이수지");
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:15");
-  await expect(draftDrawer.getByLabel("소요시간")).toContainText("15분");
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 2:15");
+  await expect(draftDrawer.getByLabel("예상소요시간")).toContainText("15분");
   const draftControlMetrics = await draftDrawer.evaluate((drawer) => {
     const getControl = (label: string) =>
       drawer.querySelector(`[aria-label="${label}"]`);
-    const patient = getControl("보호자 및 동물검색")?.getBoundingClientRect();
+    const patient = getControl("환자 검색")?.getBoundingClientRect();
     const weight = getControl("체중")?.getBoundingClientRect();
-    const visitPurpose = getControl("방문 목적")?.getBoundingClientRect();
-    const memo = getControl("접수/예약 메모")?.getBoundingClientRect();
+    const visitPurpose = getControl("방문목적")?.getBoundingClientRect();
+    const memo = getControl("접수 메모")?.getBoundingClientRect();
 
     return {
       controlHeights: [
-        "보호자 및 동물검색",
+        "환자 검색",
         "체중",
         "담당의",
-        "진료시작시간",
-        "소요시간",
+        "접수시간",
+        "예상소요시간",
       ].map((label) =>
         Math.round(getControl(label)?.getBoundingClientRect().height ?? 0),
       ),
@@ -5840,7 +6106,7 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
         visitPurpose && memo ? Math.abs(visitPurpose.height - memo.height) : null,
     };
   });
-  expect(draftControlMetrics.controlHeights).toEqual([36, 36, 36, 36, 36]);
+  expect(draftControlMetrics.controlHeights).toEqual([32, 32, 32, 32, 32]);
   expect(draftControlMetrics.patientWeightWidthDelta).not.toBeNull();
   expect(draftControlMetrics.patientWeightWidthDelta ?? 999).toBeLessThanOrEqual(
     1,
@@ -5880,14 +6146,16 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
       .filter({ hasText: "14:15" }),
   ).toHaveCount(0);
 
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await draftDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
-  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
-    "나비",
+  await expect(draftDrawer.getByLabel("환자 검색")).toHaveValue(
+    /나비 .* 오세아/,
   );
+  await draftDrawer.getByLabel("방문목적").fill("현장 접수");
   await expect(draftDrawer.getByRole("button", { name: "생성" })).toBeEnabled();
   await draftDrawer.getByRole("button", { name: "생성" }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
+  await expect(page.getByText("접수가 완료되었습니다")).toBeVisible();
   expect(walkInCreate.latestBody).toMatchObject({
     durationMinutes: 15,
     patientId: "patient-nabi",
@@ -6052,63 +6320,26 @@ test("reception clears the draft schedule card on cancel or another selection", 
   );
 
   await quarterSlot.click();
-  let draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  let draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
   await expect(calendarDraftCard).toBeVisible();
 
   await draftDrawer.getByRole("button", { name: "취소" }).click();
   await expect(calendarDraftCard).toHaveCount(0);
-  await expect(page).not.toHaveURL(/drawer=reception-draft-task/);
+  await expect(page).not.toHaveURL(/drawer=reception-form/);
 
   await quarterSlot.click();
-  draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
   await expect(calendarDraftCard).toBeVisible();
-  await page.evaluate(() => {
-    const drawer = document.querySelector('[data-testid="workspace-drawer"]');
-    const drawerHost = drawer?.parentElement;
-
-    if (!drawerHost) throw new Error("Expected workspace drawer host");
-
-    (
-      window as unknown as { __workspaceDrawerRemovals: number }
-    ).__workspaceDrawerRemovals = 0;
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.removedNodes) {
-          if (!(node instanceof HTMLElement)) continue;
-          if (
-            node.matches('[data-testid="workspace-drawer"]') ||
-            node.querySelector('[data-testid="workspace-drawer"]')
-          ) {
-            (
-              window as unknown as { __workspaceDrawerRemovals: number }
-            ).__workspaceDrawerRemovals += 1;
-          }
-        }
-      }
-    });
-    observer.observe(drawerHost, { childList: true });
-    (
-      window as unknown as { __workspaceDrawerObserver: MutationObserver }
-    ).__workspaceDrawerObserver = observer;
-  });
 
   await page.getByTestId("day-empty-slot-15-user-vet-suji-slot-1500").click();
   const replacementDraftCard = page.locator(
     '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m900"]',
   );
-  draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("15:00");
-  await expect(page.getByTestId("workspace-drawer")).toHaveCount(1);
-  await page.waitForTimeout(250);
-  expect(
-    await page.evaluate(
-      () =>
-        (window as unknown as { __workspaceDrawerRemovals?: number })
-          .__workspaceDrawerRemovals ?? 0,
-    ),
-  ).toBe(0);
+  draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 3:00");
+  await expect(page.getByTestId("reception-right-panel")).toBeVisible();
   await expect(calendarDraftCard).toHaveCount(0);
   await expect(replacementDraftCard).toBeVisible();
   await expect(
@@ -6136,18 +6367,13 @@ test("reception clears the draft schedule card when the draft drawer shell close
 
   await quarterSlot.click();
   await expect(
-    page.getByTestId("reception-draft-task-drawer").last(),
+    page.getByTestId("walk-in-reception-dialog").last(),
   ).toBeVisible();
   await expect(calendarDraftCard).toBeVisible();
 
-  await page
-    .getByTestId("workspace-drawer")
-    .last()
-    .getByRole("button", { name: "상세 닫기" })
-    .click();
-
-  await expect(page).not.toHaveURL(/drawer=reception-draft-task/);
+  await page.getByRole("button", { name: "우측 사이드 패널 닫기" }).click();
   await expect(calendarDraftCard).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
 });
 
 test("reception clears an active drag preview immediately when selecting an existing schedule", async ({
@@ -6208,7 +6434,7 @@ test("reception clears an active drag preview immediately when selecting an exis
   );
 
   await appointmentCard.click();
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(page.getByText("예약 상세").first()).toBeVisible();
 });
 
@@ -6313,7 +6539,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
   );
   await expect(outsideBusinessSlot).toHaveAttribute("aria-disabled", "true");
   await outsideBusinessSlot.click({ force: true });
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -6323,7 +6549,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
   );
   await expect(elapsedSlot).toHaveAttribute("aria-disabled", "true");
   await elapsedSlot.click({ force: true });
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -6333,9 +6559,9 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
   );
   await expect(lunchSlot).toHaveAttribute("aria-disabled", "false");
   await lunchSlot.click();
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("12:15");
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 12:15");
   await draftDrawer.getByRole("button", { name: "취소" }).click();
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
@@ -6391,7 +6617,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
     );
   });
 
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -6446,7 +6672,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
     );
   });
 
-  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -6561,18 +6787,19 @@ test("reception creates a draft task from a dragged calendar range", async ({
     );
   }, dragEndPoint);
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
-  await expect(draftDrawer.getByLabel("소요시간")).toContainText("150분");
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 2:00");
+  await expect(draftDrawer.getByLabel("예상소요시간")).toContainText("150분");
   const calendarDraftCard = page.locator(
     '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m840"]',
   );
   await expect(calendarDraftCard).toBeVisible();
   await expect(calendarDraftCard).toContainText("14:00 - 16:30");
 
-  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await draftDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await draftDrawer.getByLabel("방문목적").fill("현장 접수");
   await draftDrawer.getByRole("button", { name: "생성" }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
   expect(walkInCreate.latestBody).toMatchObject({
@@ -6589,6 +6816,103 @@ test("reception creates a draft task from a dragged calendar range", async ({
     .filter({ hasText: "14:00" });
   await expect(draftCard).toBeVisible();
   await expect(draftCard).toContainText("14:00-16:30");
+});
+
+test("calendar drag create failure shows an error toast without committing a walk-in", async ({
+  page,
+}) => {
+  let walkInCreateCount = 0;
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/walk-in-encounters",
+    async (route) => {
+      walkInCreateCount += 1;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 500,
+          error: "db_write_failed",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501",
+  );
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+
+  const emptySlot = page.getByTestId("day-empty-slot-14-user-vet-suji");
+  await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + 2,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+  });
+  const dragEndPoint = await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    const endPoint = {
+      x: rect.left + 16,
+      y: rect.top + rect.height * 2.3,
+    };
+
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: endPoint.x,
+        clientY: endPoint.y,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+
+    return endPoint;
+  });
+  await emptySlot.evaluate((slot, point) => {
+    slot.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        buttons: 0,
+        clientX: point.x,
+        clientY: point.y,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+  }, dragEndPoint);
+
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
+  await expect(draftDrawer).toBeVisible();
+  await draftDrawer.getByLabel("환자 검색").fill("나비");
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await draftDrawer.getByLabel("방문목적").fill("현장 접수");
+  await draftDrawer.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => walkInCreateCount).toBe(1);
+  await expect(page.getByText("접수를 생성할 수 없습니다.")).toBeVisible();
+  await expect(page.getByText("접수가 완료되었습니다")).toHaveCount(0);
+  await expect(
+    page
+      .locator('[data-testid^="walkin-card-"]')
+      .filter({ hasText: "나비" })
+      .filter({ hasText: "14:00" }),
+  ).toHaveCount(0);
 });
 
 test("reception creates a future dragged calendar range as a reservation", async ({
@@ -6672,12 +6996,9 @@ test("reception creates a future dragged calendar range as a reservation", async
     "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501",
   );
   await expect(page.getByText("예약 상세").first()).toBeVisible();
-  await page
-    .getByTestId("reception-date-control")
-    .getByRole("button", { name: "다음 날짜" })
-    .click();
+  await page.getByTestId("side-panel-mini-calendar-day-2026-05-02").click();
   await expect(
-    page.getByRole("button", { name: "26.05.02 (토) 날짜 선택" }),
+    page.getByTestId("side-panel-mini-calendar-day-2026-05-02"),
   ).toBeVisible();
 
   const emptySlot = page.getByTestId("day-empty-slot-10-user-vet-suji");
@@ -6730,9 +7051,7 @@ test("reception creates a future dragged calendar range as a reservation", async
   }, dragEndPoint);
 
   const reservationDrawer = page
-    .getByRole("complementary")
-    .filter({ hasText: "예약 생성" })
-    .filter({ hasText: "26.05.02 · 10:00" })
+    .getByTestId("reception-right-panel")
     .getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
   await expect(reservationDrawer.getByText("접수 생성")).toHaveCount(0);
@@ -6740,7 +7059,7 @@ test("reception creates a future dragged calendar range as a reservation", async
   await expect(reservationDrawer.getByLabel("예약일")).toContainText("26.05.02");
   await expect(reservationDrawer.getByLabel("예약시간")).toContainText("10:00");
   const durationText =
-    (await reservationDrawer.getByLabel("예상시간").textContent()) ?? "";
+    (await reservationDrawer.getByLabel("예상소요시간").textContent()) ?? "";
   const expectedDurationMinutes = Number(durationText.match(/\d+/)?.[0]);
   expect(expectedDurationMinutes).toBeGreaterThan(30);
   await expect(reservationDrawer.getByLabel("담당의")).toContainText("이수지");
@@ -6770,11 +7089,9 @@ test("reception creates a future dragged calendar range as a reservation", async
   expect(String(latestAppointmentBody?.scheduledStartAt)).toBe(
     "2026-05-02T10:00:00+09:00",
   );
-  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  await expect(page.getByText("예약이 완료되었습니다")).toBeVisible();
   await expect(
-    page
-      .locator('[data-testid^="appointment-card-"]')
-      .filter({ hasText: "미래 드래그 예약 생성" }),
+    page.getByTestId("appointment-card-appointment-future-drag-den516"),
   ).toBeVisible();
 });
 
@@ -6836,13 +7153,13 @@ test("reception normalizes a reverse dragged calendar range", async ({
     );
   });
 
-  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   const calendarDraftCard = page.locator(
     '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m840"]',
   );
   await expect(draftDrawer).toBeVisible();
-  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
-  await expect(draftDrawer.getByLabel("소요시간")).toContainText("90분");
+  await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 2:00");
+  await expect(draftDrawer.getByLabel("예상소요시간")).toContainText("90분");
   await expect(calendarDraftCard).toBeVisible();
   await expect(calendarDraftCard).toContainText("14:00 - 15:30");
 });

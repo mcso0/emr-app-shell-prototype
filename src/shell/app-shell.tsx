@@ -263,7 +263,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     const receptionRightPanelDrawerFromUrl =
       drawer?.startsWith("reception-appointment:") ||
       drawer?.startsWith("reception-appointment-check-in-form:") ||
-      drawer?.startsWith("reception-draft-task:") ||
       drawer?.startsWith("reception-encounter:") ||
       drawer?.startsWith("reception-form:") ||
       drawer?.startsWith("reception-reservation-form:");

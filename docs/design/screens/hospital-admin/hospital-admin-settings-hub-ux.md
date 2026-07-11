@@ -2,14 +2,15 @@
 id: DESIGN-SCREEN-HOSPITAL-ADMIN-SETTINGS-HUB
 type: Screen Spec
 title: "Hospital Admin Settings Hub UX"
-description: "UX flow and screen-only mock implementation direction for the 병원관리 settings hub screens."
+description: "UX flow for the 병원관리 settings hub, including dedicated session-only 병원기본설정 and interactive 근무표 screens."
 status: implemented
 area: design
 doc_type: screen-spec
 tags: [hospital-admin, settings, ux-flow, screen-concept]
 related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md"
-  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-hospital-basic-settings-ui.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-flex-schedule-session-ui.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-005-hospital-basic-settings-ui.md"
 last_updated: 2026-07-11
 ---
 
@@ -44,6 +45,7 @@ flowchart LR
 - Keep account/profile settings under the profile menu.
 - Open each target item from the existing hospital-admin side panel.
 - Hide save controls until the user changes an editable value. Show one fixed bottom change bar with save and revert actions while a draft is dirty.
+- Use explicit `취소` and `시안 저장` controls for static screen-only mocks; use add/edit/approval/publish controls for `근무표`.
 - Mark future data/API needs in docs, not as noisy in-app explanation.
 - Preserve `Order 관리` side-panel child navigation and drawer behavior.
 
@@ -55,7 +57,7 @@ flowchart LR
 | 병원구성원 관리 | Existing table + invite/edit sheets | Role/job controls | Keep existing screen; improve language and relation to role work profiles later |
 | 역할별 업무 관리 | Role-work matrix | Default assignment controls | Distinguish from raw permission editing |
 | 공간/시간 관리 | Room/status table | Scheduling rule controls | Avoid full calendar editor in this phase |
-| 근무표 | Staff/week grid | Coverage rule controls | Screen-only until schedule data model is scoped |
+| 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Interactive session state only; no DB/API or notification claim |
 | 바이탈 관리 | Vital range table | Alert policy controls | No clinical automation claim |
 | 감사 로그 | Existing audit table | Search/filter | Keep minimal read-only admin review |
 
@@ -103,9 +105,11 @@ flowchart LR
 ### 근무표
 
 1. Admin selects `근무표`.
-2. Screen shows coverage highlights and weekly staff grid.
-3. Admin reviews lock/vacancy alert controls.
-4. Future implementation writes schedule templates and coverage rules.
+2. Admin uses `주간 편성` to create, edit, copy, turn into leave, or delete staff/day shifts; unassigned shifts remain explicit.
+3. Admin switches to `일간 커버리지` to inspect time-axis coverage by role and sees availability conflicts or coverage gaps before publishing.
+4. Staff switches to `내 근무`, reviews the personal weekly calendar and availability, then submits a leave or shift-change request.
+5. Admin opens the staff detail sheet, approves or declines the request, and approved changes set the schedule to `재게시 필요`.
+6. The publish dialog blocks publication while a conflict or coverage gap exists.
 
 ### 바이탈 관리
 
@@ -130,6 +134,7 @@ flowchart LR
 - Verify top-bar gear button is removed.
 - Verify the dedicated basic-settings screen keeps save hidden initially, surfaces the change bar after an edit, and preserves its session snapshot across hospital-admin navigation.
 - Verify read-only identity, copy feedback, schedule propagation, exception CRUD, validation focus, and compact single-column layout.
+- Verify static target screens can perform mock `시안 저장`; verify `근무표` CRUD, request approval, conflict review, and publish state separately.
 
 ## Future Development Spec Backlog
 
@@ -138,6 +143,6 @@ flowchart LR
 | Hospital profile persistence | DB table/RPC/API, RLS, admin-only mutation, asset upload rules |
 | Role work profiles | Data model, relation to permission policies, Home assignment read model |
 | Space/time | Room model, operating hours model, slot rules, conflict validation |
-| Schedule | Shift templates, weekly schedules, coverage alerts, staff self-view policy |
+| Schedule | Persisted shifts/templates, coverage rules, availability, staff self-view policy, audit events, server authorization, and notifications |
 | Vitals | Versioned thresholds, species defaults, clinical warning boundary, audit event |
 | Audit | Add settings mutation events and safe summary mapping |

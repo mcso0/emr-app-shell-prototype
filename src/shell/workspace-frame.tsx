@@ -57,7 +57,6 @@ export function WorkspaceFrame({
   const isReceptionDrawer =
     activeDrawer?.type === "reception-appointment" ||
     activeDrawer?.type === "reception-appointment-check-in-form" ||
-    activeDrawer?.type === "reception-draft-task" ||
     activeDrawer?.type === "reception-encounter" ||
     activeDrawer?.type === "reception-form" ||
     activeDrawer?.type === "reception-reservation-form";
@@ -82,8 +81,6 @@ export function WorkspaceFrame({
             ? "입원 상세"
             : activeDrawer?.type === "reception-appointment"
               ? "예약 상세"
-              : activeDrawer?.type === "reception-draft-task"
-                ? "접수 생성"
               : activeDrawer?.type === "reception-appointment-check-in-form"
                 ? "접수 생성"
               : activeDrawer?.type === "reception-encounter"
@@ -105,9 +102,7 @@ export function WorkspaceFrame({
       : SHELL_LAYOUT.drawer.defaultWidth;
   const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
   const drawerMotionKey = activeDrawer
-    ? activeDrawer.type === "reception-draft-task"
-      ? activeDrawer.type
-      : `${activeDrawer.type}-${activeDrawer.id}`
+    ? `${activeDrawer.type}-${activeDrawer.id}`
     : undefined;
   const effectiveContentAsideWidth = Math.max(
     contentAsideWidth,
