@@ -7,7 +7,7 @@ related_work:
   - DEN-183
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-20T00:00:00.000Z
+last_updated: 2026-07-11T00:00:00.000Z
 ---
 
 # Decision Log Index
@@ -22,6 +22,7 @@ This index collects durable product and operating decisions that future Codex se
 | Current Product MVP proves the connected outpatient workflow and local-first foundations; it is not production launch. | [Product MVP Scope](../roadmap/product-mvp-scope.md)                                                                                                        |
 | Remote Supabase, production deploy, real email, payment, real data, and role policy changes require explicit approval. | [Launch Approval Gates](https://github.com/mcso0/emr-app-shell-prototype/blob/main/docs/engineering/auth-security/auth-login/saas-launch-approval-gates.md) |
 | Workspace membership, not personal profile, is the authorization source.                                               | [Role And Permission Source Map](../domain/role-permission-source-map.md)                                                                                   |
+| Member offboarding uses `보관됨`, not deletion; permission roles require replacement on deactivation while job positions preserve member history. | [Membership, Permission Role, and Job Position Lifecycle](../domain/membership-role-job-lifecycle.md) |
 | Outpatient work should be judged by state transitions, not isolated screens.                                           | [Outpatient Workflow State Model](../domain/outpatient-workflow-state-model.md)                                                                             |
 | Domain entities are product concepts first; DB implementation belongs in engineering data-model docs.                  | [EMR Domain Entity Map](../domain/emr-domain-entity-map.md)                                                                                                 |
 | GitBook is a readable portal; repo `docs/` remains the editing source of truth.                                        | [Docs Portal](../../)                                                                                                                                       |

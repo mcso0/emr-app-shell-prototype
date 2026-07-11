@@ -209,14 +209,19 @@ erDiagram
 | `department` | text nullable | 진료, 조제, 검사, 영상, 입원 등 |
 | `title` | text nullable | 직책 |
 | `hire_date` | date nullable | |
-| `status` | text | `pending`, `active`, `inactive` |
+| `status` | text | `active`, `inactive`, `archived` |
 | `invited_by_user_id` | uuid fk nullable | |
 | `activated_at` | timestamptz nullable | |
 | `deactivated_at` | timestamptz nullable | |
+| `archived_at` | timestamptz nullable | 병원 구성원 관계 보관 시각 |
+| `archived_by_user_id` | uuid fk nullable | 보관 처리자 |
+| `archived_reason` | text nullable | 보관 사유, 보관 상태에서는 필수 |
+| `restored_at` | timestamptz nullable | 보관 복구 시각 |
+| `restored_by_user_id` | uuid fk nullable | 보관 복구 처리자 |
 
 Unique: `(workspace_id, user_id)`.
 
-Note: MVP는 additive multi-role 정책을 사용하므로 `roles text[]`를 둔다. `hospital_admin`이 포함되면 전체 병원관리자 권한을 가진다. 마지막 active `hospital_admin` 제거/강등/비활성화는 client UI가 아니라 server-side transaction 또는 private RPC에서 차단해야 한다.
+Note: MVP는 additive multi-role 호환 정책을 사용하므로 `roles text[]`를 유지하되, 제품 권한의 기준은 workspace permission-role assignment다. 마지막 active owner 제거/강등/비활성화/보관은 client UI가 아니라 server-side transaction 또는 private RPC에서 차단해야 한다. `archived`는 삭제가 아니라 관계 종료와 이력 보존을 의미하며 복구 결과는 항상 `inactive`다. 상세 계약은 [Membership, Permission Role, and Job Position Lifecycle](../../product/domain/membership-role-job-lifecycle.md)을 따른다.
 
 ### `workspace_invitations`
 

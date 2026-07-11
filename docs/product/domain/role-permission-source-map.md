@@ -65,12 +65,15 @@ Known legacy or compatibility names:
 ## Product Rules
 
 * Workspace membership is the authorization source.
+* Membership, permission-role, job-position, and invitation lifecycle follows [Membership, Permission Role, and Job Position Lifecycle](membership-role-job-lifecycle.md).
 * Personal profile is never the authorization source.
 * Permission role and job position / 직무 are separate concepts.
 * Job position / 직무 is display/filter metadata and is never the authorization source.
 * MVP permission roles are allow-only. Do not add deny rules without a product decision.
 * Every active workspace must retain at least one active `소유자`.
 * Custom roles cannot grant owner-only authority, wildcard authority, or cross-workspace authority.
+* Custom-role deactivation requires an active same-workspace replacement for non-archived memberships and pending invitations; archived memberships preserve historical role attribution.
+* Job-position deactivation preserves existing member assignments, blocks new selection, and requires replacement only for affected pending invitations.
 * Role/permission policy changes require explicit 승욱 approval.
 
 ## Required Link Targets

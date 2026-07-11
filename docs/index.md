@@ -39,6 +39,7 @@ Use detailed history, completed reports, and archived plans only when the active
 | Outpatient workflow states | [Outpatient Workflow State Model](product/domain/outpatient-workflow-state-model.md) |
 | Domain entity map | [EMR Domain Entity Map](product/domain/emr-domain-entity-map.md) |
 | Role/permission source | [Role Permission Source Map](product/domain/role-permission-source-map.md) |
+| Member/role/job lifecycle | [Membership, Permission Role, and Job Position Lifecycle](product/domain/membership-role-job-lifecycle.md) |
 | Mock/live boundary | [Mock Live Boundary Map](engineering/architecture/mock-live-boundary-map.md) |
 | Application security review | [Application Security Review Checklist](engineering/auth-security/application-security-review-checklist.md) |
 | Persistence/data security | [Persistence Data Security Checklist](engineering/auth-security/persistence-data-security-checklist.md) |

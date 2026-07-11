@@ -7,7 +7,7 @@ status: active
 area: product
 doc_type: area-index
 tags: [product-domain, data-requirements, workflow-rules]
-last_updated: 2026-06-16
+last_updated: 2026-07-11
 ---
 
 # Product Domain Docs
@@ -26,6 +26,7 @@ Actual schema, ERD, RLS, indexes, migrations, and persistence details belong in 
 ## Current Domain Sources
 
 - `workspace-auth-permissions.md`: workspace creation, membership, permission roles, job positions, permission behavior, and personal profile authorization boundaries.
+- `membership-role-job-lifecycle.md`: approved active/inactive/archive membership lifecycle, role replacement, job-position deactivation, restoration, and history-preservation rules.
 - `workspace-hospital-profile.md`: workspace-owned hospital identity, contact, business, brand, operating-hour, and deferred referral settings requirements.
 - `outpatient-workflow-state-model.md`: outpatient appointment, encounter, queue, chart, order, result, billing, and audit state transitions.
 - `emr-domain-entity-map.md`: product-level relationships between workspace, patient, guardian, encounter, order, invoice, payment, and audit.
