@@ -1,5 +1,40 @@
 create extension if not exists pgcrypto with schema extensions;
 
+insert into auth.users (
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at
+)
+values (
+  '00000000-0000-4000-8000-000000000001',
+  'authenticated',
+  'authenticated',
+  'admin@clair.local',
+  extensions.crypt('local-password', extensions.gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"name":"송민재"}'::jsonb,
+  now(),
+  now()
+)
+on conflict (id) do update
+set
+  aud = excluded.aud,
+  role = excluded.role,
+  email = excluded.email,
+  encrypted_password = excluded.encrypted_password,
+  email_confirmed_at = excluded.email_confirmed_at,
+  raw_app_meta_data = excluded.raw_app_meta_data,
+  raw_user_meta_data = excluded.raw_user_meta_data,
+  updated_at = now();
+
 insert into public.users (id, display_name, initial, email, phone, status)
 values
   ('00000000-0000-4000-8000-000000000001', '송민재', 'SM', 'admin@clair.local', '010-0000-0001', 'active')
