@@ -2,7 +2,7 @@
 id: DESIGN-SCREEN-HOSPITAL-ADMIN-SETTINGS-HUB
 type: Screen Spec
 title: "Hospital Admin Settings Hub UX"
-description: "UX flow for the 병원관리 settings hub, including dedicated session-only 병원기본설정 and interactive 근무표 screens."
+description: "UX flow for the 병원관리 settings hub, including session-only 병원기본설정 and route-backed interactive 근무표 screens."
 status: implemented
 area: design
 doc_type: screen-spec
@@ -11,6 +11,7 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-flex-schedule-session-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-005-hospital-basic-settings-ui.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
 last_updated: 2026-07-11
 ---
 
@@ -57,7 +58,7 @@ flowchart LR
 | 병원구성원 관리 | Existing table + invite/edit sheets | Role/job controls | Keep existing screen; improve language and relation to role work profiles later |
 | 역할별 업무 관리 | Role-work matrix | Default assignment controls | Distinguish from raw permission editing |
 | 공간/시간 관리 | Room/status table | Scheduling rule controls | Avoid full calendar editor in this phase |
-| 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Interactive session state only; no DB/API or notification claim |
+| 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Supabase mode uses route/RPC persistence; mock mode remains explicit session-only fallback |
 | 바이탈 관리 | Vital range table | Alert policy controls | No clinical automation claim |
 | 감사 로그 | Existing audit table | Search/filter | Keep minimal read-only admin review |
 
