@@ -68,7 +68,10 @@ export type WorkspaceInvitationGatewayResult =
   | {
       ok: false;
       status: 409;
-      denialReason: "duplicate_pending_invitation" | "active_membership_exists";
+      denialReason:
+        | "duplicate_pending_invitation"
+        | "active_membership_exists"
+        | "archived_membership_requires_restore";
     }
   | { ok: false; status: 500; error: "db_write_failed" };
 
@@ -103,7 +106,10 @@ export type WorkspaceInvitationResult =
   | {
       ok: false;
       status: 409;
-      denialReason: "duplicate_pending_invitation" | "active_membership_exists";
+      denialReason:
+        | "duplicate_pending_invitation"
+        | "active_membership_exists"
+        | "archived_membership_requires_restore";
     }
   | {
       ok: false;
@@ -243,6 +249,14 @@ export function createSupabaseWorkspaceInvitationGateway(
       });
 
       if (error) {
+        if (error.message?.includes("archived_membership_requires_restore")) {
+          return {
+            ok: false,
+            status: 409,
+            denialReason: "archived_membership_requires_restore",
+          };
+        }
+
         if (error.message?.includes("duplicate_pending_invitation")) {
           return {
             ok: false,
@@ -306,6 +320,7 @@ function createDemoWorkspaceInvitationGateway(): WorkspaceInvitationGateway {
     async createInvitation(write) {
       const pendingEmails = new Set(["pending.staff@hanbit.test"]);
       const activeMemberEmails = new Set(["active.member@hanbit.test"]);
+      const archivedMemberEmails = new Set(["archived.member@hanbit.test"]);
 
       if (pendingEmails.has(write.email)) {
         return {
@@ -320,6 +335,14 @@ function createDemoWorkspaceInvitationGateway(): WorkspaceInvitationGateway {
           ok: false,
           status: 409,
           denialReason: "active_membership_exists",
+        };
+      }
+
+      if (archivedMemberEmails.has(write.email)) {
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "archived_membership_requires_restore",
         };
       }
 

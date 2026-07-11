@@ -92,7 +92,7 @@ export async function PATCH(request: Request, { params }: MembershipStatusRouteC
       input: {
         workspaceId,
         actorUserId: identity.actorUserId,
-        eventType: "workspace.membership_status_changed",
+        eventType: getMembershipStatusAuditEventType(nextStatus),
         targetType: "membership",
         targetId: membershipId,
         requestId: getAuditRequestId(request),
@@ -138,7 +138,7 @@ export async function PATCH(request: Request, { params }: MembershipStatusRouteC
     input: {
       workspaceId,
       actorUserId: identity.actorUserId,
-      eventType: "workspace.membership_status_changed",
+      eventType: getMembershipStatusAuditEventType(nextStatus),
       targetType: "membership",
       targetId: membershipId,
       requestId: getAuditRequestId(request),
@@ -173,4 +173,10 @@ async function readJsonBody(request: Request): Promise<Record<string, unknown>> 
 
 function getBodyString(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function getMembershipStatusAuditEventType(status: "active" | "inactive") {
+  return status === "active"
+    ? "workspace.membership_reactivated" as const
+    : "workspace.membership_deactivated" as const;
 }

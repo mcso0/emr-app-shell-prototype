@@ -110,6 +110,20 @@ test("workspace invitation route blocks duplicate pending and active member emai
   });
 });
 
+test("workspace invitation route directs archived member email to restore", async ({ request }) => {
+  const response = await postInvitation(request, {
+    actor: "user-admin",
+    email: "archived.member@hanbit.test",
+    workspaceId: "workspace-den159-duplicates",
+  });
+
+  expect(response.status()).toBe(409);
+  await expectJson(response, {
+    ok: false,
+    denialReason: "archived_membership_requires_restore",
+  });
+});
+
 test("workspace invitation route denies missing, unauthorized, and invalid requests", async ({
   request,
 }) => {
@@ -185,6 +199,7 @@ test("workspace invitation persistence boundary stays server-only", () => {
   expect(serverSource).toContain("p_job_position_id");
   expect(serverSource).toContain("p_permission_role_key");
   expect(serverSource).toContain("p_job_position_key");
+  expect(serverSource).toContain("archived_membership_requires_restore");
   expect(`${serverSource}\n${emailDeliverySource}`).toContain("not_sent_approval_gated");
   expect(`${serverSource}\n${emailDeliverySource}`).toContain("not_generated_approval_gated");
   expect(serverSource).not.toMatch(/inviteToken|rawToken|magicLink|otp/i);

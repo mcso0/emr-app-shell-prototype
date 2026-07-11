@@ -61,6 +61,7 @@ export function createDemoRoleUpdatePermissionAdapter({
     now,
     users: [
       { id: "user-admin", status: "active", displayName: "송민재" },
+      { id: "user-manager", status: "active", displayName: "운영 관리자" },
       { id: "user-vet", status: "active", displayName: "이수지" },
       { id: "user-desk", status: "active", displayName: "최유나" },
       { id: "user-tech", status: "active", displayName: "송하윤" },
@@ -73,6 +74,19 @@ export function createDemoRoleUpdatePermissionAdapter({
         workspaceId: demoWorkspaceId,
         userId: "user-admin",
         roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-manager",
+        workspaceId: demoWorkspaceId,
+        userId: "user-manager",
+        roles: ["front_desk"],
+        permissionRole: {
+          key: "admin",
+          label: "관리자",
+          roleType: "admin",
+          permissionIds: ["*"],
+        },
         status: "active",
       },
       {

@@ -5,7 +5,7 @@ async function archiveMembership(
   options: {
     actor?: string;
     membershipId?: string;
-    action?: "soft_delete" | "restore";
+    action?: "archive" | "soft_delete" | "restore";
     reason?: string;
   } = {}
 ) {
@@ -14,27 +14,27 @@ async function archiveMembership(
     {
       headers: options.actor ? { "x-clair-demo-session-user-id": options.actor } : {},
       data: {
-        action: options.action ?? "soft_delete",
+        action: options.action ?? "archive",
         ...(options.reason ? { reason: options.reason } : {}),
       },
     }
   );
 }
 
-test("membership archive route soft-deletes and restores a member through the server boundary", async ({
+test("membership archive route archives and restores a member through the server boundary", async ({
   request,
 }) => {
-  const softDeleted = await archiveMembership(request, {
+  const archived = await archiveMembership(request, {
     actor: "user-admin",
     reason: "퇴사 처리",
   });
 
-  expect(softDeleted.status()).toBe(200);
-  await expect(softDeleted.json()).resolves.toEqual(
+  expect(archived.status()).toBe(200);
+  await expect(archived.json()).resolves.toEqual(
     expect.objectContaining({
       ok: true,
-      updatedStatus: "soft_deleted",
-      action: "soft_delete",
+      updatedStatus: "archived",
+      action: "archive",
     })
   );
 
@@ -49,6 +49,25 @@ test("membership archive route soft-deletes and restores a member through the se
       ok: true,
       updatedStatus: "inactive",
       action: "restore",
+    })
+  );
+});
+
+test("membership archive route normalizes legacy soft_delete input to archive output", async ({
+  request,
+}) => {
+  const response = await archiveMembership(request, {
+    actor: "user-admin",
+    action: "soft_delete",
+    reason: "legacy client compatibility",
+  });
+
+  expect(response.status()).toBe(200);
+  await expect(response.json()).resolves.toEqual(
+    expect.objectContaining({
+      ok: true,
+      updatedStatus: "archived",
+      action: "archive",
     })
   );
 });
@@ -79,5 +98,20 @@ test("membership archive route blocks missing reason, self actions, and unauthor
   expect(denied.status()).toBe(403);
   await expect(denied.json()).resolves.toEqual(
     expect.objectContaining({ ok: false, denialReason: "permission_missing" })
+  );
+});
+
+test("membership archive route blocks a non-owner manager from archiving an owner", async ({
+  request,
+}) => {
+  const response = await archiveMembership(request, {
+    actor: "user-manager",
+    membershipId: "membership-admin",
+    reason: "권한 경계 확인",
+  });
+
+  expect(response.status()).toBe(409);
+  await expect(response.json()).resolves.toEqual(
+    expect.objectContaining({ ok: false, denialReason: "owner_target_protected" })
   );
 });

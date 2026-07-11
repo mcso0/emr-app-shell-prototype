@@ -66,6 +66,8 @@ test("role and status write paths define DB transaction wrappers", () => {
   expect(roleRoute).toContain("p_permission_role_key");
   expect(roleRoute).toContain("p_job_position_key");
   expect(statusRoute).toContain("clair_update_workspace_membership_status");
+  expect(statusRoute).toContain("workspace.membership_deactivated");
+  expect(statusRoute).toContain("workspace.membership_reactivated");
   expect(migrationSource).toContain("private.update_workspace_membership_roles");
   expect(migrationSource).toContain("last_admin");
   expect(migrationSource).toContain("audit hook");
