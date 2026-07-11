@@ -786,42 +786,6 @@ const hospitalAdminConceptScreens: Record<
   HospitalAdminConceptSection,
   HospitalAdminConceptScreenConfig
 > = {
-  settings: {
-    section: "settings",
-    title: "병원기본설정",
-    badge: "Phase 1",
-    breadcrumb: "병원관리 / 병원 기본 설정",
-    description: "워크스페이스 병원 프로필과 기본 운영값",
-    highlights: [
-      { label: "워크스페이스", value: "workspace-clair-cheongdam" },
-      { label: "대표번호", value: "02-6203-7582" },
-      { label: "운영시간", value: "평일 09:00-19:00" },
-      { label: "프로필 상태", value: "관리자 확인 필요" },
-    ],
-    fields: [
-      { label: "병원명", value: "VIP동물의료센터 청담점" },
-      { label: "워크스페이스 ID", value: "workspace-clair-cheongdam" },
-      { label: "주소", value: "서울 강남구 도산대로 000", kind: "textarea" },
-      { label: "대표 전화", value: "02-6203-7582" },
-      { label: "대표 연락처", value: "010-0000-7582" },
-      { label: "팩스", value: "02-6203-7583" },
-      { label: "대표자/원장명", value: "김청담" },
-      { label: "사업자등록번호", value: "000-00-00000" },
-      { label: "홈페이지", value: "https://clair-cheongdam.example" },
-      { label: "인스타그램", value: "@clair.cheongdam" },
-    ],
-    table: {
-      title: "운영시간 요약",
-      columns: ["요일", "진료", "점심", "예약"],
-      rows: [
-        ["월-금", "09:00-19:00", "13:00-14:00", "15분 단위"],
-        ["토", "09:00-17:00", "12:30-13:30", "20분 단위"],
-        ["일/공휴일", "응급 예약만", "-", "전화 확인"],
-      ],
-    },
-    impactItems: ["접수/예약 표시명", "영수증/청구서 병원 정보", "보호자 안내 문구", "향후 대외 문서"],
-    modelItems: ["workspace_hospital_profile", "workspace_operating_hours", "workspace_brand_assets"],
-  },
   "space-time": {
     section: "space-time",
     title: "공간/시간 관리",

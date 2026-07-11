@@ -341,6 +341,8 @@ test("hospital schedule restores keyboard focus after closing the shift sheet", 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: "근무 추가" })).toHaveCount(0);
   await expect(addShift).toBeFocused();
+});
+
 test("hospital admin role and permission screen replaces the static role-work concept", async ({
   page,
 }) => {
@@ -406,13 +408,12 @@ test("hospital admin syncs saved work defaults to another browser tab", async ({
 });
 
 test("hospital admin role screen stays compact and keyboard-safe", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/w/clair-demo/orders?modulePanel=open");
-  const sidePanel = page.getByTestId("hospital-admin-side-panel");
-  if ((await sidePanel.count()) === 0) {
-    await page.getByRole("button", { name: "사이드 패널 펼치기" }).click();
-  }
-  await sidePanel.getByRole("button", { name: "역할 및 권한" }).click();
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "역할 및 권한" })
+    .click();
+  await page.setViewportSize({ width: 390, height: 844 });
 
   const screen = page.getByTestId("hospital-admin-role-permission-screen");
   await expect(

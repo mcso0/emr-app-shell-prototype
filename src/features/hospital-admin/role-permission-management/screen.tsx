@@ -116,9 +116,11 @@ function getJobValidationMessage(reason: string) {
 }
 
 function WorkDefaultsPanel({
+  canManage,
   jobPositions,
   workspaceId,
 }: {
+  canManage: boolean;
   jobPositions: ReturnType<typeof getSessionWorkspaceJobPositions>;
   workspaceId: string;
 }) {
@@ -175,6 +177,7 @@ function WorkDefaultsPanel({
                 <Field key={field.key}>
                   <FieldLabel htmlFor={`role-work-default-${field.key}`}>{field.label}</FieldLabel>
                   <Select
+                    disabled={!canManage}
                     value={workDefaultsDraft[field.key]}
                     onValueChange={(value) => {
                       setWorkDefaultsDraft((current) => ({
@@ -221,7 +224,7 @@ function WorkDefaultsPanel({
                   ? "이 브라우저의 업무 기본값을 저장했습니다."
                   : "저장하지 않은 변경이 있습니다."}
               </p>
-              {isWorkDefaultsDirty ? (
+              {isWorkDefaultsDirty && canManage ? (
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="outline" onClick={() => setWorkDefaultsDraft(savedWorkDefaults)}>
                     취소
@@ -574,7 +577,12 @@ export function RolePermissionManagementScreen({
           </TabsContent>
 
           <TabsContent value="work-defaults" className="min-h-0">
-            <WorkDefaultsPanel key={workspaceId} workspaceId={workspaceId} jobPositions={jobPositions} />
+            <WorkDefaultsPanel
+              key={workspaceId}
+              canManage={workspace.canManage}
+              workspaceId={workspaceId}
+              jobPositions={jobPositions}
+            />
           </TabsContent>
         </Tabs>
       )}

@@ -9,6 +9,7 @@ import {
   readSessionWorkspacesState,
   type SessionWorkspacesState,
 } from "@/features/auth/workspace-session";
+import { getRoleManagementAccess } from "@/features/hospital-admin/role-permission-management/model";
 
 function readBrowserWorkspaceState() {
   if (typeof window === "undefined") return createEmptySessionWorkspacesState();
@@ -61,14 +62,14 @@ export function useWorkspaceRoleState(workspaceId: string) {
     [session]
   );
 
-  const canManage = session?.role === "hospital_admin" || session?.role === "supabase";
+  const access = getRoleManagementAccess(state, workspaceId, session);
 
   return {
     state,
     updateState,
     hydrated,
-    canView: Boolean(session),
-    canManage,
+    canView: access.canView,
+    canManage: access.canManage,
     workspaceId,
   };
 }

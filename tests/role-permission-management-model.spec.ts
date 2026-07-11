@@ -3,6 +3,7 @@ import {
   buildRolePermissionGroups,
   createRoleDraft,
   getRoleAssignedMembers,
+  getRoleManagementAccess,
   isRoleDraftDirty,
   validateRoleDraft,
 } from "../src/features/hospital-admin/role-permission-management/model";
@@ -11,6 +12,8 @@ import type {
   SessionWorkspacePermissionRole,
   SessionWorkspacesState,
 } from "../src/features/auth/workspace-session";
+
+const workspaceId = "workspace-a";
 
 const customRole: SessionWorkspacePermissionRole = {
   workspaceId: "workspace-a",
@@ -63,6 +66,38 @@ test("role permission model uses the legacy owner fallback for assigned members"
   expect(getRoleAssignedMembers(state, "workspace-a", "owner").map((member) => member.id)).toEqual([
     "membership-legacy-owner",
   ]);
+});
+
+test("role_permission:view allows local read-only access without catalog mutations", () => {
+  const access = getRoleManagementAccess(
+    {
+      ...state,
+      memberships: [
+        {
+          ...state.memberships[0],
+          userSessionId: "role-viewer",
+          roles: ["front_desk"],
+          permissionRoleKey: "role_viewer",
+        },
+      ],
+      permissionRoles: [
+        {
+          workspaceId,
+          roleKey: "role_viewer",
+          label: "권한 조회자",
+          roleType: "custom",
+          permissionIds: ["role_permission:view"],
+          isSystem: false,
+          isAssignable: true,
+          sortOrder: 200,
+        },
+      ],
+    },
+    workspaceId,
+    { id: "role-viewer", role: "front_desk" }
+  );
+
+  expect(access).toEqual({ canView: true, canManage: false });
 });
 
 test("custom role drafts reject owner-only and unknown permissions while keeping dirty state explicit", () => {

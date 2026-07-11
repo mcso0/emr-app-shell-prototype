@@ -10,7 +10,7 @@ test("role management handoff regression matrix covers UI, server, and DB guards
   expect(authSpec).toContain("hospital admin can edit active member permission role");
   expect(authSpec).toContain("role management UI blocks last active workspace owner");
   expect(authSpec).toContain("hospital admin manages custom role and job catalogs outside the invitation sheet");
-  expect(authSpec).toContain("non-admin roles cannot manage workspace invitations");
+  expect(authSpec).toContain("role_permission:view fixture can inspect roles but cannot manage invitations or catalogs");
   expect(serverSpec).toContain("role update server boundary denies missing, inactive, and unauthorized actors");
   expect(serverSpec).toContain("role update server boundary denies cross-workspace admin access");
   expect(writeSpec).toContain("membership status route enforces admin and last-admin guard");

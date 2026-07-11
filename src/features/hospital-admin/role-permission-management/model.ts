@@ -2,6 +2,7 @@ import {
   SESSION_WORKSPACE_OWNER_ONLY_PERMISSION_IDS,
   SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG,
   getSessionWorkspaceEffectivePermissionRoleKey,
+  getSessionWorkspacePermissionRoles,
   type SessionWorkspaceMembership,
   type SessionWorkspacePermissionRole,
   type SessionWorkspacesState,
@@ -40,6 +41,11 @@ export type RoleDraft = {
 export type RoleDraftValidationResult =
   | { valid: true }
   | { valid: false; reason: "empty_label" | "empty_permissions" | "owner_only_permission" | "invalid_permission" };
+
+export type RoleManagementViewer = {
+  id: string;
+  role: string;
+} | null;
 
 const groupDefinitions: Array<{
   id: Exclude<RolePermissionGroupId, "owner_only">;
@@ -176,4 +182,31 @@ export function validateRoleDraft(draft: RoleDraft): RoleDraftValidationResult {
 
 export function getRoleMemberLabel(member: SessionWorkspaceMembership) {
   return member.displayName || member.email || member.userSessionId;
+}
+
+export function getRoleManagementAccess(
+  state: Pick<SessionWorkspacesState, "memberships" | "permissionRoles">,
+  workspaceId: string,
+  viewer: RoleManagementViewer
+) {
+  const canManage = viewer?.role === "hospital_admin" || viewer?.role === "supabase";
+  const membership = viewer
+    ? state.memberships.find(
+        (item) =>
+          item.workspaceId === workspaceId && item.userSessionId === viewer.id && item.status === "active"
+      )
+    : null;
+  const permissionRole = membership
+    ? getSessionWorkspacePermissionRoles(state, workspaceId).find(
+        (role) => role.roleKey === getSessionWorkspaceEffectivePermissionRoleKey(membership)
+      )
+    : null;
+  const canView =
+    canManage ||
+    Boolean(
+      permissionRole?.permissionIds.includes("*") ||
+        permissionRole?.permissionIds.includes("role_permission:view")
+    );
+
+  return { canManage, canView };
 }
