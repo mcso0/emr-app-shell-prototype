@@ -2461,7 +2461,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
       className="group/lab-receipt-panel flex min-h-0 flex-1 flex-col"
       data-testid="lab-receipt-panel"
     >
-      <div className="flex h-14 items-center px-4">
+      <div className="flex h-[var(--clair-layout-drawer-header)] items-center px-4">
         <div className="relative flex min-w-0 max-w-full items-center">
           <h2 className="min-w-0 truncate text-sm font-semibold">장비 검사 수신함</h2>
           <span className="pointer-events-auto absolute left-full z-10 ml-1 flex w-7 shrink-0">
@@ -3549,7 +3549,7 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="imaging-summary-panel">
-      <div className="flex h-14 items-center justify-between px-4">
+      <div className="flex h-[var(--clair-layout-drawer-header)] items-center justify-between px-4">
         <h2 className="min-w-0 truncate text-sm font-semibold">종합소견</h2>
         <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
           {sameEncounterOrderCount}

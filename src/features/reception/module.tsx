@@ -8320,7 +8320,7 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
       aria-label={`${moduleLabel} 우측 사이드 패널`}
       data-testid="reception-right-panel"
     >
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--emr-line-default)] px-4">
+      <header className="flex h-[var(--clair-layout-drawer-header)] shrink-0 items-center justify-between border-b border-[var(--emr-line-default)] px-4">
         <div className="min-w-0 truncate emr-text-panel-title font-semibold text-foreground">
           {title}
         </div>
