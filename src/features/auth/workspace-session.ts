@@ -9,7 +9,7 @@ import {
 export type SessionWorkspaceSubscriptionStatus = "trialing" | "active" | "none";
 export type SessionWorkspaceRole = "hospital_admin" | "vet" | "technician" | "front_desk";
 export type SessionWorkspacePermissionRoleType = "owner" | "admin" | "standard" | "custom";
-export type SessionWorkspaceMembershipStatus = "pending" | "active" | "inactive" | "suspended";
+export type SessionWorkspaceMembershipStatus = "pending" | "active" | "inactive" | "suspended" | "soft_deleted";
 export type SessionWorkspaceInvitationStatus = "pending" | "accepted" | "canceled" | "expired";
 export type SessionWorkspaceAccessStatus =
   | "unknown"
@@ -17,6 +17,7 @@ export type SessionWorkspaceAccessStatus =
   | "pending"
   | "inactive"
   | "suspended"
+  | "soft_deleted"
   | "missing";
 
 export type WorkspaceCreationInput = {
@@ -133,6 +134,12 @@ export type SessionWorkspaceMembership = {
   createdAt: string;
   activatedAt?: string | null;
   deactivatedAt?: string | null;
+  deletedAt?: string | null;
+  deletedByUserId?: string | null;
+  deletedReason?: string | null;
+  restoredAt?: string | null;
+  restoredByUserId?: string | null;
+  lastLoginAt?: string | null;
 };
 
 export type SessionWorkspaceInvitation = {
@@ -965,6 +972,43 @@ export function deactivateSessionWorkspaceMembership(
   };
 }
 
+export function updateSessionWorkspaceMembershipStatus(
+  state: SessionWorkspacesState,
+  membershipId: string,
+  status: Extract<SessionWorkspaceMembershipStatus, "active" | "inactive" | "soft_deleted">,
+  metadata: Pick<SessionWorkspaceMembership, "deletedAt" | "deletedByUserId" | "deletedReason" | "restoredAt" | "restoredByUserId"> = {},
+  now = new Date().toISOString()
+): WorkspaceMembershipMutationResult {
+  const membership = state.memberships.find((item) => item.id === membershipId);
+  if (!membership) return { success: false, reason: "membership_not_found", state };
+
+  if (
+    status !== "active" &&
+    wouldRemoveLastActiveWorkspaceOwner(state, membership, getMembershipPermissionRoleKey(membership), status)
+  ) {
+    return { success: false, reason: "last_admin_protected", state };
+  }
+
+  return {
+    success: true,
+    state: {
+      ...state,
+      memberships: state.memberships.map((item) =>
+        item.id === membershipId
+          ? {
+              ...item,
+              ...metadata,
+              status,
+              activatedAt: status === "active" ? now : item.activatedAt,
+              deactivatedAt: status === "active" ? item.deactivatedAt : now,
+            }
+          : item
+      ),
+      updatedAt: now,
+    },
+  };
+}
+
 export function parseSessionWorkspacesState(value: string | null): SessionWorkspacesState | null {
   if (!value) return null;
 
@@ -1086,7 +1130,8 @@ function isSessionWorkspaceMembership(value: unknown): value is SessionWorkspace
     (membership.status === "pending" ||
       membership.status === "active" ||
       membership.status === "inactive" ||
-      membership.status === "suspended") &&
+      membership.status === "suspended" ||
+      membership.status === "soft_deleted") &&
     typeof membership.createdAt === "string"
   );
 }

@@ -110,12 +110,12 @@ test("workspace membership UI can render persisted status rows from server", asy
 
   await page.goto("/login?next=%2Fw%2Fclair-demo%2Forders%3FmodulePanel%3Dopen%26aside%3Dclosed");
   await page.getByRole("button", { name: /병원 관리자/ }).click();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
   await page.getByRole("button", { name: "병원구성원 관리" }).click();
 
-  await expect(page.getByText("활성 2명")).toBeVisible();
-  await expect(page.getByText("대기 1건")).toBeVisible();
-  await expect(page.getByText("비활성 1명")).toBeVisible();
+  await expect(page.getByRole("button", { name: /전체 4/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /초대 대기 1/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /비활성 1/ })).toBeVisible();
   await expect(page.getByText("pending@clair.local")).toBeVisible();
   await expect(page.getByText("old@clair.local")).toBeVisible();
 });
