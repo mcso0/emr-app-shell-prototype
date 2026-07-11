@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const migrationPath =
   "supabase/migrations/20260711150000_workspace_membership_soft_delete_lifecycle.sql";
 
-test("soft-delete migration preserves memberships and exposes a guarded archive lifecycle", () => {
+test("soft-delete migration remains immutable compatibility history", () => {
   const migration = readFileSync(migrationPath, "utf8");
 
   expect(migration).toContain("'soft_deleted'");
