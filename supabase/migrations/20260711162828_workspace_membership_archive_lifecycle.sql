@@ -8,6 +8,9 @@ alter table public.user_memberships
   add column if not exists restored_at timestamptz,
   add column if not exists restored_by_user_id uuid references public.users(id) on delete set null;
 
+-- Permit the canonical value before legacy rows are backfilled.
+alter table public.user_memberships drop constraint if exists user_memberships_status_check;
+
 do $$
 begin
   if exists (
@@ -28,7 +31,6 @@ begin
 end;
 $$;
 
-alter table public.user_memberships drop constraint if exists user_memberships_status_check;
 alter table public.user_memberships
   add constraint user_memberships_status_check
   check (status in ('pending', 'active', 'inactive', 'suspended', 'soft_deleted', 'archived'));
@@ -36,6 +38,29 @@ alter table public.user_memberships
 create index if not exists user_memberships_workspace_archived_at_idx
   on public.user_memberships (workspace_id, archived_at desc)
   where status in ('archived', 'soft_deleted');
+
+create or replace function private.clair_guard_membership_archive_rpc_boundary()
+returns trigger
+language plpgsql
+set search_path = public, private, extensions
+as $$
+begin
+  if old.status is distinct from new.status
+     and (old.status in ('archived', 'soft_deleted') or new.status in ('archived', 'soft_deleted'))
+     and current_setting('clair.membership_archive_rpc', true) is distinct from 'on' then
+    raise exception 'membership_archive_rpc_required';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists guard_membership_archive_rpc_boundary on public.user_memberships;
+create trigger guard_membership_archive_rpc_boundary
+before update on public.user_memberships
+for each row execute function private.clair_guard_membership_archive_rpc_boundary();
+
+revoke all on function private.clair_guard_membership_archive_rpc_boundary()
+  from public, anon, authenticated;
 
 create or replace function private.clair_membership_mutation_json(
   p_membership public.user_memberships
@@ -82,6 +107,7 @@ declare
   v_target_is_owner boolean := false;
   v_actor_is_owner boolean := false;
 begin
+  perform set_config('clair.membership_archive_rpc', 'on', true);
   if p_action in ('archive', 'soft_delete') then
     v_action := 'archive';
   elsif p_action = 'restore' then

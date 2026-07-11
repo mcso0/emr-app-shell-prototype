@@ -34,6 +34,16 @@ test("member reader emits canonical archive metadata and excludes archived rows 
   expect(migration).toContain("membership.status not in ('archived', 'soft_deleted')");
 });
 
+test("archive migration backfills after relaxing the legacy constraint and blocks direct transitions", () => {
+  const dropIndex = migration.indexOf("drop constraint if exists user_memberships_status_check");
+  const backfillIndex = migration.indexOf("update public.user_memberships");
+  expect(dropIndex).toBeGreaterThan(-1);
+  expect(dropIndex).toBeLessThan(backfillIndex);
+  expect(migration).toContain("membership_archive_rpc_required");
+  expect(migration).toContain("clair.membership_archive_rpc");
+  expect(migration).toContain("before update on public.user_memberships");
+});
+
 test("archive migration keeps security-definer RPC execution narrowly granted", () => {
   expect(migration).toContain("security definer");
   expect(migration).toContain("set search_path = public, private, extensions");
