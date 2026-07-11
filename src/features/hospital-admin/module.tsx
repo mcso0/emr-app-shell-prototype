@@ -116,6 +116,7 @@ import {
   type HospitalOrderWorkTypeFilter,
 } from "@/features/hospital-admin/data";
 import { WorkspaceMembershipManagement } from "@/features/auth/workspace-membership-management";
+import { WorkspaceRolePermissionManagement } from "@/features/auth/workspace-role-permission-management";
 import {
   useHospitalAdminStore,
   type HospitalAdminSection,
@@ -1481,12 +1482,15 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     return <WorkspaceMembershipManagement workspaceId={workspaceId} />;
   }
 
+  if (activeSection === "roles") {
+    return <WorkspaceRolePermissionManagement workspaceId={workspaceId} />;
+  }
+
   if (activeSection === "audit") {
     return <HospitalAdminAuditReview workspaceId={workspaceId} />;
   }
 
   if (
-    activeSection === "roles" ||
     activeSection === "schedule" ||
     activeSection === "settings" ||
     activeSection === "space-time" ||

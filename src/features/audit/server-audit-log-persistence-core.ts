@@ -8,6 +8,8 @@ export const liveAuditEventTypes = [
   "workspace.invitation_accepted",
   "workspace.membership_roles_changed",
   "workspace.membership_status_changed",
+  "workspace.membership_soft_deleted",
+  "workspace.membership_restored",
   "workspace.last_admin_change_blocked",
   "user.profile_updated",
   "reception.patient_guardian_registered",

@@ -12,7 +12,7 @@ import type {
 } from "@/features/auth/workspace-session";
 
 export type WorkspaceMembershipStatusGateway = {
-  listWorkspaceMembershipStatus(): Promise<
+  listWorkspaceMembershipStatus(includeDeleted?: boolean): Promise<
     | {
         ok: true;
         memberships: SessionWorkspaceMembership[];
@@ -42,11 +42,13 @@ export async function readWorkspaceMembershipStatus({
   workspaceId,
   permissionAdapter = createDemoMembershipStatusPermissionAdapter(workspaceId),
   gateway,
+  includeDeleted = false,
 }: {
   actorUserId: string | null;
   workspaceId: string;
   permissionAdapter?: WorkspacePermissionAdapter;
   gateway?: WorkspaceMembershipStatusGateway;
+  includeDeleted?: boolean;
 }): Promise<WorkspaceMembershipStatusResult> {
   if (!actorUserId) {
     return { ok: false, status: 401, denialReason: "unauthenticated" };
@@ -76,7 +78,7 @@ export async function readWorkspaceMembershipStatus({
     };
   }
 
-  const result = await gateway.listWorkspaceMembershipStatus();
+  const result = await gateway.listWorkspaceMembershipStatus(includeDeleted);
 
   if (!result.ok) {
     return { ok: false, status: 500, error: result.error };
@@ -103,9 +105,10 @@ export function createSupabaseWorkspaceMembershipStatusGateway(
   workspaceId: string
 ): WorkspaceMembershipStatusGateway {
   return {
-    async listWorkspaceMembershipStatus() {
+    async listWorkspaceMembershipStatus(includeDeleted = false) {
       const { data, error } = await client.rpc("clair_list_workspace_member_statuses", {
         p_workspace_id: workspaceId,
+        p_include_deleted: includeDeleted,
       });
 
       if (error) {
