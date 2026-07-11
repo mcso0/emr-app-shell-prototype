@@ -64,6 +64,13 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/components/ui/item";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -171,6 +178,7 @@ import {
   readChartLiveEncounterHandoff,
   saveChartLiveEncounterHandoff,
 } from "@/features/chart/live-encounter-handoff";
+import { getReceptionVisitContextDetailTarget } from "@/features/reception/visit-context";
 import {
   useReceptionStore,
   type ReceptionCalendarDraftSelection,
@@ -4532,13 +4540,17 @@ function ScheduleSelectionCell({
 function ReceptionVisitContextBanner({
   appointment,
   encounter,
+  detailLabel,
   guardianName,
+  onOpenDetails,
   patientName,
   reason,
 }: {
   appointment?: Appointment;
+  detailLabel?: "예약 상세" | "접수 상세";
   encounter?: Encounter;
   guardianName?: string;
+  onOpenDetails?: () => void;
   patientName: string;
   reason: string;
 }) {
@@ -4552,25 +4564,31 @@ function ReceptionVisitContextBanner({
     : appointment
       ? getAppointmentTone(appointment.status)
       : "default";
-
   return (
-    <section className="border-b bg-[var(--emr-status-info-bg)] px-4 py-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
+    <section className="border-b px-4 py-3">
+      <Item
+        data-testid="reception-visit-context"
+        variant="outline"
+      >
+        <ItemContent className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <ReceptionStatusBadge label={statusLabel} tone={statusTone} />
-            <h2 className="truncate text-[15px] font-semibold text-foreground">
-              오늘 내원: {reason}
-            </h2>
+            <ItemTitle>진료 주의사항</ItemTitle>
           </div>
-          <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
+          <ItemDescription>{reason}</ItemDescription>
+          <div className="emr-text-metadata text-muted-foreground">
             {guardianName ?? "보호자 미지정"} 보호자 · {patientName}
           </div>
-        </div>
-        <div className="rounded-md border border-[var(--emr-status-info-border)] bg-card px-2.5 py-1 emr-text-micro font-medium text-muted-foreground">
-          session-only demo context
-        </div>
-      </div>
+        </ItemContent>
+        {detailLabel && onOpenDetails ? (
+          <ItemActions>
+            <Button variant="outline" size="sm" onClick={onOpenDetails}>
+              {detailLabel}
+              <ChevronRightIcon data-icon="inline-end" aria-hidden="true" />
+            </Button>
+          </ItemActions>
+        ) : null}
+      </Item>
     </section>
   );
 }
@@ -5734,6 +5752,10 @@ export function ReceptionContent() {
     encounter: selectedEncounter,
     patientSpecialNote: selectedPatient?.specialNote,
   });
+  const visitContextDetailTarget = getReceptionVisitContextDetailTarget({
+    appointment: selectedAppointment,
+    encounter: selectedEncounter,
+  });
   const lastMessageDelivery = messageDeliveries.at(-1);
   const toggleVeterinarian = (veterinarianId: string) => {
     setSelectedVeterinarianIds((current) => {
@@ -5825,6 +5847,27 @@ export function ReceptionContent() {
     openReceptionRightPanelDrawer({
       type: "reception-encounter",
       id: draft.encounter.id,
+    });
+  };
+  const handleOpenVisitContextDetails = () => {
+    if (!visitContextDetailTarget) return;
+
+    clearCalendarTransientSelection();
+    selectPatient(visitContextDetailTarget.patientId);
+
+    if (visitContextDetailTarget.type === "reception-encounter") {
+      selectEncounter(visitContextDetailTarget.id);
+      openReceptionRightPanelDrawer({
+        type: "reception-encounter",
+        id: visitContextDetailTarget.id,
+      });
+      return;
+    }
+
+    selectAppointment(visitContextDetailTarget.id);
+    openReceptionRightPanelDrawer({
+      type: "reception-appointment",
+      id: visitContextDetailTarget.id,
     });
   };
   const openWalkInDialog = () => {
@@ -6143,8 +6186,10 @@ export function ReceptionContent() {
       {(scenario || queryPatientId || queryEncounterId) && selectedPatient ? (
         <ReceptionVisitContextBanner
           appointment={selectedAppointment}
+          detailLabel={visitContextDetailTarget?.label}
           encounter={selectedEncounter}
           guardianName={selectedBundle?.primaryGuardian?.name}
+          onOpenDetails={handleOpenVisitContextDetails}
           patientName={selectedPatient.name}
           reason={selectedVisitReason}
         />
