@@ -8,11 +8,12 @@ Date: 2026-07-02
 
 ## Implementation State (2026-07-11)
 
-- Local implementation and verification are complete; this item remains `in_progress` until representative review and an explicitly requested publish flow.
+- Local implementation, repository publish, and requested staging migration replay are complete; this item remains `in_progress` until representative review and acceptance.
 - `workspace_permission_roles` and `workspace_job_positions` now persist through checked local Supabase RPCs. Authenticated clients do not receive direct catalog-table write grants.
 - Existing `hospital_admin` assignments are reconciled creator-first to explicit `owner`/`admin` assignments. Creator-less fallback owners are marked `legacy_fallback` and the UI asks a manager to confirm them.
 - Supabase-mode role management and member invitation selectors read the server catalog. Mock mode retains the existing browser-session catalog behavior.
-- Remote Supabase apply, staging/production data mutation, and live deployment were not performed.
+- The approved staging replay applied `workspace_role_catalog_server_enforcement` and `workspace_role_catalog_audit_event_type`. Remote migration history is aligned to source versions `20260711123806` and `20260711160000`.
+- Production deployment, real-data operations, and a security-complete claim remain outside this item.
 
 ## Goal
 
@@ -41,7 +42,7 @@ Implement the MVP workspace permission-role model across docs, DB/RLS, server en
 ## Out Of Scope
 
 - `게스트` role implementation.
-- Remote Supabase migration push or staging/production data mutation.
+- Production Supabase migration push or real-data mutation.
 - Real invite email delivery.
 - Payment/provider side effects.
 - Destructive removal of `user_memberships.roles`, `workspace_invitations.invited_roles`, or existing `permission_policies` in the first foundation.
@@ -56,6 +57,7 @@ Implement the MVP workspace permission-role model across docs, DB/RLS, server en
 - Seed contract tests reject role-like display names for Cheongdam/demo staff.
 - Security/QA evidence is recorded under `.omo/`.
 - Branch is committed, pushed, opened as a PR, merged into `origin/main`, and local `main` is synced.
+- The explicitly approved staging migration replay is recorded with source-aligned history and read-only boundary verification.
 
 ## Verification
 
@@ -64,6 +66,7 @@ Implement the MVP workspace permission-role model across docs, DB/RLS, server en
 - `npx playwright test tests/permission-resolver.spec.ts tests/db-workspace-permission-adapter.spec.ts tests/server-permission-enforcement.spec.ts --reporter=line`
 - `npx playwright test tests/workspace-membership-status-server.spec.ts tests/workspace-role-status-write-server.spec.ts tests/workspace-role-management-regression.spec.ts --reporter=line`
 - Focused browser/manual QA for the hospital member-management surface.
+- Staging replay: migration history, direct catalog DML denial, anonymous RPC denial, RPC search path, owner continuity, and audit-event constraint checks.
 
 ## Notes
 
@@ -71,3 +74,4 @@ Implement the MVP workspace permission-role model across docs, DB/RLS, server en
 - Last protected authority moves from last active `hospital_admin` compatibility to last active `소유자` authority.
 - Custom-role editing must deny owner-only escalation, wildcard permission grants, and cross-workspace assignment.
 - The local migration reset also repairs the historical reception migration order by defining `patients.weight_kg` in the foundation migration before the reader that uses it. The later compatibility delta remains additive.
+- The staging advisor still emits generic `SECURITY DEFINER` execution warnings for the two authenticated RPCs. They are intentionally authenticated-only and perform in-function membership/admin checks; this is not a blanket clearance of all advisor findings.

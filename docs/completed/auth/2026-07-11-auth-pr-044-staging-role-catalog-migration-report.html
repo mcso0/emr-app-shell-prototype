@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AUTH-PR-044 staging migration replay</title>
+    <style>
+      body { max-width: 760px; margin: 48px auto; padding: 0 24px; color: #172033; font: 16px/1.65 system-ui, -apple-system, sans-serif; }
+      h1 { font-size: 28px; line-height: 1.3; }
+      h2 { margin-top: 32px; font-size: 19px; }
+      code { padding: 2px 5px; border-radius: 4px; background: #f1f4f8; }
+      .state { padding: 16px; border-radius: 8px; background: #edf7f0; }
+      .note { padding: 16px; border-radius: 8px; background: #fff8e8; }
+    </style>
+  </head>
+  <body>
+    <h1>AUTH-PR-044 역할·직무 카탈로그 staging migration replay</h1>
+    <p class="state">원격 staging 데이터베이스에 역할·직무 카탈로그의 서버 권한 경계를 반영했고, 이후 배포 도구가 같은 migration을 다시 실행하지 않도록 이력도 소스 파일 버전과 맞췄다.</p>
+
+    <h2>적용 범위</h2>
+    <ul>
+      <li><code>20260711123806_workspace_role_catalog_server_enforcement.sql</code></li>
+      <li><code>20260711160000_workspace_role_catalog_audit_event_type.sql</code></li>
+    </ul>
+    <p>변경은 역할·직무 카탈로그, 역할 배정, 감사 이벤트 허용 목록의 서버 경계에 한정했다. 프로덕션 배포와 실제 고객·환자·결제 데이터 작업은 수행하지 않았다.</p>
+
+    <h2>확인 결과</h2>
+    <ul>
+      <li>원격 migration 이력이 두 소스 버전과 일치한다.</li>
+      <li>역할/직무 테이블의 authenticated 직접 INSERT 권한은 차단돼 있다.</li>
+      <li>역할 카탈로그 RPC의 anonymous 실행은 차단돼 있다.</li>
+      <li>RPC의 고정 search path와 모든 workspace의 활성 소유자 연속성을 확인했다.</li>
+      <li>감사 이벤트 제약이 <code>workspace.role_catalog_changed</code>를 허용한다.</li>
+    </ul>
+
+    <h2>남은 주의점</h2>
+    <p class="note">Supabase security advisor는 authenticated가 실행할 수 있는 SECURITY DEFINER RPC에 일반 경고를 계속 표시한다. 이번 두 RPC는 의도적으로 authenticated에만 열고, 함수 내부에서 인증·workspace membership·admin 권한을 다시 검사한다. 이는 전체 데이터베이스 advisor 경고가 모두 해소됐다는 의미는 아니다.</p>
+  </body>
+</html>
