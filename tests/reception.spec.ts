@@ -3580,6 +3580,18 @@ test("appointment check-in persistence regression reloads from queue and calenda
   );
 });
 
+test("reception right panel header uses the shared 58px height", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-appointment%3Aappointment-nabi-260501",
+  );
+
+  const rightPanel = page.getByTestId("reception-right-panel");
+  await expect(rightPanel).toBeVisible();
+  await expect(rightPanel.locator("header")).toHaveCSS("height", "58px");
+});
+
 test("reception read failures explain local demo fallback and expose retry actions", async ({
   page,
 }) => {

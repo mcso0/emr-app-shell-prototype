@@ -3399,7 +3399,7 @@ export function BillingRightPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
-      <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
+      <div className="flex h-[var(--clair-layout-drawer-header)] shrink-0 items-center justify-between border-b px-4">
         <h2 className="emr-text-body font-semibold">수납 요약</h2>
         <div className="flex items-center gap-2">
           <EmrStatusBadge label={statusLabel} marker="none" />
