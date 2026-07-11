@@ -162,8 +162,8 @@ function readPayrollPreview(value: unknown): HospitalSchedulePayrollPreview {
   const record = asRecord(value);
   if (
     record.status !== "preview" ||
-    !Number.isInteger(record.totalMinutes) ||
-    !Number.isInteger(record.totalPayCents)
+    !isInteger(record.totalMinutes) ||
+    !isInteger(record.totalPayCents)
   ) {
     throw new Error("hospital_schedule_payroll_preview_invalid");
   }
@@ -220,6 +220,10 @@ function isShiftKind(value: unknown): value is HospitalScheduleShiftKind {
 
 function isMinute(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 1440;
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
 }
 
 function isUuid(value: string) {
