@@ -33,12 +33,17 @@ type HospitalAdminStore = {
   selectedCategoryId: HospitalOrderCategoryId;
   selectedOrderIds: string[];
   selectedSubcategoryId: HospitalOrderSubcategoryId;
+  settingsDirty: boolean;
   statusFilter: HospitalOrderStatusFilter;
   workTypeFilter: HospitalOrderWorkTypeFilter;
   clearSelectedOrders: () => void;
   createOrder: (draft?: Partial<HospitalOrderDraft>) => HospitalOrderCatalogItem;
   deleteOrder: (orderId: string) => void;
   duplicateOrder: (orderId: string) => HospitalOrderCatalogItem | null;
+  cancelPendingSectionChange: () => void;
+  confirmPendingSectionChange: () => void;
+  pendingSection: HospitalAdminSection | null;
+  requestSectionChange: (section: HospitalAdminSection) => void;
   setActiveSection: (section: HospitalAdminSection) => void;
   setBillingFilter: (filter: HospitalOrderBillingFilter) => void;
   setFocusedOrderId: (orderId: string | null) => void;
@@ -46,6 +51,7 @@ type HospitalAdminStore = {
   setSearchQuery: (query: string) => void;
   setSelectedCategoryId: (categoryId: HospitalOrderCategoryId) => void;
   setSelectedSubcategoryId: (subcategoryId: HospitalOrderSubcategoryId) => void;
+  setSettingsDirty: (dirty: boolean) => void;
   selectOrder: (orderId: string) => void;
   setStatusFilter: (filter: HospitalOrderStatusFilter) => void;
   setWorkTypeFilter: (filter: HospitalOrderWorkTypeFilter) => void;
@@ -69,6 +75,7 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
   selectedCategoryId: defaultCategoryId,
   selectedOrderIds: [],
   selectedSubcategoryId: defaultSubcategoryId,
+  settingsDirty: false,
   statusFilter: "all",
   workTypeFilter: "all",
   clearSelectedOrders: () => set({ selectedOrderIds: [] }),
@@ -116,6 +123,21 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
       standardName: `${source.standardName} 복사본`,
     });
   },
+  cancelPendingSectionChange: () => set({ pendingSection: null }),
+  confirmPendingSectionChange: () => {
+    const pendingSection = get().pendingSection;
+    if (!pendingSection) return;
+    set({ activeSection: pendingSection, pendingSection: null, settingsDirty: false });
+  },
+  pendingSection: null,
+  requestSectionChange: (section) => {
+    const state = get();
+    if (state.activeSection === "settings" && state.settingsDirty && section !== "settings") {
+      set({ pendingSection: section });
+      return;
+    }
+    set({ activeSection: section, pendingSection: null });
+  },
   setActiveSection: (activeSection) => set({ activeSection }),
   setBillingFilter: (billingFilter) => set({ billingFilter }),
   setFocusedOrderId: (focusedOrderId) => set({ focusedOrderId }),
@@ -157,6 +179,7 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
     }),
   setSelectedSubcategoryId: (selectedSubcategoryId) =>
     set({ focusedOrderId: null, selectedOrderIds: [], selectedSubcategoryId }),
+  setSettingsDirty: (settingsDirty) => set({ settingsDirty }),
   selectOrder: (orderId) => set({ selectedOrderIds: [orderId] }),
   setStatusFilter: (statusFilter) => set({ statusFilter }),
   setWorkTypeFilter: (workTypeFilter) => set({ workTypeFilter }),

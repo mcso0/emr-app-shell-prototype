@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>병원 기본 설정 UI 구현 결과</title>
+    <style>
+      :root { color-scheme: light; font-family: ui-sans-serif, system-ui, sans-serif; color: #171717; background: #f7f7f8; }
+      body { margin: 0; padding: 48px 24px; }
+      main { max-width: 760px; margin: 0 auto; border: 1px solid #e4e4e7; border-radius: 16px; background: #fff; padding: 32px; }
+      h1 { margin: 0 0 8px; font-size: 28px; } h2 { margin-top: 32px; font-size: 18px; }
+      p, li { line-height: 1.65; } .muted { color: #71717a; } code { padding: 2px 5px; border-radius: 4px; background: #f4f4f5; }
+      .boundary { border-left: 3px solid #d4d4d8; padding-left: 14px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>병원 기본 설정 UI 구현 결과</h1>
+      <p class="muted">2026-07-11 · HOSPITAL-ADMIN-PR-003</p>
+
+      <h2>요청과 결과</h2>
+      <p>
+        기존 콘셉트 화면을 전용 설정 화면으로 교체했습니다. 화면에는 개발용 워크스페이스 ID, 영향 범위, 향후 데이터 안내를 노출하지 않으며,
+        사용자가 수정 가능한 정보와 저장 상태만 보여줍니다.
+      </p>
+
+      <h2>구현한 경험</h2>
+      <ul>
+        <li>병원명·대표자/원장명·주소는 읽기 전용으로 표시하고, 우측의 <code>병원 정보 변경 요청</code>으로 사유 확인 흐름을 제공합니다.</li>
+        <li>주소 복사는 아이콘과 <code>복사됨</code> 라벨, 스크린리더 상태 메시지로 결과를 알려 줍니다.</li>
+        <li>연락처, 요일별 운영일/휴무일, 30분 단위 진료·휴게시간, 공휴일 정책, 예외 일정 추가·수정·삭제를 제공합니다.</li>
+        <li>수정 전에는 저장 버튼을 보이지 않고, 수정 후에만 화면 하단 고정 변경 바에서 저장 또는 되돌리기를 선택합니다.</li>
+        <li>운영시간 저장은 별도 토스트로 안내하고, 병원관리 내부 메뉴 이동과 브라우저 이탈 시 저장하지 않은 변경을 보호합니다.</li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li><code>npx tsc --noEmit</code> 통과</li>
+        <li>관련 파일 ESLint 통과</li>
+        <li>병원 기본 설정 모델 테스트 4개 통과</li>
+        <li>병원 기본 설정 브라우저 흐름(정보 위계, 변경 요청, 복사 피드백, 저장·되돌리기·토스트, 예외 일정·이탈 보호, 768px 단일 열) 통과</li>
+        <li><code>tests/hospital-admin.spec.ts</code> 17개 통과, <code>npm run docs:check</code> 통과, <code>npm run build</code> 통과</li>
+      </ul>
+
+      <h2>완료 범위 밖</h2>
+      <p class="boundary">
+        저장은 브라우저 세션 메모리에만 남습니다. 실제 병원 프로필/운영시간 DB·API 저장, 관리자 서버 권한, RLS, 감사 이벤트,
+        고객센터 요청 전달은 포함하지 않았습니다.
+      </p>
+      <p class="boundary">
+        빌드는 통과했습니다. 다만 격리 워크트리의 추가 <code>package-lock.json</code>과 기존 PRD 뷰어의 동적 파일 경로 추적으로
+        Next.js/Turbopack 경고가 출력됩니다. 이번 병원 기본 설정 변경으로 새로 만든 경고는 아닙니다.
+      </p>
+
+      <h2>다음 단계</h2>
+      <p>라이브 저장이 필요해지면 데이터 계약 → API/RLS → 감사 이벤트 → 이 화면 연결 순서로 확장합니다.</p>
+    </main>
+  </body>
+</html>

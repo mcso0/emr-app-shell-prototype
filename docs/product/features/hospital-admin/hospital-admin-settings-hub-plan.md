@@ -3,18 +3,19 @@ id: PRODUCT-FEATURE-HOSPITAL-ADMIN-SETTINGS-HUB
 type: Product Requirement
 title: "Hospital Admin Settings Hub"
 description: "Defines the 병원관리 settings-hub IA, target screens, screen responsibilities, and phase-1 data/API follow-up boundaries."
-status: draft
+status: implemented
 area: product
 doc_type: feature-plan
 tags: [hospital-admin, settings, workspace, roles, schedule, vitals]
 related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md"
-last_updated: 2026-07-05
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-hospital-basic-settings-ui.md"
+last_updated: 2026-07-11
 ---
 
 # Hospital Admin Settings Hub
 
-Updated: 2026-07-05
+Updated: 2026-07-11
 
 ## Product Position
 
@@ -26,7 +27,7 @@ Top-bar settings must not duplicate hospital settings. Top-bar account/profile c
 
 | Area | Responsibility | Phase 1 decision |
 | --- | --- | --- |
-| `병원기본설정` | Workspace-owned hospital identity, contact, brand, and operating-hour summary | Implement first as static/mock screen, later connect to hospital profile API |
+| `병원기본설정` | Workspace-owned hospital identity, editable contact, operating hours, and date exceptions | Dedicated session-local UI implemented; later connect to hospital profile API |
 | `병원구성원 관리` | Staff invites, member status, job position, permission-role assignment | Existing screen remains; improve IA and connect its role language to 역할별 업무 관리 |
 | `역할별 업무 관리` | Role work profiles: default work scopes, screen access expectations, default assignee behavior | Not a raw permission editor; it complements 구성원 관리 |
 | `공간/시간 관리` | Rooms, appointment intervals, operating hours, blocked times, emergency slots | Static/mock screen first |
@@ -61,17 +62,17 @@ Phase 1 may display role work profiles and default operational routing without c
 
 | Item | Spec |
 | --- | --- |
-| Purpose | Let hospital admins maintain workspace-owned hospital profile and basic operating settings. |
+| Purpose | Let hospital admins review registered hospital identity and maintain contact and operating settings. |
 | Primary user | Hospital owner/admin. |
-| Scenario | Admin reviews prefilled Cheongdam profile, fixes contact/address/operating-hour summary, saves for later API persistence. |
-| Information structure | Header, profile highlights, editable profile fields, operating-hour summary table, impact/data side rail. |
-| Fields/components | Hospital name, workspace ID read-only, address, phone, representative contact, fax, owner/director, business number, public links, operating hours. |
-| Default state | Prefilled synthetic Cheongdam profile. |
-| Empty state | Show required fields empty with clear required markers once persistence scope begins. |
-| Permission state | Non-admin should see no edit controls or a permission-denied state. |
-| Save/cancel flow | Explicit save; cancel reverts local draft; future save emits audit event. |
-| Data/API follow-up | `workspace_hospital_profile`, `workspace_operating_hours`, brand asset storage, admin-only update route, RLS/admin check. |
-| Screen direction | Quiet admin form with top summary cards, dense field grid, and operating-hours table. |
+| Scenario | Admin reviews read-only registered identity, edits contact or operating hours, then saves the session-local draft. |
+| Information structure | Header → read-only hospital identity → editable contact → day-by-day operating hours → holiday and exception schedule. |
+| Fields/components | Read-only hospital name/director/address, address copy feedback, phone/fax/homepage/Instagram, day switches, 30-minute time selects, holiday policy, exception dialogs, fixed change bar. |
+| Default state | Prefilled synthetic hospital profile and weekday operating hours. |
+| Empty state | Exception schedule shows `등록된 예외 일정이 없습니다.`. |
+| Permission state | This screen does not claim server-side permission enforcement; future non-admin behavior must be enforced by API/RLS. |
+| Save/cancel flow | The change bar appears only after edits. Save updates the session snapshot; revert confirms before restoring it. Saving operating-hour changes gives a specific toast. |
+| Data/API follow-up | `workspace_hospital_profile`, `workspace_operating_hours`, holiday/exception schedules, admin-only update route, RLS/admin check, audit events, and support-request delivery. |
+| Screen direction | Quiet, minimal form with no workspace ID, phase, impact, or future-data metadata in the customer-facing surface. |
 
 ### 병원구성원 관리 개선
 

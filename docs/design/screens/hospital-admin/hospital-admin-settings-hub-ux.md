@@ -3,18 +3,19 @@ id: DESIGN-SCREEN-HOSPITAL-ADMIN-SETTINGS-HUB
 type: Screen Spec
 title: "Hospital Admin Settings Hub UX"
 description: "UX flow and screen-only mock implementation direction for the 병원관리 settings hub screens."
-status: draft
+status: implemented
 area: design
 doc_type: screen-spec
 tags: [hospital-admin, settings, ux-flow, screen-concept]
 related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md"
-last_updated: 2026-07-05
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-hospital-basic-settings-ui.md"
+last_updated: 2026-07-11
 ---
 
 # Hospital Admin Settings Hub UX
 
-Updated: 2026-07-05
+Updated: 2026-07-11
 
 ## Design Intent
 
@@ -42,7 +43,7 @@ flowchart LR
 - Remove the top-bar gear button from the app chrome while it has no separate personal-setting role.
 - Keep account/profile settings under the profile menu.
 - Open each target item from the existing hospital-admin side panel.
-- Use explicit `취소` and `시안 저장` controls for screen-only mocks.
+- Hide save controls until the user changes an editable value. Show one fixed bottom change bar with save and revert actions while a draft is dirty.
 - Mark future data/API needs in docs, not as noisy in-app explanation.
 - Preserve `Order 관리` side-panel child navigation and drawer behavior.
 
@@ -50,7 +51,7 @@ flowchart LR
 
 | Screen | Primary pattern | Secondary pattern | Notes |
 | --- | --- | --- | --- |
-| 병원기본설정 | Summary cards + two-column profile form | Operating-hours table + impact rail | First implementation target after screen review |
+| 병원기본설정 | Read-only identity + editable contact cards | Day-by-day operating-hours editor + exception dialogs | Dedicated session-local implementation; no development metadata in the visible UI |
 | 병원구성원 관리 | Existing table + invite/edit sheets | Role/job controls | Keep existing screen; improve language and relation to role work profiles later |
 | 역할별 업무 관리 | Role-work matrix | Default assignment controls | Distinguish from raw permission editing |
 | 공간/시간 관리 | Room/status table | Scheduling rule controls | Avoid full calendar editor in this phase |
@@ -64,10 +65,18 @@ flowchart LR
 
 1. Admin opens `병원관리`.
 2. Admin selects `병원기본설정`.
-3. Screen shows workspace profile highlights and editable synthetic fields.
-4. Admin changes values locally.
-5. Admin clicks `시안 저장`.
-6. UI shows saved mock state; no DB/API mutation is claimed.
+3. Screen shows registered hospital identity as read-only fields, with a single `병원 정보 변경 요청` action and address-copy feedback.
+4. Admin changes contact, weekday, holiday, or exception settings locally.
+5. A fixed bottom change bar appears. Admin can save or confirm a full revert.
+6. The session snapshot is updated and a toast distinguishes operating-hour changes from contact-only changes. No DB/API mutation is claimed.
+
+#### Operating-hours details
+
+- Every weekday has an independent `운영일`/`휴무일` switch. Closed days retain but disable their time values.
+- Time selects use 30-minute increments. After changing a time, the user chooses either the current day only or all open days.
+- Holiday policy stays in the section header beside `예외 일정 추가`.
+- Exception schedules use a dialog for date, closed/custom mode, and custom hours; duplicate dates are rejected. The list is date-sorted and exposes calendar, edit, and destructive delete affordances.
+- If the user moves to another hospital-admin item with unsaved changes, the navigation guard offers continuing edits or discarding the draft. Browser refresh/close uses the native warning.
 
 ### 병원구성원 관리 개선
 
@@ -119,7 +128,8 @@ flowchart LR
 - Preserve existing `병원구성원 관리`, `감사 로그`, and `Order 관리` behavior.
 - Add test IDs for new screens.
 - Verify top-bar gear button is removed.
-- Verify every new target screen opens from the side panel and can perform mock `시안 저장`.
+- Verify the dedicated basic-settings screen keeps save hidden initially, surfaces the change bar after an edit, and preserves its session snapshot across hospital-admin navigation.
+- Verify read-only identity, copy feedback, schedule propagation, exception CRUD, validation focus, and compact single-column layout.
 
 ## Future Development Spec Backlog
 
