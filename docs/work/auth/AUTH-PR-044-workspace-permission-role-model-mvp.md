@@ -6,6 +6,14 @@ Area: auth
 Priority: P0
 Date: 2026-07-02
 
+## Implementation State (2026-07-11)
+
+- Local implementation and verification are complete; this item remains `in_progress` until representative review and an explicitly requested publish flow.
+- `workspace_permission_roles` and `workspace_job_positions` now persist through checked local Supabase RPCs. Authenticated clients do not receive direct catalog-table write grants.
+- Existing `hospital_admin` assignments are reconciled creator-first to explicit `owner`/`admin` assignments. Creator-less fallback owners are marked `legacy_fallback` and the UI asks a manager to confirm them.
+- Supabase-mode role management and member invitation selectors read the server catalog. Mock mode retains the existing browser-session catalog behavior.
+- Remote Supabase apply, staging/production data mutation, and live deployment were not performed.
+
 ## Goal
 
 Implement the MVP workspace permission-role model across docs, DB/RLS, server enforcement, member/invite UI, and synthetic seeds.
@@ -62,3 +70,4 @@ Implement the MVP workspace permission-role model across docs, DB/RLS, server en
 - Client-only UI gating is not a security-complete claim.
 - Last protected authority moves from last active `hospital_admin` compatibility to last active `소유자` authority.
 - Custom-role editing must deny owner-only escalation, wildcard permission grants, and cross-workspace assignment.
+- The local migration reset also repairs the historical reception migration order by defining `patients.weight_kg` in the foundation migration before the reader that uses it. The later compatibility delta remains additive.

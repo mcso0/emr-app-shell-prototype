@@ -7,6 +7,7 @@ export const liveAuditEventTypes = [
   "workspace.invitation_canceled",
   "workspace.invitation_accepted",
   "workspace.membership_roles_changed",
+  "workspace.role_catalog_changed",
   "workspace.membership_status_changed",
   "workspace.membership_soft_deleted",
   "workspace.membership_restored",

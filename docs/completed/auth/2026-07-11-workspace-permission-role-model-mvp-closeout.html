@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>AUTH-PR-044 역할 및 권한 카탈로그 로컬 구현 완료 보고서</title>
+    <style>
+      body { max-width: 920px; margin: 40px; color: #18181b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      h1, h2 { line-height: 1.25; }
+      h1 { font-size: 28px; }
+      h2 { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e4e4e7; font-size: 18px; }
+      .summary { padding: 16px 18px; border: 1px solid #d4d4d8; border-radius: 10px; background: #fafafa; }
+      .status { color: #166534; font-weight: 600; }
+      code { padding: 1px 5px; border-radius: 4px; background: #f4f4f5; }
+      ul { padding-left: 22px; }
+    </style>
+  </head>
+  <body>
+    <h1>AUTH-PR-044 역할 및 권한 카탈로그 로컬 구현 완료 보고서</h1>
+
+    <section class="summary">
+      <p>
+        <span class="status">로컬 구현 및 검증 완료.</span>
+        역할과 직무를 단순 화면 설정이 아니라 local Supabase의 workspace 단위 카탈로그로 저장하고,
+        역할 관리와 구성원 초대 화면이 같은 카탈로그를 사용하도록 연결했다.
+      </p>
+    </section>
+
+    <h2>이번에 바뀐 점</h2>
+    <ul>
+      <li>권한 역할과 직무 카탈로그를 읽고 바꾸는 checked RPC와 workspace-scoped API route를 추가했다.</li>
+      <li>시스템 역할과 기본 직무는 수정·삭제할 수 없고, 커스텀 역할은 안전 권한 목록만 선택할 수 있다.</li>
+      <li>legacy <code>hospital_admin</code>은 workspace 생성자를 우선 소유자로 정리하고, 생성자를 찾지 못한 경우만 <code>legacy_fallback</code>으로 표시한다.</li>
+      <li>Supabase 모드의 역할 화면은 서버 원본을 읽고, 저장·재시도·권한 거부를 명시적으로 표시한다. mock 모드는 기존 브라우저 세션 동작을 유지한다.</li>
+      <li>전용 화면에서 만든 커스텀 역할·직무가 구성원 초대 선택지에도 다시 나타난다.</li>
+      <li>카탈로그 변경은 역할/직무 키만 남기는 감사 이벤트로 기록한다.</li>
+    </ul>
+
+    <h2>로컬 검증</h2>
+    <ul>
+      <li><code>npx supabase db reset --local</code>: 통과</li>
+      <li>소유자 checked RPC 생성: 통과 후 트랜잭션 롤백</li>
+      <li>일반 구성원 mutation 거부 및 직접 catalog-table 쓰기 권한 없음: 통과</li>
+      <li><code>workspace.role_catalog_changed</code> 감사 이벤트 제약: 통과 후 트랜잭션 롤백</li>
+      <li>역할 카탈로그 server/client/model Playwright 회귀: 통과</li>
+      <li>TypeScript 및 ESLint: 통과</li>
+    </ul>
+
+    <h2>보안 경계</h2>
+    <ul>
+      <li>클라이언트의 숨김 버튼은 보안 경계가 아니다. 실제 권한은 Supabase session, workspace membership, RPC에서 확인한다.</li>
+      <li>다른 workspace의 membership miss는 존재 여부가 아닌 권한 거부로 처리한다.</li>
+      <li>Supabase security advisor에서 새 함수의 mutable search-path 경고를 발견해 migration에서 고정했다. 남은 경고는 기존 함수 범위다.</li>
+    </ul>
+
+    <h2>범위 밖</h2>
+    <ul>
+      <li>Remote Supabase migration apply, staging/production 데이터 변경, 배포는 수행하지 않았다.</li>
+      <li>실제 병원·직원·환자 데이터나 실제 초대 메일은 사용하지 않았다.</li>
+      <li>모든 임상 API의 최종 권한 완결성이나 모바일 Safari 자동 접근성 검증은 이번 완료 주장에 포함하지 않는다.</li>
+      <li>기존 구성원 카드의 중첩 버튼 browser console 경고와 docs viewer의 worktree build 경고는 이번 역할 카탈로그 변경 범위에서 수정하지 않았다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      대표 검토 뒤 별도 승인으로 remote Supabase에 migration을 적용하고, 필요하면 staging에서 실제 Supabase session을 이용한 end-to-end 재검증을 진행한다.
+    </p>
+  </body>
+</html>

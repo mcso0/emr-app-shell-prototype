@@ -1,6 +1,6 @@
 # Auth Login Status
 
-Updated: 2026-05-20
+Updated: 2026-07-11
 
 ## 목표
 
@@ -35,6 +35,7 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - Supabase provider adapter가 `useAuthClient()` boundary 뒤에 구현되어 있다.
 - `NEXT_PUBLIC_AUTH_MODE=auto` 기본값은 Supabase env가 있으면 provider를 쓰고, env가 없으면 mock/local demo fallback을 유지한다.
 - Membership/permission enforcement plan은 `docs/engineering/auth-security/auth-login/membership-permission-enforcement.md`에 문서화되어 있다.
+- 2026-07-11 기준 AUTH-PR-044에서 역할/직무 카탈로그의 local Supabase persistence를 추가했다. 시스템 역할·기본 직무는 불변이고, 커스텀 역할은 allow-only 안전 권한만 가진다. verified Supabase session은 workspace-scoped route와 checked RPC로 카탈로그를 읽고 변경하며, 직접 테이블 쓰기는 차단된다. legacy `hospital_admin`은 생성자 우선으로 명시적 owner/admin에 정리하고 creator가 없던 fallback은 관리자 확인 UI로 노출한다. local DB reset과 owner/general RPC denial replay는 통과했지만 remote Supabase apply, staging/production data mutation, live deployment는 수행하지 않았다.
 - Supabase project API live validation, callback route, DB migration, RLS, server permission enforcement code는 아직 연결하지 않았다.
 - 2026-05-14 기준 `/login`, auth gate loading state, top menu workspace selector, auth profile trigger/menu의 직접 Clair/local color usage는 DESIGN-SYSTEM-PR-015에서 shadcn semantic token과 EMR alias token으로 정리했다. Auth behavior, Supabase adapter boundary, mock session storage, safe `next`, and logout flow were not changed.
 - 2026-05-17 기준 workspace auth product scope는 `docs/product/domain/workspace-auth-permissions.md`에 고정했다. Canonical MVP roles are `hospital_admin`, `vet`, `technician`, and `front_desk`; current seed roles `nurse` and `billing_admin` are compatibility/legacy implementation details until follow-up implementation reconciles them.

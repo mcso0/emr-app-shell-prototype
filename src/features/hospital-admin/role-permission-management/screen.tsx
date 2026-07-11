@@ -43,12 +43,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG,
+  archiveSessionWorkspaceCustomJobPosition,
   createOrUpdateSessionWorkspaceCustomPermissionRole,
   createSessionWorkspaceCustomJobPosition,
+  deleteSessionWorkspaceCustomPermissionRole,
   getSessionWorkspaceEffectiveJobPositionKey,
   getSessionWorkspaceJobPositionLabel,
   getSessionWorkspaceJobPositions,
   getSessionWorkspacePermissionRoles,
+  updateSessionWorkspaceCustomJobPosition,
+  type SessionWorkspaceJobPosition,
   type SessionWorkspacePermissionRole,
 } from "@/features/auth/workspace-session";
 import {
@@ -76,6 +80,14 @@ type RolePermissionManagementScreenProps = {
 type RoleDialogState =
   | { mode: "create"; role: null }
   | { mode: "edit"; role: SessionWorkspacePermissionRole };
+
+type JobDialogState =
+  | { mode: "create"; position: null }
+  | { mode: "edit"; position: SessionWorkspaceJobPosition };
+
+type CatalogDestructiveAction =
+  | { type: "role.delete"; label: string }
+  | { type: "job.archive"; label: string };
 
 const workDefaultFields: Array<{
   key: keyof WorkspaceRoleWorkDefaults;
@@ -247,23 +259,30 @@ export function RolePermissionManagementScreen({
   workspaceId,
 }: RolePermissionManagementScreenProps) {
   const workspace = useWorkspaceRoleState(workspaceId);
-  const roles = useMemo(
+  const localRoles = useMemo(
     () => getSessionWorkspacePermissionRoles(workspace.state, workspaceId),
     [workspace.state, workspaceId]
   );
-  const jobPositions = useMemo(
+  const localJobPositions = useMemo(
     () => getSessionWorkspaceJobPositions(workspace.state, workspaceId),
     [workspace.state, workspaceId]
   );
+  const roles = workspace.permissionRoles ?? localRoles;
+  const jobPositions = workspace.jobPositions ?? localJobPositions;
   const [selectedRoleKey, setSelectedRoleKey] = useState("admin");
   const [selectedJobPositionKey, setSelectedJobPositionKey] = useState("front_desk");
   const [assignedRoleKey, setAssignedRoleKey] = useState<string | null>(null);
   const [roleDialogState, setRoleDialogState] = useState<RoleDialogState | null>(null);
   const [roleDraft, setRoleDraft] = useState<RoleDraft>(() => createRoleDraft());
   const [roleError, setRoleError] = useState<string | null>(null);
-  const [jobDialogOpen, setJobDialogOpen] = useState(false);
+  const [roleActionError, setRoleActionError] = useState<string | null>(null);
+  const [jobDialogState, setJobDialogState] = useState<JobDialogState | null>(null);
   const [jobLabel, setJobLabel] = useState("");
   const [jobError, setJobError] = useState<string | null>(null);
+  const [jobActionError, setJobActionError] = useState<string | null>(null);
+  const [savingCatalog, setSavingCatalog] = useState(false);
+  const [catalogDestructiveAction, setCatalogDestructiveAction] =
+    useState<CatalogDestructiveAction | null>(null);
   const activeSelectedRoleKey = roles.some((role) => role.roleKey === selectedRoleKey)
     ? selectedRoleKey
     : (roles[0]?.roleKey ?? "admin");
@@ -273,6 +292,8 @@ export function RolePermissionManagementScreen({
     ? selectedJobPositionKey
     : (jobPositions[0]?.positionKey ?? "front_desk");
   const selectedRole = roles.find((role) => role.roleKey === activeSelectedRoleKey) ?? roles[0];
+  const selectedJobPosition =
+    jobPositions.find((position) => position.positionKey === activeSelectedJobPositionKey) ?? jobPositions[0];
   const selectedRoleMembers = selectedRole
     ? getRoleAssignedMembers(workspace.state, workspaceId, selectedRole.roleKey)
     : [];
@@ -287,6 +308,12 @@ export function RolePermissionManagementScreen({
     setRoleError(null);
   };
 
+  const openJobDialog = (position?: SessionWorkspaceJobPosition) => {
+    setJobDialogState(position ? { mode: "edit", position } : { mode: "create", position: null });
+    setJobLabel(position?.label ?? "");
+    setJobError(null);
+  };
+
   const toggleDraftPermission = (permissionId: string, checked: boolean) => {
     setRoleDraft((current) => ({
       ...current,
@@ -297,17 +324,47 @@ export function RolePermissionManagementScreen({
     setRoleError(null);
   };
 
-  const saveRole = () => {
+  const saveRole = async () => {
     const validation = validateRoleDraft(roleDraft);
     if (!validation.valid) {
       setRoleError(getRoleValidationMessage(validation.reason));
       return;
     }
 
+    const roleKey = roleDialogState?.mode === "edit" ? roleDialogState.role.roleKey : undefined;
+    if (workspace.usesServerCatalog) {
+      setSavingCatalog(true);
+      const snapshot = await workspace.mutateCatalog({
+        action: roleKey ? "role.update" : "role.create",
+        roleKey,
+        role: {
+          label: roleDraft.label,
+          description: roleDraft.description,
+          permissionIds: roleDraft.permissionIds,
+        },
+      });
+      setSavingCatalog(false);
+
+      if (!snapshot) {
+        setRoleError(workspace.catalogError ?? "역할 변경을 저장하지 못했습니다.");
+        return;
+      }
+
+      const nextRole = roleKey
+        ? snapshot.permissionRoles.find((role) => role.roleKey === roleKey)
+        : snapshot.permissionRoles.find(
+            (role) => role.roleType === "custom" && role.label === roleDraft.label.trim()
+          );
+      setSelectedRoleKey(nextRole?.roleKey ?? selectedRoleKey);
+      setRoleDialogState(null);
+      return;
+    }
+
     const result = createOrUpdateSessionWorkspaceCustomPermissionRole(workspace.state, {
       workspaceId,
-      roleKey: roleDialogState?.mode === "edit" ? roleDialogState.role.roleKey : undefined,
+      roleKey,
       label: roleDraft.label,
+      description: roleDraft.description,
       permissionIds: roleDraft.permissionIds,
     });
 
@@ -321,11 +378,48 @@ export function RolePermissionManagementScreen({
     setRoleDialogState(null);
   };
 
-  const saveJobPosition = () => {
-    const result = createSessionWorkspaceCustomJobPosition(workspace.state, {
-      workspaceId,
-      label: jobLabel,
-    });
+  const saveJobPosition = async () => {
+    const positionKey = jobDialogState?.mode === "edit" ? jobDialogState.position.positionKey : undefined;
+    if (workspace.usesServerCatalog) {
+      if (!jobLabel.trim()) {
+        setJobError(getJobValidationMessage("empty_label"));
+        return;
+      }
+
+      setSavingCatalog(true);
+      const snapshot = await workspace.mutateCatalog({
+        action: positionKey ? "job.update" : "job.create",
+        positionKey,
+        job: { label: jobLabel },
+      });
+      setSavingCatalog(false);
+      if (!snapshot) {
+        setJobError(workspace.catalogError ?? "직무 변경을 저장하지 못했습니다.");
+        return;
+      }
+
+      const nextPosition = positionKey
+        ? snapshot.jobPositions.find((position) => position.positionKey === positionKey)
+        : snapshot.jobPositions.find(
+            (position) => !position.isSystem && position.label === jobLabel.trim() && position.isActive
+          );
+      setSelectedJobPositionKey(nextPosition?.positionKey ?? selectedJobPositionKey);
+      setJobDialogState(null);
+      setJobLabel("");
+      setJobError(null);
+      return;
+    }
+
+    const result = positionKey
+      ? updateSessionWorkspaceCustomJobPosition(workspace.state, {
+          workspaceId,
+          positionKey,
+          label: jobLabel,
+        })
+      : createSessionWorkspaceCustomJobPosition(workspace.state, {
+          workspaceId,
+          label: jobLabel,
+        });
 
     if (!result.success) {
       setJobError(getJobValidationMessage(result.reason));
@@ -334,16 +428,99 @@ export function RolePermissionManagementScreen({
 
     workspace.updateState(result.state);
     setSelectedJobPositionKey(result.position.positionKey);
-    setJobDialogOpen(false);
+    setJobDialogState(null);
     setJobLabel("");
     setJobError(null);
   };
 
-  if (!workspace.hydrated) {
+  const deleteSelectedRole = async () => {
+    if (!selectedRole || selectedRole.isSystem) return;
+    setRoleActionError(null);
+
+    if (workspace.usesServerCatalog) {
+      setSavingCatalog(true);
+      const snapshot = await workspace.mutateCatalog({ action: "role.delete", roleKey: selectedRole.roleKey });
+      setSavingCatalog(false);
+      if (!snapshot) {
+        setRoleActionError(workspace.catalogError ?? "역할을 삭제하지 못했습니다.");
+        return;
+      }
+    } else {
+      const result = deleteSessionWorkspaceCustomPermissionRole(workspace.state, {
+        workspaceId,
+        roleKey: selectedRole.roleKey,
+      });
+      if (!result.success) {
+        setRoleActionError(
+          result.reason === "role_referenced"
+            ? "구성원 또는 초대에 배정된 역할은 삭제할 수 없습니다. 먼저 배정을 변경하세요."
+            : "역할을 삭제할 수 없습니다."
+        );
+        return;
+      }
+      workspace.updateState(result.state);
+    }
+
+    setSelectedRoleKey(roles.find((role) => role.roleKey !== selectedRole.roleKey)?.roleKey ?? "admin");
+  };
+
+  const archiveSelectedJobPosition = async () => {
+    if (!selectedJobPosition || selectedJobPosition.isSystem) return;
+    setJobActionError(null);
+
+    if (workspace.usesServerCatalog) {
+      setSavingCatalog(true);
+      const snapshot = await workspace.mutateCatalog({
+        action: "job.archive",
+        positionKey: selectedJobPosition.positionKey,
+      });
+      setSavingCatalog(false);
+      if (!snapshot) {
+        setJobActionError(workspace.catalogError ?? "직무를 보관하지 못했습니다.");
+        return;
+      }
+    } else {
+      const result = archiveSessionWorkspaceCustomJobPosition(workspace.state, {
+        workspaceId,
+        positionKey: selectedJobPosition.positionKey,
+      });
+      if (!result.success) {
+        setJobActionError("직무를 보관할 수 없습니다.");
+        return;
+      }
+      workspace.updateState(result.state);
+    }
+
+    setSelectedJobPositionKey(
+      jobPositions.find((position) => position.positionKey !== selectedJobPosition.positionKey)?.positionKey ??
+        "front_desk"
+    );
+  };
+
+  if (!workspace.hydrated || (workspace.usesServerCatalog && workspace.catalogStatus === "loading")) {
     return (
       <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] p-5">
         <EmrPageHeader title="역할 및 권한" />
         <p className="mt-6 text-sm text-muted-foreground">권한 정보를 준비하고 있습니다.</p>
+      </div>
+    );
+  }
+
+  if (workspace.usesServerCatalog && workspace.catalogStatus === "error") {
+    return (
+      <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] p-5">
+        <EmrPageHeader title="역할 및 권한" />
+        <Card className="mt-6 max-w-xl">
+          <CardHeader>
+            <CardTitle>역할 정보를 불러오지 못했습니다</CardTitle>
+            <CardDescription role="alert">
+              {workspace.catalogError ?? "권한 또는 연결 상태를 확인한 뒤 다시 시도하세요."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => void workspace.reloadCatalog()}>다시 시도</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -367,6 +544,16 @@ export function RolePermissionManagementScreen({
         <p className="mt-1 text-sm leading-5 text-muted-foreground">
           역할은 할 수 있는 일을, 직무는 병원 안에서의 업무 표기를 정합니다.
         </p>
+        {workspace.canManage && workspace.ownerReconciliation?.needsConfirmation ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <p>소유자 확인 필요: 기존 병원관리자 중 한 명을 임시 소유자로 지정했습니다.</p>
+            {onOpenMemberManagement ? (
+              <Button size="sm" variant="outline" onClick={onOpenMemberManagement}>
+                구성원 관리 열기
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       {!workspace.canView ? (
@@ -432,18 +619,38 @@ export function RolePermissionManagementScreen({
                       <CardAction className="flex items-center gap-2">
                         {selectedRole.isSystem ? <Badge variant="outline">시스템 역할</Badge> : null}
                         {!selectedRole.isSystem ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!workspace.canManage}
-                            onClick={() => openRoleDialog(selectedRole)}
-                          >
-                            역할 편집
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!workspace.canManage || savingCatalog}
+                              onClick={() => openRoleDialog(selectedRole)}
+                            >
+                              역할 편집
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!workspace.canManage || savingCatalog}
+                              onClick={() =>
+                                setCatalogDestructiveAction({
+                                  type: "role.delete",
+                                  label: selectedRole.label,
+                                })
+                              }
+                            >
+                              역할 삭제
+                            </Button>
+                          </>
                         ) : null}
                       </CardAction>
                     </CardHeader>
                     <CardContent className="grid gap-5">
+                      {roleActionError ? (
+                        <p role="alert" className="text-sm text-destructive">
+                          {roleActionError}
+                        </p>
+                      ) : null}
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-medium">지정 구성원</p>
@@ -538,30 +745,51 @@ export function RolePermissionManagementScreen({
 
                 <Card>
                   <CardHeader className="border-b">
-                    <CardTitle>
-                      {getSessionWorkspaceJobPositionLabel(
-                        activeSelectedJobPositionKey,
-                        workspace.state,
-                        workspaceId
-                      )}
-                    </CardTitle>
+                    <CardTitle>{selectedJobPosition?.label ?? "직무"}</CardTitle>
                     <CardDescription>
                       직무는 구성원의 업무 표기와 기본 업무 제안에만 사용됩니다.
                     </CardDescription>
-                    <CardAction>
+                    <CardAction className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        disabled={!workspace.canManage}
-                        onClick={() => {
-                          setJobDialogOpen(true);
-                          setJobError(null);
-                        }}
+                        disabled={!workspace.canManage || savingCatalog}
+                        onClick={() => openJobDialog()}
                       >
                         직무 추가
                       </Button>
+                      {selectedJobPosition && !selectedJobPosition.isSystem ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!workspace.canManage || savingCatalog}
+                            onClick={() => openJobDialog(selectedJobPosition)}
+                          >
+                            직무 편집
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!workspace.canManage || savingCatalog}
+                            onClick={() =>
+                              setCatalogDestructiveAction({
+                                type: "job.archive",
+                                label: selectedJobPosition.label,
+                              })
+                            }
+                          >
+                            직무 보관
+                          </Button>
+                        </>
+                      ) : null}
                     </CardAction>
                   </CardHeader>
                   <CardContent>
+                    {jobActionError ? (
+                      <p role="alert" className="mb-3 text-sm text-destructive">
+                        {jobActionError}
+                      </p>
+                    ) : null}
                     <p className="text-sm leading-6 text-muted-foreground">
                       직무를 바꿔도 권한 역할은 바뀌지 않습니다. 구성원 배정은 병원구성원 관리에서 합니다.
                     </p>
@@ -618,6 +846,18 @@ export function RolePermissionManagementScreen({
               {roleError ? <FieldError>{roleError}</FieldError> : null}
             </Field>
             <Field>
+              <FieldLabel htmlFor="role-permission-custom-role-description">설명</FieldLabel>
+              <Input
+                id="role-permission-custom-role-description"
+                value={roleDraft.description}
+                placeholder="검사 결과 확인과 입력을 맡습니다."
+                onChange={(event) => {
+                  setRoleDraft((current) => ({ ...current, description: event.target.value }));
+                  setRoleError(null);
+                }}
+              />
+            </Field>
+            <Field>
               <FieldLabel>허용 권한</FieldLabel>
               <div className="grid gap-1 rounded-lg border border-border p-2">
                 {SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG.map((permission) => (
@@ -634,26 +874,28 @@ export function RolePermissionManagementScreen({
             </Field>
           </FieldGroup>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRoleDialogState(null)}>
+            <Button variant="outline" disabled={savingCatalog} onClick={() => setRoleDialogState(null)}>
               취소
             </Button>
             <Button
               disabled={
+                savingCatalog ||
                 roleDialogState?.mode === "edit" &&
                 !isRoleDraftDirty(roleDraft, roleDialogState.role)
               }
-              onClick={saveRole}
+              onClick={() => void saveRole()}
             >
-              역할 저장
+              {savingCatalog ? "저장 중" : "역할 저장"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog
-        open={jobDialogOpen}
+        open={Boolean(jobDialogState)}
         onOpenChange={(open) => {
-          setJobDialogOpen(open);
+          if (open) return;
+          setJobDialogState(null);
           if (!open) {
             setJobLabel("");
             setJobError(null);
@@ -662,7 +904,7 @@ export function RolePermissionManagementScreen({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>직무 추가</DialogTitle>
+            <DialogTitle>{jobDialogState?.mode === "edit" ? "직무 편집" : "직무 추가"}</DialogTitle>
             <DialogDescription>직무는 권한 역할과 분리된 업무 표기입니다.</DialogDescription>
           </DialogHeader>
           <Field data-invalid={Boolean(jobError)}>
@@ -680,10 +922,12 @@ export function RolePermissionManagementScreen({
             {jobError ? <FieldError>{jobError}</FieldError> : null}
           </Field>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setJobDialogOpen(false)}>
+            <Button variant="outline" disabled={savingCatalog} onClick={() => setJobDialogState(null)}>
               취소
             </Button>
-            <Button onClick={saveJobPosition}>직무 저장</Button>
+            <Button disabled={savingCatalog} onClick={() => void saveJobPosition()}>
+              {savingCatalog ? "저장 중" : "직무 저장"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -725,6 +969,47 @@ export function RolePermissionManagementScreen({
           </div>
         </SheetContent>
       </Sheet>
+
+      <Dialog
+        open={Boolean(catalogDestructiveAction)}
+        onOpenChange={(open) => {
+          if (!open) setCatalogDestructiveAction(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {catalogDestructiveAction?.type === "role.delete" ? "역할 삭제" : "직무 보관"}
+            </DialogTitle>
+            <DialogDescription>
+              {catalogDestructiveAction?.type === "role.delete"
+                ? `${catalogDestructiveAction.label} 역할을 삭제합니다. 구성원이나 초대에 배정되어 있으면 삭제할 수 없습니다.`
+                : `${catalogDestructiveAction?.label ?? "선택한"} 직무를 보관합니다. 새 배정과 업무 기본값에서는 제외됩니다.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={savingCatalog}
+              onClick={() => setCatalogDestructiveAction(null)}
+            >
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={savingCatalog}
+              onClick={() => {
+                const action = catalogDestructiveAction;
+                setCatalogDestructiveAction(null);
+                if (action?.type === "role.delete") void deleteSelectedRole();
+                if (action?.type === "job.archive") void archiveSelectedJobPosition();
+              }}
+            >
+              {catalogDestructiveAction?.type === "role.delete" ? "역할 삭제" : "직무 보관"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

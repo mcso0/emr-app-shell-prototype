@@ -74,6 +74,10 @@ import {
   updateSessionWorkspaceMembershipRoles,
 } from "@/features/auth/workspace-session";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import {
+  createWorkspaceRoleCatalogApi,
+} from "@/features/hospital-admin/role-permission-management/server-catalog";
+import type { WorkspaceRoleCatalogSnapshot } from "@/features/auth/server-workspace-role-catalog";
 
 type WorkspaceMembershipManagementProps = {
   onOpenRoleManagement?: () => void;
@@ -220,7 +224,12 @@ export function WorkspaceMembershipManagement({
   const [archiveReason, setArchiveReason] = useState("");
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [submittingArchive, setSubmittingArchive] = useState(false);
-  const canManageMembers = session?.role === "hospital_admin" || session?.role === "supabase";
+  const [serverCatalog, setServerCatalog] = useState<WorkspaceRoleCatalogSnapshot | null>(null);
+  const [catalogReadError, setCatalogReadError] = useState<string | null>(null);
+  const catalogApi = useMemo(() => createWorkspaceRoleCatalogApi(), []);
+  const canManageMembers =
+    session?.role === "hospital_admin" ||
+    (session?.role === "supabase" && serverCatalog?.access.canManage === true);
 
   useEffect(() => {
     hydrate();
@@ -229,6 +238,39 @@ export function WorkspaceMembershipManagement({
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  useEffect(() => {
+    if (!hydrated || session?.role !== "supabase") {
+      return;
+    }
+
+    let canceled = false;
+    const loadCatalog = async () => {
+      try {
+        const snapshot = await catalogApi.load(workspaceId);
+        if (canceled) return;
+        setServerCatalog(snapshot);
+        setCatalogReadError(null);
+      } catch {
+        if (canceled) return;
+        setServerCatalog(null);
+        setCatalogReadError("역할 카탈로그를 불러오지 못했습니다. 역할 및 권한에서 다시 시도하세요.");
+      }
+    };
+
+    const reloadCatalog = () => {
+      void loadCatalog();
+    };
+
+    void loadCatalog();
+    window.addEventListener("clair.workspaceRoleCatalog.v1", reloadCatalog);
+    window.addEventListener("focus", reloadCatalog);
+    return () => {
+      canceled = true;
+      window.removeEventListener("clair.workspaceRoleCatalog.v1", reloadCatalog);
+      window.removeEventListener("focus", reloadCatalog);
+    };
+  }, [catalogApi, hydrated, session?.role, workspaceId]);
 
   const workspaceRows = useMemo<MembershipRow[]>(() => {
     const memberships = state.memberships
@@ -242,14 +284,17 @@ export function WorkspaceMembershipManagement({
       getRowEmail(left).localeCompare(getRowEmail(right))
     );
   }, [state.invitations, state.memberships, workspaceId]);
-  const permissionRoles = useMemo(
+  const localPermissionRoles = useMemo(
     () => getSessionWorkspacePermissionRoles(state, workspaceId),
     [state, workspaceId]
   );
-  const jobPositions = useMemo(
+  const localJobPositions = useMemo(
     () => getSessionWorkspaceJobPositions(state, workspaceId),
     [state, workspaceId]
   );
+  const visibleServerCatalog = session?.role === "supabase" ? serverCatalog : null;
+  const permissionRoles = visibleServerCatalog?.permissionRoles ?? localPermissionRoles;
+  const jobPositions = visibleServerCatalog?.jobPositions.filter((position) => position.isActive) ?? localJobPositions;
 
   const activeMembers = state.memberships.filter(
     (membership) => membership.workspaceId === workspaceId && membership.status === "active"
@@ -369,7 +414,10 @@ export function WorkspaceMembershipManagement({
       title: String(formData.get("title") ?? ""),
       department: String(formData.get("department") ?? ""),
     };
-    const validation = validateWorkspaceInvitationInput(input, state, workspaceId);
+    const validation = validateWorkspaceInvitationInput(input, state, workspaceId, {
+      permissionRoleKeys: permissionRoles.map((role) => role.roleKey),
+      jobPositionKeys: jobPositions.map((position) => position.positionKey),
+    });
 
     if (!validation.valid) {
       setFieldErrors(validation.fieldErrors);
@@ -1019,6 +1067,15 @@ export function WorkspaceMembershipManagement({
                     className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]"
                   >
                     {submitError}
+                  </p>
+                ) : null}
+
+                {catalogReadError ? (
+                  <p
+                    role="alert"
+                    className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]"
+                  >
+                    {catalogReadError}
                   </p>
                 ) : null}
 
