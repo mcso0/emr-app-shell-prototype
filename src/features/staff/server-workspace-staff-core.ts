@@ -6,8 +6,10 @@ import {
   type WorkspaceRoleId,
 } from "@/features/auth/permission-resolver";
 import { mockStaffUsers } from "@/mocks/emr-domain";
+import { AVATAR_STORAGE_BUCKET } from "@/features/staff/staff-avatar";
 
 export type WorkspaceStaffMember = {
+  avatarUrl?: string;
   department?: string;
   displayName: string;
   id: string;
@@ -67,6 +69,17 @@ type SupabaseStaffUserRow = {
   status: string;
 };
 
+type SupabaseStaffProfileRow = {
+  avatar_url?: string | null;
+  user_id: string;
+};
+
+type SupabaseStaffStorage = {
+  from(bucket: string): {
+    getPublicUrl(path: string): { data: { publicUrl: string } };
+  };
+};
+
 type SupabaseStaffQueryBuilder<Row> = PromiseLike<{
   data: Row[] | null;
   error: { message?: string } | null;
@@ -79,6 +92,8 @@ type SupabaseStaffQueryBuilder<Row> = PromiseLike<{
 export type SupabaseWorkspaceStaffClient = {
   from(table: "user_memberships"): SupabaseStaffQueryBuilder<SupabaseStaffMembershipRow>;
   from(table: "users"): SupabaseStaffQueryBuilder<SupabaseStaffUserRow>;
+  from(table: "user_profiles"): SupabaseStaffQueryBuilder<SupabaseStaffProfileRow>;
+  storage: SupabaseStaffStorage;
 };
 
 export async function readWorkspaceStaff({
@@ -152,7 +167,19 @@ export function createSupabaseWorkspaceStaffReadGateway(
           .in("id", userIds);
         if (userError) return { ok: false, error: "db_read_failed" };
 
+        const { data: profileRows, error: profileError } = await client
+          .from("user_profiles")
+          .select("user_id, avatar_url")
+          .in("user_id", userIds);
+        if (profileError) return { ok: false, error: "db_read_failed" };
+
         const userById = new Map((userRows ?? []).map((row) => [row.id, row]));
+        const avatarUrlByUserId = new Map(
+          (profileRows ?? []).map((row) => [
+            row.user_id,
+            resolveStaffAvatarUrl(client, row.avatar_url),
+          ]),
+        );
         const staff = memberships
           .reduce<WorkspaceStaffMember[]>((accumulator, membership) => {
             const user = userById.get(membership.user_id);
@@ -164,6 +191,7 @@ export function createSupabaseWorkspaceStaffReadGateway(
               displayName: user.display_name ?? "이름 없음",
               id: user.id,
               initial: user.initial ?? undefined,
+              avatarUrl: avatarUrlByUserId.get(user.id) ?? undefined,
               roles,
               status: "active" as const,
               title: membership.title ?? undefined,
@@ -192,6 +220,7 @@ export function createMockWorkspaceStaffReadGateway(): WorkspaceStaffReadGateway
             displayName: user.name,
             id: user.id,
             initial: user.initial,
+            avatarUrl: user.avatarUrl ?? undefined,
             roles,
             status: "active",
             title: "수의사",
@@ -203,6 +232,19 @@ export function createMockWorkspaceStaffReadGateway(): WorkspaceStaffReadGateway
       return { ok: true, staff };
     },
   };
+}
+
+function resolveStaffAvatarUrl(
+  client: SupabaseWorkspaceStaffClient,
+  avatarReference: string | null | undefined,
+): string | undefined {
+  const reference = avatarReference?.trim();
+  if (!reference) return undefined;
+  if (reference.startsWith("/") || reference.startsWith("http")) {
+    return reference;
+  }
+
+  return client.storage.from(AVATAR_STORAGE_BUCKET).getPublicUrl(reference).data.publicUrl;
 }
 
 export function createDemoWorkspaceStaffPermissionAdapter() {

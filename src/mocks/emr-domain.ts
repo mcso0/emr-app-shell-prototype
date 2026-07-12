@@ -33,10 +33,12 @@ import type {
   SoapNote,
   WaitingQueueEntry,
 } from "@/types/emr-domain";
+import { getMockStaffAvatarUrl } from "@/features/staff/staff-avatar";
 
 export const MOCK_WORKSPACE_ID = "clair-demo";
 
 export type MockStaffUser = {
+  avatarUrl?: string | null;
   id: EmrId;
   workspaceId: EmrId;
   name: string;
@@ -45,7 +47,7 @@ export type MockStaffUser = {
   department: "진료" | "조제" | "검사" | "영상" | "수납" | "데스크" | "관리";
 };
 
-export const mockStaffUsers: MockStaffUser[] = [
+const mockStaffUserSeeds: MockStaffUser[] = [
   {
     id: "user-vet-suji",
     workspaceId: MOCK_WORKSPACE_ID,
@@ -159,6 +161,11 @@ export const mockStaffUsers: MockStaffUser[] = [
     department: "관리",
   },
 ];
+
+export const mockStaffUsers: MockStaffUser[] = mockStaffUserSeeds.map((user) => ({
+  ...user,
+  avatarUrl: getMockStaffAvatarUrl(user.id),
+}));
 
 export const mockPermissionSeeds: PermissionSeed[] = [
   {

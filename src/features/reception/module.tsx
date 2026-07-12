@@ -62,7 +62,7 @@ import {
   ExcelFileIcon,
 } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Item,
@@ -226,6 +226,7 @@ import type { DrawerState, ShellComponentProps } from "@/types/emr";
 const allVeterinarians = mockStaffUsers.filter(
   (user) => user.role === "veterinarian",
 ).map((user) => ({
+  avatarUrl: user.avatarUrl ?? undefined,
   id: user.id,
   initial: user.initial,
   name: user.name,
@@ -400,6 +401,7 @@ const monthDays = Array.from({ length: 35 }, (_, index) => index + 1);
 type ReceptionSideListMode = (typeof receptionQueueTabItems)[number]["value"];
 type CalendarTaskBadgeType = "예약" | "외래" | "노쇼";
 type Veterinarian = {
+  avatarUrl?: string;
   department?: string;
   id: string;
   initial?: string;
@@ -418,6 +420,7 @@ type WorkspaceStaffReadResponse =
         displayName: string;
         id: string;
         initial?: string;
+        avatarUrl?: string;
         roles: string[];
         status: string;
         title?: string;
@@ -565,6 +568,9 @@ function VeterinarianLaneHeader({
         size="sm"
         className="after:border-0"
       >
+        {veterinarian.avatarUrl ? (
+          <AvatarImage src={veterinarian.avatarUrl} alt="" />
+        ) : null}
         <AvatarFallback className="bg-[var(--emr-surface-panel)] font-medium text-[var(--clair-color-atomic-gray-500)]">
           {veterinarian.initial}
         </AvatarFallback>
@@ -1279,6 +1285,7 @@ function mapWorkspaceStaffToVeterinarians(
   return response.staff
     .filter((member) => member.status === "active" && member.roles.includes("vet"))
     .map((member) => ({
+      avatarUrl: member.avatarUrl,
       department: member.department,
       id: member.id,
       initial: member.initial,
