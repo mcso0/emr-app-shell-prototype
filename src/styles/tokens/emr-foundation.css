@@ -139,7 +139,7 @@
   --emr-topbar-tab-label-padding-x: var(--clair-spacing-2);
   --emr-topbar-tab-radius: var(--clair-radius-atomic-8);
   --emr-topbar-tab-min-width: 148px;
-  --emr-topbar-tab-max-width: 230px;
+  --emr-topbar-tab-max-width: 148px;
   --emr-topbar-tab-bg: transparent;
   --emr-topbar-tab-hover-bg: var(--clair-color-atomic-black-alpha-6);
   --emr-topbar-tab-active-bg: var(--clair-color-atomic-common-100);
@@ -147,12 +147,12 @@
   --emr-topbar-tab-active-shadow: var(--clair-shadow-xs);
   --emr-topbar-tab-text: var(--clair-color-atomic-neutral-600);
   --emr-topbar-tab-active-text: var(--clair-color-atomic-neutral-800);
-  --emr-topbar-tab-icon: var(--clair-color-atomic-neutral-300);
-  --emr-topbar-tab-active-icon: var(--clair-color-atomic-neutral-400);
-  --emr-topbar-tab-icon-scale: 0.75;
+  --emr-topbar-tab-icon: var(--clair-color-atomic-neutral-500);
+  --emr-topbar-tab-active-icon: var(--clair-color-atomic-neutral-800);
+  --emr-topbar-tab-icon-scale: 1;
   --emr-topbar-tab-close-size: var(--clair-spacing-16);
-  --emr-topbar-tab-close: var(--clair-color-atomic-black-alpha-16);
-  --emr-topbar-tab-active-close: var(--clair-color-atomic-black-alpha-24);
+  --emr-topbar-tab-close: var(--clair-color-atomic-neutral-500);
+  --emr-topbar-tab-active-close: var(--clair-color-atomic-neutral-800);
   --emr-topbar-profile-width: var(--clair-spacing-48);
   --emr-topbar-profile-bg: var(--clair-color-atomic-common-100);
   --emr-topbar-profile-border: var(--clair-color-atomic-neutral-200);

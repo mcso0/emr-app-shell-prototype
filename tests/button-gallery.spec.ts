@@ -101,6 +101,14 @@ test("button gallery exposes Figma-aligned text button sizing and states", async
 test("button gallery exposes Figma-aligned icon button sizing and roundness", async ({ page }) => {
   await page.goto("/button-gallery");
 
+  const tinyGhostIconButton = page.getByTestId("icon-default-tiny-ghost-enable");
+  await expect(tinyGhostIconButton).toBeVisible();
+  await expect(tinyGhostIconButton).toHaveCSS("width", "18px");
+  await expect(tinyGhostIconButton).toHaveCSS("height", "18px");
+  await expect(tinyGhostIconButton.locator("svg")).toHaveCSS("width", "14px");
+  await expect(tinyGhostIconButton.locator("svg")).toHaveCSS("height", "14px");
+  await expect(tinyGhostIconButton).toHaveCSS("border-radius", "4px");
+
   const defaultIconButton = page.getByTestId("icon-default-icon-default-enable");
   await expect(defaultIconButton).toBeVisible();
   await expect(defaultIconButton).toHaveCSS("width", "32px");

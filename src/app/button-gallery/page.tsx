@@ -17,6 +17,7 @@ const textSizes = [
 ] as const;
 
 const iconSizes = [
+  { label: "tiny", value: "tiny" },
   { label: "xs", value: "icon-xs" },
   { label: "sm", value: "icon-sm" },
   { label: "default", value: "icon" },
