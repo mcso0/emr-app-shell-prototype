@@ -1758,7 +1758,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
   const activeWorkspaceTab = getWorkspaceTablist(page).getByRole("tab").first();
   await expect(activeWorkspaceTab).toHaveCSS("height", "32px");
   await expect(activeWorkspaceTab).toHaveCSS("font-size", "14px");
-  await expect(activeWorkspaceTab).toHaveCSS("line-height", "20px");
+  await expect(activeWorkspaceTab).toHaveCSS("line-height", /^20(?:\.0004)?px$/);
   await expect(activeWorkspaceTab).toHaveCSS("letter-spacing", "0.196px");
   await expect(activeWorkspaceTab).toHaveCSS("padding-left", "8px");
   await expect(activeWorkspaceTab).toHaveCSS("padding-right", "10px");
@@ -1841,7 +1841,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
   await expect(forwardButton).toBeDisabled();
 });
 
-test("workspace tab close button keeps tab hover surface unified", async ({ page }) => {
+test("workspace tab close button uses the Figma tiny ghost hover state", async ({ page }) => {
   await clearWorkspaceTabs(page);
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
 
@@ -1849,20 +1849,51 @@ test("workspace tab close button keeps tab hover surface unified", async ({ page
   await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
 
   const hoverColor = await resolveCssColor(page, "var(--emr-topbar-tab-hover-bg)");
+  const closeHoverColor = await resolveCssColor(page, "var(--clair-color-atomic-black-alpha-4)");
+  const closeHoverTextColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-800)");
   const closeButton = workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" }).first();
   const tabContainer = closeButton.locator("xpath=ancestor::*[@role='presentation'][1]");
   const tabButton = tabContainer.getByRole("tab").first();
 
   await expect(tabButton).toHaveCSS("padding-right", "0px");
   await expect(tabContainer).toHaveCSS("min-width", "148px");
-  await expect(closeButton).toHaveCSS("width", "16px");
-  await expect(closeButton).toHaveCSS("height", "16px");
+  await expect(tabContainer).toHaveCSS("max-width", "148px");
+  await expect(closeButton).toHaveCSS("width", "18px");
+  await expect(closeButton).toHaveCSS("height", "18px");
+  await expect(closeButton.locator("svg")).toHaveCSS("width", "14px");
+  await expect(closeButton.locator("svg")).toHaveCSS("height", "14px");
   await expect(closeButton).toHaveCSS("opacity", "0");
   await tabContainer.hover();
   await expect(closeButton).toHaveCSS("opacity", "1");
   await closeButton.hover();
   await expect(tabContainer).toHaveCSS("background-color", hoverColor);
-  await expect(closeButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(closeButton).toHaveCSS("background-color", closeHoverColor);
+  await expect(closeButton).toHaveCSS("color", closeHoverTextColor);
+});
+
+test("workspace tab icons and labels use Figma neutral colors by tab state", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const workspaceTabs = getWorkspaceTablist(page);
+  const defaultTextColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-600)");
+  const defaultIconColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-500)");
+  const activeColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-800)");
+
+  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  const inactiveTab = workspaceTabs.getByRole("tab").first();
+  const activeTab = workspaceTabs.getByRole("tab").nth(1);
+
+  await expect(inactiveTab).toHaveCSS("color", defaultTextColor);
+  await expect(inactiveTab.locator("svg")).toHaveCSS("color", defaultIconColor);
+  await expect(activeTab).toHaveCSS("color", activeColor);
+  await expect(activeTab.locator("svg")).toHaveCSS("color", activeColor);
+  await expect(activeTab.locator("svg")).toHaveCSS("width", "16px");
+  await expect(activeTab.locator("svg")).toHaveCSS("height", "16px");
+
+  await inactiveTab.hover();
+  await expect(inactiveTab).toHaveCSS("color", activeColor);
+  await expect(inactiveTab.locator("svg")).toHaveCSS("color", activeColor);
 });
 
 test("workspace topbar keeps collapsed panel history controls in the legacy slot", async ({ page }) => {

@@ -28,6 +28,7 @@ const buttonVariants = cva(
         xl: "emr-control-text h-[var(--clair-control-height-xl)] gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
         icon: "size-[var(--clair-control-height-md)] [&_svg:not([class*='size-'])]:size-4",
         "icon-xs": "size-[var(--clair-control-height-xs)] [&_svg:not([class*='size-'])]:size-3",
+        tiny: "size-[18px] !rounded-[var(--clair-radius-atomic-4)] p-[2px] [&_svg:not([class*='size-'])]:size-[14px]",
         "icon-sm": "size-[var(--clair-control-height-sm)] [&_svg:not([class*='size-'])]:size-3",
         "icon-lg": "size-[var(--clair-control-height-lg)] [&_svg:not([class*='size-'])]:size-4",
         "icon-xl": "size-[var(--clair-control-height-xl)] [&_svg:not([class*='size-'])]:size-4",

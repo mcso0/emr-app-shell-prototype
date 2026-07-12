@@ -28,7 +28,7 @@ const meta = {
     },
     size: {
       control: "select",
-      options: ["xs", "sm", "default", "lg", "xl", "icon", "icon-xs", "icon-sm", "icon-lg", "icon-xl"],
+      options: ["tiny", "xs", "sm", "default", "lg", "xl", "icon", "icon-xs", "icon-sm", "icon-lg", "icon-xl"],
       description: "Control height and icon scale. Match the surrounding EMR density.",
     },
     roundness: {
@@ -127,6 +127,9 @@ export const IconUsage: Story = {
         삭제
       </Button>
       <Button size="icon" variant="ghost" aria-label="신규 등록">
+        <CdsActionsPlusIcon aria-hidden="true" />
+      </Button>
+      <Button size="tiny" variant="ghost" aria-label="닫기">
         <CdsActionsPlusIcon aria-hidden="true" />
       </Button>
     </div>

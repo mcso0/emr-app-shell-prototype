@@ -1,8 +1,10 @@
 "use client";
 
 import { type MouseEvent } from "react";
-import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
-import { CircleCloseFillIcon } from "@/components/icons";
+import {
+  CdsActionsPlusIcon,
+  CdsActionsXIcon,
+} from "@/components/cds-icons/actions-and-controls";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -30,9 +32,9 @@ const WORKSPACE_TAB_WIDTH_CLASS_NAME =
 const workspaceTabButtonClassName =
   "h-[var(--emr-topbar-control-size)] min-w-0 flex-1 justify-start gap-0 truncate rounded-[var(--emr-topbar-tab-radius)] border-transparent bg-transparent py-[var(--emr-topbar-tab-padding-y)] pl-[var(--emr-topbar-tab-padding-x)] pr-[var(--emr-topbar-tab-padding-right)] text-left [font-size:var(--emr-type-size-body)] font-medium ![letter-spacing:var(--emr-type-tracking-section)] [line-height:var(--emr-type-leading-body)] shadow-none hover:bg-transparent";
 const workspaceTabCloseClassName =
-  "mr-[var(--emr-topbar-tab-padding-x)] flex size-[var(--emr-topbar-tab-close-size)] shrink-0 items-center justify-center rounded-full bg-transparent p-0 text-[var(--emr-topbar-tab-close)] opacity-0 transition-opacity duration-[var(--emr-topbar-motion-duration)] pointer-events-none hover:bg-transparent hover:text-[var(--emr-topbar-tab-active-close)] group-hover/workspace-tab:pointer-events-auto group-hover/workspace-tab:opacity-100 group-focus-within/workspace-tab:pointer-events-auto group-focus-within/workspace-tab:opacity-100 motion-reduce:transition-none";
+  "mr-[var(--emr-topbar-tab-padding-x)] shrink-0 bg-transparent text-[var(--emr-topbar-tab-close)] opacity-0 transition-opacity duration-[var(--emr-topbar-motion-duration)] pointer-events-none hover:bg-[var(--clair-color-atomic-black-alpha-4)] hover:text-[var(--emr-topbar-tab-active-close)] group-hover/workspace-tab:pointer-events-auto group-hover/workspace-tab:opacity-100 group-focus-within/workspace-tab:pointer-events-auto group-focus-within/workspace-tab:opacity-100 motion-reduce:transition-none";
 const workspaceTabIconFrameClassName =
-  "flex size-[var(--clair-spacing-16)] shrink-0 items-center justify-center text-[var(--emr-topbar-tab-icon)]";
+  "flex size-[var(--clair-spacing-16)] shrink-0 items-center justify-center";
 const workspaceTabTooltipClassName =
   "max-w-[260px] flex-col items-start gap-0.5 px-2.5 py-2 text-left";
 
@@ -95,14 +97,16 @@ export function WorkspaceChromeTabs({
                         <span
                           className={cn(
                             workspaceTabIconFrameClassName,
-                            active && "text-[var(--emr-topbar-tab-active-icon)]",
+                            active
+                              ? "text-[var(--emr-topbar-tab-active-icon)]"
+                              : "text-[var(--emr-topbar-tab-icon)] group-hover/workspace-tab:text-[var(--emr-topbar-tab-active-icon)]",
                           )}
                           aria-hidden="true"
                         >
                           <TabIcon
                             className={cn(
-                              "origin-center scale-[var(--emr-topbar-tab-icon-scale)] text-current",
-                              tab.iconClassName
+                              tab.iconClassName,
+                              "h-4 w-4 origin-center scale-[var(--emr-topbar-tab-icon-scale)] text-current",
                             )}
                           />
                         </span>
@@ -132,7 +136,7 @@ export function WorkspaceChromeTabs({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                size="tiny"
                 aria-label={`${tab.title} 탭 닫기`}
                 className={cn(
                   workspaceTabCloseClassName,
@@ -140,7 +144,7 @@ export function WorkspaceChromeTabs({
                 )}
                 onClick={handleCloseTab}
               >
-                <CircleCloseFillIcon className="size-[var(--emr-topbar-tab-close-size)]" aria-hidden="true" />
+                <CdsActionsXIcon aria-hidden="true" />
               </Button>
             ) : null}
           </div>
