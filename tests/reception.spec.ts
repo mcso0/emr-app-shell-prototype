@@ -466,6 +466,18 @@ test("reception renders the first-path workspace instead of the placeholder", as
   );
 });
 
+test("reception calendar toolbar icon actions use square 32px controls", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+
+  for (const label of ["더보기", "우측 사이드 패널 열기"]) {
+    const button = page.getByRole("button", { name: label, exact: true });
+
+    await expect(button).toBeVisible();
+    await expect(button).toHaveCSS("width", "32px");
+    await expect(button).toHaveCSS("height", "32px");
+  }
+});
+
 test("reception route date selects requested operating date", async ({
   page,
 }) => {

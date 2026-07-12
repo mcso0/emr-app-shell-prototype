@@ -4024,8 +4024,7 @@ function ScheduleToolbar({
             aria-label="더보기"
             className={buttonVariants({
               variant: "ghost",
-              size: "icon-sm",
-              className: "h-8",
+              size: "icon",
             })}
           >
             <CdsFilesMoreHorizontalIcon />
@@ -4045,8 +4044,7 @@ function ScheduleToolbar({
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
-            className="h-8"
+            size="icon"
             aria-label="우측 사이드 패널 열기"
             onClick={() => setRightPanelOpen(true)}
           >
