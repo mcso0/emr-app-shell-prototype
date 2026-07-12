@@ -2408,7 +2408,7 @@ function CalendarTaskCard({
         "px-[var(--emr-calendar-task-padding-x)] py-[var(--emr-calendar-task-padding-y)]",
         compact
           ? "items-center"
-          : "flex-col gap-[var(--emr-calendar-task-content-gap)]",
+          : "flex-col gap-y-[var(--emr-calendar-task-row-gap)]",
         !fillHeight && compact && "h-[var(--emr-calendar-task-compact-height)]",
         !fillHeight && medium && "h-[var(--emr-calendar-task-medium-height)]",
         !fillHeight &&
