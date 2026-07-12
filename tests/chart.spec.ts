@@ -891,40 +891,42 @@ test("chart SOAP manual save persists through route-backed reload", async ({
   await expect(page.getByLabel("기본 SOAP 기록")).toContainText(savedText);
 });
 
-test("chart SOAP tabs add systems, prevent duplicates, reset, undo, and delete", async ({
+test("chart SOAP add opens a dropdown menu instead of a modal", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
-
-  const soapEditor = page.getByLabel("기본 SOAP 기록");
-  await expect(soapEditor).toContainText("보호자 진술상 전날 밤부터 구토 3회");
-
-  await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
-  await page.getByRole("menuitem", { name: "초기화" }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "초기화" })
-    .click();
-  await expect(soapEditor).toContainText("보호자 진술:");
-  await page.getByRole("button", { name: "되돌리기" }).click();
-  await expect(soapEditor).toContainText("보호자 진술상 전날 밤부터 구토 3회");
+  await expect(page.getByRole("button", { name: "SOAP 추가" })).toBeEnabled();
 
   await page.getByRole("button", { name: "SOAP 추가" }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "호흡기" })
-    .click();
+
+  await expect(page.getByRole("menu")).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "SOAP 진단계통 선택" }),
+  ).toHaveCount(0);
+});
+
+test("chart SOAP tabs add systems, prevent duplicates, and delete", async ({
+  page,
+}) => {
+  await page.goto(kongScenarioUrl);
+  await expect(page.getByRole("button", { name: "SOAP 추가" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "SOAP 추가" }).click();
+  const addMenu = page.getByRole("menu");
+  await expect(addMenu).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await addMenu.getByRole("menuitem", { name: "호흡기" }).click();
   await expect(page.getByLabel("호흡기 SOAP 기록")).toContainText(
     "보호자 진술:",
   );
 
   await page.getByRole("button", { name: "SOAP 추가" }).click();
-  const addDialog = page.getByRole("dialog");
+  const addedSystemMenu = page.getByRole("menu");
   await expect(
-    addDialog.getByRole("button", { name: /호흡기/ }),
+    addedSystemMenu.getByRole("menuitem", { name: /호흡기/ }),
   ).toBeDisabled();
   expect(
-    await addDialog.getByText("이미 추가됨").count(),
+    await addedSystemMenu.getByText("이미 추가됨").count(),
   ).toBeGreaterThanOrEqual(2);
   await page.keyboard.press("Escape");
 
@@ -1124,13 +1126,17 @@ test("chart Order 청구 sends persisted orders without draft save", async ({
 
 test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await page.goto(kongScenarioUrl);
+  await expect(page.getByRole("button", { name: "SOAP 추가" })).toBeEnabled();
 
   for (const systemLabel of ["호흡기", "피부", "전신", "예방"]) {
     await page.getByRole("button", { name: "SOAP 추가" }).click();
-    const dialog = page.getByRole("dialog");
-    const systemButton = dialog.getByRole("button", { name: systemLabel });
+    const menu = page.getByRole("menu");
+    const systemButton = menu.getByRole("menuitem", { name: systemLabel });
     if (await systemButton.isEnabled()) {
       await systemButton.click();
+      await expect(
+        page.getByLabel(`${systemLabel} SOAP 기록`),
+      ).toBeVisible();
     } else {
       await page.keyboard.press("Escape");
     }
