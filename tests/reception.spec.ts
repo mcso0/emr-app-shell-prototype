@@ -359,6 +359,20 @@ test("reception renders the first-path workspace instead of the placeholder", as
         .evaluate((card) => getComputedStyle(card).boxShadow),
     )
     .toContain("rgba(0, 0, 0, 0.05) 0px 1px 2px 0px");
+  const appointmentCard = page.getByTestId(
+    "appointment-card-appointment-coco-260501",
+  );
+  await expect(appointmentCard).toHaveCSS("row-gap", "4px");
+  const compactContentGap = await appointmentCard
+    .locator('[data-testid$="-badge"]')
+    .first()
+    .evaluate((badge) => {
+      const content = badge.parentElement;
+      if (!content) throw new Error("Expected calendar task content wrapper");
+
+      return getComputedStyle(content).columnGap;
+    });
+  expect(compactContentGap).toBe("6px");
   await expect
     .poll(async () => {
       const box = await page.getByTestId("schedule-toolbar").boundingBox();
