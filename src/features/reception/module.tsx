@@ -8372,13 +8372,12 @@ function ReceptionRightPanelEmptyState() {
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center px-6">
       <EmrEmptyState
-        description="왼쪽 대기 목록이나 일정 카드를 선택하면 상세 정보를 볼 수 있어요."
         kind="no-data"
         reserveActionSpace={false}
         size="md"
         surface="drawer"
         testId="reception-right-panel-empty-state"
-        title="접수/예약 건을 선택해주세요"
+        title="선택된 접수/예약 건이 없습니다"
       />
     </div>
   );
