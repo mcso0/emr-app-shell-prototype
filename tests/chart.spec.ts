@@ -1230,7 +1230,7 @@ test("chart order checkboxes update the selected order total", async ({
   await expect(page.getByText("선택 오더 합계: 0")).toBeVisible();
 });
 
-test("chart order table supports single sort and section filter builder", async ({
+test("chart order table supports single sort without a filter control", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
@@ -1250,27 +1250,9 @@ test("chart order table supports single sort and section filter builder", async 
     .click();
   await expect(orderRows.first()).toContainText("복부 초음파");
 
-  await orderArea.getByRole("button", { name: "오더 필터 설정" }).click();
-  const filterBuilder = page.locator('[data-emr-table-filter-builder="true"]');
-  await expect(
-    filterBuilder.getByRole("combobox", { name: "필터 필드" }),
-  ).toHaveCount(1);
-  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
-  await page.getByRole("option", { name: "수의사" }).click();
-  await filterBuilder.getByRole("combobox", { name: "필터 값" }).click();
-  await page.getByRole("option", { name: "이수지", exact: true }).click();
-
-  await expect(
-    orderArea.getByRole("button", { name: "오더 필터 1개 설정" }),
-  ).toBeVisible();
-  await expect(orderRows.first()).toBeVisible();
-  await expect(orderRows.first()).toContainText("복부 초음파");
-
-  await filterBuilder.getByRole("button", { name: "초기화" }).click();
-
   await expect(
     orderArea.getByRole("button", { name: "오더 필터 설정" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(orderRows.first()).toBeVisible();
 });
 
