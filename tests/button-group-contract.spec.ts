@@ -22,6 +22,7 @@ test("Figma button group keeps explicit segment edges and divider across chart, 
   expect(buttonGroupSource).toContain("rounded-l-none");
   expect(buttonGroupSource).toContain("!rounded-r-none");
   expect(buttonGroupSource).toContain("!rounded-l-none");
+  expect(buttonGroupSource).toContain("!border-0");
   expect(buttonGroupSource).toContain("bg-primary-foreground");
   expect(chartSource).toContain("<ButtonGroup");
   expect(chartSource).toContain("CdsNavigationChevronDownIcon");
