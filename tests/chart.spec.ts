@@ -138,7 +138,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   page,
 }) => {
   await page.goto(
-    "/w/clair-demo/treatment?modulePanel=open&aside=history&right=open",
+    "/w/clair-demo/treatment?modulePanel=open&aside=history",
   );
 
   const sidePanel = page.locator("aside").first();
@@ -325,7 +325,7 @@ test("Cheongdam chart side panel shows the centered empty queue state", async ({
   );
 
   await page.goto(
-    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=open&aside=closed&right=closed`,
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=open&aside=closed`,
   );
 
   const sidePanel = page.locator("aside").first();
@@ -873,7 +873,7 @@ test("chart SOAP manual save persists through route-backed reload", async ({
   page,
 }) => {
   await page.goto(
-    "/w/clair-demo/treatment?modulePanel=open&aside=history&right=open",
+    "/w/clair-demo/treatment?modulePanel=open&aside=history",
   );
 
   const soapEditor = page.getByLabel("기본 SOAP 기록");
@@ -1455,16 +1455,28 @@ test("chart history selection returns to a previous encounter for the patient", 
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
 });
 
-test("chart hides the patient info context-bar toggle while keeping panel collapse available", async ({
+test("chart removes the retired patient information panel and legacy right query", async ({
   page,
 }) => {
   await page.goto(
-    "/w/clair-demo/treatment?modulePanel=open&aside=history&right=closed",
+    "/w/clair-demo/treatment?modulePanel=open&aside=history&right=open",
   );
 
+  const workspaceMain = page.getByTestId("workspace-frame").locator("main");
   await expect(
     page.locator("#chart-content-aside").getByText("차트이력"),
   ).toBeVisible();
+  await expect(workspaceMain).toHaveAttribute("data-right-panel-open", "false");
+  await expect(page).not.toHaveURL(/right=/);
+  await expect(
+    page.getByRole("heading", { name: "환자 정보", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "환자 정보 패널 접기" }),
+  ).toHaveCount(0);
+  await expect(page.getByText("개인/민감 정보", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("부가 정보", { exact: true })).toHaveCount(0);
+
   const historyToggleOpen = page.getByRole("button", {
     name: "차트 이력 패널 접기",
   });
@@ -1484,43 +1496,6 @@ test("chart hides the patient info context-bar toggle while keeping panel collap
   await expect(page.getByText("과거 이력 보기")).toBeVisible();
   await page.getByRole("button", { name: "차트 이력 패널 열기" }).click();
   await expect(page).toHaveURL(/aside=history/);
-
-  await expect(
-    page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보"),
-  ).toBeHidden();
-  await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
-  await expect(page.getByText("환자 정보 보기")).toHaveCount(0);
-
-  await page.goto(
-    "/w/clair-demo/treatment?modulePanel=open&aside=history&right=open",
-  );
-  await expect(page).toHaveURL(/right=open/);
-  await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
-  await expect(
-    page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보"),
-  ).toHaveCount(0);
-  const patientInfoPanelTitle = page.getByRole("heading", {
-    name: "환자 정보",
-  });
-  const patientInfoPanelCollapse = page.getByRole("button", {
-    name: "환자 정보 패널 접기",
-  });
-  await expect(patientInfoPanelCollapse).toBeVisible();
-  await expect(patientInfoPanelCollapse).toHaveCSS("width", "32px");
-  await expect(patientInfoPanelCollapse).toHaveCSS("height", "32px");
-  const titleBox = await patientInfoPanelTitle.boundingBox();
-  const collapseBox = await patientInfoPanelCollapse.boundingBox();
-  if (!titleBox || !collapseBox) {
-    throw new Error(
-      "Patient info panel title or collapse button was not measurable.",
-    );
-  }
-  expect(collapseBox.x - (titleBox.x + titleBox.width)).toBeLessThanOrEqual(8);
-  await expect(page.getByText("개인/민감 정보", { exact: true })).toBeVisible();
-  await expect(page.getByText("부가 정보", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "환자 정보 패널 접기" }).click();
-  await expect(page).toHaveURL(/right=closed/);
-  await expect(page.getByText("개인/민감 정보", { exact: true })).toBeHidden();
 });
 
 test("chart completion persists through route-backed reload", async ({

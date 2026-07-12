@@ -132,7 +132,7 @@ test("no-selection empty states own the content area without detail slots", asyn
     },
     {
       moduleId: "treatment",
-      query: "?modulePanel=open&right=open&aside=history",
+      query: "?modulePanel=open&aside=history",
       heading: "진료 업무가 없습니다",
       absentSelectors: ["#chart-content-aside"],
     },

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import fs from "node:fs";
 
-const treatmentUrl = "/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed";
+const treatmentUrl = "/w/clair-demo/treatment?modulePanel=open&aside=closed";
 const directLocalColorPattern =
   /(clair-color-[a-z-]+-|#[0-9A-Fa-f]{3,8}\b|rgba?\(|\b(?:bg|text|border|ring|fill|stroke|hover:bg|hover:border|hover:text|focus:border|disabled:bg|shadow)-\[(?:[^\]]*(?:clair-color-|rgba?|#[0-9A-Fa-f])[^\]]*)\]|\b(?:bg|text|border|ring|fill|stroke)-(?:white|black|red|green|blue|orange|yellow|sky|gray|slate|zinc|neutral|stone|cyan|purple|pink|rose|emerald|amber)-)/g;
 
