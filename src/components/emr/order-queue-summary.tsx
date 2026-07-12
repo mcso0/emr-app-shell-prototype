@@ -22,7 +22,7 @@ export function OrderQueueSelectionSummary({
   return (
     <section
       className={cn(
-        "rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-4 py-3",
+        "rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-4 py-3",
         className
       )}
       data-testid="order-queue-selection-summary"
@@ -58,11 +58,11 @@ export function OrderQueueSelectionSummary({
         </div>
       </div>
       <div className="emr-text-status mt-2 flex min-w-0 items-center gap-1.5 font-medium">
-        <span className="rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-subtle)] px-1.5 py-0.5 text-[var(--emr-text-secondary)]">
+        <span className="rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-border-subtle)] px-1.5 py-0.5 text-[var(--emr-text-secondary)]">
           요청 {item.requesterName}
         </span>
         {item.assigneeName ? (
-          <span className="rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-subtle)] px-1.5 py-0.5 text-[var(--emr-text-secondary)]">
+          <span className="rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-border-subtle)] px-1.5 py-0.5 text-[var(--emr-text-secondary)]">
             담당 {item.assigneeName}
           </span>
         ) : null}

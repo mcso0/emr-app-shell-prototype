@@ -364,7 +364,7 @@ export function EmrDateNavigator({
               ))}
             </div>
             {todayDate ? (
-              <div className="flex justify-end border-t border-[var(--emr-line-hairline)] pt-[var(--clair-spacing-8)]">
+              <div className="flex justify-end border-t border-[var(--emr-border-default)] pt-[var(--clair-spacing-8)]">
                 <Button
                   type="button"
                   variant="outline"
@@ -423,7 +423,7 @@ export function EmrListHeader({
   return (
     <>
       {topDividerVisible ? (
-        <div className="mx-[var(--emr-list-header-padding-x)] h-px shrink-0 bg-[var(--emr-line-hairline)]" />
+        <div className="mx-[var(--emr-list-header-padding-x)] h-px shrink-0 bg-[var(--emr-border-default)]" />
       ) : null}
       <div
         className={cn(
@@ -474,7 +474,7 @@ export function EmrListHeader({
         )}
       </div>
       {searchActive && searchQuery.trim() ? (
-        <div className="emr-text-metadata mx-[var(--emr-list-header-padding-x)] flex min-h-7 shrink-0 items-center border-b border-[var(--emr-line-hairline)] text-[var(--emr-text-tertiary)]">
+        <div className="emr-text-metadata mx-[var(--emr-list-header-padding-x)] flex min-h-7 shrink-0 items-center border-b border-[var(--emr-border-default)] text-[var(--emr-text-tertiary)]">
           검색 결과 {search?.resultCount ?? 0}건
         </div>
       ) : null}
@@ -685,7 +685,7 @@ export function EmrListItem({
       </div>
       {meta ? <div className="emr-text-status mt-1 min-w-0 truncate text-muted-foreground">{meta}</div> : null}
       {footer ? (
-        <div className="emr-text-micro mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 text-muted-foreground">
+        <div className="emr-text-micro mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-border-subtle)] pt-1.5 text-muted-foreground">
           {footer}
         </div>
       ) : null}
@@ -703,10 +703,10 @@ export function EmrListItem({
           ? "border-transparent bg-transparent hover:bg-[var(--emr-state-hover)]"
           : "border-transparent bg-[var(--emr-state-selected)]"
       : variant === "outline"
-        ? "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)]"
+        ? "border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)]"
         : usesTransparentSurface
           ? "border-transparent bg-transparent hover:bg-[var(--emr-state-hover)]"
-          : "border-transparent bg-transparent hover:border-[var(--emr-line-hairline)] hover:bg-[var(--emr-state-hover)]",
+          : "border-transparent bg-transparent hover:border-[var(--emr-border-default)] hover:bg-[var(--emr-state-hover)]",
     className
   );
 

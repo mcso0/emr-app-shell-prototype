@@ -147,7 +147,7 @@ function AssigneeAvatar({ order }: { order: Order }) {
         "inline-flex size-6 items-center justify-center rounded-full text-[9px] font-medium",
         assigned
           ? "bg-[var(--emr-status-neutral-border)] text-[var(--emr-text-primary)]"
-          : "border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-tertiary)]"
+          : "border border-dashed border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-tertiary)]"
       )}
       title={order.assignee}
     >
@@ -559,7 +559,7 @@ export function EmrDataTable({
       >
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="border-[var(--emr-line-hairline)] hover:bg-transparent">
+            <TableRow key={headerGroup.id} className="border-[var(--emr-border-default)] hover:bg-transparent">
               {headerGroup.headers.map((header) => {
                 const align = getCellAlign(header.column.columnDef);
                 const headerInteraction = getHeaderInteraction(header.column.columnDef);
@@ -608,7 +608,7 @@ export function EmrDataTable({
               <TableRow
                 data-state={row.getIsSelected() ? "selected" : undefined}
                 data-testid={`order-row-${sectionId}-${row.original.id}`}
-                className="group/order-row cursor-pointer border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)] hover:!bg-[var(--emr-state-hover)] data-[state=selected]:!bg-[var(--emr-state-selected)]"
+                className="group/order-row cursor-pointer border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)] hover:!bg-[var(--emr-state-hover)] data-[state=selected]:!bg-[var(--emr-state-selected)]"
                 onClick={(event) => {
                   const target = event.target as HTMLElement;
 
@@ -682,7 +682,7 @@ export function EmrDataTable({
             </Fragment>
           ))}
           {table.getRowModel().rows.length === 0 ? (
-            <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
+            <TableRow className="border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
               <TableCell
                 colSpan={table.getVisibleFlatColumns().length}
                 className="emr-text-dense h-24 text-center font-medium text-muted-foreground"
@@ -695,7 +695,7 @@ export function EmrDataTable({
       </Table>
       {selectedRows.length ? (
         <div className="pointer-events-none sticky bottom-3 z-20 mt-3 flex justify-center">
-          <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 shadow-lg">
+          <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-3 shadow-lg">
             <span className="emr-text-status font-medium text-muted-foreground">
               선택한 오더 {selectedRows.length}개
             </span>

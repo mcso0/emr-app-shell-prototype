@@ -15,6 +15,7 @@ Current files:
 - `component-ownership-rules.md`: rules for shadcn/ui, EMR shared, feature-local, and inline UI ownership.
 - `ui-refactor-dod.md`: Definition of Done and verification levels for UI refactor issues.
 - `arbitrary-value-token-audit.md`: arbitrary Tailwind value audit and EMR token promotion candidate guidance.
+- `border-token-adoption-inventory.md`: component-level inventory for adopting the EMR subtle/default/strong border token hierarchy.
 - `global-feedback-ui-audit.md`: loading, empty, error, toast, and confirmation UI baseline for remaining refactors.
 - `inline-alert-feedback-rules.md`: `EmrInlineAlert` severity, placement, and recovery-action rules for persistent workflow feedback.
 - `dialog-shell-rules.md`: `EmrDialogShell` variants, action order, width, scroll, and migration rules for product dialogs.

@@ -64,7 +64,7 @@ export function EmrOrderGroupSection({
         </div>
       ) : null}
       <motion.section
-        className="overflow-hidden rounded-xl border border-[var(--emr-line-hairline)] bg-card px-4"
+        className="overflow-hidden rounded-xl border border-[var(--emr-border-default)] bg-card px-4"
         animate={{ paddingBottom: collapsed ? 0 : 16 }}
         transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: ORDER_GROUP_EASE }}
       >

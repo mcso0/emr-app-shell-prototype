@@ -163,7 +163,7 @@ export function WorkspaceFrame({
               className={cn(
                 "relative flex min-h-0 min-w-0 flex-col bg-[var(--emr-surface-workspace)]",
                 rightPanelDetached &&
-                  "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] shadow-xs"
+                  "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-strong)] shadow-xs"
               )}
             >
               {Header ? <Header {...slotProps} /> : null}
@@ -180,7 +180,7 @@ export function WorkspaceFrame({
                 <aside
                   className={cn(
                     "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-content-panel)] max-md:hidden",
-                    contentAsideVisible && "border-r border-[var(--emr-line-default)]"
+                    contentAsideVisible && "border-r border-[var(--emr-content-aside-border)]"
                   )}
                 >
                   <div
@@ -231,7 +231,7 @@ export function WorkspaceFrame({
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: 480, opacity: 0 }}
                   transition={{ duration: 0.18, ease: "easeOut" }}
-                  className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-line-default)] bg-card shadow-2xl"
+                  className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-border-strong)] bg-card shadow-2xl"
                   data-testid="workspace-drawer"
                   style={{
                     gridColumn: "1 / -1",

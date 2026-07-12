@@ -9,8 +9,8 @@ status: "active"
 area: design
 doc_type: design-system
 tags: [design-system, ui, tokens, components, density]
-updated: "2026-06-08"
-last_updated: "2026-06-08"
+updated: "2026-07-12"
+last_updated: "2026-07-12"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -45,8 +45,9 @@ CLAiR keeps the generated Clair token output as the base layer and adds a small 
 - `--emr-surface-panel`: primary panel surface
 - `--emr-surface-muted`: low-emphasis headers and nested surfaces
 - `--emr-surface-selected`: selected list, card, and row surface
-- `--emr-line-hairline`: quiet dividers and panel borders
-- `--emr-line-strong`: stronger structural separators
+- `--emr-border-subtle`: neutral/100 for small elements and low-emphasis internal separators
+- `--emr-border-default`: neutral/200 for ordinary cards, rows, controls, and panel-internal boundaries
+- `--emr-border-strong`: neutral/300 for layout-level boundaries and large component outer edges
 - `--emr-accent`: sparse information, link, and limited brand identity accent
 - `--emr-accent-subtle`: subtle information or brand accent fill, not default selected state
 - `--emr-radius-control`: compact controls
@@ -69,7 +70,7 @@ CLAiR follows the Neutral Command + Semantic Status direction:
 - panel: white or Clair normal background
 - muted surface: low-contrast header, table, and nested surface
 - selected surface: cool-neutral state fill with enough contrast from hover
-- hairline: blue-gray structural divider
+- border ladder: neutral/100, neutral/200, and neutral/300 mapped by structural hierarchy
 - accent: sparse information, link, and limited brand identity signal
 - focus: neutral gray ring through the shared `--ring` token by default
 
@@ -110,7 +111,7 @@ Cards should not be nested inside other decorative cards. Use panels for layout 
 
 Use `docs/design/system/border-shadow-depth-contract.md` as the implementation contract for border line strength, radius roles, and shadow depth.
 
-- Borders carry most structural separation: use `--emr-line-hairline` for ordinary panel, row, and card outlines, and reserve `--emr-line-strong` for major shell or sticky boundaries.
+- Borders carry most structural separation: use `--emr-border-subtle` for small quiet separators, `--emr-border-default` for ordinary panel-internal and component boundaries, and `--emr-border-strong` for major layout-level edges.
 - In-flow panels, tables, info boxes, empty states, and read-only rows/cards are flat by default.
 - Enabled action surfaces use the lowest shadow depth to signal clickability when they open, move, add, create, delete, search, submit, or trigger a menu.
 - Stronger shadows are reserved for real depth: floating popovers/menus, drawers, dialogs, and command overlays.

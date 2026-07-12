@@ -876,15 +876,15 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await expect(statusIcon).toHaveCSS("height", "12px");
   await expect(statusIcon).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-neutral-text)"));
   await expect(checkbox).toHaveCSS("opacity", "1");
-  await expect(checkbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-line-default)"));
+  await expect(checkbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-default)"));
   const completedCheckbox = page.getByTestId("order-row-section-0-o-10027").getByRole("checkbox");
   const canceledCheckbox = page.getByTestId("order-row-section-0-o-10028").getByRole("checkbox");
   await expect(completedCheckbox).toBeDisabled();
   await expect(completedCheckbox).toHaveCSS("opacity", "1");
-  await expect(completedCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-line-hairline)"));
+  await expect(completedCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-subtle)"));
   await expect(canceledCheckbox).toBeDisabled();
   await expect(canceledCheckbox).toHaveCSS("opacity", "1");
-  await expect(canceledCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-line-hairline)"));
+  await expect(canceledCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-subtle)"));
 
   await checkbox.click();
   await expect(page.getByText("상세 정보")).toBeHidden();
