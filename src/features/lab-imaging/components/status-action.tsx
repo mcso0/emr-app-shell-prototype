@@ -1,7 +1,13 @@
 "use client";
 
 import { CheckIcon, ChevronDownIcon } from "@/components/icons";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  ButtonGroup,
+  ButtonGroupDivider,
+  ButtonGroupIconButton,
+  ButtonGroupPrimaryButton,
+} from "@/components/ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +15,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 
 type LabImagingStatusActionProps<TStatus extends string> = {
   activeLabel: string;
@@ -53,22 +58,26 @@ export function LabImagingStatusAction<TStatus extends string>({
 
   if (status === activeStatus) {
     return (
-      <div className="inline-flex items-center">
-        <Button
+      <ButtonGroup aria-label={menuAriaLabel}>
+        <ButtonGroupPrimaryButton
           type="button"
           variant="outline"
           size="sm"
-          className="rounded-r-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
+          className="border-r-transparent border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
         >
           {activeLabel}
-        </Button>
+        </ButtonGroupPrimaryButton>
+        <ButtonGroupDivider className="bg-[var(--emr-status-info-border)]" />
         <DropdownMenu>
           <DropdownMenuTrigger
-            aria-label={menuAriaLabel}
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-sm" }),
-              "-ml-px rounded-l-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
-            )}
+            render={
+              <ButtonGroupIconButton
+                aria-label={`${menuAriaLabel} 열기`}
+                variant="outline"
+                size="sm"
+                className="border-l-transparent border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
+              />
+            }
           >
             <ChevronDownIcon />
           </DropdownMenuTrigger>
@@ -83,7 +92,7 @@ export function LabImagingStatusAction<TStatus extends string>({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </ButtonGroup>
     );
   }
 
