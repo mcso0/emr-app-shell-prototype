@@ -198,6 +198,7 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 
 ## 2026-07-12 Hospital Admin And Customer Screen Adoption
 
+- Reception right-panel no-selection state now uses `EmrEmptyState surface="drawer" size="md"` with selection guidance and no action reservation. It remains distinct from the reception queue's true-empty state.
 - Customer deleted guardian/patient history now uses `EmrEmptyState surface="table" size="md"` (`mg`). It uses `kind="no-data"` when the deletion history is empty and `kind="no-filter-results"` when the search query hides all results.
 - Hospital Admin Order catalog keeps its existing shared table empty state and now declares `size="md"` explicitly so the `mg` contract is visible at the call site.
 - Hospital Admin audit review and workspace membership directory now use the shared `md` table state for resolved empty results. Their loading, permission, and read-failure states are intentionally not converted.

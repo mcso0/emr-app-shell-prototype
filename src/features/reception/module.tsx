@@ -47,6 +47,7 @@ import {
 } from "@/components/emr/subpanel";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrSidePanelMiniCalendar } from "@/components/emr/side-panel-mini-calendar";
@@ -8370,14 +8371,15 @@ function getReceptionRightPanelTitle(drawer: DrawerState) {
 function ReceptionRightPanelEmptyState() {
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center px-6">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex size-10 items-center justify-center rounded-[var(--emr-radius-control)] border border-[var(--emr-line-default)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-secondary)]">
-          <CdsFilesReceptionCalendarIcon className="size-5" />
-        </span>
-        <p className="emr-text-dense font-semibold text-[var(--emr-text-secondary)]">
-          접수/예약 건을 선택해주세요
-        </p>
-      </div>
+      <EmrEmptyState
+        description="왼쪽 대기 목록이나 일정 카드를 선택하면 상세 정보를 볼 수 있어요."
+        kind="no-data"
+        reserveActionSpace={false}
+        size="md"
+        surface="drawer"
+        testId="reception-right-panel-empty-state"
+        title="접수/예약 건을 선택해주세요"
+      />
     </div>
   );
 }

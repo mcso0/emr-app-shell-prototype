@@ -3627,6 +3627,24 @@ test("reception right panel header uses the shared 52px height", async ({
   await expect(closeButton).toHaveCSS("height", "32px");
 });
 
+test("reception right panel selection state uses the shared drawer empty-state contract", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/workspace-clair-cheongdam/reception?modulePanel=open&right=open",
+  );
+
+  const emptyState = page.getByTestId("reception-right-panel-empty-state");
+  await expect(emptyState).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-surface", "drawer");
+  await expect(emptyState).toHaveAttribute("data-size", "md");
+  await expect(emptyState).toHaveAttribute("data-action-count", "0");
+  await expect(emptyState).toContainText("접수/예약 건을 선택해주세요");
+  await expect(emptyState).toContainText(
+    "왼쪽 대기 목록이나 일정 카드를 선택하면 상세 정보를 볼 수 있어요.",
+  );
+});
+
 test("reception side-panel footer actions use the shared 32px control height", async ({
   page,
 }) => {
