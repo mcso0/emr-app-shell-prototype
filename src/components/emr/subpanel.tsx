@@ -185,7 +185,7 @@ export function EmrSubpanelTitle({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center px-[var(--clair-spacing-16)] pb-[var(--clair-spacing-10)] pt-[var(--clair-spacing-12)]",
+        "flex h-[var(--emr-sidepanel-header-height)] shrink-0 items-center px-[var(--emr-sidepanel-header-padding-x)] py-[var(--emr-sidepanel-header-padding-y)]",
         className
       )}
     >
