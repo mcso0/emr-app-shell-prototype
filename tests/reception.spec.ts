@@ -3665,6 +3665,29 @@ test("reception side-panel footer actions use the shared 32px control height", a
   }
 });
 
+test("reception detail footer close collapses the side panel while retaining the detail", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
+  );
+
+  const rightPanel = page.getByTestId("reception-right-panel");
+  await expect(rightPanel).toBeVisible();
+  await rightPanel.getByRole("button", { name: "닫기", exact: true }).click();
+
+  await expect(page).toHaveURL(/right=closed/);
+  await expect(rightPanel).toHaveCount(0);
+
+  await page
+    .getByRole("button", { name: "우측 사이드 패널 열기", exact: true })
+    .click();
+  await expect(page.getByTestId("reception-right-panel")).toContainText(
+    "접수 상세",
+  );
+  await expect(page).toHaveURL(/drawer=reception-encounter/);
+});
+
 test("reception encounter edit mode shows its badge beside the side-panel title", async ({
   page,
 }) => {

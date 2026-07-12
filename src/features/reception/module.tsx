@@ -9192,6 +9192,7 @@ export function ReceptionDrawer({
   const router = useRouter();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const calendarDraftSelection = useReceptionStore(
     (state) => state.calendarDraftSelection,
@@ -9821,6 +9822,11 @@ export function ReceptionDrawer({
             if (editMode) {
               setEditMode(false);
               setEditDraft(getSelectedEncounterEditDraft());
+              return;
+            }
+            if (presentation === "side-panel") {
+              setCalendarDraftSelection(undefined);
+              setRightPanelOpen(false);
               return;
             }
             setActiveDrawer(null);
