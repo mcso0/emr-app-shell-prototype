@@ -101,10 +101,11 @@ alongside it when the replay-sensitive migrations change:
 npx playwright test tests/reception-patient-guardian-lookup-server.spec.ts tests/supabase-fresh-replay-ordering.spec.ts --reporter=line
 ```
 
-This is a local, synthetic-data check only. Historical-file corrections made to
-preserve fresh replay do not alter an already-applied remote database; remote
-migration-history reconciliation and schema push remain explicit approval-gated
-operations.
+This is a local, synthetic-data check only. Remote migration-history repair and
+schema push remain explicit approval-gated operations. The current timestamp
+alias map, preserved remote-only SQL, and genuinely pending remote migrations
+are maintained in
+[`supabase-migration-history-reconciliation.md`](../operations/supabase-migration-history-reconciliation.md).
 
 ## Focused Regression Commands
 

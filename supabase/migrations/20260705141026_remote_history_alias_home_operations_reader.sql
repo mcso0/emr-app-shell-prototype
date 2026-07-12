@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The identical SQL is canonical at 20260705120000_home_operations_work_items_reader.sql.
+-- Keep this file immutable so fresh local replay does not execute the same migration twice.

@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The identical SQL is canonical at 20260702110000_workspace_invitation_role_job_dual_write.sql.
+-- Keep this file immutable so fresh local replay does not execute the same migration twice.
