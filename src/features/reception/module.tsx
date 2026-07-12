@@ -3112,7 +3112,11 @@ function ReceptionQueueSideGroup({
         return (
           <EmrTaskQueueCard
             key={item.id}
-            item={{ ...item.taskCardItem, actionItems }}
+            item={{
+              ...item.taskCardItem,
+              actionItems,
+              actionMenuDensity: "compact",
+            }}
             selected={selectedItemId === item.id}
             onSelect={() => onSelect(item)}
           />
