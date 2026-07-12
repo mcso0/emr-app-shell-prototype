@@ -2475,7 +2475,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
   return (
     <div
       id="lab-receipt-panel"
-      className="group/lab-receipt-panel flex min-h-0 flex-1 flex-col"
+      className="group/lab-receipt-panel flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-rightpanel)]"
       data-testid="lab-receipt-panel"
     >
       <div className="flex h-[var(--clair-layout-drawer-header)] items-center px-4">
@@ -3562,7 +3562,7 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
   const fileAttachments = detail.attachments.filter((attachment) => !attachment.mimeType.startsWith("image/"));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-testid="imaging-summary-panel">
+    <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-rightpanel)]" data-testid="imaging-summary-panel">
       <div className="flex h-[var(--clair-layout-drawer-header)] items-center justify-between px-4">
         <h2 className="min-w-0 truncate text-sm font-semibold">종합소견</h2>
         <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">

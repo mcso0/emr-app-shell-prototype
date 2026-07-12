@@ -231,7 +231,7 @@ export function WorkspaceFrame({
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: 480, opacity: 0 }}
                   transition={{ duration: 0.18, ease: "easeOut" }}
-                  className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-border-strong)] bg-card shadow-2xl"
+                  className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-border-strong)] bg-[var(--emr-surface-rightpanel)] shadow-2xl"
                   data-testid="workspace-drawer"
                   style={{
                     gridColumn: "1 / -1",

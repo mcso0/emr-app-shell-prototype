@@ -8326,7 +8326,7 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col bg-card"
+      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-rightpanel)]"
       aria-label={`${moduleLabel} 우측 사이드 패널`}
       data-testid="reception-right-panel"
     >

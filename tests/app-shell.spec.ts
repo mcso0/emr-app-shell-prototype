@@ -259,6 +259,11 @@ test("global command palette opens new reception drawer from any workspace modul
   await expect(drawer).toContainText("접수 생성");
   await expect(page.getByTestId("walk-in-reception-dialog")).toBeVisible();
   await expect(drawer).toHaveCSS("z-index", "40");
+  await expect(page.locator(".emr-workspace-rightpanel-responsive")).toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 255)",
+  );
+  await expect(drawer).toHaveCSS("background-color", "rgb(255, 255, 255)");
 
   await expect
     .poll(async () => {

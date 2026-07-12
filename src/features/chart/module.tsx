@@ -3236,7 +3236,7 @@ export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
   if (!bundle) return null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-rightpanel)]">
       <div className="flex h-[var(--clair-layout-drawer-header)] items-center border-b border-[var(--emr-line-hairline)] px-3">
         <div className="flex min-w-0 flex-1 items-center">
           <div className="flex min-w-0 max-w-full items-center gap-1">
