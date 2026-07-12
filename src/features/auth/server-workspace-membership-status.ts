@@ -10,9 +10,10 @@ import type {
   SessionWorkspaceInvitation,
   SessionWorkspaceMembership,
 } from "@/features/auth/workspace-session";
+import { normalizeWorkspaceMembershipStatus } from "@/features/auth/workspace-session";
 
 export type WorkspaceMembershipStatusGateway = {
-  listWorkspaceMembershipStatus(includeDeleted?: boolean): Promise<
+  listWorkspaceMembershipStatus(includeArchived?: boolean): Promise<
     | {
         ok: true;
         memberships: SessionWorkspaceMembership[];
@@ -42,13 +43,13 @@ export async function readWorkspaceMembershipStatus({
   workspaceId,
   permissionAdapter = createDemoMembershipStatusPermissionAdapter(workspaceId),
   gateway,
-  includeDeleted = false,
+  includeArchived = false,
 }: {
   actorUserId: string | null;
   workspaceId: string;
   permissionAdapter?: WorkspacePermissionAdapter;
   gateway?: WorkspaceMembershipStatusGateway;
-  includeDeleted?: boolean;
+  includeArchived?: boolean;
 }): Promise<WorkspaceMembershipStatusResult> {
   if (!actorUserId) {
     return { ok: false, status: 401, denialReason: "unauthenticated" };
@@ -78,7 +79,7 @@ export async function readWorkspaceMembershipStatus({
     };
   }
 
-  const result = await gateway.listWorkspaceMembershipStatus(includeDeleted);
+  const result = await gateway.listWorkspaceMembershipStatus(includeArchived);
 
   if (!result.ok) {
     return { ok: false, status: 500, error: result.error };
@@ -87,7 +88,7 @@ export async function readWorkspaceMembershipStatus({
   return {
     ok: true,
     status: 200,
-    memberships: result.memberships,
+    memberships: result.memberships.map(normalizeWorkspaceMembership),
     invitations: result.invitations,
     enforcedBy: "workspace-membership-status-reader",
   };
@@ -105,10 +106,10 @@ export function createSupabaseWorkspaceMembershipStatusGateway(
   workspaceId: string
 ): WorkspaceMembershipStatusGateway {
   return {
-    async listWorkspaceMembershipStatus(includeDeleted = false) {
+    async listWorkspaceMembershipStatus(includeArchived = false) {
       const { data, error } = await client.rpc("clair_list_workspace_member_statuses", {
         p_workspace_id: workspaceId,
-        p_include_deleted: includeDeleted,
+        p_include_deleted: includeArchived,
       });
 
       if (error) {
@@ -126,6 +127,18 @@ export function createSupabaseWorkspaceMembershipStatusGateway(
         invitations: Array.isArray(value?.invitations) ? value.invitations : [],
       };
     },
+  };
+}
+
+function normalizeWorkspaceMembership(
+  membership: SessionWorkspaceMembership
+): SessionWorkspaceMembership {
+  return {
+    ...membership,
+    status: normalizeWorkspaceMembershipStatus(membership.status),
+    archivedAt: membership.archivedAt ?? membership.deletedAt ?? null,
+    archivedByUserId: membership.archivedByUserId ?? membership.deletedByUserId ?? null,
+    archivedReason: membership.archivedReason ?? membership.deletedReason ?? null,
   };
 }
 

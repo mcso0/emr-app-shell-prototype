@@ -1,14 +1,50 @@
 import { expect, test } from "@playwright/test";
 import type { APIRequestContext, APIResponse } from "@playwright/test";
+import * as membershipRoute from "../src/app/api/workspaces/[workspaceId]/memberships/route";
 import {
   handleMembershipStatusGet,
 } from "../src/app/api/workspaces/[workspaceId]/memberships/route";
+import * as workspaceSession from "../src/features/auth/workspace-session";
 import {
   createMembershipStatusRouteHarness,
   persistedMembershipStatusBody,
 } from "./workspace-membership-status-harness";
 
 const workspaceLive = "workspace-live";
+
+test("membership status normalizes legacy soft-deleted rows to archived", () => {
+  const normalizer = (workspaceSession as typeof workspaceSession & {
+    normalizeWorkspaceMembershipStatus?: (status: string) => string;
+    isArchivedMembershipStatus?: (status: string) => boolean;
+  }).normalizeWorkspaceMembershipStatus;
+  const isArchived = (workspaceSession as typeof workspaceSession & {
+    isArchivedMembershipStatus?: (status: string) => boolean;
+  }).isArchivedMembershipStatus;
+
+  expect(normalizer).toBeDefined();
+  expect(isArchived).toBeDefined();
+
+  if (!normalizer || !isArchived) return;
+
+  expect(normalizer("soft_deleted")).toBe("archived");
+  expect(normalizer("archived")).toBe("archived");
+  expect(isArchived("inactive")).toBe(false);
+  expect(isArchived("soft_deleted")).toBe(true);
+});
+
+test("membership list query accepts includeArchived while retaining includeDeleted compatibility", () => {
+  const resolveIncludeArchived = (membershipRoute as typeof membershipRoute & {
+    resolveMembershipStatusIncludeArchived?: (url: string) => boolean;
+  }).resolveMembershipStatusIncludeArchived;
+
+  expect(resolveIncludeArchived).toBeDefined();
+
+  if (!resolveIncludeArchived) return;
+
+  expect(resolveIncludeArchived("http://test.local/memberships?includeArchived=true")).toBe(true);
+  expect(resolveIncludeArchived("http://test.local/memberships?includeDeleted=true")).toBe(true);
+  expect(resolveIncludeArchived("http://test.local/memberships")).toBe(false);
+});
 
 async function getMembershipStatus(
   request: APIRequestContext,
@@ -100,7 +136,7 @@ test("workspace membership status route returns persisted rows for authorized Su
 test("workspace membership UI can render persisted status rows from server", async ({
   page,
 }) => {
-  await page.route("**/api/workspaces/clair-demo/memberships", async (route) => {
+  await page.route("**/api/workspaces/clair-demo/memberships**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -110,14 +146,16 @@ test("workspace membership UI can render persisted status rows from server", asy
 
   await page.goto("/login?next=%2Fw%2Fclair-demo%2Forders%3FmodulePanel%3Dopen%26aside%3Dclosed");
   await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByPlaceholder("이메일을 입력해주세요").fill("admin@clair.local");
+  await page.getByPlaceholder("비밀번호를 입력해주세요").fill("local-pass-1");
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await page.getByRole("button", { name: "병원구성원 관리" }).click();
 
   await expect(page.getByRole("button", { name: /전체 4/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /초대 대기 1/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /비활성 1/ })).toBeVisible();
-  await expect(page.getByText("pending@clair.local")).toBeVisible();
-  await expect(page.getByText("old@clair.local")).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: "pending@clair.local" }).first()).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: "old@clair.local" }).first()).toBeVisible();
 });
 
 async function expectJson(response: APIResponse, shape: Record<string, unknown>) {

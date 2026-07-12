@@ -13,6 +13,7 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - Outpatient workflow state model: `docs/product/domain/outpatient-workflow-state-model.md`
 - EMR domain entity map: `docs/product/domain/emr-domain-entity-map.md`
 - Workspace auth and permissions: `docs/product/domain/workspace-auth-permissions.md`
+- Membership, permission-role, and job-position lifecycle: `docs/product/domain/membership-role-job-lifecycle.md`
 - Workspace hospital profile: `docs/product/domain/workspace-hospital-profile.md`
 - Auth/login current-state inventory: `docs/product/current-state/auth-login-onboarding-current-state.md`
 - Login invite onboarding feature spec: `docs/product/features/auth/login-invite-onboarding-spec.md`

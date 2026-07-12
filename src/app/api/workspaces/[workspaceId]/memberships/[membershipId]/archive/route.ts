@@ -5,12 +5,9 @@ import {
 } from "@/features/auth/server-role-update-identity";
 import {
   authorizeWorkspaceMembershipArchive,
+  normalizeWorkspaceMembershipArchiveAction,
   type WorkspaceMembershipArchiveAction,
 } from "@/features/auth/server-workspace-membership-archive";
-import {
-  createSupabaseLiveAuditAppendGateway,
-  type SupabaseLiveAuditAppendRpcClient,
-} from "@/features/audit/server-audit-log-persistence";
 import {
   emitLiveMutationAuditEvent,
   getAuditRequestId,
@@ -58,7 +55,7 @@ export async function POST(request: Request, { params }: MembershipArchiveRouteC
     return Response.json({ ok: false, error: "invalid_input" }, { status: 400 });
   }
 
-  if (action === "soft_delete" && !reason) {
+  if (action === "archive" && !reason) {
     return Response.json({ ok: false, error: "invalid_reason" }, { status: 400 });
   }
 
@@ -74,42 +71,19 @@ export async function POST(request: Request, { params }: MembershipArchiveRouteC
       p_membership_id: membershipId,
       p_action: action,
       p_deleted_reason: reason,
+      p_request_id: getAuditRequestId(request),
     });
 
     if (error) {
       const denialReason = getArchiveDenialReason(error.message);
       return Response.json(
         { ok: false, denialReason },
-        { status: denialReason === "target_membership_missing" ? 404 : denialReason.endsWith("protected") ? 409 : 403 }
+        { status: getArchiveDenialStatus(denialReason) }
       );
     }
 
     const mutation = isRecord(data) ? data : {};
-    const updatedStatus = getOptionalBodyString(mutation.status) ?? (action === "soft_delete" ? "soft_deleted" : "inactive");
-    const audit = await emitLiveMutationAuditEvent({
-      auditGateway: createSupabaseLiveAuditAppendGateway(
-        client as unknown as SupabaseLiveAuditAppendRpcClient
-      ),
-      input: {
-        workspaceId,
-        actorUserId: identity.actorUserId,
-        eventType:
-          action === "soft_delete"
-            ? "workspace.membership_soft_deleted"
-            : "workspace.membership_restored",
-        targetType: "membership",
-        targetId: membershipId,
-        requestId: getAuditRequestId(request),
-        reason,
-        after: { status: updatedStatus },
-        metadata: { action, source: "workspace-membership-archive-route" },
-      },
-    });
-
-    if (!audit.ok) {
-      return Response.json({ ok: false, error: "audit_write_failed" }, { status: 500 });
-    }
-
+    const updatedStatus = getOptionalBodyString(mutation.status) ?? (action === "archive" ? "archived" : "inactive");
     return Response.json({
       ok: true,
       action,
@@ -136,8 +110,8 @@ export async function POST(request: Request, { params }: MembershipArchiveRouteC
       workspaceId,
       actorUserId: identity.actorUserId,
       eventType:
-        action === "soft_delete"
-          ? "workspace.membership_soft_deleted"
+        action === "archive"
+          ? "workspace.membership_archived"
           : "workspace.membership_restored",
       targetType: "membership",
       targetId: membershipId,
@@ -165,7 +139,7 @@ async function readJsonBody(request: Request): Promise<Record<string, unknown>> 
 }
 
 function getArchiveAction(value: unknown): WorkspaceMembershipArchiveAction | null {
-  return value === "soft_delete" || value === "restore" ? value : null;
+  return normalizeWorkspaceMembershipArchiveAction(value);
 }
 
 function getOptionalBodyString(value: unknown) {
@@ -178,7 +152,19 @@ function getArchiveDenialReason(message?: string) {
     return "last_admin_protected";
   }
   if (message?.includes("workspace_membership_missing")) return "target_membership_missing";
+  if (message?.includes("owner_target_protected")) return "owner_target_protected";
+  if (message?.includes("membership_not_archivable") || message?.includes("membership_not_restorable")) {
+    return "membership_state_conflict";
+  }
   return "permission_missing";
+}
+
+function getArchiveDenialStatus(denialReason: ReturnType<typeof getArchiveDenialReason>) {
+  if (denialReason === "target_membership_missing") return 404;
+  if (denialReason.endsWith("protected") || denialReason === "membership_state_conflict") {
+    return 409;
+  }
+  return 403;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

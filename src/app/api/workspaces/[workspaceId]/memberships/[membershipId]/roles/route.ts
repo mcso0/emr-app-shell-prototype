@@ -5,10 +5,6 @@ import {
 } from "@/features/auth/server-role-update-identity";
 import { authorizeWorkspaceRoleUpdate } from "@/features/auth/server-role-update-enforcement";
 import {
-  createSupabaseLiveAuditAppendGateway,
-  type SupabaseLiveAuditAppendRpcClient,
-} from "@/features/audit/server-audit-log-persistence";
-import {
   emitLiveMutationAuditEvent,
   getAuditRequestId,
 } from "@/features/audit/server-mutation-audit";
@@ -71,15 +67,20 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
       p_next_roles: nextRoles,
       p_permission_role_key: permissionRoleKey,
       p_job_position_key: jobPositionKey,
+      p_request_id: getAuditRequestId(request),
     });
 
     if (error) {
-      const denialReason = error.message?.includes("last_admin")
+      const denialReason = error.message?.includes("self_action_protected")
+        ? "self_action_protected"
+        : error.message?.includes("owner_target_protected") || error.message?.includes("owner_scope_required")
+          ? "owner_target_protected"
+          : error.message?.includes("last_admin")
         ? "last_admin_protected"
         : error.message?.includes("workspace_membership_missing")
           ? "target_membership_missing"
           : "permission_missing";
-      const status = denialReason === "last_admin_protected" ? 409 : 403;
+      const status = denialReason.endsWith("protected") ? 409 : 403;
 
       return Response.json({ ok: false, denialReason }, { status });
     }
@@ -92,29 +93,6 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
       getOptionalBodyString(mutationData.permissionRoleKey) ?? permissionRoleKey;
     const updatedJobPositionKey =
       getOptionalBodyString(mutationData.jobPositionKey) ?? jobPositionKey;
-    const audit = await emitLiveMutationAuditEvent({
-      auditGateway: createSupabaseLiveAuditAppendGateway(
-        client as unknown as SupabaseLiveAuditAppendRpcClient
-      ),
-      input: {
-        workspaceId,
-        actorUserId: identity.actorUserId,
-        eventType: "workspace.membership_roles_changed",
-        targetType: "membership",
-        targetId: membershipId,
-        requestId: getAuditRequestId(request),
-        after: {
-          roles: updatedRoles,
-          permissionRoleKey: updatedPermissionRoleKey,
-          jobPositionKey: updatedJobPositionKey,
-        },
-        metadata: { source: "workspace-membership-role-route" },
-      },
-    });
-    if (!audit.ok) {
-      return Response.json({ ok: false, error: "audit_write_failed" }, { status: 500 });
-    }
-
     return Response.json(
       {
         ok: true,

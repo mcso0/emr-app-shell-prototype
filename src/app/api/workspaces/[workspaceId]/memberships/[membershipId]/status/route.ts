@@ -5,10 +5,6 @@ import {
 } from "@/features/auth/server-role-update-identity";
 import { authorizeWorkspaceRoleUpdate } from "@/features/auth/server-role-update-enforcement";
 import {
-  createSupabaseLiveAuditAppendGateway,
-  type SupabaseLiveAuditAppendRpcClient,
-} from "@/features/audit/server-audit-log-persistence";
-import {
   emitLiveMutationAuditEvent,
   getAuditRequestId,
 } from "@/features/audit/server-mutation-audit";
@@ -71,39 +67,25 @@ export async function PATCH(request: Request, { params }: MembershipStatusRouteC
       p_workspace_id: workspaceId,
       p_membership_id: membershipId,
       p_next_status: nextStatus,
+      p_request_id: getAuditRequestId(request),
     });
 
     if (error) {
-      const denialReason = error.message?.includes("last_admin")
+      const denialReason = error.message?.includes("self_action_protected")
+        ? "self_action_protected"
+        : error.message?.includes("owner_target_protected")
+          ? "owner_target_protected"
+          : error.message?.includes("last_admin")
         ? "last_admin_protected"
         : error.message?.includes("workspace_membership_missing")
           ? "target_membership_missing"
           : "permission_missing";
-      const status = denialReason === "last_admin_protected" ? 409 : 403;
+      const status = denialReason.endsWith("protected") ? 409 : 403;
 
       return Response.json({ ok: false, denialReason }, { status });
     }
 
     const updatedStatus = (data as { status?: string }).status ?? nextStatus;
-    const audit = await emitLiveMutationAuditEvent({
-      auditGateway: createSupabaseLiveAuditAppendGateway(
-        client as unknown as SupabaseLiveAuditAppendRpcClient
-      ),
-      input: {
-        workspaceId,
-        actorUserId: identity.actorUserId,
-        eventType: "workspace.membership_status_changed",
-        targetType: "membership",
-        targetId: membershipId,
-        requestId: getAuditRequestId(request),
-        after: { status: updatedStatus },
-        metadata: { source: "workspace-membership-status-route" },
-      },
-    });
-    if (!audit.ok) {
-      return Response.json({ ok: false, error: "audit_write_failed" }, { status: 500 });
-    }
-
     return Response.json(
       {
         ok: true,
@@ -114,6 +96,10 @@ export async function PATCH(request: Request, { params }: MembershipStatusRouteC
       },
       { status: 200 }
     );
+  }
+
+  if ((identity.actorUserId === "user-admin" && membershipId === "membership-admin") || (identity.actorUserId === "user-manager" && membershipId === "membership-manager")) {
+    return Response.json({ ok: false, denialReason: "self_action_protected" }, { status: 409 });
   }
 
   if (membershipId === "membership-admin" && nextStatus === "inactive") {
@@ -138,7 +124,7 @@ export async function PATCH(request: Request, { params }: MembershipStatusRouteC
     input: {
       workspaceId,
       actorUserId: identity.actorUserId,
-      eventType: "workspace.membership_status_changed",
+      eventType: getMembershipStatusAuditEventType(nextStatus),
       targetType: "membership",
       targetId: membershipId,
       requestId: getAuditRequestId(request),
@@ -173,4 +159,10 @@ async function readJsonBody(request: Request): Promise<Record<string, unknown>> 
 
 function getBodyString(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function getMembershipStatusAuditEventType(status: "active" | "inactive") {
+  return status === "active"
+    ? "workspace.membership_reactivated" as const
+    : "workspace.membership_deactivated" as const;
 }

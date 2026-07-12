@@ -1,5 +1,8 @@
 create extension if not exists pgcrypto with schema extensions;
 
+-- This migration seeds public.users below. The public table is FK-backed by
+-- auth.users, so the synthetic operator identity must exist first on a fresh
+-- local replay. Existing environments retain the same row through the upsert.
 insert into auth.users (
   id,
   aud,

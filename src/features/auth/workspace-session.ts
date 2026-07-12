@@ -9,7 +9,12 @@ import {
 export type SessionWorkspaceSubscriptionStatus = "trialing" | "active" | "none";
 export type SessionWorkspaceRole = "hospital_admin" | "vet" | "technician" | "front_desk";
 export type SessionWorkspacePermissionRoleType = "owner" | "admin" | "standard" | "custom";
-export type SessionWorkspaceMembershipStatus = "pending" | "active" | "inactive" | "suspended" | "soft_deleted";
+export type CanonicalWorkspaceMembershipStatus = "active" | "inactive" | "archived";
+export type SessionWorkspaceMembershipStatus =
+  | CanonicalWorkspaceMembershipStatus
+  | "pending"
+  | "suspended"
+  | "soft_deleted";
 export type SessionWorkspaceInvitationStatus = "pending" | "accepted" | "canceled" | "expired";
 export type SessionWorkspaceAccessStatus =
   | "unknown"
@@ -17,8 +22,19 @@ export type SessionWorkspaceAccessStatus =
   | "pending"
   | "inactive"
   | "suspended"
+  | "archived"
   | "soft_deleted"
   | "missing";
+
+export function normalizeWorkspaceMembershipStatus(
+  status: SessionWorkspaceMembershipStatus
+): SessionWorkspaceMembershipStatus {
+  return status === "soft_deleted" ? "archived" : status;
+}
+
+export function isArchivedMembershipStatus(status: SessionWorkspaceMembershipStatus) {
+  return status === "archived" || status === "soft_deleted";
+}
 
 export type WorkspaceCreationInput = {
   hospitalName: string;
@@ -147,6 +163,9 @@ export type SessionWorkspaceMembership = {
   createdAt: string;
   activatedAt?: string | null;
   deactivatedAt?: string | null;
+  archivedAt?: string | null;
+  archivedByUserId?: string | null;
+  archivedReason?: string | null;
   deletedAt?: string | null;
   deletedByUserId?: string | null;
   deletedReason?: string | null;
@@ -1132,8 +1151,8 @@ export function deactivateSessionWorkspaceMembership(
 export function updateSessionWorkspaceMembershipStatus(
   state: SessionWorkspacesState,
   membershipId: string,
-  status: Extract<SessionWorkspaceMembershipStatus, "active" | "inactive" | "soft_deleted">,
-  metadata: Pick<SessionWorkspaceMembership, "deletedAt" | "deletedByUserId" | "deletedReason" | "restoredAt" | "restoredByUserId"> = {},
+  status: Extract<SessionWorkspaceMembershipStatus, "active" | "inactive" | "archived" | "soft_deleted">,
+  metadata: Pick<SessionWorkspaceMembership, "archivedAt" | "archivedByUserId" | "archivedReason" | "deletedAt" | "deletedByUserId" | "deletedReason" | "restoredAt" | "restoredByUserId"> = {},
   now = new Date().toISOString()
 ): WorkspaceMembershipMutationResult {
   const membership = state.memberships.find((item) => item.id === membershipId);
@@ -1288,6 +1307,7 @@ function isSessionWorkspaceMembership(value: unknown): value is SessionWorkspace
       membership.status === "active" ||
       membership.status === "inactive" ||
       membership.status === "suspended" ||
+      membership.status === "archived" ||
       membership.status === "soft_deleted") &&
     typeof membership.createdAt === "string"
   );

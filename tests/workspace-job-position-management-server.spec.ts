@@ -1,0 +1,4 @@
+import { expect, test } from "@playwright/test";
+const headers={"x-clair-demo-session-user-id":"user-admin"};
+test("job position management lists and creates positions",async({request})=>{const listed=await request.get("/api/workspaces/workspace-a/job-positions",{headers});expect(listed.status()).toBe(200);expect((await listed.json()).positions).toEqual(expect.arrayContaining([expect.objectContaining({positionKey:"veterinarian",isActive:true})]));const created=await request.post("/api/workspaces/workspace-a/job-positions",{headers,data:{label:"CS"}});expect(created.status()).toBe(201);expect((await created.json()).position).toEqual(expect.objectContaining({label:"CS",isActive:true}));});
+test("job position management denies ordinary members",async({request})=>{const response=await request.get("/api/workspaces/workspace-a/job-positions",{headers:{"x-clair-demo-session-user-id":"user-vet"}});expect(response.status()).toBe(403);});

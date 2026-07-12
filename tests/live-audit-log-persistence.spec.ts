@@ -45,6 +45,29 @@ test("live audit schema includes query indexes and canonical event constraints",
   }
 });
 
+test("live audit helper accepts canonical membership lifecycle events", async () => {
+  for (const eventType of [
+    "workspace.membership_archived",
+    "workspace.membership_restored",
+    "workspace.membership_deactivated",
+    "workspace.membership_reactivated",
+    "workspace.permission_role_deactivated",
+    "workspace.permission_role_reactivated",
+    "workspace.job_position_deactivated",
+    "workspace.job_position_reactivated",
+  ] as const) {
+    const result = await appendLiveAuditEvent({
+      input: {
+        workspaceId: "clair-demo",
+        eventType,
+        targetType: "membership",
+        targetId: "membership-demo",
+      },
+    });
+    expect(result.ok).toBe(true);
+  }
+});
+
 test("live audit append helper builds deterministic safe records", async () => {
   const gateway = createMockLiveAuditAppendGateway();
   const result = await appendLiveAuditEvent({

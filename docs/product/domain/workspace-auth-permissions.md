@@ -10,7 +10,7 @@ related_work:
   - AUTH-PR-044
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-02T00:00:00.000Z
+last_updated: 2026-07-11T00:00:00.000Z
 description: >-
   Defines workspace-based auth, membership, roles, permission behavior, and
   profile authorization boundaries.
@@ -24,7 +24,7 @@ tags:
 
 # Workspace Auth and Permissions
 
-Updated: 2026-07-02
+Updated: 2026-07-11
 
 This document is the product source of truth for workspace-based auth, membership, roles, and permission behavior. It captures the requirements from Linear `DEN-18` before implementation work begins.
 
@@ -172,16 +172,18 @@ Open product detail for later implementation:
 * Invitations should carry one permission role and one job position selected at invite time.
 * Invitations can use default job positions or a hospital-created custom job position.
 * Invitations can use default permission roles or a hospital-created custom permission role when the inviter has permission to assign it.
-* Membership states should include at least `pending`, `active`, and `inactive`.
+* Membership states are `active`, `inactive`, and `archived`; invitation status owns the pre-membership `pending` state.
 * `inactive` means workspace access is disabled while the membership record remains operationally visible and can be reactivated.
-* `soft_deleted` means workspace access is disabled and the membership is excluded from the default directory. It remains in the `삭제됨` tab with deletion actor, reason, and date for restoration.
-* Restoring a soft-deleted membership must return it to `inactive`, never directly to active access.
-* Soft deletion requires a reason, must be server-authorized, and must not be available for the acting user's own membership or the last active owner.
-* The directory may show a 90-day review date after soft deletion, but there is no automatic removal in MVP. Permanent record removal and platform user-account removal require separate approval and scope.
+* `archived` means workspace access is disabled and an ended hospital relationship is excluded from the default directory while its history remains available in the `보관됨` tab.
+* Restoring an archived membership must return it to `inactive`, never directly to active access.
+* Archival requires a reason, must be server-authorized, and must not be available for the acting user's own membership or the last active owner.
+* Permanent membership deletion, an automatic purge schedule, and platform user-account removal require separate approval and scope.
 * Pending invitations can be resent or canceled.
 * Duplicate active memberships in the same workspace are not allowed.
 * Duplicate pending invitations for the same email/workspace should be blocked or resolved by resend.
 * Real email delivery, public invite links, SSO/SCIM, and domain auto-join are out of MVP scope unless separately approved.
+
+The detailed state transitions, role replacement, job-position deactivation, rehire, authorization, audit, and compatibility rules are defined in [Membership, Permission Role, and Job Position Lifecycle](membership-role-job-lifecycle.md).
 
 ## Personal Profile Requirements
 
