@@ -46,6 +46,14 @@ test("mock staff gateway keeps selected avatars and fallback users distinct", as
 test("reception veterinarian lanes render image avatars and preserve fallback", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
 
+  const laneNameLabels = page
+    .getByTestId("veterinarian-lane-header")
+    .locator("span.min-w-0.truncate");
+  await expect(laneNameLabels).not.toHaveCount(0);
+  for (const laneNameLabel of await laneNameLabels.all()) {
+    await expect(laneNameLabel).toHaveClass(/emr-text-body/);
+  }
+
   const sujiHeader = page.getByTestId("veterinarian-lane-header").filter({ hasText: "이수지" });
   await expect(sujiHeader.locator("img")).toHaveAttribute(
     "src",

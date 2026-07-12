@@ -576,7 +576,7 @@ function VeterinarianLaneHeader({
           {veterinarian.initial}
         </AvatarFallback>
       </Avatar>
-      <span className="min-w-0 truncate text-[15px] font-semibold leading-5 [letter-spacing:0]">
+      <span className="min-w-0 truncate emr-text-body font-semibold">
         {veterinarian.name}
       </span>
     </div>
