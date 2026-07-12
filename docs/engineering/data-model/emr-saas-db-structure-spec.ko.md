@@ -190,7 +190,7 @@ erDiagram
 | Column | Type | Notes |
 | --- | --- | --- |
 | `user_id` | uuid pk/fk | `users.id` |
-| `avatar_url` | text nullable | |
+| `avatar_url` | text nullable | `avatars` Supabase Storage bucket의 object path. 없으면 이름 이니셜 fallback |
 | `notification_preferences` | jsonb nullable | 권한 source 아님 |
 | `locale` | text nullable | |
 | `timezone` | text nullable | |

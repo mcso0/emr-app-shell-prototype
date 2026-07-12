@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "demo:seed:avatars": "node scripts/upload-staff-avatars.mjs",
     "demo:seed:check": "node scripts/check-local-supabase-replay.mjs",
     "docs:check": "node scripts/check-doc-links.mjs",
     "owner-os": "node scripts/owner-os.mjs",
