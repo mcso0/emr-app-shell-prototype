@@ -348,6 +348,10 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await page.keyboard.press("Escape");
   await calendarViewTabs.getByRole("button", { name: "일" }).click();
   await expect(page.getByText("영업시간 09:00-19:00")).toBeVisible();
+  await expect(page.getByTestId("schedule-toolbar")).toHaveCSS(
+    "height",
+    "52px",
+  );
   await expect
     .poll(() =>
       page
@@ -360,7 +364,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
       const box = await page.getByTestId("schedule-toolbar").boundingBox();
       return Math.round(box?.height ?? 0);
     })
-    .toBe(64);
+    .toBe(52);
   const calendarFrameAlignment = await page
     .getByTestId("reception-calendar-frame")
     .evaluate((frameElement) => {
@@ -3580,7 +3584,7 @@ test("appointment check-in persistence regression reloads from queue and calenda
   );
 });
 
-test("reception right panel header uses the shared 58px height", async ({
+test("reception right panel header uses the shared 52px height", async ({
   page,
 }) => {
   await page.goto(
@@ -3589,7 +3593,7 @@ test("reception right panel header uses the shared 58px height", async ({
 
   const rightPanel = page.getByTestId("reception-right-panel");
   await expect(rightPanel).toBeVisible();
-  await expect(rightPanel.locator("header")).toHaveCSS("height", "58px");
+  await expect(rightPanel.locator("header")).toHaveCSS("height", "52px");
 });
 
 test("reception read failures explain local demo fallback and expose retry actions", async ({
