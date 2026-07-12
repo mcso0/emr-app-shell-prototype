@@ -41,7 +41,13 @@ import {
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  ButtonGroup,
+  ButtonGroupDivider,
+  ButtonGroupIconButton,
+  ButtonGroupPrimaryButton,
+} from "@/components/ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,7 +63,6 @@ import {
   isLegacySalesDemoWorkspace,
   resolveWorkspacePathname,
 } from "@/lib/emr-domain/demo-workspaces";
-import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import {
@@ -1085,22 +1090,26 @@ function GroupStatusAction({
 
   if (group.workStatus === "진행중") {
     return (
-      <div className="inline-flex items-center">
-        <Button
+      <ButtonGroup aria-label={`${group.title} 상태 액션`}>
+        <ButtonGroupPrimaryButton
           type="button"
           variant="outline"
           size={size}
-          className="rounded-r-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
+          className="border-r-transparent border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
         >
           {statusLabel}
-        </Button>
+        </ButtonGroupPrimaryButton>
+        <ButtonGroupDivider className="bg-[var(--emr-status-info-border)]" />
         <DropdownMenu>
           <DropdownMenuTrigger
-            aria-label={`${group.title} 상태 액션`}
-            className={cn(
-              buttonVariants({ variant: "outline", size: size === "sm" ? "icon-sm" : "icon-xs" }),
-              "-ml-px rounded-l-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
-            )}
+            render={
+              <ButtonGroupIconButton
+                aria-label={`${group.title} 상태 액션 열기`}
+                variant="outline"
+                size={size}
+                className="border-l-transparent border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
+              />
+            }
           >
             <ChevronDownIcon />
           </DropdownMenuTrigger>
@@ -1121,7 +1130,7 @@ function GroupStatusAction({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </ButtonGroup>
     );
   }
 

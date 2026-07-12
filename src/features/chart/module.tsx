@@ -26,6 +26,7 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
 import {
+  CdsNavigationChevronDownIcon,
   CdsNavigationChevronsRightIcon,
 } from "@/components/cds-icons/navigation";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
@@ -76,6 +77,12 @@ import {
 import type { EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  ButtonGroup,
+  ButtonGroupDivider,
+  ButtonGroupIconButton,
+  ButtonGroupPrimaryButton,
+} from "@/components/ui/button-group";
 import {
   Dialog,
   DialogContent,
@@ -6763,62 +6770,58 @@ export function ChartContent({
                     </Button>
                   ) : null}
                   {primaryAction === "complete" ? (
-                    <div className="inline-flex items-center">
-                      <Button
-                        className={
-                          canUseConsultationSecondaryActions
-                            ? "rounded-r-none"
-                            : undefined
-                        }
+                    <ButtonGroup aria-label="진료 완료 보조 액션">
+                      <ButtonGroupPrimaryButton
                         disabled={primaryActionBusy}
                         onClick={() => setChartCompleteDialogOpen(true)}
                       >
                         진료 완료
-                      </Button>
+                      </ButtonGroupPrimaryButton>
                       {canUseConsultationSecondaryActions ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                aria-label="진료 보조 액션 열기"
-                                className="-ml-px rounded-l-none"
-                                disabled={primaryActionBusy}
-                                size="icon"
-                              />
-                            }
-                          >
-                            <CdsFilesMoreHorizontalIcon aria-hidden="true" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              onClick={() => {
-                                if (hasChartWorkContent) {
-                                  setReturnToWaitingDialogOpen(true);
-                                  return;
-                                }
-                                void handleConsultationFlowMutation(
-                                  "return_to_waiting",
-                                );
-                              }}
+                        <>
+                          <ButtonGroupDivider />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <ButtonGroupIconButton
+                                  aria-label="진료 보조 액션 열기"
+                                  disabled={primaryActionBusy}
+                                />
+                              }
                             >
-                              대기로 변경
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="cursor-pointer text-[var(--emr-status-danger-text)]"
-                              onClick={() => {
-                                setCancelEncounterReason("");
-                                setEncounterCancelState({ status: "idle" });
-                                setCancelEncounterDialogOpen(true);
-                              }}
-                            >
-                              진료 취소
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <CdsNavigationChevronDownIcon aria-hidden="true" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  if (hasChartWorkContent) {
+                                    setReturnToWaitingDialogOpen(true);
+                                    return;
+                                  }
+                                  void handleConsultationFlowMutation(
+                                    "return_to_waiting",
+                                  );
+                                }}
+                              >
+                                대기로 변경
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="cursor-pointer text-[var(--emr-status-danger-text)]"
+                                onClick={() => {
+                                  setCancelEncounterReason("");
+                                  setEncounterCancelState({ status: "idle" });
+                                  setCancelEncounterDialogOpen(true);
+                                }}
+                              >
+                                진료 취소
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </>
                       ) : null}
-                    </div>
+                    </ButtonGroup>
                   ) : null}
                 </>
               }
