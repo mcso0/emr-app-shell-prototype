@@ -3826,16 +3826,14 @@ function ReceptionScheduleDateControl({
       data-testid="reception-date-control"
     >
       <span
-        className="flex h-[var(--clair-control-height-sm)] items-center gap-[var(--clair-spacing-8)] text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
+        className="flex h-[var(--clair-control-height-sm)] items-center gap-[10px] text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
         aria-label={`${dateControlLabel.dateLabel} 표시 중`}
       >
-        <span className="flex size-[var(--clair-spacing-24)] shrink-0 items-center justify-center">
-          <CdsFilesReceptionCalendarIcon
-            aria-hidden="true"
-            className="shrink-0 text-[var(--clair-color-atomic-neutral-400)]"
-            size={24}
-          />
-        </span>
+        <CdsFilesReceptionCalendarIcon
+          aria-hidden="true"
+          className="shrink-0 text-[var(--clair-color-atomic-neutral-400)]"
+          size={22}
+        />
         {dateControlLabel.dateLabel}
       </span>
     </div>
