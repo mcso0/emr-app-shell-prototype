@@ -2692,6 +2692,33 @@ test("reception card action menu exposes unavailable feedback and closes on Esca
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
+test("reception side-panel card action menu uses compact single-line actions", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception");
+
+  const card = page.getByTestId("patient-card-patient-coco");
+  const actionButton = card.getByRole("button", { name: "코코 카드 작업" });
+  await actionButton.evaluate((button) => button.focus());
+  await actionButton.click();
+
+  const actionMenu = page.getByRole("menu");
+  await expect(actionMenu).not.toContainText("현재 drawer 열기");
+  await expect(actionMenu).not.toContainText("진료/차트 탭에서 열기");
+  const actionMenuItems = actionMenu.getByRole("menuitem");
+  await expect(actionMenuItems).toHaveCount(2);
+  const openAction = actionMenu.getByRole("menuitem", {
+    name: "접수 상세 보기",
+  });
+  const chartAction = actionMenu.getByRole("menuitem", { name: "차트 보러가기" });
+  await expect(openAction).toHaveCount(1);
+  await expect(chartAction).toHaveCount(1);
+  await expect(openAction).toHaveCSS("height", "32px");
+  await expect(chartAction).toHaveCSS("height", "32px");
+  await page.keyboard.press("Escape");
+  await expect(actionMenu).toHaveCount(0);
+});
+
 test("server-backed reception queue read hydrates the side panel from persisted encounters", async ({
   page,
 }) => {
