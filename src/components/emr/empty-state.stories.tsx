@@ -278,9 +278,9 @@ export const FigmaSizeContract: Story = {
     const blackAlpha36 = resolveColorToken("--clair-color-atomic-black-alpha-36");
     const blackAlpha48 = resolveColorToken("--clair-color-atomic-black-alpha-48");
     const expected = {
-      lg: { icon: 48, rootGap: "16px", titleSize: "16px" },
-      md: { icon: 32, rootGap: "8px", titleSize: "14px" },
-      sm: { icon: 0, rootGap: "8px", titleSize: "14px" },
+      lg: { icon: 48, innerIcon: 24, rootGap: "16px", titleSize: "16px" },
+      md: { icon: 40, innerIcon: 24, rootGap: "8px", titleSize: "14px" },
+      sm: { icon: 0, innerIcon: 0, rootGap: "8px", titleSize: "14px" },
     } as const;
 
     for (const [size, contract] of Object.entries(expected)) {
@@ -322,6 +322,12 @@ export const FigmaSizeContract: Story = {
         }
         if (getComputedStyle(iconArea).backgroundColor !== blackAlpha4) {
           throw new Error(`Expected ${size} icon background black alpha 4.`);
+        }
+        const icon = emptyState.querySelector<HTMLElement>("[data-slot='icon']");
+        if (!icon) throw new Error(`Expected ${size} inner icon slot.`);
+        const iconSize = Number.parseFloat(getComputedStyle(icon).width);
+        if (iconSize !== contract.innerIcon) {
+          throw new Error(`Expected ${size} inner icon ${contract.innerIcon}px, got ${iconSize}px.`);
         }
       }
     }

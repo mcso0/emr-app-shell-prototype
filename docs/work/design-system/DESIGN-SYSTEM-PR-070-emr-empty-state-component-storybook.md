@@ -86,5 +86,6 @@ This work starts the shared runtime component layer. Screen adoption should be a
 
 - `EmrEmptyState` now exposes `size="lg" | "md" | "sm"`; legacy `density` resolves to the corresponding visual tier for compatibility.
 - `lg` maps to content, `md` maps to side-panel/large-table usage, and `sm` maps to modal/small-table usage. The requested product label `mg` is represented by the Figma `md` implementation value.
+- Figma `md` uses a `40px` icon area, a `24px` inner icon slot, a `10px` radius, and `4px` bottom wrapper space; the Storybook contract asserts the area and inner slot dimensions.
 - Existing CLAiR alpha tokens are used for the icon area (`black-alpha-4`), icon/title (`black-alpha-48`), and description (`black-alpha-36`); local rgba/hex values were removed from the shared Empty State stories.
 - Storybook contains Figma size and action contract stories with browser assertions. `EmrQueueEmptyState` now delegates its visual contract to `EmrEmptyState size="md"`.
