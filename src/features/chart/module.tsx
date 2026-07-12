@@ -5013,7 +5013,7 @@ function OrderArea({
         <ChartUnavailableAlert
           action={unavailableAction.action}
           targetName={unavailableAction.targetName}
-          className="mx-3 mt-2 shrink-0"
+          className="mx-3 mt-2 w-auto shrink-0"
           onDismiss={() => setUnavailableAction(null)}
         />
       ) : null}

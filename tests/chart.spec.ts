@@ -1623,6 +1623,16 @@ test("chart unavailable order actions show persistent inline guidance", async ({
   await expect(
     unavailableAlert.getByRole("button", { name: "확인" }),
   ).toHaveCount(0);
+  const alertOverflowsOrderWorkspace = await unavailableAlert.evaluate(
+    (element) => {
+      const parent = element.parentElement;
+
+      return parent
+        ? element.getBoundingClientRect().right > parent.getBoundingClientRect().right
+        : true;
+    },
+  );
+  expect(alertOverflowsOrderWorkspace).toBe(false);
   await dismissButton.click();
   await expect(unavailableAlert).toBeHidden();
 });
