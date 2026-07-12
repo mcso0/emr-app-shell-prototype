@@ -45,9 +45,9 @@ Basic usage:
 </EmrInlineAlert>
 ```
 
-The component exposes an action slot instead of owning click behavior. Feature
-modules remain responsible for retry callbacks, route state, permissions,
-logging, and local workflow copy.
+The component exposes below-copy recovery action slots instead of owning click
+behavior. Feature modules remain responsible for retry callbacks, route state,
+permissions, logging, and local workflow copy.
 
 ## Severity Rules
 
@@ -73,6 +73,17 @@ Use these labels and behavior classes consistently when the action exists:
 | View details | Reveal or link to diagnostic details useful for support/debugging. |
 | Unavailable | Explain that a feature is intentionally disconnected in the MVP. |
 | Dismiss | Hide only non-blocking info/success/warning messages. Do not dismiss blocking errors without another recovery path. |
+
+## Dismiss Controls
+
+- Use `dismissAction` only for a non-blocking `info`, `success`, or `warning`
+  message that the user may hide after reading.
+- Place a labelled icon-only dismiss button in `dismissAction`; the shadcn
+  `AlertAction` slot keeps it at the alert's top end.
+- Keep `action` and `secondaryAction` below the copy for meaningful recovery
+  paths such as retry, local-demo fallback, or viewing details.
+- Do not use a generic acknowledgement label such as `확인` when the only
+  result is dismissing the alert.
 
 ## Placement
 
