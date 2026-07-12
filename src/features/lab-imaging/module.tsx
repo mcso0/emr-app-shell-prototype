@@ -32,6 +32,7 @@ import {
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import {
   EmrContentAsideHeader,
   EmrContentAsidePanel,
@@ -2480,17 +2481,14 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
       <div className="flex h-[var(--clair-layout-drawer-header)] items-center px-4">
         <div className="relative flex min-w-0 max-w-full items-center">
           <h2 className="min-w-0 truncate text-sm font-semibold">장비 검사 수신함</h2>
-          <span className="pointer-events-auto absolute left-full z-10 ml-1 flex w-7 shrink-0">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
+          <span className="pointer-events-auto absolute left-full z-10 ml-1 flex w-8 shrink-0">
+            <EmrRightPanelHeaderIconButton
               className="opacity-0 text-[var(--emr-text-tertiary)] transition-opacity hover:text-[var(--emr-text-tertiary)] group-hover/lab-receipt-panel:opacity-100 focus-visible:opacity-100"
               aria-label="장비 검사 수신함 접기"
               onClick={() => setRightPanelOpen(false)}
             >
               <CdsNavigationChevronsRightIcon className="size-4" />
-            </Button>
+            </EmrRightPanelHeaderIconButton>
           </span>
         </div>
       </div>

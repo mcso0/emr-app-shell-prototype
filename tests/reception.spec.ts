@@ -3620,6 +3620,11 @@ test("reception right panel header uses the shared 52px height", async ({
   const rightPanel = page.getByTestId("reception-right-panel");
   await expect(rightPanel).toBeVisible();
   await expect(rightPanel.locator("header")).toHaveCSS("height", "52px");
+  const closeButton = rightPanel.getByRole("button", {
+    name: "우측 사이드 패널 닫기",
+  });
+  await expect(closeButton).toHaveCSS("width", "32px");
+  await expect(closeButton).toHaveCSS("height", "32px");
 });
 
 test("reception read failures explain local demo fallback and expose retry actions", async ({
