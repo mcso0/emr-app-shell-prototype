@@ -34,6 +34,7 @@ export type EmrEmptyStatePriority =
   | "primary-decision";
 
 export type EmrEmptyStateDensity = "compact" | "standard" | "table-row";
+export type EmrEmptyStateSize = "lg" | "md" | "sm";
 export type EmrEmptyStateAlign = "start" | "center";
 
 export type EmrEmptyStateProps = Omit<
@@ -62,11 +63,16 @@ export type EmrEmptyStateProps = Omit<
   icon?: ReactNode | false;
   eyebrow?: ReactNode;
   density?: EmrEmptyStateDensity;
+  /**
+   * Visual size contract aligned to CDS.V2 EmptyPlaceholder. `md` is the
+   * implementation tier for the product's `mg` usage label.
+   */
+  size?: EmrEmptyStateSize;
   align?: EmrEmptyStateAlign;
   /**
    * Keeps the no-action variant optically aligned with action variants in
-   * component-set previews. Keep false in cramped production surfaces unless
-   * the surrounding layout needs equal-height placeholders.
+   * the Figma component set. Set false only when the surrounding surface
+   * intentionally removes the reserved action row.
    */
   reserveActionSpace?: boolean;
   testId?: string;
@@ -81,10 +87,49 @@ const motionIconByKind: Record<EmrEmptyStateKind, unknown> = {
   "upstream-pending": folderFileMotionIcon,
 };
 
-const densityClassName: Record<EmrEmptyStateDensity, string> = {
-  compact: "max-w-[220px]",
-  standard: "max-w-[260px]",
-  "table-row": "max-w-[260px]",
+const sizeClassName: Record<
+  EmrEmptyStateSize,
+  {
+    root: string;
+    iconWrapper: string;
+    iconArea: string;
+    icon: string;
+    body: string;
+    title: string;
+    description: string;
+    spacer: string;
+  }
+> = {
+  lg: {
+    root: "max-w-[260px] gap-4",
+    iconWrapper: "",
+    iconArea: "size-12 rounded-[14px]",
+    icon: "size-6",
+    body: "gap-4",
+    title: "text-[16px] leading-6 tracking-[0.006em]",
+    description: "text-[14px] leading-5 tracking-[0.014em]",
+    spacer: "h-7",
+  },
+  md: {
+    root: "max-w-[220px] gap-2",
+    iconWrapper: "pb-1",
+    iconArea: "size-8 rounded-[10px]",
+    icon: "size-4",
+    body: "gap-2",
+    title: "text-[14px] leading-5 tracking-[0.014em]",
+    description: "text-[14px] leading-5 tracking-[0.014em]",
+    spacer: "h-6",
+  },
+  sm: {
+    root: "max-w-[220px] gap-2",
+    iconWrapper: "",
+    iconArea: "size-8 rounded-[10px]",
+    icon: "size-4",
+    body: "gap-2",
+    title: "text-[14px] leading-5 tracking-[0.014em]",
+    description: "text-[14px] leading-5 tracking-[0.014em]",
+    spacer: "h-6",
+  },
 };
 
 const priorityClassName: Record<EmrEmptyStatePriority, string> = {
@@ -98,6 +143,19 @@ function getDefaultDensity(surface: EmrEmptyStateSurface): EmrEmptyStateDensity 
   if (surface === "table") return "table-row";
 
   return "compact";
+}
+
+function resolveSize(
+  surface: EmrEmptyStateSurface,
+  density?: EmrEmptyStateDensity,
+  size?: EmrEmptyStateSize,
+): EmrEmptyStateSize {
+  if (size) return size;
+  if (density === "table-row") return "md";
+  if (density === "compact") return "sm";
+  if (surface === "content" || surface === "global-shell") return "lg";
+
+  return "sm";
 }
 
 /**
@@ -119,16 +177,21 @@ export function EmrEmptyState({
   kind,
   primaryAction,
   priority = "supporting",
-  reserveActionSpace = false,
+  reserveActionSpace = true,
   secondaryAction,
+  size,
   surface,
   testId,
   title,
   ...props
 }: EmrEmptyStateProps) {
   const resolvedDensity = density ?? getDefaultDensity(surface);
+  const resolvedSize = resolveSize(surface, resolvedDensity, size);
+  const sizeClasses = sizeClassName[resolvedSize];
   const resolvedAlign = align ?? "center";
   const hasActions = primaryAction || secondaryAction;
+  const actionCount = Number(Boolean(primaryAction)) + Number(Boolean(secondaryAction));
+  const showIcon = resolvedSize !== "sm" && icon !== false;
 
   return (
     <section
@@ -137,37 +200,48 @@ export function EmrEmptyState({
       data-density={resolvedDensity}
       data-kind={kind}
       data-priority={priority}
+      data-size={resolvedSize}
       data-surface={surface}
+      data-action-count={actionCount}
       data-testid={testId}
       className={cn(
-        "flex min-w-0 flex-col gap-5 text-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
-        densityClassName[resolvedDensity],
+        "flex min-w-0 flex-col text-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
+        sizeClasses.root,
         priorityClassName[priority],
         resolvedAlign === "center" && "items-center text-center",
         resolvedAlign === "start" && "items-start text-left",
         className,
       )}
     >
-      {icon !== false ? (
+      {showIcon ? (
         <div
-          className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-[rgba(0,0,0,0.04)] text-[rgba(0,0,0,0.48)]"
+          className={cn("flex items-center", sizeClasses.iconWrapper)}
           aria-hidden="true"
-          data-slot="icon-area"
+          data-slot="icon-wrapper"
         >
-          <div className="flex size-8 items-center justify-center" data-slot="icon">
-            {icon ?? (
-              <EmrMotionIcon
-                animationData={motionIconByKind[kind]}
-                className="size-8 text-current [&_path]:!stroke-current"
-                loop={false}
-              />
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-center overflow-hidden bg-[var(--clair-color-atomic-black-alpha-4)] text-[var(--clair-color-atomic-black-alpha-48)]",
+              sizeClasses.iconArea,
             )}
+            data-slot="icon-area"
+          >
+            <div className={cn("flex items-center justify-center", sizeClasses.icon)} data-slot="icon">
+              {icon ?? (
+                <EmrMotionIcon
+                  animationData={motionIconByKind[kind]}
+                  className={cn(sizeClasses.icon, "text-current [&_path]:!stroke-current")}
+                  loop={false}
+                />
+              )}
+            </div>
           </div>
         </div>
       ) : null}
       <div
         className={cn(
-          "flex min-w-0 flex-col gap-4",
+          "flex min-w-0 flex-col",
+          sizeClasses.body,
           resolvedAlign === "center" && "items-center text-center",
           resolvedAlign === "start" && "items-start text-left",
         )}
@@ -182,18 +256,28 @@ export function EmrEmptyState({
           data-slot="copy"
         >
           {eyebrow ? (
-            <div className="emr-text-metadata font-medium text-[rgba(0,0,0,0.36)]">
+            <div className="emr-text-metadata font-medium text-[var(--clair-color-atomic-black-alpha-36)]">
               {eyebrow}
             </div>
           ) : null}
-          <h3 className="text-[16px] font-medium leading-6 tracking-[0.006em] text-[rgba(0,0,0,0.64)]">
+          <h3
+            className={cn(
+              "font-medium text-[var(--clair-color-atomic-black-alpha-48)]",
+              sizeClasses.title,
+            )}
+          >
             {title}
-        </h3>
-        {description ? (
-          <p className="max-w-[220px] text-[14px] font-medium leading-5 tracking-[0.014em] text-[rgba(0,0,0,0.36)] [overflow-wrap:break-word] [text-wrap:pretty] [word-break:keep-all]">
-            {description}
-          </p>
-        ) : null}
+          </h3>
+          {description ? (
+            <p
+              className={cn(
+                "[overflow-wrap:break-word] [text-wrap:pretty] [word-break:keep-all] text-[var(--clair-color-atomic-black-alpha-36)]",
+                sizeClasses.description,
+              )}
+            >
+              {description}
+            </p>
+          ) : null}
         </div>
         {hasActions ? (
           <div
@@ -210,7 +294,7 @@ export function EmrEmptyState({
         ) : reserveActionSpace ? (
           <div
             aria-hidden="true"
-            className="h-[var(--clair-control-height-xs)]"
+            className={sizeClasses.spacer}
             data-slot="actions-spacer"
           />
         ) : null}

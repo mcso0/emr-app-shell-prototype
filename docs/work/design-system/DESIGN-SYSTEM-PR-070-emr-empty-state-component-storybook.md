@@ -10,7 +10,7 @@ source_docs:
   - "docs/design/system/empty-info-state-contract.md"
   - "docs/design/system/storybook-operating-rules.md"
   - "docs/completed/design/2026-07-01-empty-state-surface-placement-report.html"
-updated: "2026-07-01"
+updated: "2026-07-12"
 ---
 
 # EmrEmptyState Component Contract And Storybook Variants
@@ -24,6 +24,7 @@ Create the shared `EmrEmptyState` runtime component and Storybook variants for t
 - Add `EmrEmptyState` with `kind`, `surface`, `priority`, `density`, and `align` props.
 - Use existing Iconly motion JSON assets through `EmrMotionIcon`.
 - Add Storybook examples for queue, content, drawer, table, widget, permission-info, two-action, and 6-kind review states.
+- Align the shared visual contract to CDS.V2 Figma `lg`/`md`/`sm` tiers, including icon slots, typography, alpha tokens, action ordering, and size-specific reserved action space.
 - Keep feature routing, permission checks, persistence, analytics, and logging outside the component.
 - Update design-system Storybook documentation index.
 
@@ -54,6 +55,9 @@ Create the shared `EmrEmptyState` runtime component and Storybook variants for t
 - Passed `npm run storybook -- --ci --smoke-test`.
 - Passed static Storybook iframe render check for `design-system-emr-emremptystate--state-kind-set`.
   - Verified 6 rendered `data-kind` states and the `차트로 이동` / `조건 초기화` action labels.
+- Passed the Figma size/action Storybook interaction contract: 13 tests.
+- Passed queue/content Playwright regression coverage: 12 tests.
+- Passed `npm run build`.
 
 ## Handoff Notes
 
@@ -76,3 +80,10 @@ This work starts the shared runtime component layer. Screen adoption should be a
 - Updated the filter QA assertion to use the new empty-state description copy.
 - Queue placeholders were not changed.
 - Verification passed for focused eslint, TypeScript, docs link check, and the adopted table filter Playwright case.
+
+2026-07-12 Figma alignment checkpoint:
+
+- `EmrEmptyState` now exposes `size="lg" | "md" | "sm"`; legacy `density` resolves to the corresponding visual tier for compatibility.
+- `lg` maps to content, `md` maps to side-panel/large-table usage, and `sm` maps to modal/small-table usage. The requested product label `mg` is represented by the Figma `md` implementation value.
+- Existing CLAiR alpha tokens are used for the icon area (`black-alpha-4`), icon/title (`black-alpha-48`), and description (`black-alpha-36`); local rgba/hex values were removed from the shared Empty State stories.
+- Storybook now contains Figma size and action contract stories with browser assertions. `EmrQueueEmptyState` remains unchanged.

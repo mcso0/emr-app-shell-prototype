@@ -14,6 +14,7 @@ import {
   type EmrEmptyStateKind,
   type EmrEmptyStatePriority,
   type EmrEmptyStateProps,
+  type EmrEmptyStateSize,
   type EmrEmptyStateSurface,
 } from "./empty-state";
 
@@ -26,31 +27,48 @@ type EmrEmptyStateStoryArgs = {
   priority: EmrEmptyStatePriority;
   reserveActionSpace?: boolean;
   secondaryActionLabel?: string;
+  size?: EmrEmptyStateSize;
   surface: EmrEmptyStateSurface;
   title: string;
 };
 
-function EmptyStatePrimaryButton({ children }: { children: ReactNode }) {
+function EmptyStatePrimaryButton({
+  children,
+  size,
+}: {
+  children: ReactNode;
+  size?: EmrEmptyStateSize;
+}) {
+  const buttonSize = size ?? "sm";
+
   return (
     <Button
       type="button"
-      size="xs"
+      size={buttonSize === "lg" ? "sm" : "xs"}
       roundness="round"
-      className="bg-[#171717] text-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-[#171717]/90 hover:text-white"
+      className="bg-[var(--clair-color-atomic-neutral-900)] text-[var(--clair-color-atomic-common-100)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-neutral-900)] hover:text-[var(--clair-color-atomic-common-100)]"
     >
       {children}
     </Button>
   );
 }
 
-function EmptyStateSecondaryButton({ children }: { children: ReactNode }) {
+function EmptyStateSecondaryButton({
+  children,
+  size,
+}: {
+  children: ReactNode;
+  size?: EmrEmptyStateSize;
+}) {
+  const buttonSize = size ?? "sm";
+
   return (
     <Button
       type="button"
       variant="outline"
-      size="xs"
+      size={buttonSize === "lg" ? "sm" : "xs"}
       roundness="round"
-      className="border-[#e5e5e5] bg-white text-[#171717] shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-[#f7f7f7] hover:text-[#171717]"
+      className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]"
     >
       {children}
     </Button>
@@ -74,9 +92,12 @@ function EmptyStateStoryExample({
   priority,
   reserveActionSpace,
   secondaryActionLabel,
+  size,
   surface,
   title,
 }: EmrEmptyStateStoryArgs) {
+  const resolvedSize = size ?? "lg";
+
   return (
     <EmrEmptyState
       align={align}
@@ -86,15 +107,20 @@ function EmptyStateStoryExample({
       priority={priority}
       primaryAction={
         primaryActionLabel ? (
-          <EmptyStatePrimaryButton>{primaryActionLabel}</EmptyStatePrimaryButton>
+          <EmptyStatePrimaryButton size={resolvedSize}>
+            {primaryActionLabel}
+          </EmptyStatePrimaryButton>
         ) : undefined
       }
       reserveActionSpace={reserveActionSpace}
       secondaryAction={
         secondaryActionLabel ? (
-          <EmptyStateSecondaryButton>{secondaryActionLabel}</EmptyStateSecondaryButton>
+          <EmptyStateSecondaryButton size={resolvedSize}>
+            {secondaryActionLabel}
+          </EmptyStateSecondaryButton>
         ) : undefined
       }
+      size={resolvedSize}
       surface={surface}
       title={title}
     />
@@ -172,6 +198,7 @@ const meta = {
     kind: "upstream-pending",
     primaryActionLabel: "접수/예약으로 이동",
     priority: "primary-decision",
+    size: "lg",
     surface: "content",
     title: "진료 대기 환자가 없습니다",
   },
@@ -194,6 +221,7 @@ export const Default: Story = {
     priority: "supporting",
     reserveActionSpace: true,
     secondaryActionLabel: undefined,
+    size: "lg",
     surface: "content",
     title: "접수/예약이 없습니다",
   },
@@ -212,14 +240,194 @@ export const Default: Story = {
   },
 };
 
+function FigmaSizeContractExample() {
+  const sizes: EmrEmptyStateSize[] = ["lg", "md", "sm"];
+
+  return (
+    <div className="grid gap-6 md:grid-cols-3">
+      {sizes.map((size) => (
+        <div key={size} className="flex min-h-[240px] items-center justify-center border p-6">
+          <EmrEmptyState
+            description="설명이 두 줄로 표시됩니다."
+            kind="no-data"
+            reserveActionSpace
+            size={size}
+            surface="content"
+            testId={`figma-empty-state-${size}`}
+            title={`${size} empty state`}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export const FigmaSizeContract: Story = {
+  render: () => <FigmaSizeContractExample />,
+  play: async ({ canvasElement }) => {
+    const resolveColorToken = (token: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${token})`;
+      document.body.appendChild(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+
+    const blackAlpha4 = resolveColorToken("--clair-color-atomic-black-alpha-4");
+    const blackAlpha36 = resolveColorToken("--clair-color-atomic-black-alpha-36");
+    const blackAlpha48 = resolveColorToken("--clair-color-atomic-black-alpha-48");
+    const expected = {
+      lg: { icon: 48, rootGap: "16px", titleSize: "16px" },
+      md: { icon: 32, rootGap: "8px", titleSize: "14px" },
+      sm: { icon: 0, rootGap: "8px", titleSize: "14px" },
+    } as const;
+
+    for (const [size, contract] of Object.entries(expected)) {
+      const emptyState = canvasElement.querySelector<HTMLElement>(
+        `section[data-testid="figma-empty-state-${size}"]`,
+      );
+      if (!emptyState) throw new Error(`Expected ${size} empty state section.`);
+      if (emptyState.dataset.size !== size) {
+        throw new Error(`Expected ${size} data-size contract.`);
+      }
+
+      if (getComputedStyle(emptyState).gap !== contract.rootGap) {
+        throw new Error(`Expected ${size} root gap ${contract.rootGap}.`);
+      }
+
+      const title = emptyState.querySelector<HTMLElement>("[data-slot='copy'] h3");
+      if (!title) throw new Error(`Expected ${size} title.`);
+      if (getComputedStyle(title).fontSize !== contract.titleSize) {
+        throw new Error(`Expected ${size} title size ${contract.titleSize}.`);
+      }
+      if (getComputedStyle(title).color !== blackAlpha48) {
+        throw new Error(`Expected ${size} title color black alpha 48.`);
+      }
+
+      const description = emptyState.querySelector<HTMLElement>("[data-slot='copy'] p");
+      if (!description) throw new Error(`Expected ${size} description.`);
+      if (getComputedStyle(description).color !== blackAlpha36) {
+        throw new Error(`Expected ${size} description color black alpha 36.`);
+      }
+
+      const iconArea = emptyState.querySelector<HTMLElement>("[data-slot='icon-area']");
+      if (contract.icon === 0) {
+        if (iconArea) throw new Error("Expected sm empty state to omit the icon slot.");
+      } else {
+        if (!iconArea) throw new Error(`Expected ${size} icon slot.`);
+        const iconWidth = Number.parseFloat(getComputedStyle(iconArea).width);
+        if (iconWidth !== contract.icon) {
+          throw new Error(`Expected ${size} icon area ${contract.icon}px, got ${iconWidth}px.`);
+        }
+        if (getComputedStyle(iconArea).backgroundColor !== blackAlpha4) {
+          throw new Error(`Expected ${size} icon background black alpha 4.`);
+        }
+      }
+    }
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Figma `lg`/`md`/`sm` visual contract. `md` is the implementation tier for the requested `mg` usage.",
+      },
+    },
+  },
+};
+
+function FigmaActionContractExample() {
+  return (
+    <div className="grid gap-6 lg:grid-cols-3">
+      <EmrEmptyState
+        description="하단 액션 공간을 유지합니다."
+        kind="no-data"
+        surface="content"
+        testId="figma-action-default"
+        title="기본형"
+      />
+      <EmrEmptyState
+        description="복구 액션 하나를 제공합니다."
+        kind="no-search-results"
+        primaryAction={undefined}
+        secondaryAction={<EmptyStateSecondaryButton size="lg">outline action</EmptyStateSecondaryButton>}
+        size="lg"
+        surface="content"
+        testId="figma-action-one"
+        title="1 action"
+      />
+      <EmrEmptyState
+        description="보조 액션과 주요 액션을 제공합니다."
+        kind="no-scope-result"
+        primaryAction={<EmptyStatePrimaryButton size="lg">primary action</EmptyStatePrimaryButton>}
+        secondaryAction={<EmptyStateSecondaryButton size="lg">secondary action</EmptyStateSecondaryButton>}
+        size="lg"
+        surface="content"
+        testId="figma-action-two"
+        title="2 action"
+      />
+    </div>
+  );
+}
+
+export const FigmaActionContract: Story = {
+  render: () => <FigmaActionContractExample />,
+  play: async ({ canvasElement }) => {
+    const expected = {
+      default: { count: "0", buttonCount: 0 },
+      one: { count: "1", buttonCount: 1 },
+      two: { count: "2", buttonCount: 2 },
+    } as const;
+
+    for (const [variant, contract] of Object.entries(expected)) {
+      const emptyState = canvasElement.querySelector<HTMLElement>(
+        `section[data-testid="figma-action-${variant}"]`,
+      );
+      if (!emptyState) throw new Error(`Expected ${variant} action variant.`);
+      if (emptyState.dataset.actionCount !== contract.count) {
+        throw new Error(`Expected ${variant} action count ${contract.count}.`);
+      }
+
+      const buttons = emptyState.querySelectorAll("[data-slot='actions'] button");
+      if (buttons.length !== contract.buttonCount) {
+        throw new Error(`Expected ${variant} to render ${contract.buttonCount} action buttons.`);
+      }
+      for (const button of buttons) {
+        if (getComputedStyle(button).height !== "28px") {
+          throw new Error(`Expected ${variant} action buttons to be 28px high.`);
+        }
+      }
+    }
+
+    const twoActionButtons = canvasElement.querySelectorAll(
+      "section[data-testid='figma-action-two'] [data-slot='actions'] button",
+    );
+    if (twoActionButtons[0]?.textContent !== "secondary action") {
+      throw new Error("Expected the secondary action to render first.");
+    }
+    if (twoActionButtons[1]?.textContent !== "primary action") {
+      throw new Error("Expected the primary action to render second.");
+    }
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Figma `Default`, `1 action`, and `2 action` variants. One action is outline; two actions are outline then primary.",
+      },
+    },
+  },
+};
+
 export const OneAction: Story = {
   args: {
     description: "검색어를 지우면 전체 대기열이 다시 보입니다.",
     kind: "no-search-results",
-    primaryActionLabel: "검색 초기화",
+    primaryActionLabel: undefined,
     priority: "local-recovery",
     reserveActionSpace: false,
-    secondaryActionLabel: undefined,
+    secondaryActionLabel: "검색 초기화",
+    size: "lg",
     surface: "content",
     title: "검색 결과가 없습니다",
   },
@@ -246,6 +454,7 @@ export const TwoActions: Story = {
     priority: "primary-decision",
     reserveActionSpace: false,
     secondaryActionLabel: "날짜 변경",
+    size: "lg",
     surface: "content",
     title: "진료 대기 환자가 없습니다",
   },
@@ -307,8 +516,10 @@ export const QueueSearchRecovery: Story = {
   args: {
     description: "검색어를 지우면 전체 대기열이 다시 보입니다.",
     kind: "no-search-results",
-    primaryActionLabel: "검색 초기화",
+    primaryActionLabel: undefined,
     priority: "local-recovery",
+    secondaryActionLabel: "검색 초기화",
+    size: "sm",
     surface: "queue",
     title: "검색 결과가 없습니다",
   },
@@ -328,6 +539,7 @@ export const DrawerSupporting: Story = {
     kind: "no-scope-result",
     primaryActionLabel: undefined,
     priority: "supporting",
+    size: "sm",
     surface: "drawer",
     title: "선택된 환자 없음",
   },
@@ -345,8 +557,10 @@ export const TableFilterRecovery: Story = {
   args: {
     description: "조건을 초기화하면 숨겨진 행이 다시 보입니다.",
     kind: "no-filter-results",
-    primaryActionLabel: "조건 초기화",
+    primaryActionLabel: undefined,
     priority: "local-recovery",
+    secondaryActionLabel: "조건 초기화",
+    size: "md",
     surface: "table",
     title: "조건에 맞는 오더가 없습니다",
   },
@@ -378,6 +592,7 @@ export const WidgetSupporting: Story = {
     kind: "no-data",
     primaryActionLabel: undefined,
     priority: "supporting",
+    size: "sm",
     surface: "widget",
     title: "알림이 없습니다",
   },
@@ -419,12 +634,19 @@ export const PermissionInfoBoundary: Story = {
 const stateExamples: Array<
   Pick<
     EmrEmptyStateProps,
-    "description" | "kind" | "primaryAction" | "priority" | "surface" | "title"
+    | "description"
+    | "kind"
+    | "primaryAction"
+    | "priority"
+    | "size"
+    | "surface"
+    | "title"
   >
 > = [
   {
     kind: "no-data",
     priority: "supporting",
+    size: "sm",
     surface: "queue",
     title: "접수/예약이 없습니다",
   },
@@ -432,12 +654,13 @@ const stateExamples: Array<
     description: "검색어를 지우면 전체 목록이 다시 보입니다.",
     kind: "no-search-results",
     primaryAction: (
-      <EmptyStateSecondaryButton>
+      <EmptyStateSecondaryButton size="sm">
         <CdsActionsSearchIcon data-icon="inline-start" />
         검색 초기화
       </EmptyStateSecondaryButton>
     ),
     priority: "local-recovery",
+    size: "sm",
     surface: "queue",
     title: "검색 결과가 없습니다",
   },
@@ -445,12 +668,13 @@ const stateExamples: Array<
     description: "조건을 초기화하면 숨겨진 업무가 다시 보입니다.",
     kind: "no-filter-results",
     primaryAction: (
-      <EmptyStateSecondaryButton>
+      <EmptyStateSecondaryButton size="md">
         <CdsActionsFilterIcon data-icon="inline-start" />
         조건 초기화
       </EmptyStateSecondaryButton>
     ),
     priority: "local-recovery",
+    size: "md",
     surface: "table",
     title: "조건에 맞는 업무가 없습니다",
   },
@@ -458,6 +682,7 @@ const stateExamples: Array<
     description: "날짜나 범위를 바꾸면 다른 업무가 보입니다.",
     kind: "no-scope-result",
     priority: "supporting",
+    size: "lg",
     surface: "content",
     title: "선택 범위에 업무가 없습니다",
   },
@@ -465,6 +690,7 @@ const stateExamples: Array<
     description: "현재 역할에서는 이 정보를 볼 수 없습니다.",
     kind: "no-permission",
     priority: "supporting",
+    size: "lg",
     surface: "content",
     title: "조회 권한이 없습니다",
   },
@@ -472,9 +698,10 @@ const stateExamples: Array<
     description: "차트 요청이 확정되면 후속 업무가 표시됩니다.",
     kind: "upstream-pending",
     primaryAction: (
-      <EmptyStatePrimaryButton>차트로 이동</EmptyStatePrimaryButton>
+      <EmptyStatePrimaryButton size="lg">차트로 이동</EmptyStatePrimaryButton>
     ),
     priority: "primary-decision",
+    size: "lg",
     surface: "content",
     title: "넘어온 요청이 없습니다",
   },
@@ -493,6 +720,7 @@ export const StateKindSet: Story = {
             kind={example.kind}
             primaryAction={example.primaryAction}
             priority={example.priority}
+            size={example.size}
             surface={example.surface}
             title={example.title}
           />
