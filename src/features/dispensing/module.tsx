@@ -1768,8 +1768,8 @@ export function DispensingDrawer() {
         />
       </DispensingDrawerField>
       <div className="mt-auto flex justify-end gap-2 border-t pt-4">
-        <Button variant="outline">변경 이력</Button>
-        <Button>수정 저장</Button>
+        <Button variant="outline" size="default">변경 이력</Button>
+        <Button size="default">수정 저장</Button>
       </div>
     </div>
   );

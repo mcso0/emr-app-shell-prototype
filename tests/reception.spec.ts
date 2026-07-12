@@ -3627,6 +3627,28 @@ test("reception right panel header uses the shared 52px height", async ({
   await expect(closeButton).toHaveCSS("height", "32px");
 });
 
+test("reception side-panel footer actions use the shared 32px control height", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
+  );
+
+  const rightPanel = page.getByTestId("reception-right-panel");
+  await expect(rightPanel).toBeVisible();
+
+  const footerButtons = [
+    rightPanel.getByTestId("reception-encounter-cancel-open"),
+    rightPanel.getByRole("button", { name: "닫기", exact: true }),
+    rightPanel.getByTestId("reception-encounter-edit-open"),
+  ];
+
+  for (const button of footerButtons) {
+    await expect(button).toBeVisible();
+    await expect(button).toHaveCSS("height", "32px");
+  }
+});
+
 test("reception read failures explain local demo fallback and expose retry actions", async ({
   page,
 }) => {

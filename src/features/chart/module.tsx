@@ -1454,10 +1454,10 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
         </div>
       </ScrollArea>
       <div className="flex shrink-0 gap-2 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] py-3">
-        <Button variant="outline" size="sm" className="bg-card">
+        <Button variant="outline" size="default" className="bg-card">
           수술 차트
         </Button>
-        <Button size="sm">외래 차트 추가</Button>
+        <Button size="default">외래 차트 추가</Button>
       </div>
     </EmrContentAsidePanel>
   );

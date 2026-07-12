@@ -2519,7 +2519,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
       <footer className="flex shrink-0 items-center justify-between gap-3 border-t bg-card px-6 py-4 shadow-sm">
         {creatingNewOrder ? <div /> : (
           <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-            <Button variant="destructive" disabled={mutationInFlight} onClick={() => setConfirmDeleteOpen(true)}>
+            <Button size="default" variant="destructive" disabled={mutationInFlight} onClick={() => setConfirmDeleteOpen(true)}>
               사용 중지
             </Button>
             {confirmDeleteOpen ? (
