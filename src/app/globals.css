@@ -316,6 +316,12 @@
     letter-spacing: var(--emr-type-tracking-dialog-title);
   }
 
+  .emr-text-login-title {
+    font-size: var(--emr-type-size-login-title);
+    line-height: var(--emr-type-leading-login-title);
+    letter-spacing: var(--emr-type-tracking-login-title);
+  }
+
   .emr-control-radius {
     border-radius: var(--emr-radius-control);
   }

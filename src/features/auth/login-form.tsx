@@ -89,7 +89,7 @@ type LoginDialogFormProps = {
 
 function LoginDialogForm({ children, onSubmit }: LoginDialogFormProps) {
   return (
-    <div className="mx-auto w-full max-w-[440px] rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-[var(--clair-spacing-32)] shadow-[var(--clair-shadow-lg)] sm:min-w-[440px]">
+    <div className="mx-auto w-full max-w-[440px] rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-background-normal)] p-[var(--clair-spacing-32)] shadow-[var(--clair-shadow-md)] sm:min-w-[440px]">
       <form onSubmit={onSubmit} noValidate className={loginFormClassName}>
         {children}
       </form>
@@ -545,7 +545,7 @@ export function LoginForm() {
   return (
     <main className="min-h-svh bg-[var(--emr-surface-muted)] text-foreground">
       <div className="flex min-h-svh flex-col">
-        <section className="flex flex-1 items-center justify-center px-[var(--clair-spacing-16)] py-[var(--clair-spacing-32)]">
+        <section className="flex flex-1 items-center justify-center bg-[var(--emr-surface-auth)] px-[var(--clair-spacing-16)] py-[var(--clair-spacing-32)]">
           <div className="grid w-full max-w-[760px] gap-4">
             <LoginDialogForm onSubmit={handleSubmit}>
               <FieldGroup className="gap-[var(--clair-spacing-24)]">
@@ -563,7 +563,7 @@ export function LoginForm() {
                     />
                   </span>
                   <div className="flex flex-col gap-2">
-                    <h1 className="emr-text-dialog-title font-semibold text-[var(--emr-text-primary)]">
+                    <h1 className="emr-text-login-title font-semibold text-[var(--emr-text-primary)]">
                       {isInviteOtpLogin ? "초대 이메일 인증" : "CLAiR EMR 로그인"}
                     </h1>
                     {!isDefaultPasswordLogin ? (
@@ -821,7 +821,7 @@ export function LoginForm() {
 
                 {isDefaultPasswordLogin ? (
                   <>
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-[var(--clair-spacing-16)] text-center emr-text-body text-muted-foreground">
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-[var(--clair-spacing-16)] text-center emr-text-metadata text-muted-foreground">
                       <span className="h-px bg-[var(--emr-line-hairline)]" aria-hidden="true" />
                       <span>또는</span>
                       <span className="h-px bg-[var(--emr-line-hairline)]" aria-hidden="true" />

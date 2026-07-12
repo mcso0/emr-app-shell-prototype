@@ -219,6 +219,24 @@ test("root starts at login", async ({ page }) => {
   await expect(page.getByTestId("mock-session-status")).toBeVisible();
 });
 
+test("login visual tokens keep the approved surface, type, and elevation contract", async ({
+  page,
+}) => {
+  await page.goto("/login?reason=signed_out");
+
+  const loginSection = page.locator("main > div > section");
+  const loginCard = loginSection.locator(":scope > div > div").first();
+
+  await expect(loginSection).toHaveCSS("background-color", "rgb(249, 249, 249)");
+  await expect(loginCard).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(loginCard).toHaveCSS("box-shadow", /0px 4px 6px -1px/);
+  await expect(page.getByRole("heading", { name: "CLAiR EMR 로그인" })).toHaveCSS(
+    "font-size",
+    "20px"
+  );
+  await expect(page.getByText("또는", { exact: true })).toHaveCSS("font-size", "12px");
+});
+
 test("login form guides empty submit and shows inline validation after user input", async ({
   page,
 }) => {
