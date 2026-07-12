@@ -24,6 +24,7 @@ Current files:
 - `tab-table-density-contract.md`: workspace tabs, section tabs, segmented/filter-like controls, and density dropdown conditions.
 - `table-density-and-grid-ergonomics.md`: table density, scroll width, header role, resize, and cell text policy.
 - `table-sort-filter-behavior.md`: real table sort/filter behavior contract for selected EMR data grids.
+- `side-panel-header-contract.md`: shared `EmrSubpanelTitle` height and padding contract for module side panels.
 
 ## Current Storybook State
 

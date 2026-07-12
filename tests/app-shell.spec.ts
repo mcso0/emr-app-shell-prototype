@@ -744,6 +744,19 @@ test("app shell renders workspace switcher in the navigation column when module 
   expect(modulePanelBox.height).toBe(workspaceBox.height);
 });
 
+test("shared side-panel header uses the 52px frame with horizontal-only inset", async ({ page }) => {
+  await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed&right=closed");
+
+  const collapseButton = page.getByRole("button", { name: "사이드 패널 접기", exact: true });
+  const header = collapseButton.locator("..");
+
+  await expect(header).toHaveCSS("height", "52px");
+  await expect(header).toHaveCSS("padding-top", "0px");
+  await expect(header).toHaveCSS("padding-right", "16px");
+  await expect(header).toHaveCSS("padding-bottom", "0px");
+  await expect(header).toHaveCSS("padding-left", "16px");
+});
+
 test("workspace switcher reads persisted workspace display name from server list", async ({ page }) => {
   await page.route("**/api/workspaces", async (route) => {
     if (route.request().method() !== "GET") {
