@@ -19,7 +19,6 @@ import {
   CdsGnbMedicalGnbIcon,
   CdsGnbPayGnbIcon,
   CdsGnbPetGnbIcon,
-  CdsGnbPharmacyGnbIcon,
   CdsGnbPillGnbIcon,
   CdsGnbRadiographyGnbIcon,
 } from "@/components/cds-icons/gnb";
@@ -43,7 +42,7 @@ export const workspaceTabIconById: Record<string, { icon: GnbIcon; iconClassName
   home: { icon: CdsGnbHomeGnbIcon, iconClassName: "size-4" },
   reception: { icon: CdsGnbCalendarGnbIcon, iconClassName: "size-4" },
   treatment: { icon: CdsGnbMedicalGnbIcon, iconClassName: "size-4" },
-  lab: { icon: CdsGnbPharmacyGnbIcon, iconClassName: "size-4 rotate-45" },
+  lab: { icon: PharmacyGnbIcon, iconClassName: "rotate-45" },
   imaging: { icon: CdsGnbRadiographyGnbIcon, iconClassName: "size-4" },
   dispensing: { icon: CdsGnbPillGnbIcon, iconClassName: "size-4" },
   billing: { icon: CdsGnbPayGnbIcon, iconClassName: "size-4" },
