@@ -95,7 +95,7 @@ export function ShellMain({
 
           <aside
             className={cn(
-              "min-h-0 min-w-0 overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-sidepanel)] shadow-xs max-md:hidden",
+              "min-h-0 min-w-0 overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-strong)] bg-[var(--emr-surface-sidepanel)] shadow-xs max-md:hidden",
               !shouldShowModuleSidePanel && "pointer-events-none border-transparent opacity-0"
             )}
           >

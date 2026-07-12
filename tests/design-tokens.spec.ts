@@ -101,6 +101,43 @@ test("neutral command token contract is exposed on the app shell", async ({ page
   expect(colors.emrStatusInfoText).toBe(colors.expectedEmrStatusInfoText);
 });
 
+test("EMR border semantic scale maps to neutral 100, 200, and 300", async ({ page }) => {
+  await page.goto(treatmentUrl);
+
+  const colors = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    document.body.appendChild(probe);
+
+    const resolveBorderColor = (token: string) => {
+      probe.style.border = `1px solid var(${token})`;
+      return getComputedStyle(probe).borderTopColor;
+    };
+
+    const result = {
+      subtle: resolveBorderColor("--emr-border-subtle"),
+      default: resolveBorderColor("--emr-border-default"),
+      strong: resolveBorderColor("--emr-border-strong"),
+    };
+
+    probe.remove();
+    return result;
+  });
+
+  expect(colors).toEqual({
+    subtle: "rgb(245, 245, 245)",
+    default: "rgb(229, 229, 229)",
+    strong: "rgb(212, 212, 212)",
+  });
+
+  const [shellSource, workspaceFrameSource] = await Promise.all([
+    fs.promises.readFile("src/shell/shell-main.tsx", "utf8"),
+    fs.promises.readFile("src/shell/workspace-frame.tsx", "utf8"),
+  ]);
+
+  expect(shellSource).toContain("var(--emr-border-strong)");
+  expect(workspaceFrameSource).toContain("var(--emr-border-strong)");
+});
+
 test("primary command button uses primary token instead of brand blue", async ({ page }) => {
   await page.goto(treatmentUrl);
 

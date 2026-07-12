@@ -148,7 +148,7 @@ export function WorkspaceFrame({
               !instantRightPanel && "transition-[grid-template-columns]",
               rightPanelDetached
                 ? "overflow-visible bg-transparent"
-                : "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] shadow-xs"
+                : "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-strong)] bg-[var(--emr-surface-workspace)] shadow-xs"
             )}
             data-content-aside-open={contentAsideVisible ? "true" : "false"}
             data-right-panel-open={rightPanelVisible ? "true" : "false"}
@@ -210,8 +210,8 @@ export function WorkspaceFrame({
                 !instantRightPanel && "transition-opacity duration-150",
                 rightPanelVisible &&
                   (rightPanelDetached
-                    ? "rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] shadow-xs"
-                    : "border-l border-[var(--emr-line-default)]"),
+                    ? "rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-strong)] shadow-xs"
+                    : "border-l border-[var(--emr-border-strong)]"),
                 !rightPanelVisible && "pointer-events-none opacity-0"
               )}
             >
