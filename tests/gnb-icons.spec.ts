@@ -55,7 +55,7 @@ function getWorkspaceTablist(page: Page) {
   return page.getByRole("tablist", { name: "열린 업무 탭" });
 }
 
-test("navigation rail and workspace tabs use the canonical GNB SVG viewBox", async ({ page }) => {
+test("navigation rail keeps legacy GNB icons while workspace tabs use CDS GNB SVG icons", async ({ page }) => {
   await resetWorkspaceTabs(page);
   await page.goto(homeRoute);
 
@@ -64,7 +64,7 @@ test("navigation rail and workspace tabs use the canonical GNB SVG viewBox", asy
     .getByRole("tab", { name: "원내 현황" })
     .locator("svg");
 
-  await expect(homeNavIcon).toHaveAttribute("viewBox", "0 0 24 24");
+  await expect(homeNavIcon).toHaveAttribute("viewBox", "0 0 18.5 17.1048");
   await expect(homeTabIcon).toHaveAttribute("viewBox", "0 0 24 24");
 
   await getNavRail(page).getByRole("link", { name: "접수/예약" }).click();
@@ -77,6 +77,6 @@ test("navigation rail and workspace tabs use the canonical GNB SVG viewBox", asy
     .getByRole("tab", { name: "접수/예약" })
     .locator("svg");
 
-  await expect(receptionNavIcon).toHaveAttribute("viewBox", "0 0 24 24");
+  await expect(receptionNavIcon).toHaveAttribute("viewBox", "0 0 19 18.4717");
   await expect(receptionTabIcon).toHaveAttribute("viewBox", "0 0 24 24");
 });
