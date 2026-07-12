@@ -8495,7 +8495,7 @@ function ReceptionSidePanelInput({
           className={cn(
             "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2",
             isCreate
-              ? "emr-control-text font-medium text-[var(--clair-color-atomic-neutral-400)]"
+              ? "emr-control-text font-normal text-[var(--clair-color-atomic-neutral-600)]"
               : "emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]",
           )}
         >
@@ -8769,9 +8769,7 @@ function ReceptionSidePanelDetail({
   const canRemoveVital = selectedVitalIds.length > 1;
   const appointmentReadyForCheckIn =
     selectedAppointment?.status === "confirmed";
-  const detailVariant: ReceptionSidePanelLayoutVariant = selectedAppointment
-    ? "create"
-    : "default";
+  const detailVariant: ReceptionSidePanelLayoutVariant = "create";
   const usesCreateDetailLayout = detailVariant === "create";
   const detailDateLabel = selectedAppointment ? "예약일" : "접수일";
   const detailTimeLabel = selectedAppointment ? "예약시간" : "접수시간";
@@ -8903,7 +8901,7 @@ function ReceptionSidePanelDetail({
                     }))
                   }
                 >
-                  <SelectTrigger aria-label="진료과" size="sm" className="w-full bg-card">
+                  <SelectTrigger aria-label="진료과" className="w-full bg-card">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="end" className="min-w-[224px]">
@@ -8939,7 +8937,7 @@ function ReceptionSidePanelDetail({
                     }))
                   }
                 >
-                  <SelectTrigger aria-label="담당의" size="sm" className="w-full bg-card">
+                  <SelectTrigger aria-label="담당의" className="w-full bg-card">
                     <span className="flex min-w-0 flex-1 truncate text-left">
                       {getReceptionVeterinarianSelectLabel(
                         editDraft.primaryVeterinarianId ??
@@ -9019,7 +9017,6 @@ function ReceptionSidePanelDetail({
                 >
                   <SelectTrigger
                     aria-label="예상소요시간"
-                    size="sm"
                     className="w-full bg-card"
                   >
                     <SelectValue />
@@ -9110,10 +9107,8 @@ function ReceptionSidePanelDetail({
       </ScrollArea>
       <footer
         className={cn(
-          "mt-auto flex shrink-0 items-center border-t border-[var(--emr-line-default)] bg-card",
-          usesCreateDetailLayout
-            ? "justify-end gap-[var(--clair-spacing-8)] p-[var(--clair-spacing-16)]"
-            : "h-[65px] justify-between gap-2 px-4",
+          "mt-auto flex shrink-0 items-center gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]",
+          canCancelSelectedEncounter ? "justify-between" : "justify-end",
         )}
       >
         <div>
