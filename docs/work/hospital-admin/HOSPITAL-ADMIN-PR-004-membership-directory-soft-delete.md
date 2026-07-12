@@ -34,7 +34,7 @@ area: hospital-admin
 
 * 기존 `soft_deleted` 구현 초안은 승인된 제품 용어와 다르므로 새 forward migration과 호환 전환이 필요하다.
 * 이미 migration history에 기록된 migration 파일을 수정해 기존 환경을 바꾸지 않는다.
-* 원격 migration history 정합화가 완료되기 전에는 원격 스키마 push를 진행하지 않는다.
+* 원격 migration history 정합화가 완료되기 전에는 원격 스키마 push를 진행하지 않는다. 이 조건은 2026-07-12의 격리 release bundle과 후속 ENGINEERING-DB-PR-001 이력 정리로 충족했다.
 
 ## 구현 계획
 
@@ -66,4 +66,4 @@ area: hospital-admin
 
 ## 릴리스 주의
 
-새 API와 원격 DB migration은 같은 릴리스 단위로 적용해야 한다. 원격 Supabase migration 적용 전에는 `main` production 배포를 진행하지 않는다.
+새 API와 원격 DB migration은 같은 릴리스 단위로 적용해야 한다. PR #329와 migration `20260711162828`, `20260711164114`, `20260711164859`는 2026-07-12에 함께 production 반영됐다. 이후 migration 이력 운영은 [Supabase Migration History Reconciliation](../../engineering/operations/supabase-migration-history-reconciliation.md)을 따른다.

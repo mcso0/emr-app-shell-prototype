@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The identical SQL is canonical at 20260529090800_den_307_staging_demo_encounter_bridge_candidates.sql.
+-- Keep this file immutable so fresh local replay does not execute the same migration twice.

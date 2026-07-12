@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The identical SQL is canonical at 20260601112352_den_381_billing_checkout_uuid_guardian_repair.sql.
+-- Keep this file immutable so fresh local replay does not execute the same migration twice.

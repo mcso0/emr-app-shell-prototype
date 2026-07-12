@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The identical SQL is canonical at 20260625103000_chart_consultation_flow_rpc.sql.
+-- Keep this file immutable so fresh local replay does not execute the same migration twice.
