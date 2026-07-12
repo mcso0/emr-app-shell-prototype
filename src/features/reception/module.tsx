@@ -8323,6 +8323,7 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
   );
+  const [isEditing, setIsEditing] = useState(false);
   const title = getReceptionRightPanelTitle(activeDrawer);
 
   return (
@@ -8332,8 +8333,20 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
       data-testid="reception-right-panel"
     >
       <header className="flex h-[var(--clair-layout-drawer-header)] shrink-0 items-center justify-between border-b border-[var(--emr-line-default)] px-4">
-        <div className="min-w-0 truncate emr-text-panel-title font-semibold text-foreground">
-          {title}
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="truncate emr-text-panel-title font-semibold text-foreground">
+            {title}
+          </div>
+          {activeDrawer?.type === "reception-encounter" && isEditing ? (
+            <Badge
+              size="sm"
+              variant="secondary"
+              className="shrink-0 rounded-[var(--clair-radius-atomic-6)] emr-text-micro font-semibold"
+              data-testid="reception-right-panel-editing-badge"
+            >
+              수정 중
+            </Badge>
+          ) : null}
         </div>
         <EmrRightPanelHeaderIconButton
           aria-label="우측 사이드 패널 닫기"
@@ -8346,7 +8359,10 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
         </EmrRightPanelHeaderIconButton>
       </header>
       {isReceptionRightPanelDrawer(activeDrawer) ? (
-        <ReceptionDrawer presentation="side-panel" />
+        <ReceptionDrawer
+          presentation="side-panel"
+          onEditingChange={setIsEditing}
+        />
       ) : (
         <ReceptionRightPanelEmptyState />
       )}
@@ -8802,16 +8818,6 @@ function ReceptionSidePanelDetail({
               disabled={checkInDisabled}
               onCheckIn={onCheckInOrCreate}
             />
-          ) : editMode ? (
-            <div className="pt-3">
-              <Badge
-                size="sm"
-                variant="secondary"
-                className="rounded-[var(--clair-radius-atomic-6)] emr-text-micro font-semibold"
-              >
-                수정 중
-              </Badge>
-            </div>
           ) : null}
 
           <ReceptionSidePanelSection title="환자/보호자" variant={detailVariant}>
@@ -9178,8 +9184,10 @@ function ReceptionSidePanelDetail({
 
 export function ReceptionDrawer({
   presentation = "drawer",
+  onEditingChange,
 }: {
   presentation?: ReceptionDrawerPresentation;
+  onEditingChange?: (isEditing: boolean) => void;
 } = {}) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const router = useRouter();
@@ -9245,6 +9253,13 @@ export function ReceptionDrawer({
   const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
     Veterinarian[]
   >([]);
+
+  useEffect(() => {
+    onEditingChange?.(editMode);
+
+    return () => onEditingChange?.(false);
+  }, [editMode, onEditingChange]);
+
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const setWorkspaceOperatingDate = useReceptionStore(
     (state) => state.setWorkspaceOperatingDate,

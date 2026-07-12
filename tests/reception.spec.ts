@@ -3667,6 +3667,27 @@ test("reception side-panel footer actions use the shared 32px control height", a
   }
 });
 
+test("reception encounter edit mode shows its badge beside the side-panel title", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
+  );
+
+  const rightPanel = page.getByTestId("reception-right-panel");
+  const header = rightPanel.locator("header");
+  await expect(header.getByText("수정 중")).toHaveCount(0);
+
+  await rightPanel.getByTestId("reception-encounter-edit-open").click();
+  await page.getByTestId("reception-encounter-edit-confirm").click();
+
+  await expect(header.getByText("수정 중")).toHaveCount(1);
+  await expect(rightPanel.getByText("수정 중")).toHaveCount(1);
+
+  await rightPanel.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(header.getByText("수정 중")).toHaveCount(0);
+});
+
 test("reception encounter detail uses the CDS V2 side-panel field tokens", async ({
   page,
 }) => {
