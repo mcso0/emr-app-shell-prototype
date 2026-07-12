@@ -149,7 +149,7 @@ Tabs and density controls have a stricter UX contract:
 - section tabs switch peer panels in one screen context
 - segmented controls and filter buttons narrow or mode-switch data without pretending to be navigation
 - table density is presentation-only and uses `compact`, `standard`, and `comfortable`
-- density dropdowns are conditional for constrained toolbars or grouped view options; icon segmented selectors remain the default for frequent table work
+- table density uses one compact selected-value dropdown button with a row-spacing icon and downward chevron; the menu exposes `좁게`, `기본`, and `넓게`
 
 New shared primitives should be added only when a repeated pattern is stable across screens.
 

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>공용 테이블 밀도 드롭다운 선택기 완료 보고</title>
+    <style>
+      body { margin: 40px; color: #18181b; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      main { max-width: 920px; margin: 0 auto; }
+      h1 { margin-bottom: 8px; font-size: 26px; }
+      h2 { margin-top: 28px; font-size: 18px; }
+      .meta { color: #52525b; }
+      .summary { border: 1px solid #bae6fd; border-radius: 8px; background: #f0f9ff; padding: 16px; }
+      code { border-radius: 4px; background: #f4f4f5; padding: 1px 5px; }
+      li { margin: 4px 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>공용 테이블 밀도 드롭다운 선택기 완료 보고</h1>
+      <p class="meta">작성일: 2026-07-12 · 작업: DESIGN-SYSTEM-PR-074</p>
+
+      <section class="summary">
+        <strong>결론:</strong> 모든 <code>EmrTableDensitySelector</code> 사용처가 현재 선택값을 보여 주는 단일 드롭다운 버튼을 사용한다. 행 높이와 데이터 동작은 변경하지 않았다.
+      </section>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li>기존 아이콘 3개 토글을 <code>[밀도 아이콘 · 현재값 · 아래 화살표]</code> 버튼으로 교체했다.</li>
+        <li>메뉴는 <code>좁게</code>, <code>기본</code>, <code>넓게</code> 단일 선택 라디오 항목과 현재 선택 체크 상태를 제공한다.</li>
+        <li>트리거 접근성 이름에 현재값을 포함했다. 예: <code>테이블 보기 밀도: 좁게</code>.</li>
+        <li>공용 디자인 계약을 새 드롭다운 기본값으로 갱신했다. 저장된 보기, URL 상태, 사용자 설정 저장은 추가하지 않았다.</li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li>Storybook 상호작용 테스트: 통과</li>
+        <li>차트 오더 테이블에서 <code>좁게 → 넓게</code> 변경 및 <code>data-emr-density=&quot;comfortable&quot;</code> 확인: 통과</li>
+        <li><code>npm run lint</code>, <code>npx tsc --noEmit</code>, <code>npm run docs:check</code>: 통과</li>
+        <li><code>npm run build</code>, <code>npm run build-storybook</code>: 통과</li>
+        <li>Storybook 미리보기에서 트리거와 세 개의 메뉴 항목, 선택 상태를 직접 확인했다.</li>
+      </ul>
+
+      <h2>유의사항</h2>
+      <p>작업공간의 별도 lockfile 때문에 Next.js가 workspace-root 경고를 출력했고, Storybook은 기존 의존성의 문서 생성·폰트·번들 크기 경고를 출력했다. 모두 빌드 성공 상태이며 이번 선택기 변경으로 새로 발생한 오류는 아니다.</p>
+    </main>
+  </body>
+</html>
