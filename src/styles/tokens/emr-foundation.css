@@ -70,7 +70,7 @@
   --emr-surface-content-panel: var(--emr-surface-1);
   --emr-surface-subpanel: var(--emr-surface-1);
   --emr-surface-sidepanel: #F9F9F9;
-  --emr-surface-workspace: var(--emr-surface-2);
+  --emr-surface-workspace: #FFFFFF;
   --emr-surface-rightpanel: var(--emr-surface-2);
   --emr-surface-panel: var(--emr-surface-3);
   --emr-surface-muted: oklch(0.967 0.001 286.375);
