@@ -220,6 +220,11 @@ test("hospital basic settings supports exception editing and guarded navigation"
   await page.goto("/w/clair-demo/orders?modulePanel=open");
   await page.getByTestId("hospital-admin-menu-settings").click();
 
+  const exceptionEmptyState = page.getByTestId("hospital-settings-exception-empty-state");
+  await expect(exceptionEmptyState).toHaveAttribute("data-size", "sm");
+  await expect(exceptionEmptyState).toHaveAttribute("data-surface", "table");
+  await expect(exceptionEmptyState).toContainText("등록된 예외 일정이 없습니다");
+
   await page.getByRole("button", { name: "예외 일정 추가" }).click();
   const createDialog = page.getByRole("dialog", { name: "예외 일정 추가" });
   await createDialog.getByLabel("날짜").fill("2026-07-14");
@@ -599,6 +604,30 @@ test("hospital admin order search filters the visible table", async ({ page }) =
   await page.getByLabel("오더 검색").fill("BASO");
   await expect(page.getByTestId("hospital-order-row-ord-lab-cbc-baso")).toBeVisible();
   await expect(page.getByTestId("hospital-order-row-ord-paused-example")).toHaveCount(0);
+});
+
+test("hospital admin order table keeps the mg empty state contract for no matches", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  await page.getByLabel("오더 검색").fill("없는 Order");
+
+  const emptyState = page.getByTestId("hospital-order-empty-state");
+  await expect(emptyState).toHaveAttribute("data-size", "md");
+  await expect(emptyState).toHaveAttribute("data-surface", "table");
+  await expect(emptyState).toHaveAttribute("data-kind", "no-filter-results");
+  await expect(emptyState).toContainText("조건에 맞는 Order가 없습니다");
+});
+
+test("hospital member directory uses the mg table empty state for filtered results", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.getByTestId("hospital-admin-menu-members").click();
+  await page.getByPlaceholder("이름 또는 이메일 검색").fill("없는 구성원");
+
+  const emptyState = page.getByTestId("hospital-members-empty-state-desktop");
+  await expect(emptyState).toHaveAttribute("data-size", "md");
+  await expect(emptyState).toHaveAttribute("data-surface", "table");
+  await expect(emptyState).toHaveAttribute("data-kind", "no-filter-results");
+  await expect(emptyState).toContainText("조건에 맞는 구성원이 없습니다");
 });
 
 test("hospital admin order catalog supports single sort and section filter builder", async ({ page }) => {

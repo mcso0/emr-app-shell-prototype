@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DESIGN-SYSTEM-PR-073 Empty State 화면 적용 결과</title>
+    <style>
+      :root { color-scheme: light; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      body { margin: 0; background: #f7f7f8; color: #202024; line-height: 1.6; }
+      main { max-width: 960px; margin: 0 auto; padding: 48px 24px 72px; }
+      section { margin-top: 32px; padding: 24px; border: 1px solid #e4e4e7; border-radius: 16px; background: #fff; }
+      h1 { margin: 0; font-size: 28px; line-height: 1.25; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p { margin: 8px 0; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { padding: 10px 8px; border-bottom: 1px solid #ededee; text-align: left; vertical-align: top; }
+      th { color: #676770; font-weight: 600; }
+      code { padding: 2px 5px; border-radius: 4px; background: #f1f1f3; }
+      .lead { margin-top: 12px; color: #676770; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>병원관리·고객관리 Empty State 화면 적용 결과</h1>
+      <p class="lead">CDS.V2의 <code>lg / md(mg) / sm</code> 계약을 실제 누락 화면에 적용하고, 기존 정상 적용 화면의 사이즈를 명시했습니다.</p>
+
+      <section>
+        <h2>요청 내용</h2>
+        <p>고객관리 삭제 이력과 병원관리 테이블·하위 목록에서 공통 Empty State 누락 및 사이즈 불일치를 확인하고 수정했습니다.</p>
+      </section>
+
+      <section>
+        <h2>변경 결과</h2>
+        <table>
+          <thead><tr><th>영역</th><th>적용</th><th>사이즈</th></tr></thead>
+          <tbody>
+            <tr><td>고객관리 삭제 이력</td><td>공통 Empty State 적용, 검색 결과 없음과 실제 데이터 없음 분리</td><td><code>md</code> / <code>mg</code></td></tr>
+            <tr><td>병원관리 Order·감사 로그·구성원</td><td>테이블 본문 공통 Empty State 적용 및 필터 결과 문구 분리</td><td><code>md</code> / <code>mg</code></td></tr>
+            <tr><td>운영시간·역할·근무표 하위 목록</td><td>카드·드로어 내부의 작은 빈 목록을 공통 상태로 통일</td><td><code>sm</code></td></tr>
+            <tr><td>근무표 전체 데이터 없음</td><td>근무표 콘텐츠 상태를 공통 상태로 통일</td><td><code>lg</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>의도적으로 유지한 상태</h2>
+        <p>로딩, 권한 제한, API 읽기 실패, 저장 실패, 미구현 메뉴는 Empty State로 바꾸지 않았습니다. 이 상태들은 로딩·알림·권한 안내가 의미상 더 정확합니다.</p>
+        <p>아이콘 영역과 글자 색상은 기존 <code>black-alpha-4</code>, <code>black-alpha-48</code>, <code>black-alpha-36</code> 토큰을 그대로 사용합니다.</p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <p>새 Empty State 회귀 테스트 4개와 고객관리·감사 로그·병원관리 관련 Playwright 테스트 43개를 통과했습니다. TypeScript와 변경 파일 대상 ESLint도 통과했습니다.</p>
+        <p>브라우저 안정화 캡처에서 고객 삭제 이력과 감사 로그가 <code>data-size="md"</code>로 렌더링되는 것을 확인했습니다.</p>
+      </section>
+
+      <section>
+        <h2>다음 검토</h2>
+        <p>대표 검토에서는 실제 Cheongdam 데이터가 없는 상태와 검색 결과가 없는 상태를 각각 확인하고, 근무표의 <code>lg</code> 공간감이 실제 그리드 배치와 충돌하지 않는지만 확인하면 됩니다.</p>
+      </section>
+    </main>
+  </body>
+</html>

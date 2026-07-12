@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,22 @@ function ScheduleDataState() {
   const dataState = useHospitalScheduleStore((state) => state.dataState);
 
   if (dataState === "ready") return null;
+
+  if (dataState === "empty") {
+    return (
+      <div className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed bg-card p-6 text-center">
+        <EmrEmptyState
+          kind="no-data"
+          priority="primary-decision"
+          surface="content"
+          size="lg"
+          testId="hospital-schedule-empty-state"
+          title="등록된 근무가 없습니다"
+          description="직원을 선택해 첫 근무를 추가해 주세요."
+        />
+      </div>
+    );
+  }
 
   const messages = {
     loading: ["근무표를 불러오는 중", "최신 편성 정보를 준비하고 있어."],
@@ -663,13 +680,23 @@ function PersonalSchedule({ onRequest }: { onRequest: () => void }) {
             <Badge variant="outline">{personalRequests.filter((request) => request.status === "pending").length} 대기</Badge>
           </div>
           <div className="mt-3 space-y-3">
-            {personalRequests.map((request) => (
+            {personalRequests.length ? personalRequests.map((request) => (
               <div key={request.id} className="border-l-2 border-[var(--clair-color-atomic-yellow-400)] pl-3">
                 <p className="text-sm font-medium">{request.type === "leave" ? "휴무 요청" : "근무 변경 요청"}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">{request.reason}</p>
                 <p className="mt-1 text-xs font-medium">{request.status === "pending" ? "승인 대기" : request.status === "approved" ? "승인됨" : "반려됨"}</p>
               </div>
-            ))}
+            )) : (
+              <EmrEmptyState
+                kind="no-data"
+                priority="supporting"
+                surface="widget"
+                size="sm"
+                reserveActionSpace={false}
+                testId="hospital-schedule-personal-requests-empty-state"
+                title="내 요청이 없습니다"
+              />
+            )}
           </div>
         </div>
       </aside>
@@ -710,7 +737,17 @@ function StaffDetailSheet({ staffId, onClose }: { staffId: string | null; onClos
                   </div>
                 ))}
               </div>
-            ) : <p className="mt-2 text-sm text-muted-foreground">승인 대기 요청이 없어.</p>}
+            ) : (
+              <EmrEmptyState
+                kind="no-data"
+                priority="supporting"
+                surface="drawer"
+                size="sm"
+                reserveActionSpace={false}
+                testId="hospital-schedule-pending-requests-empty-state"
+                title="승인 대기 요청이 없습니다"
+              />
+            )}
           </section>
         </div>
       </SheetContent>

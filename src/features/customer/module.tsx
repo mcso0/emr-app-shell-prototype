@@ -765,6 +765,7 @@ function CustomerDataTable<TRow extends { id: string }>({
                     kind={emptyStateKind}
                     priority={emptyStatePriority}
                     surface="table"
+                    size="md"
                     title={emptyStateTitle}
                     description={emptyStateDescription}
                   />
@@ -1095,8 +1096,15 @@ function DeletedCustomerContent() {
         </div>
       </div>
       <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center border-b bg-card text-center">
-        <div className="text-[15px] font-semibold">삭제된 보호자/동물이 없습니다.</div>
-        <div className="mt-1 emr-text-dense text-muted-foreground">삭제 이력이 없습니다.</div>
+        <EmrEmptyState
+          kind={query.trim() ? "no-filter-results" : "no-data"}
+          priority={query.trim() ? "local-recovery" : "supporting"}
+          surface="table"
+          size="md"
+          testId="customer-deleted-empty-state"
+          title={query.trim() ? "조건에 맞는 삭제 항목이 없습니다" : "삭제된 보호자/동물이 없습니다"}
+          description={query.trim() ? "검색어를 바꾸면 삭제 이력이 다시 보입니다." : "삭제 이력이 없습니다."}
+        />
       </div>
     </div>
   );
