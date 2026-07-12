@@ -1544,8 +1544,8 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
       </ScrollArea>
       {editing ? (
         <div className="flex justify-end gap-2 border-t bg-card p-4">
-          <Button variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
-          <Button onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
+          <Button size="default" variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
+          <Button size="default" onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
         </div>
       ) : null}
     </div>
@@ -1813,8 +1813,8 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
       </ScrollArea>
       {editing ? (
         <div className="flex justify-end gap-2 border-t bg-card p-4">
-          <Button variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
-          <Button onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
+          <Button size="default" variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
+          <Button size="default" onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
         </div>
       ) : null}
     </div>

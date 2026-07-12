@@ -890,18 +890,18 @@ function TaskDetailPanel({
 
       <footer className="mt-auto grid shrink-0 gap-2 border-t border-[var(--emr-line-hairline)] bg-card p-4">
         <Button
-          size="sm"
-          className="h-9 w-full justify-center rounded-[var(--clair-radius-atomic-8)] bg-foreground text-background hover:bg-foreground/90"
+          size="default"
+          className="w-full justify-center rounded-[var(--clair-radius-atomic-8)] bg-foreground text-background hover:bg-foreground/90"
           onClick={() => router.push(task.actionHref)}
         >
           {task.actionLabel}
           <ChevronRightIcon data-icon="inline-end" aria-hidden="true" />
         </Button>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="default" disabled>
             담당 배정
           </Button>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="default" disabled>
             메모 남기기
           </Button>
         </div>

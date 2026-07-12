@@ -6908,6 +6908,7 @@ function ReceptionWalkInFormDrawer({
             <Button
               type="button"
               variant="ghost"
+              size="default"
               className="text-[var(--emr-text-secondary)]"
               onClick={close}
               disabled={submitting}
@@ -6916,6 +6917,7 @@ function ReceptionWalkInFormDrawer({
             </Button>
             <Button
               type="button"
+              size="default"
               onClick={create}
               disabled={!canCreate || Boolean(timeBlockMessage) || submitting}
             >
@@ -7199,7 +7201,7 @@ function ReceptionWalkInFormDrawer({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="default"
           aria-pressed={sendKakaoMessage}
           aria-label="카카오톡 발송"
           className="w-fit gap-2 text-[var(--emr-text-secondary)] aria-pressed:bg-accent aria-pressed:text-foreground"
@@ -7219,10 +7221,10 @@ function ReceptionWalkInFormDrawer({
           <span>카카오톡 발송</span>
         </Button>
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" onClick={close} disabled={submitting}>
+          <Button size="default" variant="ghost" onClick={close} disabled={submitting}>
             취소
           </Button>
-          <Button onClick={create} disabled={!canCreate || Boolean(timeBlockMessage) || submitting}>
+          <Button size="default" onClick={create} disabled={!canCreate || Boolean(timeBlockMessage) || submitting}>
             {submitting ? "생성 중" : "생성"}
           </Button>
         </div>
@@ -7767,6 +7769,7 @@ function ReceptionReservationFormDrawer({
             <Button
               type="button"
               variant="ghost"
+              size="default"
               className="text-[var(--emr-text-secondary)]"
               onClick={close}
               disabled={submitting}
@@ -7775,6 +7778,7 @@ function ReceptionReservationFormDrawer({
             </Button>
             <Button
               type="button"
+              size="default"
               onClick={create}
               disabled={!canCreate || submitting}
             >
@@ -8020,10 +8024,10 @@ function ReceptionReservationFormDrawer({
         </div>
       </ScrollArea>
       <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t bg-card p-4">
-        <Button variant="ghost" onClick={close} disabled={submitting}>
+        <Button size="default" variant="ghost" onClick={close} disabled={submitting}>
           취소
         </Button>
-        <Button onClick={create} disabled={!canCreate || submitting}>
+        <Button size="default" onClick={create} disabled={!canCreate || submitting}>
           {submitting ? "생성 중" : "생성"}
         </Button>
       </div>
@@ -8301,10 +8305,10 @@ function ReceptionAppointmentCheckInFormDrawer({
         </div>
       </ScrollArea>
       <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t bg-card p-4">
-        <Button variant="ghost" onClick={() => setActiveDrawer(null)} disabled={submitting}>
+        <Button size="default" variant="ghost" onClick={() => setActiveDrawer(null)} disabled={submitting}>
           취소
         </Button>
-        <Button onClick={create} disabled={!canCreate}>
+        <Button size="default" onClick={create} disabled={!canCreate}>
           {submitting ? "저장 중" : "생성"}
         </Button>
       </div>
@@ -9117,7 +9121,8 @@ function ReceptionSidePanelDetail({
             <Button
               type="button"
               variant="destructive"
-              className="h-9 bg-[var(--emr-status-danger-bg)]"
+              size="default"
+              className="bg-[var(--emr-status-danger-bg)]"
               onClick={onCancelOpen}
               data-testid="reception-encounter-cancel-open"
             >
@@ -9129,10 +9134,11 @@ function ReceptionSidePanelDetail({
           <Button
             type="button"
             variant="ghost"
+            size="default"
             className={cn(
               usesCreateDetailLayout
                 ? "text-[var(--emr-text-secondary)]"
-                : "h-9",
+                : undefined,
             )}
             onClick={onClose}
           >
@@ -9141,7 +9147,7 @@ function ReceptionSidePanelDetail({
           {editMode ? (
             <Button
               type="button"
-              className="h-9"
+              size="default"
               onClick={onSave}
               disabled={editSubmitting}
               data-testid="reception-encounter-edit-save"
@@ -9151,7 +9157,7 @@ function ReceptionSidePanelDetail({
           ) : canEditSelectedEncounter ? (
             <Button
               type="button"
-              className="h-9"
+              size="default"
               onClick={onEditOpen}
               data-testid="reception-encounter-edit-open"
             >
@@ -9160,7 +9166,7 @@ function ReceptionSidePanelDetail({
           ) : primaryActionLabel ? (
             <Button
               type="button"
-              className={usesCreateDetailLayout ? undefined : "h-9"}
+              size="default"
               disabled={checkInDisabled}
               onClick={onCheckInOrCreate}
             >
@@ -10187,6 +10193,7 @@ export function ReceptionDrawer({
             {canCancelSelectedEncounter ? (
               <Button
                 variant="outline"
+                size="default"
                 className="border-[var(--emr-status-danger-border)] text-[var(--emr-status-danger-text)] hover:bg-[var(--emr-status-danger-bg)]"
                 onClick={() => setCancelConfirmOpen(true)}
                 data-testid="reception-encounter-cancel-open"
@@ -10196,7 +10203,7 @@ export function ReceptionDrawer({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => {
+            <Button size="default" variant="ghost" onClick={() => {
               if (editMode) {
                 setEditMode(false);
                 setEditDraft(getSelectedEncounterEditDraft());
@@ -10208,6 +10215,7 @@ export function ReceptionDrawer({
             </Button>
             {editMode ? (
               <Button
+                size="default"
                 onClick={() => {
                   void handleSaveSelectedEncounter();
                 }}
@@ -10218,6 +10226,7 @@ export function ReceptionDrawer({
               </Button>
             ) : canEditSelectedEncounter ? (
               <Button
+                size="default"
                 onClick={() => setEditConfirmOpen(true)}
                 data-testid="reception-encounter-edit-open"
               >
@@ -10225,6 +10234,7 @@ export function ReceptionDrawer({
               </Button>
             ) : selectedAppointment || !selectedEncounter ? (
             <Button
+              size="default"
               onClick={() => {
                 if (selectedAppointment) {
                   setActiveDrawer({

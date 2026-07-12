@@ -3844,7 +3844,7 @@ function BillingPaymentActionFooter({
   return (
     <div className="grid shrink-0 gap-2 border-t p-4">
       <Button
-        size="sm"
+        size="default"
         className="w-full"
         disabled={disabled || confirmationState === "saving"}
         onClick={onIssueInvoice}
@@ -3857,7 +3857,7 @@ function BillingPaymentActionFooter({
       </Button>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <Button
-          size="sm"
+          size="default"
           variant="secondary"
           disabled={disabled || paymentState === "saving"}
           onClick={onMarkPaid}
@@ -3865,7 +3865,7 @@ function BillingPaymentActionFooter({
           {paymentState === "saving" ? "저장 중" : "수납 완료"}
         </Button>
         <Button
-          size="sm"
+          size="default"
           variant="outline"
           disabled={disabled || paymentState === "saving"}
           onClick={onMarkUnpaid}
