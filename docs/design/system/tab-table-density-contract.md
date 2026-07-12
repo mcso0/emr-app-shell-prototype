@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-06-06"
+updated: "2026-07-12"
 linear_issue: "DEN-435"
 linear_project: "공통 UX/UI 기준 정리 및 화면 적용"
 source_docs:
@@ -24,7 +24,7 @@ DEN-435 is a design-system contract issue. It does not implement app code, repla
 - Use segmented controls or filter buttons for data narrowing; do not present filters as tabs unless the choices are a small, stable mode set.
 - Keep table density as a presentation preference. It must not change row identity, data scope, sort/filter results, permissions, or persistence boundaries.
 - Keep the existing three table density options: `compact`, `standard`, and `comfortable`.
-- Do not globally replace the current density selector with a dropdown. Use a dropdown only when toolbar space, mobile width, or combined view options make a segmented selector too noisy.
+- Use the shared selected-value density dropdown as the default control. It exposes the active option with a row-spacing icon and downward chevron.
 
 ## Tab Type Decision Table
 
@@ -92,44 +92,18 @@ Density changes:
 
 ## Density Control Decision
 
-### Default: Icon Segmented Selector
+### Default: Selected-Value Density Dropdown
 
-Use the existing icon-only segmented density selector when:
-
-- the table is a high-frequency operational surface
-- users benefit from one-click density switching
-- the toolbar has enough space
-- one selector controls one table or one repeated same-role table group
-
-Accessibility:
-
-- Each option has an accessible name and hover title:
-  - `좁게 보기`
-  - `기본 보기`
-  - `넓게 보기`
-- Selected state must be stronger than hover state.
-- Tooltips supplement the accessible name; they are not the only label.
-
-### Conditional: Density Dropdown
-
-Use a dropdown only when it reduces toolbar noise without hiding a frequent action.
-
-Allowed cases:
-
-- narrow/mobile toolbar where three density buttons would crowd primary actions
-- admin/master-data table toolbar that already groups view options such as columns, density, and display settings
-- a screen-level table group where one density choice controls multiple same-role tables
-- low-frequency density changes where one extra click is acceptable
+Use the shared density dropdown for every current table-density selector.
 
 Dropdown contract:
 
-- Trigger copy may be `보기` or `표시 옵션`; avoid a standalone visible `밀도` label in dense toolbars.
-- Trigger icon should be `SlidersHorizontal`, `Rows3`, `List`, or an equivalent lucide icon if implemented.
-- Selected option remains visible inside the menu through checkmark or active item style.
-- The trigger must expose the current density through accessible name or description, for example `표시 옵션, 현재 기본 보기`.
+- The compact trigger renders the active row-spacing icon, the selected Korean option copy, and a downward chevron.
+- The trigger must expose the current density through an accessible name, for example `테이블 보기 밀도: 기본`.
+- The menu contains exactly `좁게`, `기본`, and `넓게` as radio items.
+- The selected option remains visible through a check indicator and `aria-checked` state.
+- Do not render a separate visible `밀도` label in dense toolbars.
 - The dropdown must not include saved views, URL state, localStorage persistence, or server-backed preferences unless separately scoped.
-
-Do not use a dropdown when density is the only table toolbar control and the table is switched frequently; the segmented selector is faster and clearer.
 
 ## Responsive And Overflow Rules
 

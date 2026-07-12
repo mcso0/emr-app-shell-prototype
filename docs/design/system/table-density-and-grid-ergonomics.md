@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-06-06"
+updated: "2026-07-12"
 linear_issue: "DEN-225"
 linear_project: "12 CLAiR EMR Table Density & Data Grid Ergonomics"
 source_docs:
@@ -71,7 +71,7 @@ Runtime source:
   - `--emr-table-cell-padding-x-compact|standard|comfortable`
   - `--emr-table-cell-padding-y-compact|standard|comfortable`
 - `src/components/emr/table-density.ts` owns density/layout/header role types and view option copy.
-- `src/components/emr/table-density-selector.tsx` owns the visible icon-only density segmented control.
+- `src/components/emr/table-density-selector.tsx` owns the visible selected-value density dropdown.
 - `src/components/ui/table.tsx` accepts `density`, `layout`, `minWidth`, and `containerClassName`.
 
 Density API:
@@ -90,13 +90,14 @@ View option copy:
 
 Density selector UX:
 
-- The visible selector uses compact icons for `compact`, `standard`, and `comfortable` to avoid adding more text noise to dense EMR table toolbars.
-- Each icon button must keep an accessible name and hover title mapped to the Korean option copy: `좁게`, `기본`, `넓게`.
+- The visible selector is one compact outline button with the active row-spacing icon, Korean option copy, and downward chevron.
+- The trigger must expose the generic label and active option through its accessible name, for example `테이블 보기 밀도: 좁게`.
+- Opening the control shows exactly `좁게`, `기본`, and `넓게` as one radio-menu group; the active item has a check indicator.
 - The selector may sit near the relevant table header or table body when header action space is already constrained.
-- Do not render a visible `밀도` text label next to the selector. Use icon-only controls with tooltip and accessible labels.
-- Use a single-value toggle group or equivalent segmented control, not content tabs, because density changes presentation without changing the data set.
-- Prefer a persistent per-table selector only on high-frequency dense work surfaces. When a screen repeats multiple same-role tables, place one shared selector in the screen toolbar/filter row instead of repeating it in every section header.
-- Density icons should communicate row compactness by line spacing. Use lucide-style row/list icons where possible and make the selected state visually stronger than hover.
+- Do not render a separate visible `밀도` label beside the trigger.
+- Density remains a presentation preference, so the menu is not a content tab or data filter.
+- Prefer one persistent selector per table or same-role table group. When a screen repeats same-role tables, place it in the screen toolbar/filter row instead of repeating it in every section header.
+- Density icons communicate row compactness by line spacing and are reused in both trigger and options.
 
 ### DEN-435 Tab/Table Density Control Decision
 
@@ -106,11 +107,11 @@ DEN-435 adds the shared tab and density UX contract:
 
 Decision:
 
-- Keep the existing icon-only segmented density selector as the default for high-frequency operational tables.
-- Do not globally replace density controls with a dropdown.
-- Use a density dropdown only when toolbar space is constrained, narrow/mobile layout would crowd primary actions, a screen-level selector controls multiple same-role tables, or density belongs inside a broader view-options menu.
+- The selected-value dropdown is the default shared density selector for all current consumers.
+- The trigger shows the active density rather than hiding it behind three icon-only controls.
+- The dropdown always exposes the current density through accessible copy and a checked menu item state.
 - Density remains presentation-only. It must not change source data, row identity, selected row identity, sort/filter criteria, billing totals, permission checks, DB/API behavior, or persistence boundaries.
-- If a dropdown is used later, it must expose the current density through accessible copy and active menu item state, and it must not imply saved views or persistent user preferences unless separately scoped.
+- The selector must not imply saved views or persistent user preferences unless separately scoped.
 
 ### DEN-245 Benchmark-Based Placement Contract
 
@@ -128,10 +129,8 @@ CLAiR placement rules:
 - Place density after filter controls when the filter/action row is the table toolbar (`조제/처치`).
 - Keep existing density placement for `수납`, `고객관리`, and `병원관리` if the selector already lives in the table toolbar; only remove the label.
 - For `입원`, remove repeated per-section density controls and replace the duplicate `all` dropdown in the top filter row with one shared density selector.
-- Tooltips and `aria-label` values must be:
-  - `좁게 보기`
-  - `기본 보기`
-  - `넓게 보기`
+- The trigger `aria-label` must be `테이블 보기 밀도: <현재 선택값>`.
+- Each menu option must preserve radio-menu semantics and expose its Korean option copy.
 
 Implementation report:
 

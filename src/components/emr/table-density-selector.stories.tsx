@@ -14,7 +14,11 @@ function DensitySelectorExample({ initialValue, label }: DensitySelectorArgs) {
 
   return (
     <div className="grid gap-3">
-      <EmrTableDensitySelector value={value} label={label} onValueChange={setValue} />
+      <EmrTableDensitySelector
+        value={value}
+        label={label}
+        onValueChange={setValue}
+      />
       <div className="text-sm text-muted-foreground">현재 선택: {value}</div>
     </div>
   );
@@ -55,11 +59,24 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 async function selectCompact(canvasElement: HTMLElement) {
-  const button = canvasElement.querySelector("button[aria-label='좁게 보기']");
-  if (!(button instanceof HTMLElement)) {
-    throw new Error("Expected compact density button.");
+  const trigger = canvasElement.querySelector(
+    "button[aria-label='샘플 테이블 보기 밀도: 기본']",
+  );
+  if (!(trigger instanceof HTMLElement)) {
+    throw new Error("Expected table density dropdown trigger.");
   }
-  button.click();
+  trigger.click();
+
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+  const compactOption = Array.from(
+    canvasElement.ownerDocument.querySelectorAll("[role='menuitemradio']"),
+  ).find((option) => option.textContent?.trim() === "좁게");
+  if (!(compactOption instanceof HTMLElement)) {
+    throw new Error("Expected compact density menu option.");
+  }
+  compactOption.click();
+
   await new Promise((resolve) => window.setTimeout(resolve, 0));
   if (!canvasElement.textContent?.includes("현재 선택: compact")) {
     throw new Error("Expected density selector to update to compact.");
