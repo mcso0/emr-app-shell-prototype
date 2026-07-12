@@ -113,8 +113,8 @@ const sizeClassName: Record<
   md: {
     root: "max-w-[220px] gap-2",
     iconWrapper: "pb-1",
-    iconArea: "size-8 rounded-[10px]",
-    icon: "size-4",
+    iconArea: "size-10 rounded-[10px]",
+    icon: "size-6",
     body: "gap-2",
     title: "text-[14px] leading-5 tracking-[0.014em]",
     description: "text-[14px] leading-5 tracking-[0.014em]",
