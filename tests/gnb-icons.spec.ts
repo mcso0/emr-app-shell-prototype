@@ -87,4 +87,5 @@ test("navigation rail and workspace tabs keep their module-specific GNB icon con
 
   await expect(labTabIcon).toHaveAttribute("viewBox", "0 0 12.5 17.5");
   await expect(labTabIcon).toHaveClass(/rotate-45/);
+  await expect(labTabIcon).toHaveClass(/!scale-\[0\.7071\]/);
 });
