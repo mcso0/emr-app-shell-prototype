@@ -47,6 +47,7 @@ import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import {
   EmrListHeaderIconButton,
 } from "@/components/emr/subpanel";
@@ -3242,13 +3243,12 @@ export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
             <h2 className="min-w-0 truncate text-sm font-semibold">
               환자 정보
             </h2>
-            <EmrListHeaderIconButton
-              ariaLabel="환자 정보 패널 접기"
-              iconSize="md"
+            <EmrRightPanelHeaderIconButton
+              aria-label="환자 정보 패널 접기"
               onClick={() => setRightPanelOpen(false)}
             >
               <CdsNavigationChevronsRightIcon className="size-4" />
-            </EmrListHeaderIconButton>
+            </EmrRightPanelHeaderIconButton>
           </div>
         </div>
       </div>

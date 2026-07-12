@@ -47,6 +47,7 @@ import {
 } from "@/components/emr/subpanel";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
+import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrSidePanelMiniCalendar } from "@/components/emr/side-panel-mini-calendar";
 import {
@@ -8329,10 +8330,7 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
         <div className="min-w-0 truncate emr-text-panel-title font-semibold text-foreground">
           {title}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
+        <EmrRightPanelHeaderIconButton
           aria-label="우측 사이드 패널 닫기"
           onClick={() => {
             setCalendarDraftSelection(undefined);
@@ -8340,7 +8338,7 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
           }}
         >
           <CdsNavigationSidebarIcon />
-        </Button>
+        </EmrRightPanelHeaderIconButton>
       </header>
       {isReceptionRightPanelDrawer(activeDrawer) ? (
         <ReceptionDrawer presentation="side-panel" />

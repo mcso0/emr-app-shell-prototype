@@ -314,6 +314,8 @@ test("lab workspace shows equipment receipts in the right panel", async ({ page 
   await expect(receiptPanelToggle).toContainText("1");
   await expect(page.getByRole("heading", { name: "장비 검사 수신함" })).toBeVisible();
   const receiptPanelCollapse = receiptPanel.getByRole("button", { name: "장비 검사 수신함 접기" });
+  await expect(receiptPanelCollapse).toHaveCSS("width", "32px");
+  await expect(receiptPanelCollapse).toHaveCSS("height", "32px");
   await expect(receiptPanelCollapse).toHaveCSS("opacity", "0");
   await receiptPanel.hover();
   await expect(receiptPanelCollapse).toHaveCSS("opacity", "1");

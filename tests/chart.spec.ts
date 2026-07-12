@@ -1518,6 +1518,8 @@ test("chart hides the patient info context-bar toggle while keeping panel collap
     name: "환자 정보 패널 접기",
   });
   await expect(patientInfoPanelCollapse).toBeVisible();
+  await expect(patientInfoPanelCollapse).toHaveCSS("width", "32px");
+  await expect(patientInfoPanelCollapse).toHaveCSS("height", "32px");
   const titleBox = await patientInfoPanelTitle.boundingBox();
   const collapseBox = await patientInfoPanelCollapse.boundingBox();
   if (!titleBox || !collapseBox) {
