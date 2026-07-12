@@ -102,6 +102,18 @@ Shared components must expose slots for title, body, icon, action, secondary act
 
 As of `DESIGN-SYSTEM-PR-070`, `EmrEmptyState` covers the shared empty-state layer for repeated queue, content, drawer, table, widget, and global-shell surfaces. It uses `kind`, `surface`, and `priority` to keep state reason, placement, and CTA ownership explicit. Screen adoption remains separate from the component contract.
 
+## CDS.V2 Visual Size Contract
+
+The shared component follows the CDS.V2 EmptyPlaceholder visual tiers from Figma node `27540:70134`:
+
+| Size | Intended surface | Icon slot | Title | Description | Outer gap | Default action-space reservation |
+| --- | --- | --- | --- | --- | --- | --- |
+| `lg` | Main content area | 48px area, 24px icon slot, 14px radius | Pretendard Medium 16/24 | Pretendard Medium 14/20 | 16px | 28px |
+| `md` | Side panel and large tables; product usage label `mg` | 32px area, 16px icon slot, 10px radius, 4px bottom wrapper space | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
+| `sm` | Modal and small table areas | No icon slot | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
+
+The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. Empty State colors use existing CLAiR tokens: `black-alpha-4` for the icon area background, `black-alpha-48` for the icon and title, and `black-alpha-36` for descriptions. One action uses the outline button treatment; two actions render outline secondary first and dark primary second. Queue side panels remain on `EmrQueueEmptyState` until a separate compact queue decision is approved.
+
 ## Surface Adoption Rules
 
 `EmrEmptyState` adoption must be surface-led. Do not replace every local "없습니다" message at once.
