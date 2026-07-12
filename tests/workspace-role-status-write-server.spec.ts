@@ -36,8 +36,15 @@ test("membership status route enforces admin and last-admin guard in mock fallba
     enforcedBy: "server-permission-resolver",
   });
 
-  const lastAdmin = await patchMembershipStatus(request, {
+  const self = await patchMembershipStatus(request, {
     actor: "user-admin",
+    membershipId: "membership-admin",
+  });
+  expect(self.status()).toBe(409);
+  await expectJson(self, { ok: false, denialReason: "self_action_protected" });
+
+  const lastAdmin = await patchMembershipStatus(request, {
+    actor: "user-manager",
     membershipId: "membership-admin",
   });
   expect(lastAdmin.status()).toBe(409);

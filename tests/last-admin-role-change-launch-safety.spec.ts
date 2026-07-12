@@ -67,7 +67,7 @@ test("launch role routes deny last-admin demotion and deactivation", async ({
   expect(deactivation.status()).toBe(409);
   await expectJson(deactivation, {
     ok: false,
-    denialReason: "last_admin_protected",
+    denialReason: "self_action_protected",
   });
 });
 

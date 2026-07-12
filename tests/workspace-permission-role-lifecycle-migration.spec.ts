@@ -21,6 +21,11 @@ test("permission role deactivation atomically reassigns active and inactive memb
   expect(source).toContain("system_role_protected");
   expect(source).toContain("replacement_role_invalid");
   expect(source).toContain("owner_scope_required");
+  expect(source).toContain("grant_ceiling_violation");
+  expect(source).toContain("workspace.permission_role_created");
+  expect(source).toContain("workspace.permission_role_updated");
+  expect(source).toContain("clair_update_workspace_membership_roles");
+  expect(source).toContain("self_action_protected");
   expect(source).not.toMatch(/delete\s+from\s+public\.workspace_permission_roles/i);
 });
 
@@ -29,4 +34,7 @@ test("permission role lifecycle RPC is narrowly granted", () => {
   expect(source).toContain("set search_path = public, private, extensions");
   expect(source).toContain("from public, anon");
   expect(source).toContain("to authenticated");
+  expect(source).toContain(
+    "public.clair_update_workspace_membership_roles(text,uuid,text[])"
+  );
 });

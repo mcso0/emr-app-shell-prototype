@@ -35,6 +35,28 @@ alter table public.user_memberships
   add constraint user_memberships_status_check
   check (status in ('pending', 'active', 'inactive', 'suspended', 'soft_deleted', 'archived'));
 
+create or replace function private.clair_is_canonical_workspace_owner(p_workspace_id text)
+returns boolean language sql stable security definer
+set search_path=public,private,extensions
+as $$
+  select exists (
+    select 1 from public.user_memberships membership
+    join public.workspace_membership_permission_role_assignments assignment
+      on assignment.workspace_id=membership.workspace_id and assignment.membership_id=membership.id
+    join public.workspace_permission_roles role
+      on role.workspace_id=assignment.workspace_id and role.id=assignment.permission_role_id
+    where membership.workspace_id=p_workspace_id
+      and membership.user_id=auth.uid()
+      and membership.status='active'
+      and role.role_type='owner'
+  );
+$$;
+revoke all on function private.clair_is_canonical_workspace_owner(text) from public,anon,authenticated;
+
+-- Membership creation must go through guarded invitation/session bootstrap RPCs.
+-- Direct INSERT could manufacture an assignment-less legacy administrator.
+revoke insert on table public.user_memberships from authenticated;
+
 create index if not exists user_memberships_workspace_archived_at_idx
   on public.user_memberships (workspace_id, archived_at desc)
   where status in ('archived', 'soft_deleted');
@@ -45,10 +67,15 @@ language plpgsql
 set search_path = public, private, extensions
 as $$
 begin
-  if old.status is distinct from new.status
-     and (old.status in ('archived', 'soft_deleted') or new.status in ('archived', 'soft_deleted'))
-     and current_setting('clair.membership_archive_rpc', true) is distinct from 'on' then
-    raise exception 'membership_archive_rpc_required';
+  if (old.status is distinct from new.status
+      or old.archived_at is distinct from new.archived_at
+      or old.archived_by_user_id is distinct from new.archived_by_user_id
+      or old.archived_reason is distinct from new.archived_reason
+      or old.restored_at is distinct from new.restored_at
+      or old.restored_by_user_id is distinct from new.restored_by_user_id)
+     and current_setting('clair.membership_archive_rpc', true) is distinct from 'on'
+     and current_setting('clair.membership_status_rpc', true) is distinct from 'on' then
+    raise exception 'membership_lifecycle_rpc_required';
   end if;
   return new;
 end;
@@ -177,33 +204,61 @@ begin
 end;
 $$;
 
+drop function if exists public.clair_archive_workspace_membership(text, uuid, text, text);
+
 create or replace function public.clair_archive_workspace_membership(
   p_workspace_id text,
   p_membership_id uuid,
   p_action text,
-  p_deleted_reason text default null
+  p_deleted_reason text default null,
+  p_request_id text default null
 )
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, private, extensions
 as $$
-declare v_membership public.user_memberships%rowtype;
+declare
+  v_membership public.user_memberships%rowtype;
+  v_before_status text;
+  v_event_type text;
 begin
   if auth.uid() is null then raise exception 'unauthenticated'; end if;
   if not private.clair_is_workspace_admin(p_workspace_id) then
     raise exception 'role_permission:manage required';
   end if;
+  select status into v_before_status
+    from public.user_memberships
+   where workspace_id = p_workspace_id and id = p_membership_id;
+
   v_membership := private.archive_workspace_membership(
     p_workspace_id, p_membership_id, p_action, p_deleted_reason
+  );
+  v_event_type := case when v_membership.status = 'archived'
+    then 'workspace.membership_archived' else 'workspace.membership_restored' end;
+  perform public.clair_append_audit_event(
+    'membership-lifecycle-' || gen_random_uuid()::text,
+    p_workspace_id,
+    auth.uid(),
+    null,
+    v_event_type,
+    'membership',
+    p_membership_id::text,
+    null, null, null,
+    p_request_id,
+    p_deleted_reason,
+    jsonb_build_object('status', v_before_status),
+    jsonb_build_object('status', v_membership.status),
+    jsonb_build_object('action', case when v_membership.status = 'archived' then 'archive' else 'restore' end),
+    now()
   );
   return private.clair_membership_mutation_json(v_membership);
 end;
 $$;
 
 revoke all on function private.archive_workspace_membership(text, uuid, text, text) from public, anon, authenticated;
-revoke all on function public.clair_archive_workspace_membership(text, uuid, text, text) from public, anon;
-grant execute on function public.clair_archive_workspace_membership(text, uuid, text, text) to authenticated;
+revoke all on function public.clair_archive_workspace_membership(text, uuid, text, text, text) from public, anon;
+grant execute on function public.clair_archive_workspace_membership(text, uuid, text, text, text) to authenticated;
 
 create or replace function public.clair_list_workspace_member_statuses(
   p_workspace_id text,
@@ -352,6 +407,12 @@ alter table public.audit_events
     'workspace.membership_deactivated',
     'workspace.membership_reactivated',
     'workspace.membership_restored',
+    'workspace.permission_role_deactivated',
+    'workspace.permission_role_reactivated',
+    'workspace.permission_role_created',
+    'workspace.permission_role_updated',
+    'workspace.job_position_deactivated',
+    'workspace.job_position_reactivated',
     'workspace.last_admin_change_blocked',
     'user.profile_updated',
     'reception.patient_guardian_registered',
@@ -395,6 +456,12 @@ alter table if exists public.live_audit_events
     'workspace.membership_deactivated',
     'workspace.membership_reactivated',
     'workspace.membership_restored',
+    'workspace.permission_role_deactivated',
+    'workspace.permission_role_reactivated',
+    'workspace.permission_role_created',
+    'workspace.permission_role_updated',
+    'workspace.job_position_deactivated',
+    'workspace.job_position_reactivated',
     'chart.order_created',
     'chart.patient_called',
     'chart.consultation_started',
@@ -421,5 +488,72 @@ alter table if exists public.live_audit_events
     'reception.patient_guardian_registered'
   ]));
 
-comment on function public.clair_archive_workspace_membership(text, uuid, text, text) is
+drop function if exists public.clair_update_workspace_membership_status(text, uuid, text);
+
+create or replace function public.clair_update_workspace_membership_status(
+  p_workspace_id text,
+  p_membership_id uuid,
+  p_next_status text,
+  p_request_id text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, private, extensions
+as $$
+declare
+  v_current public.user_memberships%rowtype;
+  v_membership public.user_memberships%rowtype;
+  v_target_is_owner boolean := false;
+  v_event_type text;
+begin
+  perform set_config('clair.membership_status_rpc', 'on', true);
+  if auth.uid() is null then raise exception 'unauthenticated'; end if;
+  if not private.clair_is_workspace_admin(p_workspace_id) then
+    raise exception 'role_permission:manage required';
+  end if;
+  if p_next_status not in ('active', 'inactive') then raise exception 'invalid_membership_status'; end if;
+
+  select * into v_current from public.user_memberships
+   where workspace_id = p_workspace_id and id = p_membership_id
+   for update;
+  if v_current.id is null then raise exception 'workspace_membership_missing'; end if;
+  if v_current.user_id = auth.uid() then raise exception 'self_action_protected'; end if;
+
+  select exists (
+    select 1 from public.workspace_membership_permission_role_assignments assignment
+    join public.workspace_permission_roles role on role.id = assignment.permission_role_id
+    where assignment.workspace_id = p_workspace_id
+      and assignment.membership_id = p_membership_id
+      and role.role_type = 'owner'
+  ) into v_target_is_owner;
+  if v_target_is_owner and not private.clair_is_canonical_workspace_owner(p_workspace_id) then
+    raise exception 'owner_target_protected';
+  end if;
+  if v_current.status = p_next_status then raise exception 'membership_state_conflict'; end if;
+
+  v_membership := private.update_workspace_membership_roles(
+    p_workspace_id, p_membership_id, v_current.roles, p_next_status
+  );
+  v_event_type := case when p_next_status = 'active'
+    then 'workspace.membership_reactivated' else 'workspace.membership_deactivated' end;
+  perform public.clair_append_audit_event(
+    'membership-status-' || gen_random_uuid()::text,
+    p_workspace_id, auth.uid(), null, v_event_type,
+    'membership', p_membership_id::text,
+    null, null, null, p_request_id, null,
+    jsonb_build_object('status', v_current.status),
+    jsonb_build_object('status', v_membership.status),
+    '{}'::jsonb, now()
+  );
+  return private.clair_membership_mutation_json(v_membership);
+end;
+$$;
+
+revoke all on function public.clair_update_workspace_membership_status(text, uuid, text, text)
+  from public, anon;
+grant execute on function public.clair_update_workspace_membership_status(text, uuid, text, text)
+  to authenticated;
+
+comment on function public.clair_archive_workspace_membership(text, uuid, text, text, text) is
   'Archives a workspace membership or restores it to inactive. soft_delete is input compatibility only.';

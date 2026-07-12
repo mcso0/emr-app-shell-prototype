@@ -51,6 +51,10 @@ test("live audit helper accepts canonical membership lifecycle events", async ()
     "workspace.membership_restored",
     "workspace.membership_deactivated",
     "workspace.membership_reactivated",
+    "workspace.permission_role_deactivated",
+    "workspace.permission_role_reactivated",
+    "workspace.job_position_deactivated",
+    "workspace.job_position_reactivated",
   ] as const) {
     const result = await appendLiveAuditEvent({
       input: {

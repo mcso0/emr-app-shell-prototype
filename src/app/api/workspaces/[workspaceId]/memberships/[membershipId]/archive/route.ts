@@ -9,10 +9,6 @@ import {
   type WorkspaceMembershipArchiveAction,
 } from "@/features/auth/server-workspace-membership-archive";
 import {
-  createSupabaseLiveAuditAppendGateway,
-  type SupabaseLiveAuditAppendRpcClient,
-} from "@/features/audit/server-audit-log-persistence";
-import {
   emitLiveMutationAuditEvent,
   getAuditRequestId,
 } from "@/features/audit/server-mutation-audit";
@@ -75,6 +71,7 @@ export async function POST(request: Request, { params }: MembershipArchiveRouteC
       p_membership_id: membershipId,
       p_action: action,
       p_deleted_reason: reason,
+      p_request_id: getAuditRequestId(request),
     });
 
     if (error) {
@@ -87,30 +84,6 @@ export async function POST(request: Request, { params }: MembershipArchiveRouteC
 
     const mutation = isRecord(data) ? data : {};
     const updatedStatus = getOptionalBodyString(mutation.status) ?? (action === "archive" ? "archived" : "inactive");
-    const audit = await emitLiveMutationAuditEvent({
-      auditGateway: createSupabaseLiveAuditAppendGateway(
-        client as unknown as SupabaseLiveAuditAppendRpcClient
-      ),
-      input: {
-        workspaceId,
-        actorUserId: identity.actorUserId,
-        eventType:
-          action === "archive"
-            ? "workspace.membership_archived"
-            : "workspace.membership_restored",
-        targetType: "membership",
-        targetId: membershipId,
-        requestId: getAuditRequestId(request),
-        reason,
-        after: { status: updatedStatus },
-        metadata: { action, source: "workspace-membership-archive-route" },
-      },
-    });
-
-    if (!audit.ok) {
-      return Response.json({ ok: false, error: "audit_write_failed" }, { status: 500 });
-    }
-
     return Response.json({
       ok: true,
       action,

@@ -1,0 +1,3 @@
+import { expect, test } from "@playwright/test";
+const headers={"x-clair-demo-session-user-id":"user-admin"};
+test("job position lifecycle deactivates and reactivates without member reassignment",async({request})=>{const off=await request.post("/api/workspaces/workspace-a/job-positions/position-vet/lifecycle",{headers,data:{action:"deactivate"}});expect(off.status()).toBe(200);expect((await off.json()).result).toEqual(expect.objectContaining({isActive:false,retainedMembershipCount:0}));const on=await request.post("/api/workspaces/workspace-a/job-positions/position-vet/lifecycle",{headers,data:{action:"reactivate"}});expect(on.status()).toBe(200);expect((await on.json()).result).toEqual(expect.objectContaining({isActive:true}));});
