@@ -57,13 +57,6 @@ import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
-import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
-import {
-  createInitialEmrTableFilterBuilderModel,
-  filterRowsByEmrTableFilterBuilder,
-  getEmrTableFilterBuilderActiveCount,
-  type EmrTableFilterBuilderField,
-} from "@/components/emr/table-filter-builder-model";
 import {
   EmrTableCellText,
   EmrTableHeaderCell,
@@ -4500,13 +4493,6 @@ function OrderArea({
     action: ChartUnavailableAction;
     targetName?: string;
   } | null>(null);
-  const [orderFilterOpen, setOrderFilterOpen] = useState(false);
-  const [orderTableFilterModel, setOrderTableFilterModel] = useState(() =>
-    createInitialEmrTableFilterBuilderModel(
-      "chart-order-filter",
-      "chart-order-filter-rule-1",
-    ),
-  );
   const [orderSortState, setOrderSortState] =
     useState<ChartOrderSortState>(null);
   const [orderDraftSaveState, setOrderDraftSaveState] = useState<
@@ -4548,69 +4534,9 @@ function OrderArea({
       orderFilter !== "billing" &&
       (orderFilter === "all" || order.orderType === orderFilter),
   );
-  const requestedByOptions = useMemo(() => {
-    const optionByUserId = new Map<string, { label: string; value: string }>();
-
-    draftRows.forEach(({ order }) => {
-      optionByUserId.set(order.requestedByUserId, {
-        label: getChartStaffName(order.requestedByUserId) ?? "미정",
-        value: order.requestedByUserId,
-      });
-    });
-
-    return Array.from(optionByUserId.values()).sort((a, b) =>
-      a.label.localeCompare(b.label, "ko-KR", {
-        numeric: true,
-        sensitivity: "base",
-      }),
-    );
-  }, [draftRows]);
-  const chartOrderFilterFields = useMemo<
-    Array<EmrTableFilterBuilderField<ChartOrderDraftRow>>
-  >(
-    () => [
-      {
-        getValue: (row) => row.order.status,
-        id: "status",
-        label: "상태",
-        operators: [{ id: "is", label: "Is" }],
-        options: chartOrderStatusOrder.map((status) => ({
-          label: orderStatusLabel[status],
-          value: status,
-        })),
-        valuePlaceholder: "상태 선택",
-      },
-      {
-        getValue: (row) => row.order.requestedByUserId,
-        id: "requestedBy",
-        label: "수의사",
-        operators: [{ id: "is", label: "Is" }],
-        options: requestedByOptions,
-        valuePlaceholder: "수의사 선택",
-      },
-    ],
-    [requestedByOptions],
-  );
-  const activeOrderFilterCount = getEmrTableFilterBuilderActiveCount(
-    orderTableFilterModel,
-    chartOrderFilterFields,
-  );
   const visibleOrderRows = useMemo(
-    () =>
-      sortChartOrderRows(
-        filterRowsByEmrTableFilterBuilder(
-          filteredOrderRows,
-          orderTableFilterModel,
-          chartOrderFilterFields,
-        ),
-        orderSortState,
-      ),
-    [
-      chartOrderFilterFields,
-      filteredOrderRows,
-      orderSortState,
-      orderTableFilterModel,
-    ],
+    () => sortChartOrderRows(filteredOrderRows, orderSortState),
+    [filteredOrderRows, orderSortState],
   );
   const totalAmount = draftRows.reduce(
     (sum, row) => sum + (getDraftLineTotal(row) ?? 0),
@@ -5171,49 +5097,6 @@ function OrderArea({
             value={orderTableDensity}
             onValueChange={setOrderTableDensity}
           />
-          <Popover open={orderFilterOpen} onOpenChange={setOrderFilterOpen}>
-            <PopoverTrigger
-              render={
-                <Button
-                  type="button"
-                  variant={activeOrderFilterCount > 0 ? "secondary" : "outline"}
-                  size="sm"
-                  className={cn(
-                    "bg-card",
-                    activeOrderFilterCount > 0 &&
-                      "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
-                  )}
-                  aria-label={
-                    activeOrderFilterCount > 0
-                      ? `오더 필터 ${activeOrderFilterCount}개 설정`
-                      : "오더 필터 설정"
-                  }
-                />
-              }
-            >
-              <CdsActionsListFilterIcon
-                aria-hidden="true"
-                className="size-3.5"
-              />
-              Filter
-              {activeOrderFilterCount > 0 ? ` ${activeOrderFilterCount}` : ""}
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              className="w-[min(860px,calc(100vw-32px))] gap-3 p-3"
-              initialFocus={false}
-            >
-              <EmrTableFilterBuilder
-                clearAllLabel="초기화"
-                description="오더 필터는 현재 분류 탭 결과 안에서 완성된 조건만 AND로 적용됩니다."
-                fields={chartOrderFilterFields}
-                model={orderTableFilterModel}
-                title="Filters"
-                onClose={() => setOrderFilterOpen(false)}
-                onModelChange={setOrderTableFilterModel}
-              />
-            </PopoverContent>
-          </Popover>
           <Button
             variant="outline"
             size="sm"
