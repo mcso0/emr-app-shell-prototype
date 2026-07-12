@@ -3649,6 +3649,87 @@ test("reception side-panel footer actions use the shared 32px control height", a
   }
 });
 
+test("reception encounter detail uses the CDS V2 side-panel field tokens", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
+  );
+
+  const detailPanel = page.getByTestId("reception-right-panel");
+  await expect(detailPanel).toBeVisible();
+
+  const metrics = await detailPanel.getByLabel("체중").evaluate((element) => {
+    const field = element.closest("div.grid");
+    const label = field?.firstElementChild;
+    const section = element.closest("section");
+    const sectionHeading = section?.querySelector("h3");
+    const sectionFields = section?.lastElementChild;
+    const content = section?.parentElement;
+    const footer = element.closest("main")?.querySelector("footer");
+    const unit = element.parentElement?.querySelector("span");
+    const inputStyle = getComputedStyle(element);
+
+    return {
+      contentGap: content ? getComputedStyle(content).gap : undefined,
+      contentPadding: content ? getComputedStyle(content).padding : undefined,
+      fieldGap: field ? getComputedStyle(field).columnGap : undefined,
+      fieldLabelWidth: label
+        ? Math.round(label.getBoundingClientRect().width)
+        : undefined,
+      footerPaddingTop: footer ? getComputedStyle(footer).paddingTop : undefined,
+      inputBackground: inputStyle.backgroundColor,
+      inputFontSize: inputStyle.fontSize,
+      inputFontWeight: inputStyle.fontWeight,
+      inputHeight: Math.round(element.getBoundingClientRect().height),
+      inputLineHeight: inputStyle.lineHeight,
+      inputPaddingLeft: inputStyle.paddingLeft,
+      labelColor: label ? getComputedStyle(label).color : undefined,
+      labelFontSize: label ? getComputedStyle(label).fontSize : undefined,
+      labelFontWeight: label ? getComputedStyle(label).fontWeight : undefined,
+      sectionFieldGap: sectionFields
+        ? getComputedStyle(sectionFields).rowGap
+        : undefined,
+      sectionHeadingFontSize: sectionHeading
+        ? getComputedStyle(sectionHeading).fontSize
+        : undefined,
+      sectionHeadingHeight: sectionHeading
+        ? Math.round(sectionHeading.getBoundingClientRect().height)
+        : undefined,
+      sectionHeadingMarginBottom: sectionHeading
+        ? getComputedStyle(sectionHeading).marginBottom
+        : undefined,
+      sectionPaddingTop: section ? getComputedStyle(section).paddingTop : undefined,
+      unitColor: unit ? getComputedStyle(unit).color : undefined,
+      unitFontWeight: unit ? getComputedStyle(unit).fontWeight : undefined,
+    };
+  });
+
+  expect(metrics).toEqual({
+    contentGap: "16px",
+    contentPadding: "16px",
+    fieldGap: "12px",
+    fieldLabelWidth: 108,
+    footerPaddingTop: "16px",
+    inputBackground: "rgb(255, 255, 255)",
+    inputFontSize: "14px",
+    inputFontWeight: "500",
+    inputHeight: 32,
+    inputLineHeight: "20.0004px",
+    inputPaddingLeft: "10px",
+    labelColor: "rgb(115, 115, 115)",
+    labelFontSize: "14px",
+    labelFontWeight: "500",
+    sectionFieldGap: "12px",
+    sectionHeadingFontSize: "13px",
+    sectionHeadingHeight: 24,
+    sectionHeadingMarginBottom: "0px",
+    sectionPaddingTop: "0px",
+    unitColor: "rgb(82, 82, 82)",
+    unitFontWeight: "400",
+  });
+});
+
 test("reception read failures explain local demo fallback and expose retry actions", async ({
   page,
 }) => {
