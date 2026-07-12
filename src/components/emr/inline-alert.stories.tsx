@@ -51,6 +51,11 @@ const meta = {
         disable: true,
       },
     },
+    dismissAction: {
+      table: {
+        disable: true,
+      },
+    },
     testId: {
       control: "text",
       description: "Optional test hook for feature-level regression tests.",

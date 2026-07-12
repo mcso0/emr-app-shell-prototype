@@ -4215,9 +4215,15 @@ function ChartUnavailableAlert({
       severity="info"
       title={copy.title}
       className={cn("emr-text-metadata", className)}
-      action={
-        <Button size="sm" variant="outline" onClick={onDismiss}>
-          확인
+      dismissAction={
+        <Button
+          type="button"
+          size="icon-xs"
+          variant="ghost"
+          aria-label="안내 닫기"
+          onClick={onDismiss}
+        >
+          <CdsActionsXIcon data-icon="inline-start" />
         </Button>
       }
       testId="chart-unavailable-action-alert"

@@ -1635,7 +1635,15 @@ test("chart unavailable order actions show persistent inline guidance", async ({
     "Order 출력은 아직 연결되지 않았어",
   );
   await expect(unavailableAlert).toContainText("문서 생성, 프린트, PDF 출력");
-  await unavailableAlert.getByRole("button", { name: "확인" }).click();
+  const dismissButton = unavailableAlert.getByRole("button", {
+    name: "안내 닫기",
+  });
+  await expect(dismissButton).toBeVisible();
+  await expect(
+    unavailableAlert.getByRole("button", { name: "확인" }),
+  ).toHaveCount(0);
+  await dismissButton.click();
+  await expect(unavailableAlert).toBeHidden();
 });
 
 test("chart order add searches active workspace catalog and adds a draft row", async ({

@@ -5,6 +5,12 @@ import {
   CdsAlertsAlertTriangleIcon,
   CdsAlertsInfoIcon,
 } from "@/components/cds-icons/alerts-and-status";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import type { AppIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +73,11 @@ export type EmrInlineAlertProps = Omit<ComponentPropsWithoutRef<"section">, "tit
    */
   secondaryAction?: ReactNode;
   /**
+   * Dismiss control for a non-blocking alert. It is positioned at the top end
+   * so it stays distinct from recovery actions below the alert copy.
+   */
+  dismissAction?: ReactNode;
+  /**
    * Custom icon node, or `false` to hide the icon when surrounding context
    * already communicates the alert role.
    */
@@ -90,6 +101,7 @@ export function EmrInlineAlert({
   action,
   children,
   className,
+  dismissAction,
   icon,
   role,
   secondaryAction,
@@ -104,13 +116,14 @@ export function EmrInlineAlert({
   const hasActions = action || secondaryAction;
 
   return (
-    <section
+    <Alert
       {...props}
       data-severity={severity}
       data-testid={testId}
       role={resolvedRole}
       className={cn(
         "flex min-w-0 gap-3 rounded-lg border px-3 py-2.5 text-sm leading-5",
+        dismissAction ? "pr-10" : undefined,
         rule.toneClassName,
         className
       )}
@@ -124,8 +137,12 @@ export function EmrInlineAlert({
         </span>
       ) : null}
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-current">{title}</p>
-        {children ? <div className="mt-1 text-current">{children}</div> : null}
+        <AlertTitle className="font-semibold text-current">{title}</AlertTitle>
+        {children ? (
+          <AlertDescription className="mt-1 text-current">
+            {children}
+          </AlertDescription>
+        ) : null}
         {hasActions ? (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {action}
@@ -133,6 +150,7 @@ export function EmrInlineAlert({
           </div>
         ) : null}
       </div>
-    </section>
+      {dismissAction ? <AlertAction>{dismissAction}</AlertAction> : null}
+    </Alert>
   );
 }
