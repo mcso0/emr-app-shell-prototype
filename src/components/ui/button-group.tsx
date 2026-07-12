@@ -61,7 +61,7 @@ function ButtonGroupButton({
       data-button-group-segment={position}
       className={cn(
         "relative shadow-none hover:shadow-none active:shadow-none aria-expanded:shadow-none focus-visible:z-10",
-        position === "leading" ? "rounded-r-none" : "rounded-l-none",
+        position === "leading" ? "!rounded-r-none" : "!rounded-l-none",
         className,
       )}
       {...props}
