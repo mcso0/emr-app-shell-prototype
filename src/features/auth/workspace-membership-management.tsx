@@ -298,7 +298,6 @@ export function WorkspaceMembershipManagement({
   const jobPositions = visibleServerCatalog?.jobPositions.filter((position) => position.isActive) ?? localJobPositions;
   const activePermissionRoles = permissionRoles.filter((role) => role.isAssignable);
   const activeJobPositions = jobPositions.filter((position) => position.isActive);
-  const customPermissionRoles = activePermissionRoles.filter((role) => role.roleType === "custom");
 
   const activeMembers = state.memberships.filter(
     (membership) => membership.workspaceId === workspaceId && membership.status === "active"

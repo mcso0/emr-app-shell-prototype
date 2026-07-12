@@ -1,17 +1,23 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
-test("role and job management UI uses server lifecycle endpoints and impact dialogs", () => {
-  const source=readFileSync("src/features/auth/workspace-role-permission-management.tsx","utf8");
-  const roleDialog=readFileSync("src/features/auth/workspace-permission-role-lifecycle-dialog.tsx","utf8");
-  const jobDialog=readFileSync("src/features/auth/workspace-job-position-lifecycle-dialog.tsx","utf8");
-  expect(source).toContain("/permission-roles");
-  expect(source).toContain("/job-positions");
-  expect(source).toContain("다시 활성화");
-  expect(roleDialog).toContain("대체 역할");
-  expect(roleDialog).toContain("보관된 구성원의 이력은 유지");
-  expect(jobDialog).toContain("기존 구성원");
-  expect(jobDialog).toContain("대체 직무");
+test("role and job management UI uses the server-backed catalog boundary", () => {
+  const source = readFileSync(
+    "src/features/hospital-admin/role-permission-management/screen.tsx",
+    "utf8"
+  );
+  const state = readFileSync(
+    "src/features/hospital-admin/role-permission-management/use-workspace-role-state.ts",
+    "utf8"
+  );
+  const api = readFileSync(
+    "src/features/hospital-admin/role-permission-management/server-catalog.ts",
+    "utf8"
+  );
+  expect(source).toContain("workspace.mutateCatalog");
+  expect(source).toContain('action: "job.archive"');
+  expect(state).toContain("usesServerCatalog");
+  expect(api).toContain("/role-permission-management");
 });
 
 test("member directory uses archive language and excludes inactive definitions from new selections", () => {
