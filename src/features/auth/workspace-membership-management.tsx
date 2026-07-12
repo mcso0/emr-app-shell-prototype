@@ -61,6 +61,7 @@ import {
   getSessionWorkspacePermissionRoleLabel,
   getSessionWorkspacePermissionRoleSummary,
   getSessionWorkspacePermissionRoles,
+  isArchivedMembershipStatus,
   persistSessionWorkspacesState,
   readSessionWorkspacesState,
   resendSessionWorkspaceInvitation,
@@ -93,7 +94,7 @@ type InvitationRow = SessionWorkspaceInvitation & {
 };
 
 type MembershipRow = MemberRow | InvitationRow;
-type MembershipDirectoryTab = "all" | "pending" | "inactive" | "deleted";
+type MembershipDirectoryTab = "all" | "pending" | "inactive" | "archived";
 
 type WorkspaceInvitationRouteResponse =
   | {
@@ -136,7 +137,7 @@ function getBrowserWorkspaceState() {
 
 function getStatusLabel(row: MembershipRow) {
   if (row.rowType === "invitation") return row.status === "pending" ? "초대 대기" : row.status;
-  if (row.status === "soft_deleted") return "삭제됨";
+  if (isArchivedMembershipStatus(row.status)) return "보관됨";
   if (row.status === "inactive") return "비활성";
   if (row.status === "active") return "활성";
   return row.status;
@@ -295,6 +296,9 @@ export function WorkspaceMembershipManagement({
   const visibleServerCatalog = session?.role === "supabase" ? serverCatalog : null;
   const permissionRoles = visibleServerCatalog?.permissionRoles ?? localPermissionRoles;
   const jobPositions = visibleServerCatalog?.jobPositions.filter((position) => position.isActive) ?? localJobPositions;
+  const activePermissionRoles = permissionRoles.filter((role) => role.isAssignable);
+  const activeJobPositions = jobPositions.filter((position) => position.isActive);
+  const customPermissionRoles = activePermissionRoles.filter((role) => role.roleType === "custom");
 
   const activeMembers = state.memberships.filter(
     (membership) => membership.workspaceId === workspaceId && membership.status === "active"
@@ -307,8 +311,8 @@ export function WorkspaceMembershipManagement({
   const pendingInvitations = state.invitations.filter(
     (invitation) => invitation.workspaceId === workspaceId && invitation.status === "pending"
   );
-  const softDeletedMembers = state.memberships.filter(
-    (membership) => membership.workspaceId === workspaceId && membership.status === "soft_deleted"
+  const archivedMembers = state.memberships.filter(
+    (membership) => membership.workspaceId === workspaceId && isArchivedMembershipStatus(membership.status)
   );
   const activeOwnerCount = activeMembers.filter(
     (membership) => getSessionWorkspaceEffectivePermissionRoleKey(membership) === "owner"
@@ -326,12 +330,12 @@ export function WorkspaceMembershipManagement({
     const matchesJob = jobFilter === "all" || getSessionWorkspaceJobPositionLabel(getRowJobPositionKey(row), state, workspaceId) === jobFilter;
     const matchesDepartment = departmentFilter === "all" || row.department === departmentFilter;
     const matchesTab = directoryTab === "all"
-      ? row.rowType === "invitation" || row.status !== "soft_deleted"
+      ? row.rowType === "invitation" || !isArchivedMembershipStatus(row.status)
       : directoryTab === "pending"
         ? row.rowType === "invitation" && row.status === "pending"
         : directoryTab === "inactive"
           ? row.rowType === "member" && (row.status === "inactive" || row.status === "suspended")
-          : row.rowType === "member" && row.status === "soft_deleted";
+          : row.rowType === "member" && isArchivedMembershipStatus(row.status);
     return matchesQuery && matchesJob && matchesDepartment && matchesTab;
   });
 
@@ -359,7 +363,7 @@ export function WorkspaceMembershipManagement({
       setStatusReadState("loading");
 
       try {
-        const response = await fetch(`/api/workspaces/${workspaceId}/memberships?includeDeleted=true`, {
+        const response = await fetch(`/api/workspaces/${workspaceId}/memberships?includeArchived=true`, {
           headers:
             activeSession.role === "supabase"
               ? undefined
@@ -764,7 +768,7 @@ export function WorkspaceMembershipManagement({
     if (!archivingMembership || !session) return;
     const reason = archiveReason.trim();
     if (!reason) {
-      setArchiveError("구성원 삭제 사유를 입력하세요.");
+      setArchiveError("구성원 보관 사유를 입력하세요.");
       return;
     }
 
@@ -781,32 +785,32 @@ export function WorkspaceMembershipManagement({
               ? {}
               : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session.role) }),
           },
-          body: JSON.stringify({ action: "soft_delete", reason }),
+          body: JSON.stringify({ action: "archive", reason }),
         }
       );
       const result = await response.json() as { ok?: boolean; denialReason?: string };
       if (!response.ok || !result.ok) {
         setArchiveError(
           result.denialReason === "self_action_protected"
-            ? "본인 구성원 기록은 삭제할 수 없습니다."
+            ? "본인 구성원 기록은 보관할 수 없습니다."
             : result.denialReason === "last_admin_protected"
-              ? "다른 활성 소유자를 지정한 후 삭제할 수 있습니다."
-              : "구성원 삭제 권한 또는 상태를 확인해 주세요."
+              ? "다른 활성 소유자를 지정한 후 보관할 수 있습니다."
+              : "구성원 보관 권한 또는 상태를 확인해 주세요."
         );
         return;
       }
       const local = updateSessionWorkspaceMembershipStatus(
         state,
         archivingMembership.id,
-        "soft_deleted",
-        { deletedAt: new Date().toISOString(), deletedByUserId: currentActorId, deletedReason: reason, restoredAt: null, restoredByUserId: null }
+        "archived",
+        { archivedAt: new Date().toISOString(), archivedByUserId: currentActorId, archivedReason: reason, restoredAt: null, restoredByUserId: null }
       );
       if (local.success) updateState(local.state);
       setSelectedMembership(null);
       setArchivingMembership(null);
       setArchiveReason("");
     } catch {
-      setArchiveError("구성원 삭제 요청을 완료하지 못했습니다.");
+      setArchiveError("구성원 보관 요청을 완료하지 못했습니다.");
     } finally {
       setSubmittingArchive(false);
     }
@@ -853,19 +857,19 @@ export function WorkspaceMembershipManagement({
       activeOwnerCount <= 1 &&
       getSessionWorkspaceEffectivePermissionRoleKey(row) === "owner";
     const protectionDescription = selfAction ? "본인 구성원 기록은 이 화면에서 변경할 수 없습니다." : lastOwner ? "다른 활성 소유자를 지정한 후 진행할 수 있습니다." : undefined;
-    if (row.status === "soft_deleted") {
-      return [{ key: "restore", label: "복구", description: "복구 후 비활성 상태로 전환됩니다.", onSelect: () => void handleRestore(row), disabled: !canManageMembers }];
+    if (isArchivedMembershipStatus(row.status)) {
+      return [{ key: "restore", label: "구성원 복구", description: "복구 후 비활성 상태로 전환됩니다.", onSelect: () => void handleRestore(row), disabled: !canManageMembers }];
     }
     if (row.status === "inactive" || row.status === "suspended") {
       return [
         { key: "activate", label: "다시 활성화", onSelect: () => void handleMembershipActivation(row), disabled: !canManageMembers || selfAction, description: protectionDescription },
-        { key: "soft-delete", label: "구성원 삭제", description: protectionDescription ?? "삭제됨 탭에서 복구할 수 있습니다.", onSelect: () => { setArchiveError(null); setArchiveReason(""); setArchivingMembership(row); }, disabled: !canManageMembers || selfAction || lastOwner, variant: "destructive" },
+        { key: "archive", label: "구성원 보관", description: protectionDescription ?? "보관됨 탭에서 복구할 수 있습니다.", onSelect: () => { setArchiveError(null); setArchiveReason(""); setArchivingMembership(row); }, disabled: !canManageMembers || selfAction || lastOwner, variant: "destructive" },
       ];
     }
     return [
       { key: "edit", label: "권한·직무 수정", onSelect: () => openRoleEditor(row), disabled: !canManageMembers },
       { key: "deactivate", label: "비활성화", description: protectionDescription, onSelect: () => { setDeactivationError(null); setDeactivatingMembership(row); }, disabled: !canManageMembers || selfAction || lastOwner },
-      { key: "soft-delete", label: "구성원 삭제", description: protectionDescription ?? "삭제됨 탭에서 복구할 수 있습니다.", onSelect: () => { setArchiveError(null); setArchiveReason(""); setArchivingMembership(row); }, disabled: !canManageMembers || selfAction || lastOwner, variant: "destructive" },
+      { key: "archive", label: "구성원 보관", description: protectionDescription ?? "보관됨 탭에서 복구할 수 있습니다.", onSelect: () => { setArchiveError(null); setArchiveReason(""); setArchivingMembership(row); }, disabled: !canManageMembers || selfAction || lastOwner, variant: "destructive" },
     ];
   }
 
@@ -946,7 +950,7 @@ export function WorkspaceMembershipManagement({
                   { value: "all", label: "전체", count: activeMembers.length + inactiveMembers.length + pendingInvitations.length },
                   { value: "pending", label: "초대 대기", count: pendingInvitations.length },
                   { value: "inactive", label: "비활성", count: inactiveMembers.length },
-                  { value: "deleted", label: "삭제됨", count: softDeletedMembers.length },
+                  { value: "archived", label: "보관됨", count: archivedMembers.length },
                 ]}
               />
             </div>
@@ -962,11 +966,11 @@ export function WorkspaceMembershipManagement({
 
             <div className="flex flex-col gap-2 md:hidden">
               {statusReadState === "loading" ? Array.from({ length: 4 }, (_, index) => <Skeleton key={`member-card-skeleton-${index}`} className="h-24 w-full" />) : visibleRows.map((row) => (
-                <button key={`member-card-${row.rowType}-${row.id}`} type="button" className="rounded-md border bg-card p-3 text-left" onClick={() => row.rowType === "member" && setSelectedMembership(row)}>
+                <div key={`member-card-${row.rowType}-${row.id}`} role={row.rowType === "member" ? "button" : undefined} tabIndex={row.rowType === "member" ? 0 : undefined} className="rounded-md border bg-card p-3 text-left" onClick={() => row.rowType === "member" && setSelectedMembership(row)} onKeyDown={(event) => { if (row.rowType === "member" && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setSelectedMembership(row); } }}>
                   <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><Avatar className="size-8"><AvatarFallback>{(row.rowType === "member" ? getMembershipDisplayName(row) : getRowEmail(row)).slice(0, 1)}</AvatarFallback></Avatar><div className="min-w-0"><p className="truncate text-sm font-semibold">{row.rowType === "member" ? getMembershipDisplayName(row) : getRowEmail(row)}</p><p className="truncate text-xs text-muted-foreground">{getRowEmail(row)}</p></div></div><span onClick={(event) => event.stopPropagation()}><EmrRowActionMenu ariaLabel={`${getRowEmail(row)} 작업`} items={getRowActions(row)} /></span></div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{getSessionWorkspaceJobPositionLabel(getRowJobPositionKey(row), state, workspaceId)}</span><span>·</span><span>{row.department ?? "소속 미지정"}</span><Badge variant="outline">{getSessionWorkspacePermissionRoleLabel(getRowPermissionRoleKey(row), state, workspaceId)}</Badge><Badge variant={row.status === "soft_deleted" ? "destructive" : "outline"}>{getStatusLabel(row)}</Badge></div>
-                  {row.rowType === "member" && row.status === "soft_deleted" ? <p className="mt-2 text-xs text-muted-foreground">삭제 사유: {row.deletedReason ?? "-"} · 검토 예정일: {row.deletedAt ? formatMembershipDate(new Date(new Date(row.deletedAt).getTime() + 90 * 86400000).toISOString()) : "-"}</p> : null}
-                </button>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{getSessionWorkspaceJobPositionLabel(getRowJobPositionKey(row), state, workspaceId)}</span><span>·</span><span>{row.department ?? "소속 미지정"}</span><Badge variant="outline">{getSessionWorkspacePermissionRoleLabel(getRowPermissionRoleKey(row), state, workspaceId)}</Badge><Badge variant={row.rowType === "member" && isArchivedMembershipStatus(row.status) ? "destructive" : "outline"}>{getStatusLabel(row)}</Badge></div>
+                  {row.rowType === "member" && isArchivedMembershipStatus(row.status) ? <p className="mt-2 text-xs text-muted-foreground">보관 사유: {row.archivedReason ?? row.deletedReason ?? "-"}</p> : null}
+                </div>
               ))}
               {statusReadState !== "loading" && visibleRows.length === 0 ? <p className="rounded-md border bg-card p-6 text-center text-sm text-muted-foreground">현재 조건에 맞는 구성원이 없습니다.</p> : null}
             </div>
@@ -1022,7 +1026,7 @@ export function WorkspaceMembershipManagement({
                       </TableCell>
                       <TableCell className="text-muted-foreground">{row.rowType === "member" ? formatMembershipDate(row.lastLoginAt) === "-" ? "로그인 기록 없음" : formatMembershipDate(row.lastLoginAt) : "-"}</TableCell>
                       <TableCell>
-                        <Badge variant={pending ? "secondary" : row.status === "soft_deleted" ? "destructive" : "outline"}>{getStatusLabel(row)}</Badge>
+                        <Badge variant={pending ? "secondary" : row.rowType === "member" && isArchivedMembershipStatus(row.status) ? "destructive" : "outline"}>{getStatusLabel(row)}</Badge>
                       </TableCell>
                       <TableCell className="text-right"><EmrRowActionMenu ariaLabel={`${getRowEmail(row)} 작업`} items={getRowActions(row)} /></TableCell>
                     </TableRow>
@@ -1111,7 +1115,7 @@ export function WorkspaceMembershipManagement({
                       setFieldErrors((current) => ({ ...current, permissionRoleKey: undefined }));
                     }}
                   >
-                    {permissionRoles.map((role) => (
+                    {activePermissionRoles.map((role) => (
                       <label
                         key={role.roleKey}
                         className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
@@ -1166,7 +1170,7 @@ export function WorkspaceMembershipManagement({
                       setFieldErrors((current) => ({ ...current, jobPositionKey: undefined }));
                     }}
                   >
-                    {jobPositions.map((position) => (
+                    {activeJobPositions.map((position) => (
                       <label
                         key={position.positionKey}
                         className="flex items-center gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
@@ -1307,19 +1311,13 @@ export function WorkspaceMembershipManagement({
                         value={formatMembershipDate(selectedMembership.deactivatedAt)}
                       />
                       <MembershipDetailItem
-                        label="삭제일"
-                        value={formatMembershipDate(selectedMembership.deletedAt)}
+                        label="보관일"
+                        value={formatMembershipDate(selectedMembership.archivedAt ?? selectedMembership.deletedAt)}
                       />
                       <MembershipDetailItem
-                        label="삭제 사유"
-                        value={selectedMembership.deletedReason || "-"}
+                        label="보관 사유"
+                        value={selectedMembership.archivedReason || selectedMembership.deletedReason || "-"}
                       />
-                      {selectedMembership.deletedAt ? (
-                        <MembershipDetailItem
-                          label="검토 예정일"
-                          value={formatMembershipDate(new Date(new Date(selectedMembership.deletedAt).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString())}
-                        />
-                      ) : null}
                     </dl>
                   </section>
                 </div>
@@ -1330,9 +1328,9 @@ export function WorkspaceMembershipManagement({
                   <p className="text-[12px] leading-5 text-muted-foreground">
                     일반 계정은 이 페이지에서 조회만 가능합니다. 본인 정보는 프로필에서 변경하세요.
                   </p>
-                ) : selectedMembership.status === "soft_deleted" ? (
+                ) : isArchivedMembershipStatus(selectedMembership.status) ? (
                   <Button type="button" variant="outline" onClick={() => void handleRestore(selectedMembership)}>
-                    복구
+                    구성원 복구
                   </Button>
                 ) : selectedMembership.status !== "active" ? (
                   <p className="text-[12px] leading-5 text-muted-foreground">
@@ -1397,7 +1395,7 @@ export function WorkspaceMembershipManagement({
                 setRoleChangeError(null);
               }}
             >
-              {permissionRoles.map((role) => (
+              {activePermissionRoles.map((role) => (
                 <label
                   key={role.roleKey}
                   className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
@@ -1494,21 +1492,21 @@ export function WorkspaceMembershipManagement({
       <Dialog open={Boolean(archivingMembership)} onOpenChange={(open) => { if (!open) setArchivingMembership(null); }}>
         <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle>구성원 삭제</DialogTitle>
+            <DialogTitle>구성원 보관</DialogTitle>
             <DialogDescription>
-              {archivingMembership?.displayName ?? archivingMembership?.email} 구성원의 접근을 해제하고 삭제됨 탭으로 이동합니다. 기록은 유지되며 복구하면 비활성 상태로 돌아옵니다.
+              {archivingMembership?.displayName ?? archivingMembership?.email} 구성원의 접근을 해제하고 보관됨 탭으로 이동합니다. 기록은 유지되며 복구하면 비활성 상태로 돌아옵니다.
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field data-invalid={Boolean(archiveError)}>
-              <FieldLabel htmlFor="workspace-membership-delete-reason">삭제 사유</FieldLabel>
+              <FieldLabel htmlFor="workspace-membership-delete-reason">보관 사유</FieldLabel>
               <Input id="workspace-membership-delete-reason" value={archiveReason} onChange={(event) => setArchiveReason(event.target.value)} placeholder="예: 퇴사 처리" aria-invalid={Boolean(archiveError)} />
-              {archiveError ? <FieldError>{archiveError}</FieldError> : <FieldDescription>90일 후 영구 삭제 검토 필요로 표시되지만 자동 삭제되지는 않습니다.</FieldDescription>}
+              {archiveError ? <FieldError>{archiveError}</FieldError> : <FieldDescription>기록은 유지되며 복구하면 비활성 상태로 돌아옵니다.</FieldDescription>}
             </Field>
           </FieldGroup>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setArchivingMembership(null)}>취소</Button>
-            <Button type="button" variant="destructive" disabled={submittingArchive} onClick={() => void handleArchiveConfirm()}>{submittingArchive ? "삭제 중" : "구성원 삭제"}</Button>
+            <Button type="button" variant="destructive" disabled={submittingArchive} onClick={() => void handleArchiveConfirm()}>{submittingArchive ? "보관 중" : "구성원 보관"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1151,8 +1151,8 @@ export function deactivateSessionWorkspaceMembership(
 export function updateSessionWorkspaceMembershipStatus(
   state: SessionWorkspacesState,
   membershipId: string,
-  status: Extract<SessionWorkspaceMembershipStatus, "active" | "inactive" | "soft_deleted">,
-  metadata: Pick<SessionWorkspaceMembership, "deletedAt" | "deletedByUserId" | "deletedReason" | "restoredAt" | "restoredByUserId"> = {},
+  status: Extract<SessionWorkspaceMembershipStatus, "active" | "inactive" | "archived" | "soft_deleted">,
+  metadata: Pick<SessionWorkspaceMembership, "archivedAt" | "archivedByUserId" | "archivedReason" | "deletedAt" | "deletedByUserId" | "deletedReason" | "restoredAt" | "restoredByUserId"> = {},
   now = new Date().toISOString()
 ): WorkspaceMembershipMutationResult {
   const membership = state.memberships.find((item) => item.id === membershipId);
@@ -1307,6 +1307,7 @@ function isSessionWorkspaceMembership(value: unknown): value is SessionWorkspace
       membership.status === "active" ||
       membership.status === "inactive" ||
       membership.status === "suspended" ||
+      membership.status === "archived" ||
       membership.status === "soft_deleted") &&
     typeof membership.createdAt === "string"
   );
