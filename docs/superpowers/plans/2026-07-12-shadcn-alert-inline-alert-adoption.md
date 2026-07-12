@@ -119,7 +119,7 @@ Expected: PASS with current explanatory copy, no `확인`, and a working X dismi
 
 **Files:**
 - Modify: `docs/design/system/inline-alert-feedback-rules.md:48-79`
-- Create: `docs/work/design-system/DESIGN-SYSTEM-PR-074-shadcn-alert-inline-alert-adoption.md`
+- Create: `docs/work/design-system/DESIGN-SYSTEM-PR-075-shadcn-alert-inline-alert-adoption.md`
 - Modify: `docs/work/index.md`
 
 - [x] **Step 1: Document the distinction between top-end dismiss controls and below-copy recovery actions.**

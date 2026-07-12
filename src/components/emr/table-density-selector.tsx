@@ -4,12 +4,15 @@ import {
   emrTableDensityOptions,
   type EmrTableDensity,
 } from "@/components/emr/table-density";
+import { ChevronDownIcon } from "@/components/icons";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type EmrTableDensitySelectorProps = {
@@ -49,42 +52,46 @@ export function EmrTableDensitySelector({
   className,
   label = "테이블 보기 밀도",
 }: EmrTableDensitySelectorProps) {
-  return (
-    <TooltipProvider>
-      <div
-        role="group"
-        aria-label={label}
-        className={cn(
-          "inline-flex shrink-0 items-center gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] p-[var(--clair-border-width-atomic-4)]",
-          className
-        )}
-      >
-        {emrTableDensityOptions.map((option) => {
-          const active = option.value === value;
-          const accessibleLabel = `${option.label} 보기`;
+  const selectedOption = emrTableDensityOptions.find(
+    (option) => option.value === value,
+  );
 
-          return (
-            <Tooltip key={option.value}>
-              <TooltipTrigger
-                type="button"
-                aria-label={accessibleLabel}
-                aria-pressed={active}
-                title={accessibleLabel}
-                className={cn(
-                  "inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] border border-transparent px-1 text-[var(--emr-text-secondary)] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-                  active
-                    ? "bg-card text-[var(--emr-text-primary)] shadow-[var(--clair-shadow-xs)] hover:bg-card"
-                    : "bg-transparent hover:bg-[var(--emr-state-hover)]"
-                )}
-                onClick={() => onValueChange(option.value)}
-              >
+  if (!selectedOption) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            aria-label={`${label}: ${selectedOption.label}`}
+            className={cn("shrink-0 bg-card", className)}
+          >
+            <TableDensityIcon density={value} />
+            {selectedOption.label}
+            <ChevronDownIcon data-icon="inline-end" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end" className="min-w-28">
+        <DropdownMenuRadioGroup
+          value={value}
+          onValueChange={(nextValue) =>
+            onValueChange(nextValue as EmrTableDensity)
+          }
+        >
+          {emrTableDensityOptions.map((option) => {
+            return (
+              <DropdownMenuRadioItem key={option.value} value={option.value}>
                 <TableDensityIcon density={option.value} />
-              </TooltipTrigger>
-              <TooltipContent>{accessibleLabel}</TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </div>
-    </TooltipProvider>
+                {option.label}
+              </DropdownMenuRadioItem>
+            );
+          })}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
