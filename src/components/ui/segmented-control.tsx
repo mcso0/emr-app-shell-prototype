@@ -132,7 +132,7 @@ export function SegmentedControl<TValue extends string>({
               variant === "pill" &&
                 (active
                   ? "emr-control-text min-h-8 rounded-full border-transparent bg-primary px-3 py-1.5 font-medium text-primary-foreground hover:bg-primary"
-                  : "emr-control-text min-h-8 rounded-full border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-1.5 font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"),
+                  : "emr-control-text min-h-8 rounded-full border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-3 py-1.5 font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"),
               variant === "tabs" &&
                 (active
                   ? [

@@ -222,7 +222,7 @@ function PersonalProfileForm({
   return (
     <main className="min-h-svh bg-[var(--emr-surface-app)] text-foreground">
       <div className="grid min-h-svh lg:grid-cols-[292px_minmax(0,1fr)]">
-        <aside className="border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-5 py-5 lg:border-b-0 lg:border-r">
+        <aside className="border-b border-[var(--emr-border-strong)] bg-[var(--emr-surface-panel)] px-5 py-5 lg:border-b-0 lg:border-r">
           <Link
             href={returnHref}
             className="inline-flex max-w-full items-center gap-2 rounded-[var(--emr-radius-control)] px-1 py-1 text-[14px] font-semibold leading-5 text-foreground transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -270,7 +270,7 @@ function PersonalProfileForm({
               </p>
             ) : null}
 
-            <Separator className="mt-8 bg-[var(--emr-line-hairline)]" />
+            <Separator className="mt-8 bg-[var(--emr-border-default)]" />
 
             <section className="grid gap-5 py-9 lg:grid-cols-[220px_minmax(0,1fr)]">
               <div className="flex flex-col gap-2">
@@ -299,7 +299,7 @@ function PersonalProfileForm({
               </div>
             </section>
 
-            <Separator className="bg-[var(--emr-line-hairline)]" />
+            <Separator className="bg-[var(--emr-border-default)]" />
 
             <section className="grid gap-5 py-9 lg:grid-cols-[220px_minmax(0,1fr)]">
               <div className="flex flex-col gap-2">
@@ -372,7 +372,7 @@ function PersonalProfileForm({
               </FieldGroup>
             </section>
 
-            <Separator className="bg-[var(--emr-line-hairline)]" />
+            <Separator className="bg-[var(--emr-border-default)]" />
 
             <div className="flex items-center justify-end pt-6">
               <Button type="submit" disabled={isSaving || !hasUnsavedChanges}>

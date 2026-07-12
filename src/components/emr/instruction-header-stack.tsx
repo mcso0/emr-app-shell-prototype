@@ -107,7 +107,7 @@ export function EmrInstructionHeaderStack({
       {resultDivider ? (
         <div
           data-slot="instruction-header-result-divider"
-          className="mt-3 h-px w-full shrink-0 bg-[var(--emr-line-hairline)]"
+          className="mt-3 h-px w-full shrink-0 bg-[var(--emr-border-subtle)]"
         />
       ) : null}
     </div>

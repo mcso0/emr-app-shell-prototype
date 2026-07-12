@@ -368,7 +368,7 @@ export function EmrRegistrationSummaryItem({
   title: ReactNode;
 }) {
   return (
-    <section className="flex h-[54px] min-w-0 items-center gap-[10px] rounded-[12px] border border-[var(--clair-color-atomic-neutral-100)] bg-[var(--clair-color-atomic-neutral-50)] p-4">
+    <section className="flex h-[54px] min-w-0 items-center gap-[10px] rounded-[12px] border border-[var(--emr-border-subtle)] bg-[var(--clair-color-atomic-neutral-50)] p-4">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <span aria-hidden="true" className="flex size-[22px] shrink-0 items-center justify-center text-[var(--clair-color-atomic-sky-500)]">
           {icon}

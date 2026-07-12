@@ -138,6 +138,49 @@ test("EMR border semantic scale maps to neutral 100, 200, and 300", async ({ pag
   expect(workspaceFrameSource).toContain("var(--emr-border-strong)");
 });
 
+test("shared border migration batch uses the EMR semantic border hierarchy", async () => {
+  const migrationFiles = [
+    "src/shell/workspace-frame.tsx",
+    "src/components/emr/registration-dialog.tsx",
+    "src/components/emr/side-panel-card.tsx",
+    "src/components/emr/subpanel.tsx",
+    "src/components/emr/emr-data-table.tsx",
+    "src/components/emr/dialog-shell.tsx",
+    "src/components/emr/order-queue-summary.tsx",
+    "src/components/emr/popover-shell.tsx",
+    "src/components/emr/instruction-filter-tabs.tsx",
+    "src/components/emr/instruction-header-stack.tsx",
+    "src/components/emr/order-group-section.tsx",
+    "src/components/emr/table-checkbox.tsx",
+    "src/components/ui/segmented-control.tsx",
+    "src/features/auth/personal-profile-settings.tsx",
+  ];
+  const sources = await Promise.all(
+    migrationFiles.map(async (path) => ({
+      path,
+      source: await fs.promises.readFile(path, "utf8"),
+    }))
+  );
+  const legacyUsages = sources.flatMap(({ path, source }) =>
+    [...source.matchAll(/--emr-line-(?:subtle|hairline|default|strong)/g)].map(
+      (match) => `${path}:${match[0]}`
+    )
+  );
+
+  expect(legacyUsages).toEqual([]);
+
+  const workspaceFrameSource = sources.find(({ path }) => path === "src/shell/workspace-frame.tsx")?.source;
+  const registrationDialogSource = sources.find(({ path }) => path === "src/components/emr/registration-dialog.tsx")?.source;
+  const homeWorkspaceSource = await fs.promises.readFile(
+    "src/features/home/components/home-kanban-workspace.tsx",
+    "utf8"
+  );
+
+  expect(workspaceFrameSource).toContain("border-r border-[var(--emr-content-aside-border)]");
+  expect(registrationDialogSource).toContain("border border-[var(--emr-border-subtle)]");
+  expect(homeWorkspaceSource).toContain("border-l border-[var(--emr-border-strong)]");
+});
+
 test("primary command button uses primary token instead of brand blue", async ({ page }) => {
   await page.goto(treatmentUrl);
 

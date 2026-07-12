@@ -66,7 +66,7 @@ function EmrPopoverShell({
   return (
     <PopoverContent
       className={cn(
-        "gap-0 overflow-hidden rounded-lg border-[var(--emr-line-default)] bg-popover p-0 shadow-[var(--clair-shadow-md)] ring-1 ring-foreground/10",
+        "gap-0 overflow-hidden rounded-lg border-[var(--emr-border-default)] bg-popover p-0 shadow-[var(--clair-shadow-md)] ring-1 ring-foreground/10",
         widthClassName[width],
         densityClassName[density],
         className
@@ -179,7 +179,7 @@ function EmrPopoverFooter({
     <div
       data-slot="emr-popover-footer"
       className={cn(
-        "flex items-center justify-between gap-2 border-t border-[var(--emr-line-default)] px-3 py-2.5",
+        "flex items-center justify-between gap-2 border-t border-[var(--emr-border-default)] px-3 py-2.5",
         className
       )}
       {...props}
@@ -303,7 +303,7 @@ function EmrPopoverOption({
         <span
           aria-hidden="true"
           className={cn(
-            "mt-0.5 flex size-4 shrink-0 items-center justify-center border border-[var(--emr-line-default)] text-[10px] text-primary-foreground",
+            "mt-0.5 flex size-4 shrink-0 items-center justify-center border border-[var(--emr-border-subtle)] text-[10px] text-primary-foreground",
             resolvedSelection === "radio" ? "rounded-full" : "rounded-[4px]",
             selected && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected-border)]"
           )}

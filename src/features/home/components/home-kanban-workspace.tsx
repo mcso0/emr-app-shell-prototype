@@ -828,7 +828,7 @@ function TaskDetailPanel({
 
   return (
     <aside
-      className="flex h-full w-[420px] shrink-0 flex-col border-l border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
+      className="flex h-full w-[420px] shrink-0 flex-col border-l border-[var(--emr-border-strong)] bg-[var(--emr-surface-panel)]"
       data-testid="home-work-status-detail"
       aria-label="선택한 업무 상세"
     >

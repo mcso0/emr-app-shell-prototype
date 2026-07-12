@@ -38,7 +38,7 @@ export const emrDialogShellLayouts = {
   form: {
     contentClassName:
       "grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[520px]",
-    headerClassName: "border-b border-[var(--emr-line-hairline)] px-6 pb-4 pt-6",
+    headerClassName: "border-b border-[var(--emr-border-default)] px-6 pb-4 pt-6",
     bodyClassName: "min-h-0 overflow-y-auto px-6 py-5",
     footerClassName:
       "-mx-0 -mb-0 items-center justify-end rounded-none border-t bg-[var(--emr-surface-panel)] px-6 py-4 sm:justify-end",
@@ -46,7 +46,7 @@ export const emrDialogShellLayouts = {
   "wide-form": {
     contentClassName:
       "grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[680px]",
-    headerClassName: "border-b border-[var(--emr-line-hairline)] px-8 pb-4 pt-7",
+    headerClassName: "border-b border-[var(--emr-border-default)] px-8 pb-4 pt-7",
     bodyClassName: "min-h-0 overflow-y-auto px-8 py-6",
     footerClassName:
       "-mx-0 -mb-0 items-center justify-end rounded-none border-t bg-[var(--emr-surface-panel)] px-8 py-4 sm:justify-end",

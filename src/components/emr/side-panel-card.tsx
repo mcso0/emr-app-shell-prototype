@@ -54,7 +54,7 @@ export function EmrSidePanelCard({
         "group/emr-side-panel-card relative w-full overflow-hidden text-left outline-none transition-all duration-[var(--clair-motion-duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 active:shadow-none",
         selectionVariant === "modulePanel"
           ? "flex flex-col gap-[var(--emr-sidepanel-task-card-gap)] rounded-[var(--emr-sidepanel-task-card-radius)] border border-[var(--emr-sidepanel-task-card-border)] bg-[var(--emr-sidepanel-task-card-bg)] p-[var(--emr-sidepanel-task-card-padding)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--emr-sidepanel-task-card-hover-bg)] hover:shadow-[var(--clair-shadow-xs)]"
-          : "emr-density-card rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)] hover:shadow-[var(--clair-shadow-sm)]",
+          : "emr-density-card rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)] hover:shadow-[var(--clair-shadow-sm)]",
         selected &&
           (selectionVariant === "modulePanel"
             ? "border-[var(--emr-sidepanel-task-card-selected-border)] bg-[var(--emr-sidepanel-task-card-selected-bg)] hover:bg-[var(--emr-sidepanel-task-card-selected-bg)] hover:shadow-none"
