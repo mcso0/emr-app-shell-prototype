@@ -75,6 +75,7 @@ import {
   updateSessionWorkspaceMembershipRoles,
 } from "@/features/auth/workspace-session";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import {
   createWorkspaceRoleCatalogApi,
 } from "@/features/hospital-admin/role-permission-management/server-catalog";
@@ -337,6 +338,12 @@ export function WorkspaceMembershipManagement({
           : row.rowType === "member" && isArchivedMembershipStatus(row.status);
     return matchesQuery && matchesJob && matchesDepartment && matchesTab;
   });
+  const hasMemberFilters = Boolean(memberQuery.trim()) || jobFilter !== "all" || departmentFilter !== "all" || directoryTab !== "all";
+  const memberEmptyStateKind = hasMemberFilters ? "no-filter-results" : "no-data";
+  const memberEmptyStateTitle = hasMemberFilters ? "조건에 맞는 구성원이 없습니다" : "등록된 구성원이 없습니다";
+  const memberEmptyStateDescription = hasMemberFilters
+    ? "검색어나 분류를 바꾸면 구성원이 다시 표시됩니다."
+    : "구성원이 등록되면 이 표에 표시됩니다.";
 
   const updateState = useCallback((nextState: SessionWorkspacesState) => {
     stateRef.current = nextState;
@@ -971,7 +978,17 @@ export function WorkspaceMembershipManagement({
                   {row.rowType === "member" && isArchivedMembershipStatus(row.status) ? <p className="mt-2 text-xs text-muted-foreground">보관 사유: {row.archivedReason ?? row.deletedReason ?? "-"}</p> : null}
                 </div>
               ))}
-              {statusReadState !== "loading" && visibleRows.length === 0 ? <p className="rounded-md border bg-card p-6 text-center text-sm text-muted-foreground">현재 조건에 맞는 구성원이 없습니다.</p> : null}
+              {statusReadState !== "loading" && visibleRows.length === 0 ? (
+                <EmrEmptyState
+                  kind={memberEmptyStateKind}
+                  priority={hasMemberFilters ? "local-recovery" : "supporting"}
+                  surface="table"
+                  size="md"
+                  testId="hospital-members-empty-state-mobile"
+                  title={memberEmptyStateTitle}
+                  description={memberEmptyStateDescription}
+                />
+              ) : null}
             </div>
 
             <Table minWidth={720} className="hidden table-fixed text-[13px] md:table">
@@ -1033,8 +1050,18 @@ export function WorkspaceMembershipManagement({
                 })}
                 {statusReadState !== "loading" && visibleRows.length === 0 ? (
                   <TableRow className="bg-card">
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      현재 조건에 맞는 구성원이 없습니다.
+                    <TableCell colSpan={6} className="h-36">
+                      <div className="flex justify-center px-4 py-6">
+                        <EmrEmptyState
+                          kind={memberEmptyStateKind}
+                          priority={hasMemberFilters ? "local-recovery" : "supporting"}
+                          surface="table"
+                          size="md"
+                          testId="hospital-members-empty-state-desktop"
+                          title={memberEmptyStateTitle}
+                          description={memberEmptyStateDescription}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : null}

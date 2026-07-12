@@ -1773,6 +1773,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                         kind={orderEmptyStateKind}
                         priority={orderEmptyStatePriority}
                         surface="table"
+                        size="md"
+                        testId="hospital-order-empty-state"
                         title={orderEmptyStateTitle}
                         description={orderEmptyStateDescription}
                       />
@@ -1848,6 +1850,14 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
   const [events, setEvents] = useState<AuditReviewEventRow[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "denied" | "error">("idle");
   const canReview = session?.role === "hospital_admin" || session?.role === "supabase";
+  const hasAuditFilters = Boolean(query.trim()) || eventType !== "all";
+  const auditEmptyStateKind = hasAuditFilters ? "no-filter-results" : "no-data";
+  const auditEmptyStateTitle = hasAuditFilters
+    ? "조건에 맞는 감사 로그가 없습니다"
+    : "표시할 감사 로그가 없습니다";
+  const auditEmptyStateDescription = hasAuditFilters
+    ? "검색어나 필터를 바꾸면 감사 로그가 다시 표시됩니다."
+    : "기록이 생성되면 이 표에 표시됩니다.";
 
   useEffect(() => {
     hydrate();
@@ -1995,7 +2005,19 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
                   </TableRow>
                 ) : events.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center emr-text-dense text-muted-foreground">표시할 감사 로그가 없습니다.</TableCell>
+                    <TableCell colSpan={5} className="h-36">
+                      <div className="flex justify-center px-4 py-6">
+                        <EmrEmptyState
+                          kind={auditEmptyStateKind}
+                          priority={hasAuditFilters ? "local-recovery" : "supporting"}
+                          surface="table"
+                          size="md"
+                          testId="hospital-audit-empty-state"
+                          title={auditEmptyStateTitle}
+                          description={auditEmptyStateDescription}
+                        />
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ) : null}
               </TableBody>

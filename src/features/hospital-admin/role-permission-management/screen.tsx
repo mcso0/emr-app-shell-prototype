@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -953,7 +954,15 @@ export function RolePermissionManagementScreen({
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">지정된 활성 구성원이 없습니다.</p>
+              <EmrEmptyState
+                kind="no-data"
+                priority="supporting"
+                surface="drawer"
+                size="sm"
+                reserveActionSpace={false}
+                testId="hospital-role-assigned-members-empty-state"
+                title="지정된 활성 구성원이 없습니다"
+              />
             )}
             {onOpenMemberManagement ? (
               <Button

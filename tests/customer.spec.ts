@@ -438,6 +438,23 @@ test("customer side panel uses the shared title and collapse header", async ({ p
   await expect(page).toHaveURL(/modulePanel=closed/);
 });
 
+test("customer deleted history uses the mg table empty state and distinguishes search results", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open");
+  await page.getByTestId("customer-side-panel-deleted").click();
+
+  const emptyState = page.getByTestId("customer-deleted-empty-state");
+  await expect(emptyState).toHaveAttribute("data-size", "md");
+  await expect(emptyState).toHaveAttribute("data-surface", "table");
+  await expect(emptyState).toHaveAttribute("data-kind", "no-data");
+  await expect(emptyState).toContainText("삭제된 보호자/동물이 없습니다");
+  await expect(emptyState).toContainText("삭제 이력이 없습니다");
+
+  await page.getByPlaceholder("삭제 항목 검색").fill("없는 삭제 기록");
+  await expect(emptyState).toHaveAttribute("data-kind", "no-filter-results");
+  await expect(emptyState).toContainText("조건에 맞는 삭제 항목이 없습니다");
+  await expect(emptyState).toContainText("검색어를 바꾸면 삭제 이력이 다시 보입니다");
+});
+
 test("common patient and guardian drawers are available outside reception", async ({ page }) => {
   await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&drawer=patient:patient-coco");
 

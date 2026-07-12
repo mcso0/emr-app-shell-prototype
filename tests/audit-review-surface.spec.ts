@@ -55,7 +55,9 @@ test("hospital admin audit review surface renders events and blocks non-admin us
   await page.goto("/login?next=%2Fw%2Fclair-demo%2Forders%3FmodulePanel%3Dopen%26aside%3Dclosed");
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await page.getByPlaceholder("이메일을 입력해주세요").fill("admin@clair.local");
+  await page.getByPlaceholder("비밀번호를 입력해주세요").fill("local-pass-1");
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await page.getByRole("button", { name: "감사 로그" }).click();
   await expect(page.getByRole("heading", { name: "감사 로그" })).toBeVisible();
@@ -68,9 +70,34 @@ test("hospital admin audit review surface renders events and blocks non-admin us
 
   await page.goto("/login?next=%2Fw%2Fclair-demo%2Forders%3FmodulePanel%3Dopen%26aside%3Dclosed");
   await page.getByRole("button", { name: /수의사/ }).click();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await page.getByPlaceholder("이메일을 입력해주세요").fill("vet@clair.local");
+  await page.getByPlaceholder("비밀번호를 입력해주세요").fill("local-pass-1");
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
   await page.getByRole("button", { name: "감사 로그" }).click();
   await expect(page.getByText("감사 로그 접근 제한")).toBeVisible();
+});
+
+test("hospital admin audit review uses the mg table empty state when no events match", async ({ page }) => {
+  await page.route("**/api/workspaces/clair-demo/audit/events**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, events: [] }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.getByTestId("hospital-admin-menu-audit").click();
+
+  const emptyState = page.getByTestId("hospital-audit-empty-state");
+  await expect(emptyState).toHaveAttribute("data-size", "md");
+  await expect(emptyState).toHaveAttribute("data-surface", "table");
+  await expect(emptyState).toHaveAttribute("data-kind", "no-data");
+  await expect(emptyState).toContainText("표시할 감사 로그가 없습니다");
+
+  await page.getByLabel("감사 로그 검색").fill("없는 actor");
+  await expect(emptyState).toHaveAttribute("data-kind", "no-filter-results");
+  await expect(emptyState).toContainText("조건에 맞는 감사 로그가 없습니다");
 });
 
 test("audit review migration adds an admin-only reader without direct table grants", () => {

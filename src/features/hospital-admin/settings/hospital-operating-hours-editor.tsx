@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -274,7 +275,15 @@ export function HospitalOperatingHoursEditor({
             <FieldDescription>예외 일정을 추가해 날짜별 운영시간을 설정해 주세요.</FieldDescription>
           ) : null}
           {exceptions.length === 0 ? (
-            <p className="emr-text-dense text-muted-foreground">등록된 예외 일정이 없습니다.</p>
+            <EmrEmptyState
+              kind="no-data"
+              priority="supporting"
+              surface="table"
+              size="sm"
+              reserveActionSpace={false}
+              testId="hospital-settings-exception-empty-state"
+              title="등록된 예외 일정이 없습니다"
+            />
           ) : (
             <div className="grid gap-2">
               {exceptions.map((exception) => (
