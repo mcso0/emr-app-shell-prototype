@@ -2280,7 +2280,6 @@ function SoapPanel({
   const [manualSystemLabels, setManualSystemLabels] = useState<string[]>([]);
   const [deletedSystemLabels, setDeletedSystemLabels] = useState<string[]>([]);
   const [activeSoapId, setActiveSoapId] = useState("default");
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteSoapId, setDeleteSoapId] = useState<string | null>(null);
   const [resetSoapId, setResetSoapId] = useState<string | null>(null);
   const [pendingDefaultContent, setPendingDefaultContent] = useState<
@@ -2623,17 +2622,41 @@ function SoapPanel({
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]">
       <div className="relative z-10 flex h-12 min-h-12 shrink-0 items-stretch justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
         {soapTabs}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="self-center bg-card"
-          disabled={writeDisabled}
-          onClick={() => setAddDialogOpen(true)}
-        >
-          <CdsActionsPlusIcon data-icon="inline-start" />
-          SOAP 추가
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="self-center bg-card"
+                disabled={writeDisabled}
+              >
+                <CdsActionsPlusIcon data-icon="inline-start" />
+                SOAP 추가
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-40">
+            {soapSystemOptions.map((systemLabel) => {
+              const alreadyAdded = addedSystemLabels.has(systemLabel);
+
+              return (
+                <DropdownMenuItem
+                  key={systemLabel}
+                  className="h-8 cursor-pointer justify-between"
+                  disabled={writeDisabled || alreadyAdded}
+                  onClick={() => addSystemSoap(systemLabel, true)}
+                >
+                  <span>{systemLabel}</span>
+                  {alreadyAdded ? (
+                    <Badge variant="outline">이미 추가됨</Badge>
+                  ) : null}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
         {activeSection ? (
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -2761,43 +2784,6 @@ function SoapPanel({
           </div>
         ) : null}
       </div>
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-[460px] gap-0 p-0" showCloseButton>
-          <DialogHeader className="border-b border-[var(--emr-line-hairline)] px-6 py-5">
-            <DialogTitle className="text-[18px] font-bold leading-6 text-foreground">
-              SOAP 진단계통 선택
-            </DialogTitle>
-            <DialogDescription className="emr-text-dense">
-              진단명 섹션의 계통분류와 같은 기준으로 SOAP 탭을 추가합니다.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-1 p-3">
-            {soapSystemOptions.map((systemLabel) => {
-              const alreadyAdded = addedSystemLabels.has(systemLabel);
-
-              return (
-                <button
-                  key={systemLabel}
-                  type="button"
-                  disabled={writeDisabled || alreadyAdded}
-                  className="flex min-h-11 items-center justify-between rounded-md px-3 text-left emr-text-dense transition-colors hover:bg-[var(--emr-state-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() => {
-                    addSystemSoap(systemLabel, true);
-                    setAddDialogOpen(false);
-                  }}
-                >
-                  <span className="font-semibold text-foreground">
-                    {systemLabel}
-                  </span>
-                  {alreadyAdded ? (
-                    <Badge variant="outline">이미 추가됨</Badge>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </DialogContent>
-      </Dialog>
       <Dialog
         open={deleteSoapId !== null}
         onOpenChange={(open) => !open && setDeleteSoapId(null)}
