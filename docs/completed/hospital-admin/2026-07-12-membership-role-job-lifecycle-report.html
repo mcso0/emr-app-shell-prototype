@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>병원 구성원·역할·직무 lifecycle 구현 결과</title>
+  <style>
+    :root{color-scheme:light;--bg:#f7f7f8;--panel:#fff;--text:#171719;--muted:#6b6b73;--line:#e6e6e9;--accent:#18181b;--good:#087a45;--warn:#9a5b00}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6}.wrap{width:min(1040px,calc(100% - 32px));margin:48px auto}.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}h1{max-width:760px;margin:10px 0 12px;font-size:clamp(30px,5vw,52px);line-height:1.12;letter-spacing:-.04em}.lead{max-width:760px;margin:0;color:var(--muted);font-size:17px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:28px 0}.metric,.section{border:1px solid var(--line);border-radius:14px;background:var(--panel)}.metric{padding:18px}.metric strong{display:block;font-size:24px}.metric span{font-size:13px;color:var(--muted)}.section{margin-top:14px;padding:24px}h2{margin:0 0 14px;font-size:19px;letter-spacing:-.02em}ul{margin:0;padding-left:20px}.status{display:inline-flex;margin-top:18px;padding:6px 10px;border-radius:999px;background:#e9f8f0;color:var(--good);font-size:13px;font-weight:700}.risk{border-color:#f0d6ad;background:#fffaf1}.risk h2{color:var(--warn)}code{padding:2px 5px;border-radius:5px;background:#f0f0f2;font-size:.9em}@media(max-width:720px){.wrap{margin:28px auto}.grid{grid-template-columns:1fr}.section{padding:20px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="eyebrow">HOSPITAL-ADMIN-PR-004 · 2026-07-12</div>
+    <h1>삭제가 아닌 보관으로, 구성원과 권한 이력을 안전하게 관리한다.</h1>
+    <p class="lead">구성원 디렉터리의 정보 위계를 정리하고 구성원·권한 역할·직무의 lifecycle을 DB, API, 감사 로그, 관리 UI까지 연결했다.</p>
+    <div class="status">로컬 구현 및 검증 완료 · 릴리스 승인 대기</div>
+    <section class="grid" aria-label="핵심 결과">
+      <div class="metric"><strong>3</strong><span>구성원 상태: 활성·비활성·보관됨</span></div>
+      <div class="metric"><strong>76</strong><span>관련 서버·migration·UI 검증 통과</span></div>
+      <div class="metric"><strong>1 transaction</strong><span>상태 변경과 감사 로그의 원자 처리</span></div>
+    </section>
+    <section class="section"><h2>무엇이 달라졌나</h2><ul><li>구성원 보관은 사유를 필수로 받고 기본 목록에서 제외하며, 복구 시 비활성으로 돌아온다.</li><li>본인과 마지막 활성 소유자 조작, 비소유자의 소유자 조작을 서버와 DB에서 차단한다.</li><li>역할 비활성화는 비보관 구성원과 대기 초대를 활성 대체 역할로 이동한다.</li><li>직무 비활성화는 기존 구성원 이력을 유지하고 대기 초대만 대체 직무로 변경한다.</li><li>역할·직무 화면은 서버 목록·생성·비활성·재활성 API를 사용한다.</li></ul></section>
+    <section class="section"><h2>UX 결과</h2><ul><li><code>전체 / 초대 대기 / 비활성 / 보관됨</code> 탭과 검색·직무·부서 필터를 유지했다.</li><li>행 클릭과 키보드로 상세 Sheet를 열고, 상태에 맞는 작업만 더보기 메뉴에 노출한다.</li><li>삭제·90일 영구 삭제 검토 문구를 제거하고 보관·복구 의미를 명확히 했다.</li><li>로딩 Skeleton, 빈 상태, 서버 읽기 실패 안내, 데스크톱 테이블과 모바일 목록을 제공한다.</li></ul></section>
+    <section class="section"><h2>검증</h2><ul><li>로컬 Supabase migration reset/replay 성공</li><li>실제 PostgreSQL transaction probe로 보관·복구·역할·직무·감사 이벤트와 직접 mutation 차단 확인</li><li>관련 Playwright 77건 중 74건 통과, 실패 3건 중 2건은 단독 재실행 통과</li><li>잔여 1건은 로컬 DB reset 뒤 테스트 전용 workspace bootstrap 대기 timeout이며 변경 API·migration 집중 검증은 통과</li><li>TypeScript, 전체 ESLint, secret scan, docs check, production build 통과</li><li>데스크톱 브라우저에서 구성원 디렉터리와 역할·직무 화면 확인</li></ul></section>
+    <section class="section risk"><h2>릴리스 전 확인</h2><p>새 Next.js API는 새 Supabase RPC와 컬럼을 요구한다. 원격 migration과 애플리케이션 코드를 같은 릴리스 단위로 적용해야 하며, 원격 DB 적용 승인 없이 <code>main</code> production 배포를 진행하면 안 된다.</p></section>
+  </main>
+</body>
+</html>

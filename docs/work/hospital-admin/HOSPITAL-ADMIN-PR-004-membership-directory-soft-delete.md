@@ -1,7 +1,7 @@
 ---
 id: HOSPITAL-ADMIN-PR-004
 title: 병원 구성원 디렉터리와 구성원·역할·직무 lifecycle
-status: in_progress
+status: human_review
 area: hospital-admin
 ---
 
@@ -45,3 +45,25 @@ area: hospital-admin
 * archive route 권한·본인 조작·복구·마지막 소유자 계약 테스트
 * 역할 대체, 직무 초대 대체, migration 호환 전환 및 RLS 테스트
 * 구성원 상태 reader/UI 회귀 테스트
+
+## 구현 결과
+
+* 구성원 상태를 `활성 / 비활성 / 보관됨`으로 정리하고, 복구 결과를 항상 비활성으로 제한했다.
+* 구성원 lifecycle 변경과 감사 이벤트를 동일 DB 트랜잭션에서 기록한다.
+* 커스텀 역할 비활성화는 활성·비활성 구성원과 대기 초대를 대체 역할로 이동하며 보관 이력은 유지한다.
+* 직무 비활성화는 구성원 배정을 유지하고 대기 초대에만 대체 직무를 적용한다.
+* 역할·직무 정의 관리 화면을 서버 API와 연결하고 비활성 정의를 신규 선택에서 제외했다.
+* 직접 테이블 mutation 권한을 회수해 lifecycle RPC 보안 경계를 우회하지 못하도록 했다.
+
+## 검증 결과
+
+* 로컬 Supabase 전체 migration replay 성공
+* 구성원·초대·역할·직무 관련 Playwright 77건 중 74건 통과, 실패 3건 중 2건 단독 재실행 통과
+* 잔여 1건은 로컬 DB reset 뒤 테스트 전용 workspace bootstrap 대기 timeout으로 기록
+* 구성원 디렉터리와 역할·직무 관리 화면 브라우저 QA 완료
+* `npx tsc --noEmit` 및 변경 UI ESLint 통과
+* 전체 release gate 결과는 PR/릴리스 보고서에 기록한다.
+
+## 릴리스 주의
+
+새 API와 원격 DB migration은 같은 릴리스 단위로 적용해야 한다. 원격 Supabase migration 적용 전에는 `main` production 배포를 진행하지 않는다.
