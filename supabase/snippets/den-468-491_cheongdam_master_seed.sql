@@ -138,24 +138,25 @@ set
   status = excluded.status,
   updated_at = now();
 
-insert into public.user_profiles (user_id, locale, timezone, notification_preferences)
+insert into public.user_profiles (user_id, avatar_url, locale, timezone, notification_preferences)
 values
-  ('49110000-0000-4000-8000-000000000001', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000002', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000003', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000004', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000005', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000006', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000007', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000008', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000009', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000010', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000011', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000012', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000013', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
-  ('49110000-0000-4000-8000-000000000014', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb)
+  ('49110000-0000-4000-8000-000000000001', '49110000-0000-4000-8000-000000000001.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000002', null, 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000003', '49110000-0000-4000-8000-000000000003.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000004', null, 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000005', '49110000-0000-4000-8000-000000000005.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000006', '49110000-0000-4000-8000-000000000006.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000007', '49110000-0000-4000-8000-000000000007.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000008', '49110000-0000-4000-8000-000000000008.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000009', '49110000-0000-4000-8000-000000000009.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000010', '49110000-0000-4000-8000-000000000010.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000011', '49110000-0000-4000-8000-000000000011.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000012', '49110000-0000-4000-8000-000000000012.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000013', '49110000-0000-4000-8000-000000000013.png', 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb),
+  ('49110000-0000-4000-8000-000000000014', null, 'ko-KR', 'Asia/Seoul', '{"email":false,"browser":true}'::jsonb)
 on conflict (user_id) do update
 set
+  avatar_url = excluded.avatar_url,
   locale = excluded.locale,
   timezone = excluded.timezone,
   notification_preferences = excluded.notification_preferences,

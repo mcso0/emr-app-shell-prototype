@@ -27,7 +27,7 @@ import {
   mockLabResults,
 } from "@/mocks/emr-domain";
 import { AuthProfileMenu } from "@/shell/auth-profile-menu";
-import { workspaceTabIconById } from "@/shell/module-nav-icons";
+import { moduleIconById } from "@/shell/module-nav-icons";
 import { WorkspaceChromeTabs } from "@/shell/workspace-chrome-tabs";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { WorkspaceTab } from "@/stores/workspace-tabs-store";
@@ -243,9 +243,9 @@ export function WorkspaceTabsBar({
     const preview = getTabPreview(tab);
 
     return {
-      icon: workspaceTabIconById[tab.moduleId]?.icon,
+      icon: moduleIconById[tab.moduleId]?.icon,
       iconClassName: cn(
-        workspaceTabIconById[tab.moduleId]?.iconClassName,
+        moduleIconById[tab.moduleId]?.iconClassName,
         tab.moduleId === "lab" && "translate-y-px",
       ),
       id: tab.id,
