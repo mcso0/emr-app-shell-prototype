@@ -176,6 +176,12 @@ test("production login does not expose mock development controls", () => {
   expect(source).toContain("(isInviteLogin || isInviteOtpLogin) && !isProductionRuntime");
 });
 
+test("login logo background uses the Sky 500 brand color", () => {
+  const source = readFileSync("logo/logo48*48.svg", "utf8");
+
+  expect(source).toMatch(/<rect[^>]+fill="#1085FF"\/>/);
+});
+
 test("production hidden mock fallback maps synthetic account emails to roles", () => {
   expect(resolveDemoMockAuthRoleFromEmail("admin@clair.local")).toBe("hospital_admin");
   expect(resolveDemoMockAuthRoleFromEmail(" VET@CLAIR.LOCAL ")).toBe("vet");
