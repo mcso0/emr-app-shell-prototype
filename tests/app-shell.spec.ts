@@ -785,6 +785,8 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   const workspaceArea = page.getByTestId("shell-workspace-area");
   const workspaceSwitcher = page.getByTestId("workspace-switcher");
   const modulePanelArea = page.getByTestId("module-panel-area");
+  const navRail = getNavRail(page);
+  const navRailContent = navRail.locator(":scope > div").first();
 
   await expect(navigationColumn).toBeVisible();
   await expect(workspaceSwitcher).toBeVisible();
@@ -797,21 +799,26 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   const switcherBox = await workspaceSwitcher.boundingBox();
   const modulePanelBox = await modulePanelArea.boundingBox();
   const workspaceBox = await workspaceArea.boundingBox();
+  const navRailBox = await navRail.boundingBox();
 
   expectRect(navigationBox);
   expectRect(switcherBox);
   expectRect(modulePanelBox);
   expectRect(workspaceBox);
-  expect(Math.round(navigationBox.width)).toBe(56);
-  expect(Math.round(switcherBox.width)).toBe(56);
+  expectRect(navRailBox);
+  expect(Math.round(navRailBox.width)).toBe(52);
+  await expect(navRail).toHaveCSS("padding", "10px");
+  await expect(navRailContent).toHaveCSS("gap", "10px");
+  expect(Math.round(navigationBox.width)).toBe(52);
+  expect(Math.round(switcherBox.width)).toBe(52);
   expect(Math.round(switcherBox.height)).toBe(32);
-  expect(Math.round(modulePanelBox.width)).toBe(56);
+  expect(Math.round(modulePanelBox.width)).toBe(52);
   expect(workspaceBox.width).toBeGreaterThan(300);
 });
 
 test("app shell collapses workspace switcher with the navigation column", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=closed");
-  await waitForTestIdWidth(page, "shell-navigation-column", 56);
+  await waitForTestIdWidth(page, "shell-navigation-column", 52);
 
   const navigationColumn = page.getByTestId("shell-navigation-column");
   const workspaceSwitcher = page.getByTestId("workspace-switcher");
@@ -831,16 +838,16 @@ test("app shell collapses workspace switcher with the navigation column", async 
   expectRect(navigationBox);
   expectRect(switcherBox);
   expectRect(markBox);
-  expect(Math.round(navigationBox.width)).toBe(56);
-  expect(Math.round(switcherBox.width)).toBe(56);
+  expect(Math.round(navigationBox.width)).toBe(52);
+  expect(Math.round(switcherBox.width)).toBe(52);
   expect(Math.round(switcherBox.height)).toBe(32);
   expect(Math.round(markBox.width)).toBe(18);
   await expect(workspaceChevron).toHaveCSS("width", "16px");
   await expect(workspaceChevron).toHaveCSS("height", "16px");
   const chevronBox = await workspaceChevron.boundingBox();
   expectRect(chevronBox);
-  expect(Math.round(markBox.x - switcherBox.x)).toBe(9);
-  expect(Math.round(switcherBox.x + switcherBox.width - (chevronBox.x + chevronBox.width))).toBe(9);
+  expect(Math.round(markBox.x - switcherBox.x)).toBe(7);
+  expect(Math.round(switcherBox.x + switcherBox.width - (chevronBox.x + chevronBox.width))).toBe(7);
 });
 
 test("dispensing table supports hover selection and bulk completion", async ({ page }) => {
