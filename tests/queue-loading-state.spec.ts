@@ -87,7 +87,8 @@ async function delayRouteUntilAsserted(page: Page, url: string) {
 
 async function getQueueStateIconBoxSize(page: Page, stateText: string) {
   return page.locator("aside").first().getByText(stateText, { exact: true }).evaluate((textElement) => {
-    const iconElement = textElement.previousElementSibling;
+    const state = textElement.closest<HTMLElement>('section[data-surface="queue"]');
+    const iconElement = state?.querySelector<HTMLElement>('[data-slot="icon-area"]');
     if (!iconElement) return null;
 
     const box = iconElement.getBoundingClientRect();
@@ -100,17 +101,19 @@ async function getQueueStateIconBoxSize(page: Page, stateText: string) {
 
 async function getQueueStateIconRootTagName(page: Page, stateText: string) {
   return page.locator("aside").first().getByText(stateText, { exact: true }).evaluate((textElement) => {
-    const iconElement = textElement.previousElementSibling;
+    const state = textElement.closest<HTMLElement>('section[data-surface="queue"]');
+    const iconElement = state?.querySelector<HTMLElement>('[data-slot="icon-area"]');
     return iconElement?.firstElementChild?.tagName ?? null;
   });
 }
 
 async function getQueueStateIconTextGap(page: Page, stateText: string) {
   return page.locator("aside").first().getByText(stateText, { exact: true }).evaluate((textElement) => {
-    const iconElement = textElement.previousElementSibling;
-    if (!iconElement) return null;
+    const state = textElement.closest<HTMLElement>('section[data-surface="queue"]');
+    const iconWrapper = state?.querySelector<HTMLElement>('[data-slot="icon-wrapper"]');
+    if (!iconWrapper) return null;
 
-    const iconBox = iconElement.getBoundingClientRect();
+    const iconBox = iconWrapper.getBoundingClientRect();
     const textBox = textElement.getBoundingClientRect();
     return Math.round(textBox.top - iconBox.bottom);
   });
@@ -119,7 +122,7 @@ async function getQueueStateIconTextGap(page: Page, stateText: string) {
 async function expectQueueStateSpacing(page: Page, stateText: string) {
   await expect
     .poll(async () => getQueueStateIconBoxSize(page, stateText))
-    .toEqual({ height: 40, width: 40 });
+    .toEqual({ height: 32, width: 32 });
   await expect
     .poll(async () => getQueueStateIconTextGap(page, stateText))
     .toBe(8);

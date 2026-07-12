@@ -15,6 +15,7 @@ import {
 import { ChevronDownIcon } from "@/components/icons";
 import { SidebarGnbIcon } from "@/components/gnb-icons";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
+import { EmrEmptyState, type EmrEmptyStateKind } from "@/components/emr/empty-state";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrMotionIcon } from "@/components/emr/motion-icon";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,6 @@ import {
   parseIsoDateParts,
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
-import folderFileCloseMotionIcon from "../../../icons/motionIcon/Folder File close.json";
 import queueLoadingMotionIcon from "../../../icons/motionIcon/iconly-icon-export-1782392467.json";
 import searchNotFoundMotionIcon from "../../../icons/motionIcon/search-not-found.json";
 
@@ -501,6 +501,7 @@ export function EmrListHeaderIconButton({
 
 export function EmrListSearchEmptyState(props: {
   className?: string;
+  description?: ReactNode;
   motionIcon?: ReactNode;
   objectLabel?: string;
   onClear: () => void;
@@ -510,7 +511,7 @@ export function EmrListSearchEmptyState(props: {
   const motionIcon = props.motionIcon ?? (
     <EmrMotionIcon
       animationData={searchNotFoundMotionIcon}
-      className="size-10 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
+      className="size-4 text-[var(--clair-color-atomic-black-alpha-48)] [&_path]:!stroke-current"
       loop={false}
     />
   );
@@ -518,7 +519,9 @@ export function EmrListSearchEmptyState(props: {
   return (
     <EmrQueueEmptyState
       className={props.className}
+      description={props.description ?? "검색어를 바꾸면 결과가 다시 표시됩니다"}
       icon={motionIcon}
+      kind="no-search-results"
       placement={props.placement}
       title="검색 결과가 없습니다"
       data-testid="emr-list-search-empty-state"
@@ -541,10 +544,12 @@ export function EmrQueueLoadingState({
       icon={
         <EmrMotionIcon
           animationData={queueLoadingMotionIcon}
-          className="size-10 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
+          className="size-4 text-[var(--clair-color-atomic-black-alpha-48)] [&_path]:!stroke-current"
         />
       }
+      kind="upstream-pending"
       placement={placement}
+      reserveActionSpace={false}
       title={title}
       data-testid="emr-queue-loading-state"
     />
@@ -554,45 +559,50 @@ export function EmrQueueLoadingState({
 export function EmrQueueEmptyState({
   children,
   className,
+  description,
   icon,
   iconClassName,
+  kind = "no-data",
   placement = "body-center",
+  reserveActionSpace = true,
   title,
   ...props
 }: {
   children?: ReactNode;
   className?: string;
+  description?: ReactNode;
   icon?: ReactNode;
   iconClassName?: string;
+  kind?: EmrEmptyStateKind;
   placement?: EmrQueueStatePlacement;
+  reserveActionSpace?: boolean;
   title?: ReactNode;
 } & ComponentProps<"div">) {
+  const resolvedIcon = icon ? (
+    <span className={cn("flex size-4 items-center justify-center", iconClassName)}>
+      {icon}
+    </span>
+  ) : undefined;
+
   return (
     <div
       className={cn(
-        "flex min-h-[220px] flex-1 flex-col items-center justify-center px-4 py-8 text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
+        "flex min-h-[220px] flex-1 flex-col items-center justify-center px-4 py-8 text-center",
         placement === "panel-center" && "-translate-y-[72px]",
         className,
       )}
       {...props}
     >
-      <div
-        className={cn(
-          "mb-2 flex size-10 items-center justify-center text-[var(--emr-text-placeholder)]",
-          iconClassName,
-        )}
-      >
-        {icon ?? (
-          <EmrMotionIcon
-            animationData={folderFileCloseMotionIcon}
-            className="size-9 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
-            loop={false}
-          />
-        )}
-      </div>
-      <div className="emr-text-dense font-medium text-[var(--emr-text-placeholder)]">
-        {title ?? children}
-      </div>
+      <EmrEmptyState
+        description={description}
+        icon={resolvedIcon}
+        kind={kind}
+        priority="supporting"
+        reserveActionSpace={reserveActionSpace}
+        size="md"
+        surface="queue"
+        title={title ?? children}
+      />
     </div>
   );
 }

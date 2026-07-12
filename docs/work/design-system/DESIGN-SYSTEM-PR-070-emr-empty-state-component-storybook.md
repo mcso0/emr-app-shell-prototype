@@ -25,13 +25,13 @@ Create the shared `EmrEmptyState` runtime component and Storybook variants for t
 - Use existing Iconly motion JSON assets through `EmrMotionIcon`.
 - Add Storybook examples for queue, content, drawer, table, widget, permission-info, two-action, and 6-kind review states.
 - Align the shared visual contract to CDS.V2 Figma `lg`/`md`/`sm` tiers, including icon slots, typography, alpha tokens, action ordering, and size-specific reserved action space.
+- Apply the `md`/`mg` contract to every shared side-panel queue empty state through `EmrQueueEmptyState`, including reception, chart, lab, imaging, dispensing, billing, and Home.
 - Keep feature routing, permission checks, persistence, analytics, and logging outside the component.
 - Update design-system Storybook documentation index.
 
 ## Out Of Scope
 
 - Replacing existing feature-local empty states.
-- Changing `EmrQueueEmptyState` or current queue spacing behavior.
 - Creating live feature workflow stories.
 - Adding new dependencies or external Iconly network calls.
 - DB, Supabase, RLS, server enforcement, payment, email, deploy, external provider, or real data work.
@@ -58,6 +58,7 @@ Create the shared `EmrEmptyState` runtime component and Storybook variants for t
 - Passed the Figma size/action Storybook interaction contract: 13 tests.
 - Passed queue/content Playwright regression coverage: 12 tests.
 - Passed `npm run build`.
+- Side-panel queue empty states now expose the `md` contract across the seven supported module surfaces; focused visual contract coverage passes.
 
 ## Handoff Notes
 
@@ -78,7 +79,7 @@ This work starts the shared runtime component layer. Screen adoption should be a
 - `EmptyChartState` now uses the shared content-surface empty state for selected-patient absence.
 - The chart order table no-result row now uses the shared table-surface empty state for category/filter-empty results.
 - Updated the filter QA assertion to use the new empty-state description copy.
-- Queue placeholders were not changed.
+- Queue placeholders were previously kept separate from the content contract; the 2026-07-12 follow-up now routes their visual contract through `EmrEmptyState size="md"` while preserving queue placement.
 - Verification passed for focused eslint, TypeScript, docs link check, and the adopted table filter Playwright case.
 
 2026-07-12 Figma alignment checkpoint:
@@ -86,4 +87,4 @@ This work starts the shared runtime component layer. Screen adoption should be a
 - `EmrEmptyState` now exposes `size="lg" | "md" | "sm"`; legacy `density` resolves to the corresponding visual tier for compatibility.
 - `lg` maps to content, `md` maps to side-panel/large-table usage, and `sm` maps to modal/small-table usage. The requested product label `mg` is represented by the Figma `md` implementation value.
 - Existing CLAiR alpha tokens are used for the icon area (`black-alpha-4`), icon/title (`black-alpha-48`), and description (`black-alpha-36`); local rgba/hex values were removed from the shared Empty State stories.
-- Storybook now contains Figma size and action contract stories with browser assertions. `EmrQueueEmptyState` remains unchanged.
+- Storybook contains Figma size and action contract stories with browser assertions. `EmrQueueEmptyState` now delegates its visual contract to `EmrEmptyState size="md"`.

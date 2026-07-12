@@ -718,6 +718,7 @@ export function HomeHospitalStatusSidePanel({
               <EmrQueueEmptyState
                 className="min-h-0"
                 data-testid="home-side-panel-empty-state"
+                description="오늘 표시할 원내 업무가 없습니다"
                 title="원내 업무가 없습니다"
               />
             )}
