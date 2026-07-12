@@ -55,7 +55,7 @@ function getWorkspaceTablist(page: Page) {
   return page.getByRole("tablist", { name: "열린 업무 탭" });
 }
 
-test("navigation rail keeps legacy GNB icons while workspace tabs use CDS GNB SVG icons", async ({ page }) => {
+test("navigation rail and workspace tabs keep their module-specific GNB icon contracts", async ({ page }) => {
   await resetWorkspaceTabs(page);
   await page.goto(homeRoute);
 
@@ -79,4 +79,12 @@ test("navigation rail keeps legacy GNB icons while workspace tabs use CDS GNB SV
 
   await expect(receptionNavIcon).toHaveAttribute("viewBox", "0 0 19 18.4717");
   await expect(receptionTabIcon).toHaveAttribute("viewBox", "0 0 24 24");
+
+  await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
+  const labTabIcon = getWorkspaceTablist(page)
+    .getByRole("tab", { name: "검사" })
+    .locator("svg");
+
+  await expect(labTabIcon).toHaveAttribute("viewBox", "0 0 12.5 17.5");
+  await expect(labTabIcon).toHaveClass(/rotate-45/);
 });
