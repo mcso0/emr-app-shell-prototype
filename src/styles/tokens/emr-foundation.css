@@ -103,7 +103,7 @@
 
   --emr-workspace-button-bg: var(--clair-color-atomic-common-100);
   --emr-workspace-button-hover-bg: var(--clair-color-atomic-black-alpha-4);
-  --emr-workspace-button-border: var(--clair-color-atomic-neutral-200);
+  --emr-workspace-button-border: var(--emr-border-default);
   --emr-workspace-button-text: var(--clair-color-atomic-neutral-900);
   --emr-workspace-button-icon: var(--clair-color-atomic-gray-500);
   --emr-workspace-button-logo-bg: var(--clair-color-atomic-sky-400);
@@ -143,7 +143,7 @@
   --emr-topbar-tab-bg: transparent;
   --emr-topbar-tab-hover-bg: var(--clair-color-atomic-black-alpha-6);
   --emr-topbar-tab-active-bg: var(--clair-color-atomic-common-100);
-  --emr-topbar-tab-active-border: var(--clair-color-atomic-neutral-200);
+  --emr-topbar-tab-active-border: var(--emr-border-default);
   --emr-topbar-tab-active-shadow: var(--clair-shadow-xs);
   --emr-topbar-tab-text: var(--clair-color-atomic-neutral-600);
   --emr-topbar-tab-active-text: var(--clair-color-atomic-neutral-800);
@@ -155,7 +155,7 @@
   --emr-topbar-tab-active-close: var(--clair-color-atomic-neutral-800);
   --emr-topbar-profile-width: var(--clair-spacing-48);
   --emr-topbar-profile-bg: var(--clair-color-atomic-common-100);
-  --emr-topbar-profile-border: var(--clair-color-atomic-neutral-200);
+  --emr-topbar-profile-border: var(--emr-border-default);
   --emr-topbar-profile-avatar-bg: var(--clair-color-atomic-neutral-100);
   --emr-topbar-profile-avatar-text: var(--foreground);
   --emr-topbar-profile-avatar-border: var(--clair-color-atomic-black-alpha-6);
@@ -282,7 +282,7 @@
   --emr-sidepanel-task-card-radius: var(--clair-radius-atomic-10);
   --emr-sidepanel-task-card-bg: var(--clair-color-atomic-common-100);
   --emr-sidepanel-task-card-hover-bg: var(--clair-color-atomic-black-alpha-4);
-  --emr-sidepanel-task-card-border: var(--clair-color-atomic-neutral-200);
+  --emr-sidepanel-task-card-border: var(--emr-border-default);
   --emr-sidepanel-task-card-selected-bg: color-mix(
     in srgb,
     var(--clair-color-atomic-sky-500) 6%,
@@ -301,7 +301,7 @@
   --emr-sidepanel-task-card-action-icon-size: 14px;
   --emr-sidepanel-task-card-action-radius: var(--clair-radius-atomic-4);
   --emr-sidepanel-task-card-action-bg: var(--clair-color-atomic-common-100);
-  --emr-sidepanel-task-card-action-border: var(--clair-color-atomic-neutral-200);
+  --emr-sidepanel-task-card-action-border: var(--emr-border-default);
   --emr-reception-create-field-label-width: 108px;
   --emr-reception-create-field-icon-size: 15px;
   --emr-reception-create-field-bg: var(--clair-color-atomic-common-100);
@@ -368,7 +368,7 @@
   --emr-context-bar-section-gap: var(--clair-spacing-12);
   --emr-context-bar-item-gap: var(--clair-spacing-6);
   --emr-context-bar-divider-height: 18px;
-  --emr-context-bar-divider: var(--clair-color-atomic-neutral-200);
+  --emr-context-bar-divider: var(--emr-border-default);
   --emr-context-bar-chip-height: 22px;
   --emr-context-bar-chip-bg: var(--clair-color-atomic-black-alpha-4);
   --emr-context-bar-chip-radius: var(--clair-radius-atomic-6);
@@ -386,14 +386,14 @@
   --emr-page-title-wrap-gap: var(--clair-spacing-8);
   --emr-page-title-action-gap: var(--clair-spacing-12);
   --emr-page-title-divider-height: 18px;
-  --emr-page-title-divider: var(--clair-color-atomic-neutral-200);
+  --emr-page-title-divider: var(--emr-border-default);
   --emr-document-info-radius: var(--clair-radius-atomic-10);
   --emr-document-info-padding-x: var(--clair-spacing-16);
   --emr-document-info-padding-y: var(--clair-spacing-12);
-  --emr-document-info-divider: var(--clair-color-atomic-neutral-200);
+  --emr-document-info-divider: var(--emr-border-default);
   --emr-content-aside-width: 280px;
   --emr-content-aside-bg: var(--emr-surface-content-panel);
-  --emr-content-aside-border: var(--clair-color-atomic-neutral-200);
+  --emr-content-aside-border: var(--emr-border-default);
   --emr-content-aside-padding-x: var(--clair-spacing-12);
   --emr-content-aside-header-padding-top: var(--clair-spacing-8);
   --emr-content-aside-section-gap: var(--clair-spacing-8);
@@ -412,7 +412,7 @@
   --emr-content-history-group-action-icon-size: 14px;
   --emr-content-history-timeline-gutter: var(--clair-spacing-10);
   --emr-content-history-timeline-padding-right: var(--clair-spacing-8);
-  --emr-content-history-timeline-line: var(--clair-color-atomic-neutral-200);
+  --emr-content-history-timeline-line: var(--emr-border-default);
   --emr-content-history-list-gap: var(--clair-spacing-4);
   --emr-content-history-card-padding: var(--clair-spacing-4);
   --emr-content-history-card-gap: var(--clair-spacing-4);
@@ -426,6 +426,9 @@
   --emr-content-history-card-chip-text: var(--clair-color-atomic-neutral-600);
   --emr-content-history-card-status-dot: var(--clair-color-atomic-sky-400);
 
+  --emr-border-subtle: var(--clair-color-atomic-neutral-100);
+  --emr-border-default: var(--clair-color-atomic-neutral-200);
+  --emr-border-strong: var(--clair-color-atomic-neutral-300);
   --emr-line-subtle: var(--clair-color-atomic-gray-100);
   --emr-line-hairline: var(--clair-color-atomic-gray-200);
   --emr-line-default: var(--clair-color-atomic-gray-200);
