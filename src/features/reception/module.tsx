@@ -3896,7 +3896,7 @@ function ScheduleToolbar({
 
   return (
     <div
-      className="flex h-[var(--emr-calendar-toolbar-height)] shrink-0 flex-nowrap items-center justify-between gap-4 overflow-hidden border-b bg-card px-[var(--emr-calendar-toolbar-padding-x)]"
+      className="flex h-[var(--emr-calendar-toolbar-height)] shrink-0 flex-nowrap items-center justify-between gap-4 overflow-hidden border-b bg-[var(--emr-surface-workspace)] px-[var(--emr-calendar-toolbar-padding-x)]"
       data-testid="schedule-toolbar"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-[var(--clair-spacing-16)]">
