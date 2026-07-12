@@ -49,11 +49,24 @@
 
   --clair-color-service-background: var(--emr-surface-app);
 
+  /* Product Sky palette override; keep this aligned with the canonical token source. */
+  --clair-color-atomic-sky-50: #F0F7FF;
+  --clair-color-atomic-sky-100: #DBEDFF;
+  --clair-color-atomic-sky-200: #ADD5FF;
+  --clair-color-atomic-sky-300: #70B6FF;
+  --clair-color-atomic-sky-400: #3D9CFF;
+  --clair-color-atomic-sky-500: #1085FF;
+  --clair-color-atomic-sky-600: #006BDB;
+  --clair-color-atomic-sky-700: #0055AD;
+  --clair-color-atomic-sky-800: #004185;
+  --clair-color-atomic-sky-900: #002F61;
+
   --emr-surface-0: #FAFAFA;
   --emr-surface-1: #F8F8FA;
   --emr-surface-2: #FCFCFD;
   --emr-surface-3: #FCFCFD;
   --emr-surface-app: var(--emr-surface-0);
+  --emr-surface-auth: #F9F9F9;
   --emr-surface-content-panel: var(--emr-surface-1);
   --emr-surface-subpanel: var(--emr-surface-1);
   --emr-surface-sidepanel: #F9F9F9;
@@ -432,6 +445,9 @@
   --emr-type-size-compact-title: var(--clair-typography-headline-2-font-size);
   --emr-type-size-panel-title: var(--clair-typography-headline-1-font-size);
   --emr-type-size-dialog-title: var(--clair-typography-heading-2-font-size);
+  --emr-type-size-login-title: var(--clair-typography-heading-1-font-size);
+  --emr-type-leading-login-title: var(--clair-typography-heading-1-line-height);
+  --emr-type-tracking-login-title: var(--clair-typography-heading-1-letter-spacing);
   --emr-type-leading-micro: var(--clair-typography-label-3-line-height);
   --emr-type-leading-metadata: var(--clair-typography-label-2-line-height);
   --emr-type-leading-dense: var(--clair-typography-label-1-line-height);

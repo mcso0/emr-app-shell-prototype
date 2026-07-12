@@ -23,6 +23,33 @@ const extractSourceToEnd = (source: string, startMarker: string) => {
   return source.slice(start);
 };
 
+test("Sky atomic tokens use the approved 500 anchor and coordinated scale", async ({ page }) => {
+  await page.goto(treatmentUrl);
+
+  const skyTokens = await page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    return Object.fromEntries(
+      [50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((step) => [
+        step,
+        style.getPropertyValue(`--clair-color-atomic-sky-${step}`).trim().toUpperCase(),
+      ])
+    );
+  });
+
+  expect(skyTokens).toEqual({
+    50: "#F0F7FF",
+    100: "#DBEDFF",
+    200: "#ADD5FF",
+    300: "#70B6FF",
+    400: "#3D9CFF",
+    500: "#1085FF",
+    600: "#006BDB",
+    700: "#0055AD",
+    800: "#004185",
+    900: "#002F61",
+  });
+});
+
 test("neutral command token contract is exposed on the app shell", async ({ page }) => {
   await page.goto(treatmentUrl);
 
