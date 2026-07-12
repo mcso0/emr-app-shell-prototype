@@ -15,7 +15,6 @@ import {
   ChartContent,
   ChartContentAside,
   ChartHeader,
-  ChartRightPanel,
   ChartSidePanel,
   ChartSlotAvailabilityProvider,
 } from "@/features/chart/module";
@@ -95,9 +94,7 @@ export const modules: ModuleDefinition[] = [
     contentHeader: ChartHeader,
     contentAside: ChartContentAside,
     content: ChartContent,
-    rightPanel: ChartRightPanel,
     slotAvailabilityProvider: ChartSlotAvailabilityProvider,
-    defaultRightPanelOpen: false,
   },
   {
     id: "lab",

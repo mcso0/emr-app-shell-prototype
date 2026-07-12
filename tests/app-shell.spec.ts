@@ -208,7 +208,7 @@ test("legacy chart route opens treatment shell without tab sync loop", async ({ 
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료/차트");
   await expect(page.getByText("기본 SOAP")).toBeVisible();
   await expect(page).toHaveURL(/modulePanel=open/);
-  await expect(page).toHaveURL(/right=closed/);
+  await expect(page).not.toHaveURL(/right=/);
 });
 
 test("global command palette searches and opens patient context", async ({ page }) => {
@@ -1515,19 +1515,6 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
-test("right panel can be collapsed on a module that owns it", async ({ page }) => {
-  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=open");
-  await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료/차트");
-  await expect(page.getByRole("tab", { name: "기본 SOAP" })).toBeVisible();
-  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toHaveCount(0);
-  await expect(page).toHaveURL(/right=open/);
-  await expect(page.getByRole("button", { name: "환자 정보 패널 접기" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
-  await page.getByRole("button", { name: "환자 정보 패널 접기" }).click();
-  await expect(page).toHaveURL(/right=closed/);
-  await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
-});
-
 test("dispensing does not render the patient side panel or trigger", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=open");
 
@@ -1564,7 +1551,7 @@ test("workspace tabs create an initial tab and keep the final tab open", async (
 
 test("workspace tabs keep navigation history per active tab", async ({ page }) => {
   await clearWorkspaceTabs(page);
-  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed");
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
   await expectActiveWorkspaceTab(page, "진료/차트");
 
   await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
@@ -1674,7 +1661,7 @@ test("workspace tabs warn only before opening the same concrete work surface in 
 test("workspace tabs are hidden on mobile viewports", async ({ page }) => {
   await clearWorkspaceTabs(page);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed");
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
 
   await expect(getWorkspaceTablist(page)).toBeHidden();
   await expect(page.getByRole("button", { name: "새 업무 탭" })).toHaveCount(0);

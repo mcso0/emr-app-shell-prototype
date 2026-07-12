@@ -25,10 +25,7 @@ import {
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
-import {
-  CdsNavigationChevronDownIcon,
-  CdsNavigationChevronsRightIcon,
-} from "@/components/cds-icons/navigation";
+import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
@@ -48,7 +45,6 @@ import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
-import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import {
   EmrListHeaderIconButton,
 } from "@/components/emr/subpanel";
@@ -516,11 +512,6 @@ const getShortClockTime = (dateTime?: string) =>
 const clampNumber = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
-const getDiagnosisLabel = (diagnoses: Diagnosis[]) =>
-  diagnoses.length
-    ? diagnoses.map((diagnosis) => diagnosis.diagnosisText).join(", ")
-    : "진단 미입력";
-
 const getSoapSectionStatusText = (
   status?: SoapNote["status"],
   statusAt?: string,
@@ -828,7 +819,6 @@ export function ChartSlotAvailabilityProvider({
 
   return children({
     hasContentAside: hasSelectedDetail,
-    hasRightPanel: hasSelectedDetail,
   });
 }
 
@@ -3185,95 +3175,6 @@ function AssessmentPanel({
         </div>
       </div>
     </section>
-  );
-}
-
-function AssessmentHistory({
-  historyRows,
-}: {
-  historyRows: ChartHistoryRow[];
-}) {
-  return (
-    <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="emr-text-body font-semibold">진단 이력</h2>
-        <Badge variant="outline">{historyRows.length}</Badge>
-      </div>
-      <div className="flex flex-col gap-2">
-        {historyRows.map((row) => (
-          <div
-            key={row.encounter.id}
-            className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-medium">
-                {getShortDateTime(
-                  row.encounter.checkedInAt ?? row.encounter.createdAt,
-                )}
-              </span>
-              <Badge variant="outline">
-                {getStatusLabel("encounter", row.encounter.status)}
-              </Badge>
-            </div>
-            <p className="mt-2 emr-text-dense leading-5">
-              {row.soapNote?.assessment ?? getDiagnosisLabel(row.diagnoses)}
-            </p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
-  const bundle = useSelectedChartBundle(workspaceId);
-  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
-  const historyRows = useMemo(
-    () => (bundle ? getChartHistoryRowsForBundle(bundle) : []),
-    [bundle],
-  );
-
-  if (!bundle) return null;
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-rightpanel)]">
-      <div className="flex h-[var(--clair-layout-drawer-header)] items-center border-b border-[var(--emr-line-hairline)] px-3">
-        <div className="flex min-w-0 flex-1 items-center">
-          <div className="flex min-w-0 max-w-full items-center gap-1">
-            <h2 className="min-w-0 truncate text-sm font-semibold">
-              환자 정보
-            </h2>
-            <EmrRightPanelHeaderIconButton
-              aria-label="환자 정보 패널 접기"
-              onClick={() => setRightPanelOpen(false)}
-            >
-              <CdsNavigationChevronsRightIcon className="size-4" />
-            </EmrRightPanelHeaderIconButton>
-          </div>
-        </div>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-3 p-3">
-          <AssessmentHistory historyRows={historyRows} />
-          <section className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
-            <div className="font-semibold">개인/민감 정보</div>
-            <p className="mt-2 emr-text-metadata leading-5 text-muted-foreground">
-              보호자 메모:{" "}
-              {bundle.primaryGuardian?.memo ??
-                "물 섭취 후 재구토, 검사 비용 설명을 먼저 요청."}
-            </p>
-          </section>
-          <section className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
-            <div className="font-semibold">부가 정보</div>
-            <p className="mt-2 emr-text-metadata leading-5 text-muted-foreground">
-              환자 메모:{" "}
-              {bundle.patient.specialNote ??
-                "진료대에서 긴장도가 높아 보호자 동석 권장."}
-            </p>
-          </section>
-        </div>
-      </ScrollArea>
-    </div>
   );
 }
 

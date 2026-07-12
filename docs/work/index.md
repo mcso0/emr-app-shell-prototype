@@ -311,6 +311,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CHART-PR-007                | done         | chart                | P1       | PR 7                 | `docs/work/chart/CHART-PR-007-editable-order-table.md`                                                 |
 | CHART-PR-008                | human_review | chart                | P0       | User request / consultation call-start flow | `docs/work/chart/CHART-PR-008-consultation-call-start-flow.md`                     |
 | CHART-PR-009                | human_review | chart                | P0       | User request / consultation room selection and pre-start chart lock | `docs/work/chart/CHART-PR-009-consultation-room-lock-ux.md` |
+| CHART-PR-010                | implemented  | chart                | P1       | Browser Comment 1 / retire chart patient information panel | `docs/work/chart/CHART-PR-010-retire-patient-information-panel.md` |
 | LAB-PR-001                  | done         | lab                  | P1       | PR 1                 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md`                                               |
 | IMAGING-PR-001              | done         | imaging              | P1       | PR 1                 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md`                                            |
 | HOSPITAL-ADMIN-PR-001       | done         | hospital-admin       | P1       | PR 1                 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md`                           |

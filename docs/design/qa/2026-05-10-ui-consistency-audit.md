@@ -16,7 +16,7 @@ This audit records system-level UI inconsistencies across representative CLAiR E
 ## Representative Screens
 
 - Home: `/w/clair-demo/home?modulePanel=open`
-- Chart: `/w/clair-demo/treatment?modulePanel=open&aside=history&right=open`
+- Chart: `/w/clair-demo/treatment?modulePanel=open&aside=history`
 - Billing: `/w/clair-demo/billing?modulePanel=open&right=open`
 - Lab: `/w/clair-demo/lab?modulePanel=open&aside=history&right=open`
 - Imaging: `/w/clair-demo/imaging?modulePanel=open&aside=history&right=open`
