@@ -112,7 +112,11 @@ The shared component follows the CDS.V2 EmptyPlaceholder visual tiers from Figma
 | `md` | Side panel and large tables; product usage label `mg` | 32px area, 16px icon slot, 10px radius, 4px bottom wrapper space | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
 | `sm` | Modal and small table areas | No icon slot | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
 
-The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. Empty State colors use existing CLAiR tokens: `black-alpha-4` for the icon area background, `black-alpha-48` for the icon and title, and `black-alpha-36` for descriptions. One action uses the outline button treatment; two actions render outline secondary first and dark primary second. Queue side panels remain on `EmrQueueEmptyState` until a separate compact queue decision is approved.
+The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. Empty State colors use existing CLAiR tokens: `black-alpha-4` for the icon area background, `black-alpha-48` for the icon and title, and `black-alpha-36` for descriptions. One action uses the outline button treatment; two actions render outline secondary first and dark primary second.
+
+### Side-panel queue coverage
+
+`EmrQueueEmptyState` is a queue-specific placement wrapper, but it is still an Empty State surface. It now renders the shared `EmrEmptyState` contract with `surface="queue"` and `size="md"` so the same `mg` visual tier applies to reception, chart, lab, imaging, dispensing, billing, and Home side-panel empty states. Queue placement, loading/search state ownership, and feature actions remain in the caller. Search-empty states use the same `md` slot with recovery guidance; loading keeps the slot geometry but does not reserve an action row.
 
 ## Surface Adoption Rules
 
@@ -120,7 +124,7 @@ The icon artwork is supplied by the caller/current motion-icon mapping; Figma de
 
 | Surface | Current default | `EmrEmptyState` adoption rule | Action ownership |
 | --- | --- | --- | --- |
-| Queue side panel | Keep `EmrQueueEmptyState` compact by default | Do not replace with the standard 64px icon pattern until a queue-specific compact variant is approved. Queue empty states should stay quiet and list-local. | Queue may own only local recovery such as clearing search or filters. It should not own screen-level create/navigation actions when content is also empty. |
+| Queue side panel | Use `EmrQueueEmptyState` with the `md` visual tier | Keep queue-specific placement and list-local behavior, but use the shared 32px icon slot, typography, alpha tokens, and reserved action-space contract. | Queue may own only local recovery such as clearing search or filters. It should not own screen-level create/navigation actions when content is also empty. |
 | Content body | Adopt for main operational absence states | Use `surface="content"` when the main work area has no selected object, no upstream work object, or no scope result. When no upstream work object exists in the operational modules that have adopted this pattern, render the design-system content empty state in the main content surface and suppress the content aside/history panel. | Content body carries the primary information/action weight for the screen-level absence state. Queue/list placeholders remain compact supporting states and do not own the primary screen-level action. |
 | Table body | Preferred second pilot surface | Use `surface="table"` for no rows, no filter results, or no search results inside table/list bodies when the table layout can preserve header/scroll alignment. Keep very dense tables on the existing empty row until spacing is verified. | Table owns local recovery such as reset filters. It should not trigger source workflow navigation unless the whole content surface is table-only. |
 | Drawer/detail panel | Adopt selectively | Use `surface="drawer"` for selected-object absence or passive detail guidance. Use `EmrInlineAlert` instead for permission blockers, read failures, failed saves, or degraded data. | Drawer should not own primary workflow creation. It may own close, retry, or local selection guidance. |

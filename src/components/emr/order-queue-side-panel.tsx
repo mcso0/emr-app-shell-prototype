@@ -274,6 +274,10 @@ export function EmrOrderQueueSidePanel({
     selectedDate,
     todayDate,
   });
+  const emptyStateDescription = getOrderQueueEmptyStateDescription({
+    emptyObjectLabel,
+    filtered: sourceHasItems,
+  });
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -407,7 +411,11 @@ export function EmrOrderQueueSidePanel({
             onClear={() => setSearchQuery("")}
           />
         ) : (
-          <EmrQueueEmptyState placement="panel-center" title={emptyStateTitle} />
+          <EmrQueueEmptyState
+            description={emptyStateDescription}
+            placement="panel-center"
+            title={emptyStateTitle}
+          />
         )}
       </EmrSubpanelBody>
     </EmrSubpanel>
@@ -431,6 +439,18 @@ function getOrderQueueEmptyStateTitle({
   void todayDate;
 
   return `${emptyObjectLabel}가 없습니다`;
+}
+
+function getOrderQueueEmptyStateDescription({
+  emptyObjectLabel,
+  filtered,
+}: {
+  emptyObjectLabel: string;
+  filtered: boolean;
+}) {
+  if (filtered) return `조건을 바꾸면 ${emptyObjectLabel}가 다시 표시됩니다`;
+
+  return `오늘 표시할 ${emptyObjectLabel}가 없습니다`;
 }
 
 function OrderQueueSortMenu({

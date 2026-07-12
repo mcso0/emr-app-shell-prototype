@@ -1583,7 +1583,15 @@ export function LabSidePanel({
             onClear={() => setSearchQuery("")}
           />
         ) : resultCount === 0 ? (
-          <EmrQueueEmptyState placement="panel-center" title={emptyStateTitle} />
+          <EmrQueueEmptyState
+            description={
+              sourceHasItems
+                ? "조건을 바꾸면 검사 업무가 다시 표시됩니다"
+                : "오늘 표시할 검사 업무가 없습니다"
+            }
+            placement="panel-center"
+            title={emptyStateTitle}
+          />
         ) : groups.map((group) => (
           <LabQueueGroup
             key={group.status}
@@ -1759,7 +1767,15 @@ export function ImagingSidePanel({
             onClear={() => setSearchQuery("")}
           />
         ) : resultCount === 0 ? (
-          <EmrQueueEmptyState placement="panel-center" title={emptyStateTitle} />
+          <EmrQueueEmptyState
+            description={
+              sourceHasItems
+                ? "조건을 바꾸면 영상 업무가 다시 표시됩니다"
+                : "오늘 표시할 영상 업무가 없습니다"
+            }
+            placement="panel-center"
+            title={emptyStateTitle}
+          />
         ) : groups.map((group) => (
           <ImagingQueueGroup
             key={group.status}

@@ -3024,7 +3024,9 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             onClear={() => setSearchQuery("")}
           />
         ) : (
-          <ReceptionEmptyState>{emptyStateCopy}</ReceptionEmptyState>
+          <ReceptionEmptyState description="오늘 표시할 접수/예약 업무가 없습니다">
+            {emptyStateCopy}
+          </ReceptionEmptyState>
         )}
       </EmrSubpanelBody>
     </EmrSubpanel>
