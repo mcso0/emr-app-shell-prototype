@@ -9,6 +9,7 @@ import {
   type LiveMutationAuditOptions,
 } from "@/features/audit/server-mutation-audit-core";
 import type {
+  ReceptionVitalMeasurementInput,
   ReceptionWalkInEncounterInput,
   ReceptionWalkInEncounterRecord,
 } from "@/features/reception/walk-in-encounter";
@@ -30,8 +31,20 @@ import type {
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 
+export type ReceptionWalkInEncounterFieldErrorKey =
+  | "patientId"
+  | "durationMinutes"
+  | "plannedStartAt"
+  | "vitals"
+  | "vitals.weightKg"
+  | "vitals.temperatureC"
+  | "vitals.respiratoryRateRpm"
+  | "vitals.bloodPressure"
+  | "vitals.bloodPressure.systolicMmhg"
+  | "vitals.bloodPressure.diastolicMmhg";
+
 export type ReceptionWalkInEncounterFieldErrors = Partial<
-  Record<"patientId" | "durationMinutes" | "plannedStartAt" | "weightKg", string>
+  Record<ReceptionWalkInEncounterFieldErrorKey, string>
 >;
 
 type SupabaseWalkInMembershipRow = {
@@ -134,8 +147,7 @@ export async function createReceptionWalkInEncounter({
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<ReceptionWalkInEncounterResult> {
-  const normalized = normalizeWalkInInput(input);
-  const validation = validateWalkInInput(normalized);
+  const validation = validateWalkInInput(input);
 
   if (!validation.valid) {
     return {
@@ -145,6 +157,8 @@ export async function createReceptionWalkInEncounter({
       fieldErrors: validation.fieldErrors,
     };
   }
+
+  const normalized = normalizeWalkInInput(input);
 
   const permissionContract = getReceptionMutationPermissionContract(
     "walk_in_encounter_create",
@@ -296,8 +310,8 @@ export function createMockReceptionWalkInEncounterGateway(
 	        enteredAt: eventTime,
 	      };
 
-      if (input.weightKg !== undefined) {
-        patient.weightKg = input.weightKg;
+      if (input.vitals?.weightKg !== undefined) {
+        patient.weightKg = input.vitals.weightKg;
         patient.updatedAt = eventTime;
       }
 
@@ -452,6 +466,8 @@ async function resolveStagingSyntheticWalkInInput({
 function normalizeWalkInInput(
   input: ReceptionWalkInEncounterInput,
 ): ReceptionWalkInEncounterInput {
+  const vitals = normalizeVitals(input.vitals);
+
   return {
     department: trimToUndefined(input.department),
     durationMinutes:
@@ -465,11 +481,33 @@ function normalizeWalkInInput(
     plannedStartAt: trimToUndefined(input.plannedStartAt),
     primaryVeterinarianId: trimToUndefined(input.primaryVeterinarianId),
     visitPurpose: trimToUndefined(input.visitPurpose),
-    weightKg:
-      typeof input.weightKg === "number" && Number.isFinite(input.weightKg)
-        ? Math.round(input.weightKg * 100) / 100
-        : undefined,
+	    ...(vitals ? { vitals } : {}),
 	  };
+}
+
+function normalizeVitals(
+  vitals: ReceptionVitalMeasurementInput | undefined,
+): ReceptionVitalMeasurementInput | undefined {
+  if (!vitals) return undefined;
+  const normalized: ReceptionVitalMeasurementInput = {};
+
+  if (vitals.weightKg !== undefined) {
+    normalized.weightKg = Math.round(vitals.weightKg * 100) / 100;
+  }
+  if (vitals.temperatureC !== undefined) {
+    normalized.temperatureC = Math.round(vitals.temperatureC * 10) / 10;
+  }
+  if (vitals.respiratoryRateRpm !== undefined) {
+    normalized.respiratoryRateRpm = vitals.respiratoryRateRpm;
+  }
+  if (vitals.bloodPressure) {
+    normalized.bloodPressure = {
+      systolicMmhg: vitals.bloodPressure.systolicMmhg,
+      diastolicMmhg: vitals.bloodPressure.diastolicMmhg,
+    };
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
 function normalizeSupabaseWalkInRpcInput(
@@ -481,7 +519,9 @@ function normalizeSupabaseWalkInRpcInput(
 function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
   const fieldErrors: ReceptionWalkInEncounterFieldErrors = {};
 
-  if (!input.patientId) fieldErrors.patientId = "환자를 선택해 주세요.";
+  if (!trimToUndefined(input.patientId)) {
+    fieldErrors.patientId = "환자를 선택해 주세요.";
+  }
   if (!isReceptionDurationMinutesValid(input.durationMinutes)) {
     fieldErrors.durationMinutes = receptionDurationValidationMessage;
   }
@@ -491,15 +531,106 @@ function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
   ) {
     fieldErrors.plannedStartAt = "접수 예정 시간을 확인해 주세요.";
   }
-  if (input.weightKg !== undefined && input.weightKg <= 0) {
-    fieldErrors.weightKg = "체중은 0보다 커야 합니다.";
-  }
+  validateVitals(input, fieldErrors);
 
   if (Object.keys(fieldErrors).length > 0) {
     return { valid: false as const, fieldErrors };
   }
 
   return { valid: true as const, fieldErrors: {} };
+}
+
+function validateVitals(
+  input: ReceptionWalkInEncounterInput,
+  fieldErrors: ReceptionWalkInEncounterFieldErrors,
+) {
+  const rawVitals = (input as { vitals?: unknown }).vitals;
+  if (rawVitals === undefined) return;
+  if (!isRecord(rawVitals)) {
+    fieldErrors.vitals = "바이탈 값을 확인해 주세요.";
+    return;
+  }
+
+  validatePositiveNumber(
+    rawVitals.weightKg,
+    "vitals.weightKg",
+    "체중은 0보다 큰 숫자로 입력해 주세요.",
+    fieldErrors,
+  );
+  validatePositiveNumber(
+    rawVitals.temperatureC,
+    "vitals.temperatureC",
+    "체온은 0보다 큰 숫자로 입력해 주세요.",
+    fieldErrors,
+  );
+  validatePositiveNumber(
+    rawVitals.respiratoryRateRpm,
+    "vitals.respiratoryRateRpm",
+    "호흡수는 0보다 큰 정수로 입력해 주세요.",
+    fieldErrors,
+    true,
+  );
+
+  const rawBloodPressure = rawVitals.bloodPressure;
+  if (rawBloodPressure === undefined) return;
+  if (!isRecord(rawBloodPressure)) {
+    fieldErrors["vitals.bloodPressure"] = "혈압 값을 확인해 주세요.";
+    return;
+  }
+
+  const systolic = rawBloodPressure.systolicMmhg;
+  const diastolic = rawBloodPressure.diastolicMmhg;
+  if (systolic === undefined && diastolic === undefined) {
+    fieldErrors["vitals.bloodPressure"] =
+      "수축기와 이완기 혈압을 함께 입력해 주세요.";
+    return;
+  }
+  if (systolic === undefined) {
+    fieldErrors["vitals.bloodPressure.systolicMmhg"] =
+      "수축기 혈압을 입력해 주세요.";
+  } else {
+    validatePositiveNumber(
+      systolic,
+      "vitals.bloodPressure.systolicMmhg",
+      "수축기 혈압은 0보다 큰 정수로 입력해 주세요.",
+      fieldErrors,
+      true,
+    );
+  }
+  if (diastolic === undefined) {
+    fieldErrors["vitals.bloodPressure.diastolicMmhg"] =
+      "이완기 혈압을 입력해 주세요.";
+  } else {
+    validatePositiveNumber(
+      diastolic,
+      "vitals.bloodPressure.diastolicMmhg",
+      "이완기 혈압은 0보다 큰 정수로 입력해 주세요.",
+      fieldErrors,
+      true,
+    );
+  }
+}
+
+function validatePositiveNumber(
+  value: unknown,
+  key: ReceptionWalkInEncounterFieldErrorKey,
+  message: string,
+  fieldErrors: ReceptionWalkInEncounterFieldErrors,
+  integer = false,
+) {
+  if (value === undefined) return;
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    value <= 0 ||
+    (integer && !Number.isInteger(value))
+  ) {
+    fieldErrors[key] = message;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function mapWalkInDbDenial(message?: string) {
