@@ -409,12 +409,25 @@ const monthDays = Array.from({ length: 35 }, (_, index) => index + 1);
 
 type ReceptionSideListMode = (typeof receptionQueueTabItems)[number]["value"];
 type CalendarTaskBadgeType = "예약" | "외래" | "노쇼";
+type VeterinarianOperationalStatus = {
+  code:
+    | "available"
+    | "clocked_out"
+    | "in_consultation"
+    | "leave"
+    | "off"
+    | "scheduled"
+    | "shift_ended";
+  label: string;
+  source: "reception" | "schedule" | "time_clock";
+};
 type Veterinarian = {
   avatarUrl?: string;
   department?: string;
   id: string;
   initial?: string;
   name: string;
+  operationalStatus?: VeterinarianOperationalStatus;
   role: "veterinarian";
   title?: string;
 };
@@ -430,6 +443,7 @@ type WorkspaceStaffReadResponse =
         id: string;
         initial?: string;
         avatarUrl?: string;
+        operationalStatus?: VeterinarianOperationalStatus;
         roles: string[];
         status: string;
         title?: string;
@@ -590,7 +604,7 @@ function VeterinarianLaneHeader({
       tabIndex={0}
       aria-label={`${veterinarian.name} 레인 헤더`}
       className={cn(
-        "emr-calendar-lane-header group/veterinarian-lane flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-calendar-lane-header-tone-border)] p-[var(--emr-calendar-lane-header-padding)] text-[var(--emr-calendar-lane-header-text)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        "emr-calendar-lane-header group/veterinarian-lane flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-calendar-lane-header-tone-border)] px-[var(--emr-calendar-lane-header-padding-x)] py-[var(--emr-calendar-lane-header-padding-y)] text-[var(--emr-calendar-lane-header-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
         veterinarianHeaderToneClasses[
           toneIndex % veterinarianHeaderToneClasses.length
         ],
@@ -600,7 +614,7 @@ function VeterinarianLaneHeader({
         data-testid="veterinarian-lane-avatar"
         roundness="roundrect"
         size="sm"
-        className="after:border-0"
+        className="after:border-[var(--emr-calendar-lane-avatar-border)]"
       >
         {veterinarian.avatarUrl ? (
           <AvatarImage src={veterinarian.avatarUrl} alt="" />
@@ -609,11 +623,25 @@ function VeterinarianLaneHeader({
           {veterinarian.initial}
         </AvatarFallback>
       </Avatar>
-      <span className="min-w-0 flex-1 truncate emr-text-body font-semibold">
-        {veterinarian.name}
-      </span>
+      <div className="flex min-w-0 flex-1 items-center gap-[var(--emr-calendar-lane-header-gap)]">
+        <span
+          data-testid="veterinarian-lane-name"
+          className="min-w-0 truncate text-[length:var(--emr-calendar-lane-header-name-size)] font-[var(--emr-calendar-lane-header-name-weight)] leading-[var(--emr-calendar-lane-header-name-leading)] tracking-[var(--emr-calendar-lane-header-name-tracking)]"
+        >
+          {veterinarian.name}
+        </span>
+        {veterinarian.operationalStatus ? (
+          <span
+            data-testid="veterinarian-operational-status"
+            data-status={veterinarian.operationalStatus.code}
+            className="inline-flex h-[var(--emr-calendar-lane-status-height)] shrink-0 items-center rounded-[var(--emr-calendar-lane-status-radius)] border border-[var(--emr-calendar-lane-status-border)] bg-[var(--emr-calendar-lane-status-bg)] px-[var(--emr-calendar-lane-status-padding-x)] py-[var(--emr-calendar-lane-status-padding-y)] text-[length:var(--emr-calendar-lane-status-size)] font-[var(--emr-calendar-lane-status-weight)] leading-[var(--emr-calendar-lane-status-leading)] tracking-[var(--emr-calendar-lane-status-tracking)] text-[var(--emr-calendar-lane-status-text)]"
+          >
+            {veterinarian.operationalStatus.label}
+          </span>
+        ) : null}
+      </div>
       <div
-        className="invisible ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/veterinarian-lane:visible group-hover/veterinarian-lane:opacity-100 group-focus/veterinarian-lane:visible group-focus/veterinarian-lane:opacity-100 group-focus-within/veterinarian-lane:visible group-focus-within/veterinarian-lane:opacity-100 max-md:visible max-md:opacity-100 [@media(hover:none)]:visible [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:visible [@media(pointer:coarse)]:opacity-100"
+        className="pointer-events-none ml-auto flex shrink-0 items-center gap-[var(--emr-calendar-lane-header-action-gap)] opacity-0 transition-opacity group-hover/veterinarian-lane:pointer-events-auto group-hover/veterinarian-lane:opacity-100 group-focus/veterinarian-lane:pointer-events-auto group-focus/veterinarian-lane:opacity-100 group-focus-within/veterinarian-lane:pointer-events-auto group-focus-within/veterinarian-lane:opacity-100 max-md:pointer-events-auto max-md:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100"
         data-testid="veterinarian-lane-header-actions"
       >
         <button
@@ -624,7 +652,7 @@ function VeterinarianLaneHeader({
           disabled={hideDisabled}
           onClick={onHide}
         >
-          <CdsAlertsEyeIcon aria-hidden="true" size={16} />
+          <CdsAlertsEyeIcon aria-hidden="true" size={14} />
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -632,7 +660,7 @@ function VeterinarianLaneHeader({
             aria-label={`${veterinarian.name} 수의사 옵션`}
             className="grid size-[var(--emr-calendar-lane-header-action-size)] place-items-center rounded-[var(--emr-calendar-lane-header-action-radius)] bg-transparent p-1 text-[var(--emr-calendar-lane-header-action-icon)] outline-none transition-colors hover:bg-[var(--emr-calendar-lane-header-action-hover)] focus-visible:bg-[var(--emr-calendar-lane-header-action-hover)] focus-visible:ring-2 focus-visible:ring-ring/50 data-popup-open:bg-[var(--emr-calendar-lane-header-action-hover)]"
           >
-            <CdsFilesMoreHorizontalIcon aria-hidden="true" size={16} />
+            <CdsFilesMoreHorizontalIcon aria-hidden="true" size={14} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem
@@ -1326,14 +1354,16 @@ async function loadReceptionPatientGuardianProfiles({
 
 async function loadWorkspaceVeterinarians({
   actorId,
+  operatingDate,
   workspaceId,
 }: {
   actorId?: string;
+  operatingDate: string;
   workspaceId: string;
 }): Promise<WorkspaceStaffReadResponse> {
   try {
     const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff?role=vet`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff?role=vet&date=${encodeURIComponent(operatingDate)}`,
       {
         cache: "no-store",
         headers: actorId
@@ -1367,6 +1397,7 @@ function mapWorkspaceStaffToVeterinarians(
       id: member.id,
       initial: member.initial,
       name: member.displayName,
+      operationalStatus: member.operationalStatus,
       role: "veterinarian" as const,
       title: member.title,
     }));
@@ -2272,6 +2303,54 @@ const getAppointmentDurationMinutes = (appointment: Appointment) => {
   return Number.isFinite(minutes) && minutes > 0 ? minutes : scheduleSlotMinutes;
 };
 
+function getVeterinarianLaneOperationalStatus({
+  appointments,
+  currentDate,
+  currentOperatingMinutes,
+  operatingDate,
+  veterinarian,
+}: {
+  appointments: Appointment[];
+  currentDate: string;
+  currentOperatingMinutes: number;
+  operatingDate: string;
+  veterinarian: Veterinarian;
+}): VeterinarianOperationalStatus | undefined {
+  if (operatingDate !== currentDate) return veterinarian.operationalStatus;
+
+  const hasCurrentCheckedInAppointment = appointments.some((appointment) => {
+    if (
+      appointment.assignedVeterinarianId !== veterinarian.id ||
+      appointment.status !== "checked_in" ||
+      getOperatingDateFromIso(appointment.scheduledStartAt) !== operatingDate
+    ) {
+      return false;
+    }
+
+    const startMinutes = getOperatingMinutesFromIso(
+      appointment.scheduledStartAt,
+    );
+    if (startMinutes === undefined) return false;
+    const endMinutes = appointment.scheduledEndAt
+      ? getOperatingMinutesFromIso(appointment.scheduledEndAt)
+      : startMinutes + scheduleSlotMinutes;
+
+    return (
+      endMinutes !== undefined &&
+      currentOperatingMinutes >= startMinutes &&
+      currentOperatingMinutes < endMinutes
+    );
+  });
+
+  if (!hasCurrentCheckedInAppointment) return veterinarian.operationalStatus;
+
+  return {
+    code: "in_consultation",
+    label: "진료중",
+    source: "reception",
+  };
+}
+
 const getReceptionDrawerDurationLabel = ({
   appointment,
   encounter,
@@ -2993,6 +3072,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
 
       const result = await loadWorkspaceVeterinarians({
         actorId: authSession?.id,
+        operatingDate,
         workspaceId,
       });
       if (cancelled) return;
@@ -3005,7 +3085,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     return () => {
       cancelled = true;
     };
-  }, [authSession?.id, liveStaffSourceEnabled, workspaceId]);
+  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
 
   return (
     <EmrSubpanel>
@@ -4752,6 +4832,18 @@ function DayScheduleBoard({
       !draft.encounter.primaryVeterinarianId ||
       !assignmentVeterinarianIds.has(draft.encounter.primaryVeterinarianId),
   );
+  const laneOperationalStatusByVeterinarianId = new Map(
+    selectedVeterinarians.map((veterinarian) => [
+      veterinarian.id,
+      getVeterinarianLaneOperationalStatus({
+        appointments,
+        currentDate,
+        currentOperatingMinutes,
+        operatingDate,
+        veterinarian,
+      }),
+    ]),
+  );
 
   return (
     <div
@@ -4784,7 +4876,11 @@ function DayScheduleBoard({
                   veterinarian,
                   assignmentVeterinarians,
                 )}
-                veterinarian={veterinarian}
+                veterinarian={{
+                  ...veterinarian,
+                  operationalStatus:
+                    laneOperationalStatusByVeterinarianId.get(veterinarian.id),
+                }}
               />
             </div>
           ))}
@@ -5280,7 +5376,7 @@ function CalendarResourceLoadingState() {
             key={`calendar-loading-lane-${lane}`}
             className="h-[var(--emr-calendar-lane-header-cell-height)] border-r p-[var(--emr-calendar-lane-header-cell-padding)] last:border-r-0"
           >
-            <div className="flex h-full items-center gap-2 rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-[var(--emr-calendar-lane-header-padding)]">
+            <div className="flex h-full items-center gap-2 rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-[var(--emr-calendar-lane-header-padding-x)] py-[var(--emr-calendar-lane-header-padding-y)]">
               <Skeleton className="size-[var(--emr-calendar-lane-avatar-size)] shrink-0 rounded-[var(--emr-calendar-lane-avatar-radius)]" />
               <div className="min-w-0 flex-1 space-y-2">
                 <Skeleton className="h-3 w-24" />
@@ -6055,16 +6151,17 @@ export function ReceptionContent() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadStaff() {
+    async function loadStaff(showLoading: boolean) {
       if (!liveStaffSourceEnabled) {
         setWorkspaceVeterinarians([]);
         setWorkspaceStaffReadStatus("ready");
         return;
       }
 
-      setWorkspaceStaffReadStatus("loading");
+      if (showLoading) setWorkspaceStaffReadStatus("loading");
       const result = await loadWorkspaceVeterinarians({
         actorId: authSession?.id,
+        operatingDate,
         workspaceId,
       });
       if (cancelled) return;
@@ -6074,12 +6171,18 @@ export function ReceptionContent() {
       setWorkspaceStaffReadStatus(result.ok ? "ready" : "error");
     }
 
-    void loadStaff();
+    const refreshStaff = () => void loadStaff(false);
+
+    void loadStaff(true);
+    const refreshInterval = window.setInterval(refreshStaff, 60_000);
+    window.addEventListener("focus", refreshStaff);
 
     return () => {
       cancelled = true;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", refreshStaff);
     };
-  }, [authSession?.id, liveStaffSourceEnabled, workspaceId]);
+  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
 
   useEffect(() => {
     if (queryPatientId && queryPatientId !== selectedPatientId) {
@@ -9599,6 +9702,7 @@ export function ReceptionDrawer({
 
       const result = await loadWorkspaceVeterinarians({
         actorId: authSession?.id,
+        operatingDate,
         workspaceId,
       });
       if (cancelled) return;
@@ -9611,7 +9715,7 @@ export function ReceptionDrawer({
     return () => {
       cancelled = true;
     };
-  }, [authSession?.id, liveStaffSourceEnabled, workspaceId]);
+  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
 
   if (activeDrawer?.type === "reception-patient") {
     return <PatientProfileDrawer patientId={activeDrawer.id} />;

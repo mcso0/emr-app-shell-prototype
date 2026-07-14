@@ -4428,6 +4428,150 @@ test("Cheongdam empty reception still renders the calendar workspace", async ({
   await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
 });
 
+test("day lane headers show fact-based status and match the Figma metrics", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  await freezeBrowserClock(page, "2026-07-14T19:26:00+09:00");
+  await page.route(
+    `**/api/workspaces/${workspaceId}/staff?role=vet*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          staff: [
+            {
+              id: "49110000-0000-4000-8000-000000000003",
+              displayName: "이수지",
+              initial: "이",
+              roles: ["vet"],
+              status: "active",
+              operationalStatus: {
+                code: "shift_ended",
+                label: "근무 종료",
+                source: "schedule",
+              },
+            },
+            {
+              id: "49110000-0000-4000-8000-000000000004",
+              displayName: "김도윤",
+              initial: "김",
+              roles: ["vet"],
+              status: "active",
+              operationalStatus: {
+                code: "clocked_out",
+                label: "퇴근",
+                source: "time_clock",
+              },
+            },
+          ],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+
+  await expect(page.getByTestId("veterinarian-operational-status")).toHaveText([
+    "근무 종료",
+    "퇴근",
+  ]);
+  const statusBadge = page
+    .getByTestId("veterinarian-operational-status")
+    .first();
+  await expect(statusBadge).toHaveCSS("height", "18px");
+  await expect(statusBadge).toHaveCSS("border-radius", "6px");
+  await expect(statusBadge).toHaveCSS("padding-top", "1px");
+  await expect(statusBadge).toHaveCSS("padding-right", "6px");
+  await expect(statusBadge).toHaveCSS("padding-bottom", "1px");
+  await expect(statusBadge).toHaveCSS("padding-left", "6px");
+  await expect(statusBadge).toHaveCSS("font-size", "12px");
+  await expect(statusBadge).toHaveCSS("line-height", "15.9996px");
+  await expect(statusBadge).toHaveCSS("font-weight", "500");
+  await expect(statusBadge).toHaveCSS("letter-spacing", "0.3px");
+  await expect(statusBadge).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(statusBadge).toHaveCSS("border-color", "rgb(229, 229, 229)");
+  const header = page.getByTestId("veterinarian-lane-header").first();
+  const avatar = header.getByTestId("veterinarian-lane-avatar");
+  const name = header.getByTestId("veterinarian-lane-name");
+  const hideButton = header.getByRole("button", { name: "이수지 레인 숨기기" });
+
+  const headerStyle = await header.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      backgroundColor: style.backgroundColor,
+      borderRadius: style.borderRadius,
+      columnGap: style.columnGap,
+      height: style.height,
+      paddingBottom: style.paddingBottom,
+      paddingLeft: style.paddingLeft,
+      paddingRight: style.paddingRight,
+      paddingTop: style.paddingTop,
+    };
+  });
+  expect(headerStyle).toMatchObject({
+    borderRadius: "12px",
+    columnGap: "10px",
+    height: "40px",
+    paddingBottom: "8px",
+    paddingLeft: "10px",
+    paddingRight: "10px",
+    paddingTop: "8px",
+  });
+  await expect(avatar).toHaveCSS("width", "24px");
+  await expect(avatar).toHaveCSS("height", "24px");
+  await expect(avatar).toHaveCSS("border-radius", "6px");
+  await expect(name).toHaveCSS("font-size", "16px");
+  await expect(name).toHaveCSS("line-height", "24px");
+  await expect(name).toHaveCSS("font-weight", "500");
+  await expect(name).toHaveCSS("letter-spacing", "0.096px");
+
+  await header.hover();
+  await expect
+    .poll(() => header.evaluate((element) => getComputedStyle(element).backgroundColor))
+    .toBe(headerStyle.backgroundColor);
+  await expect(hideButton).toHaveCSS("width", "24px");
+  await expect(hideButton).toHaveCSS("height", "24px");
+  await expect(hideButton).toHaveCSS("border-radius", "4px");
+  await expect(hideButton.locator("svg")).toHaveCSS("width", "14px");
+  await expect(hideButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await hideButton.hover();
+  await expect(hideButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0.04)");
+});
+
 test("Cheongdam reception defers the calendar board while veterinarian lanes load", async ({
   page,
 }) => {
@@ -4438,7 +4582,7 @@ test("Cheongdam reception defers the calendar board while veterinarian lanes loa
   });
 
   await page.route(
-    `**/api/workspaces/${workspaceId}/staff?role=vet`,
+    `**/api/workspaces/${workspaceId}/staff?role=vet*`,
     async (route) => {
       await staffResponseReady;
       await route.fulfill({
@@ -4950,7 +5094,7 @@ test("Cheongdam reception readback hydrates live patient profiles after refresh"
     },
   };
   await page.route(
-    `**/api/workspaces/${workspaceId}/staff?role=vet`,
+    `**/api/workspaces/${workspaceId}/staff?role=vet*`,
     async (route) => {
       await route.fulfill({
         status: 200,
@@ -5121,7 +5265,7 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
   });
 
   await page.route(
-    `**/api/workspaces/${workspaceId}/staff?role=vet`,
+    `**/api/workspaces/${workspaceId}/staff?role=vet*`,
     async (route) => {
       await route.fulfill({
         status: 200,
@@ -6049,7 +6193,7 @@ test("Cheongdam reservation create omits mock veterinarian fallback when staff l
   let latestAppointmentBody: Record<string, unknown> | undefined;
 
   await page.route(
-    "**/api/workspaces/workspace-clair-cheongdam/staff?role=vet",
+    "**/api/workspaces/workspace-clair-cheongdam/staff?role=vet*",
     async (route) => {
       await route.fulfill({
         status: 500,
@@ -6201,7 +6345,7 @@ test("Cheongdam reservation create uses UUID veterinarian and renders detail rea
   let latestAppointmentBody: Record<string, unknown> | undefined;
 
   await page.route(
-    "**/api/workspaces/workspace-clair-cheongdam/staff?role=vet",
+    "**/api/workspaces/workspace-clair-cheongdam/staff?role=vet*",
     async (route) => {
       await route.fulfill({
         status: 200,
