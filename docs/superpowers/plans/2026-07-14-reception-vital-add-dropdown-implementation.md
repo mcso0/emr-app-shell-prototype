@@ -34,7 +34,7 @@
 
 - Create: `tests/reception-vital-measurement-migration.spec.ts`
   - Static RED/GREEN contract for table columns, checks, tenant foreign keys, RLS posture, indexes, nested-vitals RPC parsing, actor binding, and transaction ordering.
-- Create: `supabase/migrations/20260714113000_reception_vital_measurement_history.sql`
+- Create: `supabase/migrations/20260714102902_reception_vital_measurement_history.sql`
   - Forward-only table/RLS/index migration and the complete latest definition of `clair_create_reception_walk_in_encounter`.
 - Create: `supabase/snippets/reception_vital_measurement_transaction_replay.sql`
   - Local-only authenticated RPC readback, direct-write denial, and forced vital-insert rollback proof.
@@ -81,7 +81,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const migrationPath =
-  "supabase/migrations/20260714113000_reception_vital_measurement_history.sql";
+  "supabase/migrations/20260714102902_reception_vital_measurement_history.sql";
 const migration = readFileSync(migrationPath, "utf8");
 
 test("vital history migration defines a tenant-bound measurement set", () => {
@@ -150,7 +150,7 @@ Run:
 npx playwright test tests/reception-vital-measurement-migration.spec.ts --reporter=line
 ```
 
-Expected: FAIL while loading the test because `20260714113000_reception_vital_measurement_history.sql` does not exist. A failure from another test or dependency is not the intended RED state.
+Expected: FAIL while loading the test because `20260714102902_reception_vital_measurement_history.sql` does not exist. A failure from another test or dependency is not the intended RED state.
 
 - [ ] **Step 3: Commit the RED contract**
 
@@ -164,7 +164,7 @@ git commit -m "test: define reception vital history migration contract"
 ### Task 2: Implement the Forward Migration and Atomic RPC
 
 **Files:**
-- Create: `supabase/migrations/20260714113000_reception_vital_measurement_history.sql`
+- Create: `supabase/migrations/20260714102902_reception_vital_measurement_history.sql`
 - Test: `tests/reception-vital-measurement-migration.spec.ts`
 
 **Interfaces:**
@@ -408,7 +408,7 @@ Expected: 3 tests pass and the diff has no whitespace errors.
 - [ ] **Step 4: Commit the database contract**
 
 ```bash
-git add supabase/migrations/20260714113000_reception_vital_measurement_history.sql tests/reception-vital-measurement-migration.spec.ts
+git add supabase/migrations/20260714102902_reception_vital_measurement_history.sql tests/reception-vital-measurement-migration.spec.ts
 git commit -m "feat: add atomic walk-in vital history writer"
 ```
 
@@ -797,7 +797,7 @@ git commit -m "feat: add accessible walk-in vital capture"
 
 **Files:**
 - Create: `supabase/snippets/reception_vital_measurement_transaction_replay.sql`
-- Modify only when runtime proof finds a contract bug: `supabase/migrations/20260714113000_reception_vital_measurement_history.sql`
+- Modify only when runtime proof finds a contract bug: `supabase/migrations/20260714102902_reception_vital_measurement_history.sql`
 - Test: `supabase/snippets/reception_vital_measurement_transaction_replay.sql`
 
 **Interfaces:**
@@ -874,7 +874,7 @@ Expected: all tests pass. Correct a runtime contract defect in the new migration
 - [ ] **Step 5: Commit the replay proof**
 
 ```bash
-git add supabase/snippets/reception_vital_measurement_transaction_replay.sql supabase/migrations/20260714113000_reception_vital_measurement_history.sql tests/reception-vital-measurement-migration.spec.ts
+git add supabase/snippets/reception_vital_measurement_transaction_replay.sql supabase/migrations/20260714102902_reception_vital_measurement_history.sql tests/reception-vital-measurement-migration.spec.ts
 git commit -m "test: prove walk-in vital transaction rollback"
 ```
 
@@ -924,7 +924,7 @@ After all required local verification passes:
 - add exact verification commands/results and the local-only DB replay result to the work item;
 - update the reception row in `current-status.md` with the nested API, atomic RPC, and walk-in-only UI boundary;
 - create a concise Korean HTML closeout linking the spec, plan, migration, server type, UI module, tests, and work item;
-- state explicitly that remote Supabase migration application, production DB verification, real data, history browsing, and deployment were not performed.
+- state the verified environment boundary explicitly; staging migration/replay was later completed under separate approval, while production DB, real data, history browsing, and production deployment remain unperformed.
 
 - [ ] **Step 4: Review the complete diff and scope exclusions**
 
@@ -967,7 +967,7 @@ git commit -m "docs: record walk-in vital history verification"
 - [ ] `10px` row gap, Neutral/50 menu tiles, focus, Escape, outside click, and `aria-live` are verified.
 - [ ] Submit failure preserves the unsaved draft.
 - [ ] Focused tests, local DB replay, lint, typecheck, docs check, secret scan, diff check, and build are recorded truthfully.
-- [ ] Remote Supabase and production DB operations remain unperformed pending separate approval.
+- [ ] Staging Supabase status is recorded from the separately approved replay; production DB operations remain unperformed pending separate approval.
 
 ## Execution Handoff
 

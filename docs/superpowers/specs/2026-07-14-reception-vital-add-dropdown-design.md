@@ -31,7 +31,7 @@ No patient rows or customer data were read during this inspection.
 
 Implemented locally on 2026-07-14. Reservation creation no longer renders or sends vitals. Walk-in creation owns the accessible four-option draft and submits a nested optional `vitals` object. The additive migration creates the measurement history table and updates the SECURITY DEFINER walk-in RPC so encounter, queue, optional vital history, and the compatibility weight snapshot commit or roll back together.
 
-Docker local Supabase reset and a transaction-scoped replay verified direct-write denial, exact insert/readback, and forced-failure rollback. Remote Supabase migration application, production DB changes, real-data access, history browsing UI, and production deployment remain outside this implementation result.
+Docker local Supabase reset and a transaction-scoped replay verified direct-write denial, exact insert/readback, and forced-failure rollback. After separate approval, staging migration `20260714102902_reception_vital_measurement_history` and the same synthetic rollback replay also passed remotely. Production DB changes, real-data access, history browsing UI, and production deployment remain outside this implementation result.
 
 ## Product Scope
 

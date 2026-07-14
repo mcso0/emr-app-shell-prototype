@@ -67,11 +67,11 @@ The initial wireframe covered reception and reservation creation as a UI-only in
 
 - Supabase MCP staging schema inspection on 2026-07-14 found only `patients.weight_kg` and no vital-history table.
 - Supabase MCP function inspection found appointment weight handling but no walk-in weight handling in the deployed staging function, confirming repository-to-staging drift that requires a new additive migration.
-- No patient data rows were queried.
+- No real customer or patient data was queried. Remote verification used only the repository-seeded `clair-demo` synthetic fixture.
 
 ## Verification
 
-- `npx supabase db reset --local --yes`: passed; all migrations and synthetic seed replayed, including `20260714113000_reception_vital_measurement_history.sql`.
+- `npx supabase db reset --local --yes`: passed; all migrations and synthetic seed replayed, including `20260714102902_reception_vital_measurement_history.sql`.
 - `npx supabase migration list --local`: passed; the new migration is present in local history.
 - `supabase/snippets/reception_vital_measurement_transaction_replay.sql`: passed against Docker local Supabase. It proved direct authenticated table writes are denied, RPC readback matches all values and actor/ownership fields, weight compatibility is updated, forced measurement failure rolls back encounter and queue writes, and the top-level rollback leaves zero tagged rows.
 - `npx supabase db lint --local --schema public`: the new vital table/RPC produced no lint issue. The command still reports pre-existing errors in `clair_save_chart_order_draft`, `clair_restore_reception_appointment`, and `clair_cancel_reception_encounter`, plus existing warnings outside this work item.
@@ -84,9 +84,13 @@ The initial wireframe covered reception and reservation creation as a UI-only in
 - `npm run docs:check`: passed, 800 docs checked before this closeout update.
 - `git diff --check`: passed.
 - `npm run build`: passed with the existing broad docs tracing warnings.
+- Staging Supabase migration `20260714102902_reception_vital_measurement_history` was applied on 2026-07-14 after separate approval.
+- Staging catalog verification confirmed the table, columns, constraints, indexes, RLS, direct table privilege denial, authenticated-only RPC execution, SECURITY DEFINER search path, actor binding, workspace membership check, vital-history write, and weight snapshot update.
+- Staging synthetic transaction replay passed direct-write denial, exact RPC insert/readback, weight compatibility update, and forced-failure rollback. The top-level rollback restored the original synthetic weight and left zero tagged encounter, queue, vital, or trigger rows.
+- Supabase advisors report two intentional security notices for this contract: RLS enabled with no policies because all browser table privileges are revoked, and an authenticated-callable SECURITY DEFINER RPC whose body binds `auth.uid()` and active workspace membership. The performance advisor also recommends an index for `recorded_by_user_id`; that follow-up migration remains outside this approval.
 
 ## Current Boundary
 
-- Implemented locally and ready for human review.
-- Remote Supabase migration application, production DB verification, real-data access, history browsing UI, and production deployment were not performed.
+- Implemented locally, applied to staging, and ready for human review.
+- Production DB verification, real-data access, history browsing UI, and production deployment were not performed.
 - Production deployment requires a separate approval and migration/deployment coordination because the application contract depends on the new table and RPC definition.

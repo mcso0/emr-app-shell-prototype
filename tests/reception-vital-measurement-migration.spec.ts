@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const migrationPath =
-  "supabase/migrations/20260714113000_reception_vital_measurement_history.sql";
+  "supabase/migrations/20260714102902_reception_vital_measurement_history.sql";
 const migration = readFileSync(migrationPath, "utf8");
 
 test("vital history migration defines a tenant-bound measurement set", () => {
