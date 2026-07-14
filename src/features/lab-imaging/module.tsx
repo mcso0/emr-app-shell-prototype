@@ -32,6 +32,7 @@ import {
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import {
   EmrContentAsideHeader,
@@ -2478,7 +2479,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
       className="group/lab-receipt-panel flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-rightpanel)]"
       data-testid="lab-receipt-panel"
     >
-      <div className="flex h-[var(--clair-layout-drawer-header)] items-center px-4">
+      <EmrRightPanelHeader>
         <div className="relative flex min-w-0 max-w-full items-center">
           <h2 className="min-w-0 truncate text-sm font-semibold">장비 검사 수신함</h2>
           <span className="pointer-events-auto absolute left-full z-10 ml-1 flex w-8 shrink-0">
@@ -2491,7 +2492,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
             </EmrRightPanelHeaderIconButton>
           </span>
         </div>
-      </div>
+      </EmrRightPanelHeader>
       <EmrDateNavigator
         className="px-3"
         dateLabel={dateLabel}
@@ -3563,12 +3564,12 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-rightpanel)]" data-testid="imaging-summary-panel">
-      <div className="flex h-[var(--clair-layout-drawer-header)] items-center justify-between px-4">
+      <EmrRightPanelHeader className="justify-between">
         <h2 className="min-w-0 truncate text-sm font-semibold">종합소견</h2>
         <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
           {sameEncounterOrderCount}
         </Badge>
-      </div>
+      </EmrRightPanelHeader>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 p-3">
           <section className="overflow-hidden rounded-lg border bg-card">

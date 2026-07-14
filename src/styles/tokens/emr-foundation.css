@@ -163,6 +163,7 @@
   --emr-sidepanel-header-height: 56px;
   --emr-sidepanel-header-padding-x: var(--clair-spacing-16);
   --emr-sidepanel-header-padding-y: 0px;
+  --emr-rightpanel-header-height: 56px;
   --emr-sidepanel-list-title-height: var(--clair-control-height-md);
   --emr-sidepanel-list-title-padding: var(--clair-spacing-4);
   --emr-sidepanel-list-title-gap: var(--clair-spacing-12);
