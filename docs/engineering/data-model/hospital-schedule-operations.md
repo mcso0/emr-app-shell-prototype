@@ -22,10 +22,31 @@ This model is limited to synthetic local/dev/test operations. It records plannin
 - Requests do not mutate a shift when submitted. `hospital_schedule_review_request(..., 'approved')` is the only approval path that applies the requested leave/change and marks the week `changed`.
 - Assignment is deterministic and advisory. The admin explicitly saves the proposed staff assignment through `hospital_schedule_save_shift`.
 - `hospital_schedule_read_snapshot` returns role-safe staff directory fields, shifts, the caller's permitted requests, and their in-app schedule notifications. It excludes hourly rates.
+- `reception_staff_operational_status_snapshot(workspace, day)` returns only
+  veterinarian user ID, derived status code, and source. It does not expose clock
+  timestamps, rates, notes, or mutable schedule fields. The reception staff API
+  performs its existing `reception:view` check before invoking this snapshot.
+
+## Reception operational status derivation
+
+- Only `published` or `changed` weeks participate; draft schedule data is not shown
+  as an operational fact.
+- Leave/off wins first. A matching time-clock row with `clock_out_at` then maps to
+  `clocked_out` (`퇴근`). Without that fact, elapsed shift time maps to
+  `shift_ended` (`근무 종료`). Upcoming and active work shifts map to `scheduled`
+  and `available`.
+- Missing profile or shift data maps to `unknown`; the client omits the badge rather
+  than inventing availability from membership role or display name.
+- The calculation uses `Asia/Seoul` time. It is evaluated on read and refreshed by
+  the reception client, so the database does not receive minute-by-minute status
+  writes.
+- `진료중` is not a schedule-table value. Reception may overlay it from an
+  authorized, checked-in appointment assigned to that veterinarian and overlapping
+  the current time.
 
 ## RLS and RPC notes
 
-All public tables have RLS enabled and explicit `authenticated` grants. RPCs use security-definer functions with a fixed search path and check `private.clair_is_active_workspace_member`, `private.clair_is_workspace_admin`, or the caller's own staff profile before mutation.
+All public tables have RLS enabled and explicit `authenticated` grants. RPCs use security-definer functions with a fixed search path and check `private.clair_is_active_workspace_member`, `private.clair_is_workspace_admin`, or the caller's own staff profile before mutation. The operational-status snapshot follows the existing active-member schedule-read boundary, while the reception route separately enforces `reception:view`.
 
 ## Verification boundary
 

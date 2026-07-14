@@ -25,6 +25,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   const { workspaceId } = await params;
   const url = new URL(request.url);
   const role = url.searchParams.get("role") ?? undefined;
+  const operatingDate = url.searchParams.get("date") ?? undefined;
   const serverSession = await readServerSession();
   const identity = resolveRoleUpdateActorIdentity({
     serverSession,
@@ -60,6 +61,7 @@ export async function GET(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseWorkspaceStaffClient,
         )
       : undefined,
+    operatingDate,
     permissionAdapter,
     role,
     workspaceId,
