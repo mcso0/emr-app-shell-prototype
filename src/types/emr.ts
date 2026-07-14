@@ -5,6 +5,13 @@ export type DrawerState = {
   type: string;
   id: string;
   subtitle?: string;
+  rightPanelPresentation?: {
+    gap?: number;
+    mobileFullWidth?: boolean;
+    persistToUrl?: boolean;
+    returnFocusId?: string;
+    width?: number;
+  };
 } | null;
 
 export type ShellComponentProps = {

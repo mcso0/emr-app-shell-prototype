@@ -4,7 +4,7 @@ import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permi
 import * as operationalProfileModule from "../src/features/staff/server-operational-profile-core";
 
 const route =
-  "/api/workspaces/clair-demo/staff/user-vet-suji/operational-profile?date=2026-05-01&context=reception";
+  "/api/workspaces/clair-demo/staff/user-vet-suji/operational-profile?date=2026-05-01";
 
 test("operational profile route returns only display-safe same-workspace staff data", async ({
   request,
@@ -75,7 +75,7 @@ test("operational profile route does not disclose an unavailable target", async 
   });
 });
 
-test("operational profile route enforces active workspace reception access", async ({
+test("operational profile route enforces active workspace membership", async ({
   request,
 }) => {
   const unauthenticated = await request.get(route);
@@ -113,11 +113,20 @@ test("Supabase operational profile gateway joins membership, job position, avata
         },
       ],
       user_profiles: [{ user_id: "user-suji", avatar_url: "user-suji.png" }],
+      workspace_member_activity: [
+        {
+          workspace_id: "workspace-clair-cheongdam",
+          user_id: "user-suji",
+          last_seen_at: "2026-07-14T11:55:00.000Z",
+        },
+      ],
       users: [
         {
           id: "user-suji",
           display_name: "이수지",
+          email: "suji@example.test",
           initial: "SJ",
+          phone: "010-0000-0000",
           status: "active",
         },
       ],
@@ -173,9 +182,12 @@ test("Supabase operational profile gateway joins membership, job position, avata
       avatarUrl: "https://storage.local/avatars/user-suji.png",
       department: "진료팀",
       displayName: "이수지",
+      email: "suji@example.test",
       initials: "SJ",
       jobPositionLabel: "수의사",
+      lastSeenAt: "2026-07-14T11:55:00.000Z",
       membershipStatus: "active",
+      phone: "010-0000-0000",
       title: "진료팀장",
     },
     shift: {
@@ -185,6 +197,49 @@ test("Supabase operational profile gateway joins membership, job position, avata
       kind: "clinical",
       workLabel: "진료",
       locationLabel: "제2진료실",
+    },
+  });
+});
+
+test("Supabase operational profile remains available while activity storage is unavailable", async () => {
+  const gateway =
+    operationalProfileModule.createSupabaseStaffOperationalProfileGateway(
+      createSupabaseProfileClient({
+        activityError: true,
+        hospital_schedule_staff_profiles: [],
+        user_memberships: [
+          {
+            id: "membership-suji",
+            workspace_id: "workspace-clair-cheongdam",
+            user_id: "user-suji",
+            status: "active",
+          },
+        ],
+        user_profiles: [],
+        users: [
+          {
+            id: "user-suji",
+            display_name: "이수지",
+            status: "active",
+          },
+        ],
+        workspace_job_positions: [],
+        workspace_member_activity: [],
+        workspace_membership_job_position_assignments: [],
+      }) as unknown as operationalProfileModule.SupabaseStaffOperationalProfileClient,
+    );
+
+  await expect(
+    gateway.readProfile({
+      date: "2026-07-14",
+      userId: "user-suji",
+      workspaceId: "workspace-clair-cheongdam",
+    }),
+  ).resolves.toMatchObject({
+    ok: true,
+    profile: {
+      displayName: "이수지",
+      membershipStatus: "active",
     },
   });
 });
@@ -212,6 +267,7 @@ test("Supabase operational profile gateway preserves inactive profile when sched
         },
       ],
       user_profiles: [],
+      workspace_member_activity: [],
       users: [
         {
           id: "user-suji",
@@ -243,6 +299,62 @@ test("Supabase operational profile gateway preserves inactive profile when sched
   });
 });
 
+test("operational profile keeps nullable contacts absent and does not require reception permission", async () => {
+  const gateway = operationalProfileModule.createSupabaseStaffOperationalProfileGateway(
+    createSupabaseProfileClient({
+      hospital_schedule_staff_profiles: [],
+      user_memberships: [
+        {
+          id: "membership-suji",
+          workspace_id: "workspace-clair-cheongdam",
+          user_id: "user-suji",
+          status: "active",
+        },
+      ],
+      user_profiles: [],
+      users: [
+        {
+          id: "user-suji",
+          display_name: "이수지",
+          email: null,
+          phone: "   ",
+          status: "active",
+        },
+      ],
+      workspace_job_positions: [],
+      workspace_member_activity: [],
+      workspace_membership_job_position_assignments: [],
+    }) as unknown as operationalProfileModule.SupabaseStaffOperationalProfileClient,
+  );
+
+  const result = await operationalProfileModule.readStaffOperationalProfile({
+    actorUserId: "member-without-reception-permission",
+    date: "2026-07-14",
+    gateway,
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [
+        { id: "member-without-reception-permission", status: "active" },
+      ],
+      memberships: [
+        {
+          id: "membership-reader",
+          workspaceId: "workspace-clair-cheongdam",
+          userId: "member-without-reception-permission",
+          roles: [],
+          status: "active",
+        },
+      ],
+    }),
+    userId: "user-suji",
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.profile).not.toHaveProperty("email");
+  expect(result.profile).not.toHaveProperty("phone");
+});
+
 function createReceptionViewPermissionAdapter() {
   return createMockWorkspacePermissionAdapter({
     users: [{ id: "user-front-desk", status: "active" }],
@@ -259,11 +371,13 @@ function createReceptionViewPermissionAdapter() {
 }
 
 type SupabaseProfileRows = {
+  activityError?: boolean;
   hospital_schedule_staff_profiles: Array<Record<string, unknown>>;
   user_memberships: Array<Record<string, unknown>>;
   user_profiles: Array<Record<string, unknown>>;
   users: Array<Record<string, unknown>>;
   workspace_job_positions: Array<Record<string, unknown>>;
+  workspace_member_activity: Array<Record<string, unknown>>;
   workspace_membership_job_position_assignments: Array<Record<string, unknown>>;
   scheduleError?: boolean;
   scheduleSnapshot?: Record<string, unknown>;
@@ -277,6 +391,7 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
         user_memberships: rows.user_memberships,
         user_profiles: rows.user_profiles,
         users: rows.users,
+        workspace_member_activity: rows.workspace_member_activity,
         workspace_job_positions: rows.workspace_job_positions,
         workspace_membership_job_position_assignments:
           rows.workspace_membership_job_position_assignments,
@@ -292,13 +407,18 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
         },
         then(
           onfulfilled: (value: {
-            data: typeof selectedRows;
-            error: null;
+            data: typeof selectedRows | null;
+            error: { message: string } | null;
           }) => unknown,
         ) {
-          return Promise.resolve({ data: selectedRows, error: null }).then(
-            onfulfilled,
-          );
+          const error =
+            table === "workspace_member_activity" && rows.activityError
+              ? { message: "relation does not exist" }
+              : null;
+          return Promise.resolve({
+            data: error ? null : selectedRows,
+            error,
+          }).then(onfulfilled);
         },
       };
       return query;

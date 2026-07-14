@@ -1,23 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { CloseIcon } from "@/components/icons";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
+import { toast } from "sonner";
+import { CdsActionsCopyIcon, CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
+import {
+  CdsCommunicationMailIcon,
+  CdsCommunicationPhoneIcon,
+} from "@/components/cds-icons/communication-and-media";
+import {
+  CdsFilesCalendarIcon,
+  CdsFilesFileTextIcon,
+} from "@/components/cds-icons/files-and-layout";
+import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Tab,
+  TabGroup,
+  TabPanel,
+  TabsList,
+} from "@/components/ui/tabs";
 import type {
   StaffOperationalProfile,
   StaffOperationalShift,
 } from "@/features/staff/server-operational-profile-core";
+import {
+  formatStaffLastSeenLabel,
+  useWorkspaceStaffOnlineStatus,
+} from "@/features/staff/workspace-staff-presence";
 
 type StaffOperationalProfileResponse =
   | {
@@ -28,66 +45,64 @@ type StaffOperationalProfileResponse =
     }
   | { ok: false; error?: string; denialReason?: string };
 
-export type StaffOperationalProfileContextSummary = {
-  date: string;
-  processedCount: number;
-  remainingCount: number;
-  totalCount: number;
-};
-
-export function StaffOperationalProfileDrawer({
+export function StaffOperationalProfilePanel({
   actorUserId,
-  contextSummary,
   currentMinutes,
   date,
-  onOpenChange,
-  open,
+  onClose,
   todayDate,
   userId,
   workspaceId,
 }: {
   actorUserId?: string;
-  contextSummary?: StaffOperationalProfileContextSummary;
   currentMinutes: number;
   date: string;
-  onOpenChange: (open: boolean) => void;
-  open: boolean;
+  onClose: () => void;
   todayDate: string;
-  userId: string | null;
+  userId: string;
   workspaceId: string;
 }) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [loadResult, setLoadResult] = useState<{
     key: string;
     response: Extract<StaffOperationalProfileResponse, { ok: true }> | null;
     state: "ready" | "error";
   } | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
+  const online = useWorkspaceStaffOnlineStatus({ userId, workspaceId });
 
   const loadProfile = useCallback(
     () => setRetryNonce((value) => value + 1),
     [],
   );
-  const requestKey =
-    open && userId ? `${workspaceId}:${userId}:${date}:${retryNonce}` : null;
-  const requestState = !requestKey
-    ? "idle"
-    : loadResult?.key === requestKey
+  const requestKey = `${workspaceId}:${userId}:${date}:${retryNonce}`;
+  const requestState =
+    loadResult?.key === requestKey
       ? loadResult.state === "ready"
         ? "idle"
         : "error"
       : "loading";
   const response =
-    requestKey && loadResult?.key === requestKey && loadResult.state === "ready"
+    loadResult?.key === requestKey && loadResult.state === "ready"
       ? loadResult.response
       : null;
 
   useEffect(() => {
-    if (!requestKey || !userId) return;
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
+  useEffect(() => {
     const controller = new AbortController();
 
     void fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff/${encodeURIComponent(userId)}/operational-profile?date=${encodeURIComponent(date)}&context=reception`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff/${encodeURIComponent(userId)}/operational-profile?date=${encodeURIComponent(date)}`,
       {
         cache: "no-store",
         headers: actorUserId
@@ -102,8 +117,7 @@ export function StaffOperationalProfileDrawer({
         setLoadResult({ key: requestKey, response: body, state: "ready" });
       })
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError")
-          return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
         setLoadResult({ key: requestKey, response: null, state: "error" });
       });
 
@@ -113,50 +127,75 @@ export function StaffOperationalProfileDrawer({
   const profile = response?.profile;
   const shift = response?.shift ?? null;
   const shiftSectionTitle =
-    date === todayDate ? "오늘 근무" : formatDateSection(date);
+    date === todayDate ? "오늘 근무 정보" : formatDateSection(date);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        aria-describedby="staff-operational-profile-description"
-        className="!w-screen !max-w-none gap-0 p-0 sm:!w-[440px] sm:!min-w-[400px] sm:!max-w-[480px]"
-        data-testid="staff-operational-profile-drawer"
-        showCloseButton={false}
-      >
-        <SheetHeader className="relative border-b border-[var(--emr-line-hairline)] px-5 py-4 pr-14">
-          <SheetTitle>직원 운영 프로필</SheetTitle>
-          <SheetDescription
-            className="sr-only"
-            id="staff-operational-profile-description"
+    <section
+      aria-label="직원 운영 프로필"
+      className="h-full min-h-0 bg-white"
+      data-testid="staff-operational-profile-panel"
+    >
+      <TabGroup value="profile" className="h-full min-h-0 gap-0">
+        <header className="relative h-32 shrink-0 border-b border-[#e5e5e5] px-4 pt-3">
+          {profile ? (
+            <ProfileHeader profile={profile} online={online} />
+          ) : (
+            <ProfileHeaderSkeleton />
+          )}
+          <Button
+            ref={closeButtonRef}
+            aria-label="직원 운영 프로필 닫기"
+            className="absolute right-3 top-3 size-8 rounded-lg text-[#404040]"
+            size="icon-sm"
+            variant="ghost"
+            onClick={onClose}
           >
-            직원의 공통 프로필, 조직 정보, 선택 날짜 근무 정보를 조회합니다.
-          </SheetDescription>
-          <SheetClose
-            aria-label="운영 프로필 닫기"
-            render={
-              <Button
-                className="absolute right-3 top-3"
-                size="icon-sm"
-                variant="ghost"
-              />
-            }
+            <CdsActionsXIcon aria-hidden="true" size={16} />
+          </Button>
+          <TabsList
+            activateOnFocus
+            aria-label="직원 프로필 탭"
+            className="absolute bottom-0 left-4 h-[34px] gap-2 p-0"
+            variant="line"
           >
-            <CloseIcon aria-hidden="true" />
-          </SheetClose>
-        </SheetHeader>
+            <Tab
+              className="h-[34px] min-w-0 flex-none rounded-none px-2 py-[7px] text-sm leading-5 text-[#737373] after:bottom-0 after:h-px data-active:text-[#262626]"
+              value="profile"
+            >
+              프로필
+            </Tab>
+            <Tab
+              className="h-[34px] min-w-0 flex-none rounded-none px-2 py-[7px] text-sm leading-5 text-[#737373] after:bottom-0 after:h-px"
+              value="tab2"
+              disabled
+            >
+              tab2
+            </Tab>
+            <Tab
+              className="h-[34px] min-w-0 flex-none rounded-none px-2 py-[7px] text-sm leading-5 text-[#737373] after:bottom-0 after:h-px"
+              value="tab3"
+              disabled
+            >
+              tab3
+            </Tab>
+          </TabsList>
+        </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <TabPanel
+          className="min-h-0 overflow-y-auto outline-none"
+          value="profile"
+        >
           {requestState === "loading" ? (
             <ProfileLoadingState />
           ) : requestState === "error" ? (
             <div
-              className="m-5 rounded-lg border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-4"
+              className="m-4 rounded-lg border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-4"
               role="alert"
             >
-              <div className="font-semibold text-[var(--emr-status-danger-text)]">
+              <div className="text-sm font-semibold text-[var(--emr-status-danger-text)]">
                 운영 프로필을 불러오지 못했어
               </div>
-              <p className="mt-1 text-sm text-[var(--emr-text-secondary)]">
+              <p className="mt-1 text-[13px] leading-[18px] text-[#737373]">
                 직원 정보 원본을 확인할 수 없어. 잠시 후 다시 시도해줘.
               </p>
               <Button
@@ -169,41 +208,17 @@ export function StaffOperationalProfileDrawer({
               </Button>
             </div>
           ) : profile ? (
-            <div className="divide-y divide-[var(--emr-line-hairline)]">
-              <ProfileHeader profile={profile} />
-              <section
-                className="px-5 py-5"
-                aria-labelledby="staff-organization-heading"
-              >
-                <h2
-                  className="text-sm font-semibold"
-                  id="staff-organization-heading"
-                >
-                  조직 정보
-                </h2>
-                <dl className="mt-3 grid grid-cols-[96px_minmax(0,1fr)] gap-x-4 gap-y-3 text-sm">
-                  <ProfileField label="직무" value={profile.jobPositionLabel} />
-                  <ProfileField label="직책" value={profile.title} />
-                  <ProfileField label="부서" value={profile.department} />
-                  <ProfileField
-                    label="소속 상태"
-                    value={getMembershipStatusLabel(profile.membershipStatus)}
-                  />
-                </dl>
-              </section>
-              <section
-                className="px-5 py-5"
-                aria-labelledby="staff-shift-heading"
-              >
-                <h2 className="text-sm font-semibold" id="staff-shift-heading">
+            <div className="px-4 pt-4">
+              <section aria-labelledby="staff-shift-heading">
+                <SectionTitle id="staff-shift-heading">
                   {shiftSectionTitle}
-                </h2>
-                {response.sectionErrors?.shift ? (
+                </SectionTitle>
+                {response?.sectionErrors?.shift ? (
                   <div
-                    className="mt-3 rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3"
+                    className="mt-2.5 rounded-xl border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3"
                     role="alert"
                   >
-                    <div className="text-sm font-semibold text-[var(--emr-status-warning-text)]">
+                    <div className="text-[13px] font-semibold leading-[18px] text-[var(--emr-status-warning-text)]">
                       근무 정보를 불러오지 못했어
                     </div>
                     <Button
@@ -218,104 +233,134 @@ export function StaffOperationalProfileDrawer({
                 ) : shift ? (
                   <ShiftSummary
                     currentMinutes={currentMinutes}
+                    onScheduleCheck={onClose}
                     shift={shift}
                     todayDate={todayDate}
                   />
                 ) : (
-                  <p className="mt-3 text-sm text-[var(--emr-text-secondary)]">
+                  <p className="mt-2.5 rounded-xl border border-[#e5e5e5] px-3 py-4 text-[13px] leading-[18px] text-[#737373]">
                     {date === todayDate
                       ? "오늘 등록된 근무가 없어요"
                       : "선택한 날짜에 등록된 근무가 없어요"}
                   </p>
                 )}
               </section>
-              {contextSummary ? (
-                <ReceptionContextSummary summary={contextSummary} />
-              ) : null}
+
+              <div className="my-4 h-px bg-[#e5e5e5]" />
+
+              <AccountInformation profile={profile} />
             </div>
           ) : null}
-        </div>
-      </SheetContent>
-    </Sheet>
+        </TabPanel>
+      </TabGroup>
+    </section>
+  );
+}
+
+function ProfileHeaderSkeleton() {
+  return (
+    <div className="flex h-[66px] items-center gap-4 pr-9">
+      <Skeleton className="size-[66px] shrink-0 rounded-md" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-3 w-20" />
+      </div>
+    </div>
   );
 }
 
 function ProfileLoadingState() {
   return (
     <div
-      className="space-y-6 p-5"
+      aria-live="polite"
+      className="space-y-4 p-4"
       data-testid="staff-operational-profile-loading"
     >
-      <div className="flex items-center gap-3">
-        <Skeleton className="size-12 rounded-xl" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-44" />
-        </div>
-      </div>
-      <Skeleton className="h-36 w-full rounded-lg" />
-      <Skeleton className="h-24 w-full rounded-lg" />
+      <span className="sr-only">직원 운영 프로필 불러오는 중</span>
+      <Skeleton className="h-6 w-24" />
+      <Skeleton className="h-[72px] w-full rounded-xl" />
+      <Skeleton className="h-px w-full" />
+      <Skeleton className="h-6 w-20" />
+      <Skeleton className="h-[126px] w-full rounded-lg" />
     </div>
   );
 }
 
-function ProfileHeader({ profile }: { profile: StaffOperationalProfile }) {
-  const statusLabel = getMembershipStatusLabel(profile.membershipStatus);
+function ProfileHeader({
+  online,
+  profile,
+}: {
+  online: boolean;
+  profile: StaffOperationalProfile;
+}) {
+  const detailLine = [profile.jobPositionLabel, profile.email]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <section className="flex items-center gap-4 px-5 py-5">
-      <Avatar roundness="roundrect" size="lg">
-        {profile.avatarUrl ? (
-          <AvatarImage src={profile.avatarUrl} alt="" />
-        ) : null}
-        <AvatarFallback>
+    <div className="flex h-[66px] items-center gap-4 pr-9">
+      <Avatar
+        className="size-[66px] rounded-md after:rounded-md after:border-[#e5e5e5]"
+        roundness="roundrect"
+      >
+        {profile.avatarUrl ? <AvatarImage src={profile.avatarUrl} alt="" /> : null}
+        <AvatarFallback className="rounded-md text-base">
           {profile.initials ?? profile.displayName.slice(0, 2)}
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="truncate text-lg font-semibold">
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="min-w-0 truncate text-lg font-semibold leading-[26px] text-[#171717]">
             {profile.displayName}
           </h2>
-          <Badge
-            variant={
-              profile.membershipStatus === "active" ? "outline" : "secondary"
+          <span
+            className={
+              online
+                ? "inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-[#9ae6b4] bg-[#f0fff4] px-1.5 py-0.5 text-xs font-medium leading-4 text-[#276749]"
+                : "inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-[#d4d4d4] bg-[#f5f5f5] px-1.5 py-0.5 text-xs font-medium leading-4 text-[#525252]"
             }
           >
-            {statusLabel}
-          </Badge>
+            <span
+              aria-hidden="true"
+              className={online ? "size-1.5 rounded-full bg-[#48bb78]" : "size-1.5 rounded-full bg-[#a3a3a3]"}
+            />
+            {online ? "접속 중" : "오프라인"}
+          </span>
         </div>
-        <p className="mt-1 truncate text-sm text-[var(--emr-text-secondary)]">
-          {[profile.jobPositionLabel, profile.title]
-            .filter(Boolean)
-            .join(" · ") || "조직 정보 미지정"}
+        <p className="mt-0.5 truncate text-[13px] font-medium leading-[18px] text-[#737373]">
+          {detailLine || "등록 정보 없음"}
         </p>
-        {profile.department ? (
-          <p className="mt-0.5 text-xs text-[var(--emr-text-tertiary)]">
-            {profile.department}
-          </p>
-        ) : null}
+        <p className="mt-0.5 truncate text-xs leading-4 text-[#a3a3a3]">
+          {online ? "접속 중" : formatStaffLastSeenLabel(profile.lastSeenAt)}
+        </p>
       </div>
-    </section>
+    </div>
   );
 }
 
-function ProfileField({ label, value }: { label: string; value?: string }) {
+function SectionTitle({
+  children,
+  id,
+}: {
+  children: string;
+  id: string;
+}) {
   return (
-    <>
-      <dt className="text-[var(--emr-text-secondary)]">{label}</dt>
-      <dd className="min-w-0 font-medium text-[var(--emr-text-primary)]">
-        {value || "미지정"}
-      </dd>
-    </>
+    <h2 className="flex h-6 items-center text-sm font-medium leading-5 text-[#525252]" id={id}>
+      {children}
+    </h2>
   );
 }
 
 function ShiftSummary({
   currentMinutes,
+  onScheduleCheck,
   shift,
   todayDate,
 }: {
   currentMinutes: number;
+  onScheduleCheck: () => void;
   shift: StaffOperationalShift;
   todayDate: string;
 }) {
@@ -326,71 +371,127 @@ function ShiftSummary({
       : shift.kind === "off"
         ? "휴무"
         : shift.workLabel;
+
   return (
-    <div className="mt-3 rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-subtle)] p-4">
-      <div className="text-base font-semibold tabular-nums">
-        {formatMinutes(shift.startMinutes)}–{formatMinutes(shift.endMinutes)}
+    <div className="mt-2.5 flex h-[72px] items-center gap-3 rounded-xl border border-[#e5e5e5] px-3 py-3">
+      <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-black/[0.04] text-[#737373]">
+        <CdsFilesCalendarIcon aria-hidden="true" size={24} />
       </div>
-      <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-sm text-[var(--emr-text-secondary)]">
-        <span>{kindLabel}</span>
-        {shift.locationLabel ? <span>· {shift.locationLabel}</span> : null}
-        <span>· {state}</span>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-base font-medium leading-6 text-[#404040] tabular-nums">
+          {formatMinutes(shift.startMinutes)} - {formatMinutes(shift.endMinutes)}
+        </div>
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] leading-[18px]">
+          <span className="shrink-0 text-[#0080e5]">{state}</span>
+          <span aria-hidden="true" className="size-0.5 shrink-0 rounded-full bg-[#d4d4d4]" />
+          <span className="truncate text-[#737373]">
+            {[kindLabel, shift.locationLabel].filter(Boolean).join(" · ")}
+          </span>
+        </div>
       </div>
+      <Button
+        aria-label="근무 일정 확인"
+        className="h-6 shrink-0 rounded-lg px-2 py-1 text-xs leading-4"
+        size="xs"
+        variant="outline"
+        onClick={onScheduleCheck}
+      >
+        일정 확인
+      </Button>
     </div>
   );
 }
 
-function ReceptionContextSummary({
-  summary,
-}: {
-  summary: StaffOperationalProfileContextSummary;
-}) {
+function AccountInformation({ profile }: { profile: StaffOperationalProfile }) {
   return (
-    <section
-      className="px-5 py-5"
-      aria-labelledby="staff-reception-summary-heading"
-    >
-      <h2
-        className="text-sm font-semibold"
-        id="staff-reception-summary-heading"
-      >
-        선택 날짜 예약
-      </h2>
-      {summary.totalCount === 0 ? (
-        <p className="mt-3 text-sm text-[var(--emr-text-secondary)]">
-          선택한 날짜에 예약이 없어요
-        </p>
-      ) : (
-        <dl className="mt-3 grid grid-cols-3 gap-2">
-          {[
-            ["전체", summary.totalCount],
-            ["처리", summary.processedCount],
-            ["남은 예약", summary.remainingCount],
-          ].map(([label, value]) => (
-            <div
-              className="rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-subtle)] px-3 py-3"
-              key={label}
-            >
-              <dt className="text-xs text-[var(--emr-text-secondary)]">
-                {label}
-              </dt>
-              <dd className="mt-1 text-lg font-semibold tabular-nums">
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
+    <section aria-labelledby="staff-account-heading" className="pb-4">
+      <SectionTitle id="staff-account-heading">계정 정보</SectionTitle>
+      <dl className="mt-2.5 grid grid-cols-[92px_minmax(0,1fr)_24px] items-center gap-x-3 gap-y-2.5 text-sm leading-5">
+        <AccountRow
+          copyLabel="이메일 복사"
+          icon={CdsCommunicationMailIcon}
+          label="이메일"
+          value={profile.email}
+        />
+        <AccountRow
+          copyLabel="전화번호 복사"
+          icon={CdsCommunicationPhoneIcon}
+          label="전화번호"
+          value={profile.phone}
+        />
+        <AccountRow icon={CdsPeopleUserIcon} label="직무" value={profile.jobPositionLabel} />
+        <AccountRow icon={CdsFilesFileTextIcon} label="직책" value={profile.title} />
+      </dl>
     </section>
   );
 }
 
-function getMembershipStatusLabel(
-  status: StaffOperationalProfile["membershipStatus"],
-) {
-  if (status === "inactive") return "비활성";
-  if (status === "suspended") return "중지됨";
-  return "활성";
+function AccountRow({
+  copyLabel,
+  icon: Icon,
+  label,
+  value,
+}: {
+  copyLabel?: string;
+  icon: ComponentType<{ "aria-hidden"?: boolean; size?: number }>;
+  label: string;
+  value?: string;
+}) {
+  const copyValue = async () => {
+    if (!value) return;
+    try {
+      await copyText(value);
+      toast.success(`${label}을 복사했어`);
+    } catch {
+      toast.error(`${label}을 복사하지 못했어`);
+    }
+  };
+
+  return (
+    <>
+      <dt className="flex min-w-0 items-center gap-2 text-[#737373]">
+        <Icon aria-hidden={true} size={15} />
+        <span className="truncate">{label}</span>
+      </dt>
+      <dd className="min-w-0 truncate font-medium text-[#404040]" title={value}>
+        {value || "미등록"}
+      </dd>
+      <dd className="flex size-6 items-center justify-center">
+        {value && copyLabel ? (
+          <button
+            aria-label={copyLabel}
+            className="grid size-6 place-items-center rounded-md text-[#737373] outline-none hover:bg-[#f5f5f5] focus-visible:ring-2 focus-visible:ring-ring/50"
+            type="button"
+            onClick={() => void copyValue()}
+          >
+            <CdsActionsCopyIcon aria-hidden="true" size={14} />
+          </button>
+        ) : null}
+      </dd>
+    </>
+  );
+}
+
+async function copyText(value: string) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+  } catch {
+    // Fall through to the selection-based browser fallback.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  if (!copied) throw new Error("clipboard_write_failed");
 }
 
 function getShiftStateLabel({
@@ -417,5 +518,5 @@ function formatMinutes(minutes: number) {
 
 function formatDateSection(date: string) {
   const [, month, day] = date.split("-").map(Number);
-  return `${month}월 ${day}일 근무`;
+  return `${month}월 ${day}일 근무 정보`;
 }

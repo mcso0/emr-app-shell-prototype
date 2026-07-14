@@ -79,4 +79,17 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }
+const TabGroup = Tabs
+const Tab = TabsTrigger
+const TabPanel = TabsContent
+
+export {
+  Tab,
+  TabGroup,
+  TabPanel,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  tabsListVariants,
+}

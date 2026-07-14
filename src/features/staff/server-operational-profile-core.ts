@@ -11,9 +11,12 @@ export type StaffOperationalProfile = {
   avatarUrl?: string;
   department?: string;
   displayName: string;
+  email?: string;
   initials?: string;
   jobPositionLabel?: string;
+  lastSeenAt?: string;
   membershipStatus: "active" | "inactive" | "suspended";
+  phone?: string;
   title?: string;
 };
 
@@ -101,7 +104,6 @@ export async function readStaffOperationalProfile({
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
-    requiredPermission: "reception:view",
   });
 
   if (!permission.allowed) {
@@ -175,7 +177,7 @@ export function createSupabaseStaffOperationalProfileGateway(
         const users = await readRows(
           client,
           "users",
-          "id, display_name, initial, status",
+          "id, display_name, initial, email, phone, status",
           { id: userId },
         );
         const user = users[0];
@@ -188,6 +190,15 @@ export function createSupabaseStaffOperationalProfileGateway(
           "user_profiles",
           "user_id, avatar_url",
           { user_id: userId },
+        );
+        // Keep the profile readable while the additive activity migration is
+        // rolling out. Presence remains authoritative for the live state; a
+        // missing activity snapshot only removes the last-seen enhancement.
+        const activities = await readOptionalRows(
+          client,
+          "workspace_member_activity",
+          "workspace_id, user_id, last_seen_at",
+          { workspace_id: workspaceId, user_id: userId },
         );
         const assignments = await readRows(
           client,
@@ -217,6 +228,9 @@ export function createSupabaseStaffOperationalProfileGateway(
           ...(typeof user.initial === "string"
             ? { initials: user.initial }
             : {}),
+          ...resolveOptionalText("email", user.email),
+          ...resolveOptionalText("phone", user.phone),
+          ...resolveOptionalTimestamp(activities[0]?.last_seen_at),
           ...(typeof membership.department === "string"
             ? { department: membership.department }
             : {}),
@@ -257,6 +271,21 @@ export function createSupabaseStaffOperationalProfileGateway(
   };
 }
 
+function resolveOptionalText<TKey extends "email" | "phone">(
+  key: TKey,
+  value: unknown,
+): Pick<StaffOperationalProfile, TKey> | Record<string, never> {
+  if (typeof value !== "string" || !value.trim()) return {};
+  return { [key]: value.trim() } as Pick<StaffOperationalProfile, TKey>;
+}
+
+function resolveOptionalTimestamp(
+  value: unknown,
+): Pick<StaffOperationalProfile, "lastSeenAt"> | Record<string, never> {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return {};
+  return { lastSeenAt: value };
+}
+
 async function readRows(
   client: SupabaseStaffOperationalProfileClient,
   table: string,
@@ -270,6 +299,19 @@ async function readRows(
   const { data, error } = await query;
   if (error) throw new Error(error.message ?? "db_read_failed");
   return data ?? [];
+}
+
+async function readOptionalRows(
+  client: SupabaseStaffOperationalProfileClient,
+  table: string,
+  columns: string,
+  filters: Record<string, string>,
+) {
+  try {
+    return await readRows(client, table, columns, filters);
+  } catch {
+    return [];
+  }
 }
 
 function resolveAvatar(
