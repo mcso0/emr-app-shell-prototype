@@ -266,7 +266,7 @@ test("reception date heading matches the CDS V2 left slot", async ({ page }) => 
     "aria-label",
     "26년 5월 1일(금) 표시 중",
   );
-  await expect(dateHeading).toHaveCSS("font-size", "18px");
+  await expect(dateHeading).toHaveCSS("font-size", "16px");
   await expect(dateHeading).toHaveCSS("font-weight", "600");
   await expect(dateHeading).toHaveCSS("line-height", "26px");
   await expect(dateHeading).toHaveCSS("color", "rgb(38, 38, 38)");
