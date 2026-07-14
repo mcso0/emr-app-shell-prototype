@@ -95,6 +95,10 @@ import type {
   ReceptionPatientGuardianRegistrationInput,
   ReceptionPatientGuardianRegistrationResponse,
 } from "@/features/reception/patient-guardian-registration";
+import type {
+  ReceptionPatientGuardianLookupItem,
+  ReceptionPatientGuardianLookupResponse,
+} from "@/features/reception/patient-guardian-lookup";
 import { useKakaoAddressSearch } from "@/features/reception/use-kakao-address-search";
 import type {
   CustomerGuardianProfileUpdateInput,
@@ -2905,6 +2909,44 @@ async function submitRegistration({
   }
 }
 
+async function loadRegistrationProfiles({
+  actorRole,
+  query,
+  signal,
+  workspaceId,
+}: {
+  actorRole?: string;
+  query: string;
+  signal: AbortSignal;
+  workspaceId: string;
+}): Promise<ReceptionPatientGuardianLookupResponse> {
+  const searchParams = new URLSearchParams({
+    query,
+    syntheticAliases: "false",
+  });
+
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/patient-guardian-lookup?${searchParams.toString()}`,
+      {
+        headers: {
+          "x-clair-demo-session-user-id": getReceptionRegistrationDemoActorId(actorRole),
+        },
+        signal,
+      }
+    );
+    const body = (await response.json()) as ReceptionPatientGuardianLookupResponse;
+
+    if (!response.ok || !body.ok) {
+      return body.ok ? { ok: false, error: "db_read_failed" } : body;
+    }
+
+    return body;
+  } catch {
+    return { ok: false, error: "db_read_failed" };
+  }
+}
+
 function getRegistrationRouteErrorMessage(
   result: Extract<ReceptionPatientGuardianRegistrationResponse, { ok: false }>
 ) {
@@ -2955,12 +2997,6 @@ function PatientGuardianRegistrationButton({
     (state) => state.applyPatientGuardianRegistration
   );
   const authSession = useMockAuthStore((state) => state.session);
-  const guardians = usePatientProfileStore((state) => state.guardians);
-  const hasDuplicatePatientNameForGuardian = usePatientProfileStore(
-    (state) => state.hasDuplicatePatientNameForGuardian
-  );
-  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
-  const patients = usePatientProfileStore((state) => state.patients);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
@@ -2970,6 +3006,11 @@ function PatientGuardianRegistrationButton({
   const [guardianDraft, setGuardianDraft] = useState(createGuardianRegistrationDraft);
   const [guardianPopoverOpen, setGuardianPopoverOpen] = useState(false);
   const [guardianQuery, setGuardianQuery] = useState("");
+  const [lookupItems, setLookupItems] = useState<ReceptionPatientGuardianLookupItem[]>([]);
+  const [lookupRetryKey, setLookupRetryKey] = useState(0);
+  const [lookupStatus, setLookupStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   const [mode, setMode] = useState<RegistrationMode>("new_guardian_patient");
   const [patientDraft, setPatientDraft] = useState(() => createNewPatientDraft());
   const [selectedGuardianId, setSelectedGuardianId] = useState("");
@@ -2991,35 +3032,52 @@ function PatientGuardianRegistrationButton({
     onSelectAddress: handleGuardianAddressSelect,
   });
 
-  const selectedGuardian = guardians.find((guardian) => guardian.id === selectedGuardianId);
-  const duplicateGuardian = guardianDraft.mobilePhone
-    ? guardians.find(
-        (guardian) =>
-          normalizeGuardianPhone(guardian.mobilePhone) ===
-          normalizeGuardianPhone(guardianDraft.mobilePhone)
-      )
-    : undefined;
-  const patientGuardianId =
-    mode === "new_guardian_patient" ? "draft-guardian" : selectedGuardianId;
-  const duplicatePatientName =
-    patientGuardianId && patientGuardianId !== "draft-guardian" && patientDraft.name
-      ? hasDuplicatePatientNameForGuardian(patientGuardianId, patientDraft.name)
-      : false;
-  const duplicateMicrochip =
-    patientDraft.microchipNo &&
-    patients.some((patient) => patient.microchipNo === patientDraft.microchipNo.trim());
+  const lookupPatients = useMemo(() => lookupItems.map((item) => item.patient), [lookupItems]);
+  const lookupGuardians = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          lookupItems.flatMap((item) =>
+            item.primaryGuardian ? [[item.primaryGuardian.id, item.primaryGuardian] as const] : []
+          )
+        ).values()
+      ),
+    [lookupItems]
+  );
+  const lookupPatientGuardians = useMemo<PatientGuardian[]>(
+    () =>
+      lookupItems.flatMap((item) =>
+        item.primaryGuardian
+          ? [
+              {
+                id: `registration-lookup-${item.patient.id}-${item.primaryGuardian.id}`,
+                patientId: item.patient.id,
+                guardianId: item.primaryGuardian.id,
+                relationship: "주보호자",
+                isPrimary: true,
+                canReceiveMessages: true,
+                createdAt: item.patient.createdAt,
+              },
+            ]
+          : []
+      ),
+    [lookupItems]
+  );
+  const selectedGuardian = lookupGuardians.find(
+    (guardian) => guardian.id === selectedGuardianId
+  );
   const guardianMatches = useMemo(() => {
     const query = guardianQuery.trim();
     const normalizedQuery = normalizeGuardianPhone(query);
 
-    if (!query && !normalizedQuery) return guardians;
+    if (!query && !normalizedQuery) return lookupGuardians;
 
-    return guardians.filter((guardian) => {
+    return lookupGuardians.filter((guardian) => {
       const guardianPhone = normalizeGuardianPhone(guardian.mobilePhone);
       const guardianDisplay = getGuardianSearchDisplay(
         guardian,
-        patients,
-        patientGuardians
+        lookupPatients,
+        lookupPatientGuardians
       );
 
       return (
@@ -3028,20 +3086,26 @@ function PatientGuardianRegistrationButton({
         (normalizedQuery && guardianPhone.includes(normalizedQuery))
       );
     });
-  }, [guardianQuery, guardians, patientGuardians, patients]);
+  }, [guardianQuery, lookupGuardians, lookupPatientGuardians, lookupPatients]);
   const selectedGuardianPatients = useMemo(() => {
     if (!selectedGuardian) return [];
 
     const selectedPatientIds = new Set(
-      patientGuardians
+      lookupPatientGuardians
         .filter((link) => link.guardianId === selectedGuardian.id)
         .map((link) => link.patientId)
     );
 
-    return patients.filter((patient) => selectedPatientIds.has(patient.id));
-  }, [patientGuardians, patients, selectedGuardian]);
+    return lookupPatients.filter((patient) => selectedPatientIds.has(patient.id));
+  }, [lookupPatientGuardians, lookupPatients, selectedGuardian]);
+  const duplicatePatientName = Boolean(
+    patientDraft.name.trim() &&
+      selectedGuardianPatients.some(
+        (patient) => patient.name.trim().toLowerCase() === patientDraft.name.trim().toLowerCase()
+      )
+  );
   const selectedGuardianSearchDisplay = selectedGuardian
-    ? getGuardianSearchDisplay(selectedGuardian, patients, patientGuardians)
+    ? getGuardianSearchDisplay(selectedGuardian, lookupPatients, lookupPatientGuardians)
     : "";
   const hasRequiredPatientInfo = Boolean(
     patientDraft.name.trim() &&
@@ -3066,11 +3130,60 @@ function PatientGuardianRegistrationButton({
     setOpen(true);
   }, [openRequestKey]);
 
+  useEffect(() => {
+    if (
+      !open ||
+      mode !== "existing_guardian_patient" ||
+      step !== "patient" ||
+      selectedGuardianId
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLookupItems([]);
+      setLookupStatus("loading");
+      const result = await loadRegistrationProfiles({
+        actorRole: authSession?.role,
+        query: guardianQuery,
+        signal: controller.signal,
+        workspaceId,
+      });
+
+      if (controller.signal.aborted) return;
+      if (!result.ok) {
+        setLookupItems([]);
+        setLookupStatus("error");
+        return;
+      }
+
+      setLookupItems(result.patients);
+      setLookupStatus("success");
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    authSession?.role,
+    guardianQuery,
+    lookupRetryKey,
+    mode,
+    open,
+    selectedGuardianId,
+    step,
+    workspaceId,
+  ]);
+
   const reset = () => {
     setErrors({});
     setGuardianDraft(createGuardianRegistrationDraft());
     setGuardianPopoverOpen(false);
     setGuardianQuery("");
+    setLookupItems([]);
+    setLookupStatus("idle");
     setMode("new_guardian_patient");
     setPatientDraft(createNewPatientDraft());
     setSelectedGuardianId("");
@@ -3120,7 +3233,6 @@ function PatientGuardianRegistrationButton({
     } else if (!isValidRegistrationBirthDate(guardianDraft.birthDate)) {
       nextErrors.guardianBirthDate = "생년월일은 YYYY-MM-DD 형식의 실제 날짜로 입력해 주세요.";
     }
-    if (duplicateGuardian) nextErrors.guardianMobilePhone = "이미 등록된 보호자입니다.";
     if (guardianDraft.signatureStatus !== "completed") {
       nextErrors.privacyConsent = "개인정보 수집 동의가 필요합니다.";
     }
@@ -3140,8 +3252,6 @@ function PatientGuardianRegistrationButton({
       nextErrors.age = "나이 또는 생년월일은 필수입니다.";
       nextErrors.birthDate = "나이 또는 생년월일은 필수입니다.";
     }
-    if (duplicateMicrochip) nextErrors.microchipNo = "이미 등록된 마이크로칩 번호입니다.";
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -3286,7 +3396,7 @@ function PatientGuardianRegistrationButton({
     if (validatePatientStep()) setStep("confirm");
   };
   const selectedGuardianPatientCount = selectedGuardian
-    ? getGuardianPatientCount(selectedGuardian.id, patientGuardians)
+    ? getGuardianPatientCount(selectedGuardian.id, lookupPatientGuardians)
     : 0;
   const stepBadge = getRegistrationStepBadge({ mode, step });
   const dialogTitle =
@@ -3578,12 +3688,28 @@ function PatientGuardianRegistrationButton({
                             initialFocus={false}
                           >
                             <div role="listbox" aria-label="기존 보호자 목록" className="grid gap-1">
-                              {guardianMatches.length ? (
+                              {lookupStatus === "idle" || lookupStatus === "loading" ? (
+                                <div className="px-2.5 py-2 emr-text-metadata text-muted-foreground">
+                                  보호자 정보를 불러오는 중입니다.
+                                </div>
+                              ) : lookupStatus === "error" ? (
+                                <div className="flex items-center justify-between gap-3 px-2.5 py-2 emr-text-metadata text-muted-foreground">
+                                  <span>보호자 정보를 불러오지 못했습니다.</span>
+                                  <Button
+                                    size="xs"
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setLookupRetryKey((current) => current + 1)}
+                                  >
+                                    다시 시도
+                                  </Button>
+                                </div>
+                              ) : guardianMatches.length ? (
                                 guardianMatches.map((guardian) => {
                                   const guardianDisplay = getGuardianSearchDisplay(
                                     guardian,
-                                    patients,
-                                    patientGuardians
+                                    lookupPatients,
+                                    lookupPatientGuardians
                                   );
 
                                   return (
@@ -3620,7 +3746,11 @@ function PatientGuardianRegistrationButton({
                                         </span>
                                         <span className="ml-1 emr-text-metadata text-muted-foreground">
                                           {guardian.mobilePhone ?? "연락처 미입력"} ·{" "}
-                                          {getGuardianPatientSummary(guardian.id, patients, patientGuardians)}
+                                          {getGuardianPatientSummary(
+                                            guardian.id,
+                                            lookupPatients,
+                                            lookupPatientGuardians
+                                          )}
                                         </span>
                                       </span>
                                       <Badge variant={selectedGuardianId === guardian.id ? "default" : "outline"}>
