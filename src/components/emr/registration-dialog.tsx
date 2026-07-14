@@ -169,7 +169,7 @@ export function EmrRegistrationSection({
 }) {
   return (
     <>
-      {separated ? <Separator /> : null}
+      {separated ? <Separator className="bg-[var(--emr-border-subtle)]" /> : null}
       <FieldSet className={cn("gap-3", className)}>
         <FieldLegend className="flex h-6 items-center !text-[13px] font-medium leading-[18px] text-[var(--emr-text-placeholder)]">
           {title}
