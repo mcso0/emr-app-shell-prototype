@@ -5331,7 +5331,7 @@ function ChartPreflightField({
   label: string;
 }) {
   return (
-    <div className="grid min-h-9 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3">
+    <div className="grid min-h-9 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-x-2 sm:gap-x-3 [&>*]:min-w-0">
       <label className="emr-control-text flex h-9 min-w-0 items-center gap-2 font-medium text-muted-foreground">
         <span className="flex size-4 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)] [&_svg]:size-4">
           {icon}
@@ -6715,7 +6715,7 @@ export function ChartContent({
                 </SelectContent>
               </Select>
             </ChartPreflightField>
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3 emr-text-metadata">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-x-2 emr-text-metadata sm:gap-x-3 [&>*]:min-w-0">
               <span aria-hidden="true" />
               <label className="flex min-h-7 items-center gap-2 text-[var(--emr-text-secondary)]">
                 <EmrTableCheckbox

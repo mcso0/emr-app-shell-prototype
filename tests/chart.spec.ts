@@ -569,6 +569,14 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "text-align",
     "left",
   );
+  const patientPreflightRow = callDialog
+    .locator("label")
+    .filter({ hasText: "환자 / 보호자" })
+    .locator("..");
+  await expect(patientPreflightRow).toHaveCSS("column-gap", "12px");
+  await expect(patientPreflightRow).toHaveClass(
+    /grid-cols-\[minmax\(0,1fr\)_minmax\(0,2fr\)\]/,
+  );
   await expect(callDialog).toContainText("접수 시각");
   await expect(callDialog).toContainText("담당 수의사");
   await expect(callDialog).toContainText("진료실");
