@@ -4406,7 +4406,17 @@ test("day lane headers show fact-based status and match the Figma metrics", asyn
   await expect(statusBadge).toHaveCSS("font-weight", "500");
   await expect(statusBadge).toHaveCSS("letter-spacing", "0.3px");
   await expect(statusBadge).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  await expect(statusBadge).toHaveCSS("border-color", "rgb(229, 229, 229)");
+  await expect(statusBadge).toHaveCSS("border-width", "0px");
+  await expect
+    .poll(() =>
+      statusBadge.evaluate((element) => getComputedStyle(element).boxShadow),
+    )
+    .toContain("rgb(229, 229, 229) 0px 0px 0px 1px");
+  await expect(statusBadge).toHaveCSS("color", "rgb(116, 106, 95)");
+  await expect(statusBadge).toHaveCSS("min-width", "20px");
+  await expect(
+    page.getByTestId("veterinarian-operational-status").nth(1),
+  ).toHaveCSS("color", "rgb(116, 106, 95)");
   const header = page.getByTestId("veterinarian-lane-header").first();
   const avatar = header.getByTestId("veterinarian-lane-avatar");
   const name = header.getByTestId("veterinarian-lane-name");
