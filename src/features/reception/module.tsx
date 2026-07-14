@@ -20,7 +20,10 @@ import {
   CdsActionsTrash2Icon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsAlertsEyeIcon } from "@/components/cds-icons/alerts-and-status";
+import {
+  CdsAlertsAlertCircleIcon,
+  CdsAlertsEyeIcon,
+} from "@/components/cds-icons/alerts-and-status";
 import {
   CdsFilesCalendarIcon,
   CdsFilesClockIcon,
@@ -88,6 +91,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { FieldError } from "@/components/ui/field";
 import {
   Popover,
   PopoverContent,
@@ -1620,6 +1624,75 @@ function getEncounterUpdateRouteErrorMessage(
   }
 
   return "접수 정보 수정에 실패했습니다.";
+}
+
+type ReceptionEncounterEditFieldErrors = Partial<
+  Record<keyof ReceptionEncounterUpdateInput, string>
+>;
+
+type ReceptionEncounterEditFeedback = {
+  kind: "blocked" | "permission" | "save" | "validation";
+  message: string;
+};
+
+function getEncounterUpdateEditFeedback(
+  result: Extract<ReceptionEncounterUpdateResponse, { ok: false }>,
+): {
+  feedback: ReceptionEncounterEditFeedback;
+  fieldErrors: ReceptionEncounterEditFieldErrors;
+} {
+  if (result.error === "invalid_input") {
+    return {
+      feedback: {
+        kind: "validation",
+        message: "입력값을 확인해 주세요.",
+      },
+      fieldErrors: result.fieldErrors ?? {},
+    };
+  }
+
+  if (
+    result.denialReason === "unauthenticated" ||
+    result.denialReason === "permission_missing" ||
+    result.denialReason === "inactive_user" ||
+    result.denialReason === "workspace_membership_missing" ||
+    result.denialReason === "workspace_membership_inactive"
+  ) {
+    return {
+      feedback: {
+        kind: "permission",
+        message:
+          result.denialReason === "unauthenticated"
+            ? "로그인 상태를 확인해 주세요."
+            : "접수 수정 권한이 없습니다.",
+      },
+      fieldErrors: {},
+    };
+  }
+
+  if (
+    result.denialReason === "encounter_unavailable" ||
+    result.denialReason === "encounter_not_editable" ||
+    result.denialReason === "patient_unavailable" ||
+    result.denialReason === "primary_veterinarian_unavailable" ||
+    result.denialReason === "queue_entry_unavailable"
+  ) {
+    return {
+      feedback: {
+        kind: "blocked",
+        message: getEncounterUpdateRouteErrorMessage(result),
+      },
+      fieldErrors: {},
+    };
+  }
+
+  return {
+    feedback: {
+      kind: "save",
+      message: getEncounterUpdateRouteErrorMessage(result),
+    },
+    fieldErrors: {},
+  };
 }
 
 function getReceptionReadFailureMessage(
@@ -8587,12 +8660,16 @@ function ReceptionSidePanelDivider() {
 function ReceptionSidePanelField({
   align = "center",
   children,
+  error,
+  errorId,
   icon,
   label,
   variant = "default",
 }: {
   align?: "center" | "start";
   children: ReactNode;
+  error?: string;
+  errorId?: string;
   icon: ReactNode;
   label: string;
   variant?: ReceptionSidePanelLayoutVariant;
@@ -8629,7 +8706,17 @@ function ReceptionSidePanelField({
         </span>
         <span className="min-w-0 truncate">{label}</span>
       </div>
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0">
+        {children}
+        {error ? (
+          <FieldError
+            id={errorId}
+            className="mt-[var(--clair-spacing-4)] emr-text-metadata leading-[14px]"
+          >
+            {error}
+          </FieldError>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -8976,6 +9063,7 @@ function ReceptionCreateVitalFields({
 function ReceptionVitalField({
   editDraft,
   editMode,
+  errorMessage,
   onRemove,
   onUpdateExtraVital,
   option,
@@ -8986,6 +9074,7 @@ function ReceptionVitalField({
 }: {
   editDraft: ReceptionEncounterUpdateInput;
   editMode: boolean;
+  errorMessage?: string;
   onRemove: () => void;
   onUpdateExtraVital: (id: ReceptionSidePanelVitalId, value: string) => void;
   option: (typeof receptionSidePanelVitalOptions)[number];
@@ -9004,10 +9093,20 @@ function ReceptionVitalField({
       : value;
 
   return (
-    <ReceptionSidePanelField icon={option.icon} label={option.label} variant={variant}>
+    <ReceptionSidePanelField
+      error={errorMessage}
+      errorId="reception-encounter-edit-weightKg-error"
+      icon={option.icon}
+      label={option.label}
+      variant={variant}
+    >
       <div className="flex min-w-0 items-center gap-2">
         <ReceptionSidePanelInput
           aria-label={option.label}
+          aria-describedby={
+            errorMessage ? "reception-encounter-edit-weightKg-error" : undefined
+          }
+          aria-invalid={Boolean(errorMessage) || undefined}
           readOnly={!editMode}
           inputMode={option.id === "bloodPressure" ? "text" : "decimal"}
           value={inputValue}
@@ -9137,6 +9236,8 @@ function ReceptionSidePanelDetail({
   checkInDisabled,
   departmentValue,
   editDraft,
+  editFeedback,
+  editFieldErrors,
   editMode,
   editSubmitting,
   guardian,
@@ -9164,6 +9265,8 @@ function ReceptionSidePanelDetail({
   checkInDisabled: boolean;
   departmentValue: string;
   editDraft: ReceptionEncounterUpdateInput;
+  editFeedback: ReceptionEncounterEditFeedback | null;
+  editFieldErrors: ReceptionEncounterEditFieldErrors;
   editMode: boolean;
   editSubmitting: boolean;
   guardian?: Guardian;
@@ -9273,6 +9376,7 @@ function ReceptionSidePanelDetail({
                 key={option.id}
                 editDraft={editDraft}
                 editMode={editMode}
+                errorMessage={option.id === "weight" ? editFieldErrors.weightKg : undefined}
                 option={option}
                 removable={canRemoveVital}
                 setEditDraft={setEditDraft}
@@ -9312,6 +9416,8 @@ function ReceptionSidePanelDetail({
 
           <ReceptionSidePanelSection title="진료과/담당의" variant={detailVariant}>
             <ReceptionSidePanelField
+              error={editFieldErrors.department}
+              errorId="reception-encounter-edit-department-error"
               icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
               label="진료과"
               variant={detailVariant}
@@ -9326,7 +9432,16 @@ function ReceptionSidePanelDetail({
                     }))
                   }
                 >
-                  <SelectTrigger aria-label="진료과" className="w-full bg-card">
+                  <SelectTrigger
+                    aria-describedby={
+                      editFieldErrors.department
+                        ? "reception-encounter-edit-department-error"
+                        : undefined
+                    }
+                    aria-invalid={Boolean(editFieldErrors.department) || undefined}
+                    aria-label="진료과"
+                    className="w-full bg-card"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="end" className="min-w-[224px]">
@@ -9349,6 +9464,8 @@ function ReceptionSidePanelDetail({
               )}
             </ReceptionSidePanelField>
             <ReceptionSidePanelField
+              error={editFieldErrors.primaryVeterinarianId}
+              errorId="reception-encounter-edit-primaryVeterinarianId-error"
               icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
               label="담당의"
               variant={detailVariant}
@@ -9363,7 +9480,18 @@ function ReceptionSidePanelDetail({
                     }))
                   }
                 >
-                  <SelectTrigger aria-label="담당의" className="w-full bg-card">
+                  <SelectTrigger
+                    aria-describedby={
+                      editFieldErrors.primaryVeterinarianId
+                        ? "reception-encounter-edit-primaryVeterinarianId-error"
+                        : undefined
+                    }
+                    aria-invalid={
+                      Boolean(editFieldErrors.primaryVeterinarianId) || undefined
+                    }
+                    aria-label="담당의"
+                    className="w-full bg-card"
+                  >
                     <span className="flex min-w-0 flex-1 truncate text-left">
                       {getReceptionVeterinarianSelectLabel(
                         editDraft.primaryVeterinarianId ??
@@ -9426,6 +9554,8 @@ function ReceptionSidePanelDetail({
               />
             </ReceptionSidePanelField>
             <ReceptionSidePanelField
+              error={editFieldErrors.durationMinutes}
+              errorId="reception-encounter-edit-durationMinutes-error"
               icon={<CdsMedicalActivityIcon className="size-3.5" />}
               label="예상소요시간"
               variant={detailVariant}
@@ -9443,6 +9573,14 @@ function ReceptionSidePanelDetail({
                   }
                 >
                   <SelectTrigger
+                    aria-describedby={
+                      editFieldErrors.durationMinutes
+                        ? "reception-encounter-edit-durationMinutes-error"
+                        : undefined
+                    }
+                    aria-invalid={
+                      Boolean(editFieldErrors.durationMinutes) || undefined
+                    }
                     aria-label="예상소요시간"
                     className="w-full bg-card"
                   >
@@ -9471,12 +9609,20 @@ function ReceptionSidePanelDetail({
             </ReceptionSidePanelField>
             <ReceptionSidePanelField
               align="start"
+              error={editFieldErrors.visitPurpose}
+              errorId="reception-encounter-edit-visitPurpose-error"
               icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
               label="방문목적"
               variant={detailVariant}
             >
               <Textarea
                 aria-label="방문목적"
+                aria-describedby={
+                  editFieldErrors.visitPurpose
+                    ? "reception-encounter-edit-visitPurpose-error"
+                    : undefined
+                }
+                aria-invalid={Boolean(editFieldErrors.visitPurpose) || undefined}
                 readOnly={!editMode}
                 value={editMode ? (editDraft.visitPurpose ?? "") : visitReason}
                 placeholder="방문목적을 입력해주세요"
@@ -9497,12 +9643,20 @@ function ReceptionSidePanelDetail({
             {memoLabel ? (
               <ReceptionSidePanelField
                 align="start"
+                error={editFieldErrors.memo}
+                errorId="reception-encounter-edit-memo-error"
                 icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
                 label={memoLabel}
                 variant={detailVariant}
               >
                 <Textarea
                   aria-label={memoLabel}
+                  aria-describedby={
+                    editFieldErrors.memo
+                      ? "reception-encounter-edit-memo-error"
+                      : undefined
+                  }
+                  aria-invalid={Boolean(editFieldErrors.memo) || undefined}
                   readOnly={!editMode}
                   value={
                     editMode
@@ -9530,6 +9684,30 @@ function ReceptionSidePanelDetail({
           </ReceptionSidePanelSection>
         </div>
       </ScrollArea>
+      {editFeedback ? (
+        <div
+          role="alert"
+          aria-live="assertive"
+          data-kind={editFeedback.kind}
+          data-testid="reception-encounter-edit-feedback"
+          className="flex shrink-0 items-center gap-[var(--clair-spacing-4)] px-[var(--clair-spacing-16)] pt-[var(--clair-spacing-8)] text-[12px] leading-[14px] text-[var(--emr-status-danger-text)]"
+        >
+          <CdsAlertsAlertCircleIcon aria-hidden="true" className="size-3.5 shrink-0" />
+          <p className="min-w-0">{editFeedback.message}</p>
+          {editFeedback.kind === "save" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="ml-auto h-auto shrink-0 px-0 text-[12px] leading-[14px] text-[var(--emr-status-danger-text)] hover:bg-transparent hover:text-[var(--emr-status-danger-text)]"
+              disabled={editSubmitting}
+              onClick={onSave}
+            >
+              다시 시도
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       <footer
         className={cn(
           "mt-auto flex shrink-0 items-center gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]",
@@ -9662,6 +9840,10 @@ export function ReceptionDrawer({
   const [editConfirmOpen, setEditConfirmOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editFeedback, setEditFeedback] =
+    useState<ReceptionEncounterEditFeedback | null>(null);
+  const [editFieldErrors, setEditFieldErrors] =
+    useState<ReceptionEncounterEditFieldErrors>({});
   const [appointmentCheckInConfirmOpen, setAppointmentCheckInConfirmOpen] =
     useState(false);
   const [appointmentCheckInSubmitting, setAppointmentCheckInSubmitting] =
@@ -10013,6 +10195,16 @@ export function ReceptionDrawer({
     visitPurpose: visitReason,
     weightKg: patient?.weightKg,
   });
+  const clearEditFeedback = () => {
+    setEditFeedback(null);
+    setEditFieldErrors({});
+  };
+  const updateEditDraft = (
+    updater: (current: ReceptionEncounterUpdateInput) => ReceptionEncounterUpdateInput,
+  ) => {
+    clearEditFeedback();
+    setEditDraft(updater);
+  };
   const applyAppointmentCheckInResult = (
     checkIn: ReceptionAppointmentCheckInRecord,
     weightKg?: number,
@@ -10107,6 +10299,7 @@ export function ReceptionDrawer({
       weightKg: editDraft.weightKg,
     };
 
+    clearEditFeedback();
     setEditSubmitting(true);
     const result = await submitReceptionEncounterUpdate({
       actorRole: authSession?.role,
@@ -10117,7 +10310,9 @@ export function ReceptionDrawer({
     setEditSubmitting(false);
 
     if (!result.ok) {
-      toast.error(getEncounterUpdateRouteErrorMessage(result));
+      const nextFeedback = getEncounterUpdateEditFeedback(result);
+      setEditFieldErrors(nextFeedback.fieldErrors);
+      setEditFeedback(nextFeedback.feedback);
       return;
     }
 
@@ -10138,6 +10333,7 @@ export function ReceptionDrawer({
       ),
     });
     setEditMode(false);
+    clearEditFeedback();
     toast.success("접수 수정이 완료되었습니다");
   };
 
@@ -10182,6 +10378,8 @@ export function ReceptionDrawer({
           )}
           departmentValue={departmentValue}
           editDraft={editDraft}
+          editFeedback={editFeedback}
+          editFieldErrors={editFieldErrors}
           editMode={editMode}
           editSubmitting={editSubmitting}
           guardian={guardian}
@@ -10200,7 +10398,7 @@ export function ReceptionDrawer({
           receptionStartAt={receptionStartAt}
           selectedAppointment={selectedAppointment}
           selectedEncounter={selectedEncounter}
-          setEditDraft={setEditDraft}
+          setEditDraft={updateEditDraft}
           veterinarianName={veterinarianName}
           veterinarians={veterinarians}
           visitReason={visitReason}
@@ -10227,6 +10425,7 @@ export function ReceptionDrawer({
             if (editMode) {
               setEditMode(false);
               setEditDraft(getSelectedEncounterEditDraft());
+              clearEditFeedback();
               return;
             }
             if (presentation === "side-panel") {
@@ -10236,7 +10435,10 @@ export function ReceptionDrawer({
             }
             setActiveDrawer(null);
           }}
-          onEditOpen={() => setEditConfirmOpen(true)}
+          onEditOpen={() => {
+            clearEditFeedback();
+            setEditConfirmOpen(true);
+          }}
           onSave={() => {
             void handleSaveSelectedEncounter();
           }}
@@ -10286,6 +10488,7 @@ export function ReceptionDrawer({
               <Button
                 onClick={() => {
                   setEditDraft(getSelectedEncounterEditDraft());
+                  clearEditFeedback();
                   setEditConfirmOpen(false);
                   setEditMode(true);
                 }}

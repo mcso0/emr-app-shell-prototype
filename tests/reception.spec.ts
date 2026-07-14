@@ -58,6 +58,22 @@ async function submitAppointmentCheckInConfirm(page: Page) {
   await dialog.getByRole("button", { exact: true, name: "접수" }).click();
 }
 
+async function openReceptionEncounterEdit(
+  page: Page,
+  workspaceId = "clair-demo",
+  encounterId = "encounter-haru-260430",
+) {
+  await page.goto(
+    `/w/${workspaceId}/reception?modulePanel=open&right=open&drawer=reception-encounter%3A${encounterId}`,
+  );
+
+  const rightPanel = page.getByTestId("reception-right-panel");
+  await rightPanel.getByTestId("reception-encounter-edit-open").click();
+  await page.getByTestId("reception-encounter-edit-confirm").click();
+
+  return rightPanel;
+}
+
 async function freezeBrowserClock(page: Page, iso: string) {
   await page.addInitScript((fixedIso) => {
     const RealDate = Date;
@@ -3962,6 +3978,314 @@ test("reception encounter edit mode shows its badge beside the side-panel title"
 
   await rightPanel.getByRole("button", { name: "취소", exact: true }).click();
   await expect(header.getByText("수정 중")).toHaveCount(0);
+});
+
+test("reception encounter edit keeps validation, permission, and save failures near their action", async ({
+  page,
+}) => {
+  const workspaceId = "clair-demo";
+  const encounterId = "encounter-haru-260430";
+  let updateCount = 0;
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/encounters/${encounterId}`,
+    async (route) => {
+      updateCount += 1;
+
+      const response =
+        updateCount === 1
+          ? {
+              status: 400,
+              body: {
+                ok: false,
+                error: "invalid_input",
+                fieldErrors: { weightKg: "체중은 0보다 커야 합니다." },
+              },
+            }
+          : updateCount === 2
+            ? {
+                status: 403,
+                body: {
+                  ok: false,
+                  denialReason: "permission_missing",
+                },
+              }
+            : {
+                status: 500,
+                body: {
+                  ok: false,
+                  error: "db_write_failed",
+                },
+              };
+
+      await route.fulfill({
+        status: response.status,
+        contentType: "application/json",
+        body: JSON.stringify(response.body),
+      });
+    },
+  );
+  await page.goto(
+    `/w/${workspaceId}/reception?modulePanel=open&right=open&drawer=reception-encounter%3A${encounterId}`,
+  );
+
+  const rightPanel = page.getByTestId("reception-right-panel");
+  const weight = rightPanel.getByLabel("체중", { exact: true });
+  const feedback = rightPanel.getByTestId("reception-encounter-edit-feedback");
+  const save = rightPanel.getByTestId("reception-encounter-edit-save");
+
+  await rightPanel.getByTestId("reception-encounter-edit-open").click();
+  await page.getByTestId("reception-encounter-edit-confirm").click();
+  await weight.fill("0");
+  await save.click();
+
+  await expect.poll(() => updateCount).toBe(1);
+  await expect(weight).toHaveAttribute("aria-invalid", "true");
+  await expect(weight).toHaveAttribute(
+    "aria-describedby",
+    "reception-encounter-edit-weightKg-error",
+  );
+  await expect(rightPanel.getByText("체중은 0보다 커야 합니다.")).toBeVisible();
+  await expect(feedback).toHaveAttribute("data-kind", "validation");
+  await expect(feedback).toContainText("입력값을 확인해 주세요.");
+
+  await weight.fill("12");
+  await expect(weight).not.toHaveAttribute("aria-invalid", "true");
+  await expect(feedback).toHaveCount(0);
+  await save.click();
+
+  await expect.poll(() => updateCount).toBe(2);
+  await expect(feedback).toHaveAttribute("data-kind", "permission");
+  await expect(feedback).toContainText("접수 수정 권한이 없습니다.");
+  await expect(feedback.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+
+  await weight.fill("13");
+  await save.click();
+
+  await expect.poll(() => updateCount).toBe(3);
+  await expect(feedback).toHaveAttribute("data-kind", "save");
+  await expect(feedback).toContainText("접수 정보 수정에 실패했습니다.");
+  await feedback.getByRole("button", { name: "다시 시도" }).click();
+  await expect.poll(() => updateCount).toBe(4);
+});
+
+test("reception encounter edit links every server field error to its control", async ({
+  page,
+}) => {
+  const workspaceId = "clair-demo";
+  const encounterId = "encounter-haru-260430";
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/encounters/${encounterId}`,
+    async (route) => {
+      await route.fulfill({
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          error: "invalid_input",
+          fieldErrors: {
+            weightKg: "체중 오류",
+            department: "진료과 오류",
+            primaryVeterinarianId: "담당의 오류",
+            durationMinutes: "소요시간 오류",
+            visitPurpose: "방문목적 오류",
+            memo: "메모 오류",
+          },
+        }),
+      });
+    },
+  );
+
+  const rightPanel = await openReceptionEncounterEdit(page, workspaceId, encounterId);
+  await rightPanel.getByTestId("reception-encounter-edit-save").click();
+
+  const fields = [
+    {
+      label: "체중",
+      description: "reception-encounter-edit-weightKg-error",
+      error: "체중 오류",
+    },
+    {
+      label: "진료과",
+      description: "reception-encounter-edit-department-error",
+      error: "진료과 오류",
+    },
+    {
+      label: "담당의",
+      description: "reception-encounter-edit-primaryVeterinarianId-error",
+      error: "담당의 오류",
+    },
+    {
+      label: "예상소요시간",
+      description: "reception-encounter-edit-durationMinutes-error",
+      error: "소요시간 오류",
+    },
+    {
+      label: "방문목적",
+      description: "reception-encounter-edit-visitPurpose-error",
+      error: "방문목적 오류",
+    },
+    {
+      label: "접수 메모",
+      description: "reception-encounter-edit-memo-error",
+      error: "메모 오류",
+    },
+  ] as const;
+
+  for (const field of fields) {
+    const control = rightPanel.getByLabel(field.label, { exact: true });
+    await expect(control).toHaveAttribute("aria-invalid", "true");
+    await expect(control).toHaveAttribute("aria-describedby", field.description);
+    await expect(rightPanel.getByText(field.error, { exact: true })).toBeVisible();
+  }
+
+  const feedback = rightPanel.getByTestId("reception-encounter-edit-feedback");
+  await expect(feedback).toHaveAttribute("data-kind", "validation");
+  await expect(feedback.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+});
+
+test("reception encounter edit distinguishes retryable, authentication, and blocked failures", async ({
+  page,
+}) => {
+  const workspaceId = "clair-demo";
+  const encounterId = "encounter-haru-260430";
+  const responses = [
+    { status: 429, body: { ok: false, error: "rate_limited" } },
+    { status: 401, body: { ok: false, denialReason: "unauthenticated" } },
+    {
+      status: 409,
+      body: { ok: false, denialReason: "encounter_not_editable" },
+    },
+    { status: 409, body: { ok: false, denialReason: "patient_unavailable" } },
+  ] as const;
+  let updateCount = 0;
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/encounters/${encounterId}`,
+    async (route) => {
+      const response = responses[Math.min(updateCount, responses.length - 1)];
+      updateCount += 1;
+      await route.fulfill({
+        status: response.status,
+        contentType: "application/json",
+        body: JSON.stringify(response.body),
+      });
+    },
+  );
+
+  const rightPanel = await openReceptionEncounterEdit(page, workspaceId, encounterId);
+  const feedback = rightPanel.getByTestId("reception-encounter-edit-feedback");
+  const save = rightPanel.getByTestId("reception-encounter-edit-save");
+  const weight = rightPanel.getByLabel("체중", { exact: true });
+
+  await save.click();
+  await expect(feedback).toHaveAttribute("data-kind", "save");
+  await expect(feedback).toContainText("요청이 많습니다. 잠시 후 다시 시도해 주세요.");
+  await expect(feedback.getByRole("button", { name: "다시 시도" })).toBeVisible();
+
+  await weight.fill("11");
+  await save.click();
+  await expect(feedback).toHaveAttribute("data-kind", "permission");
+  await expect(feedback).toContainText("로그인 상태를 확인해 주세요.");
+  await expect(feedback.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+
+  await weight.fill("12");
+  await save.click();
+  await expect(feedback).toHaveAttribute("data-kind", "blocked");
+  await expect(feedback).toContainText("현재 상태에서는 접수 정보를 수정할 수 없습니다.");
+  await expect(feedback.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+
+  await weight.fill("13");
+  await save.click();
+  await expect(feedback).toHaveAttribute("data-kind", "blocked");
+  await expect(feedback).toContainText("접수 연결 정보를 확인해 주세요.");
+  await expect(feedback.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+  await expect.poll(() => updateCount).toBe(4);
+});
+
+test("reception encounter edit prevents duplicate saves while a request is pending", async ({
+  page,
+}) => {
+  const workspaceId = "clair-demo";
+  const encounterId = "encounter-haru-260430";
+  let updateCount = 0;
+  let releaseUpdate: (() => void) | undefined;
+  const updateGate = new Promise<void>((resolve) => {
+    releaseUpdate = resolve;
+  });
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/encounters/${encounterId}`,
+    async (route) => {
+      updateCount += 1;
+      await updateGate;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "db_write_failed" }),
+      });
+    },
+  );
+
+  const rightPanel = await openReceptionEncounterEdit(page, workspaceId, encounterId);
+  const save = rightPanel.getByTestId("reception-encounter-edit-save");
+  await save.click();
+
+  await expect.poll(() => updateCount).toBe(1);
+  await expect(save).toBeDisabled();
+  await expect(save).toHaveText("저장 중");
+  await expect.poll(() => updateCount).toBe(1);
+
+  releaseUpdate?.();
+  const feedback = rightPanel.getByTestId("reception-encounter-edit-feedback");
+  await expect(feedback).toHaveAttribute("data-kind", "save");
+  await expect(save).toBeEnabled();
+  await expect.poll(() => updateCount).toBe(1);
+});
+
+test("reception encounter edit keeps long content and footer usable at a narrow viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 640 });
+  const rightPanel = await openReceptionEncounterEdit(page);
+  const visitPurpose = rightPanel.getByLabel("방문목적", { exact: true });
+  const memo = rightPanel.getByLabel("접수 메모", { exact: true });
+  const longText =
+    "장기간 식욕 저하와 반복적인 구토 증상이 있어 이전 검사 결과를 함께 확인하고 추가 진료 방향을 상담하려고 방문했습니다. ".repeat(
+      4,
+    );
+
+  await visitPurpose.fill(longText);
+  await memo.fill(`${longText}\n보호자에게 검사 전 금식 여부를 다시 안내해야 합니다.`);
+
+  const cancel = rightPanel.getByRole("button", { name: "취소", exact: true });
+  const save = rightPanel.getByTestId("reception-encounter-edit-save");
+  await expect(cancel).toBeVisible();
+  await expect(save).toBeVisible();
+  await expect(visitPurpose).toHaveValue(longText);
+  await expect(memo).toContainText("검사 전 금식 여부");
+
+  const geometry = await rightPanel.evaluate((panel) => {
+    const footer = panel.querySelector("footer");
+    const footerRect = footer?.getBoundingClientRect();
+    return {
+      panelClientWidth: panel.clientWidth,
+      panelScrollWidth: panel.scrollWidth,
+      footerBottom: footerRect?.bottom ?? Number.POSITIVE_INFINITY,
+      footerTop: footerRect?.top ?? Number.NEGATIVE_INFINITY,
+      viewportHeight: window.innerHeight,
+    };
+  });
+  expect(geometry.panelScrollWidth).toBeLessThanOrEqual(geometry.panelClientWidth);
+  expect(geometry.footerBottom).toBeLessThanOrEqual(geometry.viewportHeight);
+  expect(geometry.footerTop).toBeGreaterThanOrEqual(0);
+
+  await rightPanel.getByLabel("체중", { exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(rightPanel.getByRole("button", { name: "바이탈 추가" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(rightPanel.getByLabel("진료과", { exact: true })).toBeFocused();
 });
 
 test("reception encounter detail uses the CDS V2 side-panel field tokens", async ({

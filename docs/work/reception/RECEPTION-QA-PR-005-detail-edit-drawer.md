@@ -115,6 +115,21 @@ Focused verification:
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3101 npx playwright test tests/reception.spec.ts --grep "reception encounter detail header|reception detail keeps visit purpose|reception detail exposes named controls" --reporter=line`: 3 passed
 - Local rendered verification at 1280px confirmed the 380px panel, 56px header, `접수 정보` membership for `방문목적`, 76px visit-purpose textarea, zero browser console errors/warnings, and unchanged close behavior. A 1024px visual check kept the panel/footer visible without horizontal escape.
 
+## Edit-save feedback follow-up (2026-07-14)
+
+- Figma CDS V2 input error (`234:70742`) requires the invalid input and its one-line error message to be shown together. `ReceptionSidePanelField` now owns that local field/error pairing so all existing editable reception fields can use it without ad-hoc markup.
+- The update flow keeps the current server response contract intact. `invalid_input` maps every returned `fieldErrors` entry to its matching field and to a footer-adjacent summary. Authentication and permission denials show a non-retryable action-adjacent message; encounter/workflow state denials are identified as blocked; only transient or unknown save failures expose retry.
+- The footer feedback follows the CDS V2 error info treatment (`16213:26517`: 14px alert icon, 4px gap, 12/14 text). The snackbar reference (`446:104928`) was intentionally not used because this workflow needs the failure to remain adjacent to the editable form and save action.
+- Editing any field, re-entering edit mode, cancelling edit mode, and a successful save clear stale failure feedback. This changes only UI state; payload construction, API routing, permission decisions, and existing mutation behavior are unchanged.
+
+Focused verification:
+
+- `npm run lint -- src/features/reception/module.tsx tests/reception.spec.ts`: passed
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3103 npx playwright test tests/reception.spec.ts --grep "reception encounter edit" --reporter=line`: 6 passed. Coverage includes all six editable field errors, multiple simultaneous errors, rate limit, unauthenticated, permission, blocked encounter/link states, database failure and retry, pending-save disablement, long content, 1024×640 footer/overflow behavior, and keyboard focus order.
+- `npm run build`: passed; one pre-existing Turbopack warning from `next.config.mjs` / PRD viewer tracing remains
+- `git diff --check`: passed
+- Local browser verification plus automated 1024×640 geometry checks confirmed field-level error placement, footer summary visibility, fixed footer actions, and no horizontal panel escape.
+
 ## Handoff Notes
 
 - Downstream reception QA work should treat `PATCH /reception/encounters/[encounterId]` as the update boundary for editable reception detail fields.
