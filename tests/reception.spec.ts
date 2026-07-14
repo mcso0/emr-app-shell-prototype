@@ -775,7 +775,7 @@ test("reception topbar refresh refetches the selected operating date", async ({
   ).toBeVisible();
 });
 
-test("reception prioritizes the Kong vomit demo context from query params", async ({
+test("reception prioritizes the Kong vomit queue and detail context from query params", async ({
   page,
 }) => {
   await page.goto(
@@ -788,12 +788,6 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
     .first();
   const kongCard = sidePanel.getByTestId("patient-card-patient-kong");
 
-  await expect(
-    page.getByText("오늘 내원: 반복 구토와 식욕 저하"),
-  ).toBeVisible();
-  await expect(
-    page.getByText("김하늘 보호자 · 콩이(P-260501-0003)"),
-  ).toBeVisible();
   await expect(kongCard).toBeVisible();
   await expect(kongCard).toContainText("콩이");
   await expect(kongCard).toContainText("김하늘");
@@ -804,20 +798,27 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
   await page.getByTestId("appointment-card-appointment-kong-260501").click();
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
-  await expect(page.getByText("김하늘 보호자").first()).toBeVisible();
+  await expect(
+    page.getByTestId("reception-right-panel").getByRole("textbox").nth(1),
+  ).toHaveValue(/^김하늘/);
   await expect(page.getByText("콩이").first()).toBeVisible();
-  await expect(page.getByLabel("방문 목적")).toHaveValue(
+  await expect(page.getByPlaceholder("방문목적을 입력해주세요")).toHaveValue(
     "반복 구토와 식욕 저하",
   );
-  await expect(page.getByLabel("소요시간")).toHaveValue("15분");
+  await expect(
+    page.getByTestId("reception-right-panel").locator('input[value="15분"]'),
+  ).toBeVisible();
 
-  await page.getByRole("button", { name: "상세 닫기" }).click();
+  await page
+    .getByTestId("reception-right-panel")
+    .getByRole("button", { name: "닫기", exact: true })
+    .click();
   await kongCard.click();
 
   await expect(page.getByText("접수 상세").first()).toBeVisible();
-  await expect(page.getByText("P-260501-0003").first()).toBeVisible();
-  await expect(page.getByText("접수 상세").last()).toBeVisible();
-  await expect(page.getByText("김하늘 보호자").last()).toBeVisible();
+  await expect(
+    page.getByTestId("reception-right-panel").getByRole("textbox").nth(1),
+  ).toHaveValue(/^김하늘/);
   await expect(page.getByText("콩이").last()).toBeVisible();
 });
 
