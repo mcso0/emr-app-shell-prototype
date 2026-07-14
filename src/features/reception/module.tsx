@@ -427,7 +427,7 @@ const veterinarianOperationalStatusToneClasses: Record<
   available:
     "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-available)]",
   clocked_out:
-    "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-clocked-out)]",
+    "min-w-[var(--emr-calendar-lane-status-clocked-out-width)] [--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-clocked-out)]",
   in_consultation:
     "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-available)]",
   leave:

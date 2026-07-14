@@ -4417,6 +4417,9 @@ test("day lane headers show fact-based status and match the Figma metrics", asyn
   await expect(
     page.getByTestId("veterinarian-operational-status").nth(1),
   ).toHaveCSS("color", "rgb(116, 106, 95)");
+  await expect(
+    page.getByTestId("veterinarian-operational-status").nth(1),
+  ).toHaveCSS("width", "34px");
   const header = page.getByTestId("veterinarian-lane-header").first();
   const avatar = header.getByTestId("veterinarian-lane-avatar");
   const name = header.getByTestId("veterinarian-lane-name");

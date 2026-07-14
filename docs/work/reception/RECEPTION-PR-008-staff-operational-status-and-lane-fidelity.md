@@ -150,3 +150,5 @@ Figma node `27682:32532` was re-inspected through the plugin API after deployed
 review. The reception badge now uses the component's true outside neutral-200
 stroke, 20px minimum width, centered label, and status-specific token mapping;
 `퇴근` resolves to iron-600 (`#746A5F`) instead of the previous sky tone.
+The `clocked_out` variant also fixes its logical frame width at the Figma-measured
+34px so browser font-metric rounding cannot shrink it below the source component.
