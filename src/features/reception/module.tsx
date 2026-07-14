@@ -192,7 +192,6 @@ import {
 } from "@/features/reception/reception-list-search";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import {
-  formatKoreanOperatingDateLabel,
   formatOperatingMonthLabel,
   formatOperatingShortTime,
   formatShortOperatingDate,
@@ -4088,12 +4087,19 @@ function getReceptionWeekLabel(date: string) {
   return `${formatShortOperatingDate(weekStart)} - ${formatShortOperatingDate(weekEnd)}`;
 }
 
-function getReceptionDateControlLabels(operatingDate: string) {
-  const dateLabel = formatKoreanOperatingDateLabel(operatingDate);
+function getReceptionDayHeadingLabel(date: string) {
+  const parts = parseIsoDateParts(date);
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][
+    new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay()
+  ];
 
+  return `${String(parts.year).slice(2)}년 ${parts.month}월 ${parts.day}일(${weekday})`;
+}
+
+function getReceptionDateControlLabels(operatingDate: string) {
   return {
     day: {
-      dateLabel,
+      dateLabel: getReceptionDayHeadingLabel(operatingDate),
       pickerLabel: "날짜 선택",
       previousLabel: "이전 날짜",
       nextLabel: "다음 날짜",
@@ -4169,15 +4175,29 @@ function ReceptionScheduleDateControl({
 
   return (
     <div
-      className="flex h-[var(--clair-control-height-sm)] shrink-0 items-center gap-[var(--clair-spacing-8)]"
+      className="flex h-[26px] min-w-0 items-center gap-[var(--clair-spacing-12)] overflow-hidden"
       data-testid="reception-date-control"
     >
       <span
-        className="flex h-[var(--clair-control-height-sm)] items-center text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
+        className="min-w-0 truncate whitespace-nowrap [font-family:var(--clair-typography-heading-2-font-family)] text-[length:var(--clair-typography-heading-2-font-size)] font-[number:var(--clair-typography-heading-2-font-weight)] leading-[26px] tracking-[var(--clair-typography-heading-2-letter-spacing)] text-[var(--clair-color-atomic-neutral-800)] tabular-nums"
         aria-label={`${dateControlLabel.dateLabel} 표시 중`}
+        data-testid="reception-date-heading"
       >
         {dateControlLabel.dateLabel}
       </span>
+      <Badge
+        size="md"
+        variant="secondary"
+        className="h-[22px] shrink-0 gap-[var(--clair-spacing-4)] rounded-[var(--clair-radius-atomic-6)] border-0 bg-[var(--clair-color-atomic-black-alpha-4)] px-[var(--clair-spacing-8)] py-[3px] emr-text-metadata font-medium leading-4 shadow-none"
+        data-testid="reception-business-hours-badge"
+      >
+        <span className="text-[var(--clair-color-atomic-neutral-500)]">
+          업무시간
+        </span>
+        <span className="text-[var(--clair-color-atomic-sky-500)]">
+          09:00-18:00
+        </span>
+      </Badge>
     </div>
   );
 }
