@@ -47,6 +47,7 @@ Let reception staff add only the vital fields needed for the current reception o
 
 - Width follows the trigger width.
 - Each option shows a domain icon, Korean label, and unit.
+- Icon tiles use CLAiR `Neutral/50` (`#FAFAFA`) rather than an accent-tinted background.
 - One click adds one row; no checkbox or separate apply action.
 - `Escape` and outside click close the dropdown without changing fields.
 - Keyboard focus enters the first option when opened and returns to the trigger when dismissed.
