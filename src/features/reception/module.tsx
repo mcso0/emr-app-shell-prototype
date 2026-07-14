@@ -168,6 +168,7 @@ import type {
   ReceptionEncounterUpdateResponse,
 } from "@/features/reception/encounter-update";
 import type {
+  ReceptionVitalMeasurementInput,
   ReceptionWalkInEncounterInput,
   ReceptionWalkInEncounterRecord,
   ReceptionWalkInEncounterResponse,
@@ -440,19 +441,32 @@ type WorkspaceStaffReadResponse =
       denialReason?: string;
       error?: string;
     };
-type WalkInReceptionInput = {
-  department?: string;
-  durationMinutes?: number;
-  guardianId?: string;
+type ReceptionCreateVitalId =
+  | "weight"
+  | "temperature"
+  | "respiration"
+  | "bloodPressure";
+
+type ReceptionCreateVitalDraft = {
+  selectedIds: ReceptionCreateVitalId[];
+  values: {
+    weightKg: string;
+    temperatureC: string;
+    respiratoryRateRpm: string;
+    bloodPressureSystolicMmhg: string;
+    bloodPressureDiastolicMmhg: string;
+  };
+};
+
+type ReceptionCreateVitalFieldErrors = Partial<
+  Record<keyof ReceptionCreateVitalDraft["values"], string>
+>;
+
+type WalkInReceptionInput = Omit<ReceptionWalkInEncounterInput, "vitals"> & {
   guardianMobilePhone?: string;
-  memo?: string;
-  patientId: string;
   patientName?: string;
-  plannedStartAt?: string;
-  primaryVeterinarianId?: string;
   sendKakaoMessage?: boolean;
-  visitPurpose?: string;
-  weightKg?: number;
+  vitals?: ReceptionVitalMeasurementInput;
 };
 const unassignedVeterinarianValue = "unassigned";
 const demoSessionUserIdHeaderName = "x-clair-demo-session-user-id";
@@ -1623,6 +1637,93 @@ const parseWeightKgInput = (value: string) => {
   return Number.isFinite(weightKg) && weightKg > 0
     ? Math.round(weightKg * 100) / 100
     : undefined;
+};
+
+const createReceptionVitalDraft = (
+  weightKg?: number,
+): ReceptionCreateVitalDraft => ({
+  selectedIds: ["weight"],
+  values: {
+    weightKg: formatPatientWeightKgInput(weightKg),
+    temperatureC: "",
+    respiratoryRateRpm: "",
+    bloodPressureSystolicMmhg: "",
+    bloodPressureDiastolicMmhg: "",
+  },
+});
+
+const buildReceptionVitalInput = (
+  draft: ReceptionCreateVitalDraft,
+): {
+  fieldErrors: ReceptionCreateVitalFieldErrors;
+  input?: ReceptionVitalMeasurementInput;
+} => {
+  const selected = new Set(draft.selectedIds);
+  const fieldErrors: ReceptionCreateVitalFieldErrors = {};
+  const input: ReceptionVitalMeasurementInput = {};
+
+  const readPositiveNumber = (
+    key: keyof ReceptionCreateVitalDraft["values"],
+    label: string,
+    integer = false,
+  ) => {
+    const raw = draft.values[key].trim();
+    if (!raw) return undefined;
+    const value = Number(raw);
+
+    if (!Number.isFinite(value) || value <= 0 || (integer && !Number.isInteger(value))) {
+      fieldErrors[key] = integer
+        ? `${label}은 0보다 큰 정수로 입력해 주세요.`
+        : `${label}은 0보다 큰 숫자로 입력해 주세요.`;
+      return undefined;
+    }
+
+    return value;
+  };
+
+  if (selected.has("weight")) {
+    const value = readPositiveNumber("weightKg", "체중");
+    if (value !== undefined) input.weightKg = Math.round(value * 100) / 100;
+  }
+  if (selected.has("temperature")) {
+    const value = readPositiveNumber("temperatureC", "체온");
+    if (value !== undefined) input.temperatureC = Math.round(value * 10) / 10;
+  }
+  if (selected.has("respiration")) {
+    const value = readPositiveNumber("respiratoryRateRpm", "호흡", true);
+    if (value !== undefined) input.respiratoryRateRpm = value;
+  }
+  if (selected.has("bloodPressure")) {
+    const systolicRaw = draft.values.bloodPressureSystolicMmhg.trim();
+    const diastolicRaw = draft.values.bloodPressureDiastolicMmhg.trim();
+    if (Boolean(systolicRaw) !== Boolean(diastolicRaw)) {
+      const message = "수축기와 이완기 혈압을 모두 입력해 주세요.";
+      if (!systolicRaw) fieldErrors.bloodPressureSystolicMmhg = message;
+      if (!diastolicRaw) fieldErrors.bloodPressureDiastolicMmhg = message;
+    } else if (systolicRaw && diastolicRaw) {
+      const systolic = readPositiveNumber(
+        "bloodPressureSystolicMmhg",
+        "수축기 혈압",
+        true,
+      );
+      const diastolic = readPositiveNumber(
+        "bloodPressureDiastolicMmhg",
+        "이완기 혈압",
+        true,
+      );
+      if (systolic !== undefined && diastolic !== undefined) {
+        input.bloodPressure = {
+          systolicMmhg: systolic,
+          diastolicMmhg: diastolic,
+        };
+      }
+    }
+  }
+
+  return {
+    fieldErrors,
+    input: Object.keys(input).length > 0 ? input : undefined,
+  };
 };
 
 const getReservationTimeOptions = (
@@ -6339,7 +6440,9 @@ function ReceptionWalkInFormDrawer({
   const lastSuccessfulLookupKeyRef = useRef("");
   const [submitting, setSubmitting] = useState(false);
   const [visitPurpose, setVisitPurpose] = useState("");
-  const [weightKg, setWeightKg] = useState("");
+  const [vitalDraft, setVitalDraft] = useState<ReceptionCreateVitalDraft>(() =>
+    createReceptionVitalDraft(),
+  );
   const [sendKakaoMessage, setSendKakaoMessage] = useState(true);
   const plannedStartAt = getReceptionIsoAtMinutes(
     operatingDate,
@@ -6379,8 +6482,10 @@ function ReceptionWalkInFormDrawer({
     Boolean(selectedSummary) && lookupQuery === patientOptionText;
   const shouldShowPatientLookup = patientLookupOpen && lookupActive;
   const trimmedVisitPurpose = visitPurpose.trim();
-  const parsedWeightKg = parseWeightKgInput(weightKg);
-  const weightInvalid = Boolean(weightKg.trim()) && parsedWeightKg === undefined;
+  const vitalBuild = useMemo(
+    () => buildReceptionVitalInput(vitalDraft),
+    [vitalDraft],
+  );
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
     veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
@@ -6395,7 +6500,11 @@ function ReceptionWalkInFormDrawer({
     currentOperatingMinutes,
     durationMinutes,
   );
-  const canCreate = Boolean(patient && trimmedVisitPurpose && !weightInvalid);
+  const canCreate = Boolean(
+    patient &&
+      trimmedVisitPurpose &&
+      Object.keys(vitalBuild.fieldErrors).length === 0,
+  );
 
   useEffect(() => {
     const initialSummary = patientSummaryOptions.find(
@@ -6407,7 +6516,7 @@ function ReceptionWalkInFormDrawer({
     setPatientId(initialSummary.patient.id);
     setSelectedLookupSummary(initialSummary);
     setLookupQuery(getReceptionPatientOptionLabel(initialSummary));
-    setWeightKg(formatPatientWeightKgInput(initialSummary.patient.weightKg));
+    setVitalDraft(createReceptionVitalDraft(initialSummary.patient.weightKg));
   }, [initialPatientId, patientSummaryOptions]);
 
   useEffect(() => {
@@ -6495,14 +6604,14 @@ function ReceptionWalkInFormDrawer({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setWeightKg(formatPatientWeightKgInput(patient?.weightKg));
+    setVitalDraft(createReceptionVitalDraft(patient?.weightKg));
   }, [patient?.id, patient?.weightKg]);
 
   const selectPatientSummary = (summary: ReceptionPatientSummary) => {
     setPatientId(summary.patient.id);
     setSelectedLookupSummary(summary);
     setLookupQuery(getReceptionPatientOptionLabel(summary));
-    setWeightKg(formatPatientWeightKgInput(summary.patient.weightKg));
+    setVitalDraft(createReceptionVitalDraft(summary.patient.weightKg));
     setPatientLookupOpen(false);
   };
   const close = () => {
@@ -6532,7 +6641,7 @@ function ReceptionWalkInFormDrawer({
       primaryVeterinarianId: selectedVeterinarianId,
       sendKakaoMessage: presentation === "side-panel" ? false : sendKakaoMessage,
       visitPurpose: trimmedVisitPurpose,
-      weightKg: parsedWeightKg,
+      vitals: vitalBuild.input,
     };
 
     setSubmitting(true);
@@ -6620,7 +6729,7 @@ function ReceptionWalkInFormDrawer({
                         setLookupQuery("");
                         setPatientId("");
                         setSelectedLookupSummary(null);
-                        setWeightKg("");
+                        setVitalDraft(createReceptionVitalDraft());
                         setPatientLookupOpen(true);
                       }}
                     >
@@ -6702,47 +6811,19 @@ function ReceptionWalkInFormDrawer({
                 />
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
-            <ReceptionSidePanelDivider />
-
-            <ReceptionSidePanelSection title="바이탈" variant="create">
-              <ReceptionSidePanelField
-                icon={<CdsMedicalActivityIcon className="size-3.5" />}
-                label="체중"
-                variant="create"
-              >
-                <div className="min-w-0">
-                  <ReceptionSidePanelInput
-                    aria-label="체중"
-                    disabled={!patient}
-                    inputMode="decimal"
-                    placeholder="체중을 입력해주세요"
-                    unit="Kg"
-                    value={weightKg}
-                    variant="create"
-                    aria-invalid={weightInvalid || undefined}
-                    className={
-                      weightInvalid
-                        ? "border-[var(--emr-status-danger-border)]"
-                        : ""
-                    }
-                    onValueChange={(value) =>
-                      setWeightKg(value.replace(/[^\d.]/g, ""))
-                    }
+            {patient ? (
+              <>
+                <ReceptionSidePanelDivider />
+                <ReceptionSidePanelSection title="바이탈" variant="create">
+                  <ReceptionCreateVitalFields
+                    draft={vitalDraft}
+                    fieldErrors={vitalBuild.fieldErrors}
+                    presentation={presentation}
+                    setDraft={setVitalDraft}
                   />
-                  {weightInvalid ? (
-                    <p className="mt-1 emr-text-micro font-medium text-destructive">
-                      체중은 0보다 큰 숫자로 입력해 주세요.
-                    </p>
-                  ) : null}
-                </div>
-              </ReceptionSidePanelField>
-              <ReceptionSidePanelAddVitalButton
-                disabled={!patient}
-                onClick={() => {
-                  toast.info("추가 바이탈 입력은 후속 작업에서 연결됩니다.");
-                }}
-              />
-            </ReceptionSidePanelSection>
+                </ReceptionSidePanelSection>
+              </>
+            ) : null}
             <ReceptionSidePanelDivider />
 
             <ReceptionSidePanelSection title="진료과/담당의" variant="create">
@@ -6950,7 +7031,7 @@ function ReceptionWalkInFormDrawer({
             </EmrInlineAlert>
           ) : null}
           <RegistrationFormSection separated={false} title="환자 정보">
-            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+            <div className="grid gap-3">
               <RegistrationFormField label="환자 검색" required>
                 <div
                   className="relative"
@@ -6995,7 +7076,7 @@ function ReceptionWalkInFormDrawer({
                         setLookupQuery("");
                         setPatientId("");
                         setSelectedLookupSummary(null);
-                        setWeightKg("");
+                        setVitalDraft(createReceptionVitalDraft());
                         setPatientLookupOpen(true);
                       }}
                     >
@@ -7058,29 +7139,6 @@ function ReceptionWalkInFormDrawer({
                 </div>
               </RegistrationFormField>
 
-              <RegistrationFormField label="체중">
-                <div className="relative">
-                  <Input
-                    aria-label="체중"
-                    className={cn(
-                      "h-9 bg-card pr-9",
-                      weightInvalid
-                        ? "border-[var(--emr-status-danger-border)]"
-                        : "",
-                    )}
-                    disabled={!patient}
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    value={weightKg}
-                    onValueChange={(value) =>
-                      setWeightKg(value.replace(/[^\d.]/g, ""))
-                    }
-                  />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium leading-4 text-foreground">
-                    kg
-                  </span>
-                </div>
-              </RegistrationFormField>
             </div>
 
             <RegistrationFormField label="방문 목적" required>
@@ -7093,6 +7151,17 @@ function ReceptionWalkInFormDrawer({
               />
             </RegistrationFormField>
           </RegistrationFormSection>
+
+          {patient ? (
+            <RegistrationFormSection title="바이탈">
+              <ReceptionCreateVitalFields
+                draft={vitalDraft}
+                fieldErrors={vitalBuild.fieldErrors}
+                presentation={presentation}
+                setDraft={setVitalDraft}
+              />
+            </RegistrationFormSection>
+          ) : null}
 
           <RegistrationFormSection title="접수 정보">
             <section className="grid grid-cols-2 gap-3">
@@ -8466,24 +8535,295 @@ function getReceptionSidePanelWeightInputValue(weightKg?: number) {
   return Number.isInteger(weightKg) ? `${weightKg}` : `${weightKg}`;
 }
 
-function ReceptionSidePanelAddVitalButton({
-  disabled = false,
-  onClick,
+const receptionCreateVitalOptions = [
+  { id: "weight", label: "체중", unit: "kg", inputMode: "decimal" },
+  { id: "temperature", label: "체온", unit: "°C", inputMode: "decimal" },
+  { id: "respiration", label: "호흡", unit: "rpm", inputMode: "numeric" },
+  { id: "bloodPressure", label: "혈압", unit: "mmHg", inputMode: "numeric" },
+] as const;
+
+const getReceptionCreateVitalIcon = (id: ReceptionCreateVitalId) => {
+  if (id === "temperature") return <CdsMedicalThermometerIcon className="size-3.5" />;
+  if (id === "respiration") return <CdsMedicalHeartPulseIcon className="size-3.5" />;
+  return <CdsMedicalActivityIcon className="size-3.5" />;
+};
+
+function ReceptionCreateVitalFields({
+  draft,
+  fieldErrors,
+  presentation,
+  setDraft,
 }: {
-  disabled?: boolean;
-  onClick?: () => void;
+  draft: ReceptionCreateVitalDraft;
+  fieldErrors: ReceptionCreateVitalFieldErrors;
+  presentation: ReceptionDrawerPresentation;
+  setDraft: (
+    updater: (current: ReceptionCreateVitalDraft) => ReceptionCreateVitalDraft,
+  ) => void;
 }) {
+  const [announcement, setAnnouncement] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const addTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const firstMenuItemRef = useRef<HTMLButtonElement | null>(null);
+  const inputRefs = useRef<Partial<Record<ReceptionCreateVitalId, HTMLElement | null>>>({});
+  const availableOptions = receptionCreateVitalOptions.filter(
+    (option) => !draft.selectedIds.includes(option.id),
+  );
+  const removable = draft.selectedIds.length > 1;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const frame = window.requestAnimationFrame(() => firstMenuItemRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [menuOpen]);
+
+  const updateValue = (
+    key: keyof ReceptionCreateVitalDraft["values"],
+    value: string,
+    integer = false,
+  ) => {
+    const sanitized = integer
+      ? value.replace(/\D/g, "")
+      : value.replace(/[^\d.]/g, "");
+    setDraft((current) => ({
+      ...current,
+      values: { ...current.values, [key]: sanitized },
+    }));
+  };
+
+  const addVital = (id: ReceptionCreateVitalId) => {
+    const option = receptionCreateVitalOptions.find((item) => item.id === id);
+    setDraft((current) => ({
+      ...current,
+      selectedIds: current.selectedIds.includes(id)
+        ? current.selectedIds
+        : [...current.selectedIds, id],
+    }));
+    setAnnouncement(`${option?.label ?? "바이탈"} 입력 행이 추가되었습니다.`);
+    setMenuOpen(false);
+    window.setTimeout(() => inputRefs.current[id]?.focus(), 0);
+  };
+
+  const removeVital = (id: ReceptionCreateVitalId) => {
+    if (!removable) return;
+    const option = receptionCreateVitalOptions.find((item) => item.id === id);
+    setDraft((current) => ({
+      ...current,
+      selectedIds:
+        current.selectedIds.length > 1
+          ? current.selectedIds.filter((item) => item !== id)
+          : current.selectedIds,
+    }));
+    setAnnouncement(`${option?.label ?? "바이탈"} 입력 행이 삭제되었습니다.`);
+    window.setTimeout(() => addTriggerRef.current?.focus(), 0);
+  };
+
+  const renderRemoveButton = (id: ReceptionCreateVitalId, label: string) =>
+    removable ? (
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="size-8 shrink-0 text-[var(--emr-text-tertiary)]"
+        aria-label={`${label} 삭제`}
+        onClick={() => removeVital(id)}
+      >
+        <CdsActionsTrash2Icon className="size-3.5" />
+      </Button>
+    ) : null;
+
+  const renderSingleInput = (
+    id: Exclude<ReceptionCreateVitalId, "bloodPressure">,
+    label: string,
+    unit: string,
+    inputMode: "decimal" | "numeric",
+  ) => {
+    const key =
+      id === "weight"
+        ? "weightKg"
+        : id === "temperature"
+          ? "temperatureC"
+          : "respiratoryRateRpm";
+    const error = fieldErrors[key];
+    const input =
+      presentation === "side-panel" ? (
+        <ReceptionSidePanelInput
+          ref={(element) => {
+            inputRefs.current[id] = element;
+          }}
+          aria-label={label}
+          aria-invalid={Boolean(error) || undefined}
+          inputMode={inputMode}
+          placeholder={`${label}을 입력해주세요`}
+          unit={unit}
+          value={draft.values[key]}
+          variant="create"
+          onValueChange={(value) => updateValue(key, value, inputMode === "numeric")}
+        />
+      ) : (
+        <div className="relative min-w-0 flex-1">
+          <Input
+            ref={(element) => {
+              inputRefs.current[id] = element;
+            }}
+            aria-label={label}
+            aria-invalid={Boolean(error) || undefined}
+            className="h-9 bg-card pr-12"
+            inputMode={inputMode}
+            placeholder="0"
+            value={draft.values[key]}
+            onValueChange={(value) => updateValue(key, value, inputMode === "numeric")}
+          />
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium text-foreground">
+            {unit}
+          </span>
+        </div>
+      );
+
+    return (
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="min-w-0 flex-1">{input}</div>
+          {renderRemoveButton(id, label)}
+        </div>
+        {error ? <p className="mt-1 emr-text-micro font-medium text-destructive">{error}</p> : null}
+      </div>
+    );
+  };
+
+  const renderBloodPressureInput = () => {
+    const error =
+      fieldErrors.bloodPressureSystolicMmhg ??
+      fieldErrors.bloodPressureDiastolicMmhg;
+    return (
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Input
+              ref={(element) => {
+                inputRefs.current.bloodPressure = element;
+              }}
+              aria-label="수축기 혈압"
+              aria-invalid={Boolean(fieldErrors.bloodPressureSystolicMmhg) || undefined}
+              className={cn(
+                presentation === "side-panel"
+                  ? "bg-[var(--emr-reception-create-field-bg)] font-medium"
+                  : "h-9 bg-card",
+              )}
+              inputMode="numeric"
+              placeholder="수축기"
+              value={draft.values.bloodPressureSystolicMmhg}
+              onValueChange={(value) =>
+                updateValue("bloodPressureSystolicMmhg", value, true)
+              }
+            />
+            <span aria-hidden="true" className="text-muted-foreground">/</span>
+            <Input
+              aria-label="이완기 혈압"
+              aria-invalid={Boolean(fieldErrors.bloodPressureDiastolicMmhg) || undefined}
+              className={cn(
+                presentation === "side-panel"
+                  ? "bg-[var(--emr-reception-create-field-bg)] font-medium"
+                  : "h-9 bg-card",
+              )}
+              inputMode="numeric"
+              placeholder="이완기"
+              value={draft.values.bloodPressureDiastolicMmhg}
+              onValueChange={(value) =>
+                updateValue("bloodPressureDiastolicMmhg", value, true)
+              }
+            />
+            <span className="shrink-0 emr-text-dense font-medium text-foreground">mmHg</span>
+          </div>
+          {renderRemoveButton("bloodPressure", "혈압")}
+        </div>
+        {error ? <p className="mt-1 emr-text-micro font-medium text-destructive">{error}</p> : null}
+      </div>
+    );
+  };
+
   return (
-    <Button
-      type="button"
-      variant="outline"
-      disabled={disabled}
-      className="h-[var(--clair-control-height-md)] w-full border-dashed border-[var(--emr-line-default)] bg-[var(--emr-reception-create-add-vital-bg)] emr-control-text font-medium text-[var(--clair-color-atomic-neutral-500)] shadow-none hover:bg-[var(--emr-state-hover)] hover:text-[var(--clair-color-atomic-neutral-800)] hover:shadow-none active:shadow-none disabled:bg-[var(--emr-reception-create-add-vital-bg)] disabled:text-[var(--clair-color-atomic-neutral-500)] disabled:shadow-none"
-      onClick={onClick}
-    >
-      <CdsActionsPlusIcon className="size-[var(--clair-spacing-16)]" />
-      바이탈 추가
-    </Button>
+    <>
+      <div data-testid="walk-in-vital-rows" className="grid gap-[10px]">
+        {draft.selectedIds.map((id) => {
+          const option = receptionCreateVitalOptions.find((item) => item.id === id);
+          if (!option) return null;
+          const content =
+            id === "bloodPressure"
+              ? renderBloodPressureInput()
+              : renderSingleInput(id, option.label, option.unit, option.inputMode);
+
+          return presentation === "side-panel" ? (
+            <ReceptionSidePanelField
+              key={id}
+              icon={getReceptionCreateVitalIcon(id)}
+              label={option.label}
+              variant="create"
+            >
+              {content}
+            </ReceptionSidePanelField>
+          ) : (
+            <RegistrationFormField key={id} label={option.label}>
+              {content}
+            </RegistrationFormField>
+          );
+        })}
+      </div>
+      {availableOptions.length > 0 ? (
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger
+            render={
+              <Button
+                ref={addTriggerRef}
+                type="button"
+                variant="outline"
+                aria-controls="walk-in-vital-menu"
+                aria-expanded={menuOpen}
+                className={cn(
+                  "w-full border-dashed shadow-none hover:shadow-none active:shadow-none",
+                  presentation === "side-panel"
+                    ? "h-[var(--clair-control-height-md)] border-[var(--emr-line-default)] bg-[var(--emr-reception-create-add-vital-bg)] emr-control-text font-medium text-[var(--clair-color-atomic-neutral-500)]"
+                    : "h-9 bg-card emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]",
+                )}
+              />
+            }
+          >
+            <CdsActionsPlusIcon className="size-3.5" />
+            바이탈 추가
+          </PopoverTrigger>
+          <PopoverContent align="end" sideOffset={6} className="w-[244px] p-1.5">
+            <div
+              id="walk-in-vital-menu"
+              role="menu"
+              aria-label="추가할 바이탈 선택"
+              className="flex flex-col gap-1"
+            >
+              {availableOptions.map((option, index) => (
+                <button
+                  key={option.id}
+                  ref={index === 0 ? firstMenuItemRef : undefined}
+                  type="button"
+                  role="menuitem"
+                  className="flex h-10 w-full items-center gap-2 rounded-[var(--emr-radius-control)] px-2 text-left emr-text-dense font-semibold text-foreground hover:bg-[var(--emr-state-hover)] focus-visible:bg-[var(--emr-state-hover)] focus-visible:outline-none"
+                  onClick={() => addVital(option.id)}
+                >
+                  <span
+                    data-testid={`walk-in-vital-option-icon-${option.id}`}
+                    className="flex size-7 items-center justify-center rounded-md bg-[var(--clair-color-atomic-neutral-50)] text-[var(--emr-text-secondary)]"
+                  >
+                    {getReceptionCreateVitalIcon(option.id)}
+                  </span>
+                  <span>{option.label} {option.unit}</span>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : null}
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </span>
+    </>
   );
 }
 
@@ -9315,18 +9655,19 @@ export function ReceptionDrawer({
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCreate={(input, walkIn, selectedSummary) => {
+          const weightKg = input.vitals?.weightKg;
           const patient =
-            input.weightKg === undefined
+            weightKg === undefined
               ? selectedSummary.patient
-              : { ...selectedSummary.patient, weightKg: input.weightKg };
+              : { ...selectedSummary.patient, weightKg };
           applyPatientGuardianLookupItem({
             patient,
             primaryGuardian: selectedSummary.primaryGuardian,
             searchText: selectedSummary.searchText,
           });
-          if (input.weightKg !== undefined) {
+          if (weightKg !== undefined) {
             updatePatient(selectedSummary.patient.id, {
-              weightKg: input.weightKg,
+              weightKg,
             });
           }
           applyWalkInCheckIn({ ...input, walkIn });
