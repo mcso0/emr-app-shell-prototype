@@ -31,7 +31,9 @@ No patient rows or customer data were read during this inspection.
 
 Implemented locally on 2026-07-14. Reservation creation no longer renders or sends vitals. Walk-in creation owns the accessible four-option draft and submits a nested optional `vitals` object. The additive migration creates the measurement history table and updates the SECURITY DEFINER walk-in RPC so encounter, queue, optional vital history, and the compatibility weight snapshot commit or roll back together.
 
-Docker local Supabase reset and a transaction-scoped replay verified direct-write denial, exact insert/readback, and forced-failure rollback. After separate approval, staging migration `20260714102902_reception_vital_measurement_history` and the same synthetic rollback replay also passed remotely. Production DB changes, real-data access, history browsing UI, and production deployment remain outside this implementation result.
+Docker local Supabase reset and a transaction-scoped replay verified direct-write denial, exact insert/readback, and forced-failure rollback. After separate approval, staging migration `20260714102902_reception_vital_measurement_history` and the same synthetic rollback replay also passed remotely.
+
+The staging review then found a DB authorization gap: the applied authenticated SECURITY DEFINER RPC verified actor identity and active membership but did not repeat the route-level `reception:create` permission check. Forward migration `20260714193844_reception_vital_rpc_permission_hardening.sql` is prepared and transactionally replayed on staging, but is not applied to staging migration history. Production DB changes, real-data access, history browsing UI, and production deployment remain outside this implementation result.
 
 ## Product Scope
 
@@ -153,8 +155,9 @@ Displaying vital history or a latest-vitals patient-profile card is outside this
 - Insert only through the server-owned `SECURITY DEFINER` walk-in RPC.
 - Keep `revoke all ... from public` and grant execute only to `authenticated` for the RPC.
 - The RPC must call the existing active-workspace-member check and verify patient and encounter ownership inside `p_workspace_id`.
+- The public RPC must repeat the DB-backed `reception:create` permission check before invoking any write implementation; route authorization alone is not a database security boundary.
 - Use `p_actor_user_id` only after confirming it is the authenticated server actor already enforced by the route/gateway path.
-- Add patient/time and encounter indexes; run Supabase security and performance advisors after local schema verification and before any approved remote application.
+- Add patient/time, encounter, and recording-actor indexes; run Supabase security and performance advisors after local schema verification and before any approved remote application.
 
 ## Input And Validation States
 
@@ -177,8 +180,9 @@ Displaying vital history or a latest-vitals patient-profile card is outside this
 ## Migration And Deployment Boundary
 
 - Create a new migration file; do not edit previously applied reception migrations.
+- If remote verification finds a defect after application, fix it with another forward-only migration rather than editing the applied file.
 - Verify with local Supabase reset or an isolated local database path, migration tests, server-core tests, Playwright, typecheck, lint, and build.
-- Updating staging or production remains a separate approval-gated action. This design approval authorizes repository implementation and local verification, not remote migration application.
+- The initial staging history migration was separately approved and applied. Applying the prepared permission-hardening migration to staging, or updating production, remains a separate approval-gated action.
 
 ## Out Of Scope
 

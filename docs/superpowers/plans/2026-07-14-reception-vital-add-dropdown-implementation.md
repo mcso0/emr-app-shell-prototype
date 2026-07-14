@@ -8,6 +8,10 @@
 
 **Tech Stack:** Next.js 16.2.6 App Router, React 19.2.4, TypeScript, Base UI-backed CLAiR primitives, Supabase/PostgreSQL migrations and RLS, Playwright 1.59.1, ESLint, local Supabase CLI, `psql`.
 
+## Post-Application Security Addendum
+
+Staging validation on 2026-07-14 found that the applied public RPC checked `auth.uid()` and active workspace membership but did not repeat the DB-backed `reception:create` permission. The correction is forward-only: `20260714193844_reception_vital_rpc_permission_hardening.sql` moves the applied writer to a private non-executable implementation, adds a permission-gated public wrapper with the original signature, and adds the recording-actor FK index recommended by the performance advisor. Its static contract and rollback-only staging replay pass; applying it to staging migration history remains separately approval-gated.
+
 ## Global Constraints
 
 - Reservation creation contains no vital section, weight state, weight validation, or `weightKg` application payload.

@@ -71,7 +71,7 @@ The initial wireframe covered reception and reservation creation as a UI-only in
 
 ## Verification
 
-- `npx supabase db reset --local --yes`: passed; all migrations and synthetic seed replayed, including `20260714102902_reception_vital_measurement_history.sql`.
+- `npx supabase db reset --local --yes`: passed again after hardening; all migrations and synthetic seed replayed through `20260714102902_reception_vital_measurement_history.sql` and `20260714193844_reception_vital_rpc_permission_hardening.sql`.
 - `npx supabase migration list --local`: passed; the new migration is present in local history.
 - `supabase/snippets/reception_vital_measurement_transaction_replay.sql`: passed against Docker local Supabase. It proved direct authenticated table writes are denied, RPC readback matches all values and actor/ownership fields, weight compatibility is updated, forced measurement failure rolls back encounter and queue writes, and the top-level rollback leaves zero tagged rows.
 - `npx supabase db lint --local --schema public`: the new vital table/RPC produced no lint issue. The command still reports pre-existing errors in `clair_save_chart_order_draft`, `clair_restore_reception_appointment`, and `clair_cancel_reception_encounter`, plus existing warnings outside this work item.
@@ -87,10 +87,14 @@ The initial wireframe covered reception and reservation creation as a UI-only in
 - Staging Supabase migration `20260714102902_reception_vital_measurement_history` was applied on 2026-07-14 after separate approval.
 - Staging catalog verification confirmed the table, columns, constraints, indexes, RLS, direct table privilege denial, authenticated-only RPC execution, SECURITY DEFINER search path, actor binding, workspace membership check, vital-history write, and weight snapshot update.
 - Staging synthetic transaction replay passed direct-write denial, exact RPC insert/readback, weight compatibility update, and forced-failure rollback. The top-level rollback restored the original synthetic weight and left zero tagged encounter, queue, vital, or trigger rows.
-- Supabase advisors report two intentional security notices for this contract: RLS enabled with no policies because all browser table privileges are revoked, and an authenticated-callable SECURITY DEFINER RPC whose body binds `auth.uid()` and active workspace membership. The performance advisor also recommends an index for `recorded_by_user_id`; that follow-up migration remains outside this approval.
+- A follow-up permission probe found that the applied RPC did not repeat the route-level `reception:create` check. A repository-seeded active technician with `reception:create = false` could call the authenticated SECURITY DEFINER RPC directly; the rollback-only probe left zero persistent rows.
+- TDD added forward migration `20260714193844_reception_vital_rpc_permission_hardening.sql`. It moves the applied writer to a non-executable private implementation, exposes the original public signature through an actor/membership/`reception:create` gate, and adds the advisor-recommended `recorded_by_user_id` index. The migration contract test failed before the file existed and now passes 4/4.
+- A staging transaction-only replay of the forward migration passed: the synthetic technician was denied with `permission_missing`, the authorized synthetic front-desk actor created encounter/queue/vitals, and the outer rollback removed the temporary DDL and left zero probe rows. The forward migration has not been applied to staging migration history and requires separate approval.
+- The local Docker transaction replay passed again through the permission-gated public wrapper, including direct-table denial, exact readback, weight compatibility, forced-failure rollback, and final top-level rollback.
+- Supabase advisors still report the intentional RLS-with-no-policy notice because all browser table privileges are revoked. The authenticated SECURITY DEFINER notice is acceptable only after the permission-gated forward migration is applied and rechecked.
 
 ## Current Boundary
 
-- Implemented locally, applied to staging, and ready for human review.
+- Application implementation and the first vital-history migration are on staging. Production readiness is blocked until the forward permission-hardening migration is separately approved, applied, and reverified on staging.
 - Production DB verification, real-data access, history browsing UI, and production deployment were not performed.
-- Production deployment requires a separate approval and migration/deployment coordination because the application contract depends on the new table and RPC definition.
+- Production deployment requires a separate approval and migration/deployment coordination because the application contract depends on both the history migration and the permission-hardening migration.

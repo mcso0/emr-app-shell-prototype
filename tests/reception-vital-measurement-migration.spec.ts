@@ -1,9 +1,14 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const migrationPath =
   "supabase/migrations/20260714102902_reception_vital_measurement_history.sql";
 const migration = readFileSync(migrationPath, "utf8");
+const permissionHardeningMigrationPath =
+  "supabase/migrations/20260714193844_reception_vital_rpc_permission_hardening.sql";
+const permissionHardeningMigration = existsSync(permissionHardeningMigrationPath)
+  ? readFileSync(permissionHardeningMigrationPath, "utf8")
+  : "";
 
 test("vital history migration defines a tenant-bound measurement set", () => {
   expect(migration).toContain("create table public.patient_vital_measurements");
@@ -71,5 +76,26 @@ test("walk-in RPC binds the actor and writes nested vitals in the same function"
   );
   expect(migration).toContain(
     "grant execute on function public.clair_create_reception_walk_in_encounter(text, text, jsonb) to authenticated",
+  );
+});
+
+test("forward migration requires reception:create before the public walk-in RPC can write", () => {
+  expect(permissionHardeningMigration).toContain(
+    "alter function public.clair_create_reception_walk_in_encounter(text, text, jsonb) set schema private",
+  );
+  expect(permissionHardeningMigration).toContain(
+    "rename to clair_create_reception_walk_in_encounter_internal",
+  );
+  expect(permissionHardeningMigration).toContain(
+    "private.clair_current_user_has_workspace_permission(p_workspace_id, 'reception:create')",
+  );
+  expect(permissionHardeningMigration).toContain(
+    "raise exception 'permission_missing'",
+  );
+  expect(permissionHardeningMigration).toContain(
+    "revoke all on function private.clair_create_reception_walk_in_encounter_internal(text, text, jsonb) from public, anon, authenticated",
+  );
+  expect(permissionHardeningMigration).toContain(
+    "patient_vital_measurements_recorded_by_user_id_idx",
   );
 });
