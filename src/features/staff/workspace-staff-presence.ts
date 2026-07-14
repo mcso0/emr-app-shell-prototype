@@ -6,6 +6,14 @@ import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
+type WorkspaceStaffPresenceChannel = {
+  on(
+    type: "presence",
+    filter: { event: string },
+    callback: () => void,
+  ): WorkspaceStaffPresenceChannel;
+};
+
 export function getWorkspaceStaffPresenceTopic(workspaceId: string) {
   return `workspace:${workspaceId}:staff-presence`;
 }
@@ -15,6 +23,16 @@ export function isStaffOnline(
   userId: string,
 ) {
   return (presenceState[userId]?.length ?? 0) > 0;
+}
+
+export function bindWorkspaceStaffPresenceEvents(
+  channel: WorkspaceStaffPresenceChannel,
+  syncOnlineStatus: () => void,
+) {
+  return channel
+    .on("presence", { event: "sync" }, syncOnlineStatus)
+    .on("presence", { event: "join" }, syncOnlineStatus)
+    .on("presence", { event: "leave" }, syncOnlineStatus);
 }
 
 export function formatStaffLastSeenLabel(
@@ -78,6 +96,8 @@ export function useWorkspaceStaffOnlineStatus({
       });
     };
 
+    bindWorkspaceStaffPresenceEvents(channel, syncOnlineStatus);
+
     async function subscribe() {
       const { data } = await client.auth.getSession();
       if (!data.session || disposed) return;
@@ -85,11 +105,7 @@ export function useWorkspaceStaffOnlineStatus({
       await client.realtime.setAuth(data.session.access_token);
       if (disposed) return;
 
-      channel
-        .on("presence", { event: "sync" }, syncOnlineStatus)
-        .on("presence", { event: "join" }, syncOnlineStatus)
-        .on("presence", { event: "leave" }, syncOnlineStatus)
-        .subscribe();
+      channel.subscribe();
     }
 
     void subscribe();

@@ -1,9 +1,41 @@
 import { expect, test } from "@playwright/test";
 import {
+  bindWorkspaceStaffPresenceEvents,
   formatStaffLastSeenLabel,
   getWorkspaceStaffPresenceTopic,
   isStaffOnline,
 } from "../src/features/staff/workspace-staff-presence";
+
+test("Presence callbacks are bound before the channel starts subscribing", () => {
+  const events: string[] = [];
+  let subscribing = false;
+  const channel = {
+    on(
+      type: "presence",
+      filter: { event: string },
+      callback: () => void,
+    ) {
+      void callback;
+      if (subscribing) {
+        throw new Error("callbacks cannot be added after subscribe");
+      }
+      events.push(`${type}:${filter.event}`);
+      return this;
+    },
+    subscribe() {
+      subscribing = true;
+    },
+  };
+
+  bindWorkspaceStaffPresenceEvents(channel, () => undefined);
+  channel.subscribe();
+
+  expect(events).toEqual([
+    "presence:sync",
+    "presence:join",
+    "presence:leave",
+  ]);
+});
 
 test("Presence treats any remaining tab or device for the member as online", () => {
   const state = {
