@@ -1293,7 +1293,6 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
 
   return (
     <EmrPatientContextBar
-      className="[--emr-context-bar-min-height:52px]"
       patientItems={[
         { label: "차트번호", value: bundle.encounter.encounterNo },
         {

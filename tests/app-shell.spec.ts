@@ -1415,7 +1415,7 @@ test("dispensing queue selection updates existing patient and instruction contex
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=closed");
 
   const patientContextBar = page.locator("[data-slot='patient-context-bar'] > div").first();
-  await expect(patientContextBar).toHaveCSS("min-height", "50px");
+  await expect(patientContextBar).toHaveCSS("min-height", "56px");
   await expect(patientContextBar).toHaveCSS("padding-left", "16px");
   await expect(patientContextBar).toHaveCSS("column-gap", "12px");
   await expect(page.locator("[data-slot='emr-page-header']")).toHaveCSS("min-height", "32px");

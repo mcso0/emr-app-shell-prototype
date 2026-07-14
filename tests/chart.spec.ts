@@ -1326,7 +1326,7 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
   const patientContext = page.getByLabel("환자 컨텍스트 정보");
   await expect(
     page.locator("[data-slot='patient-context-bar'] > div").first(),
-  ).toHaveCSS("min-height", "52px");
+  ).toHaveCSS("min-height", "56px");
   await expect(patientContext.getByText("콩이")).toBeVisible();
   await expect(patientContext.getByText("김하늘")).toBeVisible();
   await expect(patientContext.getByText("담당 수의사")).toBeVisible();

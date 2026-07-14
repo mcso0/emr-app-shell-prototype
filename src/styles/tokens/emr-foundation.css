@@ -397,7 +397,7 @@
       var(--emr-calendar-current-time-gap) +
       (var(--emr-calendar-current-time-dot-size) * 0.5)
   );
-  --emr-context-bar-min-height: 50px;
+  --emr-context-bar-min-height: 56px;
   --emr-context-bar-padding-x: var(--clair-spacing-16);
   --emr-context-bar-padding-y: var(--clair-spacing-12);
   --emr-context-bar-section-gap: var(--clair-spacing-12);
