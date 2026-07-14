@@ -318,11 +318,12 @@
   --emr-calendar-lane-header-padding-x: var(--clair-spacing-10);
   --emr-calendar-lane-header-padding-y: var(--clair-spacing-8);
   --emr-calendar-lane-header-gap: var(--clair-spacing-10);
+  --emr-calendar-lane-header-name-status-gap: var(--clair-spacing-6);
   --emr-calendar-lane-header-text: var(--clair-color-atomic-gray-700);
-  --emr-calendar-lane-header-name-size: var(--clair-typography-body-1-normal-font-size);
-  --emr-calendar-lane-header-name-weight: var(--clair-typography-body-1-normal-font-weight);
-  --emr-calendar-lane-header-name-leading: var(--clair-typography-body-1-normal-line-height);
-  --emr-calendar-lane-header-name-tracking: var(--clair-typography-body-1-normal-letter-spacing);
+  --emr-calendar-lane-header-name-size: var(--clair-typography-body-2-normal-font-size);
+  --emr-calendar-lane-header-name-weight: var(--clair-typography-body-2-normal-font-weight);
+  --emr-calendar-lane-header-name-leading: var(--clair-typography-body-2-normal-line-height);
+  --emr-calendar-lane-header-name-tracking: var(--clair-typography-body-2-normal-letter-spacing);
   --emr-calendar-lane-header-action-size: var(--clair-spacing-24);
   --emr-calendar-lane-header-action-radius: var(--clair-radius-atomic-4);
   --emr-calendar-lane-header-action-gap: var(--clair-spacing-4);

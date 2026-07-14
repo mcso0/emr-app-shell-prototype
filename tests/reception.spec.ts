@@ -4540,12 +4540,16 @@ test("day lane headers show fact-based status and match the Figma metrics", asyn
   const header = page.getByTestId("veterinarian-lane-header").first();
   const avatar = header.getByTestId("veterinarian-lane-avatar");
   const name = header.getByTestId("veterinarian-lane-name");
+  const identityGap = await name.evaluate((element) =>
+    getComputedStyle(element.parentElement as HTMLElement).columnGap,
+  );
   const hideButton = header.getByRole("button", { name: "이수지 레인 숨기기" });
 
   const headerStyle = await header.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       backgroundColor: style.backgroundColor,
+      borderColor: style.borderColor,
       borderRadius: style.borderRadius,
       columnGap: style.columnGap,
       height: style.height,
@@ -4556,6 +4560,7 @@ test("day lane headers show fact-based status and match the Figma metrics", asyn
     };
   });
   expect(headerStyle).toMatchObject({
+    borderColor: "rgb(144, 205, 244)",
     borderRadius: "12px",
     columnGap: "10px",
     height: "40px",
@@ -4567,10 +4572,11 @@ test("day lane headers show fact-based status and match the Figma metrics", asyn
   await expect(avatar).toHaveCSS("width", "24px");
   await expect(avatar).toHaveCSS("height", "24px");
   await expect(avatar).toHaveCSS("border-radius", "6px");
-  await expect(name).toHaveCSS("font-size", "16px");
-  await expect(name).toHaveCSS("line-height", "24px");
+  expect(identityGap).toBe("6px");
+  await expect(name).toHaveCSS("font-size", "14px");
+  await expect(name).toHaveCSS("line-height", "20.0004px");
   await expect(name).toHaveCSS("font-weight", "500");
-  await expect(name).toHaveCSS("letter-spacing", "0.096px");
+  await expect(name).toHaveCSS("letter-spacing", "0.196px");
 
   await header.hover();
   await expect
