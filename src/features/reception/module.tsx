@@ -2594,6 +2594,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     (state) => state.persistedCalendarAppointments,
   );
   const [listMode, setListMode] = useState<ReceptionSideListMode>("all");
+  const [previousOperatingDate, setPreviousOperatingDate] = useState<string>();
   const [searchOpen, setSearchOpen] = useState(false);
   const [cardActionFeedback, setCardActionFeedback] =
     useState<ReceptionCardActionFeedback | null>(null);
@@ -2766,10 +2767,13 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       [group]: !current[group],
     }));
   }, []);
-  const handleSidePanelDateSelect = useCallback(
-    (nextOperatingDate: string) => {
+  const changeSidePanelOperatingDate = useCallback(
+    (nextOperatingDate: string, recordHistory = true) => {
+      if (nextOperatingDate === operatingDate) return;
+
       dispatchReceptionCalendarDragClear();
       setCalendarDraftSelection(undefined);
+      setPreviousOperatingDate(recordHistory ? operatingDate : undefined);
       setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
       router.replace(
         buildReceptionOperatingDateRoute({
@@ -2781,6 +2785,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       );
     },
     [
+      operatingDate,
       pathname,
       router,
       searchParams,
@@ -2789,6 +2794,19 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       workspaceId,
     ],
   );
+  const handleSidePanelDateSelect = useCallback(
+    (nextOperatingDate: string) => changeSidePanelOperatingDate(nextOperatingDate),
+    [changeSidePanelOperatingDate],
+  );
+  const handleReturnToPreviousOperatingDate = useCallback(() => {
+    if (!previousOperatingDate || previousOperatingDate === operatingDate) return;
+
+    changeSidePanelOperatingDate(previousOperatingDate, false);
+  }, [
+    changeSidePanelOperatingDate,
+    operatingDate,
+    previousOperatingDate,
+  ]);
   const handleRestoreQueueItem = useCallback(
     async (item: ReceptionQueueSideItem) => {
       if (item.statusGroup !== "cancelled" || pendingRestoreId) return;
@@ -2870,7 +2888,9 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         todayDate={defaultOperatingDate}
         rangeStartDate={miniCalendarWeekStartDate}
         rangeEndDate={miniCalendarWeekEndDate}
+        previousDate={previousOperatingDate}
         onDateSelect={handleSidePanelDateSelect}
+        onReturnToPreviousDate={handleReturnToPreviousOperatingDate}
       />
       <div aria-hidden="true" className="shrink-0 border-t border-[var(--emr-line-default)]" />
       {queueReadStatus === "error" ? (
@@ -3909,16 +3929,6 @@ function ScheduleToolbar({
           operatingDate={operatingDate}
           view={view}
         />
-        <Badge
-          size="md"
-          variant="secondary"
-          className="rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] emr-text-metadata font-medium text-[var(--emr-text-secondary)]"
-        >
-          영업시간{" "}
-          <span className="font-semibold text-[var(--emr-text-link)] tabular-nums">
-            {getBusinessHoursTimeRangeLabel()}
-          </span>
-        </Badge>
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <DropdownMenu>
@@ -3986,7 +3996,7 @@ function ScheduleToolbar({
           className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]"
         />
         <NewUnifiedRegistrationButton
-          label="신규 동물/보호자"
+          label="환자/보호자 등록"
           onPatientReady={onUnifiedPatientReady}
           size="default"
         />
@@ -4003,7 +4013,7 @@ function ScheduleToolbar({
             }
           >
             <CdsActionsPlusIcon data-icon="inline-start" />
-            접수/예약
+            접수/예약 생성
             <ChevronDownIcon data-icon="inline-end" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-36">
@@ -4140,7 +4150,7 @@ function ReceptionReservationDatePicker({
           <Button
             type="button"
             variant="outline"
-            size={compact ? "sm" : "lg"}
+            size={compact ? "default" : "lg"}
             className={cn(
               "w-full justify-between bg-card px-2.5 text-left font-normal",
               compact &&
@@ -6549,7 +6559,6 @@ function ReceptionWalkInFormDrawer({
     }
 
     onCreate(input, result.walkIn, selectedSummary);
-    setActiveDrawer(null);
   };
 
   if (presentation === "side-panel") {
@@ -8428,7 +8437,7 @@ function ReceptionSidePanelSection({
   }
 
   return (
-    <section className="border-b border-[var(--emr-line-default)] py-4 last:border-b-0">
+    <section className="border-b border-[var(--emr-border-subtle)] py-4 last:border-b-0">
       <h3 className="mb-3 emr-text-metadata font-medium text-[var(--emr-text-placeholder)]">
         {title}
       </h3>
@@ -8438,7 +8447,7 @@ function ReceptionSidePanelSection({
 }
 
 function ReceptionSidePanelDivider() {
-  return <div aria-hidden="true" className="h-px bg-[var(--emr-line-default)]" />;
+  return <div aria-hidden="true" className="h-px bg-[var(--emr-border-subtle)]" />;
 }
 
 function ReceptionSidePanelField({
@@ -9193,7 +9202,6 @@ export function ReceptionDrawer({
   onEditingChange?: (isEditing: boolean) => void;
 } = {}) {
   const params = useParams<{ workspaceId?: string | string[] }>();
-  const router = useRouter();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
@@ -9414,25 +9422,11 @@ export function ReceptionDrawer({
               veterinarians,
             ),
           });
-          toast.success("접수가 완료되었습니다", {
-            action: {
-              label: "접수 확인하기",
-              onClick: () => {
-                const searchParams = new URLSearchParams({
-                  modulePanel: "open",
-                  right: "open",
-                  drawer: `reception-encounter:${walkIn.encounter.id}`,
-                  encounterId: walkIn.encounter.id,
-                  patientId: patient.id,
-                });
-
-                router.push(
-                  `/w/${encodeURIComponent(workspaceId)}/reception?${searchParams.toString()}`,
-                  { scroll: false },
-                );
-              },
-            },
+          setActiveDrawer({
+            type: "reception-encounter",
+            id: walkIn.encounter.id,
           });
+          toast.success("접수가 완료되었습니다");
         }}
       />
     );

@@ -8,15 +8,25 @@ type SidePanelMiniCalendarStoryArgs = {
   todayDate: string;
   rangeStartDate?: string;
   rangeEndDate?: string;
+  previousDate?: string;
 };
 
 function SidePanelMiniCalendarStory({
   rangeEndDate,
   rangeStartDate,
+  previousDate,
   selectedDate,
   todayDate,
 }: SidePanelMiniCalendarStoryArgs) {
   const [activeDate, setActiveDate] = useState(selectedDate);
+  const [previousActiveDate, setPreviousActiveDate] = useState(previousDate);
+
+  const selectDate = (nextDate: string) => {
+    if (nextDate === activeDate) return;
+
+    setPreviousActiveDate(activeDate);
+    setActiveDate(nextDate);
+  };
 
   return (
     <div className="w-[288px] bg-[var(--emr-surface-sidepanel)]">
@@ -25,7 +35,14 @@ function SidePanelMiniCalendarStory({
         todayDate={todayDate}
         rangeStartDate={rangeStartDate}
         rangeEndDate={rangeEndDate}
-        onDateSelect={setActiveDate}
+        previousDate={previousActiveDate}
+        onDateSelect={selectDate}
+        onReturnToPreviousDate={() => {
+          if (!previousActiveDate) return;
+
+          setActiveDate(previousActiveDate);
+          setPreviousActiveDate(undefined);
+        }}
       />
     </div>
   );
@@ -124,5 +141,13 @@ export const WeekRange: Story = {
           "사용할 때: 오른쪽 캘린더가 주 단위일 때 미니 캘린더에 같은 주 영역이 잡히는지 확인한다.",
       },
     },
+  },
+};
+
+export const PreviousDateAvailable: Story = {
+  args: {
+    selectedDate: "2026-05-14",
+    previousDate: "2026-05-01",
+    todayDate: "2026-05-01",
   },
 };

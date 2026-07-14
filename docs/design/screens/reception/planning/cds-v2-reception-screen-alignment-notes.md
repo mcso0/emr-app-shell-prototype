@@ -111,7 +111,7 @@ Design implementation rule:
 
 - The visible calendar design should match the referenced Figma components.
 - Code structure should follow the current CLAiR implementation and shared EMR components instead of copying Figma node structure literally.
-- The calendar toolbar must include the veterinarian lane filter, `일 / 주 / 월` view switcher, `+ 신규 동물/보호자`, `+ 접수/예약`, and horizontal more icon button shown in the Figma frame.
+- The calendar toolbar must include the veterinarian lane filter, `일 / 주 / 월` view switcher, `+ 환자/보호자 등록`, `+ 접수/예약 생성`, and horizontal more icon button shown in the Figma frame.
 - Preserve day/week/month view behavior, selected operating date behavior, click/drag draft creation behavior, and drawer handoff behavior unless a scoped work item explicitly changes them.
 
 ## Figma Calendar Component References
@@ -159,7 +159,7 @@ Implemented on branch `codex/reception-cds-v2-alignment` as an initial combined 
 - Workspace topbar tab chrome now uses tokenized active shadow and close icon sizing.
 - Reception left side panel background resolves through `--emr-surface-sidepanel` to `#F9F9F9`.
 - Reception side panel list mode now defaults to `전체`; `외래` counts active reception encounters and `예약` counts calendar/appointment-origin reception work.
-- Calendar toolbar keeps the veterinarian filter, `일 / 주 / 월`, `신규 동물/보호자`, `접수/예약`, and horizontal more actions visible.
+- Calendar toolbar keeps the veterinarian filter, `일 / 주 / 월`, `환자/보호자 등록`, `접수/예약 생성`, and horizontal more actions visible.
 - Existing reception calendar boards were modified in place for CDS V2 lane headers, task card hierarchy, and current-time label/dot/line.
 
 Verification captured:
