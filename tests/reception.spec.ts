@@ -7971,3 +7971,23 @@ test("reception walk-in keeps selected veterinarian and form details", async ({
   await expect(haruCard).toContainText("예방접종 전 건강 확인");
   await expect(haruCard).toContainText("김도윤");
 });
+
+test("reception toolbar follows the browser annotation spacing and date icon removal", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+
+  const scheduleToolbar = page.getByTestId("schedule-toolbar");
+  const dateControl = page.getByTestId("reception-date-control");
+
+  await expect(scheduleToolbar).toBeVisible();
+  await expect(scheduleToolbar).toHaveCSS("height", "56px");
+  await expect(scheduleToolbar).toHaveCSS("padding-top", "12px");
+  await expect(scheduleToolbar).toHaveCSS("padding-right", "12px");
+  await expect(scheduleToolbar).toHaveCSS("padding-bottom", "12px");
+  await expect(scheduleToolbar).toHaveCSS("padding-left", "20px");
+  await expect(dateControl.locator("svg")).toHaveCount(0);
+  await expect(dateControl.locator('[aria-label$="표시 중"]')).toHaveText(
+    "26.05.01 (금)",
+  );
+});
