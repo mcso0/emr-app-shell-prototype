@@ -1,6 +1,6 @@
 ---
 name: clair-owner-os-router
-description: Use for CLAiR Owner OS routing requests, especially when 승욱 asks to turn a broad request into an AI work packet, reduce token waste, choose the safest next Codex action, classify work before implementation, create an intake brief, decide whether to answer/propose/edit/verify/escalate, or apply the Owner OS no-gray-zone/eval/trace contract. This skill routes first and does not perform full implementation by default.
+description: Use when a broad CLAiR Owner OS request needs intake classification, work packet drafting, safety or Linear handoff, bounded execution routing, or the Owner OS no-gray-zone, evaluation, or trace contract.
 ---
 
 # CLAiR Owner OS Router
@@ -83,15 +83,15 @@ Use a tiered parent-model policy.
 - Escalate the parent to 5.5 when ambiguity can change output, safety, cost, data access, or review status.
 - Use 5.5 for auth, workspace, Supabase, RLS, audit, billing integrity, real data, provider, payment, production, broad product decisions, multi-file implementation, failed verification, or approval-gated scope.
 
-Use `$codex-agent-router` only when a bounded read-only subagent is likely to reduce parent-model cost, verification churn, or safety risk:
+Use the active runtime's native multi-agent dispatch only when a bounded subagent is likely to reduce parent-model cost, verification churn, or safety risk:
 
-- Broad repo or document mapping: use `spark-explorer` read-only, then synthesize in the parent thread at the needed model tier.
-- Auth, workspace, Supabase, RLS, audit, billing integrity, real data, provider, payment, or production risk: use `security-boundary-reviewer` read-only when the boundary risk is material.
-- Failing logs, CI, regression choice, or flaky behavior: use `test-triage`, then let the parent choose the next command or fix; escalate to 5.5 when the failure affects safety, data boundaries, or architecture.
+- Broad repo or document mapping: dispatch one task-scoped exploration role with explicit no-write instructions, then synthesize in the parent thread.
+- Auth, workspace, Supabase, RLS, audit, billing integrity, real data, provider, payment, or production risk: dispatch an independent boundary-review role when the risk is material.
+- Failing logs, CI, regression choice, or flaky behavior: dispatch a test-triage role, then let the parent choose the next command or fix.
 
 Do not use subagents for simple answers, obvious small edits, or work where the subagent summary would cost more than the parent reading the target file directly.
 
-Subagent summaries are evidence, not authority. The parent thread must record the parent model tier, 5.5 escalation decision, trigger, cost rationale, summary used, and final parent decision.
+Subagent summaries are evidence, not authority. The parent thread must record the trigger, cost rationale, summary used, and final parent decision. Do not claim a model, custom profile, or read-only sandbox unless the active dispatch interface explicitly confirms it; compare repository state before and after prompt-enforced read-only work.
 
 ## Approval Gates
 
@@ -200,6 +200,6 @@ Expected behavior:
 
 - Use `$emr-owner-safety-os` for safety-review intake and approved review checklists.
 - Use `$manual-linear-ops` for Linear project, milestone, issue, status, Human Review, Rework, and Done handling.
-- Use `$codex-agent-router` when 승욱 specifically asks to choose or coordinate custom subagents, or when bounded read-only delegation is likely to reduce parent-model cost or catch boundary/test risk.
+- Use native multi-agent dispatch when 승욱 specifically asks for subagents, or when bounded delegation is allowed and likely to reduce parent-model cost or catch boundary/test risk.
 
 This skill is the front door for Owner OS routing, packet drafting, and token-depth decisions.
