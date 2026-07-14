@@ -174,24 +174,27 @@ Verification captured:
 
 Local Supabase direct row readback was not run in this checkpoint because the environment is missing the `supabase` and `psql` CLIs. `npm run demo:seed:check` passed local safety diagnostics for config, Docker, and local-only DB URL, and reported those CLI gaps.
 
-## 2026-07-14 Draft: Day Header Staff Availability Row
+## 2026-07-14 Implemented: Day Header Staff Availability Row
 
-Figma node `27684:22152` introduces an additive visual proposal for the existing
-`VeterinarianLaneHeader` in the reception day calendar. It is an HTML review artifact,
-not an implementation or a completion claim.
+Figma node `27684:22157` is the measured source for the existing
+`VeterinarianLaneHeader` in the reception day calendar. The HTML review artifact
+remains planning evidence; the production implementation is in the existing calendar.
 
 - Review artifact: `docs/design/screens/reception/planning/calendar-veterinarian-lane-header-prototype.html`
 - Preserve the current calendar lane color policy and the existing 40px inner-header density. The Figma blue sample is a single tone reference, not an instruction to make every staff lane blue.
 - Keep the stable staff-to-tone mapping already owned by `getVeterinarianToneIndex`; do not recompute a remaining lane's color when a peer lane is hidden.
-- Derive each tone's new header background from its existing `500` token: 6% over white for the default state and 16% over white for hover. Use that same tone's existing `300` token for the border.
-- Add a compact staff operational-status badge: `진료중`, `진료가능`, `휴게중`, `업무대기`, `퇴근`, or `휴가중`.
-- Reveal the user-info and overflow controls only on pointer hover or keyboard focus.
+- Derive each tone's header background from its existing `500` token at 6% over white and use that same tone's existing `300` token for the border. The header surface does not change on hover.
+- Use the measured 40px inner height, 12px radius, 10px horizontal/8px vertical padding, and 10px content gap.
+- Use a 24x24px, 6px-radius avatar with neutral-200 border and a 16/24 medium name with 0.006em letter spacing.
+- Use an 18px-high, 6px-radius operational badge with 6px horizontal/1px vertical padding, neutral-200 border, white surface, and 12/16 medium label with 0.025em letter spacing.
+- Render only source-backed states: `진료중`, `진료가능`, `근무 예정`, `근무 종료`, `퇴근`, `휴가중`, or `휴무`. Missing schedule data renders no badge.
+- Reveal the eye and overflow controls only on pointer hover or keyboard focus, while keeping them available on touch/coarse-pointer layouts. The action group uses a 4px gap; each control is 24x24px with 4px radius and a 14px icon.
 - Treat each icon control as a ghost button: it has no default fill, and only the hovered or keyboard-focused icon receives a translucent black overlay. Do not render the Figma hover composite as a permanent filled button.
 - The eye control hides only that staff lane from both the header and calendar body. Recalculate the shared header/body grid from the visible lane count so the remaining columns fill the available width; do not delete schedule data or leave an empty column.
 - Do not hide the final visible lane. Existing veterinarian selection remains the production restoration path; the HTML prototype's restore control exists only to demonstrate the state transition.
 - The overflow menu currently presents `메시지 보내기` and `사용자 정보 보기` as candidates only; its permission boundary, final destinations, and event behavior need an approved interaction contract before application implementation.
 
-## 2026-07-14 Implemented: Day Calendar Lane Visibility
+## 2026-07-14 Implemented: Day Calendar Lane Visibility And Status
 
 The existing day-calendar lane header now implements the approved visibility
 interaction without introducing a new staff-status data model.
@@ -206,10 +209,13 @@ interaction without introducing a new staff-status data model.
   rather than the current visible list. Hiding a lane therefore does not recolor any
   remaining lane.
 - Each lane retains its own `300` border and `500` tone. The header surface uses the
-  `500` tone at 6% over the common white token, and 16% on header hover/focus.
+  `500` tone at 6% over the common white token and remains unchanged on hover/focus.
 - The overflow control only repeats the approved `레인 숨기기` action. No message or
   profile navigation was added because those actions still lack a destination and
   permission contract.
-- The six staff operational-status badges were not rendered: current staff data only
-  supplies membership activation status, which is not a safe substitute for real-time
-  availability such as `진료중` or `휴가중`.
+- The selected-date staff read now merges a workspace-scoped schedule/time-clock
+  snapshot. Actual clock-out renders `퇴근`; elapsed shift time without a clock-out
+  fact renders `근무 종료`. A currently overlapping checked-in appointment renders
+  `진료중`, and status-read failure does not remove the staff lane.
+- The client refreshes the read every 60 seconds and when the window regains focus.
+  No minute-by-minute status value is persisted in the database.

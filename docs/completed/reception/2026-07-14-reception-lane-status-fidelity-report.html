@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>접수 레인 상태 및 Figma 정합성 구현 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #111827;
+        background: #f8fafc;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 32px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #ffffff;
+      }
+      h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.35; }
+      h2 { margin: 28px 0 10px; font-size: 18px; }
+      p, li { font-size: 15px; line-height: 1.7; }
+      .meta { color: #6b7280; }
+      code { padding: 2px 5px; border-radius: 4px; background: #f3f4f6; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>접수 레인 상태 및 Figma 정합성</h1>
+      <p class="meta">2026-07-14 · RECEPTION-PR-008</p>
+
+      <h2>결론</h2>
+      <p>
+        실제 퇴근 기록은 <code>퇴근</code>, 근무 종료 시각만 지난 경우는
+        <code>근무 종료</code>로 분리했다. 레인 헤더는 Figma 노드
+        <code>27684:22157</code>의 치수와 타이포에 맞췄고, 레인별 기존 색상은
+        그대로 유지한다.
+      </p>
+
+      <h2>데이터 동작</h2>
+      <ul>
+        <li>게시 또는 변경된 근무표와 타임클록 사실을 선택 날짜 기준으로 읽는다.</li>
+        <li><code>clock_out_at</code>이 있을 때만 퇴근으로 표시한다.</li>
+        <li>시간 경과만 확인되면 근무 종료로 표시해 실제 퇴근을 추정하지 않는다.</li>
+        <li>현재 체크인 예약이 담당 수의사 시간과 겹치면 진료중으로 표시한다.</li>
+        <li>근거 데이터가 없거나 상태 조회가 실패하면 직원 레인은 유지하고 뱃지만 생략한다.</li>
+      </ul>
+
+      <h2>화면 정합성</h2>
+      <ul>
+        <li>40px 높이, 12px radius, 가로 10px·세로 8px padding, 10px gap</li>
+        <li>24px avatar, 16/24 medium 이름, 18px 상태 뱃지</li>
+        <li>24px ghost action, 4px radius, 14px icon, action 간격 4px</li>
+        <li>헤더 전체 hover 색상 변화 제거; 실제 버튼 hover에만 black 4% 적용</li>
+        <li>레인 숨김 후 남은 레인은 너비만 채우며 각 직원의 고유 tone은 바뀌지 않음</li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li>상태 서버·migration contract 7개 통과</li>
+        <li>운영 프로필 접근성·반응형 회귀 5개 통과</li>
+        <li>레인 색상·숨김·Figma CSS·staff source 회귀 6개 통과</li>
+        <li>전체 lint, TypeScript, production build, docs check, secret scan 통과</li>
+      </ul>
+
+      <h2>남은 확인</h2>
+      <p>
+        현재 머신에는 <code>supabase</code>와 <code>psql</code> CLI가 없어 새 SQL을
+        로컬 DB에 직접 적용하는 런타임 검증은 하지 못했다. 또한 권위 있는 근무표가
+        없는 직원에게는 상태를 추정하지 않으므로 뱃지가 표시되지 않는다.
+      </p>
+    </main>
+  </body>
+</html>

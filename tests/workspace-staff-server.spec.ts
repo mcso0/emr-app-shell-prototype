@@ -106,6 +106,138 @@ test("workspace staff read filters active same-workspace veterinarians", async (
   });
 });
 
+test("workspace staff read merges the selected-date operational status snapshot", async () => {
+  const rpcCalls: Array<{ name: string; params: Record<string, unknown> }> = [];
+  const gateway = createSupabaseWorkspaceStaffReadGateway({
+    from(tableName: string) {
+      if (tableName === "user_memberships") {
+        return createSupabaseRows([
+          {
+            id: "membership-vet-suji",
+            workspace_id: "workspace-clair-cheongdam",
+            user_id: "49110000-0000-4000-8000-000000000003",
+            roles: ["vet"],
+            department: "Medical",
+            title: "수의사",
+            status: "active",
+          },
+        ]);
+      }
+
+      if (tableName === "user_profiles") return createSupabaseRows([]);
+
+      return createSupabaseRows([
+        {
+          id: "49110000-0000-4000-8000-000000000003",
+          display_name: "이수지",
+          initial: "이",
+          status: "active",
+        },
+      ]);
+    },
+    async rpc(name: string, params: Record<string, unknown>) {
+      rpcCalls.push({ name, params });
+      return {
+        data: [
+          {
+            userId: "49110000-0000-4000-8000-000000000003",
+            statusCode: "clocked_out",
+            source: "time_clock",
+          },
+        ],
+        error: null,
+      };
+    },
+  } as unknown as SupabaseStaffClient);
+
+  const result = await gateway.listWorkspaceStaff({
+    operatingDate: "2026-07-14",
+    role: "vet",
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(rpcCalls).toEqual([
+    {
+      name: "reception_staff_operational_status_snapshot",
+      params: {
+        p_day: "2026-07-14",
+        p_workspace_id: "workspace-clair-cheongdam",
+      },
+    },
+  ]);
+  expect(result).toMatchObject({
+    ok: true,
+    staff: [
+      {
+        displayName: "이수지",
+        operationalStatus: {
+          code: "clocked_out",
+          label: "퇴근",
+          source: "time_clock",
+        },
+      },
+    ],
+  });
+});
+
+test("workspace staff read preserves staff when the status snapshot fails", async () => {
+  const gateway = createSupabaseWorkspaceStaffReadGateway({
+    from(tableName: string) {
+      if (tableName === "user_memberships") {
+        return createSupabaseRows([
+          {
+            id: "membership-vet-suji",
+            workspace_id: "workspace-clair-cheongdam",
+            user_id: "49110000-0000-4000-8000-000000000003",
+            roles: ["vet"],
+            status: "active",
+          },
+        ]);
+      }
+
+      if (tableName === "user_profiles") return createSupabaseRows([]);
+
+      return createSupabaseRows([
+        {
+          id: "49110000-0000-4000-8000-000000000003",
+          display_name: "이수지",
+          status: "active",
+        },
+      ]);
+    },
+    async rpc() {
+      return { data: null, error: { message: "rpc unavailable" } };
+    },
+  } as unknown as SupabaseStaffClient);
+
+  const result = await gateway.listWorkspaceStaff({
+    operatingDate: "2026-07-14",
+    role: "vet",
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    sectionErrors: { operationalStatus: "db_read_failed" },
+    staff: [{ displayName: "이수지" }],
+  });
+});
+
+test("workspace staff read rejects an invalid operating date", async () => {
+  const result = await readWorkspaceStaff({
+    actorUserId: "user-front-desk",
+    operatingDate: "2026-02-30",
+    role: "vet",
+    workspaceId: "clair-demo",
+  });
+
+  expect(result).toEqual({
+    ok: false,
+    status: 400,
+    error: "invalid_operating_date",
+  });
+});
+
 test("workspace staff read enforces reception view permission", async () => {
   const unauthenticated = await readWorkspaceStaff({
     actorUserId: null,

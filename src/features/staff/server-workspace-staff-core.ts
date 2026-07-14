@@ -7,6 +7,22 @@ import {
 } from "@/features/auth/permission-resolver";
 import { mockStaffUsers } from "@/mocks/emr-domain";
 import { AVATAR_STORAGE_BUCKET } from "@/features/staff/staff-avatar";
+import { isIsoOperatingDate } from "@/lib/emr-domain/demo-date";
+
+export type WorkspaceStaffOperationalStatusCode =
+  | "available"
+  | "clocked_out"
+  | "leave"
+  | "off"
+  | "scheduled"
+  | "shift_ended"
+  | "unknown";
+
+export type WorkspaceStaffOperationalStatus = {
+  code: WorkspaceStaffOperationalStatusCode;
+  label: string;
+  source: "schedule" | "time_clock";
+};
 
 export type WorkspaceStaffMember = {
   avatarUrl?: string;
@@ -14,6 +30,7 @@ export type WorkspaceStaffMember = {
   displayName: string;
   id: string;
   initial?: string;
+  operationalStatus?: WorkspaceStaffOperationalStatus;
   roles: WorkspaceRoleId[];
   status: "active" | "inactive" | "suspended" | "invited";
   title?: string;
@@ -21,10 +38,15 @@ export type WorkspaceStaffMember = {
 
 export type WorkspaceStaffReadGateway = {
   listWorkspaceStaff(input: {
+    operatingDate?: string;
     role?: WorkspaceRoleId;
     workspaceId: string;
   }): Promise<
-    | { ok: true; staff: WorkspaceStaffMember[] }
+    | {
+        ok: true;
+        staff: WorkspaceStaffMember[];
+        sectionErrors?: { operationalStatus: "db_read_failed" };
+      }
     | { ok: false; error: "db_read_failed" }
   >;
 };
@@ -34,12 +56,13 @@ export type WorkspaceStaffReadResult =
       ok: true;
       status: 200;
       staff: WorkspaceStaffMember[];
+      sectionErrors?: { operationalStatus: "db_read_failed" };
       enforcedBy: "workspace-staff-read";
     }
   | {
       ok: false;
       status: 400;
-      error: "invalid_role";
+      error: "invalid_operating_date" | "invalid_role";
     }
   | {
       ok: false;
@@ -74,6 +97,12 @@ type SupabaseStaffProfileRow = {
   user_id: string;
 };
 
+type SupabaseStaffOperationalStatusRow = {
+  source: string;
+  statusCode: string;
+  userId: string;
+};
+
 type SupabaseStaffStorage = {
   from(bucket: string): {
     getPublicUrl(path: string): { data: { publicUrl: string } };
@@ -93,24 +122,36 @@ export type SupabaseWorkspaceStaffClient = {
   from(table: "user_memberships"): SupabaseStaffQueryBuilder<SupabaseStaffMembershipRow>;
   from(table: "users"): SupabaseStaffQueryBuilder<SupabaseStaffUserRow>;
   from(table: "user_profiles"): SupabaseStaffQueryBuilder<SupabaseStaffProfileRow>;
+  rpc(
+    functionName: "reception_staff_operational_status_snapshot",
+    params: { p_day: string; p_workspace_id: string },
+  ): PromiseLike<{
+    data: SupabaseStaffOperationalStatusRow[] | null;
+    error: { message?: string } | null;
+  }>;
   storage: SupabaseStaffStorage;
 };
 
 export async function readWorkspaceStaff({
   actorUserId,
   gateway = createMockWorkspaceStaffReadGateway(),
+  operatingDate,
   permissionAdapter = createDemoWorkspaceStaffPermissionAdapter(),
   role,
   workspaceId,
 }: {
   actorUserId: string | null;
   gateway?: WorkspaceStaffReadGateway;
+  operatingDate?: string;
   permissionAdapter?: WorkspacePermissionAdapter;
   role?: string;
   workspaceId: string;
 }): Promise<WorkspaceStaffReadResult> {
   const normalizedRole = role ? normalizeWorkspaceRole(role) : undefined;
   if (role && !normalizedRole) return { ok: false, status: 400, error: "invalid_role" };
+  if (operatingDate && !isIsoOperatingDate(operatingDate)) {
+    return { ok: false, status: 400, error: "invalid_operating_date" };
+  }
 
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
@@ -127,6 +168,7 @@ export async function readWorkspaceStaff({
   }
 
   const result = await gateway.listWorkspaceStaff({
+    operatingDate,
     role: normalizedRole,
     workspaceId,
   });
@@ -137,6 +179,7 @@ export async function readWorkspaceStaff({
     ok: true,
     status: 200,
     staff: result.staff,
+    ...(result.sectionErrors ? { sectionErrors: result.sectionErrors } : {}),
     enforcedBy: "workspace-staff-read",
   };
 }
@@ -145,7 +188,7 @@ export function createSupabaseWorkspaceStaffReadGateway(
   client: SupabaseWorkspaceStaffClient,
 ): WorkspaceStaffReadGateway {
   return {
-    async listWorkspaceStaff({ role, workspaceId }) {
+    async listWorkspaceStaff({ operatingDate, role, workspaceId }) {
       try {
         const { data: membershipRows, error: membershipError } = await client
           .from("user_memberships")
@@ -180,6 +223,34 @@ export function createSupabaseWorkspaceStaffReadGateway(
             resolveStaffAvatarUrl(client, row.avatar_url),
           ]),
         );
+        let operationalStatusByUserId = new Map<
+          string,
+          WorkspaceStaffOperationalStatus
+        >();
+        let sectionErrors:
+          | { operationalStatus: "db_read_failed" }
+          | undefined;
+
+        if (operatingDate) {
+          const { data: statusRows, error: statusError } = await client.rpc(
+            "reception_staff_operational_status_snapshot",
+            {
+              p_day: operatingDate,
+              p_workspace_id: workspaceId,
+            },
+          );
+
+          if (statusError) {
+            sectionErrors = { operationalStatus: "db_read_failed" };
+          } else {
+            operationalStatusByUserId = new Map(
+              (statusRows ?? []).flatMap((row) => {
+                const status = normalizeOperationalStatus(row);
+                return status ? [[row.userId, status] as const] : [];
+              }),
+            );
+          }
+        }
         const staff = memberships
           .reduce<WorkspaceStaffMember[]>((accumulator, membership) => {
             const user = userById.get(membership.user_id);
@@ -191,6 +262,7 @@ export function createSupabaseWorkspaceStaffReadGateway(
               displayName: user.display_name ?? "이름 없음",
               id: user.id,
               initial: user.initial ?? undefined,
+              operationalStatus: operationalStatusByUserId.get(user.id),
               avatarUrl: avatarUrlByUserId.get(user.id) ?? undefined,
               roles,
               status: "active" as const,
@@ -200,7 +272,11 @@ export function createSupabaseWorkspaceStaffReadGateway(
           }, [])
           .sort((a, b) => a.id.localeCompare(b.id));
 
-        return { ok: true, staff };
+        return {
+          ok: true,
+          staff,
+          ...(sectionErrors ? { sectionErrors } : {}),
+        };
       } catch {
         return { ok: false, error: "db_read_failed" };
       }
@@ -297,4 +373,37 @@ function normalizeRoles(roles: string[] | null): WorkspaceRoleId[] {
   return (roles ?? []).filter((role): role is WorkspaceRoleId =>
     Boolean(normalizeWorkspaceRole(role)),
   );
+}
+
+const operationalStatusLabels: Record<
+  WorkspaceStaffOperationalStatusCode,
+  string
+> = {
+  available: "진료가능",
+  clocked_out: "퇴근",
+  leave: "휴가중",
+  off: "휴무",
+  scheduled: "근무 예정",
+  shift_ended: "근무 종료",
+  unknown: "",
+};
+
+function normalizeOperationalStatus(
+  row: SupabaseStaffOperationalStatusRow,
+): WorkspaceStaffOperationalStatus | undefined {
+  if (!isWorkspaceStaffOperationalStatusCode(row.statusCode)) return undefined;
+  if (row.statusCode === "unknown") return undefined;
+  if (row.source !== "schedule" && row.source !== "time_clock") return undefined;
+
+  return {
+    code: row.statusCode,
+    label: operationalStatusLabels[row.statusCode],
+    source: row.source,
+  };
+}
+
+function isWorkspaceStaffOperationalStatusCode(
+  value: string,
+): value is WorkspaceStaffOperationalStatusCode {
+  return value in operationalStatusLabels;
 }

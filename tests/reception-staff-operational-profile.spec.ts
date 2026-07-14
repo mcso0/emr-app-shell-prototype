@@ -4,9 +4,9 @@ async function openStaffProfile(page: Page, staffName = "이수지") {
   const lane = page
     .getByTestId("veterinarian-lane-header")
     .filter({ hasText: staffName });
-  const trigger = lane.getByRole("button", {
-    name: `${staffName} 수의사 옵션`,
-  });
+  const trigger = lane.locator(
+    `button[aria-label="${staffName} 수의사 옵션"]`,
+  );
 
   await lane.hover();
   await trigger.click();
@@ -33,12 +33,17 @@ test("veterinarian lane menu shares filter state and protects the final lane", a
   expect(originalLaneCount).toBeGreaterThan(1);
 
   const firstLane = calendar.getByTestId("veterinarian-lane-header").first();
-  const firstLaneTrigger = firstLane.getByRole("button");
-  await expect(firstLaneTrigger).toHaveCSS("opacity", "0");
+  const firstLaneActions = firstLane.getByTestId(
+    "veterinarian-lane-header-actions",
+  );
+  const firstLaneTrigger = firstLane.locator(
+    'button[aria-label="이수지 수의사 옵션"]',
+  );
+  await expect(firstLaneActions).toHaveCSS("opacity", "0");
   const hiddenStaffName =
     (await firstLane.locator("span").last().textContent()) ?? "";
   await firstLane.hover();
-  await expect(firstLaneTrigger).toHaveCSS("opacity", "1");
+  await expect(firstLaneActions).toHaveCSS("opacity", "1");
   await firstLaneTrigger.click();
   await page.getByRole("menuitem", { name: "캘린더에서 숨기기" }).click();
   await expect(calendar.getByTestId("veterinarian-lane-header")).toHaveCount(
@@ -58,13 +63,13 @@ test("veterinarian lane menu shares filter state and protects the final lane", a
   while ((await calendar.getByTestId("veterinarian-lane-header").count()) > 1) {
     const lane = calendar.getByTestId("veterinarian-lane-header").first();
     await lane.hover();
-    await lane.getByRole("button").click();
+    await lane.getByRole("button", { name: /수의사 옵션/ }).click();
     await page.getByRole("menuitem", { name: "캘린더에서 숨기기" }).click();
   }
 
   const finalLane = calendar.getByTestId("veterinarian-lane-header").first();
   await finalLane.hover();
-  await finalLane.getByRole("button").click();
+  await finalLane.getByRole("button", { name: /수의사 옵션/ }).click();
   const hideFinalLane = page.getByRole("menuitem", {
     name: "캘린더에서 숨기기",
   });
@@ -164,8 +169,11 @@ test("touch viewport keeps the lane action visible and uses a full-width drawer"
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
 
   const lane = page.getByTestId("veterinarian-lane-header").first();
-  const trigger = lane.getByRole("button");
-  await expect(trigger).toHaveCSS("opacity", "1");
+  const actions = lane.getByTestId("veterinarian-lane-header-actions");
+  const trigger = lane.getByRole("button", {
+    name: "이수지 수의사 옵션",
+  });
+  await expect(actions).toHaveCSS("opacity", "1");
   await trigger.click();
   await page.getByRole("menuitem", { name: "운영 프로필 보기" }).click();
 
