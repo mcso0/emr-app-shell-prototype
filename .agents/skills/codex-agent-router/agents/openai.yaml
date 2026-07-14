@@ -1,4 +1,0 @@
-interface:
-  display_name: "Codex Agent Router"
-  short_description: "Route work to custom Codex subagents"
-  default_prompt: "Use $codex-agent-router to choose the right custom subagents for this task before implementation."

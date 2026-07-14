@@ -1,11 +1,11 @@
 ---
 name: subagent-decision
-description: Decide whether a CLAiR EMR coding, docs, QA, or planning task should use subagents, one main agent, review-only subagents, parallel implementation, or separate worktrees/threads. Use after a plan is drafted or before implementation when the user asks about subagent usage, delegation, parallelization, model-split work, review agents, QA agents, codebase exploration, risk review, or whether work should be split.
+description: Use when a CLAiR EMR coding, docs, QA, or planning task may benefit from subagents, delegation, parallelization, independent review, test triage, codebase exploration, risk review, or separate worktrees or threads.
 ---
 
 # Subagent Decision
 
-Use this skill as the decision gate before delegating work. It decides the execution shape; it does not replace `.agents/skills/codex-agent-router`, which maps an approved subagent route to this project's concrete agents.
+Use this skill as the decision gate before delegating work. It decides the execution shape, then dispatches approved work through the current runtime's native multi-agent capability.
 
 Core rule:
 
@@ -17,17 +17,19 @@ Centralize final design decisions, integration, and high-risk implementation.
 ## Project Defaults
 
 - Keep one parent/main agent responsible for final decisions, integration, verification, and the final user summary.
-- Use `$codex-agent-router` only after this skill decides that project custom agents are useful.
+- After this skill recommends delegation, use the active runtime's native agent-dispatch tool directly.
 - Prefer read-only subagents for broad search, logs, code-path mapping, risk review, security review, and test triage.
 - Keep implementation in the parent thread unless file/module ownership boundaries are clear and the user explicitly wants parallel implementation.
 - Do not use subagents to bypass Linear status, work item scope, branch/file ownership, approval gates, security boundaries, real-data restrictions, destructive remote operations, external publication, or Human Review rules.
 - Treat subagent summaries as evidence, not authority.
+- Do not claim that a model, custom profile, or read-only sandbox was selected unless the active dispatch interface explicitly supports and confirms that control.
+- When read-only behavior is prompt-enforced rather than sandbox-enforced, compare repository state before and after delegation.
 
-Use this project's existing custom agents through `$codex-agent-router`:
+Use task-scoped roles in native dispatch prompts:
 
-- `spark-explorer`: read-only codebase or docs mapping.
-- `security-boundary-reviewer`: auth, workspace, Supabase, RLS, audit, billing integrity, real data, provider, payment, or production risk review.
-- `test-triage`: failing tests, logs, CI/build/lint/typecheck output, regression choice, and flaky behavior.
+- exploration role: read-only codebase or docs mapping.
+- boundary-review role: auth, workspace, Supabase, RLS, audit, billing integrity, real data, provider, payment, or production risk review.
+- test-triage role: failing tests, logs, CI/build/lint/typecheck output, regression choice, and flaky behavior.
 
 ## Decision Flow
 
@@ -36,7 +38,7 @@ Use this project's existing custom agents through `$codex-agent-router`:
 3. Choose exactly one decision category.
 4. Name what stays with the main agent.
 5. If subagents are recommended, provide a bounded prompt and permissions.
-6. If using project custom agents, route the agent choice through `$codex-agent-router`.
+6. If delegation is approved, dispatch the smallest useful task-scoped roles through the current runtime and wait for their summaries.
 
 ## Scoring
 
@@ -103,7 +105,7 @@ Use when the task is read-heavy, broad, uncertain, or noisy:
 - UI regression reproduction
 - library/API usage verification
 
-Project mapping: usually `$codex-agent-router` to `spark-explorer`; add `test-triage` for failures and `security-boundary-reviewer` for boundary-sensitive areas.
+Project mapping: usually one read-only exploration role; add a test-triage role for failures and an independent boundary-review role for boundary-sensitive areas.
 
 ### USE_SUBAGENTS_FOR_REVIEW_ONLY
 

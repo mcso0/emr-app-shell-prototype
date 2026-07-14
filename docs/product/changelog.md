@@ -2,6 +2,10 @@
 
 Use this file for small product-planning changes that do not need a standalone decision record.
 
+## 2026-07-14
+
+- `removed`: Removed the legacy `codex-agent-router` skill and updated current Owner OS guidance to use native task-scoped multi-agent dispatch without unsupported model, profile, or read-only-sandbox claims.
+
 ## 2026-06-12
 
 - `changed`: Clarified the product login and onboarding baseline: CLAiR operations creates hospital workspaces, first hospital admins enter through invite links, staff join through workspace invitations, and returning users sign in with email and password.

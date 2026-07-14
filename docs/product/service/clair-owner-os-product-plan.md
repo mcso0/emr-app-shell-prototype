@@ -8,7 +8,7 @@ related_work:
   - DEN-421
 supersedes: []
 superseded_by: []
-last_updated: 2026-06-05
+last_updated: 2026-07-14
 ---
 
 # CLAiR Owner OS Product Plan
@@ -116,7 +116,7 @@ flowchart TD
 | Context Router | Choose source docs and files. | Use `docs/_meta/agent-rag-map.md`; default to 1-3 docs after startup. |
 | Cost Controller | Set depth, token budget, parent model tier, subagent policy, and escalation triggers. | Use lower-cost parent models for L0/L1 and obvious small edits; escalate to 5.5 when ambiguity, risk, broad scope, or failed verification appears. |
 | Work Packet Builder | Convert request into an executable handoff. | Emit a Markdown packet with scope, sources, gates, checks, and done criteria. |
-| Execution Orchestrator | Decide direct work, single Codex handoff, or limited specialist delegation. | Default to one owner and one issue; call `$codex-agent-router` only when read-only delegation is expected to reduce parent-model cost or catch boundary risk. |
+| Execution Orchestrator | Decide direct work, single Codex handoff, or limited specialist delegation. | Default to one owner and one issue; use native multi-agent dispatch only when bounded delegation is expected to reduce parent-model cost or catch boundary risk. |
 | Verification Gate | Run or request focused checks. | Prefer docs check, lint, typecheck, build, and focused tests by risk. |
 | Eval Designer | Define scenario set, judge rubric, pass threshold, and sample count for AI workflow quality. | Use deterministic checks for contracts and LLM-as-judge only for fuzzy outcomes. |
 | Guardrail Manager | Define input, output, and tool-call tripwires. | Block expensive or dangerous execution before model/tool calls when safety or cost matters. |
@@ -142,7 +142,7 @@ Before Owner OS creates or executes a work packet, it must resolve these fields.
 | Success criteria | Concrete pass conditions, including required fields and behavior. |
 | Failure criteria | What counts as wrong, unsafe, incomplete, too broad, or too expensive. |
 | Eval method | Deterministic check, human review, LLM-as-judge, trace grading, or mixed. |
-| Model and subagent policy | Which parent model tier should run the task, when to escalate to 5.5, and whether to delegate read-only mapping, boundary review, or test triage through `$codex-agent-router`. |
+| Model and subagent policy | Which parent model tier should run the task, when to escalate to 5.5, and whether the current runtime should delegate bounded mapping, boundary review, or test triage. |
 | Sample count | One-off review, N-run scenario set, or regression suite size. |
 | Pass threshold | Required pass rate or score before the workflow is trusted. |
 | Escalation trigger | When Owner OS must ask 승욱 instead of continuing. |
@@ -321,12 +321,12 @@ Owner OS uses a tiered parent-model policy. Simple, low-risk, and clearly bounde
 | Situation | Default route | Cost rule |
 | --- | --- | --- |
 | Simple answer, status, or obvious small edit | Lower-cost parent model | Do not spawn subagents; escalate to 5.5 only if ambiguity, risk, or failed verification appears. |
-| Broad file or document mapping | `$codex-agent-router` -> `spark-explorer` read-only, then parent synthesis at the needed tier | Use Spark to shrink the search space before the parent spends tokens on implementation. |
-| Auth, workspace, Supabase, RLS, audit, billing integrity, real data, or production boundary | 5.5 parent plus `security-boundary-reviewer` read-only when boundary risk is material | Use high-reasoning review where a wrong decision is expensive or unsafe; do not route around approval gates. |
-| Failing logs, CI, regression choice, flaky behavior | `$codex-agent-router` -> `test-triage`, then parent decision at the needed tier | Use focused triage before rerunning broad suites or guessing; escalate to 5.5 when the failure affects safety, data boundaries, or broad architecture. |
-| Pre-Human-Review QA for a broad or risky change | `security-boundary-reviewer` plus `test-triage` read-only when justified | Use specialist review as evidence; parent remains accountable for final handoff. |
+| Broad file or document mapping | Native task-scoped exploration agent, then parent synthesis at the needed tier | Use bounded exploration to shrink the search space before the parent spends tokens on implementation. |
+| Auth, workspace, Supabase, RLS, audit, billing integrity, real data, or production boundary | 5.5 parent plus an independent boundary-review agent when material | Use high-reasoning review where a wrong decision is expensive or unsafe; do not route around approval gates. |
+| Failing logs, CI, regression choice, flaky behavior | Native test-triage agent, then parent decision at the needed tier | Use focused triage before rerunning broad suites or guessing; escalate to 5.5 when the failure affects safety, data boundaries, or broad architecture. |
+| Pre-Human-Review QA for a broad or risky change | Independent boundary-review and test-triage agents when justified | Use specialist review as evidence; parent remains accountable for final handoff. |
 
-Subagent outputs are evidence, not authority. The parent Codex must synthesize the summaries, make the final implementation decision, and record which parent model tier was used, whether 5.5 escalation was required, and why any specialist agent was or was not used.
+Subagent outputs are evidence, not authority. The parent Codex must synthesize the summaries, make the final implementation decision, and record which parent model tier was used, whether 5.5 escalation was required, and why any specialist agent was or was not used. A model, profile, or read-only sandbox must not be claimed unless the active dispatch interface confirms that control.
 
 Token anti-patterns:
 
@@ -400,7 +400,7 @@ Deliverables:
 
 - repo-local Owner OS router skill
 - reusable Markdown work packet template
-- `codex-agent-router` integration policy for costed read-only subagent use
+- native multi-agent integration policy for costed, bounded subagent use
 - compact Korean owner review template
 - scenario tests for intake, safety gate, packet creation, and review brief behavior
 - initial judge rubric with positive and negative calibration examples
