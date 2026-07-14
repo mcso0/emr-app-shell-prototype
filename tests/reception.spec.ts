@@ -3828,21 +3828,58 @@ test("appointment check-in persistence regression reloads from queue and calenda
   );
 });
 
-test("reception right panel header uses the shared 52px height", async ({
+test("reception encounter detail header follows the 56px CDS V2 frame", async ({
   page,
 }) => {
   await page.goto(
-    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-appointment%3Aappointment-nabi-260501",
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
   );
 
   const rightPanel = page.getByTestId("reception-right-panel");
   await expect(rightPanel).toBeVisible();
-  await expect(rightPanel.locator("header")).toHaveCSS("height", "52px");
+  await expect(rightPanel.locator("header")).toHaveCSS("height", "56px");
   const closeButton = rightPanel.getByRole("button", {
     name: "우측 사이드 패널 닫기",
   });
   await expect(closeButton).toHaveCSS("width", "32px");
   await expect(closeButton).toHaveCSS("height", "32px");
+});
+
+test("reception detail keeps visit purpose in the Figma reception-info group", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
+  );
+
+  const detailPanel = page.getByTestId("reception-right-panel");
+  await expect(detailPanel).toBeVisible();
+
+  const hasVisitPurposeInReceptionInfo = await detailPanel.evaluate((panel) => {
+    const receptionInfo = [...panel.querySelectorAll("section")].find(
+      (section) => section.querySelector("h3")?.textContent === "접수 정보",
+    );
+
+    return Boolean(receptionInfo?.querySelector('[aria-label="방문목적"]'));
+  });
+
+  expect(hasVisitPurposeInReceptionInfo).toBe(true);
+});
+
+test("reception detail exposes named controls that remain keyboard-focusable", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
+  );
+
+  const visitPurpose = page.getByLabel("방문목적", { exact: true });
+  const memo = page.getByLabel("접수 메모", { exact: true });
+
+  await expect(visitPurpose).toBeVisible();
+  await expect(memo).toBeVisible();
+  await visitPurpose.focus();
+  await expect(visitPurpose).toBeFocused();
 });
 
 test("reception right panel selection state uses a title-only shared drawer empty state", async ({

@@ -20,7 +20,7 @@ source_docs:
 dependencies:
   - "RECEPTION-QA-PR-001"
   - "RECEPTION-QA-PR-004"
-updated: "2026-07-08"
+updated: "2026-07-14"
 ---
 
 # Reception Detail Drawer Hierarchy and Editable Encounter Update
@@ -99,6 +99,21 @@ Focused verification:
 - `npx tsc --noEmit --pretty false`: passed
 - `git diff --check -- src/features/reception/module.tsx src/shell/workspace-frame.tsx src/shell/app-shell.tsx src/modules/registry.ts src/types/emr.ts`: passed
 - Manual Playwright verification against local dev server covered closed/open panel layout, no drawer overlay, toolbar button behavior, detail mode, edit mode, textarea height, add-vital menu width, and vital delete spacing/visibility.
+
+## CDS V2 Figma fidelity follow-up (2026-07-14)
+
+- Verified the direct Figma reference as `sidepanel` (`27682:44199`, 380px wide) in the CDS V2 library. Its header is 56px high, uses the X close action, and its content uses 16px panel padding, 16px group gaps, 108px labels, 12px label/control gaps, and 32px controls.
+- Kept the receipt/detail form's existing field-token contract and changed only the reception-encounter header to 56px with the documented X close icon. The shared `--clair-layout-drawer-header` token and reservation/non-reception panels are unchanged.
+- Re-grouped `방문목적` with `접수일`, `접수시간`, and `예상소요시간` under `접수 정보`, matching the Figma information hierarchy. `접수 메모` remains after it because it is an existing persisted reception field that is absent from the reference frame.
+- Added explicit accessible names for the read-only identity/assignment controls and the visit-purpose/memo textareas. No payload, permission, data model, cancellation, or update behavior changed.
+
+Focused verification:
+
+- `npx eslint src/features/reception/module.tsx tests/reception.spec.ts`: passed
+- `npx tsc --noEmit --pretty false --incremental false`: passed
+- `git diff --check`: passed
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3101 npx playwright test tests/reception.spec.ts --grep "reception encounter detail header|reception detail keeps visit purpose|reception detail exposes named controls" --reporter=line`: 3 passed
+- Local rendered verification at 1280px confirmed the 380px panel, 56px header, `접수 정보` membership for `방문목적`, 76px visit-purpose textarea, zero browser console errors/warnings, and unchanged close behavior. A 1024px visual check kept the panel/footer visible without horizontal escape.
 
 ## Handoff Notes
 

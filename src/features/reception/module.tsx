@@ -18,6 +18,7 @@ import {
   CdsActionsPlusIcon,
   CdsActionsSearchIcon,
   CdsActionsTrash2Icon,
+  CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsAlertsEyeIcon } from "@/components/cds-icons/alerts-and-status";
 import {
@@ -8473,7 +8474,14 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
       aria-label={`${moduleLabel} 우측 사이드 패널`}
       data-testid="reception-right-panel"
     >
-      <header className="flex h-[var(--clair-layout-drawer-header)] shrink-0 items-center justify-between border-b border-[var(--emr-line-default)] px-4">
+      <header
+        className={cn(
+          "flex shrink-0 items-center justify-between border-b border-[var(--emr-line-default)] px-4",
+          activeDrawer?.type === "reception-encounter"
+            ? "h-14"
+            : "h-[var(--clair-layout-drawer-header)]",
+        )}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <div className="truncate emr-text-panel-title font-semibold text-foreground">
             {title}
@@ -8496,7 +8504,11 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
             setRightPanelOpen(false);
           }}
         >
-          <CdsNavigationSidebarIcon />
+          {activeDrawer?.type === "reception-encounter" ? (
+            <CdsActionsXIcon />
+          ) : (
+            <CdsNavigationSidebarIcon />
+          )}
         </EmrRightPanelHeaderIconButton>
       </header>
       {isReceptionRightPanelDrawer(activeDrawer) ? (
@@ -9202,9 +9214,7 @@ function ReceptionSidePanelDetail({
   const usesCreateDetailLayout = detailVariant === "create";
   const detailDateLabel = selectedAppointment ? "예약일" : "접수일";
   const detailTimeLabel = selectedAppointment ? "예약시간" : "접수시간";
-  const detailTimeSectionTitle = selectedAppointment
-    ? "예약 정보"
-    : "접수일자/시간";
+  const detailTimeSectionTitle = selectedAppointment ? "예약 정보" : "접수 정보";
   const detailDateValue = selectedAppointment
     ? formatReceptionSidePanelDateFromDateTime(selectedAppointment.scheduledStartAt)
     : receptionDate;
@@ -9238,6 +9248,7 @@ function ReceptionSidePanelDetail({
               variant={detailVariant}
             >
               <ReceptionSidePanelInput
+                aria-label="동물명"
                 readOnly
                 variant={detailVariant}
                 value={`${patient.name} · ${getSpeciesLabel(patient.species)}${
@@ -9251,6 +9262,7 @@ function ReceptionSidePanelDetail({
               variant={detailVariant}
             >
               <ReceptionSidePanelInput
+                aria-label="보호자명"
                 readOnly
                 variant={detailVariant}
                 value={`${guardian?.name ?? "보호자 미지정"}${
@@ -9335,6 +9347,7 @@ function ReceptionSidePanelDetail({
                 </Select>
               ) : (
                 <ReceptionSidePanelInput
+                  aria-label="진료과"
                   readOnly
                   value={departmentValue}
                   variant={detailVariant}
@@ -9380,6 +9393,7 @@ function ReceptionSidePanelDetail({
                 </Select>
               ) : (
                 <ReceptionSidePanelInput
+                  aria-label="담당의"
                   readOnly
                   value={veterinarianName}
                   variant={detailVariant}
@@ -9461,10 +9475,6 @@ function ReceptionSidePanelDetail({
                 />
               )}
             </ReceptionSidePanelField>
-          </ReceptionSidePanelSection>
-          {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
-
-          <ReceptionSidePanelSection title="방문목적" variant={detailVariant}>
             <ReceptionSidePanelField
               align="start"
               icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
@@ -9472,6 +9482,7 @@ function ReceptionSidePanelDetail({
               variant={detailVariant}
             >
               <Textarea
+                aria-label="방문목적"
                 readOnly={!editMode}
                 value={editMode ? (editDraft.visitPurpose ?? "") : visitReason}
                 placeholder="방문목적을 입력해주세요"
@@ -9497,6 +9508,7 @@ function ReceptionSidePanelDetail({
                 variant={detailVariant}
               >
                 <Textarea
+                  aria-label={memoLabel}
                   readOnly={!editMode}
                   value={
                     editMode
