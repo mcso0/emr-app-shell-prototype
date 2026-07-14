@@ -419,7 +419,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
           buttons.map((button) => button.textContent?.trim()),
         ),
     )
-    .toEqual(["전체6", "외래4", "예약2"]);
+    .toEqual(["전체6", "접수4", "예약2"]);
   await expect
     .poll(() =>
       sidePanel
@@ -2867,7 +2867,7 @@ test("reception side panel groups active encounters and pending reservations by 
         buttons.map((button) => button.textContent?.trim()),
       ),
     )
-    .toEqual(["전체6", "외래4", "예약2"]);
+    .toEqual(["전체6", "접수4", "예약2"]);
 
   const receptionGroup = sidePanel.getByTestId("reception-queue-group-reception");
   const appointmentGroup = sidePanel.getByTestId("reception-queue-group-appointment");
