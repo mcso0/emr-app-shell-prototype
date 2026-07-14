@@ -9,8 +9,8 @@ status: "active"
 area: design
 doc_type: design-system
 tags: [design-system, ui, tokens, components, density]
-updated: "2026-07-12"
-last_updated: "2026-07-12"
+updated: "2026-07-14"
+last_updated: "2026-07-14"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -150,6 +150,8 @@ Tabs and density controls have a stricter UX contract:
 - segmented controls and filter buttons narrow or mode-switch data without pretending to be navigation
 - table density is presentation-only and uses `compact`, `standard`, and `comfortable`
 - table density uses one compact selected-value dropdown button with a row-spacing icon and downward chevron; the menu exposes `좁게`, `기본`, and `넓게`
+
+The CDS.V2 medium segmented control maps to `SegmentedControl` with `variant="tabs"` and `size="md"`: a 32px neutral-alpha group with 2px inset, 12px outer radius, contiguous 28px items with 8px horizontal padding and 10px radius, `body/2/normal` typography, and `shadow-sm` on the selected white item. Compact `xs` and `sm` modes keep their existing denser contracts.
 
 New shared primitives should be added only when a repeated pattern is stable across screens.
 

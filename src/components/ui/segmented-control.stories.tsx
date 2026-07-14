@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent, within } from "storybook/test";
 
 import {
   SegmentedControl,
@@ -174,6 +175,40 @@ export const TabSizes: Story = {
       description: {
         story:
           "Tabs support xs, sm, and md densities. xs matches compact side-panel filters; md matches the 32px CDS V2 toolbar tab group.",
+      },
+    },
+  },
+};
+
+export const CdsV2MediumTabs: Story = {
+  args: {
+    "aria-label": "접수 캘린더 보기",
+    items: [
+      { value: "day", label: "일" },
+      { value: "week", label: "주" },
+      { value: "month", label: "월" },
+    ],
+    onValueChange: () => undefined,
+    size: "md",
+    value: "day",
+    variant: "tabs",
+  },
+  render: (args) => <ControlledSegmentedControl {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const group = canvas.getByRole("group", { name: "접수 캘린더 보기" });
+    const day = within(group).getByRole("button", { name: "일" });
+    const week = within(group).getByRole("button", { name: "주" });
+
+    await expect(day).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(week);
+    await expect(week).toHaveAttribute("aria-pressed", "true");
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "CDS.V2 node 27630:20825 medium tab group: 32px group, 28px items, 12px/10px radii, body/2 typography, and shadow-sm selected state.",
       },
     },
   },

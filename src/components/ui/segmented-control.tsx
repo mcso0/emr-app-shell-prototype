@@ -94,11 +94,22 @@ export function SegmentedControl<TValue extends string>({
     sm: "h-[var(--clair-control-height-sm)]",
     md: "h-[var(--clair-control-height-md)]",
   }[size];
+  const tabsContainerShapeClassName = {
+    xs: "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)]",
+    sm: "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)]",
+    md: "gap-0 rounded-[var(--clair-radius-atomic-12)]",
+  }[size];
   const tabsItemSizeClassName = {
     xs: "h-[calc(var(--clair-control-height-xs)-var(--clair-border-width-atomic-4))] min-w-5 px-1.5",
     sm: "h-[var(--clair-control-height-xs)] min-w-6 px-2",
-    md: "h-[var(--clair-control-height-sm)] min-w-7 px-2.5",
+    md: "h-[var(--clair-control-height-sm)] min-w-[29px] px-2",
   }[size];
+  const tabsItemTypographyClassName =
+    size === "md" ? "emr-text-body" : "emr-text-metadata";
+  const tabsItemShapeClassName =
+    size === "md"
+      ? "rounded-[var(--clair-radius-atomic-10)]"
+      : "rounded-[var(--emr-radius-control)]";
 
   return (
     <div
@@ -110,7 +121,8 @@ export function SegmentedControl<TValue extends string>({
         variant === "tabs" &&
           [
             tabsSizeClassName,
-            "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--clair-color-atomic-black-alpha-4)] p-[var(--clair-border-width-atomic-2)]",
+            tabsContainerShapeClassName,
+            "bg-[var(--clair-color-atomic-black-alpha-4)] p-[var(--clair-border-width-atomic-2)]",
           ],
         className
       )}
@@ -137,11 +149,18 @@ export function SegmentedControl<TValue extends string>({
                 (active
                   ? [
                       tabsItemSizeClassName,
-                      "emr-text-metadata rounded-[var(--emr-radius-control)] border-transparent bg-card font-medium text-[var(--clair-color-atomic-neutral-800)] shadow-[var(--clair-shadow-xs)] hover:bg-card",
+                      tabsItemTypographyClassName,
+                      tabsItemShapeClassName,
+                      "border-0 bg-[var(--clair-color-background-normal)] font-medium text-[var(--clair-color-atomic-neutral-800)] hover:bg-[var(--clair-color-background-normal)]",
+                      size === "md"
+                        ? "shadow-[var(--clair-shadow-sm)]"
+                        : "shadow-[var(--clair-shadow-xs)]",
                     ]
                   : [
                       tabsItemSizeClassName,
-                      "emr-text-metadata rounded-[var(--emr-radius-control)] border-transparent bg-transparent font-medium text-[var(--clair-color-atomic-neutral-600)] hover:bg-[var(--emr-state-hover)]",
+                      tabsItemTypographyClassName,
+                      tabsItemShapeClassName,
+                      "border-0 bg-transparent font-medium text-[var(--clair-color-atomic-neutral-600)] hover:bg-[var(--emr-state-hover)]",
                     ]),
               itemDisabled && "cursor-not-allowed opacity-45 hover:bg-transparent",
               itemClassName

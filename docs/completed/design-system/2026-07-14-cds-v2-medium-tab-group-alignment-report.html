@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CDS.V2 중간 탭 그룹 구현 시안</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --neutral-50: #fafafa;
+        --neutral-100: #f5f5f5;
+        --neutral-200: #e5e5e5;
+        --neutral-500: #737373;
+        --neutral-600: #525252;
+        --neutral-800: #262626;
+        --black-alpha-4: rgba(0, 0, 0, 0.04);
+        --background: #fff;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1),
+          0 1px 2px -1px rgba(0, 0, 0, 0.1);
+        --page: #f6f7f9;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--neutral-800);
+        font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo",
+          "Noto Sans KR", system-ui, sans-serif;
+      }
+
+      main {
+        width: min(960px, calc(100% - 32px));
+        margin: 40px auto;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--neutral-500);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.025em;
+      }
+
+      h1 { margin: 0; font-size: clamp(24px, 4vw, 36px); line-height: 1.25; }
+      h2 { margin: 0 0 14px; font-size: 18px; }
+      p { margin: 10px 0 0; color: var(--neutral-600); line-height: 1.65; }
+
+      .status {
+        display: inline-flex;
+        margin-top: 18px;
+        border-radius: 9999px;
+        background: #ecfdf5;
+        color: #047857;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .card {
+        margin-top: 24px;
+        border: 1px solid var(--neutral-200);
+        border-radius: 16px;
+        background: var(--background);
+        padding: 24px;
+      }
+
+      .toolbar {
+        display: flex;
+        min-height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        overflow-x: auto;
+        border: 1px solid var(--neutral-200);
+        border-radius: 12px;
+        background: var(--background);
+        padding: 12px 16px;
+      }
+
+      .toolbar-copy { min-width: 170px; }
+      .toolbar-copy strong { display: block; font-size: 14px; }
+      .toolbar-copy span { color: var(--neutral-500); font-size: 12px; }
+
+      .toolbar-actions { display: flex; align-items: center; gap: 12px; }
+
+      .outline-button {
+        height: 32px;
+        border: 1px solid var(--neutral-200);
+        border-radius: 8px;
+        background: var(--background);
+        padding: 0 12px;
+        color: var(--neutral-800);
+        font: 600 12px/16px inherit;
+        white-space: nowrap;
+      }
+
+      .tab-group {
+        display: inline-flex;
+        width: fit-content;
+        height: 32px;
+        flex: none;
+        align-items: center;
+        gap: 0;
+        border-radius: 12px;
+        background: var(--black-alpha-4);
+        padding: 2px;
+      }
+
+      .tab {
+        display: inline-flex;
+        min-width: 29px;
+        height: 28px;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        padding: 0 8px;
+        color: var(--neutral-600);
+        font: 500 14px/20px inherit;
+        letter-spacing: 0.014em;
+        cursor: pointer;
+      }
+
+      .tab:hover { background: rgba(0, 0, 0, 0.06); }
+
+      .tab[aria-pressed="true"] {
+        background: var(--background);
+        color: var(--neutral-800);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .tab:focus-visible {
+        outline: 3px solid rgba(113, 113, 122, 0.5);
+        outline-offset: 2px;
+      }
+
+      .measure {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .measure div {
+        border-radius: 10px;
+        background: var(--neutral-50);
+        padding: 12px;
+      }
+
+      .measure strong { display: block; font-size: 14px; }
+      .measure span { color: var(--neutral-500); font-size: 11px; }
+
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { border-bottom: 1px solid var(--neutral-200); padding: 12px 8px; text-align: left; }
+      th { color: var(--neutral-500); font-size: 11px; letter-spacing: 0.025em; }
+      td:last-child { color: #047857; font-weight: 700; }
+
+      ul { margin: 0; padding-left: 20px; color: var(--neutral-600); line-height: 1.75; }
+      code { border-radius: 5px; background: var(--neutral-100); padding: 2px 5px; color: var(--neutral-800); }
+
+      @media (max-width: 640px) {
+        main { margin: 24px auto; }
+        .card { padding: 18px; }
+        .measure { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .toolbar { align-items: flex-start; flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">DESIGN-SYSTEM-PR-074 · 2026-07-14</p>
+      <h1>CDS.V2 중간 탭 그룹 구현 시안</h1>
+      <p>
+        접수 캘린더의 일·주·월 보기를 Figma 노드 27630:20825와 같은 공용
+        탭 그룹 계약으로 맞췄다. 아래 시안은 실제 선택 상태 전환이 가능하다.
+      </p>
+      <span class="status">구현 및 브라우저 검증 완료</span>
+
+      <section class="card" aria-labelledby="demo-title">
+        <h2 id="demo-title">HTML 시안</h2>
+        <div class="toolbar">
+          <div class="toolbar-copy">
+            <strong>접수/예약 캘린더</strong>
+            <span id="view-description">일간 일정 표시 중</span>
+          </div>
+          <div class="toolbar-actions">
+            <button class="outline-button" type="button">오늘</button>
+            <div class="tab-group" role="group" aria-label="접수 캘린더 보기">
+              <button class="tab" type="button" data-view="일" aria-pressed="true">일</button>
+              <button class="tab" type="button" data-view="주" aria-pressed="false">주</button>
+              <button class="tab" type="button" data-view="월" aria-pressed="false">월</button>
+            </div>
+            <button class="outline-button" type="button">+ 접수/예약</button>
+          </div>
+        </div>
+        <div class="measure" aria-label="주요 치수">
+          <div><strong>91 × 32</strong><span>3개 탭 그룹</span></div>
+          <div><strong>29 × 28</strong><span>탭 최소 크기</span></div>
+          <div><strong>12 / 10</strong><span>외곽 / 탭 반경</span></div>
+          <div><strong>14 / 20</strong><span>글자 크기 / 행간</span></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="comparison-title">
+        <h2 id="comparison-title">Figma 대조 결과</h2>
+        <table>
+          <thead><tr><th>항목</th><th>Figma</th><th>구현</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>그룹</td><td>91×32, inset 2, radius 12</td><td>91×32, inset 2, radius 12</td><td>일치</td></tr>
+            <tr><td>탭</td><td>29×28, px 8, radius 10</td><td>29×28, px 8, radius 10</td><td>일치</td></tr>
+            <tr><td>타이포</td><td>Pretendard Medium 14/20</td><td><code>emr-text-body</code> + medium</td><td>일치</td></tr>
+            <tr><td>선택 상태</td><td>white, neutral/800, shadow-sm</td><td>동일 토큰 사용</td><td>일치</td></tr>
+            <tr><td>비선택 상태</td><td>transparent, neutral/600</td><td>동일 토큰 사용</td><td>일치</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" aria-labelledby="scope-title">
+        <h2 id="scope-title">변경 범위와 확인 사항</h2>
+        <ul>
+          <li><code>SegmentedControl</code>의 <code>tabs / md</code> 계약만 수정했다.</li>
+          <li>접수 화면은 공용 컴포넌트를 그대로 사용하며 화면별 덮어쓰기를 추가하지 않았다.</li>
+          <li><code>xs</code>와 <code>sm</code>, 캘린더 데이터·날짜 이동·필터 동작은 변경하지 않았다.</li>
+          <li>Storybook 상호작용, TypeScript, ESLint, 정적 빌드, 1024px·768px 화면 확인을 완료했다.</li>
+        </ul>
+      </section>
+    </main>
+    <script>
+      const labels = { 일: "일간 일정 표시 중", 주: "주간 일정 표시 중", 월: "월간 일정 표시 중" };
+      const tabs = [...document.querySelectorAll(".tab")];
+      const description = document.querySelector("#view-description");
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((item) => item.setAttribute("aria-pressed", String(item === tab)));
+          description.textContent = labels[tab.dataset.view];
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
-  CdsNavigationChevronLeftIcon,
-  CdsNavigationChevronRightIcon,
+  CdsNavigationChevronDownIcon,
+  CdsNavigationChevronUpIcon,
+  CdsNavigationReturnIcon,
 } from "@/components/cds-icons/navigation";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   addMonthsToIsoDate,
   formatKoreanOperatingDateLabel,
@@ -17,7 +19,9 @@ type EmrSidePanelMiniCalendarProps = {
   selectedDate: string;
   todayDate: string;
   onDateSelect: (date: string) => void;
+  onReturnToPreviousDate?: () => void;
   className?: string;
+  previousDate?: string;
   rangeEndDate?: string;
   rangeStartDate?: string;
 };
@@ -57,6 +61,8 @@ function isDateInRange(date: string, startDate?: string, endDate?: string) {
 export function EmrSidePanelMiniCalendar({
   className,
   onDateSelect,
+  onReturnToPreviousDate,
+  previousDate,
   rangeEndDate,
   rangeStartDate,
   selectedDate,
@@ -89,37 +95,50 @@ export function EmrSidePanelMiniCalendar({
       };
     });
   };
+  const showReturnAction = Boolean(
+    previousDate && previousDate !== selectedDate && onReturnToPreviousDate,
+  );
 
   return (
     <section
       className={cn(
-        "h-[233px] w-full shrink-0 bg-[var(--emr-surface-sidepanel)] pb-2",
+        "h-[227px] w-full shrink-0 bg-[var(--emr-surface-sidepanel)] pb-2",
         className,
       )}
       data-testid="side-panel-mini-calendar"
       aria-label="접수/예약 간이 캘린더"
     >
-      <div className="mx-[6px] h-[225px]">
-        <div className="flex h-9 items-center px-1.5">
-          <button
-            type="button"
-            className="relative flex size-6 shrink-0 items-center justify-center rounded-[6px] text-[var(--emr-text-tertiary)] outline-none transition-[background-color,color,box-shadow] duration-150 ease-out hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-            aria-label="이전 달"
-            onClick={() => navigateVisibleMonth(-1)}
-          >
-            <CdsNavigationChevronLeftIcon className="size-4" aria-hidden="true" />
-          </button>
-          <div className="flex h-6 flex-1 items-center justify-center px-1 text-center text-[12px] font-semibold leading-[18px] text-[var(--emr-text-primary)] tabular-nums">
+      <div className="mx-[6px] h-[219px]">
+        <div
+          className="flex h-[30px] items-center pl-3 pr-1.5"
+          data-testid="side-panel-mini-calendar-header"
+        >
+          <div className="flex min-w-0 flex-1 items-center text-[length:var(--emr-type-size-dense)] font-medium leading-[var(--emr-type-leading-dense)] tracking-[var(--emr-type-tracking-dense)] text-[var(--emr-text-tertiary)] tabular-nums">
             {visibleMonthParts.year}년 {visibleMonthParts.month}월
           </div>
-          <button
-            type="button"
-            className="relative flex size-6 shrink-0 items-center justify-center rounded-[6px] text-[var(--emr-text-tertiary)] outline-none transition-[background-color,color,box-shadow] duration-150 ease-out hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-            aria-label="다음 달"
-            onClick={() => navigateVisibleMonth(1)}
-          >
-            <CdsNavigationChevronRightIcon className="size-4" aria-hidden="true" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            {showReturnAction ? (
+              <MiniCalendarIconButton
+                label="이전에 보던 날짜로 돌아가기"
+                onClick={() => onReturnToPreviousDate?.()}
+                testId="side-panel-mini-calendar-return"
+              >
+                <CdsNavigationReturnIcon aria-hidden="true" />
+              </MiniCalendarIconButton>
+            ) : null}
+            <MiniCalendarIconButton
+              label="이전 달"
+              onClick={() => navigateVisibleMonth(-1)}
+            >
+              <CdsNavigationChevronUpIcon aria-hidden="true" />
+            </MiniCalendarIconButton>
+            <MiniCalendarIconButton
+              label="다음 달"
+              onClick={() => navigateVisibleMonth(1)}
+            >
+              <CdsNavigationChevronDownIcon aria-hidden="true" />
+            </MiniCalendarIconButton>
+          </div>
         </div>
         <div className="grid h-[189px] grid-cols-7 grid-rows-7 text-center">
           {sidePanelMiniCalendarWeekdays.map((weekday) => (
@@ -184,5 +203,35 @@ export function EmrSidePanelMiniCalendar({
         </div>
       </div>
     </section>
+  );
+}
+
+function MiniCalendarIconButton({
+  children,
+  label,
+  onClick,
+  testId,
+}: {
+  children: ReactNode;
+  label: string;
+  onClick: () => void;
+  testId?: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        type="button"
+        aria-label={label}
+        title={label}
+        data-testid={testId}
+        className="relative flex size-6 shrink-0 items-center justify-center rounded-[6px] p-0 text-[var(--emr-text-tertiary)] outline-none transition-[background-color,color,box-shadow] duration-150 ease-out hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
+        onClick={onClick}
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
