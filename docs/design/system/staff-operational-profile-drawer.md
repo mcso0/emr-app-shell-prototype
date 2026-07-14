@@ -22,6 +22,11 @@ last_updated: 2026-07-14
 
 직원 운영 프로필은 특정 수의사만을 위한 상세 화면이 아니라, 접수 캘린더·근무표·병원관리 등 여러 업무 화면에서 동일한 직원을 일관되게 확인하는 공통 조회 화면이다.
 
+검토 자료:
+
+- [기획 보고서 HTML](../../completed/design/2026-07-14-staff-operational-profile-drawer-proposal-report.html)
+- [인터랙티브 시안 HTML](../screens/reception/planning/staff-operational-profile-drawer-prototype.html)
+
 프로필은 다음 네 영역만 사용한다.
 
 1. 모든 직원에게 공통인 기본 프로필
