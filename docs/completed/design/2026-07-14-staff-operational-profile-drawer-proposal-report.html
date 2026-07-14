@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231264dc'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='sans-serif' font-size='18' font-weight='700' fill='white'%3EC%3C/text%3E%3C/svg%3E" />
+    <title>직원 운영 프로필 드로우 1차 기획 보고서</title>
+    <style>
+      :root {
+        --paper: #f2f4f7;
+        --surface: #ffffff;
+        --ink: #171a21;
+        --muted: #68707e;
+        --line: #dfe3e9;
+        --line-strong: #b9c1cc;
+        --blue: #1264dc;
+        --blue-soft: #eaf2ff;
+        --green: #16794d;
+        --green-soft: #e8f7ef;
+        --orange: #b45309;
+        --orange-soft: #fff3df;
+        --red: #b42318;
+        --red-soft: #fff0ed;
+        --radius: 16px;
+        --shadow: 0 18px 50px rgba(19, 30, 48, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          linear-gradient(90deg, rgba(18, 100, 220, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,
+          var(--paper);
+        font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif;
+        line-height: 1.65;
+        word-break: keep-all;
+      }
+
+      a { color: inherit; }
+      .layout {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 34px 28px 80px;
+        gap: 32px;
+      }
+
+      aside {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        border: 1px solid rgba(185, 193, 204, 0.72);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 12px 34px rgba(19, 30, 48, 0.06);
+        backdrop-filter: blur(14px);
+        padding: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        color: #fff;
+        background: var(--blue);
+        font-size: 11px;
+        letter-spacing: 0;
+      }
+      nav { display: grid; gap: 4px; margin-top: 14px; }
+      nav a {
+        padding: 9px 10px;
+        border-radius: 9px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      nav a:hover,
+      nav a:focus-visible { color: var(--blue); background: var(--blue-soft); outline: none; }
+      .aside-note { margin: 18px 2px 0; color: var(--muted); font-size: 11px; }
+
+      main { min-width: 0; }
+      .hero {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 24px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        padding: 48px 48px 42px;
+      }
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -70px;
+        top: -110px;
+        width: 260px;
+        height: 260px;
+        border: 52px solid var(--blue-soft);
+        border-radius: 50%;
+        opacity: 0.85;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        position: relative;
+        z-index: 1;
+        border: 1px solid #bcd3f7;
+        border-radius: 999px;
+        background: var(--blue-soft);
+        color: #0e4da9;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+      h1 {
+        position: relative;
+        z-index: 1;
+        max-width: 720px;
+        margin: 20px 0 14px;
+        font-family: "Nanum Myeongjo", "Noto Serif KR", serif;
+        font-size: clamp(34px, 5vw, 58px);
+        line-height: 1.15;
+        letter-spacing: -0.045em;
+      }
+      .hero-copy { position: relative; z-index: 1; max-width: 720px; margin: 0; color: #4e5664; font-size: 17px; }
+      .hero-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 26px; color: var(--muted); font-size: 12px; }
+      .hero-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+      .button-link {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        border-radius: 10px;
+        padding: 0 14px;
+        border: 1px solid var(--line-strong);
+        background: #fff;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 750;
+      }
+      .button-link.primary { border-color: var(--blue); color: #fff; background: var(--blue); }
+
+      .decision-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 18px 0 0;
+      }
+      .decision {
+        min-height: 132px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 18px;
+      }
+      .decision b { display: block; margin-bottom: 8px; font-size: 13px; }
+      .decision p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+      .decision .num { display: block; margin-bottom: 12px; color: var(--blue); font: 700 20px/1 Georgia, serif; }
+
+      section {
+        scroll-margin-top: 24px;
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: 0 10px 28px rgba(19, 30, 48, 0.045);
+        padding: 30px;
+      }
+      section h2 { margin: 0 0 8px; font-size: 22px; letter-spacing: -0.025em; }
+      section > p:first-of-type { margin-top: 0; color: var(--muted); }
+      h3 { margin: 24px 0 8px; font-size: 15px; }
+      p, li, td, th { font-size: 14px; }
+      ul { margin: 10px 0 0; padding-left: 20px; }
+      li + li { margin-top: 5px; }
+
+      .callout {
+        margin-top: 18px;
+        border-left: 4px solid var(--blue);
+        border-radius: 0 12px 12px 0;
+        background: var(--blue-soft);
+        padding: 16px 18px;
+      }
+      .callout strong { color: #0f4fae; }
+      .callout p { margin: 4px 0 0; color: #3f536f; }
+      .callout.danger { border-left-color: var(--red); background: var(--red-soft); }
+      .callout.danger strong { color: var(--red); }
+      .callout.danger p { color: #70443e; }
+
+      .layer-map { display: grid; gap: 10px; margin-top: 20px; }
+      .layer {
+        display: grid;
+        grid-template-columns: 46px 170px minmax(0, 1fr) 120px;
+        align-items: center;
+        gap: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .layer-index { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--blue-soft); color: var(--blue); font-weight: 850; }
+      .layer-title { font-weight: 800; }
+      .layer-copy { color: var(--muted); font-size: 13px; }
+      .owner { justify-self: end; border-radius: 999px; padding: 4px 8px; background: #f1f3f6; color: #545d6b; font-size: 11px; font-weight: 750; }
+
+      .table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; }
+      table { width: 100%; min-width: 680px; border-collapse: collapse; background: #fff; }
+      th, td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+      th { background: #f7f8fa; color: #4d5664; font-size: 12px; }
+      tbody tr:last-child td { border-bottom: 0; }
+      .yes { color: var(--green); font-weight: 750; }
+      .no { color: var(--red); font-weight: 750; }
+
+      .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 20px; }
+      .flow-step { position: relative; padding: 16px; border: 1px solid var(--line); background: #fff; }
+      .flow-step:first-child { border-radius: 12px 0 0 12px; }
+      .flow-step:last-child { border-radius: 0 12px 12px 0; }
+      .flow-step + .flow-step { border-left: 0; }
+      .flow-step b { display: block; margin-bottom: 5px; font-size: 13px; }
+      .flow-step span { color: var(--muted); font-size: 12px; }
+
+      pre {
+        overflow-x: auto;
+        margin: 16px 0 0;
+        border-radius: 12px;
+        background: #171b24;
+        color: #dce7f8;
+        padding: 18px;
+        font: 12px/1.65 "SFMono-Regular", Consolas, monospace;
+      }
+      code { font-family: "SFMono-Regular", Consolas, monospace; }
+
+      .scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+      .scope-card { border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+      .scope-card.in { background: var(--green-soft); border-color: #bbdec9; }
+      .scope-card.out { background: var(--red-soft); border-color: #efcbc4; }
+      .scope-card h3 { margin-top: 0; }
+      .review-list { list-style: none; padding: 0; counter-reset: review; }
+      .review-list li { counter-increment: review; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; }
+      .review-list li::before { content: counter(review); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; background: var(--blue); font-size: 11px; font-weight: 850; }
+
+      footer { padding: 28px 6px 0; color: var(--muted); font-size: 11px; text-align: center; }
+
+      @media (max-width: 980px) {
+        .layout { grid-template-columns: 1fr; padding: 22px 18px 60px; }
+        aside { position: static; }
+        nav { grid-template-columns: repeat(3, 1fr); }
+        .aside-note { display: none; }
+        .decision-strip { grid-template-columns: 1fr 1fr; }
+        .layer { grid-template-columns: 42px 1fr; }
+        .layer-copy, .owner { grid-column: 2; justify-self: start; }
+      }
+      @media (max-width: 680px) {
+        .hero { padding: 32px 22px; border-radius: 18px; }
+        h1 { font-size: 34px; }
+        .hero-copy { font-size: 15px; }
+        .decision-strip, .scope-grid, .flow { grid-template-columns: 1fr; }
+        .flow-step, .flow-step:first-child, .flow-step:last-child { border-radius: 10px; border: 1px solid var(--line); }
+        section { padding: 22px; }
+        nav { grid-template-columns: 1fr 1fr; }
+      }
+      @media print {
+        body { background: #fff; }
+        .layout { display: block; max-width: none; padding: 0; }
+        aside, .hero-links { display: none; }
+        .hero, section { box-shadow: none; break-inside: avoid; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside aria-label="보고서 목차">
+        <div class="brand"><span class="brand-mark">C</span> CLAiR DESIGN NOTE</div>
+        <nav>
+          <a href="#decision">결론</a>
+          <a href="#model">프로필 구조</a>
+          <a href="#ownership">입력·수정 권한</a>
+          <a href="#interaction">캘린더 동작</a>
+          <a href="#data">DB/API</a>
+          <a href="#scope">범위</a>
+          <a href="#review">검토 포인트</a>
+        </nav>
+        <p class="aside-note">이 문서는 2026-07-14 기준 1차 기획을 사람이 검토하기 쉽게 정리한 보고서야.</p>
+      </aside>
+
+      <main>
+        <header class="hero">
+          <span class="eyebrow">Proposal · Human Review</span>
+          <h1>직원 운영 프로필<br />공통 드로우</h1>
+          <p class="hero-copy">수의사 전용 정보창이 아니라, 병원 구성원을 여러 업무 화면에서 일관되게 확인하는 읽기 전용 운영 프로필을 정의한다.</p>
+          <div class="hero-meta">
+            <span>작성일 2026.07.14</span>
+            <span>초기 진입점 접수/예약 캘린더</span>
+            <span>상태 1차 기획 검토</span>
+          </div>
+          <div class="hero-links">
+            <a class="button-link primary" href="../../design/screens/reception/planning/staff-operational-profile-drawer-prototype.html">인터랙티브 시안 열기 →</a>
+            <a class="button-link" href="../../design/system/staff-operational-profile-drawer.md">원본 기획 문서 보기</a>
+          </div>
+        </header>
+
+        <div class="decision-strip" aria-label="핵심 결정">
+          <div class="decision"><span class="num">01</span><b>공통 프로필</b><p>직군별로 서로 다른 프로필을 만들지 않는다.</p></div>
+          <div class="decision"><span class="num">02</span><b>읽기 전용</b><p>본인·관리자 설정 화면과 운영 조회를 분리한다.</p></div>
+          <div class="decision"><span class="num">03</span><b>원본 기반</b><p>근무와 예약 정보는 원본 데이터에서 계산한다.</p></div>
+          <div class="decision"><span class="num">04</span><b>역량 추정 금지</b><p>직무·권한으로 가능한 업무를 추론하지 않는다.</p></div>
+        </div>
+
+        <section id="decision">
+          <h2>결론</h2>
+          <p>프로필의 중심은 사람과 조직 정보이며, 근무·예약 정보는 실제 원본이 있을 때만 맥락별로 덧붙인다.</p>
+          <div class="callout">
+            <strong>채택 구조</strong>
+            <p>공통 기본 프로필 + 관리자 조직정보 + 기준일 근무 + 선택적 화면 정보</p>
+          </div>
+          <div class="callout danger">
+            <strong>이번 기능에서 제외</strong>
+            <p><b>담당 업무</b>, 업무 역량, 진료 분야, 가능한 예약 유형. 정의가 불명확한 정보를 권한이나 직무에서 추론해 보여주지 않는다.</p>
+          </div>
+        </section>
+
+        <section id="model">
+          <h2>프로필 정보 구조</h2>
+          <p>모든 직군이 같은 뼈대를 사용하되, 현재 화면이 신뢰할 수 있는 데이터가 있을 때만 마지막 영역을 추가한다.</p>
+          <div class="layer-map">
+            <div class="layer"><span class="layer-index">1</span><span class="layer-title">공통 기본 프로필</span><span class="layer-copy">사진, 이름, 이니셜, 공개 가능한 업무용 연락처</span><span class="owner">본인 관리</span></div>
+            <div class="layer"><span class="layer-index">2</span><span class="layer-title">조직 정보</span><span class="layer-copy">직무, 직책, 부서, 소속 상태, 근무 지점</span><span class="owner">관리자 관리</span></div>
+            <div class="layer"><span class="layer-index">3</span><span class="layer-title">기준일 근무</span><span class="layer-copy">근무시간, 근무 label, 위치, 예정·근무 중·종료 상태</span><span class="owner">근무표 원본</span></div>
+            <div class="layer"><span class="layer-index">4</span><span class="layer-title">화면별 정보</span><span class="layer-copy">접수 화면에서는 선택 날짜 예약 건수만 선택적으로 제공</span><span class="owner">업무 원본</span></div>
+          </div>
+          <h3>날짜 표시 원칙</h3>
+          <p>오늘 캘린더에서 열면 <b>오늘 근무</b>, 다른 날짜에서 열면 <b>7월 15일 근무</b>처럼 기준일을 그대로 제목에 반영한다. 다른 날짜의 정보를 오늘 일정으로 잘못 표현하지 않는다.</p>
+        </section>
+
+        <section id="ownership">
+          <h2>최초 입력과 수정 권한</h2>
+          <p>한 사람이 모든 필드를 수정하는 프로필이 아니다. 개인·조직·운영 원본의 책임을 나눈다.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>정보</th><th>최초 입력</th><th>이후 수정</th><th>다른 직원</th></tr></thead>
+              <tbody>
+                <tr><td>초대 이메일</td><td>운영 관리자</td><td>본인 인증·이메일 변경 정책</td><td>제한 조회</td></tr>
+                <tr><td>직무·직책·부서</td><td>운영 관리자</td><td>권한 보유 운영 관리자</td><td>조회만</td></tr>
+                <tr><td>이름·이니셜·사진</td><td>초대 수락자</td><td>본인</td><td>조회만</td></tr>
+                <tr><td>개인 전화번호</td><td>본인</td><td>본인</td><td class="no">기본 비공개</td></tr>
+                <tr><td>기준일 근무</td><td>근무표 관리자</td><td>근무표 관리자</td><td>조회만</td></tr>
+                <tr><td>예약 요약</td><td>시스템 계산</td><td class="no">직접 수정 불가</td><td>권한 범위 조회</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>초대 수락 시 이메일 앞부분을 이름으로 임시 생성할 수 있지만, 최종 흐름은 본인이 이름·이니셜·사진을 확인하는 기본 프로필 설정 단계를 제공한다.</p>
+        </section>
+
+        <section id="interaction">
+          <h2>접수 캘린더 동작</h2>
+          <p>레인 헤더의 오른쪽 끝에 액션 공간을 미리 확보해 hover 때 버튼이 나타나도 이름이 흔들리지 않는다.</p>
+          <div class="flow">
+            <div class="flow-step"><b>1. 레인 hover/focus</b><span>더보기 버튼 노출</span></div>
+            <div class="flow-step"><b>2. 메뉴 열기</b><span>정확히 두 항목 제공</span></div>
+            <div class="flow-step"><b>3A. 숨기기</b><span>상단 필터와 같은 상태 변경</span></div>
+            <div class="flow-step"><b>3B. 프로필</b><span>읽기 전용 드로우 열기</span></div>
+          </div>
+          <h3>메뉴 항목</h3>
+          <ul>
+            <li><b>캘린더에서 숨기기</b>: 개인의 현재 보기 상태만 바꾸고 직원·근무표·예약 데이터는 변경하지 않는다.</li>
+            <li><b>운영 프로필 보기</b>: 같은 workspace shell 위에서 공통 드로우를 연다.</li>
+          </ul>
+          <p>마지막으로 보이는 수의사 한 명은 숨길 수 없다. touch 환경에서는 hover가 없으므로 더보기 버튼을 항상 표시한다.</p>
+        </section>
+
+        <section id="data">
+          <h2>DB/API 고려 결과</h2>
+          <p>기반 테이블과 일부 route는 이미 존재하지만 공통 운영 프로필 전용 조회 경계는 추가가 필요하다.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>구분</th><th>현재 상태</th><th>판단</th></tr></thead>
+              <tbody>
+                <tr><td><code>users</code>, <code>user_profiles</code></td><td>이름·이니셜·연락처·사진 기반 존재</td><td class="yes">재사용</td></tr>
+                <tr><td><code>user_memberships</code></td><td>부서·직책·상태와 직무 연결 존재</td><td class="yes">재사용</td></tr>
+                <tr><td>근무표 테이블</td><td>membership와 shift, 위치 연결 존재</td><td class="yes">재사용</td></tr>
+                <tr><td>본인 프로필 API</td><td>본인만 이름·이니셜·전화·알림 수정</td><td class="yes">기존 경계 유지</td></tr>
+                <tr><td>운영 프로필 조회 API</td><td>공통 응답과 필드별 공개 정책 없음</td><td>신규 read route 필요</td></tr>
+                <tr><td>활성 구성원 조직정보 수정</td><td>초대 시 입력 기반은 있으나 일반 수정 경로 불완전</td><td>관리자 route 보완</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>조회 API 제안</h3>
+          <pre>GET /api/workspaces/{workspaceId}/staff/{userId}/operational-profile
+    ?date=2026-07-14&amp;context=reception
+
+profile  → 모든 허용 사용자에게 필요한 최소 직원 정보
+shift    → 기준일 근무가 있을 때만 반환
+context  → 화면과 권한이 지원할 때만 반환</pre>
+          <ul>
+            <li>같은 workspace의 active member인지 서버에서 확인한다.</li>
+            <li>접수 요약에는 <code>reception:view</code> 권한이 필요하다.</li>
+            <li>개인 전화번호·권한 역할·로그인 이력·내부 ID는 일반 응답에서 제외한다.</li>
+            <li>예약 건수는 원본에서 계산하며 프로필 테이블에 중복 저장하지 않는다.</li>
+          </ul>
+        </section>
+
+        <section id="scope">
+          <h2>1차 범위</h2>
+          <div class="scope-grid">
+            <div class="scope-card in">
+              <h3>포함</h3>
+              <ul>
+                <li>레인 hover/focus 더보기 버튼</li>
+                <li>숨기기와 운영 프로필 메뉴</li>
+                <li>읽기 전용 공통 드로우</li>
+                <li>조직 정보와 기준일 근무</li>
+                <li>접수 예약 건수 요약</li>
+                <li>로딩·빈 상태·부분 오류·권한 상태</li>
+              </ul>
+            </div>
+            <div class="scope-card out">
+              <h3>제외</h3>
+              <ul>
+                <li>업무 역량과 진료 분야</li>
+                <li>다른 직원 정보 편집</li>
+                <li>권한 역할과 로그인 이력</li>
+                <li>개인 전화번호 공개</li>
+                <li>근무표 편집</li>
+                <li>새 DB 테이블</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="review">
+          <h2>승욱 검토 포인트</h2>
+          <ol class="review-list">
+            <li>프로필이 수의사 전용 화면이 아니라 모든 직원이 공유할 수 있는 뼈대로 보이는지</li>
+            <li>조직 정보와 개인 프로필의 수정 주체가 명확한지</li>
+            <li>오늘 근무와 선택 날짜 예약이 서로 다른 원본 정보로 이해되는지</li>
+            <li>레인 숨기기와 운영 프로필 보기가 캘린더 작업 흐름을 방해하지 않는지</li>
+            <li>이번 기능에서 제외한 정보가 실제 1차 범위에 적절한지</li>
+          </ol>
+          <div class="hero-links">
+            <a class="button-link primary" href="../../design/screens/reception/planning/staff-operational-profile-drawer-prototype.html">시안에서 직접 확인하기 →</a>
+          </div>
+        </section>
+
+        <footer>CLAiR EMR · Staff Operational Profile Drawer · Proposal Report</footer>
+      </main>
+    </div>
+  </body>
+</html>

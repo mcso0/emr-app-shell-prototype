@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231473e6'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='sans-serif' font-size='18' font-weight='700' fill='white'%3EC%3C/text%3E%3C/svg%3E" />
+    <title>직원 운영 프로필 드로우 인터랙티브 시안</title>
+    <style>
+      :root {
+        --bg: #f5f6f8;
+        --surface: #ffffff;
+        --surface-subtle: #f8f9fb;
+        --line: #e1e4e9;
+        --line-strong: #c8ced7;
+        --text: #191c22;
+        --muted: #69717e;
+        --blue: #1473e6;
+        --focus: #49515f;
+        --shadow-sm: 0 2px 7px rgba(20, 31, 48, 0.08);
+        --shadow-lg: 0 24px 70px rgba(20, 31, 48, 0.2);
+      }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; min-height: 100%; }
+      body {
+        margin: 0;
+        overflow: hidden;
+        color: var(--text);
+        background: var(--bg);
+        font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif;
+        word-break: keep-all;
+      }
+      button, input { font: inherit; }
+      button { color: inherit; }
+      button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+      .app { display: grid; grid-template-columns: 60px minmax(0, 1fr); height: 100vh; }
+      .rail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 8px;
+        color: #aeb7c6;
+        background: #151922;
+      }
+      .rail-logo { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 5px; border-radius: 10px; color: #fff; background: #226fd4; font-weight: 850; }
+      .rail-item { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 9px; color: inherit; background: transparent; cursor: default; }
+      .rail-item.active { color: #fff; background: #303746; }
+      .rail-spacer { flex: 1; }
+      .shell { min-width: 0; display: flex; flex-direction: column; height: 100vh; }
+      .global-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 50px;
+        flex: none;
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+        padding: 0 16px;
+      }
+      .global-left, .global-right, .toolbar-group { display: flex; align-items: center; gap: 8px; }
+      .module-pill { display: inline-flex; align-items: center; gap: 8px; min-width: 142px; height: 34px; border: 1px solid var(--line); border-radius: 9px; padding: 0 12px; font-size: 13px; font-weight: 750; box-shadow: var(--shadow-sm); }
+      .ghost-icon { border: 0; background: transparent; color: var(--muted); width: 30px; height: 30px; border-radius: 8px; }
+      .avatar-mini { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: #f0f2f5; font-size: 11px; font-weight: 750; }
+      .workspace { display: flex; flex-direction: column; min-height: 0; flex: 1; margin: 0 10px 10px; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgba(18, 28, 45, 0.04); }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        height: 50px;
+        flex: none;
+        border-bottom: 1px solid var(--line);
+        padding: 0 14px;
+      }
+      .date-title { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; white-space: nowrap; }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        height: 32px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #fff;
+        padding: 0 11px;
+        font-size: 12px;
+        font-weight: 720;
+        cursor: pointer;
+      }
+      .button:hover { background: #f6f7f9; }
+      .segmented { display: inline-flex; gap: 2px; border-radius: 10px; background: #f1f2f4; padding: 2px; }
+      .segment { height: 28px; min-width: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; }
+      .segment.active { color: var(--text); background: #fff; box-shadow: 0 1px 3px rgba(18, 28, 45, 0.12); font-weight: 800; }
+      .filter-wrap { position: relative; }
+      .filter-popover {
+        position: absolute;
+        z-index: 30;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 220px;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 18px 45px rgba(20, 31, 48, 0.16);
+        padding: 8px;
+      }
+      .filter-popover[hidden] { display: none; }
+      .popover-title { padding: 7px 8px 5px; color: var(--muted); font-size: 11px; font-weight: 750; }
+      .filter-option { display: flex; align-items: center; gap: 9px; min-height: 34px; border-radius: 8px; padding: 0 8px; font-size: 12px; cursor: pointer; }
+      .filter-option:hover { background: #f5f6f8; }
+      .filter-option input { accent-color: var(--blue); }
+      .prototype-note {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 34px;
+        flex: none;
+        border-bottom: 1px solid #cfe0f8;
+        color: #25527f;
+        background: #eef5ff;
+        padding: 6px 14px;
+        font-size: 11px;
+      }
+      .calendar-scroll { position: relative; min-height: 0; flex: 1; overflow: auto; }
+      .calendar { min-width: 980px; min-height: 100%; }
+      .lane-header-row {
+        position: sticky;
+        z-index: 10;
+        top: 0;
+        display: grid;
+        grid-template-columns: 54px repeat(var(--lane-count), minmax(160px, 1fr));
+        height: 58px;
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+        box-shadow: 0 2px 5px rgba(20, 31, 48, 0.04);
+      }
+      .axis-head { border-right: 1px solid var(--line); }
+      .lane-cell { min-width: 0; border-right: 1px solid var(--line); padding: 7px; }
+      .lane-cell:last-child { border-right: 0; }
+      .lane-head {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 42px;
+        min-width: 0;
+        border-radius: 8px;
+        color: #fff;
+        padding: 0 7px 0 8px;
+      }
+      .lane-avatar { display: grid; place-items: center; width: 25px; height: 25px; flex: none; border-radius: 7px; border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.88); color: #56606d; font-size: 9px; font-weight: 850; }
+      .lane-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 800; }
+      .lane-action-slot { display: grid; place-items: center; width: 28px; height: 28px; flex: none; }
+      .more-button {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid rgba(255,255,255,.72);
+        border-radius: 7px;
+        color: #fff;
+        background: rgba(14, 20, 31, 0.28);
+        opacity: 0;
+        transform: translateX(2px);
+        transition: opacity 130ms ease, transform 130ms ease, background-color 130ms ease;
+        cursor: pointer;
+      }
+      .lane-head:hover .more-button, .lane-head:focus-within .more-button, .more-button[aria-expanded="true"] { opacity: 1; transform: translateX(0); }
+      .more-button:hover { background: rgba(14, 20, 31, 0.46); }
+      .lane-menu {
+        position: fixed;
+        z-index: 50;
+        width: 196px;
+        border: 1px solid var(--line-strong);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 16px 42px rgba(20, 31, 48, 0.2);
+        padding: 5px;
+      }
+      .lane-menu[hidden] { display: none; }
+      .menu-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 36px; border: 0; border-radius: 7px; background: #fff; padding: 0 9px; text-align: left; font-size: 12px; cursor: pointer; }
+      .menu-item:hover, .menu-item:focus-visible { background: #f2f4f7; outline: none; }
+      .menu-item[disabled] { color: #a0a6b0; cursor: not-allowed; }
+      .menu-item[disabled]:hover { background: #fff; }
+      .menu-icon { display: grid; place-items: center; width: 18px; color: var(--muted); }
+      .menu-divider { height: 1px; margin: 4px 3px; background: var(--line); }
+      .time-grid {
+        position: relative;
+        display: grid;
+        grid-template-columns: 54px minmax(0, 1fr);
+        min-height: 820px;
+      }
+      .times { position: relative; border-right: 1px solid var(--line); background: #fff; }
+      .time-label { position: absolute; right: 7px; transform: translateY(-7px); color: #7b838f; font-size: 10px; font-variant-numeric: tabular-nums; }
+      .grid-body {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(var(--lane-count), minmax(160px, 1fr));
+        background: repeating-linear-gradient(to bottom, transparent 0, transparent 57px, #eef0f3 58px, transparent 59px, transparent 115px, #dfe3e8 116px);
+      }
+      .grid-lane { position: relative; min-height: 820px; border-right: 1px solid var(--line); }
+      .grid-lane:last-child { border-right: 0; }
+      .appointment {
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        min-height: 76px;
+        border: 1px solid color-mix(in srgb, var(--tone) 48%, white);
+        border-radius: 8px;
+        color: color-mix(in srgb, var(--tone) 78%, black);
+        background: color-mix(in srgb, var(--tone) 11%, white);
+        padding: 7px;
+        font-size: 10px;
+        overflow: hidden;
+      }
+      .appointment b { display: block; margin-bottom: 3px; font-size: 11px; }
+      .appointment span { display: block; color: color-mix(in srgb, var(--tone) 55%, #5f6875); }
+      .now-line { position: absolute; z-index: 5; left: 0; right: 0; top: 390px; height: 1px; background: #ef4444; }
+      .now-label { position: absolute; left: -41px; top: -8px; width: 38px; border-radius: 9px; color: #fff; background: #ef4444; padding: 1px 4px; text-align: center; font-size: 9px; font-weight: 800; }
+      .empty-calendar { display: grid; place-items: center; min-height: 500px; color: var(--muted); font-size: 13px; }
+
+      .backdrop { position: fixed; z-index: 70; inset: 0; background: rgba(12, 18, 28, 0.3); opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+      .backdrop.open { opacity: 1; pointer-events: auto; }
+      .drawer {
+        position: fixed;
+        z-index: 80;
+        top: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        width: min(440px, calc(100vw - 20px));
+        height: 100vh;
+        background: #fff;
+        box-shadow: var(--shadow-lg);
+        transform: translateX(104%);
+        transition: transform 220ms cubic-bezier(.2,.8,.2,1);
+      }
+      .drawer[hidden] { display: none; }
+      .drawer.open { transform: translateX(0); }
+      .drawer-header { position: relative; flex: none; border-bottom: 1px solid var(--line); padding: 22px 52px 18px 22px; }
+      .drawer-kicker { margin: 0 0 13px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+      .profile-heading { display: flex; gap: 13px; align-items: center; }
+      .profile-avatar { display: grid; place-items: center; width: 52px; height: 52px; flex: none; border-radius: 15px; color: #536071; background: #eef1f5; font-size: 15px; font-weight: 850; }
+      .profile-heading h2 { margin: 0; font-size: 19px; line-height: 1.25; }
+      .profile-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+      .status-badge { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; border-radius: 999px; color: #16734a; background: #e8f7ef; padding: 3px 7px; font-size: 10px; font-weight: 800; }
+      .status-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #22a468; }
+      .close-button { position: absolute; top: 16px; right: 16px; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+      .close-button:hover { background: #f1f3f5; }
+      .drawer-body { min-height: 0; flex: 1; overflow-y: auto; padding: 18px 20px 36px; }
+      .profile-section { padding: 16px 0; border-bottom: 1px solid var(--line); }
+      .profile-section:first-child { padding-top: 0; }
+      .profile-section:last-child { border-bottom: 0; }
+      .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+      .section-heading h3 { margin: 0; font-size: 13px; }
+      .section-heading time, .section-caption { color: var(--muted); font-size: 10px; }
+      .detail-list { display: grid; gap: 9px; margin: 0; }
+      .detail-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; min-height: 24px; align-items: start; }
+      .detail-row dt { color: var(--muted); font-size: 11px; }
+      .detail-row dd { margin: 0; text-align: right; font-size: 12px; font-weight: 700; }
+      .shift-card { display: grid; grid-template-columns: 4px 1fr; gap: 12px; border: 1px solid var(--line); border-radius: 11px; background: #fafbfc; padding: 13px; }
+      .shift-accent { border-radius: 999px; background: var(--profile-tone, var(--blue)); }
+      .shift-time { font-size: 17px; font-weight: 820; font-variant-numeric: tabular-nums; }
+      .shift-meta { margin-top: 3px; color: var(--muted); font-size: 11px; }
+      .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .metric { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 12px 10px; }
+      .metric span { display: block; color: var(--muted); font-size: 10px; }
+      .metric b { display: block; margin-top: 5px; font-size: 18px; font-variant-numeric: tabular-nums; }
+      .privacy-note { display: flex; gap: 9px; border: 1px solid #d9e5f5; border-radius: 10px; color: #47617f; background: #f3f7fc; padding: 11px; font-size: 10px; line-height: 1.55; }
+      .toast { position: fixed; z-index: 100; left: 50%; bottom: 22px; transform: translate(-50%, 20px); border-radius: 10px; color: #fff; background: #20252e; box-shadow: var(--shadow-lg); padding: 10px 14px; font-size: 11px; opacity: 0; pointer-events: none; transition: opacity 160ms ease, transform 160ms ease; }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      @media (hover: none) { .more-button { opacity: 1; transform: none; } }
+      @media (max-width: 760px) {
+        .app { grid-template-columns: 1fr; }
+        .rail { display: none; }
+        .global-bar { padding: 0 10px; }
+        .global-left > .ghost-icon, .global-right > .ghost-icon { display: none; }
+        .workspace { margin: 0; border-width: 1px 0 0; border-radius: 0; }
+        .toolbar { align-items: flex-start; height: auto; min-height: 82px; padding: 10px; }
+        .toolbar-group { flex-wrap: wrap; justify-content: flex-end; }
+        .toolbar-group .button:not(#vetFilterButton), .segmented { display: none; }
+        .prototype-note { align-items: flex-start; gap: 8px; }
+        .calendar { min-width: 760px; }
+        .lane-header-row { grid-template-columns: 48px repeat(var(--lane-count), minmax(150px, 1fr)); }
+        .time-grid { grid-template-columns: 48px minmax(0, 1fr); }
+        .more-button { opacity: 1; transform: none; }
+        .drawer { width: 100vw; max-width: none; }
+      }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="rail" aria-label="주 메뉴">
+        <div class="rail-logo">C</div>
+        <button class="rail-item" aria-label="홈">⌂</button>
+        <button class="rail-item" aria-label="검색">⌕</button>
+        <button class="rail-item active" aria-label="접수 예약">▣</button>
+        <button class="rail-item" aria-label="진료">♧</button>
+        <button class="rail-item" aria-label="검사">◇</button>
+        <button class="rail-item" aria-label="병원관리">＋</button>
+        <div class="rail-spacer"></div>
+        <button class="rail-item" aria-label="도움말">?</button>
+      </aside>
+
+      <div class="shell">
+        <header class="global-bar">
+          <div class="global-left">
+            <button class="ghost-icon" aria-label="워크스페이스 메뉴">◆</button>
+            <button class="ghost-icon" aria-label="새로고침">↻</button>
+            <span class="module-pill">▣&nbsp; 접수/예약</span>
+          </div>
+          <div class="global-right">
+            <button class="button">↶ 세션 초기화</button>
+            <button class="ghost-icon" aria-label="알림">♢</button>
+            <button class="ghost-icon" aria-label="도움말">?</button>
+            <span class="avatar-mini">AD</span>
+          </div>
+        </header>
+
+        <main class="workspace">
+          <div class="toolbar">
+            <div class="date-title">▣ <span>26.07.14 (화)</span></div>
+            <div class="toolbar-group">
+              <div class="filter-wrap">
+                <button class="button" id="vetFilterButton" aria-haspopup="menu" aria-expanded="false">⌕ <span id="filterLabel">이수지 +5</span></button>
+                <div class="filter-popover" id="filterPopover" role="menu" hidden>
+                  <div class="popover-title">캘린더에 표시할 수의사</div>
+                  <div id="filterOptions"></div>
+                </div>
+              </div>
+              <button class="button">오늘</button>
+              <div class="segmented" aria-label="캘린더 보기">
+                <button class="segment active">일</button><button class="segment">주</button><button class="segment">월</button>
+              </div>
+              <button class="button">＋ 환자/보호자 등록⌄</button>
+              <button class="button">＋ 접수/예약 생성⌄</button>
+            </div>
+          </div>
+
+          <div class="prototype-note">
+            <span><b>인터랙티브 시안</b> · 수의사 레인에 마우스를 올리거나 Tab으로 이동해 더보기 버튼을 확인해봐.</span>
+            <span>제품 데이터는 변경되지 않아</span>
+          </div>
+
+          <div class="calendar-scroll">
+            <div class="calendar" id="calendar">
+              <div class="lane-header-row" id="laneHeaderRow"><div class="axis-head"></div></div>
+              <div class="time-grid">
+                <div class="times" id="times"></div>
+                <div class="grid-body" id="gridBody"><div class="now-line"><span class="now-label">16:03</span></div></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="lane-menu" id="laneMenu" role="menu" hidden>
+      <button class="menu-item" id="hideLaneItem" role="menuitem"><span class="menu-icon">◉</span><span>캘린더에서 숨기기</span></button>
+      <div class="menu-divider"></div>
+      <button class="menu-item" id="openProfileItem" role="menuitem"><span class="menu-icon">◯</span><span>운영 프로필 보기</span></button>
+    </div>
+
+    <div class="backdrop" id="backdrop"></div>
+    <aside class="drawer" id="profileDrawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true" inert hidden>
+      <header class="drawer-header">
+        <p class="drawer-kicker">직원 운영 프로필</p>
+        <div class="profile-heading">
+          <div class="profile-avatar" id="drawerAvatar">SJ</div>
+          <div>
+            <h2 id="drawerTitle">이수지</h2>
+            <p id="drawerSubtitle">수의사 · 진료팀장 · 진료팀</p>
+            <span class="status-badge">활성 구성원</span>
+          </div>
+        </div>
+        <button class="close-button" id="closeDrawer" aria-label="운영 프로필 닫기">×</button>
+      </header>
+      <div class="drawer-body">
+        <section class="profile-section">
+          <div class="section-heading"><h3>조직 정보</h3><span class="section-caption">운영 관리자 관리</span></div>
+          <dl class="detail-list">
+            <div class="detail-row"><dt>직무</dt><dd id="drawerJob">수의사</dd></div>
+            <div class="detail-row"><dt>직책</dt><dd id="drawerTitleRole">진료팀장</dd></div>
+            <div class="detail-row"><dt>부서</dt><dd id="drawerDepartment">진료팀</dd></div>
+            <div class="detail-row"><dt>근무 지점</dt><dd>청담점</dd></div>
+          </dl>
+        </section>
+        <section class="profile-section">
+          <div class="section-heading"><h3>오늘 근무</h3><time datetime="2026-07-14">7월 14일 화요일</time></div>
+          <div class="shift-card">
+            <span class="shift-accent"></span>
+            <div><div class="shift-time" id="drawerShift">09:00–18:00</div><div class="shift-meta" id="drawerShiftMeta">진료 · 제2진료실 · 근무 중</div></div>
+          </div>
+        </section>
+        <section class="profile-section">
+          <div class="section-heading"><h3>선택 날짜 예약</h3><span class="section-caption">접수/예약 원본 집계</span></div>
+          <div class="metric-grid">
+            <div class="metric"><span>전체</span><b id="metricTotal">6</b></div>
+            <div class="metric"><span>처리</span><b id="metricDone">2</b></div>
+            <div class="metric"><span>남은 예약</span><b id="metricRemaining">4</b></div>
+          </div>
+        </section>
+        <section class="profile-section">
+          <div class="privacy-note"><span>ⓘ</span><span>개인 전화번호, 권한 역할, 로그인 이력은 이 운영 프로필에서 다른 직원에게 공개하지 않아.</span></div>
+        </section>
+      </div>
+    </aside>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      const veterinarians = [
+        { id: "suji", name: "이수지", initials: "SJ", tone: "#1676e8", title: "진료팀장", department: "진료팀", shift: "09:00–18:00", location: "제2진료실", counts: [6, 2, 4], appointments: [{ top: 300, h: 132, title: "구름 · 윤지아", meta: "외래 · 15:48–17:48" }] },
+        { id: "doyun", name: "김도윤", initials: "DY", tone: "#3bbc67", title: "수의사", department: "진료팀", shift: "09:00–18:00", location: "제1진료실", counts: [5, 3, 2], appointments: [{ top: 178, h: 144, title: "초코 · 최도현", meta: "외래 · 14:45–16:30" }] },
+        { id: "seoyeon", name: "박서연", initials: "SY", tone: "#1b89ee", title: "수의사", department: "진료팀", shift: "10:00–19:00", location: "제3진료실", counts: [4, 1, 3], appointments: [{ top: 430, h: 82, title: "나비 · 김선아", meta: "예약 · 17:00–18:00" }] },
+        { id: "minjae", name: "정민재", initials: "MJ", tone: "#e66a12", title: "외과팀장", department: "외과팀", shift: "08:30–17:30", location: "수술실", counts: [3, 2, 1], appointments: [{ top: 88, h: 100, title: "두부 · 이정환", meta: "수술 · 13:30–15:00" }] },
+        { id: "jihun", name: "오지훈", initials: "JH", tone: "#38a369", title: "수의사", department: "진료팀", shift: "11:00–20:00", location: "제4진료실", counts: [5, 1, 4], appointments: [{ top: 360, h: 92, title: "망고 · 송혜진", meta: "예약 · 16:30–17:45" }] },
+        { id: "gayeon", name: "한가연", initials: "GY", tone: "#e4383c", title: "수의사", department: "응급진료팀", shift: "12:00–21:00", location: "응급진료실", counts: [4, 2, 2], appointments: [{ top: 240, h: 112, title: "보리 · 박수영", meta: "외래 · 15:15–16:45" }] }
+      ];
+      const visibleIds = new Set(veterinarians.map((vet) => vet.id));
+      const laneMenu = document.getElementById("laneMenu");
+      const hideLaneItem = document.getElementById("hideLaneItem");
+      const openProfileItem = document.getElementById("openProfileItem");
+      const filterButton = document.getElementById("vetFilterButton");
+      const filterPopover = document.getElementById("filterPopover");
+      const drawer = document.getElementById("profileDrawer");
+      const backdrop = document.getElementById("backdrop");
+      const toast = document.getElementById("toast");
+      let activeVet = null;
+      let activeTrigger = null;
+      let toastTimer = null;
+      let drawerHideTimer = null;
+
+      const escapeHtml = (value) => value.replace(/[&<>"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character]);
+
+      function render() {
+        const visible = veterinarians.filter((vet) => visibleIds.has(vet.id));
+        document.documentElement.style.setProperty("--lane-count", visible.length || 1);
+        document.getElementById("filterLabel").textContent = visible.length === veterinarians.length ? `${visible[0].name} +${visible.length - 1}` : `${visible.length}명 표시 중`;
+        const header = document.getElementById("laneHeaderRow");
+        header.innerHTML = '<div class="axis-head"></div>' + visible.map((vet) => `
+          <div class="lane-cell" data-vet-id="${vet.id}">
+            <div class="lane-head" style="background:${vet.tone}">
+              <span class="lane-avatar">${escapeHtml(vet.initials)}</span>
+              <span class="lane-name">${escapeHtml(vet.name)}</span>
+              <span class="lane-action-slot"><button class="more-button" aria-label="${escapeHtml(vet.name)} 수의사 옵션" aria-haspopup="menu" aria-expanded="false" data-vet-id="${vet.id}">•••</button></span>
+            </div>
+          </div>`).join("");
+        const grid = document.getElementById("gridBody");
+        grid.innerHTML = visible.map((vet) => `<div class="grid-lane" data-vet-id="${vet.id}" style="--tone:${vet.tone}">${vet.appointments.map((item) => `<article class="appointment" style="top:${item.top}px;height:${item.h}px"><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.meta)}</span></article>`).join("")}</div>`).join("") + '<div class="now-line"><span class="now-label">16:03</span></div>';
+        renderFilters();
+        document.querySelectorAll(".more-button").forEach((button) => button.addEventListener("click", openLaneMenu));
+      }
+
+      function renderTimes() {
+        document.getElementById("times").innerHTML = Array.from({ length: 7 }, (_, index) => `<span class="time-label" style="top:${index * 116 + 2}px">${String(index + 13).padStart(2, "0")}:00</span>`).join("");
+      }
+
+      function renderFilters() {
+        document.getElementById("filterOptions").innerHTML = veterinarians.map((vet) => `
+          <label class="filter-option"><input type="checkbox" data-filter-id="${vet.id}" ${visibleIds.has(vet.id) ? "checked" : ""} ${visibleIds.size === 1 && visibleIds.has(vet.id) ? "disabled" : ""} /><span>${escapeHtml(vet.name)}</span></label>`).join("");
+        document.querySelectorAll("[data-filter-id]").forEach((input) => input.addEventListener("change", (event) => {
+          const id = event.currentTarget.dataset.filterId;
+          if (event.currentTarget.checked) visibleIds.add(id); else if (visibleIds.size > 1) visibleIds.delete(id);
+          closeLaneMenu(false);
+          render();
+        }));
+      }
+
+      function openLaneMenu(event) {
+        event.stopPropagation();
+        closeFilter();
+        activeTrigger = event.currentTarget;
+        activeVet = veterinarians.find((vet) => vet.id === activeTrigger.dataset.vetId);
+        document.querySelectorAll(".more-button").forEach((button) => button.setAttribute("aria-expanded", String(button === activeTrigger)));
+        const rect = activeTrigger.getBoundingClientRect();
+        const menuWidth = 196;
+        laneMenu.style.top = `${Math.min(window.innerHeight - 100, rect.bottom + 6)}px`;
+        laneMenu.style.left = `${Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth))}px`;
+        laneMenu.hidden = false;
+        hideLaneItem.disabled = visibleIds.size === 1;
+        hideLaneItem.title = visibleIds.size === 1 ? "최소 1명의 수의사를 표시해야 해요" : "";
+        hideLaneItem.focus();
+      }
+
+      function closeLaneMenu(returnFocus = true) {
+        if (laneMenu.hidden) return;
+        laneMenu.hidden = true;
+        document.querySelectorAll(".more-button").forEach((button) => button.setAttribute("aria-expanded", "false"));
+        if (returnFocus && activeTrigger && document.body.contains(activeTrigger)) activeTrigger.focus();
+      }
+
+      function openDrawer() {
+        if (!activeVet) return;
+        closeLaneMenu(false);
+        document.getElementById("drawerAvatar").textContent = activeVet.initials;
+        document.getElementById("drawerTitle").textContent = activeVet.name;
+        document.getElementById("drawerSubtitle").textContent = `수의사 · ${activeVet.title} · ${activeVet.department}`;
+        document.getElementById("drawerJob").textContent = "수의사";
+        document.getElementById("drawerTitleRole").textContent = activeVet.title;
+        document.getElementById("drawerDepartment").textContent = activeVet.department;
+        document.getElementById("drawerShift").textContent = activeVet.shift;
+        document.getElementById("drawerShiftMeta").textContent = `진료 · ${activeVet.location} · 근무 중`;
+        document.getElementById("metricTotal").textContent = activeVet.counts[0];
+        document.getElementById("metricDone").textContent = activeVet.counts[1];
+        document.getElementById("metricRemaining").textContent = activeVet.counts[2];
+        drawer.style.setProperty("--profile-tone", activeVet.tone);
+        clearTimeout(drawerHideTimer);
+        drawer.hidden = false;
+        drawer.removeAttribute("inert");
+        drawer.setAttribute("aria-hidden", "false");
+        requestAnimationFrame(() => {
+          drawer.classList.add("open");
+          backdrop.classList.add("open");
+          document.getElementById("closeDrawer").focus();
+        });
+      }
+
+      function closeDrawer() {
+        if (!drawer.classList.contains("open")) return;
+        drawer.classList.remove("open");
+        backdrop.classList.remove("open");
+        drawer.setAttribute("aria-hidden", "true");
+        drawer.setAttribute("inert", "");
+        drawerHideTimer = setTimeout(() => { drawer.hidden = true; }, 230);
+        if (activeTrigger && document.body.contains(activeTrigger)) activeTrigger.focus();
+      }
+
+      function hideActiveLane() {
+        if (!activeVet || visibleIds.size === 1) return;
+        const hiddenName = activeVet.name;
+        visibleIds.delete(activeVet.id);
+        closeLaneMenu(false);
+        render();
+        showToast(`${hiddenName} 수의사를 캘린더에서 숨겼어. 상단 필터에서 다시 표시할 수 있어.`);
+      }
+
+      function showToast(message) {
+        clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add("show");
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+      }
+
+      function toggleFilter(event) {
+        event.stopPropagation();
+        closeLaneMenu(false);
+        const willOpen = filterPopover.hidden;
+        filterPopover.hidden = !willOpen;
+        filterButton.setAttribute("aria-expanded", String(willOpen));
+      }
+
+      function closeFilter() {
+        filterPopover.hidden = true;
+        filterButton.setAttribute("aria-expanded", "false");
+      }
+
+      hideLaneItem.addEventListener("click", hideActiveLane);
+      openProfileItem.addEventListener("click", openDrawer);
+      filterButton.addEventListener("click", toggleFilter);
+      document.getElementById("closeDrawer").addEventListener("click", closeDrawer);
+      backdrop.addEventListener("click", closeDrawer);
+      laneMenu.addEventListener("keydown", (event) => {
+        const items = [hideLaneItem, openProfileItem].filter((item) => !item.disabled);
+        const current = items.indexOf(document.activeElement);
+        if (event.key === "ArrowDown") { event.preventDefault(); items[(current + 1) % items.length].focus(); }
+        if (event.key === "ArrowUp") { event.preventDefault(); items[(current - 1 + items.length) % items.length].focus(); }
+      });
+      document.addEventListener("click", (event) => {
+        if (!laneMenu.contains(event.target)) closeLaneMenu(false);
+        if (!filterPopover.contains(event.target) && !filterButton.contains(event.target)) closeFilter();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        if (!laneMenu.hidden) { closeLaneMenu(); return; }
+        if (!filterPopover.hidden) { closeFilter(); filterButton.focus(); return; }
+        closeDrawer();
+      });
+      window.addEventListener("resize", () => closeLaneMenu(false));
+
+      renderTimes();
+      render();
+    </script>
+  </body>
+</html>
