@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>CLAiR 현장 접수 바이탈 추가 시안</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f6f8;
+        --surface: #ffffff;
+        --surface-subtle: #f8f9fb;
+        --surface-hover: #f3f5f7;
+        --neutral-50: #fafafa;
+        --text: #24272c;
+        --text-secondary: #666b73;
+        --text-muted: #989da5;
+        --line: #e4e7eb;
+        --line-strong: #d6dae0;
+        --accent: #1888f2;
+        --accent-soft: #eef7ff;
+        --danger: #d84343;
+        --shadow-panel: -8px 0 24px rgba(30, 42, 56, 0.08);
+        --shadow-menu: 0 12px 28px rgba(28, 38, 51, 0.16), 0 2px 6px rgba(28, 38, 51, 0.08);
+        --radius-sm: 6px;
+        --radius-md: 8px;
+        --panel-width: 380px;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+        font-size: 14px;
+      }
+
+      button, input { font: inherit; }
+      button { color: inherit; }
+
+      .app {
+        min-width: 1120px;
+        min-height: 760px;
+        height: 100dvh;
+        display: grid;
+        grid-template-columns: 56px 292px minmax(420px, 1fr) var(--panel-width);
+        background: var(--surface);
+      }
+
+      .rail {
+        margin: 8px 0 8px 8px;
+        border-radius: 12px;
+        background: #151923;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+      }
+
+      .rail-dot {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        color: #8290a7;
+      }
+
+      .rail-dot.active { color: #fff; background: #2b3241; }
+      .rail-dot svg { width: 18px; height: 18px; }
+      .rail-spacer { flex: 1; }
+
+      .queue {
+        border-right: 1px solid var(--line);
+        background: #fbfbfc;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+      }
+
+      .queue-head {
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+        font-weight: 700;
+      }
+
+      .mini-calendar { padding: 18px 18px 14px; border-bottom: 1px solid var(--line); }
+      .month { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 14px; }
+      .week, .dates { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 8px 0; }
+      .week { color: var(--text-muted); font-size: 11px; margin-bottom: 10px; }
+      .dates span { font-size: 12px; height: 22px; display: grid; place-items: center; }
+      .dates .today { width: 22px; margin: auto; border-radius: 50%; background: #df4245; color: #fff; }
+
+      .queue-tabs { display: flex; gap: 4px; padding: 12px 16px; }
+      .queue-tab { border: 0; border-radius: 999px; background: transparent; padding: 5px 9px; font-size: 12px; }
+      .queue-tab.active { background: #eef0f3; font-weight: 700; }
+      .queue-list { padding: 0 16px; display: grid; gap: 8px; }
+      .queue-title { margin: 4px 0 2px; font-weight: 700; }
+      .queue-card { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 12px; box-shadow: 0 1px 2px rgba(20, 30, 45, .04); }
+      .queue-card strong { font-size: 13px; }
+      .queue-card p { margin: 7px 0 9px; color: var(--text-secondary); font-size: 12px; }
+      .queue-meta { display: flex; gap: 8px; color: var(--text-muted); font-size: 11px; }
+
+      .workspace { min-width: 0; background: #fff; position: relative; overflow: hidden; }
+      .workspace-head { height: 102px; border-bottom: 1px solid var(--line); }
+      .toolbar { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line); }
+      .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; }
+      .tool-pill { height: 32px; border: 1px solid var(--line); border-radius: 7px; background: #fff; padding: 0 11px; font-weight: 600; font-size: 12px; }
+      .lane-heads { height: 50px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px 14px; }
+      .lane { border-radius: 6px; color: #fff; padding: 8px 12px; font-size: 12px; font-weight: 700; }
+      .lane:nth-child(1) { background: #3383cc; }
+      .lane:nth-child(2) { background: #38b95d; }
+      .lane:nth-child(3) { background: #2185ea; }
+
+      .calendar { position: absolute; inset: 102px 0 0; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 100% 62px, calc(100% / 3) 100%; background-position: 0 36px, 0 0; }
+      .time-labels { position: absolute; inset: 0 auto 0 0; width: 54px; background: rgba(255,255,255,.92); border-right: 1px solid var(--line); }
+      .time-labels span { position: absolute; right: 10px; color: var(--text-muted); font-size: 11px; }
+      .time-labels span:nth-child(1) { top: 31px; }
+      .time-labels span:nth-child(2) { top: 155px; }
+      .time-labels span:nth-child(3) { top: 279px; }
+      .time-labels span:nth-child(4) { top: 403px; }
+      .event { position: absolute; left: 45%; top: 294px; width: 26%; height: 128px; border: 1px solid #67c98c; border-radius: 8px; background: #edf9f1; color: #44825a; padding: 10px; font-size: 12px; line-height: 1.55; }
+      .now-line { position: absolute; left: 0; right: 0; top: 386px; height: 1px; background: #ee4545; }
+      .now-line::before { content: "15:37"; position: absolute; left: 8px; top: -10px; color: #fff; background: #e33f43; border-radius: 5px; padding: 2px 5px; font-size: 10px; font-weight: 700; }
+
+      .panel {
+        position: relative;
+        z-index: 5;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        border-left: 1px solid var(--line);
+        background: #fff;
+        box-shadow: var(--shadow-panel);
+      }
+
+      .panel-head {
+        height: 52px;
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-head h1 { margin: 0; font-size: 16px; font-weight: 750; }
+      .icon-btn { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary); }
+      .icon-btn:hover { background: var(--surface-hover); }
+      .icon-btn svg { width: 16px; height: 16px; }
+
+      .panel-scroll { min-height: 0; flex: 1; overflow-y: auto; padding: 20px 16px 28px; }
+      .section { display: grid; gap: 12px; }
+      .section + .section { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+      .section-title { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 98px minmax(0, 1fr);
+        align-items: center;
+        min-height: 36px;
+        gap: 10px;
+      }
+
+      .field-label { display: flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 13px; }
+      .field-label svg { width: 15px; height: 15px; color: #7b828c; }
+      .input-shell { position: relative; min-width: 0; }
+      .input-shell input {
+        width: 100%;
+        height: 36px;
+        border: 1px solid var(--line-strong);
+        border-radius: 7px;
+        outline: none;
+        background: #fff;
+        padding: 0 45px 0 10px;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .input-shell input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,136,242,.13); }
+      .unit { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 12px; pointer-events: none; }
+      .blood-pressure-inputs {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 6px;
+      }
+      .blood-pressure-inputs .input-shell input { padding-right: 10px; }
+      .blood-pressure-separator, .blood-pressure-unit { color: var(--text-muted); font-size: 12px; }
+
+      #optional-vitals {
+        display: grid;
+        gap: 10px;
+      }
+
+      .optional-row {
+        animation: row-in 150ms ease-out;
+      }
+      @keyframes row-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+      .optional-control {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 28px;
+        align-items: center;
+        gap: 6px;
+      }
+      .remove-btn {
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-muted);
+      }
+      .remove-btn:hover, .remove-btn:focus-visible { background: #fff0f0; color: var(--danger); outline: none; }
+      .remove-btn svg { width: 14px; height: 14px; }
+
+      .add-wrap { position: relative; }
+      .add-trigger {
+        width: 100%;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px dashed var(--line-strong);
+        border-radius: 7px;
+        background: var(--surface-subtle);
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .add-trigger:hover, .add-trigger[aria-expanded="true"] { border-color: #aeb6c0; background: var(--surface-hover); color: var(--text); }
+      .add-trigger:focus-visible { outline: 3px solid rgba(24,136,242,.16); border-color: var(--accent); }
+      .add-trigger svg { width: 15px; height: 15px; }
+
+      .vital-menu {
+        position: absolute;
+        z-index: 20;
+        left: 0;
+        right: 0;
+        top: calc(100% + 6px);
+        display: none;
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #fff;
+        box-shadow: var(--shadow-menu);
+      }
+      .vital-menu.open { display: grid; animation: menu-in 120ms ease-out; }
+      @keyframes menu-in { from { opacity: 0; transform: translateY(-3px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      .menu-item {
+        width: 100%;
+        height: 38px;
+        display: grid;
+        grid-template-columns: 24px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        padding: 0 10px 0 8px;
+        text-align: left;
+        cursor: pointer;
+      }
+      .menu-item:hover, .menu-item:focus-visible { background: var(--surface-hover); outline: none; }
+      .menu-icon { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 7px; color: #4e82b8; background: var(--neutral-50); }
+      .menu-icon svg { width: 14px; height: 14px; }
+      .menu-label { font-weight: 650; }
+      .menu-unit { color: var(--text-muted); font-size: 12px; }
+
+      .select-shell, .text-shell { height: 36px; border: 1px solid var(--line-strong); border-radius: 7px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: var(--text-secondary); }
+      .text-area { height: 74px; border: 1px solid var(--line-strong); border-radius: 7px; padding: 10px; color: var(--text-muted); font-size: 12px; }
+      .panel-footer { height: 64px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 16px; border-top: 1px solid var(--line); }
+      .footer-btn { height: 34px; border-radius: 7px; border: 1px solid var(--line-strong); padding: 0 15px; background: #fff; font-weight: 650; }
+      .footer-btn.primary { border-color: #181a1f; background: #181a1f; color: #fff; }
+      .hidden { display: none !important; }
+      .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+      .prototype-note {
+        position: fixed;
+        left: 372px;
+        bottom: 18px;
+        z-index: 30;
+        max-width: 430px;
+        border: 1px solid rgba(24,136,242,.22);
+        border-radius: 9px;
+        background: rgba(246,251,255,.96);
+        padding: 10px 13px;
+        color: #386486;
+        box-shadow: 0 8px 22px rgba(30, 65, 95, .10);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .prototype-note strong { color: #235473; }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <nav class="rail" aria-label="주요 메뉴">
+        <span class="rail-dot">⌂</span>
+        <span class="rail-dot">⌕</span>
+        <span class="rail-dot active" aria-current="page">▣</span>
+        <span class="rail-dot">♧</span>
+        <span class="rail-spacer"></span>
+        <span class="rail-dot">?</span>
+      </nav>
+
+      <aside class="queue" aria-label="접수 대기 목록">
+        <div class="queue-head"><span>접수/예약</span><span>▯</span></div>
+        <div class="mini-calendar">
+          <div class="month"><span>‹</span><span>2026년 7월</span><span>›</span></div>
+          <div class="week"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+          <div class="dates">
+            <span>12</span><span>13</span><span class="today">14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+            <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+          </div>
+        </div>
+        <div class="queue-tabs"><button class="queue-tab active">전체 2</button><button class="queue-tab">외래 1</button><button class="queue-tab">예약 1</button></div>
+        <div class="queue-list">
+          <div class="queue-title">대기 2</div>
+          <article class="queue-card"><strong>예약 · 나나 · 이하린</strong><p>대기 · 예약 접수</p><div class="queue-meta"><span>20:23 접수</span><span>이수지</span></div></article>
+          <article class="queue-card"><strong>외래 · 초코 · 최도현</strong><p>대기 · 슬개골 탈구가 의심됨</p><div class="queue-meta"><span>14:45 접수</span><span>김도윤</span></div></article>
+        </div>
+      </aside>
+
+      <section class="workspace" aria-label="접수 예약 캘린더">
+        <header class="workspace-head">
+          <div class="toolbar">
+            <div class="toolbar-left"><button class="tool-pill">‹</button><button class="tool-pill">›</button><button class="tool-pill">2026.07.14 (화)</button><button class="tool-pill">오늘</button></div>
+            <div class="toolbar-right"><button class="tool-pill">일</button><button class="tool-pill">주</button><button class="tool-pill">월</button><button class="tool-pill">+ 신규 동물/보호자</button></div>
+          </div>
+          <div class="lane-heads"><div class="lane">이수지</div><div class="lane">김도윤</div><div class="lane">박서연</div></div>
+        </header>
+        <div class="calendar">
+          <div class="time-labels"><span>13:00</span><span>14:00</span><span>15:00</span><span>16:00</span></div>
+          <div class="event"><strong>외래 · 초코 · 최도현</strong><br />슬개골 탈구가 의심됨<br />14:45–16:30</div>
+          <div class="now-line"></div>
+        </div>
+      </section>
+
+      <aside class="panel" aria-label="현장 접수 생성">
+        <header class="panel-head"><h1>현장 접수 생성</h1><button class="icon-btn" aria-label="패널 닫기">×</button></header>
+        <div class="panel-scroll">
+          <section class="section">
+            <div class="section-title">환자/보호자</div>
+            <div class="field-row"><div class="field-label">◌ 동물명</div><div class="select-shell"><strong>초코 · 강아지</strong><span>×</span></div></div>
+            <div class="field-row"><div class="field-label">♙ 보호자명</div><div class="text-shell"><strong>최도현</strong><span>010-0000-0000</span></div></div>
+          </section>
+
+          <section class="section" id="vital-section">
+            <div class="section-title">바이탈</div>
+            <div id="optional-vitals"></div>
+            <div class="add-wrap" id="add-wrap">
+              <button class="add-trigger" id="add-trigger" type="button" aria-expanded="false" aria-controls="vital-menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+                바이탈 추가
+              </button>
+              <div class="vital-menu" id="vital-menu" role="menu" aria-label="추가할 바이탈 선택"></div>
+            </div>
+            <p class="sr-only" id="vital-status" aria-live="polite"></p>
+          </section>
+
+          <section class="section">
+            <div class="section-title">담당의</div>
+            <div class="field-row"><div class="field-label">♧ 담당의</div><div class="select-shell"><span>담당의를 선택해주세요</span><span>⌄</span></div></div>
+          </section>
+
+          <section class="section">
+            <div class="section-title">접수 정보</div>
+            <div class="field-row"><div class="field-label">▣ 접수일</div><div class="text-shell"><strong>26.07.14</strong><span>▣</span></div></div>
+            <div class="field-row"><div class="field-label">〽 예상소요시간</div><div class="select-shell"><strong>30분</strong><span>⌄</span></div></div>
+          </section>
+
+          <section class="section">
+            <div class="section-title">접수 메모</div>
+            <div class="field-row"><div class="field-label">▧ 접수 메모</div><div class="text-area">접수 메모를 입력해주세요</div></div>
+          </section>
+        </div>
+        <footer class="panel-footer"><button class="footer-btn">닫기</button><button class="footer-btn primary">생성</button></footer>
+      </aside>
+    </main>
+
+    <aside class="prototype-note"><strong>현장 접수 시안</strong><br />입력한 값은 접수 생성 시 환자 바이탈 측정 이력으로 저장돼요. 혈압은 수축기와 이완기를 함께 입력하고, 예약 생성에서는 바이탈을 받지 않아요.</aside>
+
+    <script>
+      const iconPlus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>';
+      const iconTrash = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 10v6M14 10v6" /></svg>';
+      const iconThermometer = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.8V5a4 4 0 0 0-8 0v9.8a6 6 0 1 0 8 0Z" /><path d="M10 9v7" /></svg>';
+      const iconWind = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h10a3 3 0 1 0-3-3M4 12h15a3 3 0 1 1-3 3M4 16h7" /></svg>';
+      const iconPulse = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>';
+      const iconWeight = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h4l2-6 4 12 2-6h4" /></svg>';
+
+      const vitals = [
+        { id: 'weight', label: '체중', unit: 'kg', icon: iconWeight, inputMode: 'decimal' },
+        { id: 'temperature', label: '체온', unit: '°C', icon: iconThermometer, inputMode: 'decimal' },
+        { id: 'respiration', label: '호흡', unit: 'rpm', icon: iconWind, inputMode: 'numeric' },
+        { id: 'blood-pressure', label: '혈압', unit: 'mmHg', icon: iconPulse, inputMode: 'numeric' },
+      ];
+
+      const selected = ['weight'];
+      const draftValues = { weight: '6.00', 'blood-pressure-systolic': '', 'blood-pressure-diastolic': '' };
+      const trigger = document.querySelector('#add-trigger');
+      const menu = document.querySelector('#vital-menu');
+      const wrap = document.querySelector('#add-wrap');
+      const rows = document.querySelector('#optional-vitals');
+      const status = document.querySelector('#vital-status');
+
+      function availableVitals() {
+        return vitals.filter((vital) => !selected.includes(vital.id));
+      }
+
+      function setMenuOpen(open) {
+        const hasOptions = availableVitals().length > 0;
+        const nextOpen = open && hasOptions;
+        menu.classList.toggle('open', nextOpen);
+        trigger.setAttribute('aria-expanded', String(nextOpen));
+        if (nextOpen) requestAnimationFrame(() => menu.querySelector('button')?.focus());
+      }
+
+      function renderMenu() {
+        const available = availableVitals();
+        menu.innerHTML = available.map((vital) => `
+          <button class="menu-item" type="button" role="menuitem" data-add="${vital.id}">
+            <span class="menu-icon">${vital.icon}</span>
+            <span class="menu-label">${vital.label}</span>
+            <span class="menu-unit">${vital.unit}</span>
+          </button>
+        `).join('');
+        wrap.classList.toggle('hidden', available.length === 0);
+      }
+
+      function renderRows(focusId) {
+        const canRemove = selected.length > 1;
+        rows.innerHTML = selected.map((id) => {
+          const vital = vitals.find((item) => item.id === id);
+          const control = vital.id === 'blood-pressure'
+            ? `<div class="blood-pressure-inputs">
+                <div class="input-shell"><input id="vital-blood-pressure-systolic" data-value-key="blood-pressure-systolic" inputmode="numeric" aria-label="수축기 혈압" placeholder="수축기" value="${draftValues['blood-pressure-systolic']}" /></div>
+                <span class="blood-pressure-separator" aria-hidden="true">/</span>
+                <div class="input-shell"><input id="vital-blood-pressure-diastolic" data-value-key="blood-pressure-diastolic" inputmode="numeric" aria-label="이완기 혈압" placeholder="이완기" value="${draftValues['blood-pressure-diastolic']}" /></div>
+                <span class="blood-pressure-unit">mmHg</span>
+              </div>`
+            : `<div class="input-shell">
+                <input id="vital-${vital.id}" data-value-key="${vital.id}" inputmode="${vital.inputMode}" aria-label="${vital.label}" value="${draftValues[vital.id] ?? ''}" />
+                <span class="unit">${vital.unit}</span>
+              </div>`;
+          return `
+            <div class="field-row optional-row" data-row="${vital.id}">
+              <label class="field-label" for="${vital.id === 'blood-pressure' ? 'vital-blood-pressure-systolic' : `vital-${vital.id}`}">${vital.icon} ${vital.label}</label>
+              <div class="optional-control">
+                ${control}
+                ${canRemove ? `<button class="remove-btn" type="button" data-remove="${vital.id}" aria-label="${vital.label} 삭제">${iconTrash}</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+        renderMenu();
+        if (focusId) requestAnimationFrame(() => document.querySelector(focusId === 'blood-pressure' ? '#vital-blood-pressure-systolic' : `#vital-${focusId}`)?.focus());
+      }
+
+      trigger.addEventListener('click', () => setMenuOpen(trigger.getAttribute('aria-expanded') !== 'true'));
+
+      menu.addEventListener('click', (event) => {
+        const option = event.target.closest('[data-add]');
+        if (!option) return;
+        const id = option.dataset.add;
+        if (!selected.includes(id)) selected.push(id);
+        const vital = vitals.find((item) => item.id === id);
+        setMenuOpen(false);
+        renderRows(id);
+        status.textContent = `${vital.label} 입력 행이 추가되었습니다.`;
+      });
+
+      rows.addEventListener('click', (event) => {
+        const remove = event.target.closest('[data-remove]');
+        if (!remove) return;
+        if (selected.length <= 1) return;
+        const id = remove.dataset.remove;
+        const vital = vitals.find((item) => item.id === id);
+        const index = selected.indexOf(id);
+        if (index >= 0) selected.splice(index, 1);
+        renderRows();
+        status.textContent = `${vital.label} 입력 행이 삭제되었습니다.`;
+        requestAnimationFrame(() => trigger.focus());
+      });
+
+      rows.addEventListener('input', (event) => {
+        const input = event.target.closest('input');
+        const valueKey = input?.dataset.valueKey;
+        if (!input || !valueKey) return;
+        draftValues[valueKey] = input.value;
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!wrap.contains(event.target)) setMenuOpen(false);
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || trigger.getAttribute('aria-expanded') !== 'true') return;
+        setMenuOpen(false);
+        trigger.focus();
+      });
+
+      renderRows();
+    </script>
+  </body>
+</html>
