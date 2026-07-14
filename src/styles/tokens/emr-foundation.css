@@ -160,7 +160,7 @@
   --emr-topbar-profile-avatar-text: var(--foreground);
   --emr-topbar-profile-avatar-border: var(--clair-color-atomic-black-alpha-6);
 
-  --emr-sidepanel-header-height: 52px;
+  --emr-sidepanel-header-height: 56px;
   --emr-sidepanel-header-padding-x: var(--clair-spacing-16);
   --emr-sidepanel-header-padding-y: 0px;
   --emr-sidepanel-list-title-height: var(--clair-control-height-md);
