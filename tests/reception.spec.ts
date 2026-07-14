@@ -2460,6 +2460,285 @@ test("patient guardian registration links an existing guardian to a new patient"
   await expect(page.getByText("환자 등록이 완료되었습니다.")).toBeVisible();
 });
 
+test("existing guardian registration uses only workspace lookup records and submits the live UUID", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const guardianId = "49150000-0000-4000-8000-000000000001";
+  const existingPatientId = "49151000-0000-4000-8000-000000000001";
+  const newPatientId = "49151000-0000-4000-8000-000000000002";
+  const lookupUrls: string[] = [];
+  let capturedBody: Record<string, unknown> | null = null;
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`,
+    async (route) => {
+      lookupUrls.push(route.request().url());
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          patients: [
+            {
+              patient: {
+                id: existingPatientId,
+                workspaceId,
+                patientNo: "P-LIVE-0001",
+                name: "몽실",
+                species: "dog",
+                breed: "말티즈",
+                sex: "female",
+                neutered: true,
+                handlingCautionLocked: true,
+                status: "active",
+                createdAt: "2026-07-14T00:00:00.000Z",
+                updatedAt: "2026-07-14T00:00:00.000Z",
+              },
+              primaryGuardian: {
+                id: guardianId,
+                workspaceId,
+                name: "박현지",
+                mobilePhone: "010-5555-6600",
+                createdAt: "2026-07-14T00:00:00.000Z",
+                updatedAt: "2026-07-14T00:00:00.000Z",
+              },
+              searchText: "박현지 010-5555-6600 몽실",
+            },
+          ],
+          enforcedBy: "reception-patient-guardian-lookup",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-registration`,
+    async (route) => {
+      capturedBody = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 201,
+          workspaceId,
+          registration: {
+            guardian: {
+              id: guardianId,
+              workspaceId,
+              name: "박현지",
+              mobilePhone: "010-5555-6600",
+              createdAt: "2026-07-14T00:00:00.000Z",
+              updatedAt: "2026-07-14T00:00:00.000Z",
+            },
+            patient: {
+              id: newPatientId,
+              workspaceId,
+              patientNo: "P-LIVE-0002",
+              name: "해리",
+              species: "dog",
+              breed: "푸들",
+              estimatedAgeText: "2년",
+              sex: "unknown",
+              neutered: false,
+              handlingCautionLocked: true,
+              status: "active",
+              createdAt: "2026-07-14T00:00:00.000Z",
+              updatedAt: "2026-07-14T00:00:00.000Z",
+            },
+            patientGuardian: {
+              id: "49152000-0000-4000-8000-000000000001",
+              patientId: newPatientId,
+              guardianId,
+              relationship: "주보호자",
+              isPrimary: true,
+              canReceiveMessages: true,
+              createdAt: "2026-07-14T00:00:00.000Z",
+            },
+            consents: [],
+          },
+          enforcedBy: "reception-patient-guardian-registration",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception`);
+  await page.getByRole("button", { name: "환자/보호자 등록", exact: true }).click();
+  await page.getByRole("menuitem", { name: "기존 보호자에 환자 추가" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "기존 보호자에 신규 환자 등록" });
+  const guardianSearch = dialog.getByLabel("기존 보호자 검색");
+  await guardianSearch.click();
+  await expect(page.getByRole("option", { name: /이지은/ })).toHaveCount(0);
+  await guardianSearch.fill("박현지");
+  await expect(page.getByRole("option", { name: /박현지/ })).toBeVisible();
+  await page.getByRole("option", { name: /박현지/ }).click();
+  await expect(dialog.getByText("몽실", { exact: true })).toBeVisible();
+
+  await dialog.getByLabel("환자명").fill("해리");
+  await dialog.getByLabel("품종").fill("푸");
+  await page.getByRole("option", { name: "푸들" }).click();
+  await dialog.getByLabel("나이 년").fill("2");
+  await dialog.getByRole("button", { name: "다음" }).click();
+  await page.getByRole("button", { name: "등록" }).click();
+
+  await expect(page.getByText("환자 등록이 완료되었습니다.")).toBeVisible();
+  expect(lookupUrls.length).toBeGreaterThan(0);
+  expect(lookupUrls.every((url) => url.includes("syntheticAliases=false"))).toBe(true);
+  expect(capturedBody).toMatchObject({
+    mode: "existing_guardian_patient",
+    existingGuardianId: guardianId,
+    patient: { name: "해리", breed: "푸들" },
+  });
+});
+
+test("existing guardian lookup recovers from an API error and shows the empty state", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  let requestCount = 0;
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`,
+    async (route) => {
+      const query = new URL(route.request().url()).searchParams.get("query");
+      if (query !== "없는보호자") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            patients: [],
+            enforcedBy: "reception-patient-guardian-lookup",
+          }),
+        });
+        return;
+      }
+
+      requestCount += 1;
+      if (requestCount === 1) {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "db_read_failed" }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          patients: [],
+          enforcedBy: "reception-patient-guardian-lookup",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception`);
+  await page.getByRole("button", { name: "환자/보호자 등록", exact: true }).click();
+  await page.getByRole("menuitem", { name: "기존 보호자에 환자 추가" }).click();
+  await page.getByLabel("기존 보호자 검색").fill("없는보호자");
+
+  await expect(page.getByText("보호자 정보를 불러오지 못했습니다.")).toBeVisible();
+  await page.getByRole("button", { name: "다시 시도" }).click();
+  await expect(page.getByText("일치하는 보호자가 없습니다.")).toBeVisible();
+  expect(requestCount).toBe(2);
+});
+
+test("new registration is not blocked by bundled demo phone or microchip data", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const guardianId = "49150000-0000-4000-8000-000000000010";
+  const patientId = "49151000-0000-4000-8000-000000000010";
+  let capturedBody: Record<string, unknown> | null = null;
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-registration`,
+    async (route) => {
+      capturedBody = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 201,
+          workspaceId,
+          registration: {
+            guardian: {
+              id: guardianId,
+              workspaceId,
+              name: "최신규",
+              mobilePhone: "010-3245-1188",
+              createdAt: "2026-07-14T00:00:00.000Z",
+              updatedAt: "2026-07-14T00:00:00.000Z",
+            },
+            patient: {
+              id: patientId,
+              workspaceId,
+              patientNo: "P-LIVE-0010",
+              name: "초롱",
+              species: "dog",
+              breed: "푸들",
+              estimatedAgeText: "1년",
+              sex: "unknown",
+              neutered: false,
+              microchipNo: "410098765432109",
+              handlingCautionLocked: true,
+              status: "active",
+              createdAt: "2026-07-14T00:00:00.000Z",
+              updatedAt: "2026-07-14T00:00:00.000Z",
+            },
+            patientGuardian: {
+              id: "49152000-0000-4000-8000-000000000010",
+              patientId,
+              guardianId,
+              relationship: "주보호자",
+              isPrimary: true,
+              canReceiveMessages: true,
+              createdAt: "2026-07-14T00:00:00.000Z",
+            },
+            consents: [],
+          },
+          enforcedBy: "reception-patient-guardian-registration",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception`);
+  await page.getByRole("button", { name: "환자/보호자 등록", exact: true }).click();
+  await page.getByRole("menuitem", { name: "신규 환자/보호자 등록" }).click();
+  const guardianDialog = page.getByRole("dialog", { name: "신규 보호자 등록" });
+  await guardianDialog.getByLabel("보호자명").fill("최신규");
+  await guardianDialog.getByLabel("보호자 생년월일").fill("19900101");
+  await guardianDialog.getByLabel("보호자 휴대전화").fill("010-3245-1188");
+  await guardianDialog.getByRole("button", { name: "태블릿 서명 요청" }).click();
+  await guardianDialog.getByRole("button", { name: "서명 완료 처리" }).click();
+  await guardianDialog.getByRole("button", { name: "다음" }).click();
+
+  const patientDialog = page.getByRole("dialog", { name: "신규 환자 등록" });
+  await expect(patientDialog).toBeVisible();
+  await patientDialog.getByLabel("환자명").fill("초롱");
+  await patientDialog.getByLabel("품종").fill("푸");
+  await page.getByRole("option", { name: "푸들" }).click();
+  await patientDialog.getByLabel("나이 년").fill("1");
+  await patientDialog.getByLabel("마이크로칩").fill("410098765432109");
+  await patientDialog.getByRole("button", { name: "다음" }).click();
+  await page.getByRole("button", { name: "등록" }).click();
+
+  await expect(page.getByText("환자/보호자 등록이 완료되었습니다.")).toBeVisible();
+  expect(capturedBody).toMatchObject({
+    mode: "new_guardian_patient",
+    guardian: { mobilePhone: "010-3245-1188", name: "최신규" },
+    patient: { microchipNo: "410098765432109", name: "초롱" },
+  });
+});
+
 test("guardian registration dialog aligns CDS V2 label and field columns", async ({
   page,
 }) => {
@@ -2750,7 +3029,7 @@ test("walk-in reception drawer removes helper chrome and keeps focused placehold
   );
 });
 
-test("patient guardian registration blocks duplicate microchips and warns duplicate patient names", async ({
+test("patient guardian registration surfaces server duplicate microchips and preserves the draft", async ({
   page,
 }) => {
   await page.goto("/w/clair-demo/reception");
@@ -2775,8 +3054,19 @@ test("patient guardian registration blocks duplicate microchips and warns duplic
   await page.getByLabel("마이크로칩").fill("410098765432109");
   await page.getByRole("button", { name: "다음" }).click();
 
+  await expect(page.getByRole("heading", { name: "등록 정보 확인" })).toBeVisible();
+  await page.getByRole("button", { name: "등록" }).click();
+
   await expect(
     page.getByText("이미 등록된 마이크로칩 번호입니다.").first(),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "등록 정보 확인" })).toBeVisible();
+  await page.getByRole("button", { name: "이전" }).click();
+  await expect(page.getByLabel("마이크로칩")).toHaveValue("410098765432109");
+  await expect(
+    page.getByText(
+      "동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다.",
+    ),
   ).toBeVisible();
 });
 

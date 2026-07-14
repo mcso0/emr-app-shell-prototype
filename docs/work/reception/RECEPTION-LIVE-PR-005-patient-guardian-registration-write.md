@@ -14,7 +14,7 @@ source_docs:
   - "docs/engineering/auth-security/auth-login/reception-patient-guardian-lookup.md"
 dependencies:
   - "RECEPTION-LIVE-PR-004"
-updated: "2026-05-19"
+updated: "2026-07-14"
 ---
 
 # Reception Patient Guardian Registration Write
@@ -72,3 +72,35 @@ Ready for Human Review.
 Report:
 
 - `docs/completed/reception/2026-05-19-den-58-reception-patient-guardian-registration-write-report.html`
+
+## 2026-07-14 Follow-up: Live Registration Data Source Integrity
+
+### Root Cause
+
+- The unified registration modal read its existing guardians, patients, relationships, duplicate phone values, and duplicate microchips directly from the global client store.
+- That store is initialized with bundled demo records for every workspace. In a Supabase session, the modal could therefore submit a demo ID such as `guardian-lee-jieun` to the UUID-backed registration RPC.
+- Production logs confirmed the resulting PostgreSQL UUID cast failure. The API route and Supabase writer were connected; the fault was the modal's mixed live/demo read source.
+- The shared lookup gateway also expanded Korean staging display aliases into synthetic seed queries. That behavior is useful for staging demos but is not acceptable as a registration identity source.
+
+### Follow-up Scope and Result
+
+- Existing-guardian registration now loads only the active workspace's patient/guardian lookup API records.
+- Registration lookup requests set `syntheticAliases=false`; other lookup consumers preserve their existing default behavior.
+- Guardian choices, linked-patient summaries, and same-name advisory warnings are derived only from the lookup response.
+- Client-side phone and microchip duplicate checks no longer consult bundled demo data. The registration API and DB writer remain authoritative and the modal preserves the draft after a conflict.
+- Loading, empty, read-error, and retry states are explicit in the existing-guardian picker.
+- The Supabase registration gateway rejects non-UUID existing guardian IDs before invoking the RPC.
+- Successful responses still update the client store so the newly registered profile is immediately available in the current UI session.
+
+### Follow-up Verification
+
+- Supabase registration/lookup server suites: 15 passed.
+- Focused new/existing registration UI flows, live UUID payload, demo-data isolation, duplicate conflict draft preservation, and lookup retry coverage: passed.
+- Focused ESLint, `npx tsc --noEmit`, and `npm run build`: passed.
+- Remote staging aggregate check after rollback: 0 QA-pattern guardians, 0 QA-pattern patients, 0 guardians created today, and 0 patients created today.
+- The pre-existing registration dialog title pixel assertion still fails on both this branch and the exact `origin/main` baseline because the shared dialog token currently renders 18px while the stale assertion expects 16px. This follow-up does not change shared dialog typography.
+
+Plan and report:
+
+- `docs/superpowers/plans/2026-07-14-reception-live-registration-data-source.md`
+- `docs/completed/reception/2026-07-14-reception-live-registration-data-source-report.html`

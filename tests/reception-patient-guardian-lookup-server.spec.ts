@@ -235,6 +235,27 @@ test("supabase reception lookup gateway resolves Korean staging display aliases"
   });
 });
 
+test("supabase reception lookup gateway can disable staging synthetic aliases", async () => {
+  const calls: string[] = [];
+  const gateway = createSupabaseReceptionPatientGuardianLookupGateway({
+    async rpc(functionName, args) {
+      calls.push(`${functionName}:${args.p_workspace_id}:${args.p_query}`);
+      return { data: [], error: null };
+    },
+  });
+
+  const result = await gateway.searchPatientGuardianLookup({
+    workspaceId: "workspace-clair-cheongdam",
+    query: "이지은",
+    allowSyntheticAliases: false,
+  });
+
+  expect(calls).toEqual([
+    "clair_search_reception_patient_guardian_lookup:workspace-clair-cheongdam:이지은",
+  ]);
+  expect(result).toEqual({ ok: true, patients: [] });
+});
+
 test("reception lookup route stays server-owned and avoids secret-shaped values", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/reception/patient-guardian-lookup/route.ts",

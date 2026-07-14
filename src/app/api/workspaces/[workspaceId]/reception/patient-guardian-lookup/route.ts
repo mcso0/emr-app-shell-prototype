@@ -41,7 +41,9 @@ export async function GET(request: Request, { params }: RouteContext) {
     );
   }
 
-  const query = new URL(request.url).searchParams.get("query") ?? "";
+  const searchParams = new URL(request.url).searchParams;
+  const query = searchParams.get("query") ?? "";
+  const allowSyntheticAliases = searchParams.get("syntheticAliases") !== "false";
   const client = identity.source === "supabase_session" ? await createClient() : null;
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
@@ -54,6 +56,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     : undefined;
   const result = await lookupReceptionPatientGuardians({
     actorUserId: identity.actorUserId,
+    allowSyntheticAliases,
     workspaceId,
     query,
     permissionAdapter,
