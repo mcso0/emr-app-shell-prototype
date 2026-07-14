@@ -40,7 +40,7 @@ import {
 import { CdsNavigationSidebarIcon } from "@/components/cds-icons/navigation";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
-import { StaffOperationalProfileDrawer } from "@/features/staff/staff-operational-profile-drawer";
+import { StaffOperationalProfilePanel } from "@/features/staff/staff-operational-profile-drawer";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
@@ -669,7 +669,7 @@ function VeterinarianLaneHeader({
         ) : null}
       </div>
       <div
-        className="pointer-events-none ml-auto flex shrink-0 items-center gap-[var(--emr-calendar-lane-header-action-gap)] opacity-0 transition-opacity group-hover/veterinarian-lane:pointer-events-auto group-hover/veterinarian-lane:opacity-100 group-focus/veterinarian-lane:pointer-events-auto group-focus/veterinarian-lane:opacity-100 group-focus-within/veterinarian-lane:pointer-events-auto group-focus-within/veterinarian-lane:opacity-100 max-md:pointer-events-auto max-md:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100"
+        className="pointer-events-auto ml-auto flex shrink-0 items-center gap-[var(--emr-calendar-lane-header-action-gap)] opacity-0 transition-opacity group-hover/veterinarian-lane:opacity-100 group-focus/veterinarian-lane:opacity-100 group-focus-within/veterinarian-lane:opacity-100 max-md:opacity-100 [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:opacity-100"
         data-testid="veterinarian-lane-header-actions"
       >
         <button
@@ -5897,10 +5897,6 @@ export function ReceptionContent() {
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
     allVeterinarians.map((veterinarian) => veterinarian.id),
   );
-  const [staffProfileTarget, setStaffProfileTarget] = useState<{
-    opener: HTMLButtonElement | null;
-    veterinarian: Veterinarian;
-  } | null>(null);
   const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
     Veterinarian[]
   >([]);
@@ -6095,40 +6091,25 @@ export function ReceptionContent() {
   };
   const openStaffOperationalProfile = useCallback(
     (veterinarian: Veterinarian, opener: HTMLButtonElement | null) => {
-      setActiveDrawer(null);
-      setRightPanelOpen(false);
-      setStaffProfileTarget({ opener, veterinarian });
+      const returnFocusId =
+        opener?.id || `staff-operational-profile-trigger-${veterinarian.id}`;
+      if (opener && !opener.id) opener.id = returnFocusId;
+
+      setActiveDrawer({
+        type: "staff-operational-profile",
+        id: veterinarian.id,
+        rightPanelPresentation: {
+          gap: 10,
+          mobileFullWidth: true,
+          persistToUrl: false,
+          returnFocusId,
+          width: 336,
+        },
+      });
+      setRightPanelOpen(true);
     },
     [setActiveDrawer, setRightPanelOpen],
   );
-  const handleStaffProfileOpenChange = useCallback(
-    (open: boolean) => {
-      if (open) return;
-      const opener = staffProfileTarget?.opener;
-      setStaffProfileTarget(null);
-      window.setTimeout(() => opener?.focus(), 0);
-    },
-    [staffProfileTarget],
-  );
-  const staffProfileContextSummary = useMemo(() => {
-    if (!staffProfileTarget) return undefined;
-    const targetAppointments = appointments.filter(
-      (appointment) =>
-        appointment.assignedVeterinarianId ===
-          staffProfileTarget.veterinarian.id &&
-        appointment.status !== "cancelled",
-    );
-    const processedCount = targetAppointments.filter(
-      (appointment) => appointment.status === "checked_in",
-    ).length;
-
-    return {
-      date: operatingDate,
-      processedCount,
-      remainingCount: Math.max(targetAppointments.length - processedCount, 0),
-      totalCount: targetAppointments.length,
-    };
-  }, [appointments, operatingDate, staffProfileTarget]);
   function clearCalendarTransientSelection() {
     dispatchReceptionCalendarDragClear();
     setCalendarDraftSelection(undefined);
@@ -6570,21 +6551,6 @@ export function ReceptionContent() {
         onCreateWalkIn={openWalkInDialog}
         onHideVeterinarian={toggleVeterinarian}
         onOpenVeterinarianProfile={openStaffOperationalProfile}
-      />
-      <StaffOperationalProfileDrawer
-        actorUserId={
-          liveStaffSourceEnabled
-            ? authSession?.id
-            : getReceptionDemoActorId(authSession?.role)
-        }
-        contextSummary={staffProfileContextSummary}
-        currentMinutes={currentOperatingMinutes}
-        date={operatingDate}
-        onOpenChange={handleStaffProfileOpenChange}
-        open={Boolean(staffProfileTarget)}
-        todayDate={defaultOperatingDate}
-        userId={staffProfileTarget?.veterinarian.id ?? null}
-        workspaceId={workspaceId}
       />
     </div>
   );
@@ -8547,14 +8513,54 @@ function ReceptionAppointmentCheckInFormDrawer({
   );
 }
 
-export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
+export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponentProps) {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
   );
   const [isEditing, setIsEditing] = useState(false);
   const title = getReceptionRightPanelTitle(activeDrawer);
+  const searchParams = useSearchParams();
+  const authSession = useMockAuthStore((state) => state.session);
+  const operatingDateOverride = useReceptionStore(
+    (state) => state.operatingDateByWorkspace[workspaceId],
+  );
+  const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
+  const routeOperatingDate = searchParams.get("date");
+  const operatingDate =
+    typeof routeOperatingDate === "string" && isIsoOperatingDate(routeOperatingDate)
+      ? routeOperatingDate
+      : (operatingDateOverride ?? defaultOperatingDate);
+  const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
+
+  const closeStaffProfile = useCallback(() => {
+    const returnFocusId = activeDrawer?.rightPanelPresentation?.returnFocusId;
+    setActiveDrawer(null);
+    setRightPanelOpen(false);
+    window.setTimeout(() => {
+      if (returnFocusId) document.getElementById(returnFocusId)?.focus();
+    }, 0);
+  }, [activeDrawer?.rightPanelPresentation?.returnFocusId, setActiveDrawer, setRightPanelOpen]);
+
+  if (activeDrawer?.type === "staff-operational-profile") {
+    return (
+      <StaffOperationalProfilePanel
+        actorUserId={
+          isPreparedEmptyClinicWorkspace(workspaceId)
+            ? authSession?.id
+            : getReceptionDemoActorId(authSession?.role)
+        }
+        currentMinutes={currentOperatingMinutes}
+        date={operatingDate}
+        onClose={closeStaffProfile}
+        todayDate={defaultOperatingDate}
+        userId={activeDrawer.id}
+        workspaceId={workspaceId}
+      />
+    );
+  }
 
   return (
     <div

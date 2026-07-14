@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { useAuthClient } from "@/features/auth/auth-client";
+import { WorkspaceStaffPresenceReporter } from "@/features/staff/workspace-staff-presence";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
 import {
   type GlobalNotification,
@@ -374,7 +375,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     } else {
       params.delete("right");
     }
-    if (activeDrawer) {
+    if (
+      activeDrawer &&
+      activeDrawer.rightPanelPresentation?.persistToUrl !== false
+    ) {
       params.set("drawer", `${activeDrawer.type}:${activeDrawer.id}`);
     } else {
       params.delete("drawer");
@@ -558,6 +562,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   return (
     <div className="h-screen min-h-0 overflow-hidden bg-[var(--emr-surface-app)] text-foreground">
+      <WorkspaceStaffPresenceReporter workspaceId={workspaceId} />
       <ShellMain
         moduleDefinition={moduleDefinition}
         navigationSearch={navigationSearch}
