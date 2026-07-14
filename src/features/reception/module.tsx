@@ -304,16 +304,16 @@ const receptionSidePanelVitalOptions: Array<{
   },
 ];
 const veterinarianHeaderToneClasses = [
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-blue-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-blue-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-forest-green-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-forest-green-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-sky-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-sky-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-orange-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-orange-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-green-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-green-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-red-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-red-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-teal-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-teal-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-neutral-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-neutral-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-purple-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-purple-500)]",
-  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-red-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-red-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-blue-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-blue-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-forest-green-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-forest-green-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-sky-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-sky-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-orange-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-orange-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-green-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-green-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-red-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-red-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-teal-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-teal-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-neutral-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-neutral-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-purple-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-purple-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-red-200)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-red-500)]",
 ];
 const veterinarianMenuItemToneClasses = [
   "border-[var(--clair-color-atomic-blue-500)] bg-[var(--clair-color-atomic-blue-500)]",
@@ -641,7 +641,7 @@ function VeterinarianLaneHeader({
           {veterinarian.initial}
         </AvatarFallback>
       </Avatar>
-      <div className="flex min-w-0 flex-1 items-center gap-[var(--emr-calendar-lane-header-gap)]">
+      <div className="flex min-w-0 flex-1 items-center gap-[var(--emr-calendar-lane-header-name-status-gap)]">
         <span
           data-testid="veterinarian-lane-name"
           className="min-w-0 truncate text-[length:var(--emr-calendar-lane-header-name-size)] font-[var(--emr-calendar-lane-header-name-weight)] leading-[var(--emr-calendar-lane-header-name-leading)] tracking-[var(--emr-calendar-lane-header-name-tracking)]"

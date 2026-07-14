@@ -56,9 +56,10 @@ and source; exact clock times do not need to leave the DB for this surface.
 - Cell: 56px high with 8px padding; inner header: 40px high.
 - Inner header: 12px radius, 10px horizontal and 8px vertical padding, 10px gap.
 - Lane surface: that lane's existing `500` token at 6% over white; border uses the
-  same lane's `300` token. No whole-header hover color.
+  same lane's `200` token. No whole-header hover color.
 - Avatar: 24x24px, 6px radius, neutral-200 border.
-- Name: Pretendard 16/24, medium 500, 0.006em letter spacing, gray-700.
+- Name: body-2 normal token, Pretendard 14/20, medium 500, 0.014em letter spacing,
+  gray-700. The name-to-status-badge gap uses the 6px spacing token.
 - Badge: 18px frame with a 1px outside stroke (20px visual bounds), 20px minimum
   width, 6px radius, 6px horizontal and 1px vertical padding, white surface,
   neutral-200 stroke; label 12/16, medium 500, 0.025em. Status colors follow the
