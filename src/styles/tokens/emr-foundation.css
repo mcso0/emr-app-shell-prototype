@@ -333,6 +333,7 @@
   --emr-calendar-lane-avatar-border: var(--clair-color-atomic-neutral-200);
   --emr-calendar-lane-status-height: 18px;
   --emr-calendar-lane-status-min-width: var(--clair-spacing-20);
+  --emr-calendar-lane-status-clocked-out-width: 34px;
   --emr-calendar-lane-status-radius: var(--clair-radius-atomic-6);
   --emr-calendar-lane-status-padding-x: var(--clair-spacing-6);
   --emr-calendar-lane-status-padding-y: 1px;
