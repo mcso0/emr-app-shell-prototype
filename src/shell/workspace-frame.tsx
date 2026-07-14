@@ -109,7 +109,9 @@ export function WorkspaceFrame({
     SHELL_LAYOUT.contentAside.minWidth
   );
   const resolvedRightPanelWidth =
-    moduleDefinition.rightPanelWidth ?? rightPanelWidth;
+    activeDrawer?.rightPanelPresentation?.width ??
+    moduleDefinition.rightPanelWidth ??
+    rightPanelWidth;
   const effectiveRightPanelWidth = Math.max(
     resolvedRightPanelWidth,
     SHELL_LAYOUT.rightPanel.defaultWidth
@@ -130,11 +132,14 @@ export function WorkspaceFrame({
           Boolean(RightPanel) && (availability.hasRightPanel ?? true);
         const contentAsideVisible = hasContentAside && contentAsideOpen;
         const rightPanelVisible = hasRightPanel && rightPanelOpen;
-        const rightPanelGap =
-          moduleDefinition.rightPanelGap && rightPanelVisible
-            ? SHELL_LAYOUT.shell.gap
-            : 0;
+        const rightPanelGap = rightPanelVisible
+          ? (activeDrawer?.rightPanelPresentation?.gap ??
+            (moduleDefinition.rightPanelGap ? SHELL_LAYOUT.shell.gap : 0))
+          : 0;
         const rightPanelDetached = rightPanelGap > 0;
+        const rightPanelMobileFullWidth = Boolean(
+          activeDrawer?.rightPanelPresentation?.mobileFullWidth,
+        );
         const slotProps = {
           ...baseSlotProps,
           hasContentAside,
@@ -151,6 +156,7 @@ export function WorkspaceFrame({
                 : "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-strong)] bg-[var(--emr-surface-workspace)] shadow-xs"
             )}
             data-content-aside-open={contentAsideVisible ? "true" : "false"}
+            data-right-panel-mobile-full={rightPanelMobileFullWidth ? "true" : "false"}
             data-right-panel-open={rightPanelVisible ? "true" : "false"}
             style={{
               "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
@@ -160,6 +166,7 @@ export function WorkspaceFrame({
             } as CSSProperties}
           >
             <section
+              data-testid="workspace-main-content"
               className={cn(
                 "relative flex min-h-0 min-w-0 flex-col bg-[var(--emr-surface-workspace)]",
                 rightPanelDetached &&
@@ -205,8 +212,11 @@ export function WorkspaceFrame({
             </section>
 
             <aside
+              data-testid="workspace-right-panel"
               className={cn(
                 "emr-workspace-rightpanel-responsive min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:hidden",
+                rightPanelMobileFullWidth &&
+                  "max-[1100px]:fixed max-[1100px]:inset-0 max-[1100px]:z-50 max-[1100px]:block max-[1100px]:rounded-none max-[1100px]:border-0",
                 !instantRightPanel && "transition-opacity duration-150",
                 rightPanelVisible &&
                   (rightPanelDetached

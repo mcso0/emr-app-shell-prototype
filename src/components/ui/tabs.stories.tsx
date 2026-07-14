@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent, within } from "storybook/test";
 
 import { Badge } from "./badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
@@ -147,5 +148,43 @@ export const Vertical: Story = {
           "사용할 때: 왼쪽 목록과 오른쪽 내용처럼 공간이 충분한 layout. 쓰지 말아야 할 때: 좁은 mobile width에서 탭 label이 눌리는 경우.",
       },
     },
+  },
+};
+
+export const DisabledPlaceholders: Story = {
+  render: () => (
+    <Tabs defaultValue="profile" className="max-w-sm">
+      <TabsList variant="line" aria-label="직원 프로필 탭">
+        <TabsTrigger value="profile">프로필</TabsTrigger>
+        <TabsTrigger value="tab2" disabled>
+          tab2
+        </TabsTrigger>
+        <TabsTrigger value="tab3" disabled>
+          tab3
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="profile">프로필 내용</TabsContent>
+    </Tabs>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "아직 콘텐츠가 정의되지 않은 탭은 표시하되 disabled로 유지한다. 화살표 키 탐색에서도 비활성 탭은 선택되지 않는다.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const profile = canvas.getByRole("tab", { name: "프로필" });
+    const tab2 = canvas.getByRole("tab", { name: "tab2" });
+    const tab3 = canvas.getByRole("tab", { name: "tab3" });
+
+    expect(tab2).toHaveAttribute("aria-disabled", "true");
+    expect(tab3).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(profile);
+    await userEvent.keyboard("{ArrowRight}");
+    expect(profile).toHaveAttribute("aria-selected", "true");
+    expect(canvas.getByRole("tabpanel")).toHaveTextContent("프로필 내용");
   },
 };

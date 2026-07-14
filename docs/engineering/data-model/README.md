@@ -7,7 +7,7 @@ status: active
 area: engineering
 doc_type: area-index
 tags: [data-model, schema, persistence, migrations]
-last_updated: 2026-06-16
+last_updated: 2026-07-14
 ---
 
 # Data Model
@@ -24,6 +24,7 @@ Canonical engineering data model documents live here. Use this README as the Git
 | CLAiR system presets to workspace order catalog initialization and auto-merge | `order-catalog-preset-initialization-contract.md` |
 | Chart-confirmed order handoff into fulfillment queues and billing candidates | `order-fulfillment-handoff-contract.md` |
 | Home 원내 현황 operations aggregate API/read model | `home-operations-work-status-read-model.md` |
+| 직원의 workspace-scoped Presence와 최근 접속 기록 | `workspace-member-activity-presence.md` |
 | Guardian-centered combined checkout, payment allocation, and adjustment proposal | `billing-checkout-session-allocation-adjustment-model.md` |
 
 ## Current Files
@@ -37,6 +38,7 @@ Canonical engineering data model documents live here. Use this README as the Git
 | `home-operations-work-status-read-model.md` | Implemented API/read-model contract for aggregating Home `원내 현황` operational work across reception, appointments, fulfillment, billing, and future inpatient sources. |
 | `order-catalog-preset-initialization-contract.md` | Engineering contract for CLAiR system presets, workspace catalog source tracking, idempotent initialization, automatic preset merge, customization protection, and DEN-282 implementation boundaries. |
 | `order-fulfillment-handoff-contract.md` | Engineering contract for order fulfillment route shape, source snapshot, status mapping, permission requirements, migration gate, and verification baseline. |
+| `workspace-member-activity-presence.md` | Private workspace Presence, throttled last-seen persistence, RLS/RPC, stale semantics, and rollout boundary. |
 
 ## Boundaries
 

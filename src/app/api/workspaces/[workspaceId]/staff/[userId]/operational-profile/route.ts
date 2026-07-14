@@ -24,7 +24,6 @@ export async function GET(request: Request, { params }: RouteContext) {
   const { userId, workspaceId } = await params;
   const url = new URL(request.url);
   const date = url.searchParams.get("date");
-  const context = url.searchParams.get("context");
 
   if (!date || !isIsoOperatingDate(date)) {
     return Response.json(
@@ -32,13 +31,6 @@ export async function GET(request: Request, { params }: RouteContext) {
       { status: 400 },
     );
   }
-  if (context !== "reception") {
-    return Response.json(
-      { ok: false, status: 400, error: "invalid_context" },
-      { status: 400 },
-    );
-  }
-
   const serverSession = await readServerSession();
   const identity = resolveRoleUpdateActorIdentity({
     serverSession,
