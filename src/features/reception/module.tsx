@@ -4180,7 +4180,7 @@ function ReceptionScheduleDateControl({
       data-testid="reception-date-control"
     >
       <span
-        className="min-w-0 truncate whitespace-nowrap [font-family:var(--clair-typography-heading-2-font-family)] text-[length:var(--clair-typography-heading-2-font-size)] font-[number:var(--clair-typography-heading-2-font-weight)] leading-[26px] tracking-[var(--clair-typography-heading-2-letter-spacing)] text-[var(--clair-color-atomic-neutral-800)] tabular-nums"
+        className="min-w-0 truncate whitespace-nowrap [font-family:var(--clair-typography-heading-2-font-family)] text-[length:var(--clair-typography-headline-1-font-size)] font-[number:var(--clair-typography-heading-2-font-weight)] leading-[26px] tracking-[var(--clair-typography-heading-2-letter-spacing)] text-[var(--clair-color-atomic-neutral-800)] tabular-nums"
         aria-label={`${dateControlLabel.dateLabel} 표시 중`}
         data-testid="reception-date-heading"
       >
