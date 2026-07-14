@@ -53,7 +53,7 @@ export const emrDialogShellLayouts = {
   },
   "registration-form": {
     contentClassName:
-      "grid h-[min(714px,calc(100vh-5rem))] max-h-[min(714px,calc(100vh-5rem))] grid-rows-[auto_minmax(0,1fr)_64px] gap-0 overflow-hidden p-0 sm:max-w-[440px]",
+      "grid h-[min(768px,calc(100vh-5rem))] max-h-[min(768px,calc(100vh-5rem))] grid-rows-[auto_minmax(0,1fr)_64px] gap-0 overflow-hidden p-0 sm:max-w-[440px]",
     headerClassName: "px-4 pb-0 pt-4",
     bodyClassName: "min-h-0 overflow-y-auto px-4 pb-0 pt-3",
     footerClassName:
