@@ -249,6 +249,43 @@ async function mockReceptionWalkInCreate(
   return state;
 }
 
+test("reception date heading matches the CDS V2 left slot", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/w/clair-demo/reception");
+
+  const dateControl = page.getByTestId("reception-date-control");
+  const dateHeading = page.getByTestId("reception-date-heading");
+  const businessHoursBadge = page.getByTestId(
+    "reception-business-hours-badge",
+  );
+
+  await expect(dateControl).toHaveCSS("height", "26px");
+  await expect(dateControl).toHaveCSS("column-gap", "12px");
+  await expect(dateHeading).toHaveText("26년 5월 1일(금)");
+  await expect(dateHeading).toHaveAttribute(
+    "aria-label",
+    "26년 5월 1일(금) 표시 중",
+  );
+  await expect(dateHeading).toHaveCSS("font-size", "18px");
+  await expect(dateHeading).toHaveCSS("font-weight", "600");
+  await expect(dateHeading).toHaveCSS("line-height", "26px");
+  await expect(dateHeading).toHaveCSS("color", "rgb(38, 38, 38)");
+  await expect(businessHoursBadge).toHaveCSS("height", "22px");
+  await expect(businessHoursBadge).toHaveCSS("border-radius", "6px");
+  await expect(businessHoursBadge).toContainText("업무시간");
+  await expect(businessHoursBadge).toContainText("09:00-18:00");
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(dateControl).toHaveCSS("height", "26px");
+  await expect
+    .poll(() =>
+      dateControl.evaluate(
+        (element) => element.scrollHeight === element.clientHeight,
+      ),
+    )
+    .toBe(true);
+});
+
 test("reception renders the first-path workspace instead of the placeholder", async ({
   page,
 }) => {
