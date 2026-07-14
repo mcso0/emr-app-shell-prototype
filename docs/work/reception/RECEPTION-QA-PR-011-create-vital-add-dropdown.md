@@ -71,4 +71,3 @@ The initial wireframe covered reception and reservation creation as a UI-only in
 ## Verification
 
 - Implementation pending.
-
