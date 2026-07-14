@@ -2502,7 +2502,7 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
     dialog: {
       centerX: 960,
       centerY: 540,
-      h: 714,
+      h: 768,
       viewportCenterX: 960,
       viewportCenterY: 540,
       w: 440,
@@ -2519,6 +2519,50 @@ test("guardian registration dialog aligns CDS V2 label and field columns", async
       lineHeight: "24px",
     },
   });
+});
+
+test("existing guardian patient registration shows the full form on a tall viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/w/clair-demo/reception");
+
+  await page
+    .getByRole("button", { name: "환자/보호자 등록", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "기존 보호자에 환자 추가" })
+    .click();
+
+  const dialog = page.getByRole("dialog", {
+    name: "기존 보호자에 신규 환자 등록",
+  });
+  await expect(dialog).toBeVisible();
+
+  const metrics = await dialog.evaluate((element) => {
+    const body = [...element.children].find(
+      (child) => getComputedStyle(child).overflowY === "auto",
+    );
+    const memo = element.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="특이사항 및 요청사항 입력"]',
+    );
+
+    if (!body || !memo) return null;
+
+    const bodyRect = body.getBoundingClientRect();
+    const memoRect = memo.getBoundingClientRect();
+
+    return {
+      bodyBottom: Math.round(bodyRect.bottom),
+      clientHeight: body.clientHeight,
+      memoBottom: Math.round(memoRect.bottom),
+      scrollHeight: body.scrollHeight,
+    };
+  });
+
+  expect(metrics).not.toBeNull();
+  expect(metrics?.scrollHeight).toBeLessThanOrEqual(metrics?.clientHeight ?? 0);
+  expect(metrics?.memoBottom).toBeLessThanOrEqual(metrics?.bodyBottom ?? 0);
 });
 
 test("registration and reception create side panels use CDS V2 32px controls", async ({
