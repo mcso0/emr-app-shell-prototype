@@ -26,7 +26,7 @@ function getUniqueBusinessStartAt() {
   const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(date.getUTCDate()).padStart(2, "0");
 
-  return `${yyyy}-${mm}-${dd}T13:00:00+09:00`;
+  return `${yyyy}-${mm}-${dd}T14:00:00+09:00`;
 }
 
 test("appointment create route requires an actor and preserves mock fallback", async ({

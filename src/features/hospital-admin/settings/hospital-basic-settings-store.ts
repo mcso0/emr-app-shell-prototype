@@ -18,6 +18,7 @@ type HospitalBasicSettingsStore = {
   ensureWorkspace: (workspaceId: string) => void;
   setDraft: (workspaceId: string, draft: HospitalBasicSettingsDraft) => void;
   save: (workspaceId: string) => void;
+  hydrateOperatingHours: (workspaceId: string, settings: Pick<HospitalBasicSettingsDraft, "timezone" | "weeklyHours" | "holidayPolicy" | "exceptions">) => void;
   revert: (workspaceId: string) => void;
   discardAllDrafts: () => void;
 };
@@ -57,6 +58,20 @@ export const useHospitalBasicSettingsStore = create<HospitalBasicSettingsStore>(
           [workspaceId]: {
             draft: cloneHospitalBasicSettingsDraft(record.draft),
             savedDraft: cloneHospitalBasicSettingsDraft(record.draft),
+          },
+        },
+      };
+    }),
+  hydrateOperatingHours: (workspaceId, settings) =>
+    set((state) => {
+      const record = state.records[workspaceId] ?? createRecord();
+      const savedDraft = cloneHospitalBasicSettingsDraft({ ...record.savedDraft, ...settings });
+      return {
+        records: {
+          ...state.records,
+          [workspaceId]: {
+            savedDraft,
+            draft: cloneHospitalBasicSettingsDraft({ ...record.draft, ...settings }),
           },
         },
       };

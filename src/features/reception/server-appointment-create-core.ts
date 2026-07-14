@@ -9,6 +9,8 @@ import {
   type LiveMutationAuditOptions,
 } from "@/features/audit/server-mutation-audit-core";
 import type { ReceptionAppointmentCreateInput } from "@/features/reception/appointment-create";
+import { createInitialHospitalBasicSettingsDraft, type HospitalBasicSettingsDraft } from "@/features/hospital-admin/settings/hospital-basic-settings-model";
+import { isReceptionTimeAllowed } from "@/features/reception/effective-operating-hours";
 import { getReceptionMutationPermissionContract } from "@/features/reception/reception-mutation-permissions";
 import {
   mockAppointments,
@@ -58,8 +60,6 @@ export type ReceptionAppointmentCreateResult =
   | { ok: false; status: 409; denialReason: ReceptionAppointmentCreateDenialReason }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
-const businessOpenMinutes = 9 * 60;
-const businessCloseMinutes = 19 * 60;
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -160,6 +160,7 @@ export function createMockReceptionAppointmentCreateGateway(
     guardians: Guardian[];
     patientGuardians: PatientGuardian[];
     patients: Patient[];
+    operatingHours?: Pick<HospitalBasicSettingsDraft, "timezone" | "weeklyHours" | "exceptions">;
   } = {
     appointments: mockAppointments,
     guardians: mockGuardians,
@@ -206,10 +207,15 @@ export function createMockReceptionAppointmentCreateGateway(
 
       const slot = getAppointmentSlot(input);
       if (!slot) return { ok: false, status: 409, denialReason: "appointment_outside_business_hours" };
-      if (isClosedOperatingDay(input.scheduledStartAt)) {
+      const availability = isReceptionTimeAllowed({
+        scheduledStartAt: input.scheduledStartAt,
+        durationMinutes: input.durationMinutes,
+        settings: dataset.operatingHours ?? createInitialHospitalBasicSettingsDraft(),
+      });
+      if (availability.closed) {
         return { ok: false, status: 409, denialReason: "appointment_closed_day" };
       }
-      if (!isWithinBusinessHours(input.scheduledStartAt, input.durationMinutes)) {
+      if (!availability.allowed) {
         return { ok: false, status: 409, denialReason: "appointment_outside_business_hours" };
       }
       if (hasAppointmentSlotConflict(dataset.appointments, workspaceId, slot.startMs, slot.endMs)) {
@@ -343,37 +349,6 @@ function hasAppointmentSlotConflict(
       : appointmentStartMs + 30 * 60_000;
     return startMs < appointmentEndMs && endMs > appointmentStartMs;
   });
-}
-
-function isClosedOperatingDay(iso: string) {
-  return getSeoulDatePart(iso, "weekday") === "Sun";
-}
-
-function isWithinBusinessHours(iso: string, durationMinutes: number) {
-  const startMinutes = getSeoulMinutes(iso);
-  const endMinutes = startMinutes + durationMinutes;
-  return startMinutes >= businessOpenMinutes && endMinutes <= businessCloseMinutes;
-}
-
-function getSeoulMinutes(iso: string) {
-  const date = new Date(iso);
-  const hour = Number(getSeoulDatePart(date, "hour"));
-  const minute = Number(getSeoulDatePart(date, "minute"));
-  return hour * 60 + minute;
-}
-
-function getSeoulDatePart(
-  isoOrDate: string | Date,
-  part: "hour" | "minute" | "weekday",
-) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    hour: part === "hour" ? "2-digit" : undefined,
-    hour12: false,
-    minute: part === "minute" ? "2-digit" : undefined,
-    timeZone: "Asia/Seoul",
-    weekday: part === "weekday" ? "short" : undefined,
-  });
-  return formatter.format(typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate);
 }
 
 function formatSeoulIsoFromMs(ms: number) {

@@ -39,6 +39,7 @@ import {
 import { HospitalOperatingHoursEditor } from "@/features/hospital-admin/settings/hospital-operating-hours-editor";
 import { useHospitalBasicSettingsStore } from "@/features/hospital-admin/settings/hospital-basic-settings-store";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
+import { useMockAuthStore } from "@/features/auth/session-store";
 
 type ContactField = keyof HospitalBasicSettingsDraft["contact"];
 
@@ -49,10 +50,13 @@ const hospitalIdentity = {
 };
 
 export function HospitalBasicSettingsScreen({ workspaceId }: { workspaceId: string }) {
+  const authSession = useMockAuthStore((state) => state.session);
+  const demoActorId = authSession?.role === "hospital_admin" ? "user-admin" : authSession?.id;
   const initialDraft = useMemo(() => createInitialHospitalBasicSettingsDraft(), []);
   const record = useHospitalBasicSettingsStore((state) => state.records[workspaceId]);
   const ensureWorkspace = useHospitalBasicSettingsStore((state) => state.ensureWorkspace);
   const save = useHospitalBasicSettingsStore((state) => state.save);
+  const hydrateOperatingHours = useHospitalBasicSettingsStore((state) => state.hydrateOperatingHours);
   const revert = useHospitalBasicSettingsStore((state) => state.revert);
   const setDraft = useHospitalBasicSettingsStore((state) => state.setDraft);
   const setSettingsDirty = useHospitalAdminStore((state) => state.setSettingsDirty);
@@ -64,11 +68,31 @@ export function HospitalBasicSettingsScreen({ workspaceId }: { workspaceId: stri
   const [revertDialogOpen, setRevertDialogOpen] = useState(false);
   const [copySucceeded, setCopySucceeded] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
+  const [isLoadingHours, setIsLoadingHours] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const copyResetTimer = useRef<number | null>(null);
 
   useEffect(() => {
     ensureWorkspace(workspaceId);
   }, [ensureWorkspace, workspaceId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/basic-settings/operating-hours`, {
+      cache: "no-store",
+      headers: demoActorId ? { "x-clair-demo-session-user-id": demoActorId } : undefined,
+    })
+      .then(async (response) => ({ response, body: await response.json() }))
+      .then(({ response, body }) => {
+        if (cancelled || !response.ok || !body.ok) return;
+        hydrateOperatingHours(workspaceId, body.settings);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("운영시간을 불러오지 못했습니다.");
+      })
+      .finally(() => { if (!cancelled) setIsLoadingHours(false); });
+    return () => { cancelled = true; };
+  }, [demoActorId, hydrateOperatingHours, workspaceId]);
 
   useEffect(
     () => () => {
@@ -109,7 +133,7 @@ export function HospitalBasicSettingsScreen({ workspaceId }: { workspaceId: stri
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const issues = validateHospitalBasicSettingsDraft(draft);
     if (issues.length > 0) {
       setValidationIssues(issues);
@@ -118,6 +142,40 @@ export function HospitalBasicSettingsScreen({ workspaceId }: { workspaceId: stri
     }
 
     const scheduleChanged = hasOperatingHoursChanges(draft, savedDraft);
+    if (scheduleChanged) {
+      setIsSaving(true);
+      try {
+        const response = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/basic-settings/operating-hours`,
+          {
+            method: "PUT",
+            headers: {
+              "content-type": "application/json",
+              ...(demoActorId ? { "x-clair-demo-session-user-id": demoActorId } : {}),
+            },
+            body: JSON.stringify({
+              timezone: draft.timezone,
+              weeklyHours: draft.weeklyHours,
+              holidayPolicy: draft.holidayPolicy,
+              exceptions: draft.exceptions,
+            }),
+          },
+        );
+        const body = await response.json();
+        if (!response.ok || !body.ok) {
+          toast.error(body.error === "future_appointment_conflict"
+            ? "변경 후 운영시간과 겹치지 않는 미래 예약이 있어 저장할 수 없습니다."
+            : "운영시간을 저장하지 못했습니다.");
+          return;
+        }
+        hydrateOperatingHours(workspaceId, body.settings);
+      } catch {
+        toast.error("운영시간을 저장하지 못했습니다.");
+        return;
+      } finally {
+        setIsSaving(false);
+      }
+    }
     save(workspaceId);
     setValidationIssues([]);
     toast.success(scheduleChanged ? "운영시간이 변경되었습니다." : "병원 기본 설정이 저장되었습니다.");
@@ -274,8 +332,8 @@ export function HospitalBasicSettingsScreen({ workspaceId }: { workspaceId: stri
             <Button type="button" size="sm" variant="outline" onClick={() => setRevertDialogOpen(true)}>
               변경 전으로 되돌리기
             </Button>
-            <Button type="button" size="sm" onClick={handleSave}>
-              변경사항 저장
+            <Button type="button" size="sm" disabled={isSaving || isLoadingHours} onClick={() => void handleSave()}>
+              {isSaving ? "저장 중..." : "변경사항 저장"}
             </Button>
           </div>
         </div>

@@ -109,6 +109,7 @@ const canonicalRolePermissions: Record<WorkspaceRoleId, PermissionId[]> = {
     "imaging:view",
     "billing:view",
     "service_catalog:view",
+    "hospital_settings:view",
   ],
   technician: [
     "reception:view",
@@ -127,6 +128,7 @@ const canonicalRolePermissions: Record<WorkspaceRoleId, PermissionId[]> = {
     "billing:view",
     "billing:issue",
     "service_catalog:view",
+    "hospital_settings:view",
   ],
   front_desk: [
     "reception:view",
@@ -143,6 +145,7 @@ const canonicalRolePermissions: Record<WorkspaceRoleId, PermissionId[]> = {
     "billing:view",
     "billing:issue",
     "service_catalog:view",
+    "hospital_settings:view",
   ],
 };
 

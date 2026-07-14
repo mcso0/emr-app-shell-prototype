@@ -126,6 +126,8 @@ import {
   getCalendarTimeRangeLayout,
   type CalendarTimeRangeLayout,
 } from "@/features/reception/calendar-time-layout";
+import { createCalendarTimeScale, type CalendarTimeScale } from "@/features/reception/calendar-time-scale";
+import { createInitialHospitalBasicSettingsDraft, resolveEffectiveOperatingHours, type EffectiveOperatingHours } from "@/features/hospital-admin/settings/hospital-basic-settings-model";
 import {
   getCalendarOverlapLayouts,
   type CalendarOverlapLayout,
@@ -386,7 +388,7 @@ const dayScheduleStartHour = 0;
 const dayScheduleEndHour = 24;
 const dayBusinessOpenHour = 9;
 const dayBusinessCloseHour = 19;
-const dayScheduleHourRowHeight = 120;
+const dayScheduleHourRowHeight = 144;
 const scheduleSlotMinutes = 15;
 const scheduleSlotCountPerHour = 60 / scheduleSlotMinutes;
 const maxReceptionCalendarDraftDurationMinutes = 240;
@@ -2144,6 +2146,7 @@ const getDraftScheduleBlock = (
 
 const getScheduleCardLayout = (
   block?: ReceptionCalendarScheduleBlock,
+  timeScale?: CalendarTimeScale,
 ): CalendarTimeRangeLayout | undefined => {
   const scheduleStartMinutes = dayScheduleStartHour * 60;
   const scheduleEndMinutes = dayScheduleEndHour * 60;
@@ -2154,6 +2157,15 @@ const getScheduleCardLayout = (
     block.startMinutes >= scheduleEndMinutes
   ) {
     return undefined;
+  }
+
+  if (timeScale) {
+    const startMinutes = Math.max(block.startMinutes, scheduleStartMinutes);
+    const endMinutes = Math.min(block.endMinutes, scheduleEndMinutes);
+    return {
+      top: timeScale.minutesToY(startMinutes),
+      height: Math.max(36, timeScale.rangeHeight(startMinutes, endMinutes)),
+    };
   }
 
   return getCalendarTimeRangeLayout({
@@ -2233,6 +2245,7 @@ const validateReceptionCalendarSelection = ({
   endMinutes,
   operatingDate,
   startMinutes,
+  timeScale,
   veterinarianId,
 }: {
   appointments: Appointment[];
@@ -2242,6 +2255,7 @@ const validateReceptionCalendarSelection = ({
   endMinutes: number;
   operatingDate: string;
   startMinutes: number;
+  timeScale?: CalendarTimeScale;
   veterinarianId: string;
 }): ReceptionCalendarSelectionValidationResult => {
   const normalized = normalizeReceptionCalendarSelection({
@@ -2265,10 +2279,9 @@ const validateReceptionCalendarSelection = ({
     };
   }
 
-  if (
-    normalized.startMinutes < dayBusinessOpenMinutes ||
-    normalized.endMinutes > dayBusinessCloseMinutes
-  ) {
+  if (timeScale
+    ? !timeScale.isSelectable(normalized.startMinutes, normalized.durationMinutes)
+    : normalized.startMinutes < dayBusinessOpenMinutes || normalized.endMinutes > dayBusinessCloseMinutes) {
     return {
       message: getReceptionCalendarSelectionMessage("outside-business-hours"),
       reason: "outside-business-hours",
@@ -2346,11 +2359,18 @@ const getScheduleSelectionFromPointer = ({
   bounds,
   baseHour,
   clientY,
+  timeScale,
 }: {
   baseHour: number;
   bounds: DOMRect;
   clientY: number;
+  timeScale?: CalendarTimeScale;
 }) => {
+  if (timeScale) {
+    return clampScheduleMinutes(timeScale.yToMinutes(
+      timeScale.minutesToY(baseHour * 60) + clientY - bounds.top,
+    ));
+  }
   const minutesPerPixel = 60 / bounds.height;
   const rawMinutes = baseHour * 60 + (clientY - bounds.top) * minutesPerPixel;
 
@@ -2617,7 +2637,7 @@ function CalendarTaskBadge({
   );
 }
 
-function CalendarQuarterHourLines() {
+function CalendarQuarterHourLines({ hour, scale }: { hour?: number; scale?: CalendarTimeScale } = {}) {
   return (
     <div
       className="pointer-events-none absolute inset-0 z-0"
@@ -2628,7 +2648,9 @@ function CalendarQuarterHourLines() {
         <span
           key={`quarter-line-${index}`}
           className="absolute left-0 right-0 h-px bg-[var(--emr-line-subtle)]/70"
-          style={{ top: `${((index + 1) / scheduleSlotCountPerHour) * 100}%` }}
+          style={scale && hour !== undefined
+            ? { top: scale.rangeHeight(hour * 60, hour * 60 + (index + 1) * scheduleSlotMinutes) }
+            : { top: `${((index + 1) / scheduleSlotCountPerHour) * 100}%` }}
         />
       ))}
     </div>
@@ -4585,8 +4607,10 @@ type ReceptionCalendarDraftInput = {
 
 function ScheduleDraftSelectionCard({
   selection,
+  timeScale,
 }: {
   selection: ReceptionCalendarDraftSelection;
+  timeScale?: CalendarTimeScale;
 }) {
   const startMinutes = getMinutesInDayFromDateTime(selection.plannedStartAt);
 
@@ -4594,12 +4618,12 @@ function ScheduleDraftSelectionCard({
 
   const endMinutes = startMinutes + selection.durationMinutes;
   const startHour = Math.floor(startMinutes / 60);
-  const selectionTop =
-    ((startMinutes - startHour * 60) / 60) * dayScheduleHourRowHeight;
-  const selectionHeight = Math.max(
-    dayScheduleHourRowHeight / (60 / scheduleSlotMinutes),
-    (selection.durationMinutes / 60) * dayScheduleHourRowHeight,
-  );
+  const selectionTop = timeScale
+    ? timeScale.rangeHeight(startHour * 60, startMinutes)
+    : ((startMinutes - startHour * 60) / 60) * dayScheduleHourRowHeight;
+  const selectionHeight = timeScale
+    ? Math.max(36, timeScale.rangeHeight(startMinutes, endMinutes))
+    : Math.max(dayScheduleHourRowHeight / (60 / scheduleSlotMinutes), (selection.durationMinutes / 60) * dayScheduleHourRowHeight);
 
   return (
     <div
@@ -4627,6 +4651,7 @@ function ScheduleSelectionCell({
   draftCheckIns,
   hour,
   operatingDate,
+  timeScale,
   onAffordancePointerMove,
   onCreateDraft,
   testId,
@@ -4640,6 +4665,7 @@ function ScheduleSelectionCell({
   draftCheckIns: ReceptionDraftCheckIn[];
   hour: number;
   operatingDate: string;
+  timeScale: CalendarTimeScale;
   onAffordancePointerMove: () => void;
   onCreateDraft: (draft: ReceptionCalendarDraftInput) => void;
   testId: string;
@@ -4696,16 +4722,12 @@ function ScheduleSelectionCell({
     dragState?.bounds.height ?? dayScheduleHourRowHeight;
   const selectionSlotRowHeight =
     selectionCellHeight / (60 / scheduleSlotMinutes);
-  const selectionTop =
-    selectionStart !== undefined
-      ? ((selectionStart - hour * 60) / 60) * selectionCellHeight
-      : 0;
+  const selectionTop = selectionStart !== undefined
+    ? timeScale.rangeHeight(hour * 60, selectionStart)
+    : 0;
   const selectionHeight =
     selectionStart !== undefined && selectionEnd !== undefined
-      ? Math.max(
-          selectionSlotRowHeight,
-          ((selectionEnd - selectionStart) / 60) * selectionCellHeight,
-        )
+      ? Math.max(36, timeScale.rangeHeight(selectionStart, selectionEnd))
       : selectionSlotRowHeight;
   const selectionValidation =
     dragState && selectionStart !== undefined && selectionEnd !== undefined
@@ -4717,6 +4739,7 @@ function ScheduleSelectionCell({
           endMinutes: selectionEnd,
           operatingDate,
           startMinutes: selectionStart,
+          timeScale,
           veterinarianId: veterinarian.id,
         })
       : undefined;
@@ -4730,6 +4753,7 @@ function ScheduleSelectionCell({
       endMinutes,
       operatingDate,
       startMinutes,
+      timeScale,
       veterinarianId: veterinarian.id,
     });
 
@@ -4757,6 +4781,7 @@ function ScheduleSelectionCell({
           baseHour: hour,
           bounds,
           clientY: event.clientY,
+          timeScale,
         });
         const startSlotValidation = validateReceptionCalendarSelection({
           appointments,
@@ -4766,6 +4791,7 @@ function ScheduleSelectionCell({
           endMinutes: startMinutes + scheduleSlotMinutes,
           operatingDate,
           startMinutes,
+          timeScale,
           veterinarianId: veterinarian.id,
         });
 
@@ -4796,6 +4822,7 @@ function ScheduleSelectionCell({
             baseHour: hour,
             bounds: dragState.bounds,
             clientY: event.clientY,
+            timeScale,
           }),
         });
       }}
@@ -4814,6 +4841,7 @@ function ScheduleSelectionCell({
           baseHour: hour,
           bounds: dragState.bounds,
           clientY: event.clientY,
+          timeScale,
         });
         const moved = Math.abs(endMinutes - dragState.startMinutes) >= 3;
         const start = moved
@@ -4854,10 +4882,10 @@ function ScheduleSelectionCell({
         getMinutesInDayFromDateTime(calendarDraftSelection.plannedStartAt)! /
           60,
       ) === hour ? (
-        <ScheduleDraftSelectionCard selection={calendarDraftSelection} />
+        <ScheduleDraftSelectionCard selection={calendarDraftSelection} timeScale={timeScale} />
       ) : null}
-      <CalendarQuarterHourLines />
-      <div className="relative z-10 grid h-full min-h-0 grid-rows-4">
+      <CalendarQuarterHourLines hour={hour} scale={timeScale} />
+      <div className="relative z-10 flex h-full min-h-0 flex-col">
         {Array.from({ length: scheduleSlotCountPerHour }, (_, index) => {
           const slotMinutes = hour * 60 + index * scheduleSlotMinutes;
           const slotValidation = validateReceptionCalendarSelection({
@@ -4868,6 +4896,7 @@ function ScheduleSelectionCell({
             endMinutes: slotMinutes + scheduleSlotMinutes,
             operatingDate,
             startMinutes: slotMinutes,
+            timeScale,
             veterinarianId: veterinarian.id,
           });
 
@@ -4878,12 +4907,13 @@ function ScheduleSelectionCell({
               aria-label={`${getScheduleTimeLabelFromMinutes(slotMinutes)} ${veterinarian.name} 접수/예약 생성`}
               aria-disabled={!slotValidation.valid}
               className={cn(
-                "group/slot flex min-h-0 items-center justify-center outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "group/slot flex min-h-0 shrink-0 items-center justify-center outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 slotValidation.valid
                   ? "focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)]"
                   : "cursor-default",
               )}
               data-testid={`${testId}-slot-${getScheduleTimeLabelFromMinutes(slotMinutes).replace(":", "")}`}
+              style={{ height: timeScale.rangeHeight(slotMinutes, slotMinutes + scheduleSlotMinutes) }}
               tabIndex={dragState ? -1 : 0}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" && event.key !== " ") return;
@@ -4910,6 +4940,7 @@ function DayScheduleBoard({
   appointments,
   draftCheckIns,
   operatingDate,
+  operatingSchedule,
   onEmptySlotAffordancePointerMove,
   onClearCalendarTransientSelection,
   onCreateCalendarDraft,
@@ -4927,6 +4958,7 @@ function DayScheduleBoard({
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   operatingDate: string;
+  operatingSchedule: EffectiveOperatingHours;
   onEmptySlotAffordancePointerMove: () => void;
   onClearCalendarTransientSelection: () => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
@@ -4941,8 +4973,9 @@ function DayScheduleBoard({
   selectedVeterinarians: Veterinarian[];
   assignmentVeterinarians: Veterinarian[];
 }) {
-  const dayScheduleHeight = dayScheduleHours.length * dayScheduleHourRowHeight;
-  const currentTimeOffset = getDayCurrentTimeOffset(currentOperatingMinutes);
+  const timeScale = createCalendarTimeScale(operatingSchedule);
+  const dayScheduleHeight = timeScale.totalHeight;
+  const currentTimeOffset = timeScale.minutesToY(currentOperatingMinutes);
   const scheduleGridTemplateColumns = `56px repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`;
   const scheduleBoardMinWidth = `max(100%, calc(56px + ${selectedVeterinarians.length} * 180px))`;
   const assignmentVeterinarianIds = new Set(
@@ -5049,14 +5082,14 @@ function DayScheduleBoard({
             className="relative grid"
             style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
           >
-        {dayScheduleHours.map((hour, index) =>
-          isBusinessHourRow(hour) ? null : (
+        {dayScheduleHours.map((hour) =>
+          timeScale.isSelectable(hour * 60, 60) ? null : (
             <div
               key={`off-hour-background-${hour}`}
               className="pointer-events-none absolute inset-x-0 z-0 bg-muted/70"
               style={{
-                top: index * dayScheduleHourRowHeight,
-                height: dayScheduleHourRowHeight,
+                top: timeScale.minutesToY(hour * 60),
+                height: timeScale.rangeHeight(hour * 60, (hour + 1) * 60),
               }}
             />
           ),
@@ -5080,7 +5113,7 @@ function DayScheduleBoard({
                   !firstLabel && !lastLabel && "-translate-y-1/2",
                 )}
                 style={{
-                  top: index * dayScheduleHourRowHeight,
+                  top: timeScale.minutesToY(hour * 60),
                 }}
               >
                 {getScheduleHourLabel(hour)}
@@ -5106,7 +5139,7 @@ function DayScheduleBoard({
               className="grid border-b"
               style={{
                 gridTemplateColumns: `repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`,
-                height: dayScheduleHourRowHeight,
+                height: timeScale.rangeHeight(hour * 60, (hour + 1) * 60),
               }}
             >
               {selectedVeterinarians.map((veterinarian) => (
@@ -5114,7 +5147,7 @@ function DayScheduleBoard({
                   key={`${hour}-${veterinarian.id}`}
                   className="relative h-full min-h-0 min-w-0 overflow-visible border-r last:border-r-0"
                 >
-                  <CalendarQuarterHourLines />
+                  <CalendarQuarterHourLines hour={hour} scale={timeScale} />
                   <ScheduleSelectionCell
                     affordanceSuspended={emptySlotAffordanceSuspended}
                     calendarDraftSelection={calendarDraftSelection}
@@ -5124,6 +5157,7 @@ function DayScheduleBoard({
                     draftCheckIns={draftCheckIns}
                     hour={hour}
                     operatingDate={operatingDate}
+                    timeScale={timeScale}
                     onAffordancePointerMove={
                       onEmptySlotAffordancePointerMove
                     }
@@ -5173,7 +5207,7 @@ function DayScheduleBoard({
                   className="relative min-w-0"
                 >
                   {laneItems.map((item) => {
-                    const layout = getScheduleCardLayout(item.block);
+                    const layout = getScheduleCardLayout(item.block, timeScale);
                     if (!layout) return null;
                     const horizontalLayout = overlapLayoutById.get(item.id);
                     const overlappingHorizontalLayout =
@@ -5596,6 +5630,7 @@ function ReceptionScheduleBoard({
   appointments,
   draftCheckIns,
   operatingDate,
+  operatingSchedule,
   onClearCalendarDraft,
   onClearCalendarTransientSelection,
   onEmptySlotAffordancePointerMove,
@@ -5618,6 +5653,7 @@ function ReceptionScheduleBoard({
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   operatingDate: string;
+  operatingSchedule: EffectiveOperatingHours;
   onClearCalendarDraft: () => void;
   onClearCalendarTransientSelection: () => void;
   onEmptySlotAffordancePointerMove: () => void;
@@ -5814,6 +5850,7 @@ function ReceptionScheduleBoard({
             appointments={appointments}
             draftCheckIns={draftCheckIns}
             operatingDate={operatingDate}
+            operatingSchedule={operatingSchedule}
             onEmptySlotAffordancePointerMove={
               onEmptySlotAffordancePointerMove
             }
@@ -5995,6 +6032,12 @@ export function ReceptionContent() {
     routeDateParam === null
       ? (operatingDateOverride ?? defaultOperatingDate)
       : (routeOperatingDate ?? defaultOperatingDate);
+  const [operatingSchedule, setOperatingSchedule] = useState<EffectiveOperatingHours>(() =>
+    resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), operatingDate),
+  );
+  const selectedDateOperatingSchedule = operatingSchedule.date === operatingDate
+    ? operatingSchedule
+    : resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), operatingDate);
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
   const veterinarians = liveStaffSourceEnabled
@@ -6385,6 +6428,7 @@ export function ReceptionContent() {
         );
       } else {
         applyPersistedReceptionCalendar(calendarResult.records);
+        setOperatingSchedule(calendarResult.operatingSchedule);
       }
 
       if (!queueResult.ok) {
@@ -6407,6 +6451,7 @@ export function ReceptionContent() {
       operatingDate,
       setReceptionCalendarReadStatus,
       setReceptionQueueReadStatus,
+      setOperatingSchedule,
       workspaceId,
     ],
   );
@@ -6537,6 +6582,7 @@ export function ReceptionContent() {
         appointments={visibleAppointments}
         draftCheckIns={calendarDraftCheckIns}
         operatingDate={operatingDate}
+        operatingSchedule={selectedDateOperatingSchedule}
         onClearCalendarDraft={clearCalendarDraft}
         onClearCalendarTransientSelection={clearCalendarTransientSelection}
         onEmptySlotAffordancePointerMove={() =>

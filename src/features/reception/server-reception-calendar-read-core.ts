@@ -5,6 +5,11 @@ import {
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
 import type { ReceptionCalendarReadRecord } from "@/features/reception/reception-calendar-read";
+import {
+  createInitialHospitalBasicSettingsDraft,
+  resolveEffectiveOperatingHours,
+  type EffectiveOperatingHours,
+} from "@/features/hospital-admin/settings/hospital-basic-settings-model";
 import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
 import { mockAppointments, mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
 import type { Appointment, Encounter, Guardian, Patient, WaitingQueueEntry } from "@/types/emr-domain";
@@ -14,7 +19,7 @@ export type ReceptionCalendarReadGateway = {
     date: string;
     workspaceId: string;
   }): Promise<
-    | { ok: true; records: ReceptionCalendarReadRecord[] }
+    | { ok: true; records: ReceptionCalendarReadRecord[]; operatingSchedule: EffectiveOperatingHours }
     | { ok: false; error: "db_read_failed" }
   >;
 };
@@ -26,6 +31,7 @@ export type ReceptionCalendarReadResult =
       workspaceId: string;
       date: string;
       records: ReceptionCalendarReadRecord[];
+      operatingSchedule: EffectiveOperatingHours;
       enforcedBy: "reception-calendar-read";
     }
   | {
@@ -76,6 +82,7 @@ export async function readReceptionDayCalendar({
     workspaceId,
     date,
     records: result.records,
+    operatingSchedule: result.operatingSchedule,
     enforcedBy: "reception-calendar-read",
   };
 }
@@ -94,9 +101,13 @@ export function createMockReceptionCalendarReadGateway(
 ): ReceptionCalendarReadGateway {
   return {
     async listReceptionDay({ date, workspaceId }) {
+      const operatingSchedule = resolveEffectiveOperatingHours(
+        createInitialHospitalBasicSettingsDraft(), date
+      );
       if (dataset.records) {
         return {
           ok: true,
+          operatingSchedule,
           records: dataset.records.filter((record) => {
             const workspace =
               record.appointment?.workspaceId ??
@@ -141,7 +152,7 @@ export function createMockReceptionCalendarReadGateway(
           ),
         }));
 
-      return { ok: true, records: [...appointmentRecords, ...walkInRecords] };
+      return { ok: true, records: [...appointmentRecords, ...walkInRecords], operatingSchedule };
     },
   };
 }
@@ -168,8 +179,32 @@ export function createSupabaseReceptionCalendarReadGateway(
 
       if (error) return { ok: false, error: "db_read_failed" };
 
-      return { ok: true, records: mapCalendarRows(data) };
+      const payload = data && typeof data === "object" && !Array.isArray(data)
+        ? data as { records?: unknown; operatingSchedule?: unknown }
+        : { records: data, operatingSchedule: undefined };
+      return {
+        ok: true,
+        records: mapCalendarRows(payload.records),
+        operatingSchedule: mapOperatingSchedule(payload.operatingSchedule, date),
+      };
     },
+  };
+}
+
+function mapOperatingSchedule(value: unknown, date: string): EffectiveOperatingHours {
+  const fallback = resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), date);
+  if (!value || typeof value !== "object") return fallback;
+  const row = value as Record<string, unknown>;
+  if (typeof row.timezone !== "string" || typeof row.isOpen !== "boolean") return fallback;
+  return {
+    date: typeof row.date === "string" ? row.date : date,
+    timezone: row.timezone,
+    isOpen: row.isOpen,
+    source: row.source === "exception" ? "exception" : "weekly",
+    treatmentStart: typeof row.treatmentStart === "string" ? row.treatmentStart : null,
+    treatmentEnd: typeof row.treatmentEnd === "string" ? row.treatmentEnd : null,
+    breakStart: typeof row.breakStart === "string" ? row.breakStart : null,
+    breakEnd: typeof row.breakEnd === "string" ? row.breakEnd : null,
   };
 }
 
