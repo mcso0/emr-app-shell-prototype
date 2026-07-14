@@ -68,14 +68,14 @@ The role screen is an explanation and local-first management surface, not the se
 | --- | --- |
 | Purpose | Let hospital admins review registered hospital identity and maintain contact and operating settings. |
 | Primary user | Hospital owner/admin. |
-| Scenario | Admin reviews read-only registered identity, edits contact or operating hours, then saves the session-local draft. |
+| Scenario | Admin reviews read-only registered identity, edits contact or operating hours, then saves. Operating hours persist through the workspace API; contact remains session-local. |
 | Information structure | Header → read-only hospital identity → editable contact → day-by-day operating hours → holiday and exception schedule. |
 | Fields/components | Read-only hospital name/director/address, address copy feedback, phone/fax/homepage/Instagram, day switches, 30-minute time selects, holiday policy, exception dialogs, fixed change bar. |
 | Default state | Prefilled synthetic hospital profile and weekday operating hours. |
 | Empty state | Exception schedule shows `등록된 예외 일정이 없습니다.`. |
-| Permission state | This screen does not claim server-side permission enforcement; future non-admin behavior must be enforced by API/RLS. |
-| Save/cancel flow | The change bar appears only after edits. Save updates the session snapshot; revert confirms before restoring it. Saving operating-hour changes gives a specific toast. |
-| Data/API follow-up | `workspace_hospital_profile`, `workspace_operating_hours`, holiday/exception schedules, admin-only update route, RLS/admin check, audit events, and support-request delivery. |
+| Permission state | Active members can read operating hours; `hospital_settings:manage` and DB workspace-admin enforcement are required to update them. |
+| Save/cancel flow | The change bar appears only after edits. Operating-hour save uses an atomic API/RPC update and blocks if future active appointments would become invalid. Revert confirms before restoring saved values. |
+| Data/API follow-up | Implemented: `workspace_operating_hours`, `workspace_operating_hour_exceptions`, timezone/holiday policy, admin-only update RPC, RLS/grants, audit event, selected-date resolver, and reception calendar/writer adoption. Remaining: contact-profile persistence and trusted public-holiday calendar ingestion. |
 | Screen direction | Quiet, minimal form with no workspace ID, phase, impact, or future-data metadata in the customer-facing surface. |
 
 ### 병원구성원 관리 개선

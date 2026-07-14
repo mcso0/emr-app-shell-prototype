@@ -74,6 +74,12 @@ test("reception calendar read route requires an actor and preserves mock fallbac
   await expectJson(mockFallback, {
     ok: true,
     records: [],
+    operatingSchedule: {
+      date: "2026-05-01",
+      timezone: "Asia/Seoul",
+      treatmentStart: "09:00",
+      treatmentEnd: "19:00",
+    },
     enforcedBy: "reception-calendar-read",
   });
 });
@@ -308,6 +314,25 @@ test("supabase reception calendar gateway accepts snake_case walk-in rows with e
       },
     ],
   });
+});
+
+test("supabase calendar response carries the selected-date effective schedule", async () => {
+  const gateway = createSupabaseReceptionCalendarReadGateway({
+    async rpc() {
+      return {
+        data: {
+          records: [],
+          operatingSchedule: {
+            date: "2026-05-02", timezone: "Asia/Seoul", isOpen: true, source: "weekly",
+            treatmentStart: "10:00", treatmentEnd: "16:00", breakStart: "12:00", breakEnd: "13:00",
+          },
+        },
+        error: null,
+      };
+    },
+  });
+  await expect(gateway.listReceptionDay({ date: "2026-05-02", workspaceId: "clair-demo" }))
+    .resolves.toMatchObject({ ok: true, operatingSchedule: { treatmentStart: "10:00", treatmentEnd: "16:00" } });
 });
 
 test("reception calendar read route stays server-owned and avoids secret-shaped values", () => {

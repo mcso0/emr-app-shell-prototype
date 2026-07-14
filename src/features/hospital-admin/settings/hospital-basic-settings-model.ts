@@ -29,6 +29,7 @@ export type HospitalScheduleException =
     };
 
 export type HospitalBasicSettingsDraft = {
+  timezone: string;
   contact: {
     phone: string;
     fax: string;
@@ -71,6 +72,7 @@ const sundaySchedule: WeekdaySchedule = {
 
 export function createInitialHospitalBasicSettingsDraft(): HospitalBasicSettingsDraft {
   return {
+    timezone: "Asia/Seoul",
     contact: {
       phone: "02-6203-7582",
       fax: "02-6203-7583",
@@ -123,13 +125,79 @@ export function hasOperatingHoursChanges(
   return JSON.stringify({
     exceptions: draft.exceptions,
     holidayPolicy: draft.holidayPolicy,
+    timezone: draft.timezone,
     weeklyHours: draft.weeklyHours,
   }) !==
     JSON.stringify({
       exceptions: savedDraft.exceptions,
       holidayPolicy: savedDraft.holidayPolicy,
+      timezone: savedDraft.timezone,
       weeklyHours: savedDraft.weeklyHours,
     });
+}
+
+export type EffectiveOperatingHours = {
+  date: string;
+  timezone: string;
+  isOpen: boolean;
+  source: "weekly" | "exception";
+  treatmentStart: string | null;
+  treatmentEnd: string | null;
+  breakStart: string | null;
+  breakEnd: string | null;
+};
+
+export function resolveEffectiveOperatingHours(
+  settings: Pick<HospitalBasicSettingsDraft, "timezone" | "weeklyHours" | "exceptions">,
+  date: string
+): EffectiveOperatingHours {
+  const exception = settings.exceptions.find((item) => item.date === date);
+  if (exception?.mode === "closed") {
+    return closedSchedule(date, settings.timezone, "exception");
+  }
+  if (exception?.mode === "custom") {
+    return {
+      date,
+      timezone: settings.timezone,
+      isOpen: true,
+      source: "exception",
+      treatmentStart: exception.treatment.start,
+      treatmentEnd: exception.treatment.end,
+      breakStart: exception.break.start,
+      breakEnd: exception.break.end,
+    };
+  }
+
+  const weekdayIndex = (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7;
+  const schedule = settings.weeklyHours[weekdays[weekdayIndex]];
+  if (!schedule.isOpen) return closedSchedule(date, settings.timezone, "weekly");
+  return {
+    date,
+    timezone: settings.timezone,
+    isOpen: true,
+    source: "weekly",
+    treatmentStart: schedule.treatment.start,
+    treatmentEnd: schedule.treatment.end,
+    breakStart: schedule.break.start,
+    breakEnd: schedule.break.end,
+  };
+}
+
+function closedSchedule(
+  date: string,
+  timezone: string,
+  source: EffectiveOperatingHours["source"]
+): EffectiveOperatingHours {
+  return {
+    date,
+    timezone,
+    isOpen: false,
+    source,
+    treatmentStart: null,
+    treatmentEnd: null,
+    breakStart: null,
+    breakEnd: null,
+  };
 }
 
 export function applyScheduleRangeToOpenDays(

@@ -966,7 +966,7 @@ Delivery history for appointment reminders, check-in notices, turn notices, resu
 
 ## 11. Clinic Settings, Schedule, Migration
 
-### `clinic_hours`
+### `workspace_operating_hours`
 
 Weekly business hours and lunch break settings.
 
@@ -975,39 +975,33 @@ Weekly business hours and lunch break settings.
 | `id` | uuid pk | |
 | `workspace_id` | text fk | |
 | `day_of_week` | int | 0-6 |
-| `opens_at` | time nullable | |
-| `closes_at` | time nullable | |
-| `lunch_starts_at` | time nullable | |
-| `lunch_ends_at` | time nullable | |
-| `is_closed` | boolean | |
+| `treatment_start` | time nullable | null when closed |
+| `treatment_end` | time nullable | null when closed |
+| `break_start` | time nullable | |
+| `break_end` | time nullable | |
+| `is_open` | boolean | |
 
-### `schedule_exceptions`
+### `workspace_operating_hour_exceptions`
 
-Clinic holidays, public holidays, veterinarian vacations, and schedule blocks.
+Workspace-wide closed dates and custom operating-hour overrides. Staff vacations and schedule blocks remain separate scheduling-domain data.
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | uuid pk | |
 | `workspace_id` | text fk | |
-| `user_id` | uuid fk nullable | null means clinic-wide |
-| `exception_type` | text | `holiday`, `vacation`, `blocked`, `extra_open` |
-| `starts_at` | timestamptz | |
-| `ends_at` | timestamptz | |
+| `operating_date` | date | unique per workspace |
+| `mode` | text | `closed`, `custom` |
+| `treatment_start` | time nullable | custom mode only |
+| `treatment_end` | time nullable | custom mode only |
+| `break_start` | time nullable | custom mode only |
+| `break_end` | time nullable | custom mode only |
 | `reason` | text nullable | |
 
-### `settings_change_logs`
+Workspace `timezone` and `holiday_policy` live on `workspaces`. The authoritative date resolver checks an explicit date exception first, then the weekday row. Public-holiday identification still requires explicit exception dates until a trusted holiday-calendar source is added.
 
-Configuration change history.
+### Settings change audit
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid pk | |
-| `workspace_id` | text fk | |
-| `changed_by_user_id` | uuid fk nullable | |
-| `setting_area` | text | `clinic`, `hours`, `service_item`, `space`, `device`, `permission` |
-| `before_value` | jsonb nullable | |
-| `after_value` | jsonb nullable | |
-| `created_at` | timestamptz | |
+Operating-hour changes reuse the canonical `audit_events` table with event type `hospital.operating_hours_updated`; no parallel settings log table is introduced.
 
 ### `migration_jobs`
 

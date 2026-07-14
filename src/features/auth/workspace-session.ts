@@ -240,6 +240,8 @@ export const SESSION_WORKSPACE_SAFE_CUSTOM_PERMISSION_CATALOG = [
   { id: "billing:view", label: "수납 조회" },
   { id: "billing:issue", label: "수납 처리" },
   { id: "service_catalog:view", label: "병원 설정 조회" },
+  { id: "hospital_settings:view", label: "병원 기본 설정 조회" },
+  { id: "hospital_settings:manage", label: "병원 기본 설정 관리" },
 ] as const;
 export const SESSION_WORKSPACE_PERMISSION_ROLES: SessionWorkspacePermissionRole[] = [
   {

@@ -7,7 +7,9 @@ import {
   hasHospitalBasicSettingsChanges,
   hasOperatingHoursChanges,
   validateHospitalBasicSettingsDraft,
+  resolveEffectiveOperatingHours,
 } from "@/features/hospital-admin/settings/hospital-basic-settings-model";
+import { isReceptionTimeAllowed } from "@/features/reception/effective-operating-hours";
 
 test("initial settings are clean and expose 30-minute time choices", () => {
   const initial = createInitialHospitalBasicSettingsDraft();
@@ -50,4 +52,39 @@ test("validation rejects inverted hours and duplicate exception dates", () => {
     "treatment_range",
     "duplicate_exception_date",
   ]);
+});
+
+test("effective hours prefer a date exception and preserve workspace timezone", () => {
+  const draft = createInitialHospitalBasicSettingsDraft();
+  draft.timezone = "Asia/Seoul";
+  draft.exceptions = [{
+    id: "exception-1",
+    date: "2026-07-15",
+    mode: "custom",
+    treatment: { start: "10:00", end: "16:00" },
+    break: { start: "12:00", end: "13:00" },
+  }];
+
+  expect(resolveEffectiveOperatingHours(draft, "2026-07-15")).toEqual({
+    date: "2026-07-15",
+    timezone: "Asia/Seoul",
+    isOpen: true,
+    source: "exception",
+    treatmentStart: "10:00",
+    treatmentEnd: "16:00",
+    breakStart: "12:00",
+    breakEnd: "13:00",
+  });
+});
+
+test("reception validation follows configured hours and blocks the configured break", () => {
+  const settings = createInitialHospitalBasicSettingsDraft();
+  settings.weeklyHours.friday = {
+    isOpen: true,
+    treatment: { start: "08:00", end: "20:00" },
+    break: { start: "12:00", end: "13:00" },
+  };
+  expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T08:00:00+09:00", durationMinutes: 30 }).allowed).toBe(true);
+  expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T12:15:00+09:00", durationMinutes: 30 }).allowed).toBe(false);
+  expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T19:30:00+09:00", durationMinutes: 30 }).allowed).toBe(true);
 });
