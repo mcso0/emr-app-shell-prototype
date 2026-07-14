@@ -67,13 +67,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@/components/ui/item";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -181,7 +174,6 @@ import {
   readChartLiveEncounterHandoff,
   saveChartLiveEncounterHandoff,
 } from "@/features/chart/live-encounter-handoff";
-import { getReceptionVisitContextDetailTarget } from "@/features/reception/visit-context";
 import {
   useReceptionStore,
   type ReceptionCalendarDraftSelection,
@@ -2504,23 +2496,6 @@ function CalendarTaskCard({
   );
 }
 
-const findScenarioEncounter = (
-  encounters: Encounter[] | undefined,
-  encounterId?: string | null,
-) => {
-  if (!encounters?.length) return undefined;
-
-  return (
-    encounters.find((encounter) => encounter.id === encounterId) ??
-    encounters.find((encounter) =>
-      ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(
-        encounter.status,
-      ),
-    ) ??
-    encounters[0]
-  );
-};
-
 function ReceptionStatusBadge({
   className,
   label,
@@ -2552,20 +2527,6 @@ function ReceptionStatusBadge({
     </Badge>
   );
 }
-
-const getEncounterTone = (status: Encounter["status"]) => {
-  if (status === "completed") return "green";
-  if (status === "cancelled") return "red";
-  if (
-    status === "ordered" ||
-    status === "in_consultation" ||
-    status === "ready_for_billing"
-  ) {
-    return "sky";
-  }
-
-  return "default";
-};
 
 const getAppointmentTone = (status: Appointment["status"]) => {
   if (status === "checked_in") return "green";
@@ -4564,62 +4525,6 @@ function ScheduleSelectionCell({
   );
 }
 
-function ReceptionVisitContextBanner({
-  appointment,
-  encounter,
-  detailLabel,
-  guardianName,
-  onOpenDetails,
-  patientName,
-  reason,
-}: {
-  appointment?: Appointment;
-  detailLabel?: "예약 상세" | "접수 상세";
-  encounter?: Encounter;
-  guardianName?: string;
-  onOpenDetails?: () => void;
-  patientName: string;
-  reason: string;
-}) {
-  const statusLabel = encounter
-    ? getReceptionEncounterStatusLabel(encounter.status)
-    : appointment
-      ? getStatusLabel("appointment", appointment.status)
-      : "선택";
-  const statusTone = encounter
-    ? getEncounterTone(encounter.status)
-    : appointment
-      ? getAppointmentTone(appointment.status)
-      : "default";
-  return (
-    <section className="border-b px-4 py-3">
-      <Item
-        data-testid="reception-visit-context"
-        variant="outline"
-      >
-        <ItemContent className="min-w-0">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ReceptionStatusBadge label={statusLabel} tone={statusTone} />
-            <ItemTitle>진료 주의사항</ItemTitle>
-          </div>
-          <ItemDescription>{reason}</ItemDescription>
-          <div className="emr-text-metadata text-muted-foreground">
-            {guardianName ?? "보호자 미지정"} 보호자 · {patientName}
-          </div>
-        </ItemContent>
-        {detailLabel && onOpenDetails ? (
-          <ItemActions>
-            <Button variant="outline" size="sm" onClick={onOpenDetails}>
-              {detailLabel}
-              <ChevronRightIcon data-icon="inline-end" aria-hidden="true" />
-            </Button>
-          </ItemActions>
-        ) : null}
-      </Item>
-    </section>
-  );
-}
-
 function DayScheduleBoard({
   assignmentVeterinarians,
   calendarDraftSelection,
@@ -5753,36 +5658,6 @@ export function ReceptionContent() {
       ),
     [appointments, effectiveSelectedVeterinarianIds],
   );
-  const selectedBundle = isLegacySalesDemoWorkspace(workspaceId)
-    ? getMockPatientBundle(selectedPatientId)
-    : undefined;
-  const selectedPatient = patients.find(
-    (patient) => patient.id === selectedPatientId && patient.workspaceId === workspaceId,
-  );
-  const activeAppointmentId =
-    activeDrawer?.type === "reception-appointment"
-      ? activeDrawer.id
-      : (selectedAppointmentId ?? scenario?.appointmentId);
-  const selectedAppointment =
-    appointments.find(
-      (appointment) => appointment.id === activeAppointmentId,
-    ) ??
-    appointments.find(
-      (appointment) => appointment.patientId === selectedPatientId,
-    );
-  const selectedEncounter = findScenarioEncounter(
-    selectedBundle?.encounters,
-    queryEncounterId,
-  );
-  const selectedVisitReason = getReceptionVisitReason({
-    appointment: selectedAppointment,
-    encounter: selectedEncounter,
-    patientSpecialNote: selectedPatient?.specialNote,
-  });
-  const visitContextDetailTarget = getReceptionVisitContextDetailTarget({
-    appointment: selectedAppointment,
-    encounter: selectedEncounter,
-  });
   const lastMessageDelivery = messageDeliveries.at(-1);
   const toggleVeterinarian = (veterinarianId: string) => {
     setSelectedVeterinarianIds((current) => {
@@ -5874,27 +5749,6 @@ export function ReceptionContent() {
     openReceptionRightPanelDrawer({
       type: "reception-encounter",
       id: draft.encounter.id,
-    });
-  };
-  const handleOpenVisitContextDetails = () => {
-    if (!visitContextDetailTarget) return;
-
-    clearCalendarTransientSelection();
-    selectPatient(visitContextDetailTarget.patientId);
-
-    if (visitContextDetailTarget.type === "reception-encounter") {
-      selectEncounter(visitContextDetailTarget.id);
-      openReceptionRightPanelDrawer({
-        type: "reception-encounter",
-        id: visitContextDetailTarget.id,
-      });
-      return;
-    }
-
-    selectAppointment(visitContextDetailTarget.id);
-    openReceptionRightPanelDrawer({
-      type: "reception-appointment",
-      id: visitContextDetailTarget.id,
     });
   };
   const openWalkInDialog = () => {
@@ -6209,17 +6063,6 @@ export function ReceptionContent() {
         >
           카카오톡 발송 완료: {lastMessageDelivery.bodySnapshot}
         </div>
-      ) : null}
-      {(scenario || queryPatientId || queryEncounterId) && selectedPatient ? (
-        <ReceptionVisitContextBanner
-          appointment={selectedAppointment}
-          detailLabel={visitContextDetailTarget?.label}
-          encounter={selectedEncounter}
-          guardianName={selectedBundle?.primaryGuardian?.name}
-          onOpenDetails={handleOpenVisitContextDetails}
-          patientName={selectedPatient.name}
-          reason={selectedVisitReason}
-        />
       ) : null}
       {calendarReadStatus === "error" ? (
         <EmrInlineAlert
