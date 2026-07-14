@@ -7318,12 +7318,7 @@ function ReceptionReservationFormDrawer({
   const selectedSummary = patientLookup.selectedSummary;
   const selectedPatient = selectedSummary?.patient;
   const selectedGuardian = selectedSummary?.primaryGuardian;
-  const [weightKg, setWeightKg] = useState(
-    formatPatientWeightKgInput(selectedPatient?.weightKg),
-  );
   const selectedTimeOption = timeOptions.find((option) => option.minutes === timeMinutes);
-  const parsedWeightKg = parseWeightKgInput(weightKg);
-  const weightInvalid = Boolean(selectedPatient && weightKg.trim() && !parsedWeightKg);
   const closedDay = isClosedReservationDate(date);
   const hasElapsedOptions = timeOptions.some((option) => option.reason === "지난 시간");
   const hasAvailableTimeOption = timeOptions.some((option) => !option.disabled);
@@ -7343,7 +7338,6 @@ function ReceptionReservationFormDrawer({
     Boolean(selectedPatient) &&
     Boolean(selectedTimeOption) &&
     !selectedTimeOption?.disabled &&
-    !weightInvalid &&
     !closedDay &&
     date >= todayDate;
   const shouldShowPatientLookup =
@@ -7353,11 +7347,6 @@ function ReceptionReservationFormDrawer({
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
   };
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setWeightKg(formatPatientWeightKgInput(selectedPatient?.weightKg));
-  }, [selectedPatient?.id, selectedPatient?.weightKg]);
 
   useEffect(() => {
     if (
@@ -7424,7 +7413,6 @@ function ReceptionReservationFormDrawer({
       patientId: selectedPatient.id,
       reservationMemo: memo.trim() || undefined,
       scheduledStartAt: getReceptionIsoAtMinutes(date, timeMinutes),
-      weightKg: parsedWeightKg,
     };
 
     setSubmitting(true);
@@ -7490,7 +7478,6 @@ function ReceptionReservationFormDrawer({
                       aria-label="환자 선택 초기화"
                       onClick={() => {
                         patientLookup.clearPatientSelection();
-                        setWeightKg("");
                         setPatientLookupOpen(true);
                       }}
                     >
@@ -7569,47 +7556,6 @@ function ReceptionReservationFormDrawer({
                   }
                 />
               </ReceptionSidePanelField>
-            </ReceptionSidePanelSection>
-            <ReceptionSidePanelDivider />
-
-            <ReceptionSidePanelSection title="바이탈" variant="create">
-              <ReceptionSidePanelField
-                icon={<CdsMedicalActivityIcon className="size-3.5" />}
-                label="체중"
-                variant="create"
-              >
-                <div className="min-w-0">
-                  <ReceptionSidePanelInput
-                    aria-label="체중"
-                    disabled={!selectedPatient}
-                    inputMode="decimal"
-                    placeholder="체중을 입력해주세요"
-                    unit="Kg"
-                    value={weightKg}
-                    variant="create"
-                    aria-invalid={weightInvalid || undefined}
-                    className={
-                      weightInvalid
-                        ? "border-[var(--emr-status-danger-border)]"
-                        : ""
-                    }
-                    onValueChange={(value) =>
-                      setWeightKg(value.replace(/[^\d.]/g, ""))
-                    }
-                  />
-                  {weightInvalid ? (
-                    <p className="mt-1 emr-text-micro font-medium text-destructive">
-                      체중은 0보다 큰 숫자로 입력해 주세요.
-                    </p>
-                  ) : null}
-                </div>
-              </ReceptionSidePanelField>
-              <ReceptionSidePanelAddVitalButton
-                disabled={!selectedPatient}
-                onClick={() => {
-                  toast.info("추가 바이탈 입력은 후속 작업에서 연결됩니다.");
-                }}
-              />
             </ReceptionSidePanelSection>
             <ReceptionSidePanelDivider />
 
@@ -7802,7 +7748,7 @@ function ReceptionReservationFormDrawer({
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
           <RegistrationFormSection separated={false} title="환자 정보">
-            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+            <div className="grid gap-3">
               <RegistrationFormField label="환자 검색" required>
                 <div
                   className="relative"
@@ -7835,7 +7781,6 @@ function ReceptionReservationFormDrawer({
                       aria-label="환자 선택 초기화"
                       onClick={() => {
                         patientLookup.clearPatientSelection();
-                        setWeightKg("");
                         setPatientLookupOpen(true);
                       }}
                     >
@@ -7892,22 +7837,6 @@ function ReceptionReservationFormDrawer({
                     </div>
                   ) : null}
                 </div>
-              </RegistrationFormField>
-
-              <RegistrationFormField
-                label="체중"
-                error={weightInvalid ? "체중은 0보다 큰 숫자로 입력해 주세요." : undefined}
-              >
-                <Input
-                  aria-label="체중"
-                  className="h-9 bg-card text-right"
-                  disabled={!selectedPatient}
-                  inputMode="decimal"
-                  placeholder="0.00"
-                  value={weightKg}
-                  aria-invalid={weightInvalid || undefined}
-                  onValueChange={setWeightKg}
-                />
               </RegistrationFormField>
             </div>
           </RegistrationFormSection>

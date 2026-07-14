@@ -15,7 +15,6 @@ const validInput = {
   patientId: "patient-nabi",
   reservationMemo: "DEN-516 예약 메모",
   scheduledStartAt: "2026-05-01T13:00:00+09:00",
-  weightKg: 4.95,
 };
 
 function getUniqueBusinessStartAt() {
@@ -162,18 +161,6 @@ test("appointment create core enforces reception create permission", async () =>
 });
 
 test("appointment create core validates patient, business hours, closed day, and slot conflicts", async () => {
-  const invalidWeight = await createReceptionAppointment({
-    actorUserId: "user-front-desk",
-    input: { ...validInput, weightKg: 0 },
-    workspaceId: "clair-demo",
-  });
-  expect(invalidWeight).toMatchObject({
-    ok: false,
-    status: 400,
-    error: "invalid_input",
-    fieldErrors: { weightKg: "weight_invalid" },
-  });
-
   const missingPatient = await createReceptionAppointment({
     actorUserId: "user-front-desk",
     input: { ...validInput, patientId: "patient-missing" },
@@ -265,9 +252,9 @@ test("supabase appointment create gateway keeps workspace scope in the RPC write
   expect(rpcPayloads).toEqual([
     expect.objectContaining({
       patientId: "patient-nabi",
-      weightKg: 4.95,
     }),
   ]);
+  expect(rpcPayloads[0]).not.toHaveProperty("weightKg");
 });
 
 test("appointment create keeps the created reservation when audit append fails after DB write", async () => {
@@ -298,7 +285,6 @@ test("appointment create keeps the created reservation when audit append fails a
       patientId: appointment.patientId,
       reservationMemo: appointment.visitPurpose,
       scheduledStartAt,
-      weightKg: 12,
     },
     permissionAdapter: createMockWorkspacePermissionAdapter({
       users: [

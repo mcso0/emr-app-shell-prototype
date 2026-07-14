@@ -7,7 +7,6 @@ export type ReceptionAppointmentCreateInput = {
   patientId: string;
   reservationMemo?: string;
   scheduledStartAt: string;
-  weightKg?: number;
 };
 
 export type ReceptionAppointmentCreateResponse =

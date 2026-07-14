@@ -29,7 +29,7 @@ export type ReceptionAppointmentCreateDenialReason =
   | "appointment_closed_day";
 
 export type ReceptionAppointmentCreateFieldErrors = Partial<
-  Record<"patientId" | "durationMinutes" | "scheduledStartAt" | "weightKg", string>
+  Record<"patientId" | "durationMinutes" | "scheduledStartAt", string>
 >;
 
 export type ReceptionAppointmentCreateGatewayResult =
@@ -233,9 +233,6 @@ export function createMockReceptionAppointmentCreateGateway(
         updatedAt: now,
       };
       dataset.appointments.push(appointment);
-      if (typeof input.weightKg === "number") {
-        patient.weightKg = input.weightKg;
-      }
 
       return { ok: true, appointment };
     },
@@ -298,12 +295,6 @@ function normalizeAppointmentCreateInput(
     patientId: input.patientId?.trim() ?? "",
     reservationMemo: trimToUndefined(input.reservationMemo),
     scheduledStartAt: input.scheduledStartAt?.trim() ?? "",
-    weightKg:
-      input.weightKg === undefined
-        ? undefined
-        : typeof input.weightKg === "number" && Number.isFinite(input.weightKg)
-          ? Math.round(input.weightKg * 100) / 100
-          : Number.NaN,
   };
 }
 
@@ -316,13 +307,6 @@ function validateAppointmentCreateInput(input: ReceptionAppointmentCreateInput) 
   if (!input.durationMinutes || input.durationMinutes < 10 || input.durationMinutes > 240) {
     fieldErrors.durationMinutes = "duration_invalid";
   }
-  if (
-    input.weightKg !== undefined &&
-    (!Number.isFinite(input.weightKg) || input.weightKg <= 0)
-  ) {
-    fieldErrors.weightKg = "weight_invalid";
-  }
-
   return Object.keys(fieldErrors).length
     ? { valid: false as const, fieldErrors }
     : { valid: true as const };

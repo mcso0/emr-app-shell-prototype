@@ -2588,7 +2588,6 @@ test("registration and reception create side panels use CDS V2 32px controls", a
   const reservationControlHeights = await Promise.all(
     [
       reservationDrawer.getByLabel("환자 검색"),
-      reservationDrawer.getByLabel("체중"),
       reservationDrawer.getByLabel("예약일"),
       reservationDrawer.getByRole("combobox", { name: "담당의" }),
       reservationDrawer.getByRole("combobox", { name: "예약시간" }),
@@ -2599,10 +2598,14 @@ test("registration and reception create side panels use CDS V2 32px controls", a
       ),
     ),
   );
-  expect(reservationControlHeights).toEqual([32, 32, 32, 32, 32, 32]);
+  expect(reservationControlHeights).toEqual([32, 32, 32, 32, 32]);
+  await expect(
+    reservationDrawer.getByText("바이탈", { exact: true }),
+  ).toHaveCount(0);
+  await expect(reservationDrawer.getByLabel("체중")).toHaveCount(0);
   await expect(
     reservationDrawer.getByRole("button", { name: "바이탈 추가" }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await expect(reservationDrawer.getByRole("combobox", { name: "담당의" })).toContainText(
     "담당의를 선택해주세요",
   );
@@ -4173,6 +4176,11 @@ test("reception creates a reservation through the unified check-in menu", async 
 
   const drawer = page.getByTestId("reservation-create-drawer");
   await expect(drawer).toBeVisible();
+  await expect(drawer.getByText("바이탈", { exact: true })).toHaveCount(0);
+  await expect(drawer.getByLabel("체중")).toHaveCount(0);
+  await expect(
+    drawer.getByRole("button", { name: "바이탈 추가" }),
+  ).toHaveCount(0);
   await expect(drawer.getByLabel("예약일")).toHaveCSS("font-size", "14px");
   await expect(drawer.getByLabel("예약일")).toHaveCSS("height", "32px");
   await expect(drawer.getByLabel("예약시간")).toHaveCSS("font-size", "14px");
@@ -4184,19 +4192,14 @@ test("reception creates a reservation through the unified check-in menu", async 
   const selectedDateButton = page.getByRole("button", { name: /선택됨/ }).last();
   await expect(selectedDateButton).toBeVisible();
   await selectedDateButton.click();
-  await expect(drawer.getByLabel("체중")).toBeDisabled();
-
   await drawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
   await expect(drawer.getByLabel("환자 검색")).toHaveValue(/나비/);
   await expect(drawer.getByLabel("환자 검색")).not.toHaveValue(/patient-nabi/);
-  await expect(drawer.getByLabel("체중")).toHaveValue("4.80");
   await drawer.getByRole("button", { name: "환자 선택 초기화" }).click();
   await expect(drawer.getByLabel("환자 검색")).toHaveValue("");
-  await expect(drawer.getByLabel("체중")).toBeDisabled();
   await drawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
-  await drawer.getByLabel("체중").fill("4.95");
 
   await expect(drawer.getByLabel("예약시간")).toContainText("11:00");
   await expect(drawer.getByLabel("예약시간")).not.toContainText("540");
@@ -4213,8 +4216,8 @@ test("reception creates a reservation through the unified check-in menu", async 
     guardianId: "guardian-oh-sea",
     durationMinutes: 30,
     reservationMemo: "DEN-516 예약 생성 UI 검증",
-    weightKg: 4.95,
   });
+  expect(latestBody).not.toHaveProperty("weightKg");
   expect(String(latestBody?.scheduledStartAt)).toMatch(
     /^2026-05-01T12:00:00\+09:00$/,
   );
@@ -7440,6 +7443,13 @@ test("reception creates a future dragged calendar range as a reservation", async
     .getByTestId("reception-right-panel")
     .getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
+  await expect(
+    reservationDrawer.getByText("바이탈", { exact: true }),
+  ).toHaveCount(0);
+  await expect(reservationDrawer.getByLabel("체중")).toHaveCount(0);
+  await expect(
+    reservationDrawer.getByRole("button", { name: "바이탈 추가" }),
+  ).toHaveCount(0);
   await expect(reservationDrawer.getByText("접수 생성")).toHaveCount(0);
   await expect(page.getByText("접수를 생성할 수 없습니다.")).toHaveCount(0);
   await expect(reservationDrawer.getByLabel("예약일")).toContainText("26.05.02");
@@ -7458,7 +7468,6 @@ test("reception creates a future dragged calendar range as a reservation", async
   await page.waitForTimeout(300);
   await reservationDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
-  await reservationDrawer.getByLabel("체중").fill("4.95");
   await reservationDrawer.getByLabel("예약 메모").fill("미래 드래그 예약 생성");
   await reservationDrawer.getByRole("button", { name: "생성" }).click();
 
@@ -7470,8 +7479,8 @@ test("reception creates a future dragged calendar range as a reservation", async
     guardianId: "guardian-oh-sea",
     patientId: "patient-nabi",
     reservationMemo: "미래 드래그 예약 생성",
-    weightKg: 4.95,
   });
+  expect(latestAppointmentBody).not.toHaveProperty("weightKg");
   expect(String(latestAppointmentBody?.scheduledStartAt)).toBe(
     "2026-05-02T10:00:00+09:00",
   );
