@@ -23,6 +23,7 @@ import {
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import {
   EmrDateNavigator,
   EmrListHeader,
@@ -3407,12 +3408,12 @@ export function BillingRightPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-rightpanel)]">
-      <div className="flex h-[var(--clair-layout-drawer-header)] shrink-0 items-center justify-between border-b px-4">
+      <EmrRightPanelHeader className="justify-between border-b">
         <h2 className="emr-text-body font-semibold">수납 요약</h2>
         <div className="flex items-center gap-2">
           <EmrStatusBadge label={statusLabel} marker="none" />
         </div>
-      </div>
+      </EmrRightPanelHeader>
       <ScrollArea className="min-h-0 flex-1">
         <div className="px-4 py-3">
           <div className="emr-text-metadata text-muted-foreground">

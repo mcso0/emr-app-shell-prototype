@@ -50,6 +50,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrSidePanelMiniCalendar } from "@/components/emr/side-panel-mini-calendar";
@@ -8468,14 +8469,7 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
       aria-label={`${moduleLabel} 우측 사이드 패널`}
       data-testid="reception-right-panel"
     >
-      <header
-        className={cn(
-          "flex shrink-0 items-center justify-between border-b border-[var(--emr-line-default)] px-4",
-          activeDrawer?.type === "reception-encounter"
-            ? "h-14"
-            : "h-[var(--clair-layout-drawer-header)]",
-        )}
-      >
+      <EmrRightPanelHeader className="justify-between border-b border-[var(--emr-line-default)]">
         <div className="flex min-w-0 items-center gap-2">
           <div className="truncate emr-text-panel-title font-semibold text-foreground">
             {title}
@@ -8504,7 +8498,7 @@ export function ReceptionRightPanel({ moduleLabel }: ShellComponentProps) {
             <CdsNavigationSidebarIcon />
           )}
         </EmrRightPanelHeaderIconButton>
-      </header>
+      </EmrRightPanelHeader>
       {isReceptionRightPanelDrawer(activeDrawer) ? (
         <ReceptionDrawer
           presentation="side-panel"
