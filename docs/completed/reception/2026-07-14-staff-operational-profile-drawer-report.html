@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>직원 운영 프로필 드로우 구현 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #111827;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 32px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #ffffff;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        line-height: 1.35;
+      }
+
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      .meta {
+        color: #6b7280;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>직원 운영 프로필 드로우 구현</h1>
+      <p class="meta">2026-07-14 · RECEPTION-PR-007</p>
+
+      <h2>요청</h2>
+      <p>
+        접수 캘린더의 수의사 레인에서 해당 레인을 숨기거나, 업무 화면을 벗어나지
+        않고 공통 직원 운영 프로필과 조회 기준일 근무 정보를 확인할 수 있게
+        한다.
+      </p>
+
+      <h2>변경 사항</h2>
+      <ul>
+        <li>
+          레인 헤더에 hover, 키보드 focus, touch 환경을 고려한 더보기 버튼과
+          정확히 두 개의 메뉴 동작을 추가했다.
+        </li>
+        <li>
+          레인 숨기기는 기존 상단 수의사 필터 상태를 그대로 사용하며 마지막 한
+          명은 숨길 수 없도록 했다.
+        </li>
+        <li>
+          데스크톱 우측 440px, 모바일 전체 너비의 공통 read-only Sheet를
+          추가하고 닫기, Escape, 바깥 클릭, focus 복귀를 지원한다.
+        </li>
+        <li>
+          기존 사용자, 멤버십, 직무, avatar, 근무표 원본을 조합하는
+          workspace-scoped 조회 API를 추가했다. 새 DB field, migration, RLS
+          변경은 없다.
+        </li>
+        <li>
+          권한 역할, 개인 전화번호, 로그인 이력, 내부 membership ID와 업무 역량
+          추론 정보는 응답과 화면에서 제외했다.
+        </li>
+      </ul>
+
+      <h2>데이터와 권한</h2>
+      <p>
+        초기 접수 적용은 active workspace membership과
+        <code>reception:view</code> 권한을 모두 확인한다. 프로필 기본 정보는
+        <code>users</code>, <code>user_profiles</code>,
+        <code>user_memberships</code>, 조직 직무는 기존 job-position assignment,
+        근무는 <code>hospital_schedule_read_snapshot</code>에서 읽는다. 예약
+        건수는 현재 접수 캘린더가 이미 조회한 권한 범위 안에서만 집계한다.
+      </p>
+
+      <h2>검증</h2>
+      <ul>
+        <li>집중 Playwright API·UI 시나리오 11개 통과</li>
+        <li>기존 staff avatar contract 시나리오 4개 통과</li>
+        <li>desktop·mobile screenshot으로 너비와 노출 상태 확인</li>
+        <li><code>npm run lint</code>, TypeScript, build, docs check 통과</li>
+        <li>secret scan에서 추적 파일 3,061개 검사 통과</li>
+      </ul>
+
+      <h2>주의 사항과 다음 결정</h2>
+      <ul>
+        <li>
+          근무표나 병원관리 등 다른 화면으로 확장하기 전에는 접수 권한과 분리된
+          공통 <code>staff:read</code> 정책을 결정해야 한다.
+        </li>
+        <li>
+          레거시 mock 근무표는 user ID와 membership ID를 신뢰성 있게 연결할 수
+          없어 근무를 추정하지 않고 등록 없음으로 표시한다.
+        </li>
+        <li>
+          원격 Supabase migration, RLS 변경, 실데이터 작업은 수행하지 않았다.
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

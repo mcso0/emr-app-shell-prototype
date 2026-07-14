@@ -233,6 +233,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-PR-004            | done         | reception            | P1       | PR 4                 | `docs/work/reception/RECEPTION-PR-004-unified-registration-entry.md`                                   |
 | RECEPTION-PR-005            | done         | reception            | P1       | Project 18 / DEN-382-DEN-385 | `docs/work/reception/RECEPTION-PR-005-calendar-task-creation-ux.md`                             |
 | RECEPTION-PR-006            | human_review | reception            | P1       | Project 19 / DEN-388-DEN-394 | `docs/work/reception/RECEPTION-PR-006-calendar-selection-guardrails.md`                         |
+| RECEPTION-PR-007            | done         | reception            | P1       | User goal / staff operational profile drawer | `docs/work/reception/RECEPTION-PR-007-staff-operational-profile-drawer.md`                    |
 | RECEPTION-LIVE-PR-001       | human_review | reception            | P0       | Project 03 / DEN-54  | `docs/work/reception/RECEPTION-LIVE-PR-001-encounter-persistence-contract.md`                          |
 | RECEPTION-LIVE-PR-002       | human_review | reception            | P0       | Project 03 / DEN-55  | `docs/work/reception/RECEPTION-LIVE-PR-002-schema-extension-plan.md`                                   |
 | RECEPTION-LIVE-PR-003       | human_review | reception            | P0       | Project 03 / DEN-56  | `docs/work/reception/RECEPTION-LIVE-PR-003-schema-migration.md`                                        |
