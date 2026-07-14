@@ -376,7 +376,7 @@ const calendarViewItems = [
 ];
 const receptionQueueTabItems = [
   { value: "all" as const, label: "전체" },
-  { value: "reception" as const, label: "외래" },
+  { value: "reception" as const, label: "접수" },
   { value: "appointment" as const, label: "예약" },
 ];
 const dayScheduleStartHour = 0;
