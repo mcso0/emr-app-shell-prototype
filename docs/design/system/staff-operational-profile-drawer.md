@@ -3,7 +3,7 @@ id: DESIGN-SYSTEM-STAFF-OPERATIONAL-PROFILE-DRAWER
 type: Design Contract
 title: Staff Operational Profile Drawer
 description: Defines a reusable, read-oriented staff operational profile and its reception calendar entry interaction.
-status: draft
+status: active
 area: design-system
 doc_type: design-contract
 tags:
@@ -17,6 +17,18 @@ last_updated: 2026-07-14
 ---
 
 # 직원 운영 프로필 드로우 기획
+
+## 구현 상태
+
+2026-07-14 기준 접수 day calendar의 첫 적용이 구현됐다.
+
+- 레인 헤더 메뉴, 기존 수의사 필터와 동일한 숨김 상태, 마지막 레인 방어를 적용했다.
+- 공통 `StaffOperationalProfileDrawer`와 reception-context 조회 API를 추가했다.
+- 새 DB 필드나 migration 없이 기존 사용자·멤버십·직무·근무표 원본을 조합한다.
+- 현재 조회 권한은 접수 화면의 초기 진입 범위에 맞춰 active workspace membership과 `reception:view`를 함께 요구한다. 다른 화면으로 확장하기 전에는 별도 `staff:read` 정책을 결정해야 한다.
+- 레거시 mock 근무표는 직원 user ID와 schedule membership ID의 신뢰 가능한 연결이 없어 근무 정보를 추론하지 않고 빈 상태로 표시한다.
+
+구현 및 검증 기록은 [RECEPTION-PR-007](../../work/reception/RECEPTION-PR-007-staff-operational-profile-drawer.md)에서 관리한다.
 
 ## 요약
 
@@ -223,7 +235,7 @@ References:
 
 1차 운영 프로필 때문에 새 DB 테이블을 만들지 않는다. `담당 업무`나 업무 역량 데이터도 추가하지 않는다.
 
-### 조회 API 제안
+### 조회 API
 
 ```http
 GET /api/workspaces/{workspaceId}/staff/{userId}/operational-profile?date=2026-07-14&context=reception
@@ -266,7 +278,8 @@ GET /api/workspaces/{workspaceId}/staff/{userId}/operational-profile?date=2026-0
 ### API 권한
 
 - actor는 대상과 동일한 workspace의 active member여야 한다.
-- 기본 운영 프로필 read permission은 최소한의 workspace staff read 권한으로 분리한다.
+- 초기 reception 적용은 active workspace membership과 `reception:view`를 요구한다.
+- 다른 업무 화면으로 재사용할 때는 최소 workspace staff read 권한을 별도 정책으로 분리한다.
 - reception context를 요청하면 actor에게 `reception:view`가 있어야 한다.
 - 관리자용 membership reader의 `role_permission:manage` 응답을 일반 프로필 조회에 그대로 재사용하지 않는다.
 - 응답에는 actor가 볼 수 있는 필드만 직렬화한다.

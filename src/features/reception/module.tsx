@@ -36,6 +36,7 @@ import {
 import { CdsNavigationSidebarIcon } from "@/components/cds-icons/navigation";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { StaffOperationalProfileDrawer } from "@/features/staff/staff-operational-profile-drawer";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
@@ -540,17 +541,27 @@ function getVeterinarianCalendarBadgeToneClassName(
 }
 
 function VeterinarianLaneHeader({
+  onHide,
+  onOpenProfile,
+  selectedLaneCount,
   toneIndex,
   veterinarian,
 }: {
+  onHide: () => void;
+  onOpenProfile: (opener: HTMLButtonElement | null) => void;
+  selectedLaneCount: number;
   toneIndex: number;
   veterinarian: Veterinarian;
 }) {
+  const actionButtonRef = useRef<HTMLButtonElement | null>(null);
+  const hideDisabled = selectedLaneCount <= 1;
+  const hideDescriptionId = `last-veterinarian-lane-description-${veterinarian.id}`;
+
   return (
     <div
       data-testid="veterinarian-lane-header"
       className={cn(
-        "flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border p-[var(--emr-calendar-lane-header-padding)] text-primary-foreground",
+        "group/veterinarian-lane flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border p-[var(--emr-calendar-lane-header-padding)] text-primary-foreground",
         veterinarianHeaderToneClasses[
           toneIndex % veterinarianHeaderToneClasses.length
         ],
@@ -569,9 +580,35 @@ function VeterinarianLaneHeader({
           {veterinarian.initial}
         </AvatarFallback>
       </Avatar>
-      <span className="min-w-0 truncate emr-text-body font-semibold">
+      <span className="min-w-0 flex-1 truncate emr-text-body font-semibold">
         {veterinarian.name}
       </span>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          ref={actionButtonRef}
+          aria-label={`${veterinarian.name} 수의사 옵션`}
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-primary-foreground opacity-0 transition-opacity hover:bg-white/15 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-white/50 group-hover/veterinarian-lane:opacity-100 group-focus-within/veterinarian-lane:opacity-100 data-popup-open:opacity-100 max-md:opacity-100 [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:opacity-100"
+        >
+          <CdsFilesMoreHorizontalIcon aria-hidden="true" className="size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem
+            aria-describedby={hideDisabled ? hideDescriptionId : undefined}
+            disabled={hideDisabled}
+            onClick={onHide}
+          >
+            캘린더에서 숨기기
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onOpenProfile(actionButtonRef.current)}>
+            운영 프로필 보기
+          </DropdownMenuItem>
+          {hideDisabled ? (
+            <span className="sr-only" id={hideDescriptionId}>
+              최소 1명의 수의사를 표시해야 해요
+            </span>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -4537,6 +4574,8 @@ function DayScheduleBoard({
   onEmptySlotAffordancePointerMove,
   onClearCalendarTransientSelection,
   onCreateCalendarDraft,
+  onHideVeterinarian,
+  onOpenVeterinarianProfile,
   onSelectEncounter,
   onSelectAppointment,
   profileDataset,
@@ -4552,6 +4591,11 @@ function DayScheduleBoard({
   onEmptySlotAffordancePointerMove: () => void;
   onClearCalendarTransientSelection: () => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
+  onHideVeterinarian: (veterinarianId: string) => void;
+  onOpenVeterinarianProfile: (
+    veterinarian: Veterinarian,
+    opener: HTMLButtonElement | null,
+  ) => void;
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   profileDataset: ReceptionProfileDataset;
@@ -4598,6 +4642,11 @@ function DayScheduleBoard({
               className="h-[var(--emr-calendar-lane-header-cell-height)] border-r p-[var(--emr-calendar-lane-header-cell-padding)] last:border-r-0"
             >
               <VeterinarianLaneHeader
+                onHide={() => onHideVeterinarian(veterinarian.id)}
+                onOpenProfile={(opener) =>
+                  onOpenVeterinarianProfile(veterinarian, opener)
+                }
+                selectedLaneCount={selectedVeterinarians.length}
                 toneIndex={getVeterinarianToneIndex(
                   veterinarian,
                   selectedVeterinarians,
@@ -5197,6 +5246,8 @@ function ReceptionScheduleBoard({
   onEmptySlotAffordancePointerMove,
   onCreateCalendarDraft,
   onCreateWalkIn,
+  onHideVeterinarian,
+  onOpenVeterinarianProfile,
   onSelectEncounter,
   onSelectAppointment,
   profileDataset,
@@ -5217,6 +5268,11 @@ function ReceptionScheduleBoard({
   onEmptySlotAffordancePointerMove: () => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
   onCreateWalkIn: () => void;
+  onHideVeterinarian: (veterinarianId: string) => void;
+  onOpenVeterinarianProfile: (
+    veterinarian: Veterinarian,
+    opener: HTMLButtonElement | null,
+  ) => void;
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   profileDataset: ReceptionProfileDataset;
@@ -5410,6 +5466,8 @@ function ReceptionScheduleBoard({
               onClearCalendarTransientSelection
             }
             onCreateCalendarDraft={onCreateCalendarDraft}
+            onHideVeterinarian={onHideVeterinarian}
+            onOpenVeterinarianProfile={onOpenVeterinarianProfile}
             profileDataset={profileDataset}
             selectedVeterinarians={selectedVeterinarians}
             onSelectAppointment={onSelectAppointment}
@@ -5484,6 +5542,10 @@ export function ReceptionContent() {
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
     allVeterinarians.map((veterinarian) => veterinarian.id),
   );
+  const [staffProfileTarget, setStaffProfileTarget] = useState<{
+    opener: HTMLButtonElement | null;
+    veterinarian: Veterinarian;
+  } | null>(null);
   const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
     Veterinarian[]
   >([]);
@@ -5676,6 +5738,42 @@ export function ReceptionContent() {
       return [...baseSelection, veterinarianId];
     });
   };
+  const openStaffOperationalProfile = useCallback(
+    (veterinarian: Veterinarian, opener: HTMLButtonElement | null) => {
+      setActiveDrawer(null);
+      setRightPanelOpen(false);
+      setStaffProfileTarget({ opener, veterinarian });
+    },
+    [setActiveDrawer, setRightPanelOpen],
+  );
+  const handleStaffProfileOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) return;
+      const opener = staffProfileTarget?.opener;
+      setStaffProfileTarget(null);
+      window.setTimeout(() => opener?.focus(), 0);
+    },
+    [staffProfileTarget],
+  );
+  const staffProfileContextSummary = useMemo(() => {
+    if (!staffProfileTarget) return undefined;
+    const targetAppointments = appointments.filter(
+      (appointment) =>
+        appointment.assignedVeterinarianId ===
+          staffProfileTarget.veterinarian.id &&
+        appointment.status !== "cancelled",
+    );
+    const processedCount = targetAppointments.filter(
+      (appointment) => appointment.status === "checked_in",
+    ).length;
+
+    return {
+      date: operatingDate,
+      processedCount,
+      remainingCount: Math.max(targetAppointments.length - processedCount, 0),
+      totalCount: targetAppointments.length,
+    };
+  }, [appointments, operatingDate, staffProfileTarget]);
   function clearCalendarTransientSelection() {
     dispatchReceptionCalendarDragClear();
     setCalendarDraftSelection(undefined);
@@ -6108,6 +6206,23 @@ export function ReceptionContent() {
         onSelectEncounter={handleSelectEncounterFromSchedule}
         onCreateCalendarDraft={openCalendarDraftDrawer}
         onCreateWalkIn={openWalkInDialog}
+        onHideVeterinarian={toggleVeterinarian}
+        onOpenVeterinarianProfile={openStaffOperationalProfile}
+      />
+      <StaffOperationalProfileDrawer
+        actorUserId={
+          liveStaffSourceEnabled
+            ? authSession?.id
+            : getReceptionDemoActorId(authSession?.role)
+        }
+        contextSummary={staffProfileContextSummary}
+        currentMinutes={currentOperatingMinutes}
+        date={operatingDate}
+        onOpenChange={handleStaffProfileOpenChange}
+        open={Boolean(staffProfileTarget)}
+        todayDate={defaultOperatingDate}
+        userId={staffProfileTarget?.veterinarian.id ?? null}
+        workspaceId={workspaceId}
       />
     </div>
   );
