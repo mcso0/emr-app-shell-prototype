@@ -206,6 +206,33 @@ test("supabase reception registration gateway keeps workspace scope in the RPC w
   });
 });
 
+test("supabase reception registration gateway rejects a non-UUID existing guardian before RPC", async () => {
+  let rpcCallCount = 0;
+  const gateway = createSupabaseReceptionPatientGuardianRegistrationGateway({
+    async rpc() {
+      rpcCallCount += 1;
+      return { data: null, error: null };
+    },
+  });
+
+  const result = await gateway.registerPatientGuardian({
+    actorUserId: "user-front-desk",
+    workspaceId: "workspace-clair-cheongdam",
+    input: {
+      mode: "existing_guardian_patient",
+      existingGuardianId: "guardian-lee-jieun",
+      patient: validRegistrationInput.patient,
+    },
+  });
+
+  expect(rpcCallCount).toBe(0);
+  expect(result).toEqual({
+    ok: false,
+    status: 409,
+    denialReason: "guardian_unavailable",
+  });
+});
+
 test("reception registration route stays server-owned and avoids secret-shaped values", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/reception/patient-guardian-registration/route.ts",

@@ -19,6 +19,7 @@ import type { Guardian, Patient } from "@/types/emr-domain";
 
 export type ReceptionPatientGuardianLookupGateway = {
   searchPatientGuardianLookup(input: {
+    allowSyntheticAliases?: boolean;
     workspaceId: string;
     query: string;
   }): Promise<
@@ -50,12 +51,14 @@ const maxQueryLength = 80;
 
 export async function lookupReceptionPatientGuardians({
   actorUserId,
+  allowSyntheticAliases = true,
   gateway = createMockReceptionPatientGuardianLookupGateway(),
   permissionAdapter = createDemoReceptionLookupPermissionAdapter(),
   query,
   workspaceId,
 }: {
   actorUserId: string | null;
+  allowSyntheticAliases?: boolean;
   gateway?: ReceptionPatientGuardianLookupGateway;
   permissionAdapter?: WorkspacePermissionAdapter;
   query: string;
@@ -76,6 +79,7 @@ export async function lookupReceptionPatientGuardians({
   }
 
   const result = await gateway.searchPatientGuardianLookup({
+    allowSyntheticAliases,
     workspaceId,
     query: normalizeLookupQuery(query),
   });
@@ -137,8 +141,12 @@ export function createSupabaseReceptionPatientGuardianLookupGateway(
   client: SupabaseReceptionPatientGuardianLookupRpcClient
 ): ReceptionPatientGuardianLookupGateway {
   return {
-    async searchPatientGuardianLookup({ workspaceId, query }) {
-      for (const candidateQuery of getStagingSyntheticLookupQueryCandidates(query)) {
+    async searchPatientGuardianLookup({ allowSyntheticAliases = true, workspaceId, query }) {
+      const candidateQueries = allowSyntheticAliases
+        ? getStagingSyntheticLookupQueryCandidates(query)
+        : [normalizeLookupQuery(query)];
+
+      for (const candidateQuery of candidateQueries) {
         const { data, error } = await client.rpc(
           "clair_search_reception_patient_guardian_lookup",
           {

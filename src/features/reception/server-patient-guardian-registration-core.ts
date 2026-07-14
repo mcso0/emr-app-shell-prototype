@@ -105,6 +105,7 @@ const speciesValues = new Set<Species>([
   "turtle",
   "other",
 ]);
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function registerReceptionPatientGuardian({
   actorUserId,
@@ -321,6 +322,13 @@ export function createSupabaseReceptionPatientGuardianRegistrationGateway(
 ): ReceptionPatientGuardianRegistrationGateway {
   return {
     async registerPatientGuardian({ actorUserId, workspaceId, input }) {
+      if (
+        input.mode === "existing_guardian_patient" &&
+        (!input.existingGuardianId || !uuidPattern.test(input.existingGuardianId))
+      ) {
+        return { ok: false, status: 409, denialReason: "guardian_unavailable" };
+      }
+
       const { data, error } = await client.rpc(
         "clair_register_reception_patient_guardian",
         {
