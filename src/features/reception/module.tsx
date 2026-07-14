@@ -19,6 +19,7 @@ import {
   CdsActionsSearchIcon,
   CdsActionsTrash2Icon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsAlertsEyeIcon } from "@/components/cds-icons/alerts-and-status";
 import {
   CdsFilesCalendarIcon,
   CdsFilesClockIcon,
@@ -302,6 +303,18 @@ const receptionSidePanelVitalOptions: Array<{
   },
 ];
 const veterinarianHeaderToneClasses = [
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-blue-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-blue-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-forest-green-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-forest-green-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-sky-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-sky-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-orange-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-orange-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-green-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-green-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-red-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-red-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-teal-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-teal-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-neutral-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-neutral-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-purple-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-purple-500)]",
+  "[--emr-calendar-lane-header-tone-border:var(--clair-color-atomic-red-300)] [--emr-calendar-lane-header-tone:var(--clair-color-atomic-red-500)]",
+];
+const veterinarianMenuItemToneClasses = [
   "border-[var(--clair-color-atomic-blue-500)] bg-[var(--clair-color-atomic-blue-500)]",
   "border-[var(--clair-color-atomic-forest-green-500)] bg-[var(--clair-color-atomic-forest-green-500)]",
   "border-[var(--clair-color-atomic-sky-500)] bg-[var(--clair-color-atomic-sky-500)]",
@@ -560,8 +573,10 @@ function VeterinarianLaneHeader({
   return (
     <div
       data-testid="veterinarian-lane-header"
+      tabIndex={0}
+      aria-label={`${veterinarian.name} 레인 헤더`}
       className={cn(
-        "group/veterinarian-lane flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border p-[var(--emr-calendar-lane-header-padding)] text-primary-foreground",
+        "emr-calendar-lane-header group/veterinarian-lane flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-calendar-lane-header-tone-border)] p-[var(--emr-calendar-lane-header-padding)] text-[var(--emr-calendar-lane-header-text)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
         veterinarianHeaderToneClasses[
           toneIndex % veterinarianHeaderToneClasses.length
         ],
@@ -583,32 +598,49 @@ function VeterinarianLaneHeader({
       <span className="min-w-0 flex-1 truncate emr-text-body font-semibold">
         {veterinarian.name}
       </span>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          ref={actionButtonRef}
-          aria-label={`${veterinarian.name} 수의사 옵션`}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-primary-foreground opacity-0 transition-opacity hover:bg-white/15 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-white/50 group-hover/veterinarian-lane:opacity-100 group-focus-within/veterinarian-lane:opacity-100 data-popup-open:opacity-100 max-md:opacity-100 [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:opacity-100"
+      <div
+        className="invisible ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/veterinarian-lane:visible group-hover/veterinarian-lane:opacity-100 group-focus/veterinarian-lane:visible group-focus/veterinarian-lane:opacity-100 group-focus-within/veterinarian-lane:visible group-focus-within/veterinarian-lane:opacity-100 max-md:visible max-md:opacity-100 [@media(hover:none)]:visible [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:visible [@media(pointer:coarse)]:opacity-100"
+        data-testid="veterinarian-lane-header-actions"
+      >
+        <button
+          type="button"
+          aria-label={`${veterinarian.name} 레인 숨기기`}
+          aria-describedby={hideDisabled ? hideDescriptionId : undefined}
+          className="grid size-[var(--emr-calendar-lane-header-action-size)] place-items-center rounded-[var(--emr-calendar-lane-header-action-radius)] bg-transparent p-1 text-[var(--emr-calendar-lane-header-action-icon)] outline-none transition-colors hover:bg-[var(--emr-calendar-lane-header-action-hover)] focus-visible:bg-[var(--emr-calendar-lane-header-action-hover)] focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40"
+          disabled={hideDisabled}
+          onClick={onHide}
         >
-          <CdsFilesMoreHorizontalIcon aria-hidden="true" className="size-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem
-            aria-describedby={hideDisabled ? hideDescriptionId : undefined}
-            disabled={hideDisabled}
-            onClick={onHide}
+          <CdsAlertsEyeIcon aria-hidden="true" size={16} />
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            ref={actionButtonRef}
+            aria-label={`${veterinarian.name} 수의사 옵션`}
+            className="grid size-[var(--emr-calendar-lane-header-action-size)] place-items-center rounded-[var(--emr-calendar-lane-header-action-radius)] bg-transparent p-1 text-[var(--emr-calendar-lane-header-action-icon)] outline-none transition-colors hover:bg-[var(--emr-calendar-lane-header-action-hover)] focus-visible:bg-[var(--emr-calendar-lane-header-action-hover)] focus-visible:ring-2 focus-visible:ring-ring/50 data-popup-open:bg-[var(--emr-calendar-lane-header-action-hover)]"
           >
-            캘린더에서 숨기기
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onOpenProfile(actionButtonRef.current)}>
-            운영 프로필 보기
-          </DropdownMenuItem>
-          {hideDisabled ? (
-            <span className="sr-only" id={hideDescriptionId}>
-              최소 1명의 수의사를 표시해야 해요
-            </span>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <CdsFilesMoreHorizontalIcon aria-hidden="true" size={16} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              aria-describedby={hideDisabled ? hideDescriptionId : undefined}
+              disabled={hideDisabled}
+              onClick={onHide}
+            >
+              캘린더에서 숨기기
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onOpenProfile(actionButtonRef.current)}
+            >
+              운영 프로필 보기
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {hideDisabled ? (
+          <span className="sr-only" id={hideDescriptionId}>
+            최소 1명의 수의사를 표시해야 해요
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -625,8 +657,8 @@ function VeterinarianMenuItemLabel({
       <span
         className={cn(
           "flex size-5 shrink-0 items-center justify-center rounded-full border text-[9px] font-semibold leading-none text-primary-foreground",
-          veterinarianHeaderToneClasses[
-            toneIndex % veterinarianHeaderToneClasses.length
+          veterinarianMenuItemToneClasses[
+            toneIndex % veterinarianMenuItemToneClasses.length
           ],
         )}
       >
@@ -4649,7 +4681,7 @@ function DayScheduleBoard({
                 selectedLaneCount={selectedVeterinarians.length}
                 toneIndex={getVeterinarianToneIndex(
                   veterinarian,
-                  selectedVeterinarians,
+                  assignmentVeterinarians,
                 )}
                 veterinarian={veterinarian}
               />

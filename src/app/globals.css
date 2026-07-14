@@ -93,6 +93,25 @@
   }
 }
 
+@layer components {
+  .emr-calendar-lane-header {
+    background-color: color-mix(
+      in srgb,
+      var(--emr-calendar-lane-header-tone) 6%,
+      var(--clair-color-atomic-common-100)
+    );
+  }
+
+  .emr-calendar-lane-header:hover,
+  .emr-calendar-lane-header:focus-visible {
+    background-color: color-mix(
+      in srgb,
+      var(--emr-calendar-lane-header-tone) 16%,
+      var(--clair-color-atomic-common-100)
+    );
+  }
+}
+
 @layer utilities {
   @keyframes clair-logo-loader-breathe {
     0%,

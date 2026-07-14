@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR · 캘린더 구성원 헤더 시안</title>
+    <style>
+      :root {
+        --page: #f4f6f8;
+        --surface: #ffffff;
+        --surface-subtle: #f8fafc;
+        --line: #dde3ea;
+        --line-strong: #c8d2dc;
+        --ink: #293443;
+        --muted: #667085;
+        --focus: #1d80de;
+        /* Figma node 27684:22152 rendered flat-color values. */
+        --figma-lane-default-bg: #f3f8fc;
+        --figma-lane-hover-bg: #deebf7;
+        --figma-lane-border: #63b3ed;
+        --figma-lane-text: #2d3748;
+        --figma-action-icon: #6b6d6f;
+        --figma-action-hover-scrim: rgba(0, 0, 0, 0.04);
+        --figma-status-consulting-text: #0080e5;
+        --figma-status-consulting-border: #bfdff8;
+        --figma-status-available-text: #319795;
+        --figma-status-available-border: #cbe5e5;
+        --figma-status-break-text: #dd6b20;
+        --figma-status-break-border: #fbece3;
+        --figma-status-standby-text: #737373;
+        --figma-status-standby-border: #b9b9b9;
+        --figma-status-offwork-text: #746a5f;
+        --figma-status-offwork-border: #eeeceb;
+        --figma-status-leave-text: #6ab98e;
+        --figma-status-leave-border: #b4dcc7;
+        --shadow: 0 12px 28px rgba(31, 45, 61, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-width: 320px;
+        color: var(--ink);
+        background: var(--page);
+        font-family:
+          "Pretendard Variable", Pretendard, "Apple SD Gothic Neo",
+          "Noto Sans KR", sans-serif;
+        word-break: keep-all;
+      }
+      button {
+        font: inherit;
+      }
+      button:focus-visible,
+      summary:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .page {
+        width: min(100%, 1080px);
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0 0 10px;
+        color: #1672c2;
+        font-size: 12px;
+        font-weight: 760;
+        letter-spacing: 0.02em;
+      }
+      .eyebrow::before {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--figma-lane-border);
+        content: "";
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(25px, 4vw, 34px);
+        letter-spacing: -0.04em;
+      }
+      .intro {
+        max-width: 690px;
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: 22px;
+        padding: 13px 14px;
+        border: 1px solid #cfe3f8;
+        border-radius: 10px;
+        background: #f6fbff;
+        color: #38526c;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .notice svg {
+        flex: none;
+        width: 18px;
+        height: 18px;
+        margin-top: 1px;
+        color: #237bca;
+      }
+
+      .mock-shell {
+        margin-top: 24px;
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .mock-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 48px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface-subtle);
+      }
+      .mock-bar strong {
+        font-size: 14px;
+        letter-spacing: -0.02em;
+      }
+      .mock-bar span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .mock-bar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .restore-lanes {
+        border: 0;
+        border-radius: 6px;
+        padding: 5px 7px;
+        color: #2d638f;
+        background: #eaf2f8;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .restore-lanes:hover {
+        background: #dcebf6;
+      }
+      .lane-grid {
+        display: grid;
+        grid-template-columns: 56px repeat(3, minmax(220px, 1fr));
+        width: max(100%, 760px);
+        min-width: 760px;
+      }
+      .time-gutter,
+      .lane-cell {
+        min-height: 56px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .lane-cell {
+        padding: 8px;
+      }
+      .lane-cell:last-child {
+        border-right: 0;
+      }
+      .time-gutter {
+        background: #fbfcfd;
+      }
+      .calendar-body {
+        display: grid;
+        grid-template-columns: 56px repeat(3, minmax(220px, 1fr));
+        width: max(100%, 760px);
+        min-width: 760px;
+        min-height: 170px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .calendar-body > div {
+        border-right: 1px solid var(--line);
+      }
+      .calendar-body > div:last-child {
+        border-right: 0;
+      }
+      .time-labels {
+        padding: 15px 8px;
+        text-align: right;
+      }
+      .empty-lane {
+        position: relative;
+        background-image: linear-gradient(
+          to bottom,
+          transparent 55px,
+          #eef1f4 56px
+        );
+        background-size: 100% 56px;
+      }
+      .empty-lane::after {
+        position: absolute;
+        top: 18px;
+        left: 16px;
+        color: #a1aab6;
+        content: "일정 영역";
+      }
+      .scroll-x {
+        overflow-x: auto;
+      }
+
+      .staff-header {
+        /* One staff member keeps one tone across the calendar header and body. */
+        --lane-300: #63b3ed;
+        --lane-500: #3182ce;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        height: 40px;
+        min-width: 0;
+        border: 1px solid var(--lane-300);
+        border-radius: 12px;
+        padding: 0 9px;
+        color: var(--figma-lane-text);
+        /* Blue 500 at 6% / 16% over white yields the sampled Figma blue state. */
+        background: color-mix(in srgb, var(--lane-500) 6%, #ffffff);
+        transition: background-color 120ms ease;
+      }
+      .staff-header:hover,
+      .staff-header:focus-within,
+      .staff-header.is-hover-demo {
+        background: color-mix(in srgb, var(--lane-500) 16%, #ffffff);
+      }
+      .lane-forest {
+        --lane-300: #84dfa2;
+        --lane-500: #41bc69;
+      }
+      .lane-sky {
+        --lane-300: #53b1ff;
+        --lane-500: #0080e5;
+      }
+      .lane-orange {
+        --lane-300: #f6ad55;
+        --lane-500: #dd6b20;
+      }
+      .lane-green {
+        --lane-300: #68d391;
+        --lane-500: #38a169;
+      }
+      .lane-red {
+        --lane-300: #fc8181;
+        --lane-500: #e53e3e;
+      }
+      .lane-teal {
+        --lane-300: #4fd1c5;
+        --lane-500: #319795;
+      }
+      .lane-purple {
+        --lane-300: #b794f4;
+        --lane-500: #805ad5;
+      }
+      .avatar {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        overflow: hidden;
+        border-radius: 6px;
+        color: #ffffff;
+        background: linear-gradient(145deg, #d5dce5 0 36%, #66778c 37% 100%);
+        font-size: 10px;
+        font-weight: 800;
+      }
+      .avatar.alt {
+        background: linear-gradient(145deg, #f1d9bf 0 36%, #8d6c5c 37% 100%);
+      }
+      .avatar.third {
+        background: linear-gradient(145deg, #d6dece 0 36%, #60765d 37% 100%);
+      }
+      .staff-name {
+        overflow: hidden;
+        min-width: 0;
+        color: var(--figma-lane-text);
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .status-badge {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        border: 1px solid var(--status-border);
+        border-radius: 6px;
+        padding: 0 6px;
+        color: var(--status-text);
+        background: #ffffff;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+      .status-consulting {
+        --status-text: var(--figma-status-consulting-text);
+        --status-border: var(--figma-status-consulting-border);
+      }
+      .status-available {
+        --status-text: var(--figma-status-available-text);
+        --status-border: var(--figma-status-available-border);
+      }
+      .status-break {
+        --status-text: var(--figma-status-break-text);
+        --status-border: var(--figma-status-break-border);
+      }
+      .status-standby {
+        --status-text: var(--figma-status-standby-text);
+        --status-border: var(--figma-status-standby-border);
+      }
+      .status-offwork {
+        --status-text: var(--figma-status-offwork-text);
+        --status-border: var(--figma-status-offwork-border);
+      }
+      .status-leave {
+        --status-text: var(--figma-status-leave-text);
+        --status-border: var(--figma-status-leave-border);
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(2px);
+        transition:
+          opacity 120ms ease,
+          transform 120ms ease;
+      }
+      .staff-header:hover .header-actions,
+      .staff-header:focus-within .header-actions,
+      .staff-header.is-hover-demo .header-actions {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(0);
+      }
+      .icon-button {
+        display: inline-grid;
+        flex: none;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border: 0;
+        border-radius: 6px;
+        color: var(--figma-action-icon);
+        background: transparent;
+        cursor: pointer;
+      }
+      .icon-button:hover,
+      .icon-button:focus-visible {
+        color: #4f555a;
+        background: var(--figma-action-hover-scrim);
+      }
+      .icon-button svg {
+        width: 15px;
+        height: 15px;
+        stroke-width: 1.8;
+      }
+      .menu-wrap {
+        position: relative;
+      }
+      .action-menu {
+        position: absolute;
+        z-index: 2;
+        top: calc(100% + 6px);
+        right: 0;
+        display: none;
+        width: 154px;
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 10px 24px rgba(31, 45, 61, 0.16);
+      }
+      .menu-wrap[data-open="true"] .action-menu {
+        display: block;
+      }
+      .action-menu button {
+        width: 100%;
+        border: 0;
+        padding: 9px 11px;
+        color: #465566;
+        background: transparent;
+        text-align: left;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .action-menu button:hover {
+        background: #f3f7fa;
+        color: #1f5f98;
+      }
+
+      .spec {
+        margin-top: 26px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+      }
+      .spec h2 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: -0.03em;
+      }
+      .spec-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px 34px;
+        margin-top: 16px;
+      }
+      .spec h3 {
+        margin: 0 0 8px;
+        font-size: 13px;
+      }
+      .spec ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .variants {
+        display: grid;
+        gap: 10px;
+      }
+      .variant-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .variant-row .staff-header {
+        max-width: 320px;
+      }
+      .variant-label {
+        min-width: 58px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .prototype-result {
+        min-height: 18px;
+        margin: 13px 0 0;
+        color: #3170a9;
+        font-size: 12px;
+      }
+      .detail-spec {
+        margin-top: 18px;
+      }
+      .detail-spec > p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      .table-wrap {
+        margin-top: 16px;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      table {
+        width: 100%;
+        min-width: 720px;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      th,
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        line-height: 1.55;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      th {
+        color: #4d5a68;
+        background: #f7f9fb;
+        font-size: 11px;
+      }
+      code {
+        border-radius: 4px;
+        padding: 1px 4px;
+        color: #325d81;
+        background: #edf3f8;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+      }
+      .implementation-list {
+        margin: 14px 0 0;
+        padding-left: 20px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .implementation-list strong {
+        color: var(--ink);
+      }
+
+      @media (max-width: 720px) {
+        .page {
+          padding: 28px 16px 48px;
+        }
+        .spec {
+          padding: 18px;
+        }
+        .spec-grid {
+          grid-template-columns: 1fr;
+        }
+        .mock-shell {
+          margin-inline: -16px;
+          border-radius: 0;
+          border-inline: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <p class="eyebrow">Figma node 27684:22152 · Draft</p>
+      <h1>캘린더 데이 헤더 · 구성원 상태 행</h1>
+      <p class="intro">
+        기존 진료의사 레인 색상 정책과 40px 헤더 밀도는 유지하고, 업무 상태
+        배지와 호버 액션만 추가한 검토용 시안이야.
+      </p>
+
+      <div class="notice">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke="currentColor"
+            stroke-width="1.8"
+          />
+          <path
+            d="M12 10.5v5M12 7.5h.01"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+        </svg>
+        <span
+          >아이콘 버튼은 마우스 호버 또는 키보드 포커스에서만 나타난다. 더보기
+          메뉴의 실제 권한·동작은 아직 확정하지 않았고, 이 시안에서는 후보만
+          표시한다.</span
+        >
+      </div>
+
+      <section class="mock-shell" aria-label="접수 일간 캘린더 헤더 시안">
+        <div class="mock-bar">
+          <strong>접수 · 일간 캘린더</strong>
+          <div class="mock-bar-actions">
+            <span data-lane-status>3개 레인 표시</span>
+            <button
+              class="restore-lanes"
+              type="button"
+              data-restore-lanes
+              hidden
+            >
+              숨긴 레인 모두 표시
+            </button>
+          </div>
+        </div>
+        <div class="scroll-x">
+          <div class="lane-grid" data-calendar-grid>
+            <div class="time-gutter" aria-hidden="true"></div>
+            <div
+              class="lane-cell"
+              data-lane-id="seunguk"
+              data-lane-label="이승욱"
+            >
+              <article
+                class="staff-header lane-blue"
+                aria-label="이승욱, 진료중"
+              >
+                <span class="avatar" aria-hidden="true">이</span
+                ><span class="staff-name">이승욱</span
+                ><span class="status-badge status-consulting">진료중</span>
+                <div class="header-actions" aria-label="이승욱 빠른 작업">
+                  <button
+                    class="icon-button"
+                    type="button"
+                    data-eye-toggle
+                    data-lane-id="seunguk"
+                    aria-label="이승욱 레인 숨기기"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M2.5 12s3.3-5 9.5-5 9.5 5 9.5 5-3.3 5-9.5 5-9.5-5-9.5-5Z"
+                        stroke="currentColor"
+                      />
+                      <circle cx="12" cy="12" r="2.2" stroke="currentColor" />
+                    </svg>
+                  </button>
+                  <div class="menu-wrap">
+                    <button
+                      class="icon-button"
+                      type="button"
+                      data-menu-trigger
+                      aria-label="이승욱 더보기"
+                      aria-expanded="false"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <circle cx="5" cy="12" r="1.5" />
+                        <circle cx="12" cy="12" r="1.5" />
+                        <circle cx="19" cy="12" r="1.5" />
+                      </svg>
+                    </button>
+                    <div class="action-menu" role="menu">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        data-action="message"
+                      >
+                        메시지 보내기</button
+                      ><button
+                        type="button"
+                        role="menuitem"
+                        data-action="user-info"
+                      >
+                        사용자 정보 보기
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+            <div
+              class="lane-cell"
+              data-lane-id="harin"
+              data-lane-label="김하린"
+            >
+              <article
+                class="staff-header lane-forest"
+                aria-label="김하린, 업무대기"
+              >
+                <span class="avatar alt" aria-hidden="true">김</span
+                ><span class="staff-name">김하린</span
+                ><span class="status-badge status-standby">업무대기</span>
+                <div class="header-actions" aria-label="김하린 빠른 작업">
+                  <button
+                    class="icon-button"
+                    type="button"
+                    data-eye-toggle
+                    data-lane-id="harin"
+                    aria-label="김하린 레인 숨기기"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M2.5 12s3.3-5 9.5-5 9.5 5 9.5 5-3.3 5-9.5 5-9.5-5-9.5-5Z"
+                        stroke="currentColor"
+                      />
+                      <circle cx="12" cy="12" r="2.2" stroke="currentColor" />
+                    </svg>
+                  </button>
+                  <button
+                    class="icon-button"
+                    type="button"
+                    data-action="more"
+                    aria-label="김하린 더보기"
+                  >
+                    •••
+                  </button>
+                </div>
+              </article>
+            </div>
+            <div
+              class="lane-cell"
+              data-lane-id="doyun"
+              data-lane-label="박도윤"
+            >
+              <article
+                class="staff-header lane-sky"
+                aria-label="박도윤, 진료가능"
+              >
+                <span class="avatar third" aria-hidden="true">박</span
+                ><span class="staff-name">박도윤</span
+                ><span class="status-badge status-available">진료가능</span>
+                <div class="header-actions" aria-label="박도윤 빠른 작업">
+                  <button
+                    class="icon-button"
+                    type="button"
+                    data-eye-toggle
+                    data-lane-id="doyun"
+                    aria-label="박도윤 레인 숨기기"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M2.5 12s3.3-5 9.5-5 9.5 5 9.5 5-3.3 5-9.5 5-9.5-5-9.5-5Z"
+                        stroke="currentColor"
+                      />
+                      <circle cx="12" cy="12" r="2.2" stroke="currentColor" />
+                    </svg>
+                  </button>
+                  <button
+                    class="icon-button"
+                    type="button"
+                    data-action="more"
+                    aria-label="박도윤 더보기"
+                  >
+                    •••
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+          <div class="calendar-body" data-calendar-grid aria-hidden="true">
+            <div class="time-labels">
+              09:00<br /><br />10:00<br /><br />11:00
+            </div>
+            <div class="empty-lane" data-lane-id="seunguk"></div>
+            <div class="empty-lane" data-lane-id="harin"></div>
+            <div class="empty-lane" data-lane-id="doyun"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="spec" aria-labelledby="variant-title">
+        <h2 id="variant-title">상태·호버 검토</h2>
+        <div class="spec-grid">
+          <div>
+            <h3>표시 규칙</h3>
+            <ul>
+              <li>기본: 아바타, 이름, 상태 배지만 표시</li>
+              <li>
+                호버/포커스: 사용자 정보 보기와 더보기 버튼을 오른쪽에 표시
+              </li>
+              <li>
+                상태 배지는 진료중, 진료가능, 휴게중, 업무대기, 퇴근, 휴가중
+                여섯 가지
+              </li>
+              <li>기존 레인 색상·배경 정책은 변경하지 않음</li>
+            </ul>
+          </div>
+          <div class="variants" aria-label="업무 상태 배지 변형">
+            <div class="variant-row">
+              <span class="variant-label">호버</span>
+              <article class="staff-header is-hover-demo">
+                <span class="avatar" aria-hidden="true">이</span
+                ><span class="staff-name">이승욱</span
+                ><span class="status-badge status-consulting">진료중</span>
+                <div class="header-actions">
+                  <button
+                    class="icon-button"
+                    type="button"
+                    data-action="user-info"
+                    aria-label="사용자 정보 보기"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M2.5 12s3.3-5 9.5-5 9.5 5 9.5 5-3.3 5-9.5 5-9.5-5-9.5-5Z"
+                        stroke="currentColor"
+                      />
+                      <circle cx="12" cy="12" r="2.2" stroke="currentColor" />
+                    </svg></button
+                  ><button
+                    class="icon-button"
+                    type="button"
+                    data-action="more"
+                    aria-label="더보기"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" />
+                    </svg>
+                  </button>
+                </div>
+              </article>
+            </div>
+            <div class="variant-row">
+              <span class="variant-label">진료가능</span>
+              <article class="staff-header">
+                <span class="avatar alt" aria-hidden="true">김</span
+                ><span class="staff-name">김하린</span
+                ><span class="status-badge status-available">진료가능</span>
+              </article>
+            </div>
+            <div class="variant-row">
+              <span class="variant-label">휴게중</span>
+              <article class="staff-header">
+                <span class="avatar third" aria-hidden="true">박</span
+                ><span class="staff-name">박도윤</span
+                ><span class="status-badge status-break">휴게중</span>
+              </article>
+            </div>
+            <div class="variant-row">
+              <span class="variant-label">업무대기</span>
+              <article class="staff-header">
+                <span class="avatar" aria-hidden="true">최</span
+                ><span class="staff-name">최은서</span
+                ><span class="status-badge status-standby">업무대기</span>
+              </article>
+            </div>
+            <div class="variant-row">
+              <span class="variant-label">퇴근</span>
+              <article class="staff-header">
+                <span class="avatar alt" aria-hidden="true">정</span
+                ><span class="staff-name">정유진</span
+                ><span class="status-badge status-offwork">퇴근</span>
+              </article>
+            </div>
+            <div class="variant-row">
+              <span class="variant-label">휴가중</span>
+              <article class="staff-header">
+                <span class="avatar third" aria-hidden="true">서</span
+                ><span class="staff-name">서민재</span
+                ><span class="status-badge status-leave">휴가중</span>
+              </article>
+            </div>
+          </div>
+        </div>
+        <p class="prototype-result" aria-live="polite" data-result>
+          검토용 시안: 실제 메시지 발송이나 사용자 정보 조회는 수행하지 않는다.
+        </p>
+      </section>
+
+      <section class="spec detail-spec" aria-labelledby="figma-detail-title">
+        <h2 id="figma-detail-title">Figma 일치 수정 명세</h2>
+        <p>
+          아래 값은 Figma node <code>27684:22152</code>의 렌더링 평면 색을 다시
+          확인한 결과야. 실제 앱에서는 hex를 복사하지 않고 CLAiR 토큰과
+          <code>color-mix()</code> 조합으로 같은 역할값을 만든다.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>대상</th>
+                <th>Figma 기준</th>
+                <th>HTML 시안 수정</th>
+                <th>앱 구현 토큰 규칙</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>레인 기본 배경</td>
+                <td>Blue 샘플: <code>#F3F8FC</code></td>
+                <td>각 레인의 <code>500</code> 색을 흰색과 6% 혼합</td>
+                <td><code>color-mix(in srgb, lane-500 6%, white)</code></td>
+              </tr>
+              <tr>
+                <td>레인 호버 배경</td>
+                <td>Blue 샘플: <code>#DEEBF7</code></td>
+                <td>기본과 같은 레인 색을 16% 혼합</td>
+                <td><code>color-mix(in srgb, lane-500 16%, white)</code></td>
+              </tr>
+              <tr>
+                <td>레인 테두리</td>
+                <td>Blue 샘플: <code>#63B3ED</code></td>
+                <td>각 레인의 <code>300</code> 색 사용</td>
+                <td>Blue / Forest green / Sky 등 기존 tone index 유지</td>
+              </tr>
+              <tr>
+                <td>이름·기본 텍스트</td>
+                <td><code>#2D3748</code>, 16px, 600</td>
+                <td>중립 텍스트로 통일; 레인 색으로 바꾸지 않음</td>
+                <td><code>--clair-color-atomic-gray-700</code> 역할</td>
+              </tr>
+              <tr>
+                <td>헤더 구조</td>
+                <td>320×40 샘플, 12px radius, 좌우 9px, 아바타 24px</td>
+                <td>40px 고정 높이·12px radius·8px 내부 gap</td>
+                <td>기존 <code>--emr-calendar-lane-*</code> 별칭으로 승격</td>
+              </tr>
+              <tr>
+                <td>호버 액션</td>
+                <td>
+                  24×24 고스트, 기본 배경 없음. 아이콘 <code>#6B6D6F</code>
+                </td>
+                <td>
+                  헤더 hover·focus-within에서 노출하고, 아이콘 자체
+                  hover/focus에서만 투명 검정 4%를 덮음
+                </td>
+                <td>
+                  기본 <code>transparent</code>, hover
+                  <code>rgba(0,0,0,.04)</code>; 레인 tone을 덮어쓰지 않음
+                </td>
+              </tr>
+              <tr>
+                <td>진료중 배지</td>
+                <td>
+                  text <code>#0080E5</code>, border <code>#BFDFF8</code>, white
+                  fill
+                </td>
+                <td>20px 높이·6px radius·12px/700</td>
+                <td>업무 상태 토큰으로 매핑, 레인 tone과 독립</td>
+              </tr>
+              <tr>
+                <td>진료가능 / 휴게중</td>
+                <td>
+                  <code>#319795 / #CBE5E5</code>, <code>#DD6B20 / #FBECE3</code>
+                </td>
+                <td>텍스트와 테두리를 각각 분리</td>
+                <td>상태 semantic token으로만 결정</td>
+              </tr>
+              <tr>
+                <td>업무대기 / 퇴근 / 휴가중</td>
+                <td>
+                  <code>#737373 / #B9B9B9</code>,
+                  <code>#746A5F / #EEECEB</code>, <code>#6AB98E / #B4DCC7</code>
+                </td>
+                <td>공통 회색·녹색으로 뭉치지 않음</td>
+                <td>상태별 text/border alias를 각각 둠</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>눈 아이콘으로 레인 숨기기</h3>
+        <ol class="implementation-list">
+          <li>
+            <strong>데이터는 삭제하지 않는다.</strong> 해당 의사 ID만
+            <code>hiddenLaneIds</code>에 넣고, 헤더·캘린더 바디·현재시간선의 열
+            모델에서 제외한다.
+          </li>
+          <li>
+            <strong>남은 레인은 자동으로 채운다.</strong> 가시 레인 수
+            <code>n</code>에 대해
+            <code>56px repeat(n, minmax(220px, 1fr))</code>를 헤더와 바디에
+            동일하게 적용한다. 따라서 3→2→1 레인으로 줄어도 남은 열이 가용 폭을
+            균등하게 채운다.
+          </li>
+          <li>
+            <strong>색상 매핑은 ID 기준으로 유지한다.</strong> 숨겼다가 다시
+            표시해도 같은 의사는 반드시 같은 기존 tone index를 사용한다. 남은
+            레인의 순서에 따라 색을 재배정하면 안 된다.
+          </li>
+          <li>
+            <strong>마지막 한 레인은 숨기지 않는다.</strong> 마지막 레인의 눈
+            버튼은 비활성화하거나 기존 의사 선택 필터로 복원하게 한다. 이 시안의
+            ‘숨긴 레인 모두 표시’는 동작 검증용이며, 실제 앱에서는 기존 의사
+            선택 제어를 재사용한다.
+          </li>
+          <li>
+            <strong>접근성을 유지한다.</strong> 버튼은
+            <code>aria-label="이승욱 레인 숨기기"</code>를 가지며, hover뿐
+            아니라 키보드 focus에서도 노출된다.
+          </li>
+        </ol>
+      </section>
+    </main>
+    <script>
+      const result = document.querySelector("[data-result]");
+      const allLaneIds = ["seunguk", "harin", "doyun"];
+      const visibleLaneIds = new Set(allLaneIds);
+      const laneStatus = document.querySelector("[data-lane-status]");
+      const restoreLanesButton = document.querySelector("[data-restore-lanes]");
+      const updateVisibleLaneLayout = () => {
+        const visibleCount = visibleLaneIds.size;
+        const columnTemplate = `56px repeat(${visibleCount}, minmax(220px, 1fr))`;
+        const minWidth = `${56 + visibleCount * 220}px`;
+        document.querySelectorAll("[data-calendar-grid]").forEach((grid) => {
+          grid.style.gridTemplateColumns = columnTemplate;
+          grid.style.minWidth = minWidth;
+          grid.style.width = `max(100%, ${minWidth})`;
+        });
+        document
+          .querySelectorAll(
+            ".lane-cell[data-lane-id], .empty-lane[data-lane-id]",
+          )
+          .forEach((lane) => {
+            lane.hidden = !visibleLaneIds.has(lane.dataset.laneId);
+          });
+        document.querySelectorAll("[data-eye-toggle]").forEach((button) => {
+          button.disabled = visibleCount === 1;
+          button.setAttribute("aria-disabled", String(visibleCount === 1));
+        });
+        laneStatus.textContent = `${visibleCount}개 레인 표시`;
+        restoreLanesButton.hidden = visibleCount === allLaneIds.length;
+      };
+      const closeMenus = () =>
+        document.querySelectorAll(".menu-wrap[data-open]").forEach((menu) => {
+          menu.dataset.open = "false";
+          menu
+            .querySelector("[data-menu-trigger]")
+            ?.setAttribute("aria-expanded", "false");
+        });
+      document.addEventListener("click", (event) => {
+        const eyeToggle = event.target.closest("[data-eye-toggle]");
+        if (eyeToggle) {
+          const laneId = eyeToggle.dataset.laneId;
+          if (visibleLaneIds.size === 1) {
+            result.textContent =
+              "마지막 레인은 숨길 수 없어. 기존 의사 선택 제어에서 레인을 다시 조정해줘.";
+            return;
+          }
+          visibleLaneIds.delete(laneId);
+          updateVisibleLaneLayout();
+          const label = document.querySelector(`[data-lane-id="${laneId}"]`)
+            ?.dataset.laneLabel;
+          result.textContent = `${label} 레인을 숨겼어. 남은 레인이 가용 폭을 균등하게 채운다.`;
+          return;
+        }
+        if (event.target.closest("[data-restore-lanes]")) {
+          allLaneIds.forEach((laneId) => visibleLaneIds.add(laneId));
+          updateVisibleLaneLayout();
+          result.textContent =
+            "숨긴 레인을 모두 다시 표시했어. 실제 앱에서는 기존 의사 선택 제어를 재사용한다.";
+          return;
+        }
+        const trigger = event.target.closest("[data-menu-trigger]");
+        if (trigger) {
+          const wrap = trigger.closest(".menu-wrap");
+          const nextOpen = wrap.dataset.open !== "true";
+          closeMenus();
+          wrap.dataset.open = String(nextOpen);
+          trigger.setAttribute("aria-expanded", String(nextOpen));
+          return;
+        }
+        if (!event.target.closest(".menu-wrap")) closeMenus();
+        const action = event.target.closest("[data-action]")?.dataset.action;
+        if (action === "message")
+          result.textContent =
+            "후보 동작: 메시지 보내기. 실제 전송은 구현 범위에서 별도 확인이 필요해.";
+        if (action === "user-info")
+          result.textContent =
+            "후보 동작: 사용자 정보 보기. 실제 드로어 연결은 구현 범위에서 별도 확인이 필요해.";
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeMenus();
+      });
+      updateVisibleLaneLayout();
+    </script>
+  </body>
+</html>

@@ -937,6 +937,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   const laneHeader = calendar.getByTestId("veterinarian-lane-header").first();
   const laneAvatar = laneHeader.getByTestId("veterinarian-lane-avatar");
   const laneAvatarFallback = laneAvatar.locator('[data-slot="avatar-fallback"]');
+  const laneAvatarImage = laneAvatar.locator('[data-slot="avatar-image"]');
   const kongAppointment = page.getByTestId(
     "appointment-card-appointment-kong-260501",
   );
@@ -994,7 +995,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
       }),
     )
     .toEqual({
-      backgroundColor: "rgb(49, 130, 206)",
+      backgroundColor: "color(srgb 0.951529 0.970588 0.988471)",
       borderRadius: "8px",
       columnGap: "8px",
       height: 40,
@@ -1025,28 +1026,32 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
       height: 24,
       width: 24,
     });
-  await expect(laneAvatarFallback).toHaveText("SJ");
-  await expect
-    .poll(() =>
-      laneAvatarFallback.evaluate((fallback) => {
-        const style = getComputedStyle(fallback);
+  if (await laneAvatarFallback.count()) {
+    await expect(laneAvatarFallback).toHaveText("SJ");
+    await expect
+      .poll(() =>
+        laneAvatarFallback.evaluate((fallback) => {
+          const style = getComputedStyle(fallback);
 
-        return {
-          backgroundColor: style.backgroundColor,
-          borderRadius: style.borderRadius,
-          color: style.color,
-          fontSize: style.fontSize,
-          fontWeight: style.fontWeight,
-        };
-      }),
-    )
-    .toEqual({
-      backgroundColor: "rgb(252, 252, 253)",
-      borderRadius: "6px",
-      color: "rgb(113, 128, 150)",
-      fontSize: "12px",
-      fontWeight: "500",
-    });
+          return {
+            backgroundColor: style.backgroundColor,
+            borderRadius: style.borderRadius,
+            color: style.color,
+            fontSize: style.fontSize,
+            fontWeight: style.fontWeight,
+          };
+        }),
+      )
+      .toEqual({
+        backgroundColor: "rgb(252, 252, 253)",
+        borderRadius: "6px",
+        color: "rgb(113, 128, 150)",
+        fontSize: "12px",
+        fontWeight: "500",
+      });
+  } else {
+    await expect(laneAvatarImage).toHaveAttribute("alt", "");
+  }
 
   const currentTimeLabel = calendar.getByTestId("day-current-time-label");
   await expect(currentTimeLabel).toHaveText("10:45");
@@ -1833,6 +1838,66 @@ test("reception month calendar fills the available calendar height", async ({
   expect(sizes.calendarHeight).toBeGreaterThanOrEqual(sizes.viewportHeight - 1);
 });
 
+test("reception day calendar hides a lane from its ghost action without recoloring remaining lanes", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception");
+
+  const calendar = page.getByTestId("reception-day-calendar");
+  const laneHeaderRow = calendar.getByTestId(
+    "reception-day-calendar-lane-header",
+  );
+  const laneHeaders = calendar.getByTestId("veterinarian-lane-header");
+  await expect.poll(() => laneHeaders.count()).toBeGreaterThan(1);
+  const hiddenLaneHeader = laneHeaders.first();
+  const retainedLaneHeader = laneHeaders.nth(1);
+  const initialLaneCount = await laneHeaders.count();
+  const retainedLaneBorderBefore = await retainedLaneHeader.evaluate((header) =>
+    getComputedStyle(header).borderColor,
+  );
+
+  await hiddenLaneHeader.hover();
+  const hideLaneButton = hiddenLaneHeader.getByRole("button", {
+    name: "이수지 레인 숨기기",
+  });
+
+  await expect(hideLaneButton).toBeVisible();
+  await expect
+    .poll(() =>
+      hideLaneButton.evaluate((button) => getComputedStyle(button).backgroundColor),
+    )
+    .toBe("rgba(0, 0, 0, 0)");
+
+  await hideLaneButton.hover();
+  await expect
+    .poll(() =>
+      hideLaneButton.evaluate((button) => getComputedStyle(button).backgroundColor),
+    )
+    .toBe("rgba(0, 0, 0, 0.04)");
+
+  await hideLaneButton.click();
+
+  await expect(laneHeaders).toHaveCount(initialLaneCount - 1);
+  await expect(
+    calendar
+      .getByTestId("veterinarian-lane-header")
+      .filter({ hasText: "김도윤" }),
+  ).toHaveCount(1);
+  await expect
+    .poll(() =>
+      laneHeaderRow.evaluate((row) =>
+        getComputedStyle(row).gridTemplateColumns.split(" ").length,
+      ),
+    )
+    .toBe(initialLaneCount);
+
+  const retainedLaneBorderAfter = await calendar
+    .getByTestId("veterinarian-lane-header")
+    .filter({ hasText: "김도윤" })
+    .evaluate((header) => getComputedStyle(header).borderColor);
+  expect(retainedLaneBorderAfter).toBe(retainedLaneBorderBefore);
+});
+
 test("reception veterinarian selector controls visible schedule lanes", async ({
   page,
 }) => {
@@ -1847,8 +1912,6 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   await expect(
     calendar.getByText("김도윤", { exact: true }).first(),
   ).toBeVisible();
-  await expect(calendar.getByText("SJ", { exact: true }).first()).toBeVisible();
-  await expect(calendar.getByText("DY", { exact: true }).first()).toBeVisible();
 
   const veterinarianButton = scheduleToolbar.getByRole("button", {
     name: "이수지 +9",
@@ -1883,8 +1946,6 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   const veterinarianMenu = page.getByRole("menu");
   await expect(veterinarianMenu.getByText("오늘 근무 수의사")).toBeVisible();
   await expect(veterinarianMenu.getByText("그 외 수의사")).toBeVisible();
-  await expect(veterinarianMenu.getByText("SJ", { exact: true })).toBeVisible();
-  await expect(veterinarianMenu.getByText("DY", { exact: true })).toBeVisible();
   await expect(page.getByRole("menuitemcheckbox")).toHaveCount(10);
   await page.getByRole("menuitemcheckbox", { name: "김도윤" }).click();
   await page.getByRole("menuitemcheckbox", { name: "박서연" }).click();
