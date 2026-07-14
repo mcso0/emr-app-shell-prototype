@@ -5,7 +5,7 @@ const migrationPath =
   "supabase/migrations/20260714102902_reception_vital_measurement_history.sql";
 const migration = readFileSync(migrationPath, "utf8");
 const permissionHardeningMigrationPath =
-  "supabase/migrations/20260714193844_reception_vital_rpc_permission_hardening.sql";
+  "supabase/migrations/20260714110547_reception_vital_rpc_permission_hardening.sql";
 const permissionHardeningMigration = existsSync(permissionHardeningMigrationPath)
   ? readFileSync(permissionHardeningMigrationPath, "utf8")
   : "";

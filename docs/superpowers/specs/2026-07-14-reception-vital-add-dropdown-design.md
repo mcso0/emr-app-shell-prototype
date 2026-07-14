@@ -33,7 +33,7 @@ Implemented locally on 2026-07-14. Reservation creation no longer renders or sen
 
 Docker local Supabase reset and a transaction-scoped replay verified direct-write denial, exact insert/readback, and forced-failure rollback. After separate approval, staging migration `20260714102902_reception_vital_measurement_history` and the same synthetic rollback replay also passed remotely.
 
-The staging review then found a DB authorization gap: the applied authenticated SECURITY DEFINER RPC verified actor identity and active membership but did not repeat the route-level `reception:create` permission check. Forward migration `20260714193844_reception_vital_rpc_permission_hardening.sql` is prepared and transactionally replayed on staging, but is not applied to staging migration history. Production DB changes, real-data access, history browsing UI, and production deployment remain outside this implementation result.
+The staging review then found a DB authorization gap: the applied authenticated SECURITY DEFINER RPC verified actor identity and active membership but did not repeat the route-level `reception:create` permission check. Forward migration `20260714110547_reception_vital_rpc_permission_hardening.sql` is now applied on staging. Post-application replay proved that the synthetic technician is denied with `permission_missing`, the authorized actor can write and read back the atomic encounter/queue/vital set, forced vital failure rolls back the encounter and queue, and all probe transactions leave zero persistent rows. Production DB changes, real-data access, history browsing UI, and production deployment remain outside this implementation result until the production Supabase target is identified and separately verified.
 
 ## Product Scope
 
