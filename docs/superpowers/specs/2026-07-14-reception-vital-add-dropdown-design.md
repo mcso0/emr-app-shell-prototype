@@ -22,7 +22,7 @@ Let reception staff add only the vital fields needed for the current reception o
 
 | Vital | Unit | Default state |
 | --- | --- | --- |
-| 체중 | kg | Always visible |
+| 체중 | kg | Initially visible; selectable again if removed |
 | 체온 | °C | Optional |
 | 호흡 | rpm | Optional |
 | 혈압 | mmHg | Optional |
@@ -32,14 +32,16 @@ Let reception staff add only the vital fields needed for the current reception o
 ## Interaction Contract
 
 1. `바이탈 추가` opens a dropdown anchored to the full-width trigger.
-2. The dropdown lists only optional vitals that are not currently present.
+2. The dropdown lists every vital that is not currently present, including `체중` if it was removed.
 3. Selecting an option closes the dropdown, inserts its row below the existing vital rows, and moves focus to the new input.
 4. Added rows keep their selection order.
-5. Each optional row has a clearly labelled remove action.
-6. Removing a row returns its option to the dropdown.
-7. When every optional vital is present, the add trigger is hidden.
-8. If a row is removed, the add trigger returns below the remaining rows.
-9. New vital fields start empty. The UI must not insert synthetic normal values.
+5. Vital rows use consistent vertical spacing and never touch each other.
+6. When two or more rows are present, every row—including `체중`—shows a clearly labelled remove action.
+7. At least one vital row must remain. When only one row remains, its remove action is hidden.
+8. Removing a row returns its option to the dropdown.
+9. When every vital is present, the add trigger is hidden.
+10. If a row is removed, the add trigger returns below the remaining rows.
+11. Newly added optional fields start empty. Initial `체중` may use the selected patient's latest value.
 
 ## Dropdown Design
 
@@ -61,7 +63,7 @@ Let reception staff add only the vital fields needed for the current reception o
 
 - Trigger exposes `aria-expanded` and `aria-controls`.
 - Dropdown uses menu semantics and options are keyboard reachable.
-- Remove buttons include the vital name, such as `체온 삭제`.
+- Remove buttons include the vital name, such as `체온 삭제`, and are absent when deletion is not allowed.
 - Addition and removal are announced through an `aria-live` status region.
 
 ## Out Of Scope
@@ -74,4 +76,3 @@ Let reception staff add only the vital fields needed for the current reception o
 ## Review Artifact
 
 - `docs/design/screens/reception/planning/reception-vital-add-dropdown-prototype.html`
-

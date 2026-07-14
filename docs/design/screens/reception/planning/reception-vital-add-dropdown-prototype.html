@@ -187,6 +187,11 @@
       .input-shell input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,136,242,.13); }
       .unit { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 12px; pointer-events: none; }
 
+      #optional-vitals {
+        display: grid;
+        gap: 10px;
+      }
+
       .optional-row {
         animation: row-in 150ms ease-out;
       }
@@ -348,10 +353,6 @@
 
           <section class="section" id="vital-section">
             <div class="section-title">바이탈</div>
-            <div class="field-row">
-              <label class="field-label" for="weight">〽 체중</label>
-              <div class="input-shell"><input id="weight" inputmode="decimal" value="6.00" /><span class="unit">kg</span></div>
-            </div>
             <div id="optional-vitals"></div>
             <div class="add-wrap" id="add-wrap">
               <button class="add-trigger" id="add-trigger" type="button" aria-expanded="false" aria-controls="vital-menu">
@@ -384,7 +385,7 @@
       </aside>
     </main>
 
-    <aside class="prototype-note"><strong>인터랙티브 시안</strong><br />오른쪽 패널의 `바이탈 추가`를 눌러 체온·호흡·혈압을 추가하거나, 행 오른쪽 삭제 버튼으로 되돌릴 수 있어요.</aside>
+    <aside class="prototype-note"><strong>인터랙티브 시안</strong><br />오른쪽 패널의 `바이탈 추가`로 행을 추가할 수 있어요. 두 개 이상이면 체중을 포함한 모든 행을 삭제할 수 있고, 마지막 한 행은 삭제할 수 없어요.</aside>
 
     <script>
       const iconPlus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>';
@@ -392,14 +393,17 @@
       const iconThermometer = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.8V5a4 4 0 0 0-8 0v9.8a6 6 0 1 0 8 0Z" /><path d="M10 9v7" /></svg>';
       const iconWind = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h10a3 3 0 1 0-3-3M4 12h15a3 3 0 1 1-3 3M4 16h7" /></svg>';
       const iconPulse = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>';
+      const iconWeight = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h4l2-6 4 12 2-6h4" /></svg>';
 
       const vitals = [
+        { id: 'weight', label: '체중', unit: 'kg', icon: iconWeight, inputMode: 'decimal' },
         { id: 'temperature', label: '체온', unit: '°C', icon: iconThermometer, inputMode: 'decimal' },
         { id: 'respiration', label: '호흡', unit: 'rpm', icon: iconWind, inputMode: 'numeric' },
         { id: 'blood-pressure', label: '혈압', unit: 'mmHg', icon: iconPulse, inputMode: 'decimal' },
       ];
 
-      const selected = [];
+      const selected = ['weight'];
+      const draftValues = { weight: '6.00' };
       const trigger = document.querySelector('#add-trigger');
       const menu = document.querySelector('#vital-menu');
       const wrap = document.querySelector('#add-wrap');
@@ -431,6 +435,7 @@
       }
 
       function renderRows(focusId) {
+        const canRemove = selected.length > 1;
         rows.innerHTML = selected.map((id) => {
           const vital = vitals.find((item) => item.id === id);
           return `
@@ -438,10 +443,10 @@
               <label class="field-label" for="vital-${vital.id}">${vital.icon} ${vital.label}</label>
               <div class="optional-control">
                 <div class="input-shell">
-                  <input id="vital-${vital.id}" inputmode="${vital.inputMode}" aria-label="${vital.label}" />
+                  <input id="vital-${vital.id}" inputmode="${vital.inputMode}" aria-label="${vital.label}" value="${draftValues[vital.id] ?? ''}" />
                   <span class="unit">${vital.unit}</span>
                 </div>
-                <button class="remove-btn" type="button" data-remove="${vital.id}" aria-label="${vital.label} 삭제">${iconTrash}</button>
+                ${canRemove ? `<button class="remove-btn" type="button" data-remove="${vital.id}" aria-label="${vital.label} 삭제">${iconTrash}</button>` : ''}
               </div>
             </div>
           `;
@@ -466,6 +471,7 @@
       rows.addEventListener('click', (event) => {
         const remove = event.target.closest('[data-remove]');
         if (!remove) return;
+        if (selected.length <= 1) return;
         const id = remove.dataset.remove;
         const vital = vitals.find((item) => item.id === id);
         const index = selected.indexOf(id);
@@ -473,6 +479,13 @@
         renderRows();
         status.textContent = `${vital.label} 입력 행이 삭제되었습니다.`;
         requestAnimationFrame(() => trigger.focus());
+      });
+
+      rows.addEventListener('input', (event) => {
+        const input = event.target.closest('input');
+        const row = event.target.closest('[data-row]');
+        if (!input || !row) return;
+        draftValues[row.dataset.row] = input.value;
       });
 
       document.addEventListener('click', (event) => {
@@ -485,7 +498,7 @@
         trigger.focus();
       });
 
-      renderMenu();
+      renderRows();
     </script>
   </body>
 </html>
