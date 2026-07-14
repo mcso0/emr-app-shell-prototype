@@ -25,7 +25,6 @@ import {
   CdsFilesCalendarIcon,
   CdsFilesClockIcon,
   CdsFilesMoreHorizontalIcon,
-  CdsFilesReceptionCalendarIcon,
 } from "@/components/cds-icons/files-and-layout";
 import {
   CdsMedicalActivityIcon,
@@ -4101,14 +4100,9 @@ function ReceptionScheduleDateControl({
       data-testid="reception-date-control"
     >
       <span
-        className="flex h-[var(--clair-control-height-sm)] items-center gap-[10px] text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
+        className="flex h-[var(--clair-control-height-sm)] items-center text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
         aria-label={`${dateControlLabel.dateLabel} 표시 중`}
       >
-        <CdsFilesReceptionCalendarIcon
-          aria-hidden="true"
-          className="shrink-0 text-[var(--clair-color-atomic-neutral-400)]"
-          size={22}
-        />
         {dateControlLabel.dateLabel}
       </span>
     </div>
@@ -4170,7 +4164,7 @@ function ScheduleToolbar({
 
   return (
     <div
-      className="flex h-[var(--emr-calendar-toolbar-height)] shrink-0 flex-nowrap items-center justify-between gap-4 overflow-hidden border-b bg-[var(--emr-surface-workspace)] px-[var(--emr-calendar-toolbar-padding-x)]"
+      className="flex h-[var(--emr-calendar-toolbar-height)] shrink-0 flex-nowrap items-center justify-between gap-4 overflow-hidden border-b bg-[var(--emr-surface-workspace)] pb-[var(--emr-calendar-toolbar-padding-bottom)] pl-[var(--emr-calendar-toolbar-padding-left)] pr-[var(--emr-calendar-toolbar-padding-right)] pt-[var(--emr-calendar-toolbar-padding-top)]"
       data-testid="schedule-toolbar"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-[var(--clair-spacing-16)]">

@@ -308,9 +308,12 @@
   --emr-reception-create-textarea-min-height: 76px;
   --emr-reception-create-select-content-min-width: 224px;
   --emr-reception-create-add-vital-bg: var(--clair-color-atomic-white-alpha-4);
-  --emr-calendar-toolbar-height: 52px;
+  --emr-calendar-toolbar-height: 56px;
   --clair-layout-drawer-header: 52px;
-  --emr-calendar-toolbar-padding-x: var(--clair-spacing-16);
+  --emr-calendar-toolbar-padding-top: var(--clair-spacing-12);
+  --emr-calendar-toolbar-padding-right: var(--clair-spacing-12);
+  --emr-calendar-toolbar-padding-bottom: var(--clair-spacing-12);
+  --emr-calendar-toolbar-padding-left: var(--clair-spacing-20);
   --emr-calendar-lane-header-cell-height: 56px;
   --emr-calendar-lane-header-cell-padding: var(--clair-spacing-8);
   --emr-calendar-lane-header-height: var(--clair-spacing-40);
