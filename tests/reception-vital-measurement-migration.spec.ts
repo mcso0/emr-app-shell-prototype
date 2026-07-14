@@ -55,7 +55,7 @@ test("walk-in RPC binds the actor and writes nested vitals in the same function"
   expect(migration).toContain(
     "create or replace function public.clair_create_reception_walk_in_encounter",
   );
-  expect(migration).toContain("v_vitals := p_walk_in -> 'vitals'");
+  expect(migration).toContain("v_vitals jsonb := p_walk_in -> 'vitals'");
   expect(migration).toContain("v_actor_user_id <> auth.uid()");
   expect(migration).toContain(
     "private.clair_is_active_workspace_member(p_workspace_id)",
