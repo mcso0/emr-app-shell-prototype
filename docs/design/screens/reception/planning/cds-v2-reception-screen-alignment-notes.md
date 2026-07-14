@@ -3,7 +3,7 @@ id: "RECEPTION-CDS-V2-SCREEN-ALIGNMENT-NOTES"
 type: "Design Planning"
 title: "CDS V2 Reception Screen Alignment Notes"
 description: "Captures the requested CDS V2 reception topbar, left side panel, and calendar alignment constraints before implementation."
-status: "draft"
+status: "in_progress"
 area: design
 tags:
   - reception
@@ -11,7 +11,7 @@ tags:
   - calendar
   - side-panel
   - queue-persistence
-updated: "2026-06-20"
+updated: "2026-07-14"
 source_docs:
   - "docs/design/system/DESIGN.md"
   - "docs/work/design-system/DESIGN-SYSTEM-PR-038-cds-v2-app-shell-scope.md"
@@ -173,3 +173,43 @@ Verification captured:
 - Desktop visual QA screenshots saved under `test-results/reception-cds-v2-1280.png` and `test-results/reception-cds-v2-1920.png`.
 
 Local Supabase direct row readback was not run in this checkpoint because the environment is missing the `supabase` and `psql` CLIs. `npm run demo:seed:check` passed local safety diagnostics for config, Docker, and local-only DB URL, and reported those CLI gaps.
+
+## 2026-07-14 Draft: Day Header Staff Availability Row
+
+Figma node `27684:22152` introduces an additive visual proposal for the existing
+`VeterinarianLaneHeader` in the reception day calendar. It is an HTML review artifact,
+not an implementation or a completion claim.
+
+- Review artifact: `docs/design/screens/reception/planning/calendar-veterinarian-lane-header-prototype.html`
+- Preserve the current calendar lane color policy and the existing 40px inner-header density. The Figma blue sample is a single tone reference, not an instruction to make every staff lane blue.
+- Keep the stable staff-to-tone mapping already owned by `getVeterinarianToneIndex`; do not recompute a remaining lane's color when a peer lane is hidden.
+- Derive each tone's new header background from its existing `500` token: 6% over white for the default state and 16% over white for hover. Use that same tone's existing `300` token for the border.
+- Add a compact staff operational-status badge: `진료중`, `진료가능`, `휴게중`, `업무대기`, `퇴근`, or `휴가중`.
+- Reveal the user-info and overflow controls only on pointer hover or keyboard focus.
+- Treat each icon control as a ghost button: it has no default fill, and only the hovered or keyboard-focused icon receives a translucent black overlay. Do not render the Figma hover composite as a permanent filled button.
+- The eye control hides only that staff lane from both the header and calendar body. Recalculate the shared header/body grid from the visible lane count so the remaining columns fill the available width; do not delete schedule data or leave an empty column.
+- Do not hide the final visible lane. Existing veterinarian selection remains the production restoration path; the HTML prototype's restore control exists only to demonstrate the state transition.
+- The overflow menu currently presents `메시지 보내기` and `사용자 정보 보기` as candidates only; its permission boundary, final destinations, and event behavior need an approved interaction contract before application implementation.
+
+## 2026-07-14 Implemented: Day Calendar Lane Visibility
+
+The existing day-calendar lane header now implements the approved visibility
+interaction without introducing a new staff-status data model.
+
+- The eye action is a ghost icon button: transparent at rest and uses the existing
+  `black-alpha-4` token only on its own hover or keyboard-focus state.
+- Selecting the eye removes that staff member from both the day header and day-grid
+  columns. The existing selected-veterinarian state remains the source of truth, so
+  the final visible lane is protected and the schedule-toolbar selector restores a
+  hidden lane.
+- Header tone assignment now resolves against the full available-veterinarian list,
+  rather than the current visible list. Hiding a lane therefore does not recolor any
+  remaining lane.
+- Each lane retains its own `300` border and `500` tone. The header surface uses the
+  `500` tone at 6% over the common white token, and 16% on header hover/focus.
+- The overflow control only repeats the approved `레인 숨기기` action. No message or
+  profile navigation was added because those actions still lack a destination and
+  permission contract.
+- The six staff operational-status badges were not rendered: current staff data only
+  supplies membership activation status, which is not a safe substitute for real-time
+  availability such as `진료중` or `휴가중`.

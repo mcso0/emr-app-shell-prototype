@@ -317,6 +317,11 @@
   --emr-calendar-lane-header-radius: var(--clair-radius-atomic-8);
   --emr-calendar-lane-header-padding: var(--clair-spacing-8);
   --emr-calendar-lane-header-gap: var(--clair-spacing-8);
+  --emr-calendar-lane-header-text: var(--clair-color-atomic-gray-700);
+  --emr-calendar-lane-header-action-size: var(--clair-spacing-24);
+  --emr-calendar-lane-header-action-radius: var(--clair-radius-atomic-4);
+  --emr-calendar-lane-header-action-icon: var(--emr-topbar-icon);
+  --emr-calendar-lane-header-action-hover: var(--clair-color-atomic-black-alpha-4);
   --emr-calendar-lane-avatar-size: var(--clair-spacing-24);
   --emr-calendar-lane-avatar-radius: var(--clair-radius-atomic-6);
   --emr-calendar-task-radius: var(--clair-radius-atomic-8);
