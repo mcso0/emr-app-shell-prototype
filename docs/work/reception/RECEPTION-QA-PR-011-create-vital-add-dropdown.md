@@ -14,6 +14,7 @@ tags:
 target_pr: "Approved walk-in vital history design"
 source_docs:
   - "docs/superpowers/specs/2026-07-14-reception-vital-add-dropdown-design.md"
+  - "docs/superpowers/plans/2026-07-14-reception-vital-add-dropdown-implementation.md"
   - "docs/design/screens/reception/planning/reception-vital-add-dropdown-prototype.html"
 dependencies:
   - "RECEPTION-QA-PR-003"
