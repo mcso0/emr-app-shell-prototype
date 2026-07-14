@@ -267,7 +267,7 @@ export function getReceptionQueueReadSummary({
 }): ReceptionQueueReadSummary {
   return queue.reduce<ReceptionQueueReadSummary>(
     (summary, record) => {
-      if (record.kind === "appointment" || record.encounter.appointmentId) {
+      if (record.kind === "appointment") {
         summary.appointmentCount += 1;
       } else {
         summary.receptionCount += 1;

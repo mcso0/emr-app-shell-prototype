@@ -419,7 +419,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
           buttons.map((button) => button.textContent?.trim()),
         ),
     )
-    .toEqual(["전체 6", "외래 2", "예약 4"]);
+    .toEqual(["전체6", "외래4", "예약2"]);
   await expect
     .poll(() =>
       sidePanel
@@ -434,8 +434,8 @@ test("reception renders the first-path workspace instead of the placeholder", as
       "patient-card-patient-dubu",
       "patient-card-patient-coco",
     ]);
-  await expect(sidePanel.getByTestId("reception-queue-status-waiting")).toContainText(
-    "대기",
+  await expect(sidePanel.getByTestId("reception-queue-group-reception")).toContainText(
+    "접수",
   );
   await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toHaveCount(
     0,
@@ -2851,6 +2851,36 @@ test("reception card action menu exposes unavailable feedback and closes on Esca
     page.getByTestId("reception-card-action-feedback"),
   ).toContainText("카카오톡 발송은 아직 연결되지 않았어");
   await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
+test("reception side panel groups active encounters and pending reservations by operational state", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception?date=2026-05-01");
+
+  const sidePanel = page.locator("aside").first();
+  const sideTabs = sidePanel.getByRole("group", { name: "접수 목록 유형" });
+
+  await expect
+    .poll(() =>
+      sideTabs.getByRole("button").evaluateAll((buttons) =>
+        buttons.map((button) => button.textContent?.trim()),
+      ),
+    )
+    .toEqual(["전체6", "외래4", "예약2"]);
+
+  const receptionGroup = sidePanel.getByTestId("reception-queue-group-reception");
+  const appointmentGroup = sidePanel.getByTestId("reception-queue-group-appointment");
+
+  await expect(receptionGroup).toContainText(/접수\s*4/);
+  await expect(appointmentGroup).toContainText(/예약\s*2/);
+  await expect(
+    receptionGroup.getByTestId("reception-queue-group-reception-status-icon"),
+  ).toHaveAttribute("data-state-icon-state", "in-progress");
+  await expect(
+    appointmentGroup.getByTestId("reception-queue-group-appointment-status-icon"),
+  ).toHaveAttribute("data-state-icon-state", "to-do");
+  await expect(sidePanel.getByTestId("reception-queue-status-waiting")).toHaveCount(0);
 });
 
 test("reception side-panel card action menu uses compact single-line actions", async ({
@@ -6025,10 +6055,10 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toHaveCount(0);
-  await expect(page.getByTestId("reception-queue-status-cancelled")).toContainText(
+  await expect(page.getByTestId("reception-queue-group-cancelled")).toContainText(
     "취소",
   );
-  await expect(page.getByTestId("reception-queue-status-cancelled")).toContainText(
+  await expect(page.getByTestId("reception-queue-group-cancelled")).toContainText(
     "두부",
   );
 });

@@ -369,6 +369,17 @@ test("reception queue read includes cancelled encounter queue rows for the selec
 });
 
 test("reception queue read keeps appointment-only rows separate from walk-in encounters", async () => {
+  const checkedInAppointmentEncounter: Encounter = {
+    ...encounter,
+    id: "encounter-db-appointment-check-in",
+    appointmentId: appointment.id,
+    encounterNo: "E-DB-APPOINTMENT-CHECK-IN",
+  };
+  const checkedInAppointmentQueueEntry: WaitingQueueEntry = {
+    ...queueEntry,
+    id: "queue-db-appointment-check-in",
+    encounterId: checkedInAppointmentEncounter.id,
+  };
   const result = await readReceptionQueue({
     actorUserId: "user-front-desk",
     workspaceId: "clair-demo",
@@ -376,6 +387,11 @@ test("reception queue read keeps appointment-only rows separate from walk-in enc
     gateway: createMockReceptionQueueReadGateway({
       queue: [
         { kind: "encounter_queue", encounter, queueEntry },
+        {
+          kind: "encounter_queue",
+          encounter: checkedInAppointmentEncounter,
+          queueEntry: checkedInAppointmentQueueEntry,
+        },
         { kind: "appointment", appointment },
       ],
     }),
@@ -385,13 +401,17 @@ test("reception queue read keeps appointment-only rows separate from walk-in enc
     ok: true,
     summary: {
       appointmentCount: 1,
-      receptionCount: 1,
-      totalCount: 2,
+      receptionCount: 2,
+      totalCount: 3,
     },
     queue: [
       {
         kind: "encounter_queue",
         encounter: { id: encounter.id },
+      },
+      {
+        kind: "encounter_queue",
+        encounter: { id: checkedInAppointmentEncounter.id },
       },
       {
         kind: "appointment",
