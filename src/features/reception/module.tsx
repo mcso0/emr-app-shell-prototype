@@ -53,6 +53,7 @@ import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrSidePanelMiniCalendar } from "@/components/emr/side-panel-mini-calendar";
+import type { EmrSidePanelStateIconState } from "@/components/emr/side-panel-state-icon";
 import {
   EmrTaskQueueCard,
   type EmrTaskQueueCardItem,
@@ -2832,8 +2833,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const [cardActionFeedback, setCardActionFeedback] =
     useState<ReceptionCardActionFeedback | null>(null);
   const [collapsedQueueGroups, setCollapsedQueueGroups] = useState<
-    Record<ReceptionQueueSideStatusGroup, boolean>
-  >({ cancelled: false, waiting: false });
+    Record<ReceptionQueueSideDisplayGroup, boolean>
+  >({ appointment: false, cancelled: false, reception: false });
   const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null);
   const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
     Veterinarian[]
@@ -2994,7 +2995,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     setSearchQuery("");
     setSearchOpen(false);
   }, [setSearchQuery]);
-  const toggleQueueGroup = useCallback((group: ReceptionQueueSideStatusGroup) => {
+  const toggleQueueGroup = useCallback((group: ReceptionQueueSideDisplayGroup) => {
     setCollapsedQueueGroups((current) => ({
       ...current,
       [group]: !current[group],
@@ -3296,7 +3297,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   );
 }
 
-type ReceptionQueueSideStatusGroup = "waiting" | "cancelled";
+type ReceptionQueueSideDisplayGroup = "reception" | "appointment" | "cancelled";
 
 type ReceptionQueueSideItem = {
   appointment?: Appointment;
@@ -3308,15 +3309,25 @@ type ReceptionQueueSideItem = {
   queueKind: "appointment" | "reception";
   searchText: string;
   sortAt: string;
-  statusGroup: ReceptionQueueSideStatusGroup;
+  statusGroup: ReceptionQueueSideDisplayGroup;
   taskCardItem: EmrTaskQueueCardItem;
   veterinarianName?: string;
 };
 
 type ReceptionQueueSideGroup = {
+  iconState: EmrSidePanelStateIconState;
   items: ReceptionQueueSideItem[];
   label: string;
-  statusGroup: ReceptionQueueSideStatusGroup;
+  statusGroup: ReceptionQueueSideDisplayGroup;
+};
+
+const receptionQueueGroupMeta: Record<
+  ReceptionQueueSideDisplayGroup,
+  { iconState: EmrSidePanelStateIconState; label: string }
+> = {
+  reception: { iconState: "in-progress", label: "접수" },
+  appointment: { iconState: "to-do", label: "예약" },
+  cancelled: { iconState: "cancel", label: "취소" },
 };
 
 function ReceptionQueueSideGroup({
@@ -3348,11 +3359,12 @@ function ReceptionQueueSideGroup({
       collapsed={collapsed}
       count={group.items.length}
       countBadgeColorToken={colorToken}
-      dataTestId={`reception-queue-status-${group.statusGroup}`}
+      dataTestId={`reception-queue-group-${group.statusGroup}`}
       indicatorColorToken={colorToken}
       indicatorVisible={false}
       label={group.label}
       onToggle={onToggle}
+      stateIconState={group.iconState}
     >
       {group.items.map((item) => {
         const actionItems = getReceptionQueueSideActionItems({
@@ -3458,10 +3470,10 @@ function getReceptionQueueSideItems({
         patientGuardians,
         patientId: patient.id,
       }) ?? row.primaryGuardian;
-      const queueKind = row.encounter.appointmentId ? "appointment" : "reception";
+      const queueKind = "reception";
       const statusGroup = isCancelledReceptionQueueRow(row)
         ? "cancelled"
-        : "waiting";
+        : "reception";
       const veterinarianName =
         row.veterinarianName ??
         getScopedStaffDisplayName({
@@ -3504,7 +3516,7 @@ function getReceptionQueueSideItems({
             eventActorName: "접수",
             guardianName: primaryGuardian?.name ?? "보호자 미지정",
             patientName: patient.name,
-            receptionType: queueKind === "appointment" ? "예약" : "외래",
+            receptionType: "외래",
             secondLineBadgeLabel: getReceptionQueueSideStatusLabel(statusGroup),
             secondLineText: visitText,
             testId: `patient-card-${patient.id}`,
@@ -3529,7 +3541,7 @@ function getReceptionQueueSideItems({
         patientId: patient.id,
       });
       const statusGroup =
-        appointment.status === "cancelled" ? "cancelled" : "waiting";
+        appointment.status === "cancelled" ? "cancelled" : "appointment";
       const veterinarianName =
         getScopedStaffDisplayName({
           allowMockFallback: allowMockStaffFallback,
@@ -3602,14 +3614,14 @@ function getReceptionSideQueueItems(
 }
 
 function getReceptionSideQueueGroups(items: ReceptionQueueSideItem[]) {
-  return (["waiting", "cancelled"] as const).flatMap((statusGroup) => {
+  return (["reception", "appointment", "cancelled"] as const).flatMap((statusGroup) => {
     const groupItems = items.filter((item) => item.statusGroup === statusGroup);
     if (!groupItems.length) return [];
 
     return [
       {
+        ...receptionQueueGroupMeta[statusGroup],
         items: groupItems,
-        label: getReceptionQueueSideStatusLabel(statusGroup),
         statusGroup,
       },
     ];
@@ -3626,12 +3638,14 @@ function getFilteredReceptionQueueSideItems(
   return items.filter((item) => item.searchText.includes(normalizedQuery));
 }
 
-function getReceptionQueueSideStatusLabel(statusGroup: ReceptionQueueSideStatusGroup) {
+function getReceptionQueueSideStatusLabel(statusGroup: ReceptionQueueSideDisplayGroup) {
   return statusGroup === "cancelled" ? "취소" : "대기";
 }
 
-function getReceptionQueueSideStatusOrder(statusGroup: ReceptionQueueSideStatusGroup) {
-  return statusGroup === "waiting" ? 0 : 1;
+function getReceptionQueueSideStatusOrder(statusGroup: ReceptionQueueSideDisplayGroup) {
+  if (statusGroup === "reception") return 0;
+  if (statusGroup === "appointment") return 1;
+  return 2;
 }
 
 function isCancelledReceptionQueueRow(row: ReturnType<typeof getReceptionQueueRows>[number]) {
