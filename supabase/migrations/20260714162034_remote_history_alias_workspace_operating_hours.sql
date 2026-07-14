@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The linked synthetic/demo project applied the SQL from canonical migration
+-- 20260715100000_workspace_operating_hours.sql under remote version 20260714162034.
+-- Keep this file statement-free so fresh replay does not duplicate the schema.

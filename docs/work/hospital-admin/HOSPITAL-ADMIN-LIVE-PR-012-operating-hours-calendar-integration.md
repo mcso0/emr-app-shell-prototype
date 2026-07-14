@@ -28,7 +28,7 @@ Persist workspace operating hours, date exceptions, holiday policy, and timezone
 
 ## Out Of Scope
 
-- Remote Supabase migration application, deployment, or real patient/customer data.
+- Real patient/customer data and unrelated production data repair.
 - Persisting unrelated hospital profile/contact fields.
 - Automatic cancellation or movement of appointments that conflict with changed hours.
 
@@ -43,12 +43,16 @@ Persist workspace operating hours, date exceptions, holiday policy, and timezone
 
 - Local PostgreSQL migration apply and transaction replay passed for member read, non-admin direct-write denial, admin update, audit, and future-appointment rollback.
 - Focused Playwright integration suite: 70 passed.
-- Calendar density UI contract: 2 passed after the final Turbopack root adjustment.
+- Calendar density and effective-hours UI contract: 3 passed.
+- Linked synthetic/demo Supabase application passed. Catalog checks confirmed both
+  operating-hours tables, RLS, 8 policies, explicit grants, audit event allowlisting,
+  and the Cheongdam effective-date resolver result for 2026-07-15.
 - `npx tsc --noEmit`, focused ESLint, `npm run docs:check`, `npm run security:secrets`, `git diff --check`, and `npm run build` passed.
 - `npx supabase migration up --local` could not replay the repository history because the existing local catalog references legacy version `20260714193844`; the new migration itself was applied directly to local PostgreSQL and verified with the scoped replay snippet.
 
 ## Handoff Notes
 
-- Apply migration `20260715100000` before or together with the application release. Remote Supabase was not queried or changed in this work.
+- Canonical migration `20260715100000` was applied remotely under version
+  `20260714162034`; keep its statement-free history alias when releasing the app.
 - Until a trusted public-holiday calendar source is selected, holiday closures must be represented as explicit date exceptions.
 - Hospital contact/profile fields remain session-local and are intentionally outside this work item.

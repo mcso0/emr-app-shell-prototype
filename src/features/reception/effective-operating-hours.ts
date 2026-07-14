@@ -1,7 +1,32 @@
 import {
   resolveEffectiveOperatingHours,
+  type EffectiveOperatingHours,
   type HospitalBasicSettingsDraft,
 } from "@/features/hospital-admin/settings/hospital-basic-settings-model";
+
+export function getOperatingScheduleLabel(schedule: EffectiveOperatingHours) {
+  if (!schedule.isOpen || !schedule.treatmentStart || !schedule.treatmentEnd) return "휴무";
+  return `${schedule.treatmentStart}-${schedule.treatmentEnd}`;
+}
+
+export function getSelectableOperatingStartMinutes(
+  schedule: EffectiveOperatingHours,
+  durationMinutes: number,
+  stepMinutes = 30,
+) {
+  if (!schedule.isOpen || !schedule.treatmentStart || !schedule.treatmentEnd || durationMinutes <= 0 || stepMinutes <= 0) return [];
+  const treatmentStart = toOperatingMinutes(schedule.treatmentStart);
+  const treatmentEnd = toOperatingMinutes(schedule.treatmentEnd);
+  const breakStart = schedule.breakStart ? toOperatingMinutes(schedule.breakStart) : null;
+  const breakEnd = schedule.breakEnd ? toOperatingMinutes(schedule.breakEnd) : null;
+  const starts: number[] = [];
+  for (let minutes = treatmentStart; minutes <= treatmentEnd - durationMinutes; minutes += stepMinutes) {
+    const endMinutes = minutes + durationMinutes;
+    const overlapsBreak = breakStart !== null && breakEnd !== null && minutes < breakEnd && endMinutes > breakStart;
+    if (!overlapsBreak) starts.push(minutes);
+  }
+  return starts;
+}
 
 export function isReceptionTimeAllowed({ durationMinutes, scheduledStartAt, settings }: {
   durationMinutes: number;
@@ -39,7 +64,9 @@ function formatMinutes(date: Date, timezone: string) {
   return Number(value.hour) * 60 + Number(value.minute);
 }
 
-function toMinutes(value: string) {
+export function toOperatingMinutes(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   return hour * 60 + minute;
 }
+
+const toMinutes = toOperatingMinutes;

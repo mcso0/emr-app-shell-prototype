@@ -127,6 +127,11 @@ import {
   type CalendarTimeRangeLayout,
 } from "@/features/reception/calendar-time-layout";
 import { createCalendarTimeScale, type CalendarTimeScale } from "@/features/reception/calendar-time-scale";
+import {
+  getOperatingScheduleLabel,
+  getSelectableOperatingStartMinutes,
+  toOperatingMinutes,
+} from "@/features/reception/effective-operating-hours";
 import { createInitialHospitalBasicSettingsDraft, resolveEffectiveOperatingHours, type EffectiveOperatingHours } from "@/features/hospital-admin/settings/hospital-basic-settings-model";
 import {
   getCalendarOverlapLayouts,
@@ -1351,6 +1356,32 @@ async function loadReceptionCalendar({
   }
 }
 
+function useReceptionOperatingSchedule({
+  actorId,
+  date,
+  workspaceId,
+}: {
+  actorId?: string;
+  date: string;
+  workspaceId: string;
+}) {
+  const fallback = useMemo(
+    () => resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), date),
+    [date],
+  );
+  const [schedule, setSchedule] = useState<EffectiveOperatingHours>(fallback);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadReceptionCalendar({ actorId, date, workspaceId }).then((result) => {
+      if (!cancelled) setSchedule(result.ok ? result.operatingSchedule : fallback);
+    });
+    return () => { cancelled = true; };
+  }, [actorId, date, fallback, workspaceId]);
+
+  return schedule.date === date ? schedule : fallback;
+}
+
 async function loadReceptionPatientGuardianProfiles({
   actorId,
   workspaceId,
@@ -1862,14 +1893,11 @@ const getReservationTimeOptions = (
   appointments: Appointment[],
   currentDate: string,
   currentOperatingMinutes: number,
+  operatingSchedule: EffectiveOperatingHours,
 ) => {
   const options: Array<{ disabled: boolean; label: string; minutes: number; reason?: string }> = [];
 
-  for (
-    let minutes = dayBusinessOpenHour * 60;
-    minutes <= dayBusinessCloseHour * 60 - durationMinutes;
-    minutes += 30
-  ) {
+  for (const minutes of getSelectableOperatingStartMinutes(operatingSchedule, durationMinutes)) {
     const startAt = getReceptionIsoAtMinutes(date, minutes);
     const startMs = Date.parse(startAt);
     const endMs = startMs + durationMinutes * 60_000;
@@ -1900,26 +1928,27 @@ const getReservationTimeOptions = (
   return options;
 };
 
-const isClosedReservationDate = (date: string) =>
-  new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Seoul",
-    weekday: "short",
-  }).format(new Date(`${date}T00:00:00+09:00`)) === "Sun";
-
 const getWalkInTimeBlockMessage = (
   currentOperatingMinutes: number,
   durationMinutes: number,
+  operatingSchedule: EffectiveOperatingHours,
 ) => {
-  if (currentOperatingMinutes < dayBusinessOpenMinutes) {
-    return "아직 접수 시작 전입니다. 오늘 접수는 09:00부터 생성할 수 있어요.";
+  if (!operatingSchedule.isOpen || !operatingSchedule.treatmentStart || !operatingSchedule.treatmentEnd) {
+    return "오늘은 휴진일입니다. 다음 영업일 예약으로 등록해 주세요.";
+  }
+  const treatmentStart = toOperatingMinutes(operatingSchedule.treatmentStart);
+  const treatmentEnd = toOperatingMinutes(operatingSchedule.treatmentEnd);
+
+  if (currentOperatingMinutes < treatmentStart) {
+    return `아직 접수 시작 전입니다. 오늘 접수는 ${operatingSchedule.treatmentStart}부터 생성할 수 있어요.`;
   }
 
-  if (currentOperatingMinutes >= dayBusinessCloseMinutes) {
+  if (currentOperatingMinutes >= treatmentEnd) {
     return "오늘 접수 가능 시간이 지났습니다. 다음 영업일 예약으로 등록해 주세요.";
   }
 
-  if (currentOperatingMinutes + durationMinutes > dayBusinessCloseMinutes) {
-    return "예상시간이 영업 종료 시간을 넘습니다. 더 이른 시간이나 짧은 예상시간을 선택해 주세요.";
+  if (!getSelectableOperatingStartMinutes(operatingSchedule, durationMinutes, 1).includes(currentOperatingMinutes)) {
+    return "예상시간이 휴게시간과 겹치거나 영업 종료 시간을 넘습니다. 더 이른 시간이나 짧은 예상시간을 선택해 주세요.";
   }
 
   return undefined;
@@ -2216,7 +2245,7 @@ const getReceptionCalendarSelectionMessage = (
   block?: ReceptionCalendarScheduleBlock,
 ) => {
   if (reason === "outside-business-hours") {
-    return `영업시간 ${getBusinessHoursTimeRangeLabel()} 안에서만 접수/예약을 만들 수 있어.`;
+    return "설정된 영업시간 안에서만 접수/예약을 만들 수 있어.";
   }
   if (reason === "past-time") {
     return "이미 지난 시간에는 접수/예약을 만들 수 없어. 현재 이후 시간을 선택해 줘.";
@@ -2376,9 +2405,6 @@ const getScheduleSelectionFromPointer = ({
 
   return clampScheduleMinutes(rawMinutes);
 };
-
-const getBusinessHoursTimeRangeLabel = () =>
-  `${getScheduleHourLabel(dayBusinessOpenHour)}-${getScheduleHourLabel(dayBusinessCloseHour)}`;
 
 const isBusinessHourRow = (hour: number) =>
   hour >= dayBusinessOpenHour && hour < dayBusinessCloseHour;
@@ -4188,9 +4214,11 @@ function addMonthsToIsoDate(date: string, months: number) {
 }
 
 function ReceptionScheduleDateControl({
+  operatingSchedule,
   operatingDate,
   view,
 }: {
+  operatingSchedule: EffectiveOperatingHours;
   operatingDate: string;
   view: ReceptionCalendarView;
 }) {
@@ -4218,7 +4246,7 @@ function ReceptionScheduleDateControl({
           업무시간
         </span>
         <span className="text-[var(--clair-color-atomic-sky-500)]">
-          09:00-18:00
+          {getOperatingScheduleLabel(operatingSchedule)}
         </span>
       </Badge>
     </div>
@@ -4228,6 +4256,7 @@ function ReceptionScheduleDateControl({
 function ScheduleToolbar({
   onOperatingDateChange,
   operatingDate,
+  operatingSchedule,
   onCreateReservation,
   onCreateWalkIn,
   onUnifiedPatientReady,
@@ -4241,6 +4270,7 @@ function ScheduleToolbar({
 }: {
   onOperatingDateChange: (operatingDate: string) => void;
   operatingDate: string;
+  operatingSchedule: EffectiveOperatingHours;
   onCreateReservation: () => void;
   onCreateWalkIn: () => void;
   onUnifiedPatientReady: (patientId: string) => void;
@@ -4286,6 +4316,7 @@ function ScheduleToolbar({
       <div className="flex min-w-0 flex-wrap items-center gap-[var(--clair-spacing-16)]">
         <ReceptionScheduleDateControl
           operatingDate={operatingDate}
+          operatingSchedule={operatingSchedule}
           view={view}
         />
       </div>
@@ -6524,6 +6555,7 @@ export function ReceptionContent() {
       <ScheduleToolbar
         onOperatingDateChange={handleOperatingDateChange}
         operatingDate={operatingDate}
+        operatingSchedule={selectedDateOperatingSchedule}
         view={calendarView}
         onViewChange={handleCalendarViewChange}
         selectedVeterinarianIds={effectiveSelectedVeterinarianIds}
@@ -6657,6 +6689,11 @@ function ReceptionWalkInFormDrawer({
   workspaceId: string;
 }) {
   const authSession = useMockAuthStore((state) => state.session);
+  const operatingSchedule = useReceptionOperatingSchedule({
+    actorId: authSession?.id,
+    date: operatingDate,
+    workspaceId,
+  });
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const [department, setDepartment] = useState("");
   const [duration, setDuration] = useState(
@@ -6740,6 +6777,7 @@ function ReceptionWalkInFormDrawer({
   const timeBlockMessage = getWalkInTimeBlockMessage(
     currentOperatingMinutes,
     durationMinutes,
+    operatingSchedule,
   );
   const canCreate = Boolean(
     patient &&
@@ -7593,7 +7631,7 @@ function ReceptionReservationFormDrawer({
   const [memo, setMemo] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [timeMinutes, setTimeMinutes] = useState(
-    initialTimeMinutes ?? dayBusinessOpenHour * 60,
+    initialTimeMinutes ?? 0,
   );
   const initialKnownVeterinarianId =
     initialVeterinarianId &&
@@ -7606,6 +7644,11 @@ function ReceptionReservationFormDrawer({
   const patientLookup = useReceptionPatientLookup({
     authSessionId: authSession?.id,
     patientSummaries,
+    workspaceId,
+  });
+  const operatingSchedule = useReceptionOperatingSchedule({
+    actorId: authSession?.id,
+    date,
     workspaceId,
   });
   const [patientLookupOpen, setPatientLookupOpen] = useState(false);
@@ -7622,14 +7665,15 @@ function ReceptionReservationFormDrawer({
         appointments,
         todayDate,
         currentOperatingMinutes,
+        operatingSchedule,
       ),
-    [appointments, currentOperatingMinutes, date, durationMinutes, todayDate],
+    [appointments, currentOperatingMinutes, date, durationMinutes, operatingSchedule, todayDate],
   );
   const selectedSummary = patientLookup.selectedSummary;
   const selectedPatient = selectedSummary?.patient;
   const selectedGuardian = selectedSummary?.primaryGuardian;
   const selectedTimeOption = timeOptions.find((option) => option.minutes === timeMinutes);
-  const closedDay = isClosedReservationDate(date);
+  const closedDay = !operatingSchedule.isOpen;
   const hasElapsedOptions = timeOptions.some((option) => option.reason === "지난 시간");
   const hasAvailableTimeOption = timeOptions.some((option) => !option.disabled);
   const reservationTimeHelper = closedDay
@@ -7709,9 +7753,9 @@ function ReceptionReservationFormDrawer({
     const firstAvailable = timeOptions.find((option) => !option.disabled);
     if (!timeOptions.some((option) => option.minutes === timeMinutes && !option.disabled)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTimeMinutes(firstAvailable?.minutes ?? dayBusinessOpenHour * 60);
+      setTimeMinutes(firstAvailable?.minutes ?? getSelectableOperatingStartMinutes(operatingSchedule, durationMinutes)[0] ?? 0);
     }
-  }, [timeMinutes, timeOptions]);
+  }, [durationMinutes, operatingSchedule, timeMinutes, timeOptions]);
 
   const create = async () => {
     if (!selectedPatient || submitting || !canCreate) return;
@@ -8324,6 +8368,11 @@ function ReceptionAppointmentCheckInFormDrawer({
     formatPatientWeightKgInput(patient.weightKg),
   );
   const durationMinutes = getDurationMinutesFromLabel(duration) ?? 30;
+  const operatingSchedule = useReceptionOperatingSchedule({
+    actorId: authSession?.id,
+    date: appointmentDate,
+    workspaceId,
+  });
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
     veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
@@ -8331,25 +8380,15 @@ function ReceptionAppointmentCheckInFormDrawer({
       : undefined;
   const parsedWeightKg = parseWeightKgInput(weightKg);
   const timeOptions = useMemo(() => {
-    const firstMinute = Math.max(currentOperatingMinutes, dayBusinessOpenHour * 60);
-    const options: Array<{ label: string; minutes: number }> = [];
-
-    for (
-      let minutes = firstMinute;
-      minutes <= dayBusinessCloseHour * 60 - durationMinutes;
-      minutes += 30
-    ) {
-      options.push({
+    const options = getSelectableOperatingStartMinutes(operatingSchedule, durationMinutes)
+      .filter((minutes) => minutes >= currentOperatingMinutes)
+      .map((minutes) => ({
         label: getScheduleTimeLabelFromMinutes(minutes),
         minutes,
-      });
-    }
-
-    return options.length > 0
-      ? options
-      : [{ label: getScheduleTimeLabelFromMinutes(firstMinute), minutes: firstMinute }];
-  }, [currentOperatingMinutes, durationMinutes]);
-  const canCreate = Boolean(visitPurpose.trim()) && !submitting;
+      }));
+    return options;
+  }, [currentOperatingMinutes, durationMinutes, operatingSchedule]);
+  const canCreate = Boolean(visitPurpose.trim()) && timeOptions.length > 0 && !submitting;
 
   useEffect(() => {
     if (!timeOptions.some((option) => option.minutes === timeMinutes)) {
