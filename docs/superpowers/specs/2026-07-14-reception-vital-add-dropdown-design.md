@@ -3,7 +3,7 @@ type: "Design Spec"
 title: "Walk-in reception vital history capture"
 description: "Defines walk-in-only vital entry, patient vital measurement persistence, and reservation-form removal."
 tags: [reception, walk-in, vitals, dropdown, supabase]
-status: approved
+status: implemented
 area: reception
 updated: 2026-07-14
 ---
@@ -26,6 +26,12 @@ Supabase MCP read-only inspection of the connected staging project on 2026-07-14
 - The staging definition of `public.clair_create_reception_walk_in_encounter(text, text, jsonb)` does not currently persist weight, while the repository contains later weight-writer work. The implementation must treat this as schema drift and ship a new additive migration rather than editing an applied migration.
 
 No patient rows or customer data were read during this inspection.
+
+## Implementation Status
+
+Implemented locally on 2026-07-14. Reservation creation no longer renders or sends vitals. Walk-in creation owns the accessible four-option draft and submits a nested optional `vitals` object. The additive migration creates the measurement history table and updates the SECURITY DEFINER walk-in RPC so encounter, queue, optional vital history, and the compatibility weight snapshot commit or roll back together.
+
+Docker local Supabase reset and a transaction-scoped replay verified direct-write denial, exact insert/readback, and forced-failure rollback. Remote Supabase migration application, production DB changes, real-data access, history browsing UI, and production deployment remain outside this implementation result.
 
 ## Product Scope
 

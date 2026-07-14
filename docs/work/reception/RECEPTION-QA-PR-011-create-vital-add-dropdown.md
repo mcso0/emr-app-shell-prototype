@@ -3,7 +3,7 @@ id: "RECEPTION-QA-PR-011"
 type: "Work Item"
 title: "Walk-in reception vital history capture"
 description: "Capture optional walk-in vitals as patient measurement history and remove vitals from reservation creation."
-status: "in_progress"
+status: "human_review"
 area: "reception"
 priority: "P1"
 tags:
@@ -71,4 +71,22 @@ The initial wireframe covered reception and reservation creation as a UI-only in
 
 ## Verification
 
-- Implementation pending.
+- `npx supabase db reset --local --yes`: passed; all migrations and synthetic seed replayed, including `20260714113000_reception_vital_measurement_history.sql`.
+- `npx supabase migration list --local`: passed; the new migration is present in local history.
+- `supabase/snippets/reception_vital_measurement_transaction_replay.sql`: passed against Docker local Supabase. It proved direct authenticated table writes are denied, RPC readback matches all values and actor/ownership fields, weight compatibility is updated, forced measurement failure rolls back encounter and queue writes, and the top-level rollback leaves zero tagged rows.
+- `npx supabase db lint --local --schema public`: the new vital table/RPC produced no lint issue. The command still reports pre-existing errors in `clair_save_chart_order_draft`, `clair_restore_reception_appointment`, and `clair_cancel_reception_encounter`, plus existing warnings outside this work item.
+- Migration and walk-in server focused suite: 14 passed.
+- Final reception UI suite: 8 passed, including add/remove/restore, 10px spacing, keyboard focus/Escape, blood-pressure pairing, empty payload, walk-in submission, and reservation non-exposure.
+- Final server/permission/migration bundle: 61 passed, 1 pre-existing unrelated failure in `tests/live-audit-mutation-emission.spec.ts`; the unchanged test expects `createSupabaseLiveAuditAppendGateway` in a membership-role route that already uses the newer audit path on `origin/main`.
+- `npm run security:secrets`: passed, 3068 tracked files checked.
+- `npm run lint`: passed.
+- `npx tsc --noEmit --pretty false`: passed.
+- `npm run docs:check`: passed, 800 docs checked before this closeout update.
+- `git diff --check`: passed.
+- `npm run build`: passed with the existing broad docs tracing warnings.
+
+## Current Boundary
+
+- Implemented locally and ready for human review.
+- Remote Supabase migration application, production DB verification, real-data access, history browsing UI, and production deployment were not performed.
+- Production deployment requires a separate approval and migration/deployment coordination because the application contract depends on the new table and RPC definition.
