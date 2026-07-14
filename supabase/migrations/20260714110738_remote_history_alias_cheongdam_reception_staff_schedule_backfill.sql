@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The linked synthetic/demo project applied the SQL from canonical migration
+-- 20260714202000_cheongdam_reception_staff_schedule_backfill.sql under remote version 20260714110738.
+-- Keep this file statement-free so fresh replay does not duplicate the dated facts.

@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The linked synthetic/demo project applied the SQL from canonical migration
+-- 20260711112810_hospital_schedule_operations.sql under remote version 20260714110720.
+-- Keep this file statement-free so fresh replay does not execute the schema twice.
