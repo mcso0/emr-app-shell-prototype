@@ -126,3 +126,19 @@ application is left to the repository deployment migration path.
 The UI deliberately renders no badge when a staff member has no authoritative
 schedule profile or published/changed shift for the selected date. This change does
 not invent dated schedules for the prepared clinic roster.
+
+## 2026-07-14 Deployment Follow-up
+
+Production-demo verification found that the remote Supabase project did not contain
+the prerequisite hospital schedule schema, the status snapshot RPC, or selected-date
+schedule facts. The follow-up applies the two already-versioned schema migrations and
+adds an idempotent synthetic backfill for the six veterinarians selected in the
+Cheongdam 2026-07-14 reception scenario. Each backfilled row contains a 09:00-19:00
+published clinical shift and an explicit 19:00 clock-out fact, so the UI renders
+`퇴근` without weakening the fact-based status rule.
+
+Remote read-back verified the status RPC, six veterinarian profiles, six published
+shifts, and six completed clock entries. A deployed-page reload then verified six
+visible `퇴근` badges whose DOM status is `clocked_out`. Supabase recorded the three
+applied migrations under remote-generated versions; statement-free compatibility
+aliases preserve those versions locally without changing fresh-replay behavior.

@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The linked synthetic/demo project applied the SQL from canonical migration
+-- 20260714194500_reception_staff_operational_status_snapshot.sql under remote version 20260714110730.
+-- Keep this file statement-free so fresh replay does not recreate the RPC twice.

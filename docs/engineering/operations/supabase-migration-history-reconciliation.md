@@ -6,7 +6,7 @@ tags:
   - supabase
   - migrations
   - release
-last_updated: 2026-07-12
+last_updated: 2026-07-14
 ---
 
 # Supabase Migration History Reconciliation
@@ -31,6 +31,9 @@ Do not delete or rename the compatibility aliases below. Their SQL was applied r
 | `20260702084357_remote_history_alias_invitation_role_job_lookup.sql` | `20260702130000_workspace_invitation_role_job_key_lookup.sql` |
 | `20260702084417_remote_history_alias_membership_role_job_update.sql` | `20260702133000_workspace_membership_role_job_key_update.sql` |
 | `20260705141026_remote_history_alias_home_operations_reader.sql` | `20260705120000_home_operations_work_items_reader.sql` |
+| `20260714110720_remote_history_alias_hospital_schedule_operations.sql` | `20260711112810_hospital_schedule_operations.sql` |
+| `20260714110730_remote_history_alias_reception_staff_operational_status_snapshot.sql` | `20260714194500_reception_staff_operational_status_snapshot.sql` |
+| `20260714110738_remote_history_alias_cheongdam_reception_staff_schedule_backfill.sql` | `20260714202000_cheongdam_reception_staff_schedule_backfill.sql` |
 
 The following remote-only SQL is preserved verbatim so a fresh local reset includes the actual remote behavior:
 
@@ -43,7 +46,13 @@ The following remote-only SQL is preserved verbatim so a fresh local reset inclu
 
 The following 17 local migrations are not timestamp aliases and were not marked as applied. They require their own release scope and verification before remote application:
 
-`20260601093000`, `20260609112000`, `20260616090000`, `20260616100000`, `20260616101000`, `20260616102000`, `20260617113000`, `20260618120000`, `20260618121000`, `20260625090000`, `20260627183000`, `20260701080619`, `20260702142317`, `20260705133000`, `20260708104700`, `20260711112810`, `20260711150000`.
+`20260601093000`, `20260609112000`, `20260616090000`, `20260616100000`, `20260616101000`, `20260616102000`, `20260617113000`, `20260618120000`, `20260618121000`, `20260625090000`, `20260627183000`, `20260701080619`, `20260702142317`, `20260705133000`, `20260708104700`, `20260711150000`.
+
+The three reception schedule canonical versions listed in the alias table are no
+longer pending behavior: their exact SQL was applied to the linked synthetic/demo
+project on 2026-07-14 under the corresponding remote versions. Do not reapply them
+merely to align timestamps. Any future history repair still requires the separate
+review and approval described below.
 
 Do not use `migration repair --status applied` for these entries merely to make `db push` look clean. Supabase repair changes only the history table; it does not execute the migration SQL.
 
@@ -59,7 +68,8 @@ npx supabase db push --linked --dry-run
 Expected remote interpretation:
 
 - remote-only versions: `0`
-- local-only versions: the 17 explicitly pending versions above
+- local-only versions: the 16 explicitly pending versions above, plus the three
+  reviewed reception canonical versions represented by remote aliases
 - plain dry-run requests `--include-all` for those pending versions instead of reporting missing remote history files
 
 Before any future repair, export `supabase_migrations.schema_migrations` and compare SQL content. Timestamp similarity or filename similarity alone is not enough evidence.
