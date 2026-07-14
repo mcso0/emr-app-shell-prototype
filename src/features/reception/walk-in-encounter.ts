@@ -1,5 +1,15 @@
 import type { Encounter, WaitingQueueEntry } from "@/types/emr-domain";
 
+export type ReceptionVitalMeasurementInput = {
+  weightKg?: number;
+  temperatureC?: number;
+  respiratoryRateRpm?: number;
+  bloodPressure?: {
+    systolicMmhg: number;
+    diastolicMmhg: number;
+  };
+};
+
 export type ReceptionWalkInEncounterInput = {
   department?: string;
   durationMinutes?: number;
@@ -9,7 +19,7 @@ export type ReceptionWalkInEncounterInput = {
   plannedStartAt?: string;
   primaryVeterinarianId?: string;
   visitPurpose?: string;
-  weightKg?: number;
+  vitals?: ReceptionVitalMeasurementInput;
 };
 
 export type ReceptionWalkInEncounterRecord = {

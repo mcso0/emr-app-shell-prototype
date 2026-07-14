@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
+  createMockReceptionWalkInEncounterGateway,
   createSupabaseReceptionWalkInEncounterGateway,
   createReceptionWalkInEncounter,
 } from "../src/features/reception/server-walk-in-encounter-core";
@@ -10,6 +11,13 @@ import {
 type SupabaseWalkInClient = Parameters<
   typeof createSupabaseReceptionWalkInEncounterGateway
 >[0];
+
+const validVitals = {
+  weightKg: 4.35,
+  temperatureC: 38.6,
+  respiratoryRateRpm: 24,
+  bloodPressure: { systolicMmhg: 132, diastolicMmhg: 84 },
+};
 
 const validWalkInInput = {
   patientId: "patient-coco",
@@ -20,7 +28,7 @@ const validWalkInInput = {
   durationMinutes: 30,
   visitPurpose: "구토 재진 상담",
   memo: "보호자가 식욕 저하를 걱정함",
-  weightKg: 4.35,
+  vitals: validVitals,
 };
 
 test("walk-in encounter route requires an actor and preserves mock fallback", async ({
@@ -170,6 +178,77 @@ test("walk-in encounter core validates duration as a positive 15 minute step", a
   });
 });
 
+test("walk-in encounter core validates nested vitals before gateway access", async () => {
+  const invalidCases = [
+    { vitals: { weightKg: 0 }, field: "vitals.weightKg" },
+    { vitals: { weightKg: Number.NaN }, field: "vitals.weightKg" },
+    { vitals: { temperatureC: -1 }, field: "vitals.temperatureC" },
+    {
+      vitals: { respiratoryRateRpm: 22.5 },
+      field: "vitals.respiratoryRateRpm",
+    },
+    {
+      vitals: { respiratoryRateRpm: Number.POSITIVE_INFINITY },
+      field: "vitals.respiratoryRateRpm",
+    },
+    {
+      vitals: { bloodPressure: { systolicMmhg: 132 } },
+      field: "vitals.bloodPressure.diastolicMmhg",
+    },
+    {
+      vitals: { bloodPressure: { systolicMmhg: 0, diastolicMmhg: 84 } },
+      field: "vitals.bloodPressure.systolicMmhg",
+    },
+    {
+      vitals: { bloodPressure: { systolicMmhg: 132, diastolicMmhg: 84.5 } },
+      field: "vitals.bloodPressure.diastolicMmhg",
+    },
+  ] as const;
+
+  let gatewayCalls = 0;
+  for (const invalidCase of invalidCases) {
+    const result = await createReceptionWalkInEncounter({
+      actorUserId: "user-front-desk",
+      workspaceId: "clair-demo",
+      input: { ...validWalkInInput, vitals: invalidCase.vitals } as never,
+      gateway: {
+        async createWalkInEncounter() {
+          gatewayCalls += 1;
+          throw new Error("gateway must not run for invalid vitals");
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: { [invalidCase.field]: expect.any(String) },
+    });
+  }
+  expect(gatewayCalls).toBe(0);
+});
+
+test("walk-in encounter core omits an empty nested vitals object", async () => {
+  let receivedInput: Record<string, unknown> | undefined;
+  const mockGateway = createMockReceptionWalkInEncounterGateway();
+  const result = await createReceptionWalkInEncounter({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: { ...validWalkInInput, vitals: {} } as never,
+    gateway: {
+      async createWalkInEncounter(args) {
+        receivedInput = args.input as unknown as Record<string, unknown>;
+        return mockGateway.createWalkInEncounter(args);
+      },
+    },
+  });
+
+  expect(result).toMatchObject({ ok: true, status: 201 });
+  expect(receivedInput).not.toHaveProperty("vitals");
+  expect(receivedInput).not.toHaveProperty("weightKg");
+});
+
 test("walk-in encounter core rejects reception times outside business hours", async () => {
   const beforeOpen = await createReceptionWalkInEncounter({
     actorUserId: "user-front-desk",
@@ -203,7 +282,7 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
         durationMinutes?: number;
         plannedStartAt?: string;
         primaryVeterinarianId?: string;
-        weightKg?: number;
+        vitals?: typeof validVitals;
       }
     | undefined;
   const gateway = createSupabaseReceptionWalkInEncounterGateway({
@@ -250,7 +329,7 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
           patientId: string;
           plannedStartAt?: string;
           primaryVeterinarianId?: string;
-          weightKg?: number;
+          vitals?: typeof validVitals;
         };
         p_workspace_id: string;
       };
@@ -308,7 +387,8 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
   );
   expect(createPayload?.durationMinutes).toBe(30);
   expect(createPayload?.plannedStartAt).toBe("2026-05-19T11:15:00+09:00");
-  expect(createPayload?.weightKg).toBe(4.35);
+  expect(createPayload?.vitals).toEqual(validVitals);
+  expect(createPayload).not.toHaveProperty("weightKg");
   expect(result).toMatchObject({
     ok: true,
     walkIn: {
