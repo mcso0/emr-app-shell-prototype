@@ -420,6 +420,24 @@ type VeterinarianOperationalStatus = {
   label: string;
   source: "reception" | "schedule" | "time_clock";
 };
+const veterinarianOperationalStatusToneClasses: Record<
+  VeterinarianOperationalStatus["code"],
+  string
+> = {
+  available:
+    "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-available)]",
+  clocked_out:
+    "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-clocked-out)]",
+  in_consultation:
+    "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-available)]",
+  leave:
+    "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-leave)]",
+  off: "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-waiting)]",
+  scheduled:
+    "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-waiting)]",
+  shift_ended:
+    "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-clocked-out)]",
+};
 type Veterinarian = {
   avatarUrl?: string;
   department?: string;
@@ -620,7 +638,12 @@ function VeterinarianLaneHeader({
           <span
             data-testid="veterinarian-operational-status"
             data-status={veterinarian.operationalStatus.code}
-            className="inline-flex h-[var(--emr-calendar-lane-status-height)] shrink-0 items-center rounded-[var(--emr-calendar-lane-status-radius)] border border-[var(--emr-calendar-lane-status-border)] bg-[var(--emr-calendar-lane-status-bg)] px-[var(--emr-calendar-lane-status-padding-x)] py-[var(--emr-calendar-lane-status-padding-y)] text-[length:var(--emr-calendar-lane-status-size)] font-[var(--emr-calendar-lane-status-weight)] leading-[var(--emr-calendar-lane-status-leading)] tracking-[var(--emr-calendar-lane-status-tracking)] text-[var(--emr-calendar-lane-status-text)]"
+            className={cn(
+              "inline-flex h-[var(--emr-calendar-lane-status-height)] min-w-[var(--emr-calendar-lane-status-min-width)] shrink-0 items-center justify-center whitespace-nowrap rounded-[var(--emr-calendar-lane-status-radius)] bg-[var(--emr-calendar-lane-status-bg)] px-[var(--emr-calendar-lane-status-padding-x)] py-[var(--emr-calendar-lane-status-padding-y)] text-center text-[length:var(--emr-calendar-lane-status-size)] font-[var(--emr-calendar-lane-status-weight)] leading-[var(--emr-calendar-lane-status-leading)] tracking-[var(--emr-calendar-lane-status-tracking)] text-[var(--emr-calendar-lane-status-text)] shadow-[0_0_0_1px_var(--emr-calendar-lane-status-border)]",
+              veterinarianOperationalStatusToneClasses[
+                veterinarian.operationalStatus.code
+              ],
+            )}
           >
             {veterinarian.operationalStatus.label}
           </span>

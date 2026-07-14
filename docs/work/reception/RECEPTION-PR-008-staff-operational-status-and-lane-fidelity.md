@@ -59,8 +59,11 @@ and source; exact clock times do not need to leave the DB for this surface.
   same lane's `300` token. No whole-header hover color.
 - Avatar: 24x24px, 6px radius, neutral-200 border.
 - Name: Pretendard 16/24, medium 500, 0.006em letter spacing, gray-700.
-- Badge: 18px high, 6px radius, 6px horizontal and 1px vertical padding, white
-  surface, neutral-200 border; label 12/16, medium 500, 0.025em.
+- Badge: 18px frame with a 1px outside stroke (20px visual bounds), 20px minimum
+  width, 6px radius, 6px horizontal and 1px vertical padding, white surface,
+  neutral-200 stroke; label 12/16, medium 500, 0.025em. Status colors follow the
+  Figma examples: teal-500 available, neutral-500 waiting, orange-500 break,
+  green-500 leave, and iron-600 clocked out.
 - Action group: 4px gap; each ghost button is 24x24px with 4px radius and a 14px icon.
 
 ## Implementation Plan
@@ -142,3 +145,8 @@ shifts, and six completed clock entries. A deployed-page reload then verified si
 visible `퇴근` badges whose DOM status is `clocked_out`. Supabase recorded the three
 applied migrations under remote-generated versions; statement-free compatibility
 aliases preserve those versions locally without changing fresh-replay behavior.
+
+Figma node `27682:32532` was re-inspected through the plugin API after deployed
+review. The reception badge now uses the component's true outside neutral-200
+stroke, 20px minimum width, centered label, and status-specific token mapping;
+`퇴근` resolves to iron-600 (`#746A5F`) instead of the previous sky tone.
