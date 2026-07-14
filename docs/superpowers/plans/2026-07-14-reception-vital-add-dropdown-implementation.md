@@ -1,5 +1,7 @@
 # Reception Vital Add Dropdown Implementation Plan
 
+> **Superseded on 2026-07-14:** Do not execute this plan. Supabase MCP verification and product review changed the scope to walk-in-only vital-history persistence, reservation-form removal, and a new DB/API contract. A replacement plan must be written from the approved design spec.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the placeholder `바이탈 추가` action in both walk-in reception and reservation creation with the approved dropdown and removable inline vital rows.

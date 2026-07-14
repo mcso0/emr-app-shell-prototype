@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CLAiR 접수/예약 바이탈 추가 시안</title>
+    <link rel="icon" href="data:," />
+    <title>CLAiR 현장 접수 바이탈 추가 시안</title>
     <style>
       :root {
         color-scheme: light;
@@ -187,6 +188,15 @@
       }
       .input-shell input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,136,242,.13); }
       .unit { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 12px; pointer-events: none; }
+      .blood-pressure-inputs {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 6px;
+      }
+      .blood-pressure-inputs .input-shell input { padding-right: 10px; }
+      .blood-pressure-separator, .blood-pressure-unit { color: var(--text-muted); font-size: 12px; }
 
       #optional-vitals {
         display: grid;
@@ -343,13 +353,13 @@
         </div>
       </section>
 
-      <aside class="panel" aria-label="예약 생성">
-        <header class="panel-head"><h1>예약 생성</h1><button class="icon-btn" aria-label="패널 닫기">×</button></header>
+      <aside class="panel" aria-label="현장 접수 생성">
+        <header class="panel-head"><h1>현장 접수 생성</h1><button class="icon-btn" aria-label="패널 닫기">×</button></header>
         <div class="panel-scroll">
           <section class="section">
             <div class="section-title">환자/보호자</div>
-            <div class="field-row"><div class="field-label">◌ 동물명</div><div class="select-shell"><strong>나나 · 고양이</strong><span>×</span></div></div>
-            <div class="field-row"><div class="field-label">♙ 보호자명</div><div class="text-shell"><strong>이하린</strong><span>010-4911-0003</span></div></div>
+            <div class="field-row"><div class="field-label">◌ 동물명</div><div class="select-shell"><strong>초코 · 강아지</strong><span>×</span></div></div>
+            <div class="field-row"><div class="field-label">♙ 보호자명</div><div class="text-shell"><strong>최도현</strong><span>010-0000-0000</span></div></div>
           </section>
 
           <section class="section" id="vital-section">
@@ -371,22 +381,21 @@
           </section>
 
           <section class="section">
-            <div class="section-title">예약 정보</div>
-            <div class="field-row"><div class="field-label">▣ 예약일</div><div class="text-shell"><strong>26.07.14</strong><span>▣</span></div></div>
-            <div class="field-row"><div class="field-label">◷ 예약시간</div><div class="select-shell"><strong>16:00</strong><span>⌄</span></div></div>
+            <div class="section-title">접수 정보</div>
+            <div class="field-row"><div class="field-label">▣ 접수일</div><div class="text-shell"><strong>26.07.14</strong><span>▣</span></div></div>
             <div class="field-row"><div class="field-label">〽 예상소요시간</div><div class="select-shell"><strong>30분</strong><span>⌄</span></div></div>
           </section>
 
           <section class="section">
-            <div class="section-title">예약 메모</div>
-            <div class="field-row"><div class="field-label">▧ 예약 메모</div><div class="text-area">예약 메모를 입력해주세요</div></div>
+            <div class="section-title">접수 메모</div>
+            <div class="field-row"><div class="field-label">▧ 접수 메모</div><div class="text-area">접수 메모를 입력해주세요</div></div>
           </section>
         </div>
         <footer class="panel-footer"><button class="footer-btn">닫기</button><button class="footer-btn primary">생성</button></footer>
       </aside>
     </main>
 
-    <aside class="prototype-note"><strong>인터랙티브 시안</strong><br />오른쪽 패널의 `바이탈 추가`로 행을 추가할 수 있어요. 두 개 이상이면 체중을 포함한 모든 행을 삭제할 수 있고, 마지막 한 행은 삭제할 수 없어요.</aside>
+    <aside class="prototype-note"><strong>현장 접수 시안</strong><br />입력한 값은 접수 생성 시 환자 바이탈 측정 이력으로 저장돼요. 혈압은 수축기와 이완기를 함께 입력하고, 예약 생성에서는 바이탈을 받지 않아요.</aside>
 
     <script>
       const iconPlus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>';
@@ -400,11 +409,11 @@
         { id: 'weight', label: '체중', unit: 'kg', icon: iconWeight, inputMode: 'decimal' },
         { id: 'temperature', label: '체온', unit: '°C', icon: iconThermometer, inputMode: 'decimal' },
         { id: 'respiration', label: '호흡', unit: 'rpm', icon: iconWind, inputMode: 'numeric' },
-        { id: 'blood-pressure', label: '혈압', unit: 'mmHg', icon: iconPulse, inputMode: 'decimal' },
+        { id: 'blood-pressure', label: '혈압', unit: 'mmHg', icon: iconPulse, inputMode: 'numeric' },
       ];
 
       const selected = ['weight'];
-      const draftValues = { weight: '6.00' };
+      const draftValues = { weight: '6.00', 'blood-pressure-systolic': '', 'blood-pressure-diastolic': '' };
       const trigger = document.querySelector('#add-trigger');
       const menu = document.querySelector('#vital-menu');
       const wrap = document.querySelector('#add-wrap');
@@ -439,21 +448,29 @@
         const canRemove = selected.length > 1;
         rows.innerHTML = selected.map((id) => {
           const vital = vitals.find((item) => item.id === id);
+          const control = vital.id === 'blood-pressure'
+            ? `<div class="blood-pressure-inputs">
+                <div class="input-shell"><input id="vital-blood-pressure-systolic" data-value-key="blood-pressure-systolic" inputmode="numeric" aria-label="수축기 혈압" placeholder="수축기" value="${draftValues['blood-pressure-systolic']}" /></div>
+                <span class="blood-pressure-separator" aria-hidden="true">/</span>
+                <div class="input-shell"><input id="vital-blood-pressure-diastolic" data-value-key="blood-pressure-diastolic" inputmode="numeric" aria-label="이완기 혈압" placeholder="이완기" value="${draftValues['blood-pressure-diastolic']}" /></div>
+                <span class="blood-pressure-unit">mmHg</span>
+              </div>`
+            : `<div class="input-shell">
+                <input id="vital-${vital.id}" data-value-key="${vital.id}" inputmode="${vital.inputMode}" aria-label="${vital.label}" value="${draftValues[vital.id] ?? ''}" />
+                <span class="unit">${vital.unit}</span>
+              </div>`;
           return `
             <div class="field-row optional-row" data-row="${vital.id}">
-              <label class="field-label" for="vital-${vital.id}">${vital.icon} ${vital.label}</label>
+              <label class="field-label" for="${vital.id === 'blood-pressure' ? 'vital-blood-pressure-systolic' : `vital-${vital.id}`}">${vital.icon} ${vital.label}</label>
               <div class="optional-control">
-                <div class="input-shell">
-                  <input id="vital-${vital.id}" inputmode="${vital.inputMode}" aria-label="${vital.label}" value="${draftValues[vital.id] ?? ''}" />
-                  <span class="unit">${vital.unit}</span>
-                </div>
+                ${control}
                 ${canRemove ? `<button class="remove-btn" type="button" data-remove="${vital.id}" aria-label="${vital.label} 삭제">${iconTrash}</button>` : ''}
               </div>
             </div>
           `;
         }).join('');
         renderMenu();
-        if (focusId) requestAnimationFrame(() => document.querySelector(`#vital-${focusId}`)?.focus());
+        if (focusId) requestAnimationFrame(() => document.querySelector(focusId === 'blood-pressure' ? '#vital-blood-pressure-systolic' : `#vital-${focusId}`)?.focus());
       }
 
       trigger.addEventListener('click', () => setMenuOpen(trigger.getAttribute('aria-expanded') !== 'true'));
@@ -484,9 +501,9 @@
 
       rows.addEventListener('input', (event) => {
         const input = event.target.closest('input');
-        const row = event.target.closest('[data-row]');
-        if (!input || !row) return;
-        draftValues[row.dataset.row] = input.value;
+        const valueKey = input?.dataset.valueKey;
+        if (!input || !valueKey) return;
+        draftValues[valueKey] = input.value;
       });
 
       document.addEventListener('click', (event) => {
