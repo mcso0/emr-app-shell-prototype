@@ -6,14 +6,14 @@ tags:
   - supabase
   - migrations
   - release
-last_updated: 2026-07-14
+last_updated: 2026-07-15
 ---
 
 # Supabase Migration History Reconciliation
 
 ## Current Contract
 
-The linked synthetic/demo Supabase project and `supabase/migrations` now share every remotely recorded migration version. Remote-only history count is `0` as of 2026-07-12.
+The linked synthetic/demo Supabase project and `supabase/migrations` now share every remotely recorded migration version. Remote-only history count is `0` as of 2026-07-15.
 
 Do not delete or rename the compatibility aliases below. Their SQL was applied remotely under the remote timestamp, while an identical canonical file exists locally under a different timestamp. The alias files intentionally contain comments only so fresh local replay does not execute the same SQL twice.
 
@@ -34,6 +34,7 @@ Do not delete or rename the compatibility aliases below. Their SQL was applied r
 | `20260714110720_remote_history_alias_hospital_schedule_operations.sql` | `20260711112810_hospital_schedule_operations.sql` |
 | `20260714110730_remote_history_alias_reception_staff_operational_status_snapshot.sql` | `20260714194500_reception_staff_operational_status_snapshot.sql` |
 | `20260714110738_remote_history_alias_cheongdam_reception_staff_schedule_backfill.sql` | `20260714202000_cheongdam_reception_staff_schedule_backfill.sql` |
+| `20260714162034_remote_history_alias_workspace_operating_hours.sql` | `20260715100000_workspace_operating_hours.sql` |
 
 The following remote-only SQL is preserved verbatim so a fresh local reset includes the actual remote behavior:
 
@@ -44,7 +45,7 @@ The following remote-only SQL is preserved verbatim so a fresh local reset inclu
 
 ## Genuinely Pending Remote Migrations
 
-The following 17 local migrations are not timestamp aliases and were not marked as applied. They require their own release scope and verification before remote application:
+The following 16 local migrations are not timestamp aliases and were not marked as applied. They require their own release scope and verification before remote application:
 
 `20260601093000`, `20260609112000`, `20260616090000`, `20260616100000`, `20260616101000`, `20260616102000`, `20260617113000`, `20260618120000`, `20260618121000`, `20260625090000`, `20260627183000`, `20260701080619`, `20260702142317`, `20260705133000`, `20260708104700`, `20260711150000`.
 
@@ -53,6 +54,11 @@ longer pending behavior: their exact SQL was applied to the linked synthetic/dem
 project on 2026-07-14 under the corresponding remote versions. Do not reapply them
 merely to align timestamps. Any future history repair still requires the separate
 review and approval described below.
+
+The workspace operating-hours canonical migration is also no longer pending
+behavior. Its exact SQL was applied and verified on 2026-07-15 under remote version
+`20260714162034`; the alias preserves that remote history version locally. The
+canonical version remains local-only metadata and must not be reapplied.
 
 Do not use `migration repair --status applied` for these entries merely to make `db push` look clean. Supabase repair changes only the history table; it does not execute the migration SQL.
 
@@ -68,8 +74,8 @@ npx supabase db push --linked --dry-run
 Expected remote interpretation:
 
 - remote-only versions: `0`
-- local-only versions: the 16 explicitly pending versions above, plus the three
-  reviewed reception canonical versions represented by remote aliases
+- local-only versions: the 16 explicitly pending versions above, plus the canonical
+  versions represented by reviewed remote aliases
 - plain dry-run requests `--include-all` for those pending versions instead of reporting missing remote history files
 
 Before any future repair, export `supabase_migrations.schema_migrations` and compare SQL content. Timestamp similarity or filename similarity alone is not enough evidence.
