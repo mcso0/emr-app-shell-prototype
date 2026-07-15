@@ -147,20 +147,49 @@ export const AvatarUploadMenuAndReset: Story = {
     await waitFor(() => expect(body.getByRole("separator")).toBeInTheDocument());
     await userEvent.click(body.getByRole("menuitem", { name: "프로필 이미지 업로드" }));
     expect(body.getByRole("heading", { name: "프로필 이미지 업로드" })).toBeInTheDocument();
+    const dialog = body.getByRole("dialog");
+    expect(dialog).toHaveStyle({ position: "fixed" });
+    expect(dialog.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
     const input = body.getByLabelText("프로필 이미지 선택");
-    const file = new File([new Uint8Array([1, 2, 3])], "avatar.png", {
+    const file = new File([decodeBase64Png()], "avatar.png", {
       type: "image/png",
     });
     await userEvent.upload(input, file);
-    expect(body.getByText("avatar.png")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        body.getByRole("img", { name: "선택한 프로필 이미지 미리보기" }),
+      ).toBeVisible(),
+    );
+    expect(body.queryByRole("button", { name: "취소" })).not.toBeInTheDocument();
+    await userEvent.click(body.getByRole("button", { name: "선택한 이미지 제거" }));
+    expect(
+      body.queryByRole("img", { name: "선택한 프로필 이미지 미리보기" }),
+    ).not.toBeInTheDocument();
+    await userEvent.upload(input, file);
     await userEvent.click(body.getByRole("button", { name: "업로드" }));
     await waitFor(() => expect(canvas.getByText("업로드됨: avatar.png")).toBeVisible());
 
     await openMenu(canvas.getByRole("button", { name: "프로필 이미지 메뉴 열기" }));
     await userEvent.click(body.getByRole("menuitem", { name: "프로필 이미지 업로드" }));
-    expect(body.queryByText("avatar.png")).not.toBeInTheDocument();
+    expect(
+      body.queryByRole("img", { name: "선택한 프로필 이미지 미리보기" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      body.getByRole("button", { name: "프로필 이미지 업로드 닫기" }),
+    );
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("button", { name: "프로필 이미지 메뉴 열기" }),
+      ).toHaveFocus(),
+    );
   },
 };
+
+function decodeBase64Png() {
+  const base64 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+  return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+}
 
 function HeaderMenuSpecimen({ canManageMember }: { canManageMember: boolean }) {
   return (

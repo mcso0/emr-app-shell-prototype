@@ -27,6 +27,7 @@ import {
   PresenceBadge,
   ProfileHeaderActionMenu,
   StatusMessageEditor,
+  type ProfileAvatarUploadPhase,
 } from "@/features/staff/components/profile-side-panel-v2-header";
 import { ProfileAvailabilitySummary } from "@/features/staff/components/profile-side-panel-v2-profile";
 import {
@@ -42,6 +43,7 @@ import type {
   StaffOperationalShift,
 } from "@/features/staff/server-operational-profile-core";
 import type { StaffAssignedWorkItem } from "@/features/staff/server-staff-assigned-work-items-core";
+import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   formatStaffLastSeenLabel,
   useWorkspaceStaffPresenceState,
@@ -282,6 +284,107 @@ export function StaffOperationalProfilePanel({
     [actorUserId, requestKey, response, workspaceId],
   );
 
+  const uploadAvatar = useCallback(
+    async (
+      file: File,
+      phase: (phase: ProfileAvatarUploadPhase) => void,
+    ) => {
+      if (!response?.capabilities.canEditAvatar) {
+        throw new Error("avatar_edit_not_allowed");
+      }
+      let uploadId: string | null = null;
+      try {
+        const prepareResponse = await fetch("/api/users/me/avatar", {
+          method: "POST",
+          headers: buildAvatarRequestHeaders(actorUserId),
+          body: JSON.stringify({ action: "prepare", workspaceId }),
+        });
+        const prepared = (await prepareResponse.json()) as AvatarPrepareResponse;
+        if (
+          !prepareResponse.ok ||
+          !prepared.ok ||
+          typeof prepared.objectPath !== "string" ||
+          typeof prepared.uploadId !== "string" ||
+          typeof prepared.uploadToken !== "string" ||
+          file.size > prepared.maxBytes
+        ) {
+          throw new Error("avatar_prepare_failed");
+        }
+        uploadId = prepared.uploadId;
+
+        const client = getBrowserSupabaseClient();
+        if (!client) throw new Error("supabase_client_missing");
+        phase("uploading");
+        const { error: uploadError } = await client.storage
+          .from("profile-avatars")
+          .uploadToSignedUrl(
+            prepared.objectPath,
+            prepared.uploadToken,
+            file,
+            { cacheControl: "0", contentType: file.type, upsert: false },
+          );
+        if (uploadError) throw new Error("avatar_upload_failed");
+
+        phase("processing");
+        const finalizeResponse = await fetch("/api/users/me/avatar", {
+          method: "POST",
+          headers: buildAvatarRequestHeaders(actorUserId),
+          body: JSON.stringify({
+            action: "finalize",
+            declaredMime: file.type,
+            uploadId,
+            workspaceId,
+          }),
+        });
+        const body = (await finalizeResponse.json()) as AvatarFinalizeResponse;
+        if (!finalizeResponse.ok || !body.ok || typeof body.avatarUrl !== "string") {
+          throw new Error("avatar_finalize_failed");
+        }
+
+        setLoadResult((current) => {
+          if (!current?.response || current.key !== requestKey) return current;
+          return {
+            ...current,
+            response: {
+              ...current.response,
+              profile: { ...current.response.profile, avatarUrl: body.avatarUrl },
+            },
+          };
+        });
+        uploadId = null;
+      } catch (error) {
+        if (uploadId) {
+          await discardAvatarUpload({ actorUserId, uploadId, workspaceId });
+        }
+        throw error;
+      }
+    },
+    [actorUserId, requestKey, response, workspaceId],
+  );
+
+  const removeAvatar = useCallback(async () => {
+    if (!response?.capabilities.canEditAvatar) {
+      throw new Error("avatar_edit_not_allowed");
+    }
+    const result = await fetch("/api/users/me/avatar", {
+      method: "DELETE",
+      headers: buildAvatarRequestHeaders(actorUserId),
+      body: JSON.stringify({ workspaceId }),
+    });
+    const body = (await result.json()) as AvatarRemoveResponse;
+    if (!result.ok || !body.ok) throw new Error("avatar_remove_failed");
+    setLoadResult((current) => {
+      if (!current?.response || current.key !== requestKey) return current;
+      return {
+        ...current,
+        response: {
+          ...current.response,
+          profile: { ...current.response.profile, avatarUrl: undefined },
+        },
+      };
+    });
+  }, [actorUserId, requestKey, response, workspaceId]);
+
   return (
     <section
       aria-label="직원 운영 프로필"
@@ -302,10 +405,13 @@ export function StaffOperationalProfilePanel({
         <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-3">
           {profile ? (
             <ProfileHeader
+              canEditAvatar={response?.capabilities.canEditAvatar ?? false}
               canEditStatusMessage={
                 response?.capabilities.canEditStatusMessage ?? false
               }
+              onRemoveAvatar={removeAvatar}
               onSaveStatusMessage={saveStatusMessage}
+              onUploadAvatar={uploadAvatar}
               presence={presence}
               profile={profile}
             />
@@ -434,13 +540,22 @@ export function StaffOperationalProfilePanel({
 }
 
 function ProfileHeader({
+  canEditAvatar,
   canEditStatusMessage,
+  onRemoveAvatar,
   onSaveStatusMessage,
+  onUploadAvatar,
   presence,
   profile,
 }: {
+  canEditAvatar: boolean;
   canEditStatusMessage: boolean;
+  onRemoveAvatar: () => Promise<void>;
   onSaveStatusMessage: (value: string) => Promise<void>;
+  onUploadAvatar: (
+    file: File,
+    phase: (phase: ProfileAvatarUploadPhase) => void,
+  ) => Promise<void>;
   presence: "online" | "offline" | "unknown";
   profile: StaffOperationalProfile;
 }) {
@@ -448,8 +563,10 @@ function ProfileHeader({
     <div className="flex items-start gap-3 pr-20">
       <EditableProfileAvatar
         alt={profile.displayName}
-        editable={false}
+        editable={canEditAvatar}
         initials={profile.initials ?? profile.displayName.slice(0, 2)}
+        onRemove={onRemoveAvatar}
+        onUpload={onUploadAvatar}
         src={profile.avatarUrl}
       />
       <div className="min-w-0 flex-1 pt-1">
@@ -484,6 +601,24 @@ type WorkspaceStatusMessageResponse =
       message: string | null;
       updatedAt: string | null;
     }
+  | { ok: false; error?: string; denialReason?: string };
+
+type AvatarPrepareResponse =
+  | {
+      ok: true;
+      maxBytes: number;
+      objectPath: string;
+      uploadId: string;
+      uploadToken: string;
+    }
+  | { ok: false; error?: string; denialReason?: string };
+
+type AvatarFinalizeResponse =
+  | { ok: true; avatarUrl: string; cleanupPending: boolean }
+  | { ok: false; error?: string; denialReason?: string };
+
+type AvatarRemoveResponse =
+  | { ok: true; avatarUrl: null }
   | { ok: false; error?: string; denialReason?: string };
 
 function ProfileHeaderSkeleton() {
@@ -789,5 +924,34 @@ async function copyValue(value: string, label: string) {
     toast.success(`${label}을 복사했어요`);
   } catch {
     toast.error(`${label}을 복사하지 못했어요`);
+  }
+}
+
+function buildAvatarRequestHeaders(actorUserId: string | undefined) {
+  return {
+    "content-type": "application/json",
+    ...(actorUserId
+      ? { "x-clair-demo-session-user-id": actorUserId }
+      : {}),
+  };
+}
+
+async function discardAvatarUpload({
+  actorUserId,
+  uploadId,
+  workspaceId,
+}: {
+  actorUserId: string | undefined;
+  uploadId: string;
+  workspaceId: string;
+}) {
+  try {
+    await fetch("/api/users/me/avatar", {
+      method: "POST",
+      headers: buildAvatarRequestHeaders(actorUserId),
+      body: JSON.stringify({ action: "discard", uploadId, workspaceId }),
+    });
+  } catch {
+    // Best effort only; the server also removes quarantine after finalization.
   }
 }

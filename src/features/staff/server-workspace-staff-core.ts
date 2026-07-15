@@ -7,6 +7,7 @@ import {
 } from "@/features/auth/permission-resolver";
 import { mockStaffUsers } from "@/mocks/emr-domain";
 import { AVATAR_STORAGE_BUCKET } from "@/features/staff/staff-avatar";
+import { PRIVATE_PROFILE_AVATAR_BUCKET } from "@/features/staff/server-profile-avatar-core";
 import { isIsoOperatingDate } from "@/lib/emr-domain/demo-date";
 
 export type WorkspaceStaffOperationalStatusCode =
@@ -93,6 +94,8 @@ type SupabaseStaffUserRow = {
 };
 
 type SupabaseStaffProfileRow = {
+  avatar_legacy_hidden?: boolean;
+  avatar_storage_path?: string | null;
   avatar_url?: string | null;
   user_id: string;
 };
@@ -105,6 +108,10 @@ type SupabaseStaffOperationalStatusRow = {
 
 type SupabaseStaffStorage = {
   from(bucket: string): {
+    createSignedUrl(path: string, expiresIn: number): Promise<{
+      data: { signedUrl?: string } | null;
+      error: { message?: string } | null;
+    }>;
     getPublicUrl(path: string): { data: { publicUrl: string } };
   };
 };
@@ -212,16 +219,20 @@ export function createSupabaseWorkspaceStaffReadGateway(
 
         const { data: profileRows, error: profileError } = await client
           .from("user_profiles")
-          .select("user_id, avatar_url")
+          .select(
+            "user_id, avatar_url, avatar_storage_path, avatar_legacy_hidden",
+          )
           .in("user_id", userIds);
         if (profileError) return { ok: false, error: "db_read_failed" };
 
         const userById = new Map((userRows ?? []).map((row) => [row.id, row]));
         const avatarUrlByUserId = new Map(
-          (profileRows ?? []).map((row) => [
-            row.user_id,
-            resolveStaffAvatarUrl(client, row.avatar_url),
-          ]),
+          await Promise.all(
+            (profileRows ?? []).map(async (row) => [
+              row.user_id,
+              await resolveStaffAvatarUrl(client, row),
+            ] as const),
+          ),
         );
         let operationalStatusByUserId = new Map<
           string,
@@ -256,6 +267,7 @@ export function createSupabaseWorkspaceStaffReadGateway(
             const user = userById.get(membership.user_id);
             if (!user || user.status !== "active") return accumulator;
             const roles = normalizeRoles(membership.roles);
+            const avatarUrl = avatarUrlByUserId.get(user.id);
 
             accumulator.push({
               department: membership.department ?? undefined,
@@ -263,7 +275,7 @@ export function createSupabaseWorkspaceStaffReadGateway(
               id: user.id,
               initial: user.initial ?? undefined,
               operationalStatus: operationalStatusByUserId.get(user.id),
-              avatarUrl: avatarUrlByUserId.get(user.id) ?? undefined,
+              ...(avatarUrl ? { avatarUrl } : {}),
               roles,
               status: "active" as const,
               title: membership.title ?? undefined,
@@ -310,10 +322,26 @@ export function createMockWorkspaceStaffReadGateway(): WorkspaceStaffReadGateway
   };
 }
 
-function resolveStaffAvatarUrl(
+async function resolveStaffAvatarUrl(
   client: SupabaseWorkspaceStaffClient,
-  avatarReference: string | null | undefined,
-): string | undefined {
+  profile: SupabaseStaffProfileRow,
+): Promise<string | undefined> {
+  const privatePath = profile.avatar_storage_path?.trim();
+  if (privatePath) {
+    try {
+      const { data, error } = await client.storage
+        .from(PRIVATE_PROFILE_AVATAR_BUCKET)
+        .createSignedUrl(privatePath, 5 * 60);
+      return !error && typeof data?.signedUrl === "string" && data.signedUrl
+        ? data.signedUrl
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  if (profile.avatar_legacy_hidden === true) return undefined;
+
+  const avatarReference = profile.avatar_url;
   const reference = avatarReference?.trim();
   if (!reference) return undefined;
   if (reference.startsWith("/") || reference.startsWith("http")) {

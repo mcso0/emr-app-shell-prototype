@@ -204,6 +204,81 @@ test("Supabase operational profile gateway joins membership, job position, avata
   });
 });
 
+test("Supabase operational profile prefers a short-lived private avatar and never revives hidden legacy media", async () => {
+  const baseRows = {
+    hospital_schedule_staff_profiles: [],
+    user_memberships: [
+      {
+        id: "membership-suji",
+        workspace_id: "workspace-clair-cheongdam",
+        user_id: "user-suji",
+        status: "active",
+      },
+    ],
+    users: [
+      {
+        id: "user-suji",
+        display_name: "이수지",
+        status: "active",
+      },
+    ],
+    workspace_job_positions: [],
+    workspace_member_activity: [],
+    workspace_membership_job_position_assignments: [],
+  };
+  const privatePath =
+    "user-suji/avatars/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.webp";
+  const privateGateway =
+    operationalProfileModule.createSupabaseStaffOperationalProfileGateway(
+      createSupabaseProfileClient({
+        ...baseRows,
+        user_profiles: [
+          {
+            user_id: "user-suji",
+            avatar_url: "legacy.png",
+            avatar_storage_path: privatePath,
+            avatar_legacy_hidden: true,
+          },
+        ],
+      }) as unknown as operationalProfileModule.SupabaseStaffOperationalProfileClient,
+    );
+
+  await expect(
+    privateGateway.readProfile({
+      date: "2026-07-14",
+      userId: "user-suji",
+      workspaceId: "workspace-clair-cheongdam",
+    }),
+  ).resolves.toMatchObject({
+    ok: true,
+    profile: {
+      avatarUrl: `https://storage.local/profile-avatars/signed/${privatePath}`,
+    },
+  });
+
+  const removedGateway =
+    operationalProfileModule.createSupabaseStaffOperationalProfileGateway(
+      createSupabaseProfileClient({
+        ...baseRows,
+        user_profiles: [
+          {
+            user_id: "user-suji",
+            avatar_url: "legacy.png",
+            avatar_storage_path: null,
+            avatar_legacy_hidden: true,
+          },
+        ],
+      }) as unknown as operationalProfileModule.SupabaseStaffOperationalProfileClient,
+    );
+  const removed = await removedGateway.readProfile({
+    date: "2026-07-14",
+    userId: "user-suji",
+    workspaceId: "workspace-clair-cheongdam",
+  });
+  expect(removed.ok).toBe(true);
+  if (removed.ok) expect(removed.profile).not.toHaveProperty("avatarUrl");
+});
+
 test("Supabase operational profile derives the nearest 14-day absence and first return from published weeks", async () => {
   const baseRows = {
     hospital_schedule_staff_profiles: [],
@@ -468,6 +543,7 @@ test("operational profile keeps nullable contacts absent and does not require re
   expect(result.ok).toBe(true);
   if (!result.ok) return;
   expect(result.capabilities.canEditStatusMessage).toBe(true);
+  expect(result.capabilities.canEditAvatar).toBe(true);
   expect(result.profile).not.toHaveProperty("email");
   expect(result.profile).not.toHaveProperty("phone");
 });
@@ -562,6 +638,14 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
     storage: {
       from(bucket: string) {
         return {
+          async createSignedUrl(path: string) {
+            return {
+              data: {
+                signedUrl: `https://storage.local/${bucket}/signed/${path}`,
+              },
+              error: null,
+            };
+          },
           getPublicUrl(path: string) {
             return {
               data: { publicUrl: `https://storage.local/${bucket}/${path}` },

@@ -4,6 +4,7 @@ import {
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
 import { AVATAR_STORAGE_BUCKET } from "@/features/staff/staff-avatar";
+import { PRIVATE_PROFILE_AVATAR_BUCKET } from "@/features/staff/server-profile-avatar-core";
 
 export type StaffOperationalProfile = {
   avatarUrl?: string;
@@ -35,6 +36,7 @@ export type StaffOperationalAvailability = {
 };
 
 export type StaffOperationalProfileCapabilities = {
+  canEditAvatar: boolean;
   canEditStatusMessage: boolean;
   canManageMember: boolean;
   manageMemberHref: string | null;
@@ -79,6 +81,10 @@ export type SupabaseStaffOperationalProfileClient = {
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   storage: {
     from(bucket: string): {
+      createSignedUrl(path: string, expiresIn: number): Promise<{
+        data: { signedUrl?: string } | null;
+        error: { message?: string } | null;
+      }>;
       getPublicUrl(path: string): { data: { publicUrl: string } };
     };
   };
@@ -153,6 +159,7 @@ export async function readStaffOperationalProfile({
     status: 200,
     availability: result.availability,
     capabilities: {
+      canEditAvatar: actorUserId === userId,
       canEditStatusMessage: actorUserId === userId,
       canManageMember,
       manageMemberHref: canManageMember
@@ -203,9 +210,12 @@ export function createSupabaseStaffOperationalProfileGateway(
         }
 
         const [profiles, activities, statuses, assignments] = await Promise.all([
-          readRows(client, "user_profiles", "user_id, avatar_url", {
-            user_id: userId,
-          }),
+          readRows(
+            client,
+            "user_profiles",
+            "user_id, avatar_url, avatar_storage_path, avatar_legacy_hidden",
+            { user_id: userId },
+          ),
           readOptionalRows(
             client,
             "workspace_member_activity",
@@ -260,7 +270,7 @@ export function createSupabaseStaffOperationalProfileGateway(
           ...(typeof positions[0]?.label === "string"
             ? { jobPositionLabel: positions[0].label }
             : {}),
-          ...resolveAvatar(client, profiles[0]?.avatar_url),
+          ...(await resolveAvatar(client, profiles[0])),
         };
 
         const weekStarts = getAvailabilityWeekStarts(date);
@@ -411,10 +421,28 @@ async function readOptionalRows(
   }
 }
 
-function resolveAvatar(
+async function resolveAvatar(
   client: SupabaseStaffOperationalProfileClient,
-  value: unknown,
-): Pick<StaffOperationalProfile, "avatarUrl"> | Record<string, never> {
+  row: Record<string, unknown> | undefined,
+): Promise<
+  Pick<StaffOperationalProfile, "avatarUrl"> | Record<string, never>
+> {
+  const privatePath = row?.avatar_storage_path;
+  if (typeof privatePath === "string" && privatePath.trim()) {
+    try {
+      const { data, error } = await client.storage
+        .from(PRIVATE_PROFILE_AVATAR_BUCKET)
+        .createSignedUrl(privatePath.trim(), 5 * 60);
+      return !error && typeof data?.signedUrl === "string" && data.signedUrl
+        ? { avatarUrl: data.signedUrl }
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  if (row?.avatar_legacy_hidden === true) return {};
+
+  const value = row?.avatar_url;
   if (typeof value !== "string" || !value.trim()) return {};
   const reference = value.trim();
   if (reference.startsWith("/") || reference.startsWith("http")) {
