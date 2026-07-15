@@ -100,6 +100,12 @@ export function bindWorkspaceStaffPresenceEvents(
     .on("presence", { event: "leave" }, syncOnlineStatus);
 }
 
+export async function resolveWorkspaceStaffActivityHeartbeat(
+  result: PromiseLike<unknown>,
+) {
+  await result;
+}
+
 export function formatStaffLastSeenLabel(
   lastSeenAt: string | undefined,
   now = new Date(),
@@ -191,9 +197,11 @@ export function WorkspaceStaffPresenceReporter({
       });
 
       const touchActivity = () =>
-        client.rpc("clair_touch_workspace_member_activity", {
-          p_workspace_id: workspaceId,
-        });
+        resolveWorkspaceStaffActivityHeartbeat(
+          client.rpc("clair_touch_workspace_member_activity", {
+            p_workspace_id: workspaceId,
+          }),
+        );
 
       channel.subscribe((status) => {
         if (status !== "SUBSCRIBED" || disposed || !channel) return;

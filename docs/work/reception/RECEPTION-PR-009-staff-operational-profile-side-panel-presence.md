@@ -118,6 +118,10 @@ last-seen data without exposing auth internals or cross-workspace identities.
    workspace snapshot. Profile consumers subscribe to that snapshot and never
    bind callbacks to an already-subscribed channel. Authenticated production UI
    smoke must pass before availability is claimed.
+7. Authenticated production smoke passed the panel and profile API path, then
+   exposed that the Supabase `rpc()` result used for `last_seen_at` was discarded
+   without being awaited. The reporter now consumes that lazy thenable for the
+   initial and interval heartbeat, with a focused regression test.
 
 ## Closeout
 
