@@ -7,6 +7,7 @@ import {
   getWorkspaceStaffPresenceTopic,
   isStaffOnline,
   publishWorkspaceStaffPresenceState,
+  resolveWorkspaceStaffActivityHeartbeat,
   subscribeWorkspaceStaffPresence,
 } from "../src/features/staff/workspace-staff-presence";
 
@@ -106,4 +107,18 @@ test("Presence topic is isolated by workspace and last-seen labels avoid fake hi
       new Date("2026-07-14T13:00:00.000Z"),
     ),
   ).toBe("5분 전 접속");
+});
+
+test("workspace activity heartbeat consumes the lazy Supabase RPC result", async () => {
+  let consumed = false;
+  const lazyRpcResult: PromiseLike<unknown> = {
+    then(onfulfilled, onrejected) {
+      consumed = true;
+      return Promise.resolve({ error: null }).then(onfulfilled, onrejected);
+    },
+  };
+
+  await resolveWorkspaceStaffActivityHeartbeat(lazyRpcResult);
+
+  expect(consumed).toBe(true);
 });
