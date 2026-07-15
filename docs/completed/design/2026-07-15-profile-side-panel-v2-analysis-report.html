@@ -1,0 +1,4779 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>CLAiR EMR 프로필 사이드 패널 V2 분석 및 시안</title>
+    <style>
+      @import url("../../../src/styles/tokens/clair.css");
+
+      :root {
+        color-scheme: light;
+        --ink: var(--clair-color-atomic-neutral-900);
+        --ink-2: var(--clair-color-atomic-neutral-700);
+        --muted: var(--clair-color-atomic-neutral-500);
+        --soft: var(--clair-color-atomic-neutral-400);
+        --line: var(--clair-color-atomic-neutral-200);
+        --line-strong: var(--clair-color-atomic-neutral-300);
+        --surface: var(--clair-color-atomic-common-100);
+        --canvas: var(--clair-color-atomic-neutral-100);
+        --green-50: var(--clair-color-atomic-green-50);
+        --green-200: var(--clair-color-atomic-green-200);
+        --green-600: var(--clair-color-atomic-green-600);
+        --blue: var(--clair-color-atomic-sky-500);
+        --danger: var(--clair-color-atomic-red-600);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: #f3f4f6;
+        color: var(--ink);
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.62;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        color: inherit;
+      }
+      main {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 44px 24px 80px;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+      h1 {
+        margin-bottom: 10px;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.18;
+        letter-spacing: -0.04em;
+      }
+      h2 {
+        margin-bottom: 14px;
+        font-size: 21px;
+        line-height: 1.35;
+        letter-spacing: -0.02em;
+      }
+      h3 {
+        margin-bottom: 8px;
+        font-size: 16px;
+        line-height: 1.4;
+      }
+      p {
+        margin-bottom: 0;
+      }
+      a {
+        color: #075985;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f5f5f5;
+        font-family: "SFMono-Regular", Consolas, monospace;
+      }
+      main > section {
+        margin-top: 22px;
+        padding: 24px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+      }
+      ul,
+      ol {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+      li + li {
+        margin-top: 5px;
+      }
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 11px 12px;
+        border: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #fafafa;
+        color: var(--ink-2);
+        font-weight: 650;
+      }
+      .eyebrow {
+        margin-bottom: 9px;
+        color: #0369a1;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .lead {
+        max-width: 840px;
+        color: var(--ink-2);
+        font-size: 17px;
+      }
+      .decision {
+        border-color: #bae6fd;
+        background: #f0f9ff;
+      }
+      .decision-grid,
+      .two-col,
+      .three-col {
+        display: grid;
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .decision-grid,
+      .three-col {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .two-col {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .card {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+      }
+      .card p,
+      .card li {
+        color: var(--ink-2);
+        font-size: 14px;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 3px 8px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .tag.critical {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: #991b1b;
+      }
+      .tag.good {
+        border-color: var(--green-200);
+        background: var(--green-50);
+        color: var(--green-600);
+      }
+      .evidence {
+        overflow: hidden;
+        padding: 0;
+      }
+      .evidence figcaption {
+        padding: 14px 16px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .evidence img {
+        display: block;
+        width: 100%;
+        height: auto;
+        background: #fafafa;
+      }
+      .evidence-grid {
+        display: grid;
+        grid-template-columns: 1.4fr 0.6fr;
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .evidence-stack {
+        display: grid;
+        gap: 14px;
+      }
+      .callout {
+        margin-top: 14px;
+        padding: 14px 16px;
+        border-left: 3px solid #0ea5e9;
+        background: #f0f9ff;
+        color: #0c4a6e;
+        font-size: 14px;
+      }
+      .risk {
+        border-left-color: #ef4444;
+        background: #fef2f2;
+        color: #7f1d1d;
+      }
+      .mockup-wrap {
+        margin-top: 16px;
+        padding: 24px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #e5e5e5;
+      }
+      .mockup-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .mock-tool,
+      .mock-button {
+        min-height: 32px;
+        padding: 6px 12px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+      }
+      .mock-tool[aria-pressed="true"],
+      .mock-button.primary {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: #fff;
+      }
+      .panel-stage {
+        display: grid;
+        min-width: 880px;
+        min-height: 720px;
+        place-items: start end;
+        padding: 18px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #fafafa 0 57%, #f5f5f5 57%);
+      }
+      .profile-panel {
+        position: relative;
+        display: flex;
+        width: 380px;
+        height: 690px;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+      }
+      .profile-head {
+        height: 150px;
+        flex: 0 0 150px;
+        padding: 16px 16px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .profile-top {
+        position: relative;
+        display: flex;
+        height: 84px;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .avatar-button {
+        position: relative;
+        width: 84px;
+        height: 84px;
+        flex: 0 0 84px;
+        padding: 0;
+        overflow: hidden;
+        border: 0;
+        border-radius: var(--clair-radius-atomic-6);
+        background: var(--clair-color-atomic-neutral-100);
+        box-shadow: inset 0 0 0 var(--clair-border-width-default)
+          var(--clair-color-atomic-neutral-200);
+        cursor: pointer;
+      }
+      .avatar-button[data-picture="false"]:hover,
+      .avatar-button[data-picture="false"][data-open="true"],
+      .component-avatar[data-picture="false"][data-state="hover"] {
+        box-shadow: none;
+      }
+      .avatar-picture,
+      .avatar-fallback {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        border-radius: var(--clair-radius-atomic-6);
+      }
+      .avatar-picture img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .avatar-fallback {
+        display: grid;
+        place-items: center;
+        background: var(--clair-color-atomic-neutral-100);
+        color: var(--clair-color-atomic-neutral-400);
+        font-family: var(--clair-typography-heading-1-font-family);
+        font-size: var(--clair-typography-heading-1-font-size);
+        font-weight: var(--clair-typography-heading-1-font-weight);
+        line-height: var(--clair-typography-heading-1-line-height);
+        letter-spacing: var(--clair-typography-heading-1-letter-spacing);
+      }
+      .avatar-edit {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: var(--clair-color-atomic-black-alpha-36);
+        backdrop-filter: blur(2px);
+        opacity: 0;
+        transition: opacity 120ms ease;
+      }
+      .avatar-edit img {
+        width: 24px;
+        height: 24px;
+      }
+      .avatar-button:hover .avatar-edit,
+      .avatar-button:focus-visible .avatar-edit,
+      .avatar-button[data-open="true"] .avatar-edit,
+      .component-avatar[data-state="hover"] .avatar-edit {
+        opacity: 1;
+      }
+      .profile-info {
+        min-width: 0;
+        flex: 1;
+      }
+      .name-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 28px;
+        padding: 0 34px 0 6px;
+      }
+      .name-row strong {
+        max-width: 132px;
+        overflow: hidden;
+        font-size: 20px;
+        line-height: 28px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .presence {
+        display: inline-flex;
+        min-height: 20px;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px 2px 6px;
+        border: 1px solid var(--green-200);
+        border-radius: var(--clair-radius-full);
+        background: var(--green-50);
+        color: var(--green-600);
+        font-family: var(--clair-typography-label-2-font-family);
+        font-size: var(--clair-typography-label-2-font-size);
+        font-weight: var(--clair-typography-label-2-font-weight);
+        line-height: var(--clair-typography-label-2-line-height);
+        letter-spacing: var(--clair-typography-label-2-letter-spacing);
+      }
+      .presence::before {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--clair-color-atomic-green-400);
+        content: "";
+      }
+      .presence.offline {
+        border-color: var(--clair-color-atomic-neutral-200);
+        background: var(--clair-color-atomic-neutral-50);
+        color: var(--clair-color-atomic-neutral-600);
+      }
+      .presence.offline::before {
+        background: var(--clair-color-atomic-neutral-400);
+      }
+      .status-row {
+        display: flex;
+        height: 28px;
+        align-items: center;
+      }
+      .status-trigger {
+        display: flex;
+        width: 138px;
+        height: 28px;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: var(--clair-radius-md);
+        background: transparent;
+        color: var(--muted);
+        font-family: var(--clair-typography-body-2-normal-font-family);
+        font-size: var(--clair-typography-body-2-normal-font-size);
+        font-weight: var(--clair-typography-body-2-normal-font-weight);
+        line-height: var(--clair-typography-body-2-normal-line-height);
+        letter-spacing: var(--clair-typography-body-2-normal-letter-spacing);
+        text-align: left;
+        cursor: pointer;
+      }
+      .status-trigger[data-has-value="true"] {
+        width: fit-content;
+        max-width: 217px;
+      }
+      .status-trigger[data-has-value="true"] .status-label {
+        flex: 0 1 auto;
+      }
+      .status-label {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .status-edit-icon {
+        display: none;
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+      }
+      .status-trigger:hover,
+      .status-trigger:focus-visible {
+        background: var(--clair-color-atomic-black-alpha-4);
+        color: var(--clair-color-atomic-neutral-600);
+      }
+      .status-trigger:hover .status-edit-icon,
+      .status-trigger:focus-visible .status-edit-icon {
+        display: block;
+      }
+      .status-input {
+        width: 217px;
+        height: 28px;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: var(--clair-radius-md);
+        outline: 0;
+        background: var(--clair-color-atomic-black-alpha-4);
+        color: var(--clair-color-atomic-neutral-600);
+        font-family: var(--clair-typography-body-2-normal-font-family);
+        font-size: var(--clair-typography-body-2-normal-font-size);
+        font-weight: var(--clair-typography-body-2-normal-font-weight);
+        line-height: var(--clair-typography-body-2-normal-line-height);
+        letter-spacing: var(--clair-typography-body-2-normal-letter-spacing);
+      }
+      .last-seen {
+        padding: 0 6px;
+        color: var(--soft);
+        font-size: 14px;
+        line-height: 20px;
+      }
+      .close-button {
+        position: absolute;
+        top: 0;
+        right: 0;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: #404040;
+        cursor: pointer;
+      }
+      .close-button:hover {
+        background: #f5f5f5;
+      }
+      .close-button img {
+        width: 16px;
+        height: 16px;
+      }
+      .tabs {
+        display: flex;
+        height: 34px;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .tab-actions-spacer {
+        flex: 1;
+      }
+      .tab {
+        position: relative;
+        height: 34px;
+        padding: 4px 6px 9px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .tab[aria-selected="true"] {
+        color: #262626;
+      }
+      .tab[aria-selected="true"]::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 1px;
+        background: #262626;
+        content: "";
+      }
+      .header-more-button {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+      }
+      .header-more-button:hover,
+      .header-more-button[aria-expanded="true"] {
+        background: var(--clair-color-atomic-black-alpha-4);
+      }
+      .header-more-button img {
+        width: 16px;
+        height: 16px;
+      }
+      .panel-content {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        padding: 16px;
+      }
+      .panel-section {
+        padding: 0 8px;
+      }
+      .panel-section + .panel-section {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+      .section-title {
+        margin-bottom: 12px;
+        color: #525252;
+        font-size: 14px;
+        font-weight: 550;
+      }
+      .account-list {
+        display: grid;
+        grid-template-columns: 102px minmax(0, 1fr);
+        gap: 12px;
+        font-size: 14px;
+      }
+      .account-list .label {
+        display: flex;
+        height: 24px;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+      }
+      .account-icon {
+        width: 15px;
+        height: 15px;
+        flex: 0 0 15px;
+        background: currentColor;
+        -webkit-mask: var(--account-icon) center / contain no-repeat;
+        mask: var(--account-icon) center / contain no-repeat;
+      }
+      .account-icon.role {
+        --account-icon: url("../../../src/assets/figma/icons/people-and-places/user.svg");
+      }
+      .account-icon.department {
+        --account-icon: url("../../../src/assets/figma/icons/medical-and-domain/cross.svg");
+      }
+      .account-icon.email {
+        --account-icon: url("../../../src/assets/figma/icons/communication-and-media/mail.svg");
+      }
+      .account-icon.phone {
+        --account-icon: url("../../../src/assets/figma/icons/communication-and-media/phone.svg");
+      }
+      .account-list .value {
+        overflow: hidden;
+        color: #262626;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .shift-card {
+        display: flex;
+        height: 72px;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px 12px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      .shift-mark {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        flex: 0 0 48px;
+        place-items: center;
+        border-radius: 8px;
+        background: rgb(0 0 0 / 0.04);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .shift-copy {
+        min-width: 0;
+        flex: 1;
+      }
+      .shift-time {
+        color: #262626;
+        font-size: 16px;
+        font-weight: 550;
+        line-height: 24px;
+      }
+      .shift-detail {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .shift-detail b {
+        color: var(--blue);
+        font-weight: 550;
+      }
+      .mini-action {
+        min-height: 24px;
+        padding: 4px 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .absence-card {
+        display: grid;
+        gap: 6px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+      }
+      .absence-primary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink-2);
+        font-size: 14px;
+        font-weight: 550;
+      }
+      .absence-primary img {
+        width: 16px;
+        height: 16px;
+        opacity: 0.65;
+      }
+      .absence-secondary {
+        padding-left: 24px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .availability-state-demo {
+        display: grid;
+        width: 248px;
+        min-height: 106px;
+        align-content: center;
+        gap: 6px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--ink-2);
+      }
+      .availability-state-demo strong {
+        font-size: 14px;
+        line-height: 20px;
+      }
+      .availability-state-demo span {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 18px;
+      }
+      .availability-state-demo.pending span {
+        display: block;
+        width: 76%;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--clair-color-atomic-neutral-100);
+        color: transparent;
+      }
+      .availability-state-demo.error {
+        border-color: var(--clair-color-atomic-red-200);
+        background: var(--clair-color-atomic-red-50);
+      }
+      .work-toolbar {
+        display: flex;
+        min-height: 28px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding: 0 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .work-toolbar strong {
+        color: var(--ink-2);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .work-timeline {
+        display: grid;
+        gap: 12px;
+      }
+      .work-day {
+        min-width: 0;
+      }
+      .work-day-toggle {
+        display: flex;
+        width: 100%;
+        min-height: 32px;
+        align-items: center;
+        gap: 8px;
+        padding: 4px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--ink-2);
+        cursor: pointer;
+        text-align: left;
+      }
+      .work-day-toggle:hover,
+      .work-day-toggle:focus-visible {
+        background: var(--clair-color-atomic-black-alpha-4);
+        outline: none;
+      }
+      .work-day-toggle > img:first-child {
+        width: 16px;
+        height: 16px;
+        opacity: 0.62;
+      }
+      .work-day-toggle strong {
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .work-day-count {
+        color: var(--soft);
+        font-size: 12px;
+      }
+      .work-day-chevron {
+        width: 16px;
+        height: 16px;
+        margin-left: auto;
+        opacity: 0.6;
+        transition: transform 160ms ease;
+      }
+      .work-day[data-collapsed="true"] .work-day-chevron {
+        transform: rotate(-90deg);
+      }
+      .work-day-items {
+        position: relative;
+        display: grid;
+        gap: 8px;
+        margin-top: 4px;
+        margin-left: 11px;
+        padding-left: 20px;
+      }
+      .work-day-items::before {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 1px;
+        background: var(--line);
+        content: "";
+      }
+      .work-day[data-collapsed="true"] .work-day-items {
+        display: none;
+      }
+      .work-card {
+        position: relative;
+        display: grid;
+        gap: 7px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+      }
+      .work-card:hover,
+      .work-card:focus-within {
+        background: var(--clair-color-atomic-black-alpha-4);
+      }
+      .work-card-top,
+      .work-card-meta,
+      .work-card-person {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+      }
+      .work-card-top {
+        gap: 6px;
+        padding-right: 28px;
+      }
+      .work-card-meta {
+        gap: 6px;
+      }
+      .work-card-time {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .work-card-time img {
+        width: 14px;
+        height: 14px;
+        opacity: 0.58;
+      }
+      .work-badge {
+        display: inline-flex;
+        min-height: 20px;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 7px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--clair-color-atomic-neutral-50);
+        color: var(--clair-color-atomic-neutral-600);
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.3;
+        white-space: nowrap;
+      }
+      .work-badge.status::before {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+      }
+      .work-badge.info {
+        border-color: var(--clair-color-atomic-blue-200);
+        background: var(--clair-color-atomic-blue-50);
+        color: var(--clair-color-atomic-blue-700);
+      }
+      .work-badge.success {
+        border-color: var(--clair-color-atomic-green-200);
+        background: var(--clair-color-atomic-green-50);
+        color: var(--clair-color-atomic-green-700);
+      }
+      .work-badge.warning {
+        border-color: var(--clair-color-atomic-orange-200);
+        background: var(--clair-color-atomic-orange-50);
+        color: var(--clair-color-atomic-orange-700);
+      }
+      .work-badge.danger {
+        border-color: var(--clair-color-atomic-red-200);
+        background: var(--clair-color-atomic-red-50);
+        color: var(--clair-color-atomic-red-700);
+      }
+      .work-card-title {
+        overflow: hidden;
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 650;
+        line-height: 20px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .work-card-description {
+        display: -webkit-box;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 17px;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+      .work-card-person {
+        gap: 5px;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .work-card-person span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .work-card-person .requester {
+        margin-left: auto;
+        color: var(--muted);
+      }
+      .work-action-button {
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        background: transparent;
+        cursor: pointer;
+      }
+      .work-action-button:hover,
+      .work-action-button[aria-expanded="true"] {
+        border-color: var(--line);
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+      }
+      .work-action-button img {
+        width: 16px;
+        height: 16px;
+      }
+      .work-action-menu {
+        position: absolute;
+        z-index: 5;
+        top: 36px;
+        right: 7px;
+        display: none;
+        width: 140px;
+        padding: 5px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #fff;
+        box-shadow: 0 8px 18px rgb(0 0 0 / 0.12);
+      }
+      .work-action-menu[data-open="true"] {
+        display: grid;
+      }
+      .work-action-menu button {
+        min-height: 30px;
+        padding: 5px 8px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        cursor: pointer;
+        font-size: 12px;
+        text-align: left;
+      }
+      .work-action-menu button:hover {
+        background: var(--clair-color-atomic-black-alpha-4);
+      }
+      .work-action-menu button:disabled {
+        color: var(--soft);
+        cursor: not-allowed;
+      }
+      .work-load-more {
+        width: 100%;
+        min-height: 36px;
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ink-2);
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .work-load-more:hover {
+        background: var(--clair-color-atomic-black-alpha-4);
+      }
+      .work-navigation-dialog {
+        width: 320px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 16px 32px rgb(0 0 0 / 0.16);
+      }
+      .work-navigation-dialog h3 {
+        margin-bottom: 6px;
+      }
+      .work-navigation-dialog p {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .work-navigation-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .work-navigation-actions button {
+        min-height: 32px;
+        padding: 6px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .work-navigation-actions .primary {
+        background: var(--ink);
+        color: #fff;
+      }
+      .mock-toast {
+        position: absolute;
+        right: 16px;
+        bottom: 16px;
+        z-index: 8;
+        max-width: 300px;
+        padding: 9px 12px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #fff;
+        box-shadow: 0 8px 18px rgb(0 0 0 / 0.12);
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .work-component-frame {
+        width: min(380px, 100%);
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+      }
+      .work-badge-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .work-state-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        width: 100%;
+      }
+      .work-state-demo {
+        display: flex;
+        min-height: 260px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 20px 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+      .work-state-contract-label {
+        color: var(--clair-color-atomic-black-alpha-36);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+        line-height: 16px;
+      }
+      .emr-empty-state-demo {
+        display: flex;
+        width: 100%;
+        max-width: 220px;
+        min-width: 0;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        color: var(--clair-color-atomic-black-alpha-48);
+        text-align: center;
+      }
+      .emr-empty-state-icon-wrapper {
+        display: flex;
+        align-items: center;
+        padding-bottom: 4px;
+      }
+      .emr-empty-state-icon-area {
+        display: flex;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 10px;
+        background: var(--clair-color-atomic-black-alpha-4);
+        color: var(--clair-color-atomic-black-alpha-48);
+      }
+      .emr-empty-state-icon {
+        width: 24px;
+        height: 24px;
+        background: currentColor;
+        -webkit-mask: var(--empty-icon) center / contain no-repeat;
+        mask: var(--empty-icon) center / contain no-repeat;
+      }
+      .emr-empty-state-icon.loading {
+        width: 16px;
+        height: 16px;
+        --empty-icon: url("../../../src/assets/figma/icons/alerts-and-status/loader.svg");
+        animation: state-loading-spin 1.2s linear infinite;
+      }
+      .emr-empty-state-icon.no-data {
+        --empty-icon: url("../../../src/assets/figma/icons/files-and-layout/folder-minus.svg");
+      }
+      .emr-empty-state-body,
+      .emr-empty-state-copy {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .emr-empty-state-body {
+        gap: 8px;
+      }
+      .emr-empty-state-copy {
+        gap: 6px;
+      }
+      .emr-empty-state-copy h4,
+      .emr-empty-state-copy p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 20px;
+        letter-spacing: 0.014em;
+        word-break: keep-all;
+      }
+      .emr-empty-state-copy h4 {
+        color: var(--clair-color-atomic-black-alpha-48);
+        font-weight: 500;
+      }
+      .emr-empty-state-copy p {
+        color: var(--clair-color-atomic-black-alpha-36);
+      }
+      .emr-empty-state-action-space {
+        height: 24px;
+      }
+      .emr-inline-alert-demo {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--clair-color-atomic-red-200);
+        border-radius: 8px;
+        background: var(--clair-color-atomic-red-50);
+        color: var(--clair-color-atomic-red-700);
+        font-size: 14px;
+        line-height: 20px;
+        text-align: left;
+      }
+      .emr-inline-alert-icon-wrap {
+        display: flex;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        align-items: center;
+        justify-content: center;
+        margin-top: 2px;
+      }
+      .emr-inline-alert-icon {
+        width: 16px;
+        height: 16px;
+        background: currentColor;
+        -webkit-mask: url("../../../src/assets/figma/icons/alerts-and-status/alert-circle.svg") center / contain no-repeat;
+        mask: url("../../../src/assets/figma/icons/alerts-and-status/alert-circle.svg") center / contain no-repeat;
+      }
+      .emr-inline-alert-copy {
+        min-width: 0;
+        flex: 1;
+      }
+      .emr-inline-alert-copy strong {
+        font-weight: 600;
+      }
+      .emr-inline-alert-copy p {
+        margin: 4px 0 0;
+        color: currentColor;
+      }
+      .emr-inline-alert-copy .mock-button {
+        margin-top: 12px;
+        border-color: currentColor;
+        background: transparent;
+        color: currentColor;
+      }
+      @keyframes state-loading-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .avatar-menu {
+        position: absolute;
+        z-index: 4;
+        top: 105px;
+        left: 14px;
+        display: none;
+        width: 180px;
+        padding: 5px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow:
+          0 10px 15px -3px rgb(0 0 0 / 0.1),
+          0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+      .avatar-menu[data-open="true"] {
+        display: grid;
+      }
+      .header-action-menu {
+        position: absolute;
+        z-index: 5;
+        top: 142px;
+        right: 12px;
+        display: none;
+        width: 196px;
+        padding: 5px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow:
+          0 10px 15px -3px rgb(0 0 0 / 0.1),
+          0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+      .header-action-menu[data-open="true"] {
+        display: grid;
+      }
+      .avatar-menu button,
+      .header-action-menu button {
+        display: flex;
+        min-height: 28px;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: 8px;
+        background: #fff;
+        text-align: left;
+        cursor: pointer;
+      }
+      .avatar-menu button:hover,
+      .header-action-menu button:hover {
+        background: #f5f5f5;
+      }
+      .avatar-menu button img,
+      .header-action-menu button img {
+        width: 16px;
+        height: 16px;
+      }
+      .avatar-menu .danger {
+        color: var(--danger);
+      }
+      .dropdown-menu-separator {
+        height: 1px;
+        margin: 4px -4px;
+        background: var(--line);
+      }
+      .dropdown-menu-group {
+        display: grid;
+      }
+      .mock-dialog-backdrop {
+        position: absolute;
+        inset: 0;
+        z-index: 6;
+        display: none;
+        place-items: center;
+        background: rgb(0 0 0 / 0.22);
+      }
+      .mock-dialog-backdrop[data-open="true"] {
+        display: grid;
+      }
+      .upload-dialog {
+        width: 382px;
+        overflow: hidden;
+        border: 0;
+        border-radius: var(--clair-radius-lg);
+        background: var(--clair-color-atomic-common-100);
+        box-shadow:
+          inset 0 0 0 var(--clair-border-width-default)
+            var(--clair-color-atomic-neutral-200),
+          var(--clair-shadow-sm);
+      }
+      .upload-main {
+        display: flex;
+        flex-direction: column;
+        gap: var(--clair-spacing-16);
+        padding: var(--clair-spacing-16);
+      }
+      .upload-header {
+        position: relative;
+        display: flex;
+        min-height: 52px;
+        flex-direction: column;
+        gap: var(--clair-spacing-8);
+      }
+      .upload-header h3 {
+        margin: 0;
+        color: var(--clair-color-atomic-neutral-900);
+        font-family: var(--clair-typography-headline-1-font-family);
+        font-size: var(--clair-typography-headline-1-font-size);
+        font-weight: var(--clair-typography-headline-1-font-weight);
+        line-height: var(--clair-typography-headline-1-line-height);
+        letter-spacing: var(--clair-typography-headline-1-letter-spacing);
+      }
+      .upload-header p {
+        color: var(--clair-color-atomic-neutral-500);
+        font-family: var(--clair-typography-body-2-normal-font-family);
+        font-size: var(--clair-typography-body-2-normal-font-size);
+        font-weight: var(--clair-typography-body-2-normal-font-weight);
+        line-height: var(--clair-typography-body-2-normal-line-height);
+        letter-spacing: var(--clair-typography-body-2-normal-letter-spacing);
+      }
+      .upload-header .upload-validation {
+        color: var(--clair-color-atomic-red-600);
+      }
+      .upload-close {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        display: grid;
+        width: var(--clair-control-height-sm);
+        height: var(--clair-control-height-sm);
+        place-items: center;
+        padding: 0;
+        border: 0;
+        border-radius: var(--clair-radius-md);
+        background: transparent;
+        cursor: pointer;
+      }
+      .upload-close img {
+        width: 16px;
+        height: 16px;
+      }
+      .upload-drop {
+        position: relative;
+        display: grid;
+        width: 350px;
+        height: 350px;
+        place-items: center;
+        overflow: hidden;
+        border: 0;
+        border-radius: var(--clair-radius-md);
+        background: var(--clair-color-atomic-neutral-100);
+        box-shadow: inset 0 0 0 var(--clair-border-width-default)
+          var(--clair-color-atomic-neutral-100);
+        color: var(--clair-color-atomic-neutral-600);
+        cursor: pointer;
+        font: inherit;
+        text-align: center;
+      }
+      .upload-drop img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .upload-preview-frame {
+        position: relative;
+        width: 350px;
+        height: 350px;
+      }
+      .upload-file-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+      }
+      .upload-selection-clear {
+        position: absolute;
+        top: var(--clair-spacing-12);
+        right: var(--clair-spacing-12);
+        z-index: 2;
+        display: grid;
+        width: var(--clair-control-height-xl);
+        height: var(--clair-control-height-xl);
+        place-items: center;
+        padding: 0;
+        border: 0;
+        border-radius: var(--clair-radius-atomic-10);
+        background: color-mix(
+          in srgb,
+          var(--clair-color-atomic-common-100) 92%,
+          transparent
+        );
+        box-shadow: var(--clair-shadow-sm);
+        cursor: pointer;
+        transition: scale 120ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      .upload-selection-clear img {
+        width: 16px;
+        height: 16px;
+      }
+      .upload-selection-clear:active {
+        scale: 0.96;
+      }
+      .upload-empty {
+        display: grid;
+        gap: var(--clair-spacing-12);
+        place-items: center;
+        color: var(--clair-color-atomic-black-alpha-64);
+        font-family: var(--clair-typography-body-2-normal-font-family);
+        font-size: var(--clair-typography-body-2-normal-font-size);
+        font-weight: var(--clair-typography-body-2-normal-font-weight);
+        line-height: var(--clair-typography-body-2-normal-line-height);
+        letter-spacing: var(--clair-typography-body-2-normal-letter-spacing);
+      }
+      .upload-empty-icon {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border-radius: var(--clair-radius-atomic-10);
+        background: var(--clair-color-atomic-black-alpha-6);
+      }
+      .upload-empty-icon img {
+        position: static;
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+      .upload-footer {
+        display: flex;
+        height: 64px;
+        justify-content: flex-end;
+        gap: var(--clair-spacing-10);
+        align-items: center;
+        padding: var(--clair-spacing-16);
+        border-top: var(--clair-border-width-default) solid
+          var(--clair-color-atomic-neutral-200);
+      }
+      .upload-footer button {
+        min-height: var(--clair-control-height-md);
+        padding: var(--clair-spacing-6) var(--clair-spacing-12);
+        border: 0;
+        border-radius: var(--clair-radius-md);
+        background: transparent;
+        font-family: var(--clair-typography-body-2-normal-font-family);
+        font-size: var(--clair-typography-body-2-normal-font-size);
+        font-weight: var(--clair-typography-body-2-normal-font-weight);
+        line-height: var(--clair-typography-body-2-normal-line-height);
+        letter-spacing: var(--clair-typography-body-2-normal-letter-spacing);
+        cursor: pointer;
+      }
+      .upload-footer .submit {
+        background: var(--clair-color-atomic-neutral-900);
+        color: var(--clair-color-atomic-common-100);
+      }
+      .upload-footer .submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .component-showcase {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+      .component-specimen {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fafafa;
+      }
+      .component-specimen.wide {
+        grid-column: 1 / -1;
+      }
+      .component-state-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: flex-start;
+        margin-top: 14px;
+      }
+      .component-state {
+        display: grid;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .component-avatar {
+        position: relative;
+        width: 84px;
+        height: 84px;
+        overflow: hidden;
+        border: 0;
+        border-radius: var(--clair-radius-atomic-6);
+        background: var(--clair-color-atomic-neutral-100);
+        box-shadow: inset 0 0 0 var(--clair-border-width-default)
+          var(--clair-color-atomic-neutral-200);
+      }
+      .component-avatar .avatar-edit {
+        pointer-events: none;
+      }
+      .status-demo {
+        display: flex;
+        width: 138px;
+        height: 28px;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 6px;
+        overflow: hidden;
+        border: 0;
+        border-radius: var(--clair-radius-md);
+        color: var(--clair-color-atomic-neutral-500);
+        font-family: var(--clair-typography-body-2-normal-font-family);
+        font-size: var(--clair-typography-body-2-normal-font-size);
+        font-weight: var(--clair-typography-body-2-normal-font-weight);
+        line-height: var(--clair-typography-body-2-normal-line-height);
+        letter-spacing: var(--clair-typography-body-2-normal-letter-spacing);
+        white-space: nowrap;
+      }
+      .status-demo.hover,
+      .status-demo.editing {
+        background: var(--clair-color-atomic-black-alpha-4);
+        color: var(--clair-color-atomic-neutral-600);
+      }
+      .status-demo.hover img {
+        width: 16px;
+        height: 16px;
+      }
+      .status-demo.editing,
+      .status-demo.long {
+        width: 217px;
+      }
+      .status-demo.saved {
+        width: fit-content;
+        max-width: 217px;
+      }
+      .status-demo.saved .status-label {
+        flex: 0 1 auto;
+      }
+      .status-demo.saved.long {
+        width: 217px;
+      }
+      .status-demo.result {
+        background: transparent;
+        color: var(--clair-color-atomic-neutral-600);
+      }
+      .component-dialog-preview {
+        width: min(382px, 100%);
+        overflow: hidden;
+        border: 0;
+        border-radius: var(--clair-radius-lg);
+        background: var(--clair-color-atomic-common-100);
+        box-shadow:
+          inset 0 0 0 var(--clair-border-width-default)
+            var(--clair-color-atomic-neutral-200),
+          var(--clair-shadow-sm);
+      }
+      .component-dialog-state {
+        width: 382px;
+        max-width: 100%;
+        flex: 0 0 382px;
+      }
+      .component-dialog-preview .upload-drop {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+      }
+      .component-dialog-preview .upload-preview-frame {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+      }
+      .menu-demo {
+        display: grid;
+        width: 180px;
+        padding: 5px;
+        border: var(--clair-border-width-default) solid
+          var(--clair-color-atomic-neutral-200);
+        border-radius: var(--clair-radius-atomic-10);
+        background: var(--clair-color-atomic-common-100);
+        box-shadow: var(--clair-shadow-lg);
+      }
+      .menu-demo.header-menu-demo {
+        width: 196px;
+      }
+      .menu-demo .menu-demo-item {
+        display: flex;
+        width: 100%;
+        min-height: 28px;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: var(--clair-radius-md);
+        background: transparent;
+        color: var(--clair-color-atomic-neutral-800);
+        cursor: default;
+        font-family: var(--clair-typography-body-2-normal-font-family);
+        font-size: var(--clair-typography-body-2-normal-font-size);
+        font-weight: var(--clair-typography-body-2-normal-font-weight);
+        line-height: var(--clair-typography-body-2-normal-line-height);
+        letter-spacing: var(--clair-typography-body-2-normal-letter-spacing);
+        text-align: left;
+      }
+      .menu-demo .danger {
+        color: var(--danger);
+      }
+      .menu-demo .menu-demo-item:disabled {
+        color: var(--soft);
+      }
+      .menu-demo img {
+        width: 16px;
+        height: 16px;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .state-table td:first-child {
+        white-space: nowrap;
+      }
+      .file-list {
+        margin-top: 12px;
+        color: var(--ink-2);
+        font-size: 14px;
+      }
+      .footer-note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      @media (max-width: 820px) {
+        main {
+          padding: 28px 14px 56px;
+        }
+        main > section {
+          padding: 18px;
+        }
+        .decision-grid,
+        .two-col,
+        .three-col,
+        .evidence-grid,
+        .component-showcase {
+          grid-template-columns: 1fr;
+        }
+        .component-specimen.wide {
+          grid-column: auto;
+        }
+        .component-dialog-state {
+          width: 100%;
+          flex-basis: 100%;
+        }
+        .work-state-grid {
+          grid-template-columns: 1fr;
+        }
+        .panel-stage {
+          min-width: 0;
+          place-items: start center;
+          padding: 8px;
+          background: #e5e5e5;
+        }
+        .profile-panel {
+          width: min(380px, calc(100vw - 64px));
+        }
+        .upload-dialog {
+          width: min(382px, calc(100% - 12px));
+        }
+        .upload-drop {
+          width: 100%;
+          height: auto;
+          aspect-ratio: 1;
+        }
+        .mockup-wrap {
+          padding: 10px;
+        }
+        table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">RECEPTION-PR-010 · UX/UI Research</div>
+      <h1>프로필 사이드 패널 V2 분석 및 시안</h1>
+      <p class="lead">
+        CDS V2 Figma를 현재 접수 캘린더의 직원 운영 프로필에 적용하기 위한
+        설계·개발 분석이다. 이번 문서는 구현 전 판단 자료이며, 제품 코드는
+        수정하지 않았다.
+      </p>
+      <p class="meta">
+        2026-07-15 · 사용자 지정 Figma 핵심 노드, 현재 Vercel 화면, 로컬
+        컴포넌트/API/RLS/Storage 계약 기준
+      </p>
+
+      <section class="decision">
+        <h2>결론</h2>
+        <p>
+          Figma 방향은 적용 가능하다. 다만 현재의
+          <strong>다른 직원 조회 패널</strong>과 Figma의
+          <strong>내 프로필 편집 패널</strong>을 권한 구분 없이 합치면 안 된다.
+          권장안은 동일한 380px 패널을 쓰되 본인에게만 상태메시지·사진 편집을
+          노출하고, 다른 직원은 읽기 전용으로 유지하는 것이다.
+        </p>
+        <div class="decision-grid">
+          <div class="card">
+            <span class="tag good">채택</span>
+            <h3>380px 전용 패널</h3>
+            <p>
+              프로필 패널만 336px에서 380px로 변경한다. 다른 우측 패널 폭은
+              유지한다.
+            </p>
+          </div>
+          <div class="card">
+            <span class="tag good">채택</span>
+            <h3>본인만 편집</h3>
+            <p>
+              <code>actorUserId === userId</code>일 때만 아바타와 상태메시지
+              편집을 허용한다.
+            </p>
+          </div>
+          <div class="card">
+            <span class="tag good">확정</span>
+            <h3>업무 현황 타임라인</h3>
+            <p>
+              담당 오더를 요청 시각 최신순으로 묶고, 전용 read API와 권한별
+              이동 동작을 제공한다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>1. 조사 범위와 증거</h2>
+        <ol>
+          <li>
+            <strong>현재 상태:</strong> Vercel 접수 캘린더에서 김도윤 직원 운영
+            프로필 패널을 캡처했다.
+          </li>
+          <li>
+            <strong>Figma 전체:</strong> 프로필 헤더 상태, 4개 탭, 계정/근무
+            정보, 아바타 메뉴, 업로드 다이얼로그 흐름을 확인했다.
+          </li>
+          <li>
+            <strong>코드:</strong> <code>StaffOperationalProfilePanel</code>,
+            Base UI tabs, 공용 dialog shell, 개인 프로필 API, Presence hook,
+            avatar Storage migration과 RLS를 확인했다.
+          </li>
+          <li>
+            <strong>제한:</strong> 캡처만으로 실제 키보드 포커스, 스크린리더
+            발화, 업로드 파일 검증, 네트워크 실패 동작은 확인할 수 없으므로 구현
+            테스트가 필요하다.
+          </li>
+        </ol>
+        <figure class="evidence">
+          <img
+            src="assets/2026-07-15-profile-side-panel-current.png"
+            alt="현재 접수 캘린더 오른쪽의 직원 운영 프로필 패널"
+          />
+          <figcaption>
+            현재 화면 · 336px, 66px 아바타, 128px 헤더, 프로필 탭만 활성, 읽기
+            전용
+          </figcaption>
+        </figure>
+        <div class="evidence-grid">
+          <figure class="evidence">
+            <img
+              src="assets/2026-07-15-figma-profile-overview.png"
+              alt="Figma 프로필 사이드 패널 전체 흐름"
+            />
+            <figcaption>
+              Figma 전체 흐름 · 상태메시지 편집, 아바타 메뉴, 파일 선택, 업로드
+              결과
+            </figcaption>
+          </figure>
+          <div class="evidence-stack">
+            <figure class="evidence">
+              <img
+                src="assets/2026-07-15-correction-figma-status-message.png"
+                alt="Figma 상태메시지 상태 모음"
+              />
+              <figcaption>
+                상태메시지 default → hover → input → result
+              </figcaption>
+            </figure>
+            <figure class="evidence">
+              <img
+                src="assets/2026-07-15-correction-figma-components.png"
+                alt="Figma 상태메시지, Presence 배지, 아바타 컴포넌트 상태"
+              />
+              <figcaption>
+                컴포넌트 상태 · 온라인/오프라인, 이미지 있음/없음, hover
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+        <div class="two-col">
+          <figure class="evidence">
+            <img
+              src="assets/2026-07-15-correction-figma-avatar-flow.png"
+              alt="Figma 프로필 이미지 편집 메뉴와 업로드 결과 흐름"
+            />
+            <figcaption>
+              아바타 편집 흐름 · hover → 업로드/제거 메뉴 → 업로드 완료
+            </figcaption>
+          </figure>
+          <figure class="evidence">
+            <img
+              src="assets/2026-07-15-correction-figma-upload-empty.png"
+              alt="Figma 프로필 이미지 업로드 다이얼로그의 초기 상태"
+            />
+            <figcaption>
+              업로드 초기 상태 · 382×514 dialog, 350px 선택 영역, disabled
+              업로드 버튼
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section>
+        <h2>2. 현재 구현과 Figma의 차이</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>영역</th>
+              <th>현재</th>
+              <th>Figma V2</th>
+              <th>권장 수정</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>패널</td>
+              <td>336px + 10px gap</td>
+              <td>380px, 12px radius, 1px border</td>
+              <td>profile drawer presentation만 380px로 변경</td>
+            </tr>
+            <tr>
+              <td>헤더</td>
+              <td>128px, avatar 66px, 이름 18/26</td>
+              <td>150px, avatar 84px, 이름 20/28</td>
+              <td>Figma 수치로 교체하고 skeleton도 동일 구조 유지</td>
+            </tr>
+            <tr>
+              <td>상태 정보</td>
+              <td>직무·이메일 한 줄 + 최근 접속</td>
+              <td>상태메시지 + 최근 접속</td>
+              <td>
+                이메일은 계정 정보로 이동, 상태메시지는 workspace-scoped로 검토
+              </td>
+            </tr>
+            <tr>
+              <td>Presence</td>
+              <td>헤더 안 인라인 span, boolean online</td>
+              <td>독립 online/offline badge</td>
+              <td><code>PresenceBadge</code>로 추출하고 unknown 상태 추가</td>
+            </tr>
+            <tr>
+              <td>탭</td>
+              <td>프로필 + disabled tab2/tab3</td>
+              <td>프로필·업무 현황·캘린더·더보기</td>
+              <td>
+                사용자 목적에 맞춰 <strong>프로필·업무 현황 2개만 유지</strong>.
+                캘린더·더보기는 제거하고 보조 액션은 헤더 메뉴로 이동
+              </td>
+            </tr>
+            <tr>
+              <td>콘텐츠 순서</td>
+              <td>오늘 근무 → 계정 정보</td>
+              <td>계정 정보 → 오늘 근무</td>
+              <td>Figma 순서로 재배치</td>
+            </tr>
+            <tr>
+              <td>일정 확인</td>
+              <td>버튼을 누르면 패널 닫힘</td>
+              <td>근무 카드의 일정 확인 액션</td>
+              <td>
+                패널 안에 근무표를 복제하지 않고 실제 병원관리 근무표의 해당
+                직원 일정으로 이동. 단순 닫기는 금지
+              </td>
+            </tr>
+            <tr>
+              <td>아바타</td>
+              <td>읽기 전용</td>
+              <td>hover pencil → upload/remove menu</td>
+              <td>본인 프로필에서만 interactive avatar 사용</td>
+            </tr>
+            <tr>
+              <td>업로드</td>
+              <td>브라우저 업로드 경로 없음</td>
+              <td>382×514 dialog, 350px preview</td>
+              <td>공용 dialog shell variant + 검증/preview/error 상태 추가</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>3. 정보 구조와 탭 제안</h2>
+        <div class="two-col">
+          <div class="card">
+            <h3>프로필</h3>
+            <ul>
+              <li>계정 정보: 역할/진료과/이메일/전화번호</li>
+              <li>오늘 근무 상태·시간·업무 위치</li>
+              <li>다가오는 휴무/휴가와 다음 복귀 예정</li>
+              <li>본인일 때 아바타·상태메시지 편집</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>업무 현황</h3>
+            <ul>
+              <li>해당 사용자가 담당하는 임상병리·영상·조제·처치 오더</li>
+              <li>오더 요청 시각 기준 최신 날짜·시간순 타임라인</li>
+              <li>상태, 환자·보호자, 요청자, 간략 설명과 권한별 이동 메뉴</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout info">
+          <strong>탭 밖 보조 액션:</strong> 헤더 <code>···</code> 메뉴에
+          전체 근무표 보기, 연락처 복사, 권한이 있을 때 멤버 관리에서 보기를
+          제공한다. 프로필 패널은 근무표 편집이나 휴가 승인 기능을 소유하지
+          않는다.
+        </div>
+        <div class="callout risk">
+          <strong>금지:</strong> 이름만 있는 빈 탭, 다른 직원 프로필 편집,
+          다른 workspace 업무 노출, 상세 권한이 없는 사용자의 이동 URL 반환,
+          API 실패를 빈 상태로 변환하는 동작, 개인 휴가 사유·승인 메모 노출,
+          패널 안에 별도 캘린더 데이터를 복제하는 동작.
+        </div>
+      </section>
+
+      <section>
+        <h2>4. 인터랙티브 시안</h2>
+        <p>
+          아래는 구현 방향을 검토하기 위한 로컬 HTML 시안이다. ‘내 프로필/다른
+          직원’ 전환, 프로필·업무 현황 2개 탭, 근무·부재 요약, 헤더 보조 메뉴,
+          상태메시지 편집, 아바타 메뉴와 업로드 다이얼로그를 눌러볼 수 있다.
+        </p>
+        <div class="callout">
+          아바타 hover 시 Figma edit icon이 나타난다. 상태메시지는 Enter 또는
+          focus-out으로 저장되고 result 배경은 투명해진다. 이미지 제거는 이름 첫
+          글자 fallback으로 전환되며, 업로드 dialog는 열 때마다 icon +
+          placeholder 상태로 초기화된다. 파일 선택 후 미리보기 우측 상단 X를
+          누르면 선택 파일만 제거하고 같은 placeholder 상태로 돌아간다. 임의로
+          넣었던 ‘닫기’ 텍스트는 제거하고 Figma의 X icon button만 유지했다.
+          캘린더·더보기 탭은 제거하고 전체 근무표 등 저빈도 액션을 헤더
+          <code>···</code> 메뉴로 이동했다.
+        </div>
+        <div class="mockup-wrap">
+          <div class="mockup-tools">
+            <button
+              class="mock-tool"
+              id="selfMode"
+              aria-pressed="true"
+              type="button"
+            >
+              내 프로필 · 편집 가능
+            </button>
+            <button
+              class="mock-tool"
+              id="otherMode"
+              aria-pressed="false"
+              type="button"
+            >
+              다른 직원 · 읽기 전용
+            </button>
+          </div>
+          <div class="panel-stage">
+            <article class="profile-panel" aria-label="프로필 사이드 패널 시안">
+              <header class="profile-head">
+                <div class="profile-top">
+                  <button
+                    class="avatar-button"
+                    id="avatarButton"
+                    data-picture="true"
+                    type="button"
+                    aria-label="프로필 이미지 메뉴 열기"
+                    aria-expanded="false"
+                  >
+                    <span class="avatar-picture" id="avatarPicture">
+                      <img
+                        id="avatarImage"
+                        src="../../../public/avatars/49110000-0000-4000-8000-000000000006.png"
+                        alt="김도윤 프로필"
+                      />
+                    </span>
+                    <span class="avatar-fallback hidden" id="avatarFallback"
+                      >김</span
+                    >
+                    <span class="avatar-edit" aria-hidden="true">
+                      <img
+                        src="assets/figma-profile-avatar-edit-icon.svg"
+                        alt=""
+                      />
+                    </span>
+                  </button>
+                  <div class="profile-info">
+                    <div class="name-row">
+                      <strong id="profileName">김도윤</strong
+                      ><span class="presence offline" id="presenceBadge"
+                        >오프라인</span
+                      >
+                    </div>
+                    <div class="status-row">
+                      <button
+                        class="status-trigger"
+                        id="statusTrigger"
+                        data-has-value="false"
+                        type="button"
+                      >
+                        <span class="status-label" id="statusText"
+                          >상태메시지 추가하기...</span
+                        ><img
+                          class="status-edit-icon"
+                          src="assets/figma-status-message-edit-icon.svg"
+                          alt=""
+                          aria-hidden="true"
+                        /></button
+                      ><input
+                        class="status-input hidden"
+                        id="statusInput"
+                        maxlength="60"
+                        aria-label="상태메시지"
+                      />
+                    </div>
+                    <div class="last-seen">최근 접속 · 5분 전</div>
+                  </div>
+                  <button
+                    class="close-button"
+                    type="button"
+                    aria-label="패널 닫기"
+                  >
+                    <img
+                      src="assets/figma-dialog-close-icon.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+                <div class="tabs" role="tablist" aria-label="프로필 탭">
+                  <button
+                    class="tab"
+                    role="tab"
+                    aria-selected="true"
+                    data-tab="profile"
+                    type="button"
+                  >
+                    프로필
+                  </button>
+                  <button
+                    class="tab"
+                    role="tab"
+                    aria-selected="false"
+                    data-tab="work"
+                    type="button"
+                  >
+                    업무 현황
+                  </button>
+                  <span class="tab-actions-spacer" aria-hidden="true"></span>
+                  <button
+                    class="header-more-button"
+                    id="headerMoreButton"
+                    type="button"
+                    aria-label="프로필 보조 메뉴 열기"
+                    aria-expanded="false"
+                  >
+                    <img
+                      src="../../../src/assets/figma/icons/files-and-layout/more-horizontal.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+              </header>
+              <div class="panel-content" id="profileTab" role="tabpanel">
+                <section class="panel-section">
+                  <div class="section-title">계정 정보</div>
+                  <div class="account-list">
+                    <span class="label"
+                      ><span class="account-icon role" aria-hidden="true"></span
+                      >역할</span
+                    ><span class="value">수의사</span
+                    ><span class="label"
+                      ><span
+                        class="account-icon department"
+                        aria-hidden="true"
+                      ></span
+                      >진료과</span
+                    ><span class="value">영상의학과</span
+                    ><span class="label"
+                      ><span
+                        class="account-icon email"
+                        aria-hidden="true"
+                      ></span
+                      >이메일</span
+                    ><span class="value">vet-doyun@clair.local</span
+                    ><span class="label"
+                      ><span
+                        class="account-icon phone"
+                        aria-hidden="true"
+                      ></span
+                      >전화번호</span
+                    ><span class="value">010-4910-0006</span>
+                  </div>
+                </section>
+                <section class="panel-section">
+                  <div class="section-title">오늘 근무 정보</div>
+                  <div class="shift-card">
+                    <div class="shift-mark">일정</div>
+                    <div class="shift-copy">
+                      <div class="shift-time">09:00 - 19:00</div>
+                      <div class="shift-detail"><b>진료중</b> · 진료1실</div>
+                    </div>
+                    <button
+                      class="mini-action"
+                      id="openScheduleFromProfile"
+                      type="button"
+                    >
+                      전체 근무표
+                    </button>
+                  </div>
+                </section>
+                <section class="panel-section">
+                  <div class="section-title">다가오는 부재</div>
+                  <div class="absence-card">
+                    <div class="absence-primary">
+                      <img
+                        src="../../../src/assets/figma/icons/files-and-layout/calendar.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <span>7월 18일(토) · 휴무</span>
+                    </div>
+                    <div class="absence-secondary">
+                      7월 20일(월) 09:00 근무 예정
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <div
+                class="panel-content hidden"
+                id="workTab"
+                role="tabpanel"
+              >
+                <div class="work-toolbar">
+                  <strong>담당 업무</strong><span>요청 시각 최신순</span>
+                </div>
+                <div class="work-timeline" id="workTimeline">
+                  <section class="work-day" data-work-day data-collapsed="false">
+                    <button
+                      class="work-day-toggle"
+                      type="button"
+                      aria-expanded="true"
+                    >
+                      <img
+                        src="../../../src/assets/figma/icons/files-and-layout/calendar.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <strong>26.07.15</strong><span class="work-day-count">2</span>
+                      <img
+                        class="work-day-chevron"
+                        src="../../../src/assets/figma/icons/navigation/chevron-down.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <div class="work-day-items">
+                      <article class="work-card">
+                        <div class="work-card-top">
+                          <span class="work-card-time"
+                            ><img
+                              src="../../../src/assets/figma/icons/files-and-layout/clock.svg"
+                              alt=""
+                              aria-hidden="true"
+                            />14:20 요청</span
+                          ><span class="work-badge">임상병리</span
+                          ><span class="work-badge status info">진행 중</span>
+                        </div>
+                        <div class="work-card-title">CBC·혈액화학 검사</div>
+                        <div class="work-card-description">
+                          초진 환자 기본 혈액검사와 간·신장 수치 확인
+                        </div>
+                        <div class="work-card-person">
+                          <span>환자 코코 · 보호자 박하늘</span
+                          ><span class="requester">요청 이수지</span>
+                        </div>
+                        <button
+                          class="work-action-button"
+                          type="button"
+                          aria-label="CBC 혈액화학 검사 더보기"
+                          aria-expanded="false"
+                          data-work-menu-button
+                        >
+                          <img
+                            src="../../../src/assets/figma/icons/files-and-layout/more-horizontal.svg"
+                            alt=""
+                            aria-hidden="true"
+                          />
+                        </button>
+                        <div class="work-action-menu" data-work-menu data-open="false">
+                          <button
+                            type="button"
+                            data-open-work
+                            data-work-title="CBC·혈액화학 검사"
+                            data-work-person="코코 · 보호자 박하늘"
+                            data-work-category="임상병리"
+                          >
+                            업무 보러가기
+                          </button>
+                        </div>
+                      </article>
+                      <article class="work-card">
+                        <div class="work-card-top">
+                          <span class="work-card-time"
+                            ><img
+                              src="../../../src/assets/figma/icons/files-and-layout/clock.svg"
+                              alt=""
+                              aria-hidden="true"
+                            />12:45 요청</span
+                          ><span class="work-badge">영상검사</span
+                          ><span class="work-badge status info">접수</span>
+                        </div>
+                        <div class="work-card-title">흉부 방사선 촬영</div>
+                        <div class="work-card-description">
+                          호흡기 증상 확인을 위한 흉부 3방향 촬영
+                        </div>
+                        <div class="work-card-person">
+                          <span>환자 보리 · 보호자 한여름</span
+                          ><span class="requester">요청 정민재</span>
+                        </div>
+                        <button
+                          class="work-action-button"
+                          type="button"
+                          aria-label="흉부 방사선 촬영 더보기"
+                          aria-expanded="false"
+                          data-work-menu-button
+                        >
+                          <img
+                            src="../../../src/assets/figma/icons/files-and-layout/more-horizontal.svg"
+                            alt=""
+                            aria-hidden="true"
+                          />
+                        </button>
+                        <div class="work-action-menu" data-work-menu data-open="false">
+                          <button
+                            type="button"
+                            data-open-work
+                            data-work-title="흉부 방사선 촬영"
+                            data-work-person="보리 · 보호자 한여름"
+                            data-work-category="영상검사"
+                          >
+                            업무 보러가기
+                          </button>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                  <section class="work-day" data-work-day data-collapsed="false">
+                    <button
+                      class="work-day-toggle"
+                      type="button"
+                      aria-expanded="true"
+                    >
+                      <img
+                        src="../../../src/assets/figma/icons/files-and-layout/calendar.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <strong>26.07.14</strong><span class="work-day-count">2</span>
+                      <img
+                        class="work-day-chevron"
+                        src="../../../src/assets/figma/icons/navigation/chevron-down.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <div class="work-day-items">
+                      <article class="work-card">
+                        <div class="work-card-top">
+                          <span class="work-card-time">17:10 요청</span
+                          ><span class="work-badge">조제</span
+                          ><span class="work-badge status success">완료</span>
+                        </div>
+                        <div class="work-card-title">퇴원 약 조제</div>
+                        <div class="work-card-description">
+                          항생제와 위장보호제 5일분 조제 및 복약 안내
+                        </div>
+                        <div class="work-card-person">
+                          <span>환자 단추 · 보호자 오지현</span
+                          ><span class="requester">요청 박서연</span>
+                        </div>
+                        <button
+                          class="work-action-button"
+                          type="button"
+                          aria-label="퇴원 약 조제 더보기"
+                          aria-expanded="false"
+                          data-work-menu-button
+                        >
+                          <img
+                            src="../../../src/assets/figma/icons/files-and-layout/more-horizontal.svg"
+                            alt=""
+                            aria-hidden="true"
+                          />
+                        </button>
+                        <div class="work-action-menu" data-work-menu data-open="false">
+                          <button
+                            type="button"
+                            data-open-work
+                            data-work-title="퇴원 약 조제"
+                            data-work-person="단추 · 보호자 오지현"
+                            data-work-category="조제"
+                          >
+                            업무 보러가기
+                          </button>
+                        </div>
+                      </article>
+                      <article class="work-card">
+                        <div class="work-card-top">
+                          <span class="work-card-time">15:30 요청</span
+                          ><span class="work-badge">처치</span
+                          ><span class="work-badge status danger">취소</span>
+                        </div>
+                        <div class="work-card-title">수액 처치</div>
+                        <div class="work-card-description">
+                          보호자 요청으로 처치 전 취소된 피하 수액 오더
+                        </div>
+                        <div class="work-card-person">
+                          <span>환자 밤비 · 보호자 최유진</span
+                          ><span class="requester">요청 오지훈</span>
+                        </div>
+                        <button
+                          class="work-action-button"
+                          type="button"
+                          aria-label="수액 처치 더보기"
+                          aria-expanded="false"
+                          data-work-menu-button
+                        >
+                          <img
+                            src="../../../src/assets/figma/icons/files-and-layout/more-horizontal.svg"
+                            alt=""
+                            aria-hidden="true"
+                          />
+                        </button>
+                        <div class="work-action-menu" data-work-menu data-open="false">
+                          <button
+                            type="button"
+                            data-open-work
+                            data-work-title="수액 처치"
+                            data-work-person="밤비 · 보호자 최유진"
+                            data-work-category="처치"
+                          >
+                            업무 보러가기
+                          </button>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                  <section
+                    class="work-day hidden"
+                    id="olderWorkDay"
+                    data-work-day
+                    data-collapsed="true"
+                  >
+                    <button
+                      class="work-day-toggle"
+                      type="button"
+                      aria-expanded="false"
+                    >
+                      <img
+                        src="../../../src/assets/figma/icons/files-and-layout/calendar.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <strong>26.07.13</strong><span class="work-day-count">3</span>
+                      <img
+                        class="work-day-chevron"
+                        src="../../../src/assets/figma/icons/navigation/chevron-down.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <div class="work-day-items">
+                      <article class="work-card">
+                        <div class="work-card-top">
+                          <span class="work-card-time">11:20 요청</span
+                          ><span class="work-badge">임상병리</span
+                          ><span class="work-badge status warning">재요청</span>
+                        </div>
+                        <div class="work-card-title">요검사 재확인</div>
+                        <div class="work-card-description">
+                          검체량 부족으로 재채취가 필요한 검사
+                        </div>
+                        <div class="work-card-person">
+                          <span>환자 마루 · 보호자 윤가람</span>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                </div>
+                <button class="work-load-more" id="workLoadMore" type="button">
+                  이전 업무 더보기
+                </button>
+              </div>
+              <div
+                class="header-action-menu"
+                id="headerActionMenu"
+                data-open="false"
+                role="menu"
+              >
+                <div class="dropdown-menu-group" role="group">
+                  <button type="button" role="menuitem" data-profile-action="schedule">
+                    전체 근무표 보기
+                  </button>
+                </div>
+                <div
+                  class="dropdown-menu-separator"
+                  role="separator"
+                  aria-orientation="horizontal"
+                ></div>
+                <div class="dropdown-menu-group" role="group">
+                  <button type="button" role="menuitem" data-profile-action="copy-contact">
+                    연락처 복사
+                  </button>
+                  <button type="button" role="menuitem" data-profile-action="member-admin">
+                    멤버 관리에서 보기
+                  </button>
+                </div>
+              </div>
+              <div
+                class="avatar-menu"
+                id="avatarMenu"
+                data-open="false"
+                role="menu"
+              >
+                <div class="dropdown-menu-group" role="group">
+                  <button id="openUpload" type="button" role="menuitem">
+                    <img
+                      src="assets/figma-profile-upload-menu-icon.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />프로필 이미지 업로드
+                  </button>
+                </div>
+                <div
+                  class="dropdown-menu-separator"
+                  role="separator"
+                  aria-orientation="horizontal"
+                ></div>
+                <div class="dropdown-menu-group" role="group">
+                  <button
+                    class="danger"
+                    id="removeAvatar"
+                    type="button"
+                    role="menuitem"
+                  >
+                    <img
+                      src="assets/figma-profile-remove-menu-icon.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />프로필 이미지 제거
+                  </button>
+                </div>
+              </div>
+              <div
+                class="mock-dialog-backdrop"
+                id="uploadBackdrop"
+                data-open="false"
+              >
+                <div
+                  class="upload-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="uploadTitle"
+                >
+                  <div class="upload-main">
+                    <div class="upload-header">
+                      <h3 id="uploadTitle">프로필 이미지 업로드</h3>
+                      <p>
+                        정사각형 512×512px 이상 권장 · JPG, PNG, WebP · 최대 5MB
+                      </p>
+                      <p
+                        class="upload-validation hidden"
+                        id="uploadValidation"
+                        aria-live="polite"
+                      ></p>
+                      <button
+                        class="upload-close"
+                        id="uploadClose"
+                        type="button"
+                        aria-label="업로드 다이얼로그 닫기"
+                      >
+                        <img
+                          src="assets/figma-dialog-close-icon.svg"
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </div>
+                    <div class="upload-preview-frame">
+                      <input
+                        class="upload-file-input"
+                        id="fileInput"
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      />
+                      <button
+                        class="upload-drop"
+                        id="uploadPicker"
+                        type="button"
+                        aria-label="프로필 이미지 선택"
+                      >
+                        <span class="upload-empty" id="dropCopy"
+                          ><span class="upload-empty-icon"
+                            ><img
+                              src="assets/figma-profile-upload-empty-icon.svg"
+                              alt=""
+                              aria-hidden="true" /></span
+                          ><span>이미지를 선택해 주세요</span></span
+                        ><img
+                          class="hidden"
+                          id="previewImage"
+                          alt="선택한 프로필 이미지 미리보기"
+                        />
+                      </button>
+                      <button
+                        class="upload-selection-clear hidden"
+                        id="clearSelectedImage"
+                        type="button"
+                        aria-label="선택한 이미지 제거"
+                        title="선택한 이미지 제거"
+                      >
+                        <img
+                          src="assets/figma-dialog-close-icon.svg"
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="upload-footer">
+                    <button id="uploadCancel" type="button">취소</button
+                    ><button
+                      class="submit"
+                      id="uploadSubmit"
+                      type="button"
+                      disabled
+                    >
+                      업로드
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mock-dialog-backdrop"
+                id="workNavBackdrop"
+                data-open="false"
+              >
+                <div
+                  class="work-navigation-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="workNavTitle"
+                  aria-describedby="workNavDescription"
+                >
+                  <h3 id="workNavTitle">업무 화면으로 이동할까?</h3>
+                  <p id="workNavDescription"></p>
+                  <div class="work-navigation-actions">
+                    <button id="workNavCancel" type="button">취소</button>
+                    <button class="primary" id="workNavConfirm" type="button">
+                      업무 보러가기
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="mock-toast hidden" id="workMockToast" aria-live="polite"></div>
+            </article>
+          </div>
+        </div>
+        <p class="footer-note">
+          이 화면의 이름·환자·보호자·업무·근무 정보는 레이아웃 검토용 합성
+          예시일 뿐이다. 구현 코드나 제품 fallback으로 복사하지 않는다. 실제
+          기능은 승인된 read API와 영속 데이터 소스를 사용한다. 전체 근무표는
+          기존 병원관리 근무표의 해당 직원 일정으로 이동하며, 프로필 패널에
+          별도 주간 캘린더 데이터를 복제하지 않는다.
+        </p>
+      </section>
+
+      <section id="component-specimens">
+        <h2>5. 컴포넌트 시안</h2>
+        <p>
+          Figma의 variant를 구현 전에 검토할 수 있도록 독립 상태로 분리했다.
+          아래 상태가 그대로 Storybook과 실제 컴포넌트의 기준이 된다.
+        </p>
+        <div class="component-showcase">
+          <article class="component-specimen">
+            <h3>ProfileAvatar</h3>
+            <p class="meta">picture on/off × default/hover · 84×84</p>
+            <div class="component-state-row">
+              <div class="component-state">
+                <div class="component-avatar">
+                  <span class="avatar-picture"
+                    ><img
+                      src="../../../public/avatars/49110000-0000-4000-8000-000000000006.png"
+                      alt="사진 있음 기본 상태"
+                  /></span>
+                </div>
+                <span>picture · default</span>
+              </div>
+              <div class="component-state">
+                <div
+                  class="component-avatar"
+                  data-picture="true"
+                  data-state="hover"
+                >
+                  <span class="avatar-picture"
+                    ><img
+                      src="../../../public/avatars/49110000-0000-4000-8000-000000000006.png"
+                      alt="사진 있음 hover 상태"
+                  /></span>
+                  <span class="avatar-edit" aria-hidden="true"
+                    ><img
+                      src="assets/figma-profile-avatar-edit-icon.svg"
+                      alt=""
+                  /></span>
+                </div>
+                <span>picture · hover</span>
+              </div>
+              <div class="component-state">
+                <div class="component-avatar">
+                  <span class="avatar-fallback">김</span>
+                </div>
+                <span>fallback · default</span>
+              </div>
+              <div class="component-state">
+                <div
+                  class="component-avatar"
+                  data-picture="false"
+                  data-state="hover"
+                >
+                  <span class="avatar-fallback">김</span>
+                  <span class="avatar-edit" aria-hidden="true"
+                    ><img
+                      src="assets/figma-profile-avatar-edit-icon.svg"
+                      alt=""
+                  /></span>
+                </div>
+                <span>fallback · hover</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen">
+            <h3>StatusMessage</h3>
+            <p class="meta">
+              default 138px · saved/hover는 내용 너비 · editing 217px · 긴
+              문구만 최대 217px
+            </p>
+            <div class="component-state-row">
+              <div class="component-state">
+                <div class="status-demo">상태메시지 추가하기...</div>
+                <span>default · transparent</span>
+              </div>
+              <div class="component-state">
+                <div class="status-demo saved hover">
+                  <span class="status-label">외근 중</span
+                  ><img
+                    src="assets/figma-status-message-edit-icon.svg"
+                    alt=""
+                  />
+                </div>
+                <span>saved hover · text hug</span>
+              </div>
+              <div class="component-state">
+                <input
+                  class="status-demo editing"
+                  value="오늘은 2시에 퇴근 예정입"
+                  aria-label="상태메시지 입력 상태 시안"
+                  readonly
+                />
+                <span>editing · 217px</span>
+              </div>
+              <div class="component-state">
+                <div class="status-demo saved result">
+                  <span class="status-label">외근 중</span>
+                </div>
+                <span>saved · text hug / transparent</span>
+              </div>
+              <div class="component-state">
+                <div class="status-demo saved hover long">
+                  <span class="status-label"
+                    >오늘은 2시에 퇴근할 예정입니다. 문의 사항은 채팅으로 남겨
+                    주세요.</span
+                  ><img
+                    src="assets/figma-status-message-edit-icon.svg"
+                    alt=""
+                  />
+                </div>
+                <span>long hover · max 217px / ellipsis</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen">
+            <h3>PresenceBadge</h3>
+            <p class="meta">색상과 텍스트를 함께 제공</p>
+            <div class="component-state-row">
+              <div class="component-state">
+                <span class="presence">온라인</span><span>online</span>
+              </div>
+              <div class="component-state">
+                <span class="presence offline">오프라인</span
+                ><span>offline</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen">
+            <h3>ProfileImageActionMenu</h3>
+            <p class="meta">
+              DropdownMenuGroup · DropdownMenuItem · DropdownMenuSeparator ·
+              destructive item · 180px menu
+            </p>
+            <div class="component-state-row">
+              <div class="menu-demo" role="menu">
+                <div class="dropdown-menu-group" role="group">
+                  <button class="menu-demo-item" type="button" role="menuitem">
+                    <img
+                      src="assets/figma-profile-upload-menu-icon.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />프로필 이미지 업로드
+                  </button>
+                </div>
+                <div
+                  class="dropdown-menu-separator"
+                  role="separator"
+                  aria-orientation="horizontal"
+                ></div>
+                <div class="dropdown-menu-group" role="group">
+                  <button
+                    class="menu-demo-item danger"
+                    type="button"
+                    role="menuitem"
+                  >
+                    <img
+                      src="assets/figma-profile-remove-menu-icon.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />프로필 이미지 제거
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen">
+            <h3>ProfileHeaderActionMenu</h3>
+            <p class="meta">
+              저빈도 탐색·복사 액션 · 멤버 관리 항목은 권한이 있을 때만 렌더링
+            </p>
+            <div class="component-state-row">
+              <div class="component-state">
+                <div class="menu-demo header-menu-demo" role="menu">
+                  <div class="dropdown-menu-group" role="group">
+                    <button class="menu-demo-item" type="button" role="menuitem">
+                      <img
+                        src="../../../src/assets/figma/icons/files-and-layout/calendar.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />전체 근무표 보기
+                    </button>
+                  </div>
+                  <div
+                    class="dropdown-menu-separator"
+                    role="separator"
+                    aria-orientation="horizontal"
+                  ></div>
+                  <div class="dropdown-menu-group" role="group">
+                    <button class="menu-demo-item" type="button" role="menuitem">
+                      <img
+                        src="../../../src/assets/figma/icons/actions-and-controls/copy.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />연락처 복사
+                    </button>
+                    <button
+                      class="menu-demo-item"
+                      type="button"
+                      role="menuitem"
+                    >
+                      <img
+                        src="../../../src/assets/figma/icons/people-and-places/users.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />멤버 관리에서 보기
+                    </button>
+                  </div>
+                </div>
+                <span>member-admin allowed · 3 items</span>
+              </div>
+              <div class="component-state">
+                <div class="menu-demo header-menu-demo" role="menu">
+                  <div class="dropdown-menu-group" role="group">
+                    <button class="menu-demo-item" type="button" role="menuitem">
+                      <img
+                        src="../../../src/assets/figma/icons/files-and-layout/calendar.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />전체 근무표 보기
+                    </button>
+                  </div>
+                  <div
+                    class="dropdown-menu-separator"
+                    role="separator"
+                    aria-orientation="horizontal"
+                  ></div>
+                  <div class="dropdown-menu-group" role="group">
+                    <button class="menu-demo-item" type="button" role="menuitem">
+                      <img
+                        src="../../../src/assets/figma/icons/actions-and-controls/copy.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />연락처 복사
+                    </button>
+                  </div>
+                </div>
+                <span>basic permission · admin item omitted</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen wide">
+            <h3>ProfileAvailabilitySummary · 상태 시안</h3>
+            <p class="meta">
+              실제 published schedule·time-clock·승인된 부재 source만 사용 ·
+              부재 사유는 표시하지 않음 · loading/empty/error를 임의 시간으로 대체하지 않음
+            </p>
+            <div class="component-state-row">
+              <div class="component-state">
+                <div class="availability-state-demo">
+                  <strong>09:00–19:00 · 진료 중</strong>
+                  <span>진료1실 · 다음 복귀 7월 20일(월) 09:00</span>
+                </div>
+                <span>loaded · source-backed</span>
+              </div>
+              <div class="component-state">
+                <div class="availability-state-demo">
+                  <strong>오늘 예정된 근무가 없습니다</strong>
+                  <span>다가오는 부재 일정도 없습니다</span>
+                </div>
+                <span>normal empty · no fabricated schedule</span>
+              </div>
+              <div class="component-state">
+                <div class="availability-state-demo pending" aria-label="근무 정보 로딩 중">
+                  <span>loading</span><span>loading</span>
+                </div>
+                <span>loading · preserve layout</span>
+              </div>
+              <div class="component-state">
+                <div class="availability-state-demo error">
+                  <strong>근무 정보를 불러오지 못했습니다</strong>
+                  <span>다시 시도 · empty로 변환하지 않음</span>
+                </div>
+                <span>error · retry</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen wide">
+            <h3>ProfileImageUploadDialog</h3>
+            <p class="meta">
+              열릴 때마다 선택 전 placeholder 상태에서 시작 · 선택 후 X로 초기화
+              · 382×514
+            </p>
+            <div class="component-state-row">
+              <div class="component-state component-dialog-state">
+                <div class="component-dialog-preview">
+                  <div class="upload-main">
+                    <div class="upload-header">
+                      <h3>프로필 이미지 업로드</h3>
+                      <p>
+                        정사각형 512×512px 이상 권장 · JPG, PNG, WebP · 최대 5MB
+                      </p>
+                      <button
+                        class="upload-close"
+                        type="button"
+                        aria-label="업로드 다이얼로그 닫기 시안"
+                      >
+                        <img
+                          src="assets/figma-dialog-close-icon.svg"
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </div>
+                    <div class="upload-preview-frame">
+                      <button class="upload-drop" type="button">
+                        <span class="upload-empty"
+                          ><span class="upload-empty-icon"
+                            ><img
+                              src="assets/figma-profile-upload-empty-icon.svg"
+                              alt=""
+                              aria-hidden="true" /></span
+                          ><span>이미지를 선택해 주세요</span></span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                  <div class="upload-footer">
+                    <button type="button">취소</button
+                    ><button class="submit" type="button" disabled>
+                      업로드
+                    </button>
+                  </div>
+                </div>
+                <span>empty · upload disabled</span>
+              </div>
+              <div class="component-state component-dialog-state">
+                <div class="component-dialog-preview">
+                  <div class="upload-main">
+                    <div class="upload-header">
+                      <h3>프로필 이미지 업로드</h3>
+                      <p>
+                        정사각형 512×512px 이상 권장 · JPG, PNG, WebP · 최대 5MB
+                      </p>
+                      <button
+                        class="upload-close"
+                        type="button"
+                        aria-label="업로드 다이얼로그 닫기 시안"
+                      >
+                        <img
+                          src="assets/figma-dialog-close-icon.svg"
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </div>
+                    <div class="upload-preview-frame">
+                      <button
+                        class="upload-drop"
+                        type="button"
+                        aria-label="다른 프로필 이미지 선택"
+                      >
+                        <img
+                          src="../../../public/avatars/49110000-0000-4000-8000-000000000006.png"
+                          alt="선택한 프로필 이미지 미리보기"
+                        />
+                      </button>
+                      <button
+                        class="upload-selection-clear"
+                        type="button"
+                        aria-label="선택한 이미지 제거 시안"
+                      >
+                        <img
+                          src="assets/figma-dialog-close-icon.svg"
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="upload-footer">
+                    <button type="button">취소</button
+                    ><button class="submit" type="button">업로드</button>
+                  </div>
+                </div>
+                <span>selected · X resets to empty</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen wide">
+            <h3>EmrWorkTimeline · EmrAssignedWorkCard</h3>
+            <p class="meta">
+              날짜·요청 시각 최신순 · 최신 2개 날짜 펼침 · 카드 전체는 비버튼 ·
+              더보기 메뉴로만 이동
+            </p>
+            <div class="component-state-row">
+              <div class="work-component-frame">
+                <section class="work-day" data-collapsed="false">
+                  <button
+                    class="work-day-toggle"
+                    type="button"
+                    aria-expanded="true"
+                  >
+                    <img
+                      src="../../../src/assets/figma/icons/files-and-layout/calendar.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <strong>26.07.15</strong><span class="work-day-count">2</span>
+                    <img
+                      class="work-day-chevron"
+                      src="../../../src/assets/figma/icons/navigation/chevron-down.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <div class="work-day-items">
+                    <article class="work-card">
+                      <div class="work-card-top">
+                        <span class="work-card-time"
+                          ><img
+                            src="../../../src/assets/figma/icons/files-and-layout/clock.svg"
+                            alt=""
+                            aria-hidden="true"
+                          />14:20 요청</span
+                        ><span class="work-badge">임상병리</span
+                        ><span class="work-badge status info">진행 중</span>
+                      </div>
+                      <div class="work-card-title">CBC·혈액화학 검사</div>
+                      <div class="work-card-description">
+                        초진 환자 기본 혈액검사와 간·신장 수치 확인
+                      </div>
+                      <div class="work-card-person">
+                        <span>환자 코코 · 보호자 박하늘</span
+                        ><span class="requester">요청 이수지</span>
+                      </div>
+                      <button
+                        class="work-action-button"
+                        type="button"
+                        aria-label="업무 카드 더보기 시안"
+                      >
+                        <img
+                          src="../../../src/assets/figma/icons/files-and-layout/more-horizontal.svg"
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </article>
+                  </div>
+                </section>
+              </div>
+              <div class="component-state">
+                <div class="menu-demo" role="menu">
+                  <div class="dropdown-menu-group" role="group">
+                    <button class="menu-demo-item" type="button" role="menuitem">
+                      업무 보러가기
+                    </button>
+                  </div>
+                </div>
+                <span>navigation allowed</span>
+              </div>
+              <div class="component-state">
+                <div class="menu-demo" role="menu">
+                  <div class="dropdown-menu-group" role="group">
+                    <button
+                      class="menu-demo-item"
+                      type="button"
+                      role="menuitem"
+                      disabled
+                    >
+                      업무 보러가기
+                    </button>
+                  </div>
+                </div>
+                <span>permission denied · disabled</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen">
+            <h3>EmrWorkCategoryBadge</h3>
+            <p class="meta">카테고리는 중립색으로 통일</p>
+            <div class="component-state-row">
+              <div class="work-badge-grid">
+                <span class="work-badge">임상병리</span>
+                <span class="work-badge">영상검사</span>
+                <span class="work-badge">조제</span>
+                <span class="work-badge">처치</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen">
+            <h3>EmrFulfillmentStatusBadge</h3>
+            <p class="meta">원본 enum을 정해진 라벨·semantic tone으로 매핑</p>
+            <div class="component-state-row">
+              <div class="work-badge-grid">
+                <span class="work-badge status">요청</span>
+                <span class="work-badge status info">접수</span>
+                <span class="work-badge status info">진행 중</span>
+                <span class="work-badge status success">완료</span>
+                <span class="work-badge status danger">취소</span>
+                <span class="work-badge status warning">재요청</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="component-specimen wide">
+            <h3>ProfileWorkStatusTab · 상태 시안</h3>
+            <p class="meta">
+              최초 로딩은 EmrQueueLoadingState, 정상 empty는 EmrQueueEmptyState,
+              읽기 실패·재시도는 EmrInlineAlert로 분리
+            </p>
+            <div class="component-state-row">
+              <div class="work-state-grid">
+                <div class="work-state-demo">
+                  <section
+                    class="emr-empty-state-demo"
+                    aria-label="업무 현황 로딩 시안"
+                    data-kind="upstream-pending"
+                    data-size="md"
+                    data-surface="queue"
+                  >
+                    <div class="emr-empty-state-icon-wrapper" aria-hidden="true">
+                      <div class="emr-empty-state-icon-area">
+                        <span class="emr-empty-state-icon loading"></span>
+                      </div>
+                    </div>
+                    <div class="emr-empty-state-body">
+                      <div class="emr-empty-state-copy">
+                        <h4>업무 정보를 불러오는 중입니다</h4>
+                      </div>
+                    </div>
+                  </section>
+                  <div class="work-state-contract-label">EmrQueueLoadingState</div>
+                </div>
+                <div class="work-state-demo">
+                  <section
+                    class="emr-empty-state-demo"
+                    aria-label="담당 업무 없음 시안"
+                    data-kind="no-data"
+                    data-size="md"
+                    data-surface="queue"
+                  >
+                    <div class="emr-empty-state-icon-wrapper" aria-hidden="true">
+                      <div class="emr-empty-state-icon-area">
+                        <span class="emr-empty-state-icon no-data"></span>
+                      </div>
+                    </div>
+                    <div class="emr-empty-state-body">
+                      <div class="emr-empty-state-copy">
+                        <h4>담당 업무가 없습니다</h4>
+                        <p>배정되었거나 완료된 업무가 없습니다.</p>
+                      </div>
+                      <div class="emr-empty-state-action-space" aria-hidden="true"></div>
+                    </div>
+                  </section>
+                  <div class="work-state-contract-label">
+                    EmrQueueEmptyState → EmrEmptyState md
+                  </div>
+                </div>
+                <div class="work-state-demo">
+                  <section class="emr-inline-alert-demo" role="alert">
+                    <span class="emr-inline-alert-icon-wrap" aria-hidden="true">
+                      <span class="emr-inline-alert-icon"></span>
+                    </span>
+                    <div class="emr-inline-alert-copy">
+                      <strong>업무 현황을 불러오지 못했습니다</strong>
+                      <p>잠시 후 다시 시도해 주세요.</p>
+                      <button class="mock-button" type="button">다시 시도</button>
+                    </div>
+                  </section>
+                  <div class="work-state-contract-label">EmrInlineAlert · error</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <h3 style="margin-top: 24px">Figma 세부 대조 결과</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>컴포넌트</th>
+              <th>Figma 원본 계약</th>
+              <th>토큰 적용 시안</th>
+              <th>판정</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ProfileAvatar</code></td>
+              <td>
+                84×84, radius 6, border neutral/200, fallback neutral/100·400,
+                hover blackAlpha/36 + blur 2, edit icon 24
+              </td>
+              <td>동일 값과 동일 Figma SVG 사용</td>
+              <td>일치</td>
+            </tr>
+            <tr>
+              <td><code>StatusMessage</code></td>
+              <td>
+                height 28, 빈 상태 default/hover 138, input 217, 저장 상태는
+                내용 너비·최대 217(노드 27709:109729 예시 176), px 6·py 4·gap 4,
+                radius 8, hover/input blackAlpha/4, body/2/normal
+              </td>
+              <td>
+                saved는 fit-content + max-width, 나머지는
+                크기·간격·색상·typography token 연결
+              </td>
+              <td>일치</td>
+            </tr>
+            <tr>
+              <td><code>AccountInfo labels</code></td>
+              <td>
+                row 24, icon 15, icon-label gap 8, label neutral/500 · 역할
+                user, 진료과 cross, 이메일 mail, 전화번호 phone
+              </td>
+              <td>
+                저장소 <code>src/assets/figma/icons</code>의 동일 CDS SVG를
+                mask로 연결하고 <code>neutral/500</code> 색상 적용
+              </td>
+              <td>일치</td>
+            </tr>
+            <tr>
+              <td><code>PresenceBadge</code></td>
+              <td>
+                min-height 20, pl 6·pr 8·py 2·gap 4, dot 6, radius full,
+                label/2, online green/50·200·400·600, offline
+                neutral/50·200·400·600
+              </td>
+              <td>font weight 500과 offline border neutral/200으로 보정</td>
+              <td>일치</td>
+            </tr>
+            <tr>
+              <td><code>ProfileImageActionMenu</code></td>
+              <td>
+                width 180, padding 5, item min-height 28, px 6·py 4·gap 6,
+                radius 10/8, neutral/200 border, shadow/lg, body/2/normal
+              </td>
+              <td>
+                <code>DropdownMenuItem</code> 사이에 독립
+                <code>DropdownMenuSeparator</code>를 배치하고, 제거 항목은
+                <code>variant="destructive"</code> 사용
+              </td>
+              <td>일치</td>
+            </tr>
+            <tr>
+              <td><code>ProfileHeaderActionMenu</code></td>
+              <td>Figma 제공 상태 없음</td>
+              <td>
+                기존 shadcn/Base UI DropdownMenu 계약과 CLAiR menu token을 재사용.
+                196px, schedule 단일 group + separator + contact/member group
+              </td>
+              <td>승인된 제품 확장</td>
+            </tr>
+            <tr>
+              <td><code>ProfileImageUploadDialog</code></td>
+              <td>
+                width 382, padding/gap 16, header gap 8, content 350×350, radius
+                12/8, footer 64·padding 16·button gap 10, shadow/sm
+              </td>
+              <td>
+                header–content gap, footer gap, placeholder 12px 시각 간격,
+                shadow/sm을 원본대로 보정
+              </td>
+              <td>기본 상태 일치 · 설명 문구는 실제 업로드 기준으로 교체</td>
+            </tr>
+            <tr>
+              <td><code>SelectedImageClear</code></td>
+              <td>Figma 제공 상태 없음</td>
+              <td>
+                40×40 hit area, offset 12, radius 10, icon 16, shadow/sm. X 클릭
+                시 empty 상태로 복귀
+              </td>
+              <td>제품 확장</td>
+            </tr>
+            <tr>
+              <td><code>EmrWorkTimeline</code></td>
+              <td>
+                콘텐츠 사이드 패널 오더 이력의 날짜 헤더·개수·세로 시간축·접기
+                패턴
+              </td>
+              <td>
+                380px 프로필 패널 안에서 최신 2개 날짜 펼침, 과거 날짜 접힘,
+                동일 날짜 페이지 병합
+              </td>
+              <td>승인된 제품 확장</td>
+            </tr>
+            <tr>
+              <td><code>EmrAssignedWorkCard</code></td>
+              <td>
+                기존 대기열 카드의 환자·보호자, 요청 시각, 상태, 더보기 액션
+                정보 밀도
+              </td>
+              <td>
+                카드 전체 선택 동작은 제거하고 카테고리·상태·업무 설명과 권한별
+                이동 메뉴를 합성
+              </td>
+              <td>승인된 제품 확장</td>
+            </tr>
+            <tr>
+              <td><code>ProfileWorkStatusTab states</code></td>
+              <td>
+                기존 <code>EmrEmptyState md</code> 계약: icon area 40, icon 24,
+                radius 10, icon wrapper pb 4, root gap 8, title/description 14/20
+              </td>
+              <td>
+                로딩은 <code>EmrQueueLoadingState</code>, 정상 empty는
+                <code>EmrQueueEmptyState</code>, 읽기 실패는
+                <code>EmrInlineAlert</code>를 그대로 합성
+              </td>
+              <td>기존 디자인 시스템 재사용</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top: 24px">Figma ↔ 저장소 토큰 대응표</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Figma variable / 값</th>
+              <th>구현 토큰</th>
+              <th>적용 범위</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>neutral/50 · #FAFAFA</code></td>
+              <td><code>--clair-color-atomic-neutral-50</code></td>
+              <td>offline badge background</td>
+            </tr>
+            <tr>
+              <td><code>neutral/100 · #F5F5F5</code></td>
+              <td><code>--clair-color-atomic-neutral-100</code></td>
+              <td>avatar fallback, upload content</td>
+            </tr>
+            <tr>
+              <td><code>neutral/200 · #E5E5E5</code></td>
+              <td><code>--clair-color-atomic-neutral-200</code></td>
+              <td>avatar/dialog/badge border, footer divider</td>
+            </tr>
+            <tr>
+              <td><code>neutral/400·500·600·800·900</code></td>
+              <td>
+                <code>--clair-color-atomic-neutral-{400|500|600|800|900}</code>
+              </td>
+              <td>fallback, placeholder, body, menu, title</td>
+            </tr>
+            <tr>
+              <td><code>blackAlpha/4·6·36·48·64</code></td>
+              <td>
+                <code>--clair-color-atomic-black-alpha-{4|6|36|48|64}</code>
+              </td>
+              <td>
+                status hover, empty-state icon area·title·description, avatar dim,
+                placeholder text
+              </td>
+            </tr>
+            <tr>
+              <td><code>green/50·200·400·600</code></td>
+              <td>
+                <code>--clair-color-atomic-green-{50|200|400|600}</code>
+              </td>
+              <td>online badge background/border/dot/text</td>
+            </tr>
+            <tr>
+              <td><code>workflow semantic tones</code></td>
+              <td>
+                <code>--emr-status-neutral-*</code>,
+                <code>--emr-status-info-*</code>,
+                <code>--emr-status-success-*</code>,
+                <code>--emr-status-warning-*</code>,
+                <code>--emr-status-danger-*</code>
+              </td>
+              <td>업무 상태 배지의 배경·테두리·텍스트</td>
+            </tr>
+            <tr>
+              <td><code>side-panel task card</code></td>
+              <td>
+                <code>--emr-sidepanel-task-card-*</code>,
+                <code>--emr-border-subtle</code>,
+                <code>--emr-text-tertiary</code>
+              </td>
+              <td>업무 카드, 날짜 시간축, 보조 정보</td>
+            </tr>
+            <tr>
+              <td><code>common/100 · #FFFFFF</code></td>
+              <td><code>--clair-color-atomic-common-100</code></td>
+              <td>dialog surface, inverse button text</td>
+            </tr>
+            <tr>
+              <td><code>2·4·6·8·10·12·16px</code></td>
+              <td><code>--clair-spacing-{2|4|6|8|10|12|16}</code></td>
+              <td>
+                padding/gap에는 Figma의
+                <code>border-width/atomic/*</code> 이름을 복제하지 않고 저장소
+                spacing token을 사용
+              </td>
+            </tr>
+            <tr>
+              <td><code>radius 6</code></td>
+              <td><code>--clair-radius-atomic-6</code></td>
+              <td>
+                avatar. Figma의 <code>rounded-md=6</code>와 저장소의
+                <code>--clair-radius-md=8</code>은 이름이 다르므로 값 기준 대응
+              </td>
+            </tr>
+            <tr>
+              <td><code>radius 8·10·12·9999</code></td>
+              <td>
+                <code>--clair-radius-md</code>,
+                <code>--clair-radius-atomic-10</code>,
+                <code>--clair-radius-lg</code>,
+                <code>--clair-radius-full</code>
+              </td>
+              <td>controls, icon area, dialog, badge</td>
+            </tr>
+            <tr>
+              <td><code>shadow/sm</code></td>
+              <td><code>--clair-shadow-sm</code></td>
+              <td>upload dialog 및 선택 제거 control</td>
+            </tr>
+            <tr>
+              <td><code>body/2/normal</code></td>
+              <td><code>--clair-typography-body-2-normal-*</code></td>
+              <td>status, dialog description, buttons, placeholder</td>
+            </tr>
+            <tr>
+              <td><code>label/2 · heading/1 · headline/1</code></td>
+              <td>
+                <code>--clair-typography-label-2-*</code>,
+                <code>--clair-typography-heading-1-*</code>,
+                <code>--clair-typography-headline-1-*</code>
+              </td>
+              <td>Presence, avatar fallback, dialog title</td>
+            </tr>
+            <tr>
+              <td><code>control 28·32·40</code></td>
+              <td>
+                <code>--clair-control-height-sm|md|xl</code>
+              </td>
+              <td>dialog close, footer button, 선택 제거 hit area</td>
+            </tr>
+            <tr>
+              <td><code>84·138·217·350·382px</code></td>
+              <td>component contract 상수</td>
+              <td>
+                전역 spacing token으로 의미를 왜곡하지 않고 컴포넌트 규격으로
+                고정
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout info">
+          <strong>구현 규칙:</strong> 자동 생성 파일인
+          <code>src/styles/tokens/clair.css</code>는 직접 수정하지 않는다.
+          반복되는 프로필 전용 의미가 필요하면 <code>emr-foundation.css</code>에
+          <code>--emr-profile-*</code> alias를 추가하고 위 CLAiR token을
+          참조한다. Figma와 저장소의 radius 이름이 다른 경우에는 이름이 아니라
+          실제 값으로 매핑한다.
+        </div>
+      </section>
+
+      <section>
+        <h2>6. 컴포넌트 경계</h2>
+        <p>
+          저장소는 shadcn <code>base-nova</code>와 Base UI를 사용한다. 아래처럼
+          이미 설치된 primitive의 접근성·포커스·키보드 동작을 유지하고, 프로필
+          feature wrapper가 CLAiR token과 업무 상태를 소유한다.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>프로필 UI</th>
+              <th>기반 primitive</th>
+              <th>합성 원칙</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>패널 탭</td>
+              <td>
+                <code>Tabs</code>, <code>TabsList variant="line"</code>,
+                <code>TabsTrigger</code>, <code>TabsContent</code>
+              </td>
+              <td>
+                <code>프로필</code>과 <code>업무 현황</code>만 유지. Base UI tab
+                semantics와 키보드 이동은 유지하고 높이·gap·underline만 프로필
+                token으로 정렬
+              </td>
+            </tr>
+            <tr>
+              <td>헤더 보조 메뉴</td>
+              <td>
+                <code>DropdownMenu</code>, <code>DropdownMenuTrigger</code>,
+                <code>DropdownMenuGroup</code>, <code>DropdownMenuItem</code>,
+                <code>DropdownMenuSeparator</code>
+              </td>
+              <td>
+                전체 근무표 이동, 연락처 복사, 권한별 멤버 관리 이동만 제공.
+                일정·인사 데이터를 메뉴 안에서 직접 편집하지 않음
+              </td>
+            </tr>
+            <tr>
+              <td>프로필 아바타</td>
+              <td>
+                기존 <code>Avatar roundness="roundrect"</code>,
+                <code>AvatarImage</code>, <code>AvatarFallback</code>
+              </td>
+              <td>
+                shared Avatar를 fork하지 않고
+                <code>EditableProfileAvatar</code>가 84px·hover overlay·edit
+                icon·메뉴를 합성. 같은 84px 사용처가 하나 더 생길 때만 shared
+                size variant로 승격
+              </td>
+            </tr>
+            <tr>
+              <td>근무·부재 요약</td>
+              <td><code>Card</code>, CDS calendar icon, <code>Button</code></td>
+              <td>
+                published schedule·time-clock·approved leave의 source-backed
+                결과만 표시. 휴가 사유나 승인 메모는 노출하지 않고, 전체 근무표
+                버튼은 원본 근무표로 이동
+              </td>
+            </tr>
+            <tr>
+              <td>아바타 액션 메뉴</td>
+              <td>
+                <code>DropdownMenu</code>, <code>DropdownMenuTrigger</code>,
+                <code>DropdownMenuGroup</code>, <code>DropdownMenuItem</code>,
+                <code>DropdownMenuSeparator</code>
+              </td>
+              <td>
+                Base UI 프로젝트이므로 trigger 합성은 <code>render</code>를
+                사용하고, 제거 항목은 destructive variant 사용
+              </td>
+            </tr>
+            <tr>
+              <td>상태메시지</td>
+              <td><code>Button</code> + <code>Input</code></td>
+              <td>
+                display/edit 상태만 <code>InlineStatusMessageEditor</code>가
+                소유. Enter·blur 저장과 Escape rollback은 feature 동작으로 유지
+              </td>
+            </tr>
+            <tr>
+              <td>Presence</td>
+              <td><code>Badge</code></td>
+              <td>
+                <code>PresenceBadge</code> wrapper가 online/offline/unknown cva
+                variant와 CLAiR status token을 제공
+              </td>
+            </tr>
+            <tr>
+              <td>이미지 업로드</td>
+              <td>
+                <code>Dialog</code>, <code>DialogContent</code>,
+                <code>DialogHeader</code>, <code>DialogTitle</code>,
+                <code>DialogDescription</code>, <code>DialogFooter</code>,
+                <code>Button</code>, native <code>input[type=file]</code>
+              </td>
+              <td>
+                <code>showCloseButton=false</code> 후 Figma 위치의 custom
+                <code>DialogClose</code> 사용. file input은 숨기고 선택 영역
+                Button이 실행하며, preview·검증·reset은 feature dialog가 소유
+              </td>
+            </tr>
+            <tr>
+              <td>업무 타임라인</td>
+              <td>
+                기존 <code>EmrSidePanelCollapsibleGroup</code>,
+                <code>Button</code>, 날짜·시간 CDS icon
+              </td>
+              <td>
+                <code>EmrWorkTimelineDateGroup</code>가 접기·펼치기와 날짜별 세로
+                시간축을 소유하고 커서 페이지의 동일 날짜를 병합
+              </td>
+            </tr>
+            <tr>
+              <td>담당 업무 카드</td>
+              <td>
+                <code>Card</code>, <code>Badge</code>, 기존
+                <code>EmrRowActionMenu</code>
+              </td>
+              <td>
+                기존 선택형 <code>EmrTaskQueueCard</code>를 변형하지 않고 정보
+                카드로 분리. 카테고리는 neutral, 상태만 semantic tone 사용
+              </td>
+            </tr>
+            <tr>
+              <td>업무 이동 확인</td>
+              <td><code>Dialog</code>, <code>Button</code></td>
+              <td>
+                환자·보호자와 업무명을 재확인한 뒤 카테고리별 처리 화면으로 이동.
+                이동 URL은 서버 권한 확인 후에만 제공
+              </td>
+            </tr>
+            <tr>
+              <td>구분선·로딩·오류</td>
+              <td>
+                <code>DropdownMenuSeparator</code>, <code>Separator</code>,
+                <code>Skeleton</code>,
+                <code>Alert</code>
+              </td>
+              <td>
+                직접 만든 border/animate-pulse/error div 대신 기존 primitive
+                사용
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout info">
+          <strong>스타일 경계:</strong> Base UI/shadcn source는 포커스 관리,
+          keyboard navigation, portal, dismiss, fallback을 제공한다. Figma
+          정합을 위한 색상·간격·radius·shadow·typography는
+          <code>--clair-*</code> 또는 <code>--emr-profile-*</code> token
+          alias에서 제공하고 페이지에서 raw hex로 덮어쓰지 않는다.
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>컴포넌트</th>
+              <th>소유</th>
+              <th>핵심 API</th>
+              <th>비고</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>StaffProfilePanel</code></td>
+              <td>features/staff</td>
+              <td><code>actorUserId, userId, workspaceId, date</code></td>
+              <td>프로필·업무 현황 2개 탭과 read-only/editable 분기 소유</td>
+            </tr>
+            <tr>
+              <td><code>StaffProfileHeader</code></td>
+              <td>features/staff</td>
+              <td>
+                <code>profile, presenceState, canEdit, auxiliaryActions</code>
+              </td>
+              <td>84px avatar, name, status message, last seen, 권한별 보조 메뉴</td>
+            </tr>
+            <tr>
+              <td><code>PresenceBadge</code></td>
+              <td>features/staff</td>
+              <td><code>state: online | offline | unknown</code></td>
+              <td>
+                색상과 텍스트를 함께 사용. 두 화면군 이상에서 계약이 안정되면
+                components/emr 승격 검토
+              </td>
+            </tr>
+            <tr>
+              <td><code>EditableProfileAvatar</code></td>
+              <td>features/staff</td>
+              <td><code>src, fallback, canEdit, onUpload, onRemove</code></td>
+              <td>공용 Avatar primitive는 변경하지 않고 합성</td>
+            </tr>
+            <tr>
+              <td><code>InlineStatusMessageEditor</code></td>
+              <td>features/staff</td>
+              <td><code>value, maxLength=60, canEdit, onSave</code></td>
+              <td>
+                Enter 또는 focus-out 저장, saved는 내용 너비·최대 217px, result
+                배경 투명, 저장 실패 rollback
+              </td>
+            </tr>
+            <tr>
+              <td><code>ProfileAvailabilitySummary</code></td>
+              <td>features/staff</td>
+              <td>
+                <code>todayStatus, todayShift, nextAbsence, nextReturnAt</code>
+              </td>
+              <td>
+                협업 가능 여부만 요약. 미확정 요청·개인 사유는 제외하고 unknown을
+                휴무로 변환하지 않음
+              </td>
+            </tr>
+            <tr>
+              <td><code>ProfileHeaderActionMenu</code></td>
+              <td>features/staff</td>
+              <td>
+                <code>canViewSchedule, canCopyContact, canManageMember, onAction</code>
+              </td>
+              <td>저빈도 탐색/복사만 소유하며 일정·멤버 데이터를 직접 편집하지 않음</td>
+            </tr>
+            <tr>
+              <td><code>ProfileImageUploadDialog</code></td>
+              <td>features/staff</td>
+              <td>
+                <code
+                  >open, accept, maxBytes, minSide, onUpload, onOpenChange,
+                  onSelectionClear</code
+                >
+              </td>
+              <td>
+                열릴 때마다 선택 전 상태로 reset. 미리보기 X는 선택 파일만
+                초기화. 공용 shell variant 검토
+              </td>
+            </tr>
+            <tr>
+              <td><code>ProfileWorkStatusTab</code></td>
+              <td>features/staff</td>
+              <td><code>workspaceId, userId, initialLimit=20</code></td>
+              <td>
+                조회·페이지네이션을 소유하고, 로딩은
+                <code>EmrQueueLoadingState</code>, empty는
+                <code>EmrQueueEmptyState</code>, 오류는
+                <code>EmrInlineAlert</code>로 합성
+              </td>
+            </tr>
+            <tr>
+              <td><code>EmrWorkTimeline</code></td>
+              <td>components/emr</td>
+              <td><code>groups, expandedDates, onDateToggle</code></td>
+              <td>요청 날짜·시간 최신순과 날짜별 그룹 병합</td>
+            </tr>
+            <tr>
+              <td><code>EmrAssignedWorkCard</code></td>
+              <td>components/emr</td>
+              <td><code>item, actions, canOpen</code></td>
+              <td>정보 표시 전용. 카드 전체를 button으로 만들지 않음</td>
+            </tr>
+            <tr>
+              <td><code>EmrFulfillmentStatusBadge</code></td>
+              <td>components/emr</td>
+              <td><code>status: FulfillmentStatus</code></td>
+              <td>원본 enum을 고정 라벨과 semantic tone으로 변환</td>
+            </tr>
+            <tr>
+              <td><code>WorkNavigationDialog</code></td>
+              <td>features/staff</td>
+              <td><code>item, open, onConfirm, onOpenChange</code></td>
+              <td>이동 전 대상 확인. 상세 권한이 없으면 열리지 않음</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 style="margin-top: 24px">프로필 이미지 업로드 계약</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>항목</th>
+              <th>권장 계약</th>
+              <th>이유</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>사용자 안내</td>
+              <td>정사각형 512×512px 이상 권장 · JPG, PNG, WebP · 최대 5MB</td>
+              <td>
+                GitHub는 약 500×500px, Slack은 512×512~1024×1024px을 권장한다.
+                5MB는 고해상도 모바일 사진을 받되 서버 비용을 제한하는 제품
+                상한이다.
+              </td>
+            </tr>
+            <tr>
+              <td>허용 형식</td>
+              <td>
+                <code>image/jpeg</code>, <code>image/png</code>,
+                <code>image/webp</code>
+              </td>
+              <td>
+                사진·투명 이미지·효율적인 웹 이미지를 세 형식으로 커버한다.
+                브라우저 <code>accept</code>와 서버 검증 목록을 동일하게 둔다.
+              </td>
+            </tr>
+            <tr>
+              <td>최소 품질</td>
+              <td>가로·세로 각각 256px 이상, 정사각형은 권장</td>
+              <td>
+                84px 아바타의 고해상도 표시를 보호한다. 정사각형이 아니면 1:1
+                미리보기에서 중앙 기준으로 잘리는 결과를 업로드 전에 확인한다.
+              </td>
+            </tr>
+            <tr>
+              <td>제외 형식</td>
+              <td>GIF/APNG, SVG, HEIC/HEIF, AVIF</td>
+              <td>
+                애니메이션 정책, SVG sanitizing, 기기별 decode, 추가 변환 경로가
+                필요하다. 프로필 사진 MVP에서는 형식을 늘리기보다 정적 래스터 세
+                종류로 제한한다.
+              </td>
+            </tr>
+            <tr>
+              <td>서버 정규화</td>
+              <td>
+                magic bytes 확인 후 decode·방향 보정·metadata 제거·정적 재인코딩
+              </td>
+              <td>
+                확장자나 클라이언트 MIME만 신뢰하지 않고 animated WebP와 손상
+                파일, 과도한 pixel count를 차단한다.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="meta">
+          비교 근거:
+          <a
+            href="https://docs.github.com/en/account-and-profile/reference/profile-reference"
+            >GitHub profile picture requirements</a
+          >,
+          <a
+            href="https://slack.com/help/articles/115005506003-Upload-a-profile-photo"
+            >Slack profile photo guidance</a
+          >,
+          <a
+            href="https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Image_types"
+            >MDN image format guide</a
+          >
+        </p>
+      </section>
+
+      <section>
+        <h2>7. 상태별 UX</h2>
+        <table class="state-table">
+          <thead>
+            <tr>
+              <th>상태</th>
+              <th>표현</th>
+              <th>행동</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>패널 로딩</td>
+              <td>150px 헤더·84px avatar 구조를 유지하는 skeleton</td>
+              <td>닫기 가능</td>
+            </tr>
+            <tr>
+              <td>Presence 연결 중/실패</td>
+              <td><code>unknown</code> 배지 또는 배지 생략 + 최근 접속 유지</td>
+              <td>오프라인으로 단정하지 않음</td>
+            </tr>
+            <tr>
+              <td>상태메시지 비어 있음</td>
+              <td>
+                본인: “상태메시지 추가하기…” / 타인: 줄 자체 생략 또는 “등록된
+                상태메시지 없음”
+              </td>
+              <td>본인만 편집</td>
+            </tr>
+            <tr>
+              <td>상태메시지 입력</td>
+              <td>217px, black alpha 4 배경</td>
+              <td>Enter 또는 마우스 focus-out 시 그대로 저장</td>
+            </tr>
+            <tr>
+              <td>상태메시지 저장 결과</td>
+              <td>내용 너비, 최대 217px, 배경 투명</td>
+              <td>
+                hover 시 텍스트+edit icon 영역만 black alpha 4. 긴 문구만 말줄임
+              </td>
+            </tr>
+            <tr>
+              <td>상태메시지 실패</td>
+              <td>이전 값 복원 + 오류 toast</td>
+              <td>재시도 가능</td>
+            </tr>
+            <tr>
+              <td>업로드 기본</td>
+              <td>350px icon + placeholder, 업로드 버튼 disabled</td>
+              <td>다시 열 때도 이전 preview 없이 이 상태로 초기화</td>
+            </tr>
+            <tr>
+              <td>업로드 미리보기</td>
+              <td>
+                정사각형 cover preview, 우측 상단 선택 제거 X, 업로드 버튼
+                enabled
+              </td>
+              <td>
+                이미지 영역 클릭 시 다른 파일 재선택, X 클릭 시 placeholder로
+                초기화
+              </td>
+            </tr>
+            <tr>
+              <td>파일 오류</td>
+              <td>형식/용량/디코딩 오류를 선택 영역 바로 아래에 표시</td>
+              <td>파일 재선택</td>
+            </tr>
+            <tr>
+              <td>이미지 제거</td>
+              <td>현재 사진을 숨기고 이름 첫 글자 fallback 표시</td>
+              <td>서버 삭제 실패 시 기존 사진 복원</td>
+            </tr>
+            <tr>
+              <td>업무 현황 최초 로딩</td>
+              <td><code>EmrQueueLoadingState</code>의 md queue 상태</td>
+              <td>기존 데이터가 없는 최초 요청에만 표시</td>
+            </tr>
+            <tr>
+              <td>담당 업무 없음</td>
+              <td>
+                <code>EmrQueueEmptyState</code> →
+                <code>EmrEmptyState size="md" surface="queue" kind="no-data"</code>
+              </td>
+              <td>오류와 구분된 정상 empty state, 액션 공간 계약 유지</td>
+            </tr>
+            <tr>
+              <td>이전 업무 조회 실패</td>
+              <td>기존 타임라인은 유지하고 하단에 오류와 재시도</td>
+              <td>성공한 페이지를 지우지 않음</td>
+            </tr>
+            <tr>
+              <td>업무 상세 권한 없음</td>
+              <td>“업무 보러가기” 비활성 + 사유 tooltip</td>
+              <td>API가 <code>href</code>를 반환하지 않음</td>
+            </tr>
+            <tr>
+              <td>업무 이동</td>
+              <td>환자·보호자·업무명을 포함한 확인 dialog</td>
+              <td>확인 후 카테고리별 환자·오더 처리 화면으로 이동</td>
+            </tr>
+            <tr>
+              <td>탭 API 실패</td>
+              <td><code>EmrInlineAlert severity="error"</code> + 재시도</td>
+              <td>다른 탭은 계속 사용 가능</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>8. 데이터·API·권한 분석</h2>
+        <div class="three-col">
+          <div class="card">
+            <h3>상태메시지</h3>
+            <p>
+              현재 스키마/API에는 필드가 없다. 근무 맥락 문구이므로 전역
+              <code>user_profiles</code>보다 workspace-scoped member profile이
+              안전하다. 새 테이블 또는 권한 필드와 self-write RPC가 필요하다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>프로필 이미지</h3>
+            <p>
+              현재 <code>avatars</code> bucket은 public, PNG 2MB, trusted seed
+              upload 전용이다. 제품 업로드 계약은 JPG/JPEG·PNG·정적 WebP, 최대
+              5MB로 확장하고, 브라우저 업로드를 위해 self-only write 정책 또는
+              서버 업로드 경계와 avatar reference 갱신이 필요하다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>편집 권한</h3>
+            <p>
+              기본은 본인만 수정이다. 관리자 대리 수정은 별도 permission, 감사
+              이벤트, UI 표시, 서버 강제가 모두 합의될 때만 추가한다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>업무 현황</h3>
+            <p>
+              기존 <code>order_fulfillment_work_items</code>와 source snapshot을
+              재사용한다. 새 이력 테이블 없이 프로필 전용 read API가 담당자,
+              요청 시각, 권한, 이동 목적지를 정규화한다.
+            </p>
+          </div>
+        </div>
+        <div class="callout">
+          <strong>권장 API 분리:</strong> 조회용 operational-profile GET은
+          유지하고, 상태메시지와 아바타는 self-owned mutation route로 분리한다.
+          기존 개인 프로필 PATCH는 전체 필드를 요구하므로 그대로 재사용하면 부분
+          수정 충돌 위험이 있다.
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>경계</th>
+              <th>제안</th>
+              <th>서버 검증</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Status read</td>
+              <td>
+                operational profile 응답에 nullable <code>statusMessage</code>
+              </td>
+              <td>active same-workspace member만 읽기</td>
+            </tr>
+            <tr>
+              <td>Status write</td>
+              <td>
+                <code
+                  >PATCH
+                  /api/workspaces/{workspaceId}/members/me/status-message</code
+                >
+              </td>
+              <td>self, active membership, trim, 60자, rate limit</td>
+            </tr>
+            <tr>
+              <td>Avatar upload</td>
+              <td>
+                <code>POST /api/users/me/avatar</code> 또는 signed upload flow
+              </td>
+              <td>
+                self, magic bytes/MIME, 5MB, 최소 256px, pixel count,
+                decode+re-encode, sanitized object path
+              </td>
+            </tr>
+            <tr>
+              <td>Avatar remove</td>
+              <td><code>DELETE /api/users/me/avatar</code></td>
+              <td>self, object ownership, metadata atomicity</td>
+            </tr>
+            <tr>
+              <td>Work status read</td>
+              <td>
+                <code
+                  >GET
+                  /api/workspaces/{workspaceId}/staff/{userId}/work-items?limit=20&amp;cursor=…</code
+                >
+              </td>
+              <td>
+                same-workspace summary read, target membership, 담당자 조건,
+                <code>requestedAt DESC, id DESC</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Work navigation</td>
+              <td>
+                항목별 <code>canOpen</code>, nullable <code>href</code>,
+                <code>disabledReason</code>
+              </td>
+              <td>
+                환자·오더 상세 권한 별도 검사. 권한이 없으면 URL 미반환, 대상
+                화면에서도 재검사
+              </td>
+            </tr>
+            <tr>
+              <td>Availability summary</td>
+              <td>
+                operational profile 응답에 오늘 published shift, time-clock 상태,
+                다음 승인 부재와 복귀 예정만 확장
+              </td>
+              <td>
+                active same-workspace read, 병원 timezone, 공개 가능한 부재 유형만
+                반환하고 사유·승인 메모는 제외
+              </td>
+            </tr>
+            <tr>
+              <td>Schedule navigation</td>
+              <td>기존 병원관리 근무표 route에 target user와 기준 주를 전달</td>
+              <td>
+                근무표 접근 권한을 서버와 목적 화면에서 재검사. 프로필 전용 range
+                read API는 만들지 않음
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 style="margin-top: 24px">업무 현황 응답 계약</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>필드</th>
+              <th>내용</th>
+              <th>표현/사용</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>id, orderId, encounterId</code></td>
+              <td>업무·오더·진료 연결 ID</td>
+              <td>안정 정렬, 이동 대상 확인</td>
+            </tr>
+            <tr>
+              <td><code>category</code></td>
+              <td><code>lab | imaging | dispensing | treatment</code></td>
+              <td>임상병리·영상검사·조제·처치 배지</td>
+            </tr>
+            <tr>
+              <td><code>status</code></td>
+              <td>
+                <code
+                  >requested | accepted | in_progress | completed | cancelled |
+                  returned</code
+                >
+              </td>
+              <td>요청·접수·진행 중·완료·취소·재요청 배지</td>
+            </tr>
+            <tr>
+              <td><code>requestedAt</code></td>
+              <td>오더가 요청된 ISO 시각</td>
+              <td>병원 현지 날짜 그룹과 최신순 정렬</td>
+            </tr>
+            <tr>
+              <td><code>title, description</code></td>
+              <td>업무명과 nullable 한 줄 설명</td>
+              <td>카드 제목과 최대 2줄 설명</td>
+            </tr>
+            <tr>
+              <td><code>patient, guardian, requester</code></td>
+              <td>업무 맥락에 필요한 최소 식별 요약</td>
+              <td>환자·보호자와 요청자 표시</td>
+            </tr>
+            <tr>
+              <td><code>navigation</code></td>
+              <td>
+                <code>canOpen</code>, nullable <code>href</code>, nullable
+                <code>disabledReason</code>
+              </td>
+              <td>권한별 더보기 메뉴와 이동 dialog</td>
+            </tr>
+            <tr>
+              <td><code>pagination</code></td>
+              <td><code>nextCursor, hasNextPage</code></td>
+              <td>20개 단위 이전 업무 더보기</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <strong>조회 규칙:</strong> 활성 상태는 현재
+          <code>assignedToUserId</code>, 완료·취소는 fulfillment 레코드에 남은
+          종료 시점 담당자를 기준으로 한다. 정렬은
+          <code>requestedAt DESC, id DESC</code>이며, 다음 페이지가 같은 날짜로
+          시작하면 기존 날짜 그룹에 합친다.
+        </div>
+      </section>
+
+      <section>
+        <h2>9. 접근성·반응형 기준</h2>
+        <ul>
+          <li>
+            아바타 편집은 hover에만 의존하지 않고 실제 <code>button</code>,
+            accessible name, focus-visible 상태를 제공한다.
+          </li>
+          <li>
+            Presence는 색상 외에 “온라인/오프라인/상태 확인 중” 텍스트를
+            제공한다.
+          </li>
+          <li>
+            상태메시지는 Enter 또는 focus-out 저장, Escape 취소, 60자 제한, 저장
+            중/실패 안내를 갖는다.
+          </li>
+          <li>
+            탭은 Base UI semantics, 좌우 화살표 이동, 활성 tab과 tabpanel 연결을
+            유지한다.
+          </li>
+          <li>
+            업무 날짜 헤더는 실제 button과 <code>aria-expanded</code>를 사용하고,
+            더보기 메뉴와 이동 dialog는 키보드·focus return을 지원한다.
+          </li>
+          <li>
+            업로드 dialog는 열릴 때 파일 선택 영역 또는 닫기에 focus, 닫힐 때
+            아바타 버튼으로 focus를 돌린다.
+          </li>
+          <li>
+            desktop은 380px + 10px gap, 좁은 화면은 backdrop 없는 full-width
+            panel을 유지한다. dialog는 viewport보다 작게 축소하고 350px
+            preview는 가용 폭에 맞춘다.
+          </li>
+          <li>
+            200% zoom, 긴 이름, 긴 상태메시지, 긴 이메일에서 close/Presence가
+            겹치지 않는지 브라우저로 확인한다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>10. 구현 순서</h2>
+        <div class="callout risk">
+          <strong>구현 데이터 금지사항:</strong> 이 보고서의 예시 이름·프로필·
+          환자·보호자·업무·근무시간·부재 일정을 제품 코드의 상수, fixture,
+          in-memory row 또는 API 실패 시 mock fallback으로 만들지 않는다. 데이터가
+          없거나 조회에 실패하면 shared loading/empty/error/disabled 상태를
+          표시해야 하며, 예시 데이터로 성공 화면을 꾸미면 안 된다.
+        </div>
+        <h3 style="margin-top: 20px">실제 데이터 경로를 사용하는 검증 계약</h3>
+        <ul>
+          <li>
+            <strong>업무 현황:</strong> 격리된 합성 테스트 workspace에서 실제
+            차트·오더·fulfillment 생성 경로로 업무를 만들고 특정 합성 테스트
+            유저를 담당자로 지정한다. 프로필 업무 API가 동일한 업무 ID, 요청
+            시각, 카테고리, 상태를 반환하는지 검증한다.
+          </li>
+          <li>
+            <strong>프로필 정보:</strong> 사용자·workspace membership·직무·진료과·
+            연락처 source에서 읽은 값을 검증한다. 시안의 이름과 연락처를 기본값
+            또는 fallback으로 사용하지 않는다.
+          </li>
+          <li>
+            <strong>오늘 근무 정보:</strong> 실제 published schedule과 time-clock
+            facts로 표시 여부와 상태를 검증한다. 일정이 없으면 정상 empty/off
+            계약을 사용하고 임의 시간대를 생성하지 않는다.
+          </li>
+          <li>
+            <strong>전체 근무표 이동:</strong> 프로필 패널에서 별도 캘린더
+            데이터를 조회하지 않는다. 권한 확인 후 기존 병원관리 근무표의 해당
+            직원·기준 주로 이동하고, 근무표의 loading/error/permission 상태는
+            원본 화면이 소유한다.
+          </li>
+          <li>
+            <strong>테스트 데이터 안전:</strong> 실제 고객·환자·보호자·직원
+            개인정보는 사용하지 않는다. 테스트 전용 합성 엔티티를 seed/API/RPC로
+            생성하고 ID 기반 read-back 후 transaction rollback 또는 명시적
+            cleanup으로 제거한다.
+          </li>
+          <li>
+            <strong>실패 경계:</strong> API·권한·DB 조회 실패를 빈 목록이나 시안
+            데이터로 바꾸지 않는다. 실패 원인을 구분한 오류 상태와 재시도를
+            표시한다.
+          </li>
+        </ul>
+        <ol>
+          <li>
+            <strong>UI 계약 PR:</strong> 380px/150px/84px 레이아웃, 계정 정보 →
+            오늘 근무 → 다가오는 부재 순서, 프로필·업무 현황 2-tab shell,
+            헤더 보조 메뉴, <code>PresenceBadge</code>, read-only/editable 분기,
+            Storybook.
+          </li>
+          <li>
+            <strong>상태메시지 PR:</strong> workspace-scoped schema/RPC/RLS/API,
+            inline editor, optimistic rollback, 권한 테스트.
+          </li>
+          <li>
+            <strong>아바타 PR:</strong> upload/remove API, Storage ownership,
+            preview dialog, 파일 검증, cache busting, fallback 전환과 실패
+            rollback.
+          </li>
+          <li>
+            <strong>업무 현황 PR:</strong> 기존 fulfillment 데이터를 읽는 프로필
+            전용 cursor API, 타임라인·업무 카드·상태/카테고리 배지, 권한별 이동
+            dialog와 Storybook.
+          </li>
+          <li>
+            <strong>통합 QA:</strong> desktop/mobile/zoom/keyboard/screen-reader
+            smoke, source-backed synthetic assignment/read-back, profile·근무·
+            부재 source와 근무표 deep-link 검증, cross-workspace denial, cleanup,
+            build/docs.
+          </li>
+        </ol>
+        <div class="callout risk">
+          <strong>한 PR로 묶지 말 것:</strong> 패널 UI, 새 schema/RLS, Storage
+          upload, 업무 현황 read model을 동시에 넣으면 검토와 rollback 경계가
+          너무 커진다. 프로필 전용 calendar read model은 만들지 않는다.
+        </div>
+      </section>
+
+      <section>
+        <h2>11. 예상 변경 파일</h2>
+        <ul class="file-list">
+          <li>
+            <code>src/features/staff/staff-operational-profile-drawer.tsx</code>
+            분해 또는 rename
+          </li>
+          <li>
+            <code>src/features/staff/presence-badge.tsx</code>,
+            <code>editable-profile-avatar.tsx</code>,
+            <code>profile-image-upload-dialog.tsx</code>,
+            <code>profile-header-action-menu.tsx</code> 신규
+          </li>
+          <li>
+            <code>src/features/staff/profile-availability-summary.tsx</code>
+            오늘 근무·다가오는 부재·다음 복귀 표시
+          </li>
+          <li>
+            <code>src/features/staff/server-operational-profile-core.ts</code>
+            status message와 source-backed availability read 확장
+          </li>
+          <li>
+            <code
+              >src/app/api/workspaces/[workspaceId]/members/me/status-message/route.ts</code
+            >
+            신규
+          </li>
+          <li><code>src/app/api/users/me/avatar/route.ts</code> 신규</li>
+          <li>
+            <code
+              >src/app/api/workspaces/[workspaceId]/staff/[userId]/work-items/route.ts</code
+            >,
+            <code>src/features/staff/server-profile-work-items.ts</code> 신규
+          </li>
+          <li>
+            <code>src/features/staff/profile-work-status-tab.tsx</code>,
+            <code>work-navigation-dialog.tsx</code> 신규
+          </li>
+          <li>
+            <code>src/components/emr/work-timeline.tsx</code>,
+            <code>assigned-work-card.tsx</code>,
+            <code>fulfillment-status-badge.tsx</code> 신규
+          </li>
+          <li>
+            <code>src/features/reception/module.tsx</code> profile panel width
+            380, 2-tab navigation 및 근무표 deep-link handoff
+          </li>
+          <li>
+            <code>src/components/emr/dialog-shell.tsx</code> profile image
+            variant가 공용 가치가 있을 때만 확장
+          </li>
+          <li>
+            기존 <code>src/components/emr/empty-state.tsx</code>,
+            <code>subpanel.tsx</code>의 queue state wrapper,
+            <code>inline-alert.tsx</code>를 변경 없이 재사용
+          </li>
+          <li>
+            focused component/server/migration/Storage/browser tests와 Storybook
+            stories
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>12. 승욱 승인으로 확정된 구현 결정</h2>
+        <ol>
+          <li>
+            <strong>상태메시지 범위:</strong> workspace별 메시지로 확정.
+          </li>
+          <li>
+            <strong>탭 변경:</strong> 최근활동을 업무 현황으로 변경. 담당 오더를
+            요청 시각 최신순의 날짜별 타임라인으로 표시.
+          </li>
+          <li>
+            <strong>아바타 공개성:</strong> private storage와 signed URL 방향으로
+            확정.
+          </li>
+          <li>
+            <strong>다른 직원 편집:</strong> 본인만 편집. 관리자 대리 편집은 후속
+            이슈로 분리.
+          </li>
+          <li>
+            <strong>업무 포함 기준:</strong> 활성 업무는 현재 담당자, 완료·취소는
+            종료 시점 담당자 기준. 완료 전 인계된 업무는 기존 담당자 목록에서
+            제외.
+          </li>
+          <li>
+            <strong>정렬·조회:</strong> 오더 요청 시각 기준 최신순, 전체 이력을
+            최초 20개와 20개 단위 더보기로 제공.
+          </li>
+          <li>
+            <strong>이동:</strong> 카드 자체는 정보용. 더보기 → 업무 보러가기 →
+            확인 dialog 후 이동.
+          </li>
+          <li>
+            <strong>공개 범위:</strong> 같은 workspace 구성원은 업무 요약을 볼 수
+            있고, 상세 이동은 별도 환자·오더 권한이 있는 경우에만 제공.
+          </li>
+          <li>
+            <strong>API 접근:</strong> 기존 fulfillment 데이터를 재사용하는 프로필
+            전용 read API로 확정. 이번 범위에 신규 DB 이력 테이블은 추가하지
+            않음.
+          </li>
+          <li>
+            <strong>업무 탭 상태 UI:</strong> 최초 로딩은
+            <code>EmrQueueLoadingState</code>, 정상 empty는
+            <code>EmrQueueEmptyState</code>의 md 계약, 읽기 실패는
+            <code>EmrInlineAlert</code>로 확정.
+          </li>
+          <li>
+            <strong>실데이터 경로 원칙:</strong> 시안의 합성 예시는 제품 코드에
+            넣지 않는다. 업무·프로필·오늘 근무·다가오는 부재는 실제 API/DB read
+            model로 구현하고, 검증은 격리된 합성 테스트 엔티티를 실제 생성·배정·
+            read-back·cleanup하는 방식으로 확정.
+          </li>
+          <li>
+            <strong>탭 IA:</strong> 프로필·업무 현황 2개 탭으로 확정. 캘린더·
+            더보기 탭은 제거하고, 전체 근무표·연락처 복사·권한별 멤버 관리는
+            헤더 보조 메뉴로 제공.
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>검증 상태</h2>
+        <ul>
+          <li>
+            사용자 지정 Figma 핵심 노드 design context 및 screenshot 확인: 완료
+          </li>
+          <li>현재 Vercel 프로필 패널 캡처 및 저장 이미지 재확인: 완료</li>
+          <li>
+            현재 코드/API/RLS/Storage/Presence/탭/다이얼로그 구조 확인: 완료
+          </li>
+          <li>제품 구현: 이번 단계 범위 밖, 미수행</li>
+          <li>HTML 시안 브라우저 검증: desktop, 760px, 390px 완료</li>
+          <li>
+            프로필·업무 현황 2개 탭, 프로필 내 근무·부재 요약, 헤더 보조 메뉴의
+            근무표 이동 toast와 권한별 멤버 관리 항목 생략 시안 확인: 완료
+          </li>
+          <li>
+            상태메시지 Enter·focus-out 저장 및 저장 후 투명 배경 확인: 완료
+          </li>
+          <li>
+            아바타 hover 편집 아이콘·이미지 제거 후 fallback 전환 확인: 완료
+          </li>
+          <li>
+            업로드 dialog 재진입 시 이전 이미지 대신 빈 placeholder와 비활성
+            업로드 버튼 노출 확인: 완료
+          </li>
+          <li>
+            선택 이미지 제거 X 클릭 시 preview·file input 초기화 및 업로드 버튼
+            비활성 전환: 완료
+          </li>
+          <li>
+            Avatar·StatusMessage·PresenceBadge·AvatarActionMenu·HeaderActionMenu·
+            AvailabilitySummary·UploadDialog·WorkTimeline·AssignedWorkCard·
+            Category/StatusBadge 컴포넌트 상태 시안 확인: 완료
+          </li>
+          <li>
+            업무 탭 상태 시안의 기존 디자인 시스템 재사용 확인: Empty State md
+            icon area 40px, icon 24px, radius 10px, title 14px 및 오류
+            <code>EmrInlineAlert</code> 분리 완료
+          </li>
+          <li>
+            제품 코드의 dummy/fixture/mock fallback 금지와 source-backed 합성
+            생성·배정·read-back·cleanup 검증 계약 문서화: 완료. 실제 API/DB 구현과
+            통합 검증 실행은 이번 분석 단계 범위 밖
+          </li>
+          <li>
+            업무 현황 탭, 날짜 접기/펼치기, 더보기 메뉴, 이동 확인 dialog,
+            focus return, 이전 업무 더보기 인터랙션 확인: 완료
+          </li>
+          <li>
+            Figma variable과 저장소 CLAiR token 대응 및 브라우저 computed style
+            검증: avatar 84/radius 6, status 138×28, dialog 382/content 350,
+            menu 180, spacing·shadow 일치
+          </li>
+          <li>
+            shadcn project context 확인: <code>base-nova</code>, Base UI,
+            Avatar/Dialog/DropdownMenu/Tabs/Badge/Button 설치 완료
+          </li>
+          <li>
+            업로드 안내 문구와 input 계약 확인: 정사각형 512×512px 이상 권장,
+            JPG/JPEG·PNG·WebP, 최대 5MB
+          </li>
+          <li>
+            <code>npm run docs:check</code>: 806개 docs/agent Markdown 내부 참조
+            검사 통과
+          </li>
+        </ul>
+      </section>
+    </main>
+    <script>
+      const selfMode = document.getElementById("selfMode");
+      const otherMode = document.getElementById("otherMode");
+      const avatarButton = document.getElementById("avatarButton");
+      const avatarPicture = document.getElementById("avatarPicture");
+      const avatarFallback = document.getElementById("avatarFallback");
+      const avatarImage = document.getElementById("avatarImage");
+      const avatarMenu = document.getElementById("avatarMenu");
+      const removeAvatar = document.getElementById("removeAvatar");
+      const headerMoreButton = document.getElementById("headerMoreButton");
+      const headerActionMenu = document.getElementById("headerActionMenu");
+      const openScheduleFromProfile = document.getElementById(
+        "openScheduleFromProfile",
+      );
+      const statusTrigger = document.getElementById("statusTrigger");
+      const statusText = document.getElementById("statusText");
+      const statusInput = document.getElementById("statusInput");
+      const openUpload = document.getElementById("openUpload");
+      const uploadBackdrop = document.getElementById("uploadBackdrop");
+      const uploadClose = document.getElementById("uploadClose");
+      const uploadCancel = document.getElementById("uploadCancel");
+      const uploadPicker = document.getElementById("uploadPicker");
+      const fileInput = document.getElementById("fileInput");
+      const previewImage = document.getElementById("previewImage");
+      const dropCopy = document.getElementById("dropCopy");
+      const uploadValidation = document.getElementById("uploadValidation");
+      const clearSelectedImage = document.getElementById("clearSelectedImage");
+      const uploadSubmit = document.getElementById("uploadSubmit");
+      const workLoadMore = document.getElementById("workLoadMore");
+      const olderWorkDay = document.getElementById("olderWorkDay");
+      const workNavBackdrop = document.getElementById("workNavBackdrop");
+      const workNavDescription = document.getElementById("workNavDescription");
+      const workNavCancel = document.getElementById("workNavCancel");
+      const workNavConfirm = document.getElementById("workNavConfirm");
+      const workMockToast = document.getElementById("workMockToast");
+      let canEdit = true;
+      let currentStatusMessage = "";
+      let statusBeforeEdit = "";
+      let cancelStatusSave = false;
+      let workNavigationTrigger = null;
+      let pendingWorkCategory = "";
+      const acceptedAvatarTypes = new Set([
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+      ]);
+      const maxAvatarBytes = 5 * 1024 * 1024;
+      const minAvatarSide = 256;
+
+      function renderStatusMessage() {
+        statusText.textContent =
+          currentStatusMessage ||
+          (canEdit ? "상태메시지 추가하기..." : "등록된 상태메시지 없음");
+        statusTrigger.dataset.hasValue = String(Boolean(currentStatusMessage));
+      }
+
+      function closeAvatarMenu() {
+        avatarMenu.dataset.open = "false";
+        avatarButton.dataset.open = "false";
+        avatarButton.setAttribute("aria-expanded", "false");
+      }
+
+      function closeHeaderActionMenu({ restoreFocus = false } = {}) {
+        headerActionMenu.dataset.open = "false";
+        headerMoreButton.setAttribute("aria-expanded", "false");
+        if (restoreFocus) headerMoreButton.focus();
+      }
+
+      function showMockToast(message) {
+        workMockToast.textContent = message;
+        workMockToast.classList.remove("hidden");
+        window.setTimeout(() => workMockToast.classList.add("hidden"), 2400);
+      }
+
+      function finishStatusEdit({ save }) {
+        if (statusInput.classList.contains("hidden")) return;
+        if (save) currentStatusMessage = statusInput.value.trim();
+        else currentStatusMessage = statusBeforeEdit;
+        statusInput.classList.add("hidden");
+        statusTrigger.classList.remove("hidden");
+        renderStatusMessage();
+      }
+
+      function setMode(editable) {
+        canEdit = editable;
+        selfMode.setAttribute("aria-pressed", String(editable));
+        otherMode.setAttribute("aria-pressed", String(!editable));
+        avatarButton.disabled = !editable;
+        avatarButton.setAttribute(
+          "aria-label",
+          editable ? "프로필 이미지 메뉴 열기" : "프로필 이미지",
+        );
+        statusTrigger.disabled = !editable;
+        closeAvatarMenu();
+        closeHeaderActionMenu();
+        finishStatusEdit({ save: true });
+        renderStatusMessage();
+      }
+
+      selfMode.addEventListener("click", () => setMode(true));
+      otherMode.addEventListener("click", () => setMode(false));
+      avatarButton.addEventListener("click", () => {
+        if (!canEdit) return;
+        const next = avatarMenu.dataset.open !== "true";
+        avatarMenu.dataset.open = String(next);
+        avatarButton.dataset.open = String(next);
+        avatarButton.setAttribute("aria-expanded", String(next));
+      });
+      removeAvatar.addEventListener("click", () => {
+        avatarPicture.classList.add("hidden");
+        avatarFallback.classList.remove("hidden");
+        avatarButton.dataset.picture = "false";
+        closeAvatarMenu();
+      });
+      headerMoreButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const shouldOpen = headerActionMenu.dataset.open !== "true";
+        closeAvatarMenu();
+        headerActionMenu.dataset.open = String(shouldOpen);
+        headerMoreButton.setAttribute("aria-expanded", String(shouldOpen));
+      });
+      document.querySelectorAll("[data-profile-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const messages = {
+            schedule: "시안: 병원관리 근무표에서 이 직원의 일정으로 이동해.",
+            "copy-contact": "시안: 이 직원의 공개 연락처를 복사해.",
+            "member-admin": "시안: 권한 확인 후 멤버 관리 화면으로 이동해.",
+          };
+          closeHeaderActionMenu({ restoreFocus: true });
+          showMockToast(messages[button.dataset.profileAction]);
+        });
+      });
+      openScheduleFromProfile.addEventListener("click", () => {
+        showMockToast("시안: 병원관리 근무표에서 이 직원의 일정으로 이동해.");
+      });
+      statusTrigger.addEventListener("click", () => {
+        if (!canEdit) return;
+        statusBeforeEdit = currentStatusMessage;
+        statusInput.value = currentStatusMessage;
+        statusTrigger.classList.add("hidden");
+        statusInput.classList.remove("hidden");
+        statusInput.focus();
+      });
+      statusInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          statusInput.blur();
+        }
+        if (event.key === "Escape") {
+          cancelStatusSave = true;
+          finishStatusEdit({ save: false });
+          statusTrigger.focus();
+        }
+      });
+      statusInput.addEventListener("blur", () => {
+        if (cancelStatusSave) {
+          cancelStatusSave = false;
+          return;
+        }
+        finishStatusEdit({ save: true });
+      });
+
+      const tabButtons = Array.from(document.querySelectorAll("[data-tab]"));
+      const tabPanels = {
+        profile: document.getElementById("profileTab"),
+        work: document.getElementById("workTab"),
+      };
+      function activateTab(name) {
+        tabButtons.forEach((button) =>
+          button.setAttribute(
+            "aria-selected",
+            String(button.dataset.tab === name),
+          ),
+        );
+        Object.entries(tabPanels).forEach(([key, panel]) =>
+          panel.classList.toggle("hidden", key !== name),
+        );
+        closeWorkMenus();
+        closeHeaderActionMenu();
+      }
+      tabButtons.forEach((button) =>
+        button.addEventListener("click", () => activateTab(button.dataset.tab)),
+      );
+      function closeWorkMenus(exceptMenu = null) {
+        document.querySelectorAll("[data-work-menu]").forEach((menu) => {
+          if (menu === exceptMenu) return;
+          menu.dataset.open = "false";
+          const trigger = menu.parentElement.querySelector(
+            "[data-work-menu-button]",
+          );
+          if (trigger) trigger.setAttribute("aria-expanded", "false");
+        });
+      }
+
+      document.querySelectorAll("[data-work-day]").forEach((day) => {
+        const toggle = day.querySelector(".work-day-toggle");
+        toggle.addEventListener("click", () => {
+          const collapsed = day.dataset.collapsed === "true";
+          day.dataset.collapsed = String(!collapsed);
+          toggle.setAttribute("aria-expanded", String(collapsed));
+        });
+      });
+
+      document.querySelectorAll("[data-work-menu-button]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const menu = button.parentElement.querySelector("[data-work-menu]");
+          const shouldOpen = menu.dataset.open !== "true";
+          closeWorkMenus(shouldOpen ? menu : null);
+          menu.dataset.open = String(shouldOpen);
+          button.setAttribute("aria-expanded", String(shouldOpen));
+        });
+      });
+
+      function setWorkNavigationDialog(open) {
+        workNavBackdrop.dataset.open = String(open);
+        if (open) {
+          workNavCancel.focus();
+          return;
+        }
+        if (workNavigationTrigger) workNavigationTrigger.focus();
+      }
+
+      document.querySelectorAll("[data-open-work]").forEach((button) => {
+        button.addEventListener("click", () => {
+          workNavigationTrigger = button;
+          pendingWorkCategory = button.dataset.workCategory;
+          workNavDescription.textContent = `${button.dataset.workPerson}의 ‘${button.dataset.workTitle}’ 업무로 이동해.`;
+          closeWorkMenus();
+          setWorkNavigationDialog(true);
+        });
+      });
+
+      workNavCancel.addEventListener("click", () =>
+        setWorkNavigationDialog(false),
+      );
+      workNavConfirm.addEventListener("click", () => {
+        setWorkNavigationDialog(false);
+        showMockToast(`시안: ${pendingWorkCategory} 업무 화면으로 이동해.`);
+      });
+
+      workLoadMore.addEventListener("click", () => {
+        olderWorkDay.classList.remove("hidden");
+        workLoadMore.classList.add("hidden");
+        olderWorkDay.querySelector(".work-day-toggle").focus();
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest(".work-card")) closeWorkMenus();
+        if (!event.target.closest(".header-action-menu")) {
+          closeHeaderActionMenu();
+        }
+      });
+
+      function setUploadValidation(message = "") {
+        uploadValidation.textContent = message;
+        uploadValidation.classList.toggle("hidden", !message);
+      }
+
+      function resetUploadSelection({ keepValidation = false } = {}) {
+        fileInput.value = "";
+        previewImage.removeAttribute("src");
+        previewImage.classList.add("hidden");
+        dropCopy.classList.remove("hidden");
+        clearSelectedImage.classList.add("hidden");
+        uploadSubmit.disabled = true;
+        if (!keepValidation) setUploadValidation();
+      }
+
+      function rejectUploadSelection(message) {
+        resetUploadSelection({ keepValidation: true });
+        setUploadValidation(message);
+      }
+
+      function resetUploadDialog() {
+        resetUploadSelection();
+      }
+
+      function setDialog(open) {
+        resetUploadDialog();
+        uploadBackdrop.dataset.open = String(open);
+        if (open) uploadClose.focus();
+        else avatarButton.focus();
+      }
+      openUpload.addEventListener("click", () => {
+        closeAvatarMenu();
+        setDialog(true);
+      });
+      uploadClose.addEventListener("click", () => setDialog(false));
+      uploadCancel.addEventListener("click", () => setDialog(false));
+      uploadPicker.addEventListener("click", () => fileInput.click());
+      clearSelectedImage.addEventListener("click", () => {
+        resetUploadSelection();
+        uploadPicker.focus();
+      });
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        if (!acceptedAvatarTypes.has(file.type.toLowerCase())) {
+          rejectUploadSelection(
+            "JPG, PNG, WebP 형식의 이미지만 선택할 수 있어요.",
+          );
+          return;
+        }
+        if (file.size > maxAvatarBytes) {
+          rejectUploadSelection("파일 용량은 5MB 이하여야 해요.");
+          return;
+        }
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+          const candidateImage = new Image();
+          candidateImage.addEventListener("load", () => {
+            if (
+              candidateImage.naturalWidth < minAvatarSide ||
+              candidateImage.naturalHeight < minAvatarSide
+            ) {
+              rejectUploadSelection(
+                "가로와 세로가 각각 256px 이상인 이미지를 선택해 주세요.",
+              );
+              return;
+            }
+            setUploadValidation();
+            previewImage.src = reader.result;
+            previewImage.classList.remove("hidden");
+            dropCopy.classList.add("hidden");
+            clearSelectedImage.classList.remove("hidden");
+            uploadSubmit.disabled = false;
+          });
+          candidateImage.addEventListener("error", () => {
+            rejectUploadSelection("이미지 파일을 읽을 수 없어요.");
+          });
+          candidateImage.src = reader.result;
+        });
+        reader.addEventListener("error", () => {
+          rejectUploadSelection("이미지 파일을 읽을 수 없어요.");
+        });
+        reader.readAsDataURL(file);
+      });
+      uploadSubmit.addEventListener("click", () => {
+        if (!previewImage.src) return;
+        avatarImage.src = previewImage.src;
+        avatarPicture.classList.remove("hidden");
+        avatarFallback.classList.add("hidden");
+        avatarButton.dataset.picture = "true";
+        setDialog(false);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        if (workNavBackdrop.dataset.open === "true") {
+          setWorkNavigationDialog(false);
+          return;
+        }
+        if (uploadBackdrop.dataset.open === "true") setDialog(false);
+        closeWorkMenus();
+      });
+    </script>
+  </body>
+</html>
