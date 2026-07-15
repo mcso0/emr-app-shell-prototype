@@ -14,6 +14,8 @@ import type {
   ReceptionWalkInEncounterRecord,
 } from "@/features/reception/walk-in-encounter";
 import { getReceptionMutationPermissionContract } from "@/features/reception/reception-mutation-permissions";
+import { createInitialHospitalBasicSettingsDraft, type HospitalBasicSettingsDraft } from "@/features/hospital-admin/settings/hospital-basic-settings-model";
+import { isReceptionTimeAllowed } from "@/features/reception/effective-operating-hours";
 import {
   mockGuardians,
   mockPatientGuardians,
@@ -125,8 +127,6 @@ export type ReceptionWalkInEncounterResult =
       error: "db_write_failed" | "supabase_client_missing";
     };
 
-const businessOpenMinutes = 9 * 60;
-const businessCloseMinutes = 19 * 60;
 
 export async function createReceptionWalkInEncounter({
   actorUserId,
@@ -174,14 +174,6 @@ export async function createReceptionWalkInEncounter({
       ok: false,
       status: permission.denialReason === "unauthenticated" ? 401 : 403,
       denialReason: permission.denialReason ?? "permission_missing",
-    };
-  }
-
-  if (!isWithinBusinessHours(normalized.plannedStartAt, normalized.durationMinutes)) {
-    return {
-      ok: false,
-      status: 409,
-      denialReason: "walk_in_outside_business_hours",
     };
   }
 
@@ -236,6 +228,7 @@ export function createMockReceptionWalkInEncounterGateway(
     guardians: Guardian[];
     patientGuardians: PatientGuardian[];
     patients: Patient[];
+    operatingHours?: Pick<HospitalBasicSettingsDraft, "timezone" | "weeklyHours" | "exceptions">;
   } = {
     guardians: mockGuardians,
     patientGuardians: mockPatientGuardians,
@@ -245,6 +238,15 @@ export function createMockReceptionWalkInEncounterGateway(
 ): ReceptionWalkInEncounterGateway {
   return {
     async createWalkInEncounter({ workspaceId, input }) {
+      const eventTime = input.plannedStartAt ?? now;
+      const availability = isReceptionTimeAllowed({
+        scheduledStartAt: eventTime,
+        durationMinutes: input.durationMinutes ?? 30,
+        settings: dataset.operatingHours ?? createInitialHospitalBasicSettingsDraft(),
+      });
+      if (!availability.allowed) {
+        return { ok: false, status: 409, denialReason: "walk_in_outside_business_hours" };
+      }
       const patient = dataset.patients.find(
         (item) =>
           item.id === input.patientId &&
@@ -280,7 +282,6 @@ export function createMockReceptionWalkInEncounterGateway(
         }
       }
 
-	      const eventTime = input.plannedStartAt ?? now;
 	      const seed = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 	      const encounter: Encounter = {
         id: `encounter-walkin-${seed}`,
@@ -649,32 +650,6 @@ function mapWalkInDbDenial(message?: string) {
 	    return "walk_in_outside_business_hours" as const;
 	  }
 	  return null;
-}
-
-function isWithinBusinessHours(iso: string | undefined, durationMinutes: number | undefined) {
-  if (!iso || !durationMinutes) return true;
-
-  const startMs = Date.parse(iso);
-  if (!Number.isFinite(startMs)) return true;
-
-  const startMinutes = getSeoulMinutes(iso);
-  const endMinutes = startMinutes + durationMinutes;
-
-  return startMinutes >= businessOpenMinutes && endMinutes <= businessCloseMinutes;
-}
-
-function getSeoulMinutes(iso: string) {
-  const date = new Date(iso);
-  const parts = new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    hour12: false,
-    minute: "2-digit",
-    timeZone: "Asia/Seoul",
-  }).formatToParts(date);
-  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
-  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
-
-  return hour * 60 + minute;
 }
 
 async function validateSupabaseWalkInVeterinarian({

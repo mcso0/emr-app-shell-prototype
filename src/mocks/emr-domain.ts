@@ -314,6 +314,18 @@ export const mockPermissionSeeds: PermissionSeed[] = [
     description: "후속 설정 화면용 seed이며 현재 화면 권한 enforcement에는 연결하지 않는다.",
   },
   {
+    id: "hospital_settings:view",
+    resource: "hospital_settings",
+    action: "view",
+    label: "병원 기본 설정 조회",
+  },
+  {
+    id: "hospital_settings:manage",
+    resource: "hospital_settings",
+    action: "manage",
+    label: "병원 기본 설정 관리",
+  },
+  {
     id: "role_permission:view",
     resource: "role_permission",
     action: "view",

@@ -73,6 +73,7 @@ export type PermissionResource =
   | "imaging"
   | "billing"
   | "service_catalog"
+  | "hospital_settings"
   | "role_permission";
 export type PermissionAction =
   | "view"
