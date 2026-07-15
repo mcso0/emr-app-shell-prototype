@@ -58,6 +58,8 @@ and leave durable evidence without retaining test records or uploaded objects.
   [#420](https://github.com/mcso0/emr-app-shell-prototype/pull/420), and
   [#421](https://github.com/mcso0/emr-app-shell-prototype/pull/421). Each PR
   started from the then-current `origin/main` and was merged before the next.
+- Final release QA, the real-session read-grant repair, and durable closeout are
+  collected in [#422](https://github.com/mcso0/emr-app-shell-prototype/pull/422).
 - Release replay exposed one server-boundary defect that mocked browser tests
   could not reveal: `authenticated` had no `SELECT` privilege on
   `order_fulfillment_work_items`, so the real-session assigned-work API could
