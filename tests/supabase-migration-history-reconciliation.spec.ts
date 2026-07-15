@@ -18,6 +18,11 @@ const aliases = [
   ["20260714110720", "20260711112810"],
   ["20260714110730", "20260714194500"],
   ["20260714110738", "20260714202000"],
+  ["20260714154910", "20260714213000"],
+  ["20260714162034", "20260715100000"],
+  ["20260715062205", "20260715014500"],
+  ["20260715164007", "20260716010000"],
+  ["20260715164307", "20260716011000"],
 ] as const;
 
 const remoteOnlyMigrations = [
@@ -34,7 +39,9 @@ test("remote timestamp aliases remain no-op compatibility records", () => {
 
     expect(source).toContain("Remote-history compatibility alias");
     expect(source).toContain(canonicalVersion);
-    expect(source).not.toMatch(/\b(create|alter|insert|update|delete|drop|grant|revoke)\b/i);
+    expect(source).not.toMatch(
+      /\b(create|alter|insert|update|delete|drop|grant|revoke)\b/i,
+    );
   }
 });
 
@@ -47,7 +54,10 @@ test("remote-only migration SQL is preserved for deterministic fresh replay", ()
 });
 
 function findMigrationFile(version: string) {
-  const manifest = readFileSync("docs/engineering/operations/supabase-migration-history-reconciliation.md", "utf8");
+  const manifest = readFileSync(
+    "docs/engineering/operations/supabase-migration-history-reconciliation.md",
+    "utf8",
+  );
   const match = manifest.match(new RegExp(`\\b(${version}_[^\\s|]+\\.sql)\\b`));
   expect(match, `missing alias manifest entry for ${version}`).not.toBeNull();
   return match?.[1] ?? "";

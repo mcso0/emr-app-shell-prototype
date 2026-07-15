@@ -105,6 +105,14 @@ test("Supabase operational profile gateway joins membership, job position, avata
           last_seen_at: "2026-07-14T11:55:00.000Z",
         },
       ],
+      workspace_member_status_messages: [
+        {
+          workspace_id: "workspace-clair-cheongdam",
+          user_id: "user-suji",
+          status_message: "진료 중입니다",
+          updated_at: "2026-07-14T12:00:00.000Z",
+        },
+      ],
       users: [
         {
           id: "user-suji",
@@ -165,6 +173,7 @@ test("Supabase operational profile gateway joins membership, job position, avata
   expect(result).toMatchObject({
     ok: true,
     capabilities: {
+      canEditStatusMessage: false,
       canManageMember: false,
       manageMemberHref: null,
       scheduleHref:
@@ -180,6 +189,8 @@ test("Supabase operational profile gateway joins membership, job position, avata
       lastSeenAt: "2026-07-14T11:55:00.000Z",
       membershipStatus: "active",
       phone: "010-0000-0000",
+      statusMessage: "진료 중입니다",
+      statusMessageUpdatedAt: "2026-07-14T12:00:00.000Z",
       title: "진료팀장",
     },
     shift: {
@@ -435,18 +446,16 @@ test("operational profile keeps nullable contacts absent and does not require re
   );
 
   const result = await operationalProfileModule.readStaffOperationalProfile({
-    actorUserId: "member-without-reception-permission",
+    actorUserId: "user-suji",
     date: "2026-07-14",
     gateway,
     permissionAdapter: createMockWorkspacePermissionAdapter({
-      users: [
-        { id: "member-without-reception-permission", status: "active" },
-      ],
+      users: [{ id: "user-suji", status: "active" }],
       memberships: [
         {
           id: "membership-reader",
           workspaceId: "workspace-clair-cheongdam",
-          userId: "member-without-reception-permission",
+          userId: "user-suji",
           roles: [],
           status: "active",
         },
@@ -458,6 +467,7 @@ test("operational profile keeps nullable contacts absent and does not require re
 
   expect(result.ok).toBe(true);
   if (!result.ok) return;
+  expect(result.capabilities.canEditStatusMessage).toBe(true);
   expect(result.profile).not.toHaveProperty("email");
   expect(result.profile).not.toHaveProperty("phone");
 });
@@ -485,6 +495,7 @@ type SupabaseProfileRows = {
   users: Array<Record<string, unknown>>;
   workspace_job_positions: Array<Record<string, unknown>>;
   workspace_member_activity: Array<Record<string, unknown>>;
+  workspace_member_status_messages?: Array<Record<string, unknown>>;
   workspace_membership_job_position_assignments: Array<Record<string, unknown>>;
   scheduleError?: boolean;
   scheduleSnapshot?: Record<string, unknown>;
@@ -500,6 +511,8 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
         user_profiles: rows.user_profiles,
         users: rows.users,
         workspace_member_activity: rows.workspace_member_activity,
+        workspace_member_status_messages:
+          rows.workspace_member_status_messages ?? [],
         workspace_job_positions: rows.workspace_job_positions,
         workspace_membership_job_position_assignments:
           rows.workspace_membership_job_position_assignments,

@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The linked synthetic/demo project applied the SQL from canonical migration
+-- 20260716011000_workspace_status_message_rls_initplan.sql under remote version 20260715164307.
+-- Keep this file statement-free so fresh replay does not duplicate the policy patch.

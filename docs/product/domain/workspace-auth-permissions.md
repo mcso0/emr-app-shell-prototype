@@ -10,7 +10,7 @@ related_work:
   - AUTH-PR-044
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-11T00:00:00.000Z
+last_updated: 2026-07-16T00:00:00.000Z
 description: >-
   Defines workspace-based auth, membership, roles, permission behavior, and
   profile authorization boundaries.
@@ -24,7 +24,7 @@ tags:
 
 # Workspace Auth and Permissions
 
-Updated: 2026-07-11
+Updated: 2026-07-16
 
 This document is the product source of truth for workspace-based auth, membership, roles, and permission behavior. It captures the requirements from Linear `DEN-18` before implementation work begins.
 
@@ -193,6 +193,8 @@ Users can edit personal profile fields such as:
 * initials/avatar placeholder
 * phone
 * notification preference placeholder, if useful
+* workspace-scoped status message; active colleagues may read it, but only the
+  owning member may edit it
 
 Users cannot edit these from personal profile:
 

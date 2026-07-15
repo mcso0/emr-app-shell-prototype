@@ -26,6 +26,7 @@ import {
   EditableProfileAvatar,
   PresenceBadge,
   ProfileHeaderActionMenu,
+  StatusMessageEditor,
 } from "@/features/staff/components/profile-side-panel-v2-header";
 import { ProfileAvailabilitySummary } from "@/features/staff/components/profile-side-panel-v2-profile";
 import {
@@ -136,7 +137,7 @@ export function StaffOperationalProfilePanel({
   useEffect(() => {
     closeButtonRef.current?.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.defaultPrevented) return;
       event.preventDefault();
       onClose();
     };
@@ -231,6 +232,56 @@ export function StaffOperationalProfilePanel({
     router.push(href);
   };
 
+  const saveStatusMessage = useCallback(
+    async (message: string) => {
+      if (!response?.capabilities.canEditStatusMessage) {
+        throw new Error("status_message_edit_not_allowed");
+      }
+      const result = await fetch(
+        `/api/workspaces/${encodeURIComponent(workspaceId)}/members/me/status-message`,
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+            ...(actorUserId
+              ? { "x-clair-demo-session-user-id": actorUserId }
+              : {}),
+          },
+          body: JSON.stringify({
+            expectedUpdatedAt: response.profile.statusMessageUpdatedAt ?? null,
+            message,
+          }),
+        },
+      );
+      const body = (await result.json()) as WorkspaceStatusMessageResponse;
+      if (!result.ok || !body.ok) {
+        throw new Error("status_message_write_failed");
+      }
+      setLoadResult((current) => {
+        if (!current?.response || current.key !== requestKey) return current;
+        return {
+          ...current,
+          response: {
+            ...current.response,
+            profile: {
+              ...current.response.profile,
+              ...(body.message === null
+                ? {
+                    statusMessage: undefined,
+                    statusMessageUpdatedAt: undefined,
+                  }
+                : {
+                    statusMessage: body.message,
+                    statusMessageUpdatedAt: body.updatedAt ?? undefined,
+                  }),
+            },
+          },
+        };
+      });
+    },
+    [actorUserId, requestKey, response, workspaceId],
+  );
+
   return (
     <section
       aria-label="직원 운영 프로필"
@@ -251,6 +302,10 @@ export function StaffOperationalProfilePanel({
         <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-3">
           {profile ? (
             <ProfileHeader
+              canEditStatusMessage={
+                response?.capabilities.canEditStatusMessage ?? false
+              }
+              onSaveStatusMessage={saveStatusMessage}
               presence={presence}
               profile={profile}
             />
@@ -379,15 +434,16 @@ export function StaffOperationalProfilePanel({
 }
 
 function ProfileHeader({
+  canEditStatusMessage,
+  onSaveStatusMessage,
   presence,
   profile,
 }: {
+  canEditStatusMessage: boolean;
+  onSaveStatusMessage: (value: string) => Promise<void>;
   presence: "online" | "offline" | "unknown";
   profile: StaffOperationalProfile;
 }) {
-  const secondary = [profile.jobPositionLabel, profile.department]
-    .filter(Boolean)
-    .join(" · ");
   return (
     <div className="flex items-start gap-3 pr-20">
       <EditableProfileAvatar
@@ -403,9 +459,13 @@ function ProfileHeader({
           </h2>
           <PresenceBadge state={presence} />
         </div>
-        <p className="mt-1 truncate text-sm text-[var(--emr-text-secondary)]">
-          {secondary || "등록 정보 없음"}
-        </p>
+        <div className="mt-1">
+          <StatusMessageEditor
+            editable={canEditStatusMessage}
+            onSave={onSaveStatusMessage}
+            value={profile.statusMessage ?? ""}
+          />
+        </div>
         <p className="mt-1 truncate text-xs text-[var(--emr-text-tertiary)]">
           {presence === "online"
             ? "접속 중"
@@ -417,6 +477,14 @@ function ProfileHeader({
     </div>
   );
 }
+
+type WorkspaceStatusMessageResponse =
+  | {
+      ok: true;
+      message: string | null;
+      updatedAt: string | null;
+    }
+  | { ok: false; error?: string; denialReason?: string };
 
 function ProfileHeaderSkeleton() {
   return (

@@ -242,7 +242,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-PR-010            | human_review | reception            | P0       | User goal / staff profile side panel V2 research | `docs/work/reception/RECEPTION-PR-010-profile-side-panel-v2-research.md` |
 | RECEPTION-PR-011            | done         | reception            | P1       | User request / patient search field alignment | `docs/work/reception/RECEPTION-PR-011-patient-search-field-ui.md` |
 | RECEPTION-PR-012            | done         | reception            | P0       | User goal / staff profile side panel V2 UI contract | `docs/work/reception/RECEPTION-PR-012-profile-side-panel-v2-ui-contract.md` |
-| RECEPTION-PR-013            | implemented  | reception            | P0       | User goal / staff profile side panel V2 read model | `docs/work/reception/RECEPTION-PR-013-profile-side-panel-v2-read-model.md` |
+| RECEPTION-PR-013            | done         | reception            | P0       | User goal / staff profile side panel V2 read model | `docs/work/reception/RECEPTION-PR-013-profile-side-panel-v2-read-model.md` |
 | RECEPTION-LIVE-PR-001       | human_review | reception            | P0       | Project 03 / DEN-54  | `docs/work/reception/RECEPTION-LIVE-PR-001-encounter-persistence-contract.md`                          |
 | RECEPTION-LIVE-PR-002       | human_review | reception            | P0       | Project 03 / DEN-55  | `docs/work/reception/RECEPTION-LIVE-PR-002-schema-extension-plan.md`                                   |
 | RECEPTION-LIVE-PR-003       | human_review | reception            | P0       | Project 03 / DEN-56  | `docs/work/reception/RECEPTION-LIVE-PR-003-schema-migration.md`                                        |
@@ -256,7 +256,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-LIVE-PR-011       | human_review | reception            | P0       | Project 03 / DEN-64  | `docs/work/reception/RECEPTION-LIVE-PR-011-sales-demo-mock-fallback-preservation.md`                   |
 | RECEPTION-LIVE-PR-012       | human_review | reception            | P0       | Project 04 / DEN-65  | `docs/work/reception/RECEPTION-LIVE-PR-012-reception-persistence-regression-coverage.md`               |
 | RECEPTION-LIVE-PR-013       | human_review | reception            | P0       | Project 04 / DEN-66  | `docs/work/reception/RECEPTION-LIVE-PR-013-chart-order-billing-handoff-closeout.md`                    |
-| RECEPTION-LIVE-PR-014       | planned      | reception            | P0       | User goal / workspace status message persistence | `docs/work/reception/RECEPTION-LIVE-PR-014-workspace-status-message-persistence.md` |
+| RECEPTION-LIVE-PR-014       | implemented  | reception            | P0       | User goal / workspace status message persistence | `docs/work/reception/RECEPTION-LIVE-PR-014-workspace-status-message-persistence.md` |
 | RECEPTION-LIVE-PR-015       | planned      | reception            | P0       | User goal / private profile avatar | `docs/work/reception/RECEPTION-LIVE-PR-015-private-profile-avatar.md` |
 | RECEPTION-QA-PR-012         | planned      | reception            | P0       | User goal / staff profile side panel V2 release closeout | `docs/work/reception/RECEPTION-QA-PR-012-profile-side-panel-v2-release-closeout.md` |
 | RECEPTION-QA-PR-001         | human_review | reception            | P0       | Reception QA / DEN-519 | `docs/work/reception/RECEPTION-QA-PR-001-db-api-fallback-boundary.md`                                |

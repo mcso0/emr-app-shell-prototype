@@ -1,6 +1,6 @@
 ---
 id: "RECEPTION-PR-013"
-status: "implemented"
+status: "done"
 area: "reception"
 priority: "P0"
 target_pr: "Staff profile side panel V2 panel and read-model integration"
@@ -14,6 +14,9 @@ updated: "2026-07-16"
 ---
 
 # Staff Profile Side Panel V2 Read Model And Integration
+
+Merged as [PR #419](https://github.com/mcso0/emr-app-shell-prototype/pull/419)
+at `c7723b666c93cb6d1674038677690be52200e3e8`.
 
 ## Goal
 
