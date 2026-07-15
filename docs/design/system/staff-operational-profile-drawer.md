@@ -161,4 +161,11 @@ GET /api/workspaces/{workspaceId}/staff/{userId}/operational-profile?date=2026-0
 
 ## 배포 경계
 
-코드와 migration은 구현됐지만 2026-07-14 기준 원격 migration drift가 있어 `20260714213000_workspace_member_activity_presence.sql`은 원격 staging에 적용하지 않았다. 원격 적용 전에는 migration history를 먼저 정합화하고, synthetic user로 same-workspace allow/cross-workspace deny, Presence publish/subscribe, RPC throttling을 재검증해야 한다.
+`20260714213000_workspace_member_activity_presence.sql`은 2026-07-15 원격
+synthetic/demo DB에 적용됐고 인증 heartbeat RPC는 통과했다. 최초 production
+rollout은 hosted Realtime이 private Presence join에서도 `broadcast.read`를
+검사해 구독을 거부하면서 이전 안정 배포로 롤백됐다. 후속
+`20260715014500_staff_presence_broadcast_read_hotfix.sql`은 같은 workspace의
+active member에게 staff-presence topic의 Broadcast 수신만 허용하고 Broadcast
+발행은 계속 금지한다. 이 hotfix는 별도 승인 후 원격 적용하며 Presence
+subscribe/track, heartbeat readback, cross-workspace deny를 다시 검증해야 한다.

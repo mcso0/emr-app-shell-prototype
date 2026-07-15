@@ -53,7 +53,7 @@
 
       <h2>남은 위험과 다음 단계</h2>
       <p>
-        원격과 로컬 migration 이력이 어긋나 있어 새 activity/Presence migration은 원격에 적용하지 않았다. 이력이 정리되기 전에도 기본 프로필은 정상 동작하고 최근 접속만 생략된다. 다음 단계는 migration history 정합화 후 synthetic 계정으로 RLS, RPC throttle, private Presence를 staging에서 재검증하는 것이다.
+        2026-07-15에 activity/Presence migration을 원격 synthetic/demo DB에 적용했고 인증 heartbeat RPC는 통과했다. 다만 hosted Realtime이 private Presence join에서도 <code>broadcast.read</code>를 검사해 최초 production rollout의 Presence 구독이 거부됐다. 승인된 중단 조건에 따라 앱 alias는 이전 안정 배포로 롤백했고, activity migration은 additive 상태로 유지했다. 다음 단계는 active same-workspace member에게 staff-presence topic의 Broadcast 수신만 허용하고 Broadcast 발행은 계속 금지하는 후속 migration을 별도 승인 후 적용한 뒤 Presence subscribe/track과 heartbeat readback을 재검증하는 것이다.
       </p>
     </main>
   </body>

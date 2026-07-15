@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 
 const migrationPath =
   "supabase/migrations/20260714213000_workspace_member_activity_presence.sql";
+const realtimeReadHotfixPath =
+  "supabase/migrations/20260715014500_staff_presence_broadcast_read_hotfix.sql";
 
 test("member activity stores only workspace-scoped throttled last-seen timestamps", () => {
   const migration = readFileSync(migrationPath, "utf8");
@@ -31,4 +33,17 @@ test("staff Presence is private and restricted to active members of its topic wo
   expect(migration).toContain("private.clair_is_active_workspace_member");
   expect(migration).not.toContain("using (true)");
   expect(migration).not.toContain("with check (true)");
+});
+
+test("private staff Presence join grants broadcast read without granting broadcast writes", () => {
+  const migration = readFileSync(realtimeReadHotfixPath, "utf8");
+
+  expect(migration).toContain("drop policy if exists clair_staff_presence_receive");
+  expect(migration).toContain("for select");
+  expect(migration).toContain("realtime.messages.extension in ('broadcast', 'presence')");
+  expect(migration).toContain("private.clair_staff_presence_workspace_from_topic");
+  expect(migration).toContain("private.clair_is_active_workspace_member");
+  expect(migration).not.toContain("drop policy if exists clair_staff_presence_track");
+  expect(migration).not.toMatch(/\nfor insert\n/i);
+  expect(migration).not.toContain("using (true)");
 });

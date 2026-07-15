@@ -11,7 +11,7 @@ source_docs:
 dependencies:
   - "RECEPTION-PR-007"
   - "RECEPTION-PR-008"
-updated: "2026-07-14"
+updated: "2026-07-15"
 ---
 
 # Staff Operational Profile Side Panel And Presence
@@ -93,18 +93,25 @@ last-seen data without exposing auth internals or cross-workspace identities.
 - `src/shell/app-shell.tsx`, `src/shell/workspace-frame.tsx`
 - `src/components/ui/tabs.tsx`, `src/components/ui/tabs.stories.tsx`
 - `supabase/migrations/20260714213000_workspace_member_activity_presence.sql`
+- `supabase/migrations/20260715014500_staff_presence_broadcast_read_hotfix.sql`
 - focused server, migration, Presence, tab, and browser tests
 - design, data-contract, current-status, and closeout docs
 
 ## Deployment Follow-Up
 
-1. Reconcile the unrelated remote/local migration history before applying the
-   new forward migration.
-2. Apply `20260714213000_workspace_member_activity_presence.sql` through the
-   repository's canonical migration path.
-3. With synthetic same-workspace and cross-workspace users, replay table RLS,
-   RPC self-write/throttle, and private Presence publish/subscribe denial.
-4. Run staging and production smoke checks before claiming live availability.
+1. `20260714213000_workspace_member_activity_presence.sql` was applied to the
+   remote synthetic/demo target on 2026-07-15.
+2. The first production rollout passed authenticated UI/profile API smoke but
+   failed private Presence join: hosted Realtime requires `broadcast.read`
+   during a private channel join even when the channel is Presence-only.
+3. Production aliases were restored to the approved stable deployment while
+   the additive activity migration remained applied.
+4. Apply `20260715014500_staff_presence_broadcast_read_hotfix.sql` only after
+   separate approval. It grants active same-workspace members receive-only
+   Broadcast access for the staff-presence handshake while keeping Broadcast
+   INSERT denied.
+5. Replay RPC, Presence subscribe/track, heartbeat readback, cross-workspace
+   denial, and authenticated production UI smoke before claiming availability.
 
 ## Closeout
 

@@ -8,7 +8,7 @@ area: engineering
 doc_type: data-contract
 tags: [staff, presence, realtime, last-seen, rls]
 created: 2026-07-14
-last_updated: 2026-07-14
+last_updated: 2026-07-15
 ---
 
 # Workspace Member Activity And Presence
@@ -28,9 +28,15 @@ Private topic은 `workspace:{workspaceId}:staff-presence` 형식이다. client�
 
 `realtime.messages`의 SELECT/INSERT policy는 다음을 모두 요구한다.
 
-- `extension = 'presence'`
+- SELECT: hosted private-channel join handshake를 위한 `extension in ('broadcast', 'presence')`
+- INSERT: 실제 tracking에 필요한 `extension = 'presence'`만 허용
 - topic이 정확한 staff-presence 형식
 - `realtime.topic()`에서 읽은 workspace에 active membership이 존재
+
+Hosted Realtime은 Presence-only channel join에서도 `broadcast.read`를 먼저
+검사한다. 따라서 같은 topic의 active member에게 Broadcast 수신 권한은 주되,
+Broadcast INSERT는 허용하지 않는다. 이 권한은 join handshake를 통과시키기
+위한 receive-only 계약이며 client가 Broadcast를 발행할 수 있게 만들지 않는다.
 
 Presence state에 같은 user key의 meta가 하나 이상 있으면 online이다. 따라서 한 탭이나 기기가 종료돼도 다른 meta가 남으면 online을 유지한다. unload 신호는 권위 있는 원본으로 사용하지 않는다.
 
@@ -80,13 +86,25 @@ activity read 실패는 base profile read 실패로 승격하지 않는다. migr
 
 ## Migration and rollback
 
-Forward migration: `supabase/migrations/20260714213000_workspace_member_activity_presence.sql`.
+Forward migrations:
 
-원격 적용 전 migration drift를 정합화해야 한다. rollback이 필요하면 먼저 두 `realtime.messages` policy와 RPC/function grants/functions를 제거하고, 마지막에 `workspace_member_activity` table을 제거한다. rollback은 last-seen history를 삭제하므로 synthetic/staging 확인 후 별도 승인된 migration으로 수행한다.
+- `supabase/migrations/20260714213000_workspace_member_activity_presence.sql`
+- `supabase/migrations/20260715014500_staff_presence_broadcast_read_hotfix.sql`
+
+첫 migration은 2026-07-15 원격에 적용됐다. 최초 production smoke에서 REST
+heartbeat RPC는 성공했지만 Presence join은 hosted Realtime의
+`broadcast.read` 선행 검사 때문에 거부되어 앱 alias를 이전 안정 배포로
+롤백했다. 후속 hotfix migration은 별도 승인 후 적용하고 synthetic 계정으로
+RPC, Presence subscribe/track, heartbeat readback을 다시 검증한다.
+
+rollback이 필요하면 먼저 두 `realtime.messages` policy와
+RPC/function grants/functions를 제거하고, 마지막에
+`workspace_member_activity` table을 제거한다. rollback은 last-seen history를
+삭제하므로 synthetic/staging 확인 후 별도 승인된 migration으로 수행한다.
 
 ## Verification
 
-- static migration contract: table, FK, RLS, grants, private topic policies, 60-second throttle
+- static migration contract: table, FK, RLS, grants, receive-only Broadcast handshake, private Presence tracking, 60-second throttle
 - same-workspace active member allow / unauthenticated and cross-workspace deny
 - multi-tab/device join and partial leave
 - last-seen missing/valid formatting
