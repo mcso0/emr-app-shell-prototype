@@ -77,6 +77,20 @@ signed reads, direct/other-user/inactive/cross-workspace denial, pointer restore
 and zero remaining probe objects. Existing signed/cached reads have a bounded
 five-minute residual lifetime; new signing is denied after pointer removal.
 
+RECEPTION-QA-PR-012 closes the Staff Profile Side Panel V2 release surface with
+200% zoom/long-content browser regression, a private Presence probe, a
+transaction-safe schedule/status/activity/assigned-work replay, and the final
+Korean release report. The replay found that the real-session assigned-work API
+could not reach its existing active-workspace RLS policy because the table had
+no `authenticated` read privilege. Migration
+`20260716030000_staff_assigned_work_items_authenticated_select.sql` grants only
+`SELECT`; remote version `20260715180209` is applied. Local and approved-remote
+replays verified same-workspace read, self-only status mutation, other-user and
+cross-workspace denial, private Presence subscribe/track/cleanup, private avatar
+pointer/object cleanup, and zero fixed synthetic probe rows. The immutable
+production deployment ID and exact final merge SHA are recorded at the
+post-merge release gate rather than guessed in pre-merge docs.
+
 ## Not Complete Yet
 
 Do not claim these as done without a scoped work item and verification evidence:
