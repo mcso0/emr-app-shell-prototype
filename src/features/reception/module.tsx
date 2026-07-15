@@ -7679,7 +7679,7 @@ function ReceptionReservationFormDrawer({
   const reservationTimeHelper = closedDay
     ? "휴진일입니다."
     : !hasAvailableTimeOption
-      ? "선택한 날짜와 예상시간으로 가능한 예약 시간이 없습니다. 날짜나 예상시간을 변경해 주세요."
+      ? "예약 가능한 시간이 없습니다. 날짜나 예상시간을 변경해 주세요."
       : date === todayDate && hasElapsedOptions
         ? "오늘 예약은 현재 시각 이후만 선택할 수 있어요."
         : undefined;
