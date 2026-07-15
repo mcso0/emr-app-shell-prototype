@@ -7,6 +7,7 @@ import {
   CdsActionsCopyIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -280,7 +281,8 @@ export function HospitalBasicSettingsScreen({ workspaceId }: { workspaceId: stri
                 <ContactField
                   error={findIssue(validationIssues, "hospital-settings-phone")}
                   id="hospital-settings-phone"
-                  label="대표 전화 *"
+                  label="대표 전화"
+                  required
                   value={draft.contact.phone}
                   onChange={(value) => updateContact("phone", value)}
                 />
@@ -405,6 +407,7 @@ function ContactField({
   label,
   onChange,
   placeholder,
+  required,
   value,
 }: {
   error?: HospitalSettingsValidationIssue;
@@ -412,15 +415,20 @@ function ContactField({
   label: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  required?: boolean;
   value: string;
 }) {
   return (
     <Field data-invalid={Boolean(error)}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id}>
+        {label}
+        {required ? <EmrRequiredIndicator className="ml-1" /> : null}
+      </FieldLabel>
       <Input
         id={id}
         aria-invalid={Boolean(error)}
         placeholder={placeholder}
+        required={required}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />

@@ -140,6 +140,7 @@ Shared primitives should carry the visual system:
 - `EmrDataTable` and `Table`: dense operational tables
 - `SegmentedControl`: compact filters and mode switching
 - `StatusBadge`: stable semantic state labels
+- `EmrRequiredIndicator`: shared required-field marker using the dedicated `--emr-form-required-indicator` token; keep native `required` or `aria-required` semantics on the associated control
 
 Patient context bars keep patient and encounter facts visible near clinical work. Secondary patient-context actions such as memo review should collapse into one labeled action with a popover when multiple memo types compete for space; do not spread several low-priority memo buttons across the bar.
 

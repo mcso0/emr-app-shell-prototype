@@ -55,6 +55,7 @@ import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button"
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
+import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrSidePanelMiniCalendar } from "@/components/emr/side-panel-mini-calendar";
 import type { EmrSidePanelStateIconState } from "@/components/emr/side-panel-state-icon";
@@ -6649,7 +6650,7 @@ function ReceptionFormField({
     <label className="flex min-w-0 flex-col gap-1.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
       <span>
         {label}
-        {required ? <span className="ml-0.5 text-primary">*</span> : null}
+        {required ? <EmrRequiredIndicator className="ml-0.5" /> : null}
       </span>
       {children}
       {error ? (

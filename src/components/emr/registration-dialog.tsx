@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
 import { cn } from "@/lib/utils";
 
 export type EmrRegistrationDialogKind = "form" | "confirm";
@@ -216,9 +217,7 @@ export function EmrRegistrationFieldRow({
             {label}
           </span>
           {required ? (
-            <span aria-hidden="true" className="shrink-0 text-[var(--emr-text-danger)]">
-              *
-            </span>
+            <EmrRequiredIndicator />
           ) : null}
         </span>
       </FieldLabel>
