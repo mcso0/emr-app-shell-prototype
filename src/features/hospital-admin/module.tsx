@@ -9,6 +9,7 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
 import {
   EmrModuleListSidePanel,
   EmrModuleListSidePanelBadge,
@@ -2069,7 +2070,7 @@ function DrawerField({
     >
       <FieldLabel className="pt-2 emr-text-body font-bold text-foreground">
         {label}
-        {required ? <span className="ml-1 text-[var(--emr-text-danger)]">*</span> : null}
+        {required ? <EmrRequiredIndicator className="ml-1" /> : null}
       </FieldLabel>
       <FieldContent className="min-w-0 gap-1.5">
         {children}

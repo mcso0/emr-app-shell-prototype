@@ -53,6 +53,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
 import {
   Field as FormField,
   FieldDescription,
@@ -645,7 +646,7 @@ export function RegistrationFormField({
           <span className="inline-flex items-baseline gap-0.5">
             <span>{label}</span>
             {required ? (
-              <span className="text-[var(--emr-text-danger)]">*</span>
+              <EmrRequiredIndicator />
             ) : null}
           </span>
         </FieldLabel>

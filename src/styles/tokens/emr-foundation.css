@@ -480,6 +480,7 @@
   --emr-text-inverse: oklch(0.985 0 0);
   --emr-text-link: oklch(0.52 0.13 240);
   --emr-text-danger: oklch(0.577 0.245 27.325);
+  --emr-form-required-indicator: var(--clair-color-atomic-neutral-800);
 
   --emr-type-size-micro: var(--clair-typography-label-3-font-size);
   --emr-type-size-metadata: var(--clair-typography-label-2-font-size);

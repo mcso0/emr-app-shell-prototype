@@ -9,6 +9,7 @@ import {
 
 import { CheckIcon, CloseIcon } from "@/components/icons";
 import { EmrIconButton } from "@/components/emr/icon-button";
+import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
 import { PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -360,7 +361,7 @@ function EmrPopoverFieldRow({
     >
       <span className="emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
         {label}
-        {required ? <span className="ml-0.5 text-destructive">*</span> : null}
+        {required ? <EmrRequiredIndicator className="ml-0.5" /> : null}
       </span>
       <span className="relative min-w-0">
         {children}
