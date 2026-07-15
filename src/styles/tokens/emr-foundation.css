@@ -164,6 +164,17 @@
   --emr-sidepanel-header-padding-x: var(--clair-spacing-16);
   --emr-sidepanel-header-padding-y: 0px;
   --emr-rightpanel-header-height: 56px;
+  --emr-profile-panel-width: 380px;
+  --emr-profile-panel-gap: var(--clair-spacing-10);
+  --emr-profile-header-height: 150px;
+  --emr-profile-avatar-size: 84px;
+  --emr-profile-status-control-height: 28px;
+  --emr-profile-status-control-max-width: 217px;
+  --emr-profile-avatar-menu-width: 180px;
+  --emr-profile-header-menu-width: 196px;
+  --emr-profile-upload-dialog-width: 382px;
+  --emr-profile-upload-content-size: 350px;
+  --emr-profile-upload-footer-height: 64px;
   --emr-sidepanel-list-title-height: var(--clair-control-height-md);
   --emr-sidepanel-list-title-padding: var(--clair-spacing-4);
   --emr-sidepanel-list-title-gap: var(--clair-spacing-12);
