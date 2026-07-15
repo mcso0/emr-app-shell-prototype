@@ -2929,6 +2929,31 @@ test("registration and reception create side panels use CDS V2 32px controls", a
   await openWalkInReceptionForm(page);
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await expect(walkInForm).toBeVisible();
+  await expect(walkInForm.getByText("환자명", { exact: true })).toBeVisible();
+  const walkInLookupDecoration = walkInForm.getByTestId(
+    "reception-patient-lookup-decoration",
+  );
+  await expect(walkInLookupDecoration).toHaveAttribute("data-state", "search");
+  const walkInLookupRightGap = await walkInForm
+    .getByLabel("환자 검색")
+    .evaluate((input) => {
+      const decoration = input.parentElement?.querySelector<HTMLElement>(
+        '[data-testid="reception-patient-lookup-decoration"]',
+      );
+      if (!decoration) return null;
+      return Math.round(
+        input.getBoundingClientRect().right -
+          decoration.getBoundingClientRect().right,
+      );
+    });
+  expect(walkInLookupRightGap).toBe(8);
+  await walkInForm.getByLabel("환자 검색").fill("두부");
+  await expect(walkInLookupDecoration).toHaveAttribute("data-state", "clear");
+  await walkInForm
+    .getByRole("button", { name: "환자 선택 초기화" })
+    .click();
+  await expect(walkInForm.getByLabel("환자 검색")).toHaveValue("");
+  await expect(walkInLookupDecoration).toHaveAttribute("data-state", "search");
   await walkInForm.getByLabel("환자 검색").fill("두부");
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
 
@@ -2962,6 +2987,42 @@ test("registration and reception create side panels use CDS V2 32px controls", a
   );
   const reservationDrawer = page.getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
+  await expect(
+    reservationDrawer.getByText("환자명", { exact: true }),
+  ).toBeVisible();
+  const reservationLookupDecoration = reservationDrawer.getByTestId(
+    "reception-patient-lookup-decoration",
+  );
+  await expect(reservationLookupDecoration).toHaveAttribute(
+    "data-state",
+    "search",
+  );
+  const reservationLookupRightGap = await reservationDrawer
+    .getByLabel("환자 검색")
+    .evaluate((input) => {
+      const decoration = input.parentElement?.querySelector<HTMLElement>(
+        '[data-testid="reception-patient-lookup-decoration"]',
+      );
+      if (!decoration) return null;
+      return Math.round(
+        input.getBoundingClientRect().right -
+          decoration.getBoundingClientRect().right,
+      );
+    });
+  expect(reservationLookupRightGap).toBe(8);
+  await reservationDrawer.getByLabel("환자 검색").fill("나비");
+  await expect(reservationLookupDecoration).toHaveAttribute(
+    "data-state",
+    "clear",
+  );
+  await reservationDrawer
+    .getByRole("button", { name: "환자 선택 초기화" })
+    .click();
+  await expect(reservationDrawer.getByLabel("환자 검색")).toHaveValue("");
+  await expect(reservationLookupDecoration).toHaveAttribute(
+    "data-state",
+    "search",
+  );
 
   const reservationControlHeights = await Promise.all(
     [

@@ -68,7 +68,6 @@ import {
   ChevronRightIcon,
   ChevronDownIcon,
   CheckIcon,
-  CircleCloseFillIcon,
   ExcelFileIcon,
 } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
@@ -244,6 +243,43 @@ const allVeterinarians = mockStaffUsers.filter(
 }));
 const defaultVeterinarian = allVeterinarians[0];
 type ReceptionDrawerPresentation = "drawer" | "side-panel";
+
+const receptionPatientLookupDecorationClassName =
+  "absolute right-[var(--clair-spacing-8)] top-1/2 flex size-[var(--clair-spacing-24)] -translate-y-1/2 items-center justify-center p-0.5";
+
+function ReceptionPatientLookupDecoration({
+  hasQuery,
+  onClear,
+}: {
+  hasQuery: boolean;
+  onClear: () => void;
+}) {
+  if (hasQuery) {
+    return (
+      <button
+        type="button"
+        className={`${receptionPatientLookupDecorationClassName} rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50`}
+        aria-label="환자 선택 초기화"
+        data-state="clear"
+        data-testid="reception-patient-lookup-decoration"
+        onClick={onClear}
+      >
+        <CdsActionsXIcon className="size-4" aria-hidden="true" />
+      </button>
+    );
+  }
+
+  return (
+    <span
+      className={`${receptionPatientLookupDecorationClassName} pointer-events-none text-[var(--clair-color-atomic-neutral-500)]`}
+      aria-hidden="true"
+      data-state="search"
+      data-testid="reception-patient-lookup-decoration"
+    >
+      <CdsActionsSearchIcon className="size-4" aria-hidden="true" />
+    </span>
+  );
+}
 
 const receptionRightPanelDrawerTypes = new Set([
   "reception-appointment",
@@ -6963,7 +6999,7 @@ function ReceptionWalkInFormDrawer({
             <ReceptionSidePanelSection title="환자/보호자" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
-                label="동물명"
+                label="환자명"
                 variant="create"
               >
                 <div
@@ -6974,14 +7010,10 @@ function ReceptionWalkInFormDrawer({
                     }
                   }}
                 >
-                  <CdsActionsSearchIcon
-                    className="pointer-events-none absolute left-[var(--clair-spacing-10)] top-1/2 size-[var(--clair-spacing-16)] -translate-y-1/2 text-[var(--clair-color-atomic-neutral-500)]"
-                    aria-hidden="true"
-                  />
                   <Input
                     aria-label="환자 검색"
                     autoComplete="off"
-                    className="bg-[var(--emr-reception-create-field-bg)] pl-[var(--clair-spacing-32)] pr-[var(--clair-spacing-32)] font-medium"
+                    className="bg-[var(--emr-reception-create-field-bg)] pr-[var(--clair-spacing-32)] font-medium"
                     placeholder="환자를 선택해주세요"
                     value={lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
@@ -7000,25 +7032,16 @@ function ReceptionWalkInFormDrawer({
                       setPatientLookupOpen(true);
                     }}
                   />
-                  {lookupQuery ? (
-                    <button
-                      type="button"
-                      className="absolute right-[var(--clair-spacing-8)] top-1/2 flex size-[var(--clair-spacing-20)] -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                      aria-label="검색어 초기화"
-                      onClick={() => {
-                        setLookupQuery("");
-                        setPatientId("");
-                        setSelectedLookupSummary(null);
-                        setVitalDraft(createReceptionVitalDraft());
-                        setPatientLookupOpen(true);
-                      }}
-                    >
-                      <CircleCloseFillIcon
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </button>
-                  ) : null}
+                  <ReceptionPatientLookupDecoration
+                    hasQuery={Boolean(lookupQuery)}
+                    onClear={() => {
+                      setLookupQuery("");
+                      setPatientId("");
+                      setSelectedLookupSummary(null);
+                      setVitalDraft(createReceptionVitalDraft());
+                      setPatientLookupOpen(true);
+                    }}
+                  />
                   {shouldShowPatientLookup ? (
                     <div
                       role="listbox"
@@ -7312,7 +7335,7 @@ function ReceptionWalkInFormDrawer({
           ) : null}
           <RegistrationFormSection separated={false} title="환자 정보">
             <div className="grid gap-3">
-              <RegistrationFormField label="환자 검색" required>
+              <RegistrationFormField label="환자명" required>
                 <div
                   className="relative"
                   onBlur={(event) => {
@@ -7321,15 +7344,11 @@ function ReceptionWalkInFormDrawer({
                     }
                   }}
                 >
-                  <CdsActionsSearchIcon
-                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-secondary)]"
-                    aria-hidden="true"
-                  />
                   <Input
                     aria-label="환자 검색"
                     autoComplete="off"
-                    className="h-9 bg-card pl-9 pr-9"
-                    placeholder="동물명 또는 보호자명으로 검색"
+                    className="h-9 bg-card pr-[var(--clair-spacing-32)]"
+                    placeholder="환자를 선택해주세요"
                     value={lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
                     onValueChange={(value) => {
@@ -7347,25 +7366,16 @@ function ReceptionWalkInFormDrawer({
                       setPatientLookupOpen(true);
                     }}
                   />
-                  {lookupQuery ? (
-                    <button
-                      type="button"
-                      className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                      aria-label="검색어 초기화"
-                      onClick={() => {
-                        setLookupQuery("");
-                        setPatientId("");
-                        setSelectedLookupSummary(null);
-                        setVitalDraft(createReceptionVitalDraft());
-                        setPatientLookupOpen(true);
-                      }}
-                    >
-                      <CircleCloseFillIcon
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </button>
-                  ) : null}
+                  <ReceptionPatientLookupDecoration
+                    hasQuery={Boolean(lookupQuery)}
+                    onClear={() => {
+                      setLookupQuery("");
+                      setPatientId("");
+                      setSelectedLookupSummary(null);
+                      setVitalDraft(createReceptionVitalDraft());
+                      setPatientLookupOpen(true);
+                    }}
+                  />
                   {shouldShowPatientLookup ? (
                     <div
                       role="listbox"
@@ -7799,7 +7809,7 @@ function ReceptionReservationFormDrawer({
             <ReceptionSidePanelSection title="환자/보호자" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
-                label="동물명"
+                label="환자명"
                 variant="create"
               >
                 <div
@@ -7810,14 +7820,10 @@ function ReceptionReservationFormDrawer({
                     }
                   }}
                 >
-                  <CdsActionsSearchIcon
-                    className="pointer-events-none absolute left-[var(--clair-spacing-10)] top-1/2 size-[var(--clair-spacing-16)] -translate-y-1/2 text-[var(--clair-color-atomic-neutral-500)]"
-                    aria-hidden="true"
-                  />
                   <Input
                     aria-label="환자 검색"
                     autoComplete="off"
-                    className="bg-[var(--emr-reception-create-field-bg)] pl-[var(--clair-spacing-32)] pr-[var(--clair-spacing-32)] font-medium"
+                    className="bg-[var(--emr-reception-create-field-bg)] pr-[var(--clair-spacing-32)] font-medium"
                     placeholder="환자를 선택해주세요"
                     value={patientLookup.lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
@@ -7826,22 +7832,13 @@ function ReceptionReservationFormDrawer({
                       setPatientLookupOpen(true);
                     }}
                   />
-                  {patientLookup.lookupQuery ? (
-                    <button
-                      type="button"
-                      className="absolute right-[var(--clair-spacing-8)] top-1/2 flex size-[var(--clair-spacing-20)] -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                      aria-label="환자 선택 초기화"
-                      onClick={() => {
-                        patientLookup.clearPatientSelection();
-                        setPatientLookupOpen(true);
-                      }}
-                    >
-                      <CircleCloseFillIcon
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </button>
-                  ) : null}
+                  <ReceptionPatientLookupDecoration
+                    hasQuery={Boolean(patientLookup.lookupQuery)}
+                    onClear={() => {
+                      patientLookup.clearPatientSelection();
+                      setPatientLookupOpen(true);
+                    }}
+                  />
                   {shouldShowPatientLookup ? (
                     <div
                       role="listbox"
@@ -8104,7 +8101,7 @@ function ReceptionReservationFormDrawer({
         <div className="flex flex-col gap-5 p-4">
           <RegistrationFormSection separated={false} title="환자 정보">
             <div className="grid gap-3">
-              <RegistrationFormField label="환자 검색" required>
+              <RegistrationFormField label="환자명" required>
                 <div
                   className="relative"
                   onBlur={(event) => {
@@ -8113,15 +8110,11 @@ function ReceptionReservationFormDrawer({
                     }
                   }}
                 >
-                  <CdsActionsSearchIcon
-                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-secondary)]"
-                    aria-hidden="true"
-                  />
                   <Input
                     aria-label="환자 검색"
                     autoComplete="off"
-                    className="h-9 bg-card pl-9 pr-9"
-                    placeholder="동물명 또는 보호자명으로 검색"
+                    className="h-9 bg-card pr-[var(--clair-spacing-32)]"
+                    placeholder="환자를 선택해주세요"
                     value={patientLookup.lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
                     onValueChange={(value) => {
@@ -8129,22 +8122,13 @@ function ReceptionReservationFormDrawer({
                       setPatientLookupOpen(true);
                     }}
                   />
-                  {patientLookup.lookupQuery ? (
-                    <button
-                      type="button"
-                      className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                      aria-label="환자 선택 초기화"
-                      onClick={() => {
-                        patientLookup.clearPatientSelection();
-                        setPatientLookupOpen(true);
-                      }}
-                    >
-                      <CircleCloseFillIcon
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </button>
-                  ) : null}
+                  <ReceptionPatientLookupDecoration
+                    hasQuery={Boolean(patientLookup.lookupQuery)}
+                    onClear={() => {
+                      patientLookup.clearPatientSelection();
+                      setPatientLookupOpen(true);
+                    }}
+                  />
                   {shouldShowPatientLookup ? (
                     <div
                       role="listbox"
