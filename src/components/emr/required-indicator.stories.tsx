@@ -37,7 +37,7 @@ export const Default: Story = {
     docs: {
       description: {
         story:
-          "The Neutral 800 marker is shared across registration, reception, popover, profile, and hospital-admin field wrappers.",
+          "The Neutral 900 marker is shared across registration, reception, popover, profile, and hospital-admin field wrappers.",
       },
     },
   },
