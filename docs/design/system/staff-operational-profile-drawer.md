@@ -167,5 +167,8 @@ rollout은 hosted Realtime이 private Presence join에서도 `broadcast.read`를
 검사해 구독을 거부하면서 이전 안정 배포로 롤백됐다. 후속
 `20260715014500_staff_presence_broadcast_read_hotfix.sql`은 같은 workspace의
 active member에게 staff-presence topic의 Broadcast 수신만 허용하고 Broadcast
-발행은 계속 금지한다. 이 hotfix는 별도 승인 후 원격 적용하며 Presence
-subscribe/track, heartbeat readback, cross-workspace deny를 다시 검증해야 한다.
+발행은 계속 금지하며 원격 적용과 synthetic 권한 검증을 통과했다. 다음 앱
+rollout에서는 Supabase-js가 같은 topic channel을 재사용하는데 profile hook이
+subscribe 뒤 callback을 추가해 화면이 중단되어 다시 롤백됐다. app-shell
+reporter가 channel과 callback을 단독 소유하고 profile은 workspace snapshot만
+구독해야 한다.

@@ -73,7 +73,8 @@ last-seen data without exposing auth internals or cross-workspace identities.
   no backdrop; Escape, close control, and trigger focus return passed.
 - `npx tsc --noEmit --pretty false`: pass.
 - focused ESLint for all touched source/test files: pass.
-- server/migration/Presence Playwright: 12 passed.
+- server/migration/Presence Playwright: 15 passed, including the shared-channel
+  late-listener regression.
 - staff panel Playwright: 5 passed.
 - Storybook Vitest for tabs: 4 passed.
 - `npm run build-storybook`: pass with existing font resolution, Lottie eval,
@@ -106,12 +107,17 @@ last-seen data without exposing auth internals or cross-workspace identities.
    during a private channel join even when the channel is Presence-only.
 3. Production aliases were restored to the approved stable deployment while
    the additive activity migration remained applied.
-4. Apply `20260715014500_staff_presence_broadcast_read_hotfix.sql` only after
-   separate approval. It grants active same-workspace members receive-only
-   Broadcast access for the staff-presence handshake while keeping Broadcast
-   INSERT denied.
-5. Replay RPC, Presence subscribe/track, heartbeat readback, cross-workspace
-   denial, and authenticated production UI smoke before claiming availability.
+4. `20260715014500_staff_presence_broadcast_read_hotfix.sql` was applied after
+   approval. Synthetic replay passed same-workspace subscribe/track, heartbeat
+   readback, and cross-workspace denial while Broadcast INSERT stayed denied.
+5. The next application rollout exposed a separate Supabase-js channel reuse
+   contract: the app-shell reporter had already subscribed when the profile hook
+   tried to add Presence callbacks to the same topic, so opening the panel
+   crashed. Production aliases were restored to the approved stable deployment.
+6. The app-shell reporter now owns the single Realtime channel and publishes a
+   workspace snapshot. Profile consumers subscribe to that snapshot and never
+   bind callbacks to an already-subscribed channel. Authenticated production UI
+   smoke must pass before availability is claimed.
 
 ## Closeout
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import type { RealtimePresenceState } from "@supabase/supabase-js";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -14,6 +14,26 @@ type WorkspaceStaffPresenceChannel = {
   ): WorkspaceStaffPresenceChannel;
 };
 
+const onlineUserIdsByWorkspace = new Map<string, ReadonlySet<string>>();
+const presenceListenersByWorkspace = new Map<string, Set<() => void>>();
+
+function notifyWorkspaceStaffPresenceListeners(workspaceId: string) {
+  for (const listener of presenceListenersByWorkspace.get(workspaceId) ?? []) {
+    listener();
+  }
+}
+
+function hasSameOnlineUsers(
+  current: ReadonlySet<string> | undefined,
+  next: ReadonlySet<string>,
+) {
+  if (!current || current.size !== next.size) return false;
+  for (const userId of next) {
+    if (!current.has(userId)) return false;
+  }
+  return true;
+}
+
 export function getWorkspaceStaffPresenceTopic(workspaceId: string) {
   return `workspace:${workspaceId}:staff-presence`;
 }
@@ -23,6 +43,51 @@ export function isStaffOnline(
   userId: string,
 ) {
   return (presenceState[userId]?.length ?? 0) > 0;
+}
+
+export function subscribeWorkspaceStaffPresence(
+  workspaceId: string,
+  listener: () => void,
+) {
+  const listeners =
+    presenceListenersByWorkspace.get(workspaceId) ?? new Set<() => void>();
+  listeners.add(listener);
+  presenceListenersByWorkspace.set(workspaceId, listeners);
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      presenceListenersByWorkspace.delete(workspaceId);
+    }
+  };
+}
+
+export function getWorkspaceStaffOnlineSnapshot(
+  workspaceId: string,
+  userId: string,
+) {
+  return onlineUserIdsByWorkspace.get(workspaceId)?.has(userId) ?? false;
+}
+
+export function publishWorkspaceStaffPresenceState(
+  workspaceId: string,
+  presenceState: RealtimePresenceState<Record<string, unknown>>,
+) {
+  const nextOnlineUserIds = new Set(
+    Object.keys(presenceState).filter(
+      (userId) => (presenceState[userId]?.length ?? 0) > 0,
+    ),
+  );
+  const currentOnlineUserIds = onlineUserIdsByWorkspace.get(workspaceId);
+  if (hasSameOnlineUsers(currentOnlineUserIds, nextOnlineUserIds)) return;
+
+  onlineUserIdsByWorkspace.set(workspaceId, nextOnlineUserIds);
+  notifyWorkspaceStaffPresenceListeners(workspaceId);
+}
+
+export function clearWorkspaceStaffPresenceState(workspaceId: string) {
+  if (!onlineUserIdsByWorkspace.delete(workspaceId)) return;
+  notifyWorkspaceStaffPresenceListeners(workspaceId);
 }
 
 export function bindWorkspaceStaffPresenceEvents(
@@ -70,53 +135,20 @@ export function useWorkspaceStaffOnlineStatus({
   userId: string | null;
   workspaceId: string;
 }) {
-  const statusKey = `${workspaceId}:${userId ?? ""}`;
-  const [snapshot, setSnapshot] = useState({ key: "", online: false });
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      subscribeWorkspaceStaffPresence(workspaceId, listener),
+    [workspaceId],
+  );
+  const getSnapshot = useCallback(
+    () =>
+      userId
+        ? getWorkspaceStaffOnlineSnapshot(workspaceId, userId)
+        : false,
+    [userId, workspaceId],
+  );
 
-  useEffect(() => {
-    if (!userId || !workspaceId) return;
-    const targetUserId = userId;
-
-    const supabase = getBrowserSupabaseClient();
-    if (!supabase) return;
-    const client = supabase;
-    let disposed = false;
-    const channel = client.channel(getWorkspaceStaffPresenceTopic(workspaceId), {
-      config: { private: true },
-    });
-
-    const syncOnlineStatus = () => {
-      if (disposed) return;
-      setSnapshot({
-        key: statusKey,
-        online: isStaffOnline(
-          channel.presenceState<Record<string, unknown>>(),
-          targetUserId,
-        ),
-      });
-    };
-
-    bindWorkspaceStaffPresenceEvents(channel, syncOnlineStatus);
-
-    async function subscribe() {
-      const { data } = await client.auth.getSession();
-      if (!data.session || disposed) return;
-
-      await client.realtime.setAuth(data.session.access_token);
-      if (disposed) return;
-
-      channel.subscribe();
-    }
-
-    void subscribe();
-
-    return () => {
-      disposed = true;
-      void client.removeChannel(channel);
-    };
-  }, [statusKey, userId, workspaceId]);
-
-  return snapshot.key === statusKey ? snapshot.online : false;
+  return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }
 
 export function WorkspaceStaffPresenceReporter({
@@ -148,6 +180,15 @@ export function WorkspaceStaffPresenceReporter({
           presence: { key: session.user.id },
         },
       });
+      const presenceChannel = channel;
+
+      bindWorkspaceStaffPresenceEvents(presenceChannel, () => {
+        if (disposed) return;
+        publishWorkspaceStaffPresenceState(
+          workspaceId,
+          presenceChannel.presenceState<Record<string, unknown>>(),
+        );
+      });
 
       const touchActivity = () =>
         client.rpc("clair_touch_workspace_member_activity", {
@@ -175,6 +216,7 @@ export function WorkspaceStaffPresenceReporter({
     return () => {
       disposed = true;
       if (heartbeatTimer) clearInterval(heartbeatTimer);
+      clearWorkspaceStaffPresenceState(workspaceId);
       if (channel) {
         void channel.untrack();
         void client.removeChannel(channel);
