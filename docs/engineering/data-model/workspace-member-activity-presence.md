@@ -94,8 +94,14 @@ Forward migrations:
 첫 migration은 2026-07-15 원격에 적용됐다. 최초 production smoke에서 REST
 heartbeat RPC는 성공했지만 Presence join은 hosted Realtime의
 `broadcast.read` 선행 검사 때문에 거부되어 앱 alias를 이전 안정 배포로
-롤백했다. 후속 hotfix migration은 별도 승인 후 적용하고 synthetic 계정으로
-RPC, Presence subscribe/track, heartbeat readback을 다시 검증한다.
+롤백했다. 후속 hotfix migration도 승인 후 적용됐고 synthetic 계정으로 RPC,
+same-workspace Presence subscribe/track, heartbeat readback, cross-workspace
+denial을 검증했다.
+
+Supabase-js는 동일 client와 topic의 channel을 재사용하므로 subscribe 뒤에는
+새 Presence callback을 추가할 수 없다. app-shell reporter가 해당 channel을
+단독 소유하고 sync/join/leave callback을 subscribe 전에 등록한다. profile
+consumer는 reporter가 발행하는 workspace별 online-user snapshot만 구독한다.
 
 rollback이 필요하면 먼저 두 `realtime.messages` policy와
 RPC/function grants/functions를 제거하고, 마지막에
@@ -109,3 +115,4 @@ RPC/function grants/functions를 제거하고, 마지막에
 - multi-tab/device join and partial leave
 - last-seen missing/valid formatting
 - activity relation unavailable while base profile remains readable
+- single reporter-owned channel with snapshot consumers and no late callbacks

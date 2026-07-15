@@ -1,9 +1,13 @@
 import { expect, test } from "@playwright/test";
 import {
   bindWorkspaceStaffPresenceEvents,
+  clearWorkspaceStaffPresenceState,
   formatStaffLastSeenLabel,
+  getWorkspaceStaffOnlineSnapshot,
   getWorkspaceStaffPresenceTopic,
   isStaffOnline,
+  publishWorkspaceStaffPresenceState,
+  subscribeWorkspaceStaffPresence,
 } from "../src/features/staff/workspace-staff-presence";
 
 test("Presence callbacks are bound before the channel starts subscribing", () => {
@@ -35,6 +39,42 @@ test("Presence callbacks are bound before the channel starts subscribing", () =>
     "presence:join",
     "presence:leave",
   ]);
+});
+
+test("online consumers use the shared snapshot without binding late channel callbacks", () => {
+  const workspaceId = "workspace-clair-cheongdam";
+  let subscribing = false;
+  const channel = {
+    on() {
+      if (subscribing) {
+        throw new Error("callbacks cannot be added after subscribe");
+      }
+      return this;
+    },
+    subscribe() {
+      subscribing = true;
+    },
+  };
+
+  bindWorkspaceStaffPresenceEvents(channel, () => undefined);
+  channel.subscribe();
+
+  let snapshotUpdates = 0;
+  const unsubscribe = subscribeWorkspaceStaffPresence(workspaceId, () => {
+    snapshotUpdates += 1;
+  });
+
+  publishWorkspaceStaffPresenceState(workspaceId, {
+    "user-seoyeon": [{ presence_ref: "tab-a" }],
+  });
+
+  expect(
+    getWorkspaceStaffOnlineSnapshot(workspaceId, "user-seoyeon"),
+  ).toBe(true);
+  expect(snapshotUpdates).toBe(1);
+
+  unsubscribe();
+  clearWorkspaceStaffPresenceState(workspaceId);
 });
 
 test("Presence treats any remaining tab or device for the member as online", () => {
