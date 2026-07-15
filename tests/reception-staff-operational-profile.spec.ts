@@ -439,6 +439,80 @@ test("touch viewport keeps the lane action visible and uses a full-width panel",
   expect(box!.width).toBeGreaterThanOrEqual(389);
 });
 
+test("staff profile reflows at a 200 percent zoom equivalent without hiding long content or self actions", async ({
+  page,
+}) => {
+  await page.route("**/staff/*/operational-profile?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        availability: null,
+        capabilities: {
+          canEditAvatar: true,
+          canEditStatusMessage: true,
+          canManageMember: false,
+          manageMemberHref: null,
+          scheduleHref: null,
+        },
+        profile: {
+          displayName:
+            "이수지 아주 긴 이름이 표시되는 접근성 확대 검증용 직원",
+          email:
+            "staff-profile-v2-accessibility-long-address@example.test",
+          initials: "이수",
+          jobPositionLabel: "수의사",
+          department: "진료 및 중환자 입원 환자 관리 지원 부서",
+          membershipStatus: "active",
+          phone: "010-1234-5678",
+          statusMessage:
+            "수술 중이며 종료 후 순서대로 연락드릴 예정입니다. 긴 상태 메시지 표시를 확인합니다.",
+          statusMessageUpdatedAt: "2026-07-16T01:00:00.000Z",
+        },
+        shift: null,
+        enforcedBy: "staff-operational-profile-read",
+      },
+    });
+  });
+  await page.setViewportSize({ width: 640, height: 450 });
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await openStaffProfile(page);
+
+  const panel = page.getByRole("region", { name: "직원 운영 프로필" });
+  const panelBox = await panel.boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(panelBox!.x).toBeGreaterThanOrEqual(0);
+  expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(640);
+  await expect(panel.getByRole("tab")).toHaveCount(2);
+  await expect(panel.getByRole("tab", { name: "프로필" })).toBeVisible();
+  await expect(panel.getByRole("tab", { name: "업무 현황" })).toBeVisible();
+  await expect(panel.getByText(/이수지 아주 긴 이름/)).toBeVisible();
+  await expect(panel.getByText(/수술 중이며 종료 후/)).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "상태 메시지 수정" }),
+  ).toBeVisible();
+
+  const avatarMenuTrigger = panel.getByRole("button", {
+    name: "프로필 이미지 메뉴 열기",
+  });
+  await avatarMenuTrigger.focus();
+  await expect(avatarMenuTrigger).toBeFocused();
+  await avatarMenuTrigger.press("Enter");
+  await expect(page.getByRole("menuitem")).toHaveCount(2);
+  await expect(
+    page.getByRole("menuitem", { name: "프로필 이미지 업로드" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
 test("staff profile panel renders account, published shift, availability, and permission-filtered header menu", async ({
   page,
 }) => {

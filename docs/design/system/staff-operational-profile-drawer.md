@@ -178,6 +178,9 @@ The tab reads actual fulfillment work items assigned to the target member.
 
 - Sort by `requestedAt DESC, id DESC` and page with a stable opaque cursor.
 - Return at most 20 items per request.
+- The authenticated server-session client has table `SELECT` only; active
+  workspace membership RLS limits rows. Direct insert/update/delete table
+  privileges are not part of this read contract.
 - Group rows by hospital operating date and timezone.
 - Active items use the current assignee. Terminal items retain the recorded
   assignee; do not add a new history table solely for this panel.
@@ -255,3 +258,8 @@ Final completion requires desktop and mobile browser QA, keyboard/focus checks,
 Storybook interaction tests, server and RLS/storage tests, synthetic live-data
 create/readback/cleanup, migration drift review, production deployment, and
 post-deploy authenticated smoke against synthetic/demo data only.
+
+The consolidated human and automated release scenario is
+[Product MVP QA Scenario 8](../../engineering/testing/product-mvp-qa-scenario-pack.md#scenario-8-staff-profile-side-panel-v2).
+The decision-oriented delivery record is the
+[V2 release closeout report](../../completed/reception/2026-07-16-staff-profile-side-panel-v2-release-closeout-report.html).

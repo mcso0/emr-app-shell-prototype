@@ -1,0 +1,5 @@
+-- Remote-history compatibility alias for
+-- 20260716030000_staff_assigned_work_items_authenticated_select.sql.
+-- The exact canonical SQL was applied to the linked synthetic/demo project
+-- under remote version 20260715180209. Keep this file statement-free so a
+-- fresh local replay executes the behavior only once from the canonical file.

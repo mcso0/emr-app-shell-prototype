@@ -7,7 +7,7 @@ related_work:
   - DEN-181
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-20T00:00:00.000Z
+last_updated: 2026-07-16T00:00:00.000Z
 ---
 
 # Product MVP QA Scenarios
@@ -91,6 +91,21 @@ Checks:
 * scenario states mock/session-only, local-first, remote staging, or production/live
 * remote/live work has explicit approval if mentioned
 * real data, email, payment, provider, and production claims are absent unless approved
+
+## Scenario 8: Staff Profile Side Panel V2
+
+Goal: verify the non-modal staff profile flow, truthful live sources, self-service controls, and workspace isolation with synthetic/demo data only.
+
+Checks:
+
+* desktop uses a detached 380px panel with a 10px gap; narrow/mobile uses a full-width non-modal panel without backdrop, blur, focus trap, or background `inert`
+* exactly `프로필` and `업무 현황` tabs remain visible and usable at 200% zoom-equivalent width, with long names, status text, and contact values
+* keyboard open/close, `Escape`, menu/dialog focus return, loading, empty, partial error, retry, and pagination states are distinct
+* published schedule, workspace status, Presence/last-seen, private avatar, and assigned fulfillment work come from their approved live sources without runtime dummy fallback
+* active same-workspace members can read the approved projection; status/avatar mutation is self-only; other-user, inactive, anonymous, and cross-workspace access is denied by API plus DB/RLS/Storage boundaries
+* JPEG/PNG/static WebP avatar validation, private direct upload, normalized signed read, pointer restore, and object cleanup pass without exposing bytes, tokens, URLs, or private metadata
+* the transaction replay creates synthetic schedule/status/activity/assigned-work rows, proves read and denial paths, rolls back, and confirms zero retained probe rows; Presence untracks and Storage removes every probe object
+* the deployed commit equals the final merged `origin/main`, and authenticated production smoke repeats profile/work/status/avatar/Presence checks against existing synthetic/demo identities only
 
 ## Pass/Blocker Policy
 

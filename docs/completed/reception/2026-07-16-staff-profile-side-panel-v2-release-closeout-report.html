@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Staff Profile Side Panel V2 출시 종료 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #171717;
+        --muted: #686868;
+        --line: #dedede;
+        --soft: #f6f6f4;
+        --brand: #1c4f43;
+        --brand-soft: #e7f2ee;
+        --warn: #76520a;
+        --warn-soft: #fff6d8;
+        --danger: #9a2a2a;
+        --danger-soft: #fff0f0;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #efefec;
+        color: var(--ink);
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        width: min(1040px, calc(100% - 32px));
+        margin: 32px auto;
+        padding: 40px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 8px 30px rgb(0 0 0 / 5%);
+      }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 10px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; letter-spacing: -0.035em; }
+      h2 { margin: 38px 0 14px; font-size: 22px; line-height: 1.35; letter-spacing: -0.02em; }
+      h3 { margin: 0 0 8px; font-size: 16px; }
+      p, li, td, th { font-size: 14px; line-height: 1.65; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      li + li { margin-top: 6px; }
+      code { padding: 2px 5px; border-radius: 5px; background: var(--soft); font-size: 0.92em; overflow-wrap: anywhere; }
+      a { color: var(--brand); text-underline-offset: 3px; }
+      .eyebrow { margin-bottom: 8px; color: var(--brand); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+      .meta { color: var(--muted); }
+      .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+      .badge { display: inline-flex; min-height: 28px; align-items: center; padding: 4px 10px; border-radius: 999px; background: var(--soft); font-size: 12px; font-weight: 700; }
+      .badge.pass { color: var(--brand); background: var(--brand-soft); }
+      .badge.gate { color: var(--warn); background: var(--warn-soft); }
+      .hero {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #b8d4ca;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f3faf7, #e7f2ee);
+      }
+      .hero strong { display: block; margin-bottom: 8px; font-size: 20px; line-height: 1.4; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .card { padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+      .card p { margin-bottom: 0; color: var(--muted); }
+      .metric { margin-bottom: 6px; color: var(--brand); font-size: 26px; font-weight: 750; }
+      .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; -webkit-overflow-scrolling: touch; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      th { background: var(--soft); font-size: 12px; letter-spacing: 0.02em; }
+      tr:last-child td { border-bottom: 0; }
+      .callout { padding: 18px; border-left: 4px solid var(--brand); border-radius: 8px; background: var(--soft); }
+      .callout.warn { border-left-color: #d29b22; background: var(--warn-soft); }
+      .callout p:last-child { margin-bottom: 0; }
+      .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; counter-reset: step; }
+      .step { min-height: 104px; padding: 14px; border-radius: 10px; background: var(--soft); }
+      .step::before { counter-increment: step; content: counter(step); display: grid; width: 24px; height: 24px; margin-bottom: 10px; place-items: center; border-radius: 999px; color: #fff; background: var(--brand); font-size: 12px; font-weight: 700; }
+      .step span { font-size: 13px; line-height: 1.5; }
+      footer { margin-top: 42px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+
+      @media (max-width: 760px) {
+        main { width: 100%; margin: 0; padding: 24px 18px 32px; border: 0; border-radius: 0; }
+        .grid { grid-template-columns: 1fr; }
+        .flow { grid-template-columns: 1fr; }
+        .step { min-height: auto; }
+        .table-wrap table { min-width: 720px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">RECEPTION-QA-PR-012 · Release closeout</p>
+      <h1>Staff Profile Side Panel V2<br />출시 종료 보고서</h1>
+      <p class="meta">2026-07-16 · 합성/데모 데이터만 사용 · 실사용자·환자·결제 데이터 미사용</p>
+      <div class="status-row">
+        <span class="badge pass">기능 PR 4개 머지 완료</span>
+        <span class="badge pass">원격 DB 마이그레이션 적용</span>
+        <span class="badge pass">RLS·Storage·Presence QA 통과</span>
+        <span class="badge gate">최종 PR merge SHA만 배포</span>
+      </div>
+
+      <section class="hero" aria-labelledby="conclusion-heading">
+        <strong id="conclusion-heading">결론</strong>
+        <p>
+          직원 프로필은 더 이상 보기 전용 보조 화면이 아니다. 현재 업무를 가리지 않는
+          비모달 패널에서 동료의 공개 가능한 운영 정보와 배정 업무를 확인하고, 본인은
+          상태 메시지와 비공개 프로필 이미지를 직접 관리할 수 있다. 화면, API, DB/RLS,
+          private Storage, Realtime Presence까지 같은 권한 규칙으로 연결했다.
+        </p>
+        <p>
+          최종 합성 QA에서 실제 세션의 업무 목록 읽기를 막던 DB 권한 누락을 발견해
+          <code>SELECT</code>만 추가했다. 이 보완 마이그레이션은 앱 머지보다 먼저 원격
+          합성/데모 프로젝트에 적용했고, 쓰기 권한은 계속 닫혀 있다.
+        </p>
+      </section>
+
+      <h2>요청과 실제 결과</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="metric">2</div>
+          <h3>실사용 탭</h3>
+          <p><code>프로필</code>과 <code>업무 현황</code>만 남기고 두 탭 모두 실제 데이터 상태를 가진다.</p>
+        </article>
+        <article class="card">
+          <div class="metric">380px</div>
+          <h3>독립 패널</h3>
+          <p>데스크톱 10px 간격, 모바일 전체 폭, backdrop·blur·focus trap·background inert 없음.</p>
+        </article>
+        <article class="card">
+          <div class="metric">Self only</div>
+          <h3>개인 편집</h3>
+          <p>상태 메시지와 아바타는 본인만 수정한다. 타인·비활성·교차 워크스페이스는 서버와 DB가 거부한다.</p>
+        </article>
+      </div>
+
+      <h2>정보 구조와 핵심 흐름</h2>
+      <div class="flow" aria-label="직원 프로필 핵심 흐름">
+        <div class="step"><span>캘린더에서 직원 옵션을 열고 운영 프로필을 선택</span></div>
+        <div class="step"><span>Presence, 상태 메시지, 계정, 오늘 근무와 복귀 일정을 확인</span></div>
+        <div class="step"><span>업무 현황에서 병원 날짜별 배정 업무와 상태를 확인</span></div>
+        <div class="step"><span>권한이 있을 때만 목적지 이동을 확인하고 실행</span></div>
+        <div class="step"><span>본인은 상태 메시지 또는 비공개 아바타를 수정</span></div>
+      </div>
+
+      <h2>데이터와 보안 경계</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>영역</th><th>원본</th><th>허용</th><th>차단·보호</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>프로필·연락처</td>
+              <td>workspace membership + <code>public.users</code></td>
+              <td>활성 동일 워크스페이스 구성원 조회</td>
+              <td>내부 ID, Auth/session 정보, 비공개 일정 메모 미노출</td>
+            </tr>
+            <tr>
+              <td>상태 메시지</td>
+              <td><code>workspace_member_status_messages</code></td>
+              <td>동일 워크스페이스 읽기, 본인 CAS 저장/삭제</td>
+              <td>타인·비활성·교차 워크스페이스 쓰기 거부, 본문 없는 감사 메타데이터</td>
+            </tr>
+            <tr>
+              <td>온라인·최근 접속</td>
+              <td>private Realtime Presence + throttled activity</td>
+              <td>동일 워크스페이스 subscribe/track</td>
+              <td>DB <code>is_online</code> 없음, 교차 워크스페이스 join 거부</td>
+            </tr>
+            <tr>
+              <td>아바타</td>
+              <td>private <code>profile-avatars</code> bucket</td>
+              <td>본인 quarantine/upload/delete, 현재 pointer의 동일 워크스페이스 signed read</td>
+              <td>5MB·형식·magic·decode·크기·pixel·animation 검사, metadata 제거, static WebP 재인코딩</td>
+            </tr>
+            <tr>
+              <td>업무 현황</td>
+              <td><code>order_fulfillment_work_items</code></td>
+              <td>활성 동일 워크스페이스 최소 projection 읽기</td>
+              <td>full snapshot·비공개 지시 미노출, 목적지 링크는 별도 권한 필터</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>출시 QA에서 발견한 결함</h2>
+      <div class="callout">
+        <h3>RLS 정책은 있었지만 테이블 읽기 권한이 없었다</h3>
+        <p>
+          목 API를 사용한 UI 테스트는 통과했지만, 전체 로컬 DB 재생 뒤 실제
+          <code>authenticated</code> 역할로 배정 업무를 읽자
+          <code>permission denied for table order_fulfillment_work_items</code>가 재현됐다.
+          RLS는 SQL을 실행할 권한을 대체하지 않기 때문이다.
+        </p>
+        <p>
+          해결은 <code>20260716030000_staff_assigned_work_items_authenticated_select.sql</code>의
+          단일 <code>GRANT SELECT</code>다. 기존 active-workspace RLS가 행 범위를 계속
+          제한하고, <code>INSERT</code>·<code>UPDATE</code>·<code>DELETE</code> 권한은 모두
+          <code>false</code>로 확인했다. 원격 이력 버전은 <code>20260715180209</code>다.
+        </p>
+      </div>
+
+      <h2>검증 결과</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>검증</th><th>결과</th><th>증거</th></tr></thead>
+          <tbody>
+            <tr><td>전체 로컬 DB replay</td><td>통과</td><td>모든 migration + full synthetic seed 재생</td></tr>
+            <tr><td>통합 transaction replay</td><td>로컬·원격 통과</td><td>schedule/status/activity/assigned work 생성, same-workspace read, self/other/cross 경계, rollback</td></tr>
+            <tr><td>Private Presence</td><td>로컬·원격 통과</td><td>subscribe, track, peer observe, heartbeat, cross denial, untrack cleanup</td></tr>
+            <tr><td>Private avatar Storage</td><td>원격 재검증 통과</td><td>direct upload, owner quarantine, pointer-scoped read, pointer restore, object cleanup</td></tr>
+            <tr><td>원격 잔여물</td><td>0</td><td>고정 QA row 0, actor probe object 0, private pointer null, legacy hidden false</td></tr>
+            <tr><td>실제 로그인 세션 API</td><td>로컬 200</td><td>Supabase 로그인 후 assigned-work와 날짜가 있는 operational-profile route를 실제 cookie session으로 호출</td></tr>
+            <tr><td>브라우저 접근성·반응형</td><td>통과</td><td>380px/10px, mobile full width, 200% zoom-equivalent, long content, exact two tabs, keyboard/focus</td></tr>
+            <tr><td>정적·빌드·Storybook</td><td>통과 후 머지 게이트</td><td>focused Playwright 59, Storybook interaction 15, lint, TypeScript, docs links, staged-file secret scan, Storybook build, production build</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>순차 PR 이력</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>PR</th><th>범위</th><th>merge commit</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://github.com/mcso0/emr-app-shell-prototype/pull/418">#418</a></td><td>V2 canonical/UI contract</td><td><code>3e61f90e</code></td></tr>
+            <tr><td><a href="https://github.com/mcso0/emr-app-shell-prototype/pull/419">#419</a></td><td>패널·read model·업무 탭</td><td><code>c7723b66</code></td></tr>
+            <tr><td><a href="https://github.com/mcso0/emr-app-shell-prototype/pull/420">#420</a></td><td>workspace 상태 메시지 persistence</td><td><code>de1d05de</code></td></tr>
+            <tr><td><a href="https://github.com/mcso0/emr-app-shell-prototype/pull/421">#421</a></td><td>private avatar pipeline</td><td><code>3bfff43d</code></td></tr>
+            <tr><td><a href="https://github.com/mcso0/emr-app-shell-prototype/pull/422">#422</a></td><td>통합 QA, 실제 세션 read grant 보완, 문서·보고서</td><td>이 PR의 merge SHA가 유일한 배포 후보</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>배포 원칙</h2>
+      <div class="callout warn">
+        <h3>보고서에는 존재하지 않는 배포 ID를 미리 쓰지 않는다</h3>
+        <p>
+          이 문서가 포함된 최종 PR을 머지한 뒤 <code>origin/main</code>의 정확한 merge
+          SHA를 확인한다. production runbook 승인 게이트에서 그 SHA만 배포하고,
+          Vercel deployment ID·배포 SHA·합성 계정 smoke 결과는 최종 작업 리뷰에
+          기록한다. 원격 DB 보완 마이그레이션은 이미 먼저 적용되어 앱/스키마 역전은 없다.
+        </p>
+      </div>
+
+      <h2>남은 위험과 범위 밖</h2>
+      <ul>
+        <li>삭제 전 발급된 signed URL 또는 캐시는 최대 5분간 유효할 수 있다. 새 signing과 원본 object는 즉시 차단·삭제된다.</li>
+        <li>Supabase advisor의 세 feature RPC 경고는 본인/활성 구성원이 호출하도록 의도한 <code>SECURITY DEFINER</code> entrypoint다. 함수 내부 membership/ownership 검증을 합성 QA로 재검증했다.</li>
+        <li>기존 fulfillment 테이블의 중복 permissive policy와 일부 FK index 권고는 이 읽기 권한 보완 이전부터 존재한 성능 정리 항목이다. 이번 변경의 권한 결과를 바꾸지 않아 별도 최적화 범위로 남겼다.</li>
+        <li>실제 병원 구성원·환자·보호자·결제·외부 메시지·provider 연동과 외부 사용자 공개는 이번 범위가 아니다.</li>
+      </ul>
+
+      <h2>의사결정자를 위한 다음 확인</h2>
+      <p>
+        최종 PR merge → <code>main...origin/main = 0 0</code> → exact SHA production
+        deploy → 합성 계정으로 프로필/업무/상태/아바타/Presence smoke → 배포·DB
+        잔여물 재확인 순서만 남는다. 이 순서가 끝나기 전에는 전체 목표를 완료로 표시하지 않는다.
+      </p>
+
+      <footer>
+        Source of truth:
+        <a href="../../design/system/staff-operational-profile-drawer.md">Staff Operational Profile Side Panel V2</a>
+        · <a href="../../engineering/testing/product-mvp-qa-scenario-pack.md#scenario-8-staff-profile-side-panel-v2">Product MVP QA Scenario 8</a>
+        · <a href="../../work/reception/RECEPTION-QA-PR-012-profile-side-panel-v2-release-closeout.md">RECEPTION-QA-PR-012</a>
+      </footer>
+    </main>
+  </body>
+</html>
