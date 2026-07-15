@@ -39,6 +39,7 @@ Do not delete or rename the compatibility aliases below. Their SQL was applied r
 | `20260715062205_remote_history_alias_staff_presence_broadcast_read_hotfix.sql` | `20260715014500_staff_presence_broadcast_read_hotfix.sql` |
 | `20260715164007_remote_history_alias_workspace_member_status_messages.sql` | `20260716010000_workspace_member_status_messages.sql` |
 | `20260715164307_remote_history_alias_workspace_status_message_rls_initplan.sql` | `20260716011000_workspace_status_message_rls_initplan.sql` |
+| `20260715172425_remote_history_alias_private_profile_avatars.sql` | `20260716020000_private_profile_avatars.sql` |
 
 The following remote-only SQL is preserved verbatim so a fresh local reset includes the actual remote behavior:
 
@@ -75,6 +76,11 @@ remote version `20260715164007`; the alias preserves the remote history version
 while the canonical migration remains the deterministic fresh-replay source.
 The follow-up init-plan policy optimization was applied under remote version
 `20260715164307` and is preserved by its own comment-only alias.
+
+The private profile-avatar schema and Storage policies are also no longer
+pending behavior. Their exact SQL was applied and verified on 2026-07-16 under
+remote version `20260715172425`; the alias preserves that history version while
+the canonical migration remains the deterministic fresh-replay source.
 
 Do not use `migration repair --status applied` for these entries merely to make `db push` look clean. Supabase repair changes only the history table; it does not execute the migration SQL.
 

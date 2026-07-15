@@ -1,9 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { CdsActionsTrashIcon, CdsActionsUploadIcon } from "@/components/cds-icons/actions-and-controls";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  CdsActionsTrashIcon,
+  CdsActionsUploadIcon,
+  CdsActionsXIcon,
+} from "@/components/cds-icons/actions-and-controls";
 import { CdsContentEditIcon } from "@/components/cds-icons/content-and-editor";
-import { CdsFilesImageIcon, CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -224,112 +228,179 @@ export function StatusMessageEditor({
 
 const acceptedAvatarTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxAvatarBytes = 5 * 1024 * 1024;
+export type ProfileAvatarUploadPhase =
+  | "preparing"
+  | "uploading"
+  | "processing";
 
 function ProfileImageUploadDialogContent({
   onOpenChange,
   onUpload,
 }: {
   onOpenChange: (open: boolean) => void;
-  onUpload: (file: File) => Promise<void>;
+  onUpload: (
+    file: File,
+    phase: (phase: ProfileAvatarUploadPhase) => void,
+  ) => Promise<void>;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] =
+    useState<ProfileAvatarUploadPhase | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  const uploading = uploadPhase !== null;
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    };
+  }, []);
+
+  function replacePreview(nextFile: File | null) {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    const nextPreviewUrl = nextFile ? URL.createObjectURL(nextFile) : null;
+    previewUrlRef.current = nextPreviewUrl;
+    setPreviewUrl(nextPreviewUrl);
+    setFile(nextFile);
+  }
+
+  function clearFile() {
+    replacePreview(null);
+    setError(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
 
   function selectFile(nextFile: File | undefined) {
     setError(null);
     if (!nextFile) {
-      setFile(null);
+      replacePreview(null);
       return;
     }
     if (!acceptedAvatarTypes.has(nextFile.type)) {
-      setFile(null);
+      replacePreview(null);
+      if (inputRef.current) inputRef.current.value = "";
       setError("JPG, PNG 또는 정적 WebP 파일을 선택해 주세요.");
       return;
     }
     if (nextFile.size > maxAvatarBytes) {
-      setFile(null);
+      replacePreview(null);
+      if (inputRef.current) inputRef.current.value = "";
       setError("파일 크기는 5MB 이하여야 해요.");
       return;
     }
-    setFile(nextFile);
+    replacePreview(nextFile);
   }
 
   async function upload() {
     if (!file || uploading) return;
-    setUploading(true);
+    setUploadPhase("preparing");
     setError(null);
     try {
-      await onUpload(file);
+      await onUpload(file, setUploadPhase);
       onOpenChange(false);
     } catch {
       setError("프로필 사진을 업로드하지 못했어요.");
     } finally {
-      setUploading(false);
+      setUploadPhase(null);
     }
   }
 
   return (
-      <DialogContent
-        className="w-[var(--emr-profile-upload-dialog-width)] max-w-[calc(100%-2rem)] gap-0 overflow-hidden p-4"
-        showCloseButton={false}
-      >
-        <DialogHeader className="pb-4 pr-8">
-          <DialogTitle>프로필 이미지 업로드</DialogTitle>
-          <DialogDescription>
-            512×512px 이상 정사각형 이미지를 권장해요. JPG, PNG, 정적 WebP · 최대 5MB
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex aspect-square w-full max-w-[var(--emr-profile-upload-content-size)] items-center justify-center rounded-[var(--clair-radius-atomic-10)] border border-dashed border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-6 text-center">
-          <input
-            ref={inputRef}
-            id="profile-avatar-file"
-            aria-label="프로필 이미지 선택"
-            className="sr-only"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(event) => selectFile(event.target.files?.[0])}
+    <DialogContent
+      className="w-[var(--emr-profile-upload-dialog-width)] max-w-[calc(100%-2rem)] gap-0 overflow-hidden p-4"
+      showCloseButton={false}
+    >
+      <DialogClose
+        render={
+          <Button
+            type="button"
+            aria-label="프로필 이미지 업로드 닫기"
+            className="absolute right-3 top-3 z-10"
+            disabled={uploading}
+            size="icon-sm"
+            variant="ghost"
           />
-          {file ? (
-            <div className="flex min-w-0 flex-col items-center gap-3">
-              <CdsFilesImageIcon aria-hidden="true" className="size-10 text-[var(--emr-text-secondary)]" />
-              <p className="max-w-[260px] truncate text-sm font-medium">{file.name}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setFile(null);
-                  if (inputRef.current) inputRef.current.value = "";
-                }}
-              >
-                선택한 이미지 제거
-              </Button>
-            </div>
-          ) : (
-            <label className="flex cursor-pointer flex-col items-center gap-3 text-sm" htmlFor="profile-avatar-file">
-              <CdsActionsUploadIcon aria-hidden="true" className="size-10 text-[var(--emr-text-secondary)]" />
-              <span className="font-medium">사진 선택</span>
-              <span className="text-xs text-[var(--emr-text-placeholder)]">최소 한 변 256px</span>
-            </label>
-          )}
-        </div>
+        }
+      >
+        <CdsActionsXIcon aria-hidden="true" size={16} />
+      </DialogClose>
+      <DialogHeader className="pb-4 pr-8">
+        <DialogTitle>프로필 이미지 업로드</DialogTitle>
+        <DialogDescription>
+          512×512px 이상 정사각형 이미지를 권장해요. JPG, PNG, 정적 WebP · 최대 5MB
+        </DialogDescription>
+      </DialogHeader>
 
-        {error ? (
-          <p className="mt-3 text-sm text-[var(--emr-status-danger-text)]" role="alert">
-            {error}
-          </p>
-        ) : null}
+      <div className="relative flex aspect-square w-full max-w-[var(--emr-profile-upload-content-size)] items-center justify-center overflow-hidden rounded-[var(--clair-radius-atomic-10)] border border-dashed border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] text-center">
+        <input
+          ref={inputRef}
+          id="profile-avatar-file"
+          aria-label="프로필 이미지 선택"
+          className="sr-only"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(event) => selectFile(event.target.files?.[0])}
+        />
+        {file && previewUrl ? (
+          <>
+            {/* Browser preview only. The server still decodes and normalizes the source. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt="선택한 프로필 이미지 미리보기"
+              className="size-full object-cover"
+              src={previewUrl}
+            />
+            <Button
+              type="button"
+              aria-label="선택한 이미지 제거"
+              className="absolute right-2 top-2 bg-[var(--emr-surface-panel)]/90"
+              disabled={uploading}
+              size="icon-sm"
+              variant="outline"
+              onClick={clearFile}
+            >
+              <CdsActionsXIcon aria-hidden="true" size={16} />
+            </Button>
+          </>
+        ) : (
+          <label className="flex cursor-pointer flex-col items-center gap-3 p-6 text-sm" htmlFor="profile-avatar-file">
+            <CdsActionsUploadIcon aria-hidden="true" className="size-10 text-[var(--emr-text-secondary)]" />
+            <span className="font-medium">사진 선택</span>
+            <span className="text-xs text-[var(--emr-text-placeholder)]">최소 한 변 256px</span>
+          </label>
+        )}
+      </div>
 
-        <DialogFooter className="mt-4 min-h-[var(--emr-profile-upload-footer-height)] items-center">
-          <DialogClose render={<Button type="button" variant="outline" />}>취소</DialogClose>
-          <Button type="button" disabled={!file || uploading} onClick={() => void upload()}>
-            {uploading ? "업로드 중" : "업로드"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+      {error ? (
+        <p className="mt-3 text-sm text-[var(--emr-status-danger-text)]" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <span className="sr-only" aria-live="polite">
+        {uploadPhase === "preparing"
+          ? "업로드 준비 중"
+          : uploadPhase === "uploading"
+            ? "파일 업로드 중"
+            : uploadPhase === "processing"
+              ? "이미지 처리 중"
+              : ""}
+      </span>
+
+      <DialogFooter className="mt-4 min-h-[var(--emr-profile-upload-footer-height)] items-center">
+        <Button type="button" disabled={!file || uploading} onClick={() => void upload()}>
+          {uploadPhase === "preparing"
+            ? "업로드 준비 중"
+            : uploadPhase === "uploading"
+              ? "파일 업로드 중"
+              : uploadPhase === "processing"
+                ? "이미지 처리 중"
+                : "업로드"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   );
 }
 
@@ -339,7 +410,10 @@ export function ProfileImageUploadDialog({
   open,
 }: {
   onOpenChange: (open: boolean) => void;
-  onUpload: (file: File) => Promise<void>;
+  onUpload: (
+    file: File,
+    phase: (phase: ProfileAvatarUploadPhase) => void,
+  ) => Promise<void>;
   open: boolean;
 }) {
   return (
@@ -353,18 +427,23 @@ export function ProfileImageUploadDialog({
 
 export function ProfileImageActionMenu({
   hasAvatar,
+  removing,
   onOpenUpload,
   onRemove,
+  triggerRef,
 }: {
   hasAvatar: boolean;
+  removing: boolean;
   onOpenUpload: () => void;
   onRemove: () => void;
+  triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <Button
+            ref={triggerRef}
             type="button"
             aria-label="프로필 이미지 메뉴 열기"
             className="absolute inset-0 size-full rounded-[var(--clair-radius-atomic-6)] bg-transparent text-transparent opacity-0 hover:bg-black/30 hover:text-white hover:opacity-100 focus-visible:bg-black/30 focus-visible:text-white focus-visible:opacity-100"
@@ -384,7 +463,7 @@ export function ProfileImageActionMenu({
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled={!hasAvatar} variant="destructive" onClick={onRemove}>
+          <DropdownMenuItem disabled={!hasAvatar || removing} variant="destructive" onClick={onRemove}>
             <CdsActionsTrashIcon aria-hidden="true" />
             프로필 이미지 제거
           </DropdownMenuItem>
@@ -406,18 +485,34 @@ export function EditableProfileAvatar({
   editable: boolean;
   initials: string;
   onRemove?: () => Promise<void>;
-  onUpload?: (file: File) => Promise<void>;
+  onUpload?: (
+    file: File,
+    phase: (phase: ProfileAvatarUploadPhase) => void,
+  ) => Promise<void>;
   src?: string | null;
 }) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   async function remove() {
+    if (removing) return;
     setMutationError(null);
+    setRemoving(true);
     try {
       await onRemove?.();
     } catch {
       setMutationError("프로필 사진을 삭제하지 못했어요.");
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  function setUploadDialogOpen(open: boolean) {
+    setUploadOpen(open);
+    if (!open) {
+      queueMicrotask(() => menuTriggerRef.current?.focus());
     }
   }
 
@@ -431,18 +526,27 @@ export function EditableProfileAvatar({
         {editable ? (
           <ProfileImageActionMenu
             hasAvatar={Boolean(src)}
-            onOpenUpload={() => setUploadOpen(true)}
+            removing={removing}
+            triggerRef={menuTriggerRef}
+            onOpenUpload={() => setUploadDialogOpen(true)}
             onRemove={() => void remove()}
           />
         ) : null}
       </div>
-      {mutationError ? (
-        <p className="max-w-52 text-xs text-[var(--emr-status-danger-text)]" role="alert">
-          {mutationError}
-        </p>
-      ) : null}
+      <div aria-live="polite">
+        {removing ? <span className="sr-only">프로필 사진 삭제 중</span> : null}
+        {mutationError ? (
+          <p className="max-w-52 text-xs text-[var(--emr-status-danger-text)]" role="alert">
+            {mutationError}
+          </p>
+        ) : null}
+      </div>
       {editable && onUpload ? (
-        <ProfileImageUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onUpload={onUpload} />
+        <ProfileImageUploadDialog
+          open={uploadOpen}
+          onOpenChange={setUploadDialogOpen}
+          onUpload={onUpload}
+        />
       ) : null}
     </div>
   );

@@ -65,6 +65,18 @@ project. Catalog checks and a rollback-only synthetic transaction verified self
 save/read/delete, same-workspace read, stale-write conflict, other-user/inactive/
 cross-workspace denial, and zero persistent probe rows.
 
+RECEPTION-LIVE-PR-015 adds private self-service profile avatars without changing
+the public synthetic seed bucket. A 2KB JSON prepare/finalize/discard API keeps
+raw files out of the Vercel request body; the browser uploads to an owner-derived
+private quarantine path, and the Node server verifies/decode-bounds/re-encodes a
+static 512px WebP before a self-only CAS pointer swap. Remote version
+`20260715172425` is applied to the linked synthetic/demo project. Catalog,
+transactional RLS/RPC replay, and authenticated Storage API QA verified private
+bucket configuration, owner-only quarantine, pointer-scoped same-workspace
+signed reads, direct/other-user/inactive/cross-workspace denial, pointer restore,
+and zero remaining probe objects. Existing signed/cached reads have a bounded
+five-minute residual lifetime; new signing is denied after pointer removal.
+
 ## Not Complete Yet
 
 Do not claim these as done without a scoped work item and verification evidence:

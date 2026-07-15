@@ -180,6 +180,93 @@ test("workspace staff read merges the selected-date operational status snapshot"
   });
 });
 
+test("workspace staff read signs private avatar pointers and respects removed legacy avatars", async () => {
+  const privatePath =
+    "49110000-0000-4000-8000-000000000003/avatars/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.webp";
+  const gateway = createSupabaseWorkspaceStaffReadGateway({
+    from(tableName: string) {
+      if (tableName === "user_memberships") {
+        return createSupabaseRows([
+          {
+            id: "membership-vet-suji",
+            workspace_id: "workspace-clair-cheongdam",
+            user_id: "49110000-0000-4000-8000-000000000003",
+            roles: ["vet"],
+            status: "active",
+          },
+          {
+            id: "membership-vet-removed",
+            workspace_id: "workspace-clair-cheongdam",
+            user_id: "49110000-0000-4000-8000-000000000004",
+            roles: ["vet"],
+            status: "active",
+          },
+        ]);
+      }
+      if (tableName === "user_profiles") {
+        return createSupabaseRows([
+          {
+            user_id: "49110000-0000-4000-8000-000000000003",
+            avatar_url: "legacy-suji.png",
+            avatar_storage_path: privatePath,
+            avatar_legacy_hidden: true,
+          },
+          {
+            user_id: "49110000-0000-4000-8000-000000000004",
+            avatar_url: "legacy-removed.png",
+            avatar_storage_path: null,
+            avatar_legacy_hidden: true,
+          },
+        ]);
+      }
+      return createSupabaseRows([
+        {
+          id: "49110000-0000-4000-8000-000000000003",
+          display_name: "이수지",
+          status: "active",
+        },
+        {
+          id: "49110000-0000-4000-8000-000000000004",
+          display_name: "삭제 사용자",
+          status: "active",
+        },
+      ]);
+    },
+    storage: {
+      from(bucket: string) {
+        return {
+          async createSignedUrl(path: string) {
+            return {
+              data: { signedUrl: `https://storage.local/${bucket}/signed/${path}` },
+              error: null,
+            };
+          },
+          getPublicUrl(path: string) {
+            return { data: { publicUrl: `https://storage.local/${bucket}/${path}` } };
+          },
+        };
+      },
+    },
+  } as unknown as SupabaseStaffClient);
+
+  const result = await gateway.listWorkspaceStaff({
+    role: "vet",
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    staff: [
+      {
+        id: "49110000-0000-4000-8000-000000000003",
+        avatarUrl: `https://storage.local/profile-avatars/signed/${privatePath}`,
+      },
+      { id: "49110000-0000-4000-8000-000000000004" },
+    ],
+  });
+  if (result.ok) expect(result.staff[1]).not.toHaveProperty("avatarUrl");
+});
+
 test("workspace staff read preserves staff when the status snapshot fails", async () => {
   const gateway = createSupabaseWorkspaceStaffReadGateway({
     from(tableName: string) {

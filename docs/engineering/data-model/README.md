@@ -26,6 +26,7 @@ Canonical engineering data model documents live here. Use this README as the Git
 | Home 원내 현황 operations aggregate API/read model | `home-operations-work-status-read-model.md` |
 | 직원의 workspace-scoped Presence와 최근 접속 기록 | `workspace-member-activity-presence.md` |
 | 직원의 workspace-scoped 상태 메시지와 self-write 경계 | `workspace-member-status-messages.md` |
+| 직원의 private self-service 아바타, Storage/RLS, signed-read 경계 | `private-profile-avatars.md` |
 | Guardian-centered combined checkout, payment allocation, and adjustment proposal | `billing-checkout-session-allocation-adjustment-model.md` |
 
 ## Current Files
@@ -41,6 +42,7 @@ Canonical engineering data model documents live here. Use this README as the Git
 | `order-fulfillment-handoff-contract.md` | Engineering contract for order fulfillment route shape, source snapshot, status mapping, permission requirements, migration gate, and verification baseline. |
 | `workspace-member-activity-presence.md` | Private workspace Presence, throttled last-seen persistence, RLS/RPC, stale semantics, and rollout boundary. |
 | `workspace-member-status-messages.md` | Workspace-scoped staff status message, same-workspace read, self-only RLS/RPC mutation, CAS, and content-free audit contract. |
+| `private-profile-avatars.md` | Private self-service staff avatar pointer, signed direct-upload quarantine, image normalization, Storage/RLS ownership, legacy fallback, and cleanup contract. |
 
 ## Boundaries
 

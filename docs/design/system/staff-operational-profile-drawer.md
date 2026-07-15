@@ -126,6 +126,12 @@ workspace-scoped `last_seen_at` supplies only the relative last-seen label.
   exists.
 - Opening the upload dialog always resets prior file, preview, validation, and
   request state.
+- The selected file renders as a real square cover preview. Icon-only close and
+  preview-reset controls have explicit Korean accessible names; there is no
+  separate text close button. Closing returns focus to the avatar menu trigger.
+- Progress distinguishes upload preparation, direct file upload, and server
+  image processing. Failure keeps the current avatar and exposes retryable
+  feedback without moving focus.
 - Accepted input: JPEG, PNG, or static WebP; maximum 5MB; minimum side 256px.
 - The server verifies file magic, declared MIME, successful decode, dimensions,
   pixel count, and WebP animation state. It strips metadata and re-encodes a
@@ -133,8 +139,16 @@ workspace-scoped `last_seen_at` supplies only the relative last-seen label.
 - Storage is private. Object ownership is derived from the authenticated user;
   client-supplied object paths are never trusted. Reads return short-lived
   signed URLs rather than public object URLs.
+- A bounded JSON `prepare` call returns a signed direct-upload capability for a
+  server-derived quarantine path. A JSON `finalize` call accepts only the upload
+  ID and declared MIME; the server downloads, validates, normalizes, publishes,
+  swaps the pointer, and cleans quarantine. `discard` is a best-effort cleanup
+  action for interrupted browser uploads.
 - Delete removes the owned object and clears the profile pointer as one guarded
   operation or reports a recoverable partial failure without claiming success.
+- Previously issued signed URLs or already cached responses can remain usable
+  until their five-minute lifetime ends. New signing is denied as soon as the
+  pointer is cleared, and the owned object is deleted through the Storage API.
 
 ## Profile Tab Read Contract
 
@@ -202,6 +216,9 @@ DELETE /api/users/me/avatar
 - Mutation routes validate content type, request size, normalized payload, and
   ownership before persistence. Logs and errors must not include uploaded bytes,
   signed URLs, auth tokens, or unnecessary personal data.
+- The avatar POST body is JSON-only and capped at 2KB. Raw images never traverse
+  the Route Handler request body; the private Storage object is still capped at
+  5MB and is never trusted until server finalization succeeds.
 
 ## Loading, Empty, Error, And Accessibility States
 

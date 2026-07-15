@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias for 20260716020000_private_profile_avatars.sql.
+-- The exact canonical SQL was applied to the linked synthetic/demo project
+-- under remote version 20260715172425. Keep this file statement-free so a
+-- fresh local replay executes the behavior only once from the canonical file.
