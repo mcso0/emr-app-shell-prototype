@@ -441,12 +441,14 @@ export function EditableProfileAvatar({
 
 export function ProfileHeaderActionMenu({
   canManageMember,
+  canViewSchedule = true,
   hasContact,
   onCopyContact,
   onManageMember,
   onOpenSchedule,
 }: {
   canManageMember: boolean;
+  canViewSchedule?: boolean;
   hasContact: boolean;
   onCopyContact: () => void;
   onManageMember: () => void;
@@ -463,7 +465,9 @@ export function ProfileHeaderActionMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[var(--emr-profile-header-menu-width)]">
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={onOpenSchedule}>전체 근무표 보기</DropdownMenuItem>
+          <DropdownMenuItem disabled={!canViewSchedule} onClick={onOpenSchedule}>
+            전체 근무표 보기
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>

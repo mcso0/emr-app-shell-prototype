@@ -1,6 +1,6 @@
 ---
 id: "RECEPTION-PR-012"
-status: "implemented"
+status: "done"
 area: "reception"
 priority: "P0"
 target_pr: "Staff profile side panel V2 canonical and UI contracts"
@@ -48,6 +48,8 @@ components before changing the live panel or persistence boundaries.
 
 ## Verification
 
+- Released in PR [#418](https://github.com/mcso0/emr-app-shell-prototype/pull/418)
+  with merge commit `3e61f90e832f01b5ac7ccb21f3c473f0a6f1f8a2`.
 - Figma source was rechecked for the panel, header/status/avatar variants, saved
   hover state, and upload dialog nodes listed in the canonical contract.
 - Storybook Vitest: 15 passed across the header and content specimen files.

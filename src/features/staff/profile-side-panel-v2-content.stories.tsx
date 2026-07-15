@@ -224,7 +224,7 @@ export const AssignedWorkCard: Story = {
     expect(canvas.queryByRole("button", { name: "합성 업무 항목" })).not.toBeInTheDocument();
     await openMenu(canvas.getByRole("button", { name: "합성 업무 항목 더보기" }));
     await waitFor(() =>
-      expect(body.getByRole("menuitem", { name: "업무 화면으로 이동" })).toBeInTheDocument(),
+      expect(body.getByRole("menuitem", { name: "업무 보러가기" })).toBeInTheDocument(),
     );
   },
 };
@@ -281,7 +281,7 @@ export const WorkStatusReadyAndNavigation: Story = {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     await openMenu(canvas.getByRole("button", { name: "합성 업무 항목 더보기" }));
-    await userEvent.click(body.getByRole("menuitem", { name: "업무 화면으로 이동" }));
+    await userEvent.click(body.getByRole("menuitem", { name: "업무 보러가기" }));
     expect(body.getByRole("dialog")).toBeInTheDocument();
     expect(body.getByRole("heading", { name: "업무 화면으로 이동할까요?" })).toBeInTheDocument();
     await userEvent.click(body.getByRole("button", { name: "취소" }));

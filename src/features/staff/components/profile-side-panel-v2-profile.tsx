@@ -60,10 +60,12 @@ export function ProfileAvailabilitySummary({
             <dt className="text-[var(--emr-text-tertiary)]">다음 휴무</dt>
             <dd className="text-right font-medium text-[var(--emr-text-primary)]">{eventLabel}</dd>
           </div>
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-[var(--emr-text-tertiary)]">다음 근무</dt>
-            <dd className="text-right font-medium text-[var(--emr-text-primary)]">{returnLabel}</dd>
-          </div>
+          {returnLabel ? (
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-[var(--emr-text-tertiary)]">다음 근무</dt>
+              <dd className="text-right font-medium text-[var(--emr-text-primary)]">{returnLabel}</dd>
+            </div>
+          ) : null}
         </dl>
       )}
     </section>

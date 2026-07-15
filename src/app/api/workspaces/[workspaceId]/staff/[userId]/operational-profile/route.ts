@@ -48,25 +48,28 @@ export async function GET(request: Request, { params }: RouteContext) {
     );
   }
 
-  const client =
-    identity.source === "supabase_session" ? await createClient() : null;
-  if (identity.source === "supabase_session" && !client) {
+  if (identity.source !== "supabase_session") {
+    return Response.json(
+      { ok: false, status: 503, error: "configured_data_source_required" },
+      { status: 503 },
+    );
+  }
+  const client = await createClient();
+  if (!client) {
     return Response.json(
       { ok: false, status: 500, error: "supabase_client_missing" },
       { status: 500 },
     );
   }
 
-  const permissionAdapter = client
-    ? await loadWorkspacePermissionAdapterFromDb({
-        gateway: createSupabaseWorkspacePermissionGateway(
-          client as unknown as SupabaseWorkspacePermissionClient,
-        ),
-        workspaceId,
-        sessionUserId: identity.actorUserId,
-      }).catch(() => undefined)
-    : undefined;
-  if (client && !permissionAdapter) {
+  const permissionAdapter = await loadWorkspacePermissionAdapterFromDb({
+    gateway: createSupabaseWorkspacePermissionGateway(
+      client as unknown as SupabaseWorkspacePermissionClient,
+    ),
+    workspaceId,
+    sessionUserId: identity.actorUserId,
+  }).catch(() => null);
+  if (!permissionAdapter) {
     return Response.json(
       { ok: false, status: 500, error: "db_read_failed" },
       { status: 500 },
@@ -76,11 +79,9 @@ export async function GET(request: Request, { params }: RouteContext) {
   const result = await readStaffOperationalProfile({
     actorUserId: identity.actorUserId,
     date,
-    gateway: client
-      ? createSupabaseStaffOperationalProfileGateway(
-          client as unknown as SupabaseStaffOperationalProfileClient,
-        )
-      : undefined,
+    gateway: createSupabaseStaffOperationalProfileGateway(
+      client as unknown as SupabaseStaffOperationalProfileClient,
+    ),
     permissionAdapter,
     userId,
     workspaceId,

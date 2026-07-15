@@ -1414,6 +1414,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     return (
       <WorkspaceMembershipManagement
         workspaceId={workspaceId}
+        targetUserId={searchParams.get("memberUserId") ?? undefined}
         onOpenRoleManagement={() => setActiveSection("roles")}
       />
     );

@@ -17,6 +17,8 @@ type WorkspaceStaffPresenceChannel = {
 const onlineUserIdsByWorkspace = new Map<string, ReadonlySet<string>>();
 const presenceListenersByWorkspace = new Map<string, Set<() => void>>();
 
+export type WorkspaceStaffPresenceState = "online" | "offline" | "unknown";
+
 function notifyWorkspaceStaffPresenceListeners(workspaceId: string) {
   for (const listener of presenceListenersByWorkspace.get(workspaceId) ?? []) {
     listener();
@@ -67,6 +69,15 @@ export function getWorkspaceStaffOnlineSnapshot(
   userId: string,
 ) {
   return onlineUserIdsByWorkspace.get(workspaceId)?.has(userId) ?? false;
+}
+
+export function getWorkspaceStaffPresenceSnapshot(
+  workspaceId: string,
+  userId: string,
+): WorkspaceStaffPresenceState {
+  const onlineUserIds = onlineUserIdsByWorkspace.get(workspaceId);
+  if (!onlineUserIds) return "unknown";
+  return onlineUserIds.has(userId) ? "online" : "offline";
 }
 
 export function publishWorkspaceStaffPresenceState(
@@ -157,6 +168,32 @@ export function useWorkspaceStaffOnlineStatus({
   return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }
 
+export function useWorkspaceStaffPresenceState({
+  userId,
+  workspaceId,
+}: {
+  userId: string | null;
+  workspaceId: string;
+}) {
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      subscribeWorkspaceStaffPresence(workspaceId, listener),
+    [workspaceId],
+  );
+  const getSnapshot = useCallback((): WorkspaceStaffPresenceState =>
+      userId
+        ? getWorkspaceStaffPresenceSnapshot(workspaceId, userId)
+        : "unknown",
+    [userId, workspaceId],
+  );
+
+  return useSyncExternalStore<WorkspaceStaffPresenceState>(
+    subscribe,
+    getSnapshot,
+    () => "unknown",
+  );
+}
+
 export function WorkspaceStaffPresenceReporter({
   workspaceId,
 }: {
@@ -166,7 +203,10 @@ export function WorkspaceStaffPresenceReporter({
     if (!workspaceId) return;
 
     const supabase = getBrowserSupabaseClient();
-    if (!supabase) return;
+    if (!supabase) {
+      clearWorkspaceStaffPresenceState(workspaceId);
+      return;
+    }
     const client = supabase;
     let disposed = false;
     let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
@@ -175,7 +215,10 @@ export function WorkspaceStaffPresenceReporter({
     async function start() {
       const { data } = await client.auth.getSession();
       const session = data.session;
-      if (!session || disposed) return;
+      if (!session || disposed) {
+        clearWorkspaceStaffPresenceState(workspaceId);
+        return;
+      }
 
       await client.realtime.setAuth(session.access_token);
       if (disposed) return;
@@ -204,6 +247,14 @@ export function WorkspaceStaffPresenceReporter({
         );
 
       channel.subscribe((status) => {
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          clearWorkspaceStaffPresenceState(workspaceId);
+          return;
+        }
         if (status !== "SUBSCRIBED" || disposed || !channel) return;
 
         void channel.track({

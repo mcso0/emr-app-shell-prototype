@@ -6214,7 +6214,7 @@ export function ReceptionContent() {
           mobileFullWidth: true,
           persistToUrl: false,
           returnFocusId,
-          width: 336,
+          width: 380,
         },
       });
       setRightPanelOpen(true);
@@ -8617,6 +8617,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   if (activeDrawer?.type === "staff-operational-profile") {
     return (
       <StaffOperationalProfilePanel
+        key={`${workspaceId}:${activeDrawer.id}`}
         actorUserId={
           isPreparedEmptyClinicWorkspace(workspaceId)
             ? authSession?.id
