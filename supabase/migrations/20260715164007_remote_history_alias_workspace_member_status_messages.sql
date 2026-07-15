@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The linked synthetic/demo project applied the SQL from canonical migration
+-- 20260716010000_workspace_member_status_messages.sql under remote version 20260715164007.
+-- Keep this file statement-free so fresh replay does not duplicate the schema.

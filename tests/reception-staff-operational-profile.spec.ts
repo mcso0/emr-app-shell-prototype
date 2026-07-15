@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
-async function mockStaffProfileApis(page: Page, options: { work?: boolean } = {}) {
+async function mockStaffProfileApis(
+  page: Page,
+  options: { work?: boolean } = {},
+) {
   await page.route("**/staff/*/operational-profile?**", async (route) => {
     await route.fulfill({
       status: 200,
@@ -44,14 +47,13 @@ async function openStaffProfile(page: Page, staffName = "이수지") {
   const lane = page
     .getByTestId("veterinarian-lane-header")
     .filter({ hasText: staffName });
-  const trigger = lane.locator(
-    `button[aria-label="${staffName} 수의사 옵션"]`,
-  );
+  const trigger = lane.locator(`button[aria-label="${staffName} 수의사 옵션"]`);
 
   await lane.focus();
-  await expect(
-    lane.getByTestId("veterinarian-lane-header-actions"),
-  ).toHaveCSS("opacity", "1");
+  await expect(lane.getByTestId("veterinarian-lane-header-actions")).toHaveCSS(
+    "opacity",
+    "1",
+  );
   await trigger.click();
   const menu = page.getByRole("menu");
   await expect(menu.getByRole("menuitem")).toHaveCount(2);
@@ -147,10 +149,16 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(panel.getByRole("tab")).toHaveCount(2);
   await expect(panel.getByRole("tab", { name: "업무 현황" })).toBeEnabled();
   await expect(page.locator('[data-slot="sheet-overlay"]')).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "직원 운영 프로필" })).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", { name: "직원 운영 프로필" }),
+  ).toHaveCount(0);
 
-  const contentBox = await page.getByTestId("workspace-main-content").boundingBox();
-  const panelBox = await page.getByTestId("workspace-right-panel").boundingBox();
+  const contentBox = await page
+    .getByTestId("workspace-main-content")
+    .boundingBox();
+  const panelBox = await page
+    .getByTestId("workspace-right-panel")
+    .boundingBox();
   expect(contentBox).not.toBeNull();
   expect(panelBox).not.toBeNull();
   expect(panelBox!.width).toBeCloseTo(380, 0);
@@ -163,8 +171,13 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
     "inert",
     "",
   );
-  expect((await panel.locator("header").boundingBox())?.height).toBeCloseTo(150, 0);
-  expect((await panel.locator("[data-slot='avatar']").boundingBox())?.width).toBeCloseTo(84, 0);
+  expect((await panel.locator("header").boundingBox())?.height).toBeCloseTo(
+    150,
+    0,
+  );
+  expect(
+    (await panel.locator("[data-slot='avatar']").boundingBox())?.width,
+  ).toBeCloseTo(84, 0);
 
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
@@ -265,7 +278,9 @@ test("staff work tab keeps server order, merges cursor pages by hospital date, a
 
   await cards.nth(0).getByRole("button", { name: "합성 CBC 더보기" }).click();
   await page.getByRole("menuitem", { name: "업무 보러가기" }).click();
-  const dialog = page.getByRole("dialog", { name: "업무 화면으로 이동할까요?" });
+  const dialog = page.getByRole("dialog", {
+    name: "업무 화면으로 이동할까요?",
+  });
   await expect(dialog).toContainText("합성 환자 · 합성 보호자 · 합성 CBC");
   await dialog.getByRole("button", { name: "이동" }).click();
   await expect(page).toHaveURL(
@@ -493,5 +508,103 @@ test("staff profile panel renders account, published shift, availability, and pe
     "전체 근무표 보기",
     "연락처 복사",
   ]);
-  await expect(page.getByRole("menuitem", { name: "멤버 관리에서 보기" })).toHaveCount(0);
+  await expect(
+    page.getByRole("menuitem", { name: "멤버 관리에서 보기" }),
+  ).toHaveCount(0);
+});
+
+test("self status message saves optimistically, rolls back, retries, cancels, and saves on blur", async ({
+  page,
+}) => {
+  await page.route("**/staff/*/operational-profile?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        availability: null,
+        capabilities: {
+          canEditStatusMessage: true,
+          canManageMember: false,
+          manageMemberHref: null,
+          scheduleHref: null,
+        },
+        profile: {
+          displayName: "이수지",
+          initials: "SJ",
+          jobPositionLabel: "수의사",
+          membershipStatus: "active",
+          statusMessage: "진료 중입니다",
+          statusMessageUpdatedAt: "2026-07-16T01:00:00.000Z",
+        },
+        shift: null,
+        enforcedBy: "staff-operational-profile-read",
+      },
+    });
+  });
+  const requests: Array<Record<string, unknown>> = [];
+  await page.route("**/members/me/status-message", async (route) => {
+    const payload = route.request().postDataJSON() as Record<string, unknown>;
+    requests.push(payload);
+    if (requests.length === 1) {
+      await route.fulfill({
+        status: 500,
+        json: { ok: false, error: "db_write_failed" },
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        message: payload.message,
+        updatedAt:
+          requests.length === 2
+            ? "2026-07-16T01:01:00.000Z"
+            : "2026-07-16T01:02:00.000Z",
+        enforcedBy: "workspace-status-message-self-write",
+      },
+    });
+  });
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await openStaffProfile(page);
+  const panel = page.getByRole("region", { name: "직원 운영 프로필" });
+  await expect(panel).toContainText("진료 중입니다");
+
+  await panel.getByRole("button", { name: "상태 메시지 수정" }).click();
+  const input = panel.getByRole("textbox", { name: "상태 메시지" });
+  await input.fill("  곧 복귀합니다  ");
+  await input.press("Enter");
+  await expect(panel.getByRole("alert")).toContainText("저장하지 못했어요");
+  await expect(panel).toContainText("진료 중입니다");
+  await panel.getByRole("button", { name: "다시 시도" }).click();
+  await expect(panel).toContainText("곧 복귀합니다");
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+
+  await panel.getByRole("button", { name: "상태 메시지 수정" }).click();
+  await panel.getByRole("textbox", { name: "상태 메시지" }).fill("취소할 문구");
+  await panel.getByRole("textbox", { name: "상태 메시지" }).press("Escape");
+  await expect(panel).toContainText("곧 복귀합니다");
+  expect(requests).toHaveLength(2);
+
+  await panel.getByRole("button", { name: "상태 메시지 수정" }).click();
+  await panel.getByRole("textbox", { name: "상태 메시지" }).fill("회의 중");
+  await panel
+    .getByRole("textbox", { name: "상태 메시지" })
+    .evaluate((element) => (element as HTMLInputElement).blur());
+  await expect(panel).toContainText("회의 중");
+  expect(requests).toEqual([
+    {
+      expectedUpdatedAt: "2026-07-16T01:00:00.000Z",
+      message: "곧 복귀합니다",
+    },
+    {
+      expectedUpdatedAt: "2026-07-16T01:00:00.000Z",
+      message: "곧 복귀합니다",
+    },
+    {
+      expectedUpdatedAt: "2026-07-16T01:01:00.000Z",
+      message: "회의 중",
+    },
+  ]);
 });

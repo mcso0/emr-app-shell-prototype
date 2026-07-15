@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The linked synthetic/demo project applied the SQL from canonical migration
+-- 20260715014500_staff_presence_broadcast_read_hotfix.sql under remote version 20260715062205.
+-- Keep this file statement-free so fresh replay does not duplicate the schema.

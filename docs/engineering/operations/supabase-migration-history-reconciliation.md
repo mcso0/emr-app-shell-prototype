@@ -6,14 +6,14 @@ tags:
   - supabase
   - migrations
   - release
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 ---
 
 # Supabase Migration History Reconciliation
 
 ## Current Contract
 
-The linked synthetic/demo Supabase project and `supabase/migrations` now share every remotely recorded migration version. Remote-only history count is `0` as of 2026-07-15.
+The linked synthetic/demo Supabase project and `supabase/migrations` now share every remotely recorded migration version. Remote-only history count is `0` as of 2026-07-16.
 
 Do not delete or rename the compatibility aliases below. Their SQL was applied remotely under the remote timestamp, while an identical canonical file exists locally under a different timestamp. The alias files intentionally contain comments only so fresh local replay does not execute the same SQL twice.
 
@@ -34,7 +34,11 @@ Do not delete or rename the compatibility aliases below. Their SQL was applied r
 | `20260714110720_remote_history_alias_hospital_schedule_operations.sql` | `20260711112810_hospital_schedule_operations.sql` |
 | `20260714110730_remote_history_alias_reception_staff_operational_status_snapshot.sql` | `20260714194500_reception_staff_operational_status_snapshot.sql` |
 | `20260714110738_remote_history_alias_cheongdam_reception_staff_schedule_backfill.sql` | `20260714202000_cheongdam_reception_staff_schedule_backfill.sql` |
+| `20260714154910_remote_history_alias_workspace_member_activity_presence.sql` | `20260714213000_workspace_member_activity_presence.sql` |
 | `20260714162034_remote_history_alias_workspace_operating_hours.sql` | `20260715100000_workspace_operating_hours.sql` |
+| `20260715062205_remote_history_alias_staff_presence_broadcast_read_hotfix.sql` | `20260715014500_staff_presence_broadcast_read_hotfix.sql` |
+| `20260715164007_remote_history_alias_workspace_member_status_messages.sql` | `20260716010000_workspace_member_status_messages.sql` |
+| `20260715164307_remote_history_alias_workspace_status_message_rls_initplan.sql` | `20260716011000_workspace_status_message_rls_initplan.sql` |
 
 The following remote-only SQL is preserved verbatim so a fresh local reset includes the actual remote behavior:
 
@@ -59,6 +63,18 @@ The workspace operating-hours canonical migration is also no longer pending
 behavior. Its exact SQL was applied and verified on 2026-07-15 under remote version
 `20260714162034`; the alias preserves that remote history version locally. The
 canonical version remains local-only metadata and must not be reapplied.
+
+The Presence activity and receive-only hotfix canonical migrations are likewise
+no longer pending behavior. Their SQL was applied and verified on 2026-07-15
+under remote versions `20260714154910` and `20260715062205`; the aliases preserve
+those remote history versions without replaying either schema change.
+
+The workspace member status-message canonical migration is no longer pending
+behavior. Its exact SQL was applied and catalog-verified on 2026-07-16 under
+remote version `20260715164007`; the alias preserves the remote history version
+while the canonical migration remains the deterministic fresh-replay source.
+The follow-up init-plan policy optimization was applied under remote version
+`20260715164307` and is preserved by its own comment-only alias.
 
 Do not use `migration repair --status applied` for these entries merely to make `db push` look clean. Supabase repair changes only the history table; it does not execute the migration SQL.
 

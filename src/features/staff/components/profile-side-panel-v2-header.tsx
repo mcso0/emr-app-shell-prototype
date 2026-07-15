@@ -96,9 +96,13 @@ export function StatusMessageEditor({
   const confirmedValue = value.trim();
   const displayedValue = optimisticValue ?? confirmedValue;
 
+  function constrain(valueToConstrain: string) {
+    return Array.from(valueToConstrain).slice(0, maxLength).join("");
+  }
+
   async function save(candidate: string) {
     if (saveInFlightRef.current) return;
-    const normalized = candidate.trim().slice(0, maxLength);
+    const normalized = constrain(candidate.trim());
     setEditing(false);
     setError(null);
     setRetryValue(normalized);
@@ -132,17 +136,19 @@ export function StatusMessageEditor({
     setOptimisticValue(null);
     setEditing(false);
     setError(null);
+    queueMicrotask(() => {
+      skipBlurRef.current = false;
+    });
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="relative flex min-w-0 flex-col">
       {editing ? (
         <div className="relative w-[var(--emr-profile-status-control-max-width)] max-w-full">
           <Input
             autoFocus
             aria-label="상태 메시지"
             className="h-[var(--emr-profile-status-control-height)] pr-11 text-sm"
-            maxLength={maxLength}
             value={draft}
             onBlur={() => {
               if (skipBlurRef.current) {
@@ -151,7 +157,7 @@ export function StatusMessageEditor({
               }
               void save(draft);
             }}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => setDraft(constrain(event.target.value))}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.nativeEvent.isComposing) {
                 event.preventDefault();
@@ -167,7 +173,7 @@ export function StatusMessageEditor({
             aria-hidden="true"
             className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-[11px] text-[var(--emr-text-placeholder)]"
           >
-            {draft.length}/{maxLength}
+            {Array.from(draft).length}/{maxLength}
           </span>
         </div>
       ) : editable ? (
@@ -197,7 +203,10 @@ export function StatusMessageEditor({
         {isSaving ? "상태 메시지 저장 중" : retryValue === null && !error ? "" : undefined}
       </span>
       {error ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--emr-status-danger-text)]" role="alert">
+        <div
+          className="absolute left-0 top-full z-10 mt-1.5 flex w-[var(--emr-profile-status-control-max-width)] max-w-full items-center gap-2 bg-[var(--emr-surface-rightpanel)] text-xs text-[var(--emr-status-danger-text)]"
+          role="alert"
+        >
           <span>{error}</span>
           <Button
             type="button"

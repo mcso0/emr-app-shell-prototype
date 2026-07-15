@@ -15,6 +15,8 @@ export type StaffOperationalProfile = {
   lastSeenAt?: string;
   membershipStatus: "active" | "inactive" | "suspended";
   phone?: string;
+  statusMessage?: string;
+  statusMessageUpdatedAt?: string;
   title?: string;
 };
 
@@ -33,6 +35,7 @@ export type StaffOperationalAvailability = {
 };
 
 export type StaffOperationalProfileCapabilities = {
+  canEditStatusMessage: boolean;
   canManageMember: boolean;
   manageMemberHref: string | null;
   scheduleHref: string | null;
@@ -150,6 +153,7 @@ export async function readStaffOperationalProfile({
     status: 200,
     availability: result.availability,
     capabilities: {
+      canEditStatusMessage: actorUserId === userId,
       canManageMember,
       manageMemberHref: canManageMember
         ? buildHospitalAdminHref(workspaceId, "members", {
@@ -198,7 +202,7 @@ export function createSupabaseStaffOperationalProfileGateway(
           return { ok: false, error: "not_found" };
         }
 
-        const [profiles, activities, assignments] = await Promise.all([
+        const [profiles, activities, statuses, assignments] = await Promise.all([
           readRows(client, "user_profiles", "user_id, avatar_url", {
             user_id: userId,
           }),
@@ -206,6 +210,12 @@ export function createSupabaseStaffOperationalProfileGateway(
             client,
             "workspace_member_activity",
             "workspace_id, user_id, last_seen_at",
+            { workspace_id: workspaceId, user_id: userId },
+          ),
+          readRows(
+            client,
+            "workspace_member_status_messages",
+            "workspace_id, user_id, status_message, updated_at",
             { workspace_id: workspaceId, user_id: userId },
           ),
           readRows(
@@ -240,6 +250,7 @@ export function createSupabaseStaffOperationalProfileGateway(
           ...resolveOptionalText("email", user.email),
           ...resolveOptionalText("phone", user.phone),
           ...resolveOptionalTimestamp(activities[0]?.last_seen_at),
+          ...resolveStatusMessage(statuses[0]),
           ...(typeof membership.department === "string"
             ? { department: membership.department }
             : {}),
@@ -348,6 +359,28 @@ function resolveOptionalTimestamp(
 ): Pick<StaffOperationalProfile, "lastSeenAt"> | Record<string, never> {
   if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return {};
   return { lastSeenAt: value };
+}
+
+function resolveStatusMessage(
+  row: Record<string, unknown> | undefined,
+): Pick<
+  StaffOperationalProfile,
+  "statusMessage" | "statusMessageUpdatedAt"
+> | Record<string, never> {
+  if (!row) return {};
+  const message = row.status_message;
+  const updatedAt = row.updated_at;
+  if (
+    typeof message !== "string" ||
+    !message ||
+    message !== message.trim() ||
+    Array.from(message).length > 60 ||
+    typeof updatedAt !== "string" ||
+    Number.isNaN(Date.parse(updatedAt))
+  ) {
+    throw new Error("invalid_status_message_row");
+  }
+  return { statusMessage: message, statusMessageUpdatedAt: updatedAt };
 }
 
 async function readRows(

@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-07-15
+Updated: 2026-07-16
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -56,6 +56,14 @@ RECEPTION-PR-007 adds the first reusable staff operational profile entry from th
 RECEPTION-PR-008 adds the reception veterinarian operational-status read model without storing a mutable "current status" field. The workspace/date-scoped RPC derives `available`, `scheduled`, `shift_ended`, `clocked_out`, `leave`, or `off` from published/changed shifts and explicit time-clock facts, while missing authoritative schedule data remains `unknown` and renders no badge. The reception UI can overlay `진료중` only from an already-authorized checked-in appointment overlapping the current time. Status RPC failure is isolated from the base staff list. The day-lane header keeps the approved Figma-derived radius, padding, badge, avatar, and ghost actions, with the later compact override of body-2 14/20 names, a 6px name-to-badge gap, and same-hue `200` borders while preserving the existing stable per-veterinarian tone mapping.
 
 RECEPTION-PR-009 replaces the staff modal Sheet with a Figma-aligned detached side-panel column: desktop `336px` with a `10px` content gap and no backdrop/blur, and backdrop-free full width on narrow screens. It removes reservation statistics, exposes nullable `public.users` email/phone to active same-workspace members, and adds reusable disabled-placeholder tabs. Private workspace Realtime Presence remains the only online source, while additive `workspace_member_activity` persistence stores throttled last-seen timestamps without `is_online` or session data. Both activity and receive-only Broadcast handshake migrations are applied and their synthetic authorization probes passed. The app-shell reporter owns the single Realtime channel, profile consumers read its shared snapshot without late callback binding, and the heartbeat path explicitly awaits Supabase's lazy `rpc()` result so `last_seen_at` writes actually execute.
+
+RECEPTION-LIVE-PR-014 adds the workspace-scoped staff status-message table,
+same-workspace read and self-only mutation RLS, Supabase-session-only PATCH route,
+atomic optimistic-concurrency RPC, and body-free audit metadata. Remote versions
+`20260715164007` and `20260715164307` are applied to the linked synthetic/demo
+project. Catalog checks and a rollback-only synthetic transaction verified self
+save/read/delete, same-workspace read, stale-write conflict, other-user/inactive/
+cross-workspace denial, and zero persistent probe rows.
 
 ## Not Complete Yet
 
