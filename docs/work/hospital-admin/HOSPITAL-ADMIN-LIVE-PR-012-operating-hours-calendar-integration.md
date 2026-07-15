@@ -47,6 +47,11 @@ Persist workspace operating hours, date exceptions, holiday policy, and timezone
 - Linked synthetic/demo Supabase application passed. Catalog checks confirmed both
   operating-hours tables, RLS, 8 policies, explicit grants, audit event allowlisting,
   and the Cheongdam effective-date resolver result for 2026-07-15.
+- PR #409 released staging commit `b0c1f5b` to production as merge commit
+  `76163bbf`; deployment `dpl_7rxCs3i3US5D56kZnbpKXR1QX9mC` reached Ready.
+- Production smoke confirmed weekday 09:00-19:00, Saturday 09:00-17:00,
+  Sunday closed, 72px off-hours, 36px business quarters, 36px/8px cards,
+  configured breaks, settings readback, and no browser console errors.
 - `npx tsc --noEmit`, focused ESLint, `npm run docs:check`, `npm run security:secrets`, `git diff --check`, and `npm run build` passed.
 - `npx supabase migration up --local` could not replay the repository history because the existing local catalog references legacy version `20260714193844`; the new migration itself was applied directly to local PostgreSQL and verified with the scoped replay snippet.
 
