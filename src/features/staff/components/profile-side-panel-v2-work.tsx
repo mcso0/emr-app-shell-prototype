@@ -32,8 +32,12 @@ export type ProfileAssignedWorkItem = {
   category: ProfileWorkCategory;
   categoryLabel: string;
   id: string;
+  guardianName?: string;
+  href?: string | null;
   navigationAvailable?: boolean;
+  patientName?: string;
   requestedAtLabel: string;
+  requestedByName?: string;
   status: ProfileFulfillmentStatus;
   statusLabel: string;
   subtitle?: string;
@@ -112,8 +116,9 @@ export function ProfileAssignedWorkCard({
           items={[
             {
               key: "navigate",
-              label: "업무 화면으로 이동",
-              disabled: item.navigationAvailable === false,
+              label: "업무 보러가기",
+              disabled:
+                item.navigationAvailable === false || item.href === null,
               onSelect: () => onRequestNavigation(item),
             },
           ]}
@@ -123,8 +128,16 @@ export function ProfileAssignedWorkCard({
         {item.title}
       </h4>
       {item.subtitle ? (
-        <p className="mt-1 truncate text-sm text-[var(--emr-text-secondary)]">{item.subtitle}</p>
+        <p className="mt-1 line-clamp-2 text-sm text-[var(--emr-text-secondary)]">{item.subtitle}</p>
       ) : null}
+      {item.patientName || item.guardianName ? (
+        <p className="mt-2 truncate text-xs text-[var(--emr-text-secondary)]">
+          {[item.patientName, item.guardianName].filter(Boolean).join(" · ")}
+        </p>
+      ) : null}
+      <p className="mt-1 truncate text-xs text-[var(--emr-text-tertiary)]">
+        요청자 {item.requestedByName || "미등록"}
+      </p>
       <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--emr-text-tertiary)]">
         <CdsFilesClockIcon aria-hidden="true" className="size-3.5" />
         {item.requestedAtLabel}
@@ -173,7 +186,9 @@ export function ProfileWorkStatusTab({
   groups,
   hasNextPage = false,
   loadingNextPage = false,
+  nextPageError = false,
   onLoadMore,
+  onRetryNextPage,
   onRequestNavigation,
   onRetry,
   state,
@@ -181,7 +196,9 @@ export function ProfileWorkStatusTab({
   groups: ProfileWorkDateGroup[];
   hasNextPage?: boolean;
   loadingNextPage?: boolean;
+  nextPageError?: boolean;
   onLoadMore?: () => void;
+  onRetryNextPage?: () => void;
   onRequestNavigation: (item: ProfileAssignedWorkItem) => void;
   onRetry?: () => void;
   state: ProfileWorkStatusState;
@@ -225,6 +242,21 @@ export function ProfileWorkStatusTab({
   return (
     <div className="grid gap-4">
       <StaffWorkTimeline groups={groups} onRequestNavigation={onRequestNavigation} />
+      {nextPageError ? (
+        <EmrInlineAlert
+          severity="error"
+          title="이전 업무를 더 불러오지 못했어요"
+          action={
+            onRetryNextPage ? (
+              <Button type="button" size="sm" variant="outline" onClick={onRetryNextPage}>
+                다시 시도
+              </Button>
+            ) : undefined
+          }
+        >
+          이미 불러온 업무는 그대로 유지돼요.
+        </EmrInlineAlert>
+      ) : null}
       {hasNextPage ? (
         <Button
           type="button"
@@ -256,7 +288,11 @@ export function WorkNavigationDialog({
         <DialogHeader>
           <DialogTitle>업무 화면으로 이동할까요?</DialogTitle>
           <DialogDescription>
-            {item ? `${item.title}의 상세 업무 화면을 엽니다.` : "선택한 업무 화면을 엽니다."}
+            {item
+              ? [item.patientName, item.guardianName, item.title]
+                  .filter(Boolean)
+                  .join(" · ") + " 업무 화면을 엽니다."
+              : "선택한 업무 화면을 엽니다."}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

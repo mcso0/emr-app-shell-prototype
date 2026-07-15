@@ -26,6 +26,12 @@ This model is limited to synthetic local/dev/test operations. It records plannin
   veterinarian user ID, derived status code, and source. It does not expose clock
   timestamps, rates, notes, or mutable schedule fields. The reception staff API
   performs its existing `reception:view` check before invoking this snapshot.
+- The staff operational-profile read resolves the workspace timezone and reads
+  every schedule week covering today through today + 13 days. Only `published`
+  and `changed` weeks participate. It returns today's published shift, the
+  nearest leave/off period, and the first following work shift as a minimal
+  display projection; request reasons, private notes, hourly rates, and editable
+  schedule fields remain excluded.
 
 ## Reception operational status derivation
 
@@ -46,7 +52,7 @@ This model is limited to synthetic local/dev/test operations. It records plannin
 
 ## RLS and RPC notes
 
-All public tables have RLS enabled and explicit `authenticated` grants. RPCs use security-definer functions with a fixed search path and check `private.clair_is_active_workspace_member`, `private.clair_is_workspace_admin`, or the caller's own staff profile before mutation. The operational-status snapshot follows the existing active-member schedule-read boundary, while the reception route separately enforces `reception:view`.
+All public tables have RLS enabled and explicit `authenticated` grants. RPCs use security-definer functions with a fixed search path and check `private.clair_is_active_workspace_member`, `private.clair_is_workspace_admin`, or the caller's own staff profile before mutation. The operational-status snapshot and minimal staff operational-profile read follow the existing active-member, same-workspace schedule-read boundary, while the reception status route separately enforces `reception:view`. Schedule and membership management destinations keep their own server permission boundaries; a profile-panel deep link is not authorization.
 
 ## Verification boundary
 

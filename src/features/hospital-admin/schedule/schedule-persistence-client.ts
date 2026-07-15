@@ -39,11 +39,13 @@ export function createHospitalSchedulePersistenceAdapter({
 }
 
 export async function readPersistedHospitalSchedule({
+  weekStart,
   workspaceId,
 }: {
+  weekStart?: string;
   workspaceId: string;
 }): Promise<HospitalScheduleRemoteState | null> {
-  const params = new URLSearchParams({ weekStart: "2026-07-06" });
+  const params = new URLSearchParams({ weekStart: weekStart ?? "2026-07-06" });
   const response = await fetch(
     `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/schedule?${params.toString()}`,
   );
@@ -80,6 +82,8 @@ function parseRemoteState(value: unknown): HospitalScheduleRemoteState {
   const snapshot = asRecord(value);
   const week = asRecord(snapshot.week);
   return {
+    weekStart:
+      typeof week.weekStart === "string" ? week.weekStart : "2026-07-06",
     staff: asArray(snapshot.staff).map(parseStaff).filter(isStaff),
     shifts: asArray(snapshot.shifts).map(parseShift).filter(isShift),
     requests: asArray(snapshot.requests).map(parseRequest).filter(isRequest),

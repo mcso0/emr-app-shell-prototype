@@ -83,6 +83,7 @@ import type { WorkspaceRoleCatalogSnapshot } from "@/features/auth/server-worksp
 
 type WorkspaceMembershipManagementProps = {
   onOpenRoleManagement?: () => void;
+  targetUserId?: string;
   workspaceId: string;
 };
 
@@ -191,6 +192,7 @@ function MembershipDetailItem({
 
 export function WorkspaceMembershipManagement({
   onOpenRoleManagement,
+  targetUserId,
   workspaceId,
 }: WorkspaceMembershipManagementProps) {
   const { hydrated, hydrate, session } = useAuthClient();
@@ -208,6 +210,7 @@ export function WorkspaceMembershipManagement({
   const [selectedMembership, setSelectedMembership] = useState<SessionWorkspaceMembership | null>(
     null
   );
+  const openedTargetUserIdRef = useRef<string | null>(null);
   const [editingMembership, setEditingMembership] = useState<SessionWorkspaceMembership | null>(
     null
   );
@@ -286,6 +289,20 @@ export function WorkspaceMembershipManagement({
       getRowEmail(left).localeCompare(getRowEmail(right))
     );
   }, [state.invitations, state.memberships, workspaceId]);
+
+  useEffect(() => {
+    if (!targetUserId || openedTargetUserIdRef.current === targetUserId) return;
+    const target = workspaceRows.find(
+      (row): row is MemberRow =>
+        row.rowType === "member" && row.userSessionId === targetUserId,
+    );
+    if (!target) return;
+    const timer = window.setTimeout(() => {
+      openedTargetUserIdRef.current = targetUserId;
+      setSelectedMembership(target);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [targetUserId, workspaceRows]);
   const localPermissionRoles = useMemo(
     () => getSessionWorkspacePermissionRoles(state, workspaceId),
     [state, workspaceId]

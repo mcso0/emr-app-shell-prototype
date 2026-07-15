@@ -39,6 +39,7 @@ export type HospitalScheduleRemoteState = Pick<
   "requests" | "shifts" | "staff"
 > & {
   publication: HospitalSchedulePublication;
+  weekStart: string;
 };
 
 let persistenceAdapter: HospitalSchedulePersistenceAdapter | null = null;
@@ -174,7 +175,7 @@ export const useHospitalScheduleStore = create<HospitalScheduleStore>()((set, ge
       dataState: "ready",
       activeDate: remote.shifts.some((shift) => shift.date === state.activeDate)
         ? state.activeDate
-        : state.weekStart,
+        : remote.weekStart,
     })),
   reset: () =>
     set({

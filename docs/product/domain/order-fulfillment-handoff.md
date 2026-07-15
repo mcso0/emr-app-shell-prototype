@@ -13,9 +13,10 @@ related_work:
   - DEN-335
   - DEN-340
   - DEN-349
+  - RECEPTION-PR-013
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-31T00:00:00.000Z
+last_updated: 2026-07-16T00:00:00.000Z
 description: >-
   Defines the product-level handoff from chart-confirmed orders to fulfillment
   queues and billing readiness.
@@ -128,6 +129,27 @@ Fulfillment work item states are intentionally operational. They do not replace 
 * Workspace catalog confirmations can create fulfillment work items from the applied snapshot even when the selected catalog row does not yet exist in the legacy mock `orders` fixture. The fulfillment source snapshot remains minimal and should contain display, billing, instruction, routing, and service item context only.
 * Every mutation must be workspace-scoped and actor-scoped.
 * Unauthorized, cross-workspace, invalid transition, and duplicate mutation attempts must keep state unchanged and return safe errors.
+
+## Staff Profile Assigned-Work Read
+
+The profile side panel may summarize work items currently assigned to a staff
+member without creating a second work-history model.
+
+- The read is authenticated, workspace-scoped, and limited to an active
+  same-workspace target membership.
+- Active work follows the current `assigned_to_user_id`. Terminal work retains
+  its last assignee, so completed/cancelled/returned rows remain attributable
+  without adding a duplicate assignment-history table.
+- Pages contain at most 20 rows ordered by `created_at DESC, id DESC`; the opaque
+  cursor represents only that stable boundary. Group labels use the hospital
+  workspace timezone.
+- The response is a minimal presentation projection: category, display title,
+  patient/guardian/requestor labels, status, request time, and operating date.
+  It never returns the complete source snapshot or internal instructions.
+- A detail URL is a server-filtered capability, not an authorization grant. It
+  is omitted unless the caller has `lab:view`, `imaging:view`, or the shared
+  phase-1 `dispensing:view` permission for dispensing/treatment. The target
+  module still performs its own server-side checks.
 
 ## Billing State Matrix
 

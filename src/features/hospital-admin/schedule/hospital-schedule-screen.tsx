@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrEmptyState } from "@/components/emr/empty-state";
@@ -756,6 +757,7 @@ function StaffDetailSheet({ staffId, onClose }: { staffId: string | null; onClos
 }
 
 export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string }) {
+  const searchParams = useSearchParams();
   const { hydrated, hydrate, session } = useAuthClient();
   const surface = useHospitalScheduleStore((state) => state.surface);
   const setSurface = useHospitalScheduleStore((state) => state.setSurface);
@@ -788,6 +790,8 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
   const publishBlocked = conflicts.length > 0 || coverageIssues.length > 0;
   const dates = getWeekDates(weekStart);
   const pendingRequests = requests.filter((request) => request.status === "pending");
+  const requestedWeekStart = searchParams.get("weekStart") ?? undefined;
+  const requestedStaffId = searchParams.get("staffId");
 
   useEffect(() => {
     hydrate();
@@ -802,7 +806,10 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
 
     let cancelled = false;
     const refresh = async () => {
-      const remote = await readPersistedHospitalSchedule({ workspaceId });
+      const remote = await readPersistedHospitalSchedule({
+        weekStart: requestedWeekStart,
+        workspaceId,
+      });
       if (!remote || cancelled) {
         if (!cancelled) setDataState("ready");
         return;
@@ -831,7 +838,21 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
       cancelled = true;
       setHospitalSchedulePersistenceAdapter(null);
     };
-  }, [hydrateRemoteSchedule, hydrated, session?.role, setDataState, workspaceId]);
+  }, [
+    hydrateRemoteSchedule,
+    hydrated,
+    requestedWeekStart,
+    session?.role,
+    setDataState,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    if (!requestedStaffId) return;
+    if (!staff.some((member) => member.id === requestedStaffId)) return;
+    const timer = window.setTimeout(() => setStaffSheetId(requestedStaffId), 0);
+    return () => window.clearTimeout(timer);
+  }, [requestedStaffId, staff]);
 
   const moveActiveDate = (direction: -1 | 1) => {
     const currentIndex = dates.indexOf(activeDate);

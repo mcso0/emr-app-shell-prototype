@@ -1,5 +1,45 @@
 import { expect, test, type Page } from "@playwright/test";
 
+async function mockStaffProfileApis(page: Page, options: { work?: boolean } = {}) {
+  await page.route("**/staff/*/operational-profile?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        availability: null,
+        capabilities: {
+          canManageMember: false,
+          manageMemberHref: null,
+          scheduleHref:
+            "/w/clair-demo/hospital-admin?modulePanel=open&section=schedule&staffId=staff-suji&weekStart=2026-04-27",
+        },
+        profile: {
+          displayName: "이수지",
+          initials: "SJ",
+          jobPositionLabel: "수의사",
+          department: "진료",
+          membershipStatus: "active",
+        },
+        shift: null,
+        enforcedBy: "staff-operational-profile-read",
+      },
+    });
+  });
+  if (options.work === false) return;
+  await page.route("**/staff/*/work-items**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        items: [],
+        nextCursor: null,
+        timezone: "Asia/Seoul",
+        enforcedBy: "staff-assigned-work-items-read",
+      },
+    });
+  });
+}
+
 async function openStaffProfile(page: Page, staffName = "이수지") {
   const lane = page
     .getByTestId("veterinarian-lane-header")
@@ -89,6 +129,7 @@ test("veterinarian lane menu shares filter state and protects the final lane", a
 test("staff profile panel is non-modal, detached, and returns focus after keyboard close", async ({
   page,
 }) => {
+  await mockStaffProfileApis(page);
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
   const { trigger } = await openStaffProfile(page);
 
@@ -97,14 +138,14 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(panel).toContainText("이수지");
   await expect(panel).toContainText("계정 정보");
   await expect(panel).toContainText("오늘 근무 정보");
-  await expect(panel).toContainText("오늘 등록된 근무가 없어요");
+  await expect(panel).toContainText("오늘 게시된 근무가 없어요");
   await expect(panel).not.toContainText("선택 날짜 예약");
   await expect(panel.getByRole("tab", { name: "프로필" })).toHaveAttribute(
     "aria-selected",
     "true",
   );
-  await expect(panel.getByRole("tab", { name: "tab2" })).toBeDisabled();
-  await expect(panel.getByRole("tab", { name: "tab3" })).toBeDisabled();
+  await expect(panel.getByRole("tab")).toHaveCount(2);
+  await expect(panel.getByRole("tab", { name: "업무 현황" })).toBeEnabled();
   await expect(page.locator('[data-slot="sheet-overlay"]')).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "직원 운영 프로필" })).toHaveCount(0);
 
@@ -112,7 +153,7 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   const panelBox = await page.getByTestId("workspace-right-panel").boundingBox();
   expect(contentBox).not.toBeNull();
   expect(panelBox).not.toBeNull();
-  expect(panelBox!.width).toBeCloseTo(336, 0);
+  expect(panelBox!.width).toBeCloseTo(380, 0);
   expect(panelBox!.x - (contentBox!.x + contentBox!.width)).toBeCloseTo(10, 0);
   await expect(page.getByTestId("workspace-right-panel")).toHaveCSS(
     "backdrop-filter",
@@ -122,6 +163,8 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
     "inert",
     "",
   );
+  expect((await panel.locator("header").boundingBox())?.height).toBeCloseTo(150, 0);
+  expect((await panel.locator("[data-slot='avatar']").boundingBox())?.width).toBeCloseTo(84, 0);
 
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
@@ -133,6 +176,173 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await panel.getByRole("button", { name: "직원 운영 프로필 닫기" }).click();
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();
+});
+
+test("staff work tab keeps server order, merges cursor pages by hospital date, and confirms permitted navigation", async ({
+  page,
+}) => {
+  await mockStaffProfileApis(page, { work: false });
+  let pageCount = 0;
+  await page.route("**/staff/*/work-items**", async (route) => {
+    pageCount += 1;
+    await route.fulfill({
+      status: 200,
+      json:
+        pageCount === 1
+          ? {
+              ok: true,
+              items: [
+                {
+                  category: "lab",
+                  categoryLabel: "임상병리",
+                  description: "혈구 검사",
+                  guardianName: "합성 보호자",
+                  href: "/w/clair-demo/lab?encounterId=encounter-1&orderId=order-1&modulePanel=open",
+                  id: "work-newest",
+                  operatingDate: "2026-05-01",
+                  orderId: "order-1",
+                  patientName: "합성 환자",
+                  queueType: "lab",
+                  requestedAt: "2026-05-01T09:00:00.000Z",
+                  requestedByName: "합성 요청자",
+                  status: "requested",
+                  statusLabel: "요청",
+                  title: "합성 CBC",
+                },
+                {
+                  category: "procedure",
+                  categoryLabel: "처치",
+                  href: null,
+                  id: "work-second",
+                  operatingDate: "2026-05-01",
+                  orderId: "order-2",
+                  queueType: "treatment",
+                  requestedAt: "2026-05-01T08:00:00.000Z",
+                  status: "in_progress",
+                  statusLabel: "진행 중",
+                  title: "합성 처치",
+                },
+              ],
+              nextCursor: "opaque-next",
+              timezone: "Asia/Seoul",
+            }
+          : {
+              ok: true,
+              items: [
+                {
+                  category: "imaging",
+                  categoryLabel: "영상검사",
+                  href: null,
+                  id: "work-older",
+                  operatingDate: "2026-05-01",
+                  orderId: "order-3",
+                  queueType: "imaging",
+                  requestedAt: "2026-05-01T07:00:00.000Z",
+                  status: "completed",
+                  statusLabel: "완료",
+                  title: "합성 X-ray",
+                },
+              ],
+              nextCursor: null,
+              timezone: "Asia/Seoul",
+            },
+    });
+  });
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await openStaffProfile(page);
+  const panel = page.getByRole("region", { name: "직원 운영 프로필" });
+  await panel.getByRole("tab", { name: "업무 현황" }).click();
+
+  const cards = panel.locator("[data-work-item-id]");
+  await expect(cards).toHaveCount(2);
+  await expect(cards.nth(0)).toContainText("합성 CBC");
+  await expect(cards.nth(1)).toContainText("합성 처치");
+  await expect(panel.getByText("오늘", { exact: true })).toHaveCount(1);
+  await panel.getByRole("button", { name: "이전 업무 더보기" }).click();
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(2)).toContainText("합성 X-ray");
+  await expect(panel.getByText("오늘", { exact: true })).toHaveCount(1);
+
+  await cards.nth(0).getByRole("button", { name: "합성 CBC 더보기" }).click();
+  await page.getByRole("menuitem", { name: "업무 보러가기" }).click();
+  const dialog = page.getByRole("dialog", { name: "업무 화면으로 이동할까요?" });
+  await expect(dialog).toContainText("합성 환자 · 합성 보호자 · 합성 CBC");
+  await dialog.getByRole("button", { name: "이동" }).click();
+  await expect(page).toHaveURL(
+    /\/w\/clair-demo\/lab\?encounterId=encounter-1&orderId=order-1&modulePanel=open/,
+  );
+});
+
+test("switching staff remounts the panel and never reuses the previous staff work state", async ({
+  page,
+}) => {
+  await page.route("**/staff/*/operational-profile?**", async (route) => {
+    const isDoyun = route.request().url().includes("user-vet-doyun");
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        availability: null,
+        capabilities: {
+          canManageMember: false,
+          manageMemberHref: null,
+          scheduleHref: null,
+        },
+        profile: {
+          displayName: isDoyun ? "김도윤" : "이수지",
+          initials: isDoyun ? "DY" : "SJ",
+          jobPositionLabel: "수의사",
+          membershipStatus: "active",
+        },
+        shift: null,
+        enforcedBy: "staff-operational-profile-read",
+      },
+    });
+  });
+  await page.route("**/staff/*/work-items**", async (route) => {
+    const isDoyun = route.request().url().includes("user-vet-doyun");
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        items: [
+          {
+            category: "lab",
+            categoryLabel: "임상병리",
+            href: null,
+            id: isDoyun ? "work-doyun" : "work-suji",
+            operatingDate: "2026-05-01",
+            orderId: isDoyun ? "order-doyun" : "order-suji",
+            queueType: "lab",
+            requestedAt: "2026-05-01T09:00:00.000Z",
+            status: "requested",
+            statusLabel: "요청",
+            title: isDoyun ? "김도윤 업무" : "이수지 업무",
+          },
+        ],
+        nextCursor: null,
+        timezone: "Asia/Seoul",
+        enforcedBy: "staff-assigned-work-items-read",
+      },
+    });
+  });
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await openStaffProfile(page, "이수지");
+  const panel = page.getByRole("region", { name: "직원 운영 프로필" });
+  await panel.getByRole("tab", { name: "업무 현황" }).click();
+  await expect(panel).toContainText("이수지 업무");
+
+  await openStaffProfile(page, "김도윤");
+  await expect(panel.getByRole("tab", { name: "프로필" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(panel).toContainText("김도윤");
+  await expect(panel).not.toContainText("이수지 업무");
+  await panel.getByRole("tab", { name: "업무 현황" }).click();
+  await expect(panel).toContainText("김도윤 업무");
+  await expect(panel).not.toContainText("이수지 업무");
 });
 
 test("staff profile panel keeps loading, error, retry, and offline states distinct", async ({
@@ -153,6 +363,12 @@ test("staff profile panel keeps loading, error, retry, and offline states distin
       status: 200,
       json: {
         ok: true,
+        availability: null,
+        capabilities: {
+          canManageMember: false,
+          manageMemberHref: null,
+          scheduleHref: null,
+        },
         profile: {
           displayName: "이수지",
           initials: "SJ",
@@ -178,13 +394,14 @@ test("staff profile panel keeps loading, error, retry, and offline states distin
   );
   allowSuccess = true;
   await drawer.getByRole("button", { name: "다시 시도" }).click();
-  await expect(drawer).toContainText("오프라인");
-  await expect(drawer).toContainText("오늘 등록된 근무가 없어요");
+  await expect(drawer).toContainText("상태 확인 중");
+  await expect(drawer).toContainText("오늘 게시된 근무가 없어요");
 });
 
 test("touch viewport keeps the lane action visible and uses a full-width panel", async ({
   page,
 }) => {
+  await mockStaffProfileApis(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
 
@@ -207,7 +424,7 @@ test("touch viewport keeps the lane action visible and uses a full-width panel",
   expect(box!.width).toBeGreaterThanOrEqual(389);
 });
 
-test("staff profile panel labels a non-today shift from the selected date source", async ({
+test("staff profile panel renders account, published shift, availability, and permission-filtered header menu", async ({
   page,
 }) => {
   await page.route("**/staff/*/operational-profile?**", async (route) => {
@@ -215,6 +432,23 @@ test("staff profile panel labels a non-today shift from the selected date source
       status: 200,
       json: {
         ok: true,
+        availability: {
+          event: { date: "2026-05-04", kind: "off" },
+          returnShift: {
+            date: "2026-05-05",
+            startMinutes: 600,
+            endMinutes: 1080,
+            kind: "clinical",
+            workLabel: "진료",
+            locationLabel: "제2진료실",
+          },
+        },
+        capabilities: {
+          canManageMember: false,
+          manageMemberHref: null,
+          scheduleHref:
+            "/w/clair-demo/hospital-admin?modulePanel=open&section=schedule&staffId=staff-suji&weekStart=2026-04-27",
+        },
         profile: {
           displayName: "이수지",
           email: "suji@example.test",
@@ -243,13 +477,21 @@ test("staff profile panel labels a non-today shift from the selected date source
   await openStaffProfile(page);
 
   const drawer = page.getByRole("region", { name: "직원 운영 프로필" });
-  await expect(drawer).toContainText("5월 2일 근무 정보");
-  await expect(drawer).toContainText("09:00 - 18:00");
+  await expect(drawer).toContainText("오늘 근무 정보");
+  await expect(drawer).toContainText("09:00–18:00");
   await expect(drawer).toContainText("제2진료실");
   await expect(drawer).toContainText("근무 예정");
-  await expect(drawer).not.toContainText("오늘 근무 정보");
+  await expect(drawer).toContainText("5월 4일 휴무");
+  await expect(drawer).toContainText("5월 5일 10:00 복귀");
   await expect(drawer).toContainText("suji@example.test");
   await expect(drawer).toContainText("010-0000-0000");
   await drawer.getByRole("button", { name: "이메일 복사" }).click();
-  await expect(page.getByText("이메일을 복사했어")).toBeVisible();
+  await expect(page.getByText("이메일을 복사했어요")).toBeVisible();
+  await drawer.getByRole("button", { name: "프로필 작업 더보기" }).click();
+  await expect(page.getByRole("menuitem")).toHaveCount(2);
+  await expect(page.getByRole("menuitem").allTextContents()).resolves.toEqual([
+    "전체 근무표 보기",
+    "연락처 복사",
+  ]);
+  await expect(page.getByRole("menuitem", { name: "멤버 관리에서 보기" })).toHaveCount(0);
 });

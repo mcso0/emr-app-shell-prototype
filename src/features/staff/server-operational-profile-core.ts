@@ -1,10 +1,8 @@
 import {
-  createMockWorkspacePermissionAdapter,
   resolveWorkspacePermission,
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
-import { mockStaffUsers } from "@/mocks/emr-domain";
 import { AVATAR_STORAGE_BUCKET } from "@/features/staff/staff-avatar";
 
 export type StaffOperationalProfile = {
@@ -29,6 +27,17 @@ export type StaffOperationalShift = {
   workLabel: string;
 };
 
+export type StaffOperationalAvailability = {
+  event: Pick<StaffOperationalShift, "date" | "kind">;
+  returnShift?: StaffOperationalShift;
+};
+
+export type StaffOperationalProfileCapabilities = {
+  canManageMember: boolean;
+  manageMemberHref: string | null;
+  scheduleHref: string | null;
+};
+
 export type StaffOperationalProfileGateway = {
   readProfile(input: {
     date: string;
@@ -37,7 +46,10 @@ export type StaffOperationalProfileGateway = {
   }): Promise<
     | {
         ok: true;
+        availability: StaffOperationalAvailability | null;
+        availabilityError?: "schedule_read_failed";
         profile: StaffOperationalProfile;
+        scheduleProfileId?: string;
         shift: StaffOperationalShift | null;
         shiftError?: "schedule_read_failed";
       }
@@ -73,9 +85,14 @@ export type StaffOperationalProfileReadResult =
   | {
       ok: true;
       status: 200;
+      availability: StaffOperationalAvailability | null;
+      capabilities: StaffOperationalProfileCapabilities;
       profile: StaffOperationalProfile;
       shift: StaffOperationalShift | null;
-      sectionErrors?: { shift: "schedule_read_failed" };
+      sectionErrors?: {
+        availability?: "schedule_read_failed";
+        shift?: "schedule_read_failed";
+      };
       enforcedBy: "staff-operational-profile-read";
     }
   | {
@@ -89,15 +106,15 @@ export type StaffOperationalProfileReadResult =
 export async function readStaffOperationalProfile({
   actorUserId,
   date,
-  gateway = createMockStaffOperationalProfileGateway(),
-  permissionAdapter = createDemoStaffOperationalProfilePermissionAdapter(),
+  gateway,
+  permissionAdapter,
   userId,
   workspaceId,
 }: {
   actorUserId: string | null;
   date: string;
-  gateway?: StaffOperationalProfileGateway;
-  permissionAdapter?: WorkspacePermissionAdapter;
+  gateway: StaffOperationalProfileGateway;
+  permissionAdapter: WorkspacePermissionAdapter;
   userId: string;
   workspaceId: string;
 }): Promise<StaffOperationalProfileReadResult> {
@@ -116,46 +133,42 @@ export async function readStaffOperationalProfile({
 
   const result = await gateway.readProfile({ date, userId, workspaceId });
   if (!result.ok) {
-    if (result.error === "not_found") {
-      return { ok: false, status: 404, error: "not_found" };
-    }
-    return { ok: false, status: 500, error: "db_read_failed" };
+    return result.error === "not_found"
+      ? { ok: false, status: 404, error: "not_found" }
+      : { ok: false, status: 500, error: "db_read_failed" };
   }
+
+  const canManageMember = permission.effectivePermissionIds.includes(
+    "role_permission:manage",
+  );
+  const canViewSchedule = permission.effectivePermissionIds.includes(
+    "hospital_settings:view",
+  );
 
   return {
     ok: true,
     status: 200,
+    availability: result.availability,
+    capabilities: {
+      canManageMember,
+      manageMemberHref: canManageMember
+        ? buildHospitalAdminHref(workspaceId, "members", {
+            memberUserId: userId,
+          })
+        : null,
+      scheduleHref: canViewSchedule
+        ? buildHospitalAdminHref(workspaceId, "schedule", {
+            ...(result.scheduleProfileId
+              ? { staffId: result.scheduleProfileId }
+              : {}),
+            weekStart: getWeekStart(date),
+          })
+        : null,
+    },
     profile: result.profile,
     shift: result.shift,
-    ...(result.shiftError
-      ? { sectionErrors: { shift: result.shiftError } }
-      : {}),
+    ...buildSectionErrors(result),
     enforcedBy: "staff-operational-profile-read",
-  };
-}
-
-export function createMockStaffOperationalProfileGateway(): StaffOperationalProfileGateway {
-  return {
-    async readProfile({ userId, workspaceId }) {
-      const staff = mockStaffUsers.find(
-        (item) => item.id === userId && item.workspaceId === workspaceId,
-      );
-      if (!staff) return { ok: false, error: "not_found" };
-
-      const jobPositionLabel = getMockJobPositionLabel(staff.role);
-      return {
-        ok: true,
-        profile: {
-          avatarUrl: staff.avatarUrl ?? undefined,
-          department: staff.department,
-          displayName: staff.name,
-          initials: staff.initial,
-          jobPositionLabel,
-          membershipStatus: "active",
-        },
-        shift: null,
-      };
-    },
   };
 }
 
@@ -185,30 +198,26 @@ export function createSupabaseStaffOperationalProfileGateway(
           return { ok: false, error: "not_found" };
         }
 
-        const profiles = await readRows(
-          client,
-          "user_profiles",
-          "user_id, avatar_url",
-          { user_id: userId },
-        );
-        // Keep the profile readable while the additive activity migration is
-        // rolling out. Presence remains authoritative for the live state; a
-        // missing activity snapshot only removes the last-seen enhancement.
-        const activities = await readOptionalRows(
-          client,
-          "workspace_member_activity",
-          "workspace_id, user_id, last_seen_at",
-          { workspace_id: workspaceId, user_id: userId },
-        );
-        const assignments = await readRows(
-          client,
-          "workspace_membership_job_position_assignments",
-          "workspace_id, membership_id, job_position_id",
-          {
-            workspace_id: workspaceId,
-            membership_id: String(membership.id),
-          },
-        );
+        const [profiles, activities, assignments] = await Promise.all([
+          readRows(client, "user_profiles", "user_id, avatar_url", {
+            user_id: userId,
+          }),
+          readOptionalRows(
+            client,
+            "workspace_member_activity",
+            "workspace_id, user_id, last_seen_at",
+            { workspace_id: workspaceId, user_id: userId },
+          ),
+          readRows(
+            client,
+            "workspace_membership_job_position_assignments",
+            "workspace_id, membership_id, job_position_id",
+            {
+              workspace_id: workspaceId,
+              membership_id: String(membership.id),
+            },
+          ),
+        ]);
         const jobPositionId = assignments[0]?.job_position_id;
         const positions =
           typeof jobPositionId === "string"
@@ -243,32 +252,87 @@ export function createSupabaseStaffOperationalProfileGateway(
           ...resolveAvatar(client, profiles[0]?.avatar_url),
         };
 
-        const { data: scheduleData, error: scheduleError } = await client.rpc(
-          "hospital_schedule_read_snapshot",
-          {
-            p_workspace_id: workspaceId,
-            p_week_start: getWeekStart(date),
-          },
+        const weekStarts = getAvailabilityWeekStarts(date);
+        const scheduleReads = await Promise.all(
+          weekStarts.map(async (weekStart) => ({
+            weekStart,
+            ...(await client.rpc("hospital_schedule_read_snapshot", {
+              p_week_start: weekStart,
+              p_workspace_id: workspaceId,
+            })),
+          })),
         );
-        if (scheduleError) {
-          return {
-            ok: true,
-            profile,
-            shift: null,
-            shiftError: "schedule_read_failed",
-          };
-        }
+        const readableSnapshots = scheduleReads
+          .filter((read) => !read.error)
+          .map((read) => read.data);
+        const publishedSnapshots = readableSnapshots.filter(isPublishedSnapshot);
+        const todayWeekStart = getWeekStart(date);
+        const todayRead = scheduleReads.find(
+          (read) => read.weekStart === todayWeekStart,
+        );
+        const scheduleProfileId = findScheduleProfileId(
+          readableSnapshots,
+          String(membership.id),
+        );
+        const availabilityError = scheduleReads.some((read) => read.error);
+        const shiftError = Boolean(todayRead?.error);
 
         return {
           ok: true,
+          availability: availabilityError
+            ? null
+            : readAvailability(
+                publishedSnapshots,
+                scheduleProfileId,
+                date,
+              ),
+          ...(availabilityError
+            ? { availabilityError: "schedule_read_failed" as const }
+            : {}),
           profile,
-          shift: readShift(scheduleData, String(membership.id), date),
+          ...(scheduleProfileId ? { scheduleProfileId } : {}),
+          shift: shiftError
+            ? null
+            : readShift(publishedSnapshots, scheduleProfileId, date),
+          ...(shiftError
+            ? { shiftError: "schedule_read_failed" as const }
+            : {}),
         };
       } catch {
         return { ok: false, error: "db_read_failed" };
       }
     },
   };
+}
+
+function buildSectionErrors(
+  result: Extract<
+    Awaited<ReturnType<StaffOperationalProfileGateway["readProfile"]>>,
+    { ok: true }
+  >,
+): Pick<StaffOperationalProfileReadResult & { ok: true }, "sectionErrors"> | Record<string, never> {
+  if (!result.shiftError && !result.availabilityError) return {};
+  return {
+    sectionErrors: {
+      ...(result.availabilityError
+        ? { availability: result.availabilityError }
+        : {}),
+      ...(result.shiftError ? { shift: result.shiftError } : {}),
+    },
+  };
+}
+
+function buildHospitalAdminHref(
+  workspaceId: string,
+  section: "members" | "schedule",
+  extra: Record<string, string>,
+) {
+  const params = new URLSearchParams({
+    modulePanel: "open",
+    section,
+    ...extra,
+  });
+  return `/w/${encodeURIComponent(workspaceId)}/hospital-admin?${params.toString()}`;
 }
 
 function resolveOptionalText<TKey extends "email" | "phone">(
@@ -343,42 +407,124 @@ function resolveMembershipStatus(
   return "active";
 }
 
-function readShift(
-  value: unknown,
+function getAvailabilityWeekStarts(date: string) {
+  const endWeekStart = getWeekStart(addDays(date, 13));
+  const weekStarts: string[] = [];
+  for (
+    let weekStart = getWeekStart(date);
+    weekStart <= endWeekStart;
+    weekStart = addDays(weekStart, 7)
+  ) {
+    weekStarts.push(weekStart);
+  }
+  return weekStarts;
+}
+
+function findScheduleProfileId(
+  snapshots: unknown[],
   membershipId: string,
+) {
+  for (const value of snapshots) {
+    const staffProfileId = asArray(asRecord(value).staff)
+      .map(asRecord)
+      .find((staff) => staff.membershipId === membershipId)?.id;
+    if (typeof staffProfileId === "string") return staffProfileId;
+  }
+  return undefined;
+}
+
+function readShift(
+  snapshots: unknown[],
+  scheduleProfileId: string | undefined,
   date: string,
 ): StaffOperationalShift | null {
-  const snapshot = asRecord(value);
-  const staffProfileId = asArray(snapshot.staff)
-    .map(asRecord)
-    .find((staff) => staff.membershipId === membershipId)?.id;
-  if (typeof staffProfileId !== "string") return null;
-
-  const shift = asArray(snapshot.shifts)
+  if (!scheduleProfileId) return null;
+  const source = snapshots
+    .flatMap((snapshot) => asArray(asRecord(snapshot).shifts))
     .map(asRecord)
     .filter(
-      (item) => item.staffProfileId === staffProfileId && item.date === date,
+      (item) =>
+        item.staffProfileId === scheduleProfileId && item.date === date,
     )
     .sort((a, b) => Number(a.startMinutes) - Number(b.startMinutes))[0];
+  return parseShift(source);
+}
+
+function readAvailability(
+  snapshots: unknown[],
+  scheduleProfileId: string | undefined,
+  date: string,
+): StaffOperationalAvailability | null {
+  if (!scheduleProfileId) return null;
+  const endDate = addDays(date, 13);
+  const shifts = snapshots
+    .flatMap((snapshot) => asArray(asRecord(snapshot).shifts))
+    .map(asRecord)
+    .filter(
+      (item) =>
+        item.staffProfileId === scheduleProfileId &&
+        typeof item.date === "string" &&
+        item.date >= date &&
+        item.date <= endDate,
+    )
+    .sort(
+      (a, b) =>
+        String(a.date).localeCompare(String(b.date)) ||
+        Number(a.startMinutes) - Number(b.startMinutes),
+    );
+  const absence = shifts.find(
+    (shift) => shift.kind === "leave" || shift.kind === "off",
+  );
   if (
-    !shift ||
-    typeof shift.startMinutes !== "number" ||
-    typeof shift.endMinutes !== "number" ||
-    typeof shift.workLabel !== "string" ||
-    !isShiftKind(shift.kind)
+    !absence ||
+    typeof absence.date !== "string" ||
+    (absence.kind !== "leave" && absence.kind !== "off")
   ) {
     return null;
   }
+  const absenceDate = absence.date;
+  const returnShift = shifts
+    .filter(
+      (shift) =>
+        typeof shift.date === "string" &&
+        shift.date > absenceDate &&
+        shift.kind !== "leave" &&
+        shift.kind !== "off",
+    )
+    .map(parseShift)
+    .find((shift): shift is StaffOperationalShift => Boolean(shift));
 
   return {
-    date,
-    startMinutes: shift.startMinutes,
-    endMinutes: shift.endMinutes,
-    kind: shift.kind,
-    workLabel: shift.workLabel,
-    locationLabel:
-      typeof shift.locationLabel === "string" ? shift.locationLabel : null,
+    event: { date: absenceDate, kind: absence.kind },
+    ...(returnShift ? { returnShift } : {}),
   };
+}
+
+function parseShift(value: Record<string, unknown> | undefined) {
+  if (
+    !value ||
+    typeof value.date !== "string" ||
+    typeof value.startMinutes !== "number" ||
+    typeof value.endMinutes !== "number" ||
+    typeof value.workLabel !== "string" ||
+    !isShiftKind(value.kind)
+  ) {
+    return null;
+  }
+  return {
+    date: value.date,
+    startMinutes: value.startMinutes,
+    endMinutes: value.endMinutes,
+    kind: value.kind,
+    workLabel: value.workLabel,
+    locationLabel:
+      typeof value.locationLabel === "string" ? value.locationLabel : null,
+  } satisfies StaffOperationalShift;
+}
+
+function isPublishedSnapshot(value: unknown) {
+  const state = asRecord(asRecord(value).week).publicationState;
+  return state === "published" || state === "changed";
 }
 
 function isShiftKind(value: unknown): value is StaffOperationalShift["kind"] {
@@ -401,50 +547,15 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function addDays(date: string, days: number) {
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + days);
+  return parsed.toISOString().slice(0, 10);
+}
+
 function getWeekStart(date: string) {
   const parsed = new Date(`${date}T00:00:00.000Z`);
   const weekday = (parsed.getUTCDay() + 6) % 7;
   parsed.setUTCDate(parsed.getUTCDate() - weekday);
   return parsed.toISOString().slice(0, 10);
-}
-
-function createDemoStaffOperationalProfilePermissionAdapter() {
-  return createMockWorkspacePermissionAdapter({
-    users: [
-      { id: "user-admin", status: "active" },
-      { id: "user-front-desk", status: "active" },
-      { id: "user-vet", status: "active" },
-    ],
-    memberships: [
-      {
-        id: "membership-admin",
-        workspaceId: "clair-demo",
-        userId: "user-admin",
-        roles: ["hospital_admin"],
-        status: "active",
-      },
-      {
-        id: "membership-front-desk",
-        workspaceId: "clair-demo",
-        userId: "user-front-desk",
-        roles: ["front_desk"],
-        status: "active",
-      },
-      {
-        id: "membership-vet",
-        workspaceId: "clair-demo",
-        userId: "user-vet",
-        roles: ["vet"],
-        status: "active",
-      },
-    ],
-  });
-}
-
-function getMockJobPositionLabel(role: string) {
-  if (role === "veterinarian") return "수의사";
-  if (role === "technician") return "테크니션";
-  if (role === "desk") return "데스크";
-  if (role === "billing") return "수납";
-  return "운영 관리자";
 }

@@ -6,36 +6,21 @@ import * as operationalProfileModule from "../src/features/staff/server-operatio
 const route =
   "/api/workspaces/clair-demo/staff/user-vet-suji/operational-profile?date=2026-05-01";
 
-test("operational profile route returns only display-safe same-workspace staff data", async ({
+test("operational profile route never falls back to runtime demo staff data", async ({
   request,
 }) => {
   const response = await request.get(route, {
     headers: { "x-clair-demo-session-user-id": "user-admin" },
   });
 
-  expect(response.status()).toBe(200);
+  expect(response.status()).toBe(503);
   const body = await response.json();
-
-  expect(body).toMatchObject({
-    ok: true,
-    profile: {
-      avatarUrl: "/avatars/49110000-0000-4000-8000-000000000003.png",
-      department: "진료",
-      displayName: "이수지",
-      initials: "SJ",
-      jobPositionLabel: "수의사",
-      membershipStatus: "active",
-    },
-    shift: null,
-    enforcedBy: "staff-operational-profile-read",
+  expect(body).toEqual({
+    ok: false,
+    status: 503,
+    error: "configured_data_source_required",
   });
-  expect(body.profile).not.toHaveProperty("email");
-  expect(body.profile).not.toHaveProperty("phone");
-  expect(body.profile).not.toHaveProperty("roles");
-  expect(body.profile).not.toHaveProperty("permissionRole");
-  expect(body.profile).not.toHaveProperty("membershipId");
-  expect(body.profile).not.toHaveProperty("userId");
-  expect(body.profile).not.toHaveProperty("title");
+  expect(body).not.toHaveProperty("profile");
 });
 
 test("operational profile route validates the selected date", async ({
@@ -59,7 +44,7 @@ test("operational profile route validates the selected date", async ({
   expect(impossibleDate.status()).toBe(400);
 });
 
-test("operational profile route does not disclose an unavailable target", async ({
+test("operational profile route does not disclose targets through demo fallback", async ({
   request,
 }) => {
   const response = await request.get(
@@ -67,15 +52,15 @@ test("operational profile route does not disclose an unavailable target", async 
     { headers: { "x-clair-demo-session-user-id": "user-admin" } },
   );
 
-  expect(response.status()).toBe(404);
+  expect(response.status()).toBe(503);
   await expect(response.json()).resolves.toEqual({
     ok: false,
-    status: 404,
-    error: "not_found",
+    status: 503,
+    error: "configured_data_source_required",
   });
 });
 
-test("operational profile route enforces active workspace membership", async ({
+test("operational profile route requires authentication and a configured source", async ({
   request,
 }) => {
   const unauthenticated = await request.get(route);
@@ -85,7 +70,7 @@ test("operational profile route enforces active workspace membership", async ({
     "/api/workspaces/workspace-b/staff/user-vet-suji/operational-profile?date=2026-05-01&context=reception",
     { headers: { "x-clair-demo-session-user-id": "user-admin" } },
   );
-  expect(wrongWorkspace.status()).toBe(403);
+  expect(wrongWorkspace.status()).toBe(503);
   await expect(wrongWorkspace.json()).resolves.not.toHaveProperty("profile");
 });
 
@@ -145,6 +130,7 @@ test("Supabase operational profile gateway joins membership, job position, avata
         },
       ],
       scheduleSnapshot: {
+        week: { publicationState: "published" },
         staff: [
           {
             id: "schedule-profile-suji",
@@ -164,7 +150,7 @@ test("Supabase operational profile gateway joins membership, job position, avata
           },
         ],
       },
-    }),
+    }) as unknown as operationalProfileModule.SupabaseStaffOperationalProfileClient,
   );
 
   const result = await operationalProfileModule.readStaffOperationalProfile({
@@ -178,6 +164,12 @@ test("Supabase operational profile gateway joins membership, job position, avata
 
   expect(result).toMatchObject({
     ok: true,
+    capabilities: {
+      canManageMember: false,
+      manageMemberHref: null,
+      scheduleHref:
+        "/w/workspace-clair-cheongdam/hospital-admin?modulePanel=open&section=schedule&staffId=schedule-profile-suji&weekStart=2026-07-13",
+    },
     profile: {
       avatarUrl: "https://storage.local/avatars/user-suji.png",
       department: "진료팀",
@@ -199,6 +191,121 @@ test("Supabase operational profile gateway joins membership, job position, avata
       locationLabel: "제2진료실",
     },
   });
+});
+
+test("Supabase operational profile derives the nearest 14-day absence and first return from published weeks", async () => {
+  const baseRows = {
+    hospital_schedule_staff_profiles: [],
+    user_memberships: [
+      {
+        id: "membership-suji",
+        workspace_id: "workspace-clair-cheongdam",
+        user_id: "user-suji",
+        status: "active",
+      },
+    ],
+    user_profiles: [],
+    users: [
+      {
+        id: "user-suji",
+        display_name: "이수지",
+        status: "active",
+      },
+    ],
+    workspace_job_positions: [],
+    workspace_member_activity: [],
+    workspace_membership_job_position_assignments: [],
+  };
+  const staff = [
+    { id: "schedule-profile-suji", membershipId: "membership-suji" },
+  ];
+  const gateway = operationalProfileModule.createSupabaseStaffOperationalProfileGateway(
+    createSupabaseProfileClient({
+      ...baseRows,
+      scheduleSnapshots: {
+        "2026-07-13": {
+          week: { publicationState: "published" },
+          staff,
+          shifts: [
+            {
+              staffProfileId: "schedule-profile-suji",
+              date: "2026-07-16",
+              startMinutes: 540,
+              endMinutes: 1080,
+              kind: "clinical",
+              workLabel: "진료",
+              locationLabel: null,
+              note: "API에 노출하면 안 되는 메모",
+            },
+          ],
+        },
+        "2026-07-20": {
+          week: { publicationState: "changed" },
+          staff,
+          shifts: [
+            {
+              staffProfileId: "schedule-profile-suji",
+              date: "2026-07-22",
+              startMinutes: 0,
+              endMinutes: 0,
+              kind: "off",
+              workLabel: "휴무",
+              locationLabel: null,
+              note: "개인 사유",
+            },
+            {
+              staffProfileId: "schedule-profile-suji",
+              date: "2026-07-23",
+              startMinutes: 600,
+              endMinutes: 1080,
+              kind: "clinical",
+              workLabel: "진료",
+              locationLabel: "제2진료실",
+            },
+          ],
+        },
+        "2026-07-27": {
+          week: { publicationState: "draft" },
+          staff,
+          shifts: [
+            {
+              staffProfileId: "schedule-profile-suji",
+              date: "2026-07-27",
+              startMinutes: 0,
+              endMinutes: 0,
+              kind: "leave",
+              workLabel: "휴가",
+              locationLabel: null,
+            },
+          ],
+        },
+      },
+    }) as unknown as operationalProfileModule.SupabaseStaffOperationalProfileClient,
+  );
+
+  const result = await operationalProfileModule.readStaffOperationalProfile({
+    actorUserId: "user-front-desk",
+    date: "2026-07-16",
+    gateway,
+    permissionAdapter: createReceptionViewPermissionAdapter(),
+    userId: "user-suji",
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    availability: {
+      event: { date: "2026-07-22", kind: "off" },
+      returnShift: {
+        date: "2026-07-23",
+        startMinutes: 600,
+        endMinutes: 1080,
+        kind: "clinical",
+      },
+    },
+  });
+  expect(JSON.stringify(result)).not.toContain("개인 사유");
+  expect(JSON.stringify(result)).not.toContain("노출하면 안 되는 메모");
 });
 
 test("Supabase operational profile remains available while activity storage is unavailable", async () => {
@@ -381,6 +488,7 @@ type SupabaseProfileRows = {
   workspace_membership_job_position_assignments: Array<Record<string, unknown>>;
   scheduleError?: boolean;
   scheduleSnapshot?: Record<string, unknown>;
+  scheduleSnapshots?: Record<string, Record<string, unknown>>;
 };
 
 function createSupabaseProfileClient(rows: SupabaseProfileRows) {
@@ -423,12 +531,17 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
       };
       return query;
     },
-    rpc() {
+    rpc(_functionName: string, args: Record<string, unknown>) {
+      const weekStart = args.p_week_start;
       return Promise.resolve(
         rows.scheduleError
           ? { data: null, error: { message: "schedule_read_failed" } }
           : {
-              data: rows.scheduleSnapshot ?? { staff: [], shifts: [] },
+              data:
+                (typeof weekStart === "string"
+                  ? rows.scheduleSnapshots?.[weekStart]
+                  : undefined) ??
+                rows.scheduleSnapshot ?? { staff: [], shifts: [] },
               error: null,
             },
       );
