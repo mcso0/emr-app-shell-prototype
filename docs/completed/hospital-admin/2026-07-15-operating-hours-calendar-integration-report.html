@@ -13,7 +13,7 @@
     <div class="eyebrow">HOSPITAL-ADMIN-LIVE-PR-012 · 2026-07-15</div>
     <h1>병원 운영시간이 접수 캘린더와 예약 가능 시간을 직접 결정한다.</h1>
     <p class="lead">병원기본설정의 요일별 운영시간, 휴게시간, 예외일, 시간대를 저장하고 같은 기준을 캘린더 표시와 예약·현장접수 검증에 연결했다.</p>
-    <div class="status">구현 및 원격 DB 검증 완료 · 애플리케이션 릴리스 진행 중</div>
+    <div class="status">구현·원격 DB·프로덕션 배포 및 smoke 검증 완료</div>
     <section class="grid" aria-label="핵심 결과">
       <div class="metric"><strong>70</strong><span>DB·API·UI 집중 테스트 통과</span></div>
       <div class="metric"><strong>36px</strong><span>영업시간 15분 및 컴팩트 카드 높이</span></div>
@@ -21,7 +21,7 @@
     </section>
     <section class="section"><h2>무엇이 달라졌나</h2><ul><li>워크스페이스별 운영시간·예외일·시간대·공휴일 정책을 저장하는 DB 계약과 RLS·grant를 추가했다.</li><li>관리자 전용 설정 변경 RPC와 감사 이벤트를 추가하고, 일반 구성원은 조회만 가능하게 했다.</li><li>선택 날짜의 예외일·요일·시간대를 해석하는 공통 resolver를 설정 API, 캘린더 API, 예약·현장접수 검증이 함께 사용한다.</li><li>운영시간 변경으로 미래 활성 예약이 비영업시간에 놓이면 전체 저장을 충돌로 거절한다.</li><li>비영업시간은 시간당 72px로 압축하고 선택·드래그를 차단한다. 영업시간은 15분당 36px, 컴팩트 카드는 36px와 사방 8px 여백을 유지한다.</li></ul></section>
     <section class="section"><h2>검증</h2><ul><li>로컬 PostgreSQL에서 migration 직접 적용과 transaction replay 성공</li><li>구성원 조회, 비관리자 직접 쓰기 차단, 관리자 변경, 감사 이벤트, 미래 예약 충돌 rollback 확인</li><li>관련 Playwright 70건 통과 및 최종 캘린더 UI 계약 2건 재통과</li><li>TypeScript, 변경 범위 ESLint, 문서 링크, 비밀정보 검사, diff 검사, production build 통과</li></ul></section>
-    <section class="section risk"><h2>릴리스 전 확인</h2><ul><li>원격 Supabase migration은 적용 및 catalog 검증을 마쳤다. 애플리케이션은 fixed staging과 production smoke gate를 통과해야 한다.</li><li>원격 적용 버전과 canonical 파일의 timestamp 차이는 statement-free history alias로 보존한다.</li><li>신뢰할 공휴일 데이터 소스를 정하기 전에는 공휴일 휴무를 날짜별 예외일로 등록해야 한다.</li><li>병원 연락처·프로필 저장은 이번 범위가 아니며 기존처럼 세션 로컬 상태다.</li></ul></section>
+    <section class="section risk"><h2>남은 확인사항</h2><ul><li>PR #409와 프로덕션 배포의 fixed staging·production smoke gate를 모두 통과했다.</li><li>원격 적용 버전과 canonical 파일의 timestamp 차이는 statement-free history alias로 보존한다.</li><li>신뢰할 공휴일 데이터 소스를 정하기 전에는 공휴일 휴무를 날짜별 예외일로 등록해야 한다.</li><li>병원 연락처·프로필 저장은 이번 범위가 아니며 기존처럼 세션 로컬 상태다.</li></ul></section>
   </main>
 </body>
 </html>
