@@ -29,7 +29,7 @@ test("required field markers use one shared EMR component and semantic token", a
   expect(indicator).toContain('aria-hidden="true"');
   expect(indicator).toContain("var(--emr-form-required-indicator)");
   expect(foundation).toContain(
-    "--emr-form-required-indicator: var(--clair-color-atomic-neutral-800);",
+    "--emr-form-required-indicator: var(--clair-color-atomic-neutral-900);",
   );
 
   for (const source of [
@@ -46,7 +46,7 @@ test("required field markers use one shared EMR component and semantic token", a
   expect(hospitalSettings).not.toContain('label="대표 전화 *"');
 });
 
-test("guardian registration required indicator resolves to the Neutral 800 token", async ({ page }) => {
+test("guardian registration required indicator resolves to the Neutral 900 token", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
   await page.getByRole("button", { name: "환자/보호자 등록", exact: true }).click();
   await page.getByRole("menuitem", { name: "신규 환자/보호자 등록" }).click();
