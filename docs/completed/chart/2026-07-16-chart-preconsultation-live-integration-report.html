@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진료 시작 전 환자 맥락 화면 구현 결과</title>
+    <style>
+      body { margin: 0; background: #f7f8fa; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; }
+      main { max-width: 920px; margin: 0 auto; padding: 40px 20px 56px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 20px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      ul { margin: 0; padding-left: 20px; }
+      code { border-radius: 4px; background: #eef1f6; padding: 2px 5px; }
+      .meta { color: #5f6b7a; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>진료 시작 전 환자 맥락 화면 구현 결과</h1>
+      <p class="meta">2026-07-16 · CHART-PR-012 · synthetic/demo workspace scope</p>
+
+      <section>
+        <h2>요청</h2>
+        <p>접수 완료 후 호출 전 수의사가 환자와 보호자, 방문 목적, 접수 맥락, 바이탈, 과거 이력을 한 화면에서 빠르게 파악하도록 승인된 시안을 실제 EMR 흐름에 연결했다.</p>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li>호출 전 전용 헤더와 1440px 최대 폭의 정보 위계를 적용하고, 기존 상단 환자 컨텍스트 바는 호출 후 차트에서만 보이도록 했다.</li>
+          <li>환자 사진 필드가 없는 현재 스키마에 맞춰 CLAiR 동물 아이콘을 fallback 아바타로 사용했다.</li>
+          <li>환자 정보, 방문 목적, 접수 메모, 바이탈 비교, 과거 진료 이력을 기존 테이블에서 읽는 단일 RPC/API 경계를 추가했다.</li>
+          <li>환자 정보 버튼은 shadcn Sheet를 열고, 호출하기는 기존 진료실 선택 및 차트 전환 흐름을 그대로 사용한다.</li>
+          <li>로딩, 권한/읽기 실패 재시도, 바이탈·이력 없음 상태를 더미 데이터 없이 명시적으로 처리했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>데이터와 보안</h2>
+        <ul>
+          <li>새 테이블 없이 기존 <code>encounters</code>, <code>waiting_queue_entries</code>, 환자/보호자, 예약, 바이탈, SOAP, 진단 테이블을 연결했다.</li>
+          <li>읽기는 활성 멤버십과 <code>chart:view</code>, 호출/대기 복귀는 <code>chart:update</code>와 세션 사용자 일치를 요구한다.</li>
+          <li>원격 staging migration 적용과 인증 RPC probe에서 encounter/queue, 바이탈 1건, 과거 이력 2건을 확인했다. 검증 데이터는 생성하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: passed</li>
+          <li>preconsultation server/API contract: 5 passed</li>
+          <li>서로 다른 두 대기 환자의 선택·호출·차트 전환 Playwright: 2 passed</li>
+          <li><code>npm run lint</code>, <code>npm run docs:check</code>, <code>npm run security:secrets</code>: passed</li>
+          <li><code>npm run build</code>: passed</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>현재 상태와 다음 단계</h2>
+        <p>코드와 staging DB 검증은 완료됐다. PR 검증과 preview 확인 후, 정확한 production release 승인 패킷을 기준으로 main merge·배포·production smoke를 진행한다.</p>
+      </section>
+
+      <section>
+        <h2>범위 밖 / 확인할 점</h2>
+        <ul>
+          <li>환자 프로필 사진 저장·업로드와 신규 임상 기준값 판정은 포함하지 않았다.</li>
+          <li>Supabase advisor의 authenticated <code>SECURITY DEFINER</code> 경고는 닫힌 테이블 위에 의도적으로 둔 권한 검사 RPC에 해당한다. anonymous 실행권한은 없다.</li>
+          <li>production 배포 완료 상태와 실제 브라우저 시각 검수 결과는 release 후 이 보고서에 갱신한다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -101,6 +101,28 @@ async function grantCheongdamWorkspaceAccess(page: Page) {
   );
 }
 
+async function routePreconsultationContext(
+  page: Page,
+  resolveContext: (encounterId: string) => Record<string, unknown>,
+) {
+  await page.route(
+    "**/api/workspaces/*/chart/preconsultation-context?*",
+    async (route) => {
+      const encounterId = new URL(route.request().url()).searchParams.get("encounterId") ?? "";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-preconsultation-context-read",
+          context: resolveContext(encounterId),
+        }),
+      });
+    },
+  );
+}
+
 async function restoreKongOrderDraftDefaults(page: Page) {
   const response = await page.request.patch(
     "/api/workspaces/clair-demo/chart/order-drafts",
@@ -415,6 +437,81 @@ test("chart consultation CTA moves from call to start before chart completion", 
       }),
     });
   });
+  await routePreconsultationContext(page, () => ({
+    encounter: {
+      id: encounter.id,
+      encounterNo: encounter.encounterNo,
+      appointmentId: encounter.appointmentId,
+      receptionType: "appointment",
+      visitPurpose: encounter.visitPurpose,
+      chiefComplaint: encounter.chiefComplaint,
+      receptionMemo: encounter.receptionMemo,
+      checkedInAt: encounter.checkedInAt,
+      status: encounter.status,
+    },
+    queue: { id: queueEntry.id, status: queueEntry.status },
+    patient: {
+      id: patient.id,
+      patientNo: patient.patientNo,
+      name: patient.name,
+      species: patient.species,
+      breed: patient.breed,
+      estimatedAgeText: patient.estimatedAgeText,
+      sex: patient.sex,
+      neutered: patient.neutered,
+      handlingCautionNote: "보정 시 보호자 동행 선호",
+    },
+    guardian: {
+      id: primaryGuardian.id,
+      name: primaryGuardian.name,
+      memo: "최근 약 복용은 잘했으나 식욕이 돌아오지 않아 걱정",
+    },
+    appointment: {
+      id: encounter.appointmentId,
+      visitPurpose: encounter.visitPurpose,
+      symptomNote: encounter.chiefComplaint,
+    },
+    veterinarian: { id: "user-vet", displayName: "청담 원장" },
+    priorEncounterCount: 2,
+    vitals: [
+      {
+        id: "vital-choco-current",
+        encounterId,
+        measuredAt: "2026-06-25T14:20:00+09:00",
+        weightKg: 4.82,
+        temperatureC: 38.7,
+        respiratoryRateRpm: 24,
+        bloodPressureSystolicMmhg: 132,
+      },
+      {
+        id: "vital-choco-previous",
+        encounterId: "encounter-choco-previous",
+        measuredAt: "2026-05-09T10:00:00+09:00",
+        weightKg: 4.76,
+        temperatureC: 38.6,
+        respiratoryRateRpm: 22,
+        bloodPressureSystolicMmhg: 128,
+      },
+    ],
+    history: [
+      {
+        encounterId,
+        encounterNo: encounter.encounterNo,
+        checkedInAt: encounter.checkedInAt,
+        status: encounter.status,
+        chiefComplaint: encounter.chiefComplaint,
+        receptionMemo: encounter.receptionMemo,
+      },
+      {
+        encounterId: "encounter-choco-previous",
+        encounterNo: "E-260509-0004",
+        checkedInAt: "2026-05-09T10:00:00+09:00",
+        status: "completed",
+        visitPurpose: "약 복용 후 재진",
+        assessment: "가려움 빈도 감소",
+      },
+    ],
+  }));
   await page.route("**/api/workspaces/clair-demo/chart/completion**", async (route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
@@ -509,21 +606,26 @@ test("chart consultation CTA moves from call to start before chart completion", 
   );
 
   await expect(page.getByTestId("chart-completion-status")).toHaveCount(0);
+  await expect(page.getByLabel("환자 컨텍스트 정보")).toHaveCount(0);
   await expect(page.locator("[data-slot='chart-instruction-info-card']")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "차트 공유" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "호출하기" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "접수 정보 보기" })).toBeVisible();
+  await expect(
+    page.getByTestId("chart-start-locked-state").getByRole("button", {
+      name: "환자 정보",
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "진료 완료" })).toHaveCount(0);
   const lockedState = page.getByTestId("chart-start-locked-state");
-  await expect(lockedState).toContainText("진료 시작 전입니다");
-  await expect(lockedState).toContainText(
-    "초코 호출 후 차트와 오더 입력을 시작할 수 있습니다",
-  );
-  await expect(lockedState).toContainText("접수 정보");
-  await expect(lockedState).toContainText("방문목적");
+  await expect(lockedState).toContainText("진료 시작 전");
+  await expect(lockedState).toContainText("차트번호 E-260625-0001");
+  await expect(lockedState).toContainText("초코");
+  await expect(lockedState).toContainText("보호자 최도현");
+  await expect(lockedState).toContainText("Pomeranian");
+  await expect(lockedState).toContainText("방문 목적");
   await expect(lockedState).toContainText("피부 재진");
-  await expect(lockedState).toContainText("예약 메모");
-  await expect(lockedState).toContainText("보호자 요청 - 피부 가려움 재상담");
+  await expect(lockedState).toContainText("접수 정보");
   await expect(lockedState).toContainText("접수 유형");
   await expect(lockedState).toContainText("예약");
   await expect(lockedState).toContainText("접수 시각");
@@ -532,16 +634,20 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(lockedState).toContainText("청담 원장");
   await expect(lockedState).toContainText("접수 메모");
   await expect(lockedState).toContainText("최근 식욕 저하, 산책 후 발 핥음 증가");
-  await expect(lockedState).toContainText("주의사항");
-  await expect(lockedState).toContainText("핸들링 주의");
+  await expect(lockedState).toContainText("환자 바이탈");
+  await expect(lockedState).toContainText("4.82 kg");
+  await expect(lockedState).toContainText("과거 진료 이력");
+  await expect(lockedState).toContainText("진료 전 주의");
+  await expect(lockedState).toContainText("보정 시 보호자 동행 선호");
   await expect(page.getByTestId("chart-soap-diagnosis-grid")).toHaveCount(0);
-  await page.getByRole("button", { name: "접수 정보 보기" }).click();
-  await expect(page).toHaveURL(/\/w\/clair-demo\/reception\?/);
-  await expect(page).toHaveURL(new RegExp(`encounterId=${encounterId}`));
-  await page.goto(
-    `/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`,
-  );
-  await expect(page.getByTestId("chart-start-locked-state")).toBeVisible();
+  await page
+    .getByTestId("chart-start-locked-state")
+    .getByRole("button", { name: "환자 정보", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("환자 정보");
+  await expect(page.getByRole("dialog")).toContainText("최근 약 복용은 잘했으나");
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment\?/);
 
   await page.getByTestId(`order-queue-item-action-${encounterId}`).click();
   const queueActionMenu = page.getByRole("menu");
@@ -613,6 +719,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(page.getByRole("button", { name: "진료 시작" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "진료 완료" })).toBeVisible();
   await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
+  await expect(page.getByLabel("환자 컨텍스트 정보")).toContainText("초코");
 
   await page.getByRole("button", { name: "진료 보조 액션 열기" }).click();
   const chartActionMenu = page.getByRole("menu");
@@ -1391,6 +1498,94 @@ test("chart queue selection changes the selected encounter", async ({
     }
   });
 
+  await routePreconsultationContext(page, (encounterId) => {
+    const isHaru = encounterId === "encounter-haru-260430";
+    return {
+      encounter: {
+        id: encounterId,
+        encounterNo: isHaru ? "E-260430-0005" : "E-260501-0002",
+        receptionType: "walk_in",
+        visitPurpose: isHaru ? "예방접종" : "정기 검진",
+        chiefComplaint: isHaru ? "예방접종 전 건강 확인" : "정기 검진",
+        checkedInAt: isHaru ? "2026-04-30T16:05:00+09:00" : "2026-05-01T09:50:00+09:00",
+        status: "waiting",
+      },
+      queue: { id: `queue-${encounterId}`, status: "waiting" },
+      patient: {
+        id: isHaru ? "patient-haru" : "patient-coco",
+        patientNo: isHaru ? "P-HARU" : "P-COCO",
+        name: isHaru ? "하루" : "코코",
+        species: isHaru ? "cat" : "dog",
+        breed: isHaru ? "Korean Shorthair" : "Poodle",
+        estimatedAgeText: isHaru ? "2세" : "4세",
+        sex: isHaru ? "female" : "male",
+      },
+      guardian: {
+        id: isHaru ? "guardian-kang-seoyun" : "guardian-coco",
+        name: isHaru ? "강서윤" : "보호자",
+      },
+      veterinarian: { id: "user-vet", displayName: "이수지" },
+      priorEncounterCount: isHaru ? 1 : 3,
+      vitals: [],
+      history: [],
+    };
+  });
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/consultation-flow",
+    async (route) => {
+      const body = (await route.request().postDataJSON()) as {
+        action: "call" | "return_to_waiting" | "start";
+        encounterId: string;
+        roomId?: string;
+      };
+      expect(body.action).toBe("call");
+      expect(body.encounterId).toBe("encounter-haru-260430");
+      expect(body.roomId).toBeTruthy();
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-consultation-flow",
+          flow: {
+            encounter: {
+              id: "encounter-haru-260430",
+              workspaceId: "clair-demo",
+              patientId: "patient-haru",
+              guardianId: "guardian-kang-seoyun",
+              primaryVeterinarianId: "user-vet",
+              encounterNo: "E-260430-0005",
+              visitPurpose: "예방접종",
+              chiefComplaint: "예방접종 전 건강 확인",
+              status: "in_consultation",
+              checkedInAt: "2026-04-30T16:05:00+09:00",
+              startedAt: "2026-04-30T16:10:00+09:00",
+              createdAt: "2026-04-30T16:05:00+09:00",
+              updatedAt: "2026-04-30T16:10:00+09:00",
+            },
+            queueEntry: {
+              id: "queue-haru-consultation",
+              workspaceId: "clair-demo",
+              encounterId: "encounter-haru-260430",
+              queueType: "consultation",
+              status: "in_progress",
+              priority: "normal",
+              sortOrder: 3,
+              enteredAt: "2026-04-30T16:05:00+09:00",
+              calledAt: "2026-04-30T16:10:00+09:00",
+            },
+            callEvent: {
+              id: "call-event-haru",
+              displayText: "진료실로 환자를 호출합니다.",
+              deliveryStatus: "queued",
+              roomId: body.roomId,
+              roomName: "1진료실",
+            },
+          },
+        }),
+      });
+    },
+  );
   await page.goto("/w/clair-demo/treatment");
 
   const haruQueueCard = page.getByTestId("order-queue-item-encounter-haru-260430");
@@ -1398,29 +1593,38 @@ test("chart queue selection changes the selected encounter", async ({
   await haruQueueCard.click();
   await expect(haruQueueCard).toHaveAttribute("aria-pressed", "true");
 
-  const patientContext = page.locator('[aria-label="환자 컨텍스트 정보"]');
-  await expect(
-    patientContext.getByText(/하루\s*·\s*보호자 강서윤/),
-  ).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보")).toHaveCount(0);
   await expect(page.getByText("E-260430-0005").first()).toBeVisible();
-  await expect(page.getByText("예방접종 전 건강 확인").first()).toBeVisible();
   const lockedState = page.getByTestId("chart-start-locked-state");
-  await expect(lockedState).toContainText("진료 시작 전입니다");
-  await expect(lockedState).toContainText(
-    "하루 호출 후 차트와 오더 입력을 시작할 수 있습니다",
-  );
+  await expect(lockedState).toContainText("진료 시작 전");
+  await expect(lockedState).toContainText("하루");
+  await expect(lockedState).toContainText("보호자 강서윤");
   await expect(lockedState).toContainText("접수 정보");
-  await expect(lockedState).toContainText("방문목적");
+  await expect(lockedState).toContainText("방문 목적");
   await expect(lockedState).toContainText("예방접종");
-  await expect(lockedState).not.toContainText("예약 메모");
   await expect(lockedState).toContainText("접수 유형");
   await expect(lockedState).toContainText("외래");
   await expect(lockedState).toContainText("접수 시각");
   await expect(lockedState).toContainText("16:05 접수");
   await expect(lockedState).toContainText("담당 수의사");
   await expect(lockedState).toContainText("이수지");
+  await expect(lockedState).toContainText("기록된 바이탈이 없습니다.");
+  await expect(lockedState).toContainText("기록된 진료 이력이 없습니다.");
   await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
   await expect(page.getByText("기본 SOAP")).toHaveCount(0);
+
+  await lockedState.getByRole("button", { name: "호출하기" }).click();
+  const callDialog = page.getByRole("dialog", {
+    name: "하루/강서윤을 호출하시겠습니까?",
+  });
+  await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
+  await page.getByRole("option", { name: "1진료실" }).click();
+  await callDialog.getByRole("button", { name: "호출하기" }).click();
+  await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
+  await expect(
+    page.getByLabel("환자 컨텍스트 정보").getByText(/하루\s*·\s*보호자 강서윤/),
+  ).toBeVisible();
+  await expect(page.getByTestId("chart-completion-status")).toContainText("진료중");
   expect(
     consoleErrors.filter((message) =>
       message.includes("Encountered two children with the same key"),
