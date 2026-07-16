@@ -243,6 +243,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-PR-011            | done         | reception            | P1       | User request / patient search field alignment | `docs/work/reception/RECEPTION-PR-011-patient-search-field-ui.md` |
 | RECEPTION-PR-012            | done         | reception            | P0       | User goal / staff profile side panel V2 UI contract | `docs/work/reception/RECEPTION-PR-012-profile-side-panel-v2-ui-contract.md` |
 | RECEPTION-PR-013            | done         | reception            | P0       | User goal / staff profile side panel V2 read model | `docs/work/reception/RECEPTION-PR-013-profile-side-panel-v2-read-model.md` |
+| RECEPTION-PR-014            | implemented  | reception            | P1       | User goal / veterinarian avatars in reception and reservation fields | `docs/work/reception/RECEPTION-PR-014-veterinarian-avatar-fields.md` |
 | RECEPTION-LIVE-PR-001       | human_review | reception            | P0       | Project 03 / DEN-54  | `docs/work/reception/RECEPTION-LIVE-PR-001-encounter-persistence-contract.md`                          |
 | RECEPTION-LIVE-PR-002       | human_review | reception            | P0       | Project 03 / DEN-55  | `docs/work/reception/RECEPTION-LIVE-PR-002-schema-extension-plan.md`                                   |
 | RECEPTION-LIVE-PR-003       | human_review | reception            | P0       | Project 03 / DEN-56  | `docs/work/reception/RECEPTION-LIVE-PR-003-schema-migration.md`                                        |
@@ -330,6 +331,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CHART-PR-008                | human_review | chart                | P0       | User request / consultation call-start flow | `docs/work/chart/CHART-PR-008-consultation-call-start-flow.md`                     |
 | CHART-PR-009                | human_review | chart                | P0       | User request / consultation room selection and pre-start chart lock | `docs/work/chart/CHART-PR-009-consultation-room-lock-ux.md` |
 | CHART-PR-010                | implemented  | chart                | P1       | Browser Comment 1 / retire chart patient information panel | `docs/work/chart/CHART-PR-010-retire-patient-information-panel.md` |
+| CHART-PR-012                | implementation | chart              | P0       | User request / live preconsultation context | `docs/work/chart/CHART-PR-012-preconsultation-live-integration.md` |
 | LAB-PR-001                  | done         | lab                  | P1       | PR 1                 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md`                                               |
 | IMAGING-PR-001              | done         | imaging              | P1       | PR 1                 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md`                                            |
 | HOSPITAL-ADMIN-PR-001       | done         | hospital-admin       | P1       | PR 1                 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md`                           |

@@ -3054,6 +3054,93 @@ test("registration and reception create side panels use CDS V2 32px controls", a
   );
 });
 
+test("reception and reservation veterinarian fields render avatars with an unassigned fallback", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception");
+  await openWalkInReceptionForm(page);
+
+  const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  const walkInVeterinarian = walkInForm.getByRole("combobox", {
+    name: "담당의",
+  });
+  await walkInVeterinarian.click();
+
+  const assignedOption = page.getByRole("option", { name: "이수지" });
+  await expect(
+    assignedOption.getByTestId("reception-veterinarian-avatar"),
+  ).toBeVisible();
+  await expect(assignedOption.locator("img")).toHaveAttribute(
+    "src",
+    /\/avatars\/49110000-0000-4000-8000-000000000003\.png$/,
+  );
+  await assignedOption.click();
+  await expect(
+    walkInVeterinarian.getByTestId("reception-veterinarian-avatar"),
+  ).toBeVisible();
+  await expect(walkInVeterinarian).toContainText("이수지");
+  await expect
+    .poll(async () => {
+      const box = await walkInVeterinarian
+        .getByTestId("reception-veterinarian-avatar")
+        .boundingBox();
+      return box ? [Math.round(box.width), Math.round(box.height)] : null;
+    })
+    .toEqual([22, 22]);
+
+  await walkInVeterinarian.click();
+  const unassignedOption = page.getByRole("option", { name: "수의사 미지정" });
+  await expect(
+    unassignedOption.getByTestId("reception-veterinarian-unassigned-icon"),
+  ).toBeVisible();
+  await unassignedOption.click();
+  await expect(
+    walkInVeterinarian.getByTestId("reception-veterinarian-unassigned-icon"),
+  ).toBeVisible();
+
+  await walkInVeterinarian.click();
+  const initialsOption = page.getByRole("option", { name: "서재원" });
+  await expect(
+    initialsOption.getByTestId("reception-veterinarian-avatar"),
+  ).toBeVisible();
+  await expect(initialsOption.locator("img")).toHaveCount(0);
+  await expect(initialsOption.getByText("JW", { exact: true })).toBeVisible();
+
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-reservation-form%3Anew",
+  );
+  const reservationDrawer = page.getByTestId("reservation-create-drawer");
+  const reservationVeterinarian = reservationDrawer.getByRole("combobox", {
+    name: "담당의",
+  });
+  await reservationVeterinarian.click();
+  await page.getByRole("option", { name: "김도윤" }).click();
+  await expect(
+    reservationVeterinarian.getByTestId("reception-veterinarian-avatar"),
+  ).toBeVisible();
+  await expect(reservationVeterinarian).toContainText("김도윤");
+
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
+  );
+  const detailPanel = page.getByTestId("reception-right-panel");
+  await expect(detailPanel.getByRole("textbox", { name: "담당의" })).toHaveValue(
+    "이수지",
+  );
+  await expect(
+    detailPanel.getByTestId("reception-veterinarian-avatar"),
+  ).toBeVisible();
+
+  await detailPanel.getByTestId("reception-encounter-edit-open").click();
+  await page.getByTestId("reception-encounter-edit-confirm").click();
+  const detailVeterinarian = detailPanel.getByRole("combobox", {
+    name: "담당의",
+  });
+  await expect(
+    detailVeterinarian.getByTestId("reception-veterinarian-avatar"),
+  ).toBeVisible();
+});
+
 test("walk-in reception drawer removes helper chrome and keeps focused placeholders", async ({
   page,
 }) => {
