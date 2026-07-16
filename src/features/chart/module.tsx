@@ -127,6 +127,7 @@ import {
   type ChartHistoryRow,
   type ChartOrderGroup,
 } from "@/features/chart/data";
+import { ChartPreconsultationContextPanel } from "@/features/chart/preconsultation-context-panel";
 import {
   readChartLiveEncounterHandoff,
   saveChartLiveEncounterHandoff,
@@ -1287,7 +1288,14 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
     allowMockFallback,
   });
 
-  if (!bundle) return null;
+  const selectedLiveQueueRecord = liveQueueRecords.find(
+    (record) => record.encounter.id === selectedEncounterId,
+  );
+  const chartStartLocked =
+    bundle?.encounter.status === "waiting" &&
+    selectedLiveQueueRecord?.queueEntry.status === "waiting";
+
+  if (!bundle || chartStartLocked) return null;
 
   const veterinarianName = getChartBundleVeterinarianName(bundle);
 
@@ -5404,181 +5412,6 @@ function writeCallRoomPreference({
   window.localStorage.removeItem(key);
 }
 
-function getChartPrecallVisitPurpose(bundle: ChartBundle) {
-  return (
-    bundle.encounter.visitPurpose ??
-    bundle.encounter.chiefComplaint ??
-    "현장 접수"
-  );
-}
-
-function getChartPrecallReservationMemo(bundle: ChartBundle) {
-  const memo = bundle.encounter.chiefComplaint;
-
-  return memo && memo !== bundle.encounter.visitPurpose ? memo : "예약 메모 없음";
-}
-
-function getChartPrecallReceptionMemo(bundle: ChartBundle) {
-  return bundle.encounter.receptionMemo ?? "접수 메모 없음";
-}
-
-function getChartPrecallReceptionType(bundle: ChartBundle) {
-  return bundle.encounter.appointmentId ? "예약" : "외래";
-}
-
-function getChartPrecallCheckedInTime(bundle: ChartBundle) {
-  return `${getShortClockTime(
-    bundle.encounter.checkedInAt ?? bundle.encounter.createdAt,
-  )} 접수`;
-}
-
-function getChartPrecallCautionText(bundle: ChartBundle) {
-  return bundle.patient.handlingCautionLocked ? "핸들링 주의" : "주의사항 없음";
-}
-
-function ChartStartLockedState({
-  bundle,
-  detailPending,
-  onOpenReceptionInfo,
-  onRequestCall,
-  primaryActionBusy,
-  queueStatus,
-}: {
-  bundle: ChartBundle;
-  detailPending: boolean;
-  onOpenReceptionInfo: () => void;
-  onRequestCall: () => void;
-  primaryActionBusy: boolean;
-  queueStatus?: WaitingQueueEntry["status"];
-}) {
-  const isCalled = queueStatus === "called";
-  const isCallable = !isCalled;
-  const isReservation = Boolean(bundle.encounter.appointmentId);
-  const veterinarianName = getChartBundleVeterinarianName(bundle);
-
-  return (
-    <div className="min-h-0 flex-1 overflow-auto px-3 py-5">
-      <div
-        className="mx-auto grid w-full max-w-5xl gap-3"
-        data-testid="chart-start-locked-state"
-      >
-        <section className="grid grid-cols-1 items-start gap-3 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[linear-gradient(180deg,rgba(239,246,255,0.78),rgba(255,255,255,0))] p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-4">
-          <div className="min-w-0">
-            <div className="emr-text-title font-semibold text-foreground">
-              진료 시작 전입니다
-            </div>
-            <p className="mt-1 emr-text-dense text-muted-foreground">
-              {isCalled
-                ? "이미 호출된 환자입니다. 진료 화면이 열리지 않으면 상태를 새로고침해 주세요."
-                : `${bundle.patient.name} 호출 후 차트와 오더 입력을 시작할 수 있습니다`}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
-            {detailPending ? <ChartDetailPendingIndicator /> : null}
-            <Button
-              className="bg-card"
-              variant="outline"
-              onClick={onOpenReceptionInfo}
-            >
-              접수 정보 보기
-            </Button>
-            {isCallable ? (
-              <Button disabled={primaryActionBusy} onClick={onRequestCall}>
-                호출하기
-              </Button>
-            ) : null}
-          </div>
-        </section>
-
-        <section
-          className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
-          aria-label="접수 정보"
-        >
-          <div className="flex min-h-12 items-center border-b border-[var(--emr-line-hairline)] px-4 py-3">
-            <div className="emr-text-section font-semibold text-foreground">
-              접수 정보
-            </div>
-          </div>
-          <dl className="grid">
-            <ChartPrecallIntakeRow
-              label="방문목적"
-              value={getChartPrecallVisitPurpose(bundle)}
-              priority
-            />
-            {isReservation ? (
-              <ChartPrecallIntakeRow
-                label="예약 메모"
-                value={getChartPrecallReservationMemo(bundle)}
-              />
-            ) : null}
-            <ChartPrecallIntakeRow
-              label="접수 유형"
-              value={getChartPrecallReceptionType(bundle)}
-            />
-            <ChartPrecallIntakeRow
-              label="접수 시각"
-              value={getChartPrecallCheckedInTime(bundle)}
-            />
-            <ChartPrecallIntakeRow
-              label="담당 수의사"
-              value={veterinarianName}
-            />
-            <ChartPrecallIntakeRow
-              label="접수 메모"
-              value={getChartPrecallReceptionMemo(bundle)}
-            />
-            <ChartPrecallIntakeRow
-              label="주의사항"
-              value={getChartPrecallCautionText(bundle)}
-            />
-          </dl>
-        </section>
-        <p className="emr-text-metadata text-muted-foreground">
-          호출 전에는 SOAP, 진단명, 오더 입력이 잠겨 있습니다
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ChartPrecallIntakeRow({
-  label,
-  priority = false,
-  value,
-}: {
-  label: string;
-  priority?: boolean;
-  value: ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        "grid min-h-12 grid-cols-[minmax(7rem,10rem)_minmax(0,1fr)] border-b border-[var(--emr-line-hairline)] last:border-b-0",
-        priority && "bg-[var(--emr-accent-subtle)]",
-      )}
-    >
-      <dt
-        className={cn(
-          "flex items-center px-4 py-3 emr-text-dense font-semibold",
-          priority
-            ? "bg-[var(--emr-accent-subtle)] text-[var(--emr-text-primary)]"
-            : "bg-[var(--emr-surface-muted)] text-muted-foreground",
-        )}
-      >
-        {label}
-      </dt>
-      <dd
-        className={cn(
-          "m-0 flex min-w-0 items-center px-4 py-3 emr-text-dense text-foreground",
-          priority ? "font-semibold" : "font-medium",
-        )}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
-
 function EmptyChartState({
   onRefresh,
   queueEmpty = false,
@@ -5681,12 +5514,10 @@ function ChartPanelPendingState({
 }
 
 export function ChartContent({
-  onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
   useScenarioEncounterSync();
 
-  const searchParams = useSearchParams();
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -6230,27 +6061,6 @@ export function ChartContent({
     setSaveCallRoomPreference(Boolean(storedRoomId));
     setSelectedCallRoomId(storedRoomId);
     setCallDialogOpen(true);
-  };
-
-  const handleOpenReceptionInfo = () => {
-    if (!activeEncounterId) return;
-
-    const href = buildWorkspaceSurfaceRoute({
-      moduleId: "reception",
-      params: {
-        encounterId: activeEncounterId,
-        modulePanel: "open",
-      },
-      search: searchParams,
-      workspaceId,
-    });
-
-    if (onNavigateWorkspaceSurface) {
-      onNavigateWorkspaceSurface(href, "reception");
-      return;
-    }
-
-    window.location.href = href;
   };
 
   useEffect(() => {
@@ -6990,13 +6800,13 @@ export function ChartContent({
         />
       ) : null}
       {chartStartLocked ? (
-        <ChartStartLockedState
-          bundle={currentBundle}
-          detailPending={showDetailPendingIndicator}
-          onOpenReceptionInfo={handleOpenReceptionInfo}
+        <ChartPreconsultationContextPanel
+          key={currentBundle.encounter.id}
+          actorHeaders={actorHeaders}
+          encounterId={currentBundle.encounter.id}
           onRequestCall={handleOpenCallDialog}
           primaryActionBusy={primaryActionBusy}
-          queueStatus={effectiveQueueEntry?.status}
+          workspaceId={activeWorkspaceId ?? workspaceId}
         />
       ) : (
         <div
