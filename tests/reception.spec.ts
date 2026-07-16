@@ -5476,7 +5476,7 @@ test("day lane headers show fact-based status and match the Figma metrics", asyn
     height: "40px",
     paddingBottom: "8px",
     paddingLeft: "10px",
-    paddingRight: "10px",
+    paddingRight: "8px",
     paddingTop: "8px",
   });
   await expect(avatar).toHaveCSS("width", "24px");
