@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>접수·예약 담당의 아바타 구현 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #191919;
+        --muted: #686868;
+        --line: #deded9;
+        --soft: #f6f6f3;
+        --brand: #195447;
+        --brand-soft: #e8f3ef;
+        --warn: #76520a;
+        --warn-soft: #fff6da;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #efefeb;
+        color: var(--ink);
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        width: min(920px, calc(100% - 32px));
+        margin: 32px auto;
+        padding: 40px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 10px 32px rgb(0 0 0 / 5%);
+      }
+      h1, h2, p { margin-top: 0; }
+      h1 { margin-bottom: 10px; font-size: clamp(28px, 5vw, 42px); letter-spacing: -0.035em; }
+      h2 { margin: 34px 0 12px; font-size: 21px; letter-spacing: -0.02em; }
+      p, li, th, td { font-size: 14px; line-height: 1.65; }
+      code { padding: 2px 5px; border-radius: 5px; background: var(--soft); overflow-wrap: anywhere; }
+      a { color: var(--brand); text-underline-offset: 3px; }
+      .eyebrow { margin-bottom: 8px; color: var(--brand); font-size: 13px; font-weight: 750; letter-spacing: 0.08em; }
+      .meta { color: var(--muted); }
+      .hero { margin-top: 24px; padding: 22px; border: 1px solid #b8d4ca; border-radius: 14px; background: var(--brand-soft); }
+      .hero strong { display: block; margin-bottom: 8px; font-size: 19px; }
+      .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+      .badge { padding: 5px 10px; border-radius: 999px; color: var(--brand); background: #fff; font-size: 12px; font-weight: 700; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .card { padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+      .card strong { display: block; margin-bottom: 7px; }
+      .card p { margin-bottom: 0; color: var(--muted); }
+      .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      th { background: var(--soft); font-size: 12px; }
+      tr:last-child td { border-bottom: 0; }
+      .callout { padding: 18px; border-left: 4px solid #d29b22; border-radius: 8px; background: var(--warn-soft); }
+      .callout p:last-child { margin-bottom: 0; }
+      footer { margin-top: 38px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+      @media (max-width: 700px) {
+        main { width: 100%; margin: 0; padding: 24px 18px 32px; border: 0; border-radius: 0; }
+        .grid { grid-template-columns: 1fr; }
+        table { min-width: 640px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">RECEPTION-PR-014 · IMPLEMENTED</p>
+      <h1>접수·예약 담당의 아바타 구현 결과</h1>
+      <p class="meta">2026-07-16 · 합성/데모 데이터만 사용 · 원격 데이터 변경 없음</p>
+
+      <section class="hero">
+        <strong>결론</strong>
+        <p>
+          접수와 예약의 담당의 필드에서 이름 앞에 프로필 이미지를 확인할 수 있다.
+          생성 폼의 선택 목록과 선택 후 값, 예약 접수, 접수 상세와 수정까지 같은 표현을
+          사용하므로 담당의를 더 빠르고 일관되게 식별할 수 있다.
+        </p>
+        <div class="badges">
+          <span class="badge">기존 Select 재사용</span>
+          <span class="badge">private avatar 연결</span>
+          <span class="badge">fallback 포함</span>
+          <span class="badge">빌드 통과</span>
+        </div>
+      </section>
+
+      <h2>무엇이 바뀌었나</h2>
+      <div class="grid">
+        <article class="card">
+          <strong>접수 생성</strong>
+          <p>담당의 드롭다운 옵션과 선택된 값에 22px 아바타를 표시한다.</p>
+        </article>
+        <article class="card">
+          <strong>예약 생성·예약 접수</strong>
+          <p>예약 폼의 다른 정보 구조는 유지하고 담당의 필드에만 같은 아바타 계약을 적용했다.</p>
+        </article>
+        <article class="card">
+          <strong>상세·수정</strong>
+          <p>읽기 전용 필드와 수정 Select 모두 이름 앞에 동일한 사용자 식별 정보를 표시한다.</p>
+        </article>
+      </div>
+
+      <h2>데이터와 보안 경계</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>항목</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>이미지 원본</td><td>기존 workspace staff API의 <code>avatarUrl</code>만 사용</td></tr>
+            <tr><td>private 이미지</td><td>서버가 만든 5분 signed URL을 렌더링하며 클라이언트에 영구 저장하지 않음</td></tr>
+            <tr><td>URL 갱신</td><td>prepared workspace 드로어에서 60초 간격과 창 포커스 복귀 시 직원 목록 재조회</td></tr>
+            <tr><td>이미지 없음</td><td>배정된 수의사는 이니셜, 명시적 미지정은 중립 user-minus 아이콘</td></tr>
+            <tr><td>원격 변경</td><td>DB, RLS, Storage, API schema 변경 없음</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>검증 결과</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>검증</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>접수·예약·상세 UI Playwright</td><td>3 passed</td></tr>
+            <tr><td>workspace staff + private avatar server 계약</td><td>18 passed</td></tr>
+            <tr><td>ESLint / TypeScript / docs links / diff check</td><td>통과</td></tr>
+            <tr><td>secret scan</td><td>통과</td></tr>
+            <tr><td>Next.js production build</td><td>통과, 기존 docs-reader NFT trace 경고만 유지</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>범위 밖과 다음 단계</h2>
+      <div class="callout">
+        <p>
+          기존 public <code>avatars</code> seed bucket은 legacy fallback으로 유지했고,
+          private <code>profile-avatars</code> 계약은 변경하지 않았다. 현재 결과는 로컬
+          브랜치에 있으며, 다음 단계는 코드 리뷰 후 PR 생성 또는 로컬 병합을 선택하는 것이다.
+        </p>
+      </div>
+
+      <footer>
+        Source:
+        <a href="../../work/reception/RECEPTION-PR-014-veterinarian-avatar-fields.md">RECEPTION-PR-014</a>
+        ·
+        <a href="../../work/reception/RECEPTION-LIVE-PR-015-private-profile-avatar.md">Private profile avatar contract</a>
+      </footer>
+    </main>
+  </body>
+</html>

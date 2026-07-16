@@ -38,7 +38,10 @@ import {
   CdsMedicalThermometerIcon,
 } from "@/components/cds-icons/medical-and-domain";
 import { CdsNavigationSidebarIcon } from "@/components/cds-icons/navigation";
-import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
+import {
+  CdsPeopleUserIcon,
+  CdsPeopleUserMinusIcon,
+} from "@/components/cds-icons/people-and-places";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { StaffOperationalProfilePanel } from "@/features/staff/staff-operational-profile-drawer";
 import {
@@ -2624,13 +2627,91 @@ const getSpeciesLabel = (species: Patient["species"]) => {
   return "기타";
 };
 
-const getReceptionVeterinarianSelectLabel = (
-  veterinarianId: string,
-  veterinarians: Veterinarian[] = allVeterinarians,
-) =>
-  veterinarianId === unassignedVeterinarianValue
-    ? "수의사 미지정"
-    : (getStaffDisplayName(veterinarianId, veterinarians) ?? "수의사 미지정");
+function ReceptionVeterinarianAvatar({
+  veterinarian,
+}: {
+  veterinarian?: Veterinarian;
+}) {
+  if (!veterinarian) {
+    return (
+      <span
+        aria-hidden="true"
+        data-testid="reception-veterinarian-unassigned-icon"
+        className="flex size-[var(--emr-reception-veterinarian-avatar-size)] shrink-0 items-center justify-center rounded-full border border-[var(--emr-reception-veterinarian-avatar-border)] bg-[var(--emr-reception-veterinarian-avatar-bg)] text-[var(--emr-reception-veterinarian-avatar-text)]"
+      >
+        <CdsPeopleUserMinusIcon className="size-3" />
+      </span>
+    );
+  }
+
+  return (
+    <Avatar
+      data-testid="reception-veterinarian-avatar"
+      className="size-[var(--emr-reception-veterinarian-avatar-size)] after:border-[var(--emr-reception-veterinarian-avatar-border)]"
+    >
+      {veterinarian.avatarUrl ? (
+        <AvatarImage src={veterinarian.avatarUrl} alt="" />
+      ) : null}
+      <AvatarFallback className="bg-[var(--emr-reception-veterinarian-avatar-bg)] text-[10px] font-medium text-[var(--emr-reception-veterinarian-avatar-text)]">
+        {veterinarian.initial ?? veterinarian.name.slice(0, 1)}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
+function ReceptionVeterinarianIdentity({
+  className,
+  veterinarianId,
+  veterinarians = allVeterinarians,
+}: {
+  className?: string;
+  veterinarianId: string;
+  veterinarians?: Veterinarian[];
+}) {
+  const veterinarian =
+    veterinarianId === unassignedVeterinarianValue
+      ? undefined
+      : veterinarians.find((item) => item.id === veterinarianId);
+
+  return (
+    <span
+      className={cn(
+        "flex min-w-0 flex-1 items-center gap-[var(--emr-reception-veterinarian-identity-gap)] text-left",
+        className,
+      )}
+    >
+      <ReceptionVeterinarianAvatar veterinarian={veterinarian} />
+      <span className="min-w-0 flex-1 truncate">
+        {veterinarian?.name ?? "수의사 미지정"}
+      </span>
+    </span>
+  );
+}
+
+function ReceptionVeterinarianSelectItems({
+  veterinarians,
+}: {
+  veterinarians: Veterinarian[];
+}) {
+  return (
+    <>
+      <SelectItem value={unassignedVeterinarianValue}>
+        <ReceptionVeterinarianIdentity
+          veterinarianId={unassignedVeterinarianValue}
+          veterinarians={veterinarians}
+        />
+      </SelectItem>
+      {veterinarians.map((veterinarian) => (
+        <SelectItem key={veterinarian.id} value={veterinarian.id}>
+          <ReceptionVeterinarianIdentity
+            veterinarianId={veterinarian.id}
+            veterinarians={veterinarians}
+          />
+        </SelectItem>
+      ))}
+    </>
+  );
+}
 
 const getReceptionEncounterStatusLabel = (status: Encounter["status"]) =>
   status === "waiting" ? "진료대기" : getStatusLabel("encounter", status);
@@ -7173,12 +7254,10 @@ function ReceptionWalkInFormDrawer({
                     className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium data-placeholder:text-[var(--clair-color-atomic-neutral-500)]"
                   >
                     {veterinarianId ? (
-                      <span className="flex min-w-0 flex-1 truncate text-left">
-                        {getReceptionVeterinarianSelectLabel(
-                          veterinarianId,
-                          veterinarians,
-                        )}
-                      </span>
+                      <ReceptionVeterinarianIdentity
+                        veterinarianId={veterinarianId}
+                        veterinarians={veterinarians}
+                      />
                     ) : (
                       <SelectValue placeholder="담당의를 선택해주세요" />
                     )}
@@ -7188,17 +7267,9 @@ function ReceptionWalkInFormDrawer({
                     className="min-w-[var(--emr-reception-create-select-content-min-width)]"
                   >
                     <SelectGroup>
-                      <SelectItem value={unassignedVeterinarianValue}>
-                        수의사 미지정
-                      </SelectItem>
-                      {veterinarians.map((veterinarian) => (
-                        <SelectItem
-                          key={veterinarian.id}
-                          value={veterinarian.id}
-                        >
-                          {veterinarian.name}
-                        </SelectItem>
-                      ))}
+                      <ReceptionVeterinarianSelectItems
+                        veterinarians={veterinarians}
+                      />
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -7480,26 +7551,16 @@ function ReceptionWalkInFormDrawer({
                   onValueChange={(value) => value && setVeterinarianId(value)}
                 >
                   <SelectTrigger aria-label="담당의" size="lg" className="w-full bg-card">
-                    <span className="flex flex-1 text-left">
-                      {getReceptionVeterinarianSelectLabel(
-                        effectiveVeterinarianId,
-                        veterinarians,
-                      )}
-                    </span>
+                    <ReceptionVeterinarianIdentity
+                      veterinarianId={effectiveVeterinarianId}
+                      veterinarians={veterinarians}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value={unassignedVeterinarianValue}>
-                        수의사 미지정
-                      </SelectItem>
-                      {veterinarians.map((veterinarian) => (
-                        <SelectItem
-                          key={veterinarian.id}
-                          value={veterinarian.id}
-                        >
-                          {veterinarian.name}
-                        </SelectItem>
-                      ))}
+                      <ReceptionVeterinarianSelectItems
+                        veterinarians={veterinarians}
+                      />
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -7926,12 +7987,10 @@ function ReceptionReservationFormDrawer({
                     className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium data-placeholder:text-[var(--clair-color-atomic-neutral-500)]"
                   >
                     {veterinarianId ? (
-                      <span className="flex min-w-0 flex-1 truncate text-left">
-                        {getReceptionVeterinarianSelectLabel(
-                          veterinarianId,
-                          veterinarians,
-                        )}
-                      </span>
+                      <ReceptionVeterinarianIdentity
+                        veterinarianId={veterinarianId}
+                        veterinarians={veterinarians}
+                      />
                     ) : (
                       <SelectValue placeholder="담당의를 선택해주세요" />
                     )}
@@ -7941,14 +8000,9 @@ function ReceptionReservationFormDrawer({
                     className="min-w-[var(--emr-reception-create-select-content-min-width)]"
                   >
                     <SelectGroup>
-                      <SelectItem value={unassignedVeterinarianValue}>
-                        수의사 미지정
-                      </SelectItem>
-                      {veterinarians.map((veterinarian) => (
-                        <SelectItem key={veterinarian.id} value={veterinarian.id}>
-                          {veterinarian.name}
-                        </SelectItem>
-                      ))}
+                      <ReceptionVeterinarianSelectItems
+                        veterinarians={veterinarians}
+                      />
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -8199,23 +8253,16 @@ function ReceptionReservationFormDrawer({
                     size="lg"
                     className="w-full bg-card"
                   >
-                    <span className="flex flex-1 text-left">
-                      {getReceptionVeterinarianSelectLabel(
-                        veterinarianId,
-                        veterinarians,
-                      )}
-                    </span>
+                    <ReceptionVeterinarianIdentity
+                      veterinarianId={veterinarianId}
+                      veterinarians={veterinarians}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value={unassignedVeterinarianValue}>
-                        수의사 미지정
-                      </SelectItem>
-                      {veterinarians.map((veterinarian) => (
-                        <SelectItem key={veterinarian.id} value={veterinarian.id}>
-                          {veterinarian.name}
-                        </SelectItem>
-                      ))}
+                      <ReceptionVeterinarianSelectItems
+                        veterinarians={veterinarians}
+                      />
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -8458,20 +8505,16 @@ function ReceptionAppointmentCheckInFormDrawer({
                   size="lg"
                   className="w-full bg-card"
                 >
-                  <span className="flex flex-1 text-left">
-                    {getReceptionVeterinarianSelectLabel(veterinarianId, veterinarians)}
-                  </span>
+                  <ReceptionVeterinarianIdentity
+                    veterinarianId={veterinarianId}
+                    veterinarians={veterinarians}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value={unassignedVeterinarianValue}>
-                      수의사 미지정
-                    </SelectItem>
-                    {veterinarians.map((veterinarian) => (
-                      <SelectItem key={veterinarian.id} value={veterinarian.id}>
-                        {veterinarian.name}
-                      </SelectItem>
-                    ))}
+                    <ReceptionVeterinarianSelectItems
+                      veterinarians={veterinarians}
+                    />
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -8844,6 +8887,42 @@ function ReceptionSidePanelInput({
           {unit}
         </span>
       ) : null}
+    </div>
+  );
+}
+
+function ReceptionVeterinarianReadonlyInput({
+  className,
+  value,
+  veterinarianId,
+  veterinarians,
+  variant = "default",
+}: {
+  className?: string;
+  value: string;
+  veterinarianId?: string;
+  veterinarians: Veterinarian[];
+  variant?: ReceptionSidePanelLayoutVariant;
+}) {
+  const veterinarian = veterinarianId
+    ? veterinarians.find((item) => item.id === veterinarianId)
+    : undefined;
+
+  return (
+    <div className="relative min-w-0">
+      <span className="pointer-events-none absolute left-2 top-1/2 z-10 -translate-y-1/2">
+        <ReceptionVeterinarianAvatar veterinarian={veterinarian} />
+      </span>
+      <ReceptionSidePanelInput
+        aria-label="담당의"
+        readOnly
+        value={value}
+        variant={variant}
+        className={cn(
+          "pl-[calc(var(--emr-reception-veterinarian-avatar-size)+var(--clair-spacing-16))]",
+          className,
+        )}
+      />
     </div>
   );
 }
@@ -9583,31 +9662,30 @@ function ReceptionSidePanelDetail({
                     aria-label="담당의"
                     className="w-full bg-card"
                   >
-                    <span className="flex min-w-0 flex-1 truncate text-left">
-                      {getReceptionVeterinarianSelectLabel(
+                    <ReceptionVeterinarianIdentity
+                      veterinarianId={
                         editDraft.primaryVeterinarianId ??
-                          unassignedVeterinarianValue,
-                        veterinarians,
-                      )}
-                    </span>
+                        unassignedVeterinarianValue
+                      }
+                      veterinarians={veterinarians}
+                    />
                   </SelectTrigger>
                   <SelectContent align="end" className="min-w-[224px]">
                     <SelectGroup>
-                      <SelectItem value={unassignedVeterinarianValue}>
-                        수의사 미지정
-                      </SelectItem>
-                      {veterinarians.map((veterinarian) => (
-                        <SelectItem key={veterinarian.id} value={veterinarian.id}>
-                          {veterinarian.name}
-                        </SelectItem>
-                      ))}
+                      <ReceptionVeterinarianSelectItems
+                        veterinarians={veterinarians}
+                      />
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               ) : (
-                <ReceptionSidePanelInput
-                  aria-label="담당의"
-                  readOnly
+                <ReceptionVeterinarianReadonlyInput
+                  veterinarianId={
+                    selectedEncounter?.primaryVeterinarianId ??
+                    selectedAppointment?.assignedVeterinarianId ??
+                    unassignedVeterinarianValue
+                  }
+                  veterinarians={veterinarians}
                   value={veterinarianName}
                   variant={detailVariant}
                 />
@@ -10026,10 +10104,16 @@ export function ReceptionDrawer({
       setWorkspaceVeterinarians(mapWorkspaceStaffToVeterinarians(result));
     }
 
+    const refreshStaff = () => void loadStaff();
+
     void loadStaff();
+    const refreshInterval = window.setInterval(refreshStaff, 60_000);
+    window.addEventListener("focus", refreshStaff);
 
     return () => {
       cancelled = true;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", refreshStaff);
     };
   }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
 
@@ -10702,29 +10786,29 @@ export function ReceptionDrawer({
                     size="lg"
                     className="w-full bg-card"
                   >
-                    <span className="flex min-w-0 flex-1 truncate text-left">
-                      {getReceptionVeterinarianSelectLabel(
+                    <ReceptionVeterinarianIdentity
+                      veterinarianId={
                         editDraft.primaryVeterinarianId ??
-                          unassignedVeterinarianValue,
-                        veterinarians,
-                      )}
-                    </span>
+                        unassignedVeterinarianValue
+                      }
+                      veterinarians={veterinarians}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value={unassignedVeterinarianValue}>
-                        수의사 미지정
-                      </SelectItem>
-                      {veterinarians.map((veterinarian) => (
-                        <SelectItem key={veterinarian.id} value={veterinarian.id}>
-                          {veterinarian.name}
-                        </SelectItem>
-                      ))}
+                      <ReceptionVeterinarianSelectItems
+                        veterinarians={veterinarians}
+                      />
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               ) : (
-                <Input value={veterinarianName} readOnly className="h-9 bg-card" />
+                <ReceptionVeterinarianReadonlyInput
+                  className="h-9"
+                  veterinarianId={selectedVeterinarianId}
+                  veterinarians={veterinarians}
+                  value={veterinarianName}
+                />
               )}
             </ReceptionFormField>
           </section>

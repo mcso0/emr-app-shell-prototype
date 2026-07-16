@@ -320,6 +320,11 @@
   --emr-reception-create-textarea-min-height: 76px;
   --emr-reception-create-select-content-min-width: 224px;
   --emr-reception-create-add-vital-bg: var(--clair-color-atomic-white-alpha-4);
+  --emr-reception-veterinarian-avatar-size: 22px;
+  --emr-reception-veterinarian-avatar-bg: var(--clair-color-atomic-neutral-100);
+  --emr-reception-veterinarian-avatar-border: var(--clair-color-atomic-black-alpha-8);
+  --emr-reception-veterinarian-avatar-text: var(--clair-color-atomic-neutral-500);
+  --emr-reception-veterinarian-identity-gap: var(--clair-spacing-6);
   --emr-calendar-toolbar-height: 56px;
   --clair-layout-drawer-header: 52px;
   --emr-calendar-toolbar-padding-top: var(--clair-spacing-12);

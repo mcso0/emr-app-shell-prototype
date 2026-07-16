@@ -243,6 +243,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-PR-011            | done         | reception            | P1       | User request / patient search field alignment | `docs/work/reception/RECEPTION-PR-011-patient-search-field-ui.md` |
 | RECEPTION-PR-012            | done         | reception            | P0       | User goal / staff profile side panel V2 UI contract | `docs/work/reception/RECEPTION-PR-012-profile-side-panel-v2-ui-contract.md` |
 | RECEPTION-PR-013            | done         | reception            | P0       | User goal / staff profile side panel V2 read model | `docs/work/reception/RECEPTION-PR-013-profile-side-panel-v2-read-model.md` |
+| RECEPTION-PR-014            | implemented  | reception            | P1       | User goal / veterinarian avatars in reception and reservation fields | `docs/work/reception/RECEPTION-PR-014-veterinarian-avatar-fields.md` |
 | RECEPTION-LIVE-PR-001       | human_review | reception            | P0       | Project 03 / DEN-54  | `docs/work/reception/RECEPTION-LIVE-PR-001-encounter-persistence-contract.md`                          |
 | RECEPTION-LIVE-PR-002       | human_review | reception            | P0       | Project 03 / DEN-55  | `docs/work/reception/RECEPTION-LIVE-PR-002-schema-extension-plan.md`                                   |
 | RECEPTION-LIVE-PR-003       | human_review | reception            | P0       | Project 03 / DEN-56  | `docs/work/reception/RECEPTION-LIVE-PR-003-schema-migration.md`                                        |
