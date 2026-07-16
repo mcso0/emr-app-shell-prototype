@@ -5475,7 +5475,7 @@ test("day lane headers show fact-based status and match the Figma metrics", asyn
     columnGap: "10px",
     height: "40px",
     paddingBottom: "8px",
-    paddingLeft: "10px",
+    paddingLeft: "8px",
     paddingRight: "8px",
     paddingTop: "8px",
   });
