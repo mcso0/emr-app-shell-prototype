@@ -2647,6 +2647,7 @@ function ReceptionVeterinarianAvatar({
   return (
     <Avatar
       data-testid="reception-veterinarian-avatar"
+      roundness="roundrect"
       className="size-[var(--emr-reception-veterinarian-avatar-size)] after:border-[var(--emr-reception-veterinarian-avatar-border)]"
     >
       {veterinarian.avatarUrl ? (
