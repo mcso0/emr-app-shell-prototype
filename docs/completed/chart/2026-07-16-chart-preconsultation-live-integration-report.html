@@ -53,12 +53,16 @@
           <li>서로 다른 두 대기 환자의 선택·호출·차트 전환 Playwright: 2 passed</li>
           <li><code>npm run lint</code>, <code>npm run docs:check</code>, <code>npm run security:secrets</code>: passed</li>
           <li><code>npm run build</code>: passed</li>
+          <li>PR #423과 #424를 포함한 staging head를 PR #425로 <code>main</code>에 승격했다.</li>
+          <li><code>origin/main</code> <code>81f85ecbbd7362c12016c7fa7a04a3f7d23adf16</code> 및 Vercel production <code>dpl_28kF14zBZRdppum45wtfRR6C5Fav</code>: Ready</li>
+          <li>인증된 production 브라우저에서 구름·초코 정보, 환자 정보 Sheet, 진료실 선택, 호출→차트 전환, 대기 복귀를 검증했고 두 환자 모두 대기 상태로 복구했다.</li>
+          <li>production 브라우저 error log: 0, Product Design QA: passed</li>
         </ul>
       </section>
 
       <section>
         <h2>현재 상태와 다음 단계</h2>
-        <p>코드와 staging DB 검증은 완료됐다. PR 검증과 preview 확인 후, 정확한 production release 승인 패킷을 기준으로 main merge·배포·production smoke를 진행한다.</p>
+        <p>구현, staging DB, PR, production merge·배포, 실제 브라우저 smoke까지 완료했다. 기능은 production alias에서 제공되고 있으며 별도 release 작업은 남아 있지 않다.</p>
       </section>
 
       <section>
@@ -66,7 +70,7 @@
         <ul>
           <li>환자 프로필 사진 저장·업로드와 신규 임상 기준값 판정은 포함하지 않았다.</li>
           <li>Supabase advisor의 authenticated <code>SECURITY DEFINER</code> 경고는 닫힌 테이블 위에 의도적으로 둔 권한 검사 RPC에 해당한다. anonymous 실행권한은 없다.</li>
-          <li>production 배포 완료 상태와 실제 브라우저 시각 검수 결과는 release 후 이 보고서에 갱신한다.</li>
+          <li>문제 발생 시 직전 production commit <code>bf342350a62eafbdecd3febc89b0a85fb0227fc7</code>, deployment <code>dpl_8sseUgGSbibJ1S32bw52JLUvf6FW</code>를 rollback 후보로 사용한다.</li>
         </ul>
       </section>
     </main>

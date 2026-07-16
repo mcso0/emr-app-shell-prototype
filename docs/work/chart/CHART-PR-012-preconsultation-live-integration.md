@@ -1,6 +1,6 @@
 ---
 id: "CHART-PR-012"
-status: "implementation"
+status: "done"
 area: "chart"
 priority: "P0"
 target_pr: "User request / live preconsultation context"
@@ -35,7 +35,7 @@ Replace the legacy pre-call chart lock surface with the approved veterinarian-or
 - Patient profile-image storage or upload. The header uses the existing pet icon as the avatar fallback because no patient photo field exists.
 - New clinical interpretation or abnormal-vital thresholds.
 - New patient, guardian, appointment, encounter, vital, SOAP, or diagnosis tables.
-- Production migration or deployment before the exact release approval packet is accepted.
+- Any production migration or deployment outside the approved release packet.
 
 ## Data Contract
 
@@ -63,4 +63,9 @@ Replace the legacy pre-call chart lock surface with the approved veterinarian-or
 - An authenticated remote read probe resolved the encounter, queue, one eligible vital measurement, and two prior encounters without returning or persisting probe data.
 - Function ACL inspection confirmed `anon` cannot execute the new read RPC or direct queue/call wrappers. The read RPC keeps the intentional `authenticated` grant behind active-membership and `chart:view` checks; call/return writers require `chart:update` and actor/session equality.
 - Supabase security advisor reports the expected authenticated `SECURITY DEFINER` warning for the read RPC. This is intentional because the table layer remains closed to direct authenticated reads; the function uses a fixed safe `search_path` and explicit membership/permission checks. No advisor finding references a new table, RLS gap, or anonymous execution grant.
-- Production merge, production smoke, and representative visual review remain pending the exact release approval gate.
+- PR #423 merged the implementation into `staging`; PR #424 was included in the promoted staging head.
+- PR #425 promoted `staging` to `main` at `81f85ecbbd7362c12016c7fa7a04a3f7d23adf16` after every required GitHub check passed.
+- Vercel production deployment `dpl_28kF14zBZRdppum45wtfRR6C5Fav` is `Ready` and serves the production alias `https://emr-app-shell-prototype.vercel.app`.
+- Authenticated production browser verification passed for both waiting patients: live preconsultation data, patient-information Sheet, consultation-room selection, call-to-chart transition, and return-to-waiting. Both queue entries were restored and the final browser error log was empty.
+- Product Design QA is recorded in `design-qa.md` with `final result: passed`.
+- Rollback candidate: production commit `bf342350a62eafbdecd3febc89b0a85fb0227fc7`, deployment `dpl_8sseUgGSbibJ1S32bw52JLUvf6FW`.
