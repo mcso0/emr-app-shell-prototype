@@ -574,8 +574,18 @@ test("staff profile panel renders account, published shift, availability, and pe
   await expect(drawer).toContainText("5월 5일 10:00 복귀");
   await expect(drawer).toContainText("suji@example.test");
   await expect(drawer).toContainText("010-0000-0000");
-  await drawer.getByRole("button", { name: "이메일 복사" }).click();
+  const emailValue = drawer.getByText("suji@example.test");
+  const emailCopy = drawer.getByRole("button", { name: "이메일 복사" });
+  const phoneValue = drawer.getByText("010-0000-0000");
+  const phoneCopy = drawer.getByRole("button", { name: "전화번호 복사" });
+  await expect(emailCopy).toHaveCSS("opacity", "0");
+  await expect(phoneCopy).toHaveCSS("opacity", "0");
+  await emailValue.hover();
+  await expect(emailCopy).toHaveCSS("opacity", "1");
+  await emailCopy.click();
   await expect(page.getByText("이메일을 복사했어요")).toBeVisible();
+  await phoneValue.hover();
+  await expect(phoneCopy).toHaveCSS("opacity", "1");
   await drawer.getByRole("button", { name: "프로필 작업 더보기" }).click();
   await expect(page.getByRole("menuitem")).toHaveCount(2);
   await expect(page.getByRole("menuitem").allTextContents()).resolves.toEqual([

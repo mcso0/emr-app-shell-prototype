@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>직원 프로필 사이드패널 Figma 정렬 결과</title>
+    <style>
+      :root { color-scheme: light; --ink:#191919; --muted:#686868; --line:#deded9; --soft:#f6f6f3; --brand:#195447; --brand-soft:#e8f3ef; --warn:#76520a; --warn-soft:#fff6da; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:#efefeb; color:var(--ink); font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      main { width:min(920px,calc(100% - 32px)); margin:32px auto; padding:40px; border:1px solid var(--line); border-radius:16px; background:#fff; box-shadow:0 10px 32px rgb(0 0 0 / 5%); }
+      h1,h2,p { margin-top:0; } h1 { margin-bottom:10px; font-size:clamp(28px,5vw,42px); letter-spacing:-.035em; } h2 { margin:34px 0 12px; font-size:21px; letter-spacing:-.02em; } p,li,th,td { font-size:14px; line-height:1.65; }
+      code { padding:2px 5px; border-radius:5px; background:var(--soft); overflow-wrap:anywhere; } a { color:var(--brand); text-underline-offset:3px; } .eyebrow { margin-bottom:8px; color:var(--brand); font-size:13px; font-weight:750; letter-spacing:.08em; } .meta { color:var(--muted); }
+      .hero { margin-top:24px; padding:22px; border:1px solid #b8d4ca; border-radius:14px; background:var(--brand-soft); } .hero strong { display:block; margin-bottom:8px; font-size:19px; } .badges { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; } .badge { padding:5px 10px; border-radius:999px; color:var(--brand); background:#fff; font-size:12px; font-weight:700; }
+      .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; } .card { padding:18px; border:1px solid var(--line); border-radius:12px; background:#fff; } .card strong { display:block; margin-bottom:7px; } .card p { margin-bottom:0; color:var(--muted); }
+      .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; } table { width:100%; border-collapse:collapse; } th,td { padding:12px 14px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; } th { background:var(--soft); font-size:12px; } tr:last-child td { border-bottom:0; }
+      .callout { padding:18px; border-left:4px solid #d29b22; border-radius:8px; background:var(--warn-soft); } .callout p:last-child { margin-bottom:0; } footer { margin-top:38px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+      @media (max-width:700px) { main { width:100%; margin:0; padding:24px 18px 32px; border:0; border-radius:0; } .grid { grid-template-columns:1fr; } table { min-width:640px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">RECEPTION-PR-015 · IMPLEMENTED</p>
+      <h1>직원 프로필 사이드패널 Figma 정렬 결과</h1>
+      <p class="meta">2026-07-18 · 합성/로컬 검증만 사용 · 원격 데이터 변경 없음</p>
+
+      <section class="hero">
+        <strong>결론</strong>
+        <p>프로필 사이드패널의 헤더, 계정 정보, 오늘 근무 카드를 Figma 구조에 맞췄다. 기존 두 탭과 권한 경계는 유지했고, 요청대로 상태 메시지 컴포넌트와 저장 로직은 변경하지 않았다.</p>
+        <div class="badges"><span class="badge">380px / 150px 유지</span><span class="badge">계정 정보 unboxed</span><span class="badge">hover·focus 복사</span><span class="badge">상태 메시지 미수정</span></div>
+      </section>
+
+      <h2>무엇이 바뀌었나</h2>
+      <div class="grid">
+        <article class="card"><strong>헤더</strong><p>16px inset, 84px 아바타 행, 20/28 이름, 20px Presence pill, 최근 접속 행으로 정렬했다.</p></article>
+        <article class="card"><strong>계정 정보</strong><p>카드 외곽을 제거하고 3등분 열, 24px 행, 12px 행 간격으로 이메일·전화번호 복사 동작을 배치했다.</p></article>
+        <article class="card"><strong>오늘 근무</strong><p>48px 캘린더 영역과 72px 카드, 권한이 있을 때만 보이는 66px 일정 확인 액션을 적용했다.</p></article>
+      </div>
+
+      <h2>범위와 안전 경계</h2>
+      <div class="table-wrap"><table><thead><tr><th>항목</th><th>결과</th></tr></thead><tbody>
+        <tr><td>상태 메시지</td><td><code>StatusMessageEditor</code>, Enter/blur 저장, Escape 취소, API/RLS, self-only 권한은 변경하지 않음</td></tr>
+        <tr><td>탭</td><td>승인된 <code>프로필</code>과 <code>업무 현황</code> 두 탭만 유지</td></tr>
+        <tr><td>일정</td><td>새 탭이나 읽기 모델은 추가하지 않고, 기존 서버가 제공한 권한 있는 destination만 버튼에 사용</td></tr>
+        <tr><td>데이터/보안</td><td>DB, API schema, RLS, avatar persistence, workspace scope 변경 없음</td></tr>
+      </tbody></table></div>
+
+      <h2>검증 결과</h2>
+      <div class="table-wrap"><table><thead><tr><th>검증</th><th>결과</th></tr></thead><tbody>
+        <tr><td>Focused ESLint / TypeScript</td><td>통과</td></tr>
+        <tr><td>접수 운영 프로필 Playwright</td><td>9 passed; 기본 숨김 및 hover 후 이메일·전화번호 복사 아이콘 노출 확인</td></tr>
+        <tr><td>Storybook 시각 검토</td><td>380px Full Panel Profile Specimen에서 헤더·unboxed 계정 목록·72px 근무 카드 확인</td></tr>
+      </tbody></table></div>
+
+      <h2>남은 결정</h2>
+      <div class="callout"><p>Figma의 세 번째 일정 탭과 현재 부재·복귀 정보의 이동은 제품 결정이 필요하다. 이번 변경은 기존 두 탭과 검증된 데이터·권한 경계를 유지한 상태에서 정적 Figma 차이만 해결한다.</p></div>
+
+      <footer>Source: <a href="../../work/reception/RECEPTION-PR-015-staff-profile-figma-alignment.md">RECEPTION-PR-015</a> · <a href="../../design/system/staff-operational-profile-drawer.md">Staff Operational Profile Side Panel V2 contract</a></footer>
+    </main>
+  </body>
+</html>
