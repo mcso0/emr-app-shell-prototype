@@ -14,6 +14,16 @@ import { useLayoutStore } from "@/stores/layout-store";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { GlobalCommandPalette } from "@/shell/global-command-palette";
+import {
+  NAV_RAIL_PANEL_TOGGLE_ENTER_FROM,
+  NAV_RAIL_PANEL_TOGGLE_ENTER_TRANSITION,
+  NAV_RAIL_PANEL_TOGGLE_EXIT_TO,
+  NAV_RAIL_PANEL_TOGGLE_EXIT_TRANSITION,
+  NAV_RAIL_PANEL_TOGGLE_REDUCED_EXIT_TO,
+  NAV_RAIL_PANEL_TOGGLE_REDUCED_TRANSITION,
+  NAV_RAIL_PANEL_TOGGLE_REDUCED_VISIBLE,
+  NAV_RAIL_PANEL_TOGGLE_VISIBLE,
+} from "@/shell/nav-rail-motion";
 
 type NavRailProps = {
   activeModuleId: string;
@@ -50,14 +60,6 @@ const RAIL_ITEM_CLASS_NAME =
   "flex size-[var(--emr-navrail-item-size)] items-center justify-center rounded-[var(--emr-navrail-item-radius)] p-[var(--emr-navrail-item-padding)] text-[var(--emr-navrail-icon)] outline-none transition-colors hover:bg-[var(--emr-navrail-item-hover)] hover:text-[var(--emr-navrail-icon-hover)] focus-visible:ring-3 focus-visible:ring-ring/50";
 const RAIL_ICON_FRAME_CLASS_NAME = "flex size-[var(--emr-navrail-icon-frame-size)] items-center justify-center";
 const RAIL_TOOLTIP_SIDE_OFFSET = 16;
-const RAIL_TOP_ENTER_TRANSITION: Transition = {
-  duration: 0.22,
-  ease: [0.22, 1, 0.36, 1],
-};
-const RAIL_TOP_EXIT_TRANSITION: Transition = {
-  duration: 0.18,
-  ease: [0.22, 1, 0.36, 1],
-};
 
 function getModuleItem(moduleId: string): RailNavItem | null {
   const moduleDefinition = modules.find((item) => item.id === moduleId);
@@ -83,10 +85,10 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
     ? RAIL_REDUCED_TRANSITION
     : RAIL_LAYOUT_TRANSITION;
   const collapsedTopTransition: Transition = reduceMotion
-    ? RAIL_REDUCED_TRANSITION
+    ? NAV_RAIL_PANEL_TOGGLE_REDUCED_TRANSITION
     : modulePanelOpen
-      ? RAIL_TOP_EXIT_TRANSITION
-      : RAIL_TOP_ENTER_TRANSITION;
+      ? NAV_RAIL_PANEL_TOGGLE_EXIT_TRANSITION
+      : NAV_RAIL_PANEL_TOGGLE_ENTER_TRANSITION;
   const sections = moduleSections.map((section) =>
     section.map(getModuleItem).filter((item): item is RailNavItem => Boolean(item))
   );
@@ -98,9 +100,13 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
           {!modulePanelOpen ? (
             <motion.div
               key="collapsed-panel-toggle"
-              initial={reduceMotion ? false : { height: 0, opacity: 0, y: -8 }}
-              animate={{ height: "auto", opacity: 1, y: 0 }}
-              exit={reduceMotion ? { height: 0 } : { height: 0, opacity: 0, y: -8 }}
+              initial={reduceMotion ? false : NAV_RAIL_PANEL_TOGGLE_ENTER_FROM}
+              animate={reduceMotion
+                ? NAV_RAIL_PANEL_TOGGLE_REDUCED_VISIBLE
+                : NAV_RAIL_PANEL_TOGGLE_VISIBLE}
+              exit={reduceMotion
+                ? NAV_RAIL_PANEL_TOGGLE_REDUCED_EXIT_TO
+                : NAV_RAIL_PANEL_TOGGLE_EXIT_TO}
               transition={collapsedTopTransition}
               className="flex w-full shrink-0 flex-col items-center gap-[var(--emr-navrail-content-gap)] overflow-hidden"
             >
