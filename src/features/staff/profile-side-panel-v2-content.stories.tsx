@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { CloseIcon } from "@/components/icons";
+import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -80,34 +81,37 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
       data-testid="profile-v2-panel-specimen"
     >
       <Tabs defaultValue={defaultTab} className="min-h-0 flex-1 gap-0">
-        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-3">
-          <div className="flex items-start gap-3 pr-16">
+        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4">
+          <div className="grid h-[var(--emr-profile-avatar-size)] grid-cols-[var(--emr-profile-avatar-size)_minmax(0,1fr)_auto] items-start gap-2.5">
             <EditableProfileAvatar alt="합성 직원" editable={false} initials="SU" />
-            <div className="min-w-0 flex-1 pt-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <h2 className="truncate text-lg font-semibold">합성 직원</h2>
+            <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-col gap-1">
+              <div className="flex h-7 min-w-0 items-center gap-2 px-1.5">
+                <h2 className="truncate text-xl leading-7 font-semibold tracking-[-0.015em]">합성 직원</h2>
                 <PresenceBadge state="online" />
               </div>
-              <div className="mt-1">
+              <div className="h-[var(--emr-profile-status-control-height)]">
                 <StatusMessageEditor editable={false} value="진료 중입니다" />
               </div>
+              <p className="flex h-5 items-center gap-1 px-1.5 text-sm font-medium tracking-[0.014em] text-[var(--emr-text-placeholder)]">
+                최근 접속 <span aria-hidden="true">·</span> 방금 전
+              </p>
             </div>
-          </div>
-          <div className="absolute right-3 top-3 flex gap-1">
-            <ProfileHeaderActionMenu
-              canManageMember={false}
-              hasContact
-              onCopyContact={() => undefined}
-              onManageMember={() => undefined}
-              onOpenSchedule={() => undefined}
-            />
-            <Button type="button" aria-label="프로필 닫기" size="icon-sm" variant="ghost">
-              <CloseIcon aria-hidden="true" />
-            </Button>
+            <div className="flex gap-1">
+              <ProfileHeaderActionMenu
+                canManageMember={false}
+                hasContact
+                onCopyContact={() => undefined}
+                onManageMember={() => undefined}
+                onOpenSchedule={() => undefined}
+              />
+              <Button type="button" aria-label="프로필 닫기" size="icon-sm" variant="ghost">
+                <CloseIcon aria-hidden="true" />
+              </Button>
+            </div>
           </div>
           <TabsList
             aria-label="직원 프로필 탭"
-            className="absolute bottom-0 left-4 right-4 w-auto"
+            className="absolute bottom-0 left-4 right-4 h-[34px] w-auto"
             variant="line"
           >
             <TabsTrigger value="profile">프로필</TabsTrigger>
@@ -116,21 +120,23 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
         </header>
 
         <TabsContent value="profile" className="min-h-0 overflow-y-auto p-4">
-          <div className="grid gap-5">
-            <section>
-              <h3 className="mb-2 text-sm font-medium text-[var(--emr-text-secondary)]">계정 정보</h3>
-              <dl className="grid gap-2 rounded-xl border p-3 text-sm">
-                <div className="flex justify-between gap-4"><dt>역할</dt><dd>수의사</dd></div>
-                <div className="flex justify-between gap-4"><dt>진료과</dt><dd>일반 진료</dd></div>
-                <div className="flex justify-between gap-4"><dt>이메일</dt><dd>synthetic@example.com</dd></div>
-                <div className="flex justify-between gap-4"><dt>전화번호</dt><dd>010-0000-0000</dd></div>
+          <div className="grid gap-4">
+            <section className="px-2">
+              <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">계정 정보</h3>
+              <dl className="mt-3 grid gap-3 text-sm">
+                <div className="grid h-6 grid-cols-3 items-center gap-3"><dt>역할</dt><dd className="col-span-2 font-medium">수의사</dd></div>
+                <div className="grid h-6 grid-cols-3 items-center gap-3"><dt>진료과</dt><dd className="col-span-2 font-medium">일반 진료</dd></div>
+                <div className="grid h-6 grid-cols-3 items-center gap-3"><dt>이메일</dt><dd className="col-span-2 font-medium">synthetic@example.com</dd></div>
+                <div className="grid h-6 grid-cols-3 items-center gap-3"><dt>전화번호</dt><dd className="col-span-2 font-medium">010-0000-0000</dd></div>
               </dl>
             </section>
-            <section>
-              <h3 className="mb-2 text-sm font-medium text-[var(--emr-text-secondary)]">오늘 근무</h3>
-              <div className="rounded-xl border p-3 text-sm">
-                <p className="font-medium">09:00–18:00 · 일반 진료</p>
-                <p className="mt-1 text-[var(--emr-text-tertiary)]">제1진료실</p>
+            <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-default)]" />
+            <section className="px-2">
+              <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">오늘 근무</h3>
+              <div className="mt-3 flex h-[72px] items-center gap-3 rounded-xl border py-[11px] pl-3 pr-4 text-sm">
+                <div className="grid size-12 place-items-center rounded-lg bg-[var(--emr-surface-muted)]"><CdsFilesCalendarIcon aria-hidden="true" size={24} /></div>
+                <div className="min-w-0 flex-1"><p className="text-base leading-6 font-medium">09:00–18:00</p><p className="truncate text-[var(--emr-text-tertiary)]">근무 예정 · 제1진료실</p></div>
+                <Button size="xs" variant="outline" className="w-[66px] px-0 text-xs">일정 확인</Button>
               </div>
             </section>
             <ProfileAvailabilitySummary

@@ -48,7 +48,7 @@ async function openMenu(trigger: HTMLElement) {
 export const PresenceStates: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    expect(canvas.getByText("접속 중")).toBeVisible();
+    expect(canvas.getByText("온라인")).toBeVisible();
     expect(canvas.getByText("오프라인")).toBeVisible();
     expect(canvas.getByText("상태 확인 중")).toBeVisible();
   },
