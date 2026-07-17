@@ -1,7 +1,7 @@
 ---
 status: "approved"
 area: "design-system"
-updated: "2026-07-05"
+updated: "2026-07-18"
 linear_issue: "DEN-434"
 linear_project: "공통 UX/UI 기준 정리 및 화면 적용"
 source_docs:
@@ -11,6 +11,7 @@ source_docs:
   - "docs/design/system/border-shadow-depth-contract.md"
   - "docs/design/system/component-ownership-rules.md"
   - "docs/work/design-system/DESIGN-SYSTEM-PR-070-emr-empty-state-component-storybook.md"
+  - "docs/work/design-system/DESIGN-SYSTEM-PR-080-emr-empty-state-read-error.md"
 ---
 
 # Empty State And Info Box Contract
@@ -28,9 +29,9 @@ Empty states explain the missing object and the next useful action. Info boxes e
 | State | Meaning | Use | Do not use |
 | --- | --- | --- | --- |
 | Loading | data is being fetched or prepared | `Skeleton` or local loading copy when the domain object matters | Empty state copy such as "no data" |
-| Empty state | the expected object list or section has no visible items | Empty state pattern from this contract | Error, degraded, or permission warning copy |
+| Empty state | the expected object list or section has no visible items, or a whole-content read failure prevents the normal body from rendering | Empty state pattern from this contract | Partial failure, stale data, save failure, degraded, or permission warning copy |
 | Info box | the workflow needs context, guidance, precondition, or boundary explanation | Info box pattern from this contract | Blocking error or destructive confirmation |
-| Inline alert | read/save failure, degraded live/demo state, permission blocker, risky preflight | `EmrInlineAlert` when persistent feedback or recovery action is needed | Passive guidance that does not require attention |
+| Inline alert | partial read/save failure, degraded live/demo state, stale data warning, permission blocker, risky preflight | `EmrInlineAlert` when the surrounding workflow or usable content remains visible | Passive guidance that does not require attention, or a whole-content read failure with no usable body |
 | Field error | one input is invalid | `FieldError` | Panel-level empty or info state |
 | Toast | transient confirmation or mock/session-only feedback | Sonner toast | Persistent empty, warning, or recovery state |
 
@@ -44,6 +45,7 @@ Empty states explain the missing object and the next useful action. Info boxes e
 | No scope result | current date, workspace, patient, encounter, or module scope has no visible data | scope name + how to change scope | change date/scope or go to source workflow | E0 panel, E1 action |
 | No permission or range access | user cannot see items in the current role/scope | neutral explanation without claiming security completion | request/admin/workspace resolution if available | E0 panel or warning/info box depending severity |
 | Pending upstream state | upstream workflow has not produced the object yet | upstream dependency + source screen | go to source workflow or wait | E0 panel, optional info tone |
+| Whole-content read error | the owning content body cannot render because its required read failed | failed object + safe recovery explanation | retry plus optional safe exit | E0 content state, E1 recovery action |
 
 Empty states should not imply live persistence, server enforcement, or permission guarantees when the app is still mock/local-first for that boundary.
 
@@ -58,7 +60,18 @@ Empty states should not imply live persistence, server enforcement, or permissio
 | Persistent success | in-context confirmation after a local action where toast is not enough | success | optional verify/view action |
 | Unavailable action explanation | a visible action is intentionally disabled or future-scoped | neutral/info | explain why and what to do instead |
 
-Use `EmrInlineAlert` instead of a passive info box when the state is a failure, degraded read/write, permission blocker, or recovery path.
+Use `EmrInlineAlert` instead of a passive info box when the surrounding workflow remains usable during a partial failure, degraded read/write, permission blocker, or recovery path. A whole-content read failure may use `EmrEmptyState kind="read-error"` only under the exception below.
+
+### Whole-content read-error exception
+
+`EmrEmptyState kind="read-error"` is allowed when all of the following are true:
+
+- a required read failed and the normal content body cannot be rendered safely;
+- there is no usable stale or partial content that should remain visible;
+- the content surface owns retry and, when needed, one safe exit action;
+- the caller keeps fetching, retry, navigation, logging, and mutation behavior outside the shared component.
+
+Keep `EmrInlineAlert` for partial reads, stale-data warnings, save/write failures, permission blockers, and failures shown beside otherwise usable content. Loading remains a skeleton or loading state and must never render as `read-error`.
 
 ## Layout And Visual Rules
 
@@ -94,13 +107,13 @@ Do not create a shared component merely because the copy repeats.
 Use this order:
 
 1. Keep feature-local markup for one-off empty or info states tied to one workflow.
-2. Use `EmrInlineAlert` for persistent alert, degraded, permission, and recovery states.
+2. Use `EmrInlineAlert` for persistent partial alerts, degraded states, permission blockers, and recovery states shown beside usable content.
 3. Consider a small `EmrEmptyState` only after at least two screen families share the same layout contract.
 4. Consider an `EmrInfoBox` only after info, prerequisite, caution, and unavailable patterns repeat across screen families without feature-specific behavior.
 
 Shared components must expose slots for title, body, icon, action, secondary action, tone, and test IDs without owning route, permission, persistence, or logging behavior.
 
-As of `DESIGN-SYSTEM-PR-070`, `EmrEmptyState` covers the shared empty-state layer for repeated queue, content, drawer, table, widget, and global-shell surfaces. It uses `kind`, `surface`, and `priority` to keep state reason, placement, and CTA ownership explicit. Screen adoption remains separate from the component contract.
+As of `DESIGN-SYSTEM-PR-080`, `EmrEmptyState` covers the shared empty-state layer for repeated queue, content, drawer, table, widget, and global-shell surfaces, plus the narrowly scoped whole-content `read-error` recovery state. It uses `kind`, `surface`, and `priority` to keep state reason, placement, and CTA ownership explicit. Screen adoption remains separate from the component contract.
 
 ## CDS.V2 Visual Size Contract
 
@@ -125,11 +138,11 @@ The icon artwork is supplied by the caller/current motion-icon mapping; Figma de
 | Surface | Current default | `EmrEmptyState` adoption rule | Action ownership |
 | --- | --- | --- | --- |
 | Queue side panel | Use `EmrQueueEmptyState` with the `md` visual tier | Keep queue-specific placement and list-local behavior, but use the shared 40px icon area / 24px icon slot, typography, alpha tokens, and reserved action-space contract. | Queue may own only local recovery such as clearing search or filters. It should not own screen-level create/navigation actions when content is also empty. |
-| Content body | Adopt for main operational absence states | Use `surface="content"` when the main work area has no selected object, no upstream work object, or no scope result. When no upstream work object exists in the operational modules that have adopted this pattern, render the design-system content empty state in the main content surface and suppress the content aside/history panel. | Content body carries the primary information/action weight for the screen-level absence state. Queue/list placeholders remain compact supporting states and do not own the primary screen-level action. |
+| Content body | Adopt for main operational absence states and narrowly scoped whole-content read failure | Use `surface="content"` when the main work area has no selected object, no upstream work object, no scope result, or cannot render because its required read failed. Use `kind="read-error"` only when no usable body remains; keep partial/degraded failures in `EmrInlineAlert`. | Content body carries the primary information/action weight for the screen-level absence or read-recovery state. Queue/list placeholders remain compact supporting states and do not own the primary screen-level action. |
 | Table body | Preferred second pilot surface | Use `surface="table"` for no rows, no filter results, or no search results inside table/list bodies when the table layout can preserve header/scroll alignment. Keep very dense tables on the existing empty row until spacing is verified. | Table owns local recovery such as reset filters. It should not trigger source workflow navigation unless the whole content surface is table-only. |
 | Drawer/detail panel | Adopt selectively | Use `surface="drawer"` for selected-object absence or passive detail guidance. Use `EmrInlineAlert` instead for permission blockers, read failures, failed saves, or degraded data. | Drawer should not own primary workflow creation. It may own close, retry, or local selection guidance. |
 | Widget/card | Adopt selectively | Use `surface="widget"` for dashboard cards and small summaries only when the copy needs an icon and repeated structure. Plain one-line widget empty copy is still allowed. | Widget actions stay secondary unless the widget is explicitly a launcher. |
-| Global shell/module | Last resort | Use only when the whole module or workspace surface cannot show its normal structure. Do not use it for transient loading, API failure, or permission denial that needs alert treatment. | Global shell may own a primary action only when there is no more specific content owner. |
+| Global shell/module | Last resort | Use only when the whole module or workspace surface cannot show its normal structure. A `read-error` state is allowed only when there is no more specific content owner and no usable shell content; transient loading and permission denial stay separate. | Global shell may own a primary action only when there is no more specific content owner. |
 
 ## Current Empty-State Inventory
 
@@ -205,6 +218,14 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 - Operating-hours exceptions, role-assignment members, personal schedule requests, and staff-detail pending requests use `size="sm"` with no icon/action reservation because they are nested lists inside cards or drawers.
 - The schedule data-source `empty` branch uses the `lg` content tier because it owns the schedule workspace status panel; loading, error, and read-only branches remain feature-local status treatments.
 - Shared icon and typography colors continue to come from the existing alpha tokens: `black-alpha-4` icon area background, `black-alpha-48` icon/title, and `black-alpha-36` description.
+
+## 2026-07-18 Whole-content Read Error Contract
+
+- `EmrEmptyStateKind` now includes `read-error` for required reads that prevent the normal content body from rendering.
+- The default visual uses the existing CDS alert-triangle icon inside the shared CDS.V2 empty-state size, tone, typography, and action-slot contract.
+- The caller owns retry, safe exit, navigation, logging, and request state. The shared component owns presentation only.
+- The patient pre-call prototype demonstrates this state with `surface="content"`, `priority="local-recovery"`, a secondary safe-exit action, and a primary retry action.
+- Partial reads, stale data, save/write failure, permission blockers, loading, and usable degraded screens remain outside this exception.
 
 ## Implementation Acceptance Criteria
 

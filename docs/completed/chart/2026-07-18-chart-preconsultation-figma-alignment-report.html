@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>환자 호출 전 화면 Figma 정합 구현 결과</title>
+    <style>
+      body { margin: 0; background: #f7f8fa; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; }
+      main { max-width: 920px; margin: 0 auto; padding: 40px 20px 56px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 20px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      ul { margin: 0; padding-left: 20px; }
+      code { border-radius: 4px; background: #eef1f6; padding: 2px 5px; }
+      .meta { color: #5f6b7a; }
+      .pending { color: #8a5400; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>환자 호출 전 화면 Figma 정합 구현 결과</h1>
+      <p class="meta">2026-07-18 · CHART-PR-013 · DESIGN-SYSTEM-PR-080</p>
+
+      <section>
+        <h2>요청과 결과</h2>
+        <p>CDS.V2 Figma의 전체 호출 전 화면, 바이탈, 과거 진료이력 구조를 실제 진료/차트 화면에 적용했다. 기존 live read와 호출 상태 전이는 유지했고, 보고서에만 있던 시안을 운영 코드와 공용 컴포넌트로 옮겼다.</p>
+      </section>
+
+      <section>
+        <h2>화면 구조</h2>
+        <ul>
+          <li>헤더는 진료 대기 상태, 차트번호, 동물 환자 프로필, 보호자, 환자 프로필·호출 액션 순서로 구성했다.</li>
+          <li>본문을 접수 정보 → 방문 목적 → 환자/보호자 메모 → 바이탈 정보 → 과거 진료이력 순서로 정리했다.</li>
+          <li>기존 우측 중복 환자 정보 영역을 제거하고 Figma의 단일 읽기 흐름과 1200px 콘텐츠 폭을 적용했다.</li>
+          <li>모바일에서는 액션과 접수 정보가 줄바꿈되고, 바이탈 표는 의미 구조를 유지한 채 가로 스크롤된다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>공용 컴포넌트</h2>
+        <ul>
+          <li><code>AnimalPatientAvatar</code>: 기존 Avatar와 CDS 동물 아이콘을 조합해 image, fallback, loading, error, 3개 크기를 제공한다.</li>
+          <li>Storybook의 image 상태는 설계 보고서에서 사용한 합성 동물 사진을 재사용한다. 환자 사진의 저장·업로드·등록 모달은 이번 범위에 포함하지 않았다.</li>
+          <li><code>EmrEmptyState kind="read-error"</code>: 전체 접수 정보 조회 실패를 공용 상태로 등록하고 대기 목록 복귀와 재시도 액션을 제공한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>데이터와 동작</h2>
+        <ul>
+          <li>기존 <code>preconsultation-context</code> API, 권한 검사, 환자 정보 Sheet, 진료실 선택, 호출 전이를 그대로 사용한다.</li>
+          <li>예상 소요시간은 현재 read model에 필드가 없어 임의 값을 만들지 않고 <code>미입력</code>으로 표시한다.</li>
+          <li>사진 URL 필드가 없는 실제 환자는 공용 동물 아이콘 fallback을 사용한다.</li>
+          <li>읽기 실패에서 재시도는 동일 요청을 다시 실행하고, 대기 목록 복귀는 환자 선택과 관련 query를 안전하게 해제한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>TypeScript, 변경 파일 ESLint, 두 공용 컴포넌트 contract: passed</li>
+          <li>핵심 Playwright 3경로: 3 passed</li>
+          <li>전체 차트 테스트: 24 passed / 6 failed. 여섯 실패는 동일한 <code>origin/main</code> 기준 작업공간에서도 재현돼 이번 변경의 회귀가 아님을 확인했다.</li>
+          <li>Storybook static build와 Next.js production build: passed</li>
+          <li>Figma 기준 이미지와 동일 1200px 구현 화면을 나란히 비교해 헤더, 섹션 순서, 바이탈 표, 과거 진료 타임라인을 재보정했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖 / 남은 확인</h2>
+        <ul>
+          <li>환자 생성 모달의 사진 입력, 이미지 저장소, DB 필드, migration, API 확장은 차후 별도 작업이다.</li>
+          <li>진료 유형 badge는 현재 과거 이력 read model에 진료 유형 필드가 없어 임의 분류 대신 실제 상태를 표시한다.</li>
+          <li>Next build의 광범위 NFT trace 경고와 전체 차트 suite의 기존 여섯 실패는 별도 정리 대상이다.</li>
+          <li class="pending">staging PR·smoke와 production 승격·배포 증거는 릴리스 단계가 끝나면 이 보고서에 추가한다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

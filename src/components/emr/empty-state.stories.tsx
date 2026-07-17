@@ -135,7 +135,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use EmrEmptyState for shared EMR empty states after the caller has decided the state kind, surface, and CTA owner. 사용할 때: queue, content, drawer, table, widget empty surfaces share the same layout contract. 쓰지 말아야 할 때: loading, degraded read/write, permission blockers needing recovery alert, or feature logic that belongs in the screen.",
+          "Use EmrEmptyState for shared EMR empty states after the caller has decided the state kind, surface, and CTA owner. 사용할 때: queue, content, drawer, table, widget empty surfaces share the same layout contract, or a whole-content read failure prevents the normal body from rendering. 쓰지 말아야 할 때: loading, partial degraded read/write, save failure, stale-data warning, permission blockers needing recovery alert, or feature logic that belongs in the screen.",
       },
     },
   },
@@ -163,6 +163,7 @@ const meta = {
         "no-scope-result",
         "no-permission",
         "upstream-pending",
+        "read-error",
       ],
       description: "Why the expected content is missing.",
     },
@@ -637,6 +638,62 @@ export const PermissionInfoBoundary: Story = {
   },
 };
 
+function ReadErrorRecoveryExample() {
+  return (
+    <EmptyStatePreviewShell>
+      <EmrEmptyState
+        description="네트워크 상태를 확인한 뒤 다시 시도해 주세요. 대기 목록의 접수 정보는 변경되지 않았어요."
+        kind="read-error"
+        primaryAction={<EmptyStatePrimaryButton size="lg">다시 시도</EmptyStatePrimaryButton>}
+        priority="local-recovery"
+        reserveActionSpace={false}
+        secondaryAction={<EmptyStateSecondaryButton size="lg">대기 목록으로</EmptyStateSecondaryButton>}
+        size="lg"
+        surface="content"
+        testId="read-error-recovery"
+        title="접수 정보를 불러오지 못했어요"
+      />
+    </EmptyStatePreviewShell>
+  );
+}
+
+export const ReadErrorRecovery: Story = {
+  render: () => <ReadErrorRecoveryExample />,
+  play: async ({ canvasElement }) => {
+    const emptyState = canvasElement.querySelector<HTMLElement>(
+      'section[data-testid="read-error-recovery"]',
+    );
+    if (!emptyState) throw new Error("Expected the shared read-error empty state.");
+    if (emptyState.dataset.kind !== "read-error") {
+      throw new Error("Expected the read-error state kind.");
+    }
+
+    const icon = emptyState.querySelector<SVGElement>(
+      '[data-slot="icon"] svg[data-empty-state-icon="read-error"]',
+    );
+    if (!icon) throw new Error("Expected the default read-error alert icon.");
+
+    const buttons = emptyState.querySelectorAll<HTMLButtonElement>(
+      '[data-slot="actions"] button',
+    );
+    if (buttons.length !== 2) throw new Error("Expected two recovery actions.");
+    if (buttons[0]?.textContent !== "대기 목록으로") {
+      throw new Error("Expected the secondary recovery action first.");
+    }
+    if (buttons[1]?.textContent !== "다시 시도") {
+      throw new Error("Expected the primary retry action second.");
+    }
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "사용할 때: 접수 호출 전 본문 전체를 구성하는 조회가 실패해 정상 콘텐츠를 표시할 수 없고, 본문이 재시도와 안전한 이탈 액션을 소유할 때. 부분 실패, 저장 실패, stale data 경고에는 EmrInlineAlert를 유지합니다.",
+      },
+    },
+  },
+};
+
 const stateExamples: Array<
   Pick<
     EmrEmptyStateProps,
@@ -711,6 +768,17 @@ const stateExamples: Array<
     surface: "content",
     title: "넘어온 요청이 없습니다",
   },
+  {
+    description: "네트워크 상태를 확인한 뒤 다시 시도해 주세요.",
+    kind: "read-error",
+    primaryAction: (
+      <EmptyStatePrimaryButton size="lg">다시 시도</EmptyStatePrimaryButton>
+    ),
+    priority: "local-recovery",
+    size: "lg",
+    surface: "content",
+    title: "접수 정보를 불러오지 못했어요",
+  },
 ];
 
 export const StateKindSet: Story = {
@@ -738,7 +806,7 @@ export const StateKindSet: Story = {
     docs: {
       description: {
         story:
-          "사용할 때: 6개 kind의 icon, copy, action 차이를 한 번에 검토할 때. 쓰지 말아야 할 때: 한 화면에 이 모든 state를 동시에 노출하는 실제 workflow로 해석할 때.",
+          "사용할 때: 7개 kind의 icon, copy, action 차이를 한 번에 검토할 때. 쓰지 말아야 할 때: 한 화면에 이 모든 state를 동시에 노출하는 실제 workflow로 해석할 때.",
       },
     },
   },
