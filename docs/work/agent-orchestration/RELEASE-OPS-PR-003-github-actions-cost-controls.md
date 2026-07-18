@@ -3,7 +3,7 @@ id: "RELEASE-OPS-PR-003"
 status: "human_review"
 area: "agent-orchestration"
 priority: "P0"
-target_pr: "User request / GitHub Actions free-budget controls"
+target_pr: "PR 444 / GitHub Actions free-budget controls"
 source_docs:
   - "docs/engineering/operations/release-environment-policy.md"
   - "docs/engineering/operations/manual-merge-gate-runbook.md"
@@ -57,6 +57,7 @@ Keep the private GitHub Free repository inside a small, explicit Actions budget 
 
 ## Handoff Notes
 
+- Review PR: `#444`
 - Vercel PR Preview remains automatic and does not use GitHub Actions minutes.
 - A merge candidate must not move forward until the manually dispatched `Release Check` and local secret gate pass.
 - Production and `main` remain separately approval-gated.
