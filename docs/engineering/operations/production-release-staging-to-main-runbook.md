@@ -5,9 +5,10 @@ area: engineering
 doc_type: runbook
 related_work:
   - DEN-451
+  - RELEASE-OPS-PR-003
 supersedes: []
 superseded_by: []
-last_updated: 2026-06-09
+last_updated: 2026-07-18
 ---
 
 # Production Release From `staging` To `main` Runbook
@@ -47,7 +48,7 @@ The packet must include:
 | Compare target | Current `origin/main` SHA or production deployment id. |
 | Included work | PR numbers, Linear issues, and closeout reports included in the release. |
 | Fixed staging evidence | Fixed staging URL, deployment id/URL, and smoke result for the same source. |
-| Verification | GitHub checks plus local preflight commands. |
+| Verification | One manually dispatched `Release Check` for the exact candidate plus local preflight commands. |
 | Secret/env safety | Confirmation that no secret values are printed and no env files are tracked. |
 | Production operation | Exact operation to run after approval, for example merge `staging` into `main` or promote a named deployment. |
 | Smoke path | Production URL and workflow paths to verify after release. |
@@ -140,7 +141,7 @@ Stop before production approval when:
 - source commit SHA is missing;
 - included PRs/issues are unclear;
 - fixed staging was not reviewed for the same source;
-- `CI`, `Secret Scan`, local preflight, or focused tests are failing or unknown;
+- the combined `Release Check`, local preflight, or focused tests are failing or unknown;
 - rollback candidate is missing;
 - production smoke path is missing;
 - any secret/env value would be exposed;

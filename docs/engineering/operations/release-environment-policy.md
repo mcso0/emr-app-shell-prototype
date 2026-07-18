@@ -8,9 +8,10 @@ related_work:
   - DEN-444
   - DEN-445
   - DEN-446
+  - RELEASE-OPS-PR-003
 supersedes: []
 superseded_by: []
-last_updated: 2026-06-09
+last_updated: 2026-07-18
 ---
 
 # Release Environment Policy
@@ -46,7 +47,7 @@ If the platform is not yet automated to enforce that rule, Codex must treat manu
 - A release/integration thread must list the included PRs/issues before changing fixed staging.
 - Merging or promoting to `main` is a production-release action and requires a separate explicit approval naming the target environment, operation, commit, verification, and rollback path.
 - Keep this working repository private. Do not make it public just to unlock branch protection.
-- While private/free branch protection is unavailable, `CI` and `Secret Scan` are automatic visible checks, and merge approval must verify them manually.
+- While private/free branch protection is unavailable, the combined `Release Check` is run manually once for the exact merge candidate. Merge approval must verify that run plus the local secret gate.
 - A future public portfolio should be a separate sanitized repository, not this internal working repository.
 
 Current known risk:
@@ -138,7 +139,7 @@ Required gate split:
 - `staging` before fixed staging URL update;
 - `staging` before merge or promote to `main` production.
 
-Do not treat a green local build alone as merge approval. The reviewer must also confirm GitHub `CI`, `Secret Scan`, Vercel Preview readiness, included Linear issues/PRs, and non-change of fixed staging or production settings according to the target environment.
+Do not treat a green local build alone as merge approval. The reviewer must also confirm the manual GitHub `Release Check`, Vercel Preview readiness, included Linear issues/PRs, and non-change of fixed staging or production settings according to the target environment.
 
 Detailed manual gate:
 
@@ -149,6 +150,7 @@ Detailed manual gate:
 Desired target state:
 
 - GitHub/Vercel integration creates a preview for every PR branch.
+- GitHub Actions does not run on every PR synchronization; the exact merge candidate receives one manually dispatched `Release Check`.
 - PR previews never receive the fixed staging alias.
 - The long-lived `staging` branch owns the fixed staging URL.
 - Merging to `main` is a production-release action.
