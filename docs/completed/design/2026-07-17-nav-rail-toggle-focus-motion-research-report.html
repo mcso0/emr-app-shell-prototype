@@ -1,0 +1,2289 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR 네비 레일 사이드 패널 토글 모션 리서치</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #f0f2f4;
+        --paper: #ffffff;
+        --paper-soft: #f7f8f9;
+        --ink: #16191d;
+        --muted: #626a73;
+        --subtle: #8a929c;
+        --line: #dce0e4;
+        --line-strong: #c7cdd3;
+        --graphite: #171a20;
+        --graphite-soft: #22262e;
+        --acid: #d7f54a;
+        --acid-ink: #263000;
+        --blue: #2f6fed;
+        --blue-soft: #edf3ff;
+        --green: #167a52;
+        --green-soft: #e9f7f0;
+        --amber: #9a5b04;
+        --amber-soft: #fff5df;
+        --shadow: 0 24px 70px rgba(23, 26, 32, 0.1);
+        --radius-lg: 24px;
+        --radius-md: 14px;
+        --radius-sm: 9px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.48) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.48) 1px,
+            transparent 1px
+          ),
+          var(--canvas);
+        background-size: 28px 28px;
+        color: var(--ink);
+        font-family: "Avenir Next", "SUIT", "Apple SD Gothic Neo", sans-serif;
+        line-height: 1.6;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        color: inherit;
+      }
+
+      a {
+        color: var(--blue);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+      }
+
+      code,
+      pre {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      code {
+        border: 1px solid #e4e7ea;
+        border-radius: 5px;
+        background: #f2f4f5;
+        padding: 1px 5px;
+        color: #27303a;
+        font-size: 0.88em;
+      }
+
+      main {
+        width: min(1320px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 28px 0 80px;
+      }
+
+      .hero {
+        position: relative;
+        min-height: 350px;
+        overflow: hidden;
+        border-radius: var(--radius-lg);
+        background: var(--graphite);
+        color: #f5f7f8;
+        box-shadow: var(--shadow);
+      }
+
+      .hero::before {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at 82% 18%,
+            rgba(215, 245, 74, 0.22),
+            transparent 28%
+          ),
+          linear-gradient(
+            120deg,
+            transparent 38%,
+            rgba(255, 255, 255, 0.04) 38.3%,
+            transparent 38.6%
+          );
+        content: "";
+        pointer-events: none;
+      }
+
+      .hero-inner {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        gap: 48px;
+        align-items: end;
+        min-height: 350px;
+        padding: 40px;
+      }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 999px;
+        padding: 5px 11px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #cbd2d8;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .kicker-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--acid);
+        box-shadow: 0 0 16px rgba(215, 245, 74, 0.68);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 780px;
+        margin: 18px 0 14px;
+        font-size: clamp(36px, 5vw, 68px);
+        font-weight: 760;
+        letter-spacing: -0.055em;
+        line-height: 0.98;
+      }
+
+      .hero-copy {
+        max-width: 720px;
+        margin: 0;
+        color: #aeb7c0;
+        font-size: 16px;
+      }
+
+      .hero-note {
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        padding-top: 18px;
+      }
+
+      .hero-note strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--acid);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero-note p {
+        margin: 0;
+        color: #dbe0e4;
+        font-size: 15px;
+      }
+
+      .meta-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1px;
+        overflow: hidden;
+        margin-top: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: var(--line);
+      }
+
+      .meta-item {
+        min-height: 92px;
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .meta-item span {
+        display: block;
+        color: var(--subtle);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .meta-item strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 14px;
+      }
+
+      section {
+        margin-top: 22px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.94);
+        padding: 30px;
+        box-shadow: 0 14px 44px rgba(23, 26, 32, 0.05);
+      }
+
+      .section-heading {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .section-heading h2 {
+        margin-bottom: 7px;
+        font-size: 25px;
+        letter-spacing: -0.025em;
+        line-height: 1.2;
+      }
+
+      .section-heading p {
+        max-width: 760px;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .recommendation-badge {
+        flex: none;
+        border: 1px solid #bfd663;
+        border-radius: 999px;
+        padding: 7px 11px;
+        background: #f3facd;
+        color: #4b5b09;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 16px;
+      }
+
+      .summary-card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        background: var(--paper-soft);
+      }
+
+      .summary-card.recommended {
+        border-color: #c5d96e;
+        background: linear-gradient(145deg, #fbffe9, #f5f9e2);
+      }
+
+      .summary-card h3 {
+        margin-bottom: 9px;
+        font-size: 17px;
+      }
+
+      .summary-card p,
+      .summary-card li {
+        color: #4d555e;
+        font-size: 14px;
+      }
+
+      .summary-card ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      .lab {
+        overflow: hidden;
+        padding: 0;
+        background: #e9ecef;
+      }
+
+      .lab-header {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #30353e;
+        padding: 18px 20px;
+        background: var(--graphite);
+        color: #f5f7f8;
+      }
+
+      .lab-title strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .lab-title span {
+        display: block;
+        margin-top: 3px;
+        color: #909aa5;
+        font-size: 12px;
+      }
+
+      .option-tabs {
+        display: flex;
+        gap: 6px;
+        padding: 4px;
+        border-radius: 10px;
+        background: #292e37;
+      }
+
+      .option-tab {
+        min-height: 34px;
+        border: 0;
+        border-radius: 7px;
+        padding: 0 13px;
+        background: transparent;
+        color: #aeb7c0;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .option-tab:hover {
+        color: #ffffff;
+      }
+
+      .option-tab[aria-selected="true"] {
+        background: var(--acid);
+        color: var(--acid-ink);
+      }
+
+      .lab-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 310px;
+        min-height: 590px;
+      }
+
+      .stage-wrap {
+        position: relative;
+        display: grid;
+        min-width: 0;
+        place-items: center;
+        overflow: hidden;
+        padding: 42px;
+        background:
+          radial-gradient(
+            circle at 50% 10%,
+            rgba(255, 255, 255, 0.95),
+            transparent 35%
+          ),
+          #e8ebee;
+      }
+
+      .stage-wrap::after {
+        position: absolute;
+        right: 20px;
+        bottom: 16px;
+        color: #9ba3ab;
+        content: "VISUAL PROTOTYPE · NOT APP CODE";
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+      }
+
+      .app-stage {
+        display: flex;
+        width: min(100%, 780px);
+        height: 430px;
+        overflow: hidden;
+        border: 1px solid #cdd2d7;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 30px 80px rgba(23, 26, 32, 0.15);
+      }
+
+      .mock-rail {
+        position: relative;
+        z-index: 3;
+        flex: 0 0 54px;
+        margin: 8px 0 8px 8px;
+        overflow: hidden;
+        border-radius: 10px;
+        background: #181c24;
+        color: #9aa5b2;
+      }
+
+      .mock-toggle-slot {
+        position: absolute;
+        top: 10px;
+        left: 9px;
+        display: none;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        transform-origin: 50% 50%;
+      }
+
+      .mock-icon-button {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .mock-icon-button:hover,
+      .mock-icon-button:focus-visible {
+        background: #2b3039;
+        color: #ffffff;
+        outline: none;
+      }
+
+      .mock-icon-button:focus-visible {
+        box-shadow: 0 0 0 3px rgba(215, 245, 74, 0.45);
+      }
+
+      .sidebar-symbol {
+        position: relative;
+        width: 17px;
+        height: 14px;
+        border: 1.5px solid currentColor;
+        border-radius: 3px;
+      }
+
+      .sidebar-symbol::before {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 4px;
+        width: 1.5px;
+        background: currentColor;
+        content: "";
+      }
+
+      .mock-nav-items {
+        position: absolute;
+        top: 13px;
+        left: 9px;
+        display: grid;
+        gap: 10px;
+        width: 36px;
+      }
+
+      .rail-item {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 7px;
+      }
+
+      .rail-item.active {
+        background: #313741;
+        color: #f3f5f7;
+      }
+
+      .rail-glyph {
+        width: 15px;
+        height: 15px;
+        border: 1.5px solid currentColor;
+        border-radius: 4px;
+        opacity: 0.92;
+      }
+
+      .rail-glyph.round {
+        border-radius: 50%;
+      }
+
+      .module-panel {
+        flex: 0 0 auto;
+        width: 244px;
+        min-width: 0;
+        margin: 8px;
+        margin-left: 10px;
+        overflow: hidden;
+        border: 1px solid #d5d9dd;
+        border-radius: 10px;
+        background: #fbfbfc;
+        opacity: 1;
+      }
+
+      .panel-inner {
+        width: 244px;
+      }
+
+      .panel-head {
+        display: flex;
+        height: 52px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px;
+        border-bottom: 1px solid #e5e7e9;
+      }
+
+      .panel-head strong {
+        font-size: 13px;
+      }
+
+      .panel-close {
+        color: #7c858f;
+      }
+
+      .queue-toolbar {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e5e7e9;
+      }
+
+      .queue-date {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .queue-label {
+        margin-top: 15px;
+        color: #7c858f;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .queue-row {
+        margin: 10px 10px 0;
+        border: 1px solid #e0e3e6;
+        border-radius: 8px;
+        padding: 11px;
+        background: #ffffff;
+      }
+
+      .queue-row strong {
+        display: block;
+        font-size: 11px;
+      }
+
+      .queue-row span {
+        display: block;
+        margin-top: 5px;
+        color: #8a929c;
+        font-size: 10px;
+      }
+
+      .workspace {
+        min-width: 0;
+        flex: 1;
+        margin: 8px 8px 8px 0;
+        overflow: hidden;
+        border: 1px solid #d5d9dd;
+        border-radius: 10px;
+        background: #ffffff;
+      }
+
+      .workspace-top {
+        display: flex;
+        height: 42px;
+        align-items: center;
+        gap: 9px;
+        border-bottom: 1px solid #e5e7e9;
+        padding: 0 12px;
+      }
+
+      .tab-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4c7df0;
+      }
+
+      .workspace-top strong {
+        font-size: 11px;
+      }
+
+      .workspace-canvas {
+        display: grid;
+        height: calc(100% - 42px);
+        place-items: center;
+        color: #8b939c;
+        font-size: 11px;
+      }
+
+      .workspace-empty {
+        display: grid;
+        gap: 8px;
+        place-items: center;
+      }
+
+      .empty-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: #f0f2f4;
+      }
+
+      .control-panel {
+        border-left: 1px solid #d3d7db;
+        padding: 22px;
+        background: #f8f9fa;
+      }
+
+      .option-label {
+        display: inline-flex;
+        min-height: 24px;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 8px;
+        background: var(--blue-soft);
+        color: #2355b6;
+        font-size: 10px;
+        font-weight: 800;
+      }
+
+      .control-panel h3 {
+        margin: 10px 0 5px;
+        font-size: 19px;
+        letter-spacing: -0.02em;
+      }
+
+      .control-lead {
+        min-height: 66px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .control-group {
+        display: grid;
+        gap: 8px;
+        margin-top: 17px;
+      }
+
+      .control-button {
+        display: flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #ffffff;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .control-button:hover {
+        border-color: #9da5ad;
+        background: #f2f4f6;
+      }
+
+      .control-button.primary {
+        border-color: #1d2128;
+        background: #1d2128;
+        color: #ffffff;
+      }
+
+      .control-button.primary:hover {
+        background: #30353e;
+      }
+
+      .control-button[aria-pressed="true"] {
+        border-color: #b8cc61;
+        background: #f1f8cb;
+        color: #465508;
+      }
+
+      .range-wrap {
+        margin-top: 18px;
+      }
+
+      .range-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: #525a63;
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        margin-top: 9px;
+        accent-color: #252a31;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .metric {
+        min-height: 66px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px;
+        background: #ffffff;
+      }
+
+      .metric span {
+        display: block;
+        color: var(--subtle);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .option-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .option-card {
+        display: flex;
+        min-height: 330px;
+        flex-direction: column;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        background: #ffffff;
+      }
+
+      .option-card.recommended {
+        border-color: #bdcf68;
+        box-shadow: inset 0 4px 0 var(--acid);
+      }
+
+      .option-number {
+        color: var(--subtle);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: 0.09em;
+      }
+
+      .option-card h3 {
+        margin: 10px 0 7px;
+        font-size: 18px;
+      }
+
+      .option-card p,
+      .option-card li {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .option-card ul {
+        margin: 12px 0 18px;
+        padding-left: 18px;
+      }
+
+      .option-card .control-button {
+        margin-top: auto;
+      }
+
+      .score-row {
+        display: grid;
+        grid-template-columns: 78px minmax(0, 1fr) 30px;
+        gap: 8px;
+        align-items: center;
+        margin-top: 7px;
+        font-size: 10px;
+      }
+
+      .score-track {
+        height: 5px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e7eaed;
+      }
+
+      .score-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: #323840;
+      }
+
+      .score-fill.best {
+        background: #9daf35;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+      }
+
+      table {
+        width: 100%;
+        min-width: 860px;
+        border-collapse: collapse;
+        background: #ffffff;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-size: 12px;
+      }
+
+      th {
+        background: #f5f7f8;
+        color: #555e68;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .status-good,
+      .status-neutral,
+      .status-caution {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 2px 7px;
+        font-size: 10px;
+        font-weight: 800;
+      }
+
+      .status-good {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .status-neutral {
+        background: var(--blue-soft);
+        color: #2456b5;
+      }
+
+      .status-caution {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .recommendation-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(340px, 0.86fr);
+        gap: 18px;
+      }
+
+      .decision-box {
+        border: 1px solid #bdcf68;
+        border-radius: var(--radius-md);
+        padding: 22px;
+        background: #f8fbe8;
+      }
+
+      .decision-box h3 {
+        margin-bottom: 8px;
+        font-size: 18px;
+      }
+
+      .decision-box p,
+      .decision-box li {
+        color: #4f5840;
+        font-size: 13px;
+      }
+
+      .decision-box ul {
+        margin: 12px 0 0;
+        padding-left: 19px;
+      }
+
+      .code-box {
+        overflow: hidden;
+        border: 1px solid #30353e;
+        border-radius: var(--radius-md);
+        background: #1d2128;
+      }
+
+      .code-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #343a44;
+        padding: 10px 14px;
+        color: #9ea8b2;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      pre {
+        max-height: 440px;
+        margin: 0;
+        overflow: auto;
+        padding: 17px;
+        color: #e2e7eb;
+        font-size: 11px;
+        line-height: 1.62;
+        tab-size: 2;
+      }
+
+      .two-column {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .note-card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 18px;
+        background: var(--paper-soft);
+      }
+
+      .note-card h3 {
+        margin-bottom: 8px;
+        font-size: 16px;
+      }
+
+      .note-card p,
+      .note-card li {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .note-card ul,
+      .note-card ol {
+        margin: 10px 0 0;
+        padding-left: 19px;
+      }
+
+      .reference-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .reference-list li {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 13px;
+        background: #ffffff;
+        font-size: 12px;
+      }
+
+      .reference-list strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #353c44;
+      }
+
+      .reference-list span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+      }
+
+      .footnote {
+        margin: 18px 2px 0;
+        color: #757e87;
+        font-size: 11px;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 1040px) {
+        .hero-inner,
+        .summary-grid,
+        .recommendation-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-inner {
+          gap: 28px;
+        }
+
+        .lab-body {
+          grid-template-columns: 1fr;
+        }
+
+        .control-panel {
+          border-top: 1px solid #d3d7db;
+          border-left: 0;
+        }
+
+        .control-lead {
+          min-height: 0;
+        }
+
+        .control-group {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .option-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        main {
+          width: min(100% - 24px, 1320px);
+          padding-top: 12px;
+        }
+
+        .hero-inner,
+        section {
+          padding: 22px;
+        }
+
+        h1 {
+          font-size: 38px;
+        }
+
+        .meta-strip,
+        .two-column,
+        .reference-list {
+          grid-template-columns: 1fr;
+        }
+
+        .section-heading,
+        .lab-header {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .option-tabs {
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        .option-tab {
+          flex: 1 0 max-content;
+        }
+
+        .stage-wrap {
+          padding: 22px 14px 42px;
+        }
+
+        .app-stage {
+          height: 380px;
+        }
+
+        .module-panel {
+          width: 190px;
+        }
+
+        .panel-inner {
+          width: 190px;
+        }
+
+        .control-group {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div class="hero-inner">
+          <div>
+            <span class="kicker"
+              ><span class="kicker-dot"></span> CLAiR INTERACTION RESEARCH ·
+              2026.07.17</span
+            >
+            <h1>Focus in.<br />Focus out.</h1>
+            <p class="hero-copy">
+              네비 레일의 사이드 패널 버튼이 갑자기 생기고 사라지는 대신, 짧은
+              이동과 초점 전환을 통해 자연스럽게 나타나고 퇴장하는 세 가지 구현
+              방안을 비교한다.
+            </p>
+          </div>
+          <div class="hero-note">
+            <strong>Executive decision</strong>
+            <p>
+              현재 앱에 이미 설치된 <b>framer-motion 12.38.0</b>을 유지하고,
+              토글 래퍼에만 <b>3px 이하 blur + opacity + 4px 이동</b>을 속성별
+              tween으로 추가하는 A안을 권장한다.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <div class="meta-strip" aria-label="보고서 메타 정보">
+        <div class="meta-item">
+          <span>대상</span><strong>NavRail 사이드 패널 토글</strong>
+        </div>
+        <div class="meta-item">
+          <span>현재 소유 파일</span><strong>src/shell/nav-rail.tsx</strong>
+        </div>
+        <div class="meta-item">
+          <span>현재 런타임</span
+          ><strong>React 19.2.4 · Framer Motion 12.38</strong>
+        </div>
+        <div class="meta-item">
+          <span>이번 범위</span
+          ><strong>리서치·시안만, 앱 코드 변경 없음</strong>
+        </div>
+      </div>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <h2>먼저 결론</h2>
+            <p>
+              버튼 하나의 자연스러운 등장에는 새 애니메이션 스택보다 기존
+              Motion의 속성별 제어가 더 적합하다.
+            </p>
+          </div>
+          <span class="recommendation-badge">A안 권장</span>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card recommended">
+            <h3>A. Motion Focus Fade</h3>
+            <p>
+              현재 <code>AnimatePresence</code>와
+              <code>useReducedMotion</code>을 그대로 사용한다. 버튼 래퍼만
+              <code>blur(3px) → blur(0)</code>, <code>opacity 0 → 1</code>,
+              <code>y 4px → 0</code>로 조정한다.
+            </p>
+            <ul>
+              <li>새 의존성 없음</li>
+              <li>기존 exit/unmount 계약 유지</li>
+              <li>한 파일 안에서 진입·퇴장·reduced motion 관리</li>
+            </ul>
+          </article>
+          <article class="summary-card">
+            <h3>디자인 판단</h3>
+            <p>
+              blur는 “흐릿한 물체가 선명해진다”는 인상을 주지만, 24px
+              아이콘에서는 값이 조금만 커도 번져 보인다. CLAiR에는
+              <b>2–3px, 120–180ms</b>가 적당하고 6px 이상의 cinematic blur는
+              피하는 편이 안전하다.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="lab" id="prototype">
+        <div class="lab-header">
+          <div class="lab-title">
+            <strong>Interactive Motion Lab</strong>
+            <span
+              >패널 접기·펼치기를 눌러 세 시안의 속도와 초점 변화를
+              비교해봐.</span
+            >
+          </div>
+          <div class="option-tabs" role="tablist" aria-label="모션 시안 선택">
+            <button
+              class="option-tab"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              data-option-tab="motion"
+            >
+              A Motion
+            </button>
+            <button
+              class="option-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              data-option-tab="css"
+            >
+              B CSS
+            </button>
+            <button
+              class="option-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              data-option-tab="waapi"
+            >
+              C WAAPI
+            </button>
+          </div>
+        </div>
+
+        <div class="lab-body">
+          <div class="stage-wrap">
+            <div class="app-stage" aria-label="CLAiR 앱 셸 모션 시안">
+              <nav class="mock-rail" aria-label="시안 네비 레일">
+                <div
+                  class="mock-toggle-slot"
+                  id="mockToggleSlot"
+                  aria-hidden="true"
+                >
+                  <button
+                    class="mock-icon-button"
+                    id="mockExpandButton"
+                    type="button"
+                    aria-label="사이드 패널 펼치기"
+                  >
+                    <span class="sidebar-symbol" aria-hidden="true"></span>
+                  </button>
+                </div>
+                <div
+                  class="mock-nav-items"
+                  id="mockNavItems"
+                  aria-hidden="true"
+                >
+                  <span class="rail-item"
+                    ><span class="rail-glyph round"></span
+                  ></span>
+                  <span class="rail-item"
+                    ><span class="rail-glyph"></span
+                  ></span>
+                  <span class="rail-item active"
+                    ><span class="rail-glyph round"></span
+                  ></span>
+                  <span class="rail-item"
+                    ><span class="rail-glyph"></span
+                  ></span>
+                  <span class="rail-item"
+                    ><span class="rail-glyph round"></span
+                  ></span>
+                  <span class="rail-item"
+                    ><span class="rail-glyph"></span
+                  ></span>
+                </div>
+              </nav>
+
+              <aside
+                class="module-panel"
+                id="mockModulePanel"
+                aria-label="진료 사이드 패널"
+              >
+                <div class="panel-inner">
+                  <div class="panel-head">
+                    <strong>진료/차트</strong>
+                    <button
+                      class="mock-icon-button panel-close"
+                      id="mockCollapseButton"
+                      type="button"
+                      aria-label="사이드 패널 접기"
+                    >
+                      <span class="sidebar-symbol" aria-hidden="true"></span>
+                    </button>
+                  </div>
+                  <div class="queue-toolbar">
+                    <div class="queue-date">
+                      <span>‹</span><strong>26.07.17 (금)</strong><span>›</span>
+                    </div>
+                    <div class="queue-label">진료 대기열 · 2</div>
+                  </div>
+                  <div class="queue-row">
+                    <strong>초코 · 김민준</strong><span>09:30 · 진료 대기</span>
+                  </div>
+                  <div class="queue-row">
+                    <strong>별이 · 윤서진</strong><span>10:10 · 예진 완료</span>
+                  </div>
+                </div>
+              </aside>
+
+              <div class="workspace">
+                <div class="workspace-top">
+                  <span class="tab-dot"></span><strong>진료/차트</strong>
+                </div>
+                <div class="workspace-canvas">
+                  <div class="workspace-empty">
+                    <span class="empty-mark"></span
+                    ><strong>진료 업무를 선택해 주세요</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="visually-hidden"
+              id="motionStatus"
+              aria-live="polite"
+            ></div>
+          </div>
+
+          <aside class="control-panel" aria-label="모션 시안 제어">
+            <span class="option-label" id="optionLabel">RECOMMENDED</span>
+            <h3 id="optionTitle">A. Motion Focus Fade</h3>
+            <p class="control-lead" id="optionLead">
+              작은 blur와 짧은 상승 이동을 분리된 easing으로 조율하는 기본안.
+            </p>
+
+            <div class="control-group">
+              <button
+                class="control-button primary"
+                id="playCollapse"
+                type="button"
+              >
+                접기 → 버튼 등장
+              </button>
+              <button class="control-button" id="playExpand" type="button">
+                펼치기 → 버튼 퇴장
+              </button>
+              <button
+                class="control-button"
+                id="autoPlay"
+                type="button"
+                aria-pressed="false"
+              >
+                자동 반복
+              </button>
+              <button
+                class="control-button"
+                id="reduceMotion"
+                type="button"
+                aria-pressed="false"
+              >
+                움직임 줄이기
+              </button>
+            </div>
+
+            <div class="range-wrap">
+              <div class="range-head">
+                <label for="speedRange">재생 속도</label
+                ><span id="speedValue">1.00×</span>
+              </div>
+              <input
+                id="speedRange"
+                type="range"
+                min="0.65"
+                max="1.5"
+                value="1"
+                step="0.05"
+              />
+            </div>
+
+            <div class="metric-grid">
+              <div class="metric">
+                <span>Enter</span><strong id="metricEnter">180ms</strong>
+              </div>
+              <div class="metric">
+                <span>Exit</span><strong id="metricExit">120ms</strong>
+              </div>
+              <div class="metric">
+                <span>Blur</span><strong id="metricBlur">3px → 0</strong>
+              </div>
+              <div class="metric">
+                <span>Easing</span
+                ><strong id="metricEase">0.16, 1, 0.3, 1</strong>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <h2>추천 방안 3가지</h2>
+            <p>
+              시각적 결과와 코드 소유권을 함께 비교했다. 각 버튼은 위 인터랙티브
+              시안으로 연결된다.
+            </p>
+          </div>
+        </div>
+        <div class="option-grid">
+          <article class="option-card recommended">
+            <span class="option-number">OPTION 01 · RECOMMENDED</span>
+            <h3>Motion Focus Fade</h3>
+            <p>
+              기존 Motion 컴포넌트에 filter, opacity, y의 속성별 transition을
+              추가한다.
+            </p>
+            <ul>
+              <li>가장 작은 변경 범위</li>
+              <li>React unmount와 exit가 이미 해결됨</li>
+              <li>현재 reduced-motion 분기 재사용</li>
+            </ul>
+            <div class="score-row">
+              <span>적합성</span
+              ><span class="score-track"
+                ><span class="score-fill best" style="width: 96%"></span></span
+              ><b>9.6</b>
+            </div>
+            <div class="score-row">
+              <span>제어력</span
+              ><span class="score-track"
+                ><span class="score-fill best" style="width: 90%"></span></span
+              ><b>9.0</b>
+            </div>
+            <div class="score-row">
+              <span>복잡도</span
+              ><span class="score-track"
+                ><span class="score-fill best" style="width: 88%"></span></span
+              ><b>낮음</b>
+            </div>
+            <button
+              class="control-button"
+              type="button"
+              data-view-option="motion"
+            >
+              A 시안 재생
+            </button>
+          </article>
+
+          <article class="option-card">
+            <span class="option-number">OPTION 02 · LIGHTEST</span>
+            <h3>CSS Soft Dissolve</h3>
+            <p>CSS keyframes 또는 transition으로 blur와 opacity를 표현한다.</p>
+            <ul>
+              <li>런타임 의존성은 가장 적음</li>
+              <li>스타일 토큰화가 쉬움</li>
+              <li>React exit 완료 시점 관리는 별도 필요</li>
+            </ul>
+            <div class="score-row">
+              <span>적합성</span
+              ><span class="score-track"
+                ><span class="score-fill" style="width: 72%"></span></span
+              ><b>7.2</b>
+            </div>
+            <div class="score-row">
+              <span>제어력</span
+              ><span class="score-track"
+                ><span class="score-fill" style="width: 68%"></span></span
+              ><b>6.8</b>
+            </div>
+            <div class="score-row">
+              <span>복잡도</span
+              ><span class="score-track"
+                ><span class="score-fill" style="width: 82%"></span></span
+              ><b>중간</b>
+            </div>
+            <button class="control-button" type="button" data-view-option="css">
+              B 시안 재생
+            </button>
+          </article>
+
+          <article class="option-card">
+            <span class="option-number">OPTION 03 · REVERSIBLE</span>
+            <h3>WAAPI Reversible Focus</h3>
+            <p>
+              <code>Element.animate()</code>와
+              <code>Animation.reverse()</code>로 빠른 재클릭을 직접 제어한다.
+            </p>
+            <ul>
+              <li>중단·반전·재생 속도 제어 우수</li>
+              <li>추가 패키지 없음</li>
+              <li>ref, cleanup, DOM lifecycle 코드가 늘어남</li>
+            </ul>
+            <div class="score-row">
+              <span>적합성</span
+              ><span class="score-track"
+                ><span class="score-fill" style="width: 63%"></span></span
+              ><b>6.3</b>
+            </div>
+            <div class="score-row">
+              <span>제어력</span
+              ><span class="score-track"
+                ><span class="score-fill" style="width: 98%"></span></span
+              ><b>9.8</b>
+            </div>
+            <div class="score-row">
+              <span>복잡도</span
+              ><span class="score-track"
+                ><span class="score-fill" style="width: 42%"></span></span
+              ><b>높음</b>
+            </div>
+            <button
+              class="control-button"
+              type="button"
+              data-view-option="waapi"
+            >
+              C 시안 재생
+            </button>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <h2>기술 비교</h2>
+            <p>
+              “가능한가”가 아니라 현재 CLAiR 코드에 얼마나 정직하게 들어가는지를
+              기준으로 비교했다.
+            </p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>방안</th>
+                <th>React exit</th>
+                <th>빠른 재클릭</th>
+                <th>reduced motion</th>
+                <th>의존성</th>
+                <th>판단</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>A · Framer Motion</b></td>
+                <td><code>AnimatePresence</code>가 처리</td>
+                <td>새 상태로 자연스럽게 보간</td>
+                <td>기존 <code>useReducedMotion</code></td>
+                <td>이미 설치됨</td>
+                <td><span class="status-good">권장</span></td>
+              </tr>
+              <tr>
+                <td><b>B · CSS</b></td>
+                <td><code>animationend</code> 또는 discrete transition 필요</td>
+                <td>클래스 토글 중 끊김 관리 필요</td>
+                <td><code>@media</code>로 직접 정의</td>
+                <td>없음</td>
+                <td><span class="status-neutral">대안</span></td>
+              </tr>
+              <tr>
+                <td><b>C · WAAPI</b></td>
+                <td><code>finished</code> 후 unmount</td>
+                <td><code>reverse()</code>, <code>cancel()</code> 가능</td>
+                <td>hook/분기 직접 구현</td>
+                <td>없음</td>
+                <td><span class="status-caution">고급 대안</span></td>
+              </tr>
+              <tr>
+                <td><b>GSAP</b></td>
+                <td>timeline cleanup 필요</td>
+                <td>매우 우수</td>
+                <td>직접 구현</td>
+                <td>새 패키지</td>
+                <td><span class="status-caution">이번 범위 제외</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <h2>권장 구현 계약</h2>
+            <p>
+              승인 후 구현한다면 <code>src/shell/nav-rail.tsx</code>의 토글
+              모션만 좁게 바꾸는 것이 안전하다.
+            </p>
+          </div>
+        </div>
+        <div class="recommendation-layout">
+          <div class="decision-box">
+            <h3>Motion Focus Fade · 기본값</h3>
+            <ul>
+              <li>
+                <b>Enter:</b> 180ms, <code>[0.16, 1, 0.3, 1]</code>, blur 3px, y
+                +4px
+              </li>
+              <li>
+                <b>Exit:</b> 120ms, <code>[0.4, 0, 1, 1]</code>, blur 2px, y
+                -3px
+              </li>
+              <li>
+                <b>Blur 대상:</b> 버튼과 첫 divider를 감싸는 현재
+                <code>motion.div</code>만
+              </li>
+              <li>
+                <b>Layout:</b> 기존 네비 아이템의 spring은 우선 유지하고, 이중
+                움직임이 보이면 후속 조정
+              </li>
+              <li>
+                <b>Reduced motion:</b> transform·blur 제거, opacity만 80–100ms
+                또는 즉시 표시
+              </li>
+            </ul>
+          </div>
+          <div class="code-box">
+            <div class="code-head">
+              <span>Proposed sketch</span><span>not applied</span>
+            </div>
+            <pre><code>const toggleVariants = {
+  hidden: {
+    height: 0,
+    opacity: 0,
+    y: 4,
+    filter: "blur(3px)",
+  },
+  visible: {
+    height: "auto",
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: {
+      default: {
+        duration: 0.18,
+        ease: [0.16, 1, 0.3, 1],
+      },
+      opacity: { duration: 0.14 },
+      filter: { duration: 0.16 },
+    },
+  },
+  exit: {
+    height: 0,
+    opacity: 0,
+    y: -3,
+    filter: "blur(2px)",
+    transition: {
+      duration: 0.12,
+      ease: [0.4, 0, 1, 1],
+    },
+  },
+};</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <h2>접근성·성능·검증</h2>
+            <p>
+              blur를 추가해도 버튼의 의미, 키보드 접근, 레이아웃 안정성이
+              약해지면 안 된다.
+            </p>
+          </div>
+        </div>
+        <div class="two-column">
+          <article class="note-card">
+            <h3>필수 안전선</h3>
+            <ul>
+              <li><code>aria-label</code>과 tooltip 계약은 그대로 유지한다.</li>
+              <li>
+                blur는 최대 3px로 제한하고 전체 nav rail이나 side panel에 걸지
+                않는다.
+              </li>
+              <li>
+                <code>prefers-reduced-motion</code>에서는 y·blur를 제거한다.
+              </li>
+              <li>지속적인 <code>will-change</code>는 추가하지 않는다.</li>
+              <li>패널 접기 후 키보드 focus가 사라지는지 별도 확인한다.</li>
+            </ul>
+          </article>
+          <article class="note-card">
+            <h3>구현 시 검증</h3>
+            <ol>
+              <li>열기·접기 URL 및 상태 회귀 Playwright</li>
+              <li>60fps trace 또는 브라우저 performance inspection</li>
+              <li>빠른 더블 클릭·반대 방향 재클릭</li>
+              <li>OS reduced motion 켜짐/꺼짐</li>
+              <li>390px 좁은 화면과 200% zoom</li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <h2>라이브러리·플러그인·스킬 조사</h2>
+            <p>
+              런타임 라이브러리와 에이전트 스킬은 역할이 다르다. 스킬은 구현
+              가이드이며 앱 의존성이 아니다.
+            </p>
+          </div>
+        </div>
+        <div class="two-column">
+          <article class="note-card">
+            <h3>런타임 판단</h3>
+            <ul>
+              <li>
+                <b>Framer Motion:</b> 현재 설치되어 있어 A안에 추가 비용이 없다.
+              </li>
+              <li>
+                <b>CSS:</b> 단순 효과에는 충분하지만 현재 React exit 계약을 다시
+                풀 이유가 없다.
+              </li>
+              <li>
+                <b>WAAPI:</b> 반전 제어는 강하지만 버튼 하나에는 imperative
+                code가 과하다.
+              </li>
+              <li>
+                <b>GSAP:</b> 복합 timeline에는 훌륭하지만 이번 24px 토글에는 새
+                의존성이 과하다.
+              </li>
+            </ul>
+          </article>
+          <article class="note-card">
+            <h3>스킬 후보</h3>
+            <ul>
+              <li>
+                <a href="https://skills.sh/wshobson/agents/interaction-design"
+                  >wshobson/agents@interaction-design</a
+                >: 11K installs, 37.9K GitHub stars.
+                microinteraction·easing·reduced motion을 폭넓게 다룬다.
+              </li>
+              <li>
+                <a href="https://skills.sh/jezweb/claude-skills/motion"
+                  >jezweb/claude-skills@motion</a
+                >: Motion 전용이지만 788 installs로 품질 확인을 더 거쳐야 한다.
+              </li>
+              <li>
+                현재 작업에는 이미 설치된 <code>frontend-design</code>으로
+                시안을 만들기에 충분해 추가 설치는 권장하지 않는다.
+              </li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <h2>공식 참고 자료</h2>
+            <p>기술 판단은 라이브러리 공식 문서와 MDN을 우선 사용했다.</p>
+          </div>
+        </div>
+        <ul class="reference-list">
+          <li>
+            <strong
+              ><a href="https://motion.dev/docs/react-animate-presence"
+                >Motion · AnimatePresence</a
+              ></strong
+            >
+            <span
+              >React tree에서 제거되는 컴포넌트의 exit 애니메이션과 easing
+              조합.</span
+            >
+          </li>
+          <li>
+            <strong
+              ><a href="https://motion.dev/docs/react-transitions"
+                >Motion · Transitions</a
+              ></strong
+            >
+            <span
+              >tween, spring, cubic-bezier, 속성별 transition과 filter
+              animation.</span
+            >
+          </li>
+          <li>
+            <strong
+              ><a href="https://motion.dev/docs/react-use-reduced-motion"
+                >Motion · useReducedMotion</a
+              ></strong
+            >
+            <span
+              >OS의 움직임 줄이기 설정에 따라 transform을 opacity로 대체하는
+              패턴.</span
+            >
+          </li>
+          <li>
+            <strong
+              ><a
+                href="https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Filter_effects/Using"
+                >MDN · CSS filter effects</a
+              ></strong
+            >
+            <span
+              ><code>filter: blur()</code>가 요소 전체 렌더 결과에 적용되는
+              방식.</span
+            >
+          </li>
+          <li>
+            <strong
+              ><a
+                href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API/Using_the_Web_Animations_API"
+                >MDN · Web Animations API</a
+              ></strong
+            >
+            <span
+              ><code>Element.animate()</code>, playback control,
+              finish/cancel/reverse 계약.</span
+            >
+          </li>
+          <li>
+            <strong
+              ><a href="https://gsap.com/docs/v3/GSAP/gsap.context%28%29/"
+                >GSAP · React context</a
+              ></strong
+            >
+            <span
+              >React에서 GSAP animation을 scope하고 cleanup하는 공식 경로.</span
+            >
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <h2>범위와 다음 결정</h2>
+            <p>이 문서는 구현 승인을 위한 연구 산출물이다.</p>
+          </div>
+        </div>
+        <div class="two-column">
+          <article class="note-card">
+            <h3>이번에 한 것</h3>
+            <ul>
+              <li>현재 코드와 설치 스택 확인</li>
+              <li>공식 자료 기반 3가지 방법 비교</li>
+              <li>속도·blur·reduced motion을 조절하는 인터랙티브 시안 제작</li>
+            </ul>
+          </article>
+          <article class="note-card">
+            <h3>아직 하지 않은 것</h3>
+            <ul>
+              <li><code>src/shell/nav-rail.tsx</code> 변경</li>
+              <li>새 패키지 또는 스킬 설치</li>
+              <li>앱 배포 및 실제 프레임 성능 측정</li>
+            </ul>
+          </article>
+        </div>
+        <p class="footnote">
+          추천 결정: A안의 시각 방향을 승인한 뒤, 별도 구현 범위에서 nav rail
+          토글 모션과 focused Playwright/브라우저 QA를 함께 처리한다.
+        </p>
+      </section>
+    </main>
+
+    <script>
+      const optionDefinitions = {
+        motion: {
+          label: "RECOMMENDED",
+          title: "A. Motion Focus Fade",
+          lead: "작은 blur와 짧은 상승 이동을 분리된 easing으로 조율하는 기본안.",
+          enterDuration: 180,
+          exitDuration: 120,
+          enterEase: "cubic-bezier(0.16, 1, 0.3, 1)",
+          exitEase: "cubic-bezier(0.4, 0, 1, 1)",
+          blur: 3,
+          enterY: 4,
+          exitY: -3,
+          shiftDuration: 190,
+          enterFrames: [
+            {
+              opacity: 0,
+              filter: "blur(3px)",
+              transform: "translateY(4px) scale(0.985)",
+            },
+            {
+              opacity: 1,
+              filter: "blur(0px)",
+              transform: "translateY(0) scale(1)",
+            },
+          ],
+          exitFrames: [
+            {
+              opacity: 1,
+              filter: "blur(0px)",
+              transform: "translateY(0) scale(1)",
+            },
+            {
+              opacity: 0,
+              filter: "blur(2px)",
+              transform: "translateY(-3px) scale(0.99)",
+            },
+          ],
+        },
+        css: {
+          label: "LIGHTEST",
+          title: "B. CSS Soft Dissolve",
+          lead: "이동을 거의 없애고 opacity와 blur에 집중한 가장 조용한 시안.",
+          enterDuration: 220,
+          exitDuration: 160,
+          enterEase: "cubic-bezier(0.22, 1, 0.36, 1)",
+          exitEase: "cubic-bezier(0.55, 0, 1, 0.45)",
+          blur: 4,
+          enterY: 2,
+          exitY: -1,
+          shiftDuration: 220,
+          enterFrames: [
+            { opacity: 0, filter: "blur(4px)", transform: "translateY(2px)" },
+            {
+              opacity: 0.72,
+              filter: "blur(1px)",
+              transform: "translateY(0.5px)",
+              offset: 0.66,
+            },
+            { opacity: 1, filter: "blur(0px)", transform: "translateY(0)" },
+          ],
+          exitFrames: [
+            { opacity: 1, filter: "blur(0px)", transform: "translateY(0)" },
+            { opacity: 0, filter: "blur(3px)", transform: "translateY(-1px)" },
+          ],
+        },
+        waapi: {
+          label: "REVERSIBLE",
+          title: "C. WAAPI Reversible Focus",
+          lead: "초점이 두 단계로 잡히는 표현적 시안. 재클릭 반전 제어가 필요할 때 유효하다.",
+          enterDuration: 240,
+          exitDuration: 150,
+          enterEase: "cubic-bezier(0.2, 0.78, 0.2, 1)",
+          exitEase: "cubic-bezier(0.5, 0, 0.75, 0)",
+          blur: 6,
+          enterY: 6,
+          exitY: -4,
+          shiftDuration: 230,
+          enterFrames: [
+            {
+              opacity: 0,
+              filter: "blur(6px)",
+              transform: "translateY(6px) scale(0.96)",
+            },
+            {
+              opacity: 0.76,
+              filter: "blur(2px)",
+              transform: "translateY(1px) scale(1.01)",
+              offset: 0.7,
+            },
+            {
+              opacity: 1,
+              filter: "blur(0px)",
+              transform: "translateY(0) scale(1)",
+            },
+          ],
+          exitFrames: [
+            {
+              opacity: 1,
+              filter: "blur(0px)",
+              transform: "translateY(0) scale(1)",
+            },
+            {
+              opacity: 0.6,
+              filter: "blur(1px)",
+              transform: "translateY(-1px) scale(0.995)",
+              offset: 0.42,
+            },
+            {
+              opacity: 0,
+              filter: "blur(4px)",
+              transform: "translateY(-4px) scale(0.97)",
+            },
+          ],
+        },
+      };
+
+      const toggleSlot = document.getElementById("mockToggleSlot");
+      const expandButton = document.getElementById("mockExpandButton");
+      const collapseButton = document.getElementById("mockCollapseButton");
+      const navItems = document.getElementById("mockNavItems");
+      const modulePanel = document.getElementById("mockModulePanel");
+      const playCollapse = document.getElementById("playCollapse");
+      const playExpand = document.getElementById("playExpand");
+      const autoPlayButton = document.getElementById("autoPlay");
+      const reduceMotionButton = document.getElementById("reduceMotion");
+      const speedRange = document.getElementById("speedRange");
+      const speedValue = document.getElementById("speedValue");
+      const motionStatus = document.getElementById("motionStatus");
+
+      let selectedOption = "motion";
+      let panelOpen = true;
+      let autoTimer = null;
+      let activeAnimations = [];
+      let transitionSequence = 0;
+      let reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+
+      function getDefinition() {
+        return optionDefinitions[selectedOption];
+      }
+
+      function speedFactor() {
+        return Number(speedRange.value);
+      }
+
+      function effectiveDuration(duration) {
+        if (reduceMotion) return 1;
+        return Math.max(1, Math.round(duration / speedFactor()));
+      }
+
+      function panelTargetWidth() {
+        const innerPanel = modulePanel.querySelector(".panel-inner");
+        const measuredWidth = innerPanel
+          ? innerPanel.getBoundingClientRect().width
+          : 244;
+        return `${Math.round(measuredWidth || 244)}px`;
+      }
+
+      function cancelActiveAnimations() {
+        activeAnimations.forEach((animation) => {
+          try {
+            animation.cancel();
+          } catch (_error) {
+            // The prototype intentionally treats already-finished animations as disposable.
+          }
+        });
+        activeAnimations = [];
+      }
+
+      function animateElement(element, frames, options) {
+        const animation = element.animate(frames, options);
+        activeAnimations.push(animation);
+        return animation;
+      }
+
+      function updateStaticState(nextPanelOpen) {
+        panelOpen = nextPanelOpen;
+        if (nextPanelOpen) {
+          modulePanel.style.width = panelTargetWidth();
+          modulePanel.style.opacity = "1";
+          modulePanel.setAttribute("aria-hidden", "false");
+          modulePanel.removeAttribute("inert");
+          toggleSlot.style.display = "none";
+          toggleSlot.style.opacity = "0";
+          toggleSlot.setAttribute("aria-hidden", "true");
+          navItems.style.transform = "translateY(0)";
+        } else {
+          modulePanel.style.width = "0px";
+          modulePanel.style.opacity = "0";
+          modulePanel.setAttribute("aria-hidden", "true");
+          modulePanel.setAttribute("inert", "");
+          toggleSlot.style.display = "grid";
+          toggleSlot.style.opacity = "1";
+          toggleSlot.style.filter = "blur(0px)";
+          toggleSlot.style.transform = "translateY(0) scale(1)";
+          toggleSlot.setAttribute("aria-hidden", "false");
+          navItems.style.transform = "translateY(46px)";
+        }
+      }
+
+      async function collapsePanel() {
+        if (!panelOpen) {
+          await expandPanel(true);
+        }
+
+        cancelActiveAnimations();
+        const sequence = ++transitionSequence;
+        const definition = getDefinition();
+        const targetPanelWidth = panelTargetWidth();
+        const enterFrames = reduceMotion
+          ? [
+              { opacity: 0, filter: "blur(0px)", transform: "translateY(0)" },
+              { opacity: 1, filter: "blur(0px)", transform: "translateY(0)" },
+            ]
+          : definition.enterFrames;
+
+        toggleSlot.style.display = "grid";
+        toggleSlot.setAttribute("aria-hidden", "false");
+
+        const panelAnimation = animateElement(
+          modulePanel,
+          [
+            { width: targetPanelWidth, opacity: 1 },
+            { width: "0px", opacity: 0 },
+          ],
+          {
+            duration: effectiveDuration(170),
+            easing: definition.exitEase,
+            fill: "forwards",
+          },
+        );
+        const buttonAnimation = animateElement(toggleSlot, enterFrames, {
+          duration: effectiveDuration(definition.enterDuration),
+          easing: definition.enterEase,
+          fill: "forwards",
+        });
+        const layoutAnimation = animateElement(
+          navItems,
+          [{ transform: "translateY(0)" }, { transform: "translateY(46px)" }],
+          {
+            duration: effectiveDuration(definition.shiftDuration),
+            easing: definition.enterEase,
+            fill: "forwards",
+          },
+        );
+
+        await Promise.allSettled([
+          panelAnimation.finished,
+          buttonAnimation.finished,
+          layoutAnimation.finished,
+        ]);
+        if (sequence !== transitionSequence) return;
+        updateStaticState(false);
+        motionStatus.textContent = `${definition.title}: 사이드 패널이 접히고 펼치기 버튼이 나타났습니다.`;
+      }
+
+      async function expandPanel(skipIfOpen = false) {
+        if (panelOpen && !skipIfOpen) {
+          await collapsePanel();
+        }
+
+        cancelActiveAnimations();
+        const sequence = ++transitionSequence;
+        const definition = getDefinition();
+        const targetPanelWidth = panelTargetWidth();
+        const exitFrames = reduceMotion
+          ? [
+              { opacity: 1, filter: "blur(0px)", transform: "translateY(0)" },
+              { opacity: 0, filter: "blur(0px)", transform: "translateY(0)" },
+            ]
+          : definition.exitFrames;
+
+        modulePanel.style.display = "block";
+        modulePanel.setAttribute("aria-hidden", "false");
+        modulePanel.removeAttribute("inert");
+
+        const panelAnimation = animateElement(
+          modulePanel,
+          [
+            { width: "0px", opacity: 0 },
+            { width: targetPanelWidth, opacity: 1 },
+          ],
+          {
+            duration: effectiveDuration(180),
+            easing: definition.enterEase,
+            fill: "forwards",
+          },
+        );
+        const buttonAnimation = animateElement(toggleSlot, exitFrames, {
+          duration: effectiveDuration(definition.exitDuration),
+          easing: definition.exitEase,
+          fill: "forwards",
+        });
+        const layoutAnimation = animateElement(
+          navItems,
+          [{ transform: "translateY(46px)" }, { transform: "translateY(0)" }],
+          {
+            duration: effectiveDuration(definition.shiftDuration),
+            easing: definition.exitEase,
+            fill: "forwards",
+          },
+        );
+
+        await Promise.allSettled([
+          panelAnimation.finished,
+          buttonAnimation.finished,
+          layoutAnimation.finished,
+        ]);
+        if (sequence !== transitionSequence) return;
+        updateStaticState(true);
+        motionStatus.textContent = `${definition.title}: 펼치기 버튼이 사라지고 사이드 패널이 열렸습니다.`;
+      }
+
+      function updateOptionUI() {
+        const definition = getDefinition();
+        document.getElementById("optionLabel").textContent = definition.label;
+        document.getElementById("optionTitle").textContent = definition.title;
+        document.getElementById("optionLead").textContent = definition.lead;
+        document.getElementById("metricEnter").textContent =
+          `${definition.enterDuration}ms`;
+        document.getElementById("metricExit").textContent =
+          `${definition.exitDuration}ms`;
+        document.getElementById("metricBlur").textContent =
+          `${definition.blur}px → 0`;
+        document.getElementById("metricEase").textContent = definition.enterEase
+          .replace("cubic-bezier(", "")
+          .replace(")", "");
+        document.querySelectorAll("[data-option-tab]").forEach((tab) => {
+          tab.setAttribute(
+            "aria-selected",
+            String(tab.dataset.optionTab === selectedOption),
+          );
+        });
+      }
+
+      async function selectOption(option, replay = true) {
+        selectedOption = option;
+        updateOptionUI();
+        stopAutoPlay();
+        transitionSequence += 1;
+        cancelActiveAnimations();
+        updateStaticState(true);
+        if (replay) await collapsePanel();
+      }
+
+      function startAutoPlay() {
+        stopAutoPlay();
+        autoPlayButton.setAttribute("aria-pressed", "true");
+        autoPlayButton.textContent = "자동 반복 중지";
+        const cycle = async () => {
+          if (panelOpen) await collapsePanel();
+          else await expandPanel();
+        };
+        void cycle();
+        autoTimer = window.setInterval(
+          cycle,
+          Math.max(900, 1500 / speedFactor()),
+        );
+      }
+
+      function stopAutoPlay() {
+        if (autoTimer !== null) window.clearInterval(autoTimer);
+        autoTimer = null;
+        autoPlayButton.setAttribute("aria-pressed", "false");
+        autoPlayButton.textContent = "자동 반복";
+      }
+
+      document.querySelectorAll("[data-option-tab]").forEach((tab) => {
+        tab.addEventListener(
+          "click",
+          () => void selectOption(tab.dataset.optionTab),
+        );
+      });
+
+      document.querySelectorAll("[data-view-option]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.getElementById("prototype").scrollIntoView({
+            block: "start",
+            behavior: reduceMotion ? "auto" : "smooth",
+          });
+          void selectOption(button.dataset.viewOption);
+        });
+      });
+
+      playCollapse.addEventListener("click", () => void collapsePanel());
+      playExpand.addEventListener("click", () => void expandPanel());
+      collapseButton.addEventListener("click", async () => {
+        await collapsePanel();
+        expandButton.focus();
+      });
+      expandButton.addEventListener("click", async () => {
+        await expandPanel();
+        collapseButton.focus();
+      });
+
+      autoPlayButton.addEventListener("click", () => {
+        if (autoTimer === null) startAutoPlay();
+        else stopAutoPlay();
+      });
+
+      reduceMotionButton.addEventListener("click", () => {
+        reduceMotion = !reduceMotion;
+        reduceMotionButton.setAttribute("aria-pressed", String(reduceMotion));
+        reduceMotionButton.textContent = reduceMotion
+          ? "움직임 줄이기 켜짐"
+          : "움직임 줄이기";
+        stopAutoPlay();
+      });
+
+      speedRange.addEventListener("input", () => {
+        speedValue.textContent = `${speedFactor().toFixed(2)}×`;
+        if (autoTimer !== null) startAutoPlay();
+      });
+
+      reduceMotionButton.setAttribute("aria-pressed", String(reduceMotion));
+      if (reduceMotion) reduceMotionButton.textContent = "움직임 줄이기 켜짐";
+      updateOptionUI();
+      updateStaticState(true);
+    </script>
+  </body>
+</html>

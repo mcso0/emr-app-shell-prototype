@@ -674,7 +674,7 @@ function VeterinarianLaneHeader({
       tabIndex={0}
       aria-label={`${veterinarian.name} 레인 헤더`}
       className={cn(
-        "emr-calendar-lane-header group/veterinarian-lane flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-calendar-lane-header-tone-border)] px-[var(--emr-calendar-lane-header-padding-x)] py-[var(--emr-calendar-lane-header-padding-y)] text-[var(--emr-calendar-lane-header-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        "emr-calendar-lane-header group/veterinarian-lane flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-calendar-lane-header-tone-border)] py-[var(--emr-calendar-lane-header-padding-y)] pl-[var(--emr-calendar-lane-header-padding-left)] pr-[var(--emr-calendar-lane-header-padding-right)] text-[var(--emr-calendar-lane-header-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
         veterinarianHeaderToneClasses[
           toneIndex % veterinarianHeaderToneClasses.length
         ],
@@ -2647,6 +2647,7 @@ function ReceptionVeterinarianAvatar({
   return (
     <Avatar
       data-testid="reception-veterinarian-avatar"
+      roundness="roundrect"
       className="size-[var(--emr-reception-veterinarian-avatar-size)] after:border-[var(--emr-reception-veterinarian-avatar-border)]"
     >
       {veterinarian.avatarUrl ? (

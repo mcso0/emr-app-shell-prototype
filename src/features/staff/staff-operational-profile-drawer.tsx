@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ComponentType,
+  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -402,9 +403,33 @@ export function StaffOperationalProfilePanel({
           }
         }}
       >
-        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-3">
+        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4">
           {profile ? (
             <ProfileHeader
+              actions={
+                <>
+                  {response ? (
+                    <ProfileHeaderActionMenu
+                      canManageMember={response.capabilities.canManageMember}
+                      canViewSchedule={Boolean(response.capabilities.scheduleHref)}
+                      hasContact={Boolean(profile.email || profile.phone)}
+                      onCopyContact={() => void copyContact(profile)}
+                      onManageMember={() => navigate(response.capabilities.manageMemberHref)}
+                      onOpenSchedule={() => navigate(response.capabilities.scheduleHref)}
+                    />
+                  ) : null}
+                  <Button
+                    ref={closeButtonRef}
+                    type="button"
+                    aria-label="직원 운영 프로필 닫기"
+                    size="icon-sm"
+                    variant="ghost"
+                    onClick={onClose}
+                  >
+                    <CdsActionsXIcon aria-hidden="true" size={16} />
+                  </Button>
+                </>
+              }
               canEditAvatar={response?.capabilities.canEditAvatar ?? false}
               canEditStatusMessage={
                 response?.capabilities.canEditStatusMessage ?? false
@@ -416,34 +441,25 @@ export function StaffOperationalProfilePanel({
               profile={profile}
             />
           ) : (
-            <ProfileHeaderSkeleton />
+            <ProfileHeaderSkeleton
+              action={
+                <Button
+                  ref={closeButtonRef}
+                  type="button"
+                  aria-label="직원 운영 프로필 닫기"
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={onClose}
+                >
+                  <CdsActionsXIcon aria-hidden="true" size={16} />
+                </Button>
+              }
+            />
           )}
-          <div className="absolute right-3 top-3 flex gap-1">
-            {profile && response ? (
-              <ProfileHeaderActionMenu
-                canManageMember={response.capabilities.canManageMember}
-                canViewSchedule={Boolean(response.capabilities.scheduleHref)}
-                hasContact={Boolean(profile.email || profile.phone)}
-                onCopyContact={() => void copyContact(profile)}
-                onManageMember={() => navigate(response.capabilities.manageMemberHref)}
-                onOpenSchedule={() => navigate(response.capabilities.scheduleHref)}
-              />
-            ) : null}
-            <Button
-              ref={closeButtonRef}
-              type="button"
-              aria-label="직원 운영 프로필 닫기"
-              size="icon-sm"
-              variant="ghost"
-              onClick={onClose}
-            >
-              <CdsActionsXIcon aria-hidden="true" size={16} />
-            </Button>
-          </div>
           <TabsList
             activateOnFocus
             aria-label="직원 프로필 탭"
-            className="absolute bottom-0 left-4 right-4 w-auto"
+            className="absolute bottom-0 left-4 right-4 h-[34px] w-auto"
             variant="line"
           >
             <Tab value="profile">프로필</Tab>
@@ -467,11 +483,20 @@ export function StaffOperationalProfilePanel({
               직원 정보 원본을 확인할 수 없어요. 잠시 후 다시 시도해 주세요.
             </EmrInlineAlert>
           ) : profile && response ? (
-            <div className="grid gap-5">
+            <div className="grid gap-4">
               <AccountInformation profile={profile} />
+              <div
+                aria-hidden="true"
+                className="mx-2 h-px bg-[var(--emr-border-default)]"
+              />
               <TodayShiftSection
                 currentMinutes={currentMinutes}
                 error={Boolean(response.sectionErrors?.shift)}
+                onOpenSchedule={
+                  response.capabilities.scheduleHref
+                    ? () => navigate(response.capabilities.scheduleHref)
+                    : undefined
+                }
                 onRetry={loadProfile}
                 shift={response.shift}
                 todayDate={todayDate}
@@ -540,6 +565,7 @@ export function StaffOperationalProfilePanel({
 }
 
 function ProfileHeader({
+  actions,
   canEditAvatar,
   canEditStatusMessage,
   onRemoveAvatar,
@@ -548,6 +574,7 @@ function ProfileHeader({
   presence,
   profile,
 }: {
+  actions: ReactNode;
   canEditAvatar: boolean;
   canEditStatusMessage: boolean;
   onRemoveAvatar: () => Promise<void>;
@@ -560,7 +587,7 @@ function ProfileHeader({
   profile: StaffOperationalProfile;
 }) {
   return (
-    <div className="flex items-start gap-3 pr-20">
+    <div className="grid h-[var(--emr-profile-avatar-size)] grid-cols-[var(--emr-profile-avatar-size)_minmax(0,1fr)_auto] items-start gap-2.5">
       <EditableProfileAvatar
         alt={profile.displayName}
         editable={canEditAvatar}
@@ -569,28 +596,29 @@ function ProfileHeader({
         onUpload={onUploadAvatar}
         src={profile.avatarUrl}
       />
-      <div className="min-w-0 flex-1 pt-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h2 className="min-w-0 truncate text-lg font-semibold text-[var(--emr-text-primary)]">
+      <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-col gap-1">
+        <div className="flex h-7 min-w-0 items-center gap-2 px-1.5">
+          <h2 className="min-w-0 truncate text-xl leading-7 font-semibold tracking-[-0.015em] text-[var(--emr-text-primary)]">
             {profile.displayName}
           </h2>
           <PresenceBadge state={presence} />
         </div>
-        <div className="mt-1">
+        <div className="h-[var(--emr-profile-status-control-height)]">
           <StatusMessageEditor
             editable={canEditStatusMessage}
             onSave={onSaveStatusMessage}
             value={profile.statusMessage ?? ""}
           />
         </div>
-        <p className="mt-1 truncate text-xs text-[var(--emr-text-tertiary)]">
-          {presence === "online"
-            ? "접속 중"
-            : presence === "unknown"
-              ? "접속 상태를 확인할 수 없음"
-              : formatStaffLastSeenLabel(profile.lastSeenAt)}
+        <p className="flex h-5 min-w-0 items-center gap-1 truncate px-1.5 text-sm font-medium tracking-[0.014em] text-[var(--emr-text-placeholder)]">
+          <span className="shrink-0">최근 접속</span>
+          <span aria-hidden="true" className="shrink-0">·</span>
+          <span className="truncate">
+            {formatProfileLastSeenDetail(presence, profile.lastSeenAt)}
+          </span>
         </p>
       </div>
+      <div className="flex items-start gap-1">{actions}</div>
     </div>
   );
 }
@@ -621,15 +649,16 @@ type AvatarRemoveResponse =
   | { ok: true; avatarUrl: null }
   | { ok: false; error?: string; denialReason?: string };
 
-function ProfileHeaderSkeleton() {
+function ProfileHeaderSkeleton({ action }: { action: ReactNode }) {
   return (
-    <div className="flex items-start gap-3 pr-20">
+    <div className="grid h-[var(--emr-profile-avatar-size)] grid-cols-[var(--emr-profile-avatar-size)_minmax(0,1fr)_auto] items-start gap-2.5">
       <Skeleton className="size-[var(--emr-profile-avatar-size)] shrink-0 rounded-md" />
-      <div className="min-w-0 flex-1 space-y-2 pt-1">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-3 w-24" />
+      <div className="min-w-0 space-y-1 px-1.5 pt-1">
+        <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-7 w-full" />
+        <Skeleton className="h-5 w-24" />
       </div>
+      <div className="flex items-start">{action}</div>
     </div>
   );
 }
@@ -665,9 +694,9 @@ function SectionTitle({ children, id }: { children: string; id: string }) {
 
 function AccountInformation({ profile }: { profile: StaffOperationalProfile }) {
   return (
-    <section aria-labelledby="staff-account-heading">
+    <section aria-labelledby="staff-account-heading" className="px-2">
       <SectionTitle id="staff-account-heading">계정 정보</SectionTitle>
-      <dl className="mt-2.5 grid gap-2 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-3 text-sm">
+      <dl className="mt-3 grid gap-3 text-sm">
         <AccountRow
           icon={CdsPeopleUserIcon}
           label="역할"
@@ -707,21 +736,22 @@ function AccountRow({
   value?: string;
 }) {
   return (
-    <div className="grid grid-cols-[92px_minmax(0,1fr)_24px] items-center gap-2">
+    <div className="grid h-6 grid-cols-3 items-center gap-3">
       <dt className="flex items-center gap-2 text-[var(--emr-text-tertiary)]">
-        <Icon aria-hidden={true} size={15} />
+        <Icon aria-hidden={true} size={14} />
         {label}
       </dt>
-      <dd className="min-w-0 truncate font-medium text-[var(--emr-text-primary)]" title={value}>
-        {value || "미등록"}
-      </dd>
-      <dd>
+      <dd className="group col-span-2 flex h-6 min-w-0 items-center gap-1 overflow-hidden font-medium tracking-[0.014em] text-[var(--emr-text-primary)]">
+        <span className="min-w-0 truncate" title={value}>
+          {value || "미등록"}
+        </span>
         {value && copyLabel ? (
           <Button
             type="button"
             aria-label={copyLabel}
             size="icon-xs"
             variant="ghost"
+            className="pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
             onClick={() => void copyValue(value, label)}
           >
             <CdsActionsCopyIcon aria-hidden="true" size={14} />
@@ -735,20 +765,22 @@ function AccountRow({
 function TodayShiftSection({
   currentMinutes,
   error,
+  onOpenSchedule,
   onRetry,
   shift,
   todayDate,
 }: {
   currentMinutes: number;
   error: boolean;
+  onOpenSchedule?: () => void;
   onRetry: () => void;
   shift: StaffOperationalShift | null;
   todayDate: string;
 }) {
   return (
-    <section aria-labelledby="staff-shift-heading">
+    <section aria-labelledby="staff-shift-heading" className="px-2">
       <SectionTitle id="staff-shift-heading">오늘 근무 정보</SectionTitle>
-      <div className="mt-2.5">
+      <div className="mt-3">
         {error ? (
           <EmrInlineAlert
             severity="error"
@@ -764,11 +796,12 @@ function TodayShiftSection({
         ) : shift ? (
           <ShiftSummary
             currentMinutes={currentMinutes}
+            onOpenSchedule={onOpenSchedule}
             shift={shift}
             todayDate={todayDate}
           />
         ) : (
-          <p className="rounded-xl border border-[var(--emr-border-default)] p-3 text-sm text-[var(--emr-text-tertiary)]">
+          <p className="flex min-h-[72px] items-center rounded-xl border border-dashed border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] px-4 text-sm text-[var(--emr-text-tertiary)]">
             오늘 게시된 근무가 없어요
           </p>
         )}
@@ -779,10 +812,12 @@ function TodayShiftSection({
 
 function ShiftSummary({
   currentMinutes,
+  onOpenSchedule,
   shift,
   todayDate,
 }: {
   currentMinutes: number;
+  onOpenSchedule?: () => void;
   shift: StaffOperationalShift;
   todayDate: string;
 }) {
@@ -794,20 +829,47 @@ function ShiftSummary({
         ? "휴무"
         : shift.workLabel;
   return (
-    <div className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-3">
-      <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)]">
-        <CdsFilesCalendarIcon aria-hidden="true" size={24} />
+    <div className="flex h-[72px] items-center gap-3 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] py-[11px] pl-3 pr-4">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)]">
+          <CdsFilesCalendarIcon aria-hidden="true" size={24} />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-base leading-6 font-medium tracking-[0.006em] tabular-nums text-[var(--emr-text-primary)]">
+            {formatMinutes(shift.startMinutes)}–{formatMinutes(shift.endMinutes)}
+          </p>
+          <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
+            <span className="shrink-0 text-[var(--clair-color-atomic-sky-500)]">{state}</span>
+            {kindLabel || shift.locationLabel ? <span aria-hidden="true">·</span> : null}
+            <span className="truncate">{[kindLabel, shift.locationLabel].filter(Boolean).join(" · ")}</span>
+          </p>
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium tabular-nums text-[var(--emr-text-primary)]">
-          {formatMinutes(shift.startMinutes)}–{formatMinutes(shift.endMinutes)}
-        </p>
-        <p className="mt-1 truncate text-sm text-[var(--emr-text-secondary)]">
-          {[state, kindLabel, shift.locationLabel].filter(Boolean).join(" · ")}
-        </p>
-      </div>
+      {onOpenSchedule ? (
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          className="w-[66px] px-0 text-xs"
+          onClick={onOpenSchedule}
+        >
+          일정 확인
+        </Button>
+      ) : null}
     </div>
   );
+}
+
+function formatProfileLastSeenDetail(
+  presence: "online" | "offline" | "unknown",
+  lastSeenAt: string | undefined,
+) {
+  if (presence === "online") return "방금 전";
+  if (presence === "unknown") return "확인할 수 없음";
+
+  return formatStaffLastSeenLabel(lastSeenAt)
+    .replace(/^방금 접속$/, "방금 전")
+    .replace(/ 접속$/, "");
 }
 
 function buildWorkGroups(

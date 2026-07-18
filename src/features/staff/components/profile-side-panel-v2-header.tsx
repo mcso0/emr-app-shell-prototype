@@ -38,15 +38,15 @@ const presenceRules: Record<
   { label: string; badgeClassName: string; dotClassName: string }
 > = {
   online: {
-    label: "접속 중",
+    label: "온라인",
     badgeClassName:
-      "bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
+      "border-[var(--clair-color-atomic-green-200)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
     dotClassName: "bg-[var(--clair-color-atomic-green-500)]",
   },
   offline: {
     label: "오프라인",
     badgeClassName:
-      "bg-[var(--emr-surface-muted)] text-[var(--emr-text-secondary)]",
+      "border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-secondary)]",
     dotClassName: "bg-[var(--clair-color-atomic-neutral-400)]",
   },
   unknown: {
@@ -68,7 +68,7 @@ export function PresenceBadge({
 
   return (
     <Badge
-      className={cn("border-0 px-2", rule.badgeClassName, className)}
+      className={cn("gap-1 border pl-1.5 pr-2", rule.badgeClassName, className)}
       data-presence-state={state}
       size="sm"
     >

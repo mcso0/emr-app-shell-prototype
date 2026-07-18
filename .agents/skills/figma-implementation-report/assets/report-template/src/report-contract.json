@@ -1,0 +1,234 @@
+{
+  "schemaVersion": "1.0.0",
+  "report": {
+    "id": "sample-feature-implementation-report",
+    "title": "샘플 기능 구현화 보고서",
+    "language": "ko",
+    "mode": "report",
+    "status": "decision-needed",
+    "generatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "source": {
+    "figma": {
+      "url": "https://www.figma.com/design/REPLACE/Design?node-id=1-2",
+      "fileKey": "REPLACE",
+      "nodeId": "1:2",
+      "nodeName": "Sample feature / Default",
+      "retrievedAt": "2026-01-01T00:00:00.000Z",
+      "fingerprint": "replace-with-figma-version-or-captured-hash",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      }
+    },
+    "repository": {
+      "path": "/absolute/path/to/repository",
+      "revision": "replace-with-git-sha",
+      "retrievedAt": "2026-01-01T00:00:00.000Z",
+      "feature": "replace-with-route-or-feature"
+    }
+  },
+  "summary": {
+    "goal": "Figma 시안을 프로젝트 계약에 맞춰 구현 가능한 단위로 정리한다.",
+    "fidelityTarget": "exact-at-source-viewport",
+    "readiness": "decision-needed",
+    "assumptions": [
+      "이 템플릿의 데이터와 화면은 구조 설명용 합성 예시다.",
+      "Figma가 제공하지 않은 좁은 화면 동작은 프로젝트 규칙을 우선한다."
+    ],
+    "knownGaps": [
+      "실제 Figma 노드와 저장소 근거로 모든 샘플 항목을 교체해야 한다."
+    ]
+  },
+  "changes": [
+    {
+      "id": "CHG-001",
+      "title": "화면 구조와 간격을 대상 프레임에 맞춤",
+      "type": "visual",
+      "status": "proposed",
+      "figmaEvidence": "Replace with node IDs and captured values",
+      "projectEvidence": "Replace with component paths and current values",
+      "recommendation": "대상 뷰포트에서는 Figma 수치를 그대로 사용하고 반응형은 기존 규칙으로 확장한다.",
+      "approvalRequired": false
+    },
+    {
+      "id": "CHG-002",
+      "title": "오류와 빈 상태를 공용 상태 컴포넌트로 표현",
+      "type": "state",
+      "status": "proposed",
+      "figmaEvidence": "The static frame does not define recovery states",
+      "projectEvidence": "Replace with the existing shared state contract",
+      "recommendation": "기존 공용 상태 계약을 재사용한다.",
+      "approvalRequired": false
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "CNF-001",
+      "title": "Figma 색상과 기존 의미 토큰의 값이 다름",
+      "class": "token",
+      "status": "decision-needed",
+      "figmaContract": "Replace with the Figma variable and resolved value",
+      "projectContract": "Replace with the semantic token and consumers",
+      "recommendation": "화면 로컬 별칭을 우선 검토한다.",
+      "options": [
+        "기존 의미 토큰을 유지한다.",
+        "기능 로컬 토큰을 추가한다.",
+        "영향 범위 승인 후 공용 토큰을 변경한다."
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "CMP-001",
+      "name": "SampleSummaryCard",
+      "title": "요약 카드",
+      "tier": "feature",
+      "action": "new",
+      "status": "proposed",
+      "owner": "replace-with-feature-path",
+      "consumers": ["sample route"],
+      "states": ["default", "loading", "error"]
+    },
+    {
+      "id": "CMP-002",
+      "name": "ExistingButton",
+      "title": "기존 버튼 재사용",
+      "tier": "shared",
+      "action": "reuse",
+      "status": "proposed",
+      "owner": "replace-with-existing-component-path",
+      "consumers": ["sample route"],
+      "states": ["default", "hover", "focus-visible", "disabled"]
+    }
+  ],
+  "tokens": [
+    {
+      "id": "TOK-001",
+      "title": "기본 표면 색상",
+      "category": "color",
+      "action": "alias",
+      "status": "proposed",
+      "figmaValue": "replace-with-figma-variable",
+      "projectValue": "replace-with-semantic-token",
+      "impact": "sample feature only"
+    }
+  ],
+  "states": [
+    {
+      "id": "STA-001",
+      "title": "기본",
+      "source": "figma-explicit",
+      "status": "proposed",
+      "behavior": "Figma 프레임의 기본 상태를 그대로 표현한다."
+    },
+    {
+      "id": "STA-002",
+      "title": "불러오는 중",
+      "source": "project-existing",
+      "status": "proposed",
+      "behavior": "레이아웃을 유지하는 스켈레톤을 사용한다."
+    },
+    {
+      "id": "STA-003",
+      "title": "읽기 오류",
+      "source": "project-existing",
+      "status": "proposed",
+      "behavior": "오류 설명과 다시 시도 동작을 제공한다."
+    }
+  ],
+  "responsive": [
+    {
+      "id": "RSP-001",
+      "title": "대상 프레임 너비",
+      "source": "figma-explicit",
+      "status": "proposed",
+      "behavior": "대상 뷰포트에서 위치, 크기, 간격을 정확히 재현한다."
+    },
+    {
+      "id": "RSP-002",
+      "title": "좁은 화면",
+      "source": "agent-generated",
+      "status": "proposed",
+      "behavior": "2열 콘텐츠를 한 열로 쌓고 주요 작업을 먼저 유지한다."
+    }
+  ],
+  "accessibility": [
+    {
+      "id": "A11Y-001",
+      "title": "키보드와 포커스",
+      "status": "proposed",
+      "requirement": "시각 순서와 탭 순서를 일치시키고 focus-visible을 유지한다."
+    },
+    {
+      "id": "A11Y-002",
+      "title": "상태 전달",
+      "status": "proposed",
+      "requirement": "색상만으로 상태를 전달하지 않고 텍스트와 의미를 함께 제공한다."
+    }
+  ],
+  "motion": [
+    {
+      "id": "MOT-001",
+      "title": "상세 영역 펼치기",
+      "source": "agent-generated",
+      "status": "proposed",
+      "trigger": "상세 보기 버튼",
+      "purpose": "continuity",
+      "library": "css",
+      "duration": "180ms",
+      "easing": "project-standard-ease",
+      "reducedMotion": "즉시 전환하고 상태 텍스트는 유지한다."
+    }
+  ],
+  "implementation": {
+    "approvalGates": [
+      {
+        "id": "APR-001",
+        "title": "공용 토큰 변경 여부",
+        "status": "decision-needed",
+        "reason": "다른 화면 소비자에 영향을 줄 수 있다.",
+        "affected": ["replace-with-consumers"]
+      }
+    ],
+    "slices": [
+      {
+        "id": "IMP-001",
+        "title": "기능 로컬 구조와 상태 구현",
+        "status": "draft",
+        "files": ["replace-with-target-files"],
+        "dependsOn": []
+      },
+      {
+        "id": "IMP-002",
+        "title": "공용 계약 변경과 소비자 회귀 검증",
+        "status": "decision-needed",
+        "files": ["replace-with-shared-files"],
+        "dependsOn": ["APR-001"]
+      }
+    ],
+    "dependencies": []
+  },
+  "verification": {
+    "checks": [
+      {
+        "id": "VER-001",
+        "name": "Standalone HTML structure",
+        "result": "not-run",
+        "command": "npm run test:report",
+        "evidence": "Run after replacing the sample contract and UI",
+        "runAt": null
+      },
+      {
+        "id": "VER-002",
+        "name": "Primary viewport visual comparison",
+        "result": "not-run",
+        "command": "browser screenshot comparison",
+        "evidence": "Capture after the real Figma frame is represented",
+        "runAt": null
+      }
+    ],
+    "visualEvidence": [],
+    "lastRunAt": null
+  }
+}

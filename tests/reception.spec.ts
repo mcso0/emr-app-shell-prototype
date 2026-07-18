@@ -3080,6 +3080,13 @@ test("reception and reservation veterinarian fields render avatars with an unass
   ).toBeVisible();
   await expect(walkInVeterinarian).toContainText("이수지");
   await expect
+    .poll(async () =>
+      walkInVeterinarian
+        .getByTestId("reception-veterinarian-avatar")
+        .evaluate((element) => getComputedStyle(element).borderRadius),
+    )
+    .toBe("6px");
+  await expect
     .poll(async () => {
       const box = await walkInVeterinarian
         .getByTestId("reception-veterinarian-avatar")
@@ -3119,6 +3126,21 @@ test("reception and reservation veterinarian fields render avatars with an unass
     reservationVeterinarian.getByTestId("reception-veterinarian-avatar"),
   ).toBeVisible();
   await expect(reservationVeterinarian).toContainText("김도윤");
+  await expect
+    .poll(async () =>
+      reservationVeterinarian
+        .getByTestId("reception-veterinarian-avatar")
+        .evaluate((element) => getComputedStyle(element).borderRadius),
+    )
+    .toBe("6px");
+  await expect
+    .poll(async () =>
+      reservationVeterinarian
+        .getByTestId("reception-veterinarian-avatar")
+        .locator("img")
+        .evaluate((element) => getComputedStyle(element).borderRadius),
+    )
+    .toBe("6px");
 
   await page.goto(
     "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
@@ -5475,8 +5497,8 @@ test("day lane headers show fact-based status and match the Figma metrics", asyn
     columnGap: "10px",
     height: "40px",
     paddingBottom: "8px",
-    paddingLeft: "10px",
-    paddingRight: "10px",
+    paddingLeft: "8px",
+    paddingRight: "8px",
     paddingTop: "8px",
   });
   await expect(avatar).toHaveCSS("width", "24px");

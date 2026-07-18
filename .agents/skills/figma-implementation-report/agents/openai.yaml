@@ -1,0 +1,4 @@
+interface:
+  display_name: "Figma Implementation Report"
+  short_description: "Build project-aware Figma implementation reports"
+  default_prompt: "Use $figma-implementation-report to turn this Figma frame into a project-aware implementation report."
