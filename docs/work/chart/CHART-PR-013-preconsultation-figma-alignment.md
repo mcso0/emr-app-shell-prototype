@@ -65,4 +65,5 @@ Apply the approved standalone implementation report to the live preconsultation 
 - `npm run build-storybook`: passed; the static bundle contains `AnimalPatientAvatar` and `EmrEmptyState` stories.
 - `npm run build`: passed with the existing broad NFT trace warning from `src/lib/prd-viewer/doc-reader.ts`.
 - Figma source and implementation were compared at the same 1200px content width. Header, section order, vital table, and history timeline were aligned after the comparison.
+- CHG-003 correction: the historical view now excludes the current encounter and uses the `27728:83189` date-above-card structure (8/24 list inset, 1px neutral divider, 56px row, 69×22 time badge, no status badge). The focused Playwright regression flow and its captured rendered section passed on the isolated local server.
 - Release evidence will be appended after staging verification and the separately approved production promotion.

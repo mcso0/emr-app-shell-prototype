@@ -63,6 +63,7 @@
           <li>전체 차트 테스트: 24 passed / 6 failed. 여섯 실패는 동일한 <code>origin/main</code> 기준 작업공간에서도 재현돼 이번 변경의 회귀가 아님을 확인했다.</li>
           <li>Storybook static build와 Next.js production build: passed</li>
           <li>Figma 기준 이미지와 동일 1200px 구현 화면을 나란히 비교해 헤더, 섹션 순서, 바이탈 표, 과거 진료 타임라인을 재보정했다.</li>
+          <li>CHG-003 보정: 현재 접수는 과거 이력에서 제외하고, Figma 27728:83189의 날짜 상단 배치·1px 회색 세로선·56px 카드·69×22 시간 배지·상태 배지 미표시를 focused Playwright와 렌더 캡처로 재검증했다.</li>
         </ul>
       </section>
 
@@ -70,7 +71,7 @@
         <h2>범위 밖 / 남은 확인</h2>
         <ul>
           <li>환자 생성 모달의 사진 입력, 이미지 저장소, DB 필드, migration, API 확장은 차후 별도 작업이다.</li>
-          <li>진료 유형 badge는 현재 과거 이력 read model에 진료 유형 필드가 없어 임의 분류 대신 실제 상태를 표시한다.</li>
+          <li>과거 이력의 상태 badge는 Figma 27728:83189에 없으므로 표시하지 않는다. 상태값은 호출 흐름 데이터로 유지하며, 이력 카드에 임의 의미를 추가하지 않는다.</li>
           <li>Next build의 광범위 NFT trace 경고와 전체 차트 suite의 기존 여섯 실패는 별도 정리 대상이다.</li>
           <li class="pending">staging PR·smoke와 production 승격·배포 증거는 릴리스 단계가 끝나면 이 보고서에 추가한다.</li>
         </ul>

@@ -512,7 +512,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
       symptomNote: encounter.chiefComplaint,
     },
     veterinarian: { id: "user-vet", displayName: "청담 원장" },
-    priorEncounterCount: 2,
+    priorEncounterCount: 3,
     vitals: [
       {
         id: "vital-choco-current",
@@ -549,6 +549,20 @@ test("chart consultation CTA moves from call to start before chart completion", 
         status: "completed",
         visitPurpose: "약 복용 후 재진",
         assessment: "가려움 빈도 감소",
+      },
+      {
+        encounterId: "encounter-choco-previous-imaging",
+        encounterNo: "E-260509-0005",
+        checkedInAt: "2026-05-09T15:18:00+09:00",
+        status: "completed",
+        visitPurpose: "슬관절 방사선 검사",
+      },
+      {
+        encounterId: "encounter-choco-older",
+        encounterNo: "E-260503-0001",
+        checkedInAt: "2026-05-03T10:20:00+09:00",
+        status: "completed",
+        visitPurpose: "예방접종 및 건강검진",
       },
     ],
   }));
@@ -693,6 +707,24 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "바이탈 정보",
     "과거 진료이력",
   ]);
+  const historySection = lockedState.getByTestId("preconsultation-history");
+  const historyTimeline = historySection.getByTestId("preconsultation-history-timeline");
+  await expect(historySection).toContainText("2026년 05월 09일");
+  await expect(historySection).toContainText("10:00:00");
+  await expect(historySection).toContainText("약 복용 후 재진");
+  await expect(historySection).toContainText("15:18:00");
+  await expect(historySection).toContainText("슬관절 방사선 검사");
+  await expect(historySection).toContainText("2026년 05월 03일");
+  await expect(historySection).toContainText("10:20:00");
+  await expect(historySection).toContainText("예방접종 및 건강검진");
+  await expect(historySection).not.toContainText("2026년 06월 25일");
+  await expect(historySection).not.toContainText("완료");
+  await expect(historyTimeline).toHaveClass(/px-6/);
+  await expect(historyTimeline).not.toHaveClass(/border-t/);
+  const historyGroups = historyTimeline.locator(":scope > li");
+  await expect(historyGroups).toHaveCount(2);
+  await expect(historyGroups.nth(0).locator(":scope > ol > li")).toHaveCount(2);
+  await expect(historyGroups.nth(1).locator(":scope > ol > li")).toHaveCount(1);
   await expect(page.getByTestId("chart-soap-diagnosis-grid")).toHaveCount(0);
   await page
     .getByTestId("chart-start-locked-state")

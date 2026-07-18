@@ -684,15 +684,22 @@ function HistorySection({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const entries = expanded ? context.history : context.history.slice(0, 3);
+  const priorEntries = context.history.filter(
+    (entry) => entry.encounterId !== context.encounter.id,
+  );
+  const entries = expanded ? priorEntries : priorEntries.slice(0, 3);
   return (
-    <section className="flex min-w-0 flex-col gap-4" aria-labelledby="preconsultation-history">
+    <section
+      className="flex min-w-0 flex-col gap-4"
+      aria-labelledby="preconsultation-history"
+      data-testid="preconsultation-history"
+    >
       <SectionTitle id="preconsultation-history" icon={<CdsUtilitiesHistoryIcon />}>
         과거 진료이력
       </SectionTitle>
       {entries.length > 0 ? (
         <>
-          <HistoryTimeline entries={entries} currentEncounterId={context.encounter.id} />
+          <HistoryTimeline entries={entries} />
           <div className="flex justify-center">
             <Button variant="ghost" size="lg" aria-expanded={expanded} onClick={onToggle}>
               {expanded ? "진료이력 접기" : "전체 진료이력 보기"}
@@ -714,48 +721,41 @@ function HistorySection({
 }
 
 function HistoryTimeline({
-  currentEncounterId,
   entries,
 }: {
-  currentEncounterId: string;
   entries: ChartPreconsultationHistoryEntry[];
 }) {
-  const groups = groupHistoryEntries(entries, currentEncounterId);
+  const groups = groupHistoryEntries(entries);
 
   return (
-    <ol className="min-w-0 border-t border-[var(--emr-line-subtle)]" aria-label="과거 진료 이력">
+    <ol
+      className="flex min-w-0 flex-col gap-4 px-6 py-2"
+      aria-label="과거 진료 이력"
+      data-testid="preconsultation-history-timeline"
+    >
       {groups.map((group) => (
-        <li
-          key={group.date}
-          className="grid min-w-0 grid-cols-1 gap-3 border-b border-[var(--emr-line-subtle)] py-4 sm:grid-cols-[136px_minmax(0,1fr)] sm:gap-5"
-        >
-          <div className="flex items-start gap-1.5 pt-1 text-[15px] font-semibold leading-6 text-[var(--emr-text-secondary)]">
-            <CdsFilesCalendarIcon className="mt-1 size-4 shrink-0 text-[var(--emr-text-tertiary)]" aria-hidden="true" />
+        <li key={group.date} className="flex min-w-0 flex-col gap-2">
+          <div className="flex items-center gap-1.5 text-[15px] font-semibold leading-6 text-[var(--emr-text-tertiary)]">
+            <CdsFilesCalendarIcon className="size-4 shrink-0" aria-hidden="true" />
             {group.date}
           </div>
-          <ol className="relative ml-2 flex min-w-0 flex-col gap-3 border-l border-[var(--emr-line-hairline)] pl-5 before:absolute before:-left-[5px] before:top-[19px] before:size-[9px] before:rounded-full before:border-2 before:border-[var(--emr-status-info-text)] before:bg-[var(--emr-surface-panel)] before:content-[''] sm:ml-0">
+          <ol className="ml-2 flex min-w-0 flex-col gap-3 border-l border-[var(--emr-line-hairline)] pl-[14px]">
             {group.entries.map((entry) => {
-              const summary = entry.primaryDiagnosis ?? entry.visitPurpose ?? entry.chiefComplaint ?? "진료 요약 미입력";
+              const summary = entry.visitPurpose ?? entry.chiefComplaint ?? entry.primaryDiagnosis ?? "진료 요약 미입력";
               return (
                 <li
                   key={entry.encounterId}
-                  className="flex min-h-14 min-w-0 items-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3"
+                  className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4"
                 >
                   <Badge
-                    className="h-[22px] min-w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
+                    className="h-[22px] w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-[rgba(0,0,0,0.08)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
                     variant="outline"
                   >
-                    {formatTime(entry.checkedInAt)}
+                    {formatHistoryTime(entry.checkedInAt)}
                   </Badge>
-                  <span className="min-w-0 truncate text-[15px] font-medium leading-6">
+                  <span className="min-w-0 truncate text-base font-medium leading-6">
                     {summary}
                   </span>
-                  <Badge
-                    className="ml-auto h-[22px] shrink-0 rounded-[var(--clair-radius-atomic-6)] px-2 text-xs font-medium"
-                    variant="outline"
-                  >
-                    {getHistoryStatusLabel(entry.status)}
-                  </Badge>
                 </li>
               );
             })}
@@ -764,18 +764,6 @@ function HistoryTimeline({
       ))}
     </ol>
   );
-}
-
-function getHistoryStatusLabel(status: string) {
-  return (
-    {
-      waiting: "대기",
-      called: "호출",
-      in_consultation: "진료",
-      completed: "완료",
-      cancelled: "취소",
-    } as Record<string, string>
-  )[status] ?? status;
 }
 
 function PatientInformationSheet({
@@ -912,6 +900,16 @@ function formatTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" }).format(new Date(value));
 }
 
+function formatHistoryTime(value: string) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Seoul",
+  }).format(new Date(value));
+}
+
 function formatFullDate(value: string) {
   const parts = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Seoul" }).formatToParts(new Date(value));
   return `${parts.find((part) => part.type === "year")?.value}.${parts.find((part) => part.type === "month")?.value}.${parts.find((part) => part.type === "day")?.value}`;
@@ -919,12 +917,10 @@ function formatFullDate(value: string) {
 
 function groupHistoryEntries(
   entries: ChartPreconsultationHistoryEntry[],
-  currentEncounterId: string,
 ) {
   return entries.reduce<Array<{ date: string; entries: ChartPreconsultationHistoryEntry[] }>>(
     (groups, entry) => {
-      const current = entry.encounterId === currentEncounterId;
-      const date = `${formatFullDate(entry.checkedInAt)}${current ? " (오늘)" : ""}`;
+      const date = formatHistoryDate(entry.checkedInAt);
       const existing = groups.find((group) => group.date === date);
       if (existing) {
         existing.entries.push(entry);
@@ -935,6 +931,19 @@ function groupHistoryEntries(
     },
     [],
   );
+}
+
+function formatHistoryDate(value: string) {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).formatToParts(new Date(value));
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  return `${year}년 ${month}월 ${day}일`;
 }
 
 function sameDate(a: string, b: string) {
