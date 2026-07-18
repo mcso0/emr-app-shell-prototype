@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import type { Transition } from "framer-motion";
 import { WorkspaceLogoMarkIcon } from "@/components/icons";
 import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,8 +15,29 @@ type WorkspaceSwitcherProps = {
   workspaceId: string;
 };
 
+const WORKSPACE_LABEL_EASE = [0.16, 0, 0.2, 1] as const;
+
 export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }: WorkspaceSwitcherProps) {
   const workspaceDisplayName = useSessionWorkspaceDisplayName(workspaceId);
+  const reduceMotion = useReducedMotion();
+  const [isLabelMounted, setIsLabelMounted] = useState(!collapsed);
+  const labelTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : {
+        duration: 0.14,
+        ease: WORKSPACE_LABEL_EASE,
+        delay: collapsed ? 0 : 0.04,
+      };
+
+  useEffect(() => {
+    if (collapsed) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      setIsLabelMounted(true);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [collapsed]);
 
   return (
     <Button
@@ -37,15 +61,35 @@ export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }:
       >
         <WorkspaceLogoMarkIcon size={18} className="size-[18px]" />
       </span>
-      <span
-        data-slot="workspace-switcher-label"
-        className={cn(
-          "min-w-0 px-[var(--clair-border-width-atomic-2)] transition-[opacity,transform] duration-150",
-          collapsed ? "hidden" : "opacity-100"
-        )}
-      >
-        {workspaceDisplayName}
-      </span>
+      {isLabelMounted ? (
+        <span
+          data-slot="workspace-switcher-label"
+          aria-hidden={collapsed}
+          className="min-w-0 px-[var(--clair-border-width-atomic-2)] transition-[opacity,transform] duration-150"
+        >
+          <motion.span
+            data-slot="workspace-switcher-label-content"
+            initial={{
+              filter: "blur(2px)",
+              opacity: 0,
+              x: -4,
+            }}
+            animate={{
+              filter: collapsed ? "blur(2px)" : "blur(0px)",
+              opacity: collapsed ? 0 : 1,
+              x: collapsed ? -4 : 0,
+            }}
+            transition={labelTransition}
+            onAnimationComplete={() => {
+              if (collapsed) {
+                setIsLabelMounted(false);
+              }
+            }}
+          >
+            {workspaceDisplayName}
+          </motion.span>
+        </span>
+      ) : null}
       <CdsNavigationChevronDownIcon
         size={16}
         className={cn(
