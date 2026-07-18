@@ -2,6 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  closestCenter,
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  horizontalListSortingStrategy,
+  SortableContext,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import NumberFlow from "@number-flow/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CdsActionsRefreshCcwIcon } from "@/components/cds-icons/actions-and-controls";
 import { ChevronDownIcon, ChevronRightIcon } from "@/components/icons";
@@ -60,6 +76,7 @@ import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
 import type {
   HomeDashboardData,
   HomeKanbanColumn,
+  HomeKanbanColumnId,
   HomeOperationsAttentionSignal,
   HomeOperationsProgressState,
   HomeTask,
@@ -88,6 +105,10 @@ type HomeWorkstreamFilter = string;
 
 const allFilterLabel = "전체";
 const unassignedFilterLabel = "미지정";
+
+const columnReorderScreenReaderInstructions = {
+  draggable: "열 순서를 바꾸려면 드래그하거나, 순서 변경 버튼에 초점을 둔 뒤 왼쪽 또는 오른쪽 화살표 키를 누르세요.",
+};
 
 const statusLabel: Record<HomeOperationsProgressState, string> = {
   waiting: "대기",
@@ -308,6 +329,22 @@ function getTaskProgressState(task: HomeTask): HomeOperationsProgressState {
   return "waiting";
 }
 
+function orderHomeColumns(
+  columns: HomeKanbanColumn[],
+  columnOrder: HomeKanbanColumnId[] | null,
+) {
+  if (!columnOrder) return columns;
+
+  const columnsById = new Map(columns.map((column) => [column.id, column]));
+  const orderedColumns = columnOrder.flatMap((columnId) => {
+    const column = columnsById.get(columnId);
+    return column ? [column] : [];
+  });
+  const missingColumns = columns.filter((column) => !columnOrder.includes(column.id));
+
+  return [...orderedColumns, ...missingColumns];
+}
+
 export function HomeKanbanWorkspace({
   data,
   errorMessage,
@@ -325,6 +362,7 @@ export function HomeKanbanWorkspace({
   const [activeWorkStatusFilter, setActiveWorkStatusFilter] = useState<HomeWorkStatusFilter>("all");
   const [activeWorkstreamFilters, setActiveWorkstreamFilters] = useState<HomeWorkstreamFilter[]>([]);
   const [attentionOnly, setAttentionOnly] = useState(false);
+  const [columnOrder, setColumnOrder] = useState<HomeKanbanColumnId[] | null>(null);
   const selectedTaskId = useHomeWorkspaceStore((state) => state.selectedTaskId);
   const detailOpen = useHomeWorkspaceStore((state) => state.detailOpen);
   const selectTask = useHomeWorkspaceStore((state) => state.selectTask);
@@ -345,7 +383,8 @@ export function HomeKanbanWorkspace({
     ],
     [myTaskIds, tasks]
   );
-  const activeWorkstreamColumns = data.columns.filter((column) => activeWorkstreamFilters.includes(column.label));
+  const orderedColumns = orderHomeColumns(data.columns, columnOrder);
+  const activeWorkstreamColumns = orderedColumns.filter((column) => activeWorkstreamFilters.includes(column.label));
   const operationModeTasks = tasks.filter((task) => matchesOperationMode(task, activeOperationMode, myTaskIds));
   const scopedTasks = tasks.filter(
     (task) =>
@@ -364,8 +403,8 @@ export function HomeKanbanWorkspace({
   const visibleColumns = activeWorkstreamColumns.length > 0
     ? activeWorkstreamColumns
     : activeOperationMode === "flow" || activeOperationMode === "load"
-      ? data.columns
-      : data.columns
+      ? orderedColumns
+      : orderedColumns
           .map((column, index) => ({
             column,
             count: filteredTaskCountByColumn.get(column.id) ?? 0,
@@ -373,6 +412,51 @@ export function HomeKanbanWorkspace({
           }))
           .sort((a, b) => Number(b.count > 0) - Number(a.count > 0) || a.index - b.index)
           .map((item) => item.column);
+  const allowColumnReorder = activeOperationMode === "flow" && activeWorkstreamColumns.length === 0;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+  const columnLabelById = useMemo(
+    () => new Map(data.columns.map((column) => [column.id, column.label])),
+    [data.columns],
+  );
+  const handleColumnDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!allowColumnReorder || !over || active.id === over.id) return;
+
+    const activeIndex = visibleColumns.findIndex((column) => column.id === active.id);
+    const overIndex = visibleColumns.findIndex((column) => column.id === over.id);
+
+    if (activeIndex < 0 || overIndex < 0) return;
+
+    setColumnOrder(arrayMove(visibleColumns.map((column) => column.id), activeIndex, overIndex));
+  };
+  const handleColumnKeyboardReorder = (columnId: HomeKanbanColumnId, direction: "left" | "right") => {
+    if (!allowColumnReorder) return;
+
+    const currentIndex = visibleColumns.findIndex((column) => column.id === columnId);
+    const nextIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1;
+
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= visibleColumns.length) return;
+
+    setColumnOrder(arrayMove(visibleColumns.map((column) => column.id), currentIndex, nextIndex));
+  };
+  const columnReorderAccessibility = {
+    announcements: {
+      onDragCancel: ({ active }: { active: { id: string | number } }) =>
+        `${columnLabelById.get(active.id as HomeKanbanColumnId) ?? "업무 열"} 순서 변경을 취소했습니다.`,
+      onDragEnd: ({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) =>
+        over
+          ? `${columnLabelById.get(active.id as HomeKanbanColumnId) ?? "업무 열"}을(를) ${columnLabelById.get(over.id as HomeKanbanColumnId) ?? "새 위치"} 앞으로 옮겼습니다.`
+          : undefined,
+      onDragOver: ({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) =>
+        over
+          ? `${columnLabelById.get(active.id as HomeKanbanColumnId) ?? "업무 열"}을(를) ${columnLabelById.get(over.id as HomeKanbanColumnId) ?? "새 위치"} 앞으로 이동합니다.`
+          : undefined,
+      onDragStart: ({ active }: { active: { id: string | number } }) =>
+        `${columnLabelById.get(active.id as HomeKanbanColumnId) ?? "업무 열"} 순서 변경을 시작했습니다.`,
+    },
+    screenReaderInstructions: columnReorderScreenReaderInstructions,
+  };
   const selectedTask = selectedTaskId
     ? tasks.find((task) => task.id === selectedTaskId)
     : undefined;
@@ -417,9 +501,9 @@ export function HomeKanbanWorkspace({
                   <h1 className="text-[18px] font-bold leading-7 text-foreground">업무 현황</h1>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-right max-md:grid-cols-1">
-                  <HomeBoardMetric label="배정 누락" value={`${tasks.filter((task) => hasAttentionSignal(task, "assignment_missing")).length}건`} tone="warning" />
-                  <HomeBoardMetric label="주의 업무" value={`${getUrgentCount(tasks)}건`} tone="danger" />
-                  <HomeBoardMetric label="내 업무" value={`${data.tasks.length}건`} />
+                  <HomeBoardMetric label="배정 누락" value={tasks.filter((task) => hasAttentionSignal(task, "assignment_missing")).length} tone="warning" />
+                  <HomeBoardMetric label="주의 업무" value={getUrgentCount(tasks)} tone="danger" />
+                  <HomeBoardMetric label="내 업무" value={data.tasks.length} />
                 </div>
               </div>
 
@@ -526,19 +610,33 @@ export function HomeKanbanWorkspace({
               onRefresh={onRefresh ?? (() => router.refresh())}
             />
           ) : hasHospitalTasks ? (
-            <div className="h-full min-h-0 overflow-x-auto pb-2">
-              <div className="grid h-full min-h-[620px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
-                {visibleColumns.map((column) => (
-                  <HomeKanbanColumn
-                    key={column.id}
-                    column={column}
-                    selectedTaskId={selectedTaskId}
-                    tasks={filteredTasks.filter((task) => task.kanbanColumn === column.id)}
-                    onSelectTask={selectTask}
-                  />
-                ))}
-              </div>
-            </div>
+            <DndContext
+              accessibility={columnReorderAccessibility}
+              collisionDetection={closestCenter}
+              sensors={sensors}
+              onDragEnd={handleColumnDragEnd}
+            >
+              <SortableContext
+                items={visibleColumns.map((column) => column.id)}
+                strategy={horizontalListSortingStrategy}
+              >
+                <div className="h-full min-h-0 overflow-x-auto pb-2">
+                  <div className="grid h-full min-h-[620px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
+                    {visibleColumns.map((column) => (
+                      <HomeKanbanColumn
+                        key={column.id}
+                        column={column}
+                        reorderEnabled={allowColumnReorder}
+                        selectedTaskId={selectedTaskId}
+                        tasks={filteredTasks.filter((task) => task.kanbanColumn === column.id)}
+                        onKeyboardReorder={handleColumnKeyboardReorder}
+                        onSelectTask={selectTask}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </SortableContext>
+            </DndContext>
           ) : (
             <div
               className="grid h-full min-h-[620px] min-w-full place-items-center pb-2"
@@ -589,7 +687,7 @@ function HomeBoardMetric({
 }: {
   label: string;
   tone?: "danger" | "normal" | "warning";
-  value: string;
+  value: number;
 }) {
   return (
     <div
@@ -600,7 +698,13 @@ function HomeBoardMetric({
       )}
     >
       <span className="text-[11px] font-semibold leading-3 text-muted-foreground">{label}</span>
-      <span className="text-[13px] font-bold leading-5 text-foreground">{value}</span>
+      <NumberFlow
+        aria-label={`${label} ${value}건`}
+        className="text-[13px] font-bold leading-5 text-foreground"
+        format={{ useGrouping: false }}
+        suffix="건"
+        value={value}
+      />
     </div>
   );
 }
@@ -1070,16 +1174,30 @@ function HomeFilterSelect({
 
 function HomeKanbanColumn({
   column,
+  onKeyboardReorder,
   onSelectTask,
+  reorderEnabled,
   selectedTaskId,
   tasks,
 }: {
   column: HomeKanbanColumn;
+  onKeyboardReorder: (columnId: HomeKanbanColumnId, direction: "left" | "right") => void;
   onSelectTask: (taskId: string) => void;
+  reorderEnabled: boolean;
   selectedTaskId?: string | null;
   tasks: HomeTask[];
 }) {
   const reduceMotion = useReducedMotion();
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: column.id });
+  const { onKeyDown: _sortableKeyboardListener, ...pointerListeners } = listeners ?? {};
   const [columnCollapsed, setColumnCollapsed] = useState(false);
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<HomeOperationsProgressState>>(new Set());
   const groupedTasks = statusGroupItems
@@ -1104,11 +1222,18 @@ function HomeKanbanColumn({
 
   return (
     <section
+      ref={setNodeRef}
       data-testid={`home-kanban-column-${column.id}`}
       className={cn(
         "group/column flex min-h-0 flex-col overflow-hidden rounded-[var(--clair-radius-md)] border border-border bg-[var(--emr-surface-muted)]",
-        columnCollapsed ? "h-auto" : "h-full"
+        columnCollapsed ? "h-auto" : "h-full",
+        isDragging && "opacity-60 shadow-lg"
       )}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 1 : undefined,
+      }}
     >
       <header className="flex min-h-[48px] items-center justify-between gap-3 border-b border-border px-3 py-3">
         <div className="min-w-0">
@@ -1119,20 +1244,40 @@ function HomeKanbanColumn({
             </Badge>
           </h2>
         </div>
-        <button
-          type="button"
-          aria-expanded={!columnCollapsed}
-          aria-label={`${column.label} ${columnCollapsed ? "펼치기" : "접기"}`}
-          className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-colors hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 group-hover/column:opacity-100"
-          onClick={() => setColumnCollapsed((current) => !current)}
-        >
-          <motion.span
-            animate={{ rotate: columnCollapsed ? 180 : 0 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE }}
+        <div className="flex shrink-0 items-center gap-1">
+          {reorderEnabled ? (
+            <button
+              ref={setActivatorNodeRef}
+              type="button"
+              aria-label={`${column.label} 열 순서 변경`}
+              className="flex size-6 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-colors hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 group-hover/column:opacity-100"
+              {...attributes}
+              {...pointerListeners}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+
+                event.preventDefault();
+                onKeyboardReorder(column.id, event.key === "ArrowLeft" ? "left" : "right");
+              }}
+            >
+              <span aria-hidden="true" className="text-[15px] leading-none">⠿</span>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            aria-expanded={!columnCollapsed}
+            aria-label={`${column.label} ${columnCollapsed ? "펼치기" : "접기"}`}
+            className="flex size-6 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-colors hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 group-hover/column:opacity-100"
+            onClick={() => setColumnCollapsed((current) => !current)}
           >
-            <ChevronDownIcon className="size-4" aria-hidden="true" />
-          </motion.span>
-        </button>
+            <motion.span
+              animate={{ rotate: columnCollapsed ? 180 : 0 }}
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE }}
+            >
+              <ChevronDownIcon className="size-4" aria-hidden="true" />
+            </motion.span>
+          </button>
+        </div>
       </header>
 
       <AnimatePresence initial={false}>

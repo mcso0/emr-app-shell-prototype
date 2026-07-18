@@ -203,6 +203,57 @@ test("operation mode filters move populated workstreams before empty columns", a
   ]);
 });
 
+test("home lets users reorder workstream columns without changing source work", async ({ page }) => {
+  await useMockRole(page, "vet");
+  await page.goto("/w/clair-demo/home");
+
+  const columnOrder = async () =>
+    page.getByTestId(/^home-kanban-column-/).evaluateAll((columns) =>
+      columns.map((column) => column.getAttribute("data-testid"))
+  );
+
+  await expect(page.locator("number-flow-react")).toHaveCount(3);
+  const reorderHandle = page.getByLabel("예약 열 순서 변경");
+
+  await reorderHandle.focus();
+  await page.keyboard.press("ArrowRight");
+
+  await expect.poll(columnOrder).toEqual([
+    "home-kanban-column-waiting",
+    "home-kanban-column-chart",
+    "home-kanban-column-reservation",
+    "home-kanban-column-lab",
+    "home-kanban-column-imaging",
+    "home-kanban-column-dispensing",
+    "home-kanban-column-treatment",
+    "home-kanban-column-billing",
+  ]);
+  const movedHandle = page.getByLabel("예약 열 순서 변경");
+  const waitingHandle = page.getByLabel("대기 열 순서 변경");
+  const movedBox = await movedHandle.boundingBox();
+  const waitingBox = await waitingHandle.boundingBox();
+
+  expect(movedBox).not.toBeNull();
+  expect(waitingBox).not.toBeNull();
+  await page.mouse.move(movedBox!.x + movedBox!.width / 2, movedBox!.y + movedBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(movedBox!.x + movedBox!.width / 2 + 12, movedBox!.y + movedBox!.height / 2);
+  await page.mouse.move(waitingBox!.x + waitingBox!.width / 2, waitingBox!.y + waitingBox!.height / 2, { steps: 12 });
+  await page.mouse.up();
+
+  await expect.poll(columnOrder).toEqual([
+    "home-kanban-column-reservation",
+    "home-kanban-column-waiting",
+    "home-kanban-column-chart",
+    "home-kanban-column-lab",
+    "home-kanban-column-imaging",
+    "home-kanban-column-dispensing",
+    "home-kanban-column-treatment",
+    "home-kanban-column-billing",
+  ]);
+  await expect(page.getByTestId("home-kanban-task-hospital-reservation-nana")).toBeVisible();
+});
+
 test("top workstream filter supports checkbox multi-select", async ({ page }) => {
   await useMockRole(page, "vet");
   await page.goto("/w/clair-demo/home");

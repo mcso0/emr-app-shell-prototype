@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>홈 원내 현황 모션 도입 결과</title>
+    <style>
+      body { max-width: 760px; margin: 40px auto; padding: 0 24px; color: #172033; font: 16px/1.6 system-ui, sans-serif; }
+      h1 { font-size: 28px; line-height: 1.3; }
+      h2 { margin-top: 32px; font-size: 20px; }
+      code { padding: 2px 5px; border-radius: 4px; background: #edf1f7; }
+      .status { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #e7f0ff; color: #174ea6; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <p class="status">Human review</p>
+    <h1>홈 원내 현황 모션 도입 결과</h1>
+    <p>운영 업무를 바꾸지 않고, 보드를 읽고 정리하는 경험만 개선했다. 카드의 원본 업무 상태·권한·소스 화면 연결은 그대로다.</p>
+
+    <h2>적용 내용</h2>
+    <ul>
+      <li><strong>dnd kit</strong>: 전체 흐름에서 업무 열을 마우스로 드래그해 이 화면 안에서 재배치할 수 있다.</li>
+      <li><strong>키보드 접근성</strong>: 각 열의 순서 변경 버튼에 초점을 둔 뒤 좌·우 화살표로 열을 옮길 수 있다.</li>
+      <li><strong>NumberFlow</strong>: 배정 누락, 주의 업무, 내 업무 수치가 값 변경 시 자연스럽게 전환된다. 운영체제의 모션 축소 설정도 기본적으로 따른다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li>홈 칸반 기본 렌더, 운영 모드 정렬, 키보드·포인터 열 재배치: 통과</li>
+      <li><code>npx tsc --noEmit --pretty false</code>: 통과</li>
+      <li><code>npm run lint -- --quiet</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>git diff --check</code>: 통과</li>
+    </ul>
+
+    <h2>범위와 다음 단계</h2>
+    <p>열 순서는 새로고침하면 초기화되는 세션 범위다. 개인별 영구 저장, 예약·진료·수납 카드의 드래그 상태 변경, 서버·DB·RLS 변경은 이번 범위에서 제외했다. 실제 사용자 검토 후 영구 저장이 필요하면 사용자·워크스페이스 경계를 포함한 별도 작업으로 다룬다.</p>
+  </body>
+</html>
