@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function mockStaffProfileApis(
   page: Page,
-  options: { work?: boolean } = {},
+  options: { schedule?: boolean; work?: boolean } = {},
 ) {
   await page.route("**/staff/*/operational-profile?**", async (route) => {
     await route.fulfill({
@@ -14,7 +14,9 @@ async function mockStaffProfileApis(
           canManageMember: false,
           manageMemberHref: null,
           scheduleHref:
-            "/w/clair-demo/hospital-admin?modulePanel=open&section=schedule&staffId=staff-suji&weekStart=2026-04-27",
+            options.schedule === false
+              ? null
+              : "/w/clair-demo/hospital-admin?modulePanel=open&section=schedule&staffId=staff-suji&weekStart=2026-04-27",
         },
         profile: {
           displayName: "이수지",
@@ -146,8 +148,9 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
     "aria-selected",
     "true",
   );
-  await expect(panel.getByRole("tab")).toHaveCount(2);
-  await expect(panel.getByRole("tab", { name: "업무 현황" })).toBeEnabled();
+  await expect(panel.getByRole("tab")).toHaveCount(3);
+  await expect(panel.getByRole("tab", { name: "업무현황" })).toBeEnabled();
+  await expect(panel.getByRole("tab", { name: "일정" })).toBeEnabled();
   await expect(page.locator('[data-slot="sheet-overlay"]')).toHaveCount(0);
   await expect(
     page.getByRole("dialog", { name: "직원 운영 프로필" }),
@@ -178,6 +181,39 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   expect(
     (await panel.locator("[data-slot='avatar']").boundingBox())?.width,
   ).toBeCloseTo(84, 0);
+
+  const tabListBox = await panel.getByRole("tablist").boundingBox();
+  const profileTabBox = await panel
+    .getByRole("tab", { name: "프로필" })
+    .boundingBox();
+  const workTabBox = await panel
+    .getByRole("tab", { name: "업무현황" })
+    .boundingBox();
+  const scheduleTabBox = await panel
+    .getByRole("tab", { name: "일정" })
+    .boundingBox();
+  expect(tabListBox?.width).toBeCloseTo(175, 0);
+  expect(profileTabBox?.width).toBeCloseTo(53, 0);
+  expect(workTabBox?.width).toBeCloseTo(65, 0);
+  expect(scheduleTabBox?.width).toBeCloseTo(41, 0);
+  expect(
+    (await panel.getByRole("heading", { name: "오늘 근무 정보" }).boundingBox())
+      ?.x,
+  ).toBeCloseTo(
+    (
+      await panel
+        .getByRole("heading", { name: "다가오는 부재와 다음 복귀" })
+        .boundingBox()
+    )?.x ?? 0,
+    0,
+  );
+
+  await panel.getByRole("tab", { name: "일정" }).click();
+  await expect(panel.getByRole("heading", { name: "일정" })).toBeVisible();
+  await expect(
+    panel.getByText("근무 일정은 일정 화면에서 확인할 수 있어요"),
+  ).toBeVisible();
+  await expect(panel.getByRole("button", { name: "일정 확인" })).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
@@ -264,7 +300,7 @@ test("staff work tab keeps server order, merges cursor pages by hospital date, a
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
   await openStaffProfile(page);
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
-  await panel.getByRole("tab", { name: "업무 현황" }).click();
+  await panel.getByRole("tab", { name: "업무현황" }).click();
 
   const cards = panel.locator("[data-work-item-id]");
   await expect(cards).toHaveCount(2);
@@ -286,6 +322,17 @@ test("staff work tab keeps server order, merges cursor pages by hospital date, a
   await expect(page).toHaveURL(
     /\/w\/clair-demo\/lab\?encounterId=encounter-1&orderId=order-1&modulePanel=open/,
   );
+});
+
+test("schedule tab keeps a missing authorized destination neutral", async ({ page }) => {
+  await mockStaffProfileApis(page, { schedule: false });
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await openStaffProfile(page);
+
+  const panel = page.getByRole("region", { name: "직원 운영 프로필" });
+  await panel.getByRole("tab", { name: "일정" }).click();
+  await expect(panel.getByText("표시할 일정이 없어요")).toBeVisible();
+  await expect(panel.getByRole("button", { name: "일정 확인" })).toHaveCount(0);
 });
 
 test("switching staff remounts the panel and never reuses the previous staff work state", async ({
@@ -345,7 +392,7 @@ test("switching staff remounts the panel and never reuses the previous staff wor
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
   await openStaffProfile(page, "이수지");
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
-  await panel.getByRole("tab", { name: "업무 현황" }).click();
+  await panel.getByRole("tab", { name: "업무현황" }).click();
   await expect(panel).toContainText("이수지 업무");
 
   await openStaffProfile(page, "김도윤");
@@ -355,7 +402,7 @@ test("switching staff remounts the panel and never reuses the previous staff wor
   );
   await expect(panel).toContainText("김도윤");
   await expect(panel).not.toContainText("이수지 업무");
-  await panel.getByRole("tab", { name: "업무 현황" }).click();
+  await panel.getByRole("tab", { name: "업무현황" }).click();
   await expect(panel).toContainText("김도윤 업무");
   await expect(panel).not.toContainText("이수지 업무");
 });
@@ -456,10 +503,8 @@ test("staff profile reflows at a 200 percent zoom equivalent without hiding long
           scheduleHref: null,
         },
         profile: {
-          displayName:
-            "이수지 아주 긴 이름이 표시되는 접근성 확대 검증용 직원",
-          email:
-            "staff-profile-v2-accessibility-long-address@example.test",
+          displayName: "이수지 아주 긴 이름이 표시되는 접근성 확대 검증용 직원",
+          email: "staff-profile-v2-accessibility-long-address@example.test",
           initials: "이수",
           jobPositionLabel: "수의사",
           department: "진료 및 중환자 입원 환자 관리 지원 부서",
@@ -483,9 +528,10 @@ test("staff profile reflows at a 200 percent zoom equivalent without hiding long
   expect(panelBox).not.toBeNull();
   expect(panelBox!.x).toBeGreaterThanOrEqual(0);
   expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(640);
-  await expect(panel.getByRole("tab")).toHaveCount(2);
+  await expect(panel.getByRole("tab")).toHaveCount(3);
   await expect(panel.getByRole("tab", { name: "프로필" })).toBeVisible();
-  await expect(panel.getByRole("tab", { name: "업무 현황" })).toBeVisible();
+  await expect(panel.getByRole("tab", { name: "업무현황" })).toBeVisible();
+  await expect(panel.getByRole("tab", { name: "일정" })).toBeVisible();
   await expect(panel.getByText(/이수지 아주 긴 이름/)).toBeVisible();
   await expect(panel.getByText(/수술 중이며 종료 후/)).toBeVisible();
   await expect(
