@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>직원 프로필 탭·섹션 정렬 완료 보고</title>
+    <style>
+      body { max-width: 760px; margin: 48px auto; padding: 0 24px; color: #1e2937; font: 16px/1.7 system-ui, sans-serif; }
+      h1 { line-height: 1.25; } h2 { margin-top: 32px; } li { margin: 6px 0; }
+      .status { color: #0b6b50; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <p class="status">완료 · RECEPTION-PR-015 후속 정렬</p>
+    <h1>직원 프로필 탭·섹션 정렬 완료 보고</h1>
+    <p>Figma의 380px 프로필 패널 탭 구조와 프로필 섹션 시작선을 실제 화면에 반영했다. 기존 상태 메시지, 서버 읽기 모델, 권한 및 데이터 범위는 변경하지 않았다.</p>
+    <h2>반영 내용</h2>
+    <ul>
+      <li>프로필·업무현황·일정의 3개 compact 탭을 53/65/41px 폭, 8px 간격, 175px 그룹으로 구현했다.</li>
+      <li>일정 탭은 독립 TabPanel이며, 기존 서버 유도 <code>scheduleHref</code>가 있을 때만 일정 이동 버튼을 제공한다.</li>
+      <li>일정 이동 대상이 없을 때는 권한이나 일정 상태를 추론하지 않는 중립 빈 상태를 표시한다.</li>
+      <li>다가오는 부재와 다음 복귀 섹션의 시작선을 오늘 근무 정보와 맞췄다.</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li>Focused ESLint와 TypeScript 검사 통과</li>
+      <li>직원 운영 프로필 Playwright 10개 통과</li>
+      <li>문서 링크 검사 통과 및 Storybook production build 완료</li>
+    </ul>
+    <h2>범위와 다음 단계</h2>
+    <p>새 일정 읽기 모델, 비공개 일정 정보, 상태 메시지 저장 동작은 추가하지 않았다. 배포 전 PR 검토와 main 반영 승인 후 자동 배포 상태를 확인한다.</p>
+  </body>
+</html>
