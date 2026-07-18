@@ -655,6 +655,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
     },
   );
 
+  await page.setViewportSize({ width: 1324, height: 877 });
   await page.goto(
     `/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`,
   );
@@ -686,6 +687,43 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(lockedState).toContainText("예상 소요시간");
   await expect(lockedState).toContainText("담당 수의사");
   await expect(lockedState).toContainText("청담 원장");
+  const receptionSummaryGrid = lockedState.getByTestId(
+    "preconsultation-reception-summary-grid",
+  );
+  const receptionSummaryItems = receptionSummaryGrid.locator(":scope > div");
+  await expect(receptionSummaryItems).toHaveCount(5);
+  for (let index = 0; index < 5; index += 1) {
+    await expect(receptionSummaryItems.nth(index)).toHaveCSS(
+      "border-left-width",
+      "0px",
+    );
+    await expect(receptionSummaryItems.nth(index)).toHaveCSS(
+      "border-right-width",
+      "0px",
+    );
+    await expect(receptionSummaryItems.nth(index)).toHaveCSS(
+      "border-top-width",
+      "0px",
+    );
+    await expect(receptionSummaryItems.nth(index)).toHaveCSS(
+      "border-bottom-width",
+      "0px",
+    );
+  }
+  const receptionDividers = receptionSummaryGrid.getByTestId(
+    "preconsultation-reception-divider",
+  );
+  await expect(receptionDividers).toHaveCount(4);
+  for (let index = 0; index < 4; index += 1) {
+    await expect(receptionDividers.nth(index)).toHaveCSS("height", "40px");
+    await expect(receptionDividers.nth(index)).toHaveCSS("width", "1px");
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(receptionDividers.nth(0)).toBeVisible();
+  await expect(receptionDividers.nth(1)).toBeHidden();
+  await expect(receptionDividers.nth(2)).toBeVisible();
+  await expect(receptionDividers.nth(3)).toBeHidden();
+  await page.setViewportSize({ width: 1324, height: 877 });
   await expect(lockedState).toContainText("방문 목적");
   await expect(lockedState).toContainText("피부 재진");
   await expect(lockedState).toContainText("환자/보호자 메모");
@@ -696,10 +734,18 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(lockedState).toContainText("4.82 kg");
   await expect(lockedState).toContainText("과거 진료이력");
   await expect(lockedState.getByLabel("환자 요약")).toHaveCount(0);
-  await expect(lockedState.getByTestId("animal-patient-avatar")).toHaveAttribute(
+  const animalPatientAvatar = lockedState.getByTestId("animal-patient-avatar");
+  await expect(animalPatientAvatar).toHaveAttribute(
     "data-avatar-state",
     "fallback",
   );
+  await expect(animalPatientAvatar).toHaveCSS("border-top-left-radius", "12px");
+  await expect(
+    animalPatientAvatar.locator("[data-slot=avatar-fallback]"),
+  ).toHaveCSS("border-top-left-radius", "12px");
+  await expect(
+    animalPatientAvatar.locator("[data-slot=avatar-fallback]"),
+  ).toHaveCSS("background-color", "rgb(250, 250, 250)");
   await expect(lockedState.getByRole("heading", { level: 2 })).toHaveText([
     "접수 정보",
     "방문 목적",
@@ -707,6 +753,18 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "바이탈 정보",
     "과거 진료이력",
   ]);
+  for (const sectionTitleId of [
+    "preconsultation-reception-summary",
+    "preconsultation-visit-purpose",
+    "preconsultation-memo",
+    "preconsultation-vitals",
+    "preconsultation-history",
+  ]) {
+    await expect(lockedState.locator(`#${sectionTitleId}`)).toHaveCSS(
+      "column-gap",
+      "8px",
+    );
+  }
   const historySection = lockedState.getByTestId("preconsultation-history");
   const historyTimeline = historySection.getByTestId("preconsultation-history-timeline");
   await expect(historySection).toContainText("2026년 05월 09일");

@@ -20,6 +20,21 @@ assert.match(componentSource, /AvatarFallback/);
 assert.match(componentSource, /data-avatar-state=\{displayState\}/);
 assert.match(componentSource, /"sm" \| "md" \| "lg"/);
 assert.match(componentSource, /CdsGnbPetGnbIcon/);
+assert.match(
+  componentSource,
+  /displayState === "fallback" && "!bg-\[var\(--clair-color-atomic-neutral-50\)\]"/,
+  "the missing-image fallback must use the Neutral/50 background token",
+);
+
+for (const size of ["sm", "md", "lg"]) {
+  assert.match(
+    componentSource,
+    new RegExp(
+      `${size}: "[^"\\n]*!rounded-\\[var\\(--clair-radius-atomic-12\\)\\][^"\\n]*\\[&_\\[data-slot=avatar-fallback\\]\\]:!rounded-\\[var\\(--clair-radius-atomic-12\\)\\][^"\\n]*\\[&_\\[data-slot=avatar-image\\]\\]:!rounded-\\[var\\(--clair-radius-atomic-12\\)\\]`,
+    ),
+    `${size} animal patient avatars must use the shared 12px radius for their root, fallback, and image`,
+  );
+}
 
 for (const story of ["Image", "Fallback", "Loading", "Error", "SizeScale"]) {
   assert.match(storySource, new RegExp(`export const ${story}`));
