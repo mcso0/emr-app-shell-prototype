@@ -392,17 +392,16 @@ function ReceptionSummary({ context }: { context: ChartPreconsultationContext })
       <SectionTitle id="preconsultation-reception-summary" icon={<CdsMedicalNotebookTextIcon />}>
         접수 정보
       </SectionTitle>
-      <dl className="grid min-w-0 grid-cols-2 overflow-hidden rounded-[var(--clair-radius-atomic-12)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] sm:grid-cols-5">
+      <dl
+        className="grid min-w-0 grid-cols-2 overflow-hidden rounded-[var(--clair-radius-atomic-12)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] sm:grid-cols-5"
+        data-testid="preconsultation-reception-summary-grid"
+      >
         {items.map((item, index) => (
           <div
             key={item.label}
             className={cn(
-              "min-w-0 px-3 py-3.5 sm:px-6 sm:py-4",
-              "border-b border-[var(--emr-line-hairline)] sm:border-b-0",
-              index % 2 === 1 && "border-l sm:border-l",
-              index > 1 && "sm:border-l",
-              index >= 3 && "border-b-0",
-              index === items.length - 1 && "col-span-2 border-t border-[var(--emr-line-hairline)] sm:col-span-1 sm:border-t-0",
+              "relative min-w-0 px-3 py-3.5 sm:px-6 sm:py-4",
+              index === items.length - 1 && "col-span-2 sm:col-span-1",
             )}
           >
             <dt className="text-sm font-medium leading-5 text-[var(--emr-text-tertiary)]">
@@ -422,6 +421,16 @@ function ReceptionSummary({ context }: { context: ChartPreconsultationContext })
                 {item.value}
               </span>
             </dd>
+            {index < items.length - 1 ? (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "pointer-events-none absolute top-1/2 right-0 h-[40px] w-px -translate-y-1/2 bg-[var(--emr-line-hairline)]",
+                  index % 2 === 0 ? "block" : "hidden sm:block",
+                )}
+                data-testid="preconsultation-reception-divider"
+              />
+            ) : null}
           </div>
         ))}
       </dl>
@@ -824,7 +833,7 @@ function SectionTitle({
   return (
     <h2
       id={id}
-      className="flex min-h-[26px] items-center gap-1.5 text-lg font-semibold leading-[26px] tracking-[-0.002em] text-[var(--emr-text-secondary)] [&_svg]:size-[18px] [&_svg]:shrink-0"
+      className="flex min-h-[26px] items-center gap-2 text-lg font-semibold leading-[26px] tracking-[-0.002em] text-[var(--emr-text-secondary)] [&_svg]:size-[18px] [&_svg]:shrink-0"
     >
       {icon}
       {children}

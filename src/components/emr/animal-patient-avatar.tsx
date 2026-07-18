@@ -22,9 +22,9 @@ export type AnimalPatientAvatarProps = {
 };
 
 const sizeClassName: Record<AnimalPatientAvatarSize, string> = {
-  sm: "size-10 rounded-[var(--clair-radius-atomic-6)] [&_[data-slot=avatar-fallback]]:rounded-[var(--clair-radius-atomic-6)] [&_[data-slot=avatar-image]]:rounded-[var(--clair-radius-atomic-6)] [&_svg]:size-5",
-  md: "size-14 rounded-[var(--clair-radius-atomic-8)] [&_[data-slot=avatar-fallback]]:rounded-[var(--clair-radius-atomic-8)] [&_[data-slot=avatar-image]]:rounded-[var(--clair-radius-atomic-8)] [&_svg]:size-7",
-  lg: "size-20 rounded-[10px] [&_[data-slot=avatar-fallback]]:rounded-[10px] [&_[data-slot=avatar-image]]:rounded-[10px] [&_svg]:size-8",
+  sm: "size-10 !rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-fallback]]:!rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-image]]:!rounded-[var(--clair-radius-atomic-12)] [&_svg]:size-5",
+  md: "size-14 !rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-fallback]]:!rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-image]]:!rounded-[var(--clair-radius-atomic-12)] [&_svg]:size-7",
+  lg: "size-20 !rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-fallback]]:!rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-image]]:!rounded-[var(--clair-radius-atomic-12)] [&_svg]:size-8",
 };
 
 /**
@@ -62,7 +62,7 @@ export function AnimalPatientAvatar({
       aria-busy={displayState === "loading" ? true : undefined}
       aria-label={label}
       className={cn(
-        "border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)] after:rounded-[inherit]",
+        "border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)] after:!rounded-[inherit]",
         displayState === "loading" && "animate-pulse",
         displayState === "error" &&
           "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
@@ -84,6 +84,7 @@ export function AnimalPatientAvatar({
       <AvatarFallback
         className={cn(
           "bg-transparent text-current",
+          displayState === "fallback" && "!bg-[var(--clair-color-atomic-neutral-50)]",
           displayState === "loading" && "opacity-50",
         )}
       >
