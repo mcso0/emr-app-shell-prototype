@@ -4,12 +4,13 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   CdsActionsRefreshCcwIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsAlertsBellIcon } from "@/components/cds-icons/alerts-and-status";
 import { CdsFilesCalendarIcon, CdsFilesClockIcon } from "@/components/cds-icons/files-and-layout";
-import { CdsGnbMedicalGnbIcon, CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
 import {
+  CdsMedicalActivityIcon,
+  CdsMedicalClipboardCheckIcon,
   CdsMedicalHeartPulseIcon,
-  CdsMedicalPawPrintIcon,
-  CdsMedicalStethoscopeIcon,
+  CdsMedicalNotebookTextIcon,
   CdsMedicalThermometerIcon,
   CdsMedicalWeightIcon,
   CdsMedicalWindIcon,
@@ -18,13 +19,15 @@ import {
   CdsNavigationChevronDownIcon,
   CdsNavigationChevronUpIcon,
 } from "@/components/cds-icons/navigation";
-import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
-import { CdsUtilitiesCircleIcon } from "@/components/cds-icons/utilities-and-misc";
+import { CdsUtilitiesCircleIcon, CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
+import { AnimalPatientAvatar } from "@/components/emr/animal-patient-avatar";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
   SheetContent,
@@ -49,12 +52,14 @@ export function ChartPreconsultationContextPanel({
   actorHeaders,
   encounterId,
   onRequestCall,
+  onReturnToQueue,
   primaryActionBusy,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   encounterId: string;
   onRequestCall: () => void;
+  onReturnToQueue: () => void;
   primaryActionBusy: boolean;
   workspaceId: string;
 }) {
@@ -102,34 +107,46 @@ export function ChartPreconsultationContextPanel({
   }, [actorHeaders, encounterId, workspaceId]);
 
   if (contextState.status === "loading") {
-    return (
-      <div className="flex min-h-[480px] flex-1 items-center justify-center px-6 py-10">
-        <EmrEmptyState
-          kind="upstream-pending"
-          priority="supporting"
-          surface="content"
-          title="진료 전 정보를 불러오는 중입니다"
-          description="환자, 접수, 바이탈, 과거 진료 이력을 확인하고 있습니다."
-        />
-      </div>
-    );
+    return <PreconsultationLoadingState />;
   }
 
   if (contextState.status === "error") {
+    const permissionError = isPermissionError(contextState.reason);
     return (
-      <div className="flex min-h-[480px] flex-1 items-center justify-center px-6 py-10">
+      <div className="flex min-h-[640px] flex-1 items-center justify-center px-6 py-10">
         <EmrEmptyState
-          kind="no-data"
+          kind={permissionError ? "no-permission" : "read-error"}
           priority="local-recovery"
+          size="lg"
           surface="content"
-          title="진료 전 정보를 불러오지 못했습니다"
-          description={getContextErrorDescription(contextState.reason)}
-          primaryAction={
-            <Button variant="outline" className="bg-card" onClick={() => void loadContext()}>
-              <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
-              다시 시도
-            </Button>
+          title={
+            permissionError
+              ? "차트 정보를 볼 권한이 없어요"
+              : "접수 정보를 불러오지 못했어요"
           }
+          description={
+            permissionError
+              ? getContextErrorDescription(contextState.reason)
+              : "네트워크 상태를 확인한 뒤 다시 시도해 주세요. 대기 목록의 접수 정보는 변경되지 않았어요."
+          }
+          secondaryAction={
+            permissionError ? undefined : (
+              <Button variant="outline" className="bg-card" onClick={onReturnToQueue}>
+                대기 목록으로
+              </Button>
+            )
+          }
+          primaryAction={
+            permissionError ? (
+              <Button onClick={onReturnToQueue}>대기 목록으로</Button>
+            ) : (
+              <Button onClick={() => void loadContext()}>
+                <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+                다시 시도
+              </Button>
+            )
+          }
+          testId="preconsultation-feedback-state"
         />
       </div>
     );
@@ -141,27 +158,31 @@ export function ChartPreconsultationContextPanel({
       className="min-h-0 flex-1 overflow-auto"
       data-testid="chart-start-locked-state"
     >
-      <div className="mx-auto w-full max-w-[1440px] px-4 py-4 xl:px-6 xl:py-6">
+      <div className="mx-auto w-full max-w-[1200px] bg-[var(--emr-surface-panel)]">
         <PreconsultationHeader
           context={context}
           primaryActionBusy={primaryActionBusy}
           onOpenPatientInformation={() => setPatientInformationOpen(true)}
           onRequestCall={onRequestCall}
         />
-        <Separator className="my-6" />
-        <div className="grid min-w-0 grid-cols-1 gap-6 min-[1180px]:grid-cols-[minmax(0,1fr)_288px] min-[1320px]:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="min-w-0 space-y-8">
-            <VisitPurpose context={context} />
+        <Separator className="mx-6 w-auto" />
+        <main className="px-5 py-6 sm:px-8 sm:py-8">
+          <div className="flex min-w-0 flex-col gap-6">
             <ReceptionSummary context={context} />
+            <SectionDivider />
+            <VisitPurpose context={context} />
+            <SectionDivider />
+            <MemoSection context={context} />
+            <SectionDivider />
             <VitalSection context={context} />
+            <SectionDivider />
             <HistorySection
               context={context}
               expanded={historyExpanded}
               onToggle={() => setHistoryExpanded((current) => !current)}
             />
           </div>
-          <PatientSummary context={context} />
-        </div>
+        </main>
       </div>
       <PatientInformationSheet
         context={context}
@@ -198,6 +219,42 @@ async function loadChartPreconsultationContext({
   }
 }
 
+function PreconsultationLoadingState() {
+  return (
+    <div
+      className="min-h-0 flex-1 overflow-auto"
+      aria-busy="true"
+      aria-label="환자 정보 불러오는 중"
+      data-testid="preconsultation-loading-state"
+    >
+      <div className="mx-auto w-full max-w-[1200px] bg-[var(--emr-surface-panel)]">
+        <div className="min-h-[204px] px-5 py-6 sm:px-6 sm:py-8">
+          <Skeleton className="h-7 w-[138px] rounded-full" />
+          <div className="mt-6 flex items-center gap-5 sm:mt-8">
+            <Skeleton className="size-16 shrink-0 rounded-[10px] sm:size-20" />
+            <div className="flex min-w-0 flex-col gap-2.5">
+              <Skeleton className="h-7 w-[210px] max-w-full" />
+              <Skeleton className="h-5 w-[330px] max-w-full" />
+            </div>
+          </div>
+        </div>
+        <Separator className="mx-6 w-auto" />
+        <div className="flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-8">
+          {[80, 56, 56, 154, 180].map((height, index) => (
+            <div className="flex flex-col gap-3.5" key={`${height}-${index}`}>
+              <Skeleton className="h-[22px] w-[130px]" />
+              <Skeleton className="w-full" style={{ height }} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <span className="sr-only" role="status">
+        환자와 접수 정보를 불러오고 있어요.
+      </span>
+    </div>
+  );
+}
+
 function PreconsultationHeader({
   context,
   onOpenPatientInformation,
@@ -210,30 +267,46 @@ function PreconsultationHeader({
   primaryActionBusy: boolean;
 }) {
   return (
-    <header className="min-w-0" aria-labelledby="preconsultation-patient-heading">
-      <div className="flex flex-wrap items-center gap-2">
+    <header
+      className="min-w-0 px-5 py-6 sm:px-6 sm:py-8"
+      aria-labelledby="preconsultation-patient-heading"
+    >
+      <div className="flex min-h-7 flex-wrap items-center gap-2.5">
         <Badge
           variant="outline"
-          className="h-6 border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2 text-[var(--emr-status-info-text)]"
+          className="h-7 rounded-full bg-[var(--emr-surface-muted)] px-2.5 text-sm text-[var(--emr-text-secondary)]"
         >
           <CdsUtilitiesCircleIcon className="size-3" aria-hidden="true" />
-          진료 시작 전
+          진료 대기
         </Badge>
         <Badge
-          variant="secondary"
-          className="h-6 px-2 text-[var(--emr-text-secondary)]"
+          variant="outline"
+          className="h-7 rounded-full bg-[var(--emr-surface-muted)] px-3 text-sm text-[var(--emr-text-tertiary)]"
         >
-          차트번호 {context.encounter.encounterNo}
+          <span>차트번호 </span>
+          <strong className="font-medium text-[var(--emr-text-secondary)]">
+            {context.encounter.encounterNo}
+          </strong>
         </Badge>
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-6">
         <PatientIdentity context={context} size="large" />
-        <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
-          <Button variant="outline" size="lg" onClick={onOpenPatientInformation}>
-            환자 정보
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4 lg:justify-end">
+          <Button
+            className="min-w-0 flex-1 sm:w-[109px] sm:flex-none"
+            variant="outline"
+            size="lg"
+            onClick={onOpenPatientInformation}
+          >
+            환자 프로필
           </Button>
-          <Button size="lg" disabled={primaryActionBusy} onClick={onRequestCall}>
-            <CdsGnbMedicalGnbIcon data-icon="inline-start" aria-hidden="true" />
+          <Button
+            className="min-w-0 flex-1 sm:w-[115px] sm:flex-none"
+            size="lg"
+            disabled={primaryActionBusy}
+            onClick={onRequestCall}
+          >
+            <CdsAlertsBellIcon data-icon="inline-start" aria-hidden="true" />
             호출하기
           </Button>
         </div>
@@ -251,39 +324,33 @@ function PatientIdentity({
 }) {
   const metadata = getPatientMetadata(context);
   return (
-    <div className="flex min-w-0 items-center gap-4">
-      <div
-        className={cn(
-          "flex shrink-0 items-center justify-center rounded-[12px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)]",
-          size === "large" ? "size-16" : "size-14",
-        )}
-        role="img"
-        aria-label={`${context.patient.name} 환자 프로필 기본 이미지`}
-      >
-        <CdsGnbPetGnbIcon
-          className={size === "large" ? "size-8" : "size-7"}
-          aria-hidden="true"
-        />
-      </div>
+    <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+      <AnimalPatientAvatar
+        alt={`${context.patient.name} 동물 환자 프로필`}
+        size={size === "large" ? "lg" : "md"}
+      />
       <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <h1
             id={size === "large" ? "preconsultation-patient-heading" : undefined}
             className={cn(
               "font-semibold tracking-[-0.025em] text-[var(--emr-text-primary)]",
-              size === "large" ? "text-2xl leading-7" : "text-lg leading-6",
+              size === "large" ? "text-[21px] leading-7 sm:text-2xl sm:leading-8" : "text-lg leading-6",
             )}
           >
             {context.patient.name}
           </h1>
-          <p className="text-base leading-6 text-muted-foreground">
+          <span className="text-base leading-6 text-[var(--emr-text-placeholder)] sm:text-2xl sm:leading-8">
+            /
+          </span>
+          <p className="text-sm font-semibold leading-5 text-[var(--emr-text-placeholder)] sm:text-2xl sm:leading-8">
             보호자{" "}
             <span className="font-semibold text-[var(--emr-text-secondary)]">
               {context.guardian?.name ?? "미지정"}
             </span>
           </p>
         </div>
-        <p className="mt-2 text-sm font-medium text-[var(--emr-text-tertiary)]">
+        <p className="mt-1 text-sm text-[var(--emr-text-tertiary)] sm:mt-3 sm:text-lg sm:leading-[26px]">
           {metadata.join(" · ")}
         </p>
       </div>
@@ -294,13 +361,12 @@ function PatientIdentity({
 function VisitPurpose({ context }: { context: ChartPreconsultationContext }) {
   const purpose = context.encounter.visitPurpose ?? context.encounter.chiefComplaint;
   return (
-    <section aria-labelledby="preconsultation-visit-purpose">
-      <SectionTitle id="preconsultation-visit-purpose">방문 목적</SectionTitle>
-      <div className="mt-3 flex min-w-0 flex-wrap items-center gap-3 rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] px-4 py-3">
-        <Badge variant="outline" className="h-5 bg-[var(--emr-surface-panel)] px-2">
-          {getVisitType(context)}
-        </Badge>
-        <p className="min-w-0 text-base font-semibold leading-6 tracking-[-0.01em]">
+    <section className="flex min-w-0 flex-col gap-4" aria-labelledby="preconsultation-visit-purpose">
+      <SectionTitle id="preconsultation-visit-purpose" icon={<CdsMedicalClipboardCheckIcon />}>
+        방문 목적
+      </SectionTitle>
+      <div className="flex min-h-14 min-w-0 items-center rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-3 sm:px-6 sm:py-4">
+        <p className="min-w-0 text-[15px] font-medium leading-6 tracking-[0.006em]">
           {purpose ?? "방문 목적 미입력"}
         </p>
       </div>
@@ -309,18 +375,118 @@ function VisitPurpose({ context }: { context: ChartPreconsultationContext }) {
 }
 
 function ReceptionSummary({ context }: { context: ChartPreconsultationContext }) {
+  const items = [
+    { label: "재진 여부", value: getVisitType(context), badge: "primary" as const },
+    {
+      label: "접수 유형",
+      value: getReceptionTypeLabel(context.encounter.receptionType),
+      badge: "neutral" as const,
+    },
+    { label: "접수 시각", value: `${formatTime(context.encounter.checkedInAt)} 접수`, icon: "clock" as const },
+    { label: "예상 소요시간", value: "미입력", icon: "clock" as const },
+    { label: "담당 수의사", value: context.veterinarian?.displayName ?? "미지정", avatar: true },
+  ];
+
   return (
-    <section aria-labelledby="preconsultation-reception-summary">
-      <SectionTitle id="preconsultation-reception-summary">접수 정보</SectionTitle>
-      <div className="mt-3 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4">
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(3,minmax(96px,1fr))_minmax(200px,2fr)]">
-          <SummaryItem label="접수 시각" value={`${formatTime(context.encounter.checkedInAt)} 접수`} />
-          <SummaryItem label="접수 유형" value={getReceptionTypeLabel(context.encounter.receptionType)} />
-          <SummaryItem label="담당 수의사" value={context.veterinarian?.displayName ?? "미지정"} />
-          <SummaryItem label="접수 메모" value={context.encounter.receptionMemo ?? "접수 메모 미입력"} multiline />
-        </dl>
+    <section className="flex min-w-0 flex-col gap-4" aria-labelledby="preconsultation-reception-summary">
+      <SectionTitle id="preconsultation-reception-summary" icon={<CdsMedicalNotebookTextIcon />}>
+        접수 정보
+      </SectionTitle>
+      <dl className="grid min-w-0 grid-cols-2 overflow-hidden rounded-[var(--clair-radius-atomic-12)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] sm:grid-cols-5">
+        {items.map((item, index) => (
+          <div
+            key={item.label}
+            className={cn(
+              "min-w-0 px-3 py-3.5 sm:px-6 sm:py-4",
+              "border-b border-[var(--emr-line-hairline)] sm:border-b-0",
+              index % 2 === 1 && "border-l sm:border-l",
+              index > 1 && "sm:border-l",
+              index >= 3 && "border-b-0",
+              index === items.length - 1 && "col-span-2 border-t border-[var(--emr-line-hairline)] sm:col-span-1 sm:border-t-0",
+            )}
+          >
+            <dt className="text-sm font-medium leading-5 text-[var(--emr-text-tertiary)]">
+              {item.label}
+            </dt>
+            <dd className="mt-1.5 flex min-h-[22px] min-w-0 items-center gap-1.5 text-sm font-medium text-[var(--emr-text-primary)]">
+              {item.icon ? <CdsFilesClockIcon className="size-3.5 shrink-0 text-[var(--emr-text-tertiary)]" aria-hidden="true" /> : null}
+              {item.avatar ? <VeterinarianAvatar name={item.value} /> : null}
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  item.badge && "inline-flex min-h-[22px] items-center rounded-[var(--clair-radius-atomic-6)] border px-2 py-0.5 text-xs leading-4",
+                  item.badge === "primary" && "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
+                  item.badge === "neutral" && "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)]",
+                )}
+              >
+                {item.value}
+              </span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function MemoSection({ context }: { context: ChartPreconsultationContext }) {
+  const patientMemo =
+    context.patient.handlingCautionNote ??
+    context.patient.specialNote ??
+    context.patient.allergyNote ??
+    context.encounter.receptionMemo;
+  const patientCaution = Boolean(context.patient.handlingCautionNote);
+
+  return (
+    <section className="flex min-w-0 flex-col gap-4" aria-labelledby="preconsultation-memo">
+      <SectionTitle id="preconsultation-memo" icon={<CdsMedicalNotebookTextIcon />}>
+        환자/보호자 메모
+      </SectionTitle>
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+        <MemoCard
+          caution={patientCaution}
+          label="환자"
+          value={patientMemo ?? "기록된 환자 주의사항이 없어요."}
+        />
+        <MemoCard
+          label="보호자"
+          value={context.guardian?.memo ?? "기록된 보호자 메모가 없어요."}
+        />
       </div>
     </section>
+  );
+}
+
+function MemoCard({
+  caution = false,
+  label,
+  value,
+}: {
+  caution?: boolean;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-14 min-w-0 items-start gap-2.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3.5 sm:items-center sm:px-5 sm:py-4",
+        caution &&
+          "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]",
+      )}
+    >
+      <Badge
+        className={cn(
+          "h-[22px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-0 bg-[var(--clair-color-atomic-black-alpha-4)] px-2 text-xs text-[var(--emr-text-primary)]",
+          caution && "bg-[var(--emr-surface-panel)] text-[var(--emr-status-warning-text)]",
+        )}
+        variant="secondary"
+      >
+        {label}
+      </Badge>
+      <p className="min-w-0 text-[15px] font-medium leading-6 tracking-[0.006em] sm:truncate">
+        {value}
+      </p>
+    </div>
   );
 }
 
@@ -328,13 +494,19 @@ function VitalSection({ context }: { context: ChartPreconsultationContext }) {
   const current = context.vitals[0];
   const previous = context.vitals[1];
   return (
-    <section aria-labelledby="preconsultation-vitals">
-      <SectionTitle id="preconsultation-vitals">환자 바이탈</SectionTitle>
+    <section className="flex min-w-0 flex-col gap-4" aria-labelledby="preconsultation-vitals">
+      <SectionTitle id="preconsultation-vitals" icon={<CdsMedicalActivityIcon />}>
+        바이탈 정보
+      </SectionTitle>
       {current ? (
         <VitalComparison current={current} previous={previous} encounterAt={context.encounter.checkedInAt} />
       ) : (
-        <div className="mt-3 rounded-[var(--emr-radius-panel)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-6 text-center text-sm text-muted-foreground">
-          기록된 바이탈이 없습니다.
+        <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
+          <CdsMedicalActivityIcon className="size-6 shrink-0 text-[var(--emr-text-placeholder)]" aria-hidden="true" />
+          <div>
+            <strong className="block text-[var(--emr-text-secondary)]">기록된 바이탈이 없어요</strong>
+            <p className="mt-0.5 text-xs">접수에서 측정하면 현재 값과 이전 값이 여기에 표시돼요.</p>
+          </div>
         </div>
       )}
     </section>
@@ -355,28 +527,46 @@ const vitalDefinitions: VitalDefinition[] = [
     label: "체중",
     icon: <CdsMedicalWeightIcon className="size-4" aria-hidden="true" />,
     format: (value) => formatOptionalNumber(value.weightKg, "kg", 2),
-    delta: (current, previous) => formatDelta(current.weightKg, previous.weightKg, 2),
+    delta: (current, previous) =>
+      formatDelta(current.weightKg, previous.weightKg, 2, "kg", "증가", "감소"),
   },
   {
     key: "temperatureC",
     label: "체온",
     icon: <CdsMedicalThermometerIcon className="size-4" aria-hidden="true" />,
     format: (value) => formatOptionalNumber(value.temperatureC, "°C", 1),
-    delta: (current, previous) => formatDelta(current.temperatureC, previous.temperatureC, 1),
-  },
-  {
-    key: "respiratoryRateRpm",
-    label: "호흡",
-    icon: <CdsMedicalWindIcon className="size-4" aria-hidden="true" />,
-    format: (value) => formatOptionalNumber(value.respiratoryRateRpm, "rpm", 0),
-    delta: (current, previous) => formatDelta(current.respiratoryRateRpm, previous.respiratoryRateRpm, 0),
+    delta: (current, previous) =>
+      formatDelta(current.temperatureC, previous.temperatureC, 1, "°C", "상승", "하강"),
   },
   {
     key: "bloodPressureSystolicMmhg",
     label: "혈압",
     icon: <CdsMedicalHeartPulseIcon className="size-4" aria-hidden="true" />,
     format: (value) => formatBloodPressure(value),
-    delta: (current, previous) => formatDelta(current.bloodPressureSystolicMmhg, previous.bloodPressureSystolicMmhg, 0),
+    delta: (current, previous) =>
+      formatDelta(
+        current.bloodPressureSystolicMmhg,
+        previous.bloodPressureSystolicMmhg,
+        0,
+        "",
+        "상승",
+        "하강",
+      ),
+  },
+  {
+    key: "respiratoryRateRpm",
+    label: "호흡수",
+    icon: <CdsMedicalWindIcon className="size-4" aria-hidden="true" />,
+    format: (value) => formatOptionalNumber(value.respiratoryRateRpm, "회/분", 0),
+    delta: (current, previous) =>
+      formatDelta(
+        current.respiratoryRateRpm,
+        previous.respiratoryRateRpm,
+        0,
+        "회/분",
+        "증가",
+        "감소",
+      ),
   },
 ];
 
@@ -390,44 +580,98 @@ function VitalComparison({
   previous?: ChartPreconsultationVitalMeasurement;
 }) {
   return (
-    <div className="mt-3 overflow-x-auto rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <div className="grid min-w-[680px] grid-cols-[112px_repeat(4,minmax(120px,1fr))]">
-        <div className="border-r border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)]" aria-hidden="true" />
-        {vitalDefinitions.map((vital) => (
-          <div key={vital.key} className="flex items-center gap-2 border-r border-[var(--emr-line-hairline)] px-3 py-2 text-sm font-medium text-muted-foreground last:border-r-0">
-            {vital.icon}{vital.label}
-          </div>
-        ))}
-        <VitalDateCell value={`${formatMonthDay(current.measuredAt)}${sameDate(current.measuredAt, encounterAt) ? "(오늘)" : ""}`} />
-        {vitalDefinitions.map((vital) => {
-          const delta = previous ? vital.delta(current, previous) : null;
-          return (
-            <div key={`current-${vital.key}`} className="flex min-h-12 items-center justify-between gap-2 border-r border-t border-[var(--emr-line-hairline)] px-3 py-2 text-sm last:border-r-0">
-              <span className="font-medium text-[var(--emr-text-secondary)]">{vital.format(current)}</span>
-              {delta ? <span className="shrink-0 font-medium text-[var(--emr-status-info-text)]">{delta}</span> : null}
-            </div>
-          );
-        })}
-        {previous ? (
-          <>
-            <VitalDateCell value={`${formatMonthDay(previous.measuredAt)} 이전 방문`} />
+    <div
+      className="max-w-full overflow-x-auto rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
+      tabIndex={0}
+      aria-label="환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다"
+    >
+      <table className="w-full min-w-[860px] table-fixed border-separate border-spacing-0">
+        <caption className="sr-only">현재 및 이전 환자 바이탈 비교</caption>
+        <thead>
+          <tr>
+            <VitalHeaderCell icon={<CdsFilesCalendarIcon />}>일자</VitalHeaderCell>
             {vitalDefinitions.map((vital) => (
-              <div key={`previous-${vital.key}`} className="flex min-h-12 items-center border-r border-t border-[var(--emr-line-hairline)] px-3 py-2 text-sm last:border-r-0">
-                <span className="font-medium text-[var(--emr-text-secondary)]">{vital.format(previous)}</span>
-              </div>
+              <VitalHeaderCell key={vital.key} icon={vital.icon}>
+                {vital.label}
+              </VitalHeaderCell>
             ))}
-          </>
-        ) : null}
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          <VitalRow
+            current
+            encounterAt={encounterAt}
+            measurement={current}
+            previous={previous}
+          />
+          {previous ? (
+            <VitalRow
+              encounterAt={encounterAt}
+              measurement={previous}
+            />
+          ) : null}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function VitalDateCell({ value }: { value: string }) {
+function VitalHeaderCell({ children, icon }: { children: ReactNode; icon: ReactNode }) {
   return (
-    <div className="flex min-h-12 items-center border-r border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3 py-2 text-sm font-medium text-[var(--emr-text-secondary)]">
-      {value}
-    </div>
+    <th className="h-11 border-r border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-5 py-2.5 text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0 first:pl-6">
+      <span className="inline-flex items-center gap-1.5 [&_svg]:size-3.5">{icon}{children}</span>
+    </th>
+  );
+}
+
+function VitalRow({
+  current = false,
+  encounterAt,
+  measurement,
+  previous,
+}: {
+  current?: boolean;
+  encounterAt: string;
+  measurement: ChartPreconsultationVitalMeasurement;
+  previous?: ChartPreconsultationVitalMeasurement;
+}) {
+  const dateLabel = current && sameDate(measurement.measuredAt, encounterAt)
+    ? `오늘 · ${formatTime(measurement.measuredAt)}`
+    : formatFullDate(measurement.measuredAt);
+
+  return (
+    <tr>
+      <th className="h-[54px] border-r border-b border-[var(--emr-line-hairline)] px-5 py-3 text-left text-[15px] font-medium last:border-b-0 first:pl-6">
+        <span>{dateLabel}</span>
+        {current ? <span className="ml-1.5 text-xs text-[var(--emr-status-info-text)]">현재</span> : null}
+      </th>
+      {vitalDefinitions.map((vital) => {
+        const delta = current && previous ? vital.delta(measurement, previous) : null;
+        const increase = delta?.startsWith("↑") ?? false;
+        return (
+          <td
+            key={vital.key}
+            className="h-[54px] border-r border-b border-[var(--emr-line-hairline)] px-5 py-3 text-[15px] font-medium last:border-r-0"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span>{vital.format(measurement)}</span>
+              {delta && delta !== "—" ? (
+                <span
+                  className={cn(
+                    "shrink-0 text-sm",
+                    increase
+                      ? "text-[var(--emr-status-danger-text)]"
+                      : "text-[var(--emr-status-info-text)]",
+                  )}
+                >
+                  {delta}
+                </span>
+              ) : null}
+            </div>
+          </td>
+        );
+      })}
+    </tr>
   );
 }
 
@@ -442,28 +686,27 @@ function HistorySection({
 }) {
   const entries = expanded ? context.history : context.history.slice(0, 3);
   return (
-    <section aria-labelledby="preconsultation-history">
-      <SectionTitle id="preconsultation-history">과거 진료 이력</SectionTitle>
+    <section className="flex min-w-0 flex-col gap-4" aria-labelledby="preconsultation-history">
+      <SectionTitle id="preconsultation-history" icon={<CdsUtilitiesHistoryIcon />}>
+        과거 진료이력
+      </SectionTitle>
       {entries.length > 0 ? (
         <>
-          <div className="relative">
-            <HistoryTimeline entries={entries} currentEncounterId={context.encounter.id} />
-            {!expanded && context.history.length > entries.length ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-24 bg-gradient-to-b from-transparent to-[#ffffff]" aria-hidden="true" />
-            ) : null}
+          <HistoryTimeline entries={entries} currentEncounterId={context.encounter.id} />
+          <div className="flex justify-center">
+            <Button variant="ghost" size="lg" aria-expanded={expanded} onClick={onToggle}>
+              {expanded ? "진료이력 접기" : "전체 진료이력 보기"}
+              {expanded ? <CdsNavigationChevronUpIcon data-icon="inline-end" /> : <CdsNavigationChevronDownIcon data-icon="inline-end" />}
+            </Button>
           </div>
-          {context.history.length > 3 ? (
-            <div className="mt-2 flex justify-center">
-              <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={onToggle}>
-                {expanded ? "진료 이력 접기" : "전체 진료 이력 보기"}
-                {expanded ? <CdsNavigationChevronUpIcon data-icon="inline-end" /> : <CdsNavigationChevronDownIcon data-icon="inline-end" />}
-              </Button>
-            </div>
-          ) : null}
         </>
       ) : (
-        <div className="mt-3 rounded-[var(--emr-radius-panel)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-6 text-center text-sm text-muted-foreground">
-          기록된 진료 이력이 없습니다.
+        <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
+          <CdsUtilitiesHistoryIcon className="size-6 shrink-0 text-[var(--emr-text-placeholder)]" aria-hidden="true" />
+          <div>
+            <strong className="block text-[var(--emr-text-secondary)]">이전 진료이력이 없어요</strong>
+            <p className="mt-0.5 text-xs">첫 방문 환자라 오늘 접수부터 이력이 쌓여요.</p>
+          </div>
         </div>
       )}
     </section>
@@ -477,59 +720,62 @@ function HistoryTimeline({
   currentEncounterId: string;
   entries: ChartPreconsultationHistoryEntry[];
 }) {
+  const groups = groupHistoryEntries(entries, currentEncounterId);
+
   return (
-    <ol className="mt-3" aria-label="과거 진료 이력">
-      {entries.map((entry, index) => {
-        const current = entry.encounterId === currentEncounterId;
-        const summary = entry.primaryDiagnosis ?? entry.visitPurpose ?? entry.chiefComplaint ?? "진료 요약 미입력";
-        const detail = entry.assessment ?? entry.plan ?? entry.subjective ?? entry.receptionMemo ?? "세부 기록 없음";
-        return (
-          <li key={entry.encounterId} className="grid grid-cols-[136px_minmax(0,1fr)] gap-5">
-            <div className="relative min-h-[112px] border-r border-[var(--emr-line-hairline)] pr-5">
-              <span className={cn("absolute -right-[9px] top-0 flex size-[18px] items-center justify-center rounded-full bg-[var(--emr-surface-workspace)]", current ? "text-[var(--emr-status-info-text)]" : "text-[var(--emr-text-tertiary)]")}>
-                <CdsUtilitiesCircleIcon className="size-[18px]" aria-hidden="true" />
-              </span>
-              <p className={cn("text-sm font-semibold leading-5", current ? "text-[var(--emr-status-info-text)]" : "text-muted-foreground")}>
-                {formatHistoryDate(entry.checkedInAt, current)}
-              </p>
-            </div>
-            <div className={cn("min-w-0 pb-5", index === entries.length - 1 && "pb-2")}>
-              <h3 className="text-base font-semibold leading-5">{summary}</h3>
-              <div className="mt-2 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-2.5">
-                <p className="text-[11px] font-semibold text-muted-foreground">{current ? "이번 내원 기록" : "진료 요약"}</p>
-                <p className="mt-0.5 text-sm font-medium text-[var(--emr-text-secondary)]">{detail}</p>
-              </div>
-            </div>
-          </li>
-        );
-      })}
+    <ol className="min-w-0 border-t border-[var(--emr-line-subtle)]" aria-label="과거 진료 이력">
+      {groups.map((group) => (
+        <li
+          key={group.date}
+          className="grid min-w-0 grid-cols-1 gap-3 border-b border-[var(--emr-line-subtle)] py-4 sm:grid-cols-[136px_minmax(0,1fr)] sm:gap-5"
+        >
+          <div className="flex items-start gap-1.5 pt-1 text-[15px] font-semibold leading-6 text-[var(--emr-text-secondary)]">
+            <CdsFilesCalendarIcon className="mt-1 size-4 shrink-0 text-[var(--emr-text-tertiary)]" aria-hidden="true" />
+            {group.date}
+          </div>
+          <ol className="relative ml-2 flex min-w-0 flex-col gap-3 border-l border-[var(--emr-line-hairline)] pl-5 before:absolute before:-left-[5px] before:top-[19px] before:size-[9px] before:rounded-full before:border-2 before:border-[var(--emr-status-info-text)] before:bg-[var(--emr-surface-panel)] before:content-[''] sm:ml-0">
+            {group.entries.map((entry) => {
+              const summary = entry.primaryDiagnosis ?? entry.visitPurpose ?? entry.chiefComplaint ?? "진료 요약 미입력";
+              return (
+                <li
+                  key={entry.encounterId}
+                  className="flex min-h-14 min-w-0 items-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3"
+                >
+                  <Badge
+                    className="h-[22px] min-w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
+                    variant="outline"
+                  >
+                    {formatTime(entry.checkedInAt)}
+                  </Badge>
+                  <span className="min-w-0 truncate text-[15px] font-medium leading-6">
+                    {summary}
+                  </span>
+                  <Badge
+                    className="ml-auto h-[22px] shrink-0 rounded-[var(--clair-radius-atomic-6)] px-2 text-xs font-medium"
+                    variant="outline"
+                  >
+                    {getHistoryStatusLabel(entry.status)}
+                  </Badge>
+                </li>
+              );
+            })}
+          </ol>
+        </li>
+      ))}
     </ol>
   );
 }
 
-function PatientSummary({ context }: { context: ChartPreconsultationContext }) {
+function getHistoryStatusLabel(status: string) {
   return (
-    <aside className="min-w-0 border-t border-[var(--emr-line-hairline)] pt-6 min-[1180px]:border-l min-[1180px]:border-t-0 min-[1180px]:pl-6 min-[1180px]:pt-0 [&>section:first-child]:mt-0 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0" aria-label="환자 요약">
-      <SideSection title="환자 정보">
-        <SideRow icon={<CdsMedicalPawPrintIcon />} label="종류" value={getSpeciesLabel(context.patient.species)} />
-        <SideRow icon={<CdsGnbPetGnbIcon />} label="품종" value={context.patient.breed ?? "미입력"} />
-        <SideRow icon={<CdsFilesCalendarIcon />} label="나이" value={getPatientAge(context)} />
-        <SideRow icon={<CdsPeopleUserIcon />} label="성별" value={getSexLabel(context.patient.sex, context.patient.neutered)} />
-        <SideRow icon={<CdsMedicalStethoscopeIcon />} label="내원 유형" value={getVisitType(context)} />
-        <SideRow icon={<CdsActionsRefreshCcwIcon />} label="재진 횟수" value={`${context.priorEncounterCount}회`} />
-      </SideSection>
-      <SideSection title="진료 전 주의">
-        <p className="text-sm font-medium leading-5 text-[var(--emr-status-warning-text)]">{context.patient.handlingCautionNote ?? "등록된 주의사항 없음"}</p>
-      </SideSection>
-      <SideSection title="보호자 메모">
-        <p className="text-sm font-medium leading-5 text-[var(--emr-text-secondary)]">{context.guardian?.memo ?? "등록된 보호자 메모 없음"}</p>
-      </SideSection>
-      <SideSection title="이번 내원">
-        <SideRow icon={<CdsMedicalStethoscopeIcon />} label="내원 유형" value={getVisitType(context)} />
-        <SideRow icon={<CdsFilesClockIcon />} label="접수 시각" value={`${formatTime(context.encounter.checkedInAt)} 접수`} />
-      </SideSection>
-    </aside>
-  );
+    {
+      waiting: "대기",
+      called: "호출",
+      in_consultation: "진료",
+      completed: "완료",
+      cancelled: "취소",
+    } as Record<string, string>
+  )[status] ?? status;
 }
 
 function PatientInformationSheet({
@@ -578,20 +824,44 @@ function PatientInformationSheet({
   );
 }
 
-function SectionTitle({ children, id }: { children: ReactNode; id: string }) {
-  return <h2 id={id} className="text-base font-semibold tracking-[-0.01em]">{children}</h2>;
+function SectionTitle({
+  children,
+  icon,
+  id,
+}: {
+  children: ReactNode;
+  icon: ReactNode;
+  id: string;
+}) {
+  return (
+    <h2
+      id={id}
+      className="flex min-h-[26px] items-center gap-1.5 text-lg font-semibold leading-[26px] tracking-[-0.002em] text-[var(--emr-text-secondary)] [&_svg]:size-[18px] [&_svg]:shrink-0"
+    >
+      {icon}
+      {children}
+    </h2>
+  );
 }
 
-function SummaryItem({ label, multiline, value }: { label: string; multiline?: boolean; value: string }) {
-  return <div className="min-w-0"><dt className="text-xs font-semibold text-muted-foreground">{label}</dt><dd className={cn("mt-1 text-sm font-semibold text-[var(--emr-text-secondary)]", multiline ? "leading-5" : "truncate")}>{value}</dd></div>;
+function SectionDivider() {
+  return <Separator className="bg-[var(--emr-line-subtle)]" />;
 }
 
-function SideSection({ children, title }: { children: ReactNode; title: string }) {
-  return <section className="mt-6 border-t border-[var(--emr-line-hairline)] pt-6"><h2 className="text-sm font-semibold">{title}</h2><div className="mt-4">{children}</div></section>;
-}
-
-function SideRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return <div className="grid min-h-8 grid-cols-[1fr_2fr] items-center gap-4 text-left text-sm"><span className="flex min-w-0 items-center gap-1 whitespace-nowrap text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">{icon}<span>{label}</span></span><span className="min-w-0 text-left font-medium text-[var(--emr-text-secondary)]">{value}</span></div>;
+function VeterinarianAvatar({ name }: { name: string }) {
+  return (
+    <Avatar
+      aria-label={`${name} 담당 수의사`}
+      className="size-5 rounded-[var(--clair-radius-atomic-4)]"
+      role="img"
+      roundness="roundrect"
+      size="sm"
+    >
+      <AvatarFallback className="rounded-[var(--clair-radius-atomic-4)] bg-[var(--emr-surface-muted)] text-[10px] font-medium">
+        {name === "미지정" ? "—" : name.slice(0, 1)}
+      </AvatarFallback>
+    </Avatar>
+  );
 }
 
 function DrawerSection({ children, title }: { children: ReactNode; title: string }) {
@@ -642,15 +912,29 @@ function formatTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" }).format(new Date(value));
 }
 
-function formatMonthDay(value: string) {
-  const parts = new Intl.DateTimeFormat("ko-KR", { month: "2-digit", day: "2-digit", timeZone: "Asia/Seoul" }).formatToParts(new Date(value));
-  return `${parts.find((part) => part.type === "month")?.value}.${parts.find((part) => part.type === "day")?.value}`;
+function formatFullDate(value: string) {
+  const parts = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Seoul" }).formatToParts(new Date(value));
+  return `${parts.find((part) => part.type === "year")?.value}.${parts.find((part) => part.type === "month")?.value}.${parts.find((part) => part.type === "day")?.value}`;
 }
 
-function formatHistoryDate(value: string, current: boolean) {
-  const parts = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Seoul" }).formatToParts(new Date(value));
-  const formatted = `${parts.find((part) => part.type === "year")?.value}.${parts.find((part) => part.type === "month")?.value}.${parts.find((part) => part.type === "day")?.value}`;
-  return current ? `${formatted}(오늘)` : formatted;
+function groupHistoryEntries(
+  entries: ChartPreconsultationHistoryEntry[],
+  currentEncounterId: string,
+) {
+  return entries.reduce<Array<{ date: string; entries: ChartPreconsultationHistoryEntry[] }>>(
+    (groups, entry) => {
+      const current = entry.encounterId === currentEncounterId;
+      const date = `${formatFullDate(entry.checkedInAt)}${current ? " (오늘)" : ""}`;
+      const existing = groups.find((group) => group.date === date);
+      if (existing) {
+        existing.entries.push(entry);
+      } else {
+        groups.push({ date, entries: [entry] });
+      }
+      return groups;
+    },
+    [],
+  );
 }
 
 function sameDate(a: string, b: string) {
@@ -668,15 +952,32 @@ function formatBloodPressure(value: ChartPreconsultationVitalMeasurement) {
   return `${value.bloodPressureSystolicMmhg}${diastolic === undefined ? "" : `/${diastolic}`} mmHg`;
 }
 
-function formatDelta(current: number | undefined, previous: number | undefined, precision: number) {
+function formatDelta(
+  current: number | undefined,
+  previous: number | undefined,
+  precision: number,
+  unit: string,
+  increaseLabel: string,
+  decreaseLabel: string,
+) {
   if (current === undefined || previous === undefined) return null;
   const delta = current - previous;
   if (Math.abs(delta) < 10 ** -precision / 2) return "—";
-  return `${delta > 0 ? "↑" : "↓"} ${Math.abs(delta).toFixed(precision)}`;
+  return `${delta > 0 ? "↑" : "↓"} ${Math.abs(delta).toFixed(precision)}${unit ? ` ${unit}` : ""} ${delta > 0 ? increaseLabel : decreaseLabel}`;
 }
 
 function getContextErrorDescription(reason?: string) {
-  if (reason === "permission_missing") return "진료 차트 조회 권한을 확인해 주세요.";
+  if (isPermissionError(reason)) return "관리자에게 차트 조회 권한을 요청해 주세요.";
   if (reason === "encounter_unavailable") return "선택한 진료 업무를 찾을 수 없습니다.";
   return "잠시 후 다시 시도해 주세요.";
+}
+
+function isPermissionError(reason?: string) {
+  return [
+    "unauthenticated",
+    "inactive_user",
+    "workspace_membership_missing",
+    "workspace_membership_inactive",
+    "permission_missing",
+  ].includes(reason ?? "");
 }

@@ -5514,10 +5514,12 @@ function ChartPanelPendingState({
 }
 
 export function ChartContent({
+  onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
   useScenarioEncounterSync();
 
+  const searchParams = useSearchParams();
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -6041,6 +6043,27 @@ export function ChartContent({
     selectEncounter,
     selectedEncounterId,
     setLiveQueueState,
+    setSelectedQueueItem,
+    workspaceId,
+  ]);
+
+  const handleReturnToQueue = useCallback(() => {
+    clearStoredSelectedChartEncounterId(workspaceId);
+    setSelectedQueueItem("treatment", "");
+    selectEncounter("");
+
+    const href = buildWorkspaceSurfaceRoute({
+      moduleId: "treatment",
+      removeParams: ["encounterId", "patientId", "scenario"],
+      search: searchParams,
+      workspaceId,
+    });
+
+    onNavigateWorkspaceSurface?.(href, "treatment");
+  }, [
+    onNavigateWorkspaceSurface,
+    searchParams,
+    selectEncounter,
     setSelectedQueueItem,
     workspaceId,
   ]);
@@ -6805,6 +6828,7 @@ export function ChartContent({
           actorHeaders={actorHeaders}
           encounterId={currentBundle.encounter.id}
           onRequestCall={handleOpenCallDialog}
+          onReturnToQueue={handleReturnToQueue}
           primaryActionBusy={primaryActionBusy}
           workspaceId={activeWorkspaceId ?? workspaceId}
         />
