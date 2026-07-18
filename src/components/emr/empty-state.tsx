@@ -8,6 +8,7 @@ import folderFileSearchMotionIcon from "../../../icons/motionIcon/folder-file-se
 import folderFileMotionIcon from "../../../icons/motionIcon/folder-file.json";
 import searchDocumentTextMotionIcon from "../../../icons/motionIcon/search-document-text.json";
 import searchNotFoundMotionIcon from "../../../icons/motionIcon/search-not-found.json";
+import { CdsAlertsAlertTriangleIcon } from "@/components/cds-icons/alerts-and-status";
 import { cn } from "@/lib/utils";
 
 import { EmrMotionIcon } from "./motion-icon";
@@ -18,7 +19,8 @@ export type EmrEmptyStateKind =
   | "no-filter-results"
   | "no-scope-result"
   | "no-permission"
-  | "upstream-pending";
+  | "upstream-pending"
+  | "read-error";
 
 export type EmrEmptyStateSurface =
   | "queue"
@@ -78,7 +80,7 @@ export type EmrEmptyStateProps = Omit<
   testId?: string;
 };
 
-const motionIconByKind: Record<EmrEmptyStateKind, unknown> = {
+const motionIconByKind: Record<Exclude<EmrEmptyStateKind, "read-error">, unknown> = {
   "no-data": folderFileCloseMotionIcon,
   "no-search-results": searchNotFoundMotionIcon,
   "no-filter-results": folderFileSearchMotionIcon,
@@ -86,6 +88,31 @@ const motionIconByKind: Record<EmrEmptyStateKind, unknown> = {
   "no-permission": folderFileRemoveMotionIcon,
   "upstream-pending": folderFileMotionIcon,
 };
+
+function DefaultEmptyStateIcon({
+  className,
+  kind,
+}: {
+  className: string;
+  kind: EmrEmptyStateKind;
+}) {
+  if (kind === "read-error") {
+    return (
+      <CdsAlertsAlertTriangleIcon
+        className={className}
+        data-empty-state-icon="read-error"
+      />
+    );
+  }
+
+  return (
+    <EmrMotionIcon
+      animationData={motionIconByKind[kind]}
+      className={cn(className, "text-current [&_path]:!stroke-current")}
+      loop={false}
+    />
+  );
+}
 
 const sizeClassName: Record<
   EmrEmptyStateSize,
@@ -228,11 +255,7 @@ export function EmrEmptyState({
           >
             <div className={cn("flex items-center justify-center", sizeClasses.icon)} data-slot="icon">
               {icon ?? (
-                <EmrMotionIcon
-                  animationData={motionIconByKind[kind]}
-                  className={cn(sizeClasses.icon, "text-current [&_path]:!stroke-current")}
-                  loop={false}
-                />
+                <DefaultEmptyStateIcon className={sizeClasses.icon} kind={kind} />
               )}
             </div>
           </div>

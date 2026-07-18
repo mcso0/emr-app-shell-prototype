@@ -355,6 +355,46 @@ test("Cheongdam chart side panel shows the centered empty queue state", async ({
   await expect(sidePanel.getByText("진료 업무가 없습니다")).toBeVisible();
 });
 
+test("chart preconsultation read error uses the shared recovery empty state", async ({
+  page,
+}) => {
+  let requestCount = 0;
+
+  await page.route(
+    "**/api/workspaces/*/chart/preconsultation-context?*",
+    async (route) => {
+      requestCount += 1;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 503,
+          error: "db_read_failed",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    "/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=encounter-haru-260430",
+  );
+
+  const feedback = page.getByTestId("preconsultation-feedback-state");
+  await expect(feedback).toHaveAttribute("data-kind", "read-error");
+  await expect(feedback).toContainText("접수 정보를 불러오지 못했어요");
+  await expect(feedback).toContainText("대기 목록의 접수 정보는 변경되지 않았어요.");
+  await expect(feedback.getByRole("button", { name: "대기 목록으로" })).toBeVisible();
+  await expect(feedback.getByRole("button", { name: "다시 시도" })).toBeVisible();
+
+  await feedback.getByRole("button", { name: "다시 시도" }).click();
+  await expect.poll(() => requestCount).toBeGreaterThan(1);
+  await expect(feedback).toBeVisible();
+
+  await feedback.getByRole("button", { name: "대기 목록으로" }).click();
+  await expect(page).not.toHaveURL(/encounterId=/);
+});
+
 test("chart consultation CTA moves from call to start before chart completion", async ({
   page,
 }) => {
@@ -612,37 +652,51 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(page.getByRole("button", { name: "호출하기" })).toBeVisible();
   await expect(
     page.getByTestId("chart-start-locked-state").getByRole("button", {
-      name: "환자 정보",
+      name: "환자 프로필",
       exact: true,
     }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "진료 완료" })).toHaveCount(0);
   const lockedState = page.getByTestId("chart-start-locked-state");
-  await expect(lockedState).toContainText("진료 시작 전");
+  await expect(lockedState).toContainText("진료 대기");
   await expect(lockedState).toContainText("차트번호 E-260625-0001");
   await expect(lockedState).toContainText("초코");
   await expect(lockedState).toContainText("보호자 최도현");
   await expect(lockedState).toContainText("Pomeranian");
-  await expect(lockedState).toContainText("방문 목적");
-  await expect(lockedState).toContainText("피부 재진");
   await expect(lockedState).toContainText("접수 정보");
+  await expect(lockedState).toContainText("재진 여부");
   await expect(lockedState).toContainText("접수 유형");
   await expect(lockedState).toContainText("예약");
   await expect(lockedState).toContainText("접수 시각");
   await expect(lockedState).toContainText("14:15 접수");
+  await expect(lockedState).toContainText("예상 소요시간");
   await expect(lockedState).toContainText("담당 수의사");
   await expect(lockedState).toContainText("청담 원장");
-  await expect(lockedState).toContainText("접수 메모");
-  await expect(lockedState).toContainText("최근 식욕 저하, 산책 후 발 핥음 증가");
-  await expect(lockedState).toContainText("환자 바이탈");
-  await expect(lockedState).toContainText("4.82 kg");
-  await expect(lockedState).toContainText("과거 진료 이력");
-  await expect(lockedState).toContainText("진료 전 주의");
+  await expect(lockedState).toContainText("방문 목적");
+  await expect(lockedState).toContainText("피부 재진");
+  await expect(lockedState).toContainText("환자/보호자 메모");
   await expect(lockedState).toContainText("보정 시 보호자 동행 선호");
+  await expect(lockedState).toContainText("최근 약 복용은 잘했으나");
+  await expect(lockedState).toContainText("바이탈 정보");
+  await expect(lockedState).toContainText("호흡수");
+  await expect(lockedState).toContainText("4.82 kg");
+  await expect(lockedState).toContainText("과거 진료이력");
+  await expect(lockedState.getByLabel("환자 요약")).toHaveCount(0);
+  await expect(lockedState.getByTestId("animal-patient-avatar")).toHaveAttribute(
+    "data-avatar-state",
+    "fallback",
+  );
+  await expect(lockedState.getByRole("heading", { level: 2 })).toHaveText([
+    "접수 정보",
+    "방문 목적",
+    "환자/보호자 메모",
+    "바이탈 정보",
+    "과거 진료이력",
+  ]);
   await expect(page.getByTestId("chart-soap-diagnosis-grid")).toHaveCount(0);
   await page
     .getByTestId("chart-start-locked-state")
-    .getByRole("button", { name: "환자 정보", exact: true })
+    .getByRole("button", { name: "환자 프로필", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText("환자 정보");
   await expect(page.getByRole("dialog")).toContainText("최근 약 복용은 잘했으나");
@@ -1596,7 +1650,7 @@ test("chart queue selection changes the selected encounter", async ({
   await expect(page.getByLabel("환자 컨텍스트 정보")).toHaveCount(0);
   await expect(page.getByText("E-260430-0005").first()).toBeVisible();
   const lockedState = page.getByTestId("chart-start-locked-state");
-  await expect(lockedState).toContainText("진료 시작 전");
+  await expect(lockedState).toContainText("진료 대기");
   await expect(lockedState).toContainText("하루");
   await expect(lockedState).toContainText("보호자 강서윤");
   await expect(lockedState).toContainText("접수 정보");
@@ -1608,8 +1662,8 @@ test("chart queue selection changes the selected encounter", async ({
   await expect(lockedState).toContainText("16:05 접수");
   await expect(lockedState).toContainText("담당 수의사");
   await expect(lockedState).toContainText("이수지");
-  await expect(lockedState).toContainText("기록된 바이탈이 없습니다.");
-  await expect(lockedState).toContainText("기록된 진료 이력이 없습니다.");
+  await expect(lockedState).toContainText("기록된 바이탈이 없어요");
+  await expect(lockedState).toContainText("이전 진료이력이 없어요");
   await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
   await expect(page.getByText("기본 SOAP")).toHaveCount(0);
 
