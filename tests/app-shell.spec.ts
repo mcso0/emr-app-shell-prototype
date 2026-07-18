@@ -724,6 +724,7 @@ test("app shell renders workspace switcher in the navigation column when module 
   expect(Math.round(miniCalendarBox.width)).toBe(288);
   await expect(switcherLabel).not.toHaveCSS("text-overflow", "ellipsis");
   await expect(switcherLabel).toHaveText("VIP 동물의료센터 청담점");
+  await expect(switcherLabel).toHaveAttribute("aria-hidden", "false");
   await expect(workspaceSwitcher).toHaveCSS("font-size", "14px");
   await expect(workspaceSwitcher).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-workspace-button-bg)"));
   await expect(workspaceSwitcher).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-workspace-button-border)"));
@@ -742,7 +743,7 @@ test("app shell renders workspace switcher in the navigation column when module 
         right: Math.round(buttonBox.x + buttonBox.width - (chevronBox.x + chevronBox.width)),
       };
     })
-    .toEqual({ left: 9, right: 9 });
+    .toEqual({ left: 7, right: 7 });
   expect(switcherBox.width).toBeLessThan(navigationBox.width);
   expect(workspaceBox.y - (tabsBox.y + tabsBox.height)).toBe(10);
   expect(modulePanelBox.y - (switcherBox.y + switcherBox.height)).toBe(10);
@@ -841,10 +842,11 @@ test("app shell collapses workspace switcher with the navigation column", async 
   const navigationColumn = page.getByTestId("shell-navigation-column");
   const workspaceSwitcher = page.getByTestId("workspace-switcher");
   const workspaceMark = workspaceSwitcher.locator('[data-slot="workspace-switcher-mark"]');
+  const workspaceLabel = workspaceSwitcher.locator('[data-slot="workspace-switcher-label"]');
   const workspaceChevron = workspaceSwitcher.locator(":scope > svg");
 
   await expect(workspaceSwitcher).toBeVisible();
-  await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeHidden();
+  await expect(workspaceLabel).toHaveCount(0);
   await expect(workspaceChevron).toBeVisible();
   await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
   await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
@@ -866,6 +868,29 @@ test("app shell collapses workspace switcher with the navigation column", async 
   expectRect(chevronBox);
   expect(Math.round(markBox.x - switcherBox.x)).toBe(7);
   expect(Math.round(switcherBox.x + switcherBox.width - (chevronBox.x + chevronBox.width))).toBe(7);
+});
+
+test("workspace switcher label restores its motion state when the module panel reopens", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  const workspaceSwitcher = page.getByTestId("workspace-switcher");
+  const workspaceLabel = workspaceSwitcher.locator('[data-slot="workspace-switcher-label"]');
+  const workspaceLabelContent = workspaceSwitcher.locator('[data-slot="workspace-switcher-label-content"]');
+  const collapseButton = page.getByRole("button", { name: "사이드 패널 접기", exact: true });
+
+  await expect(workspaceLabel).toHaveAttribute("aria-hidden", "false");
+  await expect(workspaceLabelContent).toHaveCSS("filter", "blur(0px)");
+  await expect(workspaceLabelContent).toHaveCSS("opacity", "1");
+
+  await collapseButton.click();
+  await expect(page).toHaveURL(/modulePanel=closed/);
+  await expect(workspaceLabel).toHaveCount(0);
+
+  await page.getByRole("button", { name: "사이드 패널 펼치기" }).click();
+  await expect(page).toHaveURL(/modulePanel=open/);
+  await expect(workspaceLabel).toHaveAttribute("aria-hidden", "false");
+  await expect(workspaceLabelContent).toHaveCSS("filter", "blur(0px)");
+  await expect(workspaceLabelContent).toHaveCSS("opacity", "1");
 });
 
 test("dispensing table supports hover selection and bulk completion", async ({ page }) => {
