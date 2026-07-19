@@ -89,13 +89,17 @@ export async function loadWorkspacePermissionAdapterFromDb({
   const memberships = await gateway.listMemberships(workspaceId, sessionUserId);
   const userIds = Array.from(new Set([sessionUserId, ...memberships.map((row) => row.user_id)]));
   const membershipIds = memberships.map((row) => row.id);
-  const users = await gateway.listUsers(userIds);
-  const permissionPolicies = await gateway.listPermissionPolicies(workspaceId);
-  const permissionRoleAssignments = await gateway.listPermissionRoleAssignments(
-    workspaceId,
-    membershipIds
-  );
-  const jobPositionAssignments = await gateway.listJobPositionAssignments(workspaceId, membershipIds);
+  const [
+    users,
+    permissionPolicies,
+    permissionRoleAssignments,
+    jobPositionAssignments,
+  ] = await Promise.all([
+    gateway.listUsers(userIds),
+    gateway.listPermissionPolicies(workspaceId),
+    gateway.listPermissionRoleAssignments(workspaceId, membershipIds),
+    gateway.listJobPositionAssignments(workspaceId, membershipIds),
+  ]);
 
   return createWorkspacePermissionAdapterFromDbRows({
     now,
