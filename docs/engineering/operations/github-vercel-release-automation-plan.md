@@ -5,9 +5,10 @@ area: engineering
 doc_type: implementation-plan
 related_work:
   - DEN-445
+  - RELEASE-OPS-PR-003
 supersedes: []
 superseded_by: []
-last_updated: 2026-06-09
+last_updated: 2026-07-18
 ---
 
 # GitHub And Vercel Release Automation Plan
@@ -44,7 +45,7 @@ Desired behavior:
 | Event | Expected result |
 | --- | --- |
 | Push to feature branch | Vercel creates a preview deployment. |
-| Open PR to `main` | PR has preview URL and required checks. |
+| Open PR to `main` | PR has a Vercel Preview URL; the exact merge candidate receives one manual `Release Check`. |
 | Merge approved work to `staging` | fixed staging gets the latest integrated review candidate. |
 | Fixed staging update | Staging URL points to the latest verified `staging` branch deployment. |
 | Merge or promote to `main` | Production release action; requires explicit approval. |
@@ -93,7 +94,7 @@ Recommended for this repo:
 - Use a repo-controlled GitHub Action only if Vercel dashboard cannot bind the staging alias safely to `staging`.
 - Keep production aliases separate and untouched.
 
-### Step 3: Add Required GitHub Checks Before Main Merge
+### Step 3: Run One Combined GitHub Check Before Main Merge
 
 Minimum required checks for PRs to `main`:
 
@@ -107,14 +108,14 @@ npm run build
 
 Recommended GitHub Actions:
 
-- keep `Secret Scan`;
-- add a `CI` workflow for lint, typecheck, build, and docs check on `pull_request` and `push` to `main`;
-- optionally add focused Playwright jobs later by area.
+- keep one manually dispatched `Release Check` for secret scan, docs, lint, typecheck, and build;
+- run it once for the exact merge or release candidate instead of on every PR synchronization;
+- keep focused Playwright jobs local unless a release packet explicitly requires a remote run.
 
 Branch policy target:
 
 - require PR before merging to `main`;
-- require `Secret Scan` and `CI` checks;
+- record the successful combined `Release Check` before merge;
 - restrict direct pushes to `main` if available;
 - keep production deploy/promote outside routine PR merge.
 
@@ -123,15 +124,15 @@ Current blocker:
 - GitHub branch protection and repository rulesets are blocked for this private repository by the current GitHub plan/API response.
 - Decision on 2026-06-09: keep the working repository private and do not upgrade only for branch protection at this stage.
 - Do not make this working repository public as a workaround.
-- `CI` and `Secret Scan` still run automatically, but GitHub cannot enforce them as required checks under the current private/free setup.
+- GitHub cannot enforce the manually dispatched check as a required check under the current private/free setup.
 - Merge discipline is manual until a future plan/settings change enables branch protection.
 - Public portfolio publishing should use a separate sanitized public repository later, not this internal working repository.
 
 Manual merge gate while branch protection is unavailable:
 
 - PR targets `main`.
-- `CI` succeeded.
-- `Secret Scan` succeeded.
+- The combined `Release Check` succeeded for the exact candidate SHA.
+- The local secret scan succeeded before push.
 - Vercel Preview is Ready.
 - The PR did not change fixed staging alias, production aliases, production deploy settings, or secrets.
 - The merge reviewer records any known residual risk in the PR or release note.
@@ -148,7 +149,7 @@ Before fixed staging moves:
 
 If using GitHub Action:
 
-- trigger on `push` to `staging`;
+- trigger it manually only for an explicitly approved `staging` candidate;
 - run required checks first;
 - deploy or promote the `staging` build to fixed staging only after checks pass;
 - inspect alias target and print the deployment URL in workflow summary;
@@ -171,6 +172,14 @@ No GitHub Action should automatically promote `main` to user-facing production u
 ## Execution Issues To Create Next
 
 Create or update these only after 승욱 approves moving from plan to remote configuration. The Linear connector returned `401 reauthentication required` on 2026-06-09, so local docs may temporarily lead until the connector is reauthenticated.
+
+2026-07-18 cost-control update:
+
+- `RELEASE-OPS-PR-003` consolidates `Secret Scan` into one manually dispatched `Release Check`.
+- Automatic `pull_request`, `push`, and `deployment_status` Actions triggers are removed to prevent repeated billable runs on every PR synchronization and Vercel deployment status change.
+- Vercel Git Integration continues to create PR Preview deployments independently of GitHub Actions.
+- Fixed staging alias updates remain manual and default to dry-run.
+- The 2026-06-09 notes below are retained as historical implementation evidence and no longer describe the current trigger policy.
 
 2026-06-09 execution update:
 

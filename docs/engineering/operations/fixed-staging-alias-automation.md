@@ -5,12 +5,13 @@ area: engineering
 doc_type: operating-runbook
 related_work:
   - RELEASE-OPS-PR-002
-last_updated: 2026-06-16
+  - RELEASE-OPS-PR-003
+last_updated: 2026-07-18
 ---
 
 # Fixed Staging Alias Automation
 
-This runbook defines the repo-owned automation that keeps the fixed staging URL pointed at the latest successful `staging` branch Vercel deployment.
+This runbook defines the repo-owned manual workflow that points the fixed staging URL at an approved `staging` branch Vercel deployment without spending Actions minutes on every Preview status event.
 
 ## URLs
 
@@ -23,7 +24,7 @@ This runbook defines the repo-owned automation that keeps the fixed staging URL 
 
 - Workflow: `.github/workflows/fixed-staging-alias.yml`
 - Script: `scripts/update-fixed-staging-alias.mjs`
-- Trigger: GitHub `deployment_status` success event; the workflow updates the alias only when the deployment SHA matches current `origin/staging`
+- Trigger: manual `workflow_dispatch` from an approved release/integration task
 - Action: inspect the successful Vercel deployment URL, then run `vercel alias set <deployment-url> emr-app-shell-prototype-staging-mcso0s-projects.vercel.app`
 
 The script rejects:
@@ -33,7 +34,7 @@ The script rejects:
 - Vercel URLs outside this project naming pattern;
 - real alias changes when `VERCEL_TOKEN` is missing.
 
-Manual workflow dispatch defaults to `dry_run: true`, so it can validate the target without moving the alias.
+The workflow defaults to `dry_run: true`, so it can validate the target without moving the alias. A release operator must verify the supplied deployment belongs to `staging` before running with `dry_run: false`.
 
 ## Required GitHub Secret
 
@@ -63,7 +64,7 @@ The dry run validates the URL and prints the Vercel CLI command plan with any to
 
 ## Post-Deploy Smoke Checklist
 
-After a `staging` branch deployment completes and the alias workflow runs, verify:
+After a `staging` branch deployment completes and an approved operator manually runs the alias workflow, verify:
 
 - [ ] Fixed staging URL points to the latest Vercel deployment expected for `staging`.
 - [ ] 진료/차트 screen loads at `https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app/w/workspace-clair-cheongdam/treatment?modulePanel=open&aside=closed`.
@@ -77,7 +78,7 @@ After a `staging` branch deployment completes and the alias workflow runs, verif
 
 Stop and report instead of changing the alias when:
 
-- GitHub `CI` or `Secret Scan` is failing or unknown for the source PR/merge;
+- GitHub `Release Check` or the local secret gate is failing or unknown for the source PR/merge;
 - the deployment URL is not from the `staging` branch or an approved integration branch;
 - the workflow would require exposing a Vercel token or other secret;
 - production URLs, production aliases, real data, remote DB mutations, email, payments, or provider side effects are involved.

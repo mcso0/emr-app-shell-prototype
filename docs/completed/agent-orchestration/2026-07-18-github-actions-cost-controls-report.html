@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GitHub Actions 비용 제어 결과</title>
+    <style>
+      body { max-width: 880px; margin: 48px auto; padding: 0 24px; font: 16px/1.65 system-ui, sans-serif; color: #172033; }
+      h1, h2 { line-height: 1.3; }
+      section { margin: 32px 0; }
+      code { background: #f3f5f8; padding: 2px 6px; border-radius: 4px; }
+      .status { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #e8f7ee; color: #17663a; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <p class="status">Human Review</p>
+    <h1>GitHub Actions 무료 예산 운영 최적화</h1>
+    <p>검토 대상: GitHub PR #444</p>
+    <p>PR과 Vercel Preview가 반복될 때마다 GitHub-hosted runner가 실행되던 구조를, 릴리스 후보에서 한 번만 수동 검증하는 구조로 변경했다.</p>
+
+    <section>
+      <h2>무엇이 바뀌었나</h2>
+      <ul>
+        <li><code>CI</code>와 <code>Secret Scan</code>을 하나의 수동 <code>Release Check</code>로 통합했다.</li>
+        <li>시크릿 검사, 문서 검사, 린트, 타입 검사, 빌드를 같은 러너에서 순서대로 실행한다.</li>
+        <li>Vercel의 모든 배포 상태가 fixed staging alias 워크플로를 깨우지 않도록 자동 트리거를 제거했다.</li>
+        <li>fixed staging alias는 승인된 릴리스 작업에서만 수동 실행하며 기본값은 dry-run이다.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>왜 중요한가</h2>
+      <p>Vercel PR Preview는 유지하면서 GitHub Actions 분 사용량을 실제 릴리스 검증 시점으로 제한한다. 동시에 시크릿 검사와 빌드 검증은 제거하지 않아 배포 안전장치를 보존한다.</p>
+    </section>
+
+    <section>
+      <h2>영향 범위</h2>
+      <p>GitHub Actions 워크플로와 릴리스 운영 문서만 변경한다. 앱 코드, Vercel 설정, 결제 예산, production, 데이터베이스에는 변경이 없다.</p>
+    </section>
+
+    <section>
+      <h2>검증 및 남은 확인</h2>
+      <p>시크릿 3,239개 파일, 문서 링크 833개 파일, YAML 파싱, diff 형식, lint, TypeScript, production build, fixed staging alias dry-run이 모두 통과했다. dry-run은 실제 alias를 변경하지 않았다. 빌드에는 기존 Turbopack NFT trace 경고가 남아 있지만 빌드는 성공했다.</p>
+      <p>PR 병합 후 GitHub Actions 화면에서 <code>Release Check</code> 수동 실행 선택지가 노출되는지 최종 확인이 필요하다.</p>
+    </section>
+  </body>
+</html>

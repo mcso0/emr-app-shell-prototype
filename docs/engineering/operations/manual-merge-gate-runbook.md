@@ -5,16 +5,17 @@ area: engineering
 doc_type: runbook
 related_work:
   - DEN-450
+  - RELEASE-OPS-PR-003
 supersedes: []
 superseded_by: []
-last_updated: 2026-06-09
+last_updated: 2026-07-18
 ---
 
 # Manual Merge Gate Runbook
 
 This runbook defines the manual checks required while the CLAiR EMR working repository remains private on the current GitHub free/Hobby setup.
 
-GitHub Actions can run `CI` and `Secret Scan`, but the current plan cannot enforce required checks for this private repository. Until branch protection is available, merge discipline is an explicit human and Codex responsibility.
+GitHub Actions provides one manually dispatched `Release Check` that combines secret scanning, docs, lint, typecheck, and build. The current plan cannot enforce it for this private repository, so merge discipline remains an explicit human and Codex responsibility.
 
 ## Environment Model
 
@@ -48,8 +49,8 @@ Required evidence:
 | --- | --- |
 | PR target | Targets `staging` unless 승욱 explicitly approves another integration branch. |
 | Included work | Linear issue(s), work item(s), and report are listed. |
-| `CI` | GitHub check is successful, or local equivalent is reported if GitHub check is unavailable. |
-| `Secret Scan` | GitHub check is successful and `npm run security:secrets` has passed for local release review when relevant. |
+| `Release Check` | The workflow was manually dispatched for the exact candidate commit and succeeded, or the local equivalent is reported when GitHub Actions is unavailable. |
+| Local secret gate | `npm run security:secrets` passed for the exact candidate commit. |
 | Vercel Preview | Preview deployment is Ready and linked in the PR/review note. |
 | Scope check | PR does not change fixed staging alias, production alias, Vercel production settings, or secrets. |
 | Product check | The changed workflow was smoke-tested in preview or locally with the active issue's focused verification. |
@@ -73,7 +74,7 @@ npm run build
 
 Stop before merge when:
 
-- `CI`, `Secret Scan`, preview readiness, or required local verification is failing or unknown;
+- `Release Check`, preview readiness, or required local verification is failing or unknown;
 - the PR contains secret/env values or `.env*` files;
 - the PR changes production settings, production aliases, Vercel project settings, or fixed staging alias;
 - the PR mixes unrelated work that cannot be reviewed as one change;
@@ -146,7 +147,7 @@ Production release packet must include:
 | --- | --- |
 | Source | `staging` commit SHA and comparison target. |
 | Work included | PRs/issues/reports included in the release. |
-| Verification | Commands, GitHub checks, preview/fixed staging smoke, and result. |
+| Verification | Commands, the manual GitHub `Release Check`, preview/fixed staging smoke, and result. |
 | Secret/env safety | Confirmation that no secret values were exposed and no production env values are printed. |
 | Production action | Exact merge/promote/deploy operation to run after approval. |
 | Smoke plan | Production URL and path(s) to verify after release. |
