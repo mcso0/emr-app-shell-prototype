@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RECEPTION-PR-016 프로필 사이드패널 Figma 정렬 결과</title>
+    <style>
+      body { margin: 0; background: #f5f5f5; color: #171717; font: 15px/1.6 Pretendard, system-ui, sans-serif; }
+      main { max-width: 760px; margin: 32px auto; padding: 32px; background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; }
+      h1 { margin: 0 0 8px; font-size: 24px; } h2 { margin-top: 28px; font-size: 18px; }
+      .meta { color: #737373; } .ok { color: #276749; font-weight: 700; } .warn { color: #9c4221; font-weight: 700; }
+      ul { padding-left: 20px; } code { background: #f5f5f5; padding: 1px 4px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">2026-07-19 · RECEPTION-PR-016 · implemented</p>
+      <h1>프로필 사이드패널 Figma 정렬 1차 구현</h1>
+      <p>프로필 탭의 기본 화면을 Figma 380×1105 기준에 맞췄다. 실제 직원 정보·권한·일정 읽기 계약은 그대로 유지했다.</p>
+      <h2>반영한 내용</h2>
+      <ul>
+        <li>오늘 근무 정보 → 계정 정보 → 다가오는 일정 순서와 구분선을 Figma와 동일하게 배치했다.</li>
+        <li>32px 섹션 헤더, 330×70px 카드, 42px 날짜 타일, 173px 기본 상태 메시지 폭을 적용했다.</li>
+        <li>이메일과 전화번호 복사 아이콘을 값이 있을 때 항상 보여주고, 실제 복사 동작은 유지했다.</li>
+        <li>일정이 없을 때 <code>예정된 일정이 없습니다</code>를 표시한다.</li>
+      </ul>
+      <h2>검증</h2>
+      <p class="ok">통과</p>
+      <ul>
+        <li>대상 파일 ESLint</li>
+        <li>TypeScript no-emit 검사</li>
+        <li>Storybook에서 패널 380×1105, 헤더 378×150, 본문 시작 위치 167/314/523px, 근무 카드 330×70px 확인</li>
+      </ul>
+      <p class="warn">남은 확인</p>
+      <p>전체 리셉션 Playwright 스펙은 로컬 세션/대기열 읽기 실패로 프로필 테스트 전에 막혔다. 업무현황의 모듈별 집계와 패널 내부 일정 날짜 탐색은 새 데이터·권한 계약이 필요해 이번 변경에 포함하지 않았다.</p>
+      <h2>다음 단계</h2>
+      <p>실제 로그인 가능한 리셉션 환경에서 프로필 패널의 사진, 긴 이름, 상태 메시지 편집, 빈/오류 상태를 Figma 캡처와 나란히 확인한다.</p>
+    </main>
+  </body>
+</html>
