@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   createSupabaseNotificationPersistenceGateway,
   emitPersistedLiveNotificationEvent,
+  markAllPersistedLiveNotificationsRead,
   markPersistedLiveNotificationRead,
   readPersistedLiveNotifications,
   type SupabaseNotificationPersistenceRpcClient,
@@ -12,6 +13,10 @@ import type { LiveNotificationEventInput } from "../src/features/notifications/s
 
 const migration = readFileSync(
   "supabase/migrations/20260705133000_notification_event_persistence.sql",
+  "utf8",
+);
+const batchMigration = readFileSync(
+  "supabase/migrations/20260719051725_performance_batch_rpc_followup.sql",
   "utf8",
 );
 const gatewaySource = readFileSync(
@@ -342,6 +347,89 @@ test("persisted notification helper writes read state through DB gateway", async
     p_notification_id: "notif-live-order-recheck",
     p_state_scope_id: "user-tech:browser-a",
   });
+});
+
+test("persisted notification read-all uses one set-based state RPC", async () => {
+  const calls: Array<{ args: unknown; functionName: string }> = [];
+  const gateway = createSupabaseNotificationPersistenceGateway({
+    async rpc(functionName, args) {
+      calls.push({ functionName, args });
+      if (functionName === "clair_list_notification_events") {
+        return {
+          data: {
+            ok: true,
+            status: 200,
+            notifications: [samplePersistedNotification],
+            enforcedBy: "notification-event-persistence",
+          },
+          error: null,
+        };
+      }
+
+      if (functionName === "clair_list_notification_user_states") {
+        return {
+          data: {
+            ok: true,
+            status: 200,
+            states: [],
+            enforcedBy: "notification-user-state-persistence",
+          },
+          error: null,
+        };
+      }
+
+      if (functionName === "clair_mark_notification_user_states_read") {
+        return {
+          data: {
+            ok: true,
+            status: 200,
+            updatedCount: 1,
+            enforcedBy: "notification-user-state-persistence",
+          },
+          error: null,
+        };
+      }
+
+      return {
+        data: { ok: true, status: 200, enforcedBy: "notification-user-state-persistence" },
+        error: null,
+      };
+    },
+  });
+
+  const result = await markAllPersistedLiveNotificationsRead({
+    actorUserId: "user-tech",
+    eventScopeId: "browser-a",
+    gateway,
+    stateScopeId: "user-tech:browser-a",
+    workspaceId: "clair-demo",
+  });
+
+  expect(result).toMatchObject({ ok: true, updatedCount: 1 });
+  expect(
+    calls.filter((call) => call.functionName === "clair_mark_notification_user_states_read"),
+  ).toHaveLength(1);
+  expect(
+    calls.filter((call) => call.functionName === "clair_upsert_notification_user_state"),
+  ).toHaveLength(0);
+  expect(
+    calls.find((call) => call.functionName === "clair_mark_notification_user_states_read")?.args,
+  ).toMatchObject({
+    p_notification_ids: ["notif-live-order-recheck"],
+    p_state_scope_id: "user-tech:browser-a",
+  });
+});
+
+test("batch migration keeps notification and fulfillment mutations set-based and authenticated", () => {
+  expect(batchMigration).toContain(
+    "create or replace function public.clair_mark_notification_user_states_read",
+  );
+  expect(batchMigration).toContain(
+    "create or replace function public.clair_enrich_fulfillment_work_item_snapshots",
+  );
+  expect(batchMigration).toContain("p_actor_user_id <> auth.uid()");
+  expect(batchMigration).toContain("revoke all on function public.clair_mark_notification_user_states_read");
+  expect(batchMigration).toContain("revoke all on function public.clair_enrich_fulfillment_work_item_snapshots");
 });
 
 test("notification persistence gateway maps Supabase errors without leaking raw details", async () => {
