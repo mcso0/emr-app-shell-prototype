@@ -493,12 +493,12 @@ export function StaffOperationalProfilePanel({
               />
               <div
                 aria-hidden="true"
-                className="mx-2 h-px bg-[var(--emr-border-default)]"
+                className="mx-2 h-px bg-[var(--emr-border-subtle)]"
               />
               <AccountInformation profile={profile} />
               <div
                 aria-hidden="true"
-                className="mx-2 h-px bg-[var(--emr-border-default)]"
+                className="mx-2 h-px bg-[var(--emr-border-subtle)]"
               />
               <section aria-labelledby="staff-availability-heading" className="px-2">
                 <SectionTitle id="staff-availability-heading">

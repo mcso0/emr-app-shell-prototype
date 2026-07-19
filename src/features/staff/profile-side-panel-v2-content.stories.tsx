@@ -131,7 +131,7 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
                 <div className="min-w-0 flex-1"><p className="text-base leading-6 font-medium">09:00 - 18:00</p><p className="truncate text-sm leading-[18px] text-[var(--emr-text-tertiary)]"><span className="text-[var(--clair-color-atomic-sky-500)]">근무 중</span> · 제1진료실</p></div>
               </div>
             </section>
-            <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-default)]" />
+            <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-subtle)]" />
             <section className="px-2">
               <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">계정 정보</h3>
               <dl className="mt-3 grid gap-3 text-sm">
@@ -141,7 +141,7 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
                 <div className="grid h-6 grid-cols-3 items-center gap-3"><dt>전화번호</dt><dd className="col-span-2 font-medium">010-0000-0000</dd></div>
               </dl>
             </section>
-            <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-default)]" />
+            <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-subtle)]" />
             <section className="px-2">
               <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">다가오는 일정</h3>
               <div className="mt-3">
