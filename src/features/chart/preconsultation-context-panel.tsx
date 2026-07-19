@@ -487,7 +487,7 @@ function MemoSection({ context }: { context: ChartPreconsultationContext }) {
       <SectionTitle id="preconsultation-memo" icon={<CdsMedicalNotebookTextIcon />}>
         환자/보호자 메모
       </SectionTitle>
-      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-3">
         <MemoCard
           caution={patientCaution}
           label="환자"
