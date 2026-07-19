@@ -16,7 +16,6 @@ import {
   CdsCommunicationMailIcon,
   CdsCommunicationPhoneIcon,
 } from "@/components/cds-icons/communication-and-media";
-import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsMedicalStethoscopeIcon } from "@/components/cds-icons/medical-and-domain";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
@@ -485,28 +484,27 @@ export function StaffOperationalProfilePanel({
             </EmrInlineAlert>
           ) : profile && response ? (
             <div className="grid gap-4">
+              <TodayShiftSection
+                currentMinutes={currentMinutes}
+                error={Boolean(response.sectionErrors?.shift)}
+                onRetry={loadProfile}
+                shift={response.shift}
+                todayDate={todayDate}
+              />
+              <div
+                aria-hidden="true"
+                className="mx-2 h-px bg-[var(--emr-border-default)]"
+              />
               <AccountInformation profile={profile} />
               <div
                 aria-hidden="true"
                 className="mx-2 h-px bg-[var(--emr-border-default)]"
               />
-              <TodayShiftSection
-                currentMinutes={currentMinutes}
-                error={Boolean(response.sectionErrors?.shift)}
-                onOpenSchedule={
-                  response.capabilities.scheduleHref
-                    ? () => navigate(response.capabilities.scheduleHref)
-                    : undefined
-                }
-                onRetry={loadProfile}
-                shift={response.shift}
-                todayDate={todayDate}
-              />
               <section aria-labelledby="staff-availability-heading" className="px-2">
                 <SectionTitle id="staff-availability-heading">
-                  다가오는 부재와 다음 복귀
+                  다가오는 일정
                 </SectionTitle>
-                <div className="mt-2.5">
+                <div className="mt-3">
                   <ProfileAvailabilitySummary
                     eventLabel={formatAvailabilityEvent(response.availability)}
                     onRetry={loadProfile}
@@ -598,7 +596,7 @@ function ProfileHeader({
   profile: StaffOperationalProfile;
 }) {
   return (
-    <div className="grid h-[var(--emr-profile-avatar-size)] grid-cols-[var(--emr-profile-avatar-size)_minmax(0,1fr)_auto] items-start gap-2.5">
+    <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
       <EditableProfileAvatar
         alt={profile.displayName}
         editable={canEditAvatar}
@@ -607,7 +605,7 @@ function ProfileHeader({
         onUpload={onUploadAvatar}
         src={profile.avatarUrl}
       />
-      <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-col gap-1">
+      <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-1 flex-col gap-1">
         <div className="flex h-7 min-w-0 items-center gap-2 px-1.5">
           <h2 className="min-w-0 truncate text-xl leading-7 font-semibold tracking-[-0.015em] text-[var(--emr-text-primary)]">
             {profile.displayName}
@@ -629,7 +627,9 @@ function ProfileHeader({
           </span>
         </p>
       </div>
-      <div className="flex items-start gap-1">{actions}</div>
+      <div className="absolute -top-1.5 -right-1.5 flex items-start gap-2">
+        {actions}
+      </div>
     </div>
   );
 }
@@ -662,14 +662,16 @@ type AvatarRemoveResponse =
 
 function ProfileHeaderSkeleton({ action }: { action: ReactNode }) {
   return (
-    <div className="grid h-[var(--emr-profile-avatar-size)] grid-cols-[var(--emr-profile-avatar-size)_minmax(0,1fr)_auto] items-start gap-2.5">
+    <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
       <Skeleton className="size-[var(--emr-profile-avatar-size)] shrink-0 rounded-md" />
-      <div className="min-w-0 space-y-1 px-1.5 pt-1">
+      <div className="min-w-0 flex-1 space-y-1 px-1.5 pt-1">
         <Skeleton className="h-7 w-32" />
         <Skeleton className="h-7 w-full" />
         <Skeleton className="h-5 w-24" />
       </div>
-      <div className="flex items-start">{action}</div>
+      <div className="absolute -top-1.5 -right-1.5 flex items-start">
+        {action}
+      </div>
     </div>
   );
 }
@@ -682,12 +684,14 @@ function ProfileLoadingState() {
       data-testid="staff-operational-profile-loading"
     >
       <span className="sr-only">직원 운영 프로필 불러오는 중</span>
-      <Skeleton className="h-6 w-20" />
+      <Skeleton className="h-8 w-24" />
+      <Skeleton className="h-[70px] w-full rounded-xl" />
+      <Skeleton className="h-px w-full" />
+      <Skeleton className="h-8 w-20" />
       <Skeleton className="h-32 w-full rounded-xl" />
-      <Skeleton className="h-6 w-24" />
-      <Skeleton className="h-[72px] w-full rounded-xl" />
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-24 w-full rounded-xl" />
+      <Skeleton className="h-px w-full" />
+      <Skeleton className="h-8 w-24" />
+      <Skeleton className="h-[70px] w-full rounded-xl" />
     </div>
   );
 }
@@ -695,7 +699,7 @@ function ProfileLoadingState() {
 function SectionTitle({ children, id }: { children: string; id: string }) {
   return (
     <h3
-      className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]"
+      className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]"
       id={id}
     >
       {children}
@@ -762,7 +766,7 @@ function AccountRow({
             aria-label={copyLabel}
             size="icon-xs"
             variant="ghost"
-            className="pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+            className="shrink-0"
             onClick={() => void copyValue(value, label)}
           >
             <CdsActionsCopyIcon aria-hidden="true" size={14} />
@@ -776,14 +780,12 @@ function AccountRow({
 function TodayShiftSection({
   currentMinutes,
   error,
-  onOpenSchedule,
   onRetry,
   shift,
   todayDate,
 }: {
   currentMinutes: number;
   error: boolean;
-  onOpenSchedule?: () => void;
   onRetry: () => void;
   shift: StaffOperationalShift | null;
   todayDate: string;
@@ -807,7 +809,6 @@ function TodayShiftSection({
         ) : shift ? (
           <ShiftSummary
             currentMinutes={currentMinutes}
-            onOpenSchedule={onOpenSchedule}
             shift={shift}
             todayDate={todayDate}
           />
@@ -854,50 +855,41 @@ function ScheduleNavigationSection({
 
 function ShiftSummary({
   currentMinutes,
-  onOpenSchedule,
   shift,
   todayDate,
 }: {
   currentMinutes: number;
-  onOpenSchedule?: () => void;
   shift: StaffOperationalShift;
   todayDate: string;
 }) {
   const state = getShiftStateLabel({ currentMinutes, shift, todayDate });
-  const kindLabel =
-    shift.kind === "leave"
-      ? "휴가"
-      : shift.kind === "off"
-        ? "휴무"
-        : shift.workLabel;
+  const detailLabel =
+    shift.kind === "leave" || shift.kind === "off"
+      ? undefined
+      : shift.locationLabel || shift.workLabel;
   return (
-    <div className="flex h-[72px] items-center gap-3 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] py-[11px] pl-3 pr-4">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)]">
-          <CdsFilesCalendarIcon aria-hidden="true" size={24} />
+    <div className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-[14px]">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div
+          aria-hidden="true"
+          className="grid size-[42px] shrink-0 overflow-hidden rounded-md border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
+        >
+          <span className="h-3 bg-[var(--emr-surface-muted)]" />
+          <span className="flex items-center justify-center pb-0.5 text-base leading-4 font-semibold tabular-nums text-[var(--clair-color-atomic-sky-500)]">
+            {todayDate.slice(-2)}
+          </span>
         </div>
         <div className="min-w-0">
           <p className="truncate text-base leading-6 font-medium tracking-[0.006em] tabular-nums text-[var(--emr-text-primary)]">
-            {formatMinutes(shift.startMinutes)}–{formatMinutes(shift.endMinutes)}
+            {formatMinutes(shift.startMinutes)} - {formatMinutes(shift.endMinutes)}
           </p>
-          <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
+          <p className="flex min-w-0 items-center gap-1.5 truncate text-sm leading-[18px] font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
             <span className="shrink-0 text-[var(--clair-color-atomic-sky-500)]">{state}</span>
-            {kindLabel || shift.locationLabel ? <span aria-hidden="true">·</span> : null}
-            <span className="truncate">{[kindLabel, shift.locationLabel].filter(Boolean).join(" · ")}</span>
+            {detailLabel ? <span aria-hidden="true">·</span> : null}
+            {detailLabel ? <span className="truncate">{detailLabel}</span> : null}
           </p>
         </div>
       </div>
-      {onOpenSchedule ? (
-        <Button
-          type="button"
-          size="xs"
-          variant="outline"
-          className="w-[66px] px-0 text-xs"
-          onClick={onOpenSchedule}
-        >
-          일정 확인
-        </Button>
-      ) : null}
     </div>
   );
 }

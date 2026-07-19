@@ -14,7 +14,7 @@ tags:
   - workspace-membership
   - fulfillment
 created: 2026-07-14
-last_updated: 2026-07-18
+last_updated: 2026-07-19
 ---
 
 # Staff Operational Profile Side Panel V2
@@ -43,13 +43,13 @@ A workspace member can inspect a colleague without leaving the current task,
 understand the colleague's operational availability, and navigate to permitted
 assigned work. A user can edit only their own status message and avatar.
 
-The visible order is:
+The visible profile-tab order is:
 
 1. header: avatar, Presence, name, editable-or-read-only status message, and
    member-management menu when permitted
 2. tabs: `프로필`, `업무현황`, `일정`
-3. profile account information: role, department, email, phone
-4. today's published/changed shift
+3. today's published/changed shift
+4. profile account information: role, department, email, phone
 5. next availability event within 14 days and the following return-to-work date
 6. schedule tab: a safe navigation affordance to the existing authorized
    schedule destination, if present
@@ -67,7 +67,7 @@ metadata, or inferred clinical competence.
 | header             | height `150px`, 16px horizontal padding, bottom border                                                                               |
 | avatar             | `84px` square, 6px radius, cover crop; compose locally instead of adding a global Avatar size                                        |
 | presence           | `20px` badge with dot and text for online, offline, or unknown                                                                       |
-| status message     | `28px` high; default/hover max width `217px`; input/result width `217px`                                                             |
+| status message     | `28px` high; default/hover width `173px`; editable input/result remain bounded by the existing `217px` feature-local width           |
 | tabs               | three Base UI line tabs: 53px `프로필`, 65px `업무현황`, and 41px `일정`, with 8px gaps, 34px group height, and 1px active underline |
 | content            | 16px horizontal padding, internal vertical scroll, section spacing from approved design tokens                                       |
 | avatar action menu | `180px` wide; upload group, separator, remove group                                                                                  |

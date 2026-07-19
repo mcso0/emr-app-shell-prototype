@@ -3,7 +3,6 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { CloseIcon } from "@/components/icons";
-import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -77,26 +76,26 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
   return (
     <section
       aria-label="직원 운영 프로필 Storybook 예시"
-      className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:rounded-none max-md:border-0 max-md:shadow-none md:h-[760px] md:w-[var(--emr-profile-panel-width)] md:rounded-[var(--emr-radius-panel)] md:border md:border-[var(--emr-border-strong)] md:shadow-[var(--clair-shadow-xs)]"
+      className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:rounded-none max-md:border-0 max-md:shadow-none md:h-[1105px] md:w-[var(--emr-profile-panel-width)] md:rounded-[var(--emr-radius-panel)] md:border md:border-[var(--emr-border-strong)] md:shadow-[var(--clair-shadow-xs)]"
       data-testid="profile-v2-panel-specimen"
     >
       <Tabs defaultValue={defaultTab} className="min-h-0 flex-1 gap-0">
         <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4">
-          <div className="grid h-[var(--emr-profile-avatar-size)] grid-cols-[var(--emr-profile-avatar-size)_minmax(0,1fr)_auto] items-start gap-2.5">
+          <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
             <EditableProfileAvatar alt="합성 직원" editable={false} initials="SU" />
-            <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-col gap-1">
+            <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-1 flex-col gap-1">
               <div className="flex h-7 min-w-0 items-center gap-2 px-1.5">
                 <h2 className="truncate text-xl leading-7 font-semibold tracking-[-0.015em]">합성 직원</h2>
                 <PresenceBadge state="online" />
               </div>
               <div className="h-[var(--emr-profile-status-control-height)]">
-                <StatusMessageEditor editable={false} value="진료 중입니다" />
+                <StatusMessageEditor editable onSave={async () => undefined} value="" />
               </div>
               <p className="flex h-5 items-center gap-1 px-1.5 text-sm font-medium tracking-[0.014em] text-[var(--emr-text-placeholder)]">
                 최근 접속 <span aria-hidden="true">·</span> 방금 전
               </p>
             </div>
-            <div className="flex gap-1">
+            <div className="absolute -top-1.5 -right-1.5 flex gap-2">
               <ProfileHeaderActionMenu
                 canManageMember={false}
                 hasContact
@@ -123,7 +122,18 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
         <TabsContent value="profile" className="min-h-0 overflow-y-auto p-4">
           <div className="grid gap-4">
             <section className="px-2">
-              <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">계정 정보</h3>
+              <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">오늘 근무 정보</h3>
+              <div className="mt-3 flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] px-4 py-[14px] text-sm">
+                <div aria-hidden="true" className="grid size-[42px] shrink-0 overflow-hidden rounded-md border border-[var(--emr-border-default)]">
+                  <span className="h-3 bg-[var(--emr-surface-muted)]" />
+                  <span className="flex items-center justify-center pb-0.5 text-base leading-4 font-semibold text-[var(--clair-color-atomic-sky-500)]">18</span>
+                </div>
+                <div className="min-w-0 flex-1"><p className="text-base leading-6 font-medium">09:00 - 18:00</p><p className="truncate text-sm leading-[18px] text-[var(--emr-text-tertiary)]"><span className="text-[var(--clair-color-atomic-sky-500)]">근무 중</span> · 제1진료실</p></div>
+              </div>
+            </section>
+            <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-default)]" />
+            <section className="px-2">
+              <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">계정 정보</h3>
               <dl className="mt-3 grid gap-3 text-sm">
                 <div className="grid h-6 grid-cols-3 items-center gap-3"><dt>역할</dt><dd className="col-span-2 font-medium">수의사</dd></div>
                 <div className="grid h-6 grid-cols-3 items-center gap-3"><dt>진료과</dt><dd className="col-span-2 font-medium">일반 진료</dd></div>
@@ -133,16 +143,8 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
             </section>
             <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-default)]" />
             <section className="px-2">
-              <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">오늘 근무</h3>
-              <div className="mt-3 flex h-[72px] items-center gap-3 rounded-xl border py-[11px] pl-3 pr-4 text-sm">
-                <div className="grid size-12 place-items-center rounded-lg bg-[var(--emr-surface-muted)]"><CdsFilesCalendarIcon aria-hidden="true" size={24} /></div>
-                <div className="min-w-0 flex-1"><p className="text-base leading-6 font-medium">09:00–18:00</p><p className="truncate text-[var(--emr-text-tertiary)]">근무 예정 · 제1진료실</p></div>
-                <Button size="xs" variant="outline" className="w-[66px] px-0 text-xs">일정 확인</Button>
-              </div>
-            </section>
-            <section className="px-2">
-              <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">다가오는 부재와 다음 복귀</h3>
-              <div className="mt-2.5">
+              <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">다가오는 일정</h3>
+              <div className="mt-3">
                 <ProfileAvailabilitySummary
                   state="ready"
                   eventLabel="7월 18일 휴무"
@@ -200,7 +202,7 @@ export const FullPanelThreeTabFigmaContract: Story = {
 export const AvailabilityReady: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    expect(canvas.getByText("7월 18일 휴무")).toBeVisible();
+    expect(canvas.getByText("휴무")).toBeVisible();
     expect(canvas.getByText("7월 20일 복귀")).toBeVisible();
   },
 };
@@ -215,7 +217,7 @@ export const AvailabilityStates: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    expect(canvas.getByText("예정된 휴무가 없어요")).toBeVisible();
+    expect(canvas.getByText("예정된 일정이 없습니다")).toBeVisible();
     expect(canvas.getByRole("alert")).toBeVisible();
     expect(canvas.getByRole("button", { name: "다시 시도" })).toBeVisible();
   },

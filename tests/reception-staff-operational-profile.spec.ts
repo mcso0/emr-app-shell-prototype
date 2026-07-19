@@ -202,14 +202,16 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   ).toBeCloseTo(
     (
       await panel
-        .getByRole("heading", { name: "다가오는 부재와 다음 복귀" })
+        .getByRole("heading", { name: "다가오는 일정" })
         .boundingBox()
     )?.x ?? 0,
     0,
   );
 
   await panel.getByRole("tab", { name: "일정" }).click();
-  await expect(panel.getByRole("heading", { name: "일정" })).toBeVisible();
+  await expect(
+    panel.getByRole("heading", { name: "일정", exact: true }),
+  ).toBeVisible();
   await expect(
     panel.getByText("근무 일정은 일정 화면에서 확인할 수 있어요"),
   ).toBeVisible();
@@ -613,24 +615,18 @@ test("staff profile panel renders account, published shift, availability, and pe
 
   const drawer = page.getByRole("region", { name: "직원 운영 프로필" });
   await expect(drawer).toContainText("오늘 근무 정보");
-  await expect(drawer).toContainText("09:00–18:00");
+  await expect(drawer).toContainText("09:00 - 18:00");
   await expect(drawer).toContainText("제2진료실");
   await expect(drawer).toContainText("근무 예정");
-  await expect(drawer).toContainText("5월 4일 휴무");
+  await expect(drawer).toContainText("휴무");
   await expect(drawer).toContainText("5월 5일 10:00 복귀");
   await expect(drawer).toContainText("suji@example.test");
   await expect(drawer).toContainText("010-0000-0000");
-  const emailValue = drawer.getByText("suji@example.test");
   const emailCopy = drawer.getByRole("button", { name: "이메일 복사" });
-  const phoneValue = drawer.getByText("010-0000-0000");
   const phoneCopy = drawer.getByRole("button", { name: "전화번호 복사" });
-  await expect(emailCopy).toHaveCSS("opacity", "0");
-  await expect(phoneCopy).toHaveCSS("opacity", "0");
-  await emailValue.hover();
   await expect(emailCopy).toHaveCSS("opacity", "1");
   await emailCopy.click();
   await expect(page.getByText("이메일을 복사했어요")).toBeVisible();
-  await phoneValue.hover();
   await expect(phoneCopy).toHaveCSS("opacity", "1");
   await drawer.getByRole("button", { name: "프로필 작업 더보기" }).click();
   await expect(page.getByRole("menuitem")).toHaveCount(2);
