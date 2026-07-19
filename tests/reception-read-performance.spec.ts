@@ -122,3 +122,93 @@ test("reception live refresh uses one snapshot request and a visibility-aware fa
   expect(moduleSource).toContain("window.setInterval(refresh, 60_000)");
   expect(moduleSource).not.toContain("window.setInterval(refresh, 9000)");
 });
+
+test("reception content owns one shared staff request for content, side panel, and drawer", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  let staffRequestCount = 0;
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/staff?role=vet*`,
+    async (route) => {
+      staffRequestCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          staff: [
+            {
+              id: "49110000-0000-4000-8000-000000000003",
+              displayName: "청담 원장",
+              initial: "청",
+              roles: ["vet"],
+              status: "active",
+            },
+          ],
+          enforcedBy: "workspace-staff-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day**`,
+    async (route) => {
+      const date = new URL(route.request().url()).searchParams.get("date");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          date,
+          records: [],
+          operatingSchedule: {
+            date,
+            timezone: "Asia/Seoul",
+            isOpen: true,
+            source: "weekly",
+            treatmentStart: "09:00",
+            treatmentEnd: "19:00",
+            breakStart: "13:00",
+            breakEnd: "14:00",
+          },
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${workspaceId}/reception?modulePanel=open&drawer=reception-form%3Awalk-in`,
+  );
+
+  await expect(page.getByTestId("schedule-toolbar")).toBeVisible();
+  await expect(page.getByTestId("veterinarian-lane-name")).toContainText(
+    "청담 원장",
+  );
+  const drawer = page.getByTestId("walk-in-reception-dialog");
+  await expect(drawer).toBeVisible();
+  await drawer.getByLabel("담당의").click();
+  await expect(page.getByRole("option", { name: "청담 원장" })).toBeVisible();
+  await expect.poll(() => staffRequestCount).toBe(1);
+});

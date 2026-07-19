@@ -200,6 +200,14 @@ import {
   type ReceptionCalendarView,
 } from "@/features/reception/store";
 import {
+  emptyReceptionStaffVeterinarians,
+  getReceptionStaffResourceKey,
+  useReceptionStaffResourceStore,
+  type ReceptionStaffOperationalStatus,
+  type ReceptionStaffReadStatus,
+  type ReceptionStaffVeterinarian,
+} from "@/features/reception/staff-resource-store";
+import {
   ReceptionEmptyState,
 } from "@/features/reception/reception-list-search";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
@@ -463,18 +471,7 @@ const monthDays = Array.from({ length: 35 }, (_, index) => index + 1);
 
 type ReceptionSideListMode = (typeof receptionQueueTabItems)[number]["value"];
 type CalendarTaskBadgeType = "예약" | "외래" | "노쇼";
-type VeterinarianOperationalStatus = {
-  code:
-    | "available"
-    | "clocked_out"
-    | "in_consultation"
-    | "leave"
-    | "off"
-    | "scheduled"
-    | "shift_ended";
-  label: string;
-  source: "reception" | "schedule" | "time_clock";
-};
+type VeterinarianOperationalStatus = ReceptionStaffOperationalStatus;
 const veterinarianOperationalStatusToneClasses: Record<
   VeterinarianOperationalStatus["code"],
   string
@@ -493,17 +490,8 @@ const veterinarianOperationalStatusToneClasses: Record<
   shift_ended:
     "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-clocked-out)]",
 };
-type Veterinarian = {
-  avatarUrl?: string;
-  department?: string;
-  id: string;
-  initial?: string;
-  name: string;
-  operationalStatus?: VeterinarianOperationalStatus;
-  role: "veterinarian";
-  title?: string;
-};
-type WorkspaceStaffReadStatus = "idle" | "loading" | "ready" | "error";
+type Veterinarian = ReceptionStaffVeterinarian;
+type WorkspaceStaffReadStatus = ReceptionStaffReadStatus;
 type CalendarResourceState = "loading" | "ready" | "empty" | "error";
 type WorkspaceStaffReadResponse =
   | {
@@ -3136,9 +3124,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     Record<ReceptionQueueSideDisplayGroup, boolean>
   >({ appointment: false, cancelled: false, reception: false });
   const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null);
-  const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
-    Veterinarian[]
-  >([]);
   const searchQuery = useReceptionStore((state) => state.searchQuery);
   const selectAppointment = useReceptionStore(
     (state) => state.selectAppointment,
@@ -3191,6 +3176,15 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     : undefined;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const staffResourceKey = getReceptionStaffResourceKey({
+    operatingDate,
+    workspaceId,
+  });
+  const workspaceVeterinarians = useReceptionStaffResourceStore(
+    (state) =>
+      state.resourcesByKey[staffResourceKey]?.veterinarians ??
+      emptyReceptionStaffVeterinarians,
+  );
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
@@ -3384,32 +3378,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       workspaceId,
     ],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadStaff() {
-      if (!liveStaffSourceEnabled) {
-        setWorkspaceVeterinarians([]);
-        return;
-      }
-
-      const result = await loadWorkspaceVeterinarians({
-        actorId: authSession?.id,
-        operatingDate,
-        workspaceId,
-      });
-      if (cancelled) return;
-
-      setWorkspaceVeterinarians(mapWorkspaceStaffToVeterinarians(result));
-    }
-
-    void loadStaff();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
 
   return (
     <EmrSubpanel>
@@ -6144,11 +6112,6 @@ export function ReceptionContent() {
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
     allVeterinarians.map((veterinarian) => veterinarian.id),
   );
-  const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
-    Veterinarian[]
-  >([]);
-  const [workspaceStaffReadStatus, setWorkspaceStaffReadStatus] =
-    useState<WorkspaceStaffReadStatus>("idle");
   const selectedAppointmentId = useReceptionStore(
     (state) => state.selectedAppointmentId,
   );
@@ -6232,6 +6195,10 @@ export function ReceptionContent() {
     key: string;
     promise: Promise<ReceptionRefreshResult>;
   } | null>(null);
+  const staffReadInFlightRef = useRef<{
+    key: string;
+    promise: Promise<void>;
+  } | null>(null);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const calendarView = calendarViewByWorkspace[workspaceId] ?? "day";
   const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
@@ -6254,6 +6221,23 @@ export function ReceptionContent() {
     : resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), operatingDate);
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const staffResourceKey = getReceptionStaffResourceKey({
+    operatingDate,
+    workspaceId,
+  });
+  const staffResource = useReceptionStaffResourceStore(
+    (state) => state.resourcesByKey[staffResourceKey],
+  );
+  const setStaffResourceLoading = useReceptionStaffResourceStore(
+    (state) => state.setResourceLoading,
+  );
+  const setStaffResourceResult = useReceptionStaffResourceStore(
+    (state) => state.setResourceResult,
+  );
+  const workspaceVeterinarians =
+    staffResource?.veterinarians ?? emptyReceptionStaffVeterinarians;
+  const workspaceStaffReadStatus: WorkspaceStaffReadStatus =
+    staffResource?.status ?? "idle";
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
@@ -6512,41 +6496,80 @@ export function ReceptionContent() {
     setCalendarDraftSelection,
   ]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshWorkspaceStaff = useCallback(
+    ({
+      showLoading = false,
+      skipIfFreshMs = 0,
+    }: {
+      showLoading?: boolean;
+      skipIfFreshMs?: number;
+    } = {}) => {
+      if (!liveStaffSourceEnabled) return Promise.resolve();
 
-    async function loadStaff(showLoading: boolean) {
-      if (!liveStaffSourceEnabled) {
-        setWorkspaceVeterinarians([]);
-        setWorkspaceStaffReadStatus("ready");
-        return;
+      const currentResource =
+        useReceptionStaffResourceStore.getState().resourcesByKey[staffResourceKey];
+      if (
+        skipIfFreshMs > 0 &&
+        currentResource?.updatedAt &&
+        Date.now() - currentResource.updatedAt < skipIfFreshMs
+      ) {
+        return Promise.resolve();
       }
 
-      if (showLoading) setWorkspaceStaffReadStatus("loading");
-      const result = await loadWorkspaceVeterinarians({
+      const inFlight = staffReadInFlightRef.current;
+      if (inFlight?.key === staffResourceKey) return inFlight.promise;
+
+      if (showLoading) setStaffResourceLoading(staffResourceKey);
+      const requestPromise = loadWorkspaceVeterinarians({
         actorId: authSession?.id,
         operatingDate,
         workspaceId,
+      }).then((result) => {
+        setStaffResourceResult(staffResourceKey, {
+          status: result.ok ? "ready" : "error",
+          veterinarians: mapWorkspaceStaffToVeterinarians(result),
+        });
       });
-      if (cancelled) return;
 
-      const nextVeterinarians = mapWorkspaceStaffToVeterinarians(result);
-      setWorkspaceVeterinarians(nextVeterinarians);
-      setWorkspaceStaffReadStatus(result.ok ? "ready" : "error");
-    }
+      staffReadInFlightRef.current = {
+        key: staffResourceKey,
+        promise: requestPromise,
+      };
+      void requestPromise.finally(() => {
+        if (staffReadInFlightRef.current?.promise === requestPromise) {
+          staffReadInFlightRef.current = null;
+        }
+      });
 
-    const refreshStaff = () => void loadStaff(false);
+      return requestPromise;
+    },
+    [
+      authSession?.id,
+      liveStaffSourceEnabled,
+      operatingDate,
+      setStaffResourceLoading,
+      setStaffResourceResult,
+      staffResourceKey,
+      workspaceId,
+    ],
+  );
 
-    void loadStaff(true);
+  useEffect(() => {
+    if (!liveStaffSourceEnabled) return;
+
+    const refreshStaff = () => void refreshWorkspaceStaff();
+    const refreshStaffOnFocus = () =>
+      void refreshWorkspaceStaff({ skipIfFreshMs: 30_000 });
+
+    void refreshWorkspaceStaff({ showLoading: true, skipIfFreshMs: 30_000 });
     const refreshInterval = window.setInterval(refreshStaff, 60_000);
-    window.addEventListener("focus", refreshStaff);
+    window.addEventListener("focus", refreshStaffOnFocus);
 
     return () => {
-      cancelled = true;
       window.clearInterval(refreshInterval);
-      window.removeEventListener("focus", refreshStaff);
+      window.removeEventListener("focus", refreshStaffOnFocus);
     };
-  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
+  }, [liveStaffSourceEnabled, refreshWorkspaceStaff]);
 
   useEffect(() => {
     if (queryPatientId && queryPatientId !== selectedPatientId) {
@@ -10121,10 +10144,6 @@ export function ReceptionDrawer({
   const [appointmentCheckInSubmitting, setAppointmentCheckInSubmitting] =
     useState(false);
   const [editDraft, setEditDraft] = useState<ReceptionEncounterUpdateInput>({});
-  const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
-    Veterinarian[]
-  >([]);
-
   useEffect(() => {
     onEditingChange?.(editMode);
 
@@ -10141,6 +10160,15 @@ export function ReceptionDrawer({
   const operatingDate =
     operatingDateOverride ?? getWorkspaceOperatingDate(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const staffResourceKey = getReceptionStaffResourceKey({
+    operatingDate,
+    workspaceId,
+  });
+  const workspaceVeterinarians = useReceptionStaffResourceStore(
+    (state) =>
+      state.resourcesByKey[staffResourceKey]?.veterinarians ??
+      emptyReceptionStaffVeterinarians,
+  );
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
@@ -10188,38 +10216,6 @@ export function ReceptionDrawer({
       }),
     [draftCheckIns, operatingDate, persistedCalendarAppointments, workspaceId],
   );
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadStaff() {
-      if (!liveStaffSourceEnabled) {
-        setWorkspaceVeterinarians([]);
-        return;
-      }
-
-      const result = await loadWorkspaceVeterinarians({
-        actorId: authSession?.id,
-        operatingDate,
-        workspaceId,
-      });
-      if (cancelled) return;
-
-      setWorkspaceVeterinarians(mapWorkspaceStaffToVeterinarians(result));
-    }
-
-    const refreshStaff = () => void loadStaff();
-
-    void loadStaff();
-    const refreshInterval = window.setInterval(refreshStaff, 60_000);
-    window.addEventListener("focus", refreshStaff);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(refreshInterval);
-      window.removeEventListener("focus", refreshStaff);
-    };
-  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
-
   if (activeDrawer?.type === "reception-patient") {
     return <PatientProfileDrawer patientId={activeDrawer.id} />;
   }
