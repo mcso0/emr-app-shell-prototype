@@ -738,6 +738,13 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(lockedState).toContainText("환자/보호자 메모");
   await expect(lockedState).toContainText("보정 시 보호자 동행 선호");
   await expect(lockedState).toContainText("최근 약 복용은 잘했으나");
+  const memoSection = lockedState.locator(
+    'section[aria-labelledby="preconsultation-memo"]',
+  );
+  const memoCardContainer = memoSection.locator(":scope > div");
+  await expect(memoCardContainer).toHaveCSS("flex-direction", "column");
+  await expect(memoCardContainer).toHaveCSS("row-gap", "12px");
+  await expect(memoCardContainer.locator(":scope > div")).toHaveCount(2);
   await expect(lockedState).toContainText("바이탈 정보");
   await expect(lockedState).toContainText("호흡수");
   await expect(lockedState).toContainText("4.82 kg");
