@@ -10,7 +10,7 @@ source_docs:
   - "docs/design/system/empty-info-state-contract.md"
   - "docs/design/system/storybook-operating-rules.md"
   - "docs/completed/design/2026-07-01-empty-state-surface-placement-report.html"
-updated: "2026-07-12"
+updated: "2026-07-19"
 ---
 
 # EmrEmptyState Component Contract And Storybook Variants
@@ -59,6 +59,7 @@ Create the shared `EmrEmptyState` runtime component and Storybook variants for t
 - Passed queue/content Playwright regression coverage: 12 tests.
 - Passed `npm run build`.
 - Side-panel queue empty states now expose the `md` contract across the seven supported module surfaces; focused visual contract coverage passes.
+- Passed the 2026-07-19 full-workspace XL adoption checks: secret scan, docs links, diff check, full lint, TypeScript, production build, and 3 focused Chromium route tests.
 
 ## Handoff Notes
 
@@ -97,3 +98,11 @@ This work starts the shared runtime component layer. Screen adoption should be a
 - The chart full-workspace no-work state is the first `xl` caller. Queue, table, drawer, permission, loading, API, and persistence behavior are unchanged.
 - Focused Storybook interaction coverage asserts the Figma geometry and typography for all four sizes plus Default, one-action, and two-action `xl` variants.
 - Result report: `docs/completed/design-system/2026-07-19-emr-empty-state-xl-report.html`.
+
+2026-07-19 full-workspace adoption follow-up:
+
+- Applied explicit `size="xl"` to the Home, lab, imaging, dispensing/treatment, and billing main-content absence states after verifying that each state owns the full operational workspace body.
+- Kept queue, table, drawer, widget, schedule-panel, loading, and partial-error surfaces on their existing `md`/`sm`/`lg` contracts.
+- Standardized source-empty copy as `[업무명] 업무가 없습니다` plus `오늘 표시할 [업무명] 업무가 없습니다.` and kept no-selection guidance distinct.
+- Aligned local refresh/retry actions to the Figma `xl` 32px rounded outline contract without changing request, permission, or persistence behavior.
+- Added route-level assertions that all six operational main-content empty states render `data-size="xl"`.

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EMR 엠티 스테이트 XL 구현 결과</title>
+    <title>EMR 엠티 스테이트 XL 구현 및 적용 결과</title>
     <style>
       :root {
         color-scheme: light;
@@ -60,11 +60,11 @@
   <body>
     <main>
       <p class="eyebrow">DESIGN-SYSTEM-PR-070 · 2026-07-19</p>
-      <h1>EMR 엠티 스테이트 XL 구현 결과</h1>
+      <h1>EMR 엠티 스테이트 XL 구현 및 적용 결과</h1>
       <p>
         넓은 진료 작업 영역에서 기존 LG 엠티 스테이트가 작게 보이던 문제를 해결했다.
         CDS.V2 Figma의 XL 기본형·1액션·2액션 노드를 공용 컴포넌트 계약으로 옮기고,
-        진료 화면 중앙 빈 상태에 먼저 적용했다.
+        진료 화면을 기준으로 Home, 검사, 영상, 조제/처치, 수납의 전체 작업영역에도 적용했다.
       </p>
       <span class="status">구현 및 브라우저 검증 완료</span>
 
@@ -87,7 +87,9 @@
         <ul>
           <li><code>EmrEmptyStateSize</code>에 <code>xl</code>을 추가했다.</li>
           <li>기존 <code>lg</code>, <code>md</code>, <code>sm</code> 기본 매핑은 변경하지 않았다.</li>
-          <li>진료 화면의 전체 작업영역 빈 상태와 새로고침 버튼만 XL로 전환했다.</li>
+          <li>Home, 진료, 검사, 영상, 조제/처치, 수납의 전체 작업영역 빈 상태를 XL로 전환했다.</li>
+          <li>업무 없음 문구를 도메인별 제목·설명·새로고침 규칙으로 통일했다.</li>
+          <li>복구 버튼을 Figma XL의 32px rounded outline 계약으로 맞췄다.</li>
           <li>대기열, 데이터 로딩, 권한, API, RLS, 저장 동작은 변경하지 않았다.</li>
         </ul>
       </section>
@@ -96,8 +98,9 @@
         <h2 id="verification-title">검증</h2>
         <ul>
           <li>Storybook 상호작용 테스트 14개 통과.</li>
-          <li>진료 빈 상태 브라우저 테스트 2개 통과.</li>
-          <li>TypeScript, 변경 파일 ESLint, 문서 링크 검사 통과.</li>
+          <li>운영 화면 6종의 XL 속성·중심 정렬·상세 패널 비노출 회귀 검증을 추가했다.</li>
+          <li>집중 Chromium 라우트 테스트 3개 통과.</li>
+          <li>Secret scan, TypeScript, 전체 ESLint, 문서 링크 검사 통과.</li>
           <li>Next.js 프로덕션 빌드 통과. 기존 NFT 추적 경고 1건은 이번 변경 범위 밖이다.</li>
         </ul>
       </section>
@@ -105,8 +108,8 @@
       <section class="card" aria-labelledby="risk-title">
         <h2 id="risk-title">남은 확인 사항</h2>
         <p>
-          이번 적용은 진료 화면 한 곳으로 제한했다. 다른 메인 업무 화면에 XL을 확대 적용하려면
-          각 화면이 정말 전체 작업영역 빈 상태인지 확인한 뒤 별도로 채택해야 한다.
+          큐, 표, 드로어, 위젯, 근무표 상태 패널은 전체 작업영역이 아니므로 기존 MD/SM/LG 계약을 유지한다.
+          공용 content 기본값도 LG로 유지해 부분 화면이 의도치 않게 커지는 회귀를 막았다.
         </p>
       </section>
     </main>

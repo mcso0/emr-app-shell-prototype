@@ -96,6 +96,7 @@ async function expectEmptyStateCentered(page: Page, heading: string) {
     .first();
 
   await expect(emptyState).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-size", "xl");
 
   await expect
     .poll(async () => {

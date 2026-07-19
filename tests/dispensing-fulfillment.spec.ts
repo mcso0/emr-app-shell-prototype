@@ -71,7 +71,8 @@ test("dispensing no-work empty state hides history aside", async ({ page }) => {
   const emptyState = page.getByTestId("dispensing-content-empty-state");
   await expect(emptyState).toBeVisible();
   await expect(emptyState).toHaveAttribute("data-surface", "content");
-  await expect(emptyState.getByRole("heading", { name: "오늘 조제/처치 요청이 없습니다" })).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-size", "xl");
+  await expect(emptyState.getByRole("heading", { name: "조제/처치 업무가 없습니다" })).toBeVisible();
 });
 
 type FulfillmentWorkItemStatus =

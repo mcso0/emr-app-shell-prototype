@@ -1386,6 +1386,7 @@ function DispensingContentBody({
         <EmrEmptyState
           kind={hasQueueItems ? "no-scope-result" : "upstream-pending"}
           priority="supporting"
+          size="xl"
           surface="content"
           description={
             hasQueueItems
@@ -1395,9 +1396,10 @@ function DispensingContentBody({
           primaryAction={
             hasQueueItems ? undefined : (
               <Button
-                size="sm"
+                size="default"
                 variant="outline"
-                className="bg-card"
+                roundness="round"
+                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >
