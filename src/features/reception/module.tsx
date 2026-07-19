@@ -173,6 +173,7 @@ import type {
   ReceptionQueueReadRecord,
   ReceptionQueueReadResponse,
 } from "@/features/reception/reception-queue-read";
+import type { ReceptionSnapshotReadResponse } from "@/features/reception/reception-snapshot-read";
 import type {
   ReceptionEncounterCancelResponse,
 } from "@/features/reception/encounter-cancel";
@@ -219,6 +220,7 @@ import {
   resolveWorkspaceRouteParam,
 } from "@/lib/emr-domain/demo-workspaces";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import { shouldUseSupabaseAuth } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 import {
   getMockPatientBundle,
@@ -1393,6 +1395,64 @@ async function loadReceptionCalendar({
     return body;
   } catch {
     return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+type ReceptionRefreshResult = {
+  ok: boolean;
+  stale?: boolean;
+};
+
+async function loadReceptionSnapshot({
+  actorId,
+  date,
+  workspaceId,
+}: {
+  actorId?: string;
+  date: string;
+  workspaceId: string;
+}): Promise<{
+  calendarResult: ReceptionCalendarReadResponse;
+  queueResult: ReceptionQueueReadResponse;
+}> {
+  const failure = {
+    ok: false,
+    status: 500,
+    error: "db_read_failed",
+  } as const;
+
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/snapshot?date=${encodeURIComponent(date)}`,
+      {
+        cache: "no-store",
+        headers: actorId
+          ? { "x-clair-demo-session-user-id": actorId }
+          : undefined,
+      },
+    );
+    const body = (await response.json()) as ReceptionSnapshotReadResponse;
+
+    if (!("calendar" in body) || !("queue" in body)) {
+      const responseFailure = {
+        ...failure,
+        status: response.status,
+      };
+      return {
+        calendarResult: responseFailure,
+        queueResult: responseFailure,
+      };
+    }
+
+    return {
+      calendarResult: body.calendar,
+      queueResult: body.queue,
+    };
+  } catch {
+    return {
+      calendarResult: failure,
+      queueResult: failure,
+    };
   }
 }
 
@@ -6168,6 +6228,10 @@ export function ReceptionContent() {
   const [manualReceptionRefreshing, setManualReceptionRefreshing] =
     useState(false);
   const receptionReadRequestSeqRef = useRef(0);
+  const receptionReadInFlightRef = useRef<{
+    key: string;
+    promise: Promise<ReceptionRefreshResult>;
+  } | null>(null);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const calendarView = calendarViewByWorkspace[workspaceId] ?? "day";
   const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
@@ -6509,88 +6573,123 @@ export function ReceptionContent() {
     selectedPatientId,
   ]);
   const refreshReceptionReads = useCallback(
-    async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
+    ({ showLoading = false }: { showLoading?: boolean } = {}) => {
+      const refreshKey = `${workspaceId}\u0000${operatingDate}`;
+      const inFlight = receptionReadInFlightRef.current;
+      if (inFlight?.key === refreshKey) return inFlight.promise;
+
       const requestSeq = receptionReadRequestSeqRef.current + 1;
       receptionReadRequestSeqRef.current = requestSeq;
       const isLatestRequest = () => receptionReadRequestSeqRef.current === requestSeq;
 
-      if (showLoading) {
-        setReceptionCalendarReadStatus("loading");
-        setReceptionQueueReadStatus("loading");
-      }
+      const refreshPromise = (async (): Promise<ReceptionRefreshResult> => {
+        if (showLoading) {
+          setReceptionCalendarReadStatus("loading");
+          setReceptionQueueReadStatus("loading");
+        }
 
-      const [calendarResult, queueResult] = await Promise.all([
-        loadReceptionCalendar({
-          actorId: authSession?.id,
-          date: operatingDate,
-          workspaceId,
-        }),
-        loadReceptionQueue({
-          actorId: authSession?.id,
-          date: operatingDate,
-          workspaceId,
-        }),
-      ]);
-
-      if (!isLatestRequest()) {
-        return { ok: false, stale: true };
-      }
-
-      const readbackRecords = getReceptionReadbackRecords({
-        calendarResult,
-        queueResult,
-      });
-      const embeddedLookupItems = getEmbeddedReadbackLookupItems(readbackRecords);
-
-      embeddedLookupItems.forEach(applyPatientGuardianLookupItem);
-
-      const currentPatients = usePatientProfileStore.getState().patients;
-      const knownPatientIds = new Set([
-        ...currentPatients.map((patient) => patient.id),
-        ...embeddedLookupItems.map((item) => item.patient.id),
-      ]);
-      const missingReadbackPatientIds = getReadbackPatientIds(
-        readbackRecords,
-      ).filter((patientId) => !knownPatientIds.has(patientId));
-
-      if (liveStaffSourceEnabled && missingReadbackPatientIds.length > 0) {
-        const profileResult = await loadReceptionPatientGuardianProfiles({
-          actorId: authSession?.id,
-          workspaceId,
-        });
+        const { calendarResult, queueResult } =
+          liveStaffSourceEnabled && shouldUseSupabaseAuth()
+            ? await loadReceptionSnapshot({
+                actorId: authSession?.id,
+                date: operatingDate,
+                workspaceId,
+              })
+            : await Promise.all([
+                loadReceptionCalendar({
+                  actorId: authSession?.id,
+                  date: operatingDate,
+                  workspaceId,
+                }),
+                loadReceptionQueue({
+                  actorId: authSession?.id,
+                  date: operatingDate,
+                  workspaceId,
+                }),
+              ]).then(([calendarResult, queueResult]) => ({
+                calendarResult,
+                queueResult,
+              }));
 
         if (!isLatestRequest()) {
           return { ok: false, stale: true };
         }
 
-        if (profileResult.ok) {
-          const missingPatientIds = new Set(missingReadbackPatientIds);
-          profileResult.patients
-            .filter((item) => missingPatientIds.has(item.patient.id))
-            .forEach(applyPatientGuardianLookupItem);
+        const readbackRecords = getReceptionReadbackRecords({
+          calendarResult,
+          queueResult,
+        });
+        const embeddedLookupItems = getEmbeddedReadbackLookupItems(readbackRecords);
+
+        embeddedLookupItems.forEach(applyPatientGuardianLookupItem);
+
+        const currentPatients = usePatientProfileStore.getState().patients;
+        const knownPatientIds = new Set([
+          ...currentPatients.map((patient) => patient.id),
+          ...embeddedLookupItems.map((item) => item.patient.id),
+        ]);
+        const missingReadbackPatientIds = getReadbackPatientIds(
+          readbackRecords,
+        ).filter((patientId) => !knownPatientIds.has(patientId));
+
+        if (liveStaffSourceEnabled && missingReadbackPatientIds.length > 0) {
+          const profileResult = await loadReceptionPatientGuardianProfiles({
+            actorId: authSession?.id,
+            workspaceId,
+          });
+
+          if (!isLatestRequest()) {
+            return { ok: false, stale: true };
+          }
+
+          if (profileResult.ok) {
+            const missingPatientIds = new Set(missingReadbackPatientIds);
+            profileResult.patients
+              .filter((item) => missingPatientIds.has(item.patient.id))
+              .forEach(applyPatientGuardianLookupItem);
+          }
         }
-      }
 
-      if (!calendarResult.ok) {
-        setReceptionCalendarReadStatus(
-          "error",
-          getReceptionReadFailureMessage(calendarResult, workspaceId),
-        );
-      } else {
-        applyPersistedReceptionCalendar(calendarResult.records);
-        setOperatingSchedule(calendarResult.operatingSchedule);
-      }
+        if (!calendarResult.ok) {
+          setReceptionCalendarReadStatus(
+            "error",
+            getReceptionReadFailureMessage(calendarResult, workspaceId),
+          );
+        } else {
+          applyPersistedReceptionCalendar(calendarResult.records);
+          setOperatingSchedule(calendarResult.operatingSchedule);
+        }
 
-      if (!queueResult.ok) {
-        setReceptionQueueReadStatus(
-          "error",
-          getReceptionReadFailureMessage(queueResult, workspaceId),
-        );
-      } else {
-        applyPersistedReceptionQueue(queueResult.queue, queueResult.summary);
-      }
+        if (!queueResult.ok) {
+          setReceptionQueueReadStatus(
+            "error",
+            getReceptionReadFailureMessage(queueResult, workspaceId),
+          );
+        } else {
+          applyPersistedReceptionQueue(queueResult.queue, queueResult.summary);
+        }
 
-      return { ok: calendarResult.ok && queueResult.ok };
+        return { ok: calendarResult.ok && queueResult.ok };
+      })();
+
+      receptionReadInFlightRef.current = {
+        key: refreshKey,
+        promise: refreshPromise,
+      };
+      void refreshPromise.then(
+        () => {
+          if (receptionReadInFlightRef.current?.promise === refreshPromise) {
+            receptionReadInFlightRef.current = null;
+          }
+        },
+        () => {
+          if (receptionReadInFlightRef.current?.promise === refreshPromise) {
+            receptionReadInFlightRef.current = null;
+          }
+        },
+      );
+
+      return refreshPromise;
     },
     [
       applyPatientGuardianLookupItem,
@@ -6658,13 +6757,16 @@ export function ReceptionContent() {
     if (!liveStaffSourceEnabled) return;
 
     const refresh = () => {
+      if (document.visibilityState !== "visible") return;
       void refreshReceptionReads();
     };
     window.addEventListener("focus", refresh);
-    const intervalId = window.setInterval(refresh, 9000);
+    document.addEventListener("visibilitychange", refresh);
+    const intervalId = window.setInterval(refresh, 60_000);
 
     return () => {
       window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
       window.clearInterval(intervalId);
     };
   }, [liveStaffSourceEnabled, refreshReceptionReads]);
