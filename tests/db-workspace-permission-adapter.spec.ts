@@ -10,6 +10,65 @@ import {
   type SupabaseWorkspacePermissionClient,
 } from "../src/features/auth/supabase-workspace-permission-gateway-core";
 
+test("permission adapter starts independent reads together after membership lookup", async () => {
+  const started: string[] = [];
+  let releaseReads = () => {};
+  const readGate = new Promise<void>((resolve) => {
+    releaseReads = resolve;
+  });
+
+  const waitForRelease = async (name: string) => {
+    started.push(name);
+    await readGate;
+  };
+
+  const loadPromise = loadWorkspacePermissionAdapterFromDb({
+    gateway: {
+      async listMemberships() {
+        return [
+          {
+            id: "membership-front-desk",
+            workspace_id: "clair-demo",
+            user_id: "user-front-desk",
+            roles: ["front_desk"],
+            status: "active",
+          },
+        ];
+      },
+      async listUsers() {
+        await waitForRelease("users");
+        return [{ id: "user-front-desk", status: "active" }];
+      },
+      async listPermissionPolicies() {
+        await waitForRelease("policies");
+        return [];
+      },
+      async listPermissionRoleAssignments() {
+        await waitForRelease("permission-roles");
+        return [];
+      },
+      async listJobPositionAssignments() {
+        await waitForRelease("job-positions");
+        return [];
+      },
+    },
+    workspaceId: "clair-demo",
+    sessionUserId: "user-front-desk",
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const readsStartedBeforeRelease = started.toSorted();
+  releaseReads();
+  await loadPromise;
+
+  expect(readsStartedBeforeRelease).toEqual([
+    "job-positions",
+    "permission-roles",
+    "policies",
+    "users",
+  ]);
+});
+
 test("DB-backed permission adapter maps membership and role policy rows into resolver input", async () => {
   const adapter = createWorkspacePermissionAdapterFromDbRows({
     now: "2026-05-18T00:00:00.000Z",

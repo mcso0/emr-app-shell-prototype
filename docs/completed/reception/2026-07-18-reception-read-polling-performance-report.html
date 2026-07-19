@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>접수 읽기 성능 개선 보고서</title>
+    <style>
+      :root { color-scheme: light; --ink: #171717; --muted: #666; --line: #dedede; --soft: #f6f6f4; --brand: #1c4f43; --brand-soft: #e7f2ee; --warn: #76520a; --warn-soft: #fff6d8; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #efefec; color: var(--ink); font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(960px, calc(100% - 32px)); margin: 32px auto; padding: 40px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 8px 30px rgb(0 0 0 / 5%); }
+      h1, h2, p { margin-top: 0; }
+      h1 { margin-bottom: 10px; font-size: clamp(28px, 4vw, 40px); line-height: 1.2; letter-spacing: -0.035em; }
+      h2 { margin: 34px 0 12px; font-size: 21px; }
+      p, li, td, th { font-size: 14px; line-height: 1.65; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { padding: 2px 5px; border-radius: 5px; background: var(--soft); overflow-wrap: anywhere; }
+      .eyebrow { margin-bottom: 8px; color: var(--brand); font-size: 13px; font-weight: 700; letter-spacing: .08em; }
+      .meta { color: var(--muted); }
+      .hero { margin-top: 26px; padding: 22px; border: 1px solid #b8d4ca; border-radius: 14px; background: linear-gradient(135deg, #f3faf7, var(--brand-soft)); }
+      .hero strong { display: block; margin-bottom: 8px; font-size: 20px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .card { padding: 18px; border: 1px solid var(--line); border-radius: 12px; }
+      .metric { margin-bottom: 6px; color: var(--brand); font-size: 27px; font-weight: 750; }
+      .card p { margin-bottom: 0; color: var(--muted); }
+      .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      th { background: var(--soft); font-size: 12px; }
+      tr:last-child td { border-bottom: 0; }
+      .callout { padding: 18px; border-left: 4px solid var(--brand); border-radius: 8px; background: var(--soft); }
+      .callout.warn { border-left-color: #d29b22; background: var(--warn-soft); color: var(--warn); }
+      footer { margin-top: 38px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+      @media (max-width: 720px) { main { width: 100%; margin: 0; padding: 24px 18px 32px; border: 0; border-radius: 0; } .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">RECEPTION-PERF-PR-001 · IMPLEMENTED</p>
+      <h1>접수 읽기 성능 개선 보고서</h1>
+      <p class="meta">2026-07-18 · 코드 구현 및 로컬 검증 완료 · 원격 staging 배포 전</p>
+
+      <section class="hero">
+        <strong>결론</strong>
+        <p>
+          접수 화면이 9초마다 큐와 캘린더를 따로 요청하던 구조를 줄였다. 실제 Supabase
+          환경에서는 한 번의 스냅샷 요청으로 두 데이터를 동시에 읽고, 사용자 권한도 한
+          번만 준비한다. 자동 확인 주기는 60초 fallback으로 낮추고 숨겨진 탭과 중복 요청을
+          차단했다.
+        </p>
+      </section>
+
+      <h2>무엇이 달라졌나</h2>
+      <div class="grid">
+        <article class="card"><div class="metric">2 → 1</div><p>접수 큐와 캘린더 HTTP 요청을 Supabase 환경에서 하나의 스냅샷 요청으로 통합</p></article>
+        <article class="card"><div class="metric">9초 → 60초</div><p>무조건 폴링을 가시 화면에서만 동작하는 fallback 확인으로 완화</p></article>
+        <article class="card"><div class="metric">4 병렬</div><p>멤버십 확인 뒤 사용자·정책·권한 역할·직책 조회를 동시에 시작</p></article>
+      </div>
+
+      <h2>사용자와 운영에 미치는 영향</h2>
+      <ul>
+        <li>접수 화면을 오래 열어둬도 아무 변화가 없을 때 발생하는 원격 DB 요청이 크게 줄어든다.</li>
+        <li>화면 포커스와 가시성 복귀 시에는 최신 데이터를 다시 확인한다.</li>
+        <li>같은 병원·날짜의 이전 요청이 진행 중이면 새 요청을 추가로 만들지 않는다.</li>
+        <li>권한, 워크스페이스 범위, 큐·캘린더 응답 형식, 데모 fallback은 유지한다.</li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>검증</th><th>결과</th><th>확인 내용</th></tr></thead>
+          <tbody>
+            <tr><td>성능·권한 집중 테스트</td><td>11 passed</td><td>스냅샷 병렬 읽기, 인증, mock fallback, 단일 권한 준비, 권한 후속 조회 병렬화</td></tr>
+            <tr><td>기존 큐·캘린더 서버 테스트</td><td>20 passed</td><td>기존 읽기·권한·알림 생산자 계약 유지</td></tr>
+            <tr><td>TypeScript / ESLint</td><td>통과</td><td>새 API·클라이언트·공통 권한 변경 타입 및 정적 검사</td></tr>
+            <tr><td>프로덕션 빌드</td><td>통과</td><td><code>/reception/snapshot</code> 동적 경로 포함</td></tr>
+            <tr><td>문서 링크 / 시크릿</td><td>통과</td><td>내부 문서 참조 및 민감정보 패턴 확인</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>남은 사항</h2>
+      <div class="callout warn">
+        <p>
+          이 결과는 아직 원격 staging에 배포되지 않았다. 배포 후 같은 12초·10분 관찰로
+          큐, 캘린더, 멤버십, 권한 정책 호출 증가량을 다시 측정해야 한다. Realtime 변경
+          알림, 단일 권한 스냅샷 RPC, 검사·조제 상태변경 최적화는 이번 범위에 포함하지 않았다.
+        </p>
+      </div>
+
+      <h2>알려진 별도 회귀</h2>
+      <p>
+        기존 접수 UI 날짜 테스트 4건은 현재 브랜치가 렌더하는 접근성 문구
+        <code>26년 5월 8일(금) 표시 중</code>과 테스트의 이전 기대값
+        <code>26.05.08 (금) 표시 중</code>이 달라 실패했다. 이번 성능 변경은 해당 문구를
+        수정하지 않았으며 별도 UI 회귀 정리가 필요하다.
+      </p>
+
+      <footer>합성/데모 경계만 사용했으며 DB 스키마, RLS, 원격 데이터는 변경하지 않았다.</footer>
+    </main>
+  </body>
+</html>
