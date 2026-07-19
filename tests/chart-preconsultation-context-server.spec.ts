@@ -164,6 +164,10 @@ test("preconsultation route and migration keep reads and mutations server-owned"
     "supabase/migrations/20260716054716_chart_preconsultation_context.sql",
     "utf8",
   );
+  const vitalComparisonMigration = readFileSync(
+    "supabase/migrations/20260719000000_chart_preconsultation_vital_comparison.sql",
+    "utf8",
+  );
 
   expect(routeSource).toContain("readServerSession");
   expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
@@ -178,9 +182,18 @@ test("preconsultation route and migration keep reads and mutations server-owned"
   expect(migration).toContain("clair_call_consultation_queue_internal");
   expect(migration).toContain("clair_return_consultation_to_waiting_internal");
   expect(migration).toContain("grant execute on function public.clair_get_chart_preconsultation_context");
+  expect(vitalComparisonMigration).toContain("with current_vital as");
+  expect(vitalComparisonMigration).toContain("previous_encounter as");
+  expect(vitalComparisonMigration).toContain("previous_vital as");
+  expect(vitalComparisonMigration).toContain("vm.encounter_id = e.id");
+  expect(vitalComparisonMigration).toContain("prior.checked_in_at < e.checked_in_at");
+  expect(vitalComparisonMigration).toContain("order by prior.checked_in_at desc");
+  expect(vitalComparisonMigration).toContain("grant execute on function public.clair_get_chart_preconsultation_context");
+  expect(vitalComparisonMigration).not.toMatch(/vital_encounter\.checked_in_at <= e\.checked_in_at[\s\S]*limit 2/);
   expect(`${routeSource}\n${serverSource}\n${migration}`).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET/i,
   );
+  expect(vitalComparisonMigration).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
 });
 
 function createPermissionAdapter(permissionIds: PermissionId[]) {

@@ -525,6 +525,15 @@ test("chart consultation CTA moves from call to start before chart completion", 
       },
       {
         id: "vital-choco-previous",
+        encounterId,
+        measuredAt: "2026-06-25T14:16:00+09:00",
+        weightKg: 4.78,
+        temperatureC: 38.65,
+        respiratoryRateRpm: 23,
+        bloodPressureSystolicMmhg: 130,
+      },
+      {
+        id: "vital-choco-prior-encounter",
         encounterId: "encounter-choco-previous",
         measuredAt: "2026-05-09T10:00:00+09:00",
         weightKg: 4.76,
@@ -732,20 +741,81 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(lockedState).toContainText("바이탈 정보");
   await expect(lockedState).toContainText("호흡수");
   await expect(lockedState).toContainText("4.82 kg");
+  await expect(lockedState).toContainText("4.76 kg");
+  await expect(lockedState).not.toContainText("4.78 kg");
+  await expect(lockedState).not.toContainText("오늘 · 14:20");
   await expect(lockedState).toContainText("과거 진료이력");
   await expect(lockedState.getByLabel("환자 요약")).toHaveCount(0);
+  await expect(
+    lockedState.locator(
+      'section[aria-labelledby="preconsultation-visit-purpose"] > div',
+    ),
+  ).toHaveCSS("background-color", "rgb(250, 250, 250)");
+  const vitalHeaders = lockedState.getByRole("columnheader");
+  await expect(vitalHeaders).toHaveCount(5);
+  for (let index = 0; index < 5; index += 1) {
+    await expect(vitalHeaders.nth(index)).toHaveCSS(
+      "background-color",
+      "rgb(250, 250, 250)",
+    );
+  }
+  const vitalTable = lockedState.getByLabel(
+    "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
+  );
+  await expect(vitalTable).not.toContainText("현재");
+  const currentVitalDateCell = vitalTable.locator("tbody tr").first().locator("th");
+  await expect(currentVitalDateCell.getByText("오늘", { exact: true })).toBeVisible();
+  await expect(currentVitalDateCell.getByText("(26.06.25)", { exact: true })).toBeVisible();
+  await expect(currentVitalDateCell).toHaveCSS("height", "56px");
+  await expect(currentVitalDateCell).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(currentVitalDateCell).toHaveCSS("border-top-color", "rgb(229, 229, 229)");
+  await expect(currentVitalDateCell.getByText("오늘", { exact: true })).toHaveCSS(
+    "color",
+    "rgb(38, 38, 38)",
+  );
+  await expect(currentVitalDateCell.getByText("(26.06.25)", { exact: true })).toHaveCSS(
+    "color",
+    "rgb(115, 115, 115)",
+  );
   const animalPatientAvatar = lockedState.getByTestId("animal-patient-avatar");
   await expect(animalPatientAvatar).toHaveAttribute(
     "data-avatar-state",
     "fallback",
   );
   await expect(animalPatientAvatar).toHaveCSS("border-top-left-radius", "12px");
+  await expect(animalPatientAvatar).toHaveCSS(
+    "border-top-color",
+    "rgb(212, 212, 212)",
+  );
   await expect(
     animalPatientAvatar.locator("[data-slot=avatar-fallback]"),
   ).toHaveCSS("border-top-left-radius", "12px");
   await expect(
     animalPatientAvatar.locator("[data-slot=avatar-fallback]"),
   ).toHaveCSS("background-color", "rgb(250, 250, 250)");
+  const patientHeading = lockedState.getByRole("heading", {
+    level: 1,
+    name: "초코",
+  });
+  await expect(patientHeading).toHaveCSS("font-size", "28px");
+  await expect(patientHeading).toHaveCSS("font-weight", "700");
+  await expect(patientHeading).toHaveCSS("line-height", "38px");
+  await expect(patientHeading).toHaveCSS("color", "rgb(23, 23, 23)");
+  const patientHeaderRow = patientHeading.locator("xpath=..");
+  await expect(
+    patientHeaderRow.getByText("보호자", { exact: true }),
+  ).toHaveCSS("color", "rgb(163, 163, 163)");
+  await expect(
+    patientHeaderRow.getByText("최도현", { exact: true }),
+  ).toHaveCSS("color", "rgb(23, 23, 23)");
+  const patientMetadata = patientHeading.locator("xpath=../../p");
+  await expect(patientMetadata).toHaveCSS("column-gap", "4px");
+  await expect(
+    patientMetadata.getByText("Pomeranian", { exact: true }),
+  ).toHaveCSS("color", "rgb(115, 115, 115)");
+  await expect(
+    patientMetadata.getByText("·", { exact: true }).first(),
+  ).toHaveCSS("color", "rgb(163, 163, 163)");
   await expect(lockedState.getByRole("heading", { level: 2 })).toHaveText([
     "접수 정보",
     "방문 목적",
@@ -767,6 +837,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
   }
   const historySection = lockedState.getByTestId("preconsultation-history");
   const historyTimeline = historySection.getByTestId("preconsultation-history-timeline");
+  await expect(historySection).toHaveCSS("row-gap", "16px");
   await expect(historySection).toContainText("2026년 05월 09일");
   await expect(historySection).toContainText("10:00:00");
   await expect(historySection).toContainText("약 복용 후 재진");
@@ -779,10 +850,27 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(historySection).not.toContainText("완료");
   await expect(historyTimeline).toHaveClass(/px-6/);
   await expect(historyTimeline).not.toHaveClass(/border-t/);
+  await expect(historyTimeline).toHaveCSS("row-gap", "12px");
+  await expect(historyTimeline).toHaveCSS("padding-top", "4px");
+  await expect(historyTimeline).toHaveCSS("padding-left", "24px");
   const historyGroups = historyTimeline.locator(":scope > li");
   await expect(historyGroups).toHaveCount(2);
-  await expect(historyGroups.nth(0).locator(":scope > ol > li")).toHaveCount(2);
-  await expect(historyGroups.nth(1).locator(":scope > ol > li")).toHaveCount(1);
+  await expect(historyGroups.nth(0)).toHaveCSS("column-gap", "8px");
+  const firstHistoryTimeContainer = historyGroups.nth(0).locator(":scope > div").first();
+  await expect(firstHistoryTimeContainer).toHaveCSS("width", "19px");
+  await expect(firstHistoryTimeContainer).toHaveCSS("row-gap", "8px");
+  const firstHistoryContent = historyGroups.nth(0).locator(":scope > div").nth(1);
+  await expect(firstHistoryContent).toHaveCSS("row-gap", "8px");
+  const firstHistoryDetails = firstHistoryContent.locator(":scope > ol");
+  await expect(firstHistoryDetails).toHaveCSS("row-gap", "8px");
+  await expect(firstHistoryDetails.locator(":scope > li")).toHaveCount(2);
+  const firstHistoryCard = firstHistoryDetails.locator(":scope > li").first();
+  await expect(firstHistoryCard).toHaveCSS("height", "56px");
+  await expect(firstHistoryCard).toHaveCSS("column-gap", "12px");
+  await expect(firstHistoryCard).toHaveCSS("padding-left", "16px");
+  await expect(
+    historyGroups.nth(1).locator(":scope > div").nth(1).locator(":scope > ol > li"),
+  ).toHaveCount(1);
   await expect(page.getByTestId("chart-soap-diagnosis-grid")).toHaveCount(0);
   await page
     .getByTestId("chart-start-locked-state")

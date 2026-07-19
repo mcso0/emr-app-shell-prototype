@@ -327,6 +327,11 @@ function PatientIdentity({
     <div className="flex min-w-0 items-center gap-4 sm:gap-6">
       <AnimalPatientAvatar
         alt={`${context.patient.name} 동물 환자 프로필`}
+        className={
+          size === "large"
+            ? "sm:!border-[var(--clair-color-atomic-neutral-300)]"
+            : undefined
+        }
         size={size === "large" ? "lg" : "md"}
       />
       <div className="min-w-0">
@@ -335,24 +340,55 @@ function PatientIdentity({
             id={size === "large" ? "preconsultation-patient-heading" : undefined}
             className={cn(
               "font-semibold tracking-[-0.025em] text-[var(--emr-text-primary)]",
-              size === "large" ? "text-[21px] leading-7 sm:text-2xl sm:leading-8" : "text-lg leading-6",
+              size === "large"
+                ? "text-[21px] leading-7 sm:text-[28px] sm:font-bold sm:leading-[38px] sm:tracking-[-0.024em] sm:text-[var(--clair-color-atomic-neutral-900)]"
+                : "text-lg leading-6",
             )}
           >
             {context.patient.name}
           </h1>
-          <span className="text-base leading-6 text-[var(--emr-text-placeholder)] sm:text-2xl sm:leading-8">
+          <span
+            className={cn(
+              "text-base leading-6 text-[var(--emr-text-placeholder)] sm:text-2xl sm:leading-8",
+              size === "large" && "sm:font-bold sm:tracking-[-0.023em] sm:text-[var(--clair-color-atomic-neutral-400)]",
+            )}
+          >
             /
           </span>
-          <p className="text-sm font-semibold leading-5 text-[var(--emr-text-placeholder)] sm:text-2xl sm:leading-8">
-            보호자{" "}
-            <span className="font-semibold text-[var(--emr-text-secondary)]">
+          <p
+            className={cn(
+              "inline-flex items-baseline gap-2 text-sm font-semibold leading-5 text-[var(--emr-text-placeholder)] sm:text-2xl sm:leading-8",
+              size === "large" && "sm:font-bold sm:tracking-[-0.023em] sm:text-[var(--clair-color-atomic-neutral-400)]",
+            )}
+          >
+            <span>보호자</span>
+            <span className="sr-only"> </span>
+            <span
+              className={cn(
+                "font-semibold text-[var(--emr-text-secondary)]",
+                size === "large" && "sm:font-bold sm:text-[var(--clair-color-atomic-neutral-900)]",
+              )}
+            >
               {context.guardian?.name ?? "미지정"}
             </span>
           </p>
         </div>
-        <p className="mt-1 text-sm text-[var(--emr-text-tertiary)] sm:mt-3 sm:text-lg sm:leading-[26px]">
-          {metadata.join(" · ")}
-        </p>
+        {size === "large" ? (
+          <p className="mt-1 flex flex-wrap items-baseline gap-x-1 gap-y-0 text-sm text-[var(--emr-text-tertiary)] sm:mt-3 sm:text-lg sm:leading-[26px]">
+            {metadata.map((item, index) => (
+              <span key={`${item}-${index}`} className="inline-flex items-baseline gap-1">
+                {index > 0 ? (
+                  <span className="sm:text-[var(--clair-color-atomic-neutral-400)]">·</span>
+                ) : null}
+                <span className="sm:text-[var(--clair-color-atomic-neutral-500)]">{item}</span>
+              </span>
+            ))}
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-[var(--emr-text-tertiary)] sm:mt-3 sm:text-lg sm:leading-[26px]">
+            {metadata.join(" · ")}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -365,7 +401,7 @@ function VisitPurpose({ context }: { context: ChartPreconsultationContext }) {
       <SectionTitle id="preconsultation-visit-purpose" icon={<CdsMedicalClipboardCheckIcon />}>
         방문 목적
       </SectionTitle>
-      <div className="flex min-h-14 min-w-0 items-center rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-3 sm:px-6 sm:py-4">
+      <div className="flex min-h-14 min-w-0 items-center rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-3 sm:px-6 sm:py-4">
         <p className="min-w-0 text-[15px] font-medium leading-6 tracking-[0.006em]">
           {purpose ?? "방문 목적 미입력"}
         </p>
@@ -500,21 +536,27 @@ function MemoCard({
 }
 
 function VitalSection({ context }: { context: ChartPreconsultationContext }) {
-  const current = context.vitals[0];
-  const previous = context.vitals[1];
+  const current = context.vitals.find(
+    (measurement) => measurement.encounterId === context.encounter.id,
+  );
+  const previous = current
+    ? context.vitals.find(
+        (measurement) => measurement.encounterId !== context.encounter.id,
+      )
+    : undefined;
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-labelledby="preconsultation-vitals">
       <SectionTitle id="preconsultation-vitals" icon={<CdsMedicalActivityIcon />}>
         바이탈 정보
       </SectionTitle>
       {current ? (
-        <VitalComparison current={current} previous={previous} encounterAt={context.encounter.checkedInAt} />
+        <VitalComparison current={current} previous={previous} />
       ) : (
         <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
           <CdsMedicalActivityIcon className="size-6 shrink-0 text-[var(--emr-text-placeholder)]" aria-hidden="true" />
           <div>
-            <strong className="block text-[var(--emr-text-secondary)]">기록된 바이탈이 없어요</strong>
-            <p className="mt-0.5 text-xs">접수에서 측정하면 현재 값과 이전 값이 여기에 표시돼요.</p>
+            <strong className="block text-[var(--emr-text-secondary)]">오늘 기록된 바이탈이 없어요</strong>
+            <p className="mt-0.5 text-xs">오늘 접수에서 측정하면 직전 방문 값과 비교해요.</p>
           </div>
         </div>
       )}
@@ -581,11 +623,9 @@ const vitalDefinitions: VitalDefinition[] = [
 
 function VitalComparison({
   current,
-  encounterAt,
   previous,
 }: {
   current: ChartPreconsultationVitalMeasurement;
-  encounterAt: string;
   previous?: ChartPreconsultationVitalMeasurement;
 }) {
   return (
@@ -595,7 +635,7 @@ function VitalComparison({
       aria-label="환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다"
     >
       <table className="w-full min-w-[860px] table-fixed border-separate border-spacing-0">
-        <caption className="sr-only">현재 및 이전 환자 바이탈 비교</caption>
+        <caption className="sr-only">오늘 및 직전 방문 바이탈 비교</caption>
         <thead>
           <tr>
             <VitalHeaderCell icon={<CdsFilesCalendarIcon />}>일자</VitalHeaderCell>
@@ -609,13 +649,11 @@ function VitalComparison({
         <tbody>
           <VitalRow
             current
-            encounterAt={encounterAt}
             measurement={current}
             previous={previous}
           />
           {previous ? (
             <VitalRow
-              encounterAt={encounterAt}
               measurement={previous}
             />
           ) : null}
@@ -627,7 +665,7 @@ function VitalComparison({
 
 function VitalHeaderCell({ children, icon }: { children: ReactNode; icon: ReactNode }) {
   return (
-    <th className="h-11 border-r border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-5 py-2.5 text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0 first:pl-6">
+    <th className="h-11 border-r border-b border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-neutral-50)] px-5 py-2.5 text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0 first:pl-6">
       <span className="inline-flex items-center gap-1.5 [&_svg]:size-3.5">{icon}{children}</span>
     </th>
   );
@@ -635,24 +673,23 @@ function VitalHeaderCell({ children, icon }: { children: ReactNode; icon: ReactN
 
 function VitalRow({
   current = false,
-  encounterAt,
   measurement,
   previous,
 }: {
   current?: boolean;
-  encounterAt: string;
   measurement: ChartPreconsultationVitalMeasurement;
   previous?: ChartPreconsultationVitalMeasurement;
 }) {
-  const dateLabel = current && sameDate(measurement.measuredAt, encounterAt)
-    ? `오늘 · ${formatTime(measurement.measuredAt)}`
-    : formatFullDate(measurement.measuredAt);
+  const dateLabel = current ? "오늘" : formatFullDate(measurement.measuredAt);
+  const dateDetail = current ? `(${formatShortDate(measurement.measuredAt)})` : null;
 
   return (
     <tr>
-      <th className="h-[54px] border-r border-b border-[var(--emr-line-hairline)] px-5 py-3 text-left text-[15px] font-medium last:border-b-0 first:pl-6">
-        <span>{dateLabel}</span>
-        {current ? <span className="ml-1.5 text-xs text-[var(--emr-status-info-text)]">현재</span> : null}
+      <th className="h-14 border-r border-b border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] px-6 py-0 text-left text-[15px] font-medium tracking-[0.006em] text-[var(--clair-color-atomic-neutral-800)] last:border-b-0 first:pl-6">
+        <span className="inline-flex items-center gap-0.5 whitespace-nowrap">
+          <span>{dateLabel}</span>
+          {dateDetail ? <span className="text-[var(--clair-color-atomic-neutral-500)]">{dateDetail}</span> : null}
+        </span>
       </th>
       {vitalDefinitions.map((vital) => {
         const delta = current && previous ? vital.delta(measurement, previous) : null;
@@ -660,7 +697,7 @@ function VitalRow({
         return (
           <td
             key={vital.key}
-            className="h-[54px] border-r border-b border-[var(--emr-line-hairline)] px-5 py-3 text-[15px] font-medium last:border-r-0"
+            className="h-14 border-r border-b border-[var(--clair-color-atomic-neutral-200)] px-6 py-0 text-[15px] font-medium last:border-r-0"
           >
             <div className="flex items-center justify-between gap-2">
               <span>{vital.format(measurement)}</span>
@@ -738,37 +775,46 @@ function HistoryTimeline({
 
   return (
     <ol
-      className="flex min-w-0 flex-col gap-4 px-6 py-2"
+      className="flex min-w-0 flex-col gap-3 px-6 py-1"
       aria-label="과거 진료 이력"
       data-testid="preconsultation-history-timeline"
     >
       {groups.map((group) => (
-        <li key={group.date} className="flex min-w-0 flex-col gap-2">
-          <div className="flex items-center gap-1.5 text-[15px] font-semibold leading-6 text-[var(--emr-text-tertiary)]">
-            <CdsFilesCalendarIcon className="size-4 shrink-0" aria-hidden="true" />
-            {group.date}
+        <li key={group.date} className="flex min-w-0 gap-2">
+          <div className="flex w-[19px] shrink-0 flex-col items-center gap-2">
+            <div className="flex h-6 items-center">
+              <CdsFilesCalendarIcon className="size-4 shrink-0" aria-hidden="true" />
+            </div>
+            <div className="flex min-h-px flex-1 justify-center px-2">
+              <div className="w-px bg-[var(--clair-color-atomic-neutral-300)]" />
+            </div>
           </div>
-          <ol className="ml-2 flex min-w-0 flex-col gap-3 border-l border-[var(--emr-line-hairline)] pl-[14px]">
-            {group.entries.map((entry) => {
-              const summary = entry.visitPurpose ?? entry.chiefComplaint ?? entry.primaryDiagnosis ?? "진료 요약 미입력";
-              return (
-                <li
-                  key={entry.encounterId}
-                  className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4"
-                >
-                  <Badge
-                    className="h-[22px] w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-[rgba(0,0,0,0.08)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
-                    variant="outline"
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex h-6 items-center text-[15px] font-semibold leading-6 text-[var(--emr-text-tertiary)]">
+              {group.date}
+            </div>
+            <ol className="flex min-w-0 flex-col gap-2">
+              {group.entries.map((entry) => {
+                const summary = entry.visitPurpose ?? entry.chiefComplaint ?? entry.primaryDiagnosis ?? "진료 요약 미입력";
+                return (
+                  <li
+                    key={entry.encounterId}
+                    className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4"
                   >
-                    {formatHistoryTime(entry.checkedInAt)}
-                  </Badge>
-                  <span className="min-w-0 truncate text-base font-medium leading-6">
-                    {summary}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
+                    <Badge
+                      className="h-[22px] w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-[rgba(0,0,0,0.08)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
+                      variant="outline"
+                    >
+                      {formatHistoryTime(entry.checkedInAt)}
+                    </Badge>
+                    <span className="min-w-0 truncate text-base font-medium leading-6">
+                      {summary}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </li>
       ))}
     </ol>
@@ -924,6 +970,19 @@ function formatFullDate(value: string) {
   return `${parts.find((part) => part.type === "year")?.value}.${parts.find((part) => part.type === "month")?.value}.${parts.find((part) => part.type === "day")?.value}`;
 }
 
+function formatShortDate(value: string) {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).formatToParts(new Date(value));
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  return `${year}.${month}.${day}`;
+}
+
 function groupHistoryEntries(
   entries: ChartPreconsultationHistoryEntry[],
 ) {
@@ -953,11 +1012,6 @@ function formatHistoryDate(value: string) {
   const month = parts.find((part) => part.type === "month")?.value;
   const day = parts.find((part) => part.type === "day")?.value;
   return `${year}년 ${month}월 ${day}일`;
-}
-
-function sameDate(a: string, b: string) {
-  const formatter = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Seoul" });
-  return formatter.format(new Date(a)) === formatter.format(new Date(b));
 }
 
 function formatOptionalNumber(value: number | undefined, unit: string, precision: number) {
