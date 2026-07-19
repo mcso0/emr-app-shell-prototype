@@ -43,7 +43,7 @@ Replace the legacy pre-call chart lock surface with the approved veterinarian-or
 - `encounters` remains the current visit source for purpose, complaint, reception memo, veterinarian, and check-in time.
 - `waiting_queue_entries` remains the call-state source.
 - `patients`, `guardians`, and `patient_guardians` remain identity/relationship sources.
-- `patient_vital_measurements` supplies the latest current/prior measurements.
+- `patient_vital_measurements` supplies the selected encounter's latest measurement and the latest measurement from its immediately preceding non-cancelled encounter; a missing measurement remains explicit rather than falling back to an older visit.
 - `soap_notes` and `diagnoses` enrich prior encounter summaries when records exist.
 - `clair_get_chart_preconsultation_context` is the only new read boundary; it requires active membership and `chart:view`.
 

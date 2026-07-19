@@ -338,6 +338,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CHART-PR-010                | implemented  | chart                | P1       | Browser Comment 1 / retire chart patient information panel | `docs/work/chart/CHART-PR-010-retire-patient-information-panel.md` |
 | CHART-PR-012                | done         | chart                | P0       | User request / live preconsultation context | `docs/work/chart/CHART-PR-012-preconsultation-live-integration.md` |
 | CHART-PR-013                | implemented  | chart                | P0       | User request / Figma-exact preconsultation implementation | `docs/work/chart/CHART-PR-013-preconsultation-figma-alignment.md` |
+| CHART-PR-014                | implemented  | chart                | P1       | Browser comment / current and immediate-prior vital comparison | `docs/work/chart/CHART-PR-014-preconsultation-vital-current-prior-comparison.md` |
 | LAB-PR-001                  | done         | lab                  | P1       | PR 1                 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md`                                               |
 | IMAGING-PR-001              | done         | imaging              | P1       | PR 1                 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md`                                            |
 | HOSPITAL-ADMIN-PR-001       | done         | hospital-admin       | P1       | PR 1                 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md`                           |
