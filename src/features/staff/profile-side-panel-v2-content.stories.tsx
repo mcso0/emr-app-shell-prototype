@@ -73,7 +73,7 @@ async function openMenu(trigger: HTMLElement) {
   await new Promise((resolve) => window.setTimeout(resolve, 0));
 }
 
-function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" | "work" }) {
+function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" | "work" | "schedule" }) {
   return (
     <section
       aria-label="직원 운영 프로필 Storybook 예시"
@@ -111,11 +111,12 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
           </div>
           <TabsList
             aria-label="직원 프로필 탭"
-            className="absolute bottom-0 left-4 right-4 h-[34px] w-auto"
+            className="absolute bottom-0 left-4 h-[34px] w-[175px] gap-2 p-0"
             variant="line"
           >
-            <TabsTrigger value="profile">프로필</TabsTrigger>
-            <TabsTrigger value="work">업무 현황</TabsTrigger>
+            <TabsTrigger className="h-7 w-[53px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="profile">프로필</TabsTrigger>
+            <TabsTrigger className="h-7 w-[65px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="work">업무현황</TabsTrigger>
+            <TabsTrigger className="h-7 w-[41px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="schedule">일정</TabsTrigger>
           </TabsList>
         </header>
 
@@ -139,11 +140,16 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
                 <Button size="xs" variant="outline" className="w-[66px] px-0 text-xs">일정 확인</Button>
               </div>
             </section>
-            <ProfileAvailabilitySummary
-              state="ready"
-              eventLabel="7월 18일 휴무"
-              returnLabel="7월 20일 복귀"
-            />
+            <section className="px-2">
+              <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">다가오는 부재와 다음 복귀</h3>
+              <div className="mt-2.5">
+                <ProfileAvailabilitySummary
+                  state="ready"
+                  eventLabel="7월 18일 휴무"
+                  returnLabel="7월 20일 복귀"
+                />
+              </div>
+            </section>
           </div>
         </TabsContent>
         <TabsContent value="work" className="min-h-0 overflow-y-auto p-4">
@@ -152,6 +158,15 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
             state="ready"
             onRequestNavigation={() => undefined}
           />
+        </TabsContent>
+        <TabsContent value="schedule" className="min-h-0 overflow-y-auto p-4">
+          <section className="px-2">
+            <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">일정</h3>
+            <div className="mt-3 flex min-h-[72px] items-center justify-between gap-3 rounded-xl border px-4 text-sm text-[var(--emr-text-tertiary)]">
+              근무 일정은 일정 화면에서 확인할 수 있어요
+              <Button size="xs" variant="outline" className="w-[66px] shrink-0 px-0 text-xs">일정 확인</Button>
+            </div>
+          </section>
         </TabsContent>
       </Tabs>
     </section>
@@ -162,7 +177,7 @@ export const FullPanelProfileSpecimen: Story = {
   render: () => <FullPanelSpecimen />,
 };
 
-export const FullPanelTwoTabContract: Story = {
+export const FullPanelThreeTabFigmaContract: Story = {
   render: () => <FullPanelSpecimen />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -171,12 +186,14 @@ export const FullPanelTwoTabContract: Story = {
     const header = panel.querySelector("header");
     const tabs = canvas.getAllByRole("tab");
 
-    expect(tabs).toHaveLength(2);
+    expect(tabs).toHaveLength(3);
     expect(getComputedStyle(panel).width).toBe("380px");
     expect(header ? getComputedStyle(header).height : "").toBe("150px");
     expect(avatar ? getComputedStyle(avatar).width : "").toBe("84px");
-    await userEvent.click(canvas.getByRole("tab", { name: "업무 현황" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "업무현황" }));
     expect(canvas.getByRole("heading", { name: "합성 업무 항목" })).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("tab", { name: "일정" }));
+    expect(canvas.getByRole("heading", { name: "일정" })).toBeInTheDocument();
   },
 };
 

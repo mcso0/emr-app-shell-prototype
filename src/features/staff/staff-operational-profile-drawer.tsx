@@ -109,7 +109,7 @@ export function StaffOperationalProfilePanel({
 }) {
   const router = useRouter();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const [activeTab, setActiveTab] = useState<"profile" | "work">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "work" | "schedule">("profile");
   const [loadResult, setLoadResult] = useState<{
     key: string;
     response: Extract<StaffOperationalProfileResponse, { ok: true }> | null;
@@ -396,7 +396,7 @@ export function StaffOperationalProfilePanel({
         value={activeTab}
         className="h-full min-h-0 gap-0"
         onValueChange={(value) => {
-          const nextTab = value === "work" ? "work" : "profile";
+          const nextTab = value === "work" ? "work" : value === "schedule" ? "schedule" : "profile";
           setActiveTab(nextTab);
           if (nextTab === "work" && workRead.state === "idle") {
             void loadWorkPage(null, false);
@@ -459,11 +459,12 @@ export function StaffOperationalProfilePanel({
           <TabsList
             activateOnFocus
             aria-label="직원 프로필 탭"
-            className="absolute bottom-0 left-4 right-4 h-[34px] w-auto"
+            className="absolute bottom-0 left-4 h-[34px] w-[175px] gap-2 p-0"
             variant="line"
           >
-            <Tab value="profile">프로필</Tab>
-            <Tab value="work">업무 현황</Tab>
+            <Tab className="h-7 w-[53px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="profile">프로필</Tab>
+            <Tab className="h-7 w-[65px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="work">업무현황</Tab>
+            <Tab className="h-7 w-[41px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="schedule">일정</Tab>
           </TabsList>
         </header>
 
@@ -501,7 +502,7 @@ export function StaffOperationalProfilePanel({
                 shift={response.shift}
                 todayDate={todayDate}
               />
-              <section aria-labelledby="staff-availability-heading">
+              <section aria-labelledby="staff-availability-heading" className="px-2">
                 <SectionTitle id="staff-availability-heading">
                   다가오는 부재와 다음 복귀
                 </SectionTitle>
@@ -546,6 +547,16 @@ export function StaffOperationalProfilePanel({
             onRetry={() => void loadWorkPage(null, false)}
             onRetryNextPage={() =>
               void loadWorkPage(workRead.nextCursor, true)
+            }
+          />
+        </TabPanel>
+
+        <TabPanel className="min-h-0 overflow-y-auto p-4" value="schedule">
+          <ScheduleNavigationSection
+            onOpenSchedule={
+              response?.capabilities.scheduleHref
+                ? () => navigate(response.capabilities.scheduleHref)
+                : undefined
             }
           />
         </TabPanel>
@@ -805,6 +816,37 @@ function TodayShiftSection({
             오늘 게시된 근무가 없어요
           </p>
         )}
+      </div>
+    </section>
+  );
+}
+
+
+function ScheduleNavigationSection({
+  onOpenSchedule,
+}: {
+  onOpenSchedule?: () => void;
+}) {
+  return (
+    <section aria-labelledby="staff-schedule-heading" className="px-2">
+      <SectionTitle id="staff-schedule-heading">일정</SectionTitle>
+      <div className="mt-3 flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4">
+        <p className="text-sm text-[var(--emr-text-tertiary)]">
+          {onOpenSchedule
+            ? "근무 일정은 일정 화면에서 확인할 수 있어요"
+            : "표시할 일정이 없어요"}
+        </p>
+        {onOpenSchedule ? (
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            className="w-[66px] shrink-0 px-0 text-xs"
+            onClick={onOpenSchedule}
+          >
+            일정 확인
+          </Button>
+        ) : null}
       </div>
     </section>
   );

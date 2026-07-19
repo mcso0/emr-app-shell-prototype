@@ -14,7 +14,7 @@ tags:
   - workspace-membership
   - fulfillment
 created: 2026-07-14
-last_updated: 2026-07-16
+last_updated: 2026-07-18
 ---
 
 # Staff Operational Profile Side Panel V2
@@ -23,7 +23,7 @@ last_updated: 2026-07-16
 
 The staff operational profile is a detached, non-modal workspace side panel. V2
 replaces the 336px read-only panel and disabled placeholder tabs with the
-approved Figma contract and exactly two usable tabs: `프로필` and `업무 현황`.
+approved Figma contract and three usable tabs: `프로필`, `업무현황`, and `일정`.
 
 The panel may summarize only verified workspace data. It must not manufacture
 runtime profile, schedule, availability, presence, or work-item values when a
@@ -47,30 +47,32 @@ The visible order is:
 
 1. header: avatar, Presence, name, editable-or-read-only status message, and
    member-management menu when permitted
-2. tabs: `프로필`, `업무 현황`
+2. tabs: `프로필`, `업무현황`, `일정`
 3. profile account information: role, department, email, phone
 4. today's published/changed shift
 5. next availability event within 14 days and the following return-to-work date
+6. schedule tab: a safe navigation affordance to the existing authorized
+   schedule destination, if present
 
 Do not show private schedule notes, absence reasons, internal IDs, auth/session
 metadata, or inferred clinical competence.
 
 ## Layout Contract
 
-| Area | Contract |
-| --- | --- |
-| desktop panel | width `380px`, content gap `10px`, independent right-side layout column |
-| mobile/narrow | full viewport width and height, no backdrop, no modal focus trap, no background `inert` |
-| panel surface | workspace side-panel semantic surface, 1px semantic border, 12px radius on desktop, shell-owned shadow |
-| header | height `150px`, 16px horizontal padding, bottom border |
-| avatar | `84px` square, 6px radius, cover crop; compose locally instead of adding a global Avatar size |
-| presence | `20px` badge with dot and text for online, offline, or unknown |
-| status message | `28px` high; default/hover max width `217px`; input/result width `217px` |
-| tabs | exactly two Base UI tabs using the shared line variant |
-| content | 16px horizontal padding, internal vertical scroll, section spacing from approved design tokens |
-| avatar action menu | `180px` wide; upload group, separator, remove group |
-| header action menu | `196px` wide; permission-gated member-management entries |
-| upload dialog | `382px` wide shell, `350px` content square, `64px` footer |
+| Area               | Contract                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| desktop panel      | width `380px`, content gap `10px`, independent right-side layout column                                                              |
+| mobile/narrow      | full viewport width and height, no backdrop, no modal focus trap, no background `inert`                                              |
+| panel surface      | workspace side-panel semantic surface, 1px semantic border, 12px radius on desktop, shell-owned shadow                               |
+| header             | height `150px`, 16px horizontal padding, bottom border                                                                               |
+| avatar             | `84px` square, 6px radius, cover crop; compose locally instead of adding a global Avatar size                                        |
+| presence           | `20px` badge with dot and text for online, offline, or unknown                                                                       |
+| status message     | `28px` high; default/hover max width `217px`; input/result width `217px`                                                             |
+| tabs               | three Base UI line tabs: 53px `프로필`, 65px `업무현황`, and 41px `일정`, with 8px gaps, 34px group height, and 1px active underline |
+| content            | 16px horizontal padding, internal vertical scroll, section spacing from approved design tokens                                       |
+| avatar action menu | `180px` wide; upload group, separator, remove group                                                                                  |
+| header action menu | `196px` wide; permission-gated member-management entries                                                                             |
+| upload dialog      | `382px` wide shell, `350px` content square, `64px` footer                                                                            |
 
 Use existing `--clair-*` tokens and semantic `--emr-*` aliases. Profile-specific
 aliases, when needed, belong in `emr-foundation.css`; never edit generated
@@ -172,6 +174,13 @@ date from the same published/changed schedule source. Show only safe date/type
 summaries; never expose notes or reasons. Distinguish loading, no upcoming
 event, partial read failure, and confirmed data.
 
+### Schedule Tab
+
+The schedule tab does not create a second schedule data model. It only exposes
+the existing server-derived `scheduleHref` navigation affordance. When that
+destination is unavailable, show a neutral empty state; do not infer a missing
+permission, schedule, or absence event.
+
 ## Work Status Tab
 
 The tab reads actual fulfillment work items assigned to the target member.
@@ -239,7 +248,8 @@ DELETE /api/users/me/avatar
 ## Forbidden Patterns
 
 - modal Sheet, backdrop, blur, focus trap, or background inert
-- any tab beyond `프로필` and `업무 현황`
+- a schedule tab that reads, invents, or exposes schedule data beyond the
+  existing authorized `scheduleHref` destination
 - runtime dummy/fallback profile, availability, Presence, or work-item data
 - DB `is_online` or Auth session-based online inference
 - public avatar bucket or trusting a client object path
