@@ -649,11 +649,13 @@ function VitalComparison({
         <tbody>
           <VitalRow
             current
+            isLast={!previous}
             measurement={current}
             previous={previous}
           />
           {previous ? (
             <VitalRow
+              isLast
               measurement={previous}
             />
           ) : null}
@@ -673,10 +675,12 @@ function VitalHeaderCell({ children, icon }: { children: ReactNode; icon: ReactN
 
 function VitalRow({
   current = false,
+  isLast = false,
   measurement,
   previous,
 }: {
   current?: boolean;
+  isLast?: boolean;
   measurement: ChartPreconsultationVitalMeasurement;
   previous?: ChartPreconsultationVitalMeasurement;
 }) {
@@ -685,7 +689,12 @@ function VitalRow({
 
   return (
     <tr>
-      <th className="h-14 border-r border-b border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] px-6 py-0 text-left text-[15px] font-medium tracking-[0.006em] text-[var(--clair-color-atomic-neutral-800)] last:border-b-0 first:pl-6">
+      <th
+        className={cn(
+          "h-14 border-r border-b border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] px-6 py-0 text-left text-[15px] font-medium tracking-[0.006em] text-[var(--clair-color-atomic-neutral-800)] first:pl-6",
+          isLast && "border-b-0",
+        )}
+      >
         <span className="inline-flex items-center gap-0.5 whitespace-nowrap">
           <span>{dateLabel}</span>
           {dateDetail ? <span className="text-[var(--clair-color-atomic-neutral-500)]">{dateDetail}</span> : null}
@@ -697,7 +706,10 @@ function VitalRow({
         return (
           <td
             key={vital.key}
-            className="h-14 border-r border-b border-[var(--clair-color-atomic-neutral-200)] px-6 py-0 text-[15px] font-medium last:border-r-0"
+            className={cn(
+              "h-14 border-r border-b border-[var(--clair-color-atomic-neutral-200)] px-6 py-0 text-[15px] font-medium last:border-r-0",
+              isLast && "border-b-0",
+            )}
           >
             <div className="flex items-center justify-between gap-2">
               <span>{vital.format(measurement)}</span>
@@ -733,6 +745,7 @@ function HistorySection({
   const priorEntries = context.history.filter(
     (entry) => entry.encounterId !== context.encounter.id,
   );
+  const hasMoreHistory = priorEntries.length > 3;
   const entries = expanded ? priorEntries : priorEntries.slice(0, 3);
   return (
     <section
@@ -746,12 +759,14 @@ function HistorySection({
       {entries.length > 0 ? (
         <>
           <HistoryTimeline entries={entries} />
-          <div className="flex justify-center">
-            <Button variant="ghost" size="lg" aria-expanded={expanded} onClick={onToggle}>
-              {expanded ? "진료이력 접기" : "전체 진료이력 보기"}
-              {expanded ? <CdsNavigationChevronUpIcon data-icon="inline-end" /> : <CdsNavigationChevronDownIcon data-icon="inline-end" />}
-            </Button>
-          </div>
+          {hasMoreHistory ? (
+            <div className="flex justify-center">
+              <Button variant="ghost" size="lg" aria-expanded={expanded} onClick={onToggle}>
+                {expanded ? "진료이력 접기" : "전체 진료이력 보기"}
+                {expanded ? <CdsNavigationChevronUpIcon data-icon="inline-end" /> : <CdsNavigationChevronDownIcon data-icon="inline-end" />}
+              </Button>
+            </div>
+          ) : null}
         </>
       ) : (
         <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">

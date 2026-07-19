@@ -769,6 +769,11 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(currentVitalDateCell).toHaveCSS("height", "56px");
   await expect(currentVitalDateCell).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(currentVitalDateCell).toHaveCSS("border-top-color", "rgb(229, 229, 229)");
+  const lastVitalCells = vitalTable.locator("tbody tr").last().locator("th, td");
+  await expect(lastVitalCells).toHaveCount(5);
+  for (let index = 0; index < 5; index += 1) {
+    await expect(lastVitalCells.nth(index)).toHaveCSS("border-bottom-width", "0px");
+  }
   await expect(currentVitalDateCell.getByText("오늘", { exact: true })).toHaveCSS(
     "color",
     "rgb(38, 38, 38)",
@@ -838,6 +843,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
   const historySection = lockedState.getByTestId("preconsultation-history");
   const historyTimeline = historySection.getByTestId("preconsultation-history-timeline");
   await expect(historySection).toHaveCSS("row-gap", "16px");
+  await expect(
+    historySection.getByRole("button", { name: "전체 진료이력 보기" }),
+  ).toHaveCount(0);
   await expect(historySection).toContainText("2026년 05월 09일");
   await expect(historySection).toContainText("10:00:00");
   await expect(historySection).toContainText("약 복용 후 재진");
