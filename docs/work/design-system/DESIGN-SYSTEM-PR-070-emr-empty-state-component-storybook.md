@@ -89,3 +89,11 @@ This work starts the shared runtime component layer. Screen adoption should be a
 - Figma `md` uses a `40px` icon area, a `24px` inner icon slot, a `10px` radius, and `4px` bottom wrapper space; the Storybook contract asserts the area and inner slot dimensions.
 - Existing CLAiR alpha tokens are used for the icon area (`black-alpha-4`), icon/title (`black-alpha-48`), and description (`black-alpha-36`); local rgba/hex values were removed from the shared Empty State stories.
 - Storybook contains Figma size and action contract stories with browser assertions. `EmrQueueEmptyState` now delegates its visual contract to `EmrEmptyState size="md"`.
+
+2026-07-19 Figma `xl` follow-up:
+
+- Added explicit `size="xl"` from Figma nodes `27540:70130`, `27751:87237`, and `27751:87245`; existing surface defaults remain unchanged.
+- `xl` reproduces the 220px content width, 24px outer/body gaps, 80px outer and 76px inner icon surfaces, 36px icon slot, 18/26 SemiBold title, 16/24 Medium description, and 32px action controls.
+- The chart full-workspace no-work state is the first `xl` caller. Queue, table, drawer, permission, loading, API, and persistence behavior are unchanged.
+- Focused Storybook interaction coverage asserts the Figma geometry and typography for all four sizes plus Default, one-action, and two-action `xl` variants.
+- Result report: `docs/completed/design-system/2026-07-19-emr-empty-state-xl-report.html`.

@@ -117,15 +117,16 @@ As of `DESIGN-SYSTEM-PR-080`, `EmrEmptyState` covers the shared empty-state laye
 
 ## CDS.V2 Visual Size Contract
 
-The shared component follows the CDS.V2 EmptyPlaceholder visual tiers from Figma node `27540:70134`:
+The shared component follows the CDS.V2 EmptyPlaceholder visual tiers. The `lg`/`md`/`sm` source is Figma node `27540:70134`; the full-workspace `xl` source is Figma nodes `27540:70130`, `27751:87237`, and `27751:87245`:
 
 | Size | Intended surface | Icon slot | Title | Description | Outer gap | Default action-space reservation |
 | --- | --- | --- | --- | --- | --- | --- |
+| `xl` | Full workspace content area | 80px outer area, 76px inner gradient surface, 36px icon slot, 28px/26px radii | Pretendard SemiBold 18/26 | Pretendard Medium 16/24 | 24px | 28px |
 | `lg` | Main content area | 48px area, 24px icon slot, 14px radius | Pretendard Medium 16/24 | Pretendard Medium 14/20 | 16px | 28px |
 | `md` | Side panel and large tables; product usage label `mg` | 40px area, 24px icon slot, 10px radius, 4px bottom wrapper space | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
 | `sm` | Modal and small table areas | No icon slot | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
 
-The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. Empty State colors use existing CLAiR tokens: `black-alpha-4` for the icon area background, `black-alpha-48` for the icon and title, and `black-alpha-36` for descriptions. One action uses the outline button treatment; two actions render outline secondary first and dark primary second.
+The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. `xl` uses the Figma two-layer icon treatment: Neutral/200 outer area, a 2px white-bordered 76px inner gradient surface, and Black Alpha/64 for the icon and title. Existing tiers use `black-alpha-4` for the icon area background and `black-alpha-48` for the icon and title. Every tier uses `black-alpha-36` for descriptions. `xl` actions are 32px high; one action uses the outline button treatment, and two actions render outline secondary first and dark primary second with an 8px gap.
 
 ### Side-panel queue coverage
 
@@ -137,6 +138,7 @@ The icon artwork is supplied by the caller/current motion-icon mapping; Figma de
 
 | Surface | Current default | `EmrEmptyState` adoption rule | Action ownership |
 | --- | --- | --- | --- |
+| Full workspace content | Use explicit `size="xl"` only when the entire operational workspace has no selected or source work to render | Keep `xl` explicit at the caller so ordinary content surfaces continue to resolve to `lg`. | The workspace may own one local recovery action such as refresh; keep navigation or creation actions in the feature caller. |
 | Queue side panel | Use `EmrQueueEmptyState` with the `md` visual tier | Keep queue-specific placement and list-local behavior, but use the shared 40px icon area / 24px icon slot, typography, alpha tokens, and reserved action-space contract. | Queue may own only local recovery such as clearing search or filters. It should not own screen-level create/navigation actions when content is also empty. |
 | Content body | Adopt for main operational absence states and narrowly scoped whole-content read failure | Use `surface="content"` when the main work area has no selected object, no upstream work object, no scope result, or cannot render because its required read failed. Use `kind="read-error"` only when no usable body remains; keep partial/degraded failures in `EmrInlineAlert`. | Content body carries the primary information/action weight for the screen-level absence or read-recovery state. Queue/list placeholders remain compact supporting states and do not own the primary screen-level action. |
 | Table body | Preferred second pilot surface | Use `surface="table"` for no rows, no filter results, or no search results inside table/list bodies when the table layout can preserve header/scroll alignment. Keep very dense tables on the existing empty row until spacing is verified. | Table owns local recovery such as reset filters. It should not trigger source workflow navigation unless the whole content surface is table-only. |
