@@ -1,7 +1,6 @@
 name: Fixed Staging Alias
 
 on:
-  deployment_status:
   workflow_dispatch:
     inputs:
       deployment_url:
@@ -24,9 +23,6 @@ concurrency:
 jobs:
   update-fixed-staging-alias:
     name: Update fixed staging alias
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -44,47 +40,22 @@ jobs:
 
       - name: Resolve deployment URL
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_SHA: ${{ github.event.deployment.sha || github.sha }}
-          DEPLOYMENT_STATUS_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
           DISPATCH_DEPLOYMENT_URL: ${{ github.event.inputs.deployment_url }}
           DISPATCH_DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
           set -euo pipefail
 
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            deployment_url="${DISPATCH_DEPLOYMENT_URL:-https://$STAGING_BRANCH_ALIAS}"
-          else
-            git fetch --no-tags --depth=1 origin staging
-            staging_sha="$(git rev-parse origin/staging)"
-
-            if [ -z "$EVENT_SHA" ]; then
-              echo "Deployment status event did not include a commit SHA; leaving fixed staging unchanged."
-              echo "SHOULD_UPDATE_ALIAS=false" >> "$GITHUB_ENV"
-              exit 0
-            fi
-
-            echo "Deployment SHA: $EVENT_SHA"
-            echo "Current origin/staging SHA: $staging_sha"
-
-            if [ "$EVENT_SHA" != "$staging_sha" ]; then
-              echo "Deployment is not the current staging commit; leaving fixed staging unchanged."
-              echo "SHOULD_UPDATE_ALIAS=false" >> "$GITHUB_ENV"
-              exit 0
-            fi
-
-            deployment_url="$DEPLOYMENT_STATUS_URL"
-          fi
+          deployment_url="${DISPATCH_DEPLOYMENT_URL:-https://$STAGING_BRANCH_ALIAS}"
 
           if [ -z "$deployment_url" ]; then
-            echo "No deployment URL was provided by the deployment_status event." >&2
+            echo "No deployment URL was provided." >&2
             exit 1
           fi
 
           echo "VERCEL_DEPLOYMENT_URL=$deployment_url" >> "$GITHUB_ENV"
           echo "SHOULD_UPDATE_ALIAS=true" >> "$GITHUB_ENV"
 
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DISPATCH_DRY_RUN" = "true" ]; then
+          if [ "$DISPATCH_DRY_RUN" = "true" ]; then
             echo "ALIAS_SCRIPT_ARGS=--dry-run" >> "$GITHUB_ENV"
           else
             echo "ALIAS_SCRIPT_ARGS=" >> "$GITHUB_ENV"

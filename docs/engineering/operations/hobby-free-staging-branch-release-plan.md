@@ -69,7 +69,7 @@ This also avoids making the working repository public or upgrading GitHub only f
 | Constraint | Decision |
 | --- | --- |
 | GitHub repo stays private | Yes. Do not make the working repo public. |
-| GitHub required checks unavailable on current private/free setup | Keep `CI` and `Secret Scan` automatic, but verify them manually before merge. |
+| GitHub required checks unavailable on current private/free setup | Run one combined `Release Check` manually for the exact merge candidate and keep the local secret gate mandatory. |
 | Vercel production branch is `main` | Keep `main` as production. |
 | fixed staging needs a stable URL | Use a long-lived `staging` branch and staging branch alias/domain. |
 | public portfolio need | Use a future sanitized public repo, not this working repo. |
@@ -79,8 +79,8 @@ This also avoids making the working repository public or upgrading GitHub only f
 1. Create work on a feature or `codex/*` branch.
 2. Open a PR to the intended integration branch.
 3. Verify:
-   - `CI` succeeded;
-   - `Secret Scan` succeeded;
+   - the manually dispatched `Release Check` succeeded for the exact candidate commit;
+   - `npm run security:secrets` succeeded locally;
    - Vercel Preview is Ready;
    - the PR did not touch fixed staging alias, production aliases, production deploy settings, or secrets.
 4. Merge approved work into `staging` for fixed staging review.
@@ -109,7 +109,7 @@ Recommended issue changes:
 3. `02-07 Define manual merge gate for staging and production`
    - Completed as `manual-merge-gate-runbook.md`.
    - Documents required manual checks because GitHub cannot enforce required checks on the current private/free setup.
-   - Define who checks `CI`, `Secret Scan`, Vercel Preview, fixed staging, and production non-change.
+   - Define who runs the combined `Release Check`, verifies Vercel Preview, fixed staging, and production non-change.
    - No remote settings change.
 
 4. `03-02 Define production release from staging to main`
@@ -146,7 +146,7 @@ Detailed production release procedure:
 Stop when:
 
 - target source commit is not named;
-- `CI` or `Secret Scan` is failing or unknown;
+- the manual `Release Check` or local secret gate is failing or unknown;
 - Vercel Preview is not Ready;
 - fixed staging alias would point to a feature branch instead of `staging`;
 - production alias would change without production approval;

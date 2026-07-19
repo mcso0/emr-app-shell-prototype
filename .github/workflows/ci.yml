@@ -1,21 +1,18 @@
-name: CI
+name: Release Check
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: release-check-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
-    name: Docs, lint, typecheck, and build
+    name: Secrets, docs, lint, typecheck, and build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -28,6 +25,7 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - run: npm run security:secrets
       - run: npm run docs:check
       - run: npm run lint
       - run: npx tsc --noEmit

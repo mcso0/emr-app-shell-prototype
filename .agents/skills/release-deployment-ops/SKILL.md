@@ -20,11 +20,11 @@ Read the policy first:
 - `main` is the Vercel Production branch. Merging/promoting to `main` is a production-release action.
 - Production deploy, `main` release, or production promote is blocked until 승욱 explicitly approves the exact target, commit, verification, and rollback path.
 - Keep the working repository private. Do not make it public just to unlock branch protection.
-- Under the current private/free setup, `CI` and `Secret Scan` run automatically but must be manually checked before merge.
+- Under the current private/free setup, run the combined `Release Check` manually once for the exact merge candidate and verify it before merge.
 - Before any merge to `staging`, fixed staging URL update, or merge to `main`, apply `docs/engineering/operations/manual-merge-gate-runbook.md`.
 - Public portfolio publishing belongs in a future sanitized public repository, not this internal working repository.
 - Do not expose secrets in source, docs, Linear, screenshots, logs, or chat.
-- Run `npm run security:secrets` before any approved deploy/promotion workflow.
+- Run `npm run security:secrets` locally before any approved deploy/promotion workflow even when the manual `Release Check` also passes.
 - Report branch, commit SHA, included issues/PRs, deployment URL/id, alias target, verification, and rollback candidate.
 
 ## Environment Decisions
