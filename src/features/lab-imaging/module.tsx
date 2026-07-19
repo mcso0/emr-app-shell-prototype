@@ -2835,6 +2835,7 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
         <EmrEmptyState
           kind={hasLabWorkItems ? "no-scope-result" : "upstream-pending"}
           priority="supporting"
+          size="xl"
           surface="content"
           description={
             hasLabWorkItems
@@ -2844,9 +2845,10 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
           primaryAction={
             hasLabWorkItems ? undefined : (
               <Button
-                size="sm"
+                size="default"
                 variant="outline"
-                className="bg-card"
+                roundness="round"
+                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >
@@ -3408,6 +3410,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
         <EmrEmptyState
           kind={hasImagingWorkItems ? "no-scope-result" : "upstream-pending"}
           priority="supporting"
+          size="xl"
           surface="content"
           description={
             hasImagingWorkItems
@@ -3417,9 +3420,10 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
           primaryAction={
             hasImagingWorkItems ? undefined : (
               <Button
-                size="sm"
+                size="default"
                 variant="outline"
-                className="bg-card"
+                roundness="round"
+                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >

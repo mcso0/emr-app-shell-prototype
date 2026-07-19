@@ -302,6 +302,7 @@ test("home empty work-status state is centered in the content surface", async ({
   const emptyState = page.getByTestId("home-kanban-empty-state");
 
   await expect(emptySurface).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-size", "xl");
   await expect(emptyState.getByRole("heading", { name: "원내 업무가 없습니다" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "업무 현황" })).toHaveCount(0);
   await expect(page.getByRole("group", { name: "업무 현황 운영 모드" })).toHaveCount(0);

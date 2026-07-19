@@ -2918,6 +2918,7 @@ export function BillingContent({ hasRightPanel, workspaceId }: ShellComponentPro
           kind={hasBillingRows ? "no-scope-result" : "upstream-pending"}
           surface="content"
           priority="supporting"
+          size="xl"
           description={
             hasBillingRows
               ? "대기열에서 수납 업무를 선택하면 상세가 표시됩니다."
@@ -2926,9 +2927,10 @@ export function BillingContent({ hasRightPanel, workspaceId }: ShellComponentPro
           primaryAction={
             hasBillingRows ? undefined : (
               <Button
-                size="sm"
+                size="default"
                 variant="outline"
-                className="bg-card"
+                roundness="round"
+                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 onClick={apiState.retrySnapshots}
               >
                 <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
