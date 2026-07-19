@@ -719,6 +719,14 @@ function createRecordingNotificationPersistenceGateway(
         enforcedBy: "notification-user-state-persistence-gateway",
       };
     },
+    async markNotificationUserStatesRead() {
+      return {
+        ok: true,
+        status: 200,
+        updatedCount: 0,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
   };
 }
 
@@ -747,6 +755,14 @@ function createThrowingNotificationPersistenceGateway(): NotificationPersistence
       return {
         ok: true,
         status: 200,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+    async markNotificationUserStatesRead() {
+      return {
+        ok: true,
+        status: 200,
+        updatedCount: 0,
         enforcedBy: "notification-user-state-persistence-gateway",
       };
     },

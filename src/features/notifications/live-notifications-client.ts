@@ -118,24 +118,12 @@ export async function fetchLiveNotificationSnapshot({
   workspaceId: string;
 }): Promise<LiveNotificationSnapshotResult> {
   try {
-    const [active, archived] = await Promise.all([
-      fetchLiveNotificationList({ actorHeaders, filter: "all", signal, workspaceId }),
-      fetchLiveNotificationList({ actorHeaders, filter: "archived", signal, workspaceId }),
-    ]);
-
-    if (!active.ok) return active;
-    if (!archived.ok) return archived;
-
-    const notificationById = new Map<string, GlobalNotification>();
-    [...active.notifications, ...archived.notifications].forEach((notification) => {
-      notificationById.set(notification.id, notification);
+    return await fetchLiveNotificationList({
+      actorHeaders,
+      filter: "snapshot",
+      signal,
+      workspaceId,
     });
-
-    return {
-      ok: true,
-      counts: active.counts,
-      notifications: Array.from(notificationById.values()),
-    };
   } catch (error) {
     return buildClientError(error, "알림을 불러오지 못했습니다.");
   }
@@ -192,13 +180,13 @@ async function fetchLiveNotificationList({
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
-  filter: "all" | "archived";
+  filter: "snapshot";
   signal?: AbortSignal;
   workspaceId: string;
 }): Promise<LiveNotificationSnapshotResult> {
   const params = new URLSearchParams({
     filter,
-    limit: "50",
+    limit: "100",
   });
   const response = await fetch(
     `/api/workspaces/${encodeURIComponent(workspaceId)}/notifications?${params.toString()}`,

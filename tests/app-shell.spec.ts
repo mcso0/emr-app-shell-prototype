@@ -438,18 +438,21 @@ test("global notification bell opens right drawer with badge policy count", asyn
   await expect(page.getByTestId("global-notification-badge")).toHaveText("7");
   await expect
     .poll(() =>
-      notificationRequests.some((entry) =>
-        entry.includes("GET /api/workspaces/clair-demo/notifications?filter=all"),
-      ),
+      notificationRequests.filter((entry) =>
+        entry.includes("GET /api/workspaces/clair-demo/notifications?filter=snapshot"),
+      ).length,
     )
-    .toBe(true);
-  await expect
-    .poll(() =>
-      notificationRequests.some((entry) =>
-        entry.includes("GET /api/workspaces/clair-demo/notifications?filter=archived"),
-      ),
-    )
-    .toBe(true);
+    .toBe(1);
+  expect(
+    notificationRequests.some((entry) =>
+      entry.includes("GET /api/workspaces/clair-demo/notifications?filter=all"),
+    ),
+  ).toBe(false);
+  expect(
+    notificationRequests.some((entry) =>
+      entry.includes("GET /api/workspaces/clair-demo/notifications?filter=archived"),
+    ),
+  ).toBe(false);
 
   await notificationButton.click();
 

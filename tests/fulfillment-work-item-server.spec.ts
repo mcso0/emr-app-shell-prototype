@@ -30,6 +30,10 @@ const migrationPath =
 const migration = existsSync(migrationPath)
   ? readFileSync(migrationPath, "utf8")
   : "";
+const batchMigration = readFileSync(
+  "supabase/migrations/20260719051725_performance_batch_rpc_followup.sql",
+  "utf8",
+);
 
 test("fulfillment work item routes sync from chart orders, read by queue, and mutate lifecycle", async ({
   request,
@@ -1160,48 +1164,23 @@ test("vet-reviewed billing sync keeps audit and candidate success when DB notifi
 
 test("fulfillment Supabase gateway preserves actor, workspace, encounter, selected orders, and transition payload", async () => {
   const calls: string[] = [];
-  const tableUpdates: Array<{ column: string; value: string }[]> = [];
   const gateway = createSupabaseFulfillmentWorkItemGateway({
-    from(tableName) {
-      expect(tableName).toBe("order_fulfillment_work_items");
-      const filters: Array<{ column: string; value: string }> = [];
-      const builder = {
-        eq(column: string, value: string) {
-          filters.push({ column, value });
-          return builder;
-        },
-        then<TResult1 = { error: null }, TResult2 = never>(
-          onfulfilled?:
-            | ((value: { error: null }) => TResult1 | PromiseLike<TResult1>)
-            | null,
-          _onrejected?:
-            | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-            | null,
-        ) {
-          void _onrejected;
-          tableUpdates.push(filters);
-          return Promise.resolve(
-            onfulfilled
-              ? onfulfilled({ error: null })
-              : ({ error: null } as TResult1),
-          );
-        },
-      };
-      return {
-        update(values) {
-          expect(values.source_snapshot).toMatchObject({
-            guardianName: "DEN-327 Guardian",
-            patientName: "DEN-327 Patient",
-            orderDisplayName: "DEN-327 CBC",
-          });
-          return builder;
-        },
-      };
-    },
     async rpc(functionName: string, args: Record<string, unknown>) {
       calls.push(
         `${functionName}:${args.p_workspace_id}:${args.p_encounter_id ?? args.p_work_item_id}:${args.p_actor_user_id ?? "read"}`,
       );
+      if (functionName === "clair_enrich_fulfillment_work_item_snapshots") {
+        expect(args.p_snapshots).toEqual([
+          expect.objectContaining({
+            orderId: "00000000-0000-4000-8000-000000000301",
+            sourceSnapshot: expect.objectContaining({
+              guardianName: "DEN-327 Guardian",
+              patientName: "DEN-327 Patient",
+              orderDisplayName: "DEN-327 CBC",
+            }),
+          }),
+        ]);
+      }
       return {
         data: [
           {
@@ -1221,9 +1200,18 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
             returnedAt: null,
             reason: null,
             sourceSnapshot: {
-              orderDisplayName: "CBC 검사",
+              orderDisplayName:
+                functionName === "clair_enrich_fulfillment_work_item_snapshots"
+                  ? "DEN-327 CBC"
+                  : "CBC 검사",
               billingReflectionEnabled: true,
               detail: {},
+              ...(functionName === "clair_enrich_fulfillment_work_item_snapshots"
+                ? {
+                    guardianName: "DEN-327 Guardian",
+                    patientName: "DEN-327 Patient",
+                  }
+                : {}),
             },
             createdAt: "2026-05-23T09:44:00.000Z",
             updatedAt: "2026-05-23T09:44:00.000Z",
@@ -1261,6 +1249,7 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
 
   expect(calls).toEqual([
     `clair_sync_fulfillment_work_items_from_orders:${workspaceId}:00000000-0000-4000-8000-000000000101:00000000-0000-4000-8000-000000000002`,
+    `clair_enrich_fulfillment_work_item_snapshots:${workspaceId}:undefined:00000000-0000-4000-8000-000000000002`,
     `clair_update_fulfillment_work_item:${workspaceId}:00000000-0000-4000-8000-000000000901:00000000-0000-4000-8000-000000000003`,
   ]);
   expect(synced).toMatchObject({
@@ -1276,58 +1265,21 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
       },
     ],
   });
-  expect(tableUpdates).toEqual([
-    [
-      { column: "workspace_id", value: workspaceId },
-      {
-        column: "order_id",
-        value: "00000000-0000-4000-8000-000000000301",
-      },
-    ],
-  ]);
   expect(updated).toMatchObject({
     ok: true,
     workItems: [{ status: "requested" }],
   });
 });
 
-test("fulfillment snapshot enrichment does not block order confirmation when table update is denied", async () => {
+test("fulfillment snapshot enrichment does not block order confirmation when batch RPC is denied", async () => {
   const gateway = createSupabaseFulfillmentWorkItemGateway({
-    from() {
-      const builder = {
-        eq() {
-          return builder;
-        },
-        then<TResult1 = { error: { message: string } }, TResult2 = never>(
-          onfulfilled?:
-            | ((value: {
-                error: { message: string };
-              }) => TResult1 | PromiseLike<TResult1>)
-            | null,
-          _onrejected?:
-            | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-            | null,
-        ) {
-          void _onrejected;
-          const value = {
-            error: {
-              message:
-                "permission denied for table order_fulfillment_work_items",
-            },
-          };
-          return Promise.resolve(
-            onfulfilled ? onfulfilled(value) : (value as TResult1),
-          );
-        },
-      };
-
-      return {
-        update() {
-          return builder;
-        },
-      };
-    },
-    async rpc() {
+    async rpc(functionName) {
+      if (functionName === "clair_enrich_fulfillment_work_item_snapshots") {
+        return {
+          data: null,
+          error: { message: "permission denied for batch snapshot enrichment" },
+        };
+      }
       return {
         data: [
           {
@@ -1421,6 +1373,10 @@ test("fulfillment migration defines local-first schema/RPC boundary without secr
   expect(migration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
   );
+  expect(batchMigration).toContain(
+    "create or replace function public.clair_enrich_fulfillment_work_item_snapshots",
+  );
+  expect(batchMigration).toContain("jsonb_to_recordset");
 });
 
 async function expectJson(
@@ -1470,6 +1426,14 @@ function createRecordingNotificationPersistenceGateway(
         enforcedBy: "notification-user-state-persistence-gateway",
       };
     },
+    async markNotificationUserStatesRead() {
+      return {
+        ok: true,
+        status: 200,
+        updatedCount: 0,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
   };
 }
 
@@ -1498,6 +1462,14 @@ function createThrowingNotificationPersistenceGateway(): NotificationPersistence
       return {
         ok: true,
         status: 200,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+    async markNotificationUserStatesRead() {
+      return {
+        ok: true,
+        status: 200,
+        updatedCount: 0,
         enforcedBy: "notification-user-state-persistence-gateway",
       };
     },
