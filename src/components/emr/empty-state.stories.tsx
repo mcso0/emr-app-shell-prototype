@@ -44,7 +44,7 @@ function EmptyStatePrimaryButton({
   return (
     <Button
       type="button"
-      size={buttonSize === "lg" ? "sm" : "xs"}
+      size={buttonSize === "xl" ? "default" : buttonSize === "lg" ? "sm" : "xs"}
       roundness="round"
       className="bg-[var(--clair-color-atomic-neutral-900)] text-[var(--clair-color-atomic-common-100)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-neutral-900)] hover:text-[var(--clair-color-atomic-common-100)]"
     >
@@ -66,7 +66,7 @@ function EmptyStateSecondaryButton({
     <Button
       type="button"
       variant="outline"
-      size={buttonSize === "lg" ? "sm" : "xs"}
+      size={buttonSize === "xl" ? "default" : buttonSize === "lg" ? "sm" : "xs"}
       roundness="round"
       className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]"
     >
@@ -184,6 +184,11 @@ const meta = {
       control: "text",
       description: "Synthetic label for the secondary action slot.",
     },
+    size: {
+      control: "radio",
+      options: ["xl", "lg", "md", "sm"],
+      description: "Figma visual size tier. Use xl only for full workspace empty states.",
+    },
     surface: {
       control: "select",
       options: ["queue", "content", "drawer", "table", "widget", "global-shell"],
@@ -242,10 +247,10 @@ export const Default: Story = {
 };
 
 function FigmaSizeContractExample() {
-  const sizes: EmrEmptyStateSize[] = ["lg", "md", "sm"];
+  const sizes: EmrEmptyStateSize[] = ["xl", "lg", "md", "sm"];
 
   return (
-    <div className="grid gap-6 md:grid-cols-3">
+    <div className="grid gap-6 md:grid-cols-4">
       {sizes.map((size) => (
         <div key={size} className="flex min-h-[240px] items-center justify-center border p-6">
           <EmrEmptyState
@@ -278,10 +283,37 @@ export const FigmaSizeContract: Story = {
     const blackAlpha4 = resolveColorToken("--clair-color-atomic-black-alpha-4");
     const blackAlpha36 = resolveColorToken("--clair-color-atomic-black-alpha-36");
     const blackAlpha48 = resolveColorToken("--clair-color-atomic-black-alpha-48");
+    const blackAlpha64 = resolveColorToken("--clair-color-atomic-black-alpha-64");
+    const neutral200 = resolveColorToken("--clair-color-atomic-neutral-200");
     const expected = {
-      lg: { icon: 48, innerIcon: 24, rootGap: "16px", titleSize: "16px" },
-      md: { icon: 40, innerIcon: 24, rootGap: "8px", titleSize: "14px" },
-      sm: { icon: 0, innerIcon: 0, rootGap: "8px", titleSize: "14px" },
+      xl: {
+        icon: 80,
+        innerIcon: 36,
+        rootGap: "24px",
+        titleColor: blackAlpha64,
+        titleSize: "18px",
+      },
+      lg: {
+        icon: 48,
+        innerIcon: 24,
+        rootGap: "16px",
+        titleColor: blackAlpha48,
+        titleSize: "16px",
+      },
+      md: {
+        icon: 40,
+        innerIcon: 24,
+        rootGap: "8px",
+        titleColor: blackAlpha48,
+        titleSize: "14px",
+      },
+      sm: {
+        icon: 0,
+        innerIcon: 0,
+        rootGap: "8px",
+        titleColor: blackAlpha48,
+        titleSize: "14px",
+      },
     } as const;
 
     for (const [size, contract] of Object.entries(expected)) {
@@ -302,8 +334,8 @@ export const FigmaSizeContract: Story = {
       if (getComputedStyle(title).fontSize !== contract.titleSize) {
         throw new Error(`Expected ${size} title size ${contract.titleSize}.`);
       }
-      if (getComputedStyle(title).color !== blackAlpha48) {
-        throw new Error(`Expected ${size} title color black alpha 48.`);
+      if (getComputedStyle(title).color !== contract.titleColor) {
+        throw new Error(`Expected ${size} title color ${contract.titleColor}.`);
       }
 
       const description = emptyState.querySelector<HTMLElement>("[data-slot='copy'] p");
@@ -321,7 +353,7 @@ export const FigmaSizeContract: Story = {
         if (iconWidth !== contract.icon) {
           throw new Error(`Expected ${size} icon area ${contract.icon}px, got ${iconWidth}px.`);
         }
-        if (getComputedStyle(iconArea).backgroundColor !== blackAlpha4) {
+        if (size !== "xl" && getComputedStyle(iconArea).backgroundColor !== blackAlpha4) {
           throw new Error(`Expected ${size} icon background black alpha 4.`);
         }
         const icon = emptyState.querySelector<HTMLElement>("[data-slot='icon']");
@@ -330,6 +362,46 @@ export const FigmaSizeContract: Story = {
         if (iconSize !== contract.innerIcon) {
           throw new Error(`Expected ${size} inner icon ${contract.innerIcon}px, got ${iconSize}px.`);
         }
+        if (size === "xl") {
+          if (getComputedStyle(iconArea).backgroundColor !== neutral200) {
+            throw new Error("Expected xl icon area background neutral 200.");
+          }
+          if (getComputedStyle(iconArea).borderRadius !== "28px") {
+            throw new Error("Expected xl icon area radius 28px.");
+          }
+          const iconSurface = emptyState.querySelector<HTMLElement>(
+            "[data-slot='icon-surface']",
+          );
+          if (!iconSurface) throw new Error("Expected xl inner icon surface.");
+          if (getComputedStyle(iconSurface).width !== "76px") {
+            throw new Error("Expected xl inner icon surface to be 76px wide.");
+          }
+          if (getComputedStyle(iconSurface).borderRadius !== "26px") {
+            throw new Error("Expected xl inner icon surface radius 26px.");
+          }
+          if (getComputedStyle(iconSurface).borderWidth !== "2px") {
+            throw new Error("Expected xl inner icon surface border 2px.");
+          }
+          if (!getComputedStyle(iconSurface).backgroundImage.includes("0deg")) {
+            throw new Error("Expected xl inner icon surface to preserve the Figma gradient.");
+          }
+          const copy = emptyState.querySelector<HTMLElement>("[data-slot='copy']");
+          if (!copy || getComputedStyle(copy).gap !== "8px") {
+            throw new Error("Expected xl title-description gap 8px.");
+          }
+          if (getComputedStyle(title).fontWeight !== "600") {
+            throw new Error("Expected xl title weight 600.");
+          }
+          if (getComputedStyle(title).lineHeight !== "26px") {
+            throw new Error("Expected xl title line height 26px.");
+          }
+          if (getComputedStyle(description).fontSize !== "16px") {
+            throw new Error("Expected xl description size 16px.");
+          }
+          if (getComputedStyle(description).lineHeight !== "24px") {
+            throw new Error("Expected xl description line height 24px.");
+          }
+        }
       }
     }
   },
@@ -337,7 +409,7 @@ export const FigmaSizeContract: Story = {
     docs: {
       description: {
         story:
-          "Figma `lg`/`md`/`sm` visual contract. `md` is the implementation tier for the requested `mg` usage.",
+          "Figma `xl`/`lg`/`md`/`sm` visual contract. `xl` is reserved for full workspace empty states, and `md` is the implementation tier for the requested `mg` usage.",
       },
     },
   },
@@ -349,6 +421,7 @@ function FigmaActionContractExample() {
       <EmrEmptyState
         description="하단 액션 공간을 유지합니다."
         kind="no-data"
+        size="xl"
         surface="content"
         testId="figma-action-default"
         title="기본형"
@@ -357,8 +430,8 @@ function FigmaActionContractExample() {
         description="복구 액션 하나를 제공합니다."
         kind="no-search-results"
         primaryAction={undefined}
-        secondaryAction={<EmptyStateSecondaryButton size="lg">outline action</EmptyStateSecondaryButton>}
-        size="lg"
+        secondaryAction={<EmptyStateSecondaryButton size="xl">button</EmptyStateSecondaryButton>}
+        size="xl"
         surface="content"
         testId="figma-action-one"
         title="1 action"
@@ -366,9 +439,9 @@ function FigmaActionContractExample() {
       <EmrEmptyState
         description="보조 액션과 주요 액션을 제공합니다."
         kind="no-scope-result"
-        primaryAction={<EmptyStatePrimaryButton size="lg">primary action</EmptyStatePrimaryButton>}
-        secondaryAction={<EmptyStateSecondaryButton size="lg">secondary action</EmptyStateSecondaryButton>}
-        size="lg"
+        primaryAction={<EmptyStatePrimaryButton size="xl">button</EmptyStatePrimaryButton>}
+        secondaryAction={<EmptyStateSecondaryButton size="xl">button</EmptyStateSecondaryButton>}
+        size="xl"
         surface="content"
         testId="figma-action-two"
         title="2 action"
@@ -380,6 +453,14 @@ function FigmaActionContractExample() {
 export const FigmaActionContract: Story = {
   render: () => <FigmaActionContractExample />,
   play: async ({ canvasElement }) => {
+    const resolveColorToken = (token: string) => {
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = `var(${token})`;
+      document.body.appendChild(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    };
     const expected = {
       default: { count: "0", buttonCount: 0 },
       one: { count: "1", buttonCount: 1 },
@@ -400,20 +481,28 @@ export const FigmaActionContract: Story = {
         throw new Error(`Expected ${variant} to render ${contract.buttonCount} action buttons.`);
       }
       for (const button of buttons) {
-        if (getComputedStyle(button).height !== "28px") {
-          throw new Error(`Expected ${variant} action buttons to be 28px high.`);
+        if (getComputedStyle(button).height !== "32px") {
+          throw new Error(`Expected ${variant} action buttons to be 32px high.`);
         }
+      }
+      const actions = emptyState.querySelector<HTMLElement>("[data-slot='actions']");
+      if (actions && getComputedStyle(actions).gap !== "8px") {
+        throw new Error(`Expected ${variant} action gap 8px.`);
+      }
+      if (actions && getComputedStyle(actions).flexWrap !== "nowrap") {
+        throw new Error(`Expected ${variant} xl actions to stay on one row.`);
       }
     }
 
     const twoActionButtons = canvasElement.querySelectorAll(
       "section[data-testid='figma-action-two'] [data-slot='actions'] button",
     );
-    if (twoActionButtons[0]?.textContent !== "secondary action") {
-      throw new Error("Expected the secondary action to render first.");
+    const primaryColor = resolveColorToken("--clair-color-atomic-neutral-900");
+    if (twoActionButtons[0] && getComputedStyle(twoActionButtons[0]).backgroundColor === primaryColor) {
+      throw new Error("Expected the outline secondary action to render first.");
     }
-    if (twoActionButtons[1]?.textContent !== "primary action") {
-      throw new Error("Expected the primary action to render second.");
+    if (!twoActionButtons[1] || getComputedStyle(twoActionButtons[1]).backgroundColor !== primaryColor) {
+      throw new Error("Expected the dark primary action to render second.");
     }
   },
   parameters: {

@@ -36,7 +36,7 @@ export type EmrEmptyStatePriority =
   | "primary-decision";
 
 export type EmrEmptyStateDensity = "compact" | "standard" | "table-row";
-export type EmrEmptyStateSize = "lg" | "md" | "sm";
+export type EmrEmptyStateSize = "xl" | "lg" | "md" | "sm";
 export type EmrEmptyStateAlign = "start" | "center";
 
 export type EmrEmptyStateProps = Omit<
@@ -66,8 +66,9 @@ export type EmrEmptyStateProps = Omit<
   eyebrow?: ReactNode;
   density?: EmrEmptyStateDensity;
   /**
-   * Visual size contract aligned to CDS.V2 EmptyPlaceholder. `md` is the
-   * implementation tier for the product's `mg` usage label.
+   * Visual size contract aligned to CDS.V2 EmptyPlaceholder. `xl` is reserved
+   * for full workspace states, and `md` is the implementation tier for the
+   * product's `mg` usage label.
    */
   size?: EmrEmptyStateSize;
   align?: EmrEmptyStateAlign;
@@ -124,9 +125,21 @@ const sizeClassName: Record<
     body: string;
     title: string;
     description: string;
+    copy: string;
     spacer: string;
   }
 > = {
+  xl: {
+    root: "max-w-[220px] gap-6",
+    iconWrapper: "",
+    iconArea: "size-20 rounded-[28px] p-0.5",
+    icon: "size-9",
+    body: "gap-6",
+    title: "text-[18px] leading-[26px] tracking-[-0.002em]",
+    description: "text-[16px] leading-6 tracking-[0.006em]",
+    copy: "gap-2",
+    spacer: "h-7",
+  },
   lg: {
     root: "max-w-[260px] gap-4",
     iconWrapper: "",
@@ -135,6 +148,7 @@ const sizeClassName: Record<
     body: "gap-4",
     title: "text-[16px] leading-6 tracking-[0.006em]",
     description: "text-[14px] leading-5 tracking-[0.014em]",
+    copy: "gap-1.5",
     spacer: "h-7",
   },
   md: {
@@ -145,6 +159,7 @@ const sizeClassName: Record<
     body: "gap-2",
     title: "text-[14px] leading-5 tracking-[0.014em]",
     description: "text-[14px] leading-5 tracking-[0.014em]",
+    copy: "gap-1.5",
     spacer: "h-6",
   },
   sm: {
@@ -155,6 +170,7 @@ const sizeClassName: Record<
     body: "gap-2",
     title: "text-[14px] leading-5 tracking-[0.014em]",
     description: "text-[14px] leading-5 tracking-[0.014em]",
+    copy: "gap-1.5",
     spacer: "h-6",
   },
 };
@@ -219,6 +235,9 @@ export function EmrEmptyState({
   const hasActions = primaryAction || secondaryAction;
   const actionCount = Number(Boolean(primaryAction)) + Number(Boolean(secondaryAction));
   const showIcon = resolvedSize !== "sm" && icon !== false;
+  const resolvedIcon = icon ?? (
+    <DefaultEmptyStateIcon className={sizeClasses.icon} kind={kind} />
+  );
 
   return (
     <section
@@ -248,16 +267,34 @@ export function EmrEmptyState({
         >
           <div
             className={cn(
-              "flex shrink-0 items-center justify-center overflow-hidden bg-[var(--clair-color-atomic-black-alpha-4)] text-[var(--clair-color-atomic-black-alpha-48)]",
+              "flex shrink-0 items-center justify-center overflow-hidden",
+              resolvedSize === "xl"
+                ? "bg-[var(--clair-color-atomic-neutral-200)] text-[var(--clair-color-atomic-black-alpha-64)]"
+                : "bg-[var(--clair-color-atomic-black-alpha-4)] text-[var(--clair-color-atomic-black-alpha-48)]",
               sizeClasses.iconArea,
             )}
             data-slot="icon-area"
           >
-            <div className={cn("flex items-center justify-center", sizeClasses.icon)} data-slot="icon">
-              {icon ?? (
-                <DefaultEmptyStateIcon className={sizeClasses.icon} kind={kind} />
-              )}
-            </div>
+            {resolvedSize === "xl" ? (
+              <div
+                className="flex size-full items-center justify-center rounded-[26px] border-2 border-[var(--clair-color-atomic-common-100)] bg-[linear-gradient(0deg,#FCFCFC_0%,#FAFAFA_81.7308%,#F8F8F8_100%)]"
+                data-slot="icon-surface"
+              >
+                <div
+                  className={cn("flex items-center justify-center", sizeClasses.icon)}
+                  data-slot="icon"
+                >
+                  {resolvedIcon}
+                </div>
+              </div>
+            ) : (
+              <div
+                className={cn("flex items-center justify-center", sizeClasses.icon)}
+                data-slot="icon"
+              >
+                {resolvedIcon}
+              </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -272,7 +309,8 @@ export function EmrEmptyState({
       >
         <div
           className={cn(
-            "flex min-w-0 flex-col gap-1.5",
+            "flex min-w-0 flex-col",
+            sizeClasses.copy,
             resolvedAlign === "center" && "items-center text-center",
             resolvedAlign === "start" && "items-start text-left",
           )}
@@ -285,7 +323,9 @@ export function EmrEmptyState({
           ) : null}
           <h3
             className={cn(
-              "font-medium text-[var(--clair-color-atomic-black-alpha-48)]",
+              resolvedSize === "xl"
+                ? "font-semibold text-[var(--clair-color-atomic-black-alpha-64)]"
+                : "font-medium text-[var(--clair-color-atomic-black-alpha-48)]",
               sizeClasses.title,
             )}
           >
@@ -305,7 +345,8 @@ export function EmrEmptyState({
         {hasActions ? (
           <div
             className={cn(
-              "flex flex-wrap items-center gap-2",
+              "flex items-center gap-2",
+              resolvedSize === "xl" ? "flex-nowrap" : "flex-wrap",
               resolvedAlign === "center" && "justify-center",
               resolvedAlign === "start" && "justify-start",
             )}
