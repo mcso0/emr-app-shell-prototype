@@ -175,6 +175,7 @@
   --emr-profile-upload-dialog-width: 382px;
   --emr-profile-upload-content-size: 350px;
   --emr-profile-upload-footer-height: 64px;
+  --emr-profile-work-info-active: #0080E5;
   --emr-sidepanel-list-title-height: var(--clair-control-height-md);
   --emr-sidepanel-list-title-padding: var(--clair-spacing-4);
   --emr-sidepanel-list-title-gap: var(--clair-spacing-12);

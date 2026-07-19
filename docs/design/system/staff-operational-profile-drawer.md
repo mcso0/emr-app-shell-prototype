@@ -163,9 +163,26 @@ success or failure.
 ### Today's Shift
 
 Use only the current published or changed hospital schedule snapshot. Show the
-time, work label, location, and computed status when present. No schedule row is
-not an error; read failure is an explicit section error with retry. Do not expose
-draft schedules or private notes.
+time, work label, location, and computed status when present. The profile-local
+work-information card is `330×70px` with a 42px date tile, 12px radius, and
+semantic source tokens.
+
+- A known `leave` uses the green tile variant and shows the server-provided
+  work label with a local date detail. Do not relabel all leave as annual leave
+  when the read model does not establish that reason.
+- A known `off` uses the neutral tile variant and the `휴무일` / `개인 일정`
+  presentation.
+- A known working shift uses the gray/sky tile variant and actual time,
+  computed work state, and safe location/work label.
+- A null shift uses the same outlined empty-card geometry with the truthful
+  copy `오늘 게시된 근무가 없어요`. It is neither a personal off day nor a
+  hospital closure.
+- Hospital closure may be rendered only after a separately authorized server
+  composition of operating hours, holiday policy, and closed exceptions; this
+  panel must not infer it client-side.
+
+No schedule row is not an error; read failure is an explicit section error with
+retry. Do not expose draft schedules or private notes.
 
 ### Availability
 

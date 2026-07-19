@@ -1,10 +1,24 @@
 import { expect, test, type Page } from "@playwright/test";
 
+type MockOperationalShift = {
+  date: string;
+  endMinutes: number;
+  kind: "clinical" | "support" | "reception" | "leave" | "off";
+  locationLabel: string | null;
+  startMinutes: number;
+  workLabel: string;
+};
+
 async function mockStaffProfileApis(
   page: Page,
-  options: { schedule?: boolean; work?: boolean } = {},
+  options: {
+    schedule?: boolean;
+    shiftForDate?: (date: string) => MockOperationalShift | null;
+    work?: boolean;
+  } = {},
 ) {
   await page.route("**/staff/*/operational-profile?**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "";
     await route.fulfill({
       status: 200,
       json: {
@@ -25,7 +39,7 @@ async function mockStaffProfileApis(
           department: "진료",
           membershipStatus: "active",
         },
-        shift: null,
+        shift: options.shiftForDate?.(date) ?? null,
         enforcedBy: "staff-operational-profile-read",
       },
     });
@@ -143,6 +157,14 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(panel).toContainText("계정 정보");
   await expect(panel).toContainText("오늘 근무 정보");
   await expect(panel).toContainText("오늘 게시된 근무가 없어요");
+  const emptyWorkInfo = panel.getByTestId("staff-profile-work-info-empty-card");
+  await expect(emptyWorkInfo).toBeVisible();
+  expect(
+    await emptyWorkInfo.evaluate((element) => element.getBoundingClientRect().height),
+  ).toBe(70);
+  expect(
+    await emptyWorkInfo.evaluate((element) => element.getBoundingClientRect().width),
+  ).toBe(330);
   await expect(panel).not.toContainText("선택 날짜 예약");
   await expect(panel.getByRole("tab", { name: "프로필" })).toHaveAttribute(
     "aria-selected",
@@ -227,6 +249,64 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await panel.getByRole("button", { name: "직원 운영 프로필 닫기" }).click();
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();
+});
+
+test("staff profile work info renders an explicit leave shift as a Figma card", async ({
+  page,
+}) => {
+  await mockStaffProfileApis(page, {
+    shiftForDate: (date) => {
+      if (date === "2026-05-01") {
+        return {
+          date,
+          endMinutes: 0,
+          kind: "leave",
+          locationLabel: null,
+          startMinutes: 0,
+          workLabel: "휴가",
+        };
+      }
+      return null;
+    },
+  });
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await openStaffProfile(page);
+
+  const card = page.getByTestId("staff-profile-work-info-card");
+  await expect(card).toHaveAttribute("data-work-info-state", "leave");
+  await expect(card).toContainText("휴가");
+  await expect(card).toContainText("2026.05.01(금)");
+  await expect(card).not.toContainText("00:00 - 00:00");
+  expect(await card.evaluate((element) => element.getBoundingClientRect().height)).toBe(70);
+  expect(await card.evaluate((element) => element.getBoundingClientRect().width)).toBe(330);
+});
+
+test("staff profile work info renders an explicit off shift as a Figma card", async ({
+  page,
+}) => {
+  await mockStaffProfileApis(page, {
+    shiftForDate: (date) =>
+      date === "2026-05-01"
+        ? {
+            date,
+            endMinutes: 0,
+            kind: "off",
+            locationLabel: null,
+            startMinutes: 0,
+            workLabel: "휴무",
+          }
+        : null,
+  });
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await openStaffProfile(page);
+
+  const card = page.getByTestId("staff-profile-work-info-card");
+  await expect(card).toHaveAttribute("data-work-info-state", "off");
+  await expect(card).toContainText("휴무일");
+  await expect(card).toContainText("개인 일정");
+  await expect(card).not.toContainText("00:00 - 00:00");
 });
 
 test("staff work tab keeps server order, merges cursor pages by hospital date, and confirms permitted navigation", async ({

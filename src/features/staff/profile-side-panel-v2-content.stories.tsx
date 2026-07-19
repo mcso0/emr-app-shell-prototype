@@ -21,6 +21,10 @@ import {
   WorkNavigationDialog,
   type ProfileAssignedWorkItem,
 } from "./components/profile-side-panel-v2-work";
+import {
+  ProfileWorkInfoCard,
+  ProfileWorkInfoEmptyCard,
+} from "./components/profile-work-info-card";
 
 const sampleWorkItem: ProfileAssignedWorkItem = {
   category: "lab",
@@ -123,12 +127,19 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
           <div className="grid gap-4">
             <section className="px-2">
               <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">오늘 근무 정보</h3>
-              <div className="mt-3 flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] px-4 py-[14px] text-sm">
-                <div aria-hidden="true" className="grid size-[42px] shrink-0 overflow-hidden rounded-md border border-[var(--emr-border-default)]">
-                  <span className="h-3 bg-[var(--emr-surface-muted)]" />
-                  <span className="flex items-center justify-center pb-0.5 text-base leading-4 font-semibold text-[var(--clair-color-atomic-sky-500)]">18</span>
-                </div>
-                <div className="min-w-0 flex-1"><p className="text-base leading-6 font-medium">09:00 - 18:00</p><p className="truncate text-sm leading-[18px] text-[var(--emr-text-tertiary)]"><span className="text-[var(--clair-color-atomic-sky-500)]">근무 중</span> · 제1진료실</p></div>
+              <div className="mt-3">
+                <ProfileWorkInfoCard
+                  currentMinutes={600}
+                  shift={{
+                    date: "2026-07-18",
+                    endMinutes: 1080,
+                    kind: "clinical",
+                    locationLabel: "제1진료실",
+                    startMinutes: 540,
+                    workLabel: "진료",
+                  }}
+                  todayDate="2026-07-18"
+                />
               </div>
             </section>
             <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-default)]" />
@@ -177,6 +188,50 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
 
 export const FullPanelProfileSpecimen: Story = {
   render: () => <FullPanelSpecimen />,
+};
+
+export const WorkInfoCardsFigmaContract: Story = {
+  render: () => (
+    <div className="grid w-[330px] gap-[19px]">
+      <ProfileWorkInfoCard
+        currentMinutes={600}
+        shift={{
+          date: "2026-07-19",
+          endMinutes: 0,
+          kind: "leave",
+          locationLabel: null,
+          startMinutes: 0,
+          workLabel: "당일 연차",
+        }}
+        todayDate="2026-07-19"
+      />
+      <ProfileWorkInfoCard
+        currentMinutes={600}
+        shift={{
+          date: "2026-07-19",
+          endMinutes: 0,
+          kind: "off",
+          locationLabel: null,
+          startMinutes: 0,
+          workLabel: "휴무",
+        }}
+        todayDate="2026-07-19"
+      />
+      <ProfileWorkInfoCard
+        currentMinutes={600}
+        shift={{
+          date: "2026-07-19",
+          endMinutes: 1140,
+          kind: "clinical",
+          locationLabel: "진료1실",
+          startMinutes: 540,
+          workLabel: "진료",
+        }}
+        todayDate="2026-07-19"
+      />
+      <ProfileWorkInfoEmptyCard>예정된 일정이 없습니다</ProfileWorkInfoEmptyCard>
+    </div>
+  ),
 };
 
 export const FullPanelThreeTabFigmaContract: Story = {

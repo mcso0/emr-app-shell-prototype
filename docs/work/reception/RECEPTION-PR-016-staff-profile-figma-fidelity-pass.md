@@ -30,6 +30,9 @@ permission, or RLS data boundaries.
 - Use 32px section headers, 70px outlined cards, 42px date tiles, and the
   Figma empty-schedule copy for the existing truthful one-event availability
   contract.
+- Render existing, explicit `leave`, `off`, working, and no-published-shift
+  read-model states as the Figma work-information card variants from node
+  `27751:82759`; keep the existing profile request and permission boundary.
 - Keep email and phone copy controls visible when the value exists.
 - Update the 380×1105 Storybook specimen to mirror the same geometry.
 
@@ -39,6 +42,9 @@ permission, or RLS data boundaries.
 - Cross-module work category aggregation, counts, or accordion semantics.
 - Panel-local schedule reads, date navigation, schema, RLS, or permission
   changes.
+- Hospital-closed inference or data composition from operating hours, holiday
+  policy, or closed exceptions. A missing shift remains a truthful
+  no-published-shift state, not an inferred hospital closure or personal leave.
 - Any global token, shared Tabs API, dependency, or avatar persistence change.
 
 ## Done When
@@ -59,17 +65,30 @@ permission, or RLS data boundaries.
 - A 70px availability card shows the safe single event from the existing API;
   an empty response renders `예정된 일정이 없습니다` rather than a fabricated
   event list.
+- `ProfileWorkInfoCard` owns the local 330×70 work-information presentation:
+  explicit leave uses the green date tile and date detail, explicit off uses
+  the neutral personal-schedule variant, and working shifts retain actual
+  time/status/location values. The no-published-shift copy is now rendered in
+  the same 70px outlined empty-card geometry without changing its meaning.
 
 ## Verification
 
-- `npm run lint -- src/features/staff/staff-operational-profile-drawer.tsx src/features/staff/components/profile-side-panel-v2-header.tsx src/features/staff/components/profile-side-panel-v2-profile.tsx src/features/staff/profile-side-panel-v2-content.stories.tsx`
+- `npm run lint -- src/features/staff/staff-operational-profile-drawer.tsx src/features/staff/components/profile-work-info-card.tsx src/features/staff/profile-side-panel-v2-content.stories.tsx tests/reception-staff-operational-profile.spec.ts`
 - `npx tsc --noEmit --pretty false`
+- `npx vitest --project storybook run src/features/staff/profile-side-panel-v2-content.stories.tsx` — 10 stories passed.
+- `npx playwright test tests/reception-staff-operational-profile.spec.ts --grep 'staff profile (panel is non-modal|work info)' --workers=1 --reporter=line` — 3 targeted browser scenarios passed, including 330×70 leave, off, and no-published-shift cards.
+- Local Storybook browser review: `WorkInfoCardsFigmaContract` rendered the
+  330×70 Figma card anatomy for synthetic leave, off, working, and empty data
+  at the source 16px/12px horizontal padding, 42px tile, 12px radius, and 19px
+  specimen gap.
 - Local Storybook browser review: `FullPanelProfileSpecimen` measured panel
   380×1105, header 378×150 inside the border, and profile content positions
   matching node `27751:80144` (section starts 167/314/523px; shift card starts
   211px and is 330×70px).
-- `npx playwright test tests/reception-staff-operational-profile.spec.ts --workers=1 --reporter=line` is blocked locally before the profile test because the
-  demo reception queue toolbar is disabled after a session/queue read failure.
+- Full `npx playwright test tests/reception-staff-operational-profile.spec.ts --workers=1 --reporter=line` still has one unrelated local failure in
+  `veterinarian lane menu shares filter state and protects the final lane`: the
+  schedule toolbar stays disabled after the demo staff/queue read failure. The
+  three profile-card scenarios above pass and do not touch that toolbar path.
 
 ## Closeout
 
