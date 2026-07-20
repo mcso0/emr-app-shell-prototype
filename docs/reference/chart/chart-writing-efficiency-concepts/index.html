@@ -1,0 +1,2645 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR 차트 작성 효율화 — 인터랙티브 시안 3종</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink-950: #17171a;
+        --ink-900: #242429;
+        --ink-800: #34343a;
+        --ink-700: #505057;
+        --ink-600: #6a6a72;
+        --ink-500: #85858d;
+        --ink-400: #a6a6ad;
+        --ink-300: #c7c7cc;
+        --ink-200: #dedee2;
+        --ink-150: #e9e9ec;
+        --ink-100: #f1f1f3;
+        --ink-75: #f6f6f8;
+        --ink-50: #fafafa;
+        --white: #ffffff;
+        --sky-700: #0055ad;
+        --sky-600: #006bdb;
+        --sky-500: #1085ff;
+        --sky-300: #70b6ff;
+        --sky-100: #dbedff;
+        --sky-50: #f0f7ff;
+        --green-700: #177245;
+        --green-100: #daf5e6;
+        --green-50: #effaf4;
+        --orange-700: #9a4b08;
+        --orange-100: #ffedcf;
+        --orange-50: #fff8ec;
+        --red-700: #a72c31;
+        --red-100: #ffe0e0;
+        --red-50: #fff4f4;
+        --purple-700: #6441a5;
+        --purple-100: #ebe3ff;
+        --purple-50: #f8f5ff;
+        --shadow-surface:
+          0 0 0 1px rgba(0, 0, 0, 0.06),
+          0 1px 2px -1px rgba(0, 0, 0, 0.06),
+          0 2px 4px rgba(0, 0, 0, 0.04);
+        --shadow-floating:
+          0 0 0 1px rgba(0, 0, 0, 0.07),
+          0 12px 32px rgba(18, 20, 24, 0.14);
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+        --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-synthesis: none;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--ink-75);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink-900);
+        background: var(--ink-75);
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      button,
+      [role="button"] {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button {
+        min-height: 40px;
+        border: 0;
+        cursor: pointer;
+        transition-property: transform, background-color, color, box-shadow;
+        transition-duration: 150ms;
+        transition-timing-function: var(--ease-out);
+      }
+
+      button:active:not(:disabled) {
+        transform: scale(0.96);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.46;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--sky-500);
+        outline-offset: 2px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1,
+      h2,
+      h3 {
+        text-wrap: balance;
+      }
+
+      p,
+      li {
+        text-wrap: pretty;
+      }
+
+      .tabular {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .prototype-bar {
+        position: relative;
+        z-index: 20;
+        min-height: 72px;
+        display: grid;
+        grid-template-columns: minmax(250px, 1fr) auto auto;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 18px;
+        border-bottom: 1px solid var(--ink-200);
+        background: rgba(250, 250, 250, 0.96);
+        backdrop-filter: blur(16px);
+      }
+
+      .prototype-title {
+        min-width: 0;
+      }
+
+      .prototype-title strong {
+        display: block;
+        overflow: hidden;
+        color: var(--ink-900);
+        font-size: 14px;
+        font-weight: 720;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .prototype-title span {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--ink-600);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .concept-tabs {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 12px;
+        background: var(--ink-100);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.035);
+      }
+
+      .concept-tab {
+        min-width: 158px;
+        padding: 0 14px;
+        border-radius: 8px;
+        color: var(--ink-600);
+        background: transparent;
+        font-size: 12px;
+        font-weight: 680;
+      }
+
+      .concept-tab[aria-selected="true"] {
+        color: var(--ink-900);
+        background: var(--white);
+        box-shadow: var(--shadow-surface);
+      }
+
+      .prototype-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .quiet-button,
+      .icon-button,
+      .secondary-button,
+      .primary-button,
+      .ghost-button,
+      .chip,
+      .step-button,
+      .command-result,
+      .template-option {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 660;
+      }
+
+      .quiet-button,
+      .secondary-button,
+      .icon-button {
+        color: var(--ink-700);
+        background: var(--white);
+        box-shadow: var(--shadow-surface);
+      }
+
+      .quiet-button {
+        padding: 0 12px;
+      }
+
+      .primary-button {
+        padding: 0 15px;
+        color: var(--white);
+        background: var(--ink-900);
+      }
+
+      .primary-button:hover {
+        background: var(--ink-800);
+      }
+
+      .primary-button.sky {
+        background: var(--sky-600);
+      }
+
+      .secondary-button {
+        padding: 0 13px;
+      }
+
+      .ghost-button {
+        padding: 0 10px;
+        color: var(--ink-600);
+        background: transparent;
+      }
+
+      .ghost-button:hover,
+      .quiet-button:hover,
+      .secondary-button:hover,
+      .icon-button:hover {
+        color: var(--ink-900);
+        background: var(--ink-75);
+      }
+
+      .icon-button {
+        width: 40px;
+        padding: 0;
+      }
+
+      .app-frame {
+        height: calc(100vh - 72px);
+        min-height: 0;
+        display: grid;
+        grid-template-rows: 48px minmax(0, 1fr);
+        overflow: hidden;
+        background: var(--white);
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--ink-150);
+        background: var(--white);
+      }
+
+      .workspace-switcher {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        border-radius: 8px;
+        color: var(--ink-800);
+        background: var(--white);
+        box-shadow: var(--shadow-surface);
+        font-size: 12px;
+        font-weight: 680;
+      }
+
+      .brand-mark {
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        border-radius: 6px;
+        color: var(--white);
+        background: var(--sky-500);
+        font-size: 10px;
+        font-weight: 800;
+      }
+
+      .topbar-divider {
+        width: 1px;
+        height: 16px;
+        background: var(--ink-200);
+      }
+
+      .workspace-tab {
+        height: 34px;
+        min-width: 142px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--ink-800);
+        background: var(--ink-50);
+        box-shadow: var(--shadow-surface);
+        font-size: 12px;
+        font-weight: 680;
+      }
+
+      .topbar-spacer {
+        flex: 1;
+      }
+
+      .topbar-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--ink-500);
+        font-size: 12px;
+      }
+
+      .profile-avatar {
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        color: var(--ink-700);
+        background: var(--ink-100);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .app-grid {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 52px 284px minmax(0, 1fr);
+      }
+
+      .nav-rail {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 6px;
+        background: var(--ink-950);
+        color: var(--ink-400);
+      }
+
+      .rail-button {
+        width: 40px;
+        min-height: 40px;
+        display: grid;
+        place-items: center;
+        border-radius: 7px;
+        color: var(--ink-400);
+        background: transparent;
+        font-size: 19px;
+      }
+
+      .rail-button.active,
+      .rail-button:hover {
+        color: var(--white);
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      .rail-spacer {
+        flex: 1;
+      }
+
+      .queue-panel {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        border-right: 1px solid var(--ink-150);
+        background: #fbfbfc;
+      }
+
+      .queue-title {
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+      }
+
+      .queue-title h2 {
+        font-size: 15px;
+        font-weight: 720;
+      }
+
+      .date-row {
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 12px;
+        border-top: 1px solid var(--ink-150);
+        border-bottom: 1px solid var(--ink-150);
+        color: var(--ink-700);
+        font-size: 12px;
+        font-weight: 680;
+      }
+
+      .queue-scroll {
+        min-height: 0;
+        overflow: auto;
+        padding: 14px 12px;
+      }
+
+      .queue-group-head {
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--ink-600);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .queue-count {
+        display: inline-grid;
+        min-width: 20px;
+        height: 20px;
+        place-items: center;
+        margin-left: 5px;
+        border-radius: 6px;
+        color: var(--ink-700);
+        background: var(--ink-100);
+        font-size: 11px;
+      }
+
+      .queue-card {
+        width: 100%;
+        min-height: 92px;
+        display: block;
+        padding: 12px;
+        border-radius: 10px;
+        color: var(--ink-800);
+        background: var(--white);
+        box-shadow: var(--shadow-surface);
+        text-align: left;
+      }
+
+      .queue-card + .queue-card {
+        margin-top: 8px;
+      }
+
+      .queue-card.active {
+        background: var(--sky-50);
+        box-shadow:
+          0 0 0 1px var(--sky-300),
+          0 1px 2px rgba(16, 133, 255, 0.08);
+      }
+
+      .queue-card-top,
+      .queue-card-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .queue-card strong {
+        font-size: 13px;
+        font-weight: 720;
+      }
+
+      .queue-card p {
+        margin-top: 8px;
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      .queue-card-bottom {
+        margin-top: 10px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .workspace {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: 52px minmax(0, 1fr);
+        background: var(--ink-50);
+      }
+
+      .patient-bar {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--ink-150);
+        background: var(--white);
+        scrollbar-width: none;
+      }
+
+      .patient-bar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .patient-avatar {
+        flex: 0 0 auto;
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        color: var(--sky-700);
+        background: var(--sky-100);
+        box-shadow: inset 0 0 0 1px rgba(0, 85, 173, 0.08);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .context-pill {
+        flex: 0 0 auto;
+        min-height: 26px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 8px;
+        border-radius: 7px;
+        color: var(--ink-700);
+        background: var(--ink-75);
+        font-size: 11px;
+      }
+
+      .context-pill strong {
+        color: var(--ink-900);
+        font-weight: 690;
+      }
+
+      .concept-panel {
+        min-height: 0;
+        display: none;
+        overflow: hidden;
+      }
+
+      .concept-panel.active {
+        display: grid;
+      }
+
+      .concept-a,
+      .concept-b,
+      .concept-c {
+        grid-template-rows: auto minmax(0, 1fr) auto;
+      }
+
+      .chart-toolbar {
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 18px;
+        border-bottom: 1px solid var(--ink-150);
+        background: var(--white);
+      }
+
+      .chart-toolbar-title {
+        min-width: 0;
+      }
+
+      .chart-toolbar-title h1 {
+        font-size: 17px;
+        font-weight: 740;
+      }
+
+      .chart-toolbar-title p {
+        margin-top: 4px;
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      .toolbar-spacer {
+        flex: 1;
+      }
+
+      .save-status {
+        min-height: 30px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 9px;
+        border-radius: 7px;
+        color: var(--green-700);
+        background: var(--green-50);
+        font-size: 11px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .save-status.error {
+        color: var(--red-700);
+        background: var(--red-50);
+      }
+
+      .save-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .surface {
+        border-radius: 14px;
+        background: var(--white);
+        box-shadow: var(--shadow-surface);
+      }
+
+      .section-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--ink-150);
+      }
+
+      .section-label h2,
+      .section-label h3 {
+        font-size: 13px;
+        font-weight: 730;
+      }
+
+      .section-label p {
+        margin-top: 3px;
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      .concept-a-body {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(460px, 1fr) 322px;
+        gap: 12px;
+        overflow: auto;
+        padding: 12px;
+      }
+
+      .focus-editor {
+        min-height: 620px;
+        display: grid;
+        grid-template-rows: auto auto minmax(260px, 1fr) auto;
+      }
+
+      .soap-steps {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        padding: 12px 14px 0;
+      }
+
+      .step-button {
+        min-width: 0;
+        justify-content: flex-start;
+        padding: 0 11px;
+        color: var(--ink-500);
+        background: var(--ink-75);
+        text-align: left;
+      }
+
+      .step-button.active {
+        color: var(--sky-700);
+        background: var(--sky-50);
+        box-shadow: inset 0 0 0 1px var(--sky-100);
+      }
+
+      .step-letter {
+        width: 22px;
+        height: 22px;
+        display: inline-grid;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 7px;
+        color: inherit;
+        background: rgba(255, 255, 255, 0.75);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .prompt-strip {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        overflow-x: auto;
+        padding: 12px 14px;
+        scrollbar-width: none;
+      }
+
+      .prompt-strip::-webkit-scrollbar {
+        display: none;
+      }
+
+      .prompt-strip-label {
+        flex: 0 0 auto;
+        color: var(--ink-500);
+        font-size: 11px;
+        font-weight: 680;
+      }
+
+      .chip {
+        flex: 0 0 auto;
+        min-height: 32px;
+        padding: 0 10px;
+        color: var(--ink-700);
+        background: var(--white);
+        box-shadow: 0 0 0 1px var(--ink-200);
+      }
+
+      .chip:hover {
+        color: var(--sky-700);
+        background: var(--sky-50);
+        box-shadow: 0 0 0 1px var(--sky-100);
+      }
+
+      .editor-wrap {
+        min-height: 0;
+        padding: 0 14px 14px;
+      }
+
+      .editor-label {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 9px;
+      }
+
+      .editor-label strong {
+        font-size: 14px;
+      }
+
+      .editor-label span {
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      .soap-textarea {
+        width: 100%;
+        min-height: 238px;
+        resize: vertical;
+        border: 1px solid var(--ink-200);
+        border-radius: 10px;
+        padding: 15px;
+        color: var(--ink-900);
+        background: var(--white);
+        font-size: 14px;
+        line-height: 1.7;
+        caret-color: var(--sky-600);
+        transition-property: border-color, box-shadow;
+        transition-duration: 150ms;
+        transition-timing-function: var(--ease-out);
+      }
+
+      .soap-textarea:focus {
+        border-color: var(--sky-300);
+        outline: 0;
+        box-shadow: 0 0 0 3px rgba(16, 133, 255, 0.1);
+      }
+
+      .editor-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-top: 1px solid var(--ink-150);
+      }
+
+      .keyboard-hint {
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      kbd {
+        min-width: 22px;
+        min-height: 22px;
+        display: inline-grid;
+        place-items: center;
+        padding: 0 5px;
+        border-radius: 5px;
+        color: var(--ink-600);
+        background: var(--ink-75);
+        box-shadow: inset 0 0 0 1px var(--ink-200);
+        font-family: inherit;
+        font-size: 10px;
+      }
+
+      .focus-rail {
+        min-height: 620px;
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .context-summary,
+      .clinical-queue,
+      .previous-note {
+        overflow: hidden;
+      }
+
+      .summary-list,
+      .queue-list,
+      .mini-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .summary-row,
+      .queue-item,
+      .mini-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--ink-150);
+      }
+
+      .summary-row:last-child,
+      .queue-item:last-child,
+      .mini-row:last-child {
+        border-bottom: 0;
+      }
+
+      .summary-row span,
+      .mini-row span {
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      .summary-row strong,
+      .mini-row strong {
+        color: var(--ink-800);
+        font-size: 12px;
+        font-weight: 680;
+        text-align: right;
+      }
+
+      .queue-item {
+        align-items: center;
+      }
+
+      .queue-item-copy {
+        min-width: 0;
+      }
+
+      .queue-item-copy strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .queue-item-copy span {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .item-type {
+        flex: 0 0 auto;
+        min-height: 24px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 7px;
+        border-radius: 6px;
+        color: var(--purple-700);
+        background: var(--purple-50);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .item-type.order {
+        color: var(--orange-700);
+        background: var(--orange-50);
+      }
+
+      .suggestion-box {
+        padding: 12px 14px 14px;
+      }
+
+      .suggestion-box p {
+        color: var(--ink-600);
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      .suggestion-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+        margin-top: 10px;
+      }
+
+      .sticky-summary {
+        min-height: 62px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 18px;
+        border-top: 1px solid var(--ink-150);
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(12px);
+      }
+
+      .summary-stat {
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      .summary-stat strong {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink-900);
+        font-size: 12px;
+      }
+
+      .summary-divider {
+        width: 1px;
+        height: 28px;
+        background: var(--ink-150);
+      }
+
+      .sticky-spacer {
+        flex: 1;
+      }
+
+      .concept-b-body {
+        min-height: 0;
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(520px, 1fr) 300px;
+        gap: 12px;
+        overflow: auto;
+        padding: 12px;
+      }
+
+      .command-trigger {
+        min-width: min(520px, 46vw);
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 12px;
+        border-radius: 10px;
+        color: var(--ink-500);
+        background: var(--white);
+        box-shadow:
+          0 0 0 1px var(--ink-200),
+          0 2px 6px rgba(0, 0, 0, 0.035);
+        text-align: left;
+      }
+
+      .command-trigger strong {
+        color: var(--ink-800);
+        font-size: 12px;
+      }
+
+      .command-trigger span {
+        flex: 1;
+        font-size: 11px;
+      }
+
+      .command-trigger kbd {
+        flex: 0 0 auto;
+      }
+
+      .narrative-editor {
+        min-height: 622px;
+        overflow: hidden;
+      }
+
+      .narrative-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--ink-150);
+      }
+
+      .narrative-head h2 {
+        font-size: 13px;
+      }
+
+      .narrative-head p {
+        margin-top: 3px;
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      .narrative-body {
+        padding: 4px 18px 18px;
+      }
+
+      .narrative-section {
+        display: grid;
+        grid-template-columns: 104px minmax(0, 1fr);
+        gap: 14px;
+        padding: 18px 0;
+        border-bottom: 1px solid var(--ink-150);
+      }
+
+      .narrative-section:last-child {
+        border-bottom: 0;
+      }
+
+      .narrative-key {
+        color: var(--ink-500);
+        font-size: 11px;
+        font-weight: 680;
+      }
+
+      .narrative-key strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink-900);
+        font-size: 12px;
+      }
+
+      .narrative-content {
+        min-height: 58px;
+        color: var(--ink-800);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+
+      .inline-token {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 24px;
+        margin: 1px 2px;
+        padding: 0 7px;
+        border-radius: 6px;
+        color: var(--sky-700);
+        background: var(--sky-50);
+        font-size: 11px;
+        font-weight: 670;
+      }
+
+      .command-side {
+        min-height: 622px;
+        display: grid;
+        align-content: start;
+        gap: 12px;
+      }
+
+      .shortcut-list {
+        padding: 7px;
+      }
+
+      .shortcut-row {
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 8px;
+        border-radius: 8px;
+        color: var(--ink-700);
+        font-size: 11px;
+      }
+
+      .shortcut-row:hover {
+        background: var(--ink-75);
+      }
+
+      .shortcut-row i {
+        width: 20px;
+        color: var(--ink-500);
+        font-size: 17px;
+      }
+
+      .shortcut-row span {
+        flex: 1;
+      }
+
+      .linked-work {
+        padding: 4px 12px 12px;
+      }
+
+      .linked-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding-top: 10px;
+      }
+
+      .linked-chip {
+        min-height: 28px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 8px;
+        border-radius: 7px;
+        color: var(--ink-700);
+        background: var(--ink-75);
+        box-shadow: inset 0 0 0 1px var(--ink-150);
+        font-size: 10px;
+        font-weight: 660;
+      }
+
+      .command-overlay {
+        position: absolute;
+        z-index: 15;
+        top: 18px;
+        left: 50%;
+        width: min(620px, calc(100% - 40px));
+        display: none;
+        overflow: hidden;
+        border-radius: 16px;
+        background: var(--white);
+        box-shadow: var(--shadow-floating);
+        transform: translateX(-50%);
+        transform-origin: center;
+      }
+
+      .command-overlay.open {
+        display: block;
+      }
+
+      .command-search-row {
+        min-height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--ink-150);
+      }
+
+      .command-search-row i {
+        color: var(--ink-500);
+        font-size: 20px;
+      }
+
+      .command-input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: 0;
+        color: var(--ink-900);
+        background: transparent;
+        font-size: 14px;
+      }
+
+      .command-results {
+        padding: 8px;
+      }
+
+      .command-result {
+        width: 100%;
+        min-height: 52px;
+        justify-content: flex-start;
+        padding: 8px 10px;
+        color: var(--ink-800);
+        background: transparent;
+        text-align: left;
+      }
+
+      .command-result:hover,
+      .command-result:focus-visible {
+        background: var(--sky-50);
+      }
+
+      .command-result > i {
+        width: 30px;
+        color: var(--sky-600);
+        font-size: 19px;
+        text-align: center;
+      }
+
+      .command-result-copy {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .command-result-copy strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .command-result-copy span {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .command-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 0 12px;
+        border-top: 1px solid var(--ink-150);
+        color: var(--ink-500);
+        background: var(--ink-50);
+        font-size: 10px;
+      }
+
+      .concept-c-body {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 270px minmax(390px, 1fr) 320px;
+        gap: 12px;
+        overflow: auto;
+        padding: 12px;
+      }
+
+      .template-picker,
+      .problem-chart,
+      .order-bundle {
+        min-height: 622px;
+        overflow: hidden;
+      }
+
+      .template-list {
+        display: grid;
+        gap: 6px;
+        padding: 10px;
+      }
+
+      .template-option {
+        width: 100%;
+        min-height: 54px;
+        justify-content: flex-start;
+        padding: 8px 10px;
+        color: var(--ink-700);
+        background: transparent;
+        text-align: left;
+      }
+
+      .template-option:hover {
+        background: var(--ink-75);
+      }
+
+      .template-option.active {
+        color: var(--sky-700);
+        background: var(--sky-50);
+        box-shadow: inset 0 0 0 1px var(--sky-100);
+      }
+
+      .template-icon {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 9px;
+        color: var(--sky-700);
+        background: var(--white);
+        box-shadow: var(--shadow-surface);
+        font-size: 17px;
+      }
+
+      .template-copy strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .template-copy span {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .template-savings {
+        margin: 4px 10px 10px;
+        padding: 12px;
+        border-radius: 10px;
+        color: var(--green-700);
+        background: var(--green-50);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .problem-progress {
+        padding: 12px 16px 4px;
+      }
+
+      .progress-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .progress-track {
+        height: 6px;
+        margin-top: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--ink-100);
+      }
+
+      .progress-fill {
+        width: 50%;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--sky-500);
+        transition-property: transform;
+        transition-duration: 180ms;
+        transition-timing-function: var(--ease-out);
+        transform: scaleX(1);
+        transform-origin: left;
+      }
+
+      .checklist {
+        padding: 8px 16px 16px;
+      }
+
+      .check-row {
+        min-height: 52px;
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid var(--ink-150);
+        color: var(--ink-800);
+        cursor: pointer;
+      }
+
+      .check-row:last-child {
+        border-bottom: 0;
+      }
+
+      .check-row input,
+      .bundle-row input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        accent-color: var(--sky-600);
+      }
+
+      .check-row strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .check-row span {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .check-value {
+        min-height: 28px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 8px;
+        border-radius: 7px;
+        color: var(--ink-700);
+        background: var(--ink-75);
+        font-size: 10px;
+        font-weight: 660;
+      }
+
+      .bundle-list {
+        padding: 7px 14px 12px;
+      }
+
+      .bundle-row {
+        min-height: 58px;
+        display: grid;
+        grid-template-columns: 20px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid var(--ink-150);
+      }
+
+      .bundle-row:last-child {
+        border-bottom: 0;
+      }
+
+      .bundle-copy strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .bundle-copy span {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .bundle-price {
+        color: var(--ink-700);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .bundle-total {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-top: 1px solid var(--ink-150);
+        background: var(--ink-50);
+      }
+
+      .bundle-total span {
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .bundle-total strong {
+        display: block;
+        margin-top: 3px;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .template-preview {
+        margin-top: 12px;
+        overflow: hidden;
+      }
+
+      .template-preview-copy {
+        padding: 12px 14px;
+        color: var(--ink-700);
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      .template-preview-copy strong {
+        color: var(--ink-900);
+      }
+
+      .toast-region {
+        position: fixed;
+        z-index: 50;
+        right: 18px;
+        bottom: 18px;
+        width: min(360px, calc(100vw - 36px));
+        pointer-events: none;
+      }
+
+      .toast {
+        min-height: 52px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: var(--ink-800);
+        background: var(--white);
+        box-shadow: var(--shadow-floating);
+        opacity: 1;
+        transform: translateY(0);
+        transition-property: transform, opacity;
+        transition-duration: 180ms;
+        transition-timing-function: var(--ease-out);
+      }
+
+      .toast.leaving {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      .toast i {
+        color: var(--green-700);
+        font-size: 20px;
+      }
+
+      .toast strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .toast span {
+        display: block;
+        margin-top: 2px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      dialog {
+        width: min(480px, calc(100vw - 32px));
+        padding: 0;
+        border: 0;
+        border-radius: 16px;
+        color: var(--ink-900);
+        background: var(--white);
+        box-shadow: var(--shadow-floating);
+      }
+
+      dialog::backdrop {
+        background: rgba(18, 18, 22, 0.36);
+        backdrop-filter: blur(3px);
+      }
+
+      .dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--ink-150);
+      }
+
+      .dialog-head h2 {
+        font-size: 15px;
+      }
+
+      .dialog-body {
+        padding: 18px;
+      }
+
+      .dialog-patient {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .dialog-patient strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .dialog-patient span {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink-500);
+        font-size: 10px;
+      }
+
+      .completion-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .completion-list li {
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 1px solid var(--ink-150);
+        font-size: 11px;
+      }
+
+      .completion-list li:last-child {
+        border-bottom: 0;
+      }
+
+      .status-good {
+        color: var(--green-700);
+        font-weight: 680;
+      }
+
+      .status-warn {
+        color: var(--orange-700);
+        font-weight: 680;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 12px 18px;
+        border-top: 1px solid var(--ink-150);
+        background: var(--ink-50);
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (max-width: 1240px) {
+        .prototype-bar {
+          grid-template-columns: 1fr auto;
+        }
+
+        .prototype-title {
+          display: none;
+        }
+
+        .app-grid {
+          grid-template-columns: 52px 240px minmax(0, 1fr);
+        }
+
+        .concept-c-body {
+          grid-template-columns: 240px minmax(380px, 1fr);
+        }
+
+        .order-bundle {
+          grid-column: 1 / -1;
+          min-height: auto;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .prototype-bar {
+          align-items: stretch;
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+
+        .prototype-actions {
+          display: none;
+        }
+
+        .concept-tabs {
+          overflow-x: auto;
+        }
+
+        .concept-tab {
+          flex: 1 0 150px;
+        }
+
+        .app-frame {
+          height: calc(100vh - 72px);
+        }
+
+        .app-grid {
+          grid-template-columns: 52px minmax(0, 1fr);
+        }
+
+        .queue-panel {
+          display: none;
+        }
+
+        .concept-a-body,
+        .concept-b-body,
+        .concept-c-body {
+          grid-template-columns: 1fr;
+        }
+
+        .focus-rail,
+        .command-side,
+        .template-picker,
+        .order-bundle {
+          min-height: auto;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .topbar-meta,
+        .workspace-switcher span,
+        .chart-toolbar-title p,
+        .save-status {
+          display: none;
+        }
+
+        .app-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .nav-rail {
+          display: none;
+        }
+
+        .chart-toolbar {
+          padding: 8px 10px;
+        }
+
+        .chart-toolbar .secondary-button {
+          display: none;
+        }
+
+        .concept-a-body,
+        .concept-b-body,
+        .concept-c-body {
+          padding: 8px;
+        }
+
+        .soap-steps {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .concept-a-body {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .focus-editor,
+        .narrative-editor,
+        .problem-chart {
+          min-height: 560px;
+        }
+
+        .sticky-summary {
+          gap: 8px;
+          padding: 8px 10px;
+        }
+
+        .summary-stat:nth-of-type(n + 3),
+        .summary-divider:nth-of-type(n + 3) {
+          display: none;
+        }
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .queue-card:hover {
+          box-shadow:
+            0 0 0 1px rgba(0, 0, 0, 0.08),
+            0 3px 8px rgba(0, 0, 0, 0.06);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="prototype-bar" aria-label="시안 선택 도구">
+      <div class="prototype-title">
+        <strong>차트 작성 효율화 · 인터랙티브 시안</strong>
+        <span id="conceptSummary">한 화면에 한 판단만 — 순서대로 집중해서 기록</span>
+      </div>
+      <div class="concept-tabs" role="tablist" aria-label="개선 시안 선택">
+        <button
+          class="concept-tab"
+          id="concept-tab-a"
+          role="tab"
+          aria-controls="concept-a"
+          aria-selected="true"
+          data-concept="a"
+        >
+          A · 집중 기록
+        </button>
+        <button
+          class="concept-tab"
+          id="concept-tab-b"
+          role="tab"
+          aria-controls="concept-b"
+          aria-selected="false"
+          data-concept="b"
+        >
+          B · 커맨드 차트
+        </button>
+        <button
+          class="concept-tab"
+          id="concept-tab-c"
+          role="tab"
+          aria-controls="concept-c"
+          aria-selected="false"
+          data-concept="c"
+        >
+          C · 증상 템플릿
+        </button>
+      </div>
+      <div class="prototype-actions">
+        <button class="quiet-button" id="simulateError" type="button">
+          <i class="ph ph-warning-circle" aria-hidden="true"></i>
+          저장 오류 보기
+        </button>
+      </div>
+    </header>
+
+    <div class="app-frame">
+      <header class="topbar">
+        <button class="workspace-switcher" type="button" aria-label="워크스페이스 선택">
+          <span class="brand-mark" aria-hidden="true">C</span>
+          <span>VIP동물의료센터 청담점</span>
+          <i class="ph ph-caret-down" aria-hidden="true"></i>
+        </button>
+        <span class="topbar-divider" aria-hidden="true"></span>
+        <div class="workspace-tab">
+          <i class="ph ph-stethoscope" aria-hidden="true"></i>
+          진료/차트
+        </div>
+        <div class="topbar-spacer"></div>
+        <div class="topbar-meta">
+          <span>세션 02:41:18</span>
+          <i class="ph ph-bell" aria-hidden="true"></i>
+          <i class="ph ph-question" aria-hidden="true"></i>
+        </div>
+        <span class="profile-avatar" aria-label="담당자 김도윤">김</span>
+      </header>
+
+      <div class="app-grid">
+        <nav class="nav-rail" aria-label="주요 메뉴">
+          <button class="rail-button" type="button" aria-label="원내 현황">
+            <i class="ph ph-house" aria-hidden="true"></i>
+          </button>
+          <button class="rail-button" type="button" aria-label="통합 검색">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          </button>
+          <button class="rail-button" type="button" aria-label="접수 예약">
+            <i class="ph ph-calendar-blank" aria-hidden="true"></i>
+          </button>
+          <button class="rail-button active" type="button" aria-label="진료 차트" aria-current="page">
+            <i class="ph ph-stethoscope" aria-hidden="true"></i>
+          </button>
+          <button class="rail-button" type="button" aria-label="검사">
+            <i class="ph ph-flask" aria-hidden="true"></i>
+          </button>
+          <button class="rail-button" type="button" aria-label="조제 처치">
+            <i class="ph ph-pill" aria-hidden="true"></i>
+          </button>
+          <span class="rail-spacer"></span>
+          <button class="rail-button" type="button" aria-label="도움말">
+            <i class="ph ph-headset" aria-hidden="true"></i>
+          </button>
+        </nav>
+
+        <aside class="queue-panel" aria-label="진료 대기열">
+          <div class="queue-title">
+            <h2>진료/차트</h2>
+            <i class="ph ph-sidebar-simple" aria-hidden="true"></i>
+          </div>
+          <div class="date-row">
+            <i class="ph ph-caret-left" aria-hidden="true"></i>
+            <span class="tabular">26.07.15(수)</span>
+            <i class="ph ph-caret-right" aria-hidden="true"></i>
+          </div>
+          <div class="queue-scroll">
+            <div class="queue-group-head">
+              <span>진행중 <span class="queue-count">1</span></span>
+              <i class="ph ph-caret-up" aria-hidden="true"></i>
+            </div>
+            <button class="queue-card active" type="button" aria-pressed="true">
+              <span class="queue-card-top">
+                <strong>초코 · 최도현</strong>
+                <i class="ph ph-dots-three" aria-hidden="true"></i>
+              </span>
+              <p>방문목적 · 귀를 자주 긁어요</p>
+              <span class="queue-card-bottom">
+                <span class="tabular">15:30 접수</span>
+                <span>김도윤</span>
+              </span>
+            </button>
+            <div class="queue-group-head">
+              <span>대기중 <span class="queue-count">1</span></span>
+              <i class="ph ph-caret-up" aria-hidden="true"></i>
+            </div>
+            <button class="queue-card" type="button">
+              <span class="queue-card-top">
+                <strong>구름 · 문지아</strong>
+                <i class="ph ph-dots-three" aria-hidden="true"></i>
+              </span>
+              <p>방문목적 · 예방 접종</p>
+              <span class="queue-card-bottom">
+                <span class="tabular">15:50 접수</span>
+                <span>이수지</span>
+              </span>
+            </button>
+          </div>
+        </aside>
+
+        <main class="workspace">
+          <div class="patient-bar" aria-label="환자 컨텍스트 정보">
+            <span class="patient-avatar" aria-hidden="true">초</span>
+            <span class="context-pill">환자 <strong>초코 · 보호자 최도현</strong></span>
+            <span class="context-pill">품종 <strong>Pomeranian</strong></span>
+            <span class="context-pill">나이 <strong>9세</strong></span>
+            <span class="context-pill">성별 <strong>중성화·수컷</strong></span>
+            <span class="context-pill tabular">체중 <strong>5.96 kg</strong></span>
+            <span class="context-pill tabular">체온 <strong>39.3℃</strong></span>
+            <span class="context-pill">메모 <strong>4</strong></span>
+          </div>
+
+          <section
+            class="concept-panel concept-a active"
+            id="concept-a"
+            role="tabpanel"
+            aria-labelledby="concept-tab-a"
+          >
+            <header class="chart-toolbar">
+              <div class="chart-toolbar-title">
+                <h1>집중 기록 · 주관적</h1>
+                <p>동시에 하나의 판단만 보여주고, 다음 단계는 현재 기록을 이어받아</p>
+              </div>
+              <span class="toolbar-spacer"></span>
+              <span class="save-status" data-save-status>
+                <span class="save-dot" aria-hidden="true"></span>
+                <span data-save-label>자동저장됨 · 방금</span>
+              </span>
+              <button class="secondary-button" type="button" data-action="save">
+                <i class="ph ph-floppy-disk" aria-hidden="true"></i>
+                저장
+              </button>
+              <button class="primary-button" type="button" data-action="complete">진료 완료</button>
+            </header>
+
+            <div class="concept-a-body">
+              <section class="surface focus-editor" aria-label="순차 SOAP 기록">
+                <div class="soap-steps" role="tablist" aria-label="SOAP 단계">
+                  <button class="step-button active" type="button" data-soap-step="s" role="tab" aria-selected="true">
+                    <span class="step-letter">S</span><span>주관적</span>
+                  </button>
+                  <button class="step-button" type="button" data-soap-step="o" role="tab" aria-selected="false">
+                    <span class="step-letter">O</span><span>객관적</span>
+                  </button>
+                  <button class="step-button" type="button" data-soap-step="a" role="tab" aria-selected="false">
+                    <span class="step-letter">A</span><span>평가</span>
+                  </button>
+                  <button class="step-button" type="button" data-soap-step="p" role="tab" aria-selected="false">
+                    <span class="step-letter">P</span><span>계획</span>
+                  </button>
+                </div>
+                <div class="prompt-strip" aria-label="빠른 문구">
+                  <span class="prompt-strip-label">빠른 입력</span>
+                  <button class="chip" type="button" data-quick-text="보호자 진술에 따르면 ">보호자 진술</button>
+                  <button class="chip" type="button" data-quick-text="증상은 3일 전부터 시작되었고, ">3일 전부터</button>
+                  <button class="chip" type="button" data-quick-text="식욕과 활력은 평소와 동일함. ">식욕·활력 양호</button>
+                  <button class="chip" type="button" data-quick-text="오른쪽 귀를 자주 긁고 머리를 흔드는 모습을 보임. ">오른쪽 귀 소양감</button>
+                </div>
+                <div class="editor-wrap">
+                  <div class="editor-label">
+                    <div>
+                      <strong id="soapStepTitle">보호자 진술과 주호소</strong>
+                      <span id="soapStepHint">말하듯 적어도 다음 단계에서 구조가 유지돼</span>
+                    </div>
+                    <span class="tabular"><span id="charCount">55</span>자</span>
+                  </div>
+                  <textarea class="soap-textarea" id="focusSoapEditor" aria-label="현재 SOAP 단계 기록">보호자 진술에 따르면 3일 전부터 오른쪽 귀를 자주 긁고 머리를 흔듦. 식욕과 활력은 평소와 동일함.</textarea>
+                </div>
+                <footer class="editor-footer">
+                  <span class="keyboard-hint"><kbd>⌘</kbd> <kbd>↵</kbd> 다음 단계</span>
+                  <button class="primary-button sky" type="button" data-action="next-soap">
+                    다음 · 객관적
+                    <i class="ph ph-arrow-right" aria-hidden="true"></i>
+                  </button>
+                </footer>
+              </section>
+
+              <aside class="focus-rail">
+                <section class="surface context-summary">
+                  <div class="section-label">
+                    <div><h2>이번 진료에 필요한 맥락</h2><p>결정에 직접 쓰이는 정보만</p></div>
+                  </div>
+                  <ul class="summary-list">
+                    <li class="summary-row"><span>주호소</span><strong>우측 귀 소양감</strong></li>
+                    <li class="summary-row"><span>최근 동일 증상</span><strong class="tabular">8개월 전</strong></li>
+                    <li class="summary-row"><span>알레르기</span><strong>보고 없음</strong></li>
+                    <li class="summary-row"><span>바이탈 주의</span><strong>체온 정상 범위</strong></li>
+                  </ul>
+                </section>
+
+                <section class="surface clinical-queue">
+                  <div class="section-label">
+                    <div><h2>진단·오더 큐</h2><p>기록 중 떠오른 판단을 잃지 않게</p></div>
+                    <span class="queue-count" id="focusQueueCount">2</span>
+                  </div>
+                  <ul class="queue-list" id="focusClinicalQueue">
+                    <li class="queue-item">
+                      <div class="queue-item-copy"><strong>외이염 의심</strong><span>진단 · 임시</span></div>
+                      <span class="item-type">진단</span>
+                    </li>
+                    <li class="queue-item">
+                      <div class="queue-item-copy"><strong>귀 도말 검사</strong><span>검사 · 미확정</span></div>
+                      <span class="item-type order">오더</span>
+                    </li>
+                  </ul>
+                </section>
+
+                <section class="surface previous-note">
+                  <div class="section-label">
+                    <div><h2>맥락 기반 제안</h2><p>자동 적용하지 않고 선택권 유지</p></div>
+                  </div>
+                  <div class="suggestion-box">
+                    <p>현재 주호소와 과거 기록을 기준으로 <strong>급성 외이염</strong>과 <strong>귀 세정 처치</strong>를 검토할 수 있어.</p>
+                    <div class="suggestion-actions">
+                      <button class="secondary-button" type="button" data-action="add-diagnosis">진단 담기</button>
+                      <button class="secondary-button" type="button" data-action="add-order">오더 담기</button>
+                    </div>
+                  </div>
+                </section>
+              </aside>
+            </div>
+
+            <footer class="sticky-summary">
+              <div class="summary-stat">현재 단계<strong id="focusStepSummary">S · 주관적</strong></div>
+              <span class="summary-divider" aria-hidden="true"></span>
+              <div class="summary-stat">기록 진척<strong id="focusProgress">1 / 4</strong></div>
+              <span class="summary-divider" aria-hidden="true"></span>
+              <div class="summary-stat">진단·오더<strong id="focusLinkedCount">2개 연결</strong></div>
+              <span class="sticky-spacer"></span>
+              <button class="ghost-button" type="button" data-action="previous-chart">이전 차트 보기</button>
+            </footer>
+          </section>
+
+          <section
+            class="concept-panel concept-b"
+            id="concept-b"
+            role="tabpanel"
+            aria-labelledby="concept-tab-b"
+            hidden
+          >
+            <header class="chart-toolbar">
+              <button class="command-trigger" id="commandTrigger" type="button" aria-haspopup="dialog" aria-expanded="false">
+                <i class="ph ph-command" aria-hidden="true"></i>
+                <strong>커맨드 차트</strong>
+                <span>진단, 오더, 문진 요약을 한곳에서 실행</span>
+                <kbd>/</kbd>
+              </button>
+              <span class="toolbar-spacer"></span>
+              <span class="save-status" data-save-status>
+                <span class="save-dot" aria-hidden="true"></span>
+                <span data-save-label>자동저장됨 · 방금</span>
+              </span>
+              <button class="primary-button" type="button" data-action="complete">진료 완료</button>
+            </header>
+
+            <div class="concept-b-body">
+              <section class="surface narrative-editor" aria-label="키보드 중심 SOAP 기록">
+                <header class="narrative-head">
+                  <div><h2>한 장 차트</h2><p>문맥을 끊지 않고 진단·오더까지 인라인 연결</p></div>
+                  <span class="context-pill">입력 모드 <strong>기록</strong></span>
+                </header>
+                <div class="narrative-body">
+                  <div class="narrative-section">
+                    <div class="narrative-key"><strong>S · 주관적</strong><span class="tabular">10:18</span></div>
+                    <div class="narrative-content" contenteditable="true" role="textbox" aria-label="주관적 기록">3일 전부터 오른쪽 귀를 자주 긁고 머리를 흔듦. 식욕·활력은 양호함.</div>
+                  </div>
+                  <div class="narrative-section">
+                    <div class="narrative-key"><strong>O · 객관적</strong><span>검사 소견</span></div>
+                    <div class="narrative-content" contenteditable="true" role="textbox" aria-label="객관적 기록">우측 외이도 발적 및 갈색 분비물 관찰. 이경 검사 시 고막 확인 가능. 체온 39.3℃.</div>
+                  </div>
+                  <div class="narrative-section">
+                    <div class="narrative-key"><strong>A · 평가</strong><span>진단 연결</span></div>
+                    <div class="narrative-content" id="commandAssessment" contenteditable="true" role="textbox" aria-label="평가 기록">
+                      우측 급성 외이염 의심
+                      <span class="inline-token"><i class="ph ph-link" aria-hidden="true"></i>외이염 의심</span>
+                    </div>
+                  </div>
+                  <div class="narrative-section">
+                    <div class="narrative-key"><strong>P · 계획</strong><span>오더 연결</span></div>
+                    <div class="narrative-content" id="commandPlan" contenteditable="true" role="textbox" aria-label="계획 기록">
+                      귀 도말 검사 후 결과에 따라 세정 및 점이제 처방 예정.
+                      <span class="inline-token"><i class="ph ph-link" aria-hidden="true"></i>귀 도말 검사</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <aside class="command-side">
+                <section class="surface">
+                  <div class="section-label"><div><h2>자주 쓰는 명령</h2><p>마우스 없이 바로 실행</p></div></div>
+                  <div class="shortcut-list">
+                    <div class="shortcut-row"><i class="ph ph-note" aria-hidden="true"></i><span>문진 요약 불러오기</span><kbd>⌘1</kbd></div>
+                    <div class="shortcut-row"><i class="ph ph-first-aid" aria-hidden="true"></i><span>진단 검색</span><kbd>⌘2</kbd></div>
+                    <div class="shortcut-row"><i class="ph ph-prescription" aria-hidden="true"></i><span>오더 추가</span><kbd>⌘3</kbd></div>
+                    <div class="shortcut-row"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i><span>이전 차트 인용</span><kbd>⌘4</kbd></div>
+                  </div>
+                </section>
+
+                <section class="surface linked-work">
+                  <div class="section-label"><div><h2>연결된 임상 작업</h2><p>문장 안 토큰과 실행 항목이 동기화</p></div></div>
+                  <div class="linked-chip-row" id="commandLinkedChips">
+                    <span class="linked-chip"><i class="ph ph-first-aid" aria-hidden="true"></i>외이염 의심</span>
+                    <span class="linked-chip"><i class="ph ph-flask" aria-hidden="true"></i>귀 도말 검사</span>
+                  </div>
+                </section>
+
+                <section class="surface">
+                  <div class="section-label"><div><h2>완료 전 확인</h2><p>저장 실패는 행동과 함께 표시</p></div></div>
+                  <ul class="mini-list">
+                    <li class="mini-row"><span>SOAP</span><strong class="status-good">4/4 입력</strong></li>
+                    <li class="mini-row"><span>진단</span><strong>1개</strong></li>
+                    <li class="mini-row"><span>오더</span><strong>1개 · 미확정</strong></li>
+                  </ul>
+                </section>
+              </aside>
+
+              <div class="command-overlay" id="commandOverlay" role="dialog" aria-modal="true" aria-label="차트 명령 팔레트">
+                <div class="command-search-row">
+                  <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                  <input class="command-input" id="commandInput" type="text" placeholder="기록하거나 실행할 작업을 검색" aria-label="명령 검색" />
+                  <kbd>Esc</kbd>
+                </div>
+                <div class="command-results" id="commandResults">
+                  <button class="command-result" type="button" data-command="intake">
+                    <i class="ph ph-note" aria-hidden="true"></i>
+                    <span class="command-result-copy"><strong>문진 요약 불러오기</strong><span>접수 메모를 주관적 기록에 추가</span></span>
+                    <kbd>⌘1</kbd>
+                  </button>
+                  <button class="command-result" type="button" data-command="diagnosis">
+                    <i class="ph ph-first-aid" aria-hidden="true"></i>
+                    <span class="command-result-copy"><strong>진단 추가 · 급성 외이염</strong><span>평가 문장과 진단 항목을 동시에 연결</span></span>
+                    <kbd>⌘2</kbd>
+                  </button>
+                  <button class="command-result" type="button" data-command="bundle">
+                    <i class="ph ph-prescription" aria-hidden="true"></i>
+                    <span class="command-result-copy"><strong>오더 세트 · 귀 기본 처치</strong><span>도말 검사, 세정, 점이제 후보 3건</span></span>
+                    <kbd>⌘3</kbd>
+                  </button>
+                  <button class="command-result" type="button" data-command="history">
+                    <i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i>
+                    <span class="command-result-copy"><strong>이전 차트 인용 · 25.11.02</strong><span>동일 증상 기록을 현재 커서에 삽입</span></span>
+                    <kbd>⌘4</kbd>
+                  </button>
+                </div>
+                <div class="command-footer"><span>↑↓ 이동 · Enter 실행</span><span>키보드 실행은 애니메이션 없이 즉시 반영</span></div>
+              </div>
+            </div>
+
+            <footer class="sticky-summary">
+              <div class="summary-stat">입력 방식<strong>키보드 우선</strong></div>
+              <span class="summary-divider" aria-hidden="true"></span>
+              <div class="summary-stat">연결 항목<strong id="commandLinkedCount">2개</strong></div>
+              <span class="summary-divider" aria-hidden="true"></span>
+              <div class="summary-stat">예상 남은 작업<strong>오더 확정 1건</strong></div>
+              <span class="sticky-spacer"></span>
+              <button class="secondary-button" type="button" data-action="open-command">명령 열기 <kbd>/</kbd></button>
+            </footer>
+          </section>
+
+          <section
+            class="concept-panel concept-c"
+            id="concept-c"
+            role="tabpanel"
+            aria-labelledby="concept-tab-c"
+            hidden
+          >
+            <header class="chart-toolbar">
+              <div class="chart-toolbar-title">
+                <h1>증상 템플릿 · 귀 가려움</h1>
+                <p>반복 진료는 필수 질문과 세트 오더로 누락 없이 빠르게</p>
+              </div>
+              <span class="toolbar-spacer"></span>
+              <span class="save-status" data-save-status>
+                <span class="save-dot" aria-hidden="true"></span>
+                <span data-save-label>자동저장됨 · 방금</span>
+              </span>
+              <button class="secondary-button" type="button" data-action="save">초안 저장</button>
+              <button class="primary-button" type="button" data-action="complete">진료 완료</button>
+            </header>
+
+            <div class="concept-c-body">
+              <aside class="surface template-picker">
+                <div class="section-label"><div><h2>주호소 템플릿</h2><p>선택하면 질문과 오더 후보가 바뀌어</p></div></div>
+                <div class="template-list" role="listbox" aria-label="주호소 템플릿">
+                  <button class="template-option active" type="button" role="option" aria-selected="true" data-template="ear">
+                    <span class="template-icon"><i class="ph ph-ear" aria-hidden="true"></i></span>
+                    <span class="template-copy"><strong>귀 가려움</strong><span>외이염 · 귀 도말 · 세정</span></span>
+                  </button>
+                  <button class="template-option" type="button" role="option" aria-selected="false" data-template="vomit">
+                    <span class="template-icon"><i class="ph ph-drop" aria-hidden="true"></i></span>
+                    <span class="template-copy"><strong>구토·설사</strong><span>위장관 · 탈수 · 수액</span></span>
+                  </button>
+                  <button class="template-option" type="button" role="option" aria-selected="false" data-template="limp">
+                    <span class="template-icon"><i class="ph ph-bone" aria-hidden="true"></i></span>
+                    <span class="template-copy"><strong>절뚝거림</strong><span>보행 · 통증 · 영상 검사</span></span>
+                  </button>
+                </div>
+                <div class="template-savings">
+                  현재 템플릿은 필수 확인 6개와 기본 오더 3개를 묶어, 반복 입력과 누락 확인 시간을 줄이는 방향이야.
+                </div>
+              </aside>
+
+              <section class="surface problem-chart">
+                <div class="section-label">
+                  <div><h2 id="templateTitle">귀 가려움 · 필수 확인</h2><p id="templateDescription">외이염 감별에 필요한 질문과 소견</p></div>
+                  <span class="context-pill"><strong id="templateProgressLabel">3 / 6</strong> 완료</span>
+                </div>
+                <div class="problem-progress">
+                  <div class="progress-meta"><span>차트 완성도</span><span id="templatePercent">50%</span></div>
+                  <div class="progress-track"><div class="progress-fill" id="templateProgressFill"></div></div>
+                </div>
+                <div class="checklist" id="templateChecklist">
+                  <label class="check-row">
+                    <input type="checkbox" checked data-check />
+                    <span><strong>증상 시작 시점</strong><span>언제부터, 갑작스러운지</span></span>
+                    <span class="check-value">3일 전</span>
+                  </label>
+                  <label class="check-row">
+                    <input type="checkbox" checked data-check />
+                    <span><strong>좌우·빈도</strong><span>한쪽 또는 양쪽, 긁는 횟수</span></span>
+                    <span class="check-value">우측 · 자주</span>
+                  </label>
+                  <label class="check-row">
+                    <input type="checkbox" checked data-check />
+                    <span><strong>분비물·냄새</strong><span>색, 양, 악취 여부</span></span>
+                    <span class="check-value">갈색 · 약한 냄새</span>
+                  </label>
+                  <label class="check-row">
+                    <input type="checkbox" data-check />
+                    <span><strong>외이도·고막</strong><span>발적, 부종, 고막 확인</span></span>
+                    <span class="check-value">확인 필요</span>
+                  </label>
+                  <label class="check-row">
+                    <input type="checkbox" data-check />
+                    <span><strong>피부 동반 증상</strong><span>발바닥, 얼굴, 전신 소양감</span></span>
+                    <span class="check-value">미입력</span>
+                  </label>
+                  <label class="check-row">
+                    <input type="checkbox" data-check />
+                    <span><strong>과거력·투약</strong><span>재발, 최근 점이제 사용</span></span>
+                    <span class="check-value">미입력</span>
+                  </label>
+                </div>
+              </section>
+
+              <aside>
+                <section class="surface order-bundle">
+                  <div class="section-label"><div><h2 id="bundleTitle">귀 기본 검사·처치 세트</h2><p>적용 전에 항목별로 검토 가능</p></div></div>
+                  <div class="bundle-list" id="bundleList">
+                    <label class="bundle-row">
+                      <input type="checkbox" checked data-bundle-price="25000" />
+                      <span class="bundle-copy"><strong>귀 도말 검사</strong><span>임상 · 결과 확인 필요</span></span>
+                      <span class="bundle-price">25,000</span>
+                    </label>
+                    <label class="bundle-row">
+                      <input type="checkbox" checked data-bundle-price="22000" />
+                      <span class="bundle-copy"><strong>귀 세정</strong><span>처치 · 양측 여부 확인</span></span>
+                      <span class="bundle-price">22,000</span>
+                    </label>
+                    <label class="bundle-row">
+                      <input type="checkbox" checked data-bundle-price="18000" />
+                      <span class="bundle-copy"><strong>점이제 처방 후보</strong><span>조제 · 검사 결과 후 확정</span></span>
+                      <span class="bundle-price">18,000</span>
+                    </label>
+                  </div>
+                  <div class="bundle-total">
+                    <div><span>선택 오더 예상 합계</span><strong id="bundleTotal">65,000원</strong></div>
+                    <button class="primary-button sky" type="button" data-action="apply-bundle">세트 적용</button>
+                  </div>
+                </section>
+
+                <section class="surface template-preview">
+                  <div class="section-label"><div><h2>SOAP 미리보기</h2><p>체크한 사실만 문장으로 연결</p></div></div>
+                  <div class="template-preview-copy" id="templatePreview">
+                    <strong>S</strong> 3일 전부터 우측 귀 소양감, 갈색 분비물과 약한 냄새 관찰.<br />
+                    <strong>O</strong> 외이도·고막 확인 필요.<br />
+                    <strong>A/P</strong> 급성 외이염 감별 및 귀 도말 검사 계획.
+                  </div>
+                </section>
+              </aside>
+            </div>
+
+            <footer class="sticky-summary">
+              <div class="summary-stat">템플릿<strong id="activeTemplateSummary">귀 가려움</strong></div>
+              <span class="summary-divider" aria-hidden="true"></span>
+              <div class="summary-stat">필수 확인<strong id="templateFooterProgress">3 / 6</strong></div>
+              <span class="summary-divider" aria-hidden="true"></span>
+              <div class="summary-stat">선택 오더<strong id="bundleCount">3건</strong></div>
+              <span class="sticky-spacer"></span>
+              <button class="ghost-button" type="button" data-action="reset-template">템플릿 초기화</button>
+            </footer>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <dialog id="completeDialog" aria-labelledby="completeDialogTitle">
+      <div class="dialog-head">
+        <h2 id="completeDialogTitle">진료 완료 확인</h2>
+        <button class="icon-button" type="button" data-action="close-dialog" aria-label="완료 확인 닫기">
+          <i class="ph ph-x" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="dialog-patient">
+          <span class="patient-avatar" aria-hidden="true">초</span>
+          <div><strong>초코 · 보호자 최도현</strong><span>담당 수의사 김도윤 · 진료중</span></div>
+        </div>
+        <ul class="completion-list">
+          <li><span>SOAP 기록</span><span class="status-good">저장됨</span></li>
+          <li><span>진단명</span><span class="status-good">1개 연결</span></li>
+          <li><span>오더</span><span class="status-warn">미확정 항목 확인</span></li>
+          <li><span>보호자 안내</span><span class="status-warn">메모 없음</span></li>
+        </ul>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-button" type="button" data-action="close-dialog">계속 작성</button>
+        <button class="primary-button" type="button" data-action="confirm-complete">확인하고 완료</button>
+      </div>
+    </dialog>
+
+    <div class="toast-region" aria-live="polite" aria-atomic="true" id="toastRegion"></div>
+
+    <script>
+      (() => {
+        const conceptCopy = {
+          a: "한 화면에 한 판단만 — 순서대로 집중해서 기록",
+          b: "숙련자를 위한 키보드 중심 — 기록 안에서 진단·오더 실행",
+          c: "반복 진료를 빠르게 — 증상별 필수 질문과 세트 오더",
+        };
+
+        const soapSteps = {
+          s: {
+            title: "보호자 진술과 주호소",
+            hint: "말하듯 적어도 다음 단계에서 구조가 유지돼",
+            label: "S · 주관적",
+            next: "객관적",
+          },
+          o: {
+            title: "신체검사와 측정 소견",
+            hint: "바이탈과 관찰 결과를 사실 중심으로 기록",
+            label: "O · 객관적",
+            next: "평가",
+          },
+          a: {
+            title: "임상 평가와 감별",
+            hint: "문장 안에서 진단 큐와 연결할 수 있어",
+            label: "A · 평가",
+            next: "계획",
+          },
+          p: {
+            title: "검사·처치·복약 계획",
+            hint: "오더 큐를 검토하고 보호자 안내를 남겨",
+            label: "P · 계획",
+            next: "완료 확인",
+          },
+        };
+
+        const templateData = {
+          ear: {
+            name: "귀 가려움",
+            title: "귀 가려움 · 필수 확인",
+            description: "외이염 감별에 필요한 질문과 소견",
+            bundle: "귀 기본 검사·처치 세트",
+            preview: "<strong>S</strong> 3일 전부터 우측 귀 소양감, 갈색 분비물과 약한 냄새 관찰.<br><strong>O</strong> 외이도·고막 확인 필요.<br><strong>A/P</strong> 급성 외이염 감별 및 귀 도말 검사 계획.",
+          },
+          vomit: {
+            name: "구토·설사",
+            title: "구토·설사 · 필수 확인",
+            description: "빈도, 섭취, 탈수와 복통을 빠르게 확인",
+            bundle: "위장관 기본 검사·수액 세트",
+            preview: "<strong>S</strong> 구토 횟수와 음식 섭취, 변 상태를 확인.<br><strong>O</strong> 탈수, 복통, 활력 소견 입력 필요.<br><strong>A/P</strong> 급성 위장관염 감별 및 대증 처치 계획.",
+          },
+          limp: {
+            name: "절뚝거림",
+            title: "절뚝거림 · 필수 확인",
+            description: "보행, 촉진 통증, 외상과 영상 필요성 확인",
+            bundle: "정형 기본 검사·영상 세트",
+            preview: "<strong>S</strong> 증상 시작과 외상 여부, 악화 조건을 확인.<br><strong>O</strong> 보행과 관절 가동 범위 입력 필요.<br><strong>A/P</strong> 정형학적 통증 부위 감별 및 영상 검사 검토.",
+          },
+        };
+
+        let activeConcept = "a";
+        let activeSoapStep = "s";
+        let saveErrorMode = false;
+        let focusLinkedItems = 2;
+        let commandLinkedItems = 2;
+
+        const showToast = (title, detail = "변경 내용이 이 시안에 반영됐어.") => {
+          const region = document.getElementById("toastRegion");
+          const toast = document.createElement("div");
+          toast.className = "toast";
+          toast.innerHTML = `<i class="ph ph-check-circle" aria-hidden="true"></i><div><strong>${title}</strong><span>${detail}</span></div>`;
+          region.replaceChildren(toast);
+          window.setTimeout(() => toast.classList.add("leaving"), 2200);
+          window.setTimeout(() => toast.remove(), 2420);
+        };
+
+        const setSaveState = (mode) => {
+          document.querySelectorAll("[data-save-status]").forEach((status) => {
+            const label = status.querySelector("[data-save-label]");
+            status.classList.toggle("error", mode === "error");
+            label.textContent = mode === "error" ? "저장 안 됨 · 재시도" : mode === "saving" ? "저장 중…" : "자동저장됨 · 방금";
+          });
+        };
+
+        const switchConcept = (concept) => {
+          activeConcept = concept;
+          document.querySelectorAll(".concept-tab").forEach((tab) => {
+            tab.setAttribute("aria-selected", String(tab.dataset.concept === concept));
+          });
+          document.querySelectorAll(".concept-panel").forEach((panel) => {
+            const active = panel.id === `concept-${concept}`;
+            panel.classList.toggle("active", active);
+            panel.hidden = !active;
+          });
+          document.getElementById("conceptSummary").textContent = conceptCopy[concept];
+          closeCommand();
+        };
+
+        const setSoapStep = (step) => {
+          activeSoapStep = step;
+          const meta = soapSteps[step];
+          document.querySelectorAll("[data-soap-step]").forEach((button) => {
+            const active = button.dataset.soapStep === step;
+            button.classList.toggle("active", active);
+            button.setAttribute("aria-selected", String(active));
+          });
+          document.getElementById("soapStepTitle").textContent = meta.title;
+          document.getElementById("soapStepHint").textContent = meta.hint;
+          document.getElementById("focusStepSummary").textContent = meta.label;
+          const order = ["s", "o", "a", "p"];
+          document.getElementById("focusProgress").textContent = `${order.indexOf(step) + 1} / 4`;
+          const nextButton = document.querySelector('[data-action="next-soap"]');
+          nextButton.innerHTML = `${step === "p" ? "완료 전 확인" : `다음 · ${meta.next}`} <i class="ph ph-arrow-right" aria-hidden="true"></i>`;
+        };
+
+        const addQuickText = (text) => {
+          const editor = document.getElementById("focusSoapEditor");
+          const prefix = editor.value.trim().length ? " " : "";
+          editor.value += `${prefix}${text}`;
+          editor.focus();
+          editor.setSelectionRange(editor.value.length, editor.value.length);
+          document.getElementById("charCount").textContent = editor.value.length;
+          setSaveState("saving");
+          window.setTimeout(() => setSaveState("saved"), 500);
+        };
+
+        const addFocusQueueItem = (type) => {
+          const list = document.getElementById("focusClinicalQueue");
+          const names = type === "diagnosis" ? ["급성 외이염", "진단 · 임시", "진단"] : ["귀 세정 처치", "처치 · 미확정", "오더"];
+          if ([...list.querySelectorAll("strong")].some((node) => node.textContent === names[0])) {
+            showToast("이미 큐에 담겨 있어", names[0]);
+            return;
+          }
+          const item = document.createElement("li");
+          item.className = "queue-item";
+          item.innerHTML = `<div class="queue-item-copy"><strong>${names[0]}</strong><span>${names[1]}</span></div><span class="item-type ${type === "order" ? "order" : ""}">${names[2]}</span>`;
+          list.append(item);
+          focusLinkedItems += 1;
+          document.getElementById("focusQueueCount").textContent = focusLinkedItems;
+          document.getElementById("focusLinkedCount").textContent = `${focusLinkedItems}개 연결`;
+          showToast(`${names[0]} 담음`, "현재 흐름을 벗어나지 않고 완료 전에 검토할 수 있어.");
+        };
+
+        const openCommand = () => {
+          const overlay = document.getElementById("commandOverlay");
+          overlay.classList.add("open");
+          document.getElementById("commandTrigger").setAttribute("aria-expanded", "true");
+          document.getElementById("commandInput").focus({ preventScroll: true });
+        };
+
+        const closeCommand = () => {
+          const overlay = document.getElementById("commandOverlay");
+          if (!overlay) return;
+          overlay.classList.remove("open");
+          document.getElementById("commandTrigger").setAttribute("aria-expanded", "false");
+          document.getElementById("commandInput").value = "";
+          document.querySelectorAll(".command-result").forEach((result) => (result.hidden = false));
+        };
+
+        const runCommand = (command) => {
+          const chips = document.getElementById("commandLinkedChips");
+          const assessment = document.getElementById("commandAssessment");
+          const plan = document.getElementById("commandPlan");
+          const addChip = (icon, text) => {
+            if ([...chips.children].some((chip) => chip.textContent.trim() === text)) return false;
+            const chip = document.createElement("span");
+            chip.className = "linked-chip";
+            chip.innerHTML = `<i class="ph ${icon}" aria-hidden="true"></i>${text}`;
+            chips.append(chip);
+            commandLinkedItems += 1;
+            document.getElementById("commandLinkedCount").textContent = `${commandLinkedItems}개`;
+            return true;
+          };
+
+          if (command === "intake") {
+            const subjective = document.querySelector('[aria-label="주관적 기록"]');
+            subjective.textContent = "보호자 문진: 3일 전부터 우측 귀를 긁고 머리를 흔듦. 식욕·활력 양호, 최근 점이제 사용 없음.";
+            showToast("문진 요약을 불러왔어", "원문을 확인한 뒤 바로 수정할 수 있어.");
+          }
+          if (command === "diagnosis") {
+            assessment.insertAdjacentHTML("beforeend", ' <span class="inline-token"><i class="ph ph-link" aria-hidden="true"></i>급성 외이염</span>');
+            addChip("ph-first-aid", "급성 외이염");
+            showToast("진단을 문장과 연결했어", "평가 문맥과 진단 목록이 함께 갱신됐어.");
+          }
+          if (command === "bundle") {
+            plan.insertAdjacentHTML("beforeend", ' <span class="inline-token"><i class="ph ph-link" aria-hidden="true"></i>귀 기본 처치 3건</span>');
+            addChip("ph-prescription", "귀 기본 처치 3건");
+            showToast("오더 세트를 연결했어", "확정 전에는 각 항목을 따로 검토할 수 있어.");
+          }
+          if (command === "history") {
+            assessment.insertAdjacentText("beforeend", " 25.11.02 동일 증상으로 외이염 치료 이력 있음.");
+            showToast("이전 차트 문장을 인용했어", "출처 날짜를 유지해 현재 평가에 추가했어.");
+          }
+          closeCommand();
+          setSaveState("saving");
+          window.setTimeout(() => setSaveState("saved"), 400);
+        };
+
+        const updateTemplateProgress = () => {
+          const checks = [...document.querySelectorAll("[data-check]")];
+          const complete = checks.filter((check) => check.checked).length;
+          const percent = Math.round((complete / checks.length) * 100);
+          document.getElementById("templateProgressLabel").textContent = `${complete} / ${checks.length}`;
+          document.getElementById("templateFooterProgress").textContent = `${complete} / ${checks.length}`;
+          document.getElementById("templatePercent").textContent = `${percent}%`;
+          document.getElementById("templateProgressFill").style.transform = `scaleX(${percent / 100})`;
+        };
+
+        const updateBundleTotal = () => {
+          const inputs = [...document.querySelectorAll("[data-bundle-price]")];
+          const selected = inputs.filter((input) => input.checked);
+          const total = selected.reduce((sum, input) => sum + Number(input.dataset.bundlePrice), 0);
+          document.getElementById("bundleTotal").textContent = `${total.toLocaleString("ko-KR")}원`;
+          document.getElementById("bundleCount").textContent = `${selected.length}건`;
+        };
+
+        const switchTemplate = (template) => {
+          const data = templateData[template];
+          document.querySelectorAll("[data-template]").forEach((button) => {
+            const active = button.dataset.template === template;
+            button.classList.toggle("active", active);
+            button.setAttribute("aria-selected", String(active));
+          });
+          document.getElementById("templateTitle").textContent = data.title;
+          document.getElementById("templateDescription").textContent = data.description;
+          document.getElementById("bundleTitle").textContent = data.bundle;
+          document.getElementById("activeTemplateSummary").textContent = data.name;
+          document.getElementById("templatePreview").innerHTML = data.preview;
+          showToast(`${data.name} 템플릿으로 바꿨어`, "기록 내용은 유지하고 필수 확인 항목만 바뀌는 방향이야.");
+        };
+
+        const dialog = document.getElementById("completeDialog");
+
+        document.addEventListener("click", (event) => {
+          const target = event.target.closest("button, input");
+          if (!target) return;
+
+          if (target.matches("[data-concept]")) switchConcept(target.dataset.concept);
+          if (target.matches("[data-soap-step]")) setSoapStep(target.dataset.soapStep);
+          if (target.matches("[data-quick-text]")) addQuickText(target.dataset.quickText);
+          if (target.matches("[data-template]")) switchTemplate(target.dataset.template);
+          if (target.matches("[data-command]")) runCommand(target.dataset.command);
+          if (target.matches("[data-check]")) updateTemplateProgress();
+          if (target.matches("[data-bundle-price]")) updateBundleTotal();
+
+          const action = target.dataset.action;
+          if (action === "save") {
+            saveErrorMode = false;
+            document.getElementById("simulateError").innerHTML = '<i class="ph ph-warning-circle" aria-hidden="true"></i> 저장 오류 보기';
+            setSaveState("saving");
+            window.setTimeout(() => {
+              setSaveState("saved");
+              showToast("차트를 저장했어", "저장 시점과 복구 상태가 같은 위치에 남아.");
+            }, 650);
+          }
+          if (action === "next-soap") {
+            const order = ["s", "o", "a", "p"];
+            const index = order.indexOf(activeSoapStep);
+            if (index < order.length - 1) setSoapStep(order[index + 1]);
+            else dialog.showModal();
+          }
+          if (action === "add-diagnosis") addFocusQueueItem("diagnosis");
+          if (action === "add-order") addFocusQueueItem("order");
+          if (action === "previous-chart") showToast("이전 차트 요약을 열었어", "실제 제품에서는 오른쪽 패널로 유지하는 방향이야.");
+          if (action === "open-command") openCommand();
+          if (action === "apply-bundle") showToast("선택한 오더 세트를 적용했어", "오더는 미확정 상태로 들어가 마지막 검토를 거쳐.");
+          if (action === "reset-template") {
+            document.querySelectorAll("[data-check]").forEach((check, index) => (check.checked = index < 3));
+            updateTemplateProgress();
+            showToast("템플릿 입력을 초기 상태로 되돌렸어");
+          }
+          if (action === "complete") dialog.showModal();
+          if (action === "close-dialog") dialog.close();
+          if (action === "confirm-complete") {
+            dialog.close();
+            showToast("진료를 완료했어", "다음 대기 환자로 이동할 준비가 됐어.");
+          }
+        });
+
+        document.getElementById("focusSoapEditor").addEventListener("input", (event) => {
+          document.getElementById("charCount").textContent = event.currentTarget.value.length;
+          setSaveState("saving");
+          window.clearTimeout(window.focusSaveTimer);
+          window.focusSaveTimer = window.setTimeout(() => setSaveState("saved"), 650);
+        });
+
+        document.getElementById("commandTrigger").addEventListener("click", openCommand);
+
+        document.getElementById("commandInput").addEventListener("input", (event) => {
+          const query = event.currentTarget.value.trim().toLowerCase();
+          document.querySelectorAll(".command-result").forEach((result) => {
+            result.hidden = query.length > 0 && !result.textContent.toLowerCase().includes(query);
+          });
+        });
+
+        document.getElementById("simulateError").addEventListener("click", () => {
+          saveErrorMode = !saveErrorMode;
+          setSaveState(saveErrorMode ? "error" : "saved");
+          document.getElementById("simulateError").innerHTML = saveErrorMode
+            ? '<i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> 저장 복구하기'
+            : '<i class="ph ph-warning-circle" aria-hidden="true"></i> 저장 오류 보기';
+          showToast(
+            saveErrorMode ? "저장 실패 상태를 표시했어" : "저장 상태를 복구했어",
+            saveErrorMode ? "실패 원인과 재시도 행동이 같은 위치에 나타나." : "작성 내용은 보존된 채 다시 저장됐어.",
+          );
+        });
+
+        document.addEventListener("keydown", (event) => {
+          const isTyping = ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
+          if (activeConcept === "b" && event.key === "/" && !isTyping) {
+            event.preventDefault();
+            openCommand();
+          }
+          if (event.key === "Escape") closeCommand();
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && activeConcept === "a") {
+            event.preventDefault();
+            document.querySelector('[data-action="next-soap"]').click();
+          }
+        });
+
+        updateTemplateProgress();
+        updateBundleTotal();
+        document.getElementById("charCount").textContent = document.getElementById("focusSoapEditor").value.length;
+      })();
+    </script>
+  </body>
+</html>
