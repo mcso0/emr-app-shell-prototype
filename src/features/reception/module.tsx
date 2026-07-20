@@ -9017,7 +9017,6 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
     typeof routeOperatingDate === "string" && isIsoOperatingDate(routeOperatingDate)
       ? routeOperatingDate
       : (operatingDateOverride ?? defaultOperatingDate);
-  const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const profileDataset = useMemo(
     () => ({ guardians, patientGuardians, patients }),
     [guardians, patientGuardians, patients],
@@ -9127,8 +9126,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
             : getReceptionDemoActorId(authSession?.role)
         }
         calendarAppointments={calendarAppointmentWork}
-        currentMinutes={currentOperatingMinutes}
-        date={operatingDate}
+        date={defaultOperatingDate}
         onClose={closeStaffProfile}
         todayDate={defaultOperatingDate}
         userId={activeDrawer.id}

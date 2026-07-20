@@ -37,10 +37,10 @@ import {
   type ProfileWorkDateGroup,
 } from "@/features/staff/components/profile-side-panel-v2-work";
 import type {
+  StaffCurrentWorkInfo,
   StaffOperationalAvailability,
   StaffOperationalProfile,
   StaffOperationalProfileCapabilities,
-  StaffOperationalShift,
 } from "@/features/staff/server-operational-profile-core";
 import type { StaffAssignedWorkItem } from "@/features/staff/server-staff-assigned-work-items-core";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -54,8 +54,8 @@ type StaffOperationalProfileResponse =
       ok: true;
       availability: StaffOperationalAvailability | null;
       capabilities: StaffOperationalProfileCapabilities;
+      currentWork: StaffCurrentWorkInfo | null;
       profile: StaffOperationalProfile;
-      shift: StaffOperationalShift | null;
       sectionErrors?: {
         availability?: "schedule_read_failed";
         shift?: "schedule_read_failed";
@@ -105,7 +105,6 @@ const initialWorkReadState: WorkReadState = {
 export function StaffOperationalProfilePanel({
   actorUserId,
   calendarAppointments = [],
-  currentMinutes,
   date,
   onClose,
   todayDate,
@@ -114,7 +113,6 @@ export function StaffOperationalProfilePanel({
 }: {
   actorUserId?: string;
   calendarAppointments?: StaffCalendarAppointmentWork[];
-  currentMinutes: number;
   date: string;
   onClose: () => void;
   todayDate: string;
@@ -505,12 +503,9 @@ export function StaffOperationalProfilePanel({
           ) : profile && response ? (
             <div className="grid gap-4">
               <TodayShiftSection
-                appointments={calendarAppointments}
-                currentMinutes={currentMinutes}
+                currentWork={response.currentWork}
                 error={Boolean(response.sectionErrors?.shift)}
                 onRetry={loadProfile}
-                shift={response.shift}
-                selectedDate={date}
                 todayDate={todayDate}
               />
               <div
@@ -800,20 +795,14 @@ function AccountRow({
 }
 
 function TodayShiftSection({
-  appointments,
-  currentMinutes,
+  currentWork,
   error,
   onRetry,
-  selectedDate,
-  shift,
   todayDate,
 }: {
-  appointments: StaffCalendarAppointmentWork[];
-  currentMinutes: number;
+  currentWork: StaffCurrentWorkInfo | null;
   error: boolean;
   onRetry: () => void;
-  selectedDate: string;
-  shift: StaffOperationalShift | null;
   todayDate: string;
 }) {
   return (
@@ -832,22 +821,8 @@ function TodayShiftSection({
           >
             조회 실패를 휴무로 표시하지 않았어요.
           </EmrInlineAlert>
-        ) : shift || appointments.length > 0 ? (
-          <div className="grid gap-2">
-            {shift ? (
-              <ShiftSummary
-                currentMinutes={currentMinutes}
-                shift={shift}
-                todayDate={todayDate}
-              />
-            ) : null}
-            {appointments.length > 0 ? (
-              <AppointmentWorkSummary
-                appointments={appointments}
-                selectedDate={selectedDate}
-              />
-            ) : null}
-          </div>
+        ) : currentWork ? (
+          <CurrentWorkSummary currentWork={currentWork} todayDate={todayDate} />
         ) : (
           <p className="flex min-h-[72px] items-center rounded-xl border border-dashed border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] px-4 text-sm text-[var(--emr-text-tertiary)]">
             오늘 게시된 근무가 없어요
@@ -855,50 +830,6 @@ function TodayShiftSection({
         )}
       </div>
     </section>
-  );
-}
-
-function AppointmentWorkSummary({
-  appointments,
-  selectedDate,
-}: {
-  appointments: StaffCalendarAppointmentWork[];
-  selectedDate: string;
-}) {
-  const [firstAppointment] = [...appointments].sort((left, right) =>
-    left.scheduledStartAt.localeCompare(right.scheduledStartAt),
-  );
-  if (!firstAppointment) return null;
-
-  const additionalCount = appointments.length - 1;
-  const timeRange = formatAppointmentTimeRange(firstAppointment);
-  const title = additionalCount > 0
-    ? `${firstAppointment.title} 외 ${additionalCount}건`
-    : firstAppointment.title;
-  const workLabel = firstAppointment.workLabel ?? "예약 진료";
-
-  return (
-    <div className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-[14px]">
-      <div
-        aria-hidden="true"
-        className="grid size-[42px] shrink-0 overflow-hidden rounded-md border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
-      >
-        <span className="h-3 bg-[var(--emr-surface-muted)]" />
-        <span className="flex items-center justify-center pb-0.5 text-base leading-4 font-semibold tabular-nums text-[var(--clair-color-atomic-sky-500)]">
-          {selectedDate.slice(-2)}
-        </span>
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-base leading-6 font-medium tracking-[0.006em] tabular-nums text-[var(--emr-text-primary)]">
-          {timeRange}
-        </p>
-        <p className="flex min-w-0 items-center gap-1.5 truncate text-sm leading-[18px] font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
-          <span className="shrink-0 text-[var(--clair-color-atomic-sky-500)]">{workLabel}</span>
-          <span aria-hidden="true">·</span>
-          <span className="truncate">{title}</span>
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -933,20 +864,26 @@ function ScheduleNavigationSection({
   );
 }
 
-function ShiftSummary({
-  currentMinutes,
-  shift,
+function CurrentWorkSummary({
+  currentWork,
   todayDate,
 }: {
-  currentMinutes: number;
-  shift: StaffOperationalShift;
+  currentWork: StaffCurrentWorkInfo;
   todayDate: string;
 }) {
-  const state = getShiftStateLabel({ currentMinutes, shift, todayDate });
-  const detailLabel =
-    shift.kind === "leave" || shift.kind === "off"
-      ? undefined
-      : shift.locationLabel || shift.workLabel;
+  const absence =
+    currentWork.state === "leave" ||
+    currentWork.state === "same_day_leave" ||
+    currentWork.state === "off" ||
+    currentWork.state === "hospital_closed";
+  const title = getCurrentWorkTitle(currentWork);
+  const detailLabel = getCurrentWorkDetail(currentWork, todayDate);
+  const accentClassName =
+    currentWork.state === "leave" || currentWork.state === "same_day_leave"
+      ? "text-[var(--emr-status-success-text)]"
+      : currentWork.state === "off" || currentWork.state === "hospital_closed"
+        ? "text-[var(--emr-text-tertiary)]"
+        : "text-[var(--clair-color-atomic-sky-500)]";
   return (
     <div className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-[14px]">
       <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -955,17 +892,21 @@ function ShiftSummary({
           className="grid size-[42px] shrink-0 overflow-hidden rounded-md border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
         >
           <span className="h-3 bg-[var(--emr-surface-muted)]" />
-          <span className="flex items-center justify-center pb-0.5 text-base leading-4 font-semibold tabular-nums text-[var(--clair-color-atomic-sky-500)]">
+          <span className={`flex items-center justify-center pb-0.5 text-base leading-4 font-semibold tabular-nums ${accentClassName}`}>
             {todayDate.slice(-2)}
           </span>
         </div>
         <div className="min-w-0">
           <p className="truncate text-base leading-6 font-medium tracking-[0.006em] tabular-nums text-[var(--emr-text-primary)]">
-            {formatMinutes(shift.startMinutes)} - {formatMinutes(shift.endMinutes)}
+            {title}
           </p>
           <p className="flex min-w-0 items-center gap-1.5 truncate text-sm leading-[18px] font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
-            <span className="shrink-0 text-[var(--clair-color-atomic-sky-500)]">{state}</span>
-            {detailLabel ? <span aria-hidden="true">·</span> : null}
+            {!absence ? (
+              <span className={`shrink-0 ${accentClassName}`}>
+                {getCurrentWorkStateLabel(currentWork.state)}
+              </span>
+            ) : null}
+            {!absence && detailLabel ? <span aria-hidden="true">·</span> : null}
             {detailLabel ? <span className="truncate">{detailLabel}</span> : null}
           </p>
         </div>
@@ -1117,22 +1058,41 @@ function formatRequestedAt(value: string, timezone: string | null) {
   }).format(new Date(value));
 }
 
-function getShiftStateLabel({
-  currentMinutes,
-  shift,
-  todayDate,
-}: {
-  currentMinutes: number;
-  shift: StaffOperationalShift;
-  todayDate: string;
-}) {
-  if (shift.kind === "leave") return "휴가";
-  if (shift.kind === "off") return "휴무";
-  if (shift.date < todayDate) return "근무 종료";
-  if (shift.date > todayDate) return "근무 예정";
-  if (currentMinutes < shift.startMinutes) return "근무 전";
-  if (currentMinutes >= shift.endMinutes) return "근무 종료";
-  return "근무 중";
+function getCurrentWorkTitle(currentWork: StaffCurrentWorkInfo) {
+  if (currentWork.state === "same_day_leave") return "당일 연차";
+  if (currentWork.state === "leave") return "연차";
+  if (currentWork.state === "off") return "휴무일";
+  if (currentWork.state === "hospital_closed") return "병원 휴무일";
+  if (currentWork.startMinutes === null || currentWork.endMinutes === null) {
+    return "근무 시간 미등록";
+  }
+  return `${formatMinutes(currentWork.startMinutes)} - ${formatMinutes(currentWork.endMinutes)}`;
+}
+
+function getCurrentWorkStateLabel(state: StaffCurrentWorkInfo["state"]) {
+  if (state === "scheduled") return "근무 예정";
+  if (state === "in_consultation") return "진료중";
+  if (state === "clocked_out") return "퇴근";
+  if (state === "shift_ended") return "업무 종료";
+  return "근무중";
+}
+
+function getCurrentWorkDetail(
+  currentWork: StaffCurrentWorkInfo,
+  todayDate: string,
+) {
+  if (currentWork.state === "in_consultation") {
+    return currentWork.detailLabel;
+  }
+  if (currentWork.state === "off") return "개인 일정";
+  if (
+    currentWork.state === "leave" ||
+    currentWork.state === "same_day_leave" ||
+    currentWork.state === "hospital_closed"
+  ) {
+    return formatDateLabel(currentWork.date || todayDate);
+  }
+  return null;
 }
 
 function formatMinutes(minutes: number) {

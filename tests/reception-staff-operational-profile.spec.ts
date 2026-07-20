@@ -142,10 +142,10 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(panel).toContainText("이수지");
   await expect(panel).toContainText("계정 정보");
   await expect(panel).toContainText("오늘 근무 정보");
-  await expect(panel).toContainText("09:30 - 10:00");
-  await expect(panel).toContainText("예약 진료");
-  await expect(panel).toContainText("콩이 · 김하늘 외 1건");
-  await expect(panel).not.toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).not.toContainText("09:30 - 10:00");
+  await expect(panel).not.toContainText("예약 진료");
+  await expect(panel).not.toContainText("콩이 · 김하늘 외 1건");
   await expect(panel).not.toContainText("선택 날짜 예약");
   await expect(panel.getByRole("tab", { name: "프로필" })).toHaveAttribute(
     "aria-selected",
@@ -279,10 +279,9 @@ test("non-veterinarian appointment assignees receive the same profile workload",
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
   await expect(panel).toContainText("송하윤");
-  await expect(panel).toContainText("09:42 - 10:12");
-  await expect(panel).toContainText("현장 접수");
-  await expect(panel).toContainText("외 1건");
-  await expect(panel).not.toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).not.toContainText("09:42 - 10:12");
+  await expect(panel).not.toContainText("현장 접수");
 
   await panel.getByRole("tab", { name: "업무현황" }).click();
   await expect(panel).toContainText("접수/예약");
@@ -298,9 +297,9 @@ test("walk-in reception assigned to a staff member appears in profile and worklo
   await openStaffProfile(page, "김도윤");
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
-  await expect(panel).toContainText("09:42 - 10:12");
-  await expect(panel).toContainText("현장 접수");
-  await expect(panel).not.toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).not.toContainText("09:42 - 10:12");
+  await expect(panel).not.toContainText("현장 접수");
 
   await panel.getByRole("tab", { name: "업무현황" }).click();
   await expect(panel).toContainText("접수/예약");
@@ -540,8 +539,8 @@ test("staff profile panel keeps loading, error, retry, and offline states distin
   allowSuccess = true;
   await drawer.getByRole("button", { name: "다시 시도" }).click();
   await expect(drawer).toContainText("상태 확인 중");
-  await expect(drawer).toContainText("예약 진료");
-  await expect(drawer).not.toContainText("오늘 게시된 근무가 없어요");
+  await expect(drawer).toContainText("오늘 게시된 근무가 없어요");
+  await expect(drawer).not.toContainText("예약 진료");
 });
 
 test("touch viewport keeps the lane action visible and uses a full-width panel", async ({
@@ -678,6 +677,14 @@ test("staff profile panel renders account, published shift, availability, and pe
           membershipStatus: "active",
           phone: "010-0000-0000",
         },
+        currentWork: {
+          date: "2026-05-02",
+          state: "in_consultation",
+          startMinutes: 540,
+          endMinutes: 1080,
+          detailLabel: "1진료실",
+          source: "encounter",
+        },
         shift: {
           date: "2026-05-02",
           startMinutes: 540,
@@ -698,8 +705,9 @@ test("staff profile panel renders account, published shift, availability, and pe
   const drawer = page.getByRole("region", { name: "직원 운영 프로필" });
   await expect(drawer).toContainText("오늘 근무 정보");
   await expect(drawer).toContainText("09:00 - 18:00");
-  await expect(drawer).toContainText("제2진료실");
-  await expect(drawer).toContainText("근무 예정");
+  await expect(drawer).toContainText("진료중");
+  await expect(drawer).toContainText("1진료실");
+  await expect(drawer).not.toContainText("제2진료실");
   await expect(drawer).toContainText("휴무");
   await expect(drawer).toContainText("5월 5일 10:00 복귀");
   await expect(drawer).toContainText("suji@example.test");
@@ -719,6 +727,77 @@ test("staff profile panel renders account, published shift, availability, and pe
   await expect(
     page.getByRole("menuitem", { name: "멤버 관리에서 보기" }),
   ).toHaveCount(0);
+});
+
+test("today work card renders schedule, clock-out, leave, and closure states without reception details", async ({
+  page,
+}) => {
+  let currentWork = {
+    date: "2026-07-20",
+    state: "working",
+    startMinutes: 540,
+    endMinutes: 1140,
+    detailLabel: null as string | null,
+    source: "schedule",
+  };
+  await page.route("**/staff/*/operational-profile?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        availability: null,
+        capabilities: {
+          canManageMember: false,
+          manageMemberHref: null,
+          scheduleHref: null,
+        },
+        currentWork,
+        profile: {
+          displayName: "이수지",
+          initials: "SJ",
+          jobPositionLabel: "수의사",
+          membershipStatus: "active",
+        },
+        shift: null,
+      },
+    });
+  });
+  await page.route("**/staff/*/work-items**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        items: [],
+        nextCursor: null,
+        timezone: "Asia/Seoul",
+      },
+    });
+  });
+
+  const scenarios = [
+    { state: "working", label: "근무중", detail: null },
+    { state: "scheduled", label: "근무 예정", detail: null },
+    { state: "clocked_out", label: "퇴근", detail: null },
+    { state: "shift_ended", label: "업무 종료", detail: null },
+    { state: "off", label: "휴무일", detail: "개인 일정" },
+    { state: "leave", label: "연차", detail: "7월 20일" },
+    { state: "same_day_leave", label: "당일 연차", detail: "7월 20일" },
+    { state: "hospital_closed", label: "병원 휴무일", detail: "7월 20일" },
+  ];
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  for (const [index, scenario] of scenarios.entries()) {
+    currentWork = { ...currentWork, state: scenario.state };
+    await openStaffProfile(page);
+    const drawer = page.getByRole("region", { name: "직원 운영 프로필" });
+    await expect(drawer).toContainText(scenario.label);
+    if (scenario.detail) await expect(drawer).toContainText(scenario.detail);
+    await expect(drawer).not.toContainText("초코");
+    await expect(drawer).not.toContainText("예약 진료");
+    if (index < scenarios.length - 1) {
+      await drawer.getByRole("button", { name: "직원 운영 프로필 닫기" }).click();
+    }
+  }
 });
 
 test("self status message saves optimistically, rolls back, retries, cancels, and saves on blur", async ({

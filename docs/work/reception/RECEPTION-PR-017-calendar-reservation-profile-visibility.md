@@ -17,8 +17,8 @@ updated: "2026-07-20"
 ## Goal
 
 Show every assigned staff member's selected-day reservations and walk-in
-receptions in both `오늘 근무 정보` and `업무현황` without treating reception
-work as a hospital schedule shift or an absence event.
+receptions in `업무현황` without treating reception work as a hospital schedule
+shift, current-work state, or absence event.
 
 ## Scope
 
@@ -26,9 +26,6 @@ work as a hospital schedule shift or an absence event.
   day view.
 - Keep the clinical `담당의` veterinarian-only, but let any active workspace
   member be assigned separately as an operational `업무 담당자`.
-- Show non-cancelled, non-no-show reservations and non-cancelled walk-in
-  receptions assigned to the opened staff member as `예약 진료` or `현장 접수`
-  summaries in `오늘 근무 정보`.
 - Add the same reception work to `업무현황` as `접수/예약` cards with the
   correct appointment or encounter navigation target.
 - Use only the safe patient/guardian display labels already loaded for the
@@ -43,10 +40,8 @@ work as a hospital schedule shift or an absence event.
 
 ## Done When
 
-- A visible reservation or walk-in reception assigned to a staff member of any supported role
-  replaces the false `오늘 게시된 근무가 없어요`
-  empty state with its time and display label when no published shift exists.
-- The same reception work appears in `업무현황` as an actionable `접수/예약` card.
+- Reception work appears in `업무현황` as an actionable `접수/예약` card for
+  every supported role and never replaces the `오늘 근무 정보` empty state.
 - Cancelled/no-show reservations and unrelated staff reservations remain absent.
 - TypeScript and focused reception profile checks pass or record an inherited
   environment blocker.
@@ -70,5 +65,5 @@ work as a hospital schedule shift or an absence event.
   arrays through both calendar and queue reads.
 - The remote audit foreign-key index follow-up was applied as
   `20260720124500_encounter_staff_assignments_audit_index`.
-- Published schedule and appointment workload are intentionally rendered as
-  separate cards so leave/off and schedule semantics remain truthful.
+- Published schedule/current-work state and reception workload are intentionally
+  rendered in separate tabs so leave/off and schedule semantics remain truthful.
