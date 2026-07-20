@@ -100,7 +100,8 @@ export function canWritePatientVitals({
   return {
     allowed:
       permission.allowed &&
-      (permission.jobPosition?.key === "veterinarian" ||
+      (permission.assignedRoles.includes("hospital_admin") ||
+        permission.jobPosition?.key === "veterinarian" ||
         permission.jobPosition?.key === "technician" ||
         permission.assignedRoles.includes("vet") ||
         permission.assignedRoles.includes("technician")),

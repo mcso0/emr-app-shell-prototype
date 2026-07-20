@@ -10,6 +10,7 @@ related_work:
   - RECEPTION-QA-PR-011
   - CHART-PR-014
   - CHART-PR-015
+  - CHART-PR-016
 last_updated: 2026-07-20
 tags: [data-model, patient, vital, chart, permissions]
 ---
@@ -39,7 +40,7 @@ Values must be positive. Weight accepts up to two decimal places, temperature up
 It rechecks all of the following in the database transaction:
 
 1. `auth.uid()` matches the supplied actor and the actor has active workspace membership.
-2. The actor has effective `vital:write` and clinical eligibility as a veterinarian or technician job position. The legacy `vet` and `technician` membership strings remain a migration compatibility fallback only.
+2. The actor has effective `vital:write` and is either an active hospital administrator or clinically eligible through a veterinarian or technician job position. The legacy `vet` and `technician` membership strings remain a migration compatibility fallback only.
 3. The encounter belongs to the requested workspace and both the encounter and `consultation` queue row are `waiting`.
 4. The write updates only the selected encounter's latest existing vital record; it inserts one record only when that encounter has no vital yet.
 
