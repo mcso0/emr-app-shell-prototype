@@ -22,13 +22,17 @@ This model is limited to synthetic local/dev/test operations. It records plannin
 - Requests do not mutate a shift when submitted. `hospital_schedule_review_request(..., 'approved')` is the only approval path that applies the requested leave/change and marks the week `changed`.
 - Assignment is deterministic and advisory. The admin explicitly saves the proposed staff assignment through `hospital_schedule_save_shift`.
 - `hospital_schedule_read_snapshot` returns role-safe staff directory fields, shifts, the caller's permitted requests, and their in-app schedule notifications. It excludes hourly rates.
+- `staff_current_work_status_snapshot(workspace, user, day)` applies to every
+  active workspace member. It returns only date, state, published work time,
+  optional active consultation room, and source after enforcing active
+  same-workspace membership.
 - `reception_staff_operational_status_snapshot(workspace, day)` returns only
   veterinarian user ID, derived status code, and source. It does not expose clock
   timestamps, rates, notes, or mutable schedule fields. The reception staff API
   performs its existing `reception:view` check before invoking this snapshot.
 - The staff operational-profile read resolves the workspace timezone and reads
   every schedule week covering today through today + 13 days. Only `published`
-  and `changed` weeks participate. It returns today's published shift, the
+  and `changed` weeks participate. It returns today's current-work projection, the
   nearest leave/off period, and the first following work shift as a minimal
   display projection; request reasons, private notes, hourly rates, and editable
   schedule fields remain excluded.
@@ -46,9 +50,13 @@ This model is limited to synthetic local/dev/test operations. It records plannin
 - The calculation uses `Asia/Seoul` time. It is evaluated on read and refreshed by
   the reception client, so the database does not receive minute-by-minute status
   writes.
-- `진료중` is not a schedule-table value. Reception may overlay it from an
-  authorized, checked-in appointment assigned to that veterinarian and overlapping
-  the current time.
+- `진료중` is not a schedule-table value. The current-work snapshot derives it
+  only from an `in_consultation` encounter whose primary veterinarian is the
+  target user and whose latest consultation call has a room. Waiting reservations
+  and walk-ins remain workload only.
+- `hospital_schedule_staff_profiles` is provisioned for every active membership,
+  including roles outside veterinarian, technician, and reception. Membership
+  role never implies that a shift exists.
 
 ## RLS and RPC notes
 

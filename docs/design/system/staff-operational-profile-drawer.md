@@ -162,20 +162,19 @@ success or failure.
 
 ### Today's Shift
 
-Use only the current published or changed hospital schedule snapshot. Show the
-time, work label, location, and computed status when present. No schedule row is
-not an error; read failure is an explicit section error with retry. Do not expose
-draft schedules or private notes.
+Use only the current published or changed hospital schedule, time-clock,
+operating-hours, and active-consultation facts. This contract applies to every
+active workspace member regardless of role. Normal work shows the published
+time and one of `근무 예정`, `근무중`, `퇴근`, or `업무 종료`. `진료중` and a
+room label appear only while the member is the veterinarian on an
+`in_consultation` encounter whose latest call event has that room. Leave, same-day
+leave, personal off, and hospital closure render as `연차`, `당일 연차`, `휴무일`,
+and `병원 휴무일` respectively.
 
-In the reception calendar context, an assigned, non-cancelled reservation on the
-selected operating date is also shown as a separate `예약 진료` card in this
-section. It is an operational workload signal, not a published shift: it never
-changes the schedule-derived shift, availability, leave/off, or schedule-tab
-meaning. The card may show only the slot and the patient/guardian label already
-available in the authorized reception calendar read. Cancelled and no-show
-reservations are excluded. Assignment is role-agnostic: a reservation may keep
-one veterinarian as its clinical owner while any active workspace member is an
-operational assignee.
+No schedule row on an open day is an honest empty state; read failure is an
+explicit section error with retry. Do not infer work from a calendar lane,
+membership role, reservation, or walk-in assignment, and do not expose patient
+labels, draft schedules, private notes, or leave reasons in this section.
 
 ### Availability
 

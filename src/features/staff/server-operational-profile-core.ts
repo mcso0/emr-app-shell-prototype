@@ -30,6 +30,26 @@ export type StaffOperationalShift = {
   workLabel: string;
 };
 
+export type StaffCurrentWorkState =
+  | "working"
+  | "scheduled"
+  | "in_consultation"
+  | "clocked_out"
+  | "shift_ended"
+  | "leave"
+  | "same_day_leave"
+  | "off"
+  | "hospital_closed";
+
+export type StaffCurrentWorkInfo = {
+  date: string;
+  detailLabel: string | null;
+  endMinutes: number | null;
+  source: "schedule" | "time_clock" | "encounter" | "operating_hours";
+  startMinutes: number | null;
+  state: StaffCurrentWorkState;
+};
+
 export type StaffOperationalAvailability = {
   event: Pick<StaffOperationalShift, "date" | "kind">;
   returnShift?: StaffOperationalShift;
@@ -53,6 +73,7 @@ export type StaffOperationalProfileGateway = {
         ok: true;
         availability: StaffOperationalAvailability | null;
         availabilityError?: "schedule_read_failed";
+        currentWork: StaffCurrentWorkInfo | null;
         profile: StaffOperationalProfile;
         scheduleProfileId?: string;
         shift: StaffOperationalShift | null;
@@ -76,7 +97,9 @@ type SupabaseOperationalProfileQueryBuilder =
 export type SupabaseStaffOperationalProfileClient = {
   from(table: string): SupabaseOperationalProfileQueryBuilder;
   rpc(
-    functionName: "hospital_schedule_read_snapshot",
+    functionName:
+      | "hospital_schedule_read_snapshot"
+      | "staff_current_work_status_snapshot",
     args: Record<string, unknown>,
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   storage: {
@@ -96,6 +119,7 @@ export type StaffOperationalProfileReadResult =
       status: 200;
       availability: StaffOperationalAvailability | null;
       capabilities: StaffOperationalProfileCapabilities;
+      currentWork: StaffCurrentWorkInfo | null;
       profile: StaffOperationalProfile;
       shift: StaffOperationalShift | null;
       sectionErrors?: {
@@ -176,6 +200,7 @@ export async function readStaffOperationalProfile({
           })
         : null,
     },
+    currentWork: result.currentWork,
     profile: result.profile,
     shift: result.shift,
     ...buildSectionErrors(result),
@@ -274,15 +299,22 @@ export function createSupabaseStaffOperationalProfileGateway(
         };
 
         const weekStarts = getAvailabilityWeekStarts(date);
-        const scheduleReads = await Promise.all(
-          weekStarts.map(async (weekStart) => ({
-            weekStart,
-            ...(await client.rpc("hospital_schedule_read_snapshot", {
-              p_week_start: weekStart,
-              p_workspace_id: workspaceId,
+        const [scheduleReads, currentWorkRead] = await Promise.all([
+          Promise.all(
+            weekStarts.map(async (weekStart) => ({
+              weekStart,
+              ...(await client.rpc("hospital_schedule_read_snapshot", {
+                p_week_start: weekStart,
+                p_workspace_id: workspaceId,
+              })),
             })),
-          })),
-        );
+          ),
+          client.rpc("staff_current_work_status_snapshot", {
+            p_day: date,
+            p_user_id: userId,
+            p_workspace_id: workspaceId,
+          }),
+        ]);
         const readableSnapshots = scheduleReads
           .filter((read) => !read.error)
           .map((read) => read.data);
@@ -296,7 +328,7 @@ export function createSupabaseStaffOperationalProfileGateway(
           String(membership.id),
         );
         const availabilityError = scheduleReads.some((read) => read.error);
-        const shiftError = Boolean(todayRead?.error);
+        const shiftError = Boolean(todayRead?.error || currentWorkRead.error);
 
         return {
           ok: true,
@@ -310,6 +342,9 @@ export function createSupabaseStaffOperationalProfileGateway(
           ...(availabilityError
             ? { availabilityError: "schedule_read_failed" as const }
             : {}),
+          currentWork: currentWorkRead.error
+            ? null
+            : parseCurrentWork(currentWorkRead.data),
           profile,
           ...(scheduleProfileId ? { scheduleProfileId } : {}),
           shift: shiftError
@@ -581,6 +616,65 @@ function parseShift(value: Record<string, unknown> | undefined) {
     locationLabel:
       typeof value.locationLabel === "string" ? value.locationLabel : null,
   } satisfies StaffOperationalShift;
+}
+
+function parseCurrentWork(value: unknown): StaffCurrentWorkInfo | null {
+  const item = asRecord(value);
+  if (
+    typeof item.date !== "string" ||
+    !isCurrentWorkState(item.state) ||
+    !isCurrentWorkSource(item.source)
+  ) {
+    return null;
+  }
+  const startMinutes = parseNullableMinutes(item.startMinutes);
+  const endMinutes = parseNullableMinutes(item.endMinutes);
+  if (startMinutes === undefined || endMinutes === undefined) return null;
+
+  return {
+    date: item.date,
+    state: item.state,
+    startMinutes,
+    endMinutes,
+    detailLabel:
+      typeof item.detailLabel === "string" && item.detailLabel.trim()
+        ? item.detailLabel.trim()
+        : null,
+    source: item.source,
+  };
+}
+
+function parseNullableMinutes(value: unknown): number | null | undefined {
+  if (value === null || value === undefined) return null;
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= 1440
+    ? value
+    : undefined;
+}
+
+function isCurrentWorkState(value: unknown): value is StaffCurrentWorkState {
+  return (
+    value === "working" ||
+    value === "scheduled" ||
+    value === "in_consultation" ||
+    value === "clocked_out" ||
+    value === "shift_ended" ||
+    value === "leave" ||
+    value === "same_day_leave" ||
+    value === "off" ||
+    value === "hospital_closed"
+  );
+}
+
+function isCurrentWorkSource(value: unknown): value is StaffCurrentWorkInfo["source"] {
+  return (
+    value === "schedule" ||
+    value === "time_clock" ||
+    value === "encounter" ||
+    value === "operating_hours"
+  );
 }
 
 function isPublishedSnapshot(value: unknown) {
