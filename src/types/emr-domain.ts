@@ -67,6 +67,7 @@ export type PermissionResource =
   | "patient"
   | "encounter"
   | "chart"
+  | "vital"
   | "order"
   | "dispensing"
   | "lab"
@@ -79,6 +80,7 @@ export type PermissionAction =
   | "view"
   | "create"
   | "update"
+  | "write"
   | "request"
   | "complete"
   | "issue"
@@ -210,6 +212,11 @@ export type Appointment = {
   patientId: EmrId;
   guardianId?: EmrId;
   assignedVeterinarianId?: EmrId;
+  /**
+   * Operational owners of this reservation. This is independent from the
+   * primary veterinarian and can include any active workspace member.
+   */
+  assignedStaffUserIds?: EmrId[];
   scheduledStartAt: IsoDateTime;
   scheduledEndAt?: IsoDateTime;
   visitPurpose?: string;

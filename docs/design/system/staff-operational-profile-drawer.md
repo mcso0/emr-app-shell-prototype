@@ -14,7 +14,7 @@ tags:
   - workspace-membership
   - fulfillment
 created: 2026-07-14
-last_updated: 2026-07-19
+last_updated: 2026-07-20
 ---
 
 # Staff Operational Profile Side Panel V2
@@ -167,6 +167,16 @@ time, work label, location, and computed status when present. No schedule row is
 not an error; read failure is an explicit section error with retry. Do not expose
 draft schedules or private notes.
 
+In the reception calendar context, an assigned, non-cancelled reservation on the
+selected operating date is also shown as a separate `예약 진료` card in this
+section. It is an operational workload signal, not a published shift: it never
+changes the schedule-derived shift, availability, leave/off, or schedule-tab
+meaning. The card may show only the slot and the patient/guardian label already
+available in the authorized reception calendar read. Cancelled and no-show
+reservations are excluded. Assignment is role-agnostic: a reservation may keep
+one veterinarian as its clinical owner while any active workspace member is an
+operational assignee.
+
 ### Availability
 
 Read the next leave/off event in a 14-day window and the first following work
@@ -183,7 +193,17 @@ permission, schedule, or absence event.
 
 ## Work Status Tab
 
-The tab reads actual fulfillment work items assigned to the target member.
+The tab reads actual fulfillment work items assigned to the target member. In
+the reception calendar context it also prepends the target member's assigned,
+non-cancelled reservation(s) for the selected operating date as `접수/예약`
+work cards. These cards use the same authorized calendar state as the visible
+lane, link back to reception, and are not converted into fulfillment items or
+leave/schedule events.
+
+`assigned_veterinarian_id` remains the veterinarian-only clinical owner.
+`appointment_staff_assignments` is the separate role-agnostic operational
+assignment relation used by the reservation cards. A leave/off or another
+schedule event must not be inferred from either relation.
 
 - Sort by `requestedAt DESC, id DESC` and page with a stable opaque cursor.
 - Return at most 20 items per request.

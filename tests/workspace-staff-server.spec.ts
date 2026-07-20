@@ -106,6 +106,25 @@ test("workspace staff read filters active same-workspace veterinarians", async (
   });
 });
 
+test("workspace staff read keeps every supported active role when no role filter is requested", async () => {
+  const result = await readWorkspaceStaff({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+  });
+
+  expect(result).toMatchObject({ ok: true, status: 200 });
+  if (!result.ok) throw new Error("expected workspace staff result");
+  expect(result.staff).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ displayName: "이수지", roles: ["vet"] }),
+      expect.objectContaining({ displayName: "송하윤", roles: ["technician"] }),
+      expect.objectContaining({ displayName: "최유나", roles: ["front_desk"] }),
+      expect.objectContaining({ displayName: "정하린", roles: ["billing_admin"] }),
+      expect.objectContaining({ displayName: "송민재", roles: ["hospital_admin"] }),
+    ]),
+  );
+});
+
 test("workspace staff read merges the selected-date operational status snapshot", async () => {
   const rpcCalls: Array<{ name: string; params: Record<string, unknown> }> = [];
   const gateway = createSupabaseWorkspaceStaffReadGateway({
