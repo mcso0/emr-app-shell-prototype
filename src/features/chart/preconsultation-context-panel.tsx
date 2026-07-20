@@ -21,10 +21,14 @@ import {
 } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesCircleIcon, CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
 import { AnimalPatientAvatar } from "@/components/emr/animal-patient-avatar";
+import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,12 +45,27 @@ import type {
   ChartPreconsultationHistoryEntry,
   ChartPreconsultationVitalMeasurement,
 } from "@/features/chart/preconsultation-context";
+import {
+  emptyPatientVitalWriteInput,
+  hasPatientVitalValue,
+  toPatientVitalWriteInput,
+  type PatientVitalWriteInput,
+} from "@/features/patient-vitals/patient-vital-types";
 import { cn } from "@/lib/utils";
 
 type ContextState =
   | { status: "loading" }
   | { status: "error"; reason?: string }
-  | { status: "ready"; context: ChartPreconsultationContext };
+  | { status: "ready"; context: ChartPreconsultationContext; canWriteVitals: boolean };
+
+type VitalDialogDraft = Record<keyof PatientVitalWriteInput, string>;
+type VitalSaveResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error?: string;
+      fieldErrors?: Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>;
+    };
 
 export function ChartPreconsultationContextPanel({
   actorHeaders,
@@ -66,6 +85,14 @@ export function ChartPreconsultationContextPanel({
   const [contextState, setContextState] = useState<ContextState>({ status: "loading" });
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [patientInformationOpen, setPatientInformationOpen] = useState(false);
+  const [vitalDialogOpen, setVitalDialogOpen] = useState(false);
+  const [vitalDialogDraft, setVitalDialogDraft] = useState<VitalDialogDraft>(() =>
+    createVitalDialogDraft(),
+  );
+  const [vitalFieldErrors, setVitalFieldErrors] = useState<
+    Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>
+  >({});
+  const [vitalSaving, setVitalSaving] = useState(false);
 
   const loadContext = useCallback(async () => {
     setContextState({ status: "loading" });
@@ -76,7 +103,7 @@ export function ChartPreconsultationContextPanel({
     });
     setContextState(
       result.ok
-        ? { status: "ready", context: result.context }
+        ? { status: "ready", context: result.context, canWriteVitals: result.canWriteVitals }
         : {
             status: "error",
             reason: result.denialReason ?? result.error,
@@ -92,7 +119,7 @@ export function ChartPreconsultationContextPanel({
         if (cancelled) return;
         setContextState(
           result.ok
-            ? { status: "ready", context: result.context }
+            ? { status: "ready", context: result.context, canWriteVitals: result.canWriteVitals }
             : {
                 status: "error",
                 reason: result.denialReason ?? result.error,
@@ -152,7 +179,43 @@ export function ChartPreconsultationContextPanel({
     );
   }
 
-  const { context } = contextState;
+  const { canWriteVitals, context } = contextState;
+  const currentVital = context.vitals.find(
+    (measurement) => measurement.encounterId === context.encounter.id,
+  );
+  const openVitalDialog = () => {
+    setVitalDialogDraft(createVitalDialogDraft(currentVital));
+    setVitalFieldErrors({});
+    setVitalDialogOpen(true);
+  };
+  const saveVital = async () => {
+    const parsed = parseVitalDialogDraft(vitalDialogDraft);
+    if (!parsed.ok) {
+      setVitalFieldErrors(parsed.fieldErrors);
+      return;
+    }
+    if (!currentVital && !hasPatientVitalValue(parsed.values)) {
+      setVitalFieldErrors({ vitals: "새 바이탈은 한 가지 이상 입력해 주세요." });
+      return;
+    }
+
+    setVitalSaving(true);
+    setVitalFieldErrors({});
+    const result = await saveChartPreconsultationVital({
+      actorHeaders,
+      encounterId,
+      values: parsed.values,
+      workspaceId,
+    });
+    setVitalSaving(false);
+    if (!result.ok) {
+      setVitalFieldErrors(result.fieldErrors ?? { vitals: getVitalSaveErrorMessage(result.error) });
+      return;
+    }
+
+    setVitalDialogOpen(false);
+    await loadContext();
+  };
   return (
     <div
       className="min-h-0 flex-1 overflow-auto"
@@ -174,7 +237,11 @@ export function ChartPreconsultationContextPanel({
             <SectionDivider />
             <MemoSection context={context} />
             <SectionDivider />
-            <VitalSection context={context} />
+            <VitalSection
+              canWrite={canWriteVitals}
+              context={context}
+              onOpenVitalDialog={openVitalDialog}
+            />
             <SectionDivider />
             <HistorySection
               context={context}
@@ -189,8 +256,83 @@ export function ChartPreconsultationContextPanel({
         open={patientInformationOpen}
         onOpenChange={setPatientInformationOpen}
       />
+      <Dialog
+        open={vitalDialogOpen}
+        onOpenChange={(open) => {
+          if (!vitalSaving) setVitalDialogOpen(open);
+        }}
+      >
+        <EmrDialogShell
+          variant="form"
+          title={currentVital ? "오늘 바이탈 수정" : "오늘 바이탈 입력"}
+          description="대기 중인 오늘 접수에만 저장됩니다. 이전 내원 값은 바뀌지 않습니다."
+          footerMeta={
+            currentVital
+              ? "모든 값을 비우면 오늘 바이탈 행은 유지되고 값만 미표시로 바뀝니다."
+              : "체중, 체온, 혈압, 호흡수 중 측정한 항목만 입력해 주세요."
+          }
+          secondaryAction={
+            <Button type="button" variant="outline" disabled={vitalSaving} onClick={() => setVitalDialogOpen(false)}>
+              취소
+            </Button>
+          }
+          primaryAction={
+            <Button type="button" disabled={vitalSaving} onClick={() => void saveVital()}>
+              {vitalSaving ? "저장 중" : "저장"}
+            </Button>
+          }
+        >
+          <VitalEntryFields
+            draft={vitalDialogDraft}
+            errors={vitalFieldErrors}
+            onChange={(key, value) => {
+              setVitalDialogDraft((current) => ({ ...current, [key]: value }));
+              setVitalFieldErrors((current) => ({ ...current, [key]: undefined, vitals: undefined }));
+            }}
+          />
+        </EmrDialogShell>
+      </Dialog>
     </div>
   );
+}
+
+async function saveChartPreconsultationVital({
+  actorHeaders,
+  encounterId,
+  values,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  values: PatientVitalWriteInput;
+  workspaceId: string;
+}): Promise<VitalSaveResult> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/preconsultation-vitals`,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json", ...actorHeaders },
+        body: JSON.stringify({ encounterId, vitals: values }),
+      },
+    );
+    const body = (await response.json()) as {
+      ok?: boolean;
+      error?: string;
+      fieldErrors?: Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>;
+      denialReason?: string;
+    };
+    if (!response.ok || !body.ok) {
+      return {
+        ok: false,
+        error: body.denialReason ?? body.error,
+        fieldErrors: body.fieldErrors,
+      };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "db_write_failed" };
+  }
 }
 
 async function loadChartPreconsultationContext({
@@ -535,7 +677,15 @@ function MemoCard({
   );
 }
 
-function VitalSection({ context }: { context: ChartPreconsultationContext }) {
+function VitalSection({
+  canWrite,
+  context,
+  onOpenVitalDialog,
+}: {
+  canWrite: boolean;
+  context: ChartPreconsultationContext;
+  onOpenVitalDialog: () => void;
+}) {
   const current = context.vitals.find(
     (measurement) => measurement.encounterId === context.encounter.id,
   );
@@ -546,9 +696,16 @@ function VitalSection({ context }: { context: ChartPreconsultationContext }) {
     : undefined;
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-labelledby="preconsultation-vitals">
-      <SectionTitle id="preconsultation-vitals" icon={<CdsMedicalActivityIcon />}>
-        바이탈 정보
-      </SectionTitle>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <SectionTitle id="preconsultation-vitals" icon={<CdsMedicalActivityIcon />}>
+          바이탈 정보
+        </SectionTitle>
+        {canWrite ? (
+          <Button type="button" variant="outline" size="sm" onClick={onOpenVitalDialog}>
+            {current ? "오늘 바이탈 수정" : "오늘 바이탈 입력"}
+          </Button>
+        ) : null}
+      </div>
       {current ? (
         <VitalComparison current={current} previous={previous} />
       ) : (
@@ -561,6 +718,80 @@ function VitalSection({ context }: { context: ChartPreconsultationContext }) {
         </div>
       )}
     </section>
+  );
+}
+
+function VitalEntryFields({
+  draft,
+  errors,
+  onChange,
+}: {
+  draft: VitalDialogDraft;
+  errors: Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>;
+  onChange: (key: keyof PatientVitalWriteInput, value: string) => void;
+}) {
+  const fields: Array<{
+    key: keyof PatientVitalWriteInput;
+    label: string;
+    unit: string;
+    inputMode: "decimal" | "numeric";
+  }> = [
+    { key: "weightKg", label: "체중", unit: "kg", inputMode: "decimal" },
+    { key: "temperatureC", label: "체온", unit: "°C", inputMode: "decimal" },
+    {
+      key: "bloodPressureSystolicMmhg",
+      label: "수축기 혈압",
+      unit: "mmHg",
+      inputMode: "numeric",
+    },
+    {
+      key: "bloodPressureDiastolicMmhg",
+      label: "이완기 혈압",
+      unit: "mmHg",
+      inputMode: "numeric",
+    },
+    { key: "respiratoryRateRpm", label: "호흡수", unit: "회/분", inputMode: "numeric" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm leading-5 text-[var(--emr-text-tertiary)]">
+        실제로 측정한 값만 입력해 주세요. 입력하지 않은 값은 표에서 미표시로 보여요.
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {fields.map((field) => (
+          <div key={field.key} className="space-y-1.5">
+            <Label htmlFor={`preconsultation-vital-${field.key}`}>{field.label}</Label>
+            <div className="relative">
+              <Input
+                id={`preconsultation-vital-${field.key}`}
+                aria-describedby={
+                  errors[field.key] ? `preconsultation-vital-${field.key}-error` : undefined
+                }
+                aria-invalid={Boolean(errors[field.key])}
+                inputMode={field.inputMode}
+                placeholder="미입력"
+                value={draft[field.key]}
+                onChange={(event) => onChange(field.key, event.target.value)}
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-[var(--emr-text-tertiary)]">
+                {field.unit}
+              </span>
+            </div>
+            {errors[field.key] ? (
+              <p id={`preconsultation-vital-${field.key}-error`} className="text-xs text-[var(--emr-status-danger-text)]">
+                {errors[field.key]}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {errors.vitals ? (
+        <p role="alert" className="text-sm text-[var(--emr-status-danger-text)]">
+          {errors.vitals}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -1027,6 +1258,86 @@ function formatHistoryDate(value: string) {
   const month = parts.find((part) => part.type === "month")?.value;
   const day = parts.find((part) => part.type === "day")?.value;
   return `${year}년 ${month}월 ${day}일`;
+}
+
+function createVitalDialogDraft(
+  measurement?: Pick<
+    ChartPreconsultationVitalMeasurement,
+    | "weightKg"
+    | "temperatureC"
+    | "respiratoryRateRpm"
+    | "bloodPressureSystolicMmhg"
+    | "bloodPressureDiastolicMmhg"
+  >,
+): VitalDialogDraft {
+  const values = toPatientVitalWriteInput(measurement);
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, value === null ? "" : String(value)]),
+  ) as VitalDialogDraft;
+}
+
+function parseVitalDialogDraft(draft: VitalDialogDraft):
+  | { ok: true; values: PatientVitalWriteInput }
+  | {
+      ok: false;
+      fieldErrors: Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>;
+    } {
+  const values: PatientVitalWriteInput = { ...emptyPatientVitalWriteInput };
+  const fieldErrors: Partial<Record<keyof PatientVitalWriteInput | "vitals", string>> = {};
+
+  for (const key of Object.keys(values) as (keyof PatientVitalWriteInput)[]) {
+    const rawValue = draft[key].trim();
+    if (!rawValue) continue;
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      fieldErrors[key] = "0보다 큰 숫자를 입력해 주세요.";
+      continue;
+    }
+    if (key === "weightKg" && !hasAtMostVitalDecimalPlaces(parsed, 2)) {
+      fieldErrors[key] = "소수점 둘째 자리까지 입력해 주세요.";
+      continue;
+    }
+    if (key === "temperatureC" && !hasAtMostVitalDecimalPlaces(parsed, 1)) {
+      fieldErrors[key] = "소수점 첫째 자리까지 입력해 주세요.";
+      continue;
+    }
+    if (
+      (key === "respiratoryRateRpm" ||
+        key === "bloodPressureSystolicMmhg" ||
+        key === "bloodPressureDiastolicMmhg") &&
+      !Number.isInteger(parsed)
+    ) {
+      fieldErrors[key] = "정수로 입력해 주세요.";
+      continue;
+    }
+    values[key] = parsed;
+  }
+
+  const hasSystolic = values.bloodPressureSystolicMmhg !== null;
+  const hasDiastolic = values.bloodPressureDiastolicMmhg !== null;
+  if (hasSystolic !== hasDiastolic) {
+    const message = "수축기와 이완기 혈압을 함께 입력하거나 함께 비워 주세요.";
+    fieldErrors.bloodPressureSystolicMmhg = message;
+    fieldErrors.bloodPressureDiastolicMmhg = message;
+  }
+
+  return Object.keys(fieldErrors).length
+    ? { ok: false, fieldErrors }
+    : { ok: true, values };
+}
+
+function getVitalSaveErrorMessage(error?: string) {
+  if (error === "stale_status") return "호출 전 대기 상태에서만 오늘 바이탈을 저장할 수 있어요.";
+  if (error === "vital_value_required") return "새 바이탈은 한 가지 이상 입력해 주세요.";
+  if (error === "permission_missing" || error === "vital_writer_role_required") {
+    return "오늘 바이탈을 입력할 권한이 없어요.";
+  }
+  return "바이탈을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
+}
+
+function hasAtMostVitalDecimalPlaces(value: number, decimalPlaces: number) {
+  const factor = 10 ** decimalPlaces;
+  return Math.abs(value * factor - Math.round(value * factor)) < Number.EPSILON * factor * 8;
 }
 
 function formatOptionalNumber(value: number | undefined, unit: string, precision: number) {

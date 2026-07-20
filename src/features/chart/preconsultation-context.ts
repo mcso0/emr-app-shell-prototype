@@ -78,6 +78,7 @@ export type ChartPreconsultationContextResponse =
       ok: true;
       status: 200;
       context: ChartPreconsultationContext;
+      canWriteVitals: boolean;
       enforcedBy: "chart-preconsultation-context-read";
     }
   | {

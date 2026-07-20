@@ -96,6 +96,7 @@ import {
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
+import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getChartEncounter } from "@/features/chart/data";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
@@ -2321,6 +2322,18 @@ export function LabSlotAvailabilityProvider({
 
 export function LabHeader({ workspaceId }: ShellComponentProps) {
   const { detail } = useCurrentLabDetail(workspaceId);
+  const latestVitals = usePatientLatestVitalItems({
+    encounterId: detail?.encounter.id,
+    fallbackItems: isLegacySalesDemoWorkspace(workspaceId)
+      ? [
+          { label: "체중", value: "5.96 kg" },
+          { label: "체온", value: "39.3°C" },
+          { label: "호흡", value: "20 rpm" },
+          { label: "혈압", value: "170 mmHg" },
+        ]
+      : undefined,
+    workspaceId,
+  });
 
   if (!detail) return null;
 
@@ -2333,12 +2346,7 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
         { label: "나이", value: getPatientDisplayAge(detail.patient) },
         { label: "성별", value: getPatientSexLabel(detail.patient) },
       ]}
-      vitalItems={[
-        { label: "체중", value: "5.96 kg" },
-        { label: "체온", value: "39.3°C" },
-        { label: "호흡", value: "20 rpm" },
-        { label: "혈압", value: "170 bpm" },
-      ]}
+      vitalItems={latestVitals.items}
       memoActions={[
         {
           label: "방문목적",
@@ -3035,6 +3043,18 @@ export function ImagingHeader({ hasRightPanel, workspaceId }: ShellComponentProp
   const { detail } = useCurrentImagingDetail(workspaceId);
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+  const latestVitals = usePatientLatestVitalItems({
+    encounterId: detail?.encounter.id,
+    fallbackItems: isLegacySalesDemoWorkspace(workspaceId)
+      ? [
+          { label: "체중", value: "5.96 kg" },
+          { label: "체온", value: "39.3°C" },
+          { label: "호흡", value: "20 rpm" },
+          { label: "혈압", value: "170 mmHg" },
+        ]
+      : undefined,
+    workspaceId,
+  });
 
   if (!detail) return null;
 
@@ -3047,12 +3067,7 @@ export function ImagingHeader({ hasRightPanel, workspaceId }: ShellComponentProp
         { label: "나이", value: getPatientDisplayAge(detail.patient) },
         { label: "성별", value: getPatientSexLabel(detail.patient) },
       ]}
-      vitalItems={[
-        { label: "체중", value: "5.96 kg" },
-        { label: "체온", value: "39.3°C" },
-        { label: "호흡", value: "20 rpm" },
-        { label: "혈압", value: "170 bpm" },
-      ]}
+      vitalItems={latestVitals.items}
       memoActions={[
         {
           label: "방문목적",

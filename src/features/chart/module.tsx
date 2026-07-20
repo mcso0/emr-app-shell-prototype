@@ -144,6 +144,7 @@ import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-e
 import { useChartStore } from "@/features/chart/store";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
+import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
 import {
   getPatientDisplayAge,
   getPatientSexLabel,
@@ -1294,6 +1295,11 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const chartStartLocked =
     bundle?.encounter.status === "waiting" &&
     selectedLiveQueueRecord?.queueEntry.status === "waiting";
+  const latestVitals = usePatientLatestVitalItems({
+    encounterId: bundle?.encounter.id,
+    fallbackItems: bundle && allowMockFallback ? getChartVitals(bundle) : undefined,
+    workspaceId,
+  });
 
   if (!bundle || chartStartLocked) return null;
 
@@ -1314,7 +1320,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
         { label: "나이", value: getPatientDisplayAge(bundle.patient) },
         { label: "성별", value: getPatientSexLabel(bundle.patient) },
       ]}
-      vitalItems={getChartVitals(bundle)}
+      vitalItems={latestVitals.items}
       memoActions={[
         {
           label: "방문목적",

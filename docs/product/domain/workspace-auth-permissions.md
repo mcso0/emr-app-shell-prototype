@@ -8,9 +8,10 @@ doc_type: domain-contract
 related_work:
   - DEN-18
   - AUTH-PR-044
+  - CHART-PR-015
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-16T00:00:00.000Z
+last_updated: 2026-07-20T00:00:00.000Z
 description: >-
   Defines workspace-based auth, membership, roles, permission behavior, and
   profile authorization boundaries.
@@ -24,7 +25,7 @@ tags:
 
 # Workspace Auth and Permissions
 
-Updated: 2026-07-16
+Updated: 2026-07-20
 
 This document is the product source of truth for workspace-based auth, membership, roles, and permission behavior. It captures the requirements from Linear `DEN-18` before implementation work begins.
 
@@ -60,7 +61,7 @@ Product planning excludes demo-only mock role selection from the real login expe
 | Workspace owner / 소유자   | The protected workspace authority. Owners can transfer ownership and access owner-only workspace, contract, billing, and dangerous data operations. At least one active owner must remain.                                    |
 | Workspace admin / 관리자   | A high-permission workspace operator. Admins can manage most hospital operations and member settings, but cannot delete the workspace, transfer ownership, change billing/contract authority, or run dangerous data deletion. |
 | Permission role / 권한 역할 | A workspace-scoped authorization role that answers "what can this person do?" Permission roles are separate from job positions.                                                                                               |
-| Job position / 직무       | A workspace-scoped display/filter field that answers "what is this person's clinic job?" Job position is not the authorization source.                                                                                        |
+| Job position / 직무       | A workspace-scoped display/filter field that answers "what is this person's clinic job?" It is not a general authorization source; the approved clinical `vital:write` eligibility check is the explicit exception. |
 | Member                  | A user with an active membership in a workspace.                                                                                                                                                                              |
 | Invitation              | A pending invite for an email address to join a workspace with a preselected permission role and job position.                                                                                                                |
 | Membership              | The workspace-scoped relationship between user, status, permission role assignment, job position, and permission source.                                                                                                      |
@@ -81,7 +82,7 @@ MVP excludes `게스트`. Guest-style limited read access can be reconsidered la
 
 ## Job Positions
 
-Job positions are display/filter metadata, not permission sources.
+Job positions are display/filter metadata, not general permission sources.
 
 Default MVP job positions:
 
@@ -98,6 +99,10 @@ Product rule:
 * `소유자` is a permission role.
 * Many hospitals may assign both to the same person, but the system must not assume they are identical.
 * `수의사`, `테크니션`, and `데스크` are job positions. The actual authorization question is whether the user's permission role allows chart writing, order mutation, billing processing, role management, or other work actions.
+
+### Clinical Vital Write Exception
+
+`vital:write` is a clinical permission for entering or revising the selected waiting encounter's today vital values. It requires both an active effective `vital:write` permission and active clinical eligibility as `수의사` or `테크니션`. This is intentionally narrower than general chart writing; `데스크`, owner, or admin titles alone do not authorize vital entry. The server enforces the conjunction and accepts the legacy `vet`/`technician` membership strings only while the job-position migration remains in compatibility mode.
 
 ## Permission Role Policy
 
@@ -138,6 +143,7 @@ Legend:
 | Customer / 보호자 관리                       | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View                          | Configured                                          |
 | Patient / 환자 관리                         | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View                          | Configured                                          |
 | Chart / 진료 차트                           | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit            | Configured                                          |
+| Waiting-chart today vital entry             | `vital:write` + veterinarian/technician eligibility      | `vital:write` + veterinarian/technician eligibility | `vital:write` + veterinarian/technician eligibility | Same clinical eligibility required                 |
 | SOAP / diagnosis                        | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit            | Configured                                          |
 | Order request/status                    | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit / Complete | Configured                                          |
 | Lab / 임상병리 검사                           | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit / Complete | Configured                                          |
