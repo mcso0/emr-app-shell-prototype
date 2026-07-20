@@ -234,6 +234,7 @@ export type Encounter = {
   guardianId?: EmrId;
   appointmentId?: EmrId;
   primaryVeterinarianId?: EmrId;
+  assignedStaffUserIds?: EmrId[];
   encounterNo: string;
   receptionType?: "walk_in" | "appointment";
   department?: string;

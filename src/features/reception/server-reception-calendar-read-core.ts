@@ -335,14 +335,17 @@ function mapEncounter(value: unknown): Encounter | null {
     return null;
   }
 
+  const primaryVeterinarianId =
+    getString(row.primaryVeterinarianId) ?? getString(row.primary_veterinarian_id);
+
   return {
     id,
     workspaceId,
     patientId,
     guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
     appointmentId: getString(row.appointmentId) ?? getString(row.appointment_id),
-    primaryVeterinarianId:
-      getString(row.primaryVeterinarianId) ?? getString(row.primary_veterinarian_id),
+    primaryVeterinarianId,
+    assignedStaffUserIds: getAssignedStaffUserIds(row, primaryVeterinarianId),
     encounterNo,
     receptionType: (getString(row.receptionType) ??
       getString(row.reception_type)) as Encounter["receptionType"],

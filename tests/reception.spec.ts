@@ -6584,6 +6584,10 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
           patientId: "patient-dubu",
           guardianId: "guardian-jung-harin",
           primaryVeterinarianId: "user-vet-doyun",
+          assignedStaffUserIds: [
+            "user-vet-doyun",
+            ...((capturedBody.assignedStaffUserIds as string[] | undefined) ?? []),
+          ],
           encounterNo: "E-LIVE-0001",
           receptionType: "walk_in",
           department: "재활",
@@ -6675,6 +6679,9 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
   await walkInForm.getByLabel("방문목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("담당의").click();
   await page.getByRole("option", { name: "김도윤" }).click();
+  await walkInForm.getByRole("button", { name: "업무 담당자" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "송하윤 · 테크니션" }).click();
+  await page.keyboard.press("Escape");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await expect(walkInForm.getByLabel("접수시간")).toHaveValue("오전 10:45");
   await walkInForm.getByRole("button", { name: "생성" }).click();
@@ -6683,6 +6690,7 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
     patientId: "patient-dubu",
     guardianId: "guardian-jung-harin",
     primaryVeterinarianId: "user-vet-doyun",
+    assignedStaffUserIds: ["user-tech-hayun"],
     department: "영상의학과 · 방사선종양학과",
     durationMinutes: 30,
     visitPurpose: "재활 · 보행 재검 및 통증 상담",

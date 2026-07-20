@@ -794,6 +794,7 @@ export const mockEncounters: Encounter[] = [
     patientId: "patient-dubu",
     guardianId: "guardian-jung-harin",
     primaryVeterinarianId: "user-vet-doyun",
+    assignedStaffUserIds: ["user-vet-doyun", "user-tech-hayun"],
     encounterNo: "E-260501-0002",
     chiefComplaint: "수술 후 보행 확인",
     visitPurpose: "정형외과 재진",
