@@ -97,10 +97,11 @@ export function WorkspaceFrame({
       ? undefined
       : activeDrawer?.id);
   const drawerWidth =
-    activeDrawer?.type === "hospital-order" || CommonProfileDrawer
+    activeDrawer?.type === "hospital-order"
       ? SHELL_LAYOUT.drawer.largeWidth
       : SHELL_LAYOUT.drawer.defaultWidth;
-  const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
+  const shouldShowShellDrawerHeader =
+    activeDrawer?.type !== "hospital-order" && !CommonProfileDrawer;
   const drawerMotionKey = activeDrawer
     ? `${activeDrawer.type}-${activeDrawer.id}`
     : undefined;
@@ -246,7 +247,9 @@ export function WorkspaceFrame({
                   style={{
                     gridColumn: "1 / -1",
                     gridRow: "1 / -1",
-                    width: `min(100%, ${drawerWidth}px)`,
+                    width: CommonProfileDrawer
+                      ? "min(100%, var(--emr-profile-panel-width))"
+                      : `min(100%, ${drawerWidth}px)`,
                     zIndex: SHELL_LAYOUT.drawer.zIndex,
                   }}
                 >

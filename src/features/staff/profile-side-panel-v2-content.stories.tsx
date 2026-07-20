@@ -3,6 +3,10 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { CloseIcon } from "@/components/icons";
+import {
+  EmrProfileSidePanelHeader,
+  EmrProfileSidePanelShell,
+} from "@/components/emr/profile-side-panel-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -74,13 +78,13 @@ async function openMenu(trigger: HTMLElement) {
 
 function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" | "work" | "schedule" }) {
   return (
-    <section
-      aria-label="직원 운영 프로필 Storybook 예시"
+    <EmrProfileSidePanelShell
+      ariaLabel="직원 운영 프로필 Storybook 예시"
       className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:rounded-none max-md:border-0 max-md:shadow-none md:h-[1105px] md:w-[var(--emr-profile-panel-width)] md:rounded-[var(--emr-radius-panel)] md:border md:border-[var(--emr-border-strong)] md:shadow-[var(--clair-shadow-xs)]"
-      data-testid="profile-v2-panel-specimen"
+      dataTestId="profile-v2-panel-specimen"
     >
       <Tabs defaultValue={defaultTab} className="min-h-0 flex-1 gap-0">
-        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4">
+        <EmrProfileSidePanelHeader className="relative h-[var(--emr-profile-header-height)] px-4 pt-4">
           <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
             <EditableProfileAvatar alt="합성 직원" editable={false} initials="SU" />
             <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-1 flex-col gap-1">
@@ -117,7 +121,7 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
             <TabsTrigger className="h-7 w-[65px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="work">업무현황</TabsTrigger>
             <TabsTrigger className="h-7 w-[41px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="schedule">일정</TabsTrigger>
           </TabsList>
-        </header>
+        </EmrProfileSidePanelHeader>
 
         <TabsContent value="profile" className="min-h-0 overflow-y-auto p-4">
           <div className="grid gap-4">
@@ -171,7 +175,7 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
           </section>
         </TabsContent>
       </Tabs>
-    </section>
+    </EmrProfileSidePanelShell>
   );
 }
 

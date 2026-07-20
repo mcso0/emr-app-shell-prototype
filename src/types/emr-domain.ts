@@ -65,6 +65,9 @@ export type StaffRoleId =
 export type PermissionResource =
   | "reception"
   | "patient"
+  | "patient_profile"
+  | "guardian_profile"
+  | "patient_guardian_relationship"
   | "encounter"
   | "chart"
   | "vital"

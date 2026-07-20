@@ -3,12 +3,20 @@ import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
 import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
+import {
+  createSupabaseCustomerPatientProfileGateway,
   readCustomerPatientProfile,
   updateCustomerPatientProfile,
   type CustomerPatientProfileUpdateInput,
+  type SupabaseCustomerPatientProfileClient,
 } from "@/features/customer/server-patient-profile";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
+import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
   params: Promise<{
@@ -21,11 +29,28 @@ export async function GET(request: Request, { params }: RouteContext) {
   const { patientId, workspaceId } = await params;
   const identity = await getIdentity(request);
   if (!identity.ok) return identity.response;
+  const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient,
+        ),
+        sessionUserId: identity.actorUserId,
+        workspaceId,
+      }).catch(() => null)
+    : undefined;
+  if (client && !permissionAdapter) return databasePermissionReadError();
 
   const result = await readCustomerPatientProfile({
     actorUserId: identity.actorUserId,
     workspaceId,
     patientId,
+    permissionAdapter: permissionAdapter ?? undefined,
+    gateway: client
+      ? createSupabaseCustomerPatientProfileGateway(
+          client as unknown as SupabaseCustomerPatientProfileClient,
+        )
+      : undefined,
   });
 
   return Response.json(result, { status: result.status });
@@ -45,14 +70,38 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readJsonBody(request);
+  const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient,
+        ),
+        sessionUserId: identity.actorUserId,
+        workspaceId,
+      }).catch(() => null)
+    : undefined;
+  if (client && !permissionAdapter) return databasePermissionReadError();
   const result = await updateCustomerPatientProfile({
     actorUserId: identity.actorUserId,
     workspaceId,
     patientId,
     input,
+    permissionAdapter: permissionAdapter ?? undefined,
+    gateway: client
+      ? createSupabaseCustomerPatientProfileGateway(
+          client as unknown as SupabaseCustomerPatientProfileClient,
+        )
+      : undefined,
   });
 
   return Response.json(result, { status: result.status });
+}
+
+function databasePermissionReadError() {
+  return Response.json(
+    { ok: false, status: 500, error: "db_read_failed" },
+    { status: 500 },
+  );
 }
 
 async function getIdentity(request: Request) {

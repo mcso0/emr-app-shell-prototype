@@ -205,6 +205,24 @@ export const mockPermissionSeeds: PermissionSeed[] = [
     label: "환자/보호자 변경",
   },
   {
+    id: "patient_profile:manage",
+    resource: "patient_profile",
+    action: "manage",
+    label: "환자 기본 정보 관리",
+  },
+  {
+    id: "guardian_profile:manage",
+    resource: "guardian_profile",
+    action: "manage",
+    label: "보호자 기본 정보 관리",
+  },
+  {
+    id: "patient_guardian_relationship:manage",
+    resource: "patient_guardian_relationship",
+    action: "manage",
+    label: "환자·보호자 관계 관리",
+  },
+  {
     id: "encounter:view",
     resource: "encounter",
     action: "view",

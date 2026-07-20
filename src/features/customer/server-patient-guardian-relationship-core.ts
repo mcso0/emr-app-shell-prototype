@@ -33,6 +33,13 @@ export type CustomerRelationshipGateway = {
   >;
 };
 
+export type SupabaseCustomerRelationshipClient = {
+  rpc(
+    functionName: string,
+    args: Record<string, unknown>,
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
+};
+
 export type CustomerRelationshipResult =
   | {
       ok: true;
@@ -69,7 +76,7 @@ export async function updateCustomerPatientGuardianRelationship({
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
-    requiredPermission: "patient:update",
+    requiredPermission: "patient_guardian_relationship:manage",
   });
 
   if (!permission.allowed) {
@@ -157,6 +164,33 @@ export function createMockCustomerRelationshipGateway(
   };
 }
 
+export function createSupabaseCustomerRelationshipGateway(
+  client: SupabaseCustomerRelationshipClient,
+): CustomerRelationshipGateway {
+  return {
+    async updateRelationship({ input, workspaceId }) {
+      const { data, error } = await client.rpc(
+        "clair_manage_patient_guardian_relationship",
+        {
+          p_action: input.action,
+          p_guardian_id: input.guardianId,
+          p_patient_id: input.patientId,
+          p_relationship: input.action === "link" ? input.relationship ?? null : null,
+          p_workspace_id: workspaceId,
+        },
+      );
+
+      if (error) {
+        const reason = getRelationshipDenialReason(error.message);
+        if (reason) return { ok: false, status: 409, denialReason: reason };
+        return { ok: false, status: 500, error: "db_write_failed" };
+      }
+
+      return { ok: true, relationships: mapRelationshipRows(data) };
+    },
+  };
+}
+
 export function createDemoCustomerRelationshipPermissionAdapter() {
   return createMockWorkspacePermissionAdapter({
     users: [
@@ -195,4 +229,38 @@ function normalizeRelationshipInput(input: CustomerRelationshipActionInput): Cus
 
 function isSoftUnlinked(link: PatientGuardian) {
   return link.relationship?.includes("|unlinked:") ?? false;
+}
+
+function getRelationshipDenialReason(message?: string) {
+  const reasons = [
+    "duplicate_relationship",
+    "guardian_unavailable",
+    "patient_unavailable",
+    "primary_unlink_blocked",
+    "relationship_unavailable",
+  ] as const;
+  return reasons.find((reason) => message?.includes(reason));
+}
+
+function mapRelationshipRows(data: unknown): PatientGuardian[] {
+  if (!Array.isArray(data)) return [];
+  return data.map((value) => {
+    const row = value as Record<string, unknown>;
+    return {
+      id: typeof row.id === "string" ? row.id : "",
+      patientId: typeof row.patient_id === "string" ? row.patient_id : "",
+      guardianId: typeof row.guardian_id === "string" ? row.guardian_id : "",
+      relationship:
+        typeof row.relationship_label === "string"
+          ? row.relationship_label
+          : typeof row.relationship === "string"
+            ? row.relationship
+            : undefined,
+      isPrimary: row.is_primary === true,
+      canReceiveMessages:
+        row.message_consent_status === "granted" || row.can_receive_messages === true,
+      createdAt:
+        typeof row.created_at === "string" ? row.created_at : new Date(0).toISOString(),
+    };
+  });
 }

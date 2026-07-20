@@ -2083,7 +2083,7 @@ test("patient drawer supports editing and guardian navigation", async ({
     page.getByRole("button", { name: "보호자 강서윤 보기" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "수정" }).click();
+  await page.getByRole("button", { name: "기본 정보 수정" }).click();
   const breedInput = page.getByRole("textbox", { name: "품종" });
   await breedInput.fill("포메");
   await page.getByRole("option", { name: "포메라니안" }).click();
@@ -2093,7 +2093,7 @@ test("patient drawer supports editing and guardian navigation", async ({
   await page.getByRole("button", { name: "보호자 강서윤 보기" }).click();
 
   await expect(page.getByText("보호자 정보").first()).toBeVisible();
-  await expect(page.getByText("연결 환자").last()).toBeVisible();
+  await expect(page.getByText("등록 동물").last()).toBeVisible();
   await expect(page.getByText("하루", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("두부", { exact: true }).last()).toBeVisible();
 });
@@ -2105,12 +2105,11 @@ test("patient drawer shows CS history and latest shortcuts", async ({
     "/w/clair-demo/reception?drawer=reception-patient:patient-coco",
   );
 
-  await page.getByRole("button", { name: "CS 이력" }).click();
+  await page.getByRole("tab", { name: "이력" }).click();
   await expect(page.getByText("접수 문의")).toBeVisible();
   await page.getByRole("button", { name: "KakaoTalk" }).click();
   await expect(page.getByText("검사 결과 안내")).toBeVisible();
 
-  await page.getByRole("button", { name: "최신내역" }).click();
   await expect(page.getByText("최근 조제")).toBeVisible();
   await expect(page.getByText("최근 검사")).toBeVisible();
 });

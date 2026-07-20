@@ -292,7 +292,14 @@ test("customer workspace renders animal master list and opens the common patient
   await page.getByTestId("customer-patient-row-patient-dubu").click();
 
   await expect(page.getByText("환자 정보").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "동물 정보" })).toBeVisible();
+  const profilePanel = page.getByTestId("patient-profile-panel");
+  await expect(profilePanel).toBeVisible();
+  await expect(page.getByTestId("workspace-drawer")).toHaveCSS("width", "380px");
+  await expect(profilePanel.getByRole("tab", { name: "프로필" })).toBeVisible();
+  await expect(profilePanel.getByRole("tab", { name: "이력" })).toBeVisible();
+  await expect(profilePanel.getByRole("button", { name: "기본 정보 수정" })).toBeVisible();
+  await expect(page.locator('[data-slot="sheet-overlay"]')).toHaveCount(0);
+  await expect(profilePanel).not.toHaveAttribute("aria-modal", "true");
   await expect(page.getByRole("button", { name: "카카오톡 발송" })).toBeVisible();
   await expect(page).toHaveURL(/drawer=patient%3Apatient-dubu|drawer=patient:patient-dubu/);
 });
@@ -364,8 +371,36 @@ test("customer side panel switches to guardians and search filters rows", async 
   await page.getByTestId("customer-guardian-row-guardian-kim-haneul").click();
 
   await expect(page.getByText("보호자 정보").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "보호자 정보" })).toBeVisible();
+  const profilePanel = page.getByTestId("guardian-profile-panel");
+  await expect(profilePanel).toBeVisible();
+  await expect(profilePanel.getByRole("tab", { name: "프로필" })).toBeVisible();
+  await expect(profilePanel.getByRole("tab", { name: "이력" })).toBeVisible();
+  await expect(profilePanel.getByRole("button", { name: /등록 동물 .* 접기/ })).toBeVisible();
   await expect(page).toHaveURL(/drawer=guardian%3Aguardian-kim-haneul|drawer=guardian:guardian-kim-haneul/);
+});
+
+test("general staff can read customer profiles but cannot edit master data or guardian relationships", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "clair.mockAuth.session.v1",
+      JSON.stringify({
+        id: "general-staff-session",
+        role: "vet",
+        roleLabel: "수의사",
+        storageMode: "local",
+        issuedAt: "2026-07-20T00:00:00.000Z",
+      }),
+    );
+  });
+  await page.goto("/w/clair-demo/customer?modulePanel=open");
+  await page.getByTestId("customer-patient-row-patient-dubu").click();
+
+  const profilePanel = page.getByTestId("patient-profile-panel");
+  await expect(profilePanel).toBeVisible();
+  await expect(profilePanel.getByRole("button", { name: "기본 정보 수정" })).toHaveCount(0);
+  await expect(profilePanel.getByRole("button", { name: "주보호자 지정" })).toHaveCount(0);
 });
 
 test("customer patient table supports single sort and section filter builder", async ({ page }) => {
@@ -459,7 +494,7 @@ test("common patient and guardian drawers are available outside reception", asyn
   await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&drawer=patient:patient-coco");
 
   await expect(page.getByText("환자 정보").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "동물 정보" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "프로필" })).toBeVisible();
   await page.getByRole("button", { name: "보호자 이지은 보기" }).click();
 
   await expect(page.getByText("보호자 정보").first()).toBeVisible();

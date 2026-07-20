@@ -237,7 +237,7 @@ export async function updateCustomerGuardianProfile({
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
-    requiredPermission: "patient:update",
+    requiredPermission: "guardian_profile:manage",
   });
 
   if (!permission.allowed) {
@@ -345,17 +345,6 @@ export function createSupabaseCustomerGuardianProfileGateway(
           if (insertResult.error) return { ok: false, status: 500, error: "db_write_failed" };
         }
       }
-
-      await client.from("customer_profile_change_logs").insert({
-        workspace_id: workspaceId,
-        subject_type: "guardian",
-        subject_id: guardianId,
-        change_type: "update",
-        changed_by_user_id: actorUserId,
-        before_value: {},
-        after_value: { fields: Object.keys(updatePayload) },
-        reason: "customer guardian profile update",
-      });
 
       const profile = await readSupabaseGuardianProfile(client, { guardianId, workspaceId });
       if (!profile.ok) return { ok: false, status: 500, error: "db_write_failed" };

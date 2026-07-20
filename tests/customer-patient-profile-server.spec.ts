@@ -59,7 +59,7 @@ function permissionAdapter(options: { workspaceId?: string; permissionIds?: ["*"
       {
         workspaceId,
         role: "front_desk",
-        permissionIds: (options.permissionIds ?? ["patient:view", "patient:update"]) as never,
+        permissionIds: (options.permissionIds ?? ["patient:view", "patient_profile:manage"]) as never,
       },
     ],
   });
@@ -104,14 +104,14 @@ test("patient profile read returns a workspace-scoped DTO", async () => {
   });
 });
 
-test("patient profile update enforces patient update permission", async () => {
+test("patient profile update requires the patient profile management permission", async () => {
   const result = await updateCustomerPatientProfile({
     actorUserId: "user-front",
     patientId: "patient-a",
     workspaceId: "workspace-a",
     input: { name: "콩이" },
     gateway: createMockCustomerPatientProfileGateway([profile]),
-    permissionAdapter: permissionAdapter({ permissionIds: ["patient:view"] }),
+    permissionAdapter: permissionAdapter({ permissionIds: ["patient:view", "patient:update"] }),
   });
 
   expect(result).toMatchObject({

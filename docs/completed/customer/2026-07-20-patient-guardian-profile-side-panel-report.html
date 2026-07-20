@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>환자·보호자 프로필 사이드 패널 구현 결과</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 960px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 0; padding-left: 20px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #fff3d6; color: #7a4b00; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">CUSTOMER-PR-002 / 2026-07-20</p>
+      <h1>환자·보호자 프로필 사이드 패널</h1>
+      <p>
+        직원·환자·보호자 프로필이 동일한 380px 비모달 우측 패널 구조를 사용하도록 구현했다.
+        현장 직원은 진료에 필요한 정보를 빠르게 읽고, 병원 관리자만 기본정보와 보호자 관계를 변경할 수 있다.
+      </p>
+      <span class="badge">Status: Human Review</span>
+
+      <section>
+        <h2>구현 내용</h2>
+        <ul>
+          <li>공통 구조 컴포넌트 <code>EmrProfileSidePanelShell</code>을 만들고 직원·환자·보호자 패널에 적용했다.</li>
+          <li>환자·보호자 정보를 <code>프로필</code>과 <code>이력</code> 두 탭으로 정리하고, 연결 보호자·등록 동물은 접고 펼칠 수 있게 구성했다.</li>
+          <li>일반 직원에게는 수정 버튼을 숨기고, 관리자에게만 하단 수정 푸터를 제공했다.</li>
+          <li>환자, 보호자, 관계 변경 권한을 각각 분리하고 API와 데이터베이스 정책에서도 관리자 여부를 다시 확인한다.</li>
+          <li>주보호자 변경은 한 트랜잭션으로 처리하며, 환자가 유일한 보호자를 잃는 해제는 차단한다.</li>
+          <li>성공한 변경은 개인정보 값 없이 변경 필드명·작업자·워크스페이스·대상·시간·요청 ID를 감사 기록에 남긴다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li>고객 프로필·실사용 권한 연결·관계·UI 테스트 <code>33 passed</code></li>
+          <li>접수 환자 프로필 흐름 <code>2 passed</code>, 직원 공통 셸 회귀 <code>1 passed</code></li>
+          <li>TypeScript, ESLint, 문서 링크, 비밀정보 검사 통과</li>
+          <li>Next.js 및 Storybook 빌드 통과</li>
+          <li>로컬 합성 데이터 Supabase에서 마이그레이션 실행 및 트랜잭션 재실행 검증 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 경계와 다음 단계</h2>
+        <ul>
+          <li>원격 Supabase 마이그레이션, 배포, 실제 고객 데이터 사용은 수행하지 않았다.</li>
+          <li>거부·실패 시도까지 감사 화면에서 조회하려면 별도 API 실패 감사 정책이 필요하다. 현재 DB 감사 기록은 성공한 변경을 대상으로 한다.</li>
+          <li>다음 단계는 제품 디자이너 검토 후 원격 적용 범위와 배포 승인을 별도로 확정하는 것이다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

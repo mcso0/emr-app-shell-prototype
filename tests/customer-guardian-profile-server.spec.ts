@@ -63,7 +63,7 @@ function permissionAdapter(options: { workspaceId?: string; permissionIds?: ["*"
       {
         workspaceId,
         role: "front_desk",
-        permissionIds: (options.permissionIds ?? ["patient:view", "patient:update"]) as never,
+        permissionIds: (options.permissionIds ?? ["patient:view", "guardian_profile:manage"]) as never,
       },
     ],
   });
@@ -108,14 +108,14 @@ test("guardian profile read returns a display-safe DTO scoped to workspace", asy
   });
 });
 
-test("guardian profile update enforces patient update permission", async () => {
+test("guardian profile update requires the guardian profile management permission", async () => {
   const result = await updateCustomerGuardianProfile({
     actorUserId: "user-front",
     guardianId: "guardian-a",
     workspaceId: "workspace-a",
     input: { name: "김하늘" },
     gateway: createMockCustomerGuardianProfileGateway([profile]),
-    permissionAdapter: permissionAdapter({ permissionIds: ["patient:view"] }),
+    permissionAdapter: permissionAdapter({ permissionIds: ["patient:view", "patient:update"] }),
   });
 
   expect(result).toMatchObject({

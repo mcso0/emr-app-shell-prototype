@@ -24,17 +24,17 @@ function permissionAdapter(options: { permissionIds?: ["*"] | string[] } = {}) {
   return createMockWorkspacePermissionAdapter({
     users: [{ id: "user-front", status: "active" }],
     memberships: [{ id: "membership-front", workspaceId: "workspace-a", userId: "user-front", roles: ["front_desk"], status: "active" }],
-    permissionPolicies: [{ workspaceId: "workspace-a", role: "front_desk", permissionIds: (options.permissionIds ?? ["patient:view", "patient:update"]) as never }],
+    permissionPolicies: [{ workspaceId: "workspace-a", role: "front_desk", permissionIds: (options.permissionIds ?? ["patient:view", "patient_guardian_relationship:manage"]) as never }],
   });
 }
 
-test("relationship action enforces patient update permission", async () => {
+test("relationship action requires the patient guardian relationship management permission", async () => {
   const result = await updateCustomerPatientGuardianRelationship({
     actorUserId: "user-front",
     workspaceId: "workspace-a",
     input: { action: "link", patientId: "patient-a", guardianId: "guardian-b" },
     gateway: createMockCustomerRelationshipGateway({ guardians, links, patients }, now),
-    permissionAdapter: permissionAdapter({ permissionIds: ["patient:view"] }),
+    permissionAdapter: permissionAdapter({ permissionIds: ["patient:view", "patient:update"] }),
   });
 
   expect(result).toMatchObject({ ok: false, status: 403, denialReason: "permission_missing" });
@@ -127,5 +127,49 @@ test("relationship action soft-unlinks additional guardians only", async () => {
   expect(result).toMatchObject({
     ok: true,
     relationships: [expect.objectContaining({ guardianId: "guardian-a", isPrimary: true })],
+  });
+});
+
+test("relationship route denies a non-admin actor even when that role can update patients", async ({
+  request,
+}) => {
+  const response = await request.patch(
+    "/api/workspaces/clair-demo/customer/relationships",
+    {
+      headers: { "x-clair-demo-session-user-id": "user-vet" },
+      data: {
+        action: "set_primary",
+        patientId: "patient-dubu",
+        guardianId: "guardian-kang-seoyun",
+      },
+    },
+  );
+
+  expect(response.status()).toBe(403);
+  await expect(response.json()).resolves.toMatchObject({
+    ok: false,
+    denialReason: "permission_missing",
+  });
+});
+
+test("relationship route lets an admin change the primary guardian", async ({ request }) => {
+  const response = await request.patch(
+    "/api/workspaces/clair-demo/customer/relationships",
+    {
+      headers: { "x-clair-demo-session-user-id": "user-admin" },
+      data: {
+        action: "set_primary",
+        patientId: "patient-dubu",
+        guardianId: "guardian-kang-seoyun",
+      },
+    },
+  );
+
+  expect(response.status()).toBe(200);
+  await expect(response.json()).resolves.toMatchObject({
+    ok: true,
+    relationships: expect.arrayContaining([
+      expect.objectContaining({ guardianId: "guardian-kang-seoyun", isPrimary: true }),
+    ]),
   });
 });

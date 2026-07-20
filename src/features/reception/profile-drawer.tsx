@@ -24,6 +24,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  EmrProfileSidePanelFooter,
+  EmrProfileSidePanelHeader,
+  EmrProfileSidePanelShell,
+} from "@/components/emr/profile-side-panel-shell";
+import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
+import {
   EmrRegistrationAddressControls,
   EmrRegistrationAgeControls,
   EmrRegistrationDialogShell,
@@ -79,9 +85,12 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tab, TabGroup, TabPanel, TabsList } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useAuthClient } from "@/features/auth/auth-client";
 import { useMockAuthStore } from "@/features/auth/session-store";
+import { createWorkspaceRoleCatalogApi } from "@/features/hospital-admin/role-permission-management/server-catalog";
 import {
   getGuardianDisplay,
   getPatientDisplayAge,
@@ -109,6 +118,10 @@ import type {
   CustomerPatientProfileUpdateInput,
   CustomerPatientProfileUpdateResult,
 } from "@/features/customer/server-patient-profile";
+import type {
+  CustomerRelationshipActionInput,
+  CustomerRelationshipResult,
+} from "@/features/customer/server-patient-guardian-relationship";
 import type { KakaoPostcodeSelectedAddress } from "@/lib/kakao-postcode";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
@@ -156,24 +169,12 @@ type GuardianProfileBundle = {
   latestWorkShortcuts: LatestWorkShortcut[];
 };
 
-const patientProfileTabs = [
-  { value: "summary" as const, label: "동물 정보" },
-  { value: "cs" as const, label: "CS 이력" },
-  { value: "latest" as const, label: "최신내역" },
-];
-
-const guardianProfileTabs = [
-  { value: "summary" as const, label: "보호자 정보" },
-  { value: "cs" as const, label: "CS 이력" },
-  { value: "latest" as const, label: "최신내역" },
-];
-
 const csTabs = [
   { value: "call" as const, label: "전화/응대" },
   { value: "kakao" as const, label: "KakaoTalk" },
 ];
 
-type ProfileTab = (typeof patientProfileTabs)[number]["value"];
+type ProfileTab = "profile" | "history";
 type CsTab = (typeof csTabs)[number]["value"];
 
 const getShortDateTime = (dateTime?: string) =>
@@ -1107,31 +1108,45 @@ function BreedMultiSelect({
 }
 
 function ProfileHeader({
+  closeButtonRef,
+  closeLabel,
   meta,
+  profileLabel,
   title,
-  onEdit,
-  editing,
+  onClose,
   actions,
 }: {
   actions?: ReactNode;
-  editing: boolean;
+  closeButtonRef: React.RefObject<HTMLButtonElement | null>;
+  closeLabel: string;
   meta: string;
+  onClose: () => void;
+  profileLabel: string;
   title: string;
-  onEdit: () => void;
 }) {
   return (
-    <section className="rounded-lg border bg-[var(--emr-surface-muted)] p-3">
+    <div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-[18px] font-semibold">{title}</div>
+          <div className="emr-text-metadata font-semibold text-[var(--emr-text-tertiary)]">
+            {profileLabel}
+          </div>
+          <h2 className="truncate text-[18px] font-semibold">{title}</h2>
           <div className="mt-1 emr-text-metadata text-muted-foreground">{meta}</div>
         </div>
-        <Button size="sm" variant="outline" onClick={onEdit}>
-          {editing ? "취소" : "수정"}
+        <Button
+          ref={closeButtonRef}
+          type="button"
+          aria-label={closeLabel}
+          size="icon-sm"
+          variant="ghost"
+          onClick={onClose}
+        >
+          <CdsActionsXIcon aria-hidden="true" size={16} />
         </Button>
       </div>
       {actions ? <div className="mt-3 flex flex-wrap gap-2">{actions}</div> : null}
-    </section>
+    </div>
   );
 }
 
@@ -1280,7 +1295,7 @@ function PatientSummaryFields({
   const patient = bundle.patient;
 
   return (
-    <section className="grid grid-cols-2 gap-3">
+    <section className="grid grid-cols-1 gap-3">
       <Field label="환자명">
         <Input
           value={draft.name ?? ""}
@@ -1354,16 +1369,55 @@ function PatientSummaryFields({
   );
 }
 
-function GuardianLinkList({ bundle }: { bundle: PatientProfileBundle }) {
+function GuardianLinkList({
+  actorRole,
+  bundle,
+  canManage,
+  workspaceId,
+}: {
+  actorRole?: string;
+  bundle: PatientProfileBundle;
+  canManage: boolean;
+  workspaceId: string;
+}) {
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setPrimaryGuardian = usePatientProfileStore((state) => state.setPrimaryGuardian);
-  const toggleGuardianMessageConsent = usePatientProfileStore(
-    (state) => state.toggleGuardianMessageConsent
-  );
+  const [collapsed, setCollapsed] = useState(false);
+  const [updatingGuardianId, setUpdatingGuardianId] = useState<string | null>(null);
+
+  const changePrimaryGuardian = async (guardianId: string) => {
+    if (updatingGuardianId) return;
+    setUpdatingGuardianId(guardianId);
+    const result = await submitPatientGuardianRelationshipUpdate({
+      actorRole,
+      input: {
+        action: "set_primary",
+        guardianId,
+        patientId: bundle.patient.id,
+      },
+      workspaceId,
+    });
+    setUpdatingGuardianId(null);
+
+    if (!result.ok) {
+      toast.error("주보호자 변경에 실패했습니다.");
+      return;
+    }
+    setPrimaryGuardian(bundle.patient.id, guardianId);
+    toast.success("주보호자가 변경되었습니다.");
+  };
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="emr-text-dense font-semibold">보호자 연결</div>
+    <EmrSidePanelCollapsibleGroup
+      accessibleLabel={`보호자 연결 ${bundle.guardians.length}명`}
+      collapsed={collapsed}
+      count={`${bundle.guardians.length}명`}
+      countVariant="badge"
+      indicatorVisible={false}
+      label="보호자 연결"
+      stateIconState={false}
+      onToggle={() => setCollapsed((current) => !current)}
+    >
       {bundle.guardians.map((guardian) => {
         const link = bundle.patientGuardians.find((item) => item.guardianId === guardian.id);
 
@@ -1388,43 +1442,87 @@ function GuardianLinkList({ bundle }: { bundle: PatientProfileBundle }) {
                 보기
               </Button>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={link?.isPrimary}
-                onClick={() => setPrimaryGuardian(bundle.patient.id, guardian.id)}
-              >
-                주보호자 지정
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toggleGuardianMessageConsent(bundle.patient.id, guardian.id)}
-              >
-                {link?.canReceiveMessages ? "수신 중지" : "수신 허용"}
-              </Button>
-            </div>
+            {canManage ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={link?.isPrimary || updatingGuardianId !== null}
+                  onClick={() => void changePrimaryGuardian(guardian.id)}
+                >
+                  {updatingGuardianId === guardian.id ? "변경 중" : "주보호자 지정"}
+                </Button>
+              </div>
+            ) : null}
           </div>
         );
       })}
-    </section>
+    </EmrSidePanelCollapsibleGroup>
   );
+}
+
+function useCustomerProfileManagementAccess(workspaceId: string) {
+  const { hydrated, hydrate, session } = useAuthClient();
+  const [supabaseAccess, setSupabaseAccess] = useState<{
+    canManage: boolean;
+    workspaceId: string;
+  } | null>(null);
+  const catalogApi = useMemo(() => createWorkspaceRoleCatalogApi(), []);
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated || session?.role !== "supabase") {
+      return;
+    }
+
+    let canceled = false;
+    void catalogApi
+      .load(workspaceId)
+      .then((snapshot) => {
+        if (!canceled) {
+          setSupabaseAccess({
+            canManage: snapshot.access.canManage,
+            workspaceId,
+          });
+        }
+      })
+      .catch(() => {
+        if (!canceled) setSupabaseAccess({ canManage: false, workspaceId });
+      });
+
+    return () => {
+      canceled = true;
+    };
+  }, [catalogApi, hydrated, session?.role, workspaceId]);
+
+  return {
+    actorRole: session?.role === "supabase" ? undefined : session?.role,
+    canManageProfile:
+      session?.role === "hospital_admin" ||
+      (session?.role === "supabase" &&
+        supabaseAccess?.workspaceId === workspaceId &&
+        supabaseAccess.canManage),
+  };
 }
 
 export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
-  const authSession = useMockAuthStore((state) => state.session);
+  const { actorRole, canManageProfile } = useCustomerProfileManagementAccess(workspaceId);
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const updatePatient = usePatientProfileStore((state) => state.updatePatient);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const bundle = useMemo(
     () => getProfileBundle(patientId, patients, guardians, patientGuardians),
     [guardians, patientGuardians, patientId, patients]
   );
-  const [activeTab, setActiveTab] = useState<ProfileTab>("summary");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("profile");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<
@@ -1437,6 +1535,18 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
     name: "",
     specialNote: "",
   });
+
+  const closePanel = useCallback(() => setActiveDrawer(null), [setActiveDrawer]);
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      closePanel();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closePanel]);
 
   if (!bundle) {
     return <div className="p-4 emr-text-dense text-muted-foreground">환자 정보를 찾을 수 없습니다.</div>;
@@ -1470,7 +1580,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
 
     setSaving(true);
     const result = await submitPatientProfileUpdate({
-      actorRole: authSession?.role,
+      actorRole,
       input: patch,
       patientId: bundle.patient.id,
       workspaceId,
@@ -1498,14 +1608,23 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
   };
 
   return (
-    <div className="flex h-[calc(100%-48px)] flex-col">
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-4 p-4">
+    <EmrProfileSidePanelShell
+      ariaLabel="환자 프로필"
+      dataTestId="patient-profile-panel"
+    >
+      <TabGroup
+        className="min-h-0 flex-1 gap-0"
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value === "history" ? "history" : "profile")}
+      >
+        <EmrProfileSidePanelHeader className="px-4 pt-4">
           <ProfileHeader
-            editing={editing}
+            closeButtonRef={closeButtonRef}
+            closeLabel="환자 프로필 닫기"
+            profileLabel="환자 정보"
             title={bundle.patient.name}
             meta={`${bundle.patient.patientNo} · ${getSpeciesLabel(bundle.patient)} · ${getPatientDisplayAge(bundle.patient)}`}
-            onEdit={editing ? cancelEdit : beginEdit}
+            onClose={closePanel}
             actions={
               <>
                 <ProfileHeaderAction onClick={() => showMockAction("접수")}>접수</ProfileHeaderAction>
@@ -1515,45 +1634,61 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
               </>
             }
           />
-          <LineTabs
+          <TabsList
             aria-label="환자 정보 탭"
-            value={activeTab}
-            items={patientProfileTabs}
-            itemClassName="emr-text-dense"
-            onValueChange={setActiveTab}
-          />
-          {activeTab === "summary" ? (
-            <>
-              <PatientVisitContextCard bundle={bundle} />
-              <PatientSummaryFields
-                bundle={bundle}
-                draft={editing ? draft : {
-                  allergyNote: bundle.patient.allergyNote ?? "",
-                  breed: bundle.patient.breed ?? "",
-                  handlingCautionNote: bundle.patient.handlingCautionNote ?? "",
-                  microchipNo: bundle.patient.microchipNo ?? "",
-                  name: bundle.patient.name,
-                  specialNote: bundle.patient.specialNote ?? "",
-                }}
-                editing={editing}
-                onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
-              />
-              <GuardianLinkList bundle={bundle} />
-            </>
-          ) : null}
-          {activeTab === "cs" ? <CsHistoryTable entries={bundle.csHistories} /> : null}
-          {activeTab === "latest" ? (
+            className="mt-3 h-9 w-full justify-start gap-4 p-0"
+            variant="line"
+          >
+            <Tab className="h-8 flex-none px-0" value="profile">프로필</Tab>
+            <Tab className="h-8 flex-none px-0" value="history">이력</Tab>
+          </TabsList>
+        </EmrProfileSidePanelHeader>
+        <TabPanel className="min-h-0 overflow-y-auto p-4" value="profile">
+          <div className="grid gap-4">
+            <PatientVisitContextCard bundle={bundle} />
+            <PatientSummaryFields
+              bundle={bundle}
+              draft={editing ? draft : {
+                allergyNote: bundle.patient.allergyNote ?? "",
+                breed: bundle.patient.breed ?? "",
+                handlingCautionNote: bundle.patient.handlingCautionNote ?? "",
+                microchipNo: bundle.patient.microchipNo ?? "",
+                name: bundle.patient.name,
+                specialNote: bundle.patient.specialNote ?? "",
+              }}
+              editing={editing}
+              onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+            />
+            <GuardianLinkList
+              actorRole={actorRole}
+              bundle={bundle}
+              canManage={canManageProfile}
+              workspaceId={workspaceId}
+            />
+          </div>
+        </TabPanel>
+        <TabPanel className="min-h-0 overflow-y-auto p-4" value="history">
+          <div className="grid gap-5">
+            <CsHistoryTable entries={bundle.csHistories} />
             <LatestWorkGrid shortcuts={bundle.latestWorkShortcuts} />
-          ) : null}
-        </div>
-      </ScrollArea>
-      {editing ? (
-        <div className="flex justify-end gap-2 border-t bg-card p-4">
-          <Button size="default" variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
-          <Button size="default" onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
-        </div>
+          </div>
+        </TabPanel>
+      </TabGroup>
+      {canManageProfile ? (
+        <EmrProfileSidePanelFooter className="flex justify-end gap-2">
+          {editing ? (
+            <>
+              <Button size="default" variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
+              <Button size="default" onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
+            </>
+          ) : (
+            <Button className="w-full" size="default" variant="outline" onClick={beginEdit}>
+              기본 정보 수정
+            </Button>
+          )}
+        </EmrProfileSidePanelFooter>
       ) : null}
-    </div>
+    </EmrProfileSidePanelShell>
   );
 }
 
@@ -1567,7 +1702,7 @@ function GuardianSummaryFields({
   onDraftChange: (patch: Partial<typeof draft>) => void;
 }) {
   return (
-    <section className="grid grid-cols-2 gap-3">
+    <section className="grid grid-cols-1 gap-3">
       <Field label="보호자명">
         <Input
           value={draft.name ?? ""}
@@ -1661,18 +1796,20 @@ function GuardianConsentSummary({ consents }: { consents: Consent[] }) {
 export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
-  const authSession = useMockAuthStore((state) => state.session);
+  const { actorRole, canManageProfile } = useCustomerProfileManagementAccess(workspaceId);
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const consents = usePatientProfileStore((state) => state.consents);
   const updateGuardian = usePatientProfileStore((state) => state.updateGuardian);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const bundle = useMemo(
     () => getGuardianProfileBundle(guardianId, patients, guardians, patientGuardians, consents),
     [consents, guardianId, guardians, patientGuardians, patients]
   );
-  const [activeTab, setActiveTab] = useState<ProfileTab>("summary");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("profile");
+  const [patientsCollapsed, setPatientsCollapsed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<
@@ -1685,6 +1822,18 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
     name: "",
     phone: "",
   });
+
+  const closePanel = useCallback(() => setActiveDrawer(null), [setActiveDrawer]);
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      closePanel();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closePanel]);
 
   if (!bundle) {
     return <div className="p-4 emr-text-dense text-muted-foreground">보호자 정보를 찾을 수 없습니다.</div>;
@@ -1718,7 +1867,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
 
     setSaving(true);
     const result = await submitGuardianProfileUpdate({
-      actorRole: authSession?.role,
+      actorRole,
       guardianId: bundle.guardian.id,
       input: patch,
       workspaceId,
@@ -1746,14 +1895,23 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   };
 
   return (
-    <div className="flex h-[calc(100%-48px)] flex-col">
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-4 p-4">
+    <EmrProfileSidePanelShell
+      ariaLabel="보호자 프로필"
+      dataTestId="guardian-profile-panel"
+    >
+      <TabGroup
+        className="min-h-0 flex-1 gap-0"
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value === "history" ? "history" : "profile")}
+      >
+        <EmrProfileSidePanelHeader className="px-4 pt-4">
           <ProfileHeader
-            editing={editing}
+            closeButtonRef={closeButtonRef}
+            closeLabel="보호자 프로필 닫기"
+            profileLabel="보호자 정보"
             title={bundle.guardian.name}
             meta={bundle.guardian.mobilePhone ?? "연락처 미입력"}
-            onEdit={editing ? cancelEdit : beginEdit}
+            onClose={closePanel}
             actions={
               <>
                 <ProfileHeaderAction onClick={() => showMockAction("접수")}>접수</ProfileHeaderAction>
@@ -1763,66 +1921,89 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
               </>
             }
           />
-          <LineTabs
+          <TabsList
             aria-label="보호자 정보 탭"
-            value={activeTab}
-            items={guardianProfileTabs}
-            itemClassName="emr-text-dense"
-            onValueChange={setActiveTab}
-          />
-          {activeTab === "summary" ? (
-            <>
-              <GuardianSummaryFields
-                draft={editing ? draft : {
-                  address: bundle.guardian.address ?? "",
-                  email: bundle.guardian.email ?? "",
-                  memo: bundle.guardian.memo ?? "",
-                  mobilePhone: bundle.guardian.mobilePhone ?? "",
-                  name: bundle.guardian.name,
-                  phone: bundle.guardian.phone ?? "",
-                }}
-                editing={editing}
-                onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
-              />
-              <GuardianConsentSummary consents={bundle.consents} />
-              <section className="flex flex-col gap-2">
-                <div className="emr-text-dense font-semibold">연결 환자</div>
-                {bundle.patients.map((patient) => {
-                  const link = bundle.patientGuardians.find((item) => item.patientId === patient.id);
+            className="mt-3 h-9 w-full justify-start gap-4 p-0"
+            variant="line"
+          >
+            <Tab className="h-8 flex-none px-0" value="profile">프로필</Tab>
+            <Tab className="h-8 flex-none px-0" value="history">이력</Tab>
+          </TabsList>
+        </EmrProfileSidePanelHeader>
+        <TabPanel className="min-h-0 overflow-y-auto p-4" value="profile">
+          <div className="grid gap-4">
+            <GuardianSummaryFields
+              draft={editing ? draft : {
+                address: bundle.guardian.address ?? "",
+                email: bundle.guardian.email ?? "",
+                memo: bundle.guardian.memo ?? "",
+                mobilePhone: bundle.guardian.mobilePhone ?? "",
+                name: bundle.guardian.name,
+                phone: bundle.guardian.phone ?? "",
+              }}
+              editing={editing}
+              onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+            />
+            <GuardianConsentSummary consents={bundle.consents} />
+            <EmrSidePanelCollapsibleGroup
+              accessibleLabel={`등록 동물 ${bundle.patients.length}마리`}
+              collapsed={patientsCollapsed}
+              count={`${bundle.patients.length}마리`}
+              countVariant="badge"
+              indicatorVisible={false}
+              label="등록 동물"
+              stateIconState={false}
+              onToggle={() => setPatientsCollapsed((current) => !current)}
+            >
+              {bundle.patients.length ? bundle.patients.map((patient) => {
+                const link = bundle.patientGuardians.find((item) => item.patientId === patient.id);
 
-                  return (
-                    <button
-                      key={patient.id}
-                      type="button"
-                      className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--emr-state-hover)]"
-                      onClick={() => setActiveDrawer({ type: "patient", id: patient.id })}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{patient.name}</span>
-                        {link?.isPrimary ? <Badge>주보호자</Badge> : <Badge variant="outline">연결</Badge>}
-                      </div>
-                      <div className="mt-1 emr-text-metadata text-muted-foreground">
-                        {patient.patientNo} · {getSpeciesLabel(patient)} · {getPatientDisplayAge(patient)}
-                      </div>
-                    </button>
-                  );
-                })}
-              </section>
-            </>
-          ) : null}
-          {activeTab === "cs" ? <CsHistoryTable entries={bundle.csHistories} /> : null}
-          {activeTab === "latest" ? (
+                return (
+                  <button
+                    key={patient.id}
+                    type="button"
+                    className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--emr-state-hover)]"
+                    onClick={() => setActiveDrawer({ type: "patient", id: patient.id })}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{patient.name}</span>
+                      {link?.isPrimary ? <Badge>주보호자</Badge> : <Badge variant="outline">연결</Badge>}
+                    </div>
+                    <div className="mt-1 emr-text-metadata text-muted-foreground">
+                      {patient.patientNo} · {getSpeciesLabel(patient)} · {getPatientDisplayAge(patient)}
+                    </div>
+                  </button>
+                );
+              }) : (
+                <div className="rounded-lg border border-dashed bg-card p-3 emr-text-metadata text-muted-foreground">
+                  등록된 동물이 없습니다.
+                </div>
+              )}
+            </EmrSidePanelCollapsibleGroup>
+          </div>
+        </TabPanel>
+        <TabPanel className="min-h-0 overflow-y-auto p-4" value="history">
+          <div className="grid gap-5">
+            <CsHistoryTable entries={bundle.csHistories} />
             <LatestWorkGrid shortcuts={bundle.latestWorkShortcuts} />
-          ) : null}
-        </div>
-      </ScrollArea>
-      {editing ? (
-        <div className="flex justify-end gap-2 border-t bg-card p-4">
-          <Button size="default" variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
-          <Button size="default" onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
-        </div>
+          </div>
+        </TabPanel>
+      </TabGroup>
+      {canManageProfile ? (
+        <EmrProfileSidePanelFooter className="flex justify-end gap-2">
+          {editing ? (
+            <>
+              <Button size="default" variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
+              <Button size="default" onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
+            </>
+          ) : (
+            <Button className="w-full" size="default" variant="outline" onClick={beginEdit}>
+              기본 정보 수정
+            </Button>
+          )}
+        </EmrProfileSidePanelFooter>
       ) : null}
-    </div>
+    </EmrProfileSidePanelShell>
   );
 }
 
@@ -2752,6 +2933,38 @@ function getReceptionRegistrationDemoActorId(role?: string) {
   if (role === "hospital_admin" || role === "billing_admin") return "user-admin";
   if (role === "vet") return "user-vet";
   return "user-front-desk";
+}
+
+async function submitPatientGuardianRelationshipUpdate({
+  actorRole,
+  input,
+  workspaceId,
+}: {
+  actorRole?: string;
+  input: CustomerRelationshipActionInput;
+  workspaceId: string;
+}): Promise<CustomerRelationshipResult> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/customer/relationships`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-clair-demo-session-user-id": getReceptionRegistrationDemoActorId(actorRole),
+        },
+        body: JSON.stringify(input),
+      },
+    );
+    const body = (await response.json()) as CustomerRelationshipResult;
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status } as CustomerRelationshipResult;
+      return { ok: false, status: 500, error: "db_write_failed" };
+    }
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
 }
 
 async function submitGuardianProfileUpdate({

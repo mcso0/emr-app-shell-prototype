@@ -19,6 +19,10 @@ import {
 import { CdsMedicalStethoscopeIcon } from "@/components/cds-icons/medical-and-domain";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import {
+  EmrProfileSidePanelHeader,
+  EmrProfileSidePanelShell,
+} from "@/components/emr/profile-side-panel-shell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tab, TabGroup, TabPanel, TabsList } from "@/components/ui/tabs";
@@ -404,10 +408,10 @@ export function StaffOperationalProfilePanel({
   }, [actorUserId, requestKey, response, workspaceId]);
 
   return (
-    <section
-      aria-label="직원 운영 프로필"
+    <EmrProfileSidePanelShell
+      ariaLabel="직원 운영 프로필"
       className="h-full min-h-0 bg-[var(--emr-surface-rightpanel)]"
-      data-testid="staff-operational-profile-panel"
+      dataTestId="staff-operational-profile-panel"
     >
       <TabGroup
         value={activeTab}
@@ -420,7 +424,7 @@ export function StaffOperationalProfilePanel({
           }
         }}
       >
-        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4">
+        <EmrProfileSidePanelHeader className="relative h-[var(--emr-profile-header-height)] px-4 pt-4">
           {profile ? (
             <ProfileHeader
               actions={
@@ -483,7 +487,7 @@ export function StaffOperationalProfilePanel({
             <Tab className="h-7 w-[65px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="work">업무현황</Tab>
             <Tab className="h-7 w-[41px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="schedule">일정</Tab>
           </TabsList>
-        </header>
+        </EmrProfileSidePanelHeader>
 
         <TabPanel className="min-h-0 overflow-y-auto p-4" value="profile">
           {requestState === "loading" ? (
@@ -586,7 +590,7 @@ export function StaffOperationalProfilePanel({
         }}
         onOpenChange={(open) => !open && setNavigationItem(null)}
       />
-    </section>
+    </EmrProfileSidePanelShell>
   );
 }
 

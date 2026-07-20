@@ -102,6 +102,20 @@ export type CustomerPatientProfileGateway = {
   >;
 };
 
+type SupabaseQueryResponse = { data: unknown; error: { message?: string } | null };
+type SupabaseFilterChain = PromiseLike<SupabaseQueryResponse> & {
+  eq(column: string, value: unknown): SupabaseFilterChain;
+  select(columns?: string): SupabaseFilterChain;
+  maybeSingle(): Promise<SupabaseQueryResponse>;
+};
+type SupabaseTableBuilder = {
+  select(columns: string): SupabaseFilterChain;
+  update(values: Record<string, unknown>): SupabaseFilterChain;
+};
+export type SupabaseCustomerPatientProfileClient = {
+  from(tableName: string): SupabaseTableBuilder;
+};
+
 export type CustomerPatientProfileReadResult =
   | { ok: true; status: 200; profile: CustomerPatientProfile; enforcedBy: "customer-patient-profile-read" }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
@@ -185,7 +199,7 @@ export async function updateCustomerPatientProfile({
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
-    requiredPermission: "patient:update",
+    requiredPermission: "patient_profile:manage",
   });
 
   if (!permission.allowed) {
@@ -232,6 +246,29 @@ export function createMockCustomerPatientProfileGateway(
       store.set(patientId, next);
       void actorUserId;
       return { ok: true, profile: { ...next } };
+    },
+  };
+}
+
+export function createSupabaseCustomerPatientProfileGateway(
+  client: SupabaseCustomerPatientProfileClient,
+): CustomerPatientProfileGateway {
+  return {
+    async readPatientProfile({ patientId, workspaceId }) {
+      return readSupabasePatientProfile(client, { patientId, workspaceId });
+    },
+    async updatePatientProfile({ actorUserId, patientId, update, workspaceId }) {
+      const { data, error } = await client
+        .from("patients")
+        .update(mapPatientUpdatePayload(update, actorUserId))
+        .eq("workspace_id", workspaceId)
+        .eq("id", patientId)
+        .select(patientSelectColumns)
+        .maybeSingle();
+
+      if (error) return { ok: false, status: 500, error: "db_write_failed" };
+      if (!data) return { ok: false, status: 404, denialReason: "patient_not_found" };
+      return { ok: true, profile: mapPatientProfileRow(data) };
     },
   };
 }
@@ -352,6 +389,170 @@ function mapLegacyPatientProfile(patient: Patient): CustomerPatientProfile {
 const defaultMockPatientProfileStore = new Map(
   mockPatients.map(mapLegacyPatientProfile).map((profile) => [profile.id, { ...profile }])
 );
+
+const patientSelectColumns = `
+  id,
+  workspace_id,
+  patient_no,
+  name,
+  species,
+  breed,
+  primary_breed_id,
+  primary_breed_name,
+  is_mixed_breed,
+  additional_breed_ids,
+  sex,
+  neutered,
+  birth_date,
+  estimated_age_years,
+  estimated_age_months,
+  estimated_age_days,
+  age_is_estimated,
+  weight_kg,
+  color,
+  microchip_no,
+  microchip_type,
+  patient_registration_no,
+  allergy_note,
+  special_note,
+  handling_caution_note,
+  handling_caution_locked,
+  profile_memo,
+  primary_attending_vet_id,
+  message_consent_status,
+  status,
+  deceased_at,
+  created_at,
+  updated_at
+`;
+
+async function readSupabasePatientProfile(
+  client: SupabaseCustomerPatientProfileClient,
+  { patientId, workspaceId }: { patientId: string; workspaceId: string },
+): Promise<
+  | { ok: true; profile: CustomerPatientProfile }
+  | { ok: false; status: 404; denialReason: "patient_not_found" }
+  | { ok: false; status: 500; error: "db_read_failed" }
+> {
+  const { data, error } = await client
+    .from("patients")
+    .select(patientSelectColumns)
+    .eq("workspace_id", workspaceId)
+    .eq("id", patientId)
+    .maybeSingle();
+
+  if (error) return { ok: false, status: 500, error: "db_read_failed" };
+  if (!data) return { ok: false, status: 404, denialReason: "patient_not_found" };
+  return { ok: true, profile: mapPatientProfileRow(data) };
+}
+
+function mapPatientUpdatePayload(
+  input: CustomerPatientProfileUpdateInput,
+  actorUserId: string,
+) {
+  const payload: Record<string, unknown> = { last_updated_by_user_id: actorUserId };
+  const set = (key: string, value: unknown) => {
+    if (value !== undefined) payload[key] = value;
+  };
+
+  set("additional_breed_ids", input.additionalBreedIds);
+  set("age_is_estimated", input.ageIsEstimated);
+  set("allergy_note", input.allergyNote);
+  set("birth_date", input.birthDate);
+  set("breed", input.breed);
+  set("color", input.color);
+  set("deceased_at", input.deceasedAt);
+  set("estimated_age_days", input.estimatedAgeDays);
+  set("estimated_age_months", input.estimatedAgeMonths);
+  set("estimated_age_years", input.estimatedAgeYears);
+  set("handling_caution_note", input.handlingCautionNote);
+  set("is_mixed_breed", input.isMixedBreed);
+  set("message_consent_status", input.messageConsentStatus);
+  set("microchip_no", input.microchipNo);
+  set("microchip_type", input.microchipType);
+  set("name", input.name);
+  set("neutered", input.neutered);
+  set("patient_registration_no", input.patientRegistrationNo);
+  set("primary_attending_vet_id", input.primaryAttendingVetId);
+  set("primary_breed_id", input.primaryBreedId);
+  set("primary_breed_name", input.primaryBreedName);
+  set("profile_memo", input.profileMemo);
+  set("sex", input.sex);
+  set("special_note", input.specialNote);
+  set("species", input.species);
+  set("status", input.status);
+  set("weight_kg", input.weightKg);
+  return payload;
+}
+
+function mapPatientProfileRow(data: unknown): CustomerPatientProfile {
+  const row = data as Record<string, unknown>;
+  const status = row.status;
+  return {
+    id: getString(row.id) ?? "",
+    workspaceId: getString(row.workspace_id) ?? "",
+    patientNo: getString(row.patient_no) ?? "",
+    name: getString(row.name) ?? "",
+    species: getSpecies(row.species),
+    breed: getString(row.breed),
+    primaryBreedId: getString(row.primary_breed_id),
+    primaryBreedName: getString(row.primary_breed_name),
+    isMixedBreed: row.is_mixed_breed === true,
+    additionalBreedIds: readStringArray(row.additional_breed_ids),
+    sex: row.sex === "male" || row.sex === "female" ? row.sex : "unknown",
+    neutered: typeof row.neutered === "boolean" ? row.neutered : undefined,
+    birthDate: getString(row.birth_date),
+    estimatedAgeYears: getNumber(row.estimated_age_years),
+    estimatedAgeMonths: getNumber(row.estimated_age_months),
+    estimatedAgeDays: getNumber(row.estimated_age_days),
+    ageIsEstimated: row.age_is_estimated === true,
+    weightKg: getNumber(row.weight_kg),
+    color: getString(row.color),
+    microchipNo: getString(row.microchip_no),
+    microchipType:
+      row.microchip_type === "internal" || row.microchip_type === "external"
+        ? row.microchip_type
+        : "none",
+    patientRegistrationNo: getString(row.patient_registration_no),
+    allergyNote: getString(row.allergy_note),
+    specialNote: getString(row.special_note),
+    handlingCautionNote: getString(row.handling_caution_note),
+    handlingCautionLocked: row.handling_caution_locked !== false,
+    profileMemo: getString(row.profile_memo),
+    primaryAttendingVetId: getString(row.primary_attending_vet_id),
+    messageConsentStatus:
+      row.message_consent_status === "refused" || row.message_consent_status === "unknown"
+        ? row.message_consent_status
+        : "granted",
+    status:
+      status === "inactive" || status === "deceased" || status === "soft_deleted"
+        ? status
+        : "active",
+    deceasedAt: getString(row.deceased_at),
+    createdAt: getString(row.created_at) ?? new Date(0).toISOString(),
+    updatedAt: getString(row.updated_at) ?? new Date(0).toISOString(),
+  };
+}
+
+function getSpecies(value: unknown): Species {
+  return typeof value === "string" && speciesValues.has(value as Species)
+    ? (value as Species)
+    : "other";
+}
+
+function getString(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function getNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function readStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
 
 function normalizeStringList(values?: string[]) {
   return Array.from(new Set((values ?? []).map((value) => value.trim()).filter(Boolean)));
