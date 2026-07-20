@@ -279,13 +279,32 @@ test("non-veterinarian appointment assignees receive the same profile workload",
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
   await expect(panel).toContainText("송하윤");
-  await expect(panel).toContainText("10:00 - 10:30");
-  await expect(panel).toContainText("예약 진료");
+  await expect(panel).toContainText("09:42 - 10:12");
+  await expect(panel).toContainText("현장 접수");
+  await expect(panel).toContainText("외 1건");
   await expect(panel).not.toContainText("오늘 게시된 근무가 없어요");
 
   await panel.getByRole("tab", { name: "업무현황" }).click();
   await expect(panel).toContainText("접수/예약");
   await expect(panel).toContainText("예약 진료");
+  await expect(panel).toContainText("현장 접수");
+});
+
+test("walk-in reception assigned to a staff member appears in profile and workload", async ({
+  page,
+}) => {
+  await mockStaffProfileApis(page);
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await openStaffProfile(page, "김도윤");
+
+  const panel = page.getByRole("region", { name: "직원 운영 프로필" });
+  await expect(panel).toContainText("09:42 - 10:12");
+  await expect(panel).toContainText("현장 접수");
+  await expect(panel).not.toContainText("오늘 게시된 근무가 없어요");
+
+  await panel.getByRole("tab", { name: "업무현황" }).click();
+  await expect(panel).toContainText("접수/예약");
+  await expect(panel).toContainText("현장 접수");
 });
 
 test("staff work tab keeps server order, merges cursor pages by hospital date, and confirms permitted navigation", async ({

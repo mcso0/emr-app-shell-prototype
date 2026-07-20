@@ -1614,6 +1614,11 @@ function isAppointmentAssignedToStaff(appointment: Appointment, staffUserId: str
     appointment.assignedVeterinarianId === staffUserId;
 }
 
+function isEncounterAssignedToStaff(encounter: Encounter, staffUserId: string) {
+  return encounter.assignedStaffUserIds?.includes(staffUserId) ??
+    encounter.primaryVeterinarianId === staffUserId;
+}
+
 function getWalkInRouteErrorMessage(
   result: Extract<ReceptionWalkInEncounterResponse, { ok: false }>,
 ) {
@@ -7089,6 +7094,7 @@ function ReceptionWalkInFormDrawer({
   operatingDate,
   patientSummaries,
   presentation = "drawer",
+  staffMembers,
   veterinarians,
   workspaceId,
 }: {
@@ -7104,6 +7110,7 @@ function ReceptionWalkInFormDrawer({
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
   presentation?: ReceptionDrawerPresentation;
+  staffMembers: ReceptionStaffMember[];
   veterinarians: Veterinarian[];
   workspaceId: string;
 }) {
@@ -7123,6 +7130,7 @@ function ReceptionWalkInFormDrawer({
   const [veterinarianId, setVeterinarianId] = useState(
     initialVeterinarianId ?? "",
   );
+  const [assignedStaffUserIds, setAssignedStaffUserIds] = useState<string[]>([]);
   const [patientLookupOpen, setPatientLookupOpen] = useState(false);
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<
@@ -7328,6 +7336,7 @@ function ReceptionWalkInFormDrawer({
     }
 
     const input: WalkInReceptionInput = {
+      assignedStaffUserIds,
       department: department || defaultWalkInDepartment,
       durationMinutes,
       guardianId: guardian?.id,
@@ -7574,6 +7583,22 @@ function ReceptionWalkInFormDrawer({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
+
+            <ReceptionSidePanelSection title="업무 담당" variant="create">
+              <ReceptionSidePanelField
+                icon={<CdsPeopleUserIcon className="size-3.5" />}
+                label="담당자"
+                variant="create"
+              >
+                <ReceptionStaffAssignmentSelect
+                  compact
+                  selectedIds={assignedStaffUserIds}
+                  staffMembers={staffMembers}
+                  onChange={setAssignedStaffUserIds}
+                />
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
             <ReceptionSidePanelDivider />
@@ -7867,6 +7892,14 @@ function ReceptionWalkInFormDrawer({
                 </Select>
               </RegistrationFormField>
             </section>
+
+            <RegistrationFormField label="업무 담당자">
+              <ReceptionStaffAssignmentSelect
+                selectedIds={assignedStaffUserIds}
+                staffMembers={staffMembers}
+                onChange={setAssignedStaffUserIds}
+              />
+            </RegistrationFormField>
 
             <section className="grid grid-cols-3 gap-3">
               <RegistrationFormField label="접수일">
@@ -8992,7 +9025,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   const calendarAppointmentWork = useMemo<StaffCalendarAppointmentWork[]>(() => {
     if (activeDrawer?.type !== "staff-operational-profile") return [];
 
-    return getTodayAppointments(
+    const appointmentWork = getTodayAppointments(
       draftCheckIns.filter(isReceptionDraftCalendarActive),
       persistedCalendarAppointments,
       { operatingDate, workspaceId },
@@ -9018,11 +9051,54 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
           title: [patient?.name, guardian?.name]
             .filter((value): value is string => Boolean(value?.trim()))
             .join(" · ") || "예약 진료",
+          workKind: "appointment" as const,
+          workLabel: "예약 진료" as const,
         };
+      });
+
+    const encounterWork = getEffectiveEncounters(draftCheckIns, {
+      operatingDate,
+      workspaceId,
+    })
+      .filter((encounter) => {
+        return (
+          !encounter.appointmentId &&
+          getOperatingDateFromIso(encounter.checkedInAt ?? encounter.createdAt) === operatingDate &&
+          encounter.status !== "cancelled" &&
+          isEncounterAssignedToStaff(encounter, activeDrawer.id)
+        );
       })
-      .sort((left, right) =>
-        left.scheduledStartAt.localeCompare(right.scheduledStartAt),
-      );
+      .map((encounter): StaffCalendarAppointmentWork => {
+        const scheduledStartAt = encounter.checkedInAt ?? encounter.createdAt;
+        const durationMinutes = encounter.durationMinutes ?? 30;
+        const scheduledEndAt = new Date(
+          new Date(scheduledStartAt).getTime() + durationMinutes * 60_000,
+        ).toISOString();
+        const patient = profileDataset.patients.find(
+          (item) => item.id === encounter.patientId && item.workspaceId === workspaceId,
+        );
+        const guardian = profileDataset.guardians.find(
+          (item) => item.id === encounter.guardianId && item.workspaceId === workspaceId,
+        );
+
+        return {
+          href: `/w/${encodeURIComponent(workspaceId)}/reception?encounterId=${encodeURIComponent(encounter.id)}&modulePanel=open`,
+          id: encounter.id,
+          operatingDate,
+          scheduledEndAt,
+          scheduledStartAt,
+          status: "checked_in",
+          title: [patient?.name, guardian?.name]
+            .filter((value): value is string => Boolean(value?.trim()))
+            .join(" · ") || "현장 접수",
+          workKind: "encounter",
+          workLabel: "현장 접수",
+        };
+      });
+
+    return [...appointmentWork, ...encounterWork].sort((left, right) =>
+      left.scheduledStartAt.localeCompare(right.scheduledStartAt),
+    );
   }, [
     activeDrawer,
     draftCheckIns,
@@ -10521,6 +10597,7 @@ export function ReceptionDrawer({
         operatingDate={calendarDraftDate ?? operatingDate}
         patientSummaries={patientSummaries}
         presentation={presentation}
+        staffMembers={staffMembers}
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCreate={(input, walkIn, selectedSummary) => {

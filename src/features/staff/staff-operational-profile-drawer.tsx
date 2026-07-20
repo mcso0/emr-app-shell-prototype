@@ -89,6 +89,8 @@ export type StaffCalendarAppointmentWork = {
   scheduledStartAt: string;
   status: "requested" | "confirmed" | "changed" | "checked_in";
   title: string;
+  workKind?: "appointment" | "encounter";
+  workLabel?: "예약 진료" | "현장 접수";
 };
 
 const initialWorkReadState: WorkReadState = {
@@ -873,6 +875,7 @@ function AppointmentWorkSummary({
   const title = additionalCount > 0
     ? `${firstAppointment.title} 외 ${additionalCount}건`
     : firstAppointment.title;
+  const workLabel = firstAppointment.workLabel ?? "예약 진료";
 
   return (
     <div className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-[14px]">
@@ -890,7 +893,7 @@ function AppointmentWorkSummary({
           {timeRange}
         </p>
         <p className="flex min-w-0 items-center gap-1.5 truncate text-sm leading-[18px] font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
-          <span className="shrink-0 text-[var(--clair-color-atomic-sky-500)]">예약 진료</span>
+          <span className="shrink-0 text-[var(--clair-color-atomic-sky-500)]">{workLabel}</span>
           <span aria-hidden="true">·</span>
           <span className="truncate">{title}</span>
         </p>
@@ -1031,19 +1034,20 @@ function toProfileAssignedWorkItem(
 function toProfileAppointmentWorkItem(
   appointment: StaffCalendarAppointmentWork,
 ): ProfilePanelWorkItem {
+  const workLabel = appointment.workLabel ?? "예약 진료";
   return {
     category: "other",
     categoryLabel: "접수/예약",
     href: appointment.href,
-    id: `appointment-${appointment.id}`,
+    id: `${appointment.workKind ?? "appointment"}-${appointment.id}`,
     navigationAvailable: true,
     operatingDate: appointment.operatingDate,
     requestedAt: appointment.scheduledStartAt,
     requestedAtLabel: formatAppointmentTimeRange(appointment),
-    requestedByName: "예약",
+    requestedByName: appointment.workKind === "encounter" ? "접수" : "예약",
     status: mapAppointmentWorkStatus(appointment.status),
     statusLabel: mapAppointmentWorkStatusLabel(appointment.status),
-    subtitle: "예약 진료",
+    subtitle: workLabel,
     title: appointment.title,
   };
 }

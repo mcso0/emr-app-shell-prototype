@@ -11,6 +11,7 @@ export type ReceptionVitalMeasurementInput = {
 };
 
 export type ReceptionWalkInEncounterInput = {
+  assignedStaffUserIds?: string[];
   department?: string;
   durationMinutes?: number;
   guardianId?: string;
@@ -49,6 +50,7 @@ export type ReceptionWalkInEncounterResponse =
             | "guardian_unavailable"
             | "patient_guardian_link_missing"
             | "primary_veterinarian_unavailable"
+            | "assigned_staff_unavailable"
             | "walk_in_outside_business_hours";
       fieldErrors?: Record<string, string>;
     };
