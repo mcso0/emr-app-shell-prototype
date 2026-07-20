@@ -61,7 +61,7 @@ Product planning excludes demo-only mock role selection from the real login expe
 | Workspace owner / 소유자   | The protected workspace authority. Owners can transfer ownership and access owner-only workspace, contract, billing, and dangerous data operations. At least one active owner must remain.                                    |
 | Workspace admin / 관리자   | A high-permission workspace operator. Admins can manage most hospital operations and member settings, but cannot delete the workspace, transfer ownership, change billing/contract authority, or run dangerous data deletion. |
 | Permission role / 권한 역할 | A workspace-scoped authorization role that answers "what can this person do?" Permission roles are separate from job positions.                                                                                               |
-| Job position / 직무       | A workspace-scoped display/filter field that answers "what is this person's clinic job?" It is not a general authorization source; the approved clinical `vital:write` eligibility check is the explicit exception. |
+| Job position / 직무       | A workspace-scoped display/filter field that answers "what is this person's clinic job?" It is not a general authorization source; the guarded `vital:write` eligibility check is the explicit exception for clinical positions alongside active hospital administrators. |
 | Member                  | A user with an active membership in a workspace.                                                                                                                                                                              |
 | Invitation              | A pending invite for an email address to join a workspace with a preselected permission role and job position.                                                                                                                |
 | Membership              | The workspace-scoped relationship between user, status, permission role assignment, job position, and permission source.                                                                                                      |
@@ -102,7 +102,7 @@ Product rule:
 
 ### Clinical Vital Write Exception
 
-`vital:write` is a clinical permission for entering or revising the selected waiting encounter's today vital values. It requires both an active effective `vital:write` permission and active clinical eligibility as `수의사` or `테크니션`. This is intentionally narrower than general chart writing; `데스크`, owner, or admin titles alone do not authorize vital entry. The server enforces the conjunction and accepts the legacy `vet`/`technician` membership strings only while the job-position migration remains in compatibility mode.
+`vital:write` permits entering or revising the selected waiting encounter's today vital values. It requires active effective `vital:write` plus either active `hospital_admin` membership or clinical eligibility as `수의사`/`테크니션`. `데스크` remains excluded even if its permission role contains `vital:write`; an owner permission-role label without `hospital_admin` membership is not sufficient by itself. The server enforces the conjunction and accepts the legacy `vet`/`technician` membership strings only while the job-position migration remains in compatibility mode.
 
 ## Permission Role Policy
 
@@ -143,7 +143,7 @@ Legend:
 | Customer / 보호자 관리                       | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View                          | Configured                                          |
 | Patient / 환자 관리                         | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View                          | Configured                                          |
 | Chart / 진료 차트                           | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit            | Configured                                          |
-| Waiting-chart today vital entry             | `vital:write` + veterinarian/technician eligibility      | `vital:write` + veterinarian/technician eligibility | `vital:write` + veterinarian/technician eligibility | Same clinical eligibility required                 |
+| Waiting-chart today vital entry             | `vital:write` + `hospital_admin` or veterinarian/technician eligibility | `vital:write` + `hospital_admin` or veterinarian/technician eligibility | `vital:write` + veterinarian/technician eligibility | Same guarded eligibility required                 |
 | SOAP / diagnosis                        | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit            | Configured                                          |
 | Order request/status                    | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit / Complete | Configured                                          |
 | Lab / 임상병리 검사                           | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit / Complete | Configured                                          |

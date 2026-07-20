@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
@@ -25,7 +25,7 @@ const validVitals = {
   bloodPressureDiastolicMmhg: 86,
 };
 
-test("today vital writer requires vital:write and a veterinarian or technician role", async () => {
+test("today vital writer rejects front-desk members even when they have vital:write", async () => {
   let gatewayCalled = false;
   const result = await writePatientVital({
     actorUserId,
@@ -74,6 +74,52 @@ test("today vital writer sends one normalized mutable record to the server gatew
       workspaceId,
     },
   ]);
+});
+
+test("today vital writer allows an active hospital administrator with vital:write", async () => {
+  const calls: unknown[] = [];
+  const result = await writePatientVital({
+    actorUserId,
+    encounterId,
+    gateway: {
+      async writeVital(input) {
+        calls.push(input);
+        return { ok: true, vital: createVital() };
+      },
+    },
+    input: validVitals,
+    permissionAdapter: createPermissionAdapter({
+      roles: ["hospital_admin"],
+      permissionIds: ["vital:write"],
+    }),
+    workspaceId,
+  });
+
+  expect(result).toMatchObject({ ok: true, status: 200, enforcedBy: "patient-vital-write" });
+  expect(calls).toHaveLength(1);
+});
+
+test("hospital administrator eligibility never bypasses vital:write", async () => {
+  let gatewayCalled = false;
+  const result = await writePatientVital({
+    actorUserId,
+    encounterId,
+    gateway: {
+      async writeVital() {
+        gatewayCalled = true;
+        return { ok: true, vital: createVital() };
+      },
+    },
+    input: validVitals,
+    permissionAdapter: createPermissionAdapter({
+      roles: ["hospital_admin"],
+      permissionIds: ["chart:update"],
+    }),
+    workspaceId,
+  });
+
+  expect(result).toMatchObject({ ok: false, status: 403, denialReason: "permission_missing" });
+  expect(gatewayCalled).toBe(false);
 });
 
 test("today vital validation keeps field clearing possible but requires a complete blood-pressure pair", () => {
@@ -188,10 +234,11 @@ test("vital API routes and migration keep writes server-owned and auditable", ()
     "src/app/api/workspaces/[workspaceId]/patient-vitals/latest/route.ts",
     "utf8",
   );
-  const migration = readFileSync(
-    "supabase/migrations/20260720100000_chart_waiting_vital_entry.sql",
-    "utf8",
-  );
+  const migration = readdirSync("supabase/migrations")
+    .filter((fileName) => fileName.includes("chart_waiting_vital"))
+    .sort()
+    .map((fileName) => readFileSync(`supabase/migrations/${fileName}`, "utf8"))
+    .join("\n");
 
   expect(writerRoute).toContain("readServerSession");
   expect(writerRoute).toContain("loadWorkspacePermissionAdapterFromDb");
@@ -200,7 +247,7 @@ test("vital API routes and migration keep writes server-owned and auditable", ()
   expect(migration).toContain("clair_upsert_waiting_encounter_vitals");
   expect(migration).toContain("clair_get_patient_latest_vital_for_encounter");
   expect(migration).toContain("'vital:write'");
-  expect(migration).toContain("array['vet', 'technician']");
+  expect(migration).toContain("array['hospital_admin', 'vet', 'technician']");
   expect(migration).toContain("workspace_membership_job_position_assignments");
   expect(migration).toContain("cleared_at");
   expect(migration).toContain("cleared_by_user_id");
@@ -239,7 +286,7 @@ function createPermissionAdapter({
   roles,
 }: {
   permissionIds: PermissionId[];
-  roles: Array<"vet" | "technician" | "front_desk">;
+  roles: Array<"hospital_admin" | "vet" | "technician" | "front_desk">;
 }) {
   return createMockWorkspacePermissionAdapter({
     users: [{ id: actorUserId, status: "active" }],
@@ -249,9 +296,14 @@ function createPermissionAdapter({
         workspaceId,
         userId: actorUserId,
         roles,
+        permissionRole: {
+          key: "vital-test-role",
+          label: "Vital test role",
+          roleType: "custom",
+          permissionIds,
+        },
         status: "active",
       },
     ],
-    permissionPolicies: roles.map((role) => ({ workspaceId, role, permissionIds })),
   });
 }
