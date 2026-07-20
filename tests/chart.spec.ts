@@ -115,6 +115,7 @@ async function routePreconsultationContext(
         body: JSON.stringify({
           ok: true,
           status: 200,
+          canWriteVitals: true,
           enforcedBy: "chart-preconsultation-context-read",
           context: resolveContext(encounterId),
         }),
@@ -155,6 +156,114 @@ async function restoreKongOrderDraftDefaults(page: Page) {
   await expect(quantity).toHaveValue("1");
   await expect(billingName).toHaveValue("Maropitant 16mg T");
 }
+
+test("waiting chart saves and clears only today's vital values through the dialog", async ({ page }) => {
+  const workspaceId = "clair-demo";
+  const encounterId = "encounter-haru-260430";
+  let vital: Record<string, unknown> | null = null;
+  const writes: Record<string, unknown>[] = [];
+  const context = () => ({
+    encounter: {
+      id: encounterId,
+      encounterNo: "E-260430-0005",
+      receptionType: "walk_in",
+      visitPurpose: "예방접종",
+      chiefComplaint: "예방접종 전 건강 확인",
+      checkedInAt: "2026-04-30T16:05:00+09:00",
+      status: "waiting",
+    },
+    queue: { id: "queue-haru-consultation", status: "waiting" },
+    patient: {
+      id: "patient-haru",
+      patientNo: "P-HARU",
+      name: "하루",
+      species: "cat",
+      breed: "Korean Shorthair",
+      estimatedAgeText: "2세",
+      sex: "female",
+    },
+    guardian: { id: "guardian-kang-seoyun", name: "강서윤" },
+    veterinarian: { id: "user-vet", displayName: "이수지" },
+    priorEncounterCount: 1,
+    vitals: vital ? [vital] : [],
+    history: [],
+  });
+
+  await page.route("**/api/workspaces/*/chart/preconsultation-context?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        canWriteVitals: true,
+        enforcedBy: "chart-preconsultation-context-read",
+        context: context(),
+      }),
+    });
+  });
+  await page.route("**/api/workspaces/*/chart/preconsultation-vitals", async (route) => {
+    expect(route.request().method()).toBe("PATCH");
+    const body = (await route.request().postDataJSON()) as {
+      encounterId: string;
+      vitals: Record<string, unknown>;
+    };
+    expect(body.encounterId).toBe(encounterId);
+    writes.push(body.vitals);
+    vital = {
+      id: "vital-haru-today",
+      encounterId,
+      measuredAt: "2026-07-20T09:30:00.000Z",
+      ...Object.fromEntries(
+        Object.entries(body.vitals).filter(([, value]) => value !== null),
+      ),
+    };
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, status: 200, enforcedBy: "patient-vital-write", vital }),
+    });
+  });
+
+  await page.goto(
+    `/w/${workspaceId}/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`,
+  );
+  const lockedState = page.getByTestId("chart-start-locked-state");
+  await lockedState.getByRole("button", { name: "오늘 바이탈 입력" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "오늘 바이탈 입력" });
+  await dialog.getByLabel("체중").fill("5.12");
+  await dialog.getByLabel("체온").fill("38.9");
+  await dialog.getByLabel("수축기 혈압").fill("120");
+  await dialog.getByLabel("이완기 혈압").fill("80");
+  await dialog.getByLabel("호흡수").fill("24");
+  await dialog.getByRole("button", { name: "저장" }).click();
+
+  await expect(lockedState.getByRole("button", { name: "오늘 바이탈 수정" })).toBeVisible();
+  await expect(lockedState).toContainText("5.12 kg");
+  expect(writes[0]).toEqual({
+    weightKg: 5.12,
+    temperatureC: 38.9,
+    respiratoryRateRpm: 24,
+    bloodPressureSystolicMmhg: 120,
+    bloodPressureDiastolicMmhg: 80,
+  });
+
+  await lockedState.getByRole("button", { name: "오늘 바이탈 수정" }).click();
+  const editDialog = page.getByRole("dialog", { name: "오늘 바이탈 수정" });
+  for (const label of ["체중", "체온", "수축기 혈압", "이완기 혈압", "호흡수"]) {
+    await editDialog.getByLabel(label).fill("");
+  }
+  await editDialog.getByRole("button", { name: "저장" }).click();
+
+  await expect(lockedState.getByLabel("환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다")).toContainText("—");
+  expect(writes).toHaveLength(2);
+  expect(writes[1]).toEqual({
+    weightKg: null,
+    temperatureC: null,
+    respiratoryRateRpm: null,
+    bloodPressureSystolicMmhg: null,
+    bloodPressureDiastolicMmhg: null,
+  });
+});
 
 test("chart workspace renders queue, history, SOAP, assessment, and orders", async ({
   page,

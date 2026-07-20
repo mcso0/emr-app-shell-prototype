@@ -235,6 +235,12 @@ export const mockPermissionSeeds: PermissionSeed[] = [
     label: "차트 작성",
   },
   {
+    id: "vital:write",
+    resource: "vital",
+    action: "write",
+    label: "오늘 바이탈 입력",
+  },
+  {
     id: "order:view",
     resource: "order",
     action: "view",
@@ -371,6 +377,7 @@ export const mockRoleSeeds: RoleSeed[] = [
       "encounter:view",
       "chart:view",
       "chart:update",
+      "vital:write",
       "order:view",
       "order:request",
       "order:update",
@@ -391,6 +398,7 @@ export const mockRoleSeeds: RoleSeed[] = [
       "patient:view",
       "encounter:view",
       "chart:view",
+      "vital:write",
       "order:view",
       "dispensing:view",
       "dispensing:complete",

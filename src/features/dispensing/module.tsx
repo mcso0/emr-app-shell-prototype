@@ -71,6 +71,7 @@ import {
   getSelectedOrderQueueItem,
 } from "@/features/order-queue/data";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
+import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import {
@@ -727,6 +728,19 @@ export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps)
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
     (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
+  const selectedEncounterId = getQueueItemEncounterId(selectedQueueItem, fulfillmentQueue.workItems);
+  const latestVitals = usePatientLatestVitalItems({
+    encounterId: selectedEncounterId,
+    fallbackItems: allowLegacyFixtureFallback
+      ? [
+          { label: "체중", value: selectedQueueItem?.patientWeight ?? patient.weight },
+          { label: "체온", value: selectedQueueItem?.patientTemperature ?? patient.temperature },
+          { label: "호흡", value: selectedQueueItem?.patientRespiration ?? patient.respiration },
+          { label: "혈압", value: selectedQueueItem?.patientBloodPressure ?? patient.bloodPressure },
+        ]
+      : undefined,
+    workspaceId,
+  });
 
   if (!selectedQueueItem) return null;
 
@@ -739,12 +753,7 @@ export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps)
         { label: "나이", value: selectedQueueItem?.patientAge ?? patient.age },
         { label: "성별", value: selectedQueueItem?.patientSex ?? patient.sex },
       ]}
-      vitalItems={[
-        { label: "체중", value: selectedQueueItem?.patientWeight ?? patient.weight },
-        { label: "체온", value: selectedQueueItem?.patientTemperature ?? patient.temperature },
-        { label: "호흡", value: selectedQueueItem?.patientRespiration ?? patient.respiration },
-        { label: "혈압", value: selectedQueueItem?.patientBloodPressure ?? patient.bloodPressure },
-      ]}
+      vitalItems={latestVitals.items}
       memoActions={[
         {
           label: "방문목적",
