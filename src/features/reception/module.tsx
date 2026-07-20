@@ -43,7 +43,10 @@ import {
   CdsPeopleUserMinusIcon,
 } from "@/components/cds-icons/people-and-places";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
-import { StaffOperationalProfilePanel } from "@/features/staff/staff-operational-profile-drawer";
+import {
+  StaffOperationalProfilePanel,
+  type StaffCalendarAppointmentWork,
+} from "@/features/staff/staff-operational-profile-drawer";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
@@ -200,10 +203,12 @@ import {
   type ReceptionCalendarView,
 } from "@/features/reception/store";
 import {
+  emptyReceptionStaffMembers,
   emptyReceptionStaffVeterinarians,
   getReceptionStaffResourceKey,
   useReceptionStaffResourceStore,
   type ReceptionStaffOperationalStatus,
+  type ReceptionStaffMember,
   type ReceptionStaffReadStatus,
   type ReceptionStaffVeterinarian,
 } from "@/features/reception/staff-resource-store";
@@ -254,6 +259,17 @@ const allVeterinarians = mockStaffUsers.filter(
   name: user.name,
   role: "veterinarian" as const,
 }));
+const allReceptionStaff: ReceptionStaffMember[] = mockStaffUsers
+  .map((user) => ({
+    avatarUrl: user.avatarUrl ?? undefined,
+    department: user.department,
+    id: user.id,
+    initial: user.initial,
+    name: user.name,
+    roles: getMockReceptionStaffRoles(user.role),
+    title: getMockReceptionStaffTitle(user.role),
+  }))
+  .filter((staff) => staff.roles.length > 0);
 const defaultVeterinarian = allVeterinarians[0];
 type ReceptionDrawerPresentation = "drawer" | "side-panel";
 
@@ -562,6 +578,28 @@ function getReceptionDemoActorId(role?: string) {
     return "user-admin";
   if (role === "vet") return "user-vet";
   return "user-front-desk";
+}
+
+function getMockReceptionStaffRoles(
+  role: (typeof mockStaffUsers)[number]["role"],
+): string[] {
+  if (role === "veterinarian") return ["vet"];
+  if (role === "technician") return ["technician"];
+  if (role === "desk") return ["front_desk"];
+  if (role === "billing") return ["billing_admin"];
+  if (role === "admin") return ["hospital_admin"];
+  return [];
+}
+
+function getMockReceptionStaffTitle(
+  role: (typeof mockStaffUsers)[number]["role"],
+): string | undefined {
+  if (role === "veterinarian") return "수의사";
+  if (role === "technician") return "테크니션";
+  if (role === "desk") return "데스크";
+  if (role === "billing") return "수납";
+  if (role === "admin") return "관리자";
+  return undefined;
 }
 
 function getVeterinarianFilterLabel(selectedVeterinarians: Veterinarian[]) {
@@ -1501,7 +1539,7 @@ async function loadReceptionPatientGuardianProfiles({
   }
 }
 
-async function loadWorkspaceVeterinarians({
+async function loadWorkspaceStaff({
   actorId,
   operatingDate,
   workspaceId,
@@ -1512,7 +1550,7 @@ async function loadWorkspaceVeterinarians({
 }): Promise<WorkspaceStaffReadResponse> {
   try {
     const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff?role=vet&date=${encodeURIComponent(operatingDate)}`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff?date=${encodeURIComponent(operatingDate)}`,
       {
         cache: "no-store",
         headers: actorId
@@ -1550,6 +1588,30 @@ function mapWorkspaceStaffToVeterinarians(
       role: "veterinarian" as const,
       title: member.title,
     }));
+}
+
+function mapWorkspaceStaffToReceptionStaff(
+  response: WorkspaceStaffReadResponse,
+): ReceptionStaffMember[] {
+  if (!response.ok) return [];
+
+  return response.staff
+    .filter((member) => member.status === "active" && member.roles.length > 0)
+    .map((member) => ({
+      avatarUrl: member.avatarUrl,
+      department: member.department,
+      id: member.id,
+      initial: member.initial,
+      name: member.displayName,
+      operationalStatus: member.operationalStatus,
+      roles: member.roles,
+      title: member.title,
+    }));
+}
+
+function isAppointmentAssignedToStaff(appointment: Appointment, staffUserId: string) {
+  return appointment.assignedStaffUserIds?.includes(staffUserId) ??
+    appointment.assignedVeterinarianId === staffUserId;
 }
 
 function getWalkInRouteErrorMessage(
@@ -2762,6 +2824,71 @@ function ReceptionVeterinarianSelectItems({
   );
 }
 
+function ReceptionStaffAssignmentSelect({
+  compact = false,
+  onChange,
+  selectedIds,
+  staffMembers,
+}: {
+  compact?: boolean;
+  onChange: (staffUserIds: string[]) => void;
+  selectedIds: string[];
+  staffMembers: ReceptionStaffMember[];
+}) {
+  const selectedStaff = staffMembers.filter((staffMember) =>
+    selectedIds.includes(staffMember.id),
+  );
+  const label = selectedStaff.length
+    ? selectedStaff.map((staffMember) => staffMember.name).join(", ")
+    : "업무 담당자를 선택해주세요";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="업무 담당자"
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size={compact ? "default" : "lg"}
+            className={cn(
+              "w-full justify-between bg-card font-medium",
+              compact && "bg-[var(--emr-reception-create-field-bg)]",
+            )}
+          />
+        }
+      >
+        <span className="truncate text-left">{label}</span>
+        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-72 w-[280px] overflow-y-auto">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>업무 담당자</DropdownMenuLabel>
+          {staffMembers.map((staffMember) => {
+            const checked = selectedIds.includes(staffMember.id);
+            return (
+              <DropdownMenuCheckboxItem
+                key={staffMember.id}
+                checked={checked}
+                onCheckedChange={() =>
+                  onChange(
+                    checked
+                      ? selectedIds.filter((id) => id !== staffMember.id)
+                      : [...selectedIds, staffMember.id],
+                  )
+                }
+              >
+                {staffMember.name}
+                {staffMember.title ? ` · ${staffMember.title}` : ""}
+              </DropdownMenuCheckboxItem>
+            );
+          })}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 const getReceptionEncounterStatusLabel = (status: Encounter["status"]) =>
   status === "waiting" ? "진료대기" : getStatusLabel("encounter", status);
 
@@ -3928,6 +4055,20 @@ function isReceptionDraftCalendarActive(draft: ReceptionDraftCheckIn) {
   );
 }
 
+function toStaffCalendarAppointmentStatus(
+  status: Appointment["status"],
+): StaffCalendarAppointmentWork["status"] {
+  if (
+    status === "requested" ||
+    status === "confirmed" ||
+    status === "changed" ||
+    status === "checked_in"
+  ) {
+    return status;
+  }
+  return "confirmed";
+}
+
 function getReceptionQueuePrimaryGuardian({
   guardianId,
   guardians,
@@ -4406,10 +4547,12 @@ function ScheduleToolbar({
   operatingSchedule,
   onCreateReservation,
   onCreateWalkIn,
+  onOpenStaffProfile,
   onUnifiedPatientReady,
   onToggleVeterinarian,
   selectedVeterinarianIds,
   staffReadStatus = "ready",
+  staffMembers,
   todayDate,
   veterinarians,
   view,
@@ -4420,10 +4563,15 @@ function ScheduleToolbar({
   operatingSchedule: EffectiveOperatingHours;
   onCreateReservation: () => void;
   onCreateWalkIn: () => void;
+  onOpenStaffProfile: (
+    staffMember: ReceptionStaffMember,
+    opener: HTMLElement | null,
+  ) => void;
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
   selectedVeterinarianIds: string[];
   staffReadStatus?: WorkspaceStaffReadStatus;
+  staffMembers: ReceptionStaffMember[];
   todayDate: string;
   veterinarians: Veterinarian[];
   view: ReceptionCalendarView;
@@ -4591,6 +4739,24 @@ function ScheduleToolbar({
               <ExcelFileIcon className="size-4" />
               Excel 업로드
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>직원 운영 프로필</DropdownMenuLabel>
+              <div className="max-h-56 overflow-y-auto">
+                {staffMembers.map((staffMember) => (
+                  <DropdownMenuItem
+                    key={staffMember.id}
+                    className="h-8 cursor-pointer"
+                    onClick={(event) =>
+                      onOpenStaffProfile(staffMember, event.currentTarget)
+                    }
+                  >
+                    {staffMember.name}
+                    {staffMember.title ? ` · ${staffMember.title}` : ""}
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
         {!rightPanelOpen ? (
@@ -6236,11 +6402,17 @@ export function ReceptionContent() {
   );
   const workspaceVeterinarians =
     staffResource?.veterinarians ?? emptyReceptionStaffVeterinarians;
-  const workspaceStaffReadStatus: WorkspaceStaffReadStatus =
-    staffResource?.status ?? "idle";
+  const workspaceStaffMembers =
+    staffResource?.staff ?? emptyReceptionStaffMembers;
+  const workspaceStaffReadStatus: WorkspaceStaffReadStatus = liveStaffSourceEnabled
+    ? (staffResource?.status ?? "idle")
+    : "ready";
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
+  const staffMembers = liveStaffSourceEnabled
+    ? workspaceStaffMembers
+    : allReceptionStaff;
   const veterinarianIds = useMemo(
     () => veterinarians.map((veterinarian) => veterinarian.id),
     [veterinarians],
@@ -6331,14 +6503,14 @@ export function ReceptionContent() {
     });
   };
   const openStaffOperationalProfile = useCallback(
-    (veterinarian: Veterinarian, opener: HTMLButtonElement | null) => {
+    (staffMember: ReceptionStaffMember | Veterinarian, opener: HTMLElement | null) => {
       const returnFocusId =
-        opener?.id || `staff-operational-profile-trigger-${veterinarian.id}`;
+        opener?.id || `staff-operational-profile-trigger-${staffMember.id}`;
       if (opener && !opener.id) opener.id = returnFocusId;
 
       setActiveDrawer({
         type: "staff-operational-profile",
-        id: veterinarian.id,
+        id: staffMember.id,
         rightPanelPresentation: {
           gap: 10,
           mobileFullWidth: true,
@@ -6520,13 +6692,14 @@ export function ReceptionContent() {
       if (inFlight?.key === staffResourceKey) return inFlight.promise;
 
       if (showLoading) setStaffResourceLoading(staffResourceKey);
-      const requestPromise = loadWorkspaceVeterinarians({
+      const requestPromise = loadWorkspaceStaff({
         actorId: authSession?.id,
         operatingDate,
         workspaceId,
       }).then((result) => {
         setStaffResourceResult(staffResourceKey, {
           status: result.ok ? "ready" : "error",
+          staff: mapWorkspaceStaffToReceptionStaff(result),
           veterinarians: mapWorkspaceStaffToVeterinarians(result),
         });
       });
@@ -6804,11 +6977,13 @@ export function ReceptionContent() {
         onViewChange={handleCalendarViewChange}
         selectedVeterinarianIds={effectiveSelectedVeterinarianIds}
         staffReadStatus={workspaceStaffReadStatus}
+        staffMembers={staffMembers}
         todayDate={defaultOperatingDate}
         veterinarians={veterinarians}
         onToggleVeterinarian={toggleVeterinarian}
         onCreateReservation={openReservationDialog}
         onCreateWalkIn={openWalkInDialog}
+        onOpenStaffProfile={openStaffOperationalProfile}
         onUnifiedPatientReady={(patientId) => {
           selectPatient(patientId);
           setCalendarDraftSelection(undefined);
@@ -7794,6 +7969,7 @@ function ReceptionReservationFormDrawer({
   operatingDate,
   patientSummaries,
   presentation = "drawer",
+  staffMembers,
   todayDate,
   veterinarians,
   workspaceId,
@@ -7808,6 +7984,7 @@ function ReceptionReservationFormDrawer({
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
   presentation?: ReceptionDrawerPresentation;
+  staffMembers: ReceptionStaffMember[];
   todayDate: string;
   veterinarians: Veterinarian[];
   workspaceId: string;
@@ -7839,6 +8016,7 @@ function ReceptionReservationFormDrawer({
   const [veterinarianId, setVeterinarianId] = useState(
     initialKnownVeterinarianId ?? "",
   );
+  const [assignedStaffUserIds, setAssignedStaffUserIds] = useState<string[]>([]);
   const patientLookup = useReceptionPatientLookup({
     authSessionId: authSession?.id,
     patientSummaries,
@@ -7959,6 +8137,7 @@ function ReceptionReservationFormDrawer({
     if (!selectedPatient || submitting || !canCreate) return;
 
     const input: ReceptionAppointmentCreateInput = {
+      assignedStaffUserIds,
       assignedVeterinarianId: effectiveVeterinarianId,
       durationMinutes,
       guardianId: selectedGuardian?.id,
@@ -8132,6 +8311,22 @@ function ReceptionReservationFormDrawer({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
+
+            <ReceptionSidePanelSection title="업무 담당" variant="create">
+              <ReceptionSidePanelField
+                icon={<CdsPeopleUserIcon className="size-3.5" />}
+                label="담당자"
+                variant="create"
+              >
+                <ReceptionStaffAssignmentSelect
+                  compact
+                  selectedIds={assignedStaffUserIds}
+                  staffMembers={staffMembers}
+                  onChange={setAssignedStaffUserIds}
+                />
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
             <ReceptionSidePanelDivider />
@@ -8394,6 +8589,14 @@ function ReceptionReservationFormDrawer({
                 </Select>
               </RegistrationFormField>
             </section>
+
+            <RegistrationFormField label="업무 담당자">
+              <ReceptionStaffAssignmentSelect
+                selectedIds={assignedStaffUserIds}
+                staffMembers={staffMembers}
+                onChange={setAssignedStaffUserIds}
+              />
+            </RegistrationFormField>
 
             <section className="grid grid-cols-2 gap-3">
               <RegistrationFormField
@@ -8759,6 +8962,15 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
   );
+  const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
+  const persistedCalendarAppointments = useReceptionStore(
+    (state) => state.persistedCalendarAppointments,
+  );
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
+  );
+  const patients = usePatientProfileStore((state) => state.patients);
   const [isEditing, setIsEditing] = useState(false);
   const title = getReceptionRightPanelTitle(activeDrawer);
   const searchParams = useSearchParams();
@@ -8773,6 +8985,52 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
       ? routeOperatingDate
       : (operatingDateOverride ?? defaultOperatingDate);
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
+  const profileDataset = useMemo(
+    () => ({ guardians, patientGuardians, patients }),
+    [guardians, patientGuardians, patients],
+  );
+  const calendarAppointmentWork = useMemo<StaffCalendarAppointmentWork[]>(() => {
+    if (activeDrawer?.type !== "staff-operational-profile") return [];
+
+    return getTodayAppointments(
+      draftCheckIns.filter(isReceptionDraftCalendarActive),
+      persistedCalendarAppointments,
+      { operatingDate, workspaceId },
+    )
+      .filter(
+        (appointment) =>
+          isAppointmentAssignedToStaff(appointment, activeDrawer.id) &&
+          appointment.status !== "cancelled" &&
+          appointment.status !== "no_show",
+      )
+      .map((appointment) => {
+        const patient = getAppointmentPatient(appointment, profileDataset);
+        const guardian = getAppointmentGuardian(appointment, profileDataset);
+        return {
+          href: `/w/${encodeURIComponent(workspaceId)}/reception?appointmentId=${encodeURIComponent(appointment.id)}&modulePanel=open`,
+          id: appointment.id,
+          operatingDate,
+          ...(appointment.scheduledEndAt
+            ? { scheduledEndAt: appointment.scheduledEndAt }
+            : {}),
+          scheduledStartAt: appointment.scheduledStartAt,
+          status: toStaffCalendarAppointmentStatus(appointment.status),
+          title: [patient?.name, guardian?.name]
+            .filter((value): value is string => Boolean(value?.trim()))
+            .join(" · ") || "예약 진료",
+        };
+      })
+      .sort((left, right) =>
+        left.scheduledStartAt.localeCompare(right.scheduledStartAt),
+      );
+  }, [
+    activeDrawer,
+    draftCheckIns,
+    operatingDate,
+    persistedCalendarAppointments,
+    profileDataset,
+    workspaceId,
+  ]);
 
   const closeStaffProfile = useCallback(() => {
     const returnFocusId = activeDrawer?.rightPanelPresentation?.returnFocusId;
@@ -8792,6 +9050,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
             ? authSession?.id
             : getReceptionDemoActorId(authSession?.role)
         }
+        calendarAppointments={calendarAppointmentWork}
         currentMinutes={currentOperatingMinutes}
         date={operatingDate}
         onClose={closeStaffProfile}
@@ -10169,9 +10428,16 @@ export function ReceptionDrawer({
       state.resourcesByKey[staffResourceKey]?.veterinarians ??
       emptyReceptionStaffVeterinarians,
   );
+  const workspaceStaffMembers = useReceptionStaffResourceStore(
+    (state) =>
+      state.resourcesByKey[staffResourceKey]?.staff ?? emptyReceptionStaffMembers,
+  );
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
+  const staffMembers = liveStaffSourceEnabled
+    ? workspaceStaffMembers
+    : allReceptionStaff;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const veterinarianStaffMembers = useMemo(
     () =>
@@ -10320,6 +10586,7 @@ export function ReceptionDrawer({
         patientSummaries={patientSummaries}
         presentation={presentation}
         todayDate={getWorkspaceOperatingDate(workspaceId)}
+        staffMembers={staffMembers}
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCreate={(appointment) => {

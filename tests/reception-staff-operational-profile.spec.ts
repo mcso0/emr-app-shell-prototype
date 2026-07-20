@@ -142,7 +142,10 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(panel).toContainText("이수지");
   await expect(panel).toContainText("계정 정보");
   await expect(panel).toContainText("오늘 근무 정보");
-  await expect(panel).toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).toContainText("09:30 - 10:00");
+  await expect(panel).toContainText("예약 진료");
+  await expect(panel).toContainText("콩이 · 김하늘 외 1건");
+  await expect(panel).not.toContainText("오늘 게시된 근무가 없어요");
   await expect(panel).not.toContainText("선택 날짜 예약");
   await expect(panel.getByRole("tab", { name: "프로필" })).toHaveAttribute(
     "aria-selected",
@@ -229,6 +232,62 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(trigger).toBeFocused();
 });
 
+test("non-veterinarian appointment assignees receive the same profile workload", async ({
+  page,
+}) => {
+  await page.route("**/staff/*/operational-profile?**", async (route) => {
+    const isTechnician = route.request().url().includes("user-tech-hayun");
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        availability: null,
+        capabilities: {
+          canManageMember: false,
+          manageMemberHref: null,
+          scheduleHref: null,
+        },
+        profile: {
+          displayName: isTechnician ? "송하윤" : "이수지",
+          initials: isTechnician ? "HY" : "SJ",
+          jobPositionLabel: isTechnician ? "테크니션" : "수의사",
+          membershipStatus: "active",
+        },
+        shift: null,
+        enforcedBy: "staff-operational-profile-read",
+      },
+    });
+  });
+  await page.route("**/staff/*/work-items**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        ok: true,
+        items: [],
+        nextCursor: null,
+        timezone: "Asia/Seoul",
+        enforcedBy: "staff-assigned-work-items-read",
+      },
+    });
+  });
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  await page.getByRole("button", { name: "더보기" }).click();
+  await page
+    .getByRole("menuitem", { name: "송하윤 · 테크니션" })
+    .click();
+
+  const panel = page.getByRole("region", { name: "직원 운영 프로필" });
+  await expect(panel).toContainText("송하윤");
+  await expect(panel).toContainText("10:00 - 10:30");
+  await expect(panel).toContainText("예약 진료");
+  await expect(panel).not.toContainText("오늘 게시된 근무가 없어요");
+
+  await panel.getByRole("tab", { name: "업무현황" }).click();
+  await expect(panel).toContainText("접수/예약");
+  await expect(panel).toContainText("예약 진료");
+});
+
 test("staff work tab keeps server order, merges cursor pages by hospital date, and confirms permitted navigation", async ({
   page,
 }) => {
@@ -305,16 +364,19 @@ test("staff work tab keeps server order, merges cursor pages by hospital date, a
   await panel.getByRole("tab", { name: "업무현황" }).click();
 
   const cards = panel.locator("[data-work-item-id]");
-  await expect(cards).toHaveCount(2);
-  await expect(cards.nth(0)).toContainText("합성 CBC");
-  await expect(cards.nth(1)).toContainText("합성 처치");
+  await expect(cards).toHaveCount(4);
+  await expect(cards.nth(0)).toContainText("콩이 · 김하늘");
+  await expect(cards.nth(1)).toContainText("코코 · 이지은");
+  await expect(cards.nth(2)).toContainText("합성 CBC");
+  await expect(cards.nth(3)).toContainText("합성 처치");
+  await expect(cards.nth(0)).toContainText("접수/예약");
   await expect(panel.getByText("오늘", { exact: true })).toHaveCount(1);
   await panel.getByRole("button", { name: "이전 업무 더보기" }).click();
-  await expect(cards).toHaveCount(3);
-  await expect(cards.nth(2)).toContainText("합성 X-ray");
+  await expect(cards).toHaveCount(5);
+  await expect(cards.nth(4)).toContainText("합성 X-ray");
   await expect(panel.getByText("오늘", { exact: true })).toHaveCount(1);
 
-  await cards.nth(0).getByRole("button", { name: "합성 CBC 더보기" }).click();
+  await panel.getByRole("button", { name: "합성 CBC 더보기" }).click();
   await page.getByRole("menuitem", { name: "업무 보러가기" }).click();
   const dialog = page.getByRole("dialog", {
     name: "업무 화면으로 이동할까요?",
@@ -459,7 +521,8 @@ test("staff profile panel keeps loading, error, retry, and offline states distin
   allowSuccess = true;
   await drawer.getByRole("button", { name: "다시 시도" }).click();
   await expect(drawer).toContainText("상태 확인 중");
-  await expect(drawer).toContainText("오늘 게시된 근무가 없어요");
+  await expect(drawer).toContainText("예약 진료");
+  await expect(drawer).not.toContainText("오늘 게시된 근무가 없어요");
 });
 
 test("touch viewport keeps the lane action visible and uses a full-width panel", async ({

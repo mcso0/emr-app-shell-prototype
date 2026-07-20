@@ -569,13 +569,15 @@ function mapAppointment(value: unknown): Appointment | undefined {
     return undefined;
   }
 
+  const assignedVeterinarianId =
+    getString(row.assignedVeterinarianId) ?? getString(row.assigned_veterinarian_id);
   return {
     id,
     workspaceId,
     patientId,
     guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
-    assignedVeterinarianId:
-      getString(row.assignedVeterinarianId) ?? getString(row.assigned_veterinarian_id),
+    assignedVeterinarianId,
+    assignedStaffUserIds: getAssignedStaffUserIds(row, assignedVeterinarianId),
     scheduledStartAt,
     scheduledEndAt: getString(row.scheduledEndAt) ?? getString(row.scheduled_end_at),
     visitPurpose: getString(row.visitPurpose) ?? getString(row.visit_purpose),
@@ -585,6 +587,17 @@ function mapAppointment(value: unknown): Appointment | undefined {
     createdAt,
     updatedAt,
   };
+}
+
+function getAssignedStaffUserIds(
+  row: Record<string, unknown>,
+  assignedVeterinarianId?: string,
+): string[] | undefined {
+  const raw = row.assignedStaffUserIds ?? row.assigned_staff_user_ids;
+  if (Array.isArray(raw)) {
+    return raw.filter((value): value is string => typeof value === "string");
+  }
+  return assignedVeterinarianId ? [assignedVeterinarianId] : undefined;
 }
 
 function mapPatient(value: unknown): Patient | undefined {

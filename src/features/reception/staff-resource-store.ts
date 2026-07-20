@@ -26,9 +26,21 @@ export type ReceptionStaffVeterinarian = {
   title?: string;
 };
 
+export type ReceptionStaffMember = {
+  avatarUrl?: string;
+  department?: string;
+  id: string;
+  initial?: string;
+  name: string;
+  operationalStatus?: ReceptionStaffOperationalStatus;
+  roles: string[];
+  title?: string;
+};
+
 export type ReceptionStaffReadStatus = "idle" | "loading" | "ready" | "error";
 
 type ReceptionStaffResource = {
+  staff: ReceptionStaffMember[];
   status: ReceptionStaffReadStatus;
   updatedAt?: number;
   veterinarians: ReceptionStaffVeterinarian[];
@@ -41,12 +53,14 @@ type ReceptionStaffResourceStore = {
     key: string,
     result: {
       status: Extract<ReceptionStaffReadStatus, "ready" | "error">;
+      staff: ReceptionStaffMember[];
       veterinarians: ReceptionStaffVeterinarian[];
     },
   ) => void;
 };
 
 export const emptyReceptionStaffVeterinarians: ReceptionStaffVeterinarian[] = [];
+export const emptyReceptionStaffMembers: ReceptionStaffMember[] = [];
 
 export function getReceptionStaffResourceKey({
   operatingDate,
@@ -66,6 +80,7 @@ export const useReceptionStaffResourceStore = create<ReceptionStaffResourceStore
         resourcesByKey: {
           ...state.resourcesByKey,
           [key]: {
+            staff: state.resourcesByKey[key]?.staff ?? emptyReceptionStaffMembers,
             status: "loading",
             updatedAt: state.resourcesByKey[key]?.updatedAt,
             veterinarians:

@@ -1,6 +1,7 @@
 import type { Appointment } from "@/types/emr-domain";
 
 export type ReceptionAppointmentCreateInput = {
+  assignedStaffUserIds?: string[];
   assignedVeterinarianId?: string;
   durationMinutes: number;
   guardianId?: string;

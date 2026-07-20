@@ -206,6 +206,44 @@ test("appointment create core validates patient, business hours, closed day, and
   });
 });
 
+test("appointment create persists role-agnostic operational assignees", async () => {
+  const created = await createReceptionAppointment({
+    actorUserId: "user-front-desk",
+    input: {
+      ...validInput,
+      assignedStaffUserIds: ["user-tech-hayun", "user-desk-yuna", "user-billing-harin"],
+      scheduledStartAt: getUniqueBusinessStartAt().replace("14:00", "16:00"),
+    },
+    workspaceId: "clair-demo",
+  });
+  expect(created).toMatchObject({
+    ok: true,
+    appointment: {
+      assignedStaffUserIds: expect.arrayContaining([
+        "user-vet-doyun",
+        "user-tech-hayun",
+        "user-desk-yuna",
+        "user-billing-harin",
+      ]),
+    },
+  });
+
+  const invalidAssignee = await createReceptionAppointment({
+    actorUserId: "user-front-desk",
+    input: {
+      ...validInput,
+      assignedStaffUserIds: ["user-not-in-workspace"],
+      scheduledStartAt: getUniqueBusinessStartAt(),
+    },
+    workspaceId: "clair-demo",
+  });
+  expect(invalidAssignee).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "assigned_staff_unavailable",
+  });
+});
+
 test("supabase appointment create gateway keeps workspace scope in the RPC write", async () => {
   const calls: string[] = [];
   const rpcPayloads: unknown[] = [];
@@ -367,4 +405,12 @@ test("appointment create writer migration inserts workspace-scoped appointments 
   expect(migration).toContain("weight_kg = round(v_weight_kg, 2)");
   expect(migration).toContain("insert into public.appointment_change_logs");
   expect(migration).toContain("grant execute on function public.clair_create_reception_appointment");
+
+  const assignmentMigration = readFileSync(
+    "supabase/migrations/20260720121207_appointment_staff_assignments.sql",
+    "utf8",
+  );
+  expect(assignmentMigration).toContain("appointment_staff_assignments");
+  expect(assignmentMigration).toContain("assignedStaffUserIds");
+  expect(assignmentMigration).toContain("m.roles @> array['vet']::text[]");
 });

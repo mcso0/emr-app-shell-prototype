@@ -81,6 +81,16 @@ type WorkReadState = {
   timezone: string | null;
 };
 
+export type StaffCalendarAppointmentWork = {
+  href: string;
+  id: string;
+  operatingDate: string;
+  scheduledEndAt?: string;
+  scheduledStartAt: string;
+  status: "requested" | "confirmed" | "changed" | "checked_in";
+  title: string;
+};
+
 const initialWorkReadState: WorkReadState = {
   items: [],
   loadingNextPage: false,
@@ -92,13 +102,16 @@ const initialWorkReadState: WorkReadState = {
 
 export function StaffOperationalProfilePanel({
   actorUserId,
+  calendarAppointments = [],
   currentMinutes,
+  date,
   onClose,
   todayDate,
   userId,
   workspaceId,
 }: {
   actorUserId?: string;
+  calendarAppointments?: StaffCalendarAppointmentWork[];
   currentMinutes: number;
   date: string;
   onClose: () => void;
@@ -124,7 +137,7 @@ export function StaffOperationalProfilePanel({
     () => setRetryNonce((value) => value + 1),
     [],
   );
-  const requestKey = `${workspaceId}:${userId}:${todayDate}:${retryNonce}`;
+  const requestKey = `${workspaceId}:${userId}:${date}:${retryNonce}`;
   const requestState =
     loadResult?.key === requestKey
       ? loadResult.state === "ready"
@@ -150,7 +163,7 @@ export function StaffOperationalProfilePanel({
   useEffect(() => {
     const controller = new AbortController();
     void fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff/${encodeURIComponent(userId)}/operational-profile?date=${encodeURIComponent(todayDate)}`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff/${encodeURIComponent(userId)}/operational-profile?date=${encodeURIComponent(date)}`,
       {
         cache: "no-store",
         headers: actorUserId
@@ -169,7 +182,7 @@ export function StaffOperationalProfilePanel({
         setLoadResult({ key: requestKey, response: null, state: "error" });
       });
     return () => controller.abort();
-  }, [actorUserId, requestKey, todayDate, userId, workspaceId]);
+  }, [actorUserId, date, requestKey, userId, workspaceId]);
 
   const loadWorkPage = useCallback(
     async (cursor: string | null, append: boolean) => {
@@ -222,11 +235,16 @@ export function StaffOperationalProfilePanel({
   const workGroups = useMemo(
     () =>
       buildWorkGroups(
-        workRead.items,
+        [
+          ...calendarAppointments.map(toProfileAppointmentWorkItem),
+          ...workRead.items.map((item) =>
+            toProfileAssignedWorkItem(item, workRead.timezone),
+          ),
+        ],
         workRead.timezone,
         todayDate,
       ),
-    [todayDate, workRead.items, workRead.timezone],
+    [calendarAppointments, todayDate, workRead.items, workRead.timezone],
   );
 
   const navigate = (href: string | null | undefined) => {
@@ -485,10 +503,12 @@ export function StaffOperationalProfilePanel({
           ) : profile && response ? (
             <div className="grid gap-4">
               <TodayShiftSection
+                appointments={calendarAppointments}
                 currentMinutes={currentMinutes}
                 error={Boolean(response.sectionErrors?.shift)}
                 onRetry={loadProfile}
                 shift={response.shift}
+                selectedDate={date}
                 todayDate={todayDate}
               />
               <div
@@ -534,7 +554,7 @@ export function StaffOperationalProfilePanel({
                 ? "loading"
                 : workRead.state === "error"
                   ? "error"
-                  : workRead.items.length === 0
+                  : workGroups.length === 0
                     ? "empty"
                     : "ready"
             }
@@ -778,15 +798,19 @@ function AccountRow({
 }
 
 function TodayShiftSection({
+  appointments,
   currentMinutes,
   error,
   onRetry,
+  selectedDate,
   shift,
   todayDate,
 }: {
+  appointments: StaffCalendarAppointmentWork[];
   currentMinutes: number;
   error: boolean;
   onRetry: () => void;
+  selectedDate: string;
   shift: StaffOperationalShift | null;
   todayDate: string;
 }) {
@@ -806,12 +830,22 @@ function TodayShiftSection({
           >
             조회 실패를 휴무로 표시하지 않았어요.
           </EmrInlineAlert>
-        ) : shift ? (
-          <ShiftSummary
-            currentMinutes={currentMinutes}
-            shift={shift}
-            todayDate={todayDate}
-          />
+        ) : shift || appointments.length > 0 ? (
+          <div className="grid gap-2">
+            {shift ? (
+              <ShiftSummary
+                currentMinutes={currentMinutes}
+                shift={shift}
+                todayDate={todayDate}
+              />
+            ) : null}
+            {appointments.length > 0 ? (
+              <AppointmentWorkSummary
+                appointments={appointments}
+                selectedDate={selectedDate}
+              />
+            ) : null}
+          </div>
         ) : (
           <p className="flex min-h-[72px] items-center rounded-xl border border-dashed border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] px-4 text-sm text-[var(--emr-text-tertiary)]">
             오늘 게시된 근무가 없어요
@@ -819,6 +853,49 @@ function TodayShiftSection({
         )}
       </div>
     </section>
+  );
+}
+
+function AppointmentWorkSummary({
+  appointments,
+  selectedDate,
+}: {
+  appointments: StaffCalendarAppointmentWork[];
+  selectedDate: string;
+}) {
+  const [firstAppointment] = [...appointments].sort((left, right) =>
+    left.scheduledStartAt.localeCompare(right.scheduledStartAt),
+  );
+  if (!firstAppointment) return null;
+
+  const additionalCount = appointments.length - 1;
+  const timeRange = formatAppointmentTimeRange(firstAppointment);
+  const title = additionalCount > 0
+    ? `${firstAppointment.title} 외 ${additionalCount}건`
+    : firstAppointment.title;
+
+  return (
+    <div className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-[14px]">
+      <div
+        aria-hidden="true"
+        className="grid size-[42px] shrink-0 overflow-hidden rounded-md border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
+      >
+        <span className="h-3 bg-[var(--emr-surface-muted)]" />
+        <span className="flex items-center justify-center pb-0.5 text-base leading-4 font-semibold tabular-nums text-[var(--clair-color-atomic-sky-500)]">
+          {selectedDate.slice(-2)}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-base leading-6 font-medium tracking-[0.006em] tabular-nums text-[var(--emr-text-primary)]">
+          {timeRange}
+        </p>
+        <p className="flex min-w-0 items-center gap-1.5 truncate text-sm leading-[18px] font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
+          <span className="shrink-0 text-[var(--clair-color-atomic-sky-500)]">예약 진료</span>
+          <span aria-hidden="true">·</span>
+          <span className="truncate">{title}</span>
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -907,34 +984,97 @@ function formatProfileLastSeenDetail(
 }
 
 function buildWorkGroups(
-  items: StaffAssignedWorkItem[],
+  items: ProfilePanelWorkItem[],
   timezone: string | null,
   todayDate: string,
 ): ProfileWorkDateGroup[] {
   const groups = new Map<string, ProfileAssignedWorkItem[]>();
   for (const item of items) {
     const existing = groups.get(item.operatingDate) ?? [];
-    existing.push({
-      category: item.category,
-      categoryLabel: item.categoryLabel,
-      guardianName: item.guardianName,
-      href: item.href,
-      id: item.id,
-      navigationAvailable: Boolean(item.href),
-      patientName: item.patientName,
-      requestedAtLabel: formatRequestedAt(item.requestedAt, timezone),
-      requestedByName: item.requestedByName,
-      status: item.status,
-      statusLabel: item.statusLabel,
-      subtitle: item.description,
-      title: item.title,
-    });
+    existing.push(item);
     groups.set(item.operatingDate, existing);
   }
   return Array.from(groups, ([date, groupedItems]) => ({
     dateLabel: date === todayDate ? "오늘" : formatDateLabel(date),
     items: groupedItems,
   }));
+}
+
+type ProfilePanelWorkItem = ProfileAssignedWorkItem & {
+  operatingDate: string;
+  requestedAt: string;
+};
+
+function toProfileAssignedWorkItem(
+  item: StaffAssignedWorkItem,
+  timezone: string | null,
+): ProfilePanelWorkItem {
+  return {
+    category: item.category,
+    categoryLabel: item.categoryLabel,
+    guardianName: item.guardianName,
+    href: item.href,
+    id: item.id,
+    navigationAvailable: Boolean(item.href),
+    operatingDate: item.operatingDate,
+    patientName: item.patientName,
+    requestedAt: item.requestedAt,
+    requestedAtLabel: formatRequestedAt(item.requestedAt, timezone),
+    requestedByName: item.requestedByName,
+    status: item.status,
+    statusLabel: item.statusLabel,
+    subtitle: item.description,
+    title: item.title,
+  };
+}
+
+function toProfileAppointmentWorkItem(
+  appointment: StaffCalendarAppointmentWork,
+): ProfilePanelWorkItem {
+  return {
+    category: "other",
+    categoryLabel: "접수/예약",
+    href: appointment.href,
+    id: `appointment-${appointment.id}`,
+    navigationAvailable: true,
+    operatingDate: appointment.operatingDate,
+    requestedAt: appointment.scheduledStartAt,
+    requestedAtLabel: formatAppointmentTimeRange(appointment),
+    requestedByName: "예약",
+    status: mapAppointmentWorkStatus(appointment.status),
+    statusLabel: mapAppointmentWorkStatusLabel(appointment.status),
+    subtitle: "예약 진료",
+    title: appointment.title,
+  };
+}
+
+function formatAppointmentTimeRange(appointment: StaffCalendarAppointmentWork) {
+  const start = new Date(appointment.scheduledStartAt);
+  const end = appointment.scheduledEndAt
+    ? new Date(appointment.scheduledEndAt)
+    : new Date(start.getTime() + 30 * 60_000);
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Seoul",
+  });
+  return `${formatter.format(start)} - ${formatter.format(end)}`;
+}
+
+function mapAppointmentWorkStatus(
+  status: StaffCalendarAppointmentWork["status"],
+): ProfileAssignedWorkItem["status"] {
+  return status === "checked_in" ? "in_progress" : "requested";
+}
+
+function mapAppointmentWorkStatusLabel(
+  status: StaffCalendarAppointmentWork["status"],
+) {
+  if (status === "checked_in") return "접수 완료";
+  if (status === "changed") return "변경됨";
+  if (status === "requested") return "예약 요청";
+  return "예약";
 }
 
 function mergeWorkItems(
