@@ -628,9 +628,10 @@ test("chart consultation CTA moves from call to start before chart completion", 
         encounterId,
         measuredAt: "2026-06-25T14:20:00+09:00",
         weightKg: 4.82,
-        temperatureC: 38.7,
-        respiratoryRateRpm: 24,
+        temperatureC: 38.64,
+        respiratoryRateRpm: 20,
         bloodPressureSystolicMmhg: 132,
+        bloodPressureDiastolicMmhg: 78,
       },
       {
         id: "vital-choco-previous",
@@ -640,6 +641,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
         temperatureC: 38.65,
         respiratoryRateRpm: 23,
         bloodPressureSystolicMmhg: 130,
+        bloodPressureDiastolicMmhg: 79,
       },
       {
         id: "vital-choco-prior-encounter",
@@ -649,6 +651,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
         temperatureC: 38.6,
         respiratoryRateRpm: 22,
         bloodPressureSystolicMmhg: 128,
+        bloodPressureDiastolicMmhg: 80,
       },
     ],
     history: [
@@ -879,6 +882,34 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
   );
   await expect(vitalTable).not.toContainText("현재");
+  const weightDelta = vitalTable.getByLabel("체중 변화: 0.06 증가");
+  await expect(weightDelta).toContainText("(0.06)");
+  await expect(weightDelta).not.toContainText(/kg|증가|상승/);
+  await expect(weightDelta.locator("svg")).toHaveCount(1);
+  await expect(weightDelta.locator('[data-direction="increase"]')).toHaveCount(1);
+
+  const respiratoryDelta = vitalTable.getByLabel("호흡수 변화: 2 감소");
+  await expect(respiratoryDelta).toContainText("(2)");
+  await expect(respiratoryDelta).not.toContainText(/rpm|회\/분|감소|하강/);
+  await expect(respiratoryDelta.locator("svg")).toHaveCount(1);
+  await expect(respiratoryDelta.locator('[data-direction="decrease"]')).toHaveCount(1);
+
+  await expect(vitalTable.getByLabel(/^체온 변화:/)).toHaveCount(0);
+
+  const bloodPressureDelta = vitalTable.getByLabel(
+    "혈압 변화: 수축기 4 증가, 이완기 2 감소",
+  );
+  await expect(bloodPressureDelta).toContainText("(4/2)");
+  await expect(bloodPressureDelta).not.toContainText(
+    /mmHg|증가|감소|상승|하강/,
+  );
+  await expect(bloodPressureDelta.locator("svg")).toHaveCount(2);
+  await expect(
+    bloodPressureDelta.locator('[data-direction="increase"]'),
+  ).toHaveCount(1);
+  await expect(
+    bloodPressureDelta.locator('[data-direction="decrease"]'),
+  ).toHaveCount(1);
   const currentVitalDateCell = vitalTable.locator("tbody tr").first().locator("th");
   await expect(currentVitalDateCell.getByText("오늘", { exact: true })).toBeVisible();
   await expect(currentVitalDateCell.getByText("(26.06.25)", { exact: true })).toBeVisible();
