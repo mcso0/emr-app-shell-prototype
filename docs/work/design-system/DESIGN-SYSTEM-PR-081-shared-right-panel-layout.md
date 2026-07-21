@@ -57,4 +57,7 @@ long Reception create form scrolls only in its body and its action footer stays 
 - Passed: `npx playwright test tests/right-panel-header.spec.ts --project=chromium --reporter=line` (5 passed).
 - Passed: `npx playwright test tests/reception.spec.ts -g "reception encounter edit keeps long content and footer usable at a narrow viewport" --project=chromium --reporter=line` (1 passed).
 - Passed: `npm run lint`, `npx tsc --noEmit --pretty false --incremental false`, `npm run build`, `npm run build-storybook`, `npm run docs:check`, `npm run security:secrets`, and `git diff --check`.
+- Passed: GitHub Release Check `29801487870` for candidate `cbc8a9b`.
+- Released: PR [#469](https://github.com/mcso0/emr-app-shell-prototype/pull/469) merged to `main` as `f4e00b6`; Vercel Production `dpl_9mmVGANMQPBuL3Qt6qc9jVht7AEr` is Ready.
+- Production smoke: authenticated synthetic `clair-demo` reception-create panel preserved its 56px Header, 65px Footer, independent 535px Body ScrollArea (699px content), and no Footer overlap.
 - Result report: [2026-07-21 shared right-panel layout report](../../completed/design-system/2026-07-21-design-system-pr-081-shared-right-panel-layout-report.html).

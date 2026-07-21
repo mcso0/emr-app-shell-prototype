@@ -55,7 +55,7 @@
   </head>
   <body>
     <main>
-      <span class="status">구현 및 검증 완료</span>
+      <span class="status">구현 · 프로덕션 배포 완료</span>
       <h1>우측 사이드패널 공통 레이아웃 구현 결과</h1>
       <p>
         접수 생성 폼의 하단 액션이 잘리던 문제를 한 화면의 높이 보정이 아니라,
@@ -84,6 +84,10 @@
             <tr><td>ESLint / TypeScript</td><td>통과</td></tr>
             <tr><td>Next.js production build / Storybook build</td><td>통과</td></tr>
             <tr><td>문서 링크 / secret scan / diff check</td><td>통과</td></tr>
+            <tr><td>GitHub Release Check</td><td>run 29801487870 통과</td></tr>
+            <tr><td>PR 및 main 병합</td><td>PR #469, candidate cbc8a9b, merge commit f4e00b6</td></tr>
+            <tr><td>Vercel Production</td><td>dpl_9mmVGANMQPBuL3Qt6qc9jVht7AEr Ready</td></tr>
+            <tr><td>프로덕션 접수 생성 패널</td><td>clair-demo 스모크 통과: Header 56px, Footer 65px, Body ScrollArea 535px / content 699px, 겹침 없음</td></tr>
           </tbody>
         </table>
       </section>
@@ -91,9 +95,10 @@
       <section class="card">
         <h2>남은 확인 사항</h2>
         <p>
-          이번 변경은 로컬 격리 브랜치에서 검증됐다. production 배포나 main 병합은
-          포함하지 않았다. Next build에서는 NFT 추적 경고가, Storybook build에서는 asset/chunk
-          경고가 출력됐지만, 두 빌드는 성공했다.
+          Preview 환경은 별도 세션이 없어 앱 로그인 화면까지만 확인했다. 대신 Production의
+          로그인된 synthetic <code>clair-demo</code> 세션에서 실제 패널 구조를 스모크했다.
+          Next build에서는 NFT 추적 경고가, Storybook build에서는 asset/chunk 경고가 출력됐지만,
+          두 빌드는 성공했다.
         </p>
       </section>
     </main>
