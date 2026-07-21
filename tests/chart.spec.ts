@@ -2070,6 +2070,104 @@ test("chart queue selection changes the selected encounter", async ({
   ).toEqual([]);
 });
 
+test("chart explicit encounter does not crash when the refreshed queue temporarily omits it", async ({
+  page,
+}) => {
+  await page.route("**/api/workspaces/clair-demo/chart/live-queue**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        enforcedBy: "chart-live-queue-read",
+        queue: [
+          {
+            encounter: {
+              id: "encounter-coco-260501",
+              workspaceId: "clair-demo",
+              patientId: "patient-coco",
+              guardianId: "guardian-coco",
+              encounterNo: "E-260501-0002",
+              visitPurpose: "정기 검진",
+              status: "waiting",
+              checkedInAt: "2026-05-01T09:50:00+09:00",
+              createdAt: "2026-05-01T09:50:00+09:00",
+              updatedAt: "2026-05-01T09:50:00+09:00",
+            },
+            patient: {
+              id: "patient-coco",
+              workspaceId: "clair-demo",
+              patientNo: "P-COCO",
+              name: "코코",
+              species: "dog",
+              breed: "Poodle",
+              estimatedAgeText: "4세",
+              sex: "male",
+              status: "active",
+              createdAt: "2026-05-01T09:30:00+09:00",
+              updatedAt: "2026-05-01T09:30:00+09:00",
+            },
+            primaryGuardian: {
+              id: "guardian-coco",
+              workspaceId: "clair-demo",
+              name: "보호자",
+              createdAt: "2026-05-01T09:30:00+09:00",
+              updatedAt: "2026-05-01T09:30:00+09:00",
+            },
+            queueEntry: {
+              id: "queue-coco-consultation",
+              workspaceId: "clair-demo",
+              encounterId: "encounter-coco-260501",
+              queueType: "consultation",
+              status: "waiting",
+              priority: "normal",
+              sortOrder: 1,
+              enteredAt: "2026-05-01T09:50:00+09:00",
+            },
+            veterinarianName: "이수지",
+          },
+        ],
+      }),
+    });
+  });
+
+  await routePreconsultationContext(page, (encounterId) => ({
+    encounter: {
+      id: encounterId,
+      encounterNo: "E-260430-0005",
+      receptionType: "walk_in",
+      visitPurpose: "예방접종",
+      chiefComplaint: "예방접종 전 건강 확인",
+      checkedInAt: "2026-04-30T16:05:00+09:00",
+      status: "waiting",
+    },
+    queue: { id: `queue-${encounterId}`, status: "waiting" },
+    patient: {
+      id: "patient-haru",
+      patientNo: "P-HARU",
+      name: "하루",
+      species: "dog",
+      breed: "Maltese",
+      estimatedAgeText: "3세",
+      sex: "female",
+    },
+    guardian: { id: "guardian-kang-seoyun", name: "강서윤" },
+    veterinarian: { id: "user-vet", displayName: "이수지" },
+    priorEncounterCount: 1,
+    vitals: [],
+    history: [],
+  }));
+
+  await page.goto(
+    "/w/clair-demo/treatment?encounterId=encounter-haru-260430&modulePanel=open&aside=closed",
+  );
+
+  await expect(
+    page.getByRole("heading", { name: "환자를 선택해 주세요" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This page couldn’t load" })).toHaveCount(0);
+});
+
 test("chart scenario query primes the encounter without locking queue selection", async ({
   page,
 }) => {
