@@ -23,6 +23,11 @@ import {
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import {
+  EmrRightPanel,
+  EmrRightPanelBody,
+  EmrRightPanelFooter,
+} from "@/components/emr/right-panel";
 import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import {
   EmrDateNavigator,
@@ -3409,13 +3414,19 @@ export function BillingRightPanel() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-rightpanel)]">
-      <EmrRightPanelHeader className="justify-between border-b">
+    <>
+      <EmrRightPanel
+        className="bg-[var(--emr-surface-rightpanel)]"
+        header={
+          <EmrRightPanelHeader className="justify-between border-b">
         <h2 className="emr-text-body font-semibold">수납 요약</h2>
         <div className="flex items-center gap-2">
           <EmrStatusBadge label={statusLabel} marker="none" />
         </div>
-      </EmrRightPanelHeader>
+          </EmrRightPanelHeader>
+        }
+      >
+      <EmrRightPanelBody>
       <ScrollArea className="min-h-0 flex-1">
         <div className="px-4 py-3">
           <div className="emr-text-metadata text-muted-foreground">
@@ -3612,6 +3623,7 @@ export function BillingRightPanel() {
           ) : null}
         </div>
       </ScrollArea>
+      </EmrRightPanelBody>
       <BillingPaymentActionFooter
         confirmationState={confirmationState}
         disabled={financialActionDisabled}
@@ -3620,6 +3632,7 @@ export function BillingRightPanel() {
         onMarkPaid={() => setPendingFinancialAction("mark_paid")}
         onMarkUnpaid={() => setPendingFinancialAction("mark_unpaid")}
       />
+      </EmrRightPanel>
       <BillingFinancialPreflightDialog
         action={pendingFinancialAction}
         balance={actionBalance}
@@ -3634,7 +3647,7 @@ export function BillingRightPanel() {
           if (!open) setPendingFinancialAction(null);
         }}
       />
-    </div>
+    </>
   );
 }
 
@@ -3845,7 +3858,7 @@ function BillingPaymentActionFooter({
   onMarkUnpaid: () => void;
 }) {
   return (
-    <div className="grid shrink-0 gap-2 border-t p-4">
+    <EmrRightPanelFooter size="stacked" className="grid gap-2 p-4">
       <Button
         size="default"
         className="w-full"
@@ -3876,6 +3889,6 @@ function BillingPaymentActionFooter({
           미납 처리
         </Button>
       </div>
-    </div>
+    </EmrRightPanelFooter>
   );
 }

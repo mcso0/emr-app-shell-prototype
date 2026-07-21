@@ -59,6 +59,11 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import {
+  EmrRightPanel,
+  EmrRightPanelBody,
+  EmrRightPanelFooter,
+} from "@/components/emr/right-panel";
 import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
@@ -7369,11 +7374,11 @@ function ReceptionWalkInFormDrawer({
 
   if (presentation === "side-panel") {
     return (
-      <div
-        className={getReceptionDrawerSurfaceClassName(presentation)}
+      <>
+        <EmrRightPanelBody
         data-testid="walk-in-reception-dialog"
-      >
-        <ScrollArea className="min-h-0 flex-1">
+        >
+          <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-[var(--clair-spacing-16)] p-[var(--clair-spacing-16)]">
             {timeBlockMessage ? (
               <div>
@@ -7687,8 +7692,12 @@ function ReceptionWalkInFormDrawer({
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
           </div>
-        </ScrollArea>
-        <div className="mt-auto flex shrink-0 items-center justify-end gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]">
+          </ScrollArea>
+        </EmrRightPanelBody>
+        <EmrRightPanelFooter
+          size="single"
+          className="flex items-center justify-end gap-[var(--clair-spacing-8)] p-[var(--clair-spacing-16)]"
+        >
           <div className="flex shrink-0 items-center gap-[var(--clair-spacing-8)]">
             <Button
               type="button"
@@ -7709,8 +7718,8 @@ function ReceptionWalkInFormDrawer({
               {submitting ? "생성 중" : "생성"}
             </Button>
           </div>
-        </div>
-      </div>
+        </EmrRightPanelFooter>
+      </>
     );
   }
 
@@ -8199,11 +8208,11 @@ function ReceptionReservationFormDrawer({
 
   if (presentation === "side-panel") {
     return (
-      <div
-        className={getReceptionDrawerSurfaceClassName(presentation)}
+      <>
+        <EmrRightPanelBody
         data-testid="reservation-create-drawer"
-      >
-        <ScrollArea className="min-h-0 flex-1">
+        >
+          <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-[var(--clair-spacing-16)] p-[var(--clair-spacing-16)]">
             <ReceptionSidePanelSection title="환자/보호자" variant="create">
               <ReceptionSidePanelField
@@ -8473,8 +8482,12 @@ function ReceptionReservationFormDrawer({
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
           </div>
-        </ScrollArea>
-        <div className="mt-auto flex shrink-0 items-center justify-end gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]">
+          </ScrollArea>
+        </EmrRightPanelBody>
+        <EmrRightPanelFooter
+          size="single"
+          className="flex items-center justify-end gap-[var(--clair-spacing-8)] p-[var(--clair-spacing-16)]"
+        >
           <div className="flex shrink-0 items-center gap-[var(--clair-spacing-8)]">
             <Button
               type="button"
@@ -8495,8 +8508,8 @@ function ReceptionReservationFormDrawer({
               {submitting ? "생성 중" : "생성"}
             </Button>
           </div>
-        </div>
-      </div>
+        </EmrRightPanelFooter>
+      </>
     );
   }
 
@@ -8822,12 +8835,8 @@ function ReceptionAppointmentCheckInFormDrawer({
     toast.success("예약 건 접수가 완료되었습니다");
   };
 
-  return (
-    <div
-      className={getReceptionDrawerSurfaceClassName(presentation)}
-      data-testid="appointment-check-in-form-drawer"
-    >
-      <ScrollArea className="min-h-0 flex-1">
+  const formContent = (
+    <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
           <section className="rounded-lg border bg-[var(--emr-status-info-bg)] p-3">
             <div className="emr-text-body font-semibold">접수 생성</div>
@@ -8975,14 +8984,49 @@ function ReceptionAppointmentCheckInFormDrawer({
             />
           </ReceptionFormField>
         </div>
-      </ScrollArea>
+    </ScrollArea>
+  );
+
+  const formActions = (
+    <>
+      <Button
+        size="default"
+        variant="ghost"
+        onClick={() => setActiveDrawer(null)}
+        disabled={submitting}
+      >
+        취소
+      </Button>
+      <Button size="default" onClick={create} disabled={!canCreate}>
+        {submitting ? "저장 중" : "생성"}
+      </Button>
+    </>
+  );
+
+  if (presentation === "side-panel") {
+    return (
+      <>
+        <EmrRightPanelBody data-testid="appointment-check-in-form-drawer">
+          {formContent}
+        </EmrRightPanelBody>
+        <EmrRightPanelFooter
+          size="single"
+          className="flex items-center justify-end gap-2 p-4"
+        >
+          {formActions}
+        </EmrRightPanelFooter>
+      </>
+    );
+  }
+
+  return (
+    <div
+      className={getReceptionDrawerSurfaceClassName(presentation)}
+      data-testid="appointment-check-in-form-drawer"
+    >
+      {formContent}
       <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t bg-card p-4">
-        <Button size="default" variant="ghost" onClick={() => setActiveDrawer(null)} disabled={submitting}>
-          취소
-        </Button>
-        <Button size="default" onClick={create} disabled={!canCreate}>
-          {submitting ? "저장 중" : "생성"}
-        </Button>
+        {formActions}
       </div>
     </div>
   );
@@ -9136,12 +9180,12 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   }
 
   return (
-    <div
-      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-rightpanel)]"
+    <EmrRightPanel
       aria-label={`${moduleLabel} 우측 사이드 패널`}
+      className="bg-[var(--emr-surface-rightpanel)]"
       data-testid="reception-right-panel"
-    >
-      <EmrRightPanelHeader className="justify-between border-b border-[var(--emr-line-default)]">
+      header={
+        <EmrRightPanelHeader className="justify-between border-b border-[var(--emr-line-default)]">
         <div className="flex min-w-0 items-center gap-2">
           <div className="truncate emr-text-panel-title font-semibold text-foreground">
             {title}
@@ -9170,7 +9214,9 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
             <CdsNavigationSidebarIcon />
           )}
         </EmrRightPanelHeaderIconButton>
-      </EmrRightPanelHeader>
+        </EmrRightPanelHeader>
+      }
+    >
       {isReceptionRightPanelDrawer(activeDrawer) ? (
         <ReceptionDrawer
           presentation="side-panel"
@@ -9179,7 +9225,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
       ) : (
         <ReceptionRightPanelEmptyState />
       )}
-    </div>
+    </EmrRightPanel>
   );
 }
 
@@ -9199,7 +9245,7 @@ function getReceptionRightPanelTitle(drawer: DrawerState) {
 
 function ReceptionRightPanelEmptyState() {
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center px-6">
+    <EmrRightPanelBody className="items-center justify-center px-6">
       <EmrEmptyState
         kind="no-data"
         reserveActionSpace={false}
@@ -9208,7 +9254,7 @@ function ReceptionRightPanelEmptyState() {
         testId="reception-right-panel-empty-state"
         title="선택된 접수/예약 건이 없습니다"
       />
-    </div>
+    </EmrRightPanelBody>
   );
 }
 
@@ -9951,7 +9997,8 @@ function ReceptionSidePanelDetail({
       : "-";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <>
+      <EmrRightPanelBody>
       <ScrollArea className="min-h-0 flex-1">
         <div
           className={
@@ -10336,9 +10383,11 @@ function ReceptionSidePanelDetail({
           ) : null}
         </div>
       ) : null}
-      <footer
+      </EmrRightPanelBody>
+      <EmrRightPanelFooter
+        size="single"
         className={cn(
-          "mt-auto flex shrink-0 items-center gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]",
+          "flex items-center gap-[var(--clair-spacing-8)] p-[var(--clair-spacing-16)]",
           canCancelSelectedEncounter ? "justify-between" : "justify-end",
         )}
       >
@@ -10400,8 +10449,8 @@ function ReceptionSidePanelDetail({
             </Button>
           ) : null}
         </div>
-      </footer>
-    </div>
+      </EmrRightPanelFooter>
+    </>
   );
 }
 
