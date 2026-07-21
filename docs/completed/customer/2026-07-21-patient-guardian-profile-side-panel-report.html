@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>환자·보호자 프로필 우측 패널 구현 결과</title>
+    <style>
+      :root { color-scheme: light; font-family: "Pretendard Variable", "Apple SD Gothic Neo", sans-serif; color: #171717; background: #f5f5f5; }
+      body { margin: 0; }
+      main { width: min(960px, calc(100% - 32px)); margin: 32px auto; padding: 32px; border: 1px solid #e5e5e5; border-radius: 16px; background: white; box-sizing: border-box; }
+      h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.3; }
+      h2 { margin: 32px 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.65; }
+      .status { display: inline-flex; margin: 12px 0 20px; padding: 5px 9px; border: 1px solid #f59e0b; border-radius: 8px; color: #92400e; background: #fffbeb; font-weight: 700; }
+      .summary { padding: 16px; border-radius: 12px; background: #f0f8ff; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border: 1px solid #e5e5e5; text-align: left; vertical-align: top; }
+      th { background: #fafafa; }
+      code { padding: 2px 5px; border-radius: 5px; background: #f5f5f5; }
+      ul { padding-left: 20px; }
+      .pass { color: #047857; font-weight: 700; }
+      .fail { color: #b91c1c; font-weight: 700; }
+      .muted { color: #737373; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>환자·보호자 프로필 우측 패널 구현 결과</h1>
+      <p class="muted">기준 Figma <code>27779:70074</code> · 2026-07-21</p>
+      <div class="status">현재 상태: 기능 구현·검증 완료, exact match 판정은 미해결</div>
+
+      <p class="summary">
+        환자·보호자 패널을 Figma의 380px 표면, 151px 프로필 헤더, 4탭 구조로 교체했다.
+        기존 수정·저장, URL/전역 선택, 연결 프로필 이동은 유지했다. 다만 엄격한 픽셀 비교가 0이 아니므로
+        사용자 조건에 따라 최종 완료로 판정하지 않는다.
+      </p>
+
+      <h2>무엇이 바뀌었나</h2>
+      <ul>
+        <li>정보, 진료 이력, 예약, 수납의 환자·보호자 공통 패널을 기능 전용 컴포넌트로 구현했다.</li>
+        <li>Figma 원본 환자·보호자 사진과 22px 보호자·동물 SVG 자산을 적용했다.</li>
+        <li>진료 이력은 날짜별 최신순 그룹으로 구성하고, 잘못되거나 없는 날짜는 <code>날짜 미상</code> 그룹의 마지막에 둔다.</li>
+        <li>수납 카드는 청구 주제, 수납 상태, 요청자·담당자, 결제 수단·승인 금액, 총액 순으로 구성했다.</li>
+        <li>탭 ArrowLeft/Right, Home/End, Escape 닫기, reduced-motion, 독립 내부 스크롤을 적용했다.</li>
+      </ul>
+
+      <h2>Figma 핵심 계약</h2>
+      <table>
+        <tbody>
+          <tr><th>패널</th><td>380 × 1105px, 1px <code>#d4d4d4</code>, radius 12px</td></tr>
+          <tr><th>헤더</th><td>378 × 151px, avatar 84px, identity gap 10px, 4개 탭</td></tr>
+          <tr><th>콘텐츠</th><td>378 × 952px, 헤더 고정·콘텐츠 독립 스크롤</td></tr>
+          <tr><th>타이포그래피</th><td>프로젝트의 실제 로드 폰트 <code>Pretendard Variable</code></td></tr>
+          <tr><th>원본 자산</th><td>프로필 사진 2개, 보호자 glyph SVG, 동물 glyph SVG</td></tr>
+        </tbody>
+      </table>
+
+      <h2>승인 예외 적용</h2>
+      <ul>
+        <li><strong>진료 이력:</strong> 날짜 그룹과 그룹 내부 최신순 정렬을 적용했다. 이 부분의 raw diff는 의도적 구조 차이를 포함한다.</li>
+        <li><strong>수납:</strong> 리포트의 결제·금액 위계를 사용하고 Figma 카드의 표면 스타일을 유지했다. 이 부분의 raw diff도 의도적 정보 추가를 포함한다.</li>
+      </ul>
+
+      <h2>픽셀 비교</h2>
+      <p>
+        Figma PNG를 흰색 위에 합성한 뒤 Storybook DOM을 브라우저 380 × 1105, DPR 1, CSS pixel scale,
+        무크롭으로 캡처했다. 아래 수치는 전체 화면 raw diff이며 승인 예외도 마스킹하지 않았다.
+      </p>
+      <table>
+        <thead><tr><th>상태</th><th>MAE</th><th>max-channel Δ &gt; 10</th><th>판정</th></tr></thead>
+        <tbody>
+          <tr><td>환자 정보</td><td>5.7537</td><td>6.9007%</td><td class="fail">불일치 잔존</td></tr>
+          <tr><td>보호자 정보</td><td>7.7329</td><td>10.0945%</td><td class="fail">불일치 잔존</td></tr>
+          <tr><td>환자 예약</td><td>5.1611</td><td>6.1372%</td><td class="fail">불일치 잔존</td></tr>
+          <tr><td>환자 진료 이력 · 승인 예외</td><td>5.7248</td><td>7.6204%</td><td>예외 구조 포함</td></tr>
+          <tr><td>보호자 수납 · 승인 예외</td><td>10.9905</td><td>15.0614%</td><td>예외 구조 포함</td></tr>
+          <tr><td>환자 예약 빈 상태</td><td>1.4372</td><td>1.9819%</td><td class="fail">불일치 잔존</td></tr>
+          <tr><td>환자 진료 이력 빈 상태</td><td>1.4231</td><td>1.9202%</td><td class="fail">불일치 잔존</td></tr>
+          <tr><td>환자 수납 빈 상태</td><td>1.3633</td><td>1.8885%</td><td class="fail">불일치 잔존</td></tr>
+        </tbody>
+      </table>
+      <p>
+        패널·헤더·콘텐츠 치수는 일치한다. 남은 차이는 주로 Figma와 Chromium의 텍스트·벡터 래스터화,
+        승인 예외의 정보 구조, 그리고 Figma fixture의 내부 데이터 불일치에 분포한다.
+        따라서 <strong>exact match라는 표현은 사용하지 않는다.</strong>
+      </p>
+
+      <h2>기능·데이터·권한 보존</h2>
+      <ul>
+        <li>기존 환자·보호자 PATCH 저장과 실패 toast, 연결 프로필 이동, drawer URL/전역 상태를 보존했다.</li>
+        <li>API, DB, migration, RLS, 권한 정책, 공용 토큰, 새 의존성은 변경하지 않았다.</li>
+        <li>활동 탭은 현재 mock/read-model 데이터다. live projection은 별도 권한·RLS 설계와 승인이 필요하다.</li>
+        <li>Figma 프로필 이미지는 시각 fixture이며 실제 Patient/Guardian avatar 필드로 저장하지 않는다.</li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li><span class="pass">통과</span> 대상 ESLint 및 <code>npx tsc --noEmit</code></li>
+        <li><span class="pass">통과</span> 패널 집중 Playwright 3건 + 고객 공통 패널 4건</li>
+        <li><span class="pass">통과</span> Storybook build, Next.js production build</li>
+        <li><span class="pass">통과</span> 380 × 1105, 151px 헤더, 탭 키보드, Escape, reduced-motion</li>
+        <li><span class="fail">전체 기준선 미통과</span> 전체 117건 중 49건까지 실행 후 중단: 32 통과, 기존 업무시간·날짜·캘린더 fixture·등록 타이포그래피 불일치 15건, 수정 전 프로필 저장 assertion 1건, 중단 1건. 프로필 assertion은 수정 후 집중 테스트로 재통과했다.</li>
+      </ul>
+
+      <h2>리스크와 다음 결정</h2>
+      <ul>
+        <li>보호자 정보 Figma는 카드 2개를 그리면서 개수 배지를 1로 표시한다. 실제 화면은 데이터 개수를 사용하고, 픽셀 Story만 시안 값을 격리 재현한다.</li>
+        <li>동기 mock 투영이어서 별도 로딩·부분 실패 UI는 연결하지 않았다. live API 작업 때 디자인·권한 계약이 필요하다.</li>
+        <li>완료하려면 허용할 정량 픽셀 임계값을 승인하거나, Figma와 같은 렌더러의 비교 기준을 제공해 0-diff 판정을 다시 수행해야 한다.</li>
+      </ul>
+    </main>
+  </body>
+</html>
