@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>우측 사이드패널 공통 레이아웃 구현 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f6f7f9;
+        --surface: #ffffff;
+        --line: #e5e7eb;
+        --text: #1f2937;
+        --muted: #5f6b7a;
+        --success-bg: #dcfce7;
+        --success-text: #166534;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font-family: Pretendard, system-ui, sans-serif;
+        line-height: 1.6;
+      }
+      main { width: min(900px, calc(100% - 32px)); margin: 40px auto; }
+      h1 { margin: 0; font-size: 28px; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p { margin: 10px 0 0; color: var(--muted); }
+      .status {
+        display: inline-block;
+        margin: 16px 0;
+        border-radius: 999px;
+        background: var(--success-bg);
+        color: var(--success-text);
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .card {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 22px;
+      }
+      ul { margin: 0; padding-left: 20px; color: var(--muted); }
+      li + li { margin-top: 6px; }
+      code { border-radius: 4px; background: #f3f4f6; padding: 2px 5px; color: var(--text); }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align: left; }
+      th { color: var(--muted); font-size: 12px; }
+      tr:last-child td { border-bottom: 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="status">구현 및 검증 완료</span>
+      <h1>우측 사이드패널 공통 레이아웃 구현 결과</h1>
+      <p>
+        접수 생성 폼의 하단 액션이 잘리던 문제를 한 화면의 높이 보정이 아니라,
+        표준 우측 패널의 공통 구조로 해결했다. 긴 입력 내용은 본문에서만 스크롤되고
+        하단 액션은 패널 내부의 고정 행으로 계속 보인다.
+      </p>
+
+      <section class="card">
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>EmrRightPanel</code>, <code>EmrRightPanelBody</code>, <code>EmrRightPanelFooter</code>를 추가했다.</li>
+          <li>Header는 기존 56px을 유지하고, Body만 남은 높이를 사용한다.</li>
+          <li>Footer는 Imaging 53px, Reception 65px, Billing 105px이며 Lab은 Footer 없이 Body가 끝까지 채운다.</li>
+          <li>Reception의 접수 생성, 예약 생성, 예약 접수, 상세 화면과 Lab, Imaging, Billing에 공통 구조를 적용했다.</li>
+          <li>WorkspaceFrame, 기존 반응형 정책, overlay drawer, content aside, staff profile 전용 패널은 변경하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>검증 결과</h2>
+        <table>
+          <thead><tr><th>검증</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>우측 패널 Playwright</td><td>5개 통과: 공통 Header/Body, Footer 0·53·65·105px, 긴 본문 스크롤</td></tr>
+            <tr><td>Reception 좁은 화면 회귀</td><td>1개 통과: 상세 편집의 긴 내용과 Footer 사용 가능</td></tr>
+            <tr><td>ESLint / TypeScript</td><td>통과</td></tr>
+            <tr><td>Next.js production build / Storybook build</td><td>통과</td></tr>
+            <tr><td>문서 링크 / secret scan / diff check</td><td>통과</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>남은 확인 사항</h2>
+        <p>
+          이번 변경은 로컬 격리 브랜치에서 검증됐다. production 배포나 main 병합은
+          포함하지 않았다. Next build에서는 NFT 추적 경고가, Storybook build에서는 asset/chunk
+          경고가 출력됐지만, 두 빌드는 성공했다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

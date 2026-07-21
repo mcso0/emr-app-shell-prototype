@@ -164,6 +164,9 @@
   --emr-sidepanel-header-padding-x: var(--clair-spacing-16);
   --emr-sidepanel-header-padding-y: 0px;
   --emr-rightpanel-header-height: 56px;
+  --emr-rightpanel-footer-compact-height: 53px;
+  --emr-rightpanel-footer-single-height: 65px;
+  --emr-rightpanel-footer-stacked-height: 105px;
   --emr-profile-panel-width: 380px;
   --emr-profile-panel-gap: var(--clair-spacing-10);
   --emr-profile-header-height: 150px;

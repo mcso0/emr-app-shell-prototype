@@ -32,6 +32,11 @@ import {
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import {
+  EmrRightPanel,
+  EmrRightPanelBody,
+  EmrRightPanelFooter,
+} from "@/components/emr/right-panel";
 import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import {
@@ -2482,12 +2487,12 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
   const defaultExpandedReceiptId = visibleReceipts[0]?.id;
 
   return (
-    <div
+    <EmrRightPanel
       id="lab-receipt-panel"
-      className="group/lab-receipt-panel flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-rightpanel)]"
+      className="group/lab-receipt-panel bg-[var(--emr-surface-rightpanel)]"
       data-testid="lab-receipt-panel"
-    >
-      <EmrRightPanelHeader>
+      header={
+        <EmrRightPanelHeader>
         <div className="relative flex min-w-0 max-w-full items-center">
           <h2 className="min-w-0 truncate text-sm font-semibold">장비 검사 수신함</h2>
           <span className="pointer-events-auto absolute left-full z-10 ml-1 flex w-8 shrink-0">
@@ -2500,7 +2505,10 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
             </EmrRightPanelHeaderIconButton>
           </span>
         </div>
-      </EmrRightPanelHeader>
+        </EmrRightPanelHeader>
+      }
+    >
+      <EmrRightPanelBody>
       <EmrDateNavigator
         className="px-3"
         dateLabel={dateLabel}
@@ -2587,7 +2595,8 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
           onConfirm={() => setReceiptToPaste(null)}
         />
       </Dialog>
-    </div>
+      </EmrRightPanelBody>
+    </EmrRightPanel>
   );
 }
 
@@ -3582,13 +3591,19 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
   const fileAttachments = detail.attachments.filter((attachment) => !attachment.mimeType.startsWith("image/"));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-rightpanel)]" data-testid="imaging-summary-panel">
-      <EmrRightPanelHeader className="justify-between">
+    <EmrRightPanel
+      className="bg-[var(--emr-surface-rightpanel)]"
+      data-testid="imaging-summary-panel"
+      header={
+        <EmrRightPanelHeader className="justify-between">
         <h2 className="min-w-0 truncate text-sm font-semibold">종합소견</h2>
         <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
           {sameEncounterOrderCount}
         </Badge>
-      </EmrRightPanelHeader>
+        </EmrRightPanelHeader>
+      }
+    >
+      <EmrRightPanelBody>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 p-3">
           <section className="overflow-hidden rounded-lg border bg-card">
@@ -3660,12 +3675,13 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
           </section>
         </div>
       </ScrollArea>
-      <div className="grid grid-cols-2 gap-2 border-t p-3">
+      </EmrRightPanelBody>
+      <EmrRightPanelFooter size="compact" className="grid grid-cols-2 gap-2 p-3">
         <Button variant="outline" size="sm" className="bg-card">
           취소
         </Button>
         <Button size="sm">저장</Button>
-      </div>
-    </div>
+      </EmrRightPanelFooter>
+    </EmrRightPanel>
   );
 }
