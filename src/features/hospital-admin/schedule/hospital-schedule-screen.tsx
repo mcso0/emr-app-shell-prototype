@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrEmptyState } from "@/components/emr/empty-state";
@@ -62,6 +62,7 @@ import type {
   HospitalScheduleShift,
   HospitalScheduleShiftKind,
 } from "./types";
+import { HospitalScheduleV2Screen } from "./schedule-v2-screen";
 
 const weekdayLabels = ["월", "화", "수", "목", "금", "토", "일"];
 const roleLabels: Record<HospitalScheduleRole, string> = {
@@ -756,8 +757,11 @@ function StaffDetailSheet({ staffId, onClose }: { staffId: string | null; onClos
   );
 }
 
-export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string }) {
+export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string }) {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const currentQuery = searchParams.toString();
   const { hydrated, hydrate, session } = useAuthClient();
   const surface = useHospitalScheduleStore((state) => state.surface);
   const setSurface = useHospitalScheduleStore((state) => state.setSurface);
@@ -815,6 +819,11 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
         return;
       }
       hydrateRemoteSchedule(remote);
+      if (remote.weekStart !== requestedWeekStart) {
+        const params = new URLSearchParams(currentQuery);
+        params.set("weekStart", remote.weekStart);
+        router.replace(`${pathname}?${params.toString()}`);
+      }
     };
 
     setDataState("loading");
@@ -841,7 +850,10 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
   }, [
     hydrateRemoteSchedule,
     hydrated,
+    currentQuery,
+    pathname,
     requestedWeekStart,
+    router,
     session?.role,
     setDataState,
     workspaceId,
@@ -999,6 +1011,34 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
       </Dialog>
     </main>
   );
+}
+
+export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string }) {
+  const { hydrated, hydrate, session } = useAuthClient();
+  const [modelVersion, setModelVersion] = useState<"v1" | "v2">("v1");
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated || session?.role !== "supabase") return;
+    let cancelled = false;
+    void fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/schedule`)
+      .then(async (response) => {
+        const body = (await response.json().catch(() => null)) as { modelVersion?: unknown } | null;
+        if (!cancelled) setModelVersion(body?.modelVersion === "v2" ? "v2" : "v1");
+      })
+      .catch(() => {
+        if (!cancelled) setModelVersion("v1");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, session?.role, workspaceId]);
+
+  if (modelVersion === "v2") return <HospitalScheduleV2Screen workspaceId={workspaceId} />;
+  return <HospitalScheduleV1Screen workspaceId={workspaceId} />;
 }
 
 function SummaryCard({ icon, label, value, description, tone = "default" }: { icon: ReactNode; label: string; value: string; description: string; tone?: "default" | "success" | "warning" }) {

@@ -671,16 +671,11 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
             : { data: rows.currentWorkSnapshot ?? null, error: null },
         );
       }
-      const weekStart = args.p_week_start;
       return Promise.resolve(
         rows.scheduleError
           ? { data: null, error: { message: "schedule_read_failed" } }
           : {
-              data:
-                (typeof weekStart === "string"
-                  ? rows.scheduleSnapshots?.[weekStart]
-                  : undefined) ??
-                rows.scheduleSnapshot ?? { staff: [], shifts: [] },
+              data: createProfileScheduleProjection(rows, args),
               error: null,
             },
       );
@@ -704,5 +699,55 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
         };
       },
     },
+  };
+}
+
+function createProfileScheduleProjection(
+  rows: SupabaseProfileRows,
+  args: Record<string, unknown>,
+) {
+  const startDate = typeof args.p_start_date === "string" ? args.p_start_date : "0000-00-00";
+  const endDate = typeof args.p_end_date === "string" ? args.p_end_date : "9999-12-31";
+  const snapshots = rows.scheduleSnapshots
+    ? Object.values(rows.scheduleSnapshots)
+    : [rows.scheduleSnapshot ?? { staff: [], shifts: [] }];
+  const publishedSnapshots = snapshots.filter((snapshot) => {
+    const week = snapshot.week;
+    return typeof week === "object" && week !== null &&
+      ((week as { publicationState?: unknown }).publicationState === "published" ||
+        (week as { publicationState?: unknown }).publicationState === "changed");
+  });
+  const staffProfileId = publishedSnapshots
+    .flatMap((snapshot) => (Array.isArray(snapshot.staff) ? snapshot.staff : []))
+    .find((staff) =>
+      typeof staff === "object" &&
+      staff !== null &&
+      (staff as { membershipId?: unknown }).membershipId === "membership-suji",
+    );
+  const shifts = publishedSnapshots
+    .flatMap((snapshot) => (Array.isArray(snapshot.shifts) ? snapshot.shifts : []))
+    .filter((shift) => {
+      const date = typeof shift === "object" && shift !== null
+        ? (shift as { date?: unknown }).date
+        : undefined;
+      return typeof date === "string" && date >= startDate && date <= endDate;
+    })
+    .map((shift) => {
+      const record = shift as Record<string, unknown>;
+      return {
+        date: record.date,
+        start_minutes: record.startMinutes,
+        end_minutes: record.endMinutes,
+        kind: record.kind,
+        work_label: record.workLabel,
+        location_label: record.locationLabel,
+      };
+    });
+  return {
+    scheduleProfileId:
+      staffProfileId && typeof (staffProfileId as { id?: unknown }).id === "string"
+        ? (staffProfileId as { id: string }).id
+        : null,
+    shifts,
   };
 }
