@@ -98,7 +98,7 @@ export type SupabaseStaffOperationalProfileClient = {
   from(table: string): SupabaseOperationalProfileQueryBuilder;
   rpc(
     functionName:
-      | "hospital_schedule_read_snapshot"
+      | "hospital_schedule_read_profile_schedule"
       | "staff_current_work_status_snapshot",
     args: Record<string, unknown>,
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
@@ -298,47 +298,31 @@ export function createSupabaseStaffOperationalProfileGateway(
           ...(await resolveAvatar(client, profiles[0])),
         };
 
-        const weekStarts = getAvailabilityWeekStarts(date);
-        const [scheduleReads, currentWorkRead] = await Promise.all([
-          Promise.all(
-            weekStarts.map(async (weekStart) => ({
-              weekStart,
-              ...(await client.rpc("hospital_schedule_read_snapshot", {
-                p_week_start: weekStart,
-                p_workspace_id: workspaceId,
-              })),
-            })),
-          ),
+        const [profileScheduleRead, currentWorkRead] = await Promise.all([
+          client.rpc("hospital_schedule_read_profile_schedule", {
+            p_workspace_id: workspaceId,
+            p_user_id: userId,
+            p_start_date: date,
+            p_end_date: addDays(date, 13),
+          }),
           client.rpc("staff_current_work_status_snapshot", {
             p_day: date,
             p_user_id: userId,
             p_workspace_id: workspaceId,
           }),
         ]);
-        const readableSnapshots = scheduleReads
-          .filter((read) => !read.error)
-          .map((read) => read.data);
-        const publishedSnapshots = readableSnapshots.filter(isPublishedSnapshot);
-        const todayWeekStart = getWeekStart(date);
-        const todayRead = scheduleReads.find(
-          (read) => read.weekStart === todayWeekStart,
-        );
-        const scheduleProfileId = findScheduleProfileId(
-          readableSnapshots,
-          String(membership.id),
-        );
-        const availabilityError = scheduleReads.some((read) => read.error);
-        const shiftError = Boolean(todayRead?.error || currentWorkRead.error);
+        const profileSchedule = profileScheduleRead.error
+          ? null
+          : parseProfileSchedule(profileScheduleRead.data);
+        const scheduleProfileId = profileSchedule?.scheduleProfileId;
+        const availabilityError = Boolean(profileScheduleRead.error);
+        const shiftError = Boolean(profileScheduleRead.error || currentWorkRead.error);
 
         return {
           ok: true,
           availability: availabilityError
             ? null
-            : readAvailability(
-                publishedSnapshots,
-                scheduleProfileId,
-                date,
-              ),
+            : readAvailabilityFromProfileSchedule(profileSchedule?.shifts ?? [], date),
           ...(availabilityError
             ? { availabilityError: "schedule_read_failed" as const }
             : {}),
@@ -349,7 +333,7 @@ export function createSupabaseStaffOperationalProfileGateway(
           ...(scheduleProfileId ? { scheduleProfileId } : {}),
           shift: shiftError
             ? null
-            : readShift(publishedSnapshots, scheduleProfileId, date),
+            : profileSchedule?.shifts.find((shift) => shift.date === date) ?? null,
           ...(shiftError
             ? { shiftError: "schedule_read_failed" as const }
             : {}),
@@ -503,95 +487,55 @@ function resolveMembershipStatus(
   return "active";
 }
 
-function getAvailabilityWeekStarts(date: string) {
-  const endWeekStart = getWeekStart(addDays(date, 13));
-  const weekStarts: string[] = [];
-  for (
-    let weekStart = getWeekStart(date);
-    weekStart <= endWeekStart;
-    weekStart = addDays(weekStart, 7)
-  ) {
-    weekStarts.push(weekStart);
-  }
-  return weekStarts;
-}
-
-function findScheduleProfileId(
-  snapshots: unknown[],
-  membershipId: string,
-) {
-  for (const value of snapshots) {
-    const staffProfileId = asArray(asRecord(value).staff)
-      .map(asRecord)
-      .find((staff) => staff.membershipId === membershipId)?.id;
-    if (typeof staffProfileId === "string") return staffProfileId;
-  }
-  return undefined;
-}
-
-function readShift(
-  snapshots: unknown[],
-  scheduleProfileId: string | undefined,
-  date: string,
-): StaffOperationalShift | null {
-  if (!scheduleProfileId) return null;
-  const source = snapshots
-    .flatMap((snapshot) => asArray(asRecord(snapshot).shifts))
+function parseProfileSchedule(value: unknown): {
+  scheduleProfileId?: string;
+  shifts: StaffOperationalShift[];
+} {
+  const record = asRecord(value);
+  const scheduleProfileId = record.scheduleProfileId;
+  const shifts = asArray(record.shifts)
     .map(asRecord)
-    .filter(
-      (item) =>
-        item.staffProfileId === scheduleProfileId && item.date === date,
+    .map((shift) =>
+      parseShift({
+        date: shift.date,
+        startMinutes: shift.start_minutes,
+        endMinutes: shift.end_minutes,
+        kind: shift.kind,
+        workLabel: shift.work_label,
+        locationLabel: shift.location_label,
+      }),
     )
-    .sort((a, b) => Number(a.startMinutes) - Number(b.startMinutes))[0];
-  return parseShift(source);
+    .filter((shift): shift is StaffOperationalShift => Boolean(shift));
+  return {
+    ...(typeof scheduleProfileId === "string" ? { scheduleProfileId } : {}),
+    shifts,
+  };
 }
 
-function readAvailability(
-  snapshots: unknown[],
-  scheduleProfileId: string | undefined,
+function readAvailabilityFromProfileSchedule(
+  shifts: StaffOperationalShift[],
   date: string,
 ): StaffOperationalAvailability | null {
-  if (!scheduleProfileId) return null;
   const endDate = addDays(date, 13);
-  const shifts = snapshots
-    .flatMap((snapshot) => asArray(asRecord(snapshot).shifts))
-    .map(asRecord)
-    .filter(
-      (item) =>
-        item.staffProfileId === scheduleProfileId &&
-        typeof item.date === "string" &&
-        item.date >= date &&
-        item.date <= endDate,
-    )
+  const scheduled = shifts
+    .filter((shift) => shift.date >= date && shift.date <= endDate)
     .sort(
-      (a, b) =>
-        String(a.date).localeCompare(String(b.date)) ||
-        Number(a.startMinutes) - Number(b.startMinutes),
+      (first, second) =>
+        first.date.localeCompare(second.date) || first.startMinutes - second.startMinutes,
     );
-  const absence = shifts.find(
+  const absence = scheduled.find(
     (shift) => shift.kind === "leave" || shift.kind === "off",
   );
-  if (
-    !absence ||
-    typeof absence.date !== "string" ||
-    (absence.kind !== "leave" && absence.kind !== "off")
-  ) {
-    return null;
-  }
-  const absenceDate = absence.date;
-  const returnShift = shifts
-    .filter(
-      (shift) =>
-        typeof shift.date === "string" &&
-        shift.date > absenceDate &&
-        shift.kind !== "leave" &&
-        shift.kind !== "off",
-    )
-    .map(parseShift)
-    .find((shift): shift is StaffOperationalShift => Boolean(shift));
+  if (!absence || (absence.kind !== "leave" && absence.kind !== "off")) return null;
 
+  const returnShift = scheduled.find(
+    (shift) =>
+      shift.date > absence.date &&
+      shift.kind !== "leave" &&
+      shift.kind !== "off",
+  );
   return {
-    event: { date: absenceDate, kind: absence.kind },
+    event: { date: absence.date, kind: absence.kind },
     ...(returnShift ? { returnShift } : {}),
   };
 }
@@ -675,11 +619,6 @@ function isCurrentWorkSource(value: unknown): value is StaffCurrentWorkInfo["sou
     value === "encounter" ||
     value === "operating_hours"
   );
-}
-
-function isPublishedSnapshot(value: unknown) {
-  const state = asRecord(asRecord(value).week).publicationState;
-  return state === "published" || state === "changed";
 }
 
 function isShiftKind(value: unknown): value is StaffOperationalShift["kind"] {

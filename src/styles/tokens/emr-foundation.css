@@ -79,6 +79,29 @@
   --emr-surface-disabled: oklch(0.955 0.001 286);
   --emr-surface-floating: var(--emr-surface-3);
 
+  /* Schedule v2: feature aliases only. Components must not embed palette or geometry values. */
+  --emr-schedule-grid-staff-column: 13rem;
+  --emr-schedule-grid-day-column-min: 9rem;
+  --emr-schedule-grid-row-min-height: 7rem;
+  --emr-schedule-grid-cell-padding: var(--clair-spacing-8);
+  --emr-schedule-grid-header-bg: var(--emr-surface-muted);
+  --emr-schedule-grid-divider: var(--emr-line-hairline);
+  --emr-schedule-shift-clinical-bg: var(--emr-status-info-bg);
+  --emr-schedule-shift-clinical-border: var(--emr-status-info-border);
+  --emr-schedule-shift-clinical-text: var(--emr-status-info-text);
+  --emr-schedule-shift-support-bg: color-mix(in srgb, var(--clair-color-atomic-purple-400) 8%, var(--emr-surface-panel));
+  --emr-schedule-shift-support-border: var(--clair-color-atomic-purple-200);
+  --emr-schedule-shift-support-text: var(--clair-color-atomic-purple-800);
+  --emr-schedule-shift-reception-bg: var(--emr-status-success-bg);
+  --emr-schedule-shift-reception-border: var(--emr-status-success-border);
+  --emr-schedule-shift-reception-text: var(--emr-status-success-text);
+  --emr-schedule-shift-leave-bg: var(--emr-status-warning-bg);
+  --emr-schedule-shift-leave-border: var(--emr-status-warning-border);
+  --emr-schedule-shift-leave-text: var(--emr-status-warning-text);
+  --emr-schedule-shift-off-bg: var(--emr-surface-muted);
+  --emr-schedule-shift-off-border: var(--emr-border-default);
+  --emr-schedule-shift-off-text: var(--emr-text-secondary);
+
   --emr-navrail-bg: var(--clair-color-atomic-gray-900);
   --emr-navrail-width: 52px;
   --emr-navrail-padding: var(--clair-spacing-10);
