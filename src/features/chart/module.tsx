@@ -1211,10 +1211,12 @@ export function ChartSidePanel({
     if (liveQueueStatus !== "ready") return;
     if (!selectedEncounterId) return;
     if (liveItems.some((item) => item.id === selectedEncounterId)) return;
+    if (explicitQueryEncounterId === selectedEncounterId) return;
     clearStoredSelectedChartEncounterId(workspaceId);
     setSelectedQueueItem("treatment", "");
     selectEncounter("");
   }, [
+    explicitQueryEncounterId,
     liveItems,
     liveQueueStatus,
     selectEncounter,
