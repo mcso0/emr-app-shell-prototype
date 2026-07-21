@@ -16,6 +16,8 @@ import {
   CdsMedicalWindIcon,
 } from "@/components/cds-icons/medical-and-domain";
 import {
+  CdsNavigationArrowDownIcon,
+  CdsNavigationArrowUpIcon,
   CdsNavigationChevronDownIcon,
   CdsNavigationChevronUpIcon,
 } from "@/components/cds-icons/navigation";
@@ -45,6 +47,11 @@ import type {
   ChartPreconsultationHistoryEntry,
   ChartPreconsultationVitalMeasurement,
 } from "@/features/chart/preconsultation-context";
+import {
+  buildBloodPressureDelta,
+  buildSingleVitalDelta,
+  type VitalDelta,
+} from "@/features/chart/vital-comparison-delta";
 import {
   emptyPatientVitalWriteInput,
   hasPatientVitalValue,
@@ -800,7 +807,10 @@ type VitalDefinition = {
   label: string;
   icon: ReactNode;
   format: (measurement: ChartPreconsultationVitalMeasurement) => string;
-  delta: (current: ChartPreconsultationVitalMeasurement, previous: ChartPreconsultationVitalMeasurement) => string | null;
+  delta: (
+    current: ChartPreconsultationVitalMeasurement,
+    previous: ChartPreconsultationVitalMeasurement,
+  ) => VitalDelta | null;
 };
 
 const vitalDefinitions: VitalDefinition[] = [
@@ -810,7 +820,12 @@ const vitalDefinitions: VitalDefinition[] = [
     icon: <CdsMedicalWeightIcon className="size-4" aria-hidden="true" />,
     format: (value) => formatOptionalNumber(value.weightKg, "kg", 2),
     delta: (current, previous) =>
-      formatDelta(current.weightKg, previous.weightKg, 2, "kg", "증가", "감소"),
+      buildSingleVitalDelta({
+        current: current.weightKg,
+        previous: previous.weightKg,
+        precision: 2,
+        label: "체중",
+      }),
   },
   {
     key: "temperatureC",
@@ -818,7 +833,12 @@ const vitalDefinitions: VitalDefinition[] = [
     icon: <CdsMedicalThermometerIcon className="size-4" aria-hidden="true" />,
     format: (value) => formatOptionalNumber(value.temperatureC, "°C", 1),
     delta: (current, previous) =>
-      formatDelta(current.temperatureC, previous.temperatureC, 1, "°C", "상승", "하강"),
+      buildSingleVitalDelta({
+        current: current.temperatureC,
+        previous: previous.temperatureC,
+        precision: 1,
+        label: "체온",
+      }),
   },
   {
     key: "bloodPressureSystolicMmhg",
@@ -826,14 +846,16 @@ const vitalDefinitions: VitalDefinition[] = [
     icon: <CdsMedicalHeartPulseIcon className="size-4" aria-hidden="true" />,
     format: (value) => formatBloodPressure(value),
     delta: (current, previous) =>
-      formatDelta(
-        current.bloodPressureSystolicMmhg,
-        previous.bloodPressureSystolicMmhg,
-        0,
-        "",
-        "상승",
-        "하강",
-      ),
+      buildBloodPressureDelta({
+        current: {
+          systolic: current.bloodPressureSystolicMmhg,
+          diastolic: current.bloodPressureDiastolicMmhg,
+        },
+        previous: {
+          systolic: previous.bloodPressureSystolicMmhg,
+          diastolic: previous.bloodPressureDiastolicMmhg,
+        },
+      }),
   },
   {
     key: "respiratoryRateRpm",
@@ -841,14 +863,12 @@ const vitalDefinitions: VitalDefinition[] = [
     icon: <CdsMedicalWindIcon className="size-4" aria-hidden="true" />,
     format: (value) => formatOptionalNumber(value.respiratoryRateRpm, "회/분", 0),
     delta: (current, previous) =>
-      formatDelta(
-        current.respiratoryRateRpm,
-        previous.respiratoryRateRpm,
-        0,
-        "회/분",
-        "증가",
-        "감소",
-      ),
+      buildSingleVitalDelta({
+        current: current.respiratoryRateRpm,
+        previous: previous.respiratoryRateRpm,
+        precision: 0,
+        label: "호흡수",
+      }),
   },
 ];
 
@@ -933,7 +953,6 @@ function VitalRow({
       </th>
       {vitalDefinitions.map((vital) => {
         const delta = current && previous ? vital.delta(measurement, previous) : null;
-        const increase = delta?.startsWith("↑") ?? false;
         return (
           <td
             key={vital.key}
@@ -944,23 +963,56 @@ function VitalRow({
           >
             <div className="flex items-center justify-between gap-2">
               <span>{vital.format(measurement)}</span>
-              {delta && delta !== "—" ? (
-                <span
-                  className={cn(
-                    "shrink-0 text-sm",
-                    increase
-                      ? "text-[var(--emr-status-danger-text)]"
-                      : "text-[var(--emr-status-info-text)]",
-                  )}
-                >
-                  {delta}
-                </span>
-              ) : null}
+              {delta ? <VitalDeltaIndicator delta={delta} /> : null}
             </div>
           </td>
         );
       })}
     </tr>
+  );
+}
+
+function VitalDeltaIndicator({ delta }: { delta: VitalDelta }) {
+  return (
+    <span
+      role="img"
+      aria-label={delta.accessibleLabel}
+      className="shrink-0 text-sm"
+    >
+      <span
+        aria-hidden="true"
+        className="inline-flex items-center gap-0.5 text-[var(--emr-text-tertiary)]"
+      >
+        <span>(</span>
+        {delta.parts.map((part, index) => (
+          <span
+            key={`${index}-${part.direction}`}
+            className="inline-flex items-center gap-0.5"
+          >
+            {index > 0 ? <span>/</span> : null}
+            <span
+              data-direction={part.direction}
+              className={cn(
+                "inline-flex items-center gap-0.5",
+                part.direction === "increase"
+                  ? "text-[var(--emr-status-danger-text)]"
+                  : part.direction === "decrease"
+                    ? "text-[var(--emr-status-info-text)]"
+                    : "text-[var(--emr-text-tertiary)]",
+              )}
+            >
+              {part.direction === "increase" ? (
+                <CdsNavigationArrowUpIcon className="size-3" />
+              ) : part.direction === "decrease" ? (
+                <CdsNavigationArrowDownIcon className="size-3" />
+              ) : null}
+              <span>{part.value}</span>
+            </span>
+          </span>
+        ))}
+        <span>)</span>
+      </span>
+    </span>
   );
 }
 
@@ -1345,23 +1397,13 @@ function formatOptionalNumber(value: number | undefined, unit: string, precision
 }
 
 function formatBloodPressure(value: ChartPreconsultationVitalMeasurement) {
-  if (value.bloodPressureSystolicMmhg === undefined) return "—";
-  const diastolic = value.bloodPressureDiastolicMmhg;
-  return `${value.bloodPressureSystolicMmhg}${diastolic === undefined ? "" : `/${diastolic}`} mmHg`;
-}
-
-function formatDelta(
-  current: number | undefined,
-  previous: number | undefined,
-  precision: number,
-  unit: string,
-  increaseLabel: string,
-  decreaseLabel: string,
-) {
-  if (current === undefined || previous === undefined) return null;
-  const delta = current - previous;
-  if (Math.abs(delta) < 10 ** -precision / 2) return "—";
-  return `${delta > 0 ? "↑" : "↓"} ${Math.abs(delta).toFixed(precision)}${unit ? ` ${unit}` : ""} ${delta > 0 ? increaseLabel : decreaseLabel}`;
+  if (
+    value.bloodPressureSystolicMmhg === undefined ||
+    value.bloodPressureDiastolicMmhg === undefined
+  ) {
+    return "—";
+  }
+  return `${value.bloodPressureSystolicMmhg}/${value.bloodPressureDiastolicMmhg} mmHg`;
 }
 
 function getContextErrorDescription(reason?: string) {
