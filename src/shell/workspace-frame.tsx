@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
 import {
@@ -34,6 +34,7 @@ export function WorkspaceFrame({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: WorkspaceFrameProps) {
+  const prefersReducedMotion = useReducedMotion();
   const {
     activeDrawer,
     contentAsideOpen,
@@ -97,10 +98,13 @@ export function WorkspaceFrame({
       ? undefined
       : activeDrawer?.id);
   const drawerWidth =
-    activeDrawer?.type === "hospital-order" || CommonProfileDrawer
+    CommonProfileDrawer
+      ? 380
+      : activeDrawer?.type === "hospital-order"
       ? SHELL_LAYOUT.drawer.largeWidth
       : SHELL_LAYOUT.drawer.defaultWidth;
-  const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
+  const shouldShowShellDrawerHeader =
+    activeDrawer?.type !== "hospital-order" && !CommonProfileDrawer;
   const drawerMotionKey = activeDrawer
     ? `${activeDrawer.type}-${activeDrawer.id}`
     : undefined;
@@ -240,8 +244,16 @@ export function WorkspaceFrame({
                   initial={{ x: 480, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: 480, opacity: 0 }}
-                  transition={{ duration: 0.18, ease: "easeOut" }}
-                  className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-border-strong)] bg-[var(--emr-surface-rightpanel)] shadow-2xl"
+                  transition={{
+                    duration: CommonProfileDrawer && prefersReducedMotion ? 0 : 0.18,
+                    ease: "easeOut",
+                  }}
+                  className={cn(
+                    "absolute bottom-0 right-0 top-0",
+                    CommonProfileDrawer
+                      ? "bg-transparent"
+                      : "border-l border-[var(--emr-border-strong)] bg-[var(--emr-surface-rightpanel)] shadow-2xl",
+                  )}
                   data-testid="workspace-drawer"
                   style={{
                     gridColumn: "1 / -1",

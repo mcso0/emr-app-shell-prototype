@@ -2076,43 +2076,102 @@ test("patient drawer supports editing and guardian navigation", async ({
     "/w/clair-demo/reception?drawer=reception-patient:patient-dubu",
   );
 
-  await expect(page.getByText("환자 정보")).toBeVisible();
-  await expect(page.getByText("보호자 연결")).toBeVisible();
+  const profilePanel = page.getByTestId("profile-side-panel");
+  await expect(
+    profilePanel.getByRole("heading", { name: "환자 정보", exact: true }),
+  ).toBeVisible();
+  await expect(profilePanel.getByText("등록된 보호자")).toBeVisible();
   await expect(page.getByText("정하린", { exact: true }).last()).toBeVisible();
   await expect(
     page.getByRole("button", { name: "보호자 강서윤 보기" }),
   ).toBeVisible();
 
+  await profilePanel
+    .getByRole("heading", { name: "환자 정보", exact: true })
+    .hover();
   await page.getByRole("button", { name: "수정" }).click();
   const breedInput = page.getByRole("textbox", { name: "품종" });
   await breedInput.fill("포메");
   await page.getByRole("option", { name: "포메라니안" }).click();
   await page.getByRole("button", { name: "저장" }).click();
-  await expect(breedInput).toHaveValue("포메라니안");
+  await expect(
+    profilePanel.getByText(/포메라니안/, { exact: false }).first(),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "보호자 강서윤 보기" }).click();
 
   await expect(page.getByText("보호자 정보").first()).toBeVisible();
-  await expect(page.getByText("연결 환자").last()).toBeVisible();
+  await expect(page.getByText("주 보호자로 등록된 환자").last()).toBeVisible();
   await expect(page.getByText("하루", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("두부", { exact: true }).last()).toBeVisible();
 });
 
-test("patient drawer shows CS history and latest shortcuts", async ({
+test("patient drawer exposes the Figma activity tabs and live mock projections", async ({
   page,
 }) => {
   await page.goto(
     "/w/clair-demo/reception?drawer=reception-patient:patient-coco",
   );
+  const profilePanel = page.getByTestId("profile-side-panel");
 
-  await page.getByRole("button", { name: "CS 이력" }).click();
-  await expect(page.getByText("접수 문의")).toBeVisible();
-  await page.getByRole("button", { name: "KakaoTalk" }).click();
-  await expect(page.getByText("검사 결과 안내")).toBeVisible();
+  await profilePanel.getByRole("tab", { name: "진료 이력" }).click();
+  await expect(page.getByText("전체 진료 이력")).toBeVisible();
+  await expect(page.getByText("내과 진료")).toBeVisible();
 
-  await page.getByRole("button", { name: "최신내역" }).click();
-  await expect(page.getByText("최근 조제")).toBeVisible();
-  await expect(page.getByText("최근 검사")).toBeVisible();
+  await profilePanel.getByRole("tab", { name: "예약", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "예약 조회 기간" })).toBeVisible();
+
+  await profilePanel.getByRole("tab", { name: "수납" }).click();
+  await expect(page.getByText("전체 수납 이력")).toBeVisible();
+  await expect(page.getByText(/INV-260501-0001/)).toBeVisible();
+});
+
+test("profile drawer follows the CDS V2 geometry and keyboard contract", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1169 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(
+    "/w/clair-demo/reception?drawer=reception-patient:patient-coco",
+  );
+
+  const drawer = page.getByTestId("workspace-drawer");
+  const panel = page.getByTestId("profile-side-panel");
+  const [drawerBox, panelBox, headerBox] = await Promise.all([
+    drawer.boundingBox(),
+    panel.boundingBox(),
+    panel.locator("header").boundingBox(),
+  ]);
+
+  expect(drawerBox).not.toBeNull();
+  expect(panelBox).not.toBeNull();
+  expect(headerBox).not.toBeNull();
+  expect(panelBox?.width).toBe(380);
+  expect(panelBox?.height).toBe(1105);
+  expect(panelBox?.x).toBe(drawerBox?.x);
+  expect(panelBox?.y).toBe(drawerBox?.y);
+  expect(headerBox?.height).toBe(151);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      ),
+    )
+    .toBe(true);
+
+  const informationTab = page.getByRole("tab", { name: "환자 정보" });
+  const historyTab = page.getByRole("tab", { name: "진료 이력" });
+  const billingTab = page.getByRole("tab", { name: "수납" });
+
+  await informationTab.focus();
+  await informationTab.press("End");
+  await expect(billingTab).toHaveAttribute("aria-selected", "true");
+  await billingTab.press("Home");
+  await expect(informationTab).toHaveAttribute("aria-selected", "true");
+  await informationTab.press("ArrowRight");
+  await expect(historyTab).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(drawer).toHaveCount(0);
 });
 
 test("patient guardian registration creates a new guardian and patient after confirmation", async ({

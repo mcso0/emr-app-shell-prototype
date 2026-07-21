@@ -1,0 +1,991 @@
+.panel {
+  --profile-neutral-50: #fafafa;
+  --profile-neutral-100: #f5f5f5;
+  --profile-neutral-200: #e5e5e5;
+  --profile-neutral-300: #d4d4d4;
+  --profile-neutral-400: #a3a3a3;
+  --profile-neutral-500: #737373;
+  --profile-neutral-600: #525252;
+  --profile-neutral-700: #404040;
+  --profile-neutral-800: #262626;
+  --profile-neutral-900: #171717;
+  --profile-sky-50: #f0f8ff;
+  --profile-sky-200: #87c9ff;
+  --profile-sky-600: #005fc4;
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--profile-neutral-300);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--profile-neutral-900);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-sizing: border-box;
+}
+
+.header {
+  position: relative;
+  z-index: 2;
+  height: 151px;
+  flex: 0 0 151px;
+  border-bottom: 1px solid var(--profile-neutral-200);
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.identity {
+  position: relative;
+  display: flex;
+  width: 346px;
+  height: 84px;
+  margin: 16px 16px 0;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.avatar {
+  width: 84px;
+  height: 84px;
+  flex: 0 0 84px;
+  overflow: hidden;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 6px;
+  background: var(--profile-neutral-100);
+  object-fit: cover;
+  box-sizing: border-box;
+}
+
+.identityBody {
+  display: flex;
+  width: 252px;
+  height: 84px;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.identityCopy {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nameRow {
+  display: flex;
+  width: 100%;
+  height: 28px;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  box-sizing: border-box;
+}
+
+.name {
+  max-width: 132px;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typeBadge {
+  display: inline-flex;
+  min-width: 20px;
+  height: 23px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 3px 8px 3px 6px;
+  border: 1px solid var(--profile-sky-200);
+  border-radius: 6px;
+  background: var(--profile-sky-50);
+  color: var(--profile-sky-600);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.typeBadge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.metaRow {
+  display: flex;
+  width: 100%;
+  height: 24px;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  padding: 0 6px;
+  color: var(--profile-neutral-500);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.metaItem {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metaSeparator {
+  flex: none;
+  color: var(--profile-neutral-500);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.headerActions {
+  display: flex;
+  width: 100%;
+  height: 24px;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.smallAction {
+  display: inline-flex;
+  height: 24px;
+  min-height: 24px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+  color: var(--profile-neutral-900);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.smallAction svg {
+  width: 12px;
+  height: 12px;
+}
+
+.smallAction:hover {
+  background: var(--profile-neutral-50);
+}
+
+.smallAction:focus-visible,
+.closeButton:focus-visible,
+.tab:focus-visible,
+.editButton:focus-visible,
+.monthButton:focus-visible,
+.select:focus-visible,
+.relatedCard:focus-visible {
+  outline: 2px solid var(--profile-sky-600);
+  outline-offset: 2px;
+}
+
+.closeButton {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--profile-neutral-700);
+  cursor: pointer;
+}
+
+.closeButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tabs {
+  display: flex;
+  height: 34px;
+  margin: 16px 16px 0;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  height: 34px;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--profile-neutral-500);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tabLabel {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.tab::after {
+  width: 100%;
+  height: 1px;
+  flex: none;
+  background: transparent;
+  content: "";
+}
+
+.tab[aria-selected="true"] {
+  color: var(--profile-neutral-900);
+}
+
+.tab[aria-selected="true"]::after {
+  background: var(--profile-neutral-900);
+}
+
+.content {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+}
+
+.scrollContent {
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.scrollContent::-webkit-scrollbar {
+  width: 0;
+}
+
+.infoContent {
+  padding-top: 16px;
+  padding-bottom: 48px;
+}
+
+.infoSection {
+  position: relative;
+  width: 346px;
+  margin: 0 16px;
+  padding: 0 8px 6px;
+  box-sizing: border-box;
+}
+
+.sectionHeading {
+  display: flex;
+  width: 100%;
+  height: 32px;
+  align-items: center;
+  gap: 8px;
+  color: var(--profile-neutral-800);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+}
+
+.sectionHeadingAccent {
+  color: var(--profile-sky-600);
+}
+
+.countBadge {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 4%);
+  color: var(--profile-neutral-900);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+  box-sizing: border-box;
+}
+
+.editButton {
+  position: absolute;
+  top: 3px;
+  right: 8px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--profile-neutral-600);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.infoSection:hover .editButton,
+.editButton:focus-visible {
+  opacity: 1;
+}
+
+.sectionBody {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.divider {
+  width: 346px;
+  height: 1px;
+  margin: 12px 16px;
+  background: var(--profile-neutral-100);
+}
+
+.workCard,
+.relatedCard {
+  width: 330px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 12px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.workCard {
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 12px 13px 16px;
+}
+
+.stateIcon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 6px;
+  background: var(--profile-neutral-50);
+  box-sizing: border-box;
+}
+
+.stateGlyph {
+  position: relative;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1.5px solid #a9b9ef;
+  border-radius: 8px;
+  background: rgb(102 126 234 / 6%);
+  color: #667eea;
+  box-sizing: border-box;
+}
+
+.stateGlyph::after {
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  background: currentColor;
+  content: "";
+}
+
+.workCopy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.workTitle {
+  overflow: hidden;
+  color: var(--profile-neutral-800);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workDescription {
+  overflow: hidden;
+  color: var(--profile-neutral-600);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0.247px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.definitionList {
+  display: grid;
+  gap: 12px;
+}
+
+.definitionRow {
+  display: grid;
+  min-height: 24px;
+  grid-template-columns: 102px minmax(0, 216px);
+  gap: 12px;
+}
+
+.definitionRow:last-child {
+  min-height: 42px;
+}
+
+.definitionTerm {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--profile-neutral-600);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+}
+
+.definitionMarker {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  margin-top: 3px;
+  border: 1px dashed var(--profile-neutral-500);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.definitionMarker::after {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--profile-neutral-500);
+  content: "";
+}
+
+.definitionValue {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--profile-neutral-800);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+}
+
+.definitionValue br {
+  display: block;
+  margin-top: 2px;
+  content: "";
+}
+
+.followingRelatedGroup {
+  margin-top: 12px;
+}
+
+.relatedCard {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  padding: 9px 16px 9px 10px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.relatedCard {
+  cursor: pointer;
+}
+
+button.relatedCard:hover {
+  background: var(--profile-neutral-50);
+}
+
+.relatedAvatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  color: var(--profile-neutral-600);
+}
+
+.relatedAvatarGuardian {
+  background: var(--profile-neutral-100);
+}
+
+.relatedAvatarPatient {
+  background: var(--profile-neutral-200);
+}
+
+.relatedAvatar img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.relatedAvatar img[src$="figma-patient-glyph.svg"] {
+  width: 21px;
+  height: 18px;
+  object-fit: fill;
+}
+
+.relatedAvatar svg {
+  width: 22px;
+  height: 22px;
+}
+
+.relatedCopy {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+  white-space: nowrap;
+}
+
+.relatedName {
+  flex: none;
+  color: var(--profile-neutral-800);
+}
+
+.relatedBadge {
+  display: inline-flex;
+  height: 20px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--profile-neutral-600);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.relatedBadgePrimary {
+  border-color: var(--profile-sky-200);
+  background: var(--profile-sky-50);
+  color: var(--profile-sky-600);
+}
+
+.relatedMeta {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--profile-neutral-500);
+  text-overflow: ellipsis;
+}
+
+.scrollGradient {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  left: 1px;
+  z-index: 2;
+  height: 48px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0%), #fff 100%);
+}
+
+.toolbar {
+  display: flex;
+  width: 100%;
+  height: 44px;
+  flex: 0 0 44px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  color: var(--profile-neutral-600);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+  box-sizing: border-box;
+}
+
+.toolbarStart,
+.toolbarEnd,
+.monthNavigator {
+  display: flex;
+  align-items: center;
+}
+
+.toolbarStart {
+  gap: 8px;
+}
+
+.toolbarEnd {
+  gap: 8px;
+}
+
+.monthNavigator {
+  gap: 4px;
+}
+
+.monthButton {
+  display: grid;
+  width: 24px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--profile-neutral-600);
+  cursor: pointer;
+}
+
+.monthButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.monthLabel {
+  min-width: 74px;
+  padding-left: 4px;
+  color: var(--profile-neutral-800);
+}
+
+.select {
+  height: 28px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 8px;
+  background-color: #fff;
+  color: var(--profile-neutral-700);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+  cursor: pointer;
+}
+
+.select:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.activityList {
+  display: grid;
+  gap: 12px;
+  padding: 1px 16px 32px;
+}
+
+.activityCard {
+  display: grid;
+  min-height: 86px;
+  gap: 5px;
+  padding: 10px 8px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 2%);
+  box-sizing: border-box;
+}
+
+.activityTitleRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--profile-neutral-700);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+}
+
+.activityKind {
+  display: inline-flex;
+  height: 20px;
+  align-items: center;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--profile-sky-50);
+  color: var(--profile-neutral-600);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.activityTitle {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--profile-neutral-700);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activitySubtitle {
+  display: flex;
+  min-width: 0;
+  gap: 8px;
+  overflow: hidden;
+  color: var(--profile-neutral-500);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.activitySubtitleLabel {
+  flex: none;
+}
+
+.activitySubtitleValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activityChips {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.activityChip {
+  display: inline-flex;
+  height: 20px;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--profile-neutral-600);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.activityChip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.dateGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.dateHeading {
+  display: flex;
+  height: 28px;
+  align-items: center;
+  padding: 0 4px;
+  color: var(--profile-neutral-800);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.reservationCard {
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 12px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.reservationCard .stateIcon {
+  width: 42px;
+  height: 42px;
+}
+
+.billingSummary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 1px;
+  color: var(--profile-neutral-600);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.billingAmount {
+  flex: none;
+  color: var(--profile-neutral-800);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.emptyState {
+  position: absolute;
+  top: 280px;
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--profile-neutral-600);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.emptyIcon {
+  position: relative;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--profile-neutral-100);
+  color: var(--profile-neutral-600);
+}
+
+.emptyIconMark {
+  position: absolute;
+  right: 11px;
+  bottom: 10px;
+  display: grid;
+  width: 9px;
+  height: 9px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--profile-neutral-100);
+}
+
+.emptyIconMark svg {
+  width: 8px;
+  height: 8px;
+  stroke-width: 2;
+}
+
+.emptyIcon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.editSurface {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.editFooter {
+  display: flex;
+  height: 64px;
+  flex: 0 0 64px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--profile-neutral-200);
+  padding: 0 16px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.editFooter button {
+  height: 36px;
+}
+
+@media (max-width: 379px) {
+  .panel {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .identity,
+  .infoSection,
+  .divider {
+    width: calc(100% - 32px);
+  }
+
+  .identityBody {
+    width: calc(100% - 94px);
+  }
+
+  .workCard,
+  .relatedCard {
+    width: 100%;
+  }
+
+  .definitionRow {
+    grid-template-columns: minmax(88px, 31%) minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editButton {
+    transition: none;
+  }
+}
