@@ -785,19 +785,34 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(page.getByLabel("환자 컨텍스트 정보")).toHaveCount(0);
   await expect(page.locator("[data-slot='chart-instruction-info-card']")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "차트 공유" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "호출하기" })).toBeVisible();
+  const lockedState = page.getByTestId("chart-start-locked-state");
+  const preconsultationCallButtons = lockedState.getByRole("button", {
+    name: "호출하기",
+    exact: true,
+  });
+  await expect(preconsultationCallButtons).toHaveCount(2);
+  await expect(preconsultationCallButtons.first()).toBeVisible();
   await expect(
-    page.getByTestId("chart-start-locked-state").getByRole("button", {
-      name: "환자 프로필",
+    lockedState.getByRole("button", {
+      name: "환자 정보",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    lockedState.getByRole("button", {
+      name: "보호자 정보",
       exact: true,
     }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "진료 완료" })).toHaveCount(0);
-  const lockedState = page.getByTestId("chart-start-locked-state");
+  await expect(lockedState.locator(":scope > div").first()).toHaveCSS(
+    "max-width",
+    "1024px",
+  );
   await expect(lockedState).toContainText("진료 대기");
   await expect(lockedState).toContainText("차트번호 E-260625-0001");
   await expect(lockedState).toContainText("초코");
-  await expect(lockedState).toContainText("보호자 최도현");
+  await expect(lockedState).toContainText("최도현 보호자");
   await expect(lockedState).toContainText("Pomeranian");
   await expect(lockedState).toContainText("접수 정보");
   await expect(lockedState).toContainText("재진 여부");
@@ -870,6 +885,22 @@ test("chart consultation CTA moves from call to start before chart completion", 
       'section[aria-labelledby="preconsultation-visit-purpose"] > div',
     ),
   ).toHaveCSS("background-color", "rgb(250, 250, 250)");
+  await expect(
+    lockedState.locator(
+      'section[aria-labelledby="preconsultation-visit-purpose"] > div > p',
+    ),
+  ).toHaveCSS("font-size", "14px");
+  await expect(
+    lockedState.locator(
+      'section[aria-labelledby="preconsultation-visit-purpose"] > div > p',
+    ),
+  ).toHaveCSS("line-height", "20px");
+  const memoBodyTexts = memoSection.locator("p.min-w-0");
+  await expect(memoBodyTexts).toHaveCount(2);
+  for (let index = 0; index < 2; index += 1) {
+    await expect(memoBodyTexts.nth(index)).toHaveCSS("font-size", "14px");
+    await expect(memoBodyTexts.nth(index)).toHaveCSS("line-height", "20px");
+  }
   const vitalHeaders = lockedState.getByRole("columnheader");
   await expect(vitalHeaders).toHaveCount(5);
   for (let index = 0; index < 5; index += 1) {
@@ -913,7 +944,8 @@ test("chart consultation CTA moves from call to start before chart completion", 
   const currentVitalDateCell = vitalTable.locator("tbody tr").first().locator("th");
   await expect(currentVitalDateCell.getByText("오늘", { exact: true })).toBeVisible();
   await expect(currentVitalDateCell.getByText("(26.06.25)", { exact: true })).toBeVisible();
-  await expect(currentVitalDateCell).toHaveCSS("height", "56px");
+  await expect(vitalTable.locator("table")).toHaveCSS("min-width", "960px");
+  await expect(currentVitalDateCell).toHaveCSS("height", "52px");
   await expect(currentVitalDateCell).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(currentVitalDateCell).toHaveCSS("border-top-color", "rgb(229, 229, 229)");
   const lastVitalCells = vitalTable.locator("tbody tr").last().locator("th, td");
@@ -939,6 +971,8 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "border-top-color",
     "rgb(212, 212, 212)",
   );
+  await expect(animalPatientAvatar).toHaveCSS("width", "72px");
+  await expect(animalPatientAvatar).toHaveCSS("height", "72px");
   await expect(
     animalPatientAvatar.locator("[data-slot=avatar-fallback]"),
   ).toHaveCSS("border-top-left-radius", "12px");
@@ -949,19 +983,20 @@ test("chart consultation CTA moves from call to start before chart completion", 
     level: 1,
     name: "초코",
   });
+  await expect(patientHeading.locator("xpath=../..")).toHaveCSS("opacity", "1");
   await expect(patientHeading).toHaveCSS("font-size", "28px");
   await expect(patientHeading).toHaveCSS("font-weight", "700");
   await expect(patientHeading).toHaveCSS("line-height", "38px");
   await expect(patientHeading).toHaveCSS("color", "rgb(23, 23, 23)");
   const patientHeaderRow = patientHeading.locator("xpath=..");
   await expect(
-    patientHeaderRow.getByText("보호자", { exact: true }),
-  ).toHaveCSS("color", "rgb(163, 163, 163)");
-  await expect(
-    patientHeaderRow.getByText("최도현", { exact: true }),
-  ).toHaveCSS("color", "rgb(23, 23, 23)");
+    patientHeaderRow.getByText("최도현 보호자", { exact: true }),
+  ).toBeVisible();
   const patientMetadata = patientHeading.locator("xpath=../../p");
   await expect(patientMetadata).toHaveCSS("column-gap", "4px");
+  await expect(patientMetadata).toHaveCSS("font-size", "16px");
+  await expect(patientMetadata).toHaveCSS("line-height", "24px");
+  await expect(patientMetadata).toHaveCSS("margin-top", "6px");
   await expect(
     patientMetadata.getByText("Pomeranian", { exact: true }),
   ).toHaveCSS("color", "rgb(115, 115, 115)");
@@ -984,7 +1019,11 @@ test("chart consultation CTA moves from call to start before chart completion", 
   ]) {
     await expect(lockedState.locator(`#${sectionTitleId}`)).toHaveCSS(
       "column-gap",
-      "8px",
+      "6px",
+    );
+    await expect(lockedState.locator(`#${sectionTitleId}`)).toHaveCSS(
+      "font-size",
+      "16px",
     );
   }
   const historySection = lockedState.getByTestId("preconsultation-history");
@@ -1023,15 +1062,24 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(firstHistoryCard).toHaveCSS("height", "56px");
   await expect(firstHistoryCard).toHaveCSS("column-gap", "12px");
   await expect(firstHistoryCard).toHaveCSS("padding-left", "16px");
+  await expect(firstHistoryCard.locator("span").last()).toHaveCSS("font-size", "15px");
   await expect(
     historyGroups.nth(1).locator(":scope > div").nth(1).locator(":scope > ol > li"),
   ).toHaveCount(1);
   await expect(page.getByTestId("chart-soap-diagnosis-grid")).toHaveCount(0);
   await page
     .getByTestId("chart-start-locked-state")
-    .getByRole("button", { name: "환자 프로필", exact: true })
+    .getByRole("button", { name: "환자 정보", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText("환자 정보");
+  await expect(page.getByRole("dialog")).toContainText("보정 시 보호자 동행 선호");
+  await page.keyboard.press("Escape");
+  await page
+    .getByTestId("chart-start-locked-state")
+    .getByRole("button", { name: "보호자 정보", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("보호자 정보");
+  await expect(page.getByRole("dialog")).toContainText("최도현");
   await expect(page.getByRole("dialog")).toContainText("최근 약 복용은 잘했으나");
   await page.keyboard.press("Escape");
   await expect(page).toHaveURL(/\/w\/clair-demo\/treatment\?/);
@@ -1985,7 +2033,7 @@ test("chart queue selection changes the selected encounter", async ({
   const lockedState = page.getByTestId("chart-start-locked-state");
   await expect(lockedState).toContainText("진료 대기");
   await expect(lockedState).toContainText("하루");
-  await expect(lockedState).toContainText("보호자 강서윤");
+  await expect(lockedState).toContainText("강서윤 보호자");
   await expect(lockedState).toContainText("접수 정보");
   await expect(lockedState).toContainText("방문 목적");
   await expect(lockedState).toContainText("예방접종");
@@ -2000,7 +2048,10 @@ test("chart queue selection changes the selected encounter", async ({
   await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
   await expect(page.getByText("기본 SOAP")).toHaveCount(0);
 
-  await lockedState.getByRole("button", { name: "호출하기" }).click();
+  await lockedState
+    .getByRole("button", { name: "호출하기", exact: true })
+    .first()
+    .click();
   const callDialog = page.getByRole("dialog", {
     name: "하루/강서윤을 호출하시겠습니까?",
   });
