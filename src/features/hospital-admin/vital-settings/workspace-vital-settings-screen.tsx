@@ -18,10 +18,12 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { IconReorder } from "obra-icons-react";
+import { IconReorderAlt } from "obra-icons-react";
 import { toast } from "sonner";
 import { CdsActionsRotateCcwIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsFilesMoreVerticalIcon } from "@/components/cds-icons/files-and-layout";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -32,6 +34,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -136,6 +145,29 @@ export function WorkspaceVitalSettingsScreen({
     }]);
     setAddOpen(false);
   };
+  const removeItem = (key: WorkspaceVitalKey) => {
+    const removedIndex = draft.items.findIndex((item) => item.key === key);
+    const removedItem = draft.items[removedIndex];
+    const preset = draft.presets.find((item) => item.key === key);
+    if (!removedItem || !preset || preset.requiredInWorkspace) return;
+
+    setDraft((current) => current ? {
+      ...current,
+      items: normalizeOrder(current.items.filter((item) => item.key !== key)),
+    } : current);
+
+    toast.success(`${preset.label}을 목록에서 제거했어요.`, {
+      action: {
+        label: "되돌리기",
+        onClick: () => setDraft((current) => {
+          if (!current || current.items.some((item) => item.key === key)) return current;
+          const items = [...current.items];
+          items.splice(Math.min(removedIndex, items.length), 0, removedItem);
+          return { ...current, items: normalizeOrder(items) };
+        }),
+      },
+    });
+  };
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -155,6 +187,9 @@ export function WorkspaceVitalSettingsScreen({
   const enabledLabels = getEnabledWorkspaceVitalSettings(draft).map((item) =>
     draft.presets.find((preset) => preset.key === item.key)?.label ?? item.key,
   );
+  const removedLabels = saved.items
+    .filter((item) => !draft.items.some((draftItem) => draftItem.key === item.key))
+    .map((item) => saved.presets.find((preset) => preset.key === item.key)?.label ?? item.key);
 
   return (
     <ScrollArea className="h-full" data-testid="hospital-admin-vitals-screen">
@@ -190,7 +225,7 @@ export function WorkspaceVitalSettingsScreen({
           <CardHeader className="border-b">
             <CardTitle>사용할 바이탈</CardTitle>
             <CardDescription>
-              그립을 잡아 입력 화면의 표시 순서를 바꿀 수 있습니다. 모든 항목은 선택 입력입니다.
+              체중과 체온은 항상 사용되며, 실제 측정값 입력은 선택입니다. 그립을 잡아 표시 순서를 바꿀 수 있습니다.
             </CardDescription>
             <CardAction>
               <Button
@@ -204,12 +239,13 @@ export function WorkspaceVitalSettingsScreen({
               </Button>
             </CardAction>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="grid grid-cols-[40px_minmax(0,1fr)_112px_68px] items-center gap-3 border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+          <CardContent className="overflow-x-auto p-0">
+            <div className="grid min-w-[520px] grid-cols-[40px_minmax(0,1fr)_112px_68px_40px] items-center gap-3 border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
               <span />
               <span>항목</span>
               <span>표시 단위</span>
               <span className="text-center">사용</span>
+              <span />
             </div>
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
               <SortableContext items={draft.items.map((item) => item.key)} strategy={verticalListSortingStrategy}>
@@ -224,7 +260,9 @@ export function WorkspaceVitalSettingsScreen({
                         key={item.key}
                         label={preset.label}
                         onEnabledChange={(enabled) => updateItem(item.key, { enabled })}
+                        onRemove={() => removeItem(item.key)}
                         onUnitChange={(displayUnit) => updateItem(item.key, { displayUnit })}
+                        requiredInWorkspace={preset.requiredInWorkspace}
                         units={preset.allowedDisplayUnits}
                       />
                     );
@@ -274,9 +312,19 @@ export function WorkspaceVitalSettingsScreen({
             <p className="text-xs font-medium text-muted-foreground">사용할 바이탈</p>
             <p className="mt-1 text-sm">{enabledLabels.length > 0 ? enabledLabels.join(" · ") : "없음"}</p>
           </div>
+          {removedLabels.length > 0 ? (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+              <p className="text-sm">목록에서 제거: {removedLabels.join(" · ")}</p>
+            </div>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             사용을 끈 항목은 신규 입력과 일반 화면에서 숨겨집니다. 기존 기록은 삭제되지 않으며 다시 켜면 표시됩니다.
           </p>
+          {removedLabels.length > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              목록에서 제거한 항목은 신규 입력과 일반 화면에서 숨겨집니다. 기존 기록은 삭제되지 않으며, 바이탈 추가에서 다시 추가할 수 있습니다.
+            </p>
+          ) : null}
           <DialogFooter>
             <Button disabled={saving} onClick={() => setSaveOpen(false)} variant="outline">취소</Button>
             <Button disabled={saving} onClick={() => void handleSave()}>
@@ -294,24 +342,36 @@ function SortableVitalRow({
   item,
   label,
   onEnabledChange,
+  onRemove,
   onUnitChange,
+  requiredInWorkspace,
   units,
 }: {
   canManage: boolean;
   item: WorkspaceVitalSetting;
   label: string;
   onEnabledChange(enabled: boolean): void;
+  onRemove(): void;
   onUnitChange(unit: WorkspaceVitalUnit): void;
+  requiredInWorkspace: boolean;
   units: WorkspaceVitalUnit[];
 }) {
-  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({
     disabled: !canManage,
     id: item.key,
   });
   return (
     <div
       className={cn(
-        "grid grid-cols-[40px_minmax(0,1fr)_112px_68px] items-center gap-3 border-b px-4 py-3 last:border-b-0",
+        "grid min-w-[520px] grid-cols-[40px_minmax(0,1fr)_112px_68px_40px] items-center gap-3 border-b px-4 py-3 last:border-b-0",
         !item.enabled && "bg-muted/20 text-muted-foreground",
         isDragging && "relative z-10 bg-card shadow-lg ring-1 ring-ring/30",
       )}
@@ -319,16 +379,19 @@ function SortableVitalRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <button
+      <Button
         {...attributes}
         {...listeners}
         aria-label={`${label} 순서 변경`}
-        className="flex size-8 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing disabled:cursor-default disabled:opacity-40"
+        className="size-8 cursor-grab touch-none text-muted-foreground hover:bg-transparent hover:text-muted-foreground active:cursor-grabbing disabled:cursor-default"
         disabled={!canManage}
+        ref={setActivatorNodeRef}
+        size="icon"
         type="button"
+        variant="ghost"
       >
-        <IconReorder className="size-4" />
-      </button>
+        <IconReorderAlt />
+      </Button>
       <span className="font-medium">{label}</span>
       <Select
         disabled={!canManage || units.length === 1}
@@ -343,13 +406,42 @@ function SortableVitalRow({
         </SelectContent>
       </Select>
       <div className="flex justify-center">
-        <Switch
-          aria-label={`${label} 사용`}
-          checked={item.enabled}
-          disabled={!canManage}
-          onCheckedChange={onEnabledChange}
-        />
+        {requiredInWorkspace ? (
+          <Badge aria-label={`${label} 항상 사용`} variant="secondary">필수</Badge>
+        ) : (
+          <Switch
+            aria-label={`${label} 사용`}
+            checked={item.enabled}
+            disabled={!canManage}
+            onCheckedChange={onEnabledChange}
+          />
+        )}
       </div>
+      {requiredInWorkspace ? <span /> : (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                aria-label={`${label} 작업`}
+                className="size-8 text-muted-foreground"
+                disabled={!canManage}
+                size="icon"
+                type="button"
+                variant="ghost"
+              />
+            }
+          >
+            <CdsFilesMoreVerticalIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={onRemove} variant="destructive">
+                목록에서 제거
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }

@@ -174,6 +174,12 @@ function validateItems(value: unknown): WorkspaceVitalSetting[] | null {
     items: value,
   });
   if (!parsed || parsed.items.some((item, index) => item.sortOrder !== index)) return null;
+  const requiredKeys = parsed.presets
+    .filter((preset) => preset.requiredInWorkspace)
+    .map((preset) => preset.key);
+  if (requiredKeys.some((key) => !parsed.items.some(
+    (item) => item.key === key && item.enabled,
+  ))) return null;
   return parsed.items;
 }
 

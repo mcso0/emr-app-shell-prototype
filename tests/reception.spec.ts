@@ -5096,6 +5096,28 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
 test("walk-in uses workspace-configured vitals and submits one nested measurement", async ({
   page,
 }) => {
+  await page.route("**/api/workspaces/clair-demo/vital-settings", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        canManage: true,
+        presets: [
+          { key: "weight", label: "체중", description: "환자의 현재 체중", canonicalUnit: "kg", allowedDisplayUnits: ["kg", "g"], requiredInWorkspace: true },
+          { key: "temperature", label: "체온", description: "체온계로 측정한 체온", canonicalUnit: "°C", allowedDisplayUnits: ["°C", "°F"], requiredInWorkspace: true },
+          { key: "heart_rate", label: "심박수", description: "분당 심장 박동 수", canonicalUnit: "bpm", allowedDisplayUnits: ["bpm"], requiredInWorkspace: false },
+          { key: "respiratory_rate", label: "호흡수", description: "분당 호흡 횟수", canonicalUnit: "rpm", allowedDisplayUnits: ["rpm"], requiredInWorkspace: false },
+          { key: "blood_pressure", label: "혈압", description: "수축기 단독 또는 수축기/이완기", canonicalUnit: "mmHg", allowedDisplayUnits: ["mmHg"], requiredInWorkspace: false },
+        ],
+        items: [
+          { key: "weight", enabled: true, displayUnit: "kg", sortOrder: 0 },
+          { key: "temperature", enabled: true, displayUnit: "°C", sortOrder: 1 },
+          { key: "respiratory_rate", enabled: true, displayUnit: "rpm", sortOrder: 2 },
+        ],
+      }),
+    });
+  });
   const walkInCreate = await mockReceptionWalkInCreate(page, {
     checkedInAt: "2026-05-01T10:45:00+09:00",
     encounterId: "encounter-vitals-walkin-dubu",
@@ -5116,8 +5138,8 @@ test("walk-in uses workspace-configured vitals and submits one nested measuremen
   await expect(rows.getByLabel("체중")).toHaveValue("8.40");
   await expect(rows.getByRole("button", { name: "체중 삭제" })).toHaveCount(0);
   await expect(rows).toHaveCSS("row-gap", "10px");
+  await expect(rows.getByRole("textbox", { name: "심박수", exact: true })).toHaveCount(0);
   await rows.getByRole("textbox", { name: "체온", exact: true }).fill("38.7");
-  await rows.getByRole("textbox", { name: "심박수", exact: true }).fill("88");
   await rows.getByRole("textbox", { name: "호흡", exact: true }).fill("24");
   await form.getByLabel("방문목적").fill("바이탈 측정 현장 접수");
   await expect(page.getByTestId("reception-right-panel").getByRole("button", { name: "생성", exact: true })).toBeEnabled();
@@ -5128,10 +5150,10 @@ test("walk-in uses workspace-configured vitals and submits one nested measuremen
     vitals: {
       weightKg: 8.4,
       temperatureC: 38.7,
-      heartRateBpm: 88,
       respiratoryRateRpm: 24,
     },
   });
+  expect(walkInCreate.latestBody).not.toHaveProperty("vitals.heartRateBpm");
   expect(walkInCreate.latestBody).not.toHaveProperty("weightKg");
 });
 

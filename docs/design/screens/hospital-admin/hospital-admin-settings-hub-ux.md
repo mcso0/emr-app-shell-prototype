@@ -60,7 +60,7 @@ flowchart LR
 | 역할 및 권한 | Role list + grouped permission detail | Job-position and work-default tabs | Separate authorization, job metadata, and operational defaults |
 | 공간/시간 관리 | Room/status table | Scheduling rule controls | Avoid full calendar editor in this phase |
 | 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Supabase mode uses route/RPC persistence; mock mode remains explicit session-only fallback |
-| 바이탈 관리 | Vital range table | Alert policy controls | No clinical automation claim |
+| 바이탈 관리 | Workspace preset order, units, and availability | Required preset protection and optional preset removal | No clinical range or alert automation claim |
 | 감사 로그 | Existing audit table | Search/filter | Keep minimal read-only admin review |
 
 ## UX Flows
@@ -116,9 +116,13 @@ flowchart LR
 ### 바이탈 관리
 
 1. Admin selects `바이탈 관리`.
-2. Screen shows default species, warning policy, and vital range table.
-3. Admin saves mock state.
-4. Future implementation versions clinical threshold changes and emits audit.
+2. Screen shows the workspace vital preset list, display units, order, and availability.
+3. `체중` and `체온` show `필수`; they can be reordered and change allowed units but cannot be disabled or removed. Measurement entry remains optional.
+4. Optional presets can be disabled in place or removed through `목록에서 제거`. Removal is draft-only, offers toast undo, and is confirmed only by the page-level save action.
+5. Removed presets return to `바이탈 추가`; historical measurements are never deleted and reappear when the preset is added again.
+6. The drag activator uses a conventional six-dot grip, transparent hover, grab/grabbing cursor, visible keyboard focus, and pointer/touch/keyboard ordering.
+7. Admin reviews the workspace-wide impact in the existing save dialog and saves the draft.
+8. Reception, chart, and patient summaries consume the saved settings without rewriting historical measurements.
 
 ### 감사 로그
 
@@ -147,5 +151,5 @@ flowchart LR
 | Role work profiles | Data model, relation to permission policies, Home assignment read model |
 | Space/time | Room model, operating hours model, slot rules, conflict validation |
 | Schedule | Persisted shifts/templates, coverage rules, availability, staff self-view policy, audit events, server authorization, and notifications |
-| Vitals | Versioned thresholds, species defaults, clinical warning boundary, audit event |
+| Vitals | Curated preset metadata, required flag, workspace inclusion/order/unit/enabled state, audit event |
 | Audit | Add settings mutation events and safe summary mapping |

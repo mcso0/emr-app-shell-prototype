@@ -15,6 +15,7 @@ export type WorkspaceVitalPreset = {
   description: string;
   key: WorkspaceVitalKey;
   label: string;
+  requiredInWorkspace: boolean;
 };
 
 export type WorkspaceVitalSetting = {
@@ -37,6 +38,7 @@ export const defaultWorkspaceVitalPresets: WorkspaceVitalPreset[] = [
     description: "환자의 현재 체중",
     canonicalUnit: "kg",
     allowedDisplayUnits: ["kg", "g"],
+    requiredInWorkspace: true,
   },
   {
     key: "temperature",
@@ -44,6 +46,7 @@ export const defaultWorkspaceVitalPresets: WorkspaceVitalPreset[] = [
     description: "체온계로 측정한 체온",
     canonicalUnit: "°C",
     allowedDisplayUnits: ["°C", "°F"],
+    requiredInWorkspace: true,
   },
   {
     key: "heart_rate",
@@ -51,6 +54,7 @@ export const defaultWorkspaceVitalPresets: WorkspaceVitalPreset[] = [
     description: "분당 심장 박동 수",
     canonicalUnit: "bpm",
     allowedDisplayUnits: ["bpm"],
+    requiredInWorkspace: false,
   },
   {
     key: "respiratory_rate",
@@ -58,6 +62,7 @@ export const defaultWorkspaceVitalPresets: WorkspaceVitalPreset[] = [
     description: "분당 호흡 횟수",
     canonicalUnit: "rpm",
     allowedDisplayUnits: ["rpm"],
+    requiredInWorkspace: false,
   },
   {
     key: "blood_pressure",
@@ -65,6 +70,7 @@ export const defaultWorkspaceVitalPresets: WorkspaceVitalPreset[] = [
     description: "수축기 단독 또는 수축기/이완기",
     canonicalUnit: "mmHg",
     allowedDisplayUnits: ["mmHg"],
+    requiredInWorkspace: false,
   },
 ];
 
@@ -105,6 +111,7 @@ export function parseWorkspaceVitalSettingsSnapshot(
     if (
       typeof item.label !== "string" ||
       typeof item.description !== "string" ||
+      typeof item.requiredInWorkspace !== "boolean" ||
       !isWorkspaceVitalUnit(item.canonicalUnit) ||
       !Array.isArray(item.allowedDisplayUnits) ||
       !item.allowedDisplayUnits.every(isWorkspaceVitalUnit)
@@ -117,6 +124,7 @@ export function parseWorkspaceVitalSettingsSnapshot(
       description: item.description,
       canonicalUnit: item.canonicalUnit,
       allowedDisplayUnits: [...item.allowedDisplayUnits],
+      requiredInWorkspace: item.requiredInWorkspace,
     }];
   });
   if (presets.length !== value.presets.length || new Set(presets.map((item) => item.key)).size !== presets.length) {
@@ -148,7 +156,10 @@ export function parseWorkspaceVitalSettingsSnapshot(
   if (
     items.length !== value.items.length ||
     new Set(items.map((item) => item.key)).size !== items.length ||
-    new Set(items.map((item) => item.sortOrder)).size !== items.length
+    new Set(items.map((item) => item.sortOrder)).size !== items.length ||
+    presets.some((preset) => preset.requiredInWorkspace && !items.some(
+      (item) => item.key === preset.key && item.enabled,
+    ))
   ) {
     return null;
   }

@@ -69,6 +69,39 @@ test("workspace vital settings validate supported units and unique order before 
   expect(result).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
 });
 
+test("workspace vital settings reject missing or disabled required presets before writing", async () => {
+  let gatewayCalled = false;
+  const gateway = {
+    async get() {
+      return { ok: false as const, error: "db_read_failed" as const };
+    },
+    async replace() {
+      gatewayCalled = true;
+      return { ok: false as const, error: "db_write_failed" as const };
+    },
+  };
+  const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+
+  for (const items of [
+    snapshot.items.filter((item) => item.key !== "weight")
+      .map((item, sortOrder) => ({ ...item, sortOrder })),
+    snapshot.items.map((item) => item.key === "temperature"
+      ? { ...item, enabled: false }
+      : item),
+  ]) {
+    const result = await replaceWorkspaceVitalSettings({
+      actorUserId,
+      workspaceId,
+      items,
+      permissionAdapter: permissionAdapter("hospital_admin"),
+      gateway,
+    });
+
+    expect(result).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
+  }
+  expect(gatewayCalled).toBe(false);
+});
+
 test("Supabase vital settings gateway uses only workspace-scoped read and replace RPCs", async () => {
   const calls: unknown[] = [];
   const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
