@@ -15,6 +15,7 @@ export type HospitalScheduleProfileReadbackStatus = "confirmed" | "verification_
 
 export type HospitalScheduleRevisionCommandResponse = {
   profileReadback: HospitalScheduleProfileReadbackStatus | null;
+  result: unknown;
   snapshot: HospitalScheduleRevisionRemoteSnapshot;
 };
 
@@ -88,6 +89,7 @@ export async function sendHospitalScheduleRevisionCommand({
   return {
     snapshot: parseRevisionRemoteSnapshot(body.snapshot, body.canonicalWeekStart),
     profileReadback: parseProfileReadbackStatus(body.profileReadback),
+    result: body.result,
   };
 }
 
@@ -284,6 +286,7 @@ type ScheduleResponseBody = {
   modelVersion?: "v1" | "v2";
   canonicalWeekStart?: unknown;
   profileReadback?: unknown;
+  result?: unknown;
   snapshot?: unknown;
 };
 

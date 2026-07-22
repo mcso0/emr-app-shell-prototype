@@ -7,6 +7,7 @@ const componentPaths = [
   "src/features/hospital-admin/schedule/components/schedule-week-grid.tsx",
   "src/features/hospital-admin/schedule/components/schedule-day-list.tsx",
   "src/features/hospital-admin/schedule/components/schedule-data-state.tsx",
+  "src/features/hospital-admin/schedule/components/schedule-fixed-week-dialog.tsx",
   "src/features/hospital-admin/schedule/components/schedule-shift-editor-sheet.tsx",
   "src/features/hospital-admin/schedule/components/schedule-publish-review-dialog.tsx",
 ];
@@ -24,6 +25,7 @@ test("v2 screen is composed from named components and schedule tokens", () => {
     "ScheduleWeekGrid",
     "ScheduleDayList",
     "ScheduleDataState",
+    "ScheduleFixedWeekDialog",
     "ScheduleShiftEditorSheet",
     "SchedulePublishReviewDialog",
   ]) {
@@ -33,7 +35,10 @@ test("v2 screen is composed from named components and schedule tokens", () => {
   expect(tokens).toContain("--emr-schedule-shift-clinical-bg");
   expect(screen).toContain("게시 완료 · 프로필 확인 필요");
   expect(screen).toContain("읽기 확인 다시 시도");
-  expect(screen).toContain("이전 게시본 복원");
+  expect(screen).toContain("이전 버전으로 편집");
+  expect(screen).toContain("overflow-y-auto");
+  expect(screen).toContain("기본 근무 입력");
+  expect(readFileSync(componentPaths[4], "utf8")).toContain('aria-busy="true"');
 });
 
 test("v2 schedule components do not add raw CLAiR palette references", () => {

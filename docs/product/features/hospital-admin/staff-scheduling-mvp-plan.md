@@ -9,6 +9,7 @@ related_work:
   - "HOSPITAL-ADMIN-LIVE-PR-014"
   - "HOSPITAL-ADMIN-LIVE-PR-015"
   - "HOSPITAL-ADMIN-LIVE-PR-016"
+  - "HOSPITAL-ADMIN-LIVE-PR-017"
 ---
 
 # Staff Scheduling MVP v2
@@ -27,6 +28,9 @@ The existing mutable v1 schedule remains available as the rollback source. v2 ad
 - Required job-position completeness blocks publication only when a workspace explicitly opts into the policy; an unconfigured workspace produces no completeness blocker.
 - Source roster or operating-calendar changes require an explicit validation before publication.
 - Every mutating v2 operation is idempotent, lock-version checked, and audited without private note or leave-reason content.
+- An administrator can apply one fixed daytime pattern to selected roles and weekdays in the current draft. Existing work, leave, and off entries are preserved; the batch validates and commits atomically.
+- Repetition stays explicit in this MVP: establish a full week with `기본 근무 일괄 입력`, then use `지난주 근무표 가져오기` for the next week and edit only exceptions.
+- The schedule owns vertical scrolling inside the workspace frame and exposes visible loading progress, error/retry, empty, published, and editing states.
 
 ## State Contract
 

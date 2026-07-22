@@ -22,6 +22,10 @@ import type {
 } from "./revision-types";
 import { ScheduleDataState } from "./components/schedule-data-state";
 import { ScheduleDayList } from "./components/schedule-day-list";
+import {
+  ScheduleFixedWeekDialog,
+  type FixedWeekValue,
+} from "./components/schedule-fixed-week-dialog";
 import { SchedulePageHeader } from "./components/schedule-page-header";
 import { SchedulePublishReviewDialog } from "./components/schedule-publish-review-dialog";
 import {
@@ -44,6 +48,8 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
   const [editorDirty, setEditorDirty] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [fixedWeekOpen, setFixedWeekOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [profileReadback, setProfileReadback] = useState<
@@ -93,6 +99,7 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
   };
 
   const commitCommand = async (command: Record<string, unknown>) => {
+    setPendingAction(typeof command.type === "string" ? command.type : "saving");
     try {
       const response = await sendHospitalScheduleRevisionCommand({ command, workspaceId });
       setSnapshot(response.snapshot);
@@ -112,6 +119,8 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
       }
       toast.error(requestError.message);
       throw requestError;
+    } finally {
+      setPendingAction(null);
     }
   };
 
@@ -190,6 +199,28 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
     });
   };
 
+  const applyFixedWeek = async (value: FixedWeekValue) => {
+    if (!snapshot?.revision) return;
+    const response = await commitCommand({
+      type: "apply_fixed_week",
+      revisionId: snapshot.revision.id,
+      expectedLockVersion: snapshot.revision.lockVersion,
+      weekdays: value.weekdays,
+      startMinutes: value.startMinutes,
+      endMinutes: value.endMinutes,
+      roles: value.roles,
+    });
+    const result = asRecord(response.result);
+    const insertedCount = typeof result.insertedCount === "number" ? result.insertedCount : null;
+    const skippedCount = typeof result.skippedCount === "number" ? result.skippedCount : null;
+    setFixedWeekOpen(false);
+    toast.success(
+      insertedCount === null
+        ? "기본 근무를 현재 주에 입력했어."
+        : `${insertedCount}건을 입력했어${skippedCount ? `. 기존 입력 ${skippedCount}건은 유지했어` : ""}.`,
+    );
+  };
+
   const publish = async () => {
     if (!snapshot?.revision) return;
     setPublishing(true);
@@ -244,9 +275,12 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
   };
 
   return (
-    <main data-testid="hospital-admin-schedule-v2-screen" className="flex min-h-full flex-col bg-[var(--emr-surface-canvas)]">
+    <main data-testid="hospital-admin-schedule-v2-screen" className="flex h-full min-h-0 flex-col overflow-y-auto bg-[var(--emr-surface-canvas)]">
       <SchedulePageHeader
+        busy={pendingAction !== null}
+        dataState={state}
         draftRevision={snapshot?.revision ?? null}
+        hasPublishedRevision={Boolean(snapshot?.latestPublishedRevision)}
         onCreateDraft={() => void createDraft()}
         onOpenEditor={() => setEditor({ mode: "create", date: snapshot?.weekStart ?? requestedWeekStart ?? "" })}
         onPublish={() => setPublishOpen(true)}
@@ -258,20 +292,25 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
             <div className="flex items-center gap-2">
               {!snapshot.revision ? (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => void copyPreviousPublishedWeek()}>
-                    지난 게시 주 복사
+                  <Button size="sm" variant="outline" disabled={pendingAction !== null} onClick={() => void copyPreviousPublishedWeek()}>
+                    지난주 근무표 가져오기
                   </Button>
                   {previousPublishedRevision ? (
-                    <Button size="sm" variant="outline" onClick={() => void restorePreviousPublishedRevision()}>
-                      이전 게시본 복원
+                    <Button size="sm" variant="outline" disabled={pendingAction !== null} onClick={() => void restorePreviousPublishedRevision()}>
+                      이전 버전으로 편집
                     </Button>
                   ) : null}
                 </>
               ) : null}
               {snapshot.revision ? (
-                <Button size="sm" variant="outline" onClick={() => void validate()}>
-                  다시 검증
-                </Button>
+                <>
+                  <Button size="sm" variant="outline" disabled={pendingAction !== null} onClick={() => setFixedWeekOpen(true)}>
+                    기본 근무 입력
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={pendingAction !== null} onClick={() => void validate()}>
+                    게시 전 확인
+                  </Button>
+                </>
               ) : null}
             </div>
           </div>
@@ -364,6 +403,16 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
         onSave={saveEditor}
       />
 
+      <ScheduleFixedWeekDialog
+        open={fixedWeekOpen}
+        applying={pendingAction === "apply_fixed_week"}
+        staff={snapshot?.staff ?? []}
+        onOpenChange={(open) => {
+          if (!pendingAction) setFixedWeekOpen(open);
+        }}
+        onApply={applyFixedWeek}
+      />
+
       <SchedulePublishReviewDialog
         open={publishOpen}
         publishing={publishing}
@@ -411,6 +460,12 @@ function toRequestError(value: unknown) {
     value instanceof Error ? value.message : "근무표 작업을 완료하지 못했어.",
     "schedule_request_failed",
   );
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 export function toWorkEditorTarget(block: HospitalScheduleWorkBlock): ScheduleEntryEditorTarget {
