@@ -5615,7 +5615,7 @@ function DayScheduleBoard({
                 data-testid="reception-break-time-hatch"
                 style={{
                   backgroundImage:
-                    "repeating-linear-gradient(135deg, transparent 0, transparent 27px, var(--emr-border-default) 27px, var(--emr-border-default) 28px)",
+                    "repeating-linear-gradient(120deg, transparent 0, transparent 9px, var(--emr-border-subtle) 9px, var(--emr-border-subtle) 10px)",
                 }}
               />
               <span

@@ -141,8 +141,9 @@ test("day calendar renders the effective break with reference-aligned hatch laye
       };
     });
   expect(visualContract.bandBackgroundColor).toBe("rgba(0, 0, 0, 0)");
-  expect(visualContract.bandBackgroundImage).toContain("27px");
-  expect(visualContract.bandBackgroundImage).toContain("rgb(229, 229, 229)");
+  expect(visualContract.bandBackgroundImage).toContain("120deg");
+  expect(visualContract.bandBackgroundImage).toContain("10px");
+  expect(visualContract.bandBackgroundImage).toContain("rgb(245, 245, 245)");
   expect(visualContract.labelBackgroundColor).toBe("rgb(255, 255, 255)");
   expect(visualContract.labelAboveGrid).toBe(true);
   expect(visualContract.x).toBeLessThanOrEqual(1);
