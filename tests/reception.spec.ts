@@ -2135,21 +2135,27 @@ test("profile drawer follows the CDS V2 geometry and keyboard contract", async (
     "/w/clair-demo/reception?drawer=reception-patient:patient-coco",
   );
 
-  const drawer = page.getByTestId("workspace-drawer");
+  const rightPanel = page.getByTestId("workspace-right-panel");
+  const mainContent = page.getByTestId("workspace-main-content");
   const panel = page.getByTestId("profile-side-panel");
-  const [drawerBox, panelBox, headerBox] = await Promise.all([
-    drawer.boundingBox(),
+  const [rightPanelBox, mainContentBox, panelBox, headerBox] = await Promise.all([
+    rightPanel.boundingBox(),
+    mainContent.boundingBox(),
     panel.boundingBox(),
     panel.locator("header").boundingBox(),
   ]);
 
-  expect(drawerBox).not.toBeNull();
+  expect(rightPanelBox).not.toBeNull();
+  expect(mainContentBox).not.toBeNull();
   expect(panelBox).not.toBeNull();
   expect(headerBox).not.toBeNull();
-  expect(panelBox?.width).toBe(380);
+  expect(rightPanelBox?.width).toBe(380);
+  expect(panelBox?.width).toBe(378);
   expect(panelBox?.height).toBe(1105);
-  expect(panelBox?.x).toBe(drawerBox?.x);
-  expect(panelBox?.y).toBe(drawerBox?.y);
+  expect(panelBox?.x).toBe(rightPanelBox!.x + 1);
+  expect(panelBox?.y).toBe(rightPanelBox!.y + 1);
+  expect(rightPanelBox!.x - (mainContentBox!.x + mainContentBox!.width)).toBe(10);
+  await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   expect(headerBox?.height).toBe(151);
   await expect
     .poll(() =>
@@ -2171,7 +2177,7 @@ test("profile drawer follows the CDS V2 geometry and keyboard contract", async (
   await informationTab.press("ArrowRight");
   await expect(historyTab).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Escape");
-  await expect(drawer).toHaveCount(0);
+  await expect(panel).toHaveCount(0);
 });
 
 test("patient guardian registration creates a new guardian and patient after confirmation", async ({

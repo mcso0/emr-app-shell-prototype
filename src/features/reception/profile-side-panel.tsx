@@ -99,6 +99,7 @@ export type ProfileSidePanelModel = {
 type ProfileSidePanelProps = {
   defaultTab?: ProfileSidePanelTab;
   editContent?: ReactNode;
+  embedded?: boolean;
   editing?: boolean;
   model: ProfileSidePanelModel;
   onBeginEdit?: () => void;
@@ -801,6 +802,7 @@ function BillingTab({ items, kind }: { items: ProfileBillingItem[]; kind: Profil
 export function ProfileSidePanel({
   defaultTab = "info",
   editContent,
+  embedded = false,
   editing = false,
   model,
   onBeginEdit,
@@ -826,7 +828,7 @@ export function ProfileSidePanel({
 
   return (
     <section
-      className={styles.panel}
+      className={cn(styles.panel, embedded && styles.embeddedPanel)}
       aria-label={`${model.kind === "patient" ? "환자" : "보호자"} 프로필 사이드 패널`}
       data-profile-kind={model.kind}
       data-testid="profile-side-panel"

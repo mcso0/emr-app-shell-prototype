@@ -11,14 +11,14 @@ source_docs:
 dependencies:
   - "CUSTOMER-LIVE-PR-004"
   - "CUSTOMER-LIVE-PR-005"
-updated: "2026-07-21"
+updated: "2026-07-22"
 ---
 
 # Patient and Guardian Profile Side Panel
 
 ## Goal
 
-Implement the CDS V2 patient and guardian profile right-side panel from Figma with a measured 380 x 1105 visual contract while preserving the existing profile read/edit and navigation behavior.
+Implement the CDS V2 patient and guardian profile right-side panel from Figma with a measured 380 x 1105 visual contract while preserving the existing profile read/edit and navigation behavior. Route the profiles through the same shared workspace right-panel slot as the staff profile so the panel reserves layout space instead of covering workspace content.
 
 ## Scope
 
@@ -28,20 +28,22 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
 - Add operating-date grouping for encounter history, including missing or invalid dates.
 - Add invoice/payment hierarchy to billing cards while retaining the Figma card surface.
 - Verify the source viewport against the provided Figma captures with pixel comparison and record explicit masks for the two approved content exceptions.
+- Reuse the shared `WorkspaceFrame` right-panel column with the staff-profile 380 px width, 10 px gap, detached surface, and mobile full-width behavior.
 
 ## Out Of Scope
 
 - New or changed API, database, Supabase migration, RLS, or permission policy.
 - New avatar persistence or Patient/Guardian avatar fields.
 - Production activity-tab read projections.
-- Shared design-system token changes or unrelated drawer changes.
-- Publishing, deployment, commit, or PR creation.
+- Shared design-system token changes, staff-profile content changes, or unrelated drawer placement changes.
 
 ## Done Criteria
 
 - Patient and guardian drawers use a 380 px feature-owned panel with the Figma header, tabs, spacing, typography, radii, and colors.
 - Information, reservation, history, billing, filled, empty, long-content, edit, and keyboard-close paths are usable.
 - Existing profile save and linked-identity navigation continue to work.
+- Patient and guardian profiles render in `workspace-right-panel`; no absolute `workspace-drawer` overlays the customer/reception content.
+- Opening the panel reduces the main workspace width and preserves the same right-panel position when navigating between patient and guardian profiles.
 - Focused lint, typecheck, Playwright, Storybook build, and pixel-comparison evidence are recorded.
 - Pixel differences are iterated to the approved threshold; any remaining mismatch is reported, not described as exact.
 
@@ -54,6 +56,7 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
 - Passed: `npm run build` (existing Turbopack NFT trace warning remains).
 - The broader customer/reception suite was sampled through 49/117 tests, then stopped with 32 passes, 15 unrelated baseline failures in operating-hours, date labels, calendar fixtures, and registration typography, plus one stale profile post-save assertion. The profile assertion was corrected and its focused suite passed on rerun.
 - Captured eight 380 x 1105 DPR 1 Storybook specimens and compared raw DOM screenshots with Figma PNG references after compositing transparent source pixels over white.
+- 2026-07-22 follow-up passed targeted ESLint, `npx tsc --noEmit`, and four focused Playwright scenarios covering content push, 380 px right-panel geometry, patient-to-guardian position retention, edit/navigation behavior, activity tabs, keyboard close, and the absence of the absolute workspace drawer.
 
 ## Pixel Comparison Result
 
@@ -70,3 +73,4 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
 - Visual authority: Figma. The implementation report supplies IA, data, edge-case, and verification guidance only.
 - The activity data remains synthetic/mock in this item. A live tab projection needs separate workspace, RLS, and permission approval.
 - The supplied guardian-info Figma fixture renders two primary-patient cards while its count badge says `1`; production uses the actual item count, while the pixel-reference story isolates the literal Figma badge value.
+- PR #475 shipped the original CDS V2 profile surface. The 2026-07-22 follow-up changes only its shell placement and embedded border ownership; profile data, permissions, persistence, tabs, and actions remain unchanged.

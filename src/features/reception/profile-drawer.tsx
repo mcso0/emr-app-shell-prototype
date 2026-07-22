@@ -1566,6 +1566,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
 
   return (
     <ProfileSidePanel
+      embedded
       model={model}
       editing={editing}
       saving={saving}
@@ -1748,6 +1749,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
 
   return (
     <ProfileSidePanel
+      embedded
       model={model}
       editing={editing}
       saving={saving}
