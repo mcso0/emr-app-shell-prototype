@@ -77,7 +77,7 @@ test("effective hours prefer a date exception and preserve workspace timezone", 
   });
 });
 
-test("reception validation follows configured hours and blocks the configured break", () => {
+test("reception validation follows configured hours and warns on the configured break", () => {
   const settings = createInitialHospitalBasicSettingsDraft();
   settings.weeklyHours.friday = {
     isOpen: true,
@@ -85,6 +85,21 @@ test("reception validation follows configured hours and blocks the configured br
     break: { start: "12:00", end: "13:00" },
   };
   expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T08:00:00+09:00", durationMinutes: 30 }).allowed).toBe(true);
-  expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T12:15:00+09:00", durationMinutes: 30 }).allowed).toBe(false);
+  expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T12:15:00+09:00", durationMinutes: 30 })).toMatchObject({
+    allowed: true,
+    classification: "break-warning",
+  });
+  expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T11:30:00+09:00", durationMinutes: 30 })).toMatchObject({
+    allowed: true,
+    classification: "normal",
+  });
+  expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T12:30:00+09:00", durationMinutes: 30 })).toMatchObject({
+    allowed: true,
+    classification: "break-warning",
+  });
+  expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T13:00:00+09:00", durationMinutes: 30 })).toMatchObject({
+    allowed: true,
+    classification: "normal",
+  });
   expect(isReceptionTimeAllowed({ settings, scheduledStartAt: "2026-05-01T19:30:00+09:00", durationMinutes: 30 }).allowed).toBe(true);
 });

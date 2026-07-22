@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const path = "supabase/migrations/20260715100000_workspace_operating_hours.sql";
 const migration = readFileSync(path, "utf8");
@@ -30,4 +30,45 @@ test("migration resolves dates, audits settings writes, and blocks future confli
   expect(migration).toContain("walk_in_outside_business_hours");
   expect(migration).not.toContain("< 540");
   expect(migration).not.toContain("> 1140");
+});
+
+test("a forward migration allows reception writes during configured breaks", () => {
+  const policyPath =
+    "supabase/migrations/20260722112803_reception_break_time_creation_policy.sql";
+  const policyMigration = existsSync(policyPath)
+    ? readFileSync(policyPath, "utf8")
+    : "";
+
+  expect(policyMigration).toContain(
+    "create or replace function private.clair_assert_reception_time_allowed",
+  );
+  const assertionFunction =
+    policyMigration
+      .split(
+        "create or replace function private.clair_assert_reception_time_allowed",
+      )[1]
+      ?.split(
+        "revoke all on function private.clair_assert_reception_time_allowed",
+      )[0] ?? "";
+  expect(assertionFunction).toContain(
+    "v_start < (v_schedule->>'treatmentStart')::time",
+  );
+  expect(assertionFunction).toContain(
+    "v_end > (v_schedule->>'treatmentEnd')::time",
+  );
+  expect(assertionFunction).not.toContain("v_schedule->>'breakStart'");
+  expect(assertionFunction).not.toContain("v_schedule->>'breakEnd'");
+  expect(policyMigration).toContain(
+    "revoke all on function private.clair_assert_reception_time_allowed(text, timestamptz, timestamptz, text) from public, anon, authenticated",
+  );
+
+  const futureConflictCheck =
+    policyMigration
+      .split("select jsonb_agg(")[1]
+      ?.split("if v_conflicts is not null")[0] ?? "";
+  expect(futureConflictCheck).toContain("a.scheduled_start_at >= now()");
+  expect(futureConflictCheck).toContain("treatmentStart");
+  expect(futureConflictCheck).toContain("treatmentEnd");
+  expect(futureConflictCheck).not.toContain("breakStart");
+  expect(futureConflictCheck).not.toContain("breakEnd");
 });

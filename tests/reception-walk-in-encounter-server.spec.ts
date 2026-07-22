@@ -280,6 +280,28 @@ test("walk-in encounter core rejects reception times outside business hours", as
   });
 });
 
+test("walk-in encounter core allows a reception that overlaps the configured break", async () => {
+  const result = await createReceptionWalkInEncounter({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: {
+      ...validWalkInInput,
+      plannedStartAt: "2026-05-19T13:45:00+09:00",
+    },
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    status: 201,
+    walkIn: {
+      encounter: {
+        checkedInAt: "2026-05-19T13:45:00+09:00",
+        durationMinutes: 30,
+      },
+    },
+  });
+});
+
 test("supabase walk-in encounter gateway keeps workspace scope in the RPC write", async () => {
   const calls: string[] = [];
   let createPayload:

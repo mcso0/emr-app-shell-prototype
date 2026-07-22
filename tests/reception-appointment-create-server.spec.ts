@@ -206,6 +206,26 @@ test("appointment create core validates patient, business hours, closed day, and
   });
 });
 
+test("appointment create core allows a reservation that overlaps the configured break", async () => {
+  const result = await createReceptionAppointment({
+    actorUserId: "user-front-desk",
+    input: {
+      ...validInput,
+      scheduledStartAt: "2026-05-01T13:00:00+09:00",
+    },
+    workspaceId: "clair-demo",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    status: 201,
+    appointment: {
+      scheduledStartAt: "2026-05-01T13:00:00+09:00",
+      scheduledEndAt: "2026-05-01T13:30:00+09:00",
+    },
+  });
+});
+
 test("appointment create persists role-agnostic operational assignees", async () => {
   const created = await createReceptionAppointment({
     actorUserId: "user-front-desk",
