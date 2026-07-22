@@ -139,6 +139,7 @@ import {
 } from "@/features/reception/calendar-time-layout";
 import { createCalendarTimeScale, type CalendarTimeScale } from "@/features/reception/calendar-time-scale";
 import {
+  getOperatingTimeClassification,
   getOperatingScheduleLabel,
   getSelectableOperatingStartMinutes,
   toOperatingMinutes,
@@ -1511,17 +1512,41 @@ function useReceptionOperatingSchedule({
     () => resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), date),
     [date],
   );
-  const [schedule, setSchedule] = useState<EffectiveOperatingHours>(fallback);
+  const requestKey = `${workspaceId}\u0000${actorId ?? ""}\u0000${date}`;
+  const [resolved, setResolved] = useState<{
+    key: string;
+    schedule: EffectiveOperatingHours;
+    status: "error" | "ready";
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     void loadReceptionCalendar({ actorId, date, workspaceId }).then((result) => {
-      if (!cancelled) setSchedule(result.ok ? result.operatingSchedule : fallback);
+      if (!cancelled) {
+        const authoritativeSchedule =
+          result.ok && result.operatingSchedule?.date === date
+            ? result.operatingSchedule
+            : undefined;
+        setResolved({
+          key: requestKey,
+          schedule: authoritativeSchedule ?? fallback,
+          status:
+            authoritativeSchedule || !shouldUseSupabaseAuth()
+              ? "ready"
+              : "error",
+        });
+      }
     });
     return () => { cancelled = true; };
-  }, [actorId, date, fallback, workspaceId]);
+  }, [actorId, date, fallback, requestKey, workspaceId]);
 
-  return schedule.date === date ? schedule : fallback;
+  return {
+    schedule:
+      resolved?.key === requestKey && resolved.schedule.date === date
+        ? resolved.schedule
+        : fallback,
+    status: resolved?.key === requestKey ? resolved.status : "loading",
+  } as const;
 }
 
 async function loadReceptionPatientGuardianProfiles({
@@ -2119,7 +2144,13 @@ const getReservationTimeOptions = (
   currentOperatingMinutes: number,
   operatingSchedule: EffectiveOperatingHours,
 ) => {
-  const options: Array<{ disabled: boolean; label: string; minutes: number; reason?: string }> = [];
+  const options: Array<{
+    breakWarning: boolean;
+    disabled: boolean;
+    label: string;
+    minutes: number;
+    reason?: string;
+  }> = [];
 
   for (const minutes of getSelectableOperatingStartMinutes(operatingSchedule, durationMinutes)) {
     const startAt = getReceptionIsoAtMinutes(date, minutes);
@@ -2140,8 +2171,15 @@ const getReservationTimeOptions = (
     });
     const elapsed = date === currentDate && minutes < currentOperatingMinutes;
     const reason = elapsed ? "지난 시간" : conflict ? "예약됨" : undefined;
+    const breakWarning =
+      getOperatingTimeClassification(
+        operatingSchedule,
+        minutes,
+        durationMinutes,
+      ) === "break-warning";
 
     options.push({
+      breakWarning,
       disabled: elapsed || conflict,
       label: getScheduleTimeLabelFromMinutes(minutes),
       minutes,
@@ -2171,8 +2209,14 @@ const getWalkInTimeBlockMessage = (
     return "오늘 접수 가능 시간이 지났습니다. 다음 영업일 예약으로 등록해 주세요.";
   }
 
-  if (!getSelectableOperatingStartMinutes(operatingSchedule, durationMinutes, 1).includes(currentOperatingMinutes)) {
-    return "예상시간이 휴게시간과 겹치거나 영업 종료 시간을 넘습니다. 더 이른 시간이나 짧은 예상시간을 선택해 주세요.";
+  if (
+    getOperatingTimeClassification(
+      operatingSchedule,
+      currentOperatingMinutes,
+      durationMinutes,
+    ) === "blocked"
+  ) {
+    return "예상시간이 영업 종료 시간을 넘습니다. 더 이른 시간이나 짧은 예상시간을 선택해 주세요.";
   }
 
   return undefined;
@@ -5394,6 +5438,17 @@ function DayScheduleBoard({
   const timeScale = createCalendarTimeScale(operatingSchedule);
   const dayScheduleHeight = timeScale.totalHeight;
   const currentTimeOffset = timeScale.minutesToY(currentOperatingMinutes);
+  const breakStartMinutes = operatingSchedule.breakStart
+    ? toOperatingMinutes(operatingSchedule.breakStart)
+    : null;
+  const breakEndMinutes = operatingSchedule.breakEnd
+    ? toOperatingMinutes(operatingSchedule.breakEnd)
+    : null;
+  const hasBreakTimeBand =
+    operatingSchedule.isOpen &&
+    breakStartMinutes !== null &&
+    breakEndMinutes !== null &&
+    breakStartMinutes < breakEndMinutes;
   const scheduleGridTemplateColumns = `56px repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`;
   const scheduleBoardMinWidth = `max(100%, calc(56px + ${selectedVeterinarians.length} * 180px))`;
   const assignmentVeterinarianIds = new Set(
@@ -5512,6 +5567,29 @@ function DayScheduleBoard({
             />
           ),
         )}
+        {hasBreakTimeBand ? (
+          <div
+            aria-label={`휴게시간 ${operatingSchedule.breakStart}-${operatingSchedule.breakEnd}`}
+            className="pointer-events-none absolute right-0 z-[5] overflow-hidden border-y border-[var(--emr-border-subtle)]"
+            data-testid="reception-break-time-band"
+            role="note"
+            style={{
+              backgroundColor: "var(--clair-color-atomic-neutral-50)",
+              backgroundImage:
+                "repeating-linear-gradient(135deg, transparent 0, transparent 27px, color-mix(in srgb, var(--emr-border-subtle) 65%, transparent) 27px, color-mix(in srgb, var(--emr-border-subtle) 65%, transparent) 28px)",
+              height: timeScale.rangeHeight(
+                breakStartMinutes,
+                breakEndMinutes,
+              ),
+              left: 56,
+              top: timeScale.minutesToY(breakStartMinutes),
+            }}
+          >
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-card/90 px-2 py-1 emr-text-micro font-medium text-[var(--emr-text-secondary)] shadow-xs">
+              휴게시간 {operatingSchedule.breakStart}-{operatingSchedule.breakEnd}
+            </span>
+          </div>
+        ) : null}
         <div
           data-testid="day-time-axis"
           className="relative z-10 border-r"
@@ -6927,7 +7005,9 @@ export function ReceptionContent() {
           );
         } else {
           applyPersistedReceptionCalendar(calendarResult.records);
-          setOperatingSchedule(calendarResult.operatingSchedule);
+          if (calendarResult.operatingSchedule) {
+            setOperatingSchedule(calendarResult.operatingSchedule);
+          }
         }
 
         if (!queueResult.ok) {
@@ -7154,6 +7234,42 @@ function ReceptionFormField({
   );
 }
 
+function ReceptionBreakTimeConfirmDialog({
+  mode,
+  onConfirm,
+  onOpenChange,
+  open,
+  submitting,
+}: {
+  mode: "appointment" | "walk-in";
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  submitting: boolean;
+}) {
+  const isWalkIn = mode === "walk-in";
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!submitting) onOpenChange(nextOpen);
+      }}
+    >
+      <EmrConfirmDialogContent
+        cancelLabel="취소"
+        closeAriaLabel="휴게시간 경고 닫기"
+        confirmDisabled={submitting}
+        confirmLabel={isWalkIn ? "접수 진행" : "예약 진행"}
+        description={`선택한 시간에 휴게시간이 포함되어 있습니다. ${isWalkIn ? "접수를" : "예약을"} 진행하시겠습니까?`}
+        title="휴게시간이 포함되어 있습니다"
+        onCancel={() => onOpenChange(false)}
+        onConfirm={onConfirm}
+      />
+    </Dialog>
+  );
+}
+
 function ReceptionWalkInFormDrawer({
   currentOperatingMinutes,
   initialDurationMinutes,
@@ -7193,7 +7309,10 @@ function ReceptionWalkInFormDrawer({
     actorHeaders: vitalActorHeaders,
     workspaceId,
   });
-  const operatingSchedule = useReceptionOperatingSchedule({
+  const {
+    schedule: operatingSchedule,
+    status: operatingScheduleStatus,
+  } = useReceptionOperatingSchedule({
     actorId: authSession?.id,
     date: operatingDate,
     workspaceId,
@@ -7221,6 +7340,8 @@ function ReceptionWalkInFormDrawer({
   );
   const lookupRequestSeqRef = useRef(0);
   const lastSuccessfulLookupKeyRef = useRef("");
+  const submitLockRef = useRef(false);
+  const [breakConfirmOpen, setBreakConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [visitPurpose, setVisitPurpose] = useState("");
   const [vitalDraft, setVitalDraft] = useState<ReceptionCreateVitalDraft>(() =>
@@ -7285,7 +7406,21 @@ function ReceptionWalkInFormDrawer({
     durationMinutes,
     operatingSchedule,
   );
+  const createBlockMessage =
+    timeBlockMessage ??
+    (operatingScheduleStatus === "loading"
+      ? "운영시간을 확인하는 중입니다."
+      : operatingScheduleStatus === "error"
+        ? "운영시간을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
+        : undefined);
+  const breakTimeWarning =
+    getOperatingTimeClassification(
+      operatingSchedule,
+      currentOperatingMinutes,
+      durationMinutes,
+    ) === "break-warning";
   const canCreate = Boolean(
+    operatingScheduleStatus === "ready" &&
     patient &&
       trimmedVisitPurpose &&
       Object.keys(vitalBuild.fieldErrors).length === 0,
@@ -7406,17 +7541,25 @@ function ReceptionWalkInFormDrawer({
     setPatientLookupOpen(false);
   };
   const close = () => {
-    if (!submitting) setActiveDrawer(null);
+    if (!submitting && !submitLockRef.current) setActiveDrawer(null);
   };
-  const create = async () => {
-    if (!patient || !selectedSummary || submitting || !canCreate) return;
+  const submitCreate = async () => {
+    if (
+      !patient ||
+      !selectedSummary ||
+      submitting ||
+      submitLockRef.current ||
+      !canCreate
+    ) {
+      return;
+    }
 
     const selectedVeterinarianId =
       effectiveVeterinarianId === unassignedVeterinarianValue
         ? undefined
         : effectiveVeterinarianId;
-    if (timeBlockMessage) {
-      toast.error(timeBlockMessage);
+    if (createBlockMessage) {
+      toast.error(createBlockMessage);
       return;
     }
 
@@ -7436,20 +7579,45 @@ function ReceptionWalkInFormDrawer({
       vitals: vitalBuild.input,
     };
 
+    submitLockRef.current = true;
     setSubmitting(true);
-    const result = await submitWalkInEncounter({
-      actorRole: authSession?.role,
-      input,
-      workspaceId,
-    });
-    setSubmitting(false);
+    try {
+      const result = await submitWalkInEncounter({
+        actorRole: authSession?.role,
+        input,
+        workspaceId,
+      });
 
-    if (!result.ok) {
-      toast.error(getWalkInRouteErrorMessage(result));
+      if (!result.ok) {
+        toast.error(getWalkInRouteErrorMessage(result));
+        return;
+      }
+
+      onCreate(input, result.walkIn, selectedSummary);
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+    }
+  };
+  const requestCreate = () => {
+    if (
+      !patient ||
+      !selectedSummary ||
+      submitting ||
+      submitLockRef.current ||
+      !canCreate
+    ) {
       return;
     }
-
-    onCreate(input, result.walkIn, selectedSummary);
+    if (createBlockMessage) {
+      toast.error(createBlockMessage);
+      return;
+    }
+    if (breakTimeWarning) {
+      setBreakConfirmOpen(true);
+      return;
+    }
+    void submitCreate();
   };
 
   if (presentation === "side-panel") {
@@ -7460,14 +7628,14 @@ function ReceptionWalkInFormDrawer({
         >
           <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-[var(--clair-spacing-16)] p-[var(--clair-spacing-16)]">
-            {timeBlockMessage ? (
+            {createBlockMessage ? (
               <div>
                 <EmrInlineAlert
                   severity="warning"
                   title="접수 가능 시간이 아닙니다"
                   testId="walk-in-time-block-alert"
                 >
-                  {timeBlockMessage}
+                  {createBlockMessage}
                 </EmrInlineAlert>
               </div>
             ) : null}
@@ -7793,31 +7961,42 @@ function ReceptionWalkInFormDrawer({
             <Button
               type="button"
               size="default"
-              onClick={create}
-              disabled={!canCreate || Boolean(timeBlockMessage) || submitting}
+              onClick={requestCreate}
+              disabled={!canCreate || Boolean(createBlockMessage) || submitting}
             >
               {submitting ? "생성 중" : "생성"}
             </Button>
           </div>
         </EmrRightPanelFooter>
+        <ReceptionBreakTimeConfirmDialog
+          mode="walk-in"
+          open={breakConfirmOpen}
+          submitting={submitting}
+          onOpenChange={setBreakConfirmOpen}
+          onConfirm={() => {
+            setBreakConfirmOpen(false);
+            void submitCreate();
+          }}
+        />
       </>
     );
   }
 
   return (
+    <>
     <div
       className={getReceptionDrawerSurfaceClassName(presentation)}
       data-testid="walk-in-reception-dialog"
     >
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
-          {timeBlockMessage ? (
+          {createBlockMessage ? (
             <EmrInlineAlert
               severity="warning"
               title="접수 가능 시간이 아닙니다"
               testId="walk-in-time-block-alert"
             >
-              {timeBlockMessage}
+              {createBlockMessage}
             </EmrInlineAlert>
           ) : null}
           <RegistrationFormSection separated={false} title="환자 정보">
@@ -8073,12 +8252,23 @@ function ReceptionWalkInFormDrawer({
           <Button size="default" variant="ghost" onClick={close} disabled={submitting}>
             취소
           </Button>
-          <Button size="default" onClick={create} disabled={!canCreate || Boolean(timeBlockMessage) || submitting}>
+          <Button size="default" onClick={requestCreate} disabled={!canCreate || Boolean(createBlockMessage) || submitting}>
             {submitting ? "생성 중" : "생성"}
           </Button>
         </div>
       </div>
     </div>
+    <ReceptionBreakTimeConfirmDialog
+      mode="walk-in"
+      open={breakConfirmOpen}
+      submitting={submitting}
+      onOpenChange={setBreakConfirmOpen}
+      onConfirm={() => {
+        setBreakConfirmOpen(false);
+        void submitCreate();
+      }}
+    />
+    </>
   );
 }
 
@@ -8128,6 +8318,8 @@ function ReceptionReservationFormDrawer({
     initialDurationMinutes ? `${initialDurationMinutes}분` : defaultWalkInDuration,
   );
   const [memo, setMemo] = useState("");
+  const submitLockRef = useRef(false);
+  const [breakConfirmOpen, setBreakConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [timeMinutes, setTimeMinutes] = useState(
     initialTimeMinutes ?? 0,
@@ -8146,7 +8338,10 @@ function ReceptionReservationFormDrawer({
     patientSummaries,
     workspaceId,
   });
-  const operatingSchedule = useReceptionOperatingSchedule({
+  const {
+    schedule: operatingSchedule,
+    status: operatingScheduleStatus,
+  } = useReceptionOperatingSchedule({
     actorId: authSession?.id,
     date,
     workspaceId,
@@ -8173,22 +8368,29 @@ function ReceptionReservationFormDrawer({
   const selectedPatient = selectedSummary?.patient;
   const selectedGuardian = selectedSummary?.primaryGuardian;
   const selectedTimeOption = timeOptions.find((option) => option.minutes === timeMinutes);
+  const breakTimeWarning = Boolean(selectedTimeOption?.breakWarning);
   const closedDay = !operatingSchedule.isOpen;
   const hasElapsedOptions = timeOptions.some((option) => option.reason === "지난 시간");
   const hasAvailableTimeOption = timeOptions.some((option) => !option.disabled);
-  const reservationTimeHelper = closedDay
-    ? "휴진일입니다."
-    : !hasAvailableTimeOption
-      ? "예약 가능한 시간이 없습니다. 날짜나 예상시간을 변경해 주세요."
-      : date === todayDate && hasElapsedOptions
-        ? "오늘 예약은 현재 시각 이후만 선택할 수 있어요."
-        : undefined;
+  const reservationTimeHelper =
+    operatingScheduleStatus === "loading"
+      ? "운영시간을 확인하는 중입니다."
+      : operatingScheduleStatus === "error"
+        ? "운영시간을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
+        : closedDay
+          ? "휴진일입니다."
+          : !hasAvailableTimeOption
+            ? "예약 가능한 시간이 없습니다. 날짜나 예상시간을 변경해 주세요."
+            : date === todayDate && hasElapsedOptions
+              ? "오늘 예약은 현재 시각 이후만 선택할 수 있어요."
+              : undefined;
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
     veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
       ? veterinarianId
       : undefined;
   const canCreate =
+    operatingScheduleStatus === "ready" &&
     Boolean(selectedPatient) &&
     Boolean(selectedTimeOption) &&
     !selectedTimeOption?.disabled &&
@@ -8197,7 +8399,7 @@ function ReceptionReservationFormDrawer({
   const shouldShowPatientLookup =
     patientLookupOpen && patientLookup.lookupActive;
   const close = () => {
-    if (submitting) return;
+    if (submitting || submitLockRef.current) return;
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
   };
@@ -8257,8 +8459,15 @@ function ReceptionReservationFormDrawer({
     }
   }, [durationMinutes, operatingSchedule, timeMinutes, timeOptions]);
 
-  const create = async () => {
-    if (!selectedPatient || submitting || !canCreate) return;
+  const submitCreate = async () => {
+    if (
+      !selectedPatient ||
+      submitting ||
+      submitLockRef.current ||
+      !canCreate
+    ) {
+      return;
+    }
 
     const input: ReceptionAppointmentCreateInput = {
       assignedStaffUserIds,
@@ -8270,22 +8479,42 @@ function ReceptionReservationFormDrawer({
       scheduledStartAt: getReceptionIsoAtMinutes(date, timeMinutes),
     };
 
+    submitLockRef.current = true;
     setSubmitting(true);
-    const result = await submitAppointmentCreate({
-      actorRole: authSession?.role,
-      input,
-      workspaceId,
-    });
-    setSubmitting(false);
+    try {
+      const result = await submitAppointmentCreate({
+        actorRole: authSession?.role,
+        input,
+        workspaceId,
+      });
 
-    if (!result.ok) {
-      toast.error(getAppointmentCreateRouteErrorMessage(result));
+      if (!result.ok) {
+        toast.error(getAppointmentCreateRouteErrorMessage(result));
+        return;
+      }
+
+      onCreate(result.appointment);
+      setCalendarDraftSelection(undefined);
+      toast.success("예약이 완료되었습니다");
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+    }
+  };
+  const requestCreate = () => {
+    if (
+      !selectedPatient ||
+      submitting ||
+      submitLockRef.current ||
+      !canCreate
+    ) {
       return;
     }
-
-    onCreate(result.appointment);
-    setCalendarDraftSelection(undefined);
-    toast.success("예약이 완료되었습니다");
+    if (breakTimeWarning) {
+      setBreakConfirmOpen(true);
+      return;
+    }
+    void submitCreate();
   };
 
   if (presentation === "side-panel") {
@@ -8486,6 +8715,7 @@ function ReceptionReservationFormDrawer({
                       <span className="flex min-w-0 flex-1 truncate text-left">
                         {selectedTimeOption?.label ??
                           getScheduleTimeLabelFromMinutes(timeMinutes)}
+                        {selectedTimeOption?.breakWarning ? " · 휴게시간" : ""}
                       </span>
                     </SelectTrigger>
                     <SelectContent
@@ -8500,7 +8730,11 @@ function ReceptionReservationFormDrawer({
                             disabled={option.disabled}
                           >
                             {option.label}
-                            {option.reason ? ` · ${option.reason}` : ""}
+                            {option.reason
+                              ? ` · ${option.reason}`
+                              : option.breakWarning
+                                ? " · 휴게시간"
+                                : ""}
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -8584,18 +8818,29 @@ function ReceptionReservationFormDrawer({
             <Button
               type="button"
               size="default"
-              onClick={create}
+              onClick={requestCreate}
               disabled={!canCreate || submitting}
             >
               {submitting ? "생성 중" : "생성"}
             </Button>
           </div>
         </EmrRightPanelFooter>
+        <ReceptionBreakTimeConfirmDialog
+          mode="appointment"
+          open={breakConfirmOpen}
+          submitting={submitting}
+          onOpenChange={setBreakConfirmOpen}
+          onConfirm={() => {
+            setBreakConfirmOpen(false);
+            void submitCreate();
+          }}
+        />
       </>
     );
   }
 
   return (
+    <>
     <div
       className={getReceptionDrawerSurfaceClassName(presentation)}
       data-testid="reservation-create-drawer"
@@ -8744,6 +8989,7 @@ function ReceptionReservationFormDrawer({
                   >
                     <span className="flex flex-1 text-left">
                       {selectedTimeOption?.label ?? getScheduleTimeLabelFromMinutes(timeMinutes)}
+                      {selectedTimeOption?.breakWarning ? " · 휴게시간" : ""}
                     </span>
                   </SelectTrigger>
                   <SelectContent>
@@ -8755,7 +9001,11 @@ function ReceptionReservationFormDrawer({
                           disabled={option.disabled}
                         >
                           {option.label}
-                          {option.reason ? ` · ${option.reason}` : ""}
+                          {option.reason
+                            ? ` · ${option.reason}`
+                            : option.breakWarning
+                              ? " · 휴게시간"
+                              : ""}
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -8803,11 +9053,22 @@ function ReceptionReservationFormDrawer({
         <Button size="default" variant="ghost" onClick={close} disabled={submitting}>
           취소
         </Button>
-        <Button size="default" onClick={create} disabled={!canCreate || submitting}>
+        <Button size="default" onClick={requestCreate} disabled={!canCreate || submitting}>
           {submitting ? "생성 중" : "생성"}
         </Button>
       </div>
     </div>
+    <ReceptionBreakTimeConfirmDialog
+      mode="appointment"
+      open={breakConfirmOpen}
+      submitting={submitting}
+      onOpenChange={setBreakConfirmOpen}
+      onConfirm={() => {
+        setBreakConfirmOpen(false);
+        void submitCreate();
+      }}
+    />
+    </>
   );
 }
 
@@ -8857,7 +9118,10 @@ function ReceptionAppointmentCheckInFormDrawer({
     formatPatientWeightKgInput(patient.weightKg),
   );
   const durationMinutes = getDurationMinutesFromLabel(duration) ?? 30;
-  const operatingSchedule = useReceptionOperatingSchedule({
+  const {
+    schedule: operatingSchedule,
+    status: operatingScheduleStatus,
+  } = useReceptionOperatingSchedule({
     actorId: authSession?.id,
     date: appointmentDate,
     workspaceId,
@@ -8877,7 +9141,11 @@ function ReceptionAppointmentCheckInFormDrawer({
       }));
     return options;
   }, [currentOperatingMinutes, durationMinutes, operatingSchedule]);
-  const canCreate = Boolean(visitPurpose.trim()) && timeOptions.length > 0 && !submitting;
+  const canCreate =
+    operatingScheduleStatus === "ready" &&
+    Boolean(visitPurpose.trim()) &&
+    timeOptions.length > 0 &&
+    !submitting;
 
   useEffect(() => {
     if (!timeOptions.some((option) => option.minutes === timeMinutes)) {

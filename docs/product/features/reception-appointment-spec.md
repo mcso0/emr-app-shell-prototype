@@ -8,7 +8,7 @@ related_work:
   - "docs/work/reception/RECEPTION-QA-PR-009-command-new-reception-flow.md"
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-05
+last_updated: 2026-07-22
 ---
 
 # Reception / Appointment Feature Spec
@@ -119,6 +119,7 @@ last_updated: 2026-07-05
 - 데스크 직원은 스케줄 영역에서 수의사별 예약/접수 현황과 빈 시간대를 확인한 뒤, 현장 접수 환자를 적절한 시간대 또는 담당 수의사로 배정한다.
 - 스케줄 운영 toolbar는 schedule controls 뒤에 divider를 두고, 업무 action을 `환자 등록`, `보호자 등록`, primary `접수`, `더보기` 순서로 제공한다.
 - Day view empty time slots can create session-only reception tasks by click or drag. The interaction must snap to exact 15-minute boundaries only: `HH:00`, `HH:15`, `HH:30`, and `HH:45`. The creation surface is the CLAiR right drawer, not a calendar popover.
+- Effective break periods are warning-only creation time, not blocked time. Walk-in reception and reservations that overlap a break require explicit confirmation before mutation, while closed days, treatment-hour boundaries, elapsed time, and occupied slots remain unavailable. Day view distinguishes breaks with a labeled hatched band that does not intercept calendar interaction.
 
 ## State Model
 
