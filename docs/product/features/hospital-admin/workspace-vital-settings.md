@@ -9,6 +9,7 @@ doc_type: feature-spec
 tags: [hospital-admin, vitals, workspace-settings, reception, chart]
 related_work:
   - "HOSPITAL-ADMIN-LIVE-PR-018"
+  - "HOSPITAL-ADMIN-LIVE-PR-019"
 last_updated: 2026-07-22
 ---
 
@@ -22,8 +23,10 @@ Give each hospital one workspace-wide list of vital fields. Administrators choos
 
 - Scope is one configuration per workspace. It is not user-, role-, room-, or species-specific.
 - Members with `hospital_settings:view` can read the configuration. Only members with `hospital_settings:manage` can save it.
-- Enabled fields remain optional during patient entry. Enabling a field never makes a measurement required.
-- Disabling a field hides it from new entry and current summary surfaces. Existing measurements remain stored and reappear if the field is enabled again.
+- Every measurement remains optional during patient entry. A required workspace preset never makes its patient value mandatory.
+- `weight` and `temperature` are required workspace presets: they always remain configured and enabled, while retaining reorder and allowed-unit controls.
+- Optional presets can be disabled while remaining configured, or removed from the workspace list.
+- Disabling or removing an optional preset hides it from new entry and current summary surfaces. Existing measurements remain stored and reappear when the preset is enabled or added again.
 - Product presets are curated centrally. Workspace users cannot create arbitrary field definitions.
 - The first supported preset catalog is `weight`, `temperature`, `heart_rate`, `respiratory_rate`, and `blood_pressure`.
 - New workspaces receive weight, temperature, heart rate, and respiratory rate in that order. Blood pressure is available from `추가`.
@@ -49,7 +52,8 @@ Storage remains canonical. The UI converts grams to kilograms and Fahrenheit to 
 - `초기화` restores the last saved snapshot.
 - `변경사항 저장` opens a confirmation dialog that names the enabled vital list and explains that reception/chart input will change while historical records remain.
 - `사용할 바이탈` contains the only `추가` action.
-- Rows expose a drag handle, display-unit control, and enabled switch.
+- Rows expose a six-dot drag handle and display-unit control. Required rows show a `필수` badge; optional rows show an enabled switch and `목록에서 제거` menu.
+- Removing an optional row changes only the draft, offers toast undo, and is persisted through the existing save confirmation. The confirmation explains that historical measurements remain.
 - Reordering must support pointer, touch, and keyboard interaction through a maintained drag-and-drop library.
 
 ## Data And Audit

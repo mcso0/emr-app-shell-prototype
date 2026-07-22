@@ -266,6 +266,99 @@ test("waiting chart saves and clears only today's vital values through the dialo
   });
 });
 
+test("chart vital history follows workspace omission and re-add without rewriting measurements", async ({ page }) => {
+  const workspaceId = "clair-demo";
+  const encounterId = "encounter-haru-260430";
+  let includeHeartRate = false;
+  const historicalVital = {
+    id: "vital-haru-history",
+    encounterId,
+    measuredAt: "2026-07-20T09:30:00.000Z",
+    weightKg: 5.12,
+    temperatureC: 38.9,
+    heartRateBpm: 88,
+    respiratoryRateRpm: 24,
+  };
+  const presets = [
+    { key: "weight", label: "체중", description: "환자의 현재 체중", canonicalUnit: "kg", allowedDisplayUnits: ["kg", "g"], requiredInWorkspace: true },
+    { key: "temperature", label: "체온", description: "체온계로 측정한 체온", canonicalUnit: "°C", allowedDisplayUnits: ["°C", "°F"], requiredInWorkspace: true },
+    { key: "heart_rate", label: "심박수", description: "분당 심장 박동 수", canonicalUnit: "bpm", allowedDisplayUnits: ["bpm"], requiredInWorkspace: false },
+    { key: "respiratory_rate", label: "호흡수", description: "분당 호흡 횟수", canonicalUnit: "rpm", allowedDisplayUnits: ["rpm"], requiredInWorkspace: false },
+    { key: "blood_pressure", label: "혈압", description: "수축기 단독 또는 수축기/이완기", canonicalUnit: "mmHg", allowedDisplayUnits: ["mmHg"], requiredInWorkspace: false },
+  ];
+
+  await page.route("**/api/workspaces/*/vital-settings", async (route) => {
+    const items = [
+      { key: "weight", enabled: true, displayUnit: "kg", sortOrder: 0 },
+      { key: "temperature", enabled: true, displayUnit: "°C", sortOrder: 1 },
+      ...(includeHeartRate
+        ? [{ key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 2 }]
+        : []),
+      {
+        key: "respiratory_rate",
+        enabled: true,
+        displayUnit: "rpm",
+        sortOrder: includeHeartRate ? 3 : 2,
+      },
+    ];
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, status: 200, canManage: true, presets, items }),
+    });
+  });
+  await page.route("**/api/workspaces/*/chart/preconsultation-context?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        canWriteVitals: true,
+        enforcedBy: "chart-preconsultation-context-read",
+        context: {
+          encounter: {
+            id: encounterId,
+            encounterNo: "E-260430-0005",
+            receptionType: "walk_in",
+            visitPurpose: "예방접종",
+            chiefComplaint: "예방접종 전 건강 확인",
+            checkedInAt: "2026-04-30T16:05:00+09:00",
+            status: "waiting",
+          },
+          queue: { id: "queue-haru-consultation", status: "waiting" },
+          patient: {
+            id: "patient-haru",
+            patientNo: "P-HARU",
+            name: "하루",
+            species: "cat",
+            breed: "Korean Shorthair",
+            estimatedAgeText: "2세",
+            sex: "female",
+          },
+          guardian: { id: "guardian-kang-seoyun", name: "강서윤" },
+          veterinarian: { id: "user-vet", displayName: "이수지" },
+          priorEncounterCount: 1,
+          vitals: [historicalVital],
+          history: [],
+        },
+      }),
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`);
+  const vitalTable = page.getByTestId("chart-start-locked-state").getByLabel(
+    "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
+  );
+  await expect(vitalTable).not.toContainText("심박수");
+  await expect(vitalTable).not.toContainText("88 bpm");
+  expect(historicalVital.heartRateBpm).toBe(88);
+
+  includeHeartRate = true;
+  await page.reload();
+  await expect(vitalTable).toContainText("심박수");
+  await expect(vitalTable).toContainText("88 bpm");
+  expect(historicalVital.heartRateBpm).toBe(88);
+});
+
 test("chart workspace renders queue, history, SOAP, assessment, and orders", async ({
   page,
 }) => {

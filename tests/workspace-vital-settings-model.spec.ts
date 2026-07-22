@@ -25,6 +25,13 @@ test("workspace vital defaults enable the four approved presets in input order",
     "respiratory_rate",
     "blood_pressure",
   ]);
+  expect(snapshot.presets.map((preset) => [preset.key, preset.requiredInWorkspace])).toEqual([
+    ["weight", true],
+    ["temperature", true],
+    ["heart_rate", false],
+    ["respiratory_rate", false],
+    ["blood_pressure", false],
+  ]);
 });
 
 test("workspace vital parser rejects unknown presets and unsupported display units", () => {
@@ -38,6 +45,21 @@ test("workspace vital parser rejects unknown presets and unsupported display uni
   expect(parseWorkspaceVitalSettingsSnapshot({
     ...valid,
     items: [{ key: "unknown", enabled: true, displayUnit: "kg", sortOrder: 0 }],
+  })).toBeNull();
+});
+
+test("workspace vital parser rejects snapshots that omit or disable a required preset", () => {
+  const valid = createDefaultWorkspaceVitalSettingsSnapshot();
+
+  expect(parseWorkspaceVitalSettingsSnapshot({
+    ...valid,
+    items: valid.items.filter((item) => item.key !== "weight"),
+  })).toBeNull();
+  expect(parseWorkspaceVitalSettingsSnapshot({
+    ...valid,
+    items: valid.items.map((item) => item.key === "temperature"
+      ? { ...item, enabled: false }
+      : item),
   })).toBeNull();
 });
 

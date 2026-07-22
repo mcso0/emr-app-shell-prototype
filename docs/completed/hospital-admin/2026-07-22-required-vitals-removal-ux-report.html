@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>필수 바이탈 및 목록 제거 UX 구현 보고서</title>
+  <style>
+    body{margin:0;background:#f6f7f9;color:#18202a;font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:860px;margin:40px auto;padding:36px;background:#fff;border:1px solid #e5e7eb;border-radius:16px}h1{margin-top:0;font-size:28px}h2{margin-top:30px;font-size:18px}ul{padding-left:22px}.status{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff7df;color:#825400;font-weight:700}.note{padding:14px 16px;border-radius:10px;background:#f3f4f6}code{font-size:13px}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>필수 바이탈 및 목록 제거 UX 구현 보고서</h1>
+    <p class="status">구현 완료 · Human Review</p>
+    <p>체중과 체온은 병원 워크스페이스에서 항상 사용할 수 있게 보호하고, 나머지 바이탈은 필요에 따라 목록에서 제거하거나 다시 추가할 수 있게 만들었다. 제거해도 과거 측정 기록은 그대로 남는다.</p>
+    <h2>화면 변경</h2>
+    <ul>
+      <li>드래그 핸들을 일반적인 6점 그립으로 바꾸고, 배경 호버 없이 grab/grabbing 커서를 사용한다.</li>
+      <li>체중·체온은 스위치 대신 <strong>필수</strong> 배지로 표시하며 제거 메뉴를 제공하지 않는다.</li>
+      <li>선택 바이탈은 더보기 메뉴에서 목록 제거, 토스트 되돌리기, 바이탈 추가를 통한 재등록이 가능하다.</li>
+      <li>저장 확인에서 제거 항목과 과거 기록 보존 방식을 명확히 안내한다.</li>
+    </ul>
+    <h2>데이터와 안전 경계</h2>
+    <ul>
+      <li>프리셋에 <code>required_in_workspace</code>를 추가하고 체중·체온을 필수로 지정했다.</li>
+      <li>UI, TypeScript 서버 검증, SQL RPC가 필수 항목 누락·비활성을 각각 차단한다.</li>
+      <li>마이그레이션은 기존 단위와 순서를 유지하고 누락된 필수 설정만 보완한다.</li>
+      <li><code>patient_vital_measurements</code> 행은 삭제하거나 수정하지 않는다.</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li>설정 모델·서버·마이그레이션·관리 화면 집중 테스트를 통과했다.</li>
+      <li>접수에서 제거된 입력이 사라지고, 차트에서 과거 심박수가 숨김 후 재추가 시 다시 보이는 것을 확인했다.</li>
+      <li>로컬 Supabase 전체 재구성과 권한/데이터 보존 롤백 재현을 통과했다.</li>
+      <li>TypeScript, ESLint, 프로덕션 빌드를 통과했다.</li>
+    </ul>
+    <h2>남은 단계</h2>
+    <p class="note">현재 변경은 로컬 Human Review 상태다. 원격 마이그레이션, 배포, 커밋·PR·병합은 아직 수행하지 않았다.</p>
+  </main>
+</body>
+</html>

@@ -12,6 +12,7 @@ related_work:
   - CHART-PR-015
   - CHART-PR-016
   - HOSPITAL-ADMIN-LIVE-PR-018
+  - HOSPITAL-ADMIN-LIVE-PR-019
 last_updated: 2026-07-22
 tags: [data-model, patient, vital, chart, permissions]
 ---
@@ -54,7 +55,7 @@ The direct table remains RLS-protected with direct authenticated table privilege
 
 The context bar has no vital write UI. It requests the shared latest read model on a later screen selection/load, not through real-time push.
 
-Workspace display and entry visibility comes from `vital_presets` plus `workspace_vital_settings`. The measurement table keeps canonical `kg` and `°C` values; changing a workspace display unit or disabling a preset never rewrites or deletes historical rows.
+Workspace display and entry visibility comes from `vital_presets` plus `workspace_vital_settings`. The measurement table keeps canonical `kg` and `°C` values; changing a workspace display unit, disabling an optional preset, or removing an optional preset from the workspace list never rewrites or deletes historical rows. Re-adding the preset makes the same stored values visible again. `required_in_workspace` means the preset must remain configured and enabled; it does not make a patient measurement mandatory.
 
 ## Compatibility Snapshot
 
