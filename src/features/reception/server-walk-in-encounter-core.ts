@@ -41,6 +41,7 @@ export type ReceptionWalkInEncounterFieldErrorKey =
   | "vitals"
   | "vitals.weightKg"
   | "vitals.temperatureC"
+  | "vitals.heartRateBpm"
   | "vitals.respiratoryRateRpm"
   | "vitals.bloodPressure"
   | "vitals.bloodPressure.systolicMmhg"
@@ -503,13 +504,18 @@ function normalizeVitals(
   if (vitals.temperatureC !== undefined) {
     normalized.temperatureC = Math.round(vitals.temperatureC * 10) / 10;
   }
+  if (vitals.heartRateBpm !== undefined) {
+    normalized.heartRateBpm = vitals.heartRateBpm;
+  }
   if (vitals.respiratoryRateRpm !== undefined) {
     normalized.respiratoryRateRpm = vitals.respiratoryRateRpm;
   }
   if (vitals.bloodPressure) {
     normalized.bloodPressure = {
       systolicMmhg: vitals.bloodPressure.systolicMmhg,
-      diastolicMmhg: vitals.bloodPressure.diastolicMmhg,
+      ...(vitals.bloodPressure.diastolicMmhg === undefined
+        ? {}
+        : { diastolicMmhg: vitals.bloodPressure.diastolicMmhg }),
     };
   }
 
@@ -582,6 +588,13 @@ function validateVitals(
     fieldErrors,
   );
   validatePositiveNumber(
+    rawVitals.heartRateBpm,
+    "vitals.heartRateBpm",
+    "심박수는 0보다 큰 정수로 입력해 주세요.",
+    fieldErrors,
+    true,
+  );
+  validatePositiveNumber(
     rawVitals.respiratoryRateRpm,
     "vitals.respiratoryRateRpm",
     "호흡수는 0보다 큰 정수로 입력해 주세요.",
@@ -615,10 +628,7 @@ function validateVitals(
       true,
     );
   }
-  if (diastolic === undefined) {
-    fieldErrors["vitals.bloodPressure.diastolicMmhg"] =
-      "이완기 혈압을 입력해 주세요.";
-  } else {
+  if (diastolic !== undefined) {
     validatePositiveNumber(
       diastolic,
       "vitals.bloodPressure.diastolicMmhg",

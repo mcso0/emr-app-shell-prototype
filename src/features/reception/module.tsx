@@ -199,6 +199,15 @@ import type {
   ReceptionWalkInEncounterResponse,
 } from "@/features/reception/walk-in-encounter";
 import {
+  fromCanonicalVitalValue,
+  getEnabledWorkspaceVitalSettings,
+  toCanonicalVitalValue,
+  type WorkspaceVitalKey,
+  type WorkspaceVitalSettingsSnapshot,
+  type WorkspaceVitalUnit,
+} from "@/features/patient-vitals/workspace-vital-settings";
+import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
+import {
   readChartLiveEncounterHandoff,
   saveChartLiveEncounterHandoff,
 } from "@/features/chart/live-encounter-handoff";
@@ -539,6 +548,7 @@ type WorkspaceStaffReadResponse =
 type ReceptionCreateVitalId =
   | "weight"
   | "temperature"
+  | "heartRate"
   | "respiration"
   | "bloodPressure";
 
@@ -547,6 +557,7 @@ type ReceptionCreateVitalDraft = {
   values: {
     weightKg: string;
     temperatureC: string;
+    heartRateBpm: string;
     respiratoryRateRpm: string;
     bloodPressureSystolicMmhg: string;
     bloodPressureDiastolicMmhg: string;
@@ -1960,13 +1971,61 @@ const parseWeightKgInput = (value: string) => {
     : undefined;
 };
 
+const receptionIdByWorkspaceVitalKey: Record<WorkspaceVitalKey, ReceptionCreateVitalId> = {
+  weight: "weight",
+  temperature: "temperature",
+  heart_rate: "heartRate",
+  respiratory_rate: "respiration",
+  blood_pressure: "bloodPressure",
+};
+
+const workspaceVitalKeyByReceptionId: Record<ReceptionCreateVitalId, WorkspaceVitalKey> = {
+  weight: "weight",
+  temperature: "temperature",
+  heartRate: "heart_rate",
+  respiration: "respiratory_rate",
+  bloodPressure: "blood_pressure",
+};
+
+const workspaceVitalKeyToReceptionId = (key: WorkspaceVitalKey) =>
+  receptionIdByWorkspaceVitalKey[key];
+
+const getReceptionVitalUnit = (
+  settings: WorkspaceVitalSettingsSnapshot | undefined,
+  key: WorkspaceVitalKey,
+): WorkspaceVitalUnit =>
+  settings?.items.find((item) => item.key === key)?.displayUnit ??
+  settings?.presets.find((preset) => preset.key === key)?.canonicalUnit ??
+  ({
+    weight: "kg",
+    temperature: "°C",
+    heart_rate: "bpm",
+    respiratory_rate: "rpm",
+    blood_pressure: "mmHg",
+  } satisfies Record<WorkspaceVitalKey, WorkspaceVitalUnit>)[key];
+
+const formatReceptionInitialWeight = (
+  weightKg: number | undefined,
+  settings: WorkspaceVitalSettingsSnapshot | undefined,
+) => {
+  if (weightKg === undefined) return "";
+  const unit = getReceptionVitalUnit(settings, "weight");
+  return unit === "kg"
+    ? formatPatientWeightKgInput(weightKg)
+    : String(fromCanonicalVitalValue("weight", weightKg, unit));
+};
+
 const createReceptionVitalDraft = (
   weightKg?: number,
+  settings?: WorkspaceVitalSettingsSnapshot,
 ): ReceptionCreateVitalDraft => ({
-  selectedIds: ["weight"],
+  selectedIds: settings
+    ? getEnabledWorkspaceVitalSettings(settings).map((item) => workspaceVitalKeyToReceptionId(item.key))
+    : ["weight", "temperature", "heartRate", "respiration"],
   values: {
-    weightKg: formatPatientWeightKgInput(weightKg),
+    weightKg: formatReceptionInitialWeight(weightKg, settings),
     temperatureC: "",
+    heartRateBpm: "",
     respiratoryRateRpm: "",
     bloodPressureSystolicMmhg: "",
     bloodPressureDiastolicMmhg: "",
@@ -1975,6 +2034,7 @@ const createReceptionVitalDraft = (
 
 const buildReceptionVitalInput = (
   draft: ReceptionCreateVitalDraft,
+  settings?: WorkspaceVitalSettingsSnapshot,
 ): {
   fieldErrors: ReceptionCreateVitalFieldErrors;
   input?: ReceptionVitalMeasurementInput;
@@ -2004,11 +2064,19 @@ const buildReceptionVitalInput = (
 
   if (selected.has("weight")) {
     const value = readPositiveNumber("weightKg", "체중");
-    if (value !== undefined) input.weightKg = Math.round(value * 100) / 100;
+    if (value !== undefined) {
+      input.weightKg = toCanonicalVitalValue("weight", value, getReceptionVitalUnit(settings, "weight"));
+    }
   }
   if (selected.has("temperature")) {
     const value = readPositiveNumber("temperatureC", "체온");
-    if (value !== undefined) input.temperatureC = Math.round(value * 10) / 10;
+    if (value !== undefined) {
+      input.temperatureC = toCanonicalVitalValue("temperature", value, getReceptionVitalUnit(settings, "temperature"));
+    }
+  }
+  if (selected.has("heartRate")) {
+    const value = readPositiveNumber("heartRateBpm", "심박수", true);
+    if (value !== undefined) input.heartRateBpm = value;
   }
   if (selected.has("respiration")) {
     const value = readPositiveNumber("respiratoryRateRpm", "호흡", true);
@@ -2017,25 +2085,21 @@ const buildReceptionVitalInput = (
   if (selected.has("bloodPressure")) {
     const systolicRaw = draft.values.bloodPressureSystolicMmhg.trim();
     const diastolicRaw = draft.values.bloodPressureDiastolicMmhg.trim();
-    if (Boolean(systolicRaw) !== Boolean(diastolicRaw)) {
-      const message = "수축기와 이완기 혈압을 모두 입력해 주세요.";
-      if (!systolicRaw) fieldErrors.bloodPressureSystolicMmhg = message;
-      if (!diastolicRaw) fieldErrors.bloodPressureDiastolicMmhg = message;
-    } else if (systolicRaw && diastolicRaw) {
+    if (!systolicRaw && diastolicRaw) {
+      fieldErrors.bloodPressureSystolicMmhg = "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
+    } else if (systolicRaw) {
       const systolic = readPositiveNumber(
         "bloodPressureSystolicMmhg",
         "수축기 혈압",
         true,
       );
-      const diastolic = readPositiveNumber(
-        "bloodPressureDiastolicMmhg",
-        "이완기 혈압",
-        true,
-      );
-      if (systolic !== undefined && diastolic !== undefined) {
+      const diastolic = diastolicRaw
+        ? readPositiveNumber("bloodPressureDiastolicMmhg", "이완기 혈압", true)
+        : undefined;
+      if (systolic !== undefined && (!diastolicRaw || diastolic !== undefined)) {
         input.bloodPressure = {
           systolicMmhg: systolic,
-          diastolicMmhg: diastolic,
+          ...(diastolic === undefined ? {} : { diastolicMmhg: diastolic }),
         };
       }
     }
@@ -7120,6 +7184,15 @@ function ReceptionWalkInFormDrawer({
   workspaceId: string;
 }) {
   const authSession = useMockAuthStore((state) => state.session);
+  const authSessionId = authSession?.id;
+  const vitalActorHeaders = useMemo(
+    () => authSessionId ? { "x-clair-demo-session-user-id": authSessionId } : undefined,
+    [authSessionId],
+  );
+  const { snapshot: vitalSettings, status: vitalSettingsStatus } = useWorkspaceVitalSettings({
+    actorHeaders: vitalActorHeaders,
+    workspaceId,
+  });
   const operatingSchedule = useReceptionOperatingSchedule({
     actorId: authSession?.id,
     date: operatingDate,
@@ -7151,8 +7224,9 @@ function ReceptionWalkInFormDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [visitPurpose, setVisitPurpose] = useState("");
   const [vitalDraft, setVitalDraft] = useState<ReceptionCreateVitalDraft>(() =>
-    createReceptionVitalDraft(),
+    createReceptionVitalDraft(undefined, vitalSettings),
   );
+  const vitalSettingsAppliedRef = useRef(false);
   const [sendKakaoMessage, setSendKakaoMessage] = useState(true);
   const plannedStartAt = getReceptionIsoAtMinutes(
     operatingDate,
@@ -7193,8 +7267,8 @@ function ReceptionWalkInFormDrawer({
   const shouldShowPatientLookup = patientLookupOpen && lookupActive;
   const trimmedVisitPurpose = visitPurpose.trim();
   const vitalBuild = useMemo(
-    () => buildReceptionVitalInput(vitalDraft),
-    [vitalDraft],
+    () => buildReceptionVitalInput(vitalDraft, vitalSettings),
+    [vitalDraft, vitalSettings],
   );
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
@@ -7218,6 +7292,12 @@ function ReceptionWalkInFormDrawer({
   );
 
   useEffect(() => {
+    if (vitalSettingsStatus !== "ready" || vitalSettingsAppliedRef.current) return;
+    vitalSettingsAppliedRef.current = true;
+    setVitalDraft(createReceptionVitalDraft(patient?.weightKg, vitalSettings));
+  }, [patient?.weightKg, vitalSettings, vitalSettingsStatus]);
+
+  useEffect(() => {
     const initialSummary = patientSummaryOptions.find(
       (summary) => summary.patient.id === initialPatientId,
     );
@@ -7227,8 +7307,8 @@ function ReceptionWalkInFormDrawer({
     setPatientId(initialSummary.patient.id);
     setSelectedLookupSummary(initialSummary);
     setLookupQuery(getReceptionPatientOptionLabel(initialSummary));
-    setVitalDraft(createReceptionVitalDraft(initialSummary.patient.weightKg));
-  }, [initialPatientId, patientSummaryOptions]);
+    setVitalDraft(createReceptionVitalDraft(initialSummary.patient.weightKg, vitalSettings));
+  }, [initialPatientId, patientSummaryOptions, vitalSettings]);
 
   useEffect(() => {
     const query = lookupQuery.trim();
@@ -7315,14 +7395,14 @@ function ReceptionWalkInFormDrawer({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setVitalDraft(createReceptionVitalDraft(patient?.weightKg));
-  }, [patient?.id, patient?.weightKg]);
+    setVitalDraft(createReceptionVitalDraft(patient?.weightKg, vitalSettings));
+  }, [patient?.id, patient?.weightKg, vitalSettings]);
 
   const selectPatientSummary = (summary: ReceptionPatientSummary) => {
     setPatientId(summary.patient.id);
     setSelectedLookupSummary(summary);
     setLookupQuery(getReceptionPatientOptionLabel(summary));
-    setVitalDraft(createReceptionVitalDraft(summary.patient.weightKg));
+    setVitalDraft(createReceptionVitalDraft(summary.patient.weightKg, vitalSettings));
     setPatientLookupOpen(false);
   };
   const close = () => {
@@ -7434,7 +7514,7 @@ function ReceptionWalkInFormDrawer({
                       setLookupQuery("");
                       setPatientId("");
                       setSelectedLookupSummary(null);
-                      setVitalDraft(createReceptionVitalDraft());
+                      setVitalDraft(createReceptionVitalDraft(undefined, vitalSettings));
                       setPatientLookupOpen(true);
                     }}
                   />
@@ -7519,6 +7599,7 @@ function ReceptionWalkInFormDrawer({
                     fieldErrors={vitalBuild.fieldErrors}
                     presentation={presentation}
                     setDraft={setVitalDraft}
+                    vitalSettings={vitalSettings}
                   />
                 </ReceptionSidePanelSection>
               </>
@@ -7778,7 +7859,7 @@ function ReceptionWalkInFormDrawer({
                       setLookupQuery("");
                       setPatientId("");
                       setSelectedLookupSummary(null);
-                      setVitalDraft(createReceptionVitalDraft());
+                      setVitalDraft(createReceptionVitalDraft(undefined, vitalSettings));
                       setPatientLookupOpen(true);
                     }}
                   />
@@ -7855,6 +7936,7 @@ function ReceptionWalkInFormDrawer({
                 fieldErrors={vitalBuild.fieldErrors}
                 presentation={presentation}
                 setDraft={setVitalDraft}
+                vitalSettings={vitalSettings}
               />
             </RegistrationFormSection>
           ) : null}
@@ -9446,13 +9528,14 @@ function getReceptionSidePanelWeightInputValue(weightKg?: number) {
 const receptionCreateVitalOptions = [
   { id: "weight", label: "체중", unit: "kg", inputMode: "decimal" },
   { id: "temperature", label: "체온", unit: "°C", inputMode: "decimal" },
+  { id: "heartRate", label: "심박수", unit: "bpm", inputMode: "numeric" },
   { id: "respiration", label: "호흡", unit: "rpm", inputMode: "numeric" },
   { id: "bloodPressure", label: "혈압", unit: "mmHg", inputMode: "numeric" },
 ] as const;
 
 const getReceptionCreateVitalIcon = (id: ReceptionCreateVitalId) => {
   if (id === "temperature") return <CdsMedicalThermometerIcon className="size-3.5" />;
-  if (id === "respiration") return <CdsMedicalHeartPulseIcon className="size-3.5" />;
+  if (id === "respiration" || id === "heartRate") return <CdsMedicalHeartPulseIcon className="size-3.5" />;
   return <CdsMedicalActivityIcon className="size-3.5" />;
 };
 
@@ -9461,6 +9544,7 @@ function ReceptionCreateVitalFields({
   fieldErrors,
   presentation,
   setDraft,
+  vitalSettings,
 }: {
   draft: ReceptionCreateVitalDraft;
   fieldErrors: ReceptionCreateVitalFieldErrors;
@@ -9468,16 +9552,22 @@ function ReceptionCreateVitalFields({
   setDraft: (
     updater: (current: ReceptionCreateVitalDraft) => ReceptionCreateVitalDraft,
   ) => void;
+  vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
   const [announcement, setAnnouncement] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const addTriggerRef = useRef<HTMLButtonElement | null>(null);
   const firstMenuItemRef = useRef<HTMLButtonElement | null>(null);
   const inputRefs = useRef<Partial<Record<ReceptionCreateVitalId, HTMLElement | null>>>({});
-  const availableOptions = receptionCreateVitalOptions.filter(
-    (option) => !draft.selectedIds.includes(option.id),
+  const enabledIds = getEnabledWorkspaceVitalSettings(vitalSettings).map((item) =>
+    workspaceVitalKeyToReceptionId(item.key),
   );
-  const removable = draft.selectedIds.length > 1;
+  const configuredOptions = enabledIds.flatMap((id) => {
+    const option = receptionCreateVitalOptions.find((candidate) => candidate.id === id);
+    return option ? [{ ...option, unit: getReceptionVitalUnit(vitalSettings, workspaceVitalKeyByReceptionId[id]) }] : [];
+  });
+  const availableOptions: typeof configuredOptions = [];
+  const removable = false;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -9500,7 +9590,7 @@ function ReceptionCreateVitalFields({
   };
 
   const addVital = (id: ReceptionCreateVitalId) => {
-    const option = receptionCreateVitalOptions.find((item) => item.id === id);
+    const option = configuredOptions.find((item) => item.id === id);
     setDraft((current) => ({
       ...current,
       selectedIds: current.selectedIds.includes(id)
@@ -9514,7 +9604,7 @@ function ReceptionCreateVitalFields({
 
   const removeVital = (id: ReceptionCreateVitalId) => {
     if (!removable) return;
-    const option = receptionCreateVitalOptions.find((item) => item.id === id);
+    const option = configuredOptions.find((item) => item.id === id);
     setDraft((current) => ({
       ...current,
       selectedIds:
@@ -9551,7 +9641,9 @@ function ReceptionCreateVitalFields({
         ? "weightKg"
         : id === "temperature"
           ? "temperatureC"
-          : "respiratoryRateRpm";
+          : id === "heartRate"
+            ? "heartRateBpm"
+            : "respiratoryRateRpm";
     const error = fieldErrors[key];
     const input =
       presentation === "side-panel" ? (
@@ -9654,7 +9746,7 @@ function ReceptionCreateVitalFields({
     <>
       <div data-testid="walk-in-vital-rows" className="grid gap-[10px]">
         {draft.selectedIds.map((id) => {
-          const option = receptionCreateVitalOptions.find((item) => item.id === id);
+          const option = configuredOptions.find((item) => item.id === id);
           if (!option) return null;
           const content =
             id === "bloodPressure"

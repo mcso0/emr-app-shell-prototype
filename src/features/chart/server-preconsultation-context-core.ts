@@ -277,6 +277,7 @@ function parseVital(value: unknown): ChartPreconsultationVitalMeasurement | null
   const vital: ChartPreconsultationVitalMeasurement = { id, encounterId, measuredAt };
   assignOptionalNumber(vital, "weightKg", value.weightKg);
   assignOptionalNumber(vital, "temperatureC", value.temperatureC);
+  assignOptionalNumber(vital, "heartRateBpm", value.heartRateBpm);
   assignOptionalNumber(vital, "respiratoryRateRpm", value.respiratoryRateRpm);
   assignOptionalNumber(
     vital,

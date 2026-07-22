@@ -90,6 +90,7 @@ export function parsePatientVitalMeasurement(value: unknown): PatientVitalMeasur
   const vital: PatientVitalMeasurement = { id, patientId, encounterId, measuredAt };
   assignOptionalNumber(vital, "weightKg", value.weightKg);
   assignOptionalNumber(vital, "temperatureC", value.temperatureC);
+  assignOptionalNumber(vital, "heartRateBpm", value.heartRateBpm);
   assignOptionalNumber(vital, "respiratoryRateRpm", value.respiratoryRateRpm);
   assignOptionalNumber(vital, "bloodPressureSystolicMmhg", value.bloodPressureSystolicMmhg);
   assignOptionalNumber(vital, "bloodPressureDiastolicMmhg", value.bloodPressureDiastolicMmhg);

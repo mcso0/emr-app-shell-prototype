@@ -3,10 +3,11 @@ import type { Encounter, WaitingQueueEntry } from "@/types/emr-domain";
 export type ReceptionVitalMeasurementInput = {
   weightKg?: number;
   temperatureC?: number;
+  heartRateBpm?: number;
   respiratoryRateRpm?: number;
   bloodPressure?: {
     systolicMmhg: number;
-    diastolicMmhg: number;
+    diastolicMmhg?: number;
   };
 };
 

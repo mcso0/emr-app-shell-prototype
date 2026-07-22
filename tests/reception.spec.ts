@@ -5064,7 +5064,7 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await expect(walkInForm.getByLabel("체중")).toBeEnabled();
   await expect(
     walkInForm.getByRole("button", { name: "바이탈 추가" }),
-  ).toBeEnabled();
+  ).toHaveCount(0);
   await expect(walkInForm.getByLabel("체중")).toHaveValue("8.40");
   await walkInForm.getByLabel("체중").fill("8.65");
   await expect(walkInForm.getByLabel("방문목적")).toBeVisible();
@@ -5073,7 +5073,7 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   ).toHaveCount(0);
   await walkInForm.getByLabel("방문목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
-  await walkInForm.getByRole("button", { name: "생성" }).click();
+  await page.getByTestId("reception-right-panel").getByRole("button", { name: "생성", exact: true }).click();
 
   await expect.poll(() => walkInCreate.count).toBe(1);
   await expect(page.getByText("접수가 완료되었습니다")).toBeVisible();
@@ -5093,7 +5093,7 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   ).toBeVisible();
 });
 
-test("walk-in vitals add remove restore and submit as one nested measurement", async ({
+test("walk-in uses workspace-configured vitals and submits one nested measurement", async ({
   page,
 }) => {
   const walkInCreate = await mockReceptionWalkInCreate(page, {
@@ -5115,61 +5115,21 @@ test("walk-in vitals add remove restore and submit as one nested measurement", a
   const rows = form.getByTestId("walk-in-vital-rows");
   await expect(rows.getByLabel("체중")).toHaveValue("8.40");
   await expect(rows.getByRole("button", { name: "체중 삭제" })).toHaveCount(0);
-
-  const addTrigger = form.getByRole("button", { name: "바이탈 추가" });
-  await addTrigger.focus();
-  await addTrigger.press("Enter");
-  await expect(
-    page.getByRole("menuitem", { name: "체온 °C" }),
-  ).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(addTrigger).toBeFocused();
-
-  await addTrigger.press("Enter");
-  const temperatureOption = page.getByRole("menuitem", { name: "체온 °C" });
-  await expect(
-    temperatureOption.getByTestId("walk-in-vital-option-icon-temperature"),
-  ).toHaveCSS("background-color", "rgb(250, 250, 250)");
-  await temperatureOption.click();
   await expect(rows).toHaveCSS("row-gap", "10px");
-  await expect(rows.getByRole("button", { name: "체중 삭제" })).toBeVisible();
-  await expect(rows.getByRole("button", { name: "체온 삭제" })).toBeVisible();
   await rows.getByRole("textbox", { name: "체온", exact: true }).fill("38.7");
-  await rows.getByRole("button", { name: "체온 삭제" }).click();
-  await expect(addTrigger).toBeFocused();
-  await addTrigger.click();
-  await page.getByRole("menuitem", { name: "체온 °C" }).click();
-  await expect(
-    rows.getByRole("textbox", { name: "체온", exact: true }),
-  ).toHaveValue("38.7");
-
-  await addTrigger.click();
-  await page.getByRole("menuitem", { name: "호흡 rpm" }).click();
+  await rows.getByRole("textbox", { name: "심박수", exact: true }).fill("88");
   await rows.getByRole("textbox", { name: "호흡", exact: true }).fill("24");
-  await addTrigger.click();
-  await page.getByRole("menuitem", { name: "혈압 mmHg" }).click();
-  await expect(addTrigger).toHaveCount(0);
-  await expect(rows.getByLabel("수축기 혈압")).toBeVisible();
-  await expect(rows.getByLabel("이완기 혈압")).toBeVisible();
-
-  await rows.getByLabel("수축기 혈압").fill("120");
   await form.getByLabel("방문목적").fill("바이탈 측정 현장 접수");
-  await expect(form.getByRole("button", { name: "생성" })).toBeDisabled();
-  await expect(form.getByText("수축기와 이완기 혈압을 모두 입력해 주세요.")).toBeVisible();
-  await rows.getByLabel("이완기 혈압").fill("80");
-  await expect(form.getByRole("button", { name: "생성" })).toBeEnabled();
-  await form.getByRole("button", { name: "생성" }).click();
+  await expect(page.getByTestId("reception-right-panel").getByRole("button", { name: "생성", exact: true })).toBeEnabled();
+  await page.getByTestId("reception-right-panel").getByRole("button", { name: "생성", exact: true }).click();
 
   await expect.poll(() => walkInCreate.count).toBe(1);
   expect(walkInCreate.latestBody).toMatchObject({
     vitals: {
       weightKg: 8.4,
       temperatureC: 38.7,
+      heartRateBpm: 88,
       respiratoryRateRpm: 24,
-      bloodPressure: {
-        systolicMmhg: 120,
-        diastolicMmhg: 80,
-      },
     },
   });
   expect(walkInCreate.latestBody).not.toHaveProperty("weightKg");
@@ -5193,11 +5153,9 @@ test("walk-in empty vital draft creates without a measurement payload", async ({
   await form.getByLabel("환자 검색").fill("두부");
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
   const rows = form.getByTestId("walk-in-vital-rows");
-  await form.getByRole("button", { name: "바이탈 추가" }).click();
-  await page.getByRole("menuitem", { name: "체온 °C" }).click();
-  await rows.getByRole("button", { name: "체중 삭제" }).click();
+  await rows.getByLabel("체중").fill("");
   await form.getByLabel("방문목적").fill("측정값 없는 현장 접수");
-  await form.getByRole("button", { name: "생성" }).click();
+  await page.getByTestId("reception-right-panel").getByRole("button", { name: "생성", exact: true }).click();
 
   await expect.poll(() => walkInCreate.count).toBe(1);
   expect(walkInCreate.latestBody).not.toHaveProperty("vitals");
@@ -6028,7 +5986,7 @@ test("Cheongdam walk-in keeps a selected DB lookup patient when the display labe
   await expect.poll(() => lookupRequests).toBeGreaterThanOrEqual(2);
 
   await walkInForm.getByLabel("방문목적").fill("첫 내원 상담");
-  await walkInForm.getByRole("button", { name: "생성" }).click();
+  await page.getByRole("button", { name: "생성", exact: true }).click();
 
   await expect.poll(() => createBody?.patientId).toBe(patientId);
   expect(createBody).toMatchObject({
@@ -6615,7 +6573,7 @@ test("Cheongdam walk-in create failure does not say the selected DB patient is m
   await walkInForm.getByLabel("환자 검색").fill("토리");
   await page.getByRole("option", { name: /토리.*심도겸/ }).click();
   await walkInForm.getByLabel("방문목적").fill("구토");
-  await walkInForm.getByRole("button", { name: "생성" }).click();
+  await page.getByRole("button", { name: "생성", exact: true }).click();
 
   await expect(page.getByText("접수를 생성할 수 없습니다.")).toBeVisible();
   await expect(page.getByText("접수할 환자를 찾을 수 없습니다.")).toHaveCount(
@@ -6749,7 +6707,7 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
   await page.keyboard.press("Escape");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await expect(walkInForm.getByLabel("접수시간")).toHaveValue("오전 10:45");
-  await walkInForm.getByRole("button", { name: "생성" }).click();
+  await page.getByRole("button", { name: "생성", exact: true }).click();
 
   expect(capturedBody).toMatchObject({
     patientId: "patient-dubu",
@@ -6937,7 +6895,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await walkInForm.getByLabel("방문목적").fill("DEN-65 reload walk-in");
   await walkInForm.getByLabel("담당의").click();
   await page.getByRole("option", { name: "김도윤" }).click();
-  await walkInForm.getByRole("button", { name: "생성" }).click();
+  await page.getByRole("button", { name: "생성", exact: true }).click();
 
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
@@ -8856,7 +8814,7 @@ test("reception walk-in keeps selected veterinarian and form details", async ({
     .fill("기존 노쇼 예약과 별도 현장 접수");
   await walkInForm.getByLabel("담당의").click();
   await page.getByRole("option", { name: "김도윤" }).click();
-  await walkInForm.getByRole("button", { name: "생성" }).click();
+  await page.getByRole("button", { name: "생성", exact: true }).click();
 
   const haruCard = page
     .getByTestId("patient-card-patient-haru")

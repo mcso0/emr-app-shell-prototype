@@ -66,6 +66,14 @@ import {
   toPatientVitalWriteInput,
   type PatientVitalWriteInput,
 } from "@/features/patient-vitals/patient-vital-types";
+import {
+  fromCanonicalVitalValue,
+  getEnabledWorkspaceVitalSettings,
+  toCanonicalVitalValue,
+  type WorkspaceVitalKey,
+  type WorkspaceVitalSettingsSnapshot,
+} from "@/features/patient-vitals/workspace-vital-settings";
+import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
 import { cn } from "@/lib/utils";
 
 type ContextState =
@@ -97,13 +105,14 @@ export function ChartPreconsultationContextPanel({
   primaryActionBusy: boolean;
   workspaceId: string;
 }) {
+  const { snapshot: vitalSettings } = useWorkspaceVitalSettings({ actorHeaders, workspaceId });
   const [contextState, setContextState] = useState<ContextState>({ status: "loading" });
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [guardianInformationOpen, setGuardianInformationOpen] = useState(false);
   const [patientInformationOpen, setPatientInformationOpen] = useState(false);
   const [vitalDialogOpen, setVitalDialogOpen] = useState(false);
   const [vitalDialogDraft, setVitalDialogDraft] = useState<VitalDialogDraft>(() =>
-    createVitalDialogDraft(),
+    createVitalDialogDraft(undefined, vitalSettings),
   );
   const [vitalFieldErrors, setVitalFieldErrors] = useState<
     Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>
@@ -200,12 +209,12 @@ export function ChartPreconsultationContextPanel({
     (measurement) => measurement.encounterId === context.encounter.id,
   );
   const openVitalDialog = () => {
-    setVitalDialogDraft(createVitalDialogDraft(currentVital));
+    setVitalDialogDraft(createVitalDialogDraft(currentVital, vitalSettings));
     setVitalFieldErrors({});
     setVitalDialogOpen(true);
   };
   const saveVital = async () => {
-    const parsed = parseVitalDialogDraft(vitalDialogDraft);
+    const parsed = parseVitalDialogDraft(vitalDialogDraft, vitalSettings);
     if (!parsed.ok) {
       setVitalFieldErrors(parsed.fieldErrors);
       return;
@@ -258,6 +267,7 @@ export function ChartPreconsultationContextPanel({
               canWrite={canWriteVitals}
               context={context}
               onOpenVitalDialog={openVitalDialog}
+              vitalSettings={vitalSettings}
             />
             <SectionDivider />
             <HistorySection
@@ -291,7 +301,7 @@ export function ChartPreconsultationContextPanel({
           footerMeta={
             currentVital
               ? "모든 값을 비우면 오늘 바이탈 행은 유지되고 값만 미표시로 바뀝니다."
-              : "체중, 체온, 혈압, 호흡수 중 측정한 항목만 입력해 주세요."
+              : "병원에서 사용하는 바이탈 중 실제로 측정한 항목만 입력해 주세요."
           }
           secondaryAction={
             <Button type="button" variant="outline" disabled={vitalSaving} onClick={() => setVitalDialogOpen(false)}>
@@ -311,6 +321,7 @@ export function ChartPreconsultationContextPanel({
               setVitalDialogDraft((current) => ({ ...current, [key]: value }));
               setVitalFieldErrors((current) => ({ ...current, [key]: undefined, vitals: undefined }));
             }}
+            vitalSettings={vitalSettings}
           />
         </EmrDialogShell>
       </Dialog>
@@ -722,10 +733,12 @@ function VitalSection({
   canWrite,
   context,
   onOpenVitalDialog,
+  vitalSettings,
 }: {
   canWrite: boolean;
   context: ChartPreconsultationContext;
   onOpenVitalDialog: () => void;
+  vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
   const current = context.vitals.find(
     (measurement) => measurement.encounterId === context.encounter.id,
@@ -748,7 +761,7 @@ function VitalSection({
         ) : null}
       </div>
       {current ? (
-        <VitalComparison current={current} previous={previous} />
+        <VitalComparison current={current} previous={previous} vitalSettings={vitalSettings} />
       ) : (
         <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
           <CdsMedicalActivityIcon className="size-6 shrink-0 text-[var(--emr-text-placeholder)]" aria-hidden="true" />
@@ -766,33 +779,14 @@ function VitalEntryFields({
   draft,
   errors,
   onChange,
+  vitalSettings,
 }: {
   draft: VitalDialogDraft;
   errors: Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>;
   onChange: (key: keyof PatientVitalWriteInput, value: string) => void;
+  vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
-  const fields: Array<{
-    key: keyof PatientVitalWriteInput;
-    label: string;
-    unit: string;
-    inputMode: "decimal" | "numeric";
-  }> = [
-    { key: "weightKg", label: "체중", unit: "kg", inputMode: "decimal" },
-    { key: "temperatureC", label: "체온", unit: "°C", inputMode: "decimal" },
-    {
-      key: "bloodPressureSystolicMmhg",
-      label: "수축기 혈압",
-      unit: "mmHg",
-      inputMode: "numeric",
-    },
-    {
-      key: "bloodPressureDiastolicMmhg",
-      label: "이완기 혈압",
-      unit: "mmHg",
-      inputMode: "numeric",
-    },
-    { key: "respiratoryRateRpm", label: "호흡수", unit: "회/분", inputMode: "numeric" },
-  ];
+  const enabledSettings = getEnabledWorkspaceVitalSettings(vitalSettings);
 
   return (
     <div className="space-y-4">
@@ -800,32 +794,48 @@ function VitalEntryFields({
         실제로 측정한 값만 입력해 주세요. 입력하지 않은 값은 표에서 미표시로 보여요.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
-        {fields.map((field) => (
-          <div key={field.key} className="space-y-1.5">
-            <Label htmlFor={`preconsultation-vital-${field.key}`}>{field.label}</Label>
-            <div className="relative">
-              <Input
-                id={`preconsultation-vital-${field.key}`}
-                aria-describedby={
-                  errors[field.key] ? `preconsultation-vital-${field.key}-error` : undefined
-                }
-                aria-invalid={Boolean(errors[field.key])}
-                inputMode={field.inputMode}
-                placeholder="미입력"
-                value={draft[field.key]}
-                onChange={(event) => onChange(field.key, event.target.value)}
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-[var(--emr-text-tertiary)]">
-                {field.unit}
-              </span>
-            </div>
-            {errors[field.key] ? (
-              <p id={`preconsultation-vital-${field.key}-error`} className="text-xs text-[var(--emr-status-danger-text)]">
-                {errors[field.key]}
-              </p>
-            ) : null}
-          </div>
-        ))}
+        {enabledSettings.flatMap((setting) => {
+          const preset = vitalSettings.presets.find((item) => item.key === setting.key);
+          if (!preset) return [];
+          if (setting.key === "blood_pressure") {
+            return ([
+              <VitalDialogInput
+                draft={draft}
+                errors={errors}
+                inputMode="numeric"
+                inputKey="bloodPressureSystolicMmhg"
+                key="bloodPressureSystolicMmhg"
+                label="수축기 혈압"
+                onChange={onChange}
+                unit={setting.displayUnit}
+              />,
+              <VitalDialogInput
+                draft={draft}
+                errors={errors}
+                inputMode="numeric"
+                inputKey="bloodPressureDiastolicMmhg"
+                key="bloodPressureDiastolicMmhg"
+                label="이완기 혈압 (선택)"
+                onChange={onChange}
+                unit={setting.displayUnit}
+              />,
+            ]);
+          }
+          const inputKey = inputKeyByVitalKey[setting.key];
+          if (!inputKey) return [];
+          return [
+            <VitalDialogInput
+              draft={draft}
+              errors={errors}
+              inputMode={setting.key === "weight" || setting.key === "temperature" ? "decimal" : "numeric"}
+              inputKey={inputKey}
+              key={setting.key}
+              label={preset.label}
+              onChange={onChange}
+              unit={setting.displayUnit}
+            />,
+          ];
+        })}
       </div>
       {errors.vitals ? (
         <p role="alert" className="text-sm text-[var(--emr-status-danger-text)]">
@@ -836,51 +846,128 @@ function VitalEntryFields({
   );
 }
 
-type VitalDefinition = {
-  key: "weightKg" | "temperatureC" | "respiratoryRateRpm" | "bloodPressureSystolicMmhg";
+function VitalDialogInput({
+  draft,
+  errors,
+  inputKey,
+  inputMode,
+  label,
+  onChange,
+  unit,
+}: {
+  draft: VitalDialogDraft;
+  errors: Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>;
+  inputKey: keyof PatientVitalWriteInput;
+  inputMode: "decimal" | "numeric";
   label: string;
-  icon: ReactNode;
-  format: (measurement: ChartPreconsultationVitalMeasurement) => string;
-  delta: (
-    current: ChartPreconsultationVitalMeasurement,
-    previous: ChartPreconsultationVitalMeasurement,
-  ) => VitalDelta | null;
+  onChange: (key: keyof PatientVitalWriteInput, value: string) => void;
+  unit: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`preconsultation-vital-${inputKey}`}>{label}</Label>
+      <div className="relative">
+        <Input
+          id={`preconsultation-vital-${inputKey}`}
+          aria-describedby={errors[inputKey] ? `preconsultation-vital-${inputKey}-error` : undefined}
+          aria-invalid={Boolean(errors[inputKey])}
+          inputMode={inputMode}
+          placeholder="미입력"
+          value={draft[inputKey]}
+          onChange={(event) => onChange(inputKey, event.target.value)}
+        />
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-[var(--emr-text-tertiary)]">
+          {unit}
+        </span>
+      </div>
+      {errors[inputKey] ? (
+        <p id={`preconsultation-vital-${inputKey}-error`} className="text-xs text-[var(--emr-status-danger-text)]">
+          {errors[inputKey]}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+const inputKeyByVitalKey: Partial<Record<WorkspaceVitalKey, keyof PatientVitalWriteInput>> = {
+  weight: "weightKg",
+  temperature: "temperatureC",
+  heart_rate: "heartRateBpm",
+  respiratory_rate: "respiratoryRateRpm",
 };
 
-const vitalDefinitions: VitalDefinition[] = [
-  {
-    key: "weightKg",
-    label: "체중",
-    icon: <CdsMedicalWeightIcon className="size-4" aria-hidden="true" />,
-    format: (value) => formatOptionalNumber(value.weightKg, "kg", 2),
-    delta: (current, previous) =>
-      buildSingleVitalDelta({
-        current: current.weightKg,
-        previous: previous.weightKg,
-        precision: 2,
-        label: "체중",
-      }),
-  },
-  {
-    key: "temperatureC",
-    label: "체온",
-    icon: <CdsMedicalThermometerIcon className="size-4" aria-hidden="true" />,
-    format: (value) => formatOptionalNumber(value.temperatureC, "°C", 1),
-    delta: (current, previous) =>
-      buildSingleVitalDelta({
-        current: current.temperatureC,
-        previous: previous.temperatureC,
-        precision: 1,
-        label: "체온",
-      }),
-  },
-  {
-    key: "bloodPressureSystolicMmhg",
-    label: "혈압",
-    icon: <CdsMedicalHeartPulseIcon className="size-4" aria-hidden="true" />,
-    format: (value) => formatBloodPressure(value),
-    delta: (current, previous) =>
-      buildBloodPressureDelta({
+function getVitalDefinitions(settings: WorkspaceVitalSettingsSnapshot): VitalDefinition[] {
+  return getEnabledWorkspaceVitalSettings(settings).flatMap<VitalDefinition>((setting) => {
+    const preset = settings.presets.find((item) => item.key === setting.key);
+    const label = preset?.label ?? setting.key;
+    if (setting.key === "weight") {
+      const convert = (value: number | undefined) => value === undefined
+        ? undefined
+        : fromCanonicalVitalValue("weight", value, setting.displayUnit);
+      return [{
+        key: setting.key,
+        label,
+        icon: <CdsMedicalWeightIcon className="size-4" aria-hidden="true" />,
+        format: (value) => formatOptionalNumber(convert(value.weightKg), setting.displayUnit, setting.displayUnit === "g" ? 0 : 2),
+        delta: (current, previous) => buildSingleVitalDelta({
+          current: convert(current.weightKg),
+          previous: convert(previous.weightKg),
+          precision: setting.displayUnit === "g" ? 0 : 2,
+          label,
+        }),
+      }];
+    }
+    if (setting.key === "temperature") {
+      const convert = (value: number | undefined) => value === undefined
+        ? undefined
+        : fromCanonicalVitalValue("temperature", value, setting.displayUnit);
+      return [{
+        key: setting.key,
+        label,
+        icon: <CdsMedicalThermometerIcon className="size-4" aria-hidden="true" />,
+        format: (value) => formatOptionalNumber(convert(value.temperatureC), setting.displayUnit, 1),
+        delta: (current, previous) => buildSingleVitalDelta({
+          current: convert(current.temperatureC),
+          previous: convert(previous.temperatureC),
+          precision: 1,
+          label,
+        }),
+      }];
+    }
+    if (setting.key === "heart_rate") {
+      return [{
+        key: setting.key,
+        label,
+        icon: <CdsMedicalHeartPulseIcon className="size-4" aria-hidden="true" />,
+        format: (value) => formatOptionalNumber(value.heartRateBpm, setting.displayUnit, 0),
+        delta: (current, previous) => buildSingleVitalDelta({
+          current: current.heartRateBpm,
+          previous: previous.heartRateBpm,
+          precision: 0,
+          label,
+        }),
+      }];
+    }
+    if (setting.key === "respiratory_rate") {
+      return [{
+        key: setting.key,
+        label,
+        icon: <CdsMedicalWindIcon className="size-4" aria-hidden="true" />,
+        format: (value) => formatOptionalNumber(value.respiratoryRateRpm, setting.displayUnit, 0),
+        delta: (current, previous) => buildSingleVitalDelta({
+          current: current.respiratoryRateRpm,
+          previous: previous.respiratoryRateRpm,
+          precision: 0,
+          label,
+        }),
+      }];
+    }
+    return [{
+      key: setting.key,
+      label,
+      icon: <CdsMedicalHeartPulseIcon className="size-4" aria-hidden="true" />,
+      format: formatBloodPressure,
+      delta: (current, previous) => buildBloodPressureDelta({
         current: {
           systolic: current.bloodPressureSystolicMmhg,
           diastolic: current.bloodPressureDiastolicMmhg,
@@ -890,29 +977,31 @@ const vitalDefinitions: VitalDefinition[] = [
           diastolic: previous.bloodPressureDiastolicMmhg,
         },
       }),
-  },
-  {
-    key: "respiratoryRateRpm",
-    label: "호흡수",
-    icon: <CdsMedicalWindIcon className="size-4" aria-hidden="true" />,
-    format: (value) => formatOptionalNumber(value.respiratoryRateRpm, "회/분", 0),
-    delta: (current, previous) =>
-      buildSingleVitalDelta({
-        current: current.respiratoryRateRpm,
-        previous: previous.respiratoryRateRpm,
-        precision: 0,
-        label: "호흡수",
-      }),
-  },
-];
+    }];
+  });
+}
+
+type VitalDefinition = {
+  key: WorkspaceVitalKey;
+  label: string;
+  icon: ReactNode;
+  format: (measurement: ChartPreconsultationVitalMeasurement) => string;
+  delta: (
+    current: ChartPreconsultationVitalMeasurement,
+    previous: ChartPreconsultationVitalMeasurement,
+  ) => VitalDelta | null;
+};
 
 function VitalComparison({
   current,
   previous,
+  vitalSettings,
 }: {
   current: ChartPreconsultationVitalMeasurement;
   previous?: ChartPreconsultationVitalMeasurement;
+  vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
+  const vitalDefinitions = getVitalDefinitions(vitalSettings);
   return (
     <div
       className="max-w-full overflow-x-auto rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
@@ -941,11 +1030,13 @@ function VitalComparison({
             isLast={!previous}
             measurement={current}
             previous={previous}
+            vitalDefinitions={vitalDefinitions}
           />
           {previous ? (
             <VitalRow
               isLast
               measurement={previous}
+              vitalDefinitions={vitalDefinitions}
             />
           ) : null}
         </tbody>
@@ -970,11 +1061,13 @@ function VitalRow({
   isLast = false,
   measurement,
   previous,
+  vitalDefinitions,
 }: {
   current?: boolean;
   isLast?: boolean;
   measurement: ChartPreconsultationVitalMeasurement;
   previous?: ChartPreconsultationVitalMeasurement;
+  vitalDefinitions: VitalDefinition[];
 }) {
   const dateLabel = current ? "오늘" : formatFullDate(measurement.measuredAt);
   const dateDetail = current ? `(${formatShortDate(measurement.measuredAt)})` : null;
@@ -1385,22 +1478,32 @@ function formatHistoryDate(value: string) {
 }
 
 function createVitalDialogDraft(
-  measurement?: Pick<
+  measurement: Pick<
     ChartPreconsultationVitalMeasurement,
     | "weightKg"
     | "temperatureC"
+    | "heartRateBpm"
     | "respiratoryRateRpm"
     | "bloodPressureSystolicMmhg"
     | "bloodPressureDiastolicMmhg"
-  >,
+  > | undefined,
+  settings: WorkspaceVitalSettingsSnapshot,
 ): VitalDialogDraft {
   const values = toPatientVitalWriteInput(measurement);
   return Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [key, value === null ? "" : String(value)]),
+    Object.entries(values).map(([rawKey, value]) => {
+      const key = rawKey as keyof PatientVitalWriteInput;
+      if (value === null) return [key, ""];
+      const setting = getVitalSettingForInputKey(settings, key);
+      return [key, setting ? String(fromCanonicalVitalValue(setting.key, value, setting.displayUnit)) : String(value)];
+    }),
   ) as VitalDialogDraft;
 }
 
-function parseVitalDialogDraft(draft: VitalDialogDraft):
+function parseVitalDialogDraft(
+  draft: VitalDialogDraft,
+  settings: WorkspaceVitalSettingsSnapshot,
+):
   | { ok: true; values: PatientVitalWriteInput }
   | {
       ok: false;
@@ -1427,6 +1530,7 @@ function parseVitalDialogDraft(draft: VitalDialogDraft):
     }
     if (
       (key === "respiratoryRateRpm" ||
+        key === "heartRateBpm" ||
         key === "bloodPressureSystolicMmhg" ||
         key === "bloodPressureDiastolicMmhg") &&
       !Number.isInteger(parsed)
@@ -1434,20 +1538,36 @@ function parseVitalDialogDraft(draft: VitalDialogDraft):
       fieldErrors[key] = "정수로 입력해 주세요.";
       continue;
     }
-    values[key] = parsed;
+    const setting = getVitalSettingForInputKey(settings, key);
+    values[key] = setting ? toCanonicalVitalValue(setting.key, parsed, setting.displayUnit) : parsed;
   }
 
   const hasSystolic = values.bloodPressureSystolicMmhg !== null;
   const hasDiastolic = values.bloodPressureDiastolicMmhg !== null;
-  if (hasSystolic !== hasDiastolic) {
-    const message = "수축기와 이완기 혈압을 함께 입력하거나 함께 비워 주세요.";
+  if (!hasSystolic && hasDiastolic) {
+    const message = "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
     fieldErrors.bloodPressureSystolicMmhg = message;
-    fieldErrors.bloodPressureDiastolicMmhg = message;
   }
 
   return Object.keys(fieldErrors).length
     ? { ok: false, fieldErrors }
     : { ok: true, values };
+}
+
+function getVitalSettingForInputKey(
+  settings: WorkspaceVitalSettingsSnapshot,
+  inputKey: keyof PatientVitalWriteInput,
+) {
+  const key = inputKey === "weightKg"
+    ? "weight"
+    : inputKey === "temperatureC"
+      ? "temperature"
+      : inputKey === "heartRateBpm"
+        ? "heart_rate"
+        : inputKey === "respiratoryRateRpm"
+          ? "respiratory_rate"
+          : "blood_pressure";
+  return settings.items.find((item) => item.key === key);
 }
 
 function getVitalSaveErrorMessage(error?: string) {
@@ -1469,13 +1589,10 @@ function formatOptionalNumber(value: number | undefined, unit: string, precision
 }
 
 function formatBloodPressure(value: ChartPreconsultationVitalMeasurement) {
-  if (
-    value.bloodPressureSystolicMmhg === undefined ||
-    value.bloodPressureDiastolicMmhg === undefined
-  ) {
-    return "—";
-  }
-  return `${value.bloodPressureSystolicMmhg}/${value.bloodPressureDiastolicMmhg} mmHg`;
+  if (value.bloodPressureSystolicMmhg === undefined) return "—";
+  return value.bloodPressureDiastolicMmhg === undefined
+    ? `${value.bloodPressureSystolicMmhg} mmHg`
+    : `${value.bloodPressureSystolicMmhg}/${value.bloodPressureDiastolicMmhg} mmHg`;
 }
 
 function getContextErrorDescription(reason?: string) {

@@ -139,6 +139,7 @@ export function validatePatientVitalWriteInput(value: unknown):
     }
     if (
       (key === "respiratoryRateRpm" ||
+        key === "heartRateBpm" ||
         key === "bloodPressureSystolicMmhg" ||
         key === "bloodPressureDiastolicMmhg") &&
       !Number.isInteger(rawValue)
@@ -149,12 +150,9 @@ export function validatePatientVitalWriteInput(value: unknown):
     values[key] = rawValue;
   }
 
-  const hasSystolic = values.bloodPressureSystolicMmhg !== null;
   const hasDiastolic = values.bloodPressureDiastolicMmhg !== null;
-  if (hasSystolic !== hasDiastolic) {
-    const message = "수축기와 이완기 혈압을 함께 입력하거나 함께 비워 주세요.";
-    fieldErrors.bloodPressureSystolicMmhg = message;
-    fieldErrors.bloodPressureDiastolicMmhg = message;
+  if (hasDiastolic && values.bloodPressureSystolicMmhg === null) {
+    fieldErrors.bloodPressureDiastolicMmhg = "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
   }
 
   return Object.keys(fieldErrors).length

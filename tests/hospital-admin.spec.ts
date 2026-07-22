@@ -125,7 +125,6 @@ test("hospital admin settings hub opens static screens and role management", asy
   const sidePanel = page.getByTestId("hospital-admin-side-panel");
   const plannedScreens = [
     { button: "공간/시간 관리", heading: "공간/시간 관리", testId: "hospital-admin-space-time-screen" },
-    { button: "바이탈 관리", heading: "바이탈 관리", testId: "hospital-admin-vitals-screen" },
   ];
 
   for (const screen of plannedScreens) {
@@ -142,6 +141,88 @@ test("hospital admin settings hub opens static screens and role management", asy
 
   await expect(sidePanel.getByRole("button", { name: /진료과 분리운영/ })).toBeDisabled();
   await expect(sidePanel.getByRole("button", { name: /차트 템플릿/ })).toBeDisabled();
+});
+
+test("hospital vital settings follows the reviewed V3 interaction", async ({ page }) => {
+  let items: Array<{ key: string; enabled: boolean; displayUnit: string; sortOrder: number }> = [
+    { key: "weight", enabled: true, displayUnit: "kg", sortOrder: 0 },
+    { key: "temperature", enabled: true, displayUnit: "°C", sortOrder: 1 },
+    { key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 2 },
+    { key: "respiratory_rate", enabled: true, displayUnit: "rpm", sortOrder: 3 },
+  ];
+  const presets = [
+    { key: "weight", label: "체중", description: "환자의 현재 체중", canonicalUnit: "kg", allowedDisplayUnits: ["kg", "g"] },
+    { key: "temperature", label: "체온", description: "체온계로 측정한 체온", canonicalUnit: "°C", allowedDisplayUnits: ["°C", "°F"] },
+    { key: "heart_rate", label: "심박수", description: "분당 심장 박동 수", canonicalUnit: "bpm", allowedDisplayUnits: ["bpm"] },
+    { key: "respiratory_rate", label: "호흡수", description: "분당 호흡 횟수", canonicalUnit: "rpm", allowedDisplayUnits: ["rpm"] },
+    { key: "blood_pressure", label: "혈압", description: "수축기 단독 또는 수축기/이완기", canonicalUnit: "mmHg", allowedDisplayUnits: ["mmHg"] },
+  ];
+  await page.route("**/api/workspaces/clair-demo/vital-settings", async (route) => {
+    if (route.request().method() === "PUT") {
+      items = ((await route.request().postDataJSON()) as { items: typeof items }).items;
+    }
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, status: 200, canManage: true, presets, items }),
+    });
+  });
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: /바이탈 관리/ }).click();
+
+  const screen = page.getByTestId("hospital-admin-vitals-screen");
+  await expect(screen.getByRole("heading", { level: 1, name: "바이탈 관리" })).toBeVisible();
+  await expect(screen).toContainText("모든 항목은 선택 입력입니다.");
+  await expect(screen).not.toContainText("영향 범위");
+  await expect(screen).not.toContainText("향후 데이터");
+  await expect(screen).not.toContainText("기본 바이탈 정상 범위");
+  await expect(screen.getByRole("button", { name: "바이탈 추가" })).toHaveCount(1);
+
+  const resetButton = screen.getByTestId("vital-settings-reset");
+  const saveButton = screen.getByTestId("vital-settings-save");
+  await expect(resetButton).toBeDisabled();
+  await expect(saveButton).toBeDisabled();
+  await expect(screen.getByTestId("vital-settings-list").locator('[data-testid^="vital-setting-row-"]')).toHaveCount(4);
+
+  const weightGrip = screen.getByRole("button", { name: "체중 순서 변경" });
+  const weightGripBox = await weightGrip.boundingBox();
+  const temperatureRowBox = await screen.getByTestId("vital-setting-row-temperature").boundingBox();
+  if (!weightGripBox || !temperatureRowBox) throw new Error("바이탈 드래그 대상을 찾지 못했습니다.");
+  await page.mouse.move(weightGripBox.x + weightGripBox.width / 2, weightGripBox.y + weightGripBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    temperatureRowBox.x + temperatureRowBox.width / 2,
+    temperatureRowBox.y + temperatureRowBox.height - 2,
+    { steps: 8 },
+  );
+  await page.mouse.up();
+  await expect(screen.getByTestId("vital-settings-list").locator('[data-testid^="vital-setting-row-"]').nth(1)).toHaveAttribute(
+    "data-testid",
+    "vital-setting-row-weight",
+  );
+  await resetButton.click();
+
+  await screen.getByLabel("체중 표시 단위").click();
+  await page.getByRole("option", { name: "g", exact: true }).click();
+  await expect(resetButton).toBeEnabled();
+  await expect(saveButton).toBeEnabled();
+  await resetButton.click();
+  await expect(screen.getByLabel("체중 표시 단위")).toContainText("kg");
+  await expect(resetButton).toBeDisabled();
+  await expect(saveButton).toBeDisabled();
+
+  await screen.getByRole("button", { name: "바이탈 추가" }).click();
+  const addDialog = page.getByRole("dialog", { name: "바이탈 추가" });
+  await addDialog.getByRole("button", { name: /혈압/ }).click();
+  await expect(screen.getByTestId("vital-setting-row-blood_pressure")).toBeVisible();
+  await saveButton.click();
+
+  const saveDialog = page.getByTestId("vital-settings-save-dialog");
+  await expect(saveDialog).toContainText("접수와 진료 화면에 같은 설정이 적용됩니다.");
+  await expect(saveDialog).toContainText("기존 기록은 삭제되지 않으며 다시 켜면 표시됩니다.");
+  await expect(saveDialog).toContainText("체중 · 체온 · 심박수 · 호흡수 · 혈압");
+  await saveDialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(saveButton).toBeDisabled();
+  await expect(resetButton).toBeDisabled();
 });
 
 test("hospital basic settings uses the reviewed information hierarchy", async ({ page }) => {

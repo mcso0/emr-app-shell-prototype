@@ -52,6 +52,7 @@ const liveContext = {
       measuredAt: "2026-07-16T06:35:00.000Z",
       weightKg: 4.82,
       temperatureC: 38.7,
+      heartRateBpm: 88,
       respiratoryRateRpm: 24,
       bloodPressureSystolicMmhg: 132,
     },
@@ -107,7 +108,7 @@ test("preconsultation context returns the DB-backed read model for chart viewers
       encounter: { id: encounterId, receptionType: "appointment" },
       patient: { name: "초코" },
       guardian: { name: "최도현" },
-      vitals: [{ weightKg: 4.82 }],
+      vitals: [{ weightKg: 4.82, heartRateBpm: 88 }],
     },
   });
 });
