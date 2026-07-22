@@ -5567,29 +5567,6 @@ function DayScheduleBoard({
             />
           ),
         )}
-        {hasBreakTimeBand ? (
-          <div
-            aria-label={`휴게시간 ${operatingSchedule.breakStart}-${operatingSchedule.breakEnd}`}
-            className="pointer-events-none absolute right-0 z-[5] overflow-hidden border-y border-[var(--emr-border-subtle)]"
-            data-testid="reception-break-time-band"
-            role="note"
-            style={{
-              backgroundColor: "var(--clair-color-atomic-neutral-50)",
-              backgroundImage:
-                "repeating-linear-gradient(135deg, transparent 0, transparent 27px, color-mix(in srgb, var(--emr-border-subtle) 65%, transparent) 27px, color-mix(in srgb, var(--emr-border-subtle) 65%, transparent) 28px)",
-              height: timeScale.rangeHeight(
-                breakStartMinutes,
-                breakEndMinutes,
-              ),
-              left: 56,
-              top: timeScale.minutesToY(breakStartMinutes),
-            }}
-          >
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-card/90 px-2 py-1 emr-text-micro font-medium text-[var(--emr-text-secondary)] shadow-xs">
-              휴게시간 {operatingSchedule.breakStart}-{operatingSchedule.breakEnd}
-            </span>
-          </div>
-        ) : null}
         <div
           data-testid="day-time-axis"
           className="relative z-10 border-r"
@@ -5618,6 +5595,38 @@ function DayScheduleBoard({
           })}
         </div>
         <div className="relative z-10 col-span-full col-start-2 min-w-0">
+          {hasBreakTimeBand ? (
+            <div
+              aria-label={`휴게시간 ${operatingSchedule.breakStart}-${operatingSchedule.breakEnd}`}
+              className="pointer-events-none absolute inset-x-0 z-[10] isolate overflow-hidden"
+              data-testid="reception-break-time-band"
+              role="note"
+              style={{
+                height: timeScale.rangeHeight(
+                  breakStartMinutes,
+                  breakEndMinutes,
+                ),
+                top: timeScale.minutesToY(breakStartMinutes),
+              }}
+            >
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 z-0 border-y border-[var(--emr-border-subtle)]"
+                data-testid="reception-break-time-hatch"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(120deg, transparent 0, transparent 9px, var(--emr-border-subtle) 9px, var(--emr-border-subtle) 10px)",
+                }}
+              />
+              <span
+                className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-[var(--emr-surface-panel)] px-2 py-1 emr-text-micro font-medium text-[var(--emr-text-secondary)]"
+                data-testid="reception-break-time-label"
+              >
+                휴게시간 {operatingSchedule.breakStart}-
+                {operatingSchedule.breakEnd}
+              </span>
+            </div>
+          ) : null}
           <CalendarCurrentTimeIndicator
             currentOperatingMinutes={currentOperatingMinutes}
             labelTestId="day-current-time-label"

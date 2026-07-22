@@ -73,7 +73,7 @@ test("calendar header displays the effective operating hours", async ({
   ).toContainText("08:00-20:00");
 });
 
-test("day calendar renders the effective break as a selectable hatched band", async ({
+test("day calendar renders the effective break with reference-aligned hatch layering", async ({
   page,
 }) => {
   await page.goto("/w/clair-demo/reception?date=2026-05-01");
@@ -84,20 +84,52 @@ test("day calendar renders the effective break as a selectable hatched band", as
     "aria-label",
     "휴게시간 13:00-14:00",
   );
-  expect(
-    await breakBand.evaluate((element) =>
-      getComputedStyle(element).backgroundImage,
-    ),
-  ).toContain("27px");
-  const labelCenterDelta = await breakBand
-    .getByText("휴게시간 13:00-14:00", { exact: true })
+  const breakHatch = page.getByTestId("reception-break-time-hatch");
+  const breakLabel = page.getByTestId("reception-break-time-label");
+  await expect(breakHatch).toBeVisible();
+  await expect(breakLabel).toHaveText("휴게시간 13:00-14:00");
+  await breakLabel.scrollIntoViewIfNeeded();
+  const visualContract = await breakLabel
     .evaluate((label) => {
       const labelRect = label.getBoundingClientRect();
-      const bandRect = label.parentElement?.getBoundingClientRect();
-      if (!bandRect) {
-        return { x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY };
+      const band = label.parentElement;
+      const bandRect = band?.getBoundingClientRect();
+      const hatch = document.querySelector(
+        '[data-testid="reception-break-time-hatch"]',
+      );
+      const gridRow = document.querySelector(
+        '[data-testid="day-hour-row-13"]',
+      );
+      const previousPointerEvents = label.style.pointerEvents;
+      label.style.pointerEvents = "auto";
+      const paintStack = document.elementsFromPoint(
+        labelRect.left + labelRect.width / 2,
+        labelRect.top + labelRect.height / 2,
+      );
+      label.style.pointerEvents = previousPointerEvents;
+      if (!band || !bandRect) {
+        return {
+          bandBackgroundColor: "",
+          bandBackgroundImage: "",
+          labelAboveGrid: false,
+          labelBackgroundColor: "",
+          x: Number.POSITIVE_INFINITY,
+          y: Number.POSITIVE_INFINITY,
+        };
       }
+      const bandStyle = getComputedStyle(band);
+      const hatchStyle = hatch ? getComputedStyle(hatch) : undefined;
+      const labelStyle = getComputedStyle(label);
+      const labelPaintIndex = paintStack.indexOf(label);
+      const gridPaintIndex = gridRow ? paintStack.indexOf(gridRow) : -1;
       return {
+        bandBackgroundColor: bandStyle.backgroundColor,
+        bandBackgroundImage: hatchStyle?.backgroundImage ?? "",
+        labelAboveGrid:
+          labelPaintIndex >= 0 &&
+          gridPaintIndex >= 0 &&
+          labelPaintIndex < gridPaintIndex,
+        labelBackgroundColor: labelStyle.backgroundColor,
         x: Math.abs(
           labelRect.left + labelRect.width / 2 -
             (bandRect.left + bandRect.width / 2),
@@ -108,8 +140,14 @@ test("day calendar renders the effective break as a selectable hatched band", as
         ),
       };
     });
-  expect(labelCenterDelta.x).toBeLessThanOrEqual(1);
-  expect(labelCenterDelta.y).toBeLessThanOrEqual(1);
+  expect(visualContract.bandBackgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(visualContract.bandBackgroundImage).toContain("120deg");
+  expect(visualContract.bandBackgroundImage).toContain("10px");
+  expect(visualContract.bandBackgroundImage).toContain("rgb(245, 245, 245)");
+  expect(visualContract.labelBackgroundColor).toBe("rgb(255, 255, 255)");
+  expect(visualContract.labelAboveGrid).toBe(true);
+  expect(visualContract.x).toBeLessThanOrEqual(1);
+  expect(visualContract.y).toBeLessThanOrEqual(1);
   await expect(
     page.getByTestId("day-empty-slot-13-user-vet-suji-slot-1300"),
   ).toHaveAttribute("aria-disabled", "false");
