@@ -63,7 +63,9 @@ Replace the static hospital-admin vital concept with a persisted workspace-wide 
 
 - Implemented the persisted preset/workspace configuration, authenticated API, audit-emitting replacement RPC, and local mock boundary.
 - Replaced the static concept with the approved V3 editor using dnd-kit pointer and keyboard sensors.
-- Connected reception and waiting-chart entry/comparison to the same enabled order and display units.
+- Connected reception, waiting-chart entry/comparison, and shared latest-vital patient summaries to the same enabled order and display units.
 - Added canonical unit conversion, heart-rate persistence, and systolic-only blood-pressure handling.
-- Local Supabase full reset and rollback-only RPC readback passed. Remote migration application remains release-gated.
+- PR #479 was merged and deployed to production from merge SHA `7fcd70a58daa444d18d41d845475d848225c2a1e` after the Release Check passed.
+- Local Supabase full reset passed. Remote migration `20260722112553` passed catalog/RLS/grant checks, authenticated administrator rollback-only replacement/readback, front-desk writer denial, and persisted-default reconciliation.
+- Authenticated production smoke covered the settings editor, dirty reset/save confirmation, add-vital dialog, and reception input. The same smoke exposed and drove a focused correction so patient context summaries also follow workspace visibility/order instead of the legacy fixed five-item list.
 - A broader chart/reception batch was stopped after five unrelated existing chart failures and socket-listener accumulation warnings; all 43 focused affected tests passed.

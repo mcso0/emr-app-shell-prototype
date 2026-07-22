@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { formatPatientVitalDisplayItemsForSettings } from "../src/features/patient-vitals/patient-vital-types";
 import {
   createDefaultWorkspaceVitalSettingsSnapshot,
   fromCanonicalVitalValue,
@@ -61,4 +62,25 @@ test("enabled vital selection follows saved order and keeps disabled items confi
     "heart_rate",
   ]);
   expect(snapshot.items).toHaveLength(3);
+});
+
+test("patient context vital items follow workspace visibility, order, units, and systolic-only blood pressure", () => {
+  const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+  snapshot.items = [
+    { key: "temperature", enabled: true, displayUnit: "°F", sortOrder: 0 },
+    { key: "weight", enabled: false, displayUnit: "g", sortOrder: 1 },
+    { key: "blood_pressure", enabled: true, displayUnit: "mmHg", sortOrder: 2 },
+    { key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 3 },
+  ];
+
+  expect(formatPatientVitalDisplayItemsForSettings({
+    temperatureC: 38.7,
+    weightKg: 7.4,
+    bloodPressureSystolicMmhg: 120,
+    heartRateBpm: 88,
+  }, snapshot)).toEqual([
+    { label: "체온", value: "101.7°F" },
+    { label: "혈압", value: "120 mmHg" },
+    { label: "심박수", value: "88 bpm" },
+  ]);
 });

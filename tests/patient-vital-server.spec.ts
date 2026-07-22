@@ -273,12 +273,18 @@ test("patient context bars are display-only latest-vital consumers", () => {
   const chart = readFileSync("src/features/chart/module.tsx", "utf8");
   const dispensing = readFileSync("src/features/dispensing/module.tsx", "utf8");
   const labImaging = readFileSync("src/features/lab-imaging/module.tsx", "utf8");
+  const latestVitalHook = readFileSync(
+    "src/features/patient-vitals/use-patient-latest-vitals.ts",
+    "utf8",
+  );
 
   expect(contextBar).not.toContain("PatientVitalPopover");
   expect(contextBar).not.toContain("CdsActionsPlusIcon");
   expect(chart).toContain("usePatientLatestVitalItems");
   expect(dispensing).toContain("usePatientLatestVitalItems");
   expect(labImaging).toContain("usePatientLatestVitalItems");
+  expect(latestVitalHook).toContain("useWorkspaceVitalSettings");
+  expect(latestVitalHook).toContain("formatPatientVitalDisplayItemsForSettings");
 });
 
 function createVital() {

@@ -1,3 +1,11 @@
+import {
+  fromCanonicalVitalValue,
+  getEnabledWorkspaceVitalSettings,
+  type WorkspaceVitalKey,
+  type WorkspaceVitalSettingsSnapshot,
+  type WorkspaceVitalUnit,
+} from "@/features/patient-vitals/workspace-vital-settings";
+
 export type PatientVitalMeasurement = {
   bloodPressureDiastolicMmhg?: number;
   bloodPressureSystolicMmhg?: number;
@@ -24,6 +32,16 @@ export type PatientVitalDisplayItem = {
   label: string;
   value: string;
 };
+
+type PatientVitalDisplayMeasurement = Pick<
+  PatientVitalMeasurement,
+  | "weightKg"
+  | "temperatureC"
+  | "heartRateBpm"
+  | "respiratoryRateRpm"
+  | "bloodPressureSystolicMmhg"
+  | "bloodPressureDiastolicMmhg"
+>;
 
 export const emptyPatientVitalWriteInput: PatientVitalWriteInput = {
   bloodPressureDiastolicMmhg: null,
@@ -60,15 +78,7 @@ export function hasPatientVitalValue(values: PatientVitalWriteInput) {
 }
 
 export function formatPatientVitalDisplayItems(
-  measurement?: Pick<
-    PatientVitalMeasurement,
-    | "weightKg"
-    | "temperatureC"
-    | "heartRateBpm"
-    | "respiratoryRateRpm"
-    | "bloodPressureSystolicMmhg"
-    | "bloodPressureDiastolicMmhg"
-  > | null,
+  measurement?: PatientVitalDisplayMeasurement | null,
 ): PatientVitalDisplayItem[] {
   return [
     {
@@ -103,4 +113,53 @@ export function formatPatientVitalDisplayItems(
           : `${measurement.bloodPressureSystolicMmhg}/${measurement.bloodPressureDiastolicMmhg} mmHg`,
     },
   ];
+}
+
+export function formatPatientVitalDisplayItemsForSettings(
+  measurement: PatientVitalDisplayMeasurement | null | undefined,
+  settings: WorkspaceVitalSettingsSnapshot,
+): PatientVitalDisplayItem[] {
+  return getEnabledWorkspaceVitalSettings(settings).map((setting) => ({
+    label: getPatientVitalDisplayLabel(setting.key),
+    value: formatPatientVitalDisplayValue(measurement, setting.key, setting.displayUnit),
+  }));
+}
+
+function getPatientVitalDisplayLabel(key: WorkspaceVitalKey) {
+  return ({
+    weight: "체중",
+    temperature: "체온",
+    heart_rate: "심박수",
+    respiratory_rate: "호흡",
+    blood_pressure: "혈압",
+  } satisfies Record<WorkspaceVitalKey, string>)[key];
+}
+
+function formatPatientVitalDisplayValue(
+  measurement: PatientVitalDisplayMeasurement | null | undefined,
+  key: WorkspaceVitalKey,
+  unit: WorkspaceVitalUnit,
+) {
+  if (key === "weight") {
+    if (measurement?.weightKg === undefined) return "—";
+    const value = fromCanonicalVitalValue(key, measurement.weightKg, unit);
+    return `${value.toFixed(unit === "g" ? 0 : 2)} ${unit}`;
+  }
+  if (key === "temperature") {
+    if (measurement?.temperatureC === undefined) return "—";
+    const value = fromCanonicalVitalValue(key, measurement.temperatureC, unit);
+    return `${value.toFixed(1)}${unit}`;
+  }
+  if (key === "heart_rate") {
+    return measurement?.heartRateBpm === undefined ? "—" : `${measurement.heartRateBpm} ${unit}`;
+  }
+  if (key === "respiratory_rate") {
+    return measurement?.respiratoryRateRpm === undefined
+      ? "—"
+      : `${measurement.respiratoryRateRpm} ${unit}`;
+  }
+  if (measurement?.bloodPressureSystolicMmhg === undefined) return "—";
+  return measurement.bloodPressureDiastolicMmhg === undefined
+    ? `${measurement.bloodPressureSystolicMmhg} ${unit}`
+    : `${measurement.bloodPressureSystolicMmhg}/${measurement.bloodPressureDiastolicMmhg} ${unit}`;
 }
