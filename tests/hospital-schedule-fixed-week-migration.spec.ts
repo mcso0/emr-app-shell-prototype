@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const migrationPath =
-  "supabase/migrations/20260722084209_hospital_schedule_fixed_week_batch.sql";
+  "supabase/migrations/20260722090248_hospital_schedule_fixed_week_batch.sql";
 
 test("fixed weekly schedule batch is atomic, idempotent, and admin-scoped", () => {
   const migration = readFileSync(migrationPath, "utf8");

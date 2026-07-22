@@ -3,7 +3,7 @@ id: "HOSPITAL-ADMIN-LIVE-PR-017"
 status: "human_review"
 area: "hospital-admin"
 priority: "P0"
-target_pr: "User goal / production schedule polish and fixed weekly hours"
+target_pr: "https://github.com/mcso0/emr-app-shell-prototype/pull/477"
 source_docs:
   - "docs/product/features/hospital-admin/staff-scheduling-mvp-plan.md"
 dependencies:
@@ -32,7 +32,7 @@ Make the v2 hospital schedule feel like an operational product: keep long roster
 
 - Automatic recurring jobs that create future weeks without an administrator action.
 - Complex rotating shifts, overnight work, split-shift templates, payroll, or attendance policy.
-- Remote migration application, production deployment, or real employee data.
+- Production deployment or real employee data.
 
 ## Done When
 
@@ -48,4 +48,5 @@ Make the v2 hospital schedule feel like an operational product: keep long roster
 - Passed: targeted ESLint for the v2 schedule surface, API parser, and focused tests.
 - Passed: focused Playwright contracts for fixed-week migration/API/UI composition (6 tests).
 - Passed: local transaction replay compiled the v2 base plus the additive migration, inserted 30 synthetic veterinarian work blocks, verified idempotent replay, and rolled back.
-- Pending: production browser verification after release; no remote migration or deployment was performed in this work item.
+- Passed: staging migration `20260722090248_hospital_schedule_fixed_week_batch` applied; RPC existence, anonymous denial, authenticated grant, internal administrator check, and zero batch-created rows verified.
+- Pending: authenticated PR Preview browser verification and production release approval; no production code deployment or real employee-data mutation was performed.
