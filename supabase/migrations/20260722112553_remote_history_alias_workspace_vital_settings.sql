@@ -1,0 +1,4 @@
+-- Remote history compatibility alias.
+-- The linked synthetic/demo project applied the exact SQL from
+-- 20260722143000_workspace_vital_settings.sql under version 20260722112553.
+-- Keep this file comment-only so fresh local replay does not execute it twice.

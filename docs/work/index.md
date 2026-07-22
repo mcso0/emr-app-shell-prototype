@@ -15,13 +15,13 @@ DEN-255 review on 2026-05-24 confirmed the large status counts are intentional, 
 | Status         | Count | How to read it                                                                                                          |
 | -------------- | ----: | ----------------------------------------------------------------------------------------------------------------------- |
 | `done`         |    49 | Completed historical work items already closed in this repo board.                                                      |
-| `human_review` |   108 | Completed or handed-off work waiting for representative review, project-level acceptance, or explicit status migration. |
+| `human_review` |   109 | Completed or handed-off work waiting for representative review, project-level acceptance, or explicit status migration. |
 
 Large `human_review` groups:
 
 | Group                        | Count | Current meaning                                                                                                                                                                         |
 | ---------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Standalone or legacy PR rows |    40 | Historical PR-sized work items. Do not pick these as next work unless a current Linear issue points back to them.                                                                       |
+| Standalone or legacy PR rows |    41 | Historical PR-sized work items. Do not pick these as next work unless a current Linear issue points back to them.                                                                       |
 | Project 03                   |    11 | Historical reception/live-persistence review queue; keep status unchanged until a representative review or migration task explicitly handles it.                                        |
 | Project 04                   |    19 | Active sequence was accepted for `Done` in Linear on 2026-05-20, but this repo board still records the older Human Review rows. Proposed status migration needs explicit 승욱 approval. |
 | Project 05                   |    12 | Active sequence was accepted for `Done` in Linear on 2026-05-20, but this repo board still records the older Human Review rows. Proposed status migration needs explicit 승욱 approval. |
@@ -375,7 +375,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | HOSPITAL-ADMIN-LIVE-PR-016  | human_review | hospital-admin       | P0       | User goal / staff scheduling v2 profile consumer and rollout | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-016-schedule-v2-profile-rollout.md` |
 | HOSPITAL-ADMIN-LIVE-PR-017  | human_review | hospital-admin       | P0       | User goal / production schedule polish and fixed weekly hours | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-017-schedule-production-polish-fixed-week.md` |
 | HOSPITAL-ADMIN-LIVE-PR-018  | human_review | hospital-admin       | P0       | User-approved workspace vital settings V3 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-018-workspace-vital-settings.md` |
-| HOSPITAL-ADMIN-LIVE-PR-019  | planning     | hospital-admin       | P0       | Required workspace vitals and optional preset removal UX | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-019-required-vitals-removal-ux.md` |
+| HOSPITAL-ADMIN-LIVE-PR-019  | human_review | hospital-admin       | P0       | Required workspace vitals and optional preset removal UX | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-019-required-vitals-removal-ux.md` |
 | BILLING-PR-001              | done         | billing              | P1       | PR 1                 | `docs/work/billing/BILLING-PR-001-billing-workspace-restructure.md`                                    |
 | INPATIENT-PR-001            | done         | inpatient            | P1       | PR 1                 | `docs/work/inpatient/INPATIENT-PR-001-ward-workspace.md`                                               |
 | CUSTOMER-PR-001             | done         | customer             | P1       | PR 1                 | `docs/work/customer/CUSTOMER-PR-001-customer-management-workspace.md`                                  |

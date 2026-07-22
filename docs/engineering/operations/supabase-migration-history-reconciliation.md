@@ -6,14 +6,14 @@ tags:
   - supabase
   - migrations
   - release
-last_updated: 2026-07-16
+last_updated: 2026-07-22
 ---
 
 # Supabase Migration History Reconciliation
 
 ## Current Contract
 
-The linked synthetic/demo Supabase project and `supabase/migrations` now share every remotely recorded migration version. Remote-only history count is `0` as of 2026-07-16.
+The linked synthetic/demo Supabase project and `supabase/migrations` now share every remotely recorded migration version. Remote-only history count is `0` as of 2026-07-22.
 
 Do not delete or rename the compatibility aliases below. Their SQL was applied remotely under the remote timestamp, while an identical canonical file exists locally under a different timestamp. The alias files intentionally contain comments only so fresh local replay does not execute the same SQL twice.
 
@@ -40,6 +40,8 @@ Do not delete or rename the compatibility aliases below. Their SQL was applied r
 | `20260715164007_remote_history_alias_workspace_member_status_messages.sql` | `20260716010000_workspace_member_status_messages.sql` |
 | `20260715164307_remote_history_alias_workspace_status_message_rls_initplan.sql` | `20260716011000_workspace_status_message_rls_initplan.sql` |
 | `20260715172425_remote_history_alias_private_profile_avatars.sql` | `20260716020000_private_profile_avatars.sql` |
+| `20260722112553_remote_history_alias_workspace_vital_settings.sql` | `20260722143000_workspace_vital_settings.sql` |
+| `20260722130209_remote_history_alias_required_workspace_vitals.sql` | `20260722190000_required_workspace_vitals.sql` |
 
 The following remote-only SQL is preserved verbatim so a fresh local reset includes the actual remote behavior:
 
@@ -81,6 +83,12 @@ The private profile-avatar schema and Storage policies are also no longer
 pending behavior. Their exact SQL was applied and verified on 2026-07-16 under
 remote version `20260715172425`; the alias preserves that history version while
 the canonical migration remains the deterministic fresh-replay source.
+
+The workspace vital-settings foundation and required-vitals follow-up are also
+no longer pending behavior. Their exact SQL was applied and verified on
+2026-07-22 under remote versions `20260722112553` and `20260722130209`;
+comment-only aliases preserve those history versions while canonical migrations
+remain the deterministic fresh-replay source.
 
 Do not use `migration repair --status applied` for these entries merely to make `db push` look clean. Supabase repair changes only the history table; it does not execute the migration SQL.
 

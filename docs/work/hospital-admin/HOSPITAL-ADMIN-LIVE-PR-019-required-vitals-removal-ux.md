@@ -34,7 +34,6 @@ Keep weight and temperature permanently available in every workspace, let admini
 - Mandatory patient measurement entry.
 - Species ranges, warning thresholds, or clinical decision support.
 - Custom workspace-defined vital types.
-- Remote migration, deployment, or release work.
 
 ## Done When
 
@@ -63,7 +62,9 @@ Keep weight and temperature permanently available in every workspace, let admini
 - Replaced the list icon with the installed Obra six-dot grip, kept hover transparent, and preserved pointer/touch/keyboard DnD semantics.
 - Added optional-row removal, toast undo, add-back, and save-confirmation history copy without changing measurement rows.
 - Added reception omission and chart history hide/re-add regression coverage.
-- Local Supabase reset and rollback-only replay passed. Remote migration and release remain out of scope.
+- Local Supabase reset and rollback-only replay passed.
+- The approved synthetic/demo remote migration was applied as `20260722130209_required_workspace_vitals`; catalog checks and the authenticated rollback-only replay confirmed required metadata, writer rejection, optional removal/re-add, front-desk denial, and unchanged measurement rows.
+- Delivery PR #483 passed exact-candidate Release Check and Vercel Preview before the production merge gate.
 
 ## Verification Result
 
@@ -73,3 +74,4 @@ Keep weight and temperature permanently available in every workspace, let admini
 - Local DB reset and rollback-only permission/data-integrity replay: passed.
 - TypeScript, ESLint, and production build: passed.
 - DB lint reported only pre-existing findings outside the new vital-settings functions.
+- Remote catalog and rollback-only transaction replay: passed; `patient_vital_measurements` remained at 9 rows before and after verification.
