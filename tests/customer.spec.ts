@@ -465,3 +465,46 @@ test("common patient and guardian drawers are available outside reception", asyn
   await expect(page.getByText("보호자 정보").first()).toBeVisible();
   await expect(page).toHaveURL(/drawer=guardian%3Aguardian-lee-jieun|drawer=guardian:guardian-lee-jieun/);
 });
+
+test("patient and guardian profiles share the right-panel slot and push customer content", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto(
+    "/w/clair-demo/customer?modulePanel=open&drawer=patient:patient-coco",
+  );
+
+  const frame = page.locator("main.emr-workspace-frame-responsive");
+  const mainContent = page.getByTestId("workspace-main-content");
+  const rightPanel = page.getByTestId("workspace-right-panel");
+  const profilePanel = page.getByTestId("profile-side-panel");
+
+  await expect(profilePanel).toHaveAttribute("data-profile-kind", "patient");
+  await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
+  await expect
+    .poll(async () => (await rightPanel.boundingBox())?.width)
+    .toBe(380);
+
+  const [frameBox, mainContentBox, rightPanelBox] = await Promise.all([
+    frame.boundingBox(),
+    mainContent.boundingBox(),
+    rightPanel.boundingBox(),
+  ]);
+  expect(frameBox).not.toBeNull();
+  expect(mainContentBox).not.toBeNull();
+  expect(rightPanelBox).not.toBeNull();
+  expect(rightPanelBox?.width).toBe(380);
+  expect(rightPanelBox!.x - (mainContentBox!.x + mainContentBox!.width)).toBe(10);
+  expect(frameBox!.x + frameBox!.width).toBe(
+    rightPanelBox!.x + rightPanelBox!.width,
+  );
+
+  await page.getByRole("button", { name: "보호자 이지은 보기" }).click();
+  await expect(profilePanel).toHaveAttribute("data-profile-kind", "guardian");
+
+  const guardianRightPanelBox = await rightPanel.boundingBox();
+  expect(guardianRightPanelBox).not.toBeNull();
+  expect(guardianRightPanelBox?.x).toBe(rightPanelBox?.x);
+  expect(guardianRightPanelBox?.width).toBe(rightPanelBox?.width);
+  await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
+});
