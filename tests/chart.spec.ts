@@ -232,8 +232,7 @@ test("waiting chart saves and clears only today's vital values through the dialo
   const dialog = page.getByRole("dialog", { name: "오늘 바이탈 입력" });
   await dialog.getByLabel("체중").fill("5.12");
   await dialog.getByLabel("체온").fill("38.9");
-  await dialog.getByLabel("수축기 혈압").fill("120");
-  await dialog.getByLabel("이완기 혈압").fill("80");
+  await dialog.getByLabel("심박수").fill("88");
   await dialog.getByLabel("호흡수").fill("24");
   await dialog.getByRole("button", { name: "저장" }).click();
 
@@ -242,14 +241,15 @@ test("waiting chart saves and clears only today's vital values through the dialo
   expect(writes[0]).toEqual({
     weightKg: 5.12,
     temperatureC: 38.9,
+    heartRateBpm: 88,
     respiratoryRateRpm: 24,
-    bloodPressureSystolicMmhg: 120,
-    bloodPressureDiastolicMmhg: 80,
+    bloodPressureSystolicMmhg: null,
+    bloodPressureDiastolicMmhg: null,
   });
 
   await lockedState.getByRole("button", { name: "오늘 바이탈 수정" }).click();
   const editDialog = page.getByRole("dialog", { name: "오늘 바이탈 수정" });
-  for (const label of ["체중", "체온", "수축기 혈압", "이완기 혈압", "호흡수"]) {
+  for (const label of ["체중", "체온", "심박수", "호흡수"]) {
     await editDialog.getByLabel(label).fill("");
   }
   await editDialog.getByRole("button", { name: "저장" }).click();
@@ -259,6 +259,7 @@ test("waiting chart saves and clears only today's vital values through the dialo
   expect(writes[1]).toEqual({
     weightKg: null,
     temperatureC: null,
+    heartRateBpm: null,
     respiratoryRateRpm: null,
     bloodPressureSystolicMmhg: null,
     bloodPressureDiastolicMmhg: null,
@@ -927,20 +928,8 @@ test("chart consultation CTA moves from call to start before chart completion", 
 
   await expect(vitalTable.getByLabel(/^체온 변화:/)).toHaveCount(0);
 
-  const bloodPressureDelta = vitalTable.getByLabel(
-    "혈압 변화: 수축기 4 증가, 이완기 2 감소",
-  );
-  await expect(bloodPressureDelta).toContainText("(4/2)");
-  await expect(bloodPressureDelta).not.toContainText(
-    /mmHg|증가|감소|상승|하강/,
-  );
-  await expect(bloodPressureDelta.locator("svg")).toHaveCount(2);
-  await expect(
-    bloodPressureDelta.locator('[data-direction="increase"]'),
-  ).toHaveCount(1);
-  await expect(
-    bloodPressureDelta.locator('[data-direction="decrease"]'),
-  ).toHaveCount(1);
+  await expect(vitalTable).toContainText("심박수");
+  await expect(vitalTable).not.toContainText("혈압");
   const currentVitalDateCell = vitalTable.locator("tbody tr").first().locator("th");
   await expect(currentVitalDateCell.getByText("오늘", { exact: true })).toBeVisible();
   await expect(currentVitalDateCell.getByText("(26.06.25)", { exact: true })).toBeVisible();

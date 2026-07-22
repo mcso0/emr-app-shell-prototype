@@ -120,6 +120,7 @@ import { WorkspaceMembershipManagement } from "@/features/auth/workspace-members
 import { HospitalBasicSettingsScreen } from "@/features/hospital-admin/settings/hospital-basic-settings-screen";
 import { useHospitalBasicSettingsStore } from "@/features/hospital-admin/settings/hospital-basic-settings-store";
 import { HospitalScheduleScreen } from "@/features/hospital-admin/schedule/hospital-schedule-screen";
+import { WorkspaceVitalSettingsScreen } from "@/features/hospital-admin/vital-settings/workspace-vital-settings-screen";
 import { RolePermissionManagementScreen } from "@/features/hospital-admin/role-permission-management/screen";
 import {
   useHospitalAdminStore,
@@ -1441,10 +1442,16 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     );
   }
 
-  if (
-    activeSection === "space-time" ||
-    activeSection === "vitals"
-  ) {
+  if (activeSection === "vitals") {
+    return (
+      <WorkspaceVitalSettingsScreen
+        actorHeaders={session ? getDemoActorHeaders(session) : undefined}
+        workspaceId={workspaceId}
+      />
+    );
+  }
+
+  if (activeSection === "space-time") {
     return <HospitalAdminConceptScreen section={activeSection} />;
   }
 

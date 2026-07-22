@@ -11,7 +11,8 @@ related_work:
   - CHART-PR-014
   - CHART-PR-015
   - CHART-PR-016
-last_updated: 2026-07-20
+  - HOSPITAL-ADMIN-LIVE-PR-018
+last_updated: 2026-07-22
 tags: [data-model, patient, vital, chart, permissions]
 ---
 
@@ -25,13 +26,13 @@ tags: [data-model, patient, vital, chart, permissions]
 
 Each row is workspace-, patient-, and encounter-scoped and contains:
 
-- `weight_kg`, `temperature_c`, `respiratory_rate_rpm`
+- `weight_kg`, `temperature_c`, `heart_rate_bpm`, `respiratory_rate_rpm`
 - `blood_pressure_systolic_mmhg`, `blood_pressure_diastolic_mmhg`
 - original measurement attribution: `measured_at`, `recorded_by_user_id`, `created_at`
 - mutable current-record attribution: `updated_at`, `updated_by_user_id`
 - whole-row value-clear attribution: `cleared_at`, `cleared_by_user_id`
 
-Values must be positive. Weight accepts up to two decimal places, temperature up to one, and respiratory rate/blood pressure are integers. Blood pressure is stored only as a complete pair. A new measurement needs at least one value. When every value on an existing current record is cleared, the row remains with all values null and both clearing fields set; it is not deleted.
+Values must be positive. Weight accepts up to two decimal places, temperature up to one, and heart rate/respiratory rate/blood pressure are integers. Blood pressure accepts systolic alone; diastolic is optional and cannot exist without systolic. A new measurement needs at least one value. When every value on an existing current record is cleared, the row remains with all values null and both clearing fields set; it is not deleted.
 
 ## Write Boundary
 
@@ -53,10 +54,12 @@ The direct table remains RLS-protected with direct authenticated table privilege
 
 The context bar has no vital write UI. It requests the shared latest read model on a later screen selection/load, not through real-time push.
 
+Workspace display and entry visibility comes from `vital_presets` plus `workspace_vital_settings`. The measurement table keeps canonical `kg` and `°C` values; changing a workspace display unit or disabling a preset never rewrites or deletes historical rows.
+
 ## Compatibility Snapshot
 
 When a submitted vital includes weight, the writer updates `patients.weight_kg` for existing reception/profile compatibility. Clearing a current vital weight does not erase that patient snapshot; the latest-vital read model still renders the cleared value as unshown.
 
 ## Rollout Boundary
 
-The migration is implemented in source but has not been applied to a remote Supabase project in this work item. Apply, local replay, staging validation, and deployment stay separate approval-gated operations.
+The workspace-settings migration is implemented and fully replayed against local Supabase. It has not been applied to a remote Supabase project in this work item. Remote apply, staging validation, and deployment stay separate release operations.

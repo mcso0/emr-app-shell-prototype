@@ -4,6 +4,7 @@ export type ChartPreconsultationVitalMeasurement = {
   measuredAt: string;
   weightKg?: number;
   temperatureC?: number;
+  heartRateBpm?: number;
   respiratoryRateRpm?: number;
   bloodPressureSystolicMmhg?: number;
   bloodPressureDiastolicMmhg?: number;

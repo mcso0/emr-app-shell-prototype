@@ -193,8 +193,12 @@ test("walk-in encounter core validates nested vitals before gateway access", asy
       field: "vitals.respiratoryRateRpm",
     },
     {
-      vitals: { bloodPressure: { systolicMmhg: 132 } },
-      field: "vitals.bloodPressure.diastolicMmhg",
+      vitals: { heartRateBpm: 88.5 },
+      field: "vitals.heartRateBpm",
+    },
+    {
+      vitals: { bloodPressure: { diastolicMmhg: 84 } },
+      field: "vitals.bloodPressure.systolicMmhg",
     },
     {
       vitals: { bloodPressure: { systolicMmhg: 0, diastolicMmhg: 84 } },

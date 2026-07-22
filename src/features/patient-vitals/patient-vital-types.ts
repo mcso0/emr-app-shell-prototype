@@ -3,6 +3,7 @@ export type PatientVitalMeasurement = {
   bloodPressureSystolicMmhg?: number;
   encounterId: string;
   id: string;
+  heartRateBpm?: number;
   measuredAt: string;
   patientId: string;
   respiratoryRateRpm?: number;
@@ -13,6 +14,7 @@ export type PatientVitalMeasurement = {
 export type PatientVitalWriteInput = {
   bloodPressureDiastolicMmhg: number | null;
   bloodPressureSystolicMmhg: number | null;
+  heartRateBpm: number | null;
   respiratoryRateRpm: number | null;
   temperatureC: number | null;
   weightKg: number | null;
@@ -26,6 +28,7 @@ export type PatientVitalDisplayItem = {
 export const emptyPatientVitalWriteInput: PatientVitalWriteInput = {
   bloodPressureDiastolicMmhg: null,
   bloodPressureSystolicMmhg: null,
+  heartRateBpm: null,
   respiratoryRateRpm: null,
   temperatureC: null,
   weightKg: null,
@@ -36,6 +39,7 @@ export function toPatientVitalWriteInput(
     PatientVitalMeasurement,
     | "weightKg"
     | "temperatureC"
+    | "heartRateBpm"
     | "respiratoryRateRpm"
     | "bloodPressureSystolicMmhg"
     | "bloodPressureDiastolicMmhg"
@@ -44,6 +48,7 @@ export function toPatientVitalWriteInput(
   return {
     weightKg: measurement?.weightKg ?? null,
     temperatureC: measurement?.temperatureC ?? null,
+    heartRateBpm: measurement?.heartRateBpm ?? null,
     respiratoryRateRpm: measurement?.respiratoryRateRpm ?? null,
     bloodPressureSystolicMmhg: measurement?.bloodPressureSystolicMmhg ?? null,
     bloodPressureDiastolicMmhg: measurement?.bloodPressureDiastolicMmhg ?? null,
@@ -59,6 +64,7 @@ export function formatPatientVitalDisplayItems(
     PatientVitalMeasurement,
     | "weightKg"
     | "temperatureC"
+    | "heartRateBpm"
     | "respiratoryRateRpm"
     | "bloodPressureSystolicMmhg"
     | "bloodPressureDiastolicMmhg"
@@ -80,6 +86,13 @@ export function formatPatientVitalDisplayItems(
         measurement?.respiratoryRateRpm === undefined
           ? "—"
           : `${measurement.respiratoryRateRpm} rpm`,
+    },
+    {
+      label: "심박수",
+      value:
+        measurement?.heartRateBpm === undefined
+          ? "—"
+          : `${measurement.heartRateBpm} bpm`,
     },
     {
       label: "혈압",

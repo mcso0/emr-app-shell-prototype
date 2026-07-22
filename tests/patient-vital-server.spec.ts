@@ -20,6 +20,7 @@ const actorUserId = "19410000-0000-4000-8000-000000000001";
 const validVitals = {
   weightKg: 4.82,
   temperatureC: 38.7,
+  heartRateBpm: 88,
   respiratoryRateRpm: 24,
   bloodPressureSystolicMmhg: 132,
   bloodPressureDiastolicMmhg: 86,
@@ -122,25 +123,32 @@ test("hospital administrator eligibility never bypasses vital:write", async () =
   expect(gatewayCalled).toBe(false);
 });
 
-test("today vital validation keeps field clearing possible but requires a complete blood-pressure pair", () => {
+test("today vital validation keeps field clearing possible and allows systolic-only blood pressure", () => {
   expect(validatePatientVitalWriteInput({ weightKg: null })).toEqual({
     valid: true,
     values: {
       weightKg: null,
       temperatureC: null,
+      heartRateBpm: null,
       respiratoryRateRpm: null,
       bloodPressureSystolicMmhg: null,
       bloodPressureDiastolicMmhg: null,
     },
   });
 
-  const invalid = validatePatientVitalWriteInput({
+  const systolicOnly = validatePatientVitalWriteInput({
     bloodPressureSystolicMmhg: 132,
     bloodPressureDiastolicMmhg: null,
   });
+  expect(systolicOnly.valid).toBe(true);
+
+  const invalid = validatePatientVitalWriteInput({
+    bloodPressureSystolicMmhg: null,
+    bloodPressureDiastolicMmhg: 86,
+  });
   expect(invalid.valid).toBe(false);
   if (invalid.valid) return;
-  expect(invalid.fieldErrors.bloodPressureSystolicMmhg).toContain("함께");
+  expect(invalid.fieldErrors.bloodPressureDiastolicMmhg).toContain("수축기");
 });
 
 test("today vital validation rejects values that the stored column would round", () => {
@@ -148,6 +156,7 @@ test("today vital validation rejects values that the stored column would round",
     weightKg: 4.825,
     temperatureC: 38.75,
     respiratoryRateRpm: 24.5,
+    heartRateBpm: 88.5,
   });
 
   expect(invalid.valid).toBe(false);
@@ -155,6 +164,7 @@ test("today vital validation rejects values that the stored column would round",
   expect(invalid.fieldErrors.weightKg).toContain("둘째");
   expect(invalid.fieldErrors.temperatureC).toContain("첫째");
   expect(invalid.fieldErrors.respiratoryRateRpm).toContain("정수");
+  expect(invalid.fieldErrors.heartRateBpm).toContain("정수");
 });
 
 test("latest vital read uses the selected encounter only to resolve its patient", async () => {
