@@ -70,3 +70,49 @@ test("v2 RPC args include revision locking and idempotency keys", () => {
     },
   });
 });
+
+test("fixed-week command accepts bounded roles, weekdays, and working hours", () => {
+  const command = parseHospitalScheduleRevisionCommand({
+    type: "apply_fixed_week",
+    revisionId,
+    expectedLockVersion: 5,
+    weekdays: [1, 2, 3, 4, 5],
+    startMinutes: 540,
+    endMinutes: 1140,
+    roles: ["veterinarian", "technician", "reception"],
+  });
+  expect(command).not.toBeNull();
+  if (!command) return;
+
+  expect(
+    toRevisionRpcArgs({
+      command,
+      workspaceId: "workspace-clair-cheongdam",
+      idempotencyKey: "schedule-fixed-week-test",
+    }),
+  ).toEqual({
+    functionName: "hospital_schedule_apply_fixed_week_v2",
+    args: {
+      p_workspace_id: "workspace-clair-cheongdam",
+      p_idempotency_key: "schedule-fixed-week-test",
+      p_revision_id: revisionId,
+      p_expected_lock_version: 5,
+      p_weekdays: [1, 2, 3, 4, 5],
+      p_start_minutes: 540,
+      p_end_minutes: 1140,
+      p_roles: ["veterinarian", "technician", "reception"],
+    },
+  });
+
+  expect(
+    parseHospitalScheduleRevisionCommand({
+      type: "apply_fixed_week",
+      revisionId,
+      expectedLockVersion: 5,
+      weekdays: [1, 1],
+      startMinutes: 1140,
+      endMinutes: 540,
+      roles: ["veterinarian"],
+    }),
+  ).toBeNull();
+});

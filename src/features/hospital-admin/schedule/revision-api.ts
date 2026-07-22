@@ -27,6 +27,15 @@ export type HospitalScheduleRevisionCommand =
       nonWorkEntry: HospitalScheduleNonWorkEntryInput;
     }
   | {
+      type: "apply_fixed_week";
+      revisionId: string;
+      expectedLockVersion: number;
+      weekdays: number[];
+      startMinutes: number;
+      endMinutes: number;
+      roles: Array<"veterinarian" | "technician" | "reception">;
+    }
+  | {
       type: "delete_entry";
       revisionId: string;
       expectedLockVersion: number;
@@ -109,6 +118,26 @@ export function parseHospitalScheduleRevisionCommand(
           }
         : null;
     }
+    case "apply_fixed_week":
+      return (
+        isUuid(record.revisionId) &&
+        isLockVersion(record.expectedLockVersion) &&
+        isWeekdayList(record.weekdays) &&
+        isMinute(record.startMinutes) &&
+        isMinute(record.endMinutes) &&
+        record.endMinutes > record.startMinutes &&
+        isRoleList(record.roles)
+      )
+        ? {
+            type: "apply_fixed_week",
+            revisionId: record.revisionId,
+            expectedLockVersion: record.expectedLockVersion,
+            weekdays: record.weekdays,
+            startMinutes: record.startMinutes,
+            endMinutes: record.endMinutes,
+            roles: record.roles,
+          }
+        : null;
     case "delete_entry":
       return (
         isUuid(record.revisionId) &&
@@ -220,6 +249,19 @@ export function toRevisionRpcArgs({
             endMinutes: command.nonWorkEntry.endMinutes,
             privateNote: command.nonWorkEntry.privateNote,
           },
+        },
+      };
+    case "apply_fixed_week":
+      return {
+        functionName: "hospital_schedule_apply_fixed_week_v2",
+        args: {
+          ...base,
+          p_revision_id: command.revisionId,
+          p_expected_lock_version: command.expectedLockVersion,
+          p_weekdays: command.weekdays,
+          p_start_minutes: command.startMinutes,
+          p_end_minutes: command.endMinutes,
+          p_roles: command.roles,
         },
       };
     case "delete_entry":
@@ -371,6 +413,30 @@ function isMinute(value: unknown): value is number {
 
 function isNullableMinute(value: unknown): value is number | null {
   return value === null || isMinute(value);
+}
+
+function isWeekdayList(value: unknown): value is number[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.length <= 7 &&
+    new Set(value).size === value.length &&
+    value.every((weekday) => Number.isInteger(weekday) && weekday >= 1 && weekday <= 7)
+  );
+}
+
+function isRoleList(
+  value: unknown,
+): value is Array<"veterinarian" | "technician" | "reception"> {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.length <= 3 &&
+    new Set(value).size === value.length &&
+    value.every(
+      (role) => role === "veterinarian" || role === "technician" || role === "reception",
+    )
+  );
 }
 
 function isText(value: unknown, maxLength: number): value is string {
