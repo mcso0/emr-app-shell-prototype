@@ -2,10 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  formatPatientVitalDisplayItems,
+  formatPatientVitalDisplayItemsForSettings,
   type PatientVitalDisplayItem,
   type PatientVitalMeasurement,
 } from "@/features/patient-vitals/patient-vital-types";
+import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
+import {
+  getEnabledWorkspaceVitalSettings,
+  type WorkspaceVitalKey,
+  type WorkspaceVitalSettingsSnapshot,
+} from "@/features/patient-vitals/workspace-vital-settings";
 
 type PatientLatestVitalResponse =
   | { ok: true; status: 200; vital: PatientVitalMeasurement | null }
@@ -20,6 +26,7 @@ export function usePatientLatestVitalItems({
   fallbackItems?: PatientVitalDisplayItem[];
   workspaceId: string;
 }) {
+  const { snapshot: vitalSettings } = useWorkspaceVitalSettings({ workspaceId });
   const [result, setResult] = useState<
     | { encounterId?: string; status: "loading" }
     | { encounterId: string; status: "ready"; vital: PatientVitalMeasurement | null }
@@ -54,10 +61,35 @@ export function usePatientLatestVitalItems({
     () => ({
       items:
         result.status === "ready" && result.encounterId === encounterId
-          ? formatPatientVitalDisplayItems(result.vital)
-          : fallbackItems ?? formatPatientVitalDisplayItems(),
+          ? formatPatientVitalDisplayItemsForSettings(result.vital, vitalSettings)
+          : fallbackItems
+            ? orderFallbackVitalItems(fallbackItems, vitalSettings)
+            : formatPatientVitalDisplayItemsForSettings(undefined, vitalSettings),
       status: result.encounterId === encounterId ? result.status : "loading",
     }),
-    [encounterId, fallbackItems, result],
+    [encounterId, fallbackItems, result, vitalSettings],
   );
+}
+
+const fallbackLabelsByKey: Record<WorkspaceVitalKey, string[]> = {
+  weight: ["체중"],
+  temperature: ["체온"],
+  heart_rate: ["심박수"],
+  respiratory_rate: ["호흡", "호흡수"],
+  blood_pressure: ["혈압"],
+};
+
+function orderFallbackVitalItems(
+  fallbackItems: PatientVitalDisplayItem[],
+  settings: WorkspaceVitalSettingsSnapshot,
+) {
+  return getEnabledWorkspaceVitalSettings(settings).map((setting) => {
+    const fallback = fallbackItems.find((item) =>
+      fallbackLabelsByKey[setting.key].includes(item.label),
+    );
+    return fallback ?? formatPatientVitalDisplayItemsForSettings(undefined, {
+      ...settings,
+      items: [{ ...setting, sortOrder: 0 }],
+    })[0];
+  });
 }
