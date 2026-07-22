@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsPeopleUserPlusIcon } from "@/components/cds-icons/people-and-places";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -28,16 +29,7 @@ import {
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -46,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tab, TabGroup, TabPanel, TabsList } from "@/components/ui/tabs";
 import { useAuthClient } from "@/features/auth/auth-client";
 import {
   acceptSessionWorkspaceInvitation,
@@ -80,6 +73,7 @@ import {
   createWorkspaceRoleCatalogApi,
 } from "@/features/hospital-admin/role-permission-management/server-catalog";
 import type { WorkspaceRoleCatalogSnapshot } from "@/features/auth/server-workspace-role-catalog";
+import { cn } from "@/lib/utils";
 
 type WorkspaceMembershipManagementProps = {
   onOpenRoleManagement?: () => void;
@@ -181,12 +175,169 @@ function MembershipDetailItem({
   readonly value: string;
 }) {
   return (
-    <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2">
-      <dt className="text-[12px] leading-4 text-muted-foreground">{label}</dt>
+    <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3 border-b border-[var(--emr-border-subtle)] py-2.5 last:border-b-0">
+      <dt className="text-[12px] leading-5 text-muted-foreground">{label}</dt>
       <dd className="min-w-0 break-words text-[13px] font-medium leading-5 text-[var(--emr-text-primary)]">
         {value}
       </dd>
     </div>
+  );
+}
+
+function MembershipProfilePanel({
+  canManageMembers,
+  jobPositionLabel,
+  membership,
+  onClose,
+  onDeactivate,
+  onEditRole,
+  onRestore,
+  permissionRoleLabel,
+  permissionRoleSummary,
+}: {
+  readonly canManageMembers: boolean;
+  readonly jobPositionLabel: string;
+  readonly membership: SessionWorkspaceMembership;
+  readonly onClose: () => void;
+  readonly onDeactivate: () => void;
+  readonly onEditRole: () => void;
+  readonly onRestore: () => void;
+  readonly permissionRoleLabel: string;
+  readonly permissionRoleSummary: string;
+}) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const displayName = getMembershipDisplayName(membership);
+  const statusLabel = getStatusLabel({ ...membership, rowType: "member" });
+
+  return (
+    <section className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-rightpanel)]">
+      <TabGroup defaultValue="profile" className="min-h-0 flex-1 gap-0">
+        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4">
+          <div className="flex items-start gap-3">
+            <Avatar className="size-[var(--emr-profile-avatar-size)] shrink-0 rounded-[var(--emr-radius-control)]">
+              <AvatarFallback className="rounded-[var(--emr-radius-control)] text-[22px] font-semibold">
+                {displayName.slice(0, 2)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h2 className="truncate text-[16px] font-semibold leading-6 text-[var(--emr-text-primary)]">
+                    {displayName}
+                  </h2>
+                  <p className="mt-0.5 truncate text-[12px] leading-5 text-muted-foreground">
+                    {[jobPositionLabel, membership.department].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+                <Button
+                  ref={closeButtonRef}
+                  type="button"
+                  aria-label="구성원 정보 닫기"
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={onClose}
+                >
+                  <CdsActionsXIcon aria-hidden="true" size={16} />
+                </Button>
+              </div>
+              <p className="mt-2 truncate text-[12px] leading-5 text-muted-foreground">
+                {membership.email ?? "이메일 미등록"}
+              </p>
+              <Badge className="mt-1.5" variant="outline">{statusLabel}</Badge>
+            </div>
+          </div>
+          <TabsList
+            activateOnFocus
+            aria-label="구성원 정보 탭"
+            className="absolute bottom-0 left-4 h-[34px] gap-3 p-0"
+            variant="line"
+          >
+            <Tab className="h-7 flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="profile">
+              기본 정보
+            </Tab>
+            <Tab className="h-7 flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="access">
+              권한 · 이력
+            </Tab>
+          </TabsList>
+        </header>
+
+        <TabPanel className="min-h-0 overflow-y-auto p-4" value="profile">
+          <div className="grid gap-5">
+            <section aria-labelledby="member-organization-heading" className="px-2">
+              <h3 id="member-organization-heading" className="text-[13px] font-semibold">소속 정보</h3>
+              <dl className="mt-2">
+                <MembershipDetailItem label="이름" value={displayName} />
+                <MembershipDetailItem label="이메일" value={membership.email ?? "-"} />
+                <MembershipDetailItem label="직무" value={jobPositionLabel} />
+                <MembershipDetailItem label="직책" value={membership.title ?? "-"} />
+                <MembershipDetailItem label="부서" value={membership.department ?? "-"} />
+              </dl>
+            </section>
+            <p className="rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)] px-3 py-2 text-[12px] leading-5 text-muted-foreground">
+              개인 프로필 정보는 구성원 본인이 프로필에서 관리합니다.
+            </p>
+          </div>
+        </TabPanel>
+
+        <TabPanel className="min-h-0 overflow-y-auto p-4" value="access">
+          <div className="grid gap-5">
+            <section aria-labelledby="member-access-heading" className="px-2">
+              <h3 id="member-access-heading" className="text-[13px] font-semibold">권한 및 직무</h3>
+              <dl className="mt-2">
+                <MembershipDetailItem label="권한 역할" value={permissionRoleLabel} />
+                <MembershipDetailItem label="권한 설명" value={permissionRoleSummary} />
+                <MembershipDetailItem label="직무" value={jobPositionLabel} />
+              </dl>
+            </section>
+            <section aria-labelledby="member-history-heading" className="px-2">
+              <h3 id="member-history-heading" className="text-[13px] font-semibold">멤버십 이력</h3>
+              <dl className="mt-2">
+                <MembershipDetailItem label="생성일" value={formatMembershipDate(membership.createdAt)} />
+                <MembershipDetailItem label="활성화일" value={formatMembershipDate(membership.activatedAt)} />
+                <MembershipDetailItem label="비활성화일" value={formatMembershipDate(membership.deactivatedAt)} />
+                <MembershipDetailItem label="보관일" value={formatMembershipDate(membership.archivedAt ?? membership.deletedAt)} />
+                <MembershipDetailItem label="보관 사유" value={membership.archivedReason || membership.deletedReason || "-"} />
+              </dl>
+              <details className="mt-3 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-subtle)] px-3 py-2 text-[12px]">
+                <summary className="cursor-pointer font-medium text-muted-foreground">기술 정보</summary>
+                <p className="mt-2 break-all text-[var(--emr-text-primary)]">사용자 ID · {membership.userSessionId}</p>
+              </details>
+            </section>
+          </div>
+        </TabPanel>
+      </TabGroup>
+
+      <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3">
+        {!canManageMembers ? (
+          <p className="text-[12px] leading-5 text-muted-foreground">
+            일반 계정은 조회만 가능합니다.
+          </p>
+        ) : isArchivedMembershipStatus(membership.status) ? (
+          <Button type="button" variant="outline" onClick={onRestore}>구성원 복구</Button>
+        ) : membership.status !== "active" ? (
+          <p className="text-[12px] leading-5 text-muted-foreground">
+            비활성 구성원은 권한을 수정할 수 없습니다.
+          </p>
+        ) : (
+          <>
+            <Button type="button" variant="outline" onClick={onEditRole}>권한 수정</Button>
+            <Button type="button" variant="ghost" onClick={onDeactivate}>비활성화</Button>
+          </>
+        )}
+      </footer>
+    </section>
   );
 }
 
@@ -203,13 +354,14 @@ export function WorkspaceMembershipManagement({
   const [editingInvitation, setEditingInvitation] = useState<SessionWorkspaceInvitation | null>(null);
   const [statusReadState, setStatusReadState] =
     useState<"idle" | "loading" | "error">("idle");
-  const [inviteSheetOpen, setInviteSheetOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [submittingInvitation, setSubmittingInvitation] = useState(false);
   const [selectedPermissionRoleKey, setSelectedPermissionRoleKey] = useState("general");
   const [selectedJobPositionKey, setSelectedJobPositionKey] = useState("front_desk");
   const [selectedMembership, setSelectedMembership] = useState<SessionWorkspaceMembership | null>(
     null
   );
+  const memberTriggerRef = useRef<HTMLElement | null>(null);
   const openedTargetUserIdRef = useRef<string | null>(null);
   const [editingMembership, setEditingMembership] = useState<SessionWorkspaceMembership | null>(
     null
@@ -235,6 +387,21 @@ export function WorkspaceMembershipManagement({
   const canManageMembers =
     session?.role === "hospital_admin" ||
     (session?.role === "supabase" && serverCatalog?.access.canManage === true);
+
+  const openMembershipPanel = useCallback(
+    (membership: SessionWorkspaceMembership, trigger: HTMLElement | null) => {
+      memberTriggerRef.current = trigger;
+      setSelectedMembership(membership);
+    },
+    []
+  );
+
+  const closeMembershipPanel = useCallback(() => {
+    setSelectedMembership(null);
+    const trigger = memberTriggerRef.current;
+    memberTriggerRef.current = null;
+    window.requestAnimationFrame(() => trigger?.focus());
+  }, []);
 
   useEffect(() => {
     hydrate();
@@ -464,7 +631,7 @@ export function WorkspaceMembershipManagement({
       });
       setEditingInvitation(null);
       setFieldErrors({});
-      setInviteSheetOpen(false);
+      setInviteDialogOpen(false);
       return;
     }
 
@@ -515,7 +682,7 @@ export function WorkspaceMembershipManagement({
       setFieldErrors({});
       setSelectedPermissionRoleKey("general");
       setSelectedJobPositionKey("front_desk");
-      setInviteSheetOpen(false);
+      setInviteDialogOpen(false);
       form.reset();
     } catch {
       const invitation = createSessionWorkspaceInvitation(input, workspaceId, {
@@ -526,7 +693,7 @@ export function WorkspaceMembershipManagement({
       setFieldErrors({});
       setSelectedPermissionRoleKey("general");
       setSelectedJobPositionKey("front_desk");
-      setInviteSheetOpen(false);
+      setInviteDialogOpen(false);
       form.reset();
     } finally {
       setSubmittingInvitation(false);
@@ -868,7 +1035,7 @@ export function WorkspaceMembershipManagement({
   function getRowActions(row: MembershipRow): EmrRowActionMenuItem[] {
     if (row.rowType === "invitation") {
       return [
-        { key: "edit-invitation", label: "초대 정보 수정", description: "역할·직무·소속 정보를 수정합니다.", onSelect: () => { setEditingInvitation(row); setSelectedPermissionRoleKey(getRowPermissionRoleKey(row)); setSelectedJobPositionKey(getRowJobPositionKey(row)); setInviteSheetOpen(true); }, disabled: !canManageMembers },
+        { key: "edit-invitation", label: "초대 정보 수정", description: "역할·직무·소속 정보를 수정합니다.", onSelect: () => { setEditingInvitation(row); setSelectedPermissionRoleKey(getRowPermissionRoleKey(row)); setSelectedJobPositionKey(getRowJobPositionKey(row)); setInviteDialogOpen(true); }, disabled: !canManageMembers },
         { key: "resend", label: "초대 재발송", onSelect: () => handleResend(row.id), disabled: !canManageMembers },
         { key: "accept", label: "수락 시뮬레이션", onSelect: () => handleAccept(row.id), disabled: !canManageMembers },
         { key: "cancel", label: "초대 취소", onSelect: () => handleCancel(row.id), disabled: !canManageMembers, variant: "destructive" },
@@ -922,21 +1089,38 @@ export function WorkspaceMembershipManagement({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-auto bg-[var(--emr-surface-workspace)] lg:overflow-hidden">
-      <section className="border-b bg-card px-5 py-4">
+    <div className="relative h-full min-h-0 bg-[var(--emr-surface-workspace)]">
+      <div
+        className={cn(
+          "grid h-full min-h-0 grid-cols-[minmax(0,1fr)]",
+          selectedMembership &&
+            "lg:grid-cols-[minmax(0,1fr)_var(--emr-profile-panel-width)] lg:gap-[var(--emr-profile-panel-gap)]"
+        )}
+      >
+        <main className="flex min-h-0 min-w-0 flex-col overflow-auto bg-[var(--emr-surface-workspace)] lg:overflow-hidden">
+          <section className="border-b bg-card px-5 py-4">
         <EmrPageHeader
           title="병원 구성원"
           actions={
-            <Button type="button" size="sm" disabled={!canManageMembers} onClick={() => { setSelectedMembership(null); setInviteSheetOpen(true); }}>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!canManageMembers}
+              onClick={() => {
+                setSelectedMembership(null);
+                memberTriggerRef.current = null;
+                setInviteDialogOpen(true);
+              }}
+            >
               <CdsPeopleUserPlusIcon data-icon="inline-start" aria-hidden="true" />
               직원 초대
             </Button>
           }
         />
         <p className="mt-1 text-[13px] leading-5 text-muted-foreground">구성원의 소속과 권한을 확인하고 초대를 관리해.</p>
-      </section>
+          </section>
 
-      <section className="min-h-0 flex-1 overflow-hidden">
+          <section className="min-h-0 flex-1 overflow-hidden">
         <ScrollArea className="h-full min-h-0 bg-[var(--emr-surface-workspace)]">
           <div className="p-4">
             {statusReadState === "loading" ? (
@@ -953,14 +1137,18 @@ export function WorkspaceMembershipManagement({
             ) : null}
 
             <div className="mb-4 flex flex-col gap-3">
-              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_160px_160px]">
+              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_148px_148px]">
                 <Input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="이름 또는 이메일 검색" aria-label="구성원 검색" />
                 <Select value={jobFilter} onValueChange={(value) => setJobFilter(value ?? "all")}>
-                  <SelectTrigger><SelectValue placeholder="모든 직무" /></SelectTrigger>
-                  <SelectContent><SelectGroup><SelectItem value="all">모든 직무</SelectItem>{jobFilterOptions.map((label) => <SelectItem key={label} value={label}>{label}</SelectItem>)}</SelectGroup></SelectContent>
+                  <SelectTrigger className="w-full" aria-label="직군 필터">
+                    <span className="min-w-0 flex-1 truncate text-left">{jobFilter === "all" ? "모든 직군" : jobFilter}</span>
+                  </SelectTrigger>
+                  <SelectContent><SelectGroup><SelectItem value="all">모든 직군</SelectItem>{jobFilterOptions.map((label) => <SelectItem key={label} value={label}>{label}</SelectItem>)}</SelectGroup></SelectContent>
                 </Select>
                 <Select value={departmentFilter} onValueChange={(value) => setDepartmentFilter(value ?? "all")}>
-                  <SelectTrigger><SelectValue placeholder="모든 부서" /></SelectTrigger>
+                  <SelectTrigger className="w-full" aria-label="부서 필터">
+                    <span className="min-w-0 flex-1 truncate text-left">{departmentFilter === "all" ? "모든 부서" : departmentFilter}</span>
+                  </SelectTrigger>
                   <SelectContent><SelectGroup><SelectItem value="all">모든 부서</SelectItem>{departmentFilterOptions.map((label) => <SelectItem key={label} value={label}>{label}</SelectItem>)}</SelectGroup></SelectContent>
                 </Select>
               </div>
@@ -989,7 +1177,7 @@ export function WorkspaceMembershipManagement({
 
             <div className="flex flex-col gap-2 md:hidden">
               {statusReadState === "loading" ? Array.from({ length: 4 }, (_, index) => <Skeleton key={`member-card-skeleton-${index}`} className="h-24 w-full" />) : visibleRows.map((row) => (
-                <div key={`member-card-${row.rowType}-${row.id}`} role={row.rowType === "member" ? "button" : undefined} tabIndex={row.rowType === "member" ? 0 : undefined} className="rounded-md border bg-card p-3 text-left" onClick={() => row.rowType === "member" && setSelectedMembership(row)} onKeyDown={(event) => { if (row.rowType === "member" && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setSelectedMembership(row); } }}>
+                <div key={`member-card-${row.rowType}-${row.id}`} role={row.rowType === "member" ? "button" : undefined} tabIndex={row.rowType === "member" ? 0 : undefined} className="rounded-md border bg-card p-3 text-left" onClick={(event) => row.rowType === "member" && openMembershipPanel(row, event.currentTarget)} onKeyDown={(event) => { if (row.rowType === "member" && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openMembershipPanel(row, event.currentTarget); } }}>
                   <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><Avatar className="size-8"><AvatarFallback>{(row.rowType === "member" ? getMembershipDisplayName(row) : getRowEmail(row)).slice(0, 1)}</AvatarFallback></Avatar><div className="min-w-0"><p className="truncate text-sm font-semibold">{row.rowType === "member" ? getMembershipDisplayName(row) : getRowEmail(row)}</p><p className="truncate text-xs text-muted-foreground">{getRowEmail(row)}</p></div></div><span onClick={(event) => event.stopPropagation()}><EmrRowActionMenu ariaLabel={`${getRowEmail(row)} 작업`} items={getRowActions(row)} /></span></div>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{getSessionWorkspaceJobPositionLabel(getRowJobPositionKey(row), state, workspaceId)}</span><span>·</span><span>{row.department ?? "소속 미지정"}</span><Badge variant="outline">{getSessionWorkspacePermissionRoleLabel(getRowPermissionRoleKey(row), state, workspaceId)}</Badge><Badge variant={row.rowType === "member" && isArchivedMembershipStatus(row.status) ? "destructive" : "outline"}>{getStatusLabel(row)}</Badge></div>
                   {row.rowType === "member" && isArchivedMembershipStatus(row.status) ? <p className="mt-2 text-xs text-muted-foreground">보관 사유: {row.archivedReason ?? row.deletedReason ?? "-"}</p> : null}
@@ -1037,15 +1225,15 @@ export function WorkspaceMembershipManagement({
                       }
                       data-state={selectedMembership?.id === row.id ? "selected" : undefined}
                       tabIndex={selectable ? 0 : undefined}
-                      onClick={() => {
-                        if (row.rowType === "member") setSelectedMembership(row);
+                      onClick={(event) => {
+                        if (row.rowType === "member") openMembershipPanel(row, event.currentTarget);
                       }}
                       onKeyDown={(event) => {
                         if (event.target !== event.currentTarget) return;
                         if (row.rowType !== "member") return;
                         if (event.key !== "Enter" && event.key !== " ") return;
                         event.preventDefault();
-                        setSelectedMembership(row);
+                        openMembershipPanel(row, event.currentTarget);
                       }}
                     >
                       <TableCell>
@@ -1085,20 +1273,54 @@ export function WorkspaceMembershipManagement({
               </TableBody>
             </Table>
           </div>
-        </ScrollArea>
-      </section>
+            </ScrollArea>
+          </section>
+        </main>
 
-      <Sheet open={inviteSheetOpen} onOpenChange={(open) => { setInviteSheetOpen(open); if (!open) setEditingInvitation(null); }}>
-        <SheetContent className="w-[min(520px,calc(100vw-1rem))] gap-0 p-0 sm:max-w-[520px]">
-          <SheetHeader className="border-b border-[var(--emr-line-hairline)] px-5 py-4">
-            <SheetTitle className="text-[16px] leading-6">{editingInvitation ? "초대 정보 수정" : "직원 초대"}</SheetTitle>
-            <SheetDescription className="text-[12px] leading-5">
+        {selectedMembership ? (
+          <aside
+            aria-label="구성원 정보"
+            className="fixed inset-0 z-40 min-h-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] lg:static lg:w-[var(--emr-profile-panel-width)] lg:rounded-[var(--emr-radius-panel)] lg:border lg:border-[var(--emr-border-strong)] lg:shadow-[var(--clair-shadow-xs)]"
+            data-testid="hospital-member-profile-panel"
+          >
+            <MembershipProfilePanel
+              key={selectedMembership.id}
+              canManageMembers={canManageMembers}
+              jobPositionLabel={selectedMembershipJobPositionLabel}
+              membership={selectedMembership}
+              onClose={closeMembershipPanel}
+              onDeactivate={() => {
+                setDeactivationError(null);
+                setDeactivatingMembership(selectedMembership);
+              }}
+              onEditRole={() => {
+                setSelectedMembership(null);
+                memberTriggerRef.current = null;
+                openRoleEditor(selectedMembership);
+              }}
+              onRestore={() => void handleRestore(selectedMembership)}
+              permissionRoleLabel={selectedMembershipPermissionRoleLabel}
+              permissionRoleSummary={getSessionWorkspacePermissionRoleSummary(
+                selectedMembershipPermissionRoleKey,
+                state,
+                workspaceId
+              )}
+            />
+          </aside>
+        ) : null}
+      </div>
+
+      <Dialog open={inviteDialogOpen} onOpenChange={(open) => { setInviteDialogOpen(open); if (!open) setEditingInvitation(null); }}>
+        <DialogContent className="max-h-[min(760px,calc(100dvh-2rem))] gap-0 overflow-hidden p-0 sm:max-w-[640px]">
+          <DialogHeader className="border-b border-[var(--emr-line-hairline)] px-5 py-4 pr-12">
+            <DialogTitle className="text-[16px] leading-6">{editingInvitation ? "초대 정보 수정" : "직원 초대"}</DialogTitle>
+            <DialogDescription className="text-[12px] leading-5">
               실제 이메일 발송 없이 초대 상태만 저장합니다.
-            </SheetDescription>
-          </SheetHeader>
-          <form key={editingInvitation?.id ?? "new"} className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+            </DialogDescription>
+          </DialogHeader>
+          <form key={editingInvitation?.id ?? "new"} className="flex min-h-0 flex-col overflow-hidden" onSubmit={handleSubmit}>
             <ScrollArea className="min-h-0 flex-1">
-              <FieldGroup className="p-4">
+              <FieldGroup className="p-5">
                 {!canManageMembers ? (
                   <p
                     role="alert"
@@ -1151,7 +1373,7 @@ export function WorkspaceMembershipManagement({
                   </FieldDescription>
                   <RadioGroup
                     aria-label="권한 역할"
-                    className="gap-2"
+                    className="grid gap-2 sm:grid-cols-3"
                     value={selectedPermissionRoleKey}
                     onValueChange={(value) => {
                       setSelectedPermissionRoleKey(String(value));
@@ -1185,7 +1407,7 @@ export function WorkspaceMembershipManagement({
                       variant="ghost"
                       className="w-fit px-0"
                       onClick={() => {
-                        setInviteSheetOpen(false);
+                        setInviteDialogOpen(false);
                         onOpenRoleManagement();
                       }}
                     >
@@ -1258,156 +1480,22 @@ export function WorkspaceMembershipManagement({
 
               </FieldGroup>
             </ScrollArea>
-            <SheetFooter className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 sm:flex-row sm:justify-end">
+            <DialogFooter className="mx-0 mb-0 rounded-none border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-5 py-3 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 disabled={submittingInvitation}
-                onClick={() => setInviteSheetOpen(false)}
+                onClick={() => setInviteDialogOpen(false)}
               >
                 닫기
               </Button>
               <Button type="submit" disabled={!canManageMembers || submittingInvitation}>
                 {submittingInvitation ? "저장 중" : editingInvitation ? "초대 정보 저장" : "초대 만들기"}
               </Button>
-            </SheetFooter>
+            </DialogFooter>
           </form>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet
-        open={Boolean(selectedMembership)}
-        onOpenChange={(open) => {
-          if (!open) setSelectedMembership(null);
-        }}
-      >
-        <SheetContent className="w-[min(460px,calc(100vw-1rem))] gap-0 p-0 sm:max-w-[460px]">
-          <SheetHeader className="border-b border-[var(--emr-line-hairline)] px-5 py-4">
-            <SheetTitle className="text-[16px] leading-6">
-              {selectedMembership ? getMembershipDisplayName(selectedMembership) : "구성원 상세"}
-            </SheetTitle>
-            <SheetDescription className="text-[12px] leading-5">
-              기본 정보와 권한 역할을 확인합니다. 개인 프로필 정보는 본인 프로필에서 관리합니다.
-            </SheetDescription>
-          </SheetHeader>
-
-          {selectedMembership ? (
-            <>
-              <ScrollArea className="min-h-0 flex-1">
-                <div className="grid gap-4 p-4">
-                  <section className="grid gap-2">
-                    <h3 className="text-[13px] font-semibold">기본 정보</h3>
-                    <dl className="grid gap-2">
-                      <MembershipDetailItem
-                        label="이름"
-                        value={getMembershipDisplayName(selectedMembership)}
-                      />
-                      <MembershipDetailItem
-                        label="이메일"
-                        value={selectedMembership.email ?? "-"}
-                      />
-                      <MembershipDetailItem
-                        label="사용자 ID"
-                        value={selectedMembership.userSessionId}
-                      />
-                      <MembershipDetailItem label="상태" value={selectedMembership.status} />
-                      <MembershipDetailItem label="직책" value={selectedMembership.title ?? "-"} />
-                      <MembershipDetailItem
-                        label="부서"
-                        value={selectedMembership.department ?? "-"}
-                      />
-                    </dl>
-                  </section>
-
-                  <section className="grid gap-2">
-                    <h3 className="text-[13px] font-semibold">권한 및 직무</h3>
-                    <dl className="grid gap-2">
-                      <MembershipDetailItem
-                        label="권한 역할"
-                        value={selectedMembershipPermissionRoleLabel}
-                      />
-                      <MembershipDetailItem
-                        label="권한 설명"
-                        value={getSessionWorkspacePermissionRoleSummary(
-                          selectedMembershipPermissionRoleKey,
-                          state,
-                          workspaceId
-                        )}
-                      />
-                      <MembershipDetailItem label="직무" value={selectedMembershipJobPositionLabel} />
-                    </dl>
-                  </section>
-
-                  <section className="grid gap-2">
-                    <h3 className="text-[13px] font-semibold">멤버십 이력</h3>
-                    <dl className="grid gap-2">
-                      <MembershipDetailItem
-                        label="생성일"
-                        value={formatMembershipDate(selectedMembership.createdAt)}
-                      />
-                      <MembershipDetailItem
-                        label="활성화일"
-                        value={formatMembershipDate(selectedMembership.activatedAt)}
-                      />
-                      <MembershipDetailItem
-                        label="비활성화일"
-                        value={formatMembershipDate(selectedMembership.deactivatedAt)}
-                      />
-                      <MembershipDetailItem
-                        label="보관일"
-                        value={formatMembershipDate(selectedMembership.archivedAt ?? selectedMembership.deletedAt)}
-                      />
-                      <MembershipDetailItem
-                        label="보관 사유"
-                        value={selectedMembership.archivedReason || selectedMembership.deletedReason || "-"}
-                      />
-                    </dl>
-                  </section>
-                </div>
-              </ScrollArea>
-
-              <SheetFooter className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 sm:flex-row sm:justify-end">
-                {!canManageMembers ? (
-                  <p className="text-[12px] leading-5 text-muted-foreground">
-                    일반 계정은 이 페이지에서 조회만 가능합니다. 본인 정보는 프로필에서 변경하세요.
-                  </p>
-                ) : isArchivedMembershipStatus(selectedMembership.status) ? (
-                  <Button type="button" variant="outline" onClick={() => void handleRestore(selectedMembership)}>
-                    구성원 복구
-                  </Button>
-                ) : selectedMembership.status !== "active" ? (
-                  <p className="text-[12px] leading-5 text-muted-foreground">
-                    비활성 구성원은 현재 화면에서 권한을 수정할 수 없습니다.
-                  </p>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedMembership(null);
-                        openRoleEditor(selectedMembership);
-                      }}
-                    >
-                      권한 수정
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        setDeactivationError(null);
-                        setDeactivatingMembership(selectedMembership);
-                      }}
-                    >
-                      비활성화
-                    </Button>
-                  </>
-                )}
-              </SheetFooter>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(editingMembership)}
