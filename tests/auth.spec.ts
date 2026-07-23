@@ -1020,9 +1020,10 @@ test("role_permission:view fixture can inspect roles but cannot manage invitatio
   const roleScreen = page.getByTestId("hospital-admin-role-permission-screen");
   await expect(roleScreen.getByRole("heading", { name: "역할 및 권한" })).toBeVisible();
   await expect(roleScreen.getByRole("button", { name: "새 커스텀 역할" })).toHaveCount(0);
-  await roleScreen.getByRole("tab", { name: "직무" }).click();
+  await roleScreen.getByTestId("role-permission-hub-positions").click();
   await expect(roleScreen.getByRole("button", { name: "직무 추가" })).toBeDisabled();
-  await roleScreen.getByRole("tab", { name: "업무 기본값" }).click();
+  await roleScreen.getByRole("button", { name: "역할 및 권한", exact: true }).click();
+  await roleScreen.getByTestId("role-permission-hub-work-defaults").click();
   await expect(roleScreen.getByLabel("기본 접수 담당")).toBeDisabled();
 });
 
@@ -1047,6 +1048,8 @@ test("hospital admin manages custom role and job catalogs outside the invitation
   await expect(page.getByText("CS", { exact: true })).toHaveCount(0);
   await expect(page.getByText("마케터", { exact: true })).toHaveCount(0);
   await expect(page.getByText("디자이너", { exact: true })).toHaveCount(0);
+  await page.getByTestId("role-permission-hub-roles").click();
+  await page.getByRole("button", { name: /소유자.*1명/ }).click();
   await expect(page.getByText("워크스페이스 삭제")).toBeVisible();
   await expect(page.getByText("소유권 이전")).toBeVisible();
   await expect(page.getByText("소유자 전용").first()).toBeVisible();
@@ -1056,18 +1059,31 @@ test("hospital admin manages custom role and job catalogs outside the invitation
   await page.getByRole("checkbox", { name: "접수/예약 조회" }).check();
   await page.getByRole("checkbox", { name: "검사/처치 결과 입력" }).check();
   await page.getByRole("button", { name: "역할 저장" }).click();
-  await expect(page.getByRole("button", { name: /검사 보조.*0명/ })).toBeVisible();
+  const customRole = page.getByRole("button", { name: /검사 보조.*0명/ });
+  await expect(customRole).toBeVisible();
 
-  await page.getByRole("button", { name: /검사 보조.*0명/ }).click();
-  await page.getByRole("button", { name: "역할 편집" }).click();
+  await customRole.click();
+  const customRolePanel = page.locator('[data-testid^="role-panel-custom:"]');
+  const chartViewSwitch = customRolePanel.getByRole("switch", { name: /차트 조회 · 차단/ });
+  await expect(chartViewSwitch).toBeEnabled();
+  await chartViewSwitch.click();
+  await expect(customRolePanel.getByRole("button", { name: "권한 저장" })).toBeVisible();
+  await customRolePanel.getByRole("button", { name: "권한 저장" }).click();
+  await expect(customRolePanel.getByRole("status")).toContainText("역할 권한을 저장했습니다.");
+
+  await page.getByRole("button", { name: "역할 정보 편집" }).click();
   const roleEditDialog = page.getByRole("dialog", { name: "커스텀 역할 편집" });
   await expect(roleEditDialog.getByRole("button", { name: "역할 저장" })).toBeDisabled();
-  await roleEditDialog.getByRole("checkbox", { name: "차트 조회" }).check();
+  await roleEditDialog.getByLabel("설명").fill("검사 결과 확인과 입력을 담당합니다.");
   await expect(roleEditDialog.getByRole("button", { name: "역할 저장" })).toBeEnabled();
   await roleEditDialog.getByRole("button", { name: "역할 저장" }).click();
   await expect(roleEditDialog).toHaveCount(0);
 
-  await page.getByRole("tab", { name: "직무" }).click();
+  await page
+    .getByTestId("hospital-admin-role-permission-screen")
+    .getByRole("button", { name: "역할 및 권한", exact: true })
+    .click();
+  await page.getByTestId("role-permission-hub-positions").click();
   await page.getByRole("button", { name: "직무 추가" }).click();
   const jobDialog = page.getByRole("dialog", { name: "직무 추가" });
   await expect(jobDialog).toBeVisible();

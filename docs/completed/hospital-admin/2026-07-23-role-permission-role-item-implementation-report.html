@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>권한 역할 역할-아이템 구현 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Pretendard, "Apple SD Gothic Neo", system-ui, sans-serif;
+        color: #171717;
+        background: #f6f6f4;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0 88px; }
+      header { margin-bottom: 40px; }
+      .eyebrow { margin: 0 0 12px; color: #6f6f6b; font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+      h1 { margin: 0; font-size: clamp(30px, 5vw, 48px); line-height: 1.15; letter-spacing: -.04em; }
+      .lede { max-width: 720px; margin: 18px 0 0; color: #5e5e5a; font-size: 17px; line-height: 1.7; }
+      section { margin-top: 40px; }
+      h2 { margin: 0 0 14px; font-size: 20px; letter-spacing: -.02em; }
+      p, li { color: #50504d; font-size: 14px; line-height: 1.75; }
+      ul { margin: 0; padding-left: 20px; }
+      .surface { overflow: hidden; border: 1px solid #deded9; border-radius: 16px; background: #fff; }
+      .row { display: grid; grid-template-columns: 160px 1fr; gap: 24px; padding: 18px 20px; border-top: 1px solid #e8e8e4; }
+      .row:first-child { border-top: 0; }
+      .row strong { font-size: 14px; }
+      .row p { margin: 0; }
+      .two-up { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 18px; align-items: start; }
+      .preview { padding: 20px; border: 1px solid #deded9; border-radius: 16px; background: #fff; }
+      .preview strong { display: block; margin-bottom: 10px; }
+      .preview p { margin: 0; }
+      .status { display: inline-flex; margin-top: 20px; padding: 7px 11px; border-radius: 999px; background: #eaf5ec; color: #276b36; font-size: 12px; font-weight: 700; }
+      code { padding: 2px 5px; border-radius: 5px; background: #eeeeea; color: #2f2f2d; }
+      @media (max-width: 700px) {
+        main { padding-top: 36px; }
+        .row { grid-template-columns: 1fr; gap: 6px; }
+        .two-up { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">HOSPITAL ADMIN · IMPLEMENTATION RESULT</p>
+        <h1>권한 역할을 하나의 연결된 설정 단위로 바꿨어요</h1>
+        <p class="lede">
+          분리돼 보이던 역할 탭과 권한 목록을 한 번에 하나만 열리는 역할 항목으로 통합했다.
+          각 역할은 배정 구성원, 요약, 세부 권한을 같은 surface 안에서 소유하고, 권한 상태는
+          체크 표시 대신 명확한 스위치로 보여준다.
+        </p>
+        <span class="status">구현 및 집중 검증 통과</span>
+      </header>
+
+      <section aria-labelledby="change-heading">
+        <h2 id="change-heading">변경한 구조</h2>
+        <div class="surface">
+          <div class="row">
+            <strong>역할 탐색</strong>
+            <p>소유자·관리자·일반·커스텀 역할을 하나의 divided surface에 배치하고 관리자 역할을 기본으로 연다.</p>
+          </div>
+          <div class="row">
+            <strong>연결감</strong>
+            <p>열린 역할의 구성원과 권한을 바로 아래에 이어서 표시한다. 같은 항목을 다시 눌러도 닫히지 않는다.</p>
+          </div>
+          <div class="row">
+            <strong>구성원</strong>
+            <p>실제 워크스페이스 배정 이름을 전부 표시하고, 배정이 없으면 빈 상태를 숨기지 않고 명시한다.</p>
+          </div>
+          <div class="row">
+            <strong>권한 제어</strong>
+            <p>권한 행은 스위치와 허용·차단 텍스트를 사용한다. 시스템 역할은 읽기 전용이고 커스텀 역할만 저장할 수 있다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="evidence-heading">
+        <h2 id="evidence-heading">화면 검증</h2>
+        <div class="two-up">
+          <div class="preview">
+            <strong>데스크톱 · 1440×1000</strong>
+            <p>역할 목록과 열린 관리자 역할의 권한 행이 920px 콘텐츠 경계 안에 표시되고 문서 폭은 뷰포트를 넘지 않는다.</p>
+          </div>
+          <div class="preview">
+            <strong>모바일 · 390×844</strong>
+            <p>역할 설명과 요약이 한 열에서 줄바꿈되며 가로 넘침이 없다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="verification-heading">
+        <h2 id="verification-heading">확인한 항목</h2>
+        <ul>
+          <li>소유자 → 일반 전환 뒤에도 정확히 하나의 역할 패널만 열림</li>
+          <li>열린 역할을 다시 눌러도 패널이 유지되고 <code>aria-expanded</code> 상태가 일치함</li>
+          <li>시스템 역할 스위치 16개가 읽기 전용으로 표시됨</li>
+          <li>커스텀 역할의 인라인 권한 변경·취소·저장 집중 테스트 통과</li>
+          <li>데스크톱 1440×1000, 모바일 390×844에서 가로 넘침 없음</li>
+          <li>브라우저 콘솔 오류 없음</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="boundary-heading">
+        <h2 id="boundary-heading">유지한 경계</h2>
+        <p>
+          기존 역할·구성원·권한 데이터 모델과 저장 경로를 재사용했다. 실제 권한 정책, 서버 API,
+          RLS, 구성원 배정 방식은 변경하지 않았다. 현재 검토 워크스페이스에는 시스템 역할 배정자가
+          없어 화면은 실제 빈 상태를 표시한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

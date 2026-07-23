@@ -13,7 +13,7 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-005-hospital-basic-settings-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-006-role-permission-management-ui.md"
-last_updated: 2026-07-11
+last_updated: 2026-07-23
 ---
 
 # Hospital Admin Settings Hub UX
@@ -57,7 +57,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | 병원기본설정 | Read-only identity + editable contact cards | Day-by-day operating-hours editor + exception dialogs | Dedicated session-local implementation; no development metadata in the visible UI |
 | 병원구성원 관리 | Existing table + invite/edit sheets | Role/job assignment controls | Assign people here and link to definitions in `역할 및 권한` |
-| 역할 및 권한 | Role list + grouped permission detail | Job-position and work-default tabs | Separate authorization, job metadata, and operational defaults |
+| 역할 및 권한 | `920px` grouped settings hub + URL-backed independent detail screen | One-open role items, divided switch rows, and contextual save state | Keep the hub concise; each role item owns its assigned members, summary, and permission controls |
 | 공간/시간 관리 | Room/status table | Scheduling rule controls | Avoid full calendar editor in this phase |
 | 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Supabase mode uses route/RPC persistence; mock mode remains explicit session-only fallback |
 | 바이탈 관리 | Workspace preset order, units, and availability | Required preset protection and optional preset removal | No clinical range or alert automation claim |
@@ -92,10 +92,14 @@ flowchart LR
 ### 역할 및 권한
 
 1. Admin selects `역할 및 권한`.
-2. `권한 역할` opens with `관리자` selected in a stable role-list/detail split view.
-3. System roles are read-only; custom roles use only the safe allow-list and explain locked owner-only powers.
-4. `직무` manages job labels without changing screen/action permissions.
-5. `업무 기본값` saves only browser-local defaults and states that it does not change authorization.
+2. One divided settings surface lists `권한 역할`, `직무`, and `업무 기본값` with summaries and chevrons.
+3. Selecting a row opens its independent URL-backed detail screen; the detail back action and browser back return to the hub.
+4. `권한 역할` detail uses one-open `소유자` / `관리자` / `일반` role items; `관리자` is the initial selection and opening another item closes the previous item.
+5. Each role header shows every assigned member name together with member and allowed-permission counts. The open item's role summary, member action, and permissions continue inside the same divided surface.
+6. Permission categories remain visible as titled sections with divided switch rows; they do not use nested disclosure.
+7. System-role switches are disabled but keep explicit `허용` / `차단` status. Custom roles can edit only the safe allow-list and use a contextual cancel/save bar; owner-only powers stay locked.
+8. `직무` manages job labels without changing screen/action permissions.
+9. `업무 기본값` saves only browser-local defaults and states that it does not change authorization.
 
 ### 공간/시간 관리
 

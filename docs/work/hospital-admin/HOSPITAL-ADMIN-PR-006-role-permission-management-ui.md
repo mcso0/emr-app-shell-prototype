@@ -10,7 +10,7 @@ source_docs:
   - "docs/design/screens/hospital-admin/hospital-admin-settings-hub-ux.md"
 dependencies:
   - "HOSPITAL-ADMIN-PR-002"
-updated: "2026-07-11"
+updated: "2026-07-23"
 ---
 
 # Role and Permission Management UI
@@ -21,8 +21,11 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 
 ## Delivered Scope
 
-- `권한 역할`, `직무`, and `업무 기본값` tabs in the existing hospital-admin panel.
-- Role list/detail split view, grouped permission explanations, locked system roles, and assigned-member sheet.
+- `권한 역할`, `직무`, and `업무 기본값` as one grouped settings hub that opens independent detail screens in the existing hospital-admin panel.
+- Role summary/detail view, grouped permission explanations, locked system roles, and assigned-member sheet.
+- Human Review refinement: match the hospital-basic-settings `920px` content boundary, express detail state with `roleSettings` in the URL, and keep permission categories visible only inside the `권한 역할` detail screen.
+- Role-item refinement: replace the detached segmented selector with one-open role items. Each item shows all assigned member names and owns its expanded member summary and permission sections.
+- Permission rows use switches with explicit `허용` / `차단` text. System roles remain disabled; custom roles support inline draft, cancel, and save against the existing safe allow-list.
 - Custom role creation/editing limited to the existing safe allow-only permission set.
 - Job creation/editing outside the invitation sheet; invitations only assign a person to an existing role and job.
 - Workspace-scoped browser storage for work defaults, with save, cancel, reload, and cross-tab synchronization.
@@ -42,9 +45,27 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 - Passed: role permission view-model and legacy effective-key regression coverage.
 - Passed: targeted ESLint and TypeScript checks.
 - Passed: `npm run build`, `npm run docs:check`, and `git diff --check`.
+- 2026-07-22 hub/detail refinement: focused coverage now targets the `920px` boundary, URL-backed detail navigation, browser back, role tabs, visible permission sections, mobile overflow, and keyboard activation.
+- Broader hospital-admin run on 2026-07-22: 25/26 passed. The unrelated hospital-basic-settings save test repeatedly timed out while waiting for the existing `대표 전화 *` label; the role/permission tests stayed green.
+- 2026-07-23 role-item refinement: focused Playwright coverage passed for exclusive role expansion, system-role read-only switches, custom-role inline permission save, member-management navigation, work-default persistence, and URL/history behavior.
+- 2026-07-23 browser QA: `1440×1000` and `390×844` both had no horizontal overflow; one role panel remained open through role changes; no console errors were reported.
 
 ## Handoff
 
 - Browser-local state is scoped by workspace ID and may be unavailable after browser storage is cleared.
 - System roles remain read-only. Custom roles cannot select owner-only or unknown permissions.
+- The default screen is a quiet three-row settings hub. Each row opens one independent detail screen and browser back returns to the hub.
+- Permission categories are not accordions. The selected role's categories and rows remain visible in the role detail screen, while system-role controls stay disabled and explicit.
+- Role headers show live workspace member names when assignments exist. Empty assignment data is shown explicitly rather than replaced with sample names.
 - Result report: `docs/completed/hospital-admin/2026-07-11-role-permission-management-ui-report.html`.
+- Layout refinement report: `docs/completed/hospital-admin/2026-07-22-role-permission-layout-refinement-report.html`.
+- Role-item implementation report: `docs/completed/hospital-admin/2026-07-23-role-permission-role-item-implementation-report.html`.
+
+## 2026-07-22 Human Review Follow-up
+
+- Human review found that the segmented `소유자 / 관리자 / 일반` selector and the permission content below do not read as one connected setting unit.
+- The next candidate keeps the top-level hub-to-detail navigation, but changes role selection inside the detail page to a one-open role-item accordion. Each expanded role owns its member names, role summary, and permission rows.
+- Permission checkboxes should become switches. System roles remain disabled with explicit `허용 / 차단` text; only custom roles may edit and save.
+- Permission categories remain visible inside the selected role and must not become nested accordions.
+- The reviewed structure was implemented on 2026-07-23 without changing permission policy, API, RLS, or assignment behavior.
+- Interactive review report: `docs/completed/hospital-admin/2026-07-22-role-permission-role-item-structure-review.html`.
