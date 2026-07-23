@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
 const migrationPath = "supabase/migrations/20260723110000_workspace_hospital_profiles.sql";
+const logoMigrationPath = "supabase/migrations/20260723120000_private_hospital_logos.sql";
 const finalAuditCatalogPath =
   "supabase/migrations/20260723223000_hospital_settings_audit_event_types.sql";
 
@@ -42,11 +43,19 @@ test("hospital profile RPCs use fixed search paths, actor checks, locking, CAS, 
   expect(migration).not.toContain("p_detail =>");
 });
 
-test("the final audit catalog keeps existing hospital settings events after later migrations", () => {
-  const migration = readFileSync(finalAuditCatalogPath, "utf8");
-  expect(migration).toContain("hospital.space_archived");
-  expect(migration).toContain("hospital.profile_contact_updated");
-  expect(migration).toContain("hospital.profile_change_requested");
-  expect(migration).toContain("hospital.logo_updated");
-  expect(migration).toContain("hospital.logo_removed");
+test("every hospital settings migration preserves previously deployed audit events", () => {
+  for (const path of [migrationPath, logoMigrationPath, finalAuditCatalogPath]) {
+    const migration = readFileSync(path, "utf8");
+    expect(migration).toContain("hospital.schedule_revision_published");
+    expect(migration).toContain("hospital.vital_settings_updated");
+    expect(migration).toContain("hospital.space_archived");
+    expect(migration).toContain("hospital.profile_contact_updated");
+    expect(migration).toContain("hospital.profile_change_requested");
+  }
+
+  for (const path of [logoMigrationPath, finalAuditCatalogPath]) {
+    const migration = readFileSync(path, "utf8");
+    expect(migration).toContain("hospital.logo_updated");
+    expect(migration).toContain("hospital.logo_removed");
+  }
 });

@@ -138,7 +138,11 @@ alter table public.audit_events
     'order.billing_candidate_requested','order.status_changed','order_catalog.created',
     'order_catalog.updated','order_catalog.paused','billing.invoice_candidate_generated',
     'billing.invoice_line_changed','billing.invoice_issued','billing.payment_state_changed',
-    'billing.refund_requested','hospital.operating_hours_updated',
+    'billing.refund_requested','hospital.operating_hours_updated','hospital.schedule_revision_published',
+    'hospital.schedule_revision_mutated','hospital.vital_settings_updated',
+    'hospital.space_category_created','hospital.space_category_renamed',
+    'hospital.space_category_archived','hospital.space_created',
+    'hospital.space_updated','hospital.space_archived',
     'hospital.profile_contact_updated','hospital.profile_change_requested',
     'hospital.logo_updated','hospital.logo_removed'
   ));
