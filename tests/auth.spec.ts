@@ -1062,12 +1062,27 @@ test("hospital admin manages custom role and job catalogs outside the invitation
   const customRole = page.getByRole("button", { name: /검사 보조.*0명/ });
   await expect(customRole).toBeVisible();
 
-  await customRole.click();
+  await expect(customRole).toHaveAttribute("aria-expanded", "true");
   const customRolePanel = page.locator('[data-testid^="role-panel-custom:"]');
-  const chartViewSwitch = customRolePanel.getByRole("switch", { name: /차트 조회 · 차단/ });
+  const chartViewSwitch = customRolePanel.getByRole("switch", { name: /차트 조회/ });
   await expect(chartViewSwitch).toBeEnabled();
   await chartViewSwitch.click();
   await expect(customRolePanel.getByRole("button", { name: "권한 저장" })).toBeVisible();
+
+  await customRole.click();
+  const unsavedRoleDialog = page.getByRole("dialog", {
+    name: "저장하지 않은 변경사항이 있습니다",
+  });
+  await expect(unsavedRoleDialog).toBeVisible();
+  await unsavedRoleDialog.getByRole("button", { name: "계속 편집" }).click();
+  await expect(customRole).toHaveAttribute("aria-expanded", "true");
+  await expect(chartViewSwitch).toBeChecked();
+
+  await customRole.click();
+  await unsavedRoleDialog.getByRole("button", { name: "변경사항 버리기" }).click();
+  await expect(customRole).toHaveAttribute("aria-expanded", "false");
+  await customRole.click();
+  await chartViewSwitch.click();
   await customRolePanel.getByRole("button", { name: "권한 저장" }).click();
   await expect(customRolePanel.getByRole("status")).toContainText("역할 권한을 저장했습니다.");
 

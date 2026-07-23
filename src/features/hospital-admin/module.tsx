@@ -1132,7 +1132,9 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       onClick: nextSection
         ? () => {
             const shouldConfirmNavigation =
-              activeSection === "settings" && settingsDirty && nextSection !== "settings";
+              (activeSection === "settings" || activeSection === "roles") &&
+              settingsDirty &&
+              nextSection !== activeSection;
             requestSectionChange(nextSection);
             if (shouldConfirmNavigation) return;
             if (typeof window !== "undefined" && window.innerWidth < 768) {
@@ -1438,6 +1440,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   if (activeSection === "roles") {
     return (
       <RolePermissionManagementScreen
+        key={workspaceId}
         workspaceId={workspaceId}
         onOpenMemberManagement={() => setActiveSection("members")}
       />

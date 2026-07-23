@@ -534,6 +534,9 @@ test("hospital admin role and permission screen replaces the static role-work co
   await ownerRole.click();
   await expect(ownerRole).toHaveAttribute("aria-expanded", "true");
   await expect(adminRole).toHaveAttribute("aria-expanded", "false");
+  await ownerRole.click();
+  await expect(ownerRole).toHaveAttribute("aria-expanded", "false");
+  await expect(screen.locator('[data-testid^="role-panel-"]')).toHaveCount(0);
   await generalRole.click();
   await expect(generalRole).toHaveAttribute("aria-expanded", "true");
   await expect(screen.locator('[data-testid^="role-panel-"]')).toHaveCount(1);
@@ -564,6 +567,61 @@ test("hospital admin saves role work defaults locally without changing permissio
   await page.reload();
   await expect(page).toHaveURL(/roleSettings=work-defaults/);
   await expect(screen.getByLabel("기본 접수 담당")).toContainText("수의사");
+});
+
+test("hospital admin preserves unsaved work defaults and confirms destructive navigation", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  await sidePanel.getByRole("button", { name: "역할 및 권한" }).click();
+
+  const screen = page.getByTestId("hospital-admin-role-permission-screen");
+  const workDefaultsSection = screen.getByTestId("role-permission-hub-work-defaults");
+  await workDefaultsSection.click();
+  await screen.getByLabel("기본 접수 담당").click();
+  await page.getByRole("option", { name: "수의사" }).click();
+
+  await page.goBack();
+  await expect(workDefaultsSection).toContainText("저장하지 않은 변경");
+  await workDefaultsSection.click();
+  await expect(screen.getByLabel("기본 접수 담당")).toContainText("수의사");
+
+  await sidePanel.getByRole("button", { name: "병원기본설정" }).click();
+  const sideNavigationDialog = page.getByRole("dialog", {
+    name: "저장하지 않은 변경사항이 있습니다",
+  });
+  await expect(sideNavigationDialog).toBeVisible();
+  await sideNavigationDialog.getByRole("button", { name: "계속 편집" }).click();
+  await expect(screen.getByRole("heading", { name: "업무 기본값" })).toBeVisible();
+
+  await screen.getByRole("button", { name: "역할 및 권한", exact: true }).click();
+  const detailNavigationDialog = page.getByRole("dialog", {
+    name: "저장하지 않은 변경사항이 있습니다",
+  });
+  await expect(detailNavigationDialog).toBeVisible();
+  await detailNavigationDialog.getByRole("button", { name: "계속 편집" }).click();
+  await expect(screen.getByLabel("기본 접수 담당")).toContainText("수의사");
+
+  await screen.getByRole("button", { name: "역할 및 권한", exact: true }).click();
+  await detailNavigationDialog.getByRole("button", { name: "변경사항 버리기" }).click();
+  await expect(workDefaultsSection).toContainText("4개 업무");
+  await expect(page).not.toHaveURL(/roleSettings=/);
+});
+
+test("hospital admin detail back always returns a direct deep link to the settings hub", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/orders?modulePanel=open&section=roles&roleSettings=roles"
+  );
+
+  const screen = page.getByTestId("hospital-admin-role-permission-screen");
+  await expect(screen.getByRole("heading", { name: "권한 역할", exact: true })).toBeVisible();
+  await screen.getByRole("button", { name: "역할 및 권한", exact: true }).click();
+
+  await expect(page).not.toHaveURL(/roleSettings=/);
+  await expect(screen.getByTestId("role-permission-hub-roles")).toBeVisible();
 });
 
 test("hospital admin syncs saved work defaults to another browser tab", async ({ page, context }) => {
@@ -620,6 +678,10 @@ test("hospital admin role screen stays compact and keyboard-safe", async ({ page
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/roleSettings=positions/);
   await expect(screen.getByRole("heading", { name: "직무", exact: true })).toBeVisible();
+  await expect(
+    screen.getByRole("button", { name: /병원장 시스템 직무/ })
+  ).toHaveCount(0);
+  await expect(screen.getByText("병원장", { exact: true })).toBeVisible();
   await page.goBack();
   await expect(screen.getByTestId("role-permission-hub-roles")).toBeVisible();
 });

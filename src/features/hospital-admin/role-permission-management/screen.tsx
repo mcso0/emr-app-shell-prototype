@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +80,7 @@ import {
   type WorkspaceRoleWorkDefaults,
 } from "@/features/hospital-admin/role-permission-management/work-defaults";
 import { useWorkspaceRoleState } from "@/features/hospital-admin/role-permission-management/use-workspace-role-state";
+import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import { cn } from "@/lib/utils";
 
 type RolePermissionManagementScreenProps = {
@@ -99,6 +101,11 @@ type CatalogDestructiveAction =
   | { type: "job.archive"; label: string };
 
 type SettingsSectionKey = "roles" | "positions" | "work-defaults";
+
+type PendingUnsavedAction =
+  | { type: "return-to-hub" }
+  | { type: "select-role"; roleKey: string | null }
+  | { type: "open-member-management" };
 
 const settingsSectionKeys = new Set<SettingsSectionKey>([
   "roles",
@@ -172,50 +179,25 @@ function getJobValidationMessage(reason: string) {
 
 function WorkDefaultsPanel({
   canManage,
+  isDirty,
   jobPositions,
-  workspaceId,
+  onChange,
+  onReset,
+  onSave,
+  workDefaultsDraft,
+  workDefaultsError,
+  workDefaultsSaved,
 }: {
   canManage: boolean;
+  isDirty: boolean;
   jobPositions: ReturnType<typeof getSessionWorkspaceJobPositions>;
-  workspaceId: string;
+  onChange: (next: WorkspaceRoleWorkDefaults) => void;
+  onReset: () => void;
+  onSave: () => void;
+  workDefaultsDraft: WorkspaceRoleWorkDefaults;
+  workDefaultsError: string | null;
+  workDefaultsSaved: boolean;
 }) {
-  const [savedWorkDefaults, setSavedWorkDefaults] = useState<WorkspaceRoleWorkDefaults>(() =>
-    readWorkspaceRoleWorkDefaults(workspaceId)
-  );
-  const [workDefaultsDraft, setWorkDefaultsDraft] = useState<WorkspaceRoleWorkDefaults>(
-    savedWorkDefaults
-  );
-  const [workDefaultsSaved, setWorkDefaultsSaved] = useState(false);
-  const [workDefaultsError, setWorkDefaultsError] = useState<string | null>(null);
-  const isWorkDefaultsDirty = JSON.stringify(savedWorkDefaults) !== JSON.stringify(workDefaultsDraft);
-
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key !== getWorkspaceRoleWorkDefaultsStorageKey(workspaceId)) return;
-
-      const nextDefaults = readWorkspaceRoleWorkDefaults(workspaceId);
-      setSavedWorkDefaults(nextDefaults);
-      setWorkDefaultsDraft(nextDefaults);
-      setWorkDefaultsSaved(false);
-      setWorkDefaultsError(null);
-    };
-
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [workspaceId]);
-
-  const saveWorkDefaults = () => {
-    try {
-      persistWorkspaceRoleWorkDefaults(workspaceId, workDefaultsDraft);
-      setSavedWorkDefaults(workDefaultsDraft);
-      setWorkDefaultsSaved(true);
-      setWorkDefaultsError(null);
-    } catch {
-      setWorkDefaultsSaved(false);
-      setWorkDefaultsError("브라우저 저장소에 저장하지 못했습니다. 브라우저 설정을 확인한 뒤 다시 시도하세요.");
-    }
-  };
-
   return (
     <div className="grid gap-4">
       <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
@@ -238,12 +220,10 @@ function WorkDefaultsPanel({
               disabled={!canManage}
               value={workDefaultsDraft[field.key]}
               onValueChange={(value) => {
-                setWorkDefaultsDraft((current) => ({
-                  ...current,
+                onChange({
+                  ...workDefaultsDraft,
                   [field.key]: String(value),
-                }));
-                setWorkDefaultsSaved(false);
-                setWorkDefaultsError(null);
+                });
               }}
             >
               <SelectTrigger id={`role-work-default-${field.key}`} className="w-full">
@@ -271,19 +251,19 @@ function WorkDefaultsPanel({
           {workDefaultsError}
         </p>
       ) : null}
-      {isWorkDefaultsDirty || workDefaultsSaved ? (
+      {isDirty || workDefaultsSaved ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
           <p className="text-sm text-muted-foreground" role={workDefaultsSaved ? "status" : undefined}>
             {workDefaultsSaved
               ? "이 브라우저의 업무 기본값을 저장했습니다."
               : "저장하지 않은 변경이 있습니다."}
           </p>
-          {isWorkDefaultsDirty && canManage ? (
+          {isDirty && canManage ? (
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => setWorkDefaultsDraft(savedWorkDefaults)}>
+              <Button size="sm" variant="outline" onClick={onReset}>
                 취소
               </Button>
-              <Button size="sm" onClick={saveWorkDefaults}>
+              <Button size="sm" onClick={onSave}>
                 저장
               </Button>
             </div>
@@ -300,6 +280,7 @@ function SettingsHubRow({
   id,
   onOpen,
   summary,
+  summaryIsDirty = false,
   title,
 }: {
   description: string;
@@ -307,6 +288,7 @@ function SettingsHubRow({
   id: SettingsSectionKey;
   onOpen: () => void;
   summary: string;
+  summaryIsDirty?: boolean;
   title: string;
 }) {
   return (
@@ -323,7 +305,14 @@ function SettingsHubRow({
         <span className="block text-sm font-semibold text-foreground">{title}</span>
         <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{description}</span>
       </span>
-      <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">{summary}</span>
+      <span
+        className={cn(
+          "hidden shrink-0 text-xs text-muted-foreground sm:block",
+          summaryIsDirty && "font-medium text-foreground"
+        )}
+      >
+        {summary}
+      </span>
       <ChevronRightIcon
         className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
         aria-hidden="true"
@@ -373,6 +362,7 @@ export function RolePermissionManagementScreen({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const setSettingsDirty = useHospitalAdminStore((state) => state.setSettingsDirty);
   const workspace = useWorkspaceRoleState(workspaceId);
   const localRoles = useMemo(
     () => getSessionWorkspacePermissionRoles(workspace.state, workspaceId),
@@ -384,7 +374,7 @@ export function RolePermissionManagementScreen({
   );
   const roles = workspace.permissionRoles ?? localRoles;
   const jobPositions = workspace.jobPositions ?? localJobPositions;
-  const [selectedRoleKey, setSelectedRoleKey] = useState("admin");
+  const [selectedRoleKey, setSelectedRoleKey] = useState<string | null>("admin");
   const [selectedJobPositionKey, setSelectedJobPositionKey] = useState("front_desk");
   const [assignedRoleKey, setAssignedRoleKey] = useState<string | null>(null);
   const [roleDialogState, setRoleDialogState] = useState<RoleDialogState | null>(null);
@@ -398,6 +388,16 @@ export function RolePermissionManagementScreen({
   const [savingCatalog, setSavingCatalog] = useState(false);
   const [rolePermissionDrafts, setRolePermissionDrafts] = useState<Record<string, string[]>>({});
   const [savedInlineRoleKey, setSavedInlineRoleKey] = useState<string | null>(null);
+  const [savedWorkDefaults, setSavedWorkDefaults] = useState<WorkspaceRoleWorkDefaults>(() =>
+    readWorkspaceRoleWorkDefaults(workspaceId)
+  );
+  const [workDefaultsDraft, setWorkDefaultsDraft] = useState<WorkspaceRoleWorkDefaults>(
+    savedWorkDefaults
+  );
+  const [workDefaultsSaved, setWorkDefaultsSaved] = useState(false);
+  const [workDefaultsError, setWorkDefaultsError] = useState<string | null>(null);
+  const [pendingUnsavedAction, setPendingUnsavedAction] =
+    useState<PendingUnsavedAction | null>(null);
   const [catalogDestructiveAction, setCatalogDestructiveAction] =
     useState<CatalogDestructiveAction | null>(null);
   const requestedSettingsSection = searchParams.get("roleSettings");
@@ -406,15 +406,18 @@ export function RolePermissionManagementScreen({
   )
     ? (requestedSettingsSection as SettingsSectionKey)
     : null;
-  const activeSelectedRoleKey = roles.some((role) => role.roleKey === selectedRoleKey)
-    ? selectedRoleKey
-    : (roles[0]?.roleKey ?? "admin");
+  const activeSelectedRoleKey =
+    selectedRoleKey && roles.some((role) => role.roleKey === selectedRoleKey)
+      ? selectedRoleKey
+      : null;
   const activeSelectedJobPositionKey = jobPositions.some(
     (position) => position.positionKey === selectedJobPositionKey
   )
     ? selectedJobPositionKey
     : (jobPositions[0]?.positionKey ?? "front_desk");
-  const selectedRole = roles.find((role) => role.roleKey === activeSelectedRoleKey) ?? roles[0];
+  const selectedRole = activeSelectedRoleKey
+    ? (roles.find((role) => role.roleKey === activeSelectedRoleKey) ?? null)
+    : null;
   const selectedJobPosition =
     jobPositions.find((position) => position.positionKey === activeSelectedJobPositionKey) ?? jobPositions[0];
   const selectedRoleMembers = selectedRole
@@ -441,6 +444,57 @@ export function RolePermissionManagementScreen({
   const inlineRolePermissionsDirty = selectedRole
     ? !haveSamePermissionIds(selectedRolePermissionIds, selectedRole.permissionIds)
     : false;
+  const dirtyRoleKeys = roles
+    .filter((role) => {
+      const draftPermissionIds = rolePermissionDrafts[role.roleKey];
+      return (
+        draftPermissionIds !== undefined &&
+        !haveSamePermissionIds(draftPermissionIds, role.permissionIds)
+      );
+    })
+    .map((role) => role.roleKey);
+  const hasRolePermissionDrafts = dirtyRoleKeys.length > 0;
+  const isWorkDefaultsDirty =
+    JSON.stringify(savedWorkDefaults) !== JSON.stringify(workDefaultsDraft);
+  const hasUnsavedChanges = hasRolePermissionDrafts || isWorkDefaultsDirty;
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== getWorkspaceRoleWorkDefaultsStorageKey(workspaceId)) return;
+
+      const nextDefaults = readWorkspaceRoleWorkDefaults(workspaceId);
+      setSavedWorkDefaults((previousSavedDefaults) => {
+        setWorkDefaultsDraft((currentDraft) =>
+          JSON.stringify(currentDraft) === JSON.stringify(previousSavedDefaults)
+            ? nextDefaults
+            : currentDraft
+        );
+        return nextDefaults;
+      });
+      setWorkDefaultsSaved(false);
+      setWorkDefaultsError(null);
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [workspaceId]);
+
+  useEffect(() => {
+    setSettingsDirty(hasUnsavedChanges);
+    return () => setSettingsDirty(false);
+  }, [hasUnsavedChanges, setSettingsDirty]);
+
+  useEffect(() => {
+    const preventUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", preventUnload);
+    return () => window.removeEventListener("beforeunload", preventUnload);
+  }, [hasUnsavedChanges]);
+
   const openSettingsSection = (section: SettingsSectionKey) => {
     const nextSearchParams = new URLSearchParams(searchParams.toString());
     nextSearchParams.set("section", "roles");
@@ -448,16 +502,109 @@ export function RolePermissionManagementScreen({
     router.push(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
   };
 
-  const returnToSettingsHub = () => {
-    router.back();
+  const navigateToSettingsHub = () => {
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    nextSearchParams.set("section", "roles");
+    nextSearchParams.delete("roleSettings");
+    router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
   };
 
-  const openMemberManagement = () => {
+  const navigateToMemberManagement = () => {
     const nextSearchParams = new URLSearchParams(searchParams.toString());
     nextSearchParams.set("section", "members");
     nextSearchParams.delete("roleSettings");
     router.push(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
     onOpenMemberManagement?.();
+  };
+
+  const runUnsavedAction = (action: PendingUnsavedAction) => {
+    if (action.type === "return-to-hub") {
+      navigateToSettingsHub();
+      return;
+    }
+
+    if (action.type === "open-member-management") {
+      navigateToMemberManagement();
+      return;
+    }
+
+    setSelectedRoleKey(action.roleKey);
+    setSavedInlineRoleKey(null);
+    setRoleActionError(null);
+  };
+
+  const activeSectionHasUnsavedChanges =
+    (activeSettingsSection === "roles" && inlineRolePermissionsDirty) ||
+    (activeSettingsSection === "work-defaults" && isWorkDefaultsDirty);
+
+  const requestUnsavedAction = (action: PendingUnsavedAction) => {
+    if (activeSectionHasUnsavedChanges) {
+      setPendingUnsavedAction(action);
+      return;
+    }
+
+    runUnsavedAction(action);
+  };
+
+  const discardActiveChanges = () => {
+    if (activeSettingsSection === "roles" && selectedRole) {
+      setRolePermissionDrafts((current) => {
+        const next = { ...current };
+        delete next[selectedRole.roleKey];
+        return next;
+      });
+      setSavedInlineRoleKey(null);
+      setRoleActionError(null);
+    }
+
+    if (activeSettingsSection === "work-defaults") {
+      setWorkDefaultsDraft(savedWorkDefaults);
+      setWorkDefaultsSaved(false);
+      setWorkDefaultsError(null);
+    }
+  };
+
+  const confirmUnsavedAction = () => {
+    if (!pendingUnsavedAction) return;
+
+    const action = pendingUnsavedAction;
+    discardActiveChanges();
+    setPendingUnsavedAction(null);
+    runUnsavedAction(action);
+  };
+
+  const returnToSettingsHub = () => {
+    requestUnsavedAction({ type: "return-to-hub" });
+  };
+
+  const openMemberManagement = () => {
+    requestUnsavedAction({ type: "open-member-management" });
+  };
+
+  const updateWorkDefaultsDraft = (nextDefaults: WorkspaceRoleWorkDefaults) => {
+    setWorkDefaultsDraft(nextDefaults);
+    setWorkDefaultsSaved(false);
+    setWorkDefaultsError(null);
+  };
+
+  const resetWorkDefaults = () => {
+    setWorkDefaultsDraft(savedWorkDefaults);
+    setWorkDefaultsSaved(false);
+    setWorkDefaultsError(null);
+  };
+
+  const saveWorkDefaults = () => {
+    try {
+      persistWorkspaceRoleWorkDefaults(workspaceId, workDefaultsDraft);
+      setSavedWorkDefaults(workDefaultsDraft);
+      setWorkDefaultsSaved(true);
+      setWorkDefaultsError(null);
+    } catch {
+      setWorkDefaultsSaved(false);
+      setWorkDefaultsError(
+        "브라우저 저장소에 저장하지 못했습니다. 브라우저 설정을 확인한 뒤 다시 시도하세요."
+      );
+    }
   };
 
   const openRoleDialog = (role?: SessionWorkspacePermissionRole) => {
@@ -833,7 +980,10 @@ export function RolePermissionManagementScreen({
                     id="roles"
                     title="권한 역할"
                     description="구성원이 사용할 수 있는 화면과 기능을 역할별로 설정합니다."
-                    summary={`${roles.length}개 역할`}
+                    summary={
+                      hasRolePermissionDrafts ? "저장하지 않은 변경" : `${roles.length}개 역할`
+                    }
+                    summaryIsDirty={hasRolePermissionDrafts}
                     icon={<ShieldIcon className="size-4" aria-hidden="true" />}
                     onOpen={() => openSettingsSection("roles")}
                   />
@@ -849,7 +999,12 @@ export function RolePermissionManagementScreen({
                     id="work-defaults"
                     title="업무 기본값"
                     description="업무를 시작할 때 제안할 기본 담당 직무를 설정합니다."
-                    summary={`${workDefaultFields.length}개 업무`}
+                    summary={
+                      isWorkDefaultsDirty
+                        ? "저장하지 않은 변경"
+                        : `${workDefaultFields.length}개 업무`
+                    }
+                    summaryIsDirty={isWorkDefaultsDirty}
                     icon={<SlidersIcon className="size-4" aria-hidden="true" />}
                     onOpen={() => openSettingsSection("work-defaults")}
                   />
@@ -914,9 +1069,10 @@ export function RolePermissionManagementScreen({
                           aria-expanded={selected}
                           aria-controls={panelId}
                           onClick={() => {
-                            setSelectedRoleKey(role.roleKey);
-                            setSavedInlineRoleKey(null);
-                            setRoleActionError(null);
+                            requestUnsavedAction({
+                              type: "select-role",
+                              roleKey: selected ? null : role.roleKey,
+                            });
                           }}
                         >
                           <span className="flex min-w-0 flex-wrap items-center gap-2">
@@ -1202,22 +1358,39 @@ export function RolePermissionManagementScreen({
                           member.status === "active" &&
                           getSessionWorkspaceEffectiveJobPositionKey(member) === position.positionKey
                       ).length;
+                      const rowContent = (
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">{position.label}</span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            {position.isSystem ? "시스템 직무" : "커스텀 직무"} · {assignedCount}명 배정
+                          </span>
+                        </span>
+                      );
+
+                      if (position.isSystem || !workspace.canManage) {
+                        return (
+                          <div
+                            key={position.positionKey}
+                            data-testid={`job-position-readonly-${position.positionKey}`}
+                            className="flex min-h-16 w-full items-center px-4 py-3.5"
+                          >
+                            {rowContent}
+                          </div>
+                        );
+                      }
+
                       return (
                         <button
                           key={position.positionKey}
                           type="button"
+                          data-testid={`job-position-action-${position.positionKey}`}
                           className="group flex min-h-16 w-full items-center justify-between gap-4 px-4 py-3.5 text-left hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                           onClick={() => {
                             setSelectedJobPositionKey(position.positionKey);
-                            if (!position.isSystem && workspace.canManage) openJobDialog(position);
+                            openJobDialog(position);
                           }}
                         >
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-medium">{position.label}</span>
-                            <span className="mt-0.5 block text-xs text-muted-foreground">
-                              {position.isSystem ? "시스템 직무" : "커스텀 직무"} · {assignedCount}명 배정
-                            </span>
-                          </span>
+                          {rowContent}
                           <ChevronRightIcon
                             className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
                             aria-hidden="true"
@@ -1250,15 +1423,41 @@ export function RolePermissionManagementScreen({
                 onBack={returnToSettingsHub}
               />
                 <WorkDefaultsPanel
-                  key={workspaceId}
                   canManage={workspace.canManage}
-                  workspaceId={workspaceId}
+                  isDirty={isWorkDefaultsDirty}
                   jobPositions={jobPositions}
+                  onChange={updateWorkDefaultsDraft}
+                  onReset={resetWorkDefaults}
+                  onSave={saveWorkDefaults}
+                  workDefaultsDraft={workDefaultsDraft}
+                  workDefaultsError={workDefaultsError}
+                  workDefaultsSaved={workDefaultsSaved}
                 />
             </div>
           )}
         </main>
       </ScrollArea>
+
+      <Dialog
+        open={pendingUnsavedAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingUnsavedAction(null);
+        }}
+      >
+        <EmrConfirmDialogContent
+          title="저장하지 않은 변경사항이 있습니다"
+          description={
+            activeSettingsSection === "work-defaults"
+              ? "업무 기본값 변경을 저장하지 않았습니다. 변경사항을 버리고 이동할까요?"
+              : "역할 권한 변경을 저장하지 않았습니다. 변경사항을 버리고 이동할까요?"
+          }
+          cancelLabel="계속 편집"
+          confirmLabel="변경사항 버리기"
+          confirmButtonVariant="destructive"
+          onCancel={() => setPendingUnsavedAction(null)}
+          onConfirm={confirmUnsavedAction}
+        />
+      </Dialog>
 
       <Dialog
         open={Boolean(roleDialogState)}
