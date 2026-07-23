@@ -23,7 +23,7 @@ export function SchedulePublishReviewDialog({
         title="게시 전 검토"
         description={
           <div className="space-y-3">
-            <p>게시하면 이 주의 최신 리비전이 직원 프로필과 운영 화면의 기준이 돼.</p>
+            <p>게시하면 이 주의 최신 리비전이 직원 프로필과 운영 화면의 기준이 됩니다.</p>
             {blockers.length ? (
               <ul className="max-h-48 space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3 text-sm">
                 {blockers.map((issue, index) => (
@@ -32,7 +32,7 @@ export function SchedulePublishReviewDialog({
               </ul>
             ) : (
               <p className="rounded-lg border bg-[var(--emr-schedule-shift-reception-bg)] p-3 text-sm text-[var(--emr-schedule-shift-reception-text)]">
-                현재 저장된 검증 이슈가 없어. 게시 직전에 서버가 한 번 더 검증해.
+                현재 저장된 검증 이슈가 없습니다. 게시 직전에 서버가 한 번 더 검증합니다.
               </p>
             )}
           </div>

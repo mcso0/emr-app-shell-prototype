@@ -1117,7 +1117,7 @@ export function WorkspaceMembershipManagement({
             </Button>
           }
         />
-        <p className="mt-1 text-[13px] leading-5 text-muted-foreground">구성원의 소속과 권한을 확인하고 초대를 관리해.</p>
+        <p className="mt-1 text-[13px] leading-5 text-muted-foreground">구성원의 소속과 권한을 확인하고 초대를 관리할 수 있습니다.</p>
           </section>
 
           <section className="min-h-0 flex-1 overflow-hidden">

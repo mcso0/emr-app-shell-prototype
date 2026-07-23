@@ -271,7 +271,7 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
             <CommandList className={styles.scrollArea}>
               {normalizedQuery ? (
                 <>
-                  <CommandEmpty>검색 결과가 없어.</CommandEmpty>
+                  <CommandEmpty>검색 결과가 없습니다.</CommandEmpty>
                   {filteredGroups.map((group) => (
                     <CommandGroup heading={group.group} key={group.group}>
                       {group.docs.map((doc) => (

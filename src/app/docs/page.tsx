@@ -143,10 +143,10 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Document not found
                   </p>
-                  <h2 className="mt-2 text-2xl font-semibold">등록되지 않은 CLAiR Docs 문서야.</h2>
+                  <h2 className="mt-2 text-2xl font-semibold">등록되지 않은 CLAiR Docs 문서입니다.</h2>
                   <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-                    `/docs`는 registry에 등록된 curated Markdown만 읽어.
-                    임의 파일 경로는 열지 않는다.
+                    `/docs`는 registry에 등록된 curated Markdown만 표시합니다.
+                    임의 파일 경로는 열지 않습니다.
                   </p>
                   <Link
                     className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
@@ -179,7 +179,7 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
                   ))}
                 </nav>
               ) : (
-                <p className="text-xs leading-5 text-muted-foreground">표시할 목차가 없어.</p>
+                <p className="text-xs leading-5 text-muted-foreground">표시할 목차가 없습니다.</p>
               )}
             </div>
           </div>

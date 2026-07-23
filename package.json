@@ -17,6 +17,7 @@
     "owner-os:packet:check": "node scripts/validate-owner-os-packets.mjs",
     "release:staging-alias:dry-run": "node scripts/update-fixed-staging-alias.mjs --dry-run",
     "security:secrets": "node scripts/scan-secrets.mjs",
+    "ux-copy:check": "node scripts/check-korean-ux-copy-honorifics.mjs",
     "storybook": "storybook dev -p 6006 --disable-telemetry",
     "build-storybook": "storybook build --disable-telemetry"
   },

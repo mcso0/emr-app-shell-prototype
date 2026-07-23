@@ -447,7 +447,7 @@ test("hospital schedule supports editing, personal requests, approval, and publi
 
   await page.getByRole("button", { name: "야간 검사 보강 작업" }).click();
   await page.getByText("삭제", { exact: true }).click();
-  await expect(page.getByRole("heading", { name: "근무를 삭제할까?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "근무를 삭제하시겠습니까?" })).toBeVisible();
   await page.getByRole("button", { name: "삭제" }).last().click();
   await expect(page.getByText("야간 검사 보강")).toHaveCount(0);
 

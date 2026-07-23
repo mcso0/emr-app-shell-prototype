@@ -31,7 +31,7 @@ export function createHospitalSchedulePersistenceAdapter({
       );
       const body = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
       if (!response.ok || !body?.ok) {
-        throw new Error(body?.message ?? "근무표 저장에 실패했어.");
+        throw new Error(body?.message ?? "근무표를 저장하지 못했습니다.");
       }
       await onRefreshed();
     },
@@ -57,7 +57,7 @@ export async function readPersistedHospitalSchedule({
     canonicalWeekStart?: unknown;
     message?: string;
   } | null;
-  if (!response.ok || !body?.ok) throw new Error(body?.message ?? "근무표를 불러오지 못했어.");
+  if (!response.ok || !body?.ok) throw new Error(body?.message ?? "근무표를 불러오지 못했습니다.");
   return parseRemoteState(body.snapshot, body.canonicalWeekStart);
 }
 
@@ -93,7 +93,7 @@ function parseRemoteState(value: unknown, canonicalWeekStart: unknown): Hospital
       : typeof week.weekStart === "string" && isIsoDate(week.weekStart)
         ? week.weekStart
         : null;
-  if (!weekStart) throw new Error("근무표 주차 정보가 올바르지 않아.");
+  if (!weekStart) throw new Error("근무표 주차 정보가 올바르지 않습니다.");
   return {
     weekStart,
     staff: asArray(snapshot.staff).map(parseStaff).filter(isStaff),

@@ -2720,7 +2720,7 @@ function SoapPanel({
           role="alert"
           className="border-b border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-4 py-2 text-sm text-[var(--emr-status-warning-text)]"
         >
-          다른 탭이나 사용자가 먼저 SOAP를 저장했어. 현재 입력은 유지되며, 최신 내용을 확인한 뒤 다시 저장해.
+          다른 탭이나 사용자가 먼저 SOAP를 저장했습니다. 현재 입력은 유지되며, 최신 내용을 확인한 뒤 다시 저장해 주세요.
         </div>
       ) : null}
       {loading ? (
@@ -4079,20 +4079,20 @@ type ChartUnavailableAction =
 
 const chartUnavailableActionCopy = {
   "chart-share": {
-    title: "차트 공유는 아직 연결되지 않았어",
-    body: "실제 공유, 이메일, 카카오톡, 외부 문서 전송은 이번 MVP 범위 밖이야. 현재 화면에서 차트 상태를 확인해.",
+    title: "차트 공유는 아직 연결되지 않았습니다",
+    body: "실제 공유, 이메일, 카카오톡, 외부 문서 전송은 이번 MVP 범위에 포함되지 않습니다. 현재 화면에서 차트 상태를 확인해 주세요.",
   },
   "order-history": {
-    title: "Order 이력 상세는 아직 연결되지 않았어",
-    body: "선택 오더의 상세 이력 화면은 후속 상세 화면 범위야. 현재 테이블의 상태와 갱신 시간을 기준으로 확인해.",
+    title: "Order 이력 상세는 아직 연결되지 않았습니다",
+    body: "선택 오더의 상세 이력 화면은 후속 상세 화면 범위에 포함됩니다. 현재 테이블의 상태와 갱신 시간을 기준으로 확인해 주세요.",
   },
   "order-print": {
-    title: "Order 출력은 아직 연결되지 않았어",
-    body: "실제 문서 생성, 프린트, PDF 출력 연동은 이번 MVP 범위 밖이야. 화면의 오더 목록을 기준으로 데모를 진행해.",
+    title: "Order 출력은 아직 연결되지 않았습니다",
+    body: "실제 문서 생성, 프린트, PDF 출력 연동은 이번 MVP 범위에 포함되지 않습니다. 화면의 오더 목록을 기준으로 데모를 진행해 주세요.",
   },
   "order-request": {
-    title: "Order 요청 흐름은 아직 연결되지 않았어",
-    body: "검사실, 영상실, 처치실 같은 외부/부서 요청 전송은 후속 연동 범위야. 현재는 차트 내부 상태만 저장해.",
+    title: "Order 요청 흐름은 아직 연결되지 않았습니다",
+    body: "검사실, 영상실, 처치실 같은 외부/부서 요청 전송은 후속 연동 범위입니다. 현재는 차트 내부 상태만 저장합니다.",
   },
 } as const satisfies Record<
   ChartUnavailableAction,
@@ -6581,7 +6581,7 @@ export function ChartContent({
           consultationFlowState.action === "call" ? (
             <EmrInlineAlert
               severity="error"
-              title="호출과 진료 시작 상태가 저장되지 않았어"
+              title="호출과 진료 시작 상태가 저장되지 않았습니다"
               className="mt-3 emr-text-metadata"
               action={
                 <Button
@@ -6653,7 +6653,7 @@ export function ChartContent({
           consultationFlowState.action === "return_to_waiting" ? (
             <EmrInlineAlert
               severity="error"
-              title="대기 상태로 변경하지 못했어"
+              title="대기 상태로 변경하지 못했습니다"
               className="mt-3 emr-text-metadata"
               action={
                 <Button
@@ -6668,7 +6668,7 @@ export function ChartContent({
               }
             >
               현재 진료 상태는 화면에 남아 있지만 대기 상태 변경은 저장되지
-              않았어. 권한 또는 서버 저장 상태를 확인한 뒤 다시 시도해.
+              않았습니다. 권한 또는 서버 저장 상태를 확인한 뒤 다시 시도해 주세요.
             </EmrInlineAlert>
           ) : null}
         </EmrDialogShell>
@@ -6737,7 +6737,7 @@ export function ChartContent({
           {encounterCancelState.status === "error" ? (
             <EmrInlineAlert
               severity="error"
-              title="진료 취소가 저장되지 않았어"
+              title="진료 취소가 저장되지 않았습니다"
               className="mt-3 emr-text-metadata"
             >
               {encounterCancelState.message ??
@@ -6753,8 +6753,8 @@ export function ChartContent({
         <EmrDialogShell
           variant="confirm"
           title="진료 완료 확인"
-          description="진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인하고 진료 완료 상태를 저장해."
-          footerMeta="진료 완료는 local-first/server route 저장 상태만 바꾸며 외부 전송이나 청구 확정은 별도 흐름이야."
+          description="진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인하고 진료 완료 상태를 저장해 주세요."
+          footerMeta="진료 완료는 local-first/server route 저장 상태만 바꾸며 외부 전송이나 청구 확정은 별도 흐름입니다."
           primaryAction={
             <Button
               size="sm"
@@ -6806,7 +6806,7 @@ export function ChartContent({
           {chartCompletionState.status === "error" ? (
             <EmrInlineAlert
               severity="error"
-              title="진료 완료가 저장되지 않았어"
+              title="진료 완료가 저장되지 않았습니다"
               className="mt-3 emr-text-metadata"
               action={
                 <Button
@@ -6820,7 +6820,7 @@ export function ChartContent({
               testId="chart-completion-error-alert"
             >
               현재 차트 내용은 화면에 남아 있지만 작성완료 상태는 확정되지
-              않았어. 권한 또는 서버 저장 상태를 확인한 뒤 다시 시도해.
+              않았습니다. 권한 또는 서버 저장 상태를 확인한 뒤 다시 시도해 주세요.
             </EmrInlineAlert>
           ) : null}
         </EmrDialogShell>

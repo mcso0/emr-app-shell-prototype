@@ -2,15 +2,15 @@
 id: DESIGN-SYSTEM-CLAIR-EMR
 type: Design System
 title: "CLAiR EMR Design"
-description: "Defines the CLAiR EMR visual, interaction, density, token, and component design standards."
+description: "Defines the CLAiR EMR visual, interaction, writing, density, token, and component design standards."
 version: "alpha"
 name: "CLAiR EMR"
 status: "active"
 area: design
 doc_type: design-system
-tags: [design-system, ui, tokens, components, density]
-updated: "2026-07-14"
-last_updated: "2026-07-14"
+tags: [design-system, ui, ux-writing, tokens, components, density]
+updated: "2026-07-23"
+last_updated: "2026-07-23"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -34,6 +34,25 @@ Keep the screen useful before it is expressive:
 - keep status and medical semantic colors stable
 - prefer product data, tables, queues, and forms over explanation text
 - make the selected item obvious without making every card visually loud
+
+## Korean UX Writing Baseline
+
+User-facing Korean product copy uses 존댓말. Conversation settings for agents,
+internal developer notes, and synthetic user-authored clinical content do not
+determine the product voice.
+
+Until a broader UX writing guide is approved:
+
+- use `합니다체` for system facts, status, explanations, restrictions, and errors
+- use `~해 주세요` when the user needs to take an action
+- use `~하시겠습니까?` for confirmation questions
+- keep action labels concise, such as `저장`, `취소`, and `다시 시도`
+- preserve the meaning, permission boundary, recovery path, and mock/live
+  disclosure when correcting tone
+- do not rewrite existing polite `해요체` solely for register normalization in
+  the honorific-correction pass
+- do not rewrite user-authored notes, clinical records, fixture content that
+  represents authored records, machine error codes, or developer-only guidance
 
 ## Foundation
 

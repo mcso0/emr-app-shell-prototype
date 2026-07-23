@@ -3489,7 +3489,7 @@ export function BillingRightPanel() {
           {dataBackedExcludedSummaryGroupCount ? (
             <EmrInlineAlert
               severity="warning"
-              title="수납 합산에서 제외된 이력이 있어"
+              title="수납 합산에서 제외된 이력이 있습니다"
               className="mt-3 emr-text-metadata"
             >
               완료/취소 건은 중앙 작업대에서 세부 내역과 상태 변경만 확인하고,
@@ -3582,20 +3582,20 @@ export function BillingRightPanel() {
           </div>
           {confirmationState === "error" ? (
             <BillingPaymentErrorMessage
-              title="수납 진행이 저장되지 않았어"
+              title="수납 진행이 저장되지 않았습니다"
               actionLabel="수납 진행 다시 시도"
               onRetry={() => setPendingFinancialAction("issue_invoice")}
             >
-              금액과 항목은 화면에 남아 있지만 서버 저장은 완료되지 않았어. 실제
-              PG, VAT, 영수증 연동은 아직 없는 MVP 범위야.
+              금액과 항목은 화면에 남아 있지만 서버 저장은 완료되지 않았습니다. 실제
+              PG, VAT, 영수증 연동은 이번 MVP 범위에 포함되지 않습니다.
             </BillingPaymentErrorMessage>
           ) : null}
           {paymentState === "error" ? (
             <BillingPaymentErrorMessage
               title={
                 paymentFailureContext === "payment_method"
-                  ? "결제 수단이 저장되지 않았어"
-                  : "수납 상태가 저장되지 않았어"
+                  ? "결제 수단이 저장되지 않았습니다"
+                  : "수납 상태가 저장되지 않았습니다"
               }
               actionLabel={
                 paymentFailureContext === "payment_method"
@@ -3617,8 +3617,8 @@ export function BillingRightPanel() {
                 );
               }}
             >
-              수납 상태는 아직 확정되지 않았어. 결제 수단과 금액을 확인한 뒤
-              다시 시도해.
+              수납 상태는 아직 확정되지 않았습니다. 결제 수단과 금액을 확인한 뒤
+              다시 시도해 주세요.
             </BillingPaymentErrorMessage>
           ) : null}
         </div>
@@ -3740,8 +3740,8 @@ function BillingFinancialPreflightDialog({
       <EmrDialogShell
         variant="confirm"
         title={dialogTitle}
-        description="금액 상태가 바뀌는 financial CTA라서 저장 전에 보호자, 청구서, 금액, MVP 경계를 확인해."
-        footerMeta="실제 PG, VAT, 영수증, 환불, 정산 연동은 이번 MVP 범위 밖이야."
+        description="금액 상태가 바뀌는 financial CTA입니다. 저장 전에 보호자, 청구서, 금액, MVP 경계를 확인해 주세요."
+        footerMeta="실제 PG, VAT, 영수증, 환불, 정산 연동은 이번 MVP 범위에 포함되지 않습니다."
         primaryAction={
           <Button
             type="button"
@@ -3810,11 +3810,11 @@ function BillingFinancialPreflightDialog({
         ) : null}
         <EmrInlineAlert
           severity="warning"
-          title="저장 실패 시 상태는 확정되지 않아"
+          title="저장 실패 시 상태는 확정되지 않습니다"
           className="mt-3 emr-text-metadata"
         >
           실패하면 이 패널에 다시 시도 안내를 남기고, 실제 결제나 영수증 발행이
-          된 것처럼 표시하지 않아.
+          된 것처럼 표시하지 않습니다.
         </EmrInlineAlert>
       </EmrDialogShell>
     </Dialog>

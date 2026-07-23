@@ -62,9 +62,9 @@ const meta = {
     },
   },
   args: {
-    children: "현재 화면은 마지막 로컬 데모 상태를 보여주고 있어.",
+    children: "현재 화면은 마지막 로컬 데모 상태를 표시합니다.",
     severity: "warning",
-    title: "서버 대기열을 불러오지 못했어",
+    title: "서버 대기열을 불러오지 못했습니다",
   },
 } satisfies Meta<typeof EmrInlineAlert>;
 
@@ -87,27 +87,27 @@ export const Severities: Story = {
     <div className="grid max-w-3xl gap-3">
       <EmrInlineAlert
         severity="error"
-        title="저장하지 못했어"
+        title="저장하지 못했습니다"
       >
-        입력 내용은 화면에 남아 있어. 다시 시도하거나 지원 로그를 확인해.
+        입력 내용은 화면에 남아 있습니다. 다시 시도하거나 지원 로그를 확인해 주세요.
       </EmrInlineAlert>
       <EmrInlineAlert
         severity="warning"
-        title="실시간 상태가 지연되고 있어"
+        title="실시간 상태가 지연되고 있습니다"
       >
-        현재 목록은 마지막으로 확인된 로컬 상태 기준이야.
+        현재 목록은 마지막으로 확인된 로컬 상태 기준입니다.
       </EmrInlineAlert>
       <EmrInlineAlert
         severity="info"
         title="데모 데이터 모드"
       >
-        이 화면은 제품 흐름 검토를 위한 합성 데이터만 사용해.
+        이 화면은 제품 흐름 검토를 위한 합성 데이터만 사용합니다.
       </EmrInlineAlert>
       <EmrInlineAlert
         severity="success"
-        title="임시 저장됐어"
+        title="임시 저장되었습니다"
       >
-        같은 화면에서 저장 상태를 다시 확인할 수 있어.
+        같은 화면에서 저장 상태를 다시 확인할 수 있습니다.
       </EmrInlineAlert>
     </div>
   ),
@@ -125,7 +125,7 @@ export const WithRecoveryActions: Story = {
   render: () => (
     <EmrInlineAlert
       severity="warning"
-      title="검사 대기열 동기화가 지연되고 있어"
+      title="검사 대기열 동기화가 지연되고 있습니다"
       action={<Button size="sm">다시 시도</Button>}
       secondaryAction={
         <Button
@@ -136,7 +136,7 @@ export const WithRecoveryActions: Story = {
         </Button>
       }
     >
-      현재 화면은 마지막 로컬 데모 상태를 보여주고 있어.
+      현재 화면은 마지막 로컬 데모 상태를 표시합니다.
     </EmrInlineAlert>
   ),
   parameters: {
@@ -154,7 +154,7 @@ export const WithoutIcon: Story = {
     icon: false,
     severity: "info",
     title: "읽기 전용 검토 상태",
-    children: "이 문맥에서는 주변 헤더가 상태 의미를 이미 설명하고 있어.",
+    children: "이 문맥에서는 주변 헤더가 상태 의미를 이미 설명하고 있습니다.",
   },
   parameters: {
     docs: {

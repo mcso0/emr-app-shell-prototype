@@ -136,19 +136,19 @@ function issue(
   date: string | null,
 ): HospitalScheduleIssue {
   const messages: Record<HospitalScheduleIssue["code"], string> = {
-    invalid_time_range: "근무 시간 범위가 올바르지 않아.",
-    date_outside_week: "선택한 주차 밖의 날짜는 저장할 수 없어.",
-    overlapping_assignment: "같은 직원의 근무 시간이 겹쳐.",
-    work_overlaps_non_work: "근무와 휴무·휴가가 겹쳐.",
-    inactive_staff_profile: "활성 상태가 아닌 직원에게 근무를 배정할 수 없어.",
-    missing_required_assignment: "근무표 대상 직원의 근무·휴무·휴가가 미등록 상태야.",
-    hospital_closed: "병원 휴무일에는 근무를 편성할 수 없어.",
-    overnight_not_supported: "야간 근무는 날짜별 근무로 나누어 등록해줘.",
-    stale_schedule_revision: "다른 관리자의 변경이 있어 최신 초안을 다시 불러와야 해.",
-    roster_revalidation_required: "직원 구성 변경 후 재검토가 필요해.",
-    operating_calendar_revalidation_required: "운영 시간 변경 후 재검토가 필요해.",
-    outside_operating_hours: "운영 시간 밖의 근무야.",
-    missing_location: "근무 위치를 확인해줘.",
+    invalid_time_range: "근무 시간 범위가 올바르지 않습니다.",
+    date_outside_week: "선택한 주차 밖의 날짜는 저장할 수 없습니다.",
+    overlapping_assignment: "같은 직원의 근무 시간이 겹칩니다.",
+    work_overlaps_non_work: "근무와 휴무·휴가가 겹칩니다.",
+    inactive_staff_profile: "활성 상태가 아닌 직원에게 근무를 배정할 수 없습니다.",
+    missing_required_assignment: "근무표 대상 직원의 근무·휴무·휴가가 미등록 상태입니다.",
+    hospital_closed: "병원 휴무일에는 근무를 편성할 수 없습니다.",
+    overnight_not_supported: "야간 근무는 날짜별 근무로 나누어 등록해 주세요.",
+    stale_schedule_revision: "다른 관리자의 변경이 있어 최신 초안을 다시 불러와야 합니다.",
+    roster_revalidation_required: "직원 구성 변경 후 재검토가 필요합니다.",
+    operating_calendar_revalidation_required: "운영 시간 변경 후 재검토가 필요합니다.",
+    outside_operating_hours: "운영 시간 밖의 근무입니다.",
+    missing_location: "근무 위치를 확인해 주세요.",
   };
   return { code, date, entryId, message: messages[code], severity: "blocker", staffProfileId };
 }

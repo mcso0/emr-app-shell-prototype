@@ -216,8 +216,8 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
     setFixedWeekOpen(false);
     toast.success(
       insertedCount === null
-        ? "기본 근무를 현재 주에 입력했어."
-        : `${insertedCount}건을 입력했어${skippedCount ? `. 기존 입력 ${skippedCount}건은 유지했어` : ""}.`,
+        ? "기본 근무를 현재 주에 입력했습니다."
+        : `${insertedCount}건을 입력했습니다${skippedCount ? `. 기존 입력 ${skippedCount}건은 유지했습니다` : ""}.`,
     );
   };
 
@@ -235,8 +235,8 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
       setPublishOpen(false);
       toast.success(
         response.profileReadback === "confirmed"
-          ? "근무표를 게시했고 프로필 반영까지 확인했어."
-          : "근무표를 게시했어. 프로필 반영 확인이 필요해.",
+          ? "근무표를 게시했고 프로필 반영까지 확인했습니다."
+          : "근무표를 게시했습니다. 프로필 반영 확인이 필요합니다.",
       );
     } catch {
       setProfileReadback(null);
@@ -319,7 +319,7 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
         {error ? (
           <EmrInlineAlert
             severity={error.code === "stale_schedule_revision" ? "warning" : "error"}
-            title={error.code === "stale_schedule_revision" ? "다른 관리자의 변경이 있어" : "근무표 작업을 완료하지 못했어"}
+            title={error.code === "stale_schedule_revision" ? "다른 관리자의 변경이 있습니다" : "근무표 작업을 완료하지 못했습니다"}
             action={<Button size="sm" variant="outline" onClick={() => void load(snapshot?.weekStart ?? requestedWeekStart)}>서버 상태 다시 불러오기</Button>}
           >
             {error.code === "publication_blocked" && error.issues.length
@@ -330,12 +330,12 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
 
         {profileReadback === "checking" ? (
           <EmrInlineAlert severity="info" title="반영 확인 중">
-            게시된 근무가 직원 프로필의 오늘 근무 정보에 반영됐는지 확인하고 있어.
+            게시된 근무가 직원 프로필의 오늘 근무 정보에 반영됐는지 확인하고 있습니다.
           </EmrInlineAlert>
         ) : null}
         {profileReadback === "confirmed" ? (
           <EmrInlineAlert severity="success" title="게시 완료 · 프로필 반영 확인됨">
-            최신 게시본이 프로필 소비부에서 정상적으로 조회됐어.
+            최신 게시본이 프로필 소비부에서 정상적으로 조회되었습니다.
           </EmrInlineAlert>
         ) : null}
         {profileReadback === "verification_failed" ? (
@@ -344,7 +344,7 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
             title="게시 완료 · 프로필 확인 필요"
             action={<Button size="sm" variant="outline" onClick={() => void retryProfileReadback()}>읽기 확인 다시 시도</Button>}
           >
-            게시를 다시 실행하지 말고 프로필 읽기 확인만 다시 시도해줘.
+            게시를 다시 실행하지 말고 프로필 읽기 확인만 다시 시도해 주세요.
           </EmrInlineAlert>
         ) : null}
 
@@ -423,8 +423,8 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
 
       <Dialog open={pendingNavigation !== null} onOpenChange={(open) => !open && setPendingNavigation(null)}>
         <EmrConfirmDialogContent
-          title="저장하지 않은 변경이 있어"
-          description="이동하거나 닫으면 현재 입력 중인 내용은 저장되지 않아."
+          title="저장하지 않은 변경이 있습니다"
+          description="이동하거나 닫으면 현재 입력 중인 내용은 저장되지 않습니다."
           cancelLabel="계속 편집"
           confirmLabel="저장하지 않고 이동"
           onCancel={() => setPendingNavigation(null)}
@@ -457,7 +457,7 @@ function replaceWeekStart(
 function toRequestError(value: unknown) {
   if (value instanceof HospitalScheduleRevisionRequestError) return value;
   return new HospitalScheduleRevisionRequestError(
-    value instanceof Error ? value.message : "근무표 작업을 완료하지 못했어.",
+    value instanceof Error ? value.message : "근무표 작업을 완료하지 못했습니다.",
     "schedule_request_failed",
   );
 }

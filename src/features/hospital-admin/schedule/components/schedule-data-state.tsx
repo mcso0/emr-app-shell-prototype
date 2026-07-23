@@ -25,7 +25,7 @@ export function ScheduleDataState({
         </div>
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <div>
-            <p className="text-sm font-medium">근무표를 불러오고 있어</p>
+            <p className="text-sm font-medium">근무표를 불러오고 있습니다</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               직원과 최신 게시 상태를 확인하는 중입니다.
             </p>
@@ -51,7 +51,7 @@ export function ScheduleDataState({
     return (
       <EmrInlineAlert
         severity="error"
-        title="근무표를 불러오지 못했어"
+        title="근무표를 불러오지 못했습니다"
         action={
           onRetry ? (
             <Button size="sm" variant="outline" onClick={onRetry}>
@@ -60,7 +60,7 @@ export function ScheduleDataState({
           ) : undefined
         }
       >
-        세션과 네트워크를 확인한 뒤 다시 불러와줘.
+        세션과 네트워크를 확인한 뒤 다시 불러와 주세요.
       </EmrInlineAlert>
     );
   }

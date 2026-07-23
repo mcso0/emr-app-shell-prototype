@@ -213,8 +213,8 @@ function CustomerRowActionMenu({
           description: "진료/차트 화면 연결 전",
           onSelect: () =>
             onUnavailableAction({
-              title: "차트 보기는 아직 직접 연결되지 않았어",
-              body: `${label}의 차트 이동은 진료/차트 화면의 환자 선택 흐름에서 확인해. 여기서는 프로필 drawer와 고객 정보만 열 수 있어.`,
+              title: "차트 보기는 아직 직접 연결되지 않았습니다",
+              body: `${label}의 차트 이동은 진료/차트 화면의 환자 선택 흐름에서 확인해 주세요. 여기서는 프로필 drawer와 고객 정보만 열 수 있습니다.`,
             }),
         },
         {
@@ -223,8 +223,8 @@ function CustomerRowActionMenu({
           description: "외부 발송 미연동",
           onSelect: () =>
             onUnavailableAction({
-              title: "카카오톡 발송은 아직 연결되지 않았어",
-              body: "실제 카카오톡, 문자, 이메일 발송은 이번 MVP 범위 밖이야. 동의 상태와 연락처만 이 화면에서 확인해.",
+              title: "카카오톡 발송은 아직 연결되지 않았습니다",
+              body: "실제 카카오톡, 문자, 이메일 발송은 이번 MVP 범위에 포함되지 않습니다. 동의 상태와 연락처만 이 화면에서 확인해 주세요.",
             }),
         },
       ]}
