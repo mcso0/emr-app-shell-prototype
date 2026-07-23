@@ -121,6 +121,7 @@ import { HospitalBasicSettingsScreen } from "@/features/hospital-admin/settings/
 import { useHospitalBasicSettingsStore } from "@/features/hospital-admin/settings/hospital-basic-settings-store";
 import { HospitalScheduleScreen } from "@/features/hospital-admin/schedule/hospital-schedule-screen";
 import { WorkspaceVitalSettingsScreen } from "@/features/hospital-admin/vital-settings/workspace-vital-settings-screen";
+import { WorkspaceSpaceManagementScreen } from "@/features/hospital-admin/space-management/screen";
 import { RolePermissionManagementScreen } from "@/features/hospital-admin/role-permission-management/screen";
 import {
   useHospitalAdminStore,
@@ -307,7 +308,7 @@ const hospitalAdminMenuItems: HospitalAdminMenuItem[] = [
   { label: "감사 로그", icon: DocumentCheckIcon, section: "audit", testId: "hospital-admin-menu-audit" },
   { label: "근무표", icon: CalendarIcon, section: "schedule", testId: "hospital-admin-menu-schedule" },
   { label: "역할 및 권한", icon: GridIcon, section: "roles", testId: "hospital-admin-menu-roles" },
-  { label: "공간/시간 관리", icon: BuildingIcon, section: "space-time", testId: "hospital-admin-menu-space-time" },
+  { label: "공간 관리", icon: BuildingIcon, section: "space-time", testId: "hospital-admin-menu-space-time" },
   { label: "진료과 분리운영", icon: LayersIcon },
   { label: "바이탈 관리", icon: ActivityIcon, section: "vitals", testId: "hospital-admin-menu-vitals" },
   { label: "차트 템플릿", icon: ClipboardListIcon },
@@ -753,10 +754,7 @@ function HospitalOrderSortableHeader({
   );
 }
 
-type HospitalAdminConceptSection = Exclude<
-  HospitalAdminSection,
-  "audit" | "members" | "orders" | "roles" | "schedule" | "settings"
->;
+type HospitalAdminConceptSection = "vitals";
 
 type HospitalAdminConceptField = {
   label: string;
@@ -788,40 +786,6 @@ const hospitalAdminConceptScreens: Record<
   HospitalAdminConceptSection,
   HospitalAdminConceptScreenConfig
 > = {
-  "space-time": {
-    section: "space-time",
-    title: "공간/시간 관리",
-    badge: "운영 캘린더",
-    breadcrumb: "병원관리 / 공간·시간 관리",
-    description: "진료 공간, 예약 단위, 운영시간을 한 곳에서 관리",
-    highlights: [
-      { label: "공간", value: "6개" },
-      { label: "기본 예약 간격", value: "15분" },
-      { label: "점심 차단", value: "13:00-14:00" },
-      { label: "예약 가능일", value: "30일" },
-    ],
-    fields: [
-      { label: "기본 예약 간격", value: "15분", kind: "select", options: ["10분", "15분", "20분", "30분"] },
-      { label: "예약 오픈 범위", value: "30일", kind: "select", options: ["14일", "30일", "60일", "90일"] },
-      { label: "점심시간 예약 차단", value: "true", kind: "switch" },
-      { label: "응급 슬롯 유지", value: "true", kind: "switch" },
-      { label: "공휴일 기본 정책", value: "전화 확인", kind: "select", options: ["휴무", "전화 확인", "응급 예약만"] },
-    ],
-    table: {
-      title: "공간 운영 상태",
-      columns: ["공간", "유형", "사용", "예약 단위"],
-      rows: [
-        ["진료실 1", "진료", "사용", "15분"],
-        ["진료실 2", "진료", "사용", "15분"],
-        ["처치실", "처치", "사용", "20분"],
-        ["임상병리실", "검사", "사용", "검사별"],
-        ["영상실", "영상", "사용", "30분"],
-        ["수술실", "수술", "제한", "수동 배정"],
-      ],
-    },
-    impactItems: ["접수/예약 캘린더", "진료실 배정", "검사실 큐", "Home 운영 상태"],
-    modelItems: ["workspace_rooms", "workspace_operating_hours", "appointment_slot_rules"],
-  },
   vitals: {
     section: "vitals",
     title: "바이탈 관리",
@@ -937,7 +901,7 @@ function HospitalAdminConceptTable({ table }: { table: HospitalAdminConceptTable
   );
 }
 
-function HospitalAdminConceptScreen({
+export function HospitalAdminConceptScreen({
   section,
 }: {
   section: HospitalAdminConceptSection;
@@ -1457,7 +1421,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   }
 
   if (activeSection === "space-time") {
-    return <HospitalAdminConceptScreen section={activeSection} />;
+    return (
+      <WorkspaceSpaceManagementScreen
+        actorHeaders={session ? getDemoActorHeaders(session) : undefined}
+        workspaceId={workspaceId}
+      />
+    );
   }
 
   const openDrawer = (order: HospitalOrderCatalogItem) => {

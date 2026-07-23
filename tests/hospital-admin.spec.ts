@@ -17,7 +17,7 @@ test("hospital admin order management opens with category and subcategory naviga
     "감사 로그",
     "근무표",
     "역할 및 권한",
-    "공간/시간 관리",
+    "공간 관리",
     "바이탈 관리",
     "Order 관리",
     "진료과 분리운영",
@@ -151,15 +151,13 @@ test("hospital admin settings hub opens static screens and role management", asy
 
   const sidePanel = page.getByTestId("hospital-admin-side-panel");
   const plannedScreens = [
-    { button: "공간/시간 관리", heading: "공간/시간 관리", testId: "hospital-admin-space-time-screen" },
+    { button: "공간 관리", heading: "공간 관리", testId: "hospital-admin-space-management-screen" },
   ];
 
   for (const screen of plannedScreens) {
     await sidePanel.getByRole("button", { name: new RegExp(screen.button) }).click();
     await expect(page.getByTestId(screen.testId)).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: screen.heading, exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "시안 저장" }).click();
-    await expect(page.getByTestId(screen.testId)).toContainText("방금 시안 저장");
   }
 
   await sidePanel.getByRole("button", { name: "역할 및 권한" }).click();
@@ -168,6 +166,190 @@ test("hospital admin settings hub opens static screens and role management", asy
 
   await expect(sidePanel.getByRole("button", { name: /진료과 분리운영/ })).toBeDisabled();
   await expect(sidePanel.getByRole("button", { name: /차트 템플릿/ })).toBeDisabled();
+});
+
+test("hospital space management supports category and terminal space CRUD with feedback", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "공간 관리" })
+    .click();
+
+  const screen = page.getByTestId("hospital-admin-space-management-screen");
+  await expect(screen.getByRole("heading", { level: 1, name: "공간 관리" })).toBeVisible();
+  await expect(screen).not.toContainText("시간");
+  await expect(screen.getByTestId("space-category-row-consult")).toContainText("진료 공간");
+  await expect(screen.getByTestId("space-category-row-consult")).toContainText("2");
+  await expect(screen.locator('[data-testid^="space-category-icon-"]')).toHaveCount(4);
+  await expect(screen.locator('[data-testid^="space-category-icon-"] svg')).toHaveCount(4);
+  const consultIconKey = await screen
+    .getByTestId("space-category-icon-consult")
+    .getAttribute("data-icon-key");
+  const examIconKey = await screen
+    .getByTestId("space-category-icon-exam")
+    .getAttribute("data-icon-key");
+  expect(consultIconKey).not.toBeNull();
+  expect(consultIconKey).not.toBe(examIconKey);
+
+  await screen.getByRole("button", { name: "카테고리 설정" }).click();
+  const categoryDialog = page.getByRole("dialog", { name: "카테고리 설정" });
+  await expect(categoryDialog).toBeVisible();
+  await expect(categoryDialog.getByText("2", { exact: true })).toHaveCount(0);
+
+  await categoryDialog.getByRole("button", { name: "카테고리 추가" }).click();
+  const categoryInput = categoryDialog.getByPlaceholder("예: 입원 공간");
+  await expect(categoryInput).toBeVisible();
+  await categoryInput.fill("입원 공간");
+  await categoryDialog.getByRole("button", { name: "추가", exact: true }).click();
+  await expect(page.getByText("카테고리를 추가했어요.")).toBeVisible();
+  await expect(categoryDialog.getByText("입원 공간", { exact: true })).toBeVisible();
+
+  await categoryDialog.getByRole("button", { name: "입원 공간 이름 수정" }).click();
+  const renameInput = categoryDialog.getByRole("textbox", { name: "카테고리 이름" });
+  await renameInput.fill("입원·격리 공간");
+  await categoryDialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(page.getByText("카테고리 이름을 변경했어요.")).toBeVisible();
+  await expect(categoryDialog.getByText("입원·격리 공간", { exact: true })).toBeVisible();
+
+  await categoryDialog.getByRole("button", { name: "입원·격리 공간 삭제" }).click();
+  const emptyCategoryDeleteDialog = page.getByRole("dialog", { name: "카테고리를 삭제할까요?" });
+  await emptyCategoryDeleteDialog.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(page.getByText("카테고리를 삭제했어요.")).toBeVisible();
+  await expect(categoryDialog.getByText("입원·격리 공간", { exact: true })).toHaveCount(0);
+  await categoryDialog.getByRole("button", { name: "닫기" }).click();
+
+  await screen.getByRole("button", { name: /진료 공간/ }).click();
+  await expect(screen.getByRole("heading", { level: 1, name: "진료 공간" })).toBeVisible();
+  await expect(screen.getByRole("button", { name: "카테고리 설정" })).toHaveCount(0);
+  await expect(screen.getByRole("button", { name: "진료실 1 수정" })).toBeVisible();
+  await expect(screen.getByRole("button", { name: "진료실 1 삭제" })).toBeVisible();
+  await expect(
+    screen.getByRole("button", { name: "진료실 1", exact: true }),
+  ).toHaveCount(0);
+
+  await screen.getByRole("button", { name: "공간 추가" }).click();
+  const spaceInput = screen.getByPlaceholder("예: 진료실 3");
+  await spaceInput.fill("진료실 3");
+  await screen.getByRole("button", { name: "추가", exact: true }).click();
+  await expect(page.getByText("공간을 추가했어요.")).toBeVisible();
+  await expect(screen.getByText("진료실 3", { exact: true })).toBeVisible();
+
+  await screen.getByRole("button", { name: "진료실 3 수정" }).click();
+  const editSpaceInput = screen.getByRole("textbox", { name: "공간 이름" });
+  await editSpaceInput.fill("진료실 3A");
+  await screen.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(page.getByText("공간 정보를 변경했어요.")).toBeVisible();
+  await expect(screen.getByText("진료실 3A", { exact: true })).toBeVisible();
+
+  await screen.getByRole("button", { name: "진료실 3A 삭제" }).click();
+  const spaceDeleteDialog = page.getByRole("dialog", { name: "공간을 삭제할까요?" });
+  await spaceDeleteDialog.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(page.getByText("공간을 삭제했어요.")).toBeVisible();
+  await expect(screen.getByText("진료실 3A", { exact: true })).toHaveCount(0);
+  await screen.getByRole("button", { name: "공간 관리로 돌아가기" }).click();
+  await expect(screen.getByRole("heading", { level: 1, name: "공간 관리" })).toBeVisible();
+});
+
+test("hospital space management moves spaces before deleting a populated category", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "공간 관리" })
+    .click();
+
+  const screen = page.getByTestId("hospital-admin-space-management-screen");
+  await screen.getByRole("button", { name: "카테고리 설정" }).click();
+  const categoryDialog = page.getByRole("dialog", { name: "카테고리 설정" });
+
+  await categoryDialog.getByRole("button", { name: "카테고리 추가" }).click();
+  await categoryDialog.getByPlaceholder("예: 입원 공간").fill("진료 공간");
+  await categoryDialog.getByRole("button", { name: "추가", exact: true }).click();
+  await expect(page.getByText("같은 이름의 카테고리가 이미 있습니다.")).toBeVisible();
+  await categoryDialog.getByRole("button", { name: "취소", exact: true }).click();
+
+  await categoryDialog.getByRole("button", { name: "처치 공간 삭제" }).click();
+  const deleteDialog = page.getByRole("dialog", { name: "카테고리를 삭제할까요?" });
+  await expect(deleteDialog).toContainText("등록된 공간은 선택한 카테고리로 이동");
+  await deleteDialog.getByRole("combobox", { name: "공간 이동 대상" }).click();
+  await page.getByRole("option", { name: "진료 공간" }).click();
+  await deleteDialog.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(page.getByText("카테고리를 삭제했어요.")).toBeVisible();
+  await expect(categoryDialog.getByText("처치 공간", { exact: true })).toHaveCount(0);
+  await categoryDialog.getByRole("button", { name: "닫기" }).click();
+
+  await screen.getByRole("button", { name: /진료 공간/ }).click();
+  await expect(screen.getByText("처치실 1", { exact: true })).toBeVisible();
+});
+
+test("hospital space management recovers from read failure and renders an empty read-only state", async ({ page }) => {
+  let serveSuccess = false;
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/space-management",
+    async (route) => {
+      if (!serveSuccess) {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, status: 500, error: "db_read_failed" }),
+        });
+        return;
+      }
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "workspace-space-management",
+          workspaceId: "clair-demo",
+          canManage: false,
+          categories: [],
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "공간 관리" })
+    .click();
+
+  const screen = page.getByTestId("hospital-admin-space-management-screen");
+  await expect(screen.getByText("공간 정보를 불러오지 못했습니다")).toBeVisible();
+  serveSuccess = true;
+  await screen.getByRole("button", { name: "다시 시도" }).click();
+  await expect(screen.getByText("등록된 공간 카테고리가 없습니다")).toBeVisible();
+  await expect(screen.getByRole("button", { name: "카테고리 설정" })).toBeDisabled();
+});
+
+test("hospital space management stays usable on a compact screen", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "공간 관리" })
+    .click();
+  await page.setViewportSize({ width: 720, height: 900 });
+
+  const screen = page.getByTestId("hospital-admin-space-management-screen");
+  await expect(screen.getByRole("button", { name: "카테고리 설정" })).toBeVisible();
+  await expect(screen.getByTestId("space-category-row-consult")).toBeVisible();
+  await expect
+    .poll(() =>
+      screen.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    )
+    .toBe(true);
+
+  await screen.getByRole("button", { name: "카테고리 설정" }).click();
+  const categoryDialog = page.getByRole("dialog", { name: "카테고리 설정" });
+  await expect(categoryDialog.getByRole("button", { name: "카테고리 추가" })).toBeVisible();
+  await categoryDialog.getByRole("button", { name: "닫기" }).click();
+
+  await screen.getByRole("button", { name: /진료 공간/ }).click();
+  await expect(screen.getByRole("button", { name: "공간 추가" })).toBeVisible();
+  await expect(screen.getByRole("button", { name: "진료실 1 수정" })).toBeVisible();
+  await expect(screen.getByRole("button", { name: "진료실 1 삭제" })).toBeVisible();
 });
 
 test("hospital vital settings follows the reviewed V3 interaction", async ({ page }) => {

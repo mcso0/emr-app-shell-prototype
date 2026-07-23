@@ -2,23 +2,24 @@
 id: DESIGN-SCREEN-HOSPITAL-ADMIN-SETTINGS-HUB
 type: Screen Spec
 title: "Hospital Admin Settings Hub UX"
-description: "UX flow for the 병원관리 settings hub, including session-only 병원기본설정 and route-backed interactive 근무표 screens."
+description: "UX flow for the 병원관리 settings hub, including persisted 공간 관리 and route-backed interactive operations screens."
 status: implemented
 area: design
 doc_type: screen-spec
-tags: [hospital-admin, settings, ux-flow, screen-concept]
+tags: [hospital-admin, settings, spaces, ux-flow, screen-concept]
 related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-flex-schedule-session-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-005-hospital-basic-settings-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-006-role-permission-management-ui.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-020-space-management-persistence.md"
 last_updated: 2026-07-23
 ---
 
 # Hospital Admin Settings Hub UX
 
-Updated: 2026-07-11
+Updated: 2026-07-23
 
 ## Design Intent
 
@@ -33,7 +34,7 @@ flowchart LR
   A["병원관리 side panel"] --> B["병원기본설정"]
   A --> C["병원구성원 관리"]
   A --> D["역할 및 권한"]
-  A --> E["공간/시간 관리"]
+  A --> E["공간 관리"]
   A --> F["근무표"]
   A --> G["바이탈 관리"]
   A --> H["감사 로그"]
@@ -47,6 +48,7 @@ flowchart LR
 - Keep account/profile settings under the profile menu.
 - Open each target item from the existing hospital-admin side panel.
 - Hide save controls until the user changes an editable value. Show one fixed bottom change bar with save and revert actions while a draft is dirty.
+- `공간 관리` is the narrow-command exception: category and space commands submit from their inline row or confirmation dialog and replace the view with the server snapshot.
 - Use explicit `취소` and `시안 저장` controls for static screen-only mocks, add/edit/approval/publish controls for `근무표`, and role-specific save/cancel with local dirty state for `역할 및 권한`.
 - Mark future data/API needs in docs, not as noisy in-app explanation.
 - Preserve `Order 관리` side-panel child navigation and drawer behavior.
@@ -58,7 +60,7 @@ flowchart LR
 | 병원기본설정 | Read-only identity + editable contact cards | Day-by-day operating-hours editor + exception dialogs | Dedicated session-local implementation; no development metadata in the visible UI |
 | 병원구성원 관리 | Existing table + invite/edit sheets | Role/job assignment controls | Assign people here and link to definitions in `역할 및 권한` |
 | 역할 및 권한 | `920px` grouped settings hub + URL-backed independent detail screen | One-open role items, divided switch rows, and contextual save state | Keep the hub concise; each role item owns its assigned members, summary, and permission controls |
-| 공간/시간 관리 | Room/status table | Scheduling rule controls | Avoid full calendar editor in this phase |
+| 공간 관리 | Category settings list + two-level category detail | Inline category/space CRUD with confirmations and toasts | Categories navigate; terminal space rows use direct edit/delete actions |
 | 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Supabase mode uses route/RPC persistence; mock mode remains explicit session-only fallback |
 | 바이탈 관리 | Workspace preset order, units, and availability | Required preset protection and optional preset removal | No clinical range or alert automation claim |
 | 감사 로그 | Existing audit table | Search/filter | Keep minimal read-only admin review |
@@ -102,12 +104,18 @@ flowchart LR
 9. `직무` manages job labels without changing screen/action permissions. System or read-only rows are static; only editable custom rows use button and chevron affordances.
 10. `업무 기본값` saves only browser-local defaults and states that it does not change authorization. Dirty navigation uses discard confirmation, and a browser-back draft remains visible through the hub summary.
 
-### 공간/시간 관리
+### 공간 관리
 
-1. Admin selects `공간/시간 관리`.
-2. Screen shows scheduling rule controls and active room table.
-3. Admin adjusts appointment interval or room policy locally.
-4. Future implementation validates blocked hours and room conflicts before saving.
+1. Admin selects `공간 관리`.
+2. The overview lists only top-level categories. Each row has a distinct semantic icon, category name, space-count badge, description, and right chevron.
+3. Admin uses the header `카테고리 설정` CTA to open one dialog. Category rows use edit/trash icon buttons without count badges.
+4. `카테고리 추가` expands to an inline name input with `취소` and `추가`. Editing replaces that category name in the same row with an input plus `취소` and `저장`.
+5. Deleting an empty category asks for confirmation. Deleting a category with spaces requires another category; the server moves every space and archives the source category atomically.
+6. Selecting an overview row opens one category detail. This is the final navigation depth: space rows do not navigate and expose direct `수정` and `삭제` actions.
+7. `공간 추가` expands to an inline input. Space edit expands that row to a name input, category select, and `취소`/`저장`, allowing rename and category move together.
+8. Every successful or rejected add, update, move, and delete shows a toast. Cancel closes the inline draft without a toast.
+9. Loading preserves the card structure; read error offers retry; category and space empty states keep their relevant add action; read-only users see data without mutation controls.
+10. No operating-hour, appointment interval, blocked-time, capacity, allocation, or status setting appears in this screen.
 
 ### 근무표
 
@@ -138,14 +146,14 @@ flowchart LR
 
 ## Screen-Only Implementation Checklist
 
-- Enable target side-panel items: `병원기본설정`, `근무표`, `역할 및 권한`, `공간/시간 관리`, `바이탈 관리`.
+- Enable target side-panel items: `병원기본설정`, `근무표`, `역할 및 권한`, `공간 관리`, `바이탈 관리`.
 - Keep out-of-scope items disabled: `진료과 분리운영`, `차트 템플릿`, `장비 관리`, `마약류 관리`, `Order 세트`, `프린터 설정`, `데이터랩`.
 - Preserve existing `병원구성원 관리`, `감사 로그`, and `Order 관리` behavior.
 - Add test IDs for new screens and stable role/tab/detail contracts.
 - Verify top-bar gear button is removed.
 - Verify the dedicated basic-settings screen keeps save hidden initially, surfaces the change bar after an edit, and preserves its session snapshot across hospital-admin navigation.
 - Verify read-only identity, copy feedback, schedule propagation, exception CRUD, validation focus, and compact single-column layout.
-- Verify static target screens can perform mock `시안 저장`; verify `근무표` CRUD, request approval, conflict review, and publish state separately.
+- Verify `공간 관리` command CRUD/toasts and `근무표` CRUD, request approval, conflict review, and publish state separately.
 - Verify every new target screen opens from the side panel. `역할 및 권한` must not use `시안 저장`.
 
 ## Future Development Spec Backlog

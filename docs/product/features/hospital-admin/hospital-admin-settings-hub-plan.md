@@ -2,23 +2,24 @@
 id: PRODUCT-FEATURE-HOSPITAL-ADMIN-SETTINGS-HUB
 type: Product Requirement
 title: "Hospital Admin Settings Hub"
-description: "Defines the 병원관리 settings-hub IA, including session-only 병원기본설정 and persisted interactive 근무표 boundaries."
+description: "Defines the 병원관리 settings-hub IA, including persisted 공간 관리 and interactive operations boundaries."
 status: implemented
 area: product
 doc_type: feature-plan
-tags: [hospital-admin, settings, workspace, roles, schedule, vitals]
+tags: [hospital-admin, settings, workspace, roles, schedule, spaces, vitals]
 related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-003-flex-schedule-session-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-005-hospital-basic-settings-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-006-role-permission-management-ui.md"
-last_updated: 2026-07-11
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-020-space-management-persistence.md"
+last_updated: 2026-07-23
 ---
 
 # Hospital Admin Settings Hub
 
-Updated: 2026-07-11
+Updated: 2026-07-23
 
 ## Product Position
 
@@ -33,7 +34,7 @@ Top-bar settings must not duplicate hospital settings. Top-bar account/profile c
 | `병원기본설정` | Workspace-owned hospital identity, editable contact, operating hours, and date exceptions | Dedicated session-local UI implemented; later connect to hospital profile API |
 | `병원구성원 관리` | Staff invites, member status, and assigning one permission role and one job position to a person | Keep people assignment here; role/job catalog definitions live in `역할 및 권한` |
 | `역할 및 권한` | Permission-role definitions, grouped effective permissions, job-position catalog, and local work defaults | System roles are inspectable/read-only; custom roles are allow-only within the approved catalog |
-| `공간/시간 관리` | Rooms, appointment intervals, operating hours, blocked times, emergency slots | Static/mock screen first |
+| `공간 관리` | Workspace-owned space categories and spaces | Persist through workspace-scoped API/RPC/RLS; time settings are excluded |
 | `근무표` | Weekly shift editing, daily role coverage, personal schedule, and approval requests | Supabase mode persists through route/RPC/RLS; mock mode intentionally remains session-only |
 | `바이탈 관리` | Workspace clinical vital thresholds and alert policy | Static/mock screen first |
 | `감사 로그` | Minimal administrator review of high-value mutation events | Keep as a minimal independent screen; do not remove from MVP |
@@ -110,21 +111,21 @@ The role screen is an explanation and local-first management surface, not the se
 | Data/API follow-up | Live catalog API/RPC/RLS and an approved work-default contract remain follow-up work. |
 | Screen direction | Quiet centered settings view; keep top-level summaries in one divided surface, use a clear back action and browser history for details, show permission categories as sectioned switch rows, and avoid nested accordions, KPI strips, phase badges, future-data rails, or database table names. |
 
-### 공간/시간 관리
+### 공간 관리
 
 | Item | Spec |
 | --- | --- |
-| Purpose | Manage rooms, appointment slot rules, blocked times, and operating-calendar assumptions. |
-| Primary user | Hospital admin, reception lead. |
-| Scenario | Admin adjusts appointment interval and sees which rooms are active for scheduling and work queues. |
-| Information structure | Calendar-rule highlights, appointment settings, room status table, impact/data side rail. |
-| Fields/components | Appointment interval, open range, lunch block, emergency slot, holiday policy, room list. |
-| Default state | Cheongdam synthetic rooms and 15-minute base interval. |
-| Empty state | Show room setup prompt before appointment routing can claim complete configuration. |
-| Permission state | Admin-only edit; reception may later get read-only. |
-| Save/cancel flow | Explicit save; future save should validate overlapping hours and blocked slots. |
-| Data/API follow-up | `workspace_rooms`, `workspace_operating_hours`, `appointment_slot_rules`, calendar read model. |
-| Screen direction | Admin table plus compact rule form; avoid calendar-heavy build until scheduling API is scoped. |
+| Purpose | Let each hospital organize its physical spaces by editable category. |
+| Primary user | Hospital owner/admin; active members with view permission may read. |
+| Scenario | Admin reviews category-level space counts, opens one category, then adds, renames, moves, or deletes spaces. Category creation, rename, and protected deletion live in one top-level settings dialog. |
+| Information structure | Header + `카테고리 설정` CTA → category card with distinct icons/count badges/chevrons → one category detail with terminal space rows. |
+| Fields/components | Category name, semantic icon key, space name, target category when moving a space or deleting a non-empty category. |
+| Default state | Synthetic `진료`, `처치`, `검사`, and `수술` categories with workspace-owned example spaces. |
+| Empty state | Category overview explains how to add the first category; an empty detail keeps `공간 추가` available. |
+| Permission state | `hospital_settings:view` reads; `hospital_settings:manage` plus server/RPC workspace checks mutate. Client visibility is not the security boundary. |
+| Save/cancel flow | Every command saves immediately and returns an authoritative snapshot. Success and rejection always show a toast; cancel only discards the inline draft. |
+| Data/API boundary | `workspace_space_categories` and `workspace_spaces`, active-name uniqueness, archive-based deletion, GET/command API, atomic RPC, tenant RLS, explicit grants, default seeding, and safe audit events. |
+| Screen direction | Quiet `920px` settings surface using existing cards, dialogs, inline inputs, selects, icon buttons, and tokens. No time, capacity, allocation, status, or scheduling controls. |
 
 ### 근무표
 
