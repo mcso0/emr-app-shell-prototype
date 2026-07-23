@@ -61,8 +61,8 @@ test("CLAiR Docs opens the Study tab and renders the first lesson archive", asyn
 test("CLAiR Docs handles invalid doc slugs without opening arbitrary paths", async ({ page }) => {
   await page.goto("/docs?doc=../../docs/engineering/auth-security/mvp-auth-transition-roadmap");
 
-  await expect(page.getByRole("heading", { name: "등록되지 않은 CLAiR Docs 문서야." })).toBeVisible();
-  await expect(page.getByText("임의 파일 경로는 열지 않는다.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "등록되지 않은 CLAiR Docs 문서입니다." })).toBeVisible();
+  await expect(page.getByText("임의 파일 경로는 열지 않습니다.")).toBeVisible();
   await expect(page.getByRole("link", { name: "기본 문서로 이동" })).toHaveAttribute("href", "/docs");
 });
 

@@ -96,7 +96,7 @@ export function getScheduleConflicts(
         kind: "availability",
         shiftId: shift.id,
         staffId: shift.staffId,
-        message: "근무 가능 시간을 벗어났어.",
+        message: "근무 가능 시간을 벗어났습니다.",
       });
     }
 
@@ -116,7 +116,7 @@ export function getScheduleConflicts(
           kind: "overlap",
           shiftId: shift.id,
           staffId: shift.staffId,
-          message: "같은 시간대의 근무가 겹쳐.",
+          message: "같은 시간대의 근무가 겹칩니다.",
         });
       }
     }

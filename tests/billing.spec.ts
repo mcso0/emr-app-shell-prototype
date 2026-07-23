@@ -580,7 +580,7 @@ test("billing financial confirmation failure shows persistent recovery action", 
   await issueDialog.getByRole("button", { name: "수납 진행 저장" }).click();
 
   await expect(page.getByTestId("billing-financial-error-alert")).toContainText(
-    "수납 진행이 저장되지 않았어",
+    "수납 진행이 저장되지 않았습니다",
   );
   await expect(
     page.getByRole("button", { name: "수납 진행 다시 시도" }),

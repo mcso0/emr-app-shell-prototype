@@ -1933,8 +1933,8 @@ function getReceptionReadFailureMessage(
 ) {
   const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const localFallbackText = preparedEmptyClinic
-    ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지해."
-    : "현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+    ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지합니다."
+    : "현재 화면은 로컬 데모/세션 데이터 기준으로 유지됩니다.";
 
   if (
     result.denialReason === "permission_missing" ||
@@ -1942,18 +1942,18 @@ function getReceptionReadFailureMessage(
     result.denialReason === "workspace_membership_missing" ||
     result.denialReason === "workspace_membership_inactive"
   ) {
-    return `접수 보기 권한 또는 workspace membership을 확인해야 해. ${localFallbackText}`;
+    return `접수 보기 권한 또는 workspace membership을 확인해야 합니다. ${localFallbackText}`;
   }
 
   if (result.denialReason === "unauthenticated") {
-    return `로그인 세션을 확인하지 못했어. ${localFallbackText}`;
+    return `로그인 세션을 확인하지 못했습니다. ${localFallbackText}`;
   }
 
   if (result.error === "supabase_client_missing") {
-    return `live Supabase read 연결이 구성되지 않았어. ${localFallbackText}`;
+    return `live Supabase read 연결이 구성되지 않았습니다. ${localFallbackText}`;
   }
 
-  return `서버 read 결과를 반영하지 못했어. ${localFallbackText}`;
+  return `서버 read 결과를 반영하지 못했습니다. ${localFallbackText}`;
 }
 
 function getReceptionEmptyStateCopy({
@@ -2513,25 +2513,25 @@ const getReceptionCalendarSelectionMessage = (
   block?: ReceptionCalendarScheduleBlock,
 ) => {
   if (reason === "outside-business-hours") {
-    return "설정된 영업시간 안에서만 접수/예약을 만들 수 있어.";
+    return "설정된 영업시간 안에서만 접수/예약을 만들 수 있습니다.";
   }
   if (reason === "past-time") {
-    return "이미 지난 시간에는 접수/예약을 만들 수 없어. 현재 이후 시간을 선택해 줘.";
+    return "이미 지난 시간에는 접수/예약을 만들 수 없습니다. 현재 이후 시간을 선택해 주세요.";
   }
   if (reason === "unavailable-time") {
-    return `${block?.label ?? "접수/예약 불가 시간"}에는 접수/예약을 만들 수 없어.`;
+    return `${block?.label ?? "접수/예약 불가 시간"}에는 접수/예약을 만들 수 없습니다.`;
   }
   if (reason === "overlap") {
-    return `${block?.label ?? "기존 일정"}과 겹치는 시간에는 접수/예약을 만들 수 없어.`;
+    return `${block?.label ?? "기존 일정"}과 겹치는 시간에는 접수/예약을 만들 수 없습니다.`;
   }
   if (reason === "too-long") {
-    return `접수 task는 최대 ${maxReceptionCalendarDraftDurationMinutes}분까지 만들 수 있어.`;
+    return `접수 task는 최대 ${maxReceptionCalendarDraftDurationMinutes}분까지 만들 수 있습니다.`;
   }
   if (reason === "too-short") {
-    return "접수 task는 최소 15분 이상이어야 해.";
+    return "접수 task는 최소 15분 이상이어야 합니다.";
   }
 
-  return "선택한 캘린더 위치에서는 접수/예약을 만들 수 없어.";
+  return "선택한 캘린더 위치에서는 접수/예약을 만들 수 없습니다.";
 };
 
 const validateReceptionCalendarSelection = ({
@@ -3585,7 +3585,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       if (item.statusGroup !== "cancelled" || pendingRestoreId) return;
       if (isReceptionQueueSideItemPast(item, operatingDate, currentOperatingMinutes)) {
         const confirmed = window.confirm(
-          "원래 시간이 이미 지났어. 그래도 이 접수/예약을 원래 시간대에 복구할까?",
+          "원래 시간이 이미 지났습니다. 그래도 이 접수/예약을 원래 시간대에 복구하시겠습니까?",
         );
         if (!confirmed) return;
       }
@@ -3645,7 +3645,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         <EmrInlineAlert
           className="mx-3 my-2"
           severity="warning"
-          title="서버 대기열을 불러오지 못했어"
+          title="서버 대기열을 불러오지 못했습니다"
           action={
             <Button
               size="sm"
@@ -3659,8 +3659,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         >
           {queueReadError ??
             (isPreparedEmptyClinicWorkspace(workspaceId)
-              ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지해."
-              : "현재 목록은 로컬 데모/세션 데이터 기준으로 유지돼.")}
+              ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지합니다."
+              : "현재 목록은 로컬 데모/세션 데이터 기준으로 유지됩니다.")}
         </EmrInlineAlert>
       ) : null}
       {cardActionFeedback ? (
@@ -3740,8 +3740,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
               onOpenChart={(item) => {
                 if (!item.encounter) {
                   setCardActionFeedback({
-                    title: "먼저 접수를 생성해야 해",
-                    body: `${item.patient.name}은 아직 진행 중인 encounter가 없어서 차트로 넘길 live 접수 id가 없어.`,
+                    title: "먼저 접수를 생성해야 합니다",
+                    body: `${item.patient.name}은 아직 진행 중인 encounter가 없어서 차트로 넘길 live 접수 id가 없습니다.`,
                   });
                   return;
                 }
@@ -7168,7 +7168,7 @@ export function ReceptionContent() {
         <EmrInlineAlert
           className="border-x-0 border-t-0 rounded-none px-4"
           severity="warning"
-          title="서버 캘린더를 불러오지 못했어"
+          title="서버 캘린더를 불러오지 못했습니다"
           action={
             <Button
               size="sm"
@@ -7182,8 +7182,8 @@ export function ReceptionContent() {
         >
           {calendarReadError ??
             (isPreparedEmptyClinicWorkspace(workspaceId)
-              ? "기존 데모 예약은 표시하지 않고 준비된 빈 병원 캘린더를 유지해."
-              : "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지돼.")}
+              ? "기존 데모 예약은 표시하지 않고 준비된 빈 병원 캘린더를 유지합니다."
+              : "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지됩니다.")}
         </EmrInlineAlert>
       ) : null}
       <ReceptionScheduleBoard

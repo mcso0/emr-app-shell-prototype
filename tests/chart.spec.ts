@@ -2443,7 +2443,7 @@ test("chart unavailable order actions show persistent inline guidance", async ({
   await page.getByRole("button", { name: "Order 출력" }).click();
   const unavailableAlert = page.getByTestId("chart-unavailable-action-alert");
   await expect(unavailableAlert).toContainText(
-    "Order 출력은 아직 연결되지 않았어",
+    "Order 출력은 아직 연결되지 않았습니다",
   );
   await expect(unavailableAlert).toContainText("문서 생성, 프린트, PDF 출력");
   const dismissButton = unavailableAlert.getByRole("button", {

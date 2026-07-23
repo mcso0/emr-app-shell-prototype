@@ -102,12 +102,12 @@ export function DemoSessionResetControl({
       ) : null}
       <Dialog open={confirmOpen} onOpenChange={(open) => !resetting && setConfirmOpen(open)}>
         <EmrConfirmDialogContent
-          title="데모 세션을 처음 상태로 초기화할까?"
+          title="데모 세션을 처음 상태로 초기화하시겠습니까?"
           description={
             <span>
               {PREPARED_EMPTY_CLINIC_WORKSPACE_DISPLAY_NAME} synthetic demo data만
-              대상으로 접수, 진료, 오더, 처리, 수납 흐름을 비워. 실제 환자/보호자/결제/외부
-              연동 데이터는 대상이 아니야.
+              대상으로 접수, 진료, 오더, 처리, 수납 흐름을 초기화합니다. 실제 환자/보호자/결제/외부
+              연동 데이터는 대상이 아닙니다.
             </span>
           }
           cancelLabel="취소"
@@ -127,23 +127,23 @@ function getResetSuccessMessage(result: {
   mode?: string;
 }) {
   if (result.mode === "local_only") {
-    return "브라우저 데모 상태를 초기화했어.";
+    return "브라우저 데모 상태를 초기화했습니다.";
   }
 
   const encounterCount = result.counts?.encounters ?? 0;
   const patientCount = result.counts?.generatedPatients ?? 0;
-  return `데모 세션을 초기화했어. 접수 ${encounterCount}건, 신규 환자 ${patientCount}건 정리됨.`;
+  return `데모 세션을 초기화했습니다. 접수 ${encounterCount}건과 신규 환자 ${patientCount}건을 정리했습니다.`;
 }
 
 function getResetFailureMessage(error: unknown) {
-  if (!(error instanceof Error)) return "데모 세션 초기화에 실패했어.";
+  if (!(error instanceof Error)) return "데모 세션을 초기화하지 못했습니다.";
   if (error.message === "workspace_admin_required") {
-    return "병원 관리자 권한이 있어야 초기화할 수 있어.";
+    return "병원 관리자 권한이 있어야 초기화할 수 있습니다.";
   }
   if (error.message === "unsupported_workspace") {
-    return "Cheongdam synthetic demo workspace에서만 초기화할 수 있어.";
+    return "Cheongdam synthetic demo workspace에서만 초기화할 수 있습니다.";
   }
-  return "데모 세션 초기화에 실패했어.";
+  return "데모 세션을 초기화하지 못했습니다.";
 }
 
 function clearDemoBrowserState(workspaceId: string) {

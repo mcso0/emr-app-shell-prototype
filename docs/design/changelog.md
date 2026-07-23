@@ -2,6 +2,12 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-07-23
+
+- `added`: DESIGN-SYSTEM-PR-082 adds the product-wide Korean honorific baseline: system copy uses `합니다체`, user requests use `~해 주세요`, and confirmation questions use `~하시겠습니까?`.
+- `changed`: Confirmed informal product copy was corrected across shell, docs/PRD viewers, auth, reception, customer, chart, billing, Home, hospital scheduling, and demo-session surfaces without changing workflow behavior.
+- `added`: A dependency-free source check now blocks clear informal Korean product-copy endings while preserving polite `해요체`, user-authored clinical content, and developer-only guidance.
+
 ## 2026-06-06
 
 - `added`: DEN-433 defines the shared border, radius, and shadow depth contract for common EMR surfaces and follow-up screen implementation issues.

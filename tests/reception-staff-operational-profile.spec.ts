@@ -534,7 +534,7 @@ test("staff profile panel keeps loading, error, retry, and offline states distin
     drawer.getByTestId("staff-operational-profile-loading"),
   ).toBeVisible();
   await expect(drawer.getByRole("alert")).toContainText(
-    "운영 프로필을 불러오지 못했어",
+    "운영 프로필을 불러오지 못했어요",
   );
   allowSuccess = true;
   await drawer.getByRole("button", { name: "다시 시도" }).click();

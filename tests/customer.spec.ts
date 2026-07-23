@@ -423,7 +423,7 @@ test("customer row action menu closes with Escape and explains unavailable actio
   await row.getByRole("button", { name: "두부 행 작업" }).click();
   await page.getByText("카카오톡 발송", { exact: true }).click();
   await expect(page.getByTestId("customer-row-action-feedback")).toContainText(
-    "카카오톡 발송은 아직 연결되지 않았어"
+    "카카오톡 발송은 아직 연결되지 않았습니다"
   );
   await expect(page.getByRole("menu")).toHaveCount(0);
 });

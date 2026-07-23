@@ -317,7 +317,7 @@ export const mockPermissionSeeds: PermissionSeed[] = [
     resource: "service_catalog",
     action: "manage",
     label: "서비스 카탈로그 관리",
-    description: "후속 설정 화면용 seed이며 현재 화면 권한 enforcement에는 연결하지 않는다.",
+    description: "후속 설정 화면용 seed이며 현재 화면 권한 enforcement에는 연결되지 않습니다.",
   },
   {
     id: "hospital_settings:view",
@@ -342,7 +342,7 @@ export const mockPermissionSeeds: PermissionSeed[] = [
     resource: "role_permission",
     action: "manage",
     label: "역할/권한 관리",
-    description: "후속 병원관리용 seed이며 현재 화면 권한 enforcement에는 연결하지 않는다.",
+    description: "후속 병원관리용 seed이며 현재 화면 권한 enforcement에는 연결되지 않습니다.",
   },
 ];
 

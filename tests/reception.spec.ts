@@ -3427,7 +3427,7 @@ test("reception card action menu exposes unavailable feedback and closes on Esca
   await page.getByText("카카오톡 발송", { exact: true }).click();
   await expect(
     page.getByTestId("reception-card-action-feedback"),
-  ).toContainText("카카오톡 발송은 아직 연결되지 않았어");
+  ).toContainText("카카오톡 발송은 아직 연결되지 않았습니다");
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
@@ -5000,9 +5000,9 @@ test("reception read failures explain local demo fallback and expose retry actio
   const queueAlert = page.getByTestId("reception-queue-read-alert");
   const calendarAlert = page.getByTestId("reception-calendar-read-alert");
 
-  await expect(queueAlert).toContainText("서버 대기열을 불러오지 못했어");
+  await expect(queueAlert).toContainText("서버 대기열을 불러오지 못했습니다");
   await expect(queueAlert).toContainText("로컬 데모/세션 데이터 기준으로 유지");
-  await expect(calendarAlert).toContainText("서버 캘린더를 불러오지 못했어");
+  await expect(calendarAlert).toContainText("서버 캘린더를 불러오지 못했습니다");
   await expect(calendarAlert).toContainText(
     "로컬 데모/세션 데이터 기준으로 유지",
   );

@@ -64,7 +64,7 @@ export function ScheduleShiftEditorSheet({
         <SheetContent className="w-full sm:max-w-md">
           <SheetHeader>
             <SheetTitle>{target.mode === "create" ? "근무 추가" : "근무 수정"}</SheetTitle>
-            <SheetDescription>변경 내용은 서버 검증과 저장이 완료된 뒤 근무표에 반영돼.</SheetDescription>
+            <SheetDescription>변경 내용은 서버 검증과 저장이 완료된 뒤 근무표에 반영됩니다.</SheetDescription>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
             <FieldGroup>

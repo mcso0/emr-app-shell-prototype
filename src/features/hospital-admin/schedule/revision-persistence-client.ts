@@ -45,7 +45,7 @@ export async function readHospitalScheduleRevision({
   const body = (await response.json().catch(() => null)) as ScheduleResponseBody | null;
   if (!response.ok || !body?.ok) {
     throw new HospitalScheduleRevisionRequestError(
-      body?.message ?? "근무표를 불러오지 못했어.",
+      body?.message ?? "근무표를 불러오지 못했습니다.",
       body?.error ?? "schedule_read_failed",
       parseIssues(body?.issues),
     );
@@ -75,14 +75,14 @@ export async function sendHospitalScheduleRevisionCommand({
   const body = (await response.json().catch(() => null)) as ScheduleResponseBody | null;
   if (!response.ok || !body?.ok) {
     throw new HospitalScheduleRevisionRequestError(
-      body?.message ?? "근무표 저장에 실패했어.",
+      body?.message ?? "근무표를 저장하지 못했습니다.",
       body?.error ?? "schedule_command_failed",
       parseIssues(body?.issues),
     );
   }
   if (body.modelVersion !== "v2") {
     throw new HospitalScheduleRevisionRequestError(
-      "v2 근무표 응답을 받지 못했어.",
+      "v2 근무표 응답을 받지 못했습니다.",
       "schedule_v2_response_invalid",
     );
   }
@@ -107,7 +107,7 @@ export async function verifyHospitalScheduleProfileReadback({
   const body = (await response.json().catch(() => null)) as ScheduleResponseBody | null;
   if (!response.ok || !body?.ok) {
     throw new HospitalScheduleRevisionRequestError(
-      body?.message ?? "프로필 반영을 확인하지 못했어.",
+      body?.message ?? "프로필 반영을 확인하지 못했습니다.",
       body?.error ?? "schedule_profile_readback_failed",
     );
   }
@@ -127,7 +127,7 @@ function parseRevisionRemoteSnapshot(
       : fallbackWeekStart;
   if (!isIsoDate(parsedWeekStart)) {
     throw new HospitalScheduleRevisionRequestError(
-      "근무표 주차 정보가 올바르지 않아.",
+      "근무표 주차 정보가 올바르지 않습니다.",
       "schedule_week_invalid",
     );
   }

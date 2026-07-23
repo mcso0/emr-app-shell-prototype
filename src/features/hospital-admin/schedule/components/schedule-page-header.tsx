@@ -80,7 +80,7 @@ export function SchedulePageHeader({
         }
       />
       <p className="mt-1 text-sm text-muted-foreground">
-        직원별 근무시간을 입력한 뒤 게시하면 구성원 화면의 오늘 근무에 반영돼.
+        직원별 근무시간을 입력한 뒤 게시하면 구성원 화면의 오늘 근무에 반영됩니다.
       </p>
     </header>
   );

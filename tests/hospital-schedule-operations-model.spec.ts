@@ -23,7 +23,7 @@ test("schedule assignment suggests the lowest-load eligible staff without changi
   });
 
   expect(suggestions).toEqual([
-    expect.objectContaining({ staffId: "staff-free", reason: "역할과 시간이 맞고 이번 주 배정 시간이 가장 적어." }),
+    expect.objectContaining({ staffId: "staff-free", reason: "역할과 시간이 맞고 이번 주 배정 시간이 가장 적습니다." }),
   ]);
   expect(busyShift.staffId).toBe("staff-busy");
 });
