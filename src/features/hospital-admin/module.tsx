@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
@@ -118,6 +118,8 @@ import {
 } from "@/features/hospital-admin/data";
 import { WorkspaceMembershipManagement } from "@/features/auth/workspace-membership-management";
 import { HospitalBasicSettingsScreen } from "@/features/hospital-admin/settings/hospital-basic-settings-screen";
+import { HospitalContactSettingsScreen } from "@/features/hospital-admin/settings/hospital-contact-settings-screen";
+import { HospitalOperatingHoursSettingsScreen } from "@/features/hospital-admin/settings/hospital-operating-hours-settings-screen";
 import { useHospitalBasicSettingsStore } from "@/features/hospital-admin/settings/hospital-basic-settings-store";
 import { HospitalScheduleScreen } from "@/features/hospital-admin/schedule/hospital-schedule-screen";
 import { WorkspaceVitalSettingsScreen } from "@/features/hospital-admin/vital-settings/workspace-vital-settings-screen";
@@ -147,6 +149,8 @@ const hospitalAdminSections = new Set<HospitalAdminSection>([
   "roles",
   "schedule",
   "settings",
+  "settings-contact",
+  "settings-hours",
   "space-time",
   "vitals",
 ]);
@@ -296,6 +300,7 @@ type OrderMenuGroup = {
 };
 
 type HospitalAdminMenuItem = {
+  group: "hospital" | "organization" | "catalog";
   icon: typeof SettingsIcon;
   label: string;
   section?: HospitalAdminSection;
@@ -303,17 +308,19 @@ type HospitalAdminMenuItem = {
 };
 
 const hospitalAdminMenuItems: HospitalAdminMenuItem[] = [
-  { label: "병원기본설정", icon: SettingsIcon, section: "settings", testId: "hospital-admin-menu-settings" },
-  { label: "병원구성원 관리", icon: UsersIcon, section: "members", testId: "hospital-admin-menu-members" },
-  { label: "감사 로그", icon: DocumentCheckIcon, section: "audit", testId: "hospital-admin-menu-audit" },
-  { label: "근무표", icon: CalendarIcon, section: "schedule", testId: "hospital-admin-menu-schedule" },
-  { label: "역할 및 권한", icon: GridIcon, section: "roles", testId: "hospital-admin-menu-roles" },
-  { label: "공간 관리", icon: BuildingIcon, section: "space-time", testId: "hospital-admin-menu-space-time" },
-  { label: "진료과 분리운영", icon: LayersIcon },
-  { label: "바이탈 관리", icon: ActivityIcon, section: "vitals", testId: "hospital-admin-menu-vitals" },
-  { label: "차트 템플릿", icon: ClipboardListIcon },
-  { label: "장비 관리", icon: DatabaseIcon },
-  { label: "마약류 관리", icon: ShieldIcon },
+  { group: "hospital", label: "병원 기본 설정", icon: SettingsIcon, section: "settings", testId: "hospital-admin-menu-settings" },
+  { group: "hospital", label: "연락처 및 채널", icon: UsersIcon, section: "settings-contact", testId: "hospital-admin-menu-settings-contact" },
+  { group: "hospital", label: "운영시간 관리", icon: CalendarIcon, section: "settings-hours", testId: "hospital-admin-menu-settings-hours" },
+  { group: "hospital", label: "공간 관리", icon: BuildingIcon, section: "space-time", testId: "hospital-admin-menu-space-time" },
+  { group: "hospital", label: "바이탈 관리", icon: ActivityIcon, section: "vitals", testId: "hospital-admin-menu-vitals" },
+  { group: "hospital", label: "진료과 분리운영", icon: LayersIcon },
+  { group: "organization", label: "병원 구성원", icon: UsersIcon, section: "members", testId: "hospital-admin-menu-members" },
+  { group: "organization", label: "역할 및 권한", icon: GridIcon, section: "roles", testId: "hospital-admin-menu-roles" },
+  { group: "organization", label: "근무표", icon: CalendarIcon, section: "schedule", testId: "hospital-admin-menu-schedule" },
+  { group: "organization", label: "감사 로그", icon: DocumentCheckIcon, section: "audit", testId: "hospital-admin-menu-audit" },
+  { group: "catalog", label: "차트 템플릿", icon: ClipboardListIcon },
+  { group: "catalog", label: "장비 관리", icon: DatabaseIcon },
+  { group: "catalog", label: "마약류 관리", icon: ShieldIcon },
 ];
 
 const orderMenuGroups: OrderMenuGroup[] = [
@@ -1022,6 +1029,9 @@ export function HospitalAdminConceptScreen({
 }
 
 export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const activeSection = useHospitalAdminStore((state) => state.activeSection);
   const cancelPendingSectionChange = useHospitalAdminStore((state) => state.cancelPendingSectionChange);
   const confirmPendingSectionChange = useHospitalAdminStore((state) => state.confirmPendingSectionChange);
@@ -1036,6 +1046,34 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
   const discardAllSettingsDrafts = useHospitalBasicSettingsStore((state) => state.discardAllDrafts);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["orders"]));
+  const [pendingOrderSelection, setPendingOrderSelection] = useState<{
+    categoryId: HospitalOrderCategoryId;
+    subcategoryId: HospitalOrderSubcategoryId;
+  } | null>(null);
+  const guardedSections = new Set<HospitalAdminSection>([
+    "settings",
+    "settings-contact",
+    "settings-hours",
+    "roles",
+  ]);
+  const pushSection = (section: HospitalAdminSection) => {
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    nextSearchParams.set("section", section);
+    router.push(`${pathname}?${nextSearchParams.toString()}`);
+  };
+  const navigateToSection = (section: HospitalAdminSection) => {
+    const shouldConfirmNavigation =
+      guardedSections.has(activeSection) &&
+      settingsDirty &&
+      section !== activeSection;
+    requestSectionChange(section);
+    if (shouldConfirmNavigation) return false;
+    pushSection(section);
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setModulePanelOpen(false);
+    }
+    return true;
+  };
   const toggleSection = (sectionId: string) => {
     setOpenSections((current) => {
       const next = new Set(current);
@@ -1075,7 +1113,14 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
         onClick: () => {
           if (!item.categoryId || !item.subcategoryId) return;
 
-          requestSectionChange("orders");
+          if (!navigateToSection("orders")) {
+            setPendingOrderSelection({
+              categoryId: item.categoryId,
+              subcategoryId: item.subcategoryId,
+            });
+            return;
+          }
+          setPendingOrderSelection(null);
           setSelectedCategoryId(item.categoryId);
           setSelectedSubcategoryId(item.subcategoryId);
         },
@@ -1087,6 +1132,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
     const nextSection = item.section;
 
     return {
+      group: item.group,
       type: "button" as const,
       id: item.label,
       active: nextSection ? activeSection === nextSection : false,
@@ -1094,23 +1140,29 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       icon: <Icon className="size-4 shrink-0" />,
       label: item.label,
       onClick: nextSection
-        ? () => {
-            const shouldConfirmNavigation =
-              (activeSection === "settings" || activeSection === "roles") &&
-              settingsDirty &&
-              nextSection !== activeSection;
-            requestSectionChange(nextSection);
-            if (shouldConfirmNavigation) return;
-            if (typeof window !== "undefined" && window.innerWidth < 768) {
-              setModulePanelOpen(false);
-            }
-          }
+        ? () => navigateToSection(nextSection)
         : undefined,
       testId: item.testId,
     };
   });
   const sidePanelItems: EmrModuleListSidePanelItem[] = [
-    ...hospitalAdminSidePanelItems.filter((item) => !item.disabled),
+    {
+      type: "groupLabel",
+      id: "hospital-settings-group",
+      label: "병원 설정",
+    },
+    ...hospitalAdminSidePanelItems.filter((item) => item.group === "hospital"),
+    {
+      type: "groupLabel",
+      id: "organization-access-group",
+      label: "조직 및 접근",
+    },
+    ...hospitalAdminSidePanelItems.filter((item) => item.group === "organization"),
+    {
+      type: "groupLabel",
+      id: "care-catalog-group",
+      label: "진료 카탈로그",
+    },
     {
       type: "section",
       id: "orders",
@@ -1120,7 +1172,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       testId: "hospital-admin-menu-order-management",
       children: orderSectionChildren,
     },
-    ...hospitalAdminSidePanelItems.filter((item) => item.disabled),
+    ...hospitalAdminSidePanelItems.filter((item) => item.group === "catalog"),
     {
       type: "button",
       id: "order-set",
@@ -1155,7 +1207,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
         onCollapse={() => setModulePanelOpen(false)}
         onToggleSection={(sectionId) => {
           if (sectionId === "orders") {
-            requestSectionChange("orders");
+            navigateToSection("orders");
           }
 
           toggleSection(sectionId);
@@ -1166,7 +1218,10 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       <Dialog
         open={pendingSection !== null}
         onOpenChange={(open) => {
-          if (!open) cancelPendingSectionChange();
+          if (!open) {
+            setPendingOrderSelection(null);
+            cancelPendingSectionChange();
+          }
         }}
       >
         <EmrConfirmDialogContent
@@ -1175,10 +1230,20 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
           cancelLabel="계속 편집"
           confirmLabel="변경사항 버리고 이동"
           confirmButtonVariant="destructive"
-          onCancel={cancelPendingSectionChange}
+          onCancel={() => {
+            setPendingOrderSelection(null);
+            cancelPendingSectionChange();
+          }}
           onConfirm={() => {
+            const nextSection = pendingSection;
             discardAllSettingsDrafts();
             confirmPendingSectionChange();
+            if (nextSection === "orders" && pendingOrderSelection) {
+              setSelectedCategoryId(pendingOrderSelection.categoryId);
+              setSelectedSubcategoryId(pendingOrderSelection.subcategoryId);
+            }
+            setPendingOrderSelection(null);
+            if (nextSection) pushSection(nextSection);
           }}
         />
       </Dialog>
@@ -1395,6 +1460,14 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
 
   if (activeSection === "settings") {
     return <HospitalBasicSettingsScreen workspaceId={workspaceId} />;
+  }
+
+  if (activeSection === "settings-contact") {
+    return <HospitalContactSettingsScreen workspaceId={workspaceId} />;
+  }
+
+  if (activeSection === "settings-hours") {
+    return <HospitalOperatingHoursSettingsScreen workspaceId={workspaceId} />;
   }
 
   if (activeSection === "schedule") {

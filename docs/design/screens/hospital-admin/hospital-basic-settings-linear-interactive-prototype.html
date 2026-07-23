@@ -1,0 +1,3394 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Linear 설정 화면 레퍼런스를 반영한 CLAiR 병원 기본 설정 인터랙티브 HTML 시안"
+    />
+    <link rel="icon" href="data:," />
+    <title>CLAiR 병원 기본 설정 · Interactive prototype</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8f8f9;
+        --surface: #ffffff;
+        --surface-subtle: #fafafa;
+        --sidebar: #f9f9f9;
+        --rail: #191a1e;
+        --hover: #ededee;
+        --active: #e5e5e5;
+        --border: #e5e5e5;
+        --border-strong: #d5d5d9;
+        --text: #171717;
+        --muted: #404040;
+        --faint: #737373;
+        --accent: #6268d9;
+        --accent-hover: #545ac7;
+        --accent-soft: #f0f0ff;
+        --success: #2e7c49;
+        --success-soft: #edf8f0;
+        --danger: #d14343;
+        --danger-soft: #fff1f1;
+        --warning: #96641d;
+        --warning-soft: #fff7e7;
+        --focus: rgba(98, 104, 217, 0.24);
+        --shadow-float:
+          0 18px 48px rgba(20, 21, 25, 0.16), 0 2px 10px rgba(20, 21, 25, 0.08);
+        --rail-width: 52px;
+        --sidebar-width: 304px;
+        font-family:
+          "Pretendard Variable", Pretendard, "SUIT Variable", SUIT,
+          "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.45;
+        letter-spacing: -0.012em;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button,
+      select {
+        cursor: pointer;
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 1px;
+      }
+
+      svg {
+        display: block;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .icon {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .app {
+        height: 100vh;
+        display: grid;
+        grid-template-rows: 44px minmax(0, 1fr);
+        overflow: hidden;
+      }
+
+      .topbar {
+        position: relative;
+        z-index: 60;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.94);
+        padding: 0 10px 0 8px;
+        backdrop-filter: blur(14px);
+      }
+
+      .topbar-group,
+      .workspace-switcher,
+      .tab-label,
+      .topbar-action {
+        display: flex;
+        align-items: center;
+      }
+
+      .topbar-group {
+        min-width: 0;
+        gap: 5px;
+      }
+
+      .workspace-switcher {
+        height: 32px;
+        max-width: 238px;
+        gap: 8px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: var(--surface);
+        padding: 0 9px 0 7px;
+        color: var(--text);
+        font-weight: 650;
+      }
+
+      .workspace-logo {
+        width: 20px;
+        height: 20px;
+        display: grid;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 6px;
+        background: #2e8cff;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .workspace-name,
+      .tab-label span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      .icon-button {
+        width: 30px;
+        height: 30px;
+        display: inline-grid;
+        place-items: center;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+      }
+
+      .icon-button:hover {
+        background: var(--hover);
+        color: var(--text);
+      }
+
+      .topbar-divider {
+        width: 1px;
+        height: 20px;
+        margin: 0 3px;
+        background: var(--border);
+      }
+
+      .tab-label {
+        min-width: 124px;
+        height: 32px;
+        gap: 8px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: #fbfbfb;
+        padding: 0 10px;
+        font-weight: 650;
+      }
+
+      .topbar-action {
+        height: 30px;
+        gap: 6px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface);
+        padding: 0 10px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .topbar-action:hover {
+        border-color: var(--border-strong);
+        background: var(--hover);
+        color: var(--text);
+      }
+
+      .prototype-chip {
+        min-height: 20px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        padding: 0 8px;
+        color: var(--accent);
+        font-size: 9px;
+        font-weight: 750;
+        letter-spacing: 0.03em;
+      }
+
+      .avatar-button {
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        background: #f2f2f3;
+        color: var(--text);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .mobile-menu {
+        display: none;
+      }
+
+      .workspace {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: var(--rail-width) var(--sidebar-width) minmax(
+            0,
+            1fr
+          );
+        transition: grid-template-columns 170ms ease;
+      }
+
+      .app.nav-collapsed .workspace {
+        grid-template-columns: var(--rail-width) 0 minmax(0, 1fr);
+      }
+
+      .app.nav-collapsed .settings-nav {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-304px);
+      }
+
+      .app.nav-collapsed .dirty-bar {
+        left: calc(var(--rail-width) + (100vw - var(--rail-width)) / 2);
+      }
+
+      .rail {
+        z-index: 35;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        background: var(--rail);
+        padding: 8px 6px;
+        color: #8e9199;
+      }
+
+      .rail-item {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+      }
+
+      .rail-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #d4d5d9;
+      }
+
+      .rail-item.active {
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+      }
+
+      .rail-spacer {
+        flex: 1;
+      }
+
+      .settings-nav {
+        position: relative;
+        z-index: 30;
+        width: 296px;
+        min-height: 0;
+        margin: 4px;
+        overflow-y: auto;
+        border-radius: 12px;
+        background: var(--sidebar);
+        box-shadow:
+          inset 0 0 0 1px var(--border),
+          0 1px 2px rgba(0, 0, 0, 0.05);
+        scrollbar-width: thin;
+        transition:
+          opacity 140ms ease,
+          transform 170ms ease;
+      }
+
+      .nav-head {
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        padding: 16px 16px 10px;
+      }
+
+      .nav-head h1 {
+        margin: 0;
+        color: #171717;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 24px;
+      }
+
+      .nav-head .icon-button {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+      }
+
+      .nav-head .icon-button img {
+        width: 12px;
+        height: 10px;
+      }
+
+      .settings-nav > nav {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 8px 0;
+      }
+
+      .nav-group + .nav-group {
+        margin-top: 0;
+      }
+
+      .nav-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 0 8px;
+      }
+
+      .nav-group-title {
+        height: 24px;
+        display: flex;
+        align-items: center;
+        margin: 0;
+        padding: 0 8px;
+        color: #737373;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.247px;
+        line-height: 18px;
+      }
+
+      .nav-item {
+        width: 280px;
+        height: 36px;
+        display: grid;
+        grid-template-columns: 14px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        padding: 6px 8px;
+        color: #404040;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.247px;
+        line-height: 18px;
+        text-align: left;
+      }
+
+      .nav-item:hover {
+        background: rgba(0, 0, 0, 0.04);
+        color: #171717;
+      }
+
+      .nav-item.active {
+        background: var(--active);
+        color: #171717;
+        font-weight: 600;
+      }
+
+      .nav-item .icon {
+        width: 14px;
+        height: 14px;
+      }
+
+      .nav-item[hidden] {
+        display: none;
+      }
+
+      .nav-item:disabled {
+        cursor: default;
+        color: #a3a3a3;
+      }
+
+      .nav-item:disabled:hover {
+        background: transparent;
+      }
+
+      .nav-meta {
+        min-width: 20px;
+        min-height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.04);
+        padding: 2px 6px;
+        color: #171923;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+        line-height: 16px;
+      }
+
+      .nav-empty {
+        display: none;
+        padding: 12px 8px;
+        color: var(--faint);
+        font-size: 12px;
+      }
+
+      .main {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
+        overflow-y: auto;
+        background: var(--bg);
+        scrollbar-width: thin;
+      }
+
+      .page {
+        width: min(100%, 960px);
+        margin: 0 auto;
+        padding: 56px 40px 150px;
+      }
+
+      .page-header {
+        margin-bottom: 46px;
+      }
+
+      .page-header h2 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.2;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      .page-header p {
+        max-width: 610px;
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .settings-group {
+        scroll-margin-top: 68px;
+      }
+
+      .settings-group[hidden] {
+        display: none;
+      }
+
+      .settings-group.page-enter {
+        animation: page-enter 180ms ease-out;
+      }
+
+      .settings-group + .settings-group {
+        margin-top: 48px;
+      }
+
+      .settings-group.page-first {
+        margin-top: 0;
+      }
+
+      .group-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 0 0 13px;
+        padding: 0 2px;
+      }
+
+      .group-heading h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 680;
+        letter-spacing: -0.025em;
+      }
+
+      .group-heading p {
+        margin: 0;
+        color: var(--faint);
+        font-size: 11px;
+      }
+
+      .settings-card {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 1px 1px rgba(20, 21, 25, 0.025);
+      }
+
+      .setting-row {
+        min-height: 76px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(230px, 330px);
+        align-items: center;
+        gap: 28px;
+        padding: 15px 20px;
+      }
+
+      .setting-row + .setting-row {
+        border-top: 1px solid var(--border);
+      }
+
+      .row-label {
+        min-width: 0;
+      }
+
+      .row-label strong,
+      .row-label span {
+        display: block;
+      }
+
+      .row-label strong {
+        font-size: 14px;
+        line-height: 1.4;
+        font-weight: 630;
+        letter-spacing: -0.02em;
+      }
+
+      .row-label span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .row-control {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .text-field,
+      .select-field {
+        width: 100%;
+        height: 36px;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        padding: 0 11px;
+        color: var(--text);
+        outline: 0;
+        transition:
+          border-color 120ms ease,
+          box-shadow 120ms ease;
+      }
+
+      .text-field:hover,
+      .select-field:hover {
+        border-color: #bfc0c6;
+      }
+
+      .text-field:focus,
+      .select-field:focus {
+        border-color: #a9aabc;
+        box-shadow: 0 0 0 3px var(--focus);
+      }
+
+      .text-field::placeholder {
+        color: #b0b1b6;
+      }
+
+      .text-area-field {
+        height: auto;
+        min-height: 88px;
+        max-height: 180px;
+        resize: vertical;
+        padding: 9px 11px;
+        line-height: 1.5;
+      }
+
+      .text-field[readonly] {
+        color: var(--muted);
+        cursor: default;
+      }
+
+      .text-field.invalid {
+        border-color: #d86969;
+        box-shadow: 0 0 0 3px rgba(209, 67, 67, 0.1);
+      }
+
+      .readonly-value {
+        color: var(--muted);
+        font-size: 13px;
+        text-align: right;
+      }
+
+      .hospital-logo {
+        width: 44px;
+        height: 44px;
+        position: relative;
+        display: grid;
+        overflow: hidden;
+        place-items: center;
+        flex: 0 0 auto;
+        appearance: none;
+        border: 1px solid #dbe7f5;
+        border-radius: 10px;
+        background: #edf5ff;
+        padding: 0;
+        color: #2879d1;
+        cursor: pointer;
+        isolation: isolate;
+        transition:
+          border-color 140ms ease,
+          box-shadow 140ms ease;
+      }
+
+      .hospital-logo > .icon {
+        width: 21px;
+        height: 21px;
+      }
+
+      .hospital-logo > img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .hospital-logo > img[hidden],
+      .hospital-logo > svg[hidden],
+      .logo-preview-large img[hidden],
+      .logo-preview-large svg[hidden] {
+        display: none;
+      }
+
+      .hospital-logo-overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        border-radius: inherit;
+        background: rgba(20, 21, 25, 0.58);
+        color: #fff;
+        opacity: 0;
+        transition:
+          background 140ms ease,
+          opacity 140ms ease;
+      }
+
+      .hospital-logo-overlay .icon {
+        width: 18px;
+        height: 18px;
+        stroke-width: 2;
+      }
+
+      .hospital-logo:hover,
+      .hospital-logo:focus-visible {
+        border-color: #b8bbc2;
+      }
+
+      .hospital-logo:hover .hospital-logo-overlay,
+      .hospital-logo:focus-visible .hospital-logo-overlay {
+        opacity: 1;
+      }
+
+      .hospital-logo:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px var(--focus);
+      }
+
+      .hospital-logo:active .hospital-logo-overlay {
+        background: rgba(20, 21, 25, 0.7);
+        opacity: 1;
+      }
+
+      .button {
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 1px solid var(--border-strong);
+        border-radius: 7px;
+        background: var(--surface);
+        padding: 0 11px;
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 630;
+        box-shadow: 0 1px 1px rgba(20, 21, 25, 0.035);
+      }
+
+      .button:hover {
+        border-color: #bfc0c6;
+        background: #f7f7f8;
+      }
+
+      .button:disabled {
+        border-color: var(--border);
+        background: #f3f3f4;
+        color: var(--faint);
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      .button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .button.primary:hover {
+        border-color: var(--accent-hover);
+        background: var(--accent-hover);
+      }
+
+      .button.primary:disabled {
+        border-color: var(--border);
+        background: #f3f3f4;
+        color: var(--faint);
+      }
+
+      .button.danger {
+        border-color: #edcaca;
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .button.icon-only {
+        width: 34px;
+        flex: 0 0 auto;
+        padding: 0;
+      }
+
+      .link-button {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        gap: 6px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        padding: 0 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .link-button:hover {
+        background: var(--hover);
+        color: var(--text);
+      }
+
+      .day-button {
+        min-width: 176px;
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        padding: 0 10px 0 12px;
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .day-button:not(:disabled):hover {
+        border-color: #bfc0c6;
+        background: #f9f9fa;
+      }
+
+      .day-button:disabled {
+        border-color: #e0e1e4;
+        background: #f4f4f5;
+        color: var(--faint);
+        cursor: not-allowed;
+      }
+
+      .schedule-overview {
+        min-height: 94px;
+      }
+
+      .schedule-overview + .schedule-list {
+        border-top: 1px solid var(--border);
+      }
+
+      .schedule-overview .row-control {
+        min-width: 322px;
+      }
+
+      .workweek-days {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .workweek-day {
+        width: 40px;
+        height: 40px;
+        border: 0;
+        border-radius: 8px;
+        background: #f0f0f1;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .workweek-day[aria-pressed="true"] {
+        background: #202124;
+        color: #fff;
+      }
+
+      .workweek-day:hover {
+        box-shadow: inset 0 0 0 1px var(--border-strong);
+      }
+
+      .day-status {
+        display: inline-flex;
+        min-height: 24px;
+        align-items: center;
+        border-radius: 999px;
+        background: var(--warning-soft);
+        padding: 0 8px;
+        color: var(--warning);
+        font-size: 10px;
+        font-weight: 650;
+      }
+
+      .day-status.closed {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .exception-row {
+        min-height: 72px;
+      }
+
+      .exception-control {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .exception-summary {
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: right;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .add-row {
+        min-height: 58px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        border-top: 1px solid var(--border);
+        padding: 10px 20px;
+      }
+
+      .add-row span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .empty-row {
+        display: none;
+        min-height: 88px;
+        place-items: center;
+        color: var(--faint);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .scope-card {
+        border: 1px solid #e0e0f2;
+        border-radius: 12px;
+        background: #f8f8ff;
+        padding: 16px 18px;
+        color: #656687;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .scope-card strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #53547b;
+      }
+
+      .dirty-bar {
+        position: fixed;
+        z-index: 50;
+        left: calc(
+          var(--rail-width) + var(--sidebar-width) +
+            (100vw - var(--rail-width) - var(--sidebar-width)) / 2
+        );
+        bottom: 22px;
+        min-width: min(510px, calc(100vw - 40px));
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 10px;
+        background: #202126;
+        padding: 9px 10px 9px 14px;
+        color: #fff;
+        box-shadow: var(--shadow-float);
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, 16px);
+        transition:
+          opacity 150ms ease,
+          transform 170ms ease;
+      }
+
+      .dirty-bar.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, 0);
+      }
+
+      .dirty-copy strong,
+      .dirty-copy span {
+        display: block;
+      }
+
+      .dirty-copy strong {
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .dirty-copy span {
+        margin-top: 2px;
+        color: #aeb0b8;
+        font-size: 10px;
+      }
+
+      .dirty-actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 6px;
+      }
+
+      .dirty-actions .button:not(.primary) {
+        border-color: #3b3c43;
+        background: #2a2b31;
+        color: #e4e4e7;
+      }
+
+      .toast-region {
+        position: fixed;
+        z-index: 90;
+        top: 58px;
+        right: 18px;
+        width: min(340px, calc(100vw - 36px));
+        display: grid;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .toast {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.98);
+        padding: 10px 12px;
+        box-shadow: var(--shadow-float);
+        animation: toast-in 160ms ease-out;
+      }
+
+      .toast .icon {
+        margin-top: 1px;
+        color: var(--success);
+      }
+
+      .toast.info .icon {
+        color: var(--accent);
+      }
+
+      .toast.error {
+        border-color: #efcaca;
+        background: rgba(255, 249, 249, 0.98);
+      }
+
+      .toast.error .icon {
+        color: var(--danger);
+      }
+
+      .toast strong,
+      .toast span {
+        display: block;
+      }
+
+      .toast strong {
+        font-size: 12px;
+      }
+
+      .toast span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .modal-layer {
+        position: fixed;
+        z-index: 110;
+        inset: 0;
+        display: none;
+        place-items: center;
+        background: rgba(20, 21, 25, 0.38);
+        padding: 20px;
+        backdrop-filter: blur(3px);
+      }
+
+      .modal-layer.open {
+        display: grid;
+        animation: fade-in 130ms ease-out;
+      }
+
+      .dialog {
+        width: min(100%, 480px);
+        max-height: min(720px, calc(100vh - 40px));
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 30px 90px rgba(20, 21, 25, 0.3);
+        animation: dialog-in 150ms ease-out;
+      }
+
+      .dialog-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 17px 18px 14px;
+      }
+
+      .dialog-header h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .dialog-header p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .dialog-body {
+        display: grid;
+        gap: 16px;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 18px;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 7px;
+        padding: 12px 18px;
+      }
+
+      .field {
+        min-width: 0;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 12px;
+        font-weight: 630;
+      }
+
+      .field input,
+      .field select,
+      .field textarea {
+        width: 100%;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+        outline: 0;
+      }
+
+      .field input,
+      .field select {
+        height: 36px;
+        padding: 0 10px;
+      }
+
+      .field textarea {
+        min-height: 90px;
+        resize: vertical;
+        padding: 9px 10px;
+      }
+
+      .field input:focus,
+      .field select:focus,
+      .field textarea:focus {
+        border-color: #a9aabc;
+        box-shadow: 0 0 0 3px var(--focus);
+      }
+
+      .field-hint {
+        margin: 6px 0 0;
+        color: var(--faint);
+        font-size: 11px;
+      }
+
+      .field-error {
+        margin: 6px 0 0;
+        color: #bd3b3b;
+        font-size: 11px;
+      }
+
+      .logo-editor {
+        display: grid;
+        grid-template-columns: 88px minmax(0, 1fr);
+        align-items: center;
+        gap: 16px;
+      }
+
+      .logo-preview-large {
+        width: 88px;
+        height: 88px;
+        display: grid;
+        overflow: hidden;
+        place-items: center;
+        border: 1px solid #dbe7f5;
+        border-radius: 16px;
+        background: #edf5ff;
+        color: #2879d1;
+      }
+
+      .logo-preview-large .icon {
+        width: 30px;
+        height: 30px;
+      }
+
+      .logo-preview-large img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .logo-editor-copy strong,
+      .logo-editor-copy span {
+        display: block;
+      }
+
+      .logo-editor-copy strong {
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .logo-editor-copy span {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .logo-editor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .check-list {
+        display: grid;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      .check-row {
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 11px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .check-row + .check-row {
+        border-top: 1px solid var(--border);
+      }
+
+      .check-row input {
+        accent-color: var(--accent);
+      }
+
+      .exception-hours {
+        display: none;
+      }
+
+      .exception-hours.visible {
+        display: grid;
+      }
+
+      @keyframes toast-in {
+        from {
+          opacity: 0;
+          transform: translateY(-7px);
+        }
+      }
+
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+        }
+      }
+
+      @keyframes page-enter {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+      }
+
+      @keyframes dialog-in {
+        from {
+          opacity: 0;
+          transform: translateY(9px) scale(0.985);
+        }
+      }
+
+      @media (max-width: 1120px) {
+        .page {
+          padding-inline: 32px;
+        }
+      }
+
+      @media (max-width: 920px) {
+        .workspace {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .app.nav-collapsed .workspace {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .app.nav-collapsed .settings-nav {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .rail {
+          display: none;
+        }
+
+        .mobile-menu {
+          display: inline-grid;
+        }
+
+        .settings-nav {
+          position: fixed;
+          top: 44px;
+          bottom: 0;
+          left: 0;
+          z-index: 70;
+          width: min(296px, calc(100vw - 16px));
+          margin: 4px;
+          box-shadow: var(--shadow-float);
+          transform: translateX(-105%);
+          transition: transform 170ms ease;
+        }
+
+        .settings-nav.mobile-open {
+          transform: translateX(0);
+        }
+
+        .main {
+          min-height: calc(100vh - 44px);
+        }
+
+        .dirty-bar {
+          left: 50%;
+        }
+
+        .tab-label,
+        .topbar-divider,
+        .nav-arrow {
+          display: none;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .prototype-chip,
+        .topbar-action,
+        .topbar-help {
+          display: none;
+        }
+
+        .workspace-switcher {
+          max-width: 248px;
+        }
+
+        .workweek-days {
+          flex-wrap: nowrap;
+          gap: 6px;
+        }
+
+        .workweek-day {
+          width: auto;
+          min-width: 0;
+          flex: 1 1 0;
+        }
+
+        .page {
+          padding: 38px 18px 132px;
+        }
+
+        .page-header {
+          margin-bottom: 38px;
+        }
+
+        .page-header h2 {
+          font-size: 26px;
+        }
+
+        .settings-group + .settings-group {
+          margin-top: 40px;
+        }
+
+        .setting-row {
+          min-height: 0;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 12px;
+          padding: 17px 16px;
+        }
+
+        .row-control {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .schedule-overview .row-control {
+          min-width: 0;
+        }
+
+        .readonly-value {
+          text-align: left;
+        }
+
+        .day-button {
+          min-width: 0;
+          flex: 1;
+        }
+
+        .exception-control {
+          width: 100%;
+          grid-template-columns: minmax(0, 1fr) auto auto;
+        }
+
+        .exception-summary {
+          text-align: left;
+        }
+
+        .add-row {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 14px 16px;
+        }
+
+        .dirty-bar {
+          bottom: 12px;
+          width: calc(100vw - 24px);
+          min-width: 0;
+        }
+
+        .dirty-copy span {
+          display: none;
+        }
+
+        .field-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg class="sr-only" aria-hidden="true" width="0" height="0">
+      <symbol id="i-chevron-down" viewBox="0 0 24 24">
+        <path d="m7 10 5 5 5-5" />
+      </symbol>
+      <symbol id="i-chevron-right" viewBox="0 0 24 24">
+        <path d="m9 6 6 6-6 6" />
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-4-4" />
+      </symbol>
+      <symbol id="i-building" viewBox="0 0 24 24">
+        <path d="M5 21V5l7-3 7 3v16" />
+        <path d="M9 9h1m4 0h1M9 13h1m4 0h1M9 17h6M3 21h18" />
+      </symbol>
+      <symbol id="i-home" viewBox="0 0 24 24">
+        <path d="m3 10 9-7 9 7v10H3z" />
+        <path d="M9 20v-6h6v6" />
+      </symbol>
+      <symbol id="i-users" viewBox="0 0 24 24">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+      </symbol>
+      <symbol id="i-key" viewBox="0 0 24 24">
+        <circle cx="8" cy="15" r="5" />
+        <path d="m12 11 8-8m-3 3 3 3m-6 0 3 3" />
+      </symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </symbol>
+      <symbol id="i-calendar" viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </symbol>
+      <symbol id="i-activity" viewBox="0 0 24 24">
+        <path d="M3 12h4l2-7 4 14 2-7h6" />
+      </symbol>
+      <symbol id="i-package" viewBox="0 0 24 24">
+        <path
+          d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+        />
+        <path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" />
+      </symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      </symbol>
+      <symbol id="i-file" viewBox="0 0 24 24">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+        <path d="M14 2v6h6M8 13h8M8 17h6" />
+      </symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24">
+        <path d="M4 6h10M18 6h2M10 12h10M4 12h2M4 18h6M14 18h6" />
+        <circle cx="16" cy="6" r="2" />
+        <circle cx="8" cy="12" r="2" />
+        <circle cx="12" cy="18" r="2" />
+      </symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24">
+        <rect x="9" y="9" width="11" height="11" rx="2" />
+        <path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3" />
+      </symbol>
+      <symbol id="i-info" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5M12 8h.01" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path d="m5 12 4 4L19 6" />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path d="m6 6 12 12M18 6 6 18" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" />
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24">
+        <path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6" />
+      </symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24">
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24">
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </symbol>
+      <symbol id="i-back" viewBox="0 0 24 24">
+        <path d="m15 18-6-6 6-6" />
+      </symbol>
+      <symbol id="i-forward" viewBox="0 0 24 24">
+        <path d="m9 18 6-6-6-6" />
+      </symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24">
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+        <path d="M3 3v5h5" />
+      </symbol>
+    </svg>
+
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar-group">
+          <button
+            class="icon-button mobile-menu"
+            id="mobile-menu"
+            type="button"
+            aria-label="설정 메뉴 열기"
+          >
+            <svg class="icon"><use href="#i-menu" /></svg>
+          </button>
+          <button
+            class="workspace-switcher"
+            type="button"
+            aria-label="워크스페이스 전환"
+          >
+            <span class="workspace-logo">C</span>
+            <span class="workspace-name">VIP동물의료센터 청담점</span>
+            <svg class="icon"><use href="#i-chevron-down" /></svg>
+          </button>
+          <span class="topbar-divider" aria-hidden="true"></span>
+          <button class="icon-button nav-arrow" type="button" aria-label="뒤로">
+            <svg class="icon"><use href="#i-back" /></svg>
+          </button>
+          <button
+            class="icon-button nav-arrow"
+            type="button"
+            aria-label="앞으로"
+          >
+            <svg class="icon"><use href="#i-forward" /></svg>
+          </button>
+          <div class="tab-label">
+            <svg class="icon"><use href="#i-building" /></svg>
+            <span>병원관리</span>
+          </div>
+        </div>
+        <div class="topbar-group">
+          <span class="prototype-chip">REFERENCE V2</span>
+          <button class="topbar-action" id="reset-prototype" type="button">
+            <svg class="icon"><use href="#i-reset" /></svg>
+            시안 초기화
+          </button>
+          <button
+            class="icon-button topbar-help"
+            type="button"
+            aria-label="도움말"
+          >
+            <svg class="icon"><use href="#i-info" /></svg>
+          </button>
+          <button class="avatar-button" type="button" aria-label="사용자 메뉴">
+            AD
+          </button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <nav class="rail" aria-label="주요 모듈">
+          <button class="rail-item" type="button" aria-label="홈">
+            <svg class="icon"><use href="#i-home" /></svg>
+          </button>
+          <button class="rail-item" type="button" aria-label="검색">
+            <svg class="icon"><use href="#i-search" /></svg>
+          </button>
+          <button class="rail-item" type="button" aria-label="캘린더">
+            <svg class="icon"><use href="#i-calendar" /></svg>
+          </button>
+          <button class="rail-item" type="button" aria-label="진료">
+            <svg class="icon"><use href="#i-activity" /></svg>
+          </button>
+          <button class="rail-item" type="button" aria-label="오더">
+            <svg class="icon"><use href="#i-package" /></svg>
+          </button>
+          <span class="rail-spacer"></span>
+          <button
+            class="rail-item active"
+            id="hospital-nav-toggle"
+            type="button"
+            aria-label="병원관리"
+            aria-current="page"
+          >
+            <svg class="icon"><use href="#i-building" /></svg>
+          </button>
+          <button class="rail-item" type="button" aria-label="지원">
+            <svg class="icon"><use href="#i-info" /></svg>
+          </button>
+        </nav>
+
+        <aside
+          class="settings-nav"
+          id="settings-nav"
+          aria-label="병원관리 설정"
+        >
+          <div class="nav-head">
+            <h1>병원관리</h1>
+            <button
+              class="icon-button"
+              id="close-nav"
+              type="button"
+              aria-label="메뉴 닫기"
+              aria-expanded="true"
+            >
+              <img
+                src="./assets/cds-v2-subpanel-collapse.svg"
+                alt=""
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+
+          <nav aria-label="설정 항목">
+            <div class="nav-group">
+              <p class="nav-group-title">병원 설정</p>
+              <button
+                class="nav-item active"
+                type="button"
+                data-target="hospital"
+                data-search="병원 기본 설정 병원 정보 로고"
+              >
+                <svg class="icon"><use href="#i-building" /></svg>
+                <span>병원 기본 설정</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                data-target="contact"
+                data-search="연락처 전화 팩스 홈페이지 인스타그램"
+              >
+                <svg class="icon"><use href="#i-users" /></svg>
+                <span>연락처 및 채널</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                data-target="hours"
+                data-search="운영시간 관리 진료시간 휴게시간 공휴일 예외일 휴무"
+              >
+                <svg class="icon"><use href="#i-clock" /></svg>
+                <span>운영시간 관리</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="공간 시간 관리"
+              >
+                <svg class="icon"><use href="#i-grid" /></svg>
+                <span>공간/시간 관리</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="바이탈 관리"
+              >
+                <svg class="icon"><use href="#i-activity" /></svg>
+                <span>바이탈 관리</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="진료과 분리운영"
+              >
+                <svg class="icon"><use href="#i-package" /></svg>
+                <span>진료과 분리운영</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+            </div>
+
+            <div class="nav-group">
+              <p class="nav-group-title">조직 및 접근</p>
+              <button
+                class="nav-item"
+                type="button"
+                data-search="병원 구성원 직원"
+              >
+                <svg class="icon"><use href="#i-users" /></svg>
+                <span>병원 구성원</span>
+                <span class="nav-meta">28</span>
+              </button>
+              <button class="nav-item" type="button" data-search="역할 권한">
+                <svg class="icon"><use href="#i-key" /></svg>
+                <span>역할 및 권한</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                data-search="근무표 스케줄"
+              >
+                <svg class="icon"><use href="#i-calendar" /></svg>
+                <span>근무표</span>
+              </button>
+              <button class="nav-item" type="button" data-search="감사 로그">
+                <svg class="icon"><use href="#i-shield" /></svg>
+                <span>감사 로그</span>
+              </button>
+            </div>
+
+            <div class="nav-group">
+              <p class="nav-group-title">진료 카탈로그</p>
+              <button class="nav-item" type="button" data-search="오더 관리">
+                <svg class="icon"><use href="#i-package" /></svg>
+                <span>Order 관리</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="차트 템플릿"
+              >
+                <svg class="icon"><use href="#i-file" /></svg>
+                <span>차트 템플릿</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="장비 관리"
+              >
+                <svg class="icon"><use href="#i-package" /></svg>
+                <span>장비 관리</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="마약류 관리"
+              >
+                <svg class="icon"><use href="#i-shield" /></svg>
+                <span>마약류 관리</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="오더 세트 Order 세트"
+              >
+                <svg class="icon"><use href="#i-package" /></svg>
+                <span>Order 세트</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="프린터 설정"
+              >
+                <svg class="icon"><use href="#i-sliders" /></svg>
+                <span>프린터 설정</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+              <button
+                class="nav-item"
+                type="button"
+                disabled
+                data-search="데이터랩"
+              >
+                <svg class="icon"><use href="#i-sliders" /></svg>
+                <span>데이터랩</span>
+                <span class="nav-meta">준비중</span>
+              </button>
+            </div>
+          </nav>
+        </aside>
+
+        <main class="main" id="main">
+          <div class="sr-only" aria-live="polite">
+            <span id="save-state-text">모든 변경사항이 저장됨</span>
+          </div>
+
+          <article class="page">
+            <header class="page-header">
+              <h2 id="page-title" tabindex="-1">병원 기본 설정</h2>
+              <p id="page-description">
+                병원에 표시되는 기본 정보와 지역 기준을 확인합니다.
+              </p>
+            </header>
+
+            <form id="settings-form" novalidate>
+              <section
+                class="settings-group"
+                id="hospital"
+                data-title="병원 정보"
+              >
+                <div class="group-heading">
+                  <h3>병원 정보</h3>
+                </div>
+                <div class="settings-card">
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>병원 로고</strong>
+                      <span
+                        >PNG 또는 JPG, 최대 5MB. 256 × 256px 이상을
+                        권장합니다.</span
+                      >
+                    </div>
+                    <div class="row-control">
+                      <button
+                        class="hospital-logo"
+                        id="hospital-logo-preview"
+                        type="button"
+                        aria-label="병원 로고 변경"
+                      >
+                        <svg class="icon"><use href="#i-building" /></svg>
+                        <img alt="병원 로고 미리보기" hidden />
+                        <span class="hospital-logo-overlay" aria-hidden="true">
+                          <svg class="icon"><use href="#i-edit" /></svg>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>병원명</strong>
+                    </div>
+                    <div class="row-control">
+                      <input
+                        class="text-field"
+                        type="text"
+                        aria-label="병원명"
+                        value="VIP동물의료센터 청담점"
+                        readonly
+                      />
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>대표자/원장</strong>
+                    </div>
+                    <div class="row-control">
+                      <input
+                        class="text-field"
+                        type="text"
+                        aria-label="대표자/원장"
+                        value="김청담"
+                        readonly
+                      />
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>주소</strong>
+                    </div>
+                    <div class="row-control">
+                      <input
+                        class="text-field"
+                        id="address"
+                        type="text"
+                        aria-label="주소"
+                        value="서울 강남구 도산대로 000"
+                        readonly
+                      />
+                      <button
+                        class="button icon-only"
+                        id="copy-address"
+                        type="button"
+                        aria-label="주소 복사"
+                      >
+                        <svg class="icon"><use href="#i-copy" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>등록 정보 변경</strong>
+                      <span
+                        >병원명, 대표자 및 주소 변경은 운영팀 확인이
+                        필요합니다.</span
+                      >
+                    </div>
+                    <div class="row-control">
+                      <button
+                        class="button"
+                        type="button"
+                        data-open-modal="request-dialog"
+                      >
+                        변경 요청
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section
+                class="settings-group"
+                id="region"
+                data-title="지역 및 시간대"
+              >
+                <div class="group-heading">
+                  <h3>지역 및 시간대</h3>
+                </div>
+                <div class="settings-card">
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>시간대</strong>
+                      <span>예약 및 운영시간 계산에 사용됩니다.</span>
+                    </div>
+                    <div class="row-control">
+                      <span class="readonly-value">Asia/Seoul (UTC+09:00)</span>
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>지역</strong>
+                      <span>워크스페이스 생성 후에는 변경할 수 없습니다.</span>
+                    </div>
+                    <div class="row-control">
+                      <span class="readonly-value">대한민국</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section
+                class="settings-group"
+                id="contact"
+                data-title="연락처 및 채널"
+                hidden
+              >
+                <div class="group-heading">
+                  <h3>연락처 및 채널</h3>
+                </div>
+                <div class="settings-card">
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>대표 전화</strong>
+                      <span
+                        >고객 안내 및 문서에 표시되는 필수 연락처입니다.</span
+                      >
+                    </div>
+                    <div class="row-control">
+                      <input
+                        class="text-field"
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        value="02-6203-7582"
+                        data-dirty-key="대표 전화"
+                      />
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>팩스</strong>
+                    </div>
+                    <div class="row-control">
+                      <input
+                        class="text-field"
+                        name="fax"
+                        type="tel"
+                        value="02-6203-7583"
+                        data-dirty-key="팩스"
+                      />
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>홈페이지</strong>
+                    </div>
+                    <div class="row-control">
+                      <input
+                        class="text-field"
+                        name="homepage"
+                        type="url"
+                        placeholder="https://"
+                        data-dirty-key="홈페이지"
+                      />
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>인스타그램</strong>
+                    </div>
+                    <div class="row-control">
+                      <input
+                        class="text-field"
+                        name="instagram"
+                        type="text"
+                        placeholder="@account"
+                        data-dirty-key="인스타그램"
+                      />
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>고객 안내 메모</strong>
+                      <span
+                        >예약 알림과 방문 안내에 표시할 문구를 입력합니다.</span
+                      >
+                    </div>
+                    <div class="row-control">
+                      <textarea
+                        class="text-field text-area-field"
+                        name="contactNote"
+                        rows="3"
+                        maxlength="300"
+                        aria-label="고객 안내 메모"
+                        data-dirty-key="고객 안내 메모"
+                      >
+주차는 건물 뒤편 발렛을 이용해 주세요.</textarea>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section
+                class="settings-group"
+                id="hours"
+                data-title="주간 운영시간"
+                hidden
+              >
+                <div class="group-heading">
+                  <h3>주간 운영시간</h3>
+                  <p>요일별 운영 여부와 진료·휴게시간을 설정합니다.</p>
+                </div>
+                <div class="settings-card" id="schedule-card"></div>
+              </section>
+
+              <section
+                class="settings-group"
+                id="exceptions"
+                data-title="공휴일 및 예외일"
+                hidden
+              >
+                <div class="group-heading">
+                  <h3>공휴일 및 예외일</h3>
+                  <p>공휴일 정책과 날짜별 예외 운영 일정을 설정합니다.</p>
+                </div>
+                <div class="settings-card">
+                  <div class="setting-row">
+                    <div class="row-label">
+                      <strong>공휴일 기본 정책</strong>
+                      <span
+                        >별도 일정이 없는 공휴일에 적용할 운영 기준을
+                        선택합니다.</span
+                      >
+                    </div>
+                    <div class="row-control">
+                      <select
+                        class="select-field"
+                        id="holiday-policy"
+                        aria-label="공휴일 기본 정책"
+                        data-dirty-key="공휴일 기본 정책"
+                      >
+                        <option value="closed">휴무</option>
+                        <option value="weekday">평일 운영시간 적용</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div id="exception-rows"></div>
+                  <div class="empty-row" id="empty-exceptions">
+                    등록된 예외 일정이 없습니다.
+                  </div>
+                  <div class="add-row">
+                    <span
+                      >특정 날짜의 휴무 또는 단축 운영시간을 추가할 수
+                      있습니다.</span
+                    >
+                    <button
+                      class="button"
+                      type="button"
+                      data-open-modal="exception-dialog"
+                    >
+                      <svg class="icon"><use href="#i-plus" /></svg>
+                      예외 일정 추가
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </form>
+          </article>
+        </main>
+      </div>
+    </div>
+
+    <div
+      class="dirty-bar"
+      id="dirty-bar"
+      role="status"
+      aria-live="polite"
+      aria-hidden="true"
+    >
+      <div class="dirty-copy">
+        <strong
+          ><span id="dirty-count">0</span>개의 변경사항이 있습니다.</strong
+        >
+        <span>저장 전까지 현재 브라우저에서만 유지됩니다.</span>
+      </div>
+      <div class="dirty-actions">
+        <button class="button" id="revert-button" type="button">
+          되돌리기
+        </button>
+        <button class="button primary" id="save-button" type="button">
+          변경사항 저장
+        </button>
+      </div>
+    </div>
+
+    <div
+      class="toast-region"
+      id="toast-region"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <div class="modal-layer" id="navigation-dialog" role="presentation">
+      <section
+        class="dialog compact-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="navigation-title"
+        aria-describedby="navigation-description"
+      >
+        <header class="dialog-header">
+          <div>
+            <h2 id="navigation-title">저장하지 않은 변경사항이 있습니다.</h2>
+            <p id="navigation-description">
+              다른 설정 화면으로 이동하면 현재 변경사항이 삭제됩니다.
+            </p>
+          </div>
+          <button
+            class="icon-button modal-close"
+            id="navigation-close"
+            type="button"
+            aria-label="닫기"
+          >
+            <svg class="icon"><use href="#i-close" /></svg>
+          </button>
+        </header>
+        <footer class="dialog-actions">
+          <button class="button" id="navigation-stay" type="button">
+            계속 편집
+          </button>
+          <button class="button danger" id="navigation-discard" type="button">
+            변경사항 삭제 후 이동
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <div class="modal-layer" id="logo-dialog" role="presentation">
+      <section
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logo-dialog-title"
+        aria-describedby="logo-dialog-description"
+      >
+        <header class="dialog-header">
+          <div>
+            <h2 id="logo-dialog-title">병원 로고 변경</h2>
+            <p id="logo-dialog-description">
+              병원관리와 고객 안내 화면에 표시할 이미지를 선택합니다.
+            </p>
+          </div>
+          <button
+            class="icon-button modal-close"
+            type="button"
+            aria-label="닫기"
+          >
+            <svg class="icon"><use href="#i-close" /></svg>
+          </button>
+        </header>
+        <div class="dialog-body">
+          <div class="logo-editor">
+            <div
+              class="logo-preview-large"
+              id="logo-dialog-preview"
+              aria-label="선택한 병원 로고 미리보기"
+            >
+              <svg class="icon"><use href="#i-building" /></svg>
+              <img alt="선택한 병원 로고" hidden />
+            </div>
+            <div class="logo-editor-copy">
+              <strong id="logo-file-name">기본 이미지</strong>
+              <span
+                >PNG 또는 JPG 파일을 선택해 주세요. 최대 용량은 5MB입니다.</span
+              >
+              <div class="logo-editor-actions">
+                <label class="button" for="logo-file-input">파일 선택</label>
+                <button class="button" id="use-default-logo" type="button">
+                  기본 이미지 사용
+                </button>
+              </div>
+              <input
+                class="sr-only"
+                id="logo-file-input"
+                type="file"
+                accept="image/png,image/jpeg"
+              />
+              <p class="field-error" id="logo-file-error" hidden></p>
+            </div>
+          </div>
+        </div>
+        <footer class="dialog-actions">
+          <button class="button modal-close" type="button">취소</button>
+          <button class="button primary" id="apply-logo" type="button">
+            로고 적용
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <div class="modal-layer" id="request-dialog" role="presentation">
+      <section
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="request-title"
+      >
+        <header class="dialog-header">
+          <div>
+            <h2 id="request-title">병원 정보 변경 요청</h2>
+            <p>실제 전송 없이 변경 요청 과정을 확인하는 시안입니다.</p>
+          </div>
+          <button
+            class="icon-button modal-close"
+            type="button"
+            aria-label="닫기"
+          >
+            <svg class="icon"><use href="#i-close" /></svg>
+          </button>
+        </header>
+        <div class="dialog-body">
+          <div>
+            <span class="sr-only" id="request-items-label"
+              >변경이 필요한 항목</span
+            >
+            <div class="check-list" aria-labelledby="request-items-label">
+              <label class="check-row"
+                ><input type="checkbox" value="hospital-name" /> 병원명</label
+              >
+              <label class="check-row"
+                ><input type="checkbox" value="director" /> 대표자/원장</label
+              >
+              <label class="check-row"
+                ><input type="checkbox" value="address" /> 주소</label
+              >
+            </div>
+          </div>
+          <div class="field">
+            <label for="request-detail">변경 내용</label>
+            <textarea
+              id="request-detail"
+              placeholder="변경할 정보와 사유를 입력해 주세요."
+            ></textarea>
+            <p class="field-hint">
+              시안에서는 입력한 내용이 외부로 전송되지 않습니다.
+            </p>
+          </div>
+        </div>
+        <footer class="dialog-actions">
+          <button class="button modal-close" type="button">취소</button>
+          <button class="button primary" id="request-submit" type="button">
+            요청 흐름 확인
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <div class="modal-layer" id="schedule-dialog" role="presentation">
+      <section
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="schedule-title"
+      >
+        <header class="dialog-header">
+          <div>
+            <h2 id="schedule-title">월요일 운영시간</h2>
+            <p>진료시간과 휴게시간을 30분 단위로 설정합니다.</p>
+          </div>
+          <button
+            class="icon-button modal-close"
+            type="button"
+            aria-label="닫기"
+          >
+            <svg class="icon"><use href="#i-close" /></svg>
+          </button>
+        </header>
+        <div class="dialog-body">
+          <div class="field-grid">
+            <div class="field">
+              <label for="day-start">진료 시작</label>
+              <select id="day-start"></select>
+            </div>
+            <div class="field">
+              <label for="day-end">진료 종료</label>
+              <select id="day-end"></select>
+            </div>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="break-start">휴게 시작</label>
+              <select id="break-start"></select>
+            </div>
+            <div class="field">
+              <label for="break-end">휴게 종료</label>
+              <select id="break-end"></select>
+            </div>
+          </div>
+        </div>
+        <footer class="dialog-actions">
+          <button class="button modal-close" type="button">취소</button>
+          <button class="button primary" id="schedule-save" type="button">
+            운영시간 적용
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <div class="modal-layer" id="exception-dialog" role="presentation">
+      <section
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exception-title"
+      >
+        <header class="dialog-header">
+          <div>
+            <h2 id="exception-title">예외 일정 추가</h2>
+            <p>주간 운영시간보다 우선 적용할 날짜별 일정을 추가합니다.</p>
+          </div>
+          <button
+            class="icon-button modal-close"
+            type="button"
+            aria-label="닫기"
+          >
+            <svg class="icon"><use href="#i-close" /></svg>
+          </button>
+        </header>
+        <div class="dialog-body">
+          <div class="field-grid">
+            <div class="field">
+              <label for="exception-date">날짜</label>
+              <input id="exception-date" type="date" value="2026-09-25" />
+            </div>
+            <div class="field">
+              <label for="exception-type">운영 유형</label>
+              <select id="exception-type">
+                <option value="closed">휴무</option>
+                <option value="custom">직접 설정</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="exception-name">일정명</label>
+            <input id="exception-name" type="text" value="병원 내부 교육" />
+          </div>
+          <div class="field-grid exception-hours" id="exception-hours">
+            <div class="field">
+              <label for="exception-start">시작</label>
+              <select id="exception-start"></select>
+            </div>
+            <div class="field">
+              <label for="exception-end">종료</label>
+              <select id="exception-end"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="exception-note">메모</label>
+            <input
+              id="exception-note"
+              type="text"
+              placeholder="운영팀이 알아야 할 메모"
+            />
+          </div>
+        </div>
+        <footer class="dialog-actions">
+          <button class="button modal-close" type="button">취소</button>
+          <button class="button primary" id="exception-add" type="button">
+            예외 일정 추가
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <script>
+      (() => {
+        const initialDays = [
+          {
+            key: "mon",
+            label: "월요일",
+            open: true,
+            start: "09:00",
+            end: "19:00",
+            breakStart: "13:00",
+            breakEnd: "14:00",
+          },
+          {
+            key: "tue",
+            label: "화요일",
+            open: true,
+            start: "09:00",
+            end: "19:00",
+            breakStart: "13:00",
+            breakEnd: "14:00",
+          },
+          {
+            key: "wed",
+            label: "수요일",
+            open: true,
+            start: "09:00",
+            end: "19:00",
+            breakStart: "13:00",
+            breakEnd: "14:00",
+          },
+          {
+            key: "thu",
+            label: "목요일",
+            open: true,
+            start: "09:00",
+            end: "19:00",
+            breakStart: "13:00",
+            breakEnd: "14:00",
+          },
+          {
+            key: "fri",
+            label: "금요일",
+            open: true,
+            start: "09:00",
+            end: "19:00",
+            breakStart: "13:00",
+            breakEnd: "14:00",
+          },
+          {
+            key: "sat",
+            label: "토요일",
+            open: true,
+            start: "09:00",
+            end: "17:00",
+            breakStart: "12:30",
+            breakEnd: "13:30",
+          },
+          {
+            key: "sun",
+            label: "일요일",
+            open: false,
+            start: "09:00",
+            end: "19:00",
+            breakStart: "13:00",
+            breakEnd: "14:00",
+          },
+        ];
+
+        const initialExceptions = [
+          {
+            id: "2026-08-15",
+            date: "2026-08-15",
+            name: "광복절",
+            type: "closed",
+            start: "",
+            end: "",
+            note: "",
+          },
+        ];
+
+        const timeOptions = [
+          "08:00",
+          "08:30",
+          "09:00",
+          "09:30",
+          "10:00",
+          "10:30",
+          "11:00",
+          "11:30",
+          "12:00",
+          "12:30",
+          "13:00",
+          "13:30",
+          "14:00",
+          "14:30",
+          "15:00",
+          "15:30",
+          "16:00",
+          "16:30",
+          "17:00",
+          "17:30",
+          "18:00",
+          "18:30",
+          "19:00",
+          "19:30",
+          "20:00",
+        ];
+
+        const form = document.querySelector("#settings-form");
+        const scheduleCard = document.querySelector("#schedule-card");
+        const exceptionRows = document.querySelector("#exception-rows");
+        const dirtyBar = document.querySelector("#dirty-bar");
+        const dirtyCount = document.querySelector("#dirty-count");
+        const saveStateText = document.querySelector("#save-state-text");
+        const toastRegion = document.querySelector("#toast-region");
+        const dirtyKeys = new Set();
+        const initialFormValues = new Map();
+        const settingsPages = {
+          hospital: {
+            title: "병원 기본 설정",
+            description: "병원에 표시되는 기본 정보와 지역 기준을 확인합니다.",
+            sections: ["hospital", "region"],
+          },
+          contact: {
+            title: "연락처 및 채널",
+            description:
+              "고객 안내, 문서 및 예약 메시지에 사용할 연락처를 관리합니다.",
+            sections: ["contact"],
+          },
+          hours: {
+            title: "병원 운영시간 관리",
+            description:
+              "주간 진료시간, 휴게시간 및 공휴일·예외 운영 일정을 설정합니다.",
+            sections: ["hours", "exceptions"],
+          },
+        };
+        let days = structuredClone(initialDays);
+        let exceptions = structuredClone(initialExceptions);
+        let activeModal = null;
+        let activeDayKey = null;
+        let lastFocusedElement = null;
+        let currentPageId = "hospital";
+        let pendingNavigation = null;
+        let appliedLogoDataUrl = "";
+        let appliedLogoName = "기본 이미지";
+        let pendingLogoDataUrl = "";
+        let pendingLogoName = "기본 이미지";
+
+        const icon = (name) =>
+          `<svg class="icon" aria-hidden="true"><use href="#${name}" /></svg>`;
+
+        function escapeHtml(value) {
+          return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+        }
+
+        function showToast(title, detail = "", tone = "success") {
+          const toast = document.createElement("div");
+          toast.className = `toast ${tone}`;
+          toast.setAttribute("role", tone === "error" ? "alert" : "status");
+          toast.innerHTML = `
+            ${icon(tone === "success" ? "i-check" : "i-info")}
+            <div>
+              <strong>${escapeHtml(title)}</strong>
+              ${detail ? `<span>${escapeHtml(detail)}</span>` : ""}
+            </div>
+          `;
+          toastRegion.replaceChildren(toast);
+          window.setTimeout(() => toast.remove(), 3400);
+        }
+
+        function renderLogoPreview(container, dataUrl) {
+          const fallback = container.querySelector("svg");
+          const image = container.querySelector("img");
+          fallback.toggleAttribute("hidden", Boolean(dataUrl));
+          image.hidden = !dataUrl;
+          if (dataUrl) image.src = dataUrl;
+          else image.removeAttribute("src");
+        }
+
+        function setLogoError(message = "") {
+          const error = document.querySelector("#logo-file-error");
+          error.textContent = message;
+          error.hidden = !message;
+        }
+
+        function updatePendingLogo(dataUrl, name) {
+          pendingLogoDataUrl = dataUrl;
+          pendingLogoName = name;
+          renderLogoPreview(
+            document.querySelector("#logo-dialog-preview"),
+            pendingLogoDataUrl,
+          );
+          document.querySelector("#logo-file-name").textContent =
+            pendingLogoName;
+          document.querySelector("#apply-logo").disabled =
+            pendingLogoDataUrl === appliedLogoDataUrl &&
+            pendingLogoName === appliedLogoName;
+          setLogoError();
+        }
+
+        function openLogoDialog() {
+          document.querySelector("#logo-file-input").value = "";
+          updatePendingLogo(appliedLogoDataUrl, appliedLogoName);
+          openModal("logo-dialog");
+        }
+
+        function markDirty(key) {
+          dirtyKeys.add(key || "설정");
+          dirtyCount.textContent = String(dirtyKeys.size);
+          dirtyBar.classList.add("visible");
+          dirtyBar.setAttribute("aria-hidden", "false");
+          saveStateText.textContent = "저장되지 않은 변경사항";
+        }
+
+        function markClean(message = "모든 변경사항이 저장됨") {
+          dirtyKeys.clear();
+          dirtyCount.textContent = "0";
+          dirtyBar.classList.remove("visible");
+          dirtyBar.setAttribute("aria-hidden", "true");
+          saveStateText.textContent = message;
+        }
+
+        function resolvePageId(value = window.location.hash.slice(1)) {
+          const normalized = value.replace(/^settings\//, "");
+          if (normalized === "exceptions") return "hours";
+          return settingsPages[normalized] ? normalized : "hospital";
+        }
+
+        function pageHash(pageId) {
+          return `#settings/${pageId}`;
+        }
+
+        function renderSettingsPage(pageId, historyMode = "none") {
+          const page = settingsPages[pageId] || settingsPages.hospital;
+          currentPageId = settingsPages[pageId] ? pageId : "hospital";
+
+          Object.entries(settingsPages).forEach(([id, config]) => {
+            config.sections.forEach((sectionId) => {
+              const section = document.querySelector(`#${sectionId}`);
+              const visible = id === currentPageId;
+              section.hidden = !visible;
+              section.classList.toggle("page-enter", visible);
+              section.classList.toggle(
+                "page-first",
+                visible && sectionId === page.sections[0],
+              );
+            });
+          });
+
+          document.querySelector("#page-title").textContent = page.title;
+          document.querySelector("#page-description").textContent =
+            page.description;
+          document.title = `CLAiR ${page.title} · Interactive prototype`;
+
+          document
+            .querySelectorAll(".nav-item[data-target]")
+            .forEach((item) => {
+              const active = item.dataset.target === currentPageId;
+              item.classList.toggle("active", active);
+              if (active) item.setAttribute("aria-current", "page");
+              else item.removeAttribute("aria-current");
+            });
+
+          document.querySelector("#main").scrollTop = 0;
+          document
+            .querySelector("#settings-nav")
+            .classList.remove("mobile-open");
+
+          const nextUrl = `${window.location.pathname}${window.location.search}${pageHash(currentPageId)}`;
+          if (historyMode === "push") {
+            window.history.pushState(
+              { settingsPage: currentPageId },
+              "",
+              nextUrl,
+            );
+          }
+          if (historyMode === "replace") {
+            window.history.replaceState(
+              { settingsPage: currentPageId },
+              "",
+              nextUrl,
+            );
+          }
+
+          if (historyMode !== "replace") {
+            document
+              .querySelector("#page-title")
+              .focus({ preventScroll: true });
+          }
+
+          window.setTimeout(() => {
+            page.sections.forEach((sectionId) =>
+              document
+                .querySelector(`#${sectionId}`)
+                .classList.remove("page-enter"),
+            );
+          }, 220);
+        }
+
+        function requestPageNavigation(pageId, historyMode = "push") {
+          if (!settingsPages[pageId] || pageId === currentPageId) {
+            document
+              .querySelector("#settings-nav")
+              .classList.remove("mobile-open");
+            return;
+          }
+          if (dirtyKeys.size) {
+            pendingNavigation = { pageId, historyMode };
+            openModal("navigation-dialog");
+            return;
+          }
+          renderSettingsPage(pageId, historyMode);
+        }
+
+        function daySummary(day) {
+          if (!day.open) return "휴무";
+          return `${day.start} – ${day.end}`;
+        }
+
+        function dayDescription(day) {
+          if (!day.open) return "휴무일입니다.";
+          return `휴게시간 ${day.breakStart} – ${day.breakEnd}`;
+        }
+
+        function renderSchedule() {
+          const workweek = days
+            .map(
+              (day) => `
+                <button
+                  class="workweek-day"
+                  type="button"
+                  data-day="${day.key}"
+                  aria-label="${day.label} ${day.open ? "운영 해제" : "운영 설정"}"
+                  aria-pressed="${day.open}"
+                >${day.label.slice(0, 1)}</button>
+              `,
+            )
+            .join("");
+          const scheduleRows = days
+            .map(
+              (day) => `
+                <div class="setting-row" data-day="${day.key}">
+                  <div class="row-label">
+                    <strong>${day.label}</strong>
+                    <span>${dayDescription(day)}</span>
+                  </div>
+                  <div class="row-control">
+                    <button class="day-button edit-day" type="button" aria-label="${
+                      day.open
+                        ? `${day.label} 운영시간 편집`
+                        : `${day.label}은 휴무일입니다`
+                    }"${day.open ? "" : " disabled"}>
+                      <span>${daySummary(day)}</span>
+                      ${day.open ? icon("i-chevron-right") : ""}
+                    </button>
+                  </div>
+                </div>
+              `,
+            )
+            .join("");
+          scheduleCard.innerHTML = `
+            <div class="setting-row schedule-overview">
+              <div class="row-label">
+                <strong>운영 요일</strong>
+                <span>진료와 예약을 운영하는 요일을 선택합니다.</span>
+              </div>
+              <div class="row-control">
+                <div class="workweek-days" aria-label="운영 요일">${workweek}</div>
+              </div>
+            </div>
+            <div class="schedule-list">${scheduleRows}</div>
+          `;
+        }
+
+        function formatExceptionDescription(item) {
+          const date = new Date(`${item.date}T00:00:00`);
+          const dateText = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+          const hours =
+            item.type === "closed"
+              ? "하루 종일 휴무"
+              : `${item.start} – ${item.end}`;
+          return `${dateText} · ${hours}${item.note ? ` · ${item.note}` : ""}`;
+        }
+
+        function renderExceptions() {
+          exceptionRows.innerHTML = exceptions
+            .map(
+              (item) => `
+                <div class="setting-row exception-row" data-exception-id="${escapeHtml(item.id)}">
+                  <div class="row-label">
+                    <strong>${escapeHtml(item.name)}</strong>
+                    <span>${escapeHtml(formatExceptionDescription(item))}</span>
+                  </div>
+                  <div class="exception-control">
+                    <span class="exception-summary">${item.type === "closed" ? "휴무" : `${item.start} – ${item.end}`}</span>
+                    <span class="day-status${item.type === "closed" ? " closed" : ""}">${
+                      item.type === "closed" ? "휴무" : "직접 설정"
+                    }</span>
+                    <button class="button icon-only delete-exception" type="button" aria-label="${escapeHtml(
+                      item.name,
+                    )} 예외 일정 삭제">
+                      ${icon("i-trash")}
+                    </button>
+                  </div>
+                </div>
+              `,
+            )
+            .join("");
+          document.querySelector("#empty-exceptions").style.display =
+            exceptions.length ? "none" : "grid";
+        }
+
+        function fillTimeSelect(select, selected) {
+          select.innerHTML = timeOptions
+            .map(
+              (time) =>
+                `<option value="${time}"${time === selected ? " selected" : ""}>${time}</option>`,
+            )
+            .join("");
+        }
+
+        function openModal(id) {
+          const modal = document.querySelector(`#${id}`);
+          if (!modal) return;
+          lastFocusedElement = document.activeElement;
+          activeModal = modal;
+          modal.classList.add("open");
+          document.body.style.overflow = "hidden";
+          window.setTimeout(
+            () =>
+              modal.querySelector("input, select, textarea, button")?.focus(),
+            20,
+          );
+        }
+
+        function closeModal(modal = activeModal) {
+          if (!modal) return;
+          modal.classList.remove("open");
+          activeModal = null;
+          document.body.style.overflow = "";
+          lastFocusedElement?.focus();
+        }
+
+        function openDayDialog(dayKey) {
+          const day = days.find((item) => item.key === dayKey);
+          if (!day || !day.open) return;
+          activeDayKey = dayKey;
+          document.querySelector("#schedule-title").textContent =
+            `${day.label} 운영시간`;
+          fillTimeSelect(document.querySelector("#day-start"), day.start);
+          fillTimeSelect(document.querySelector("#day-end"), day.end);
+          fillTimeSelect(
+            document.querySelector("#break-start"),
+            day.breakStart,
+          );
+          fillTimeSelect(document.querySelector("#break-end"), day.breakEnd);
+          openModal("schedule-dialog");
+        }
+
+        function resetPrototype(showFeedback = true) {
+          form.reset();
+          initialFormValues.forEach((value, control) => {
+            control.value = value;
+          });
+          days = structuredClone(initialDays);
+          exceptions = structuredClone(initialExceptions);
+          appliedLogoDataUrl = "";
+          appliedLogoName = "기본 이미지";
+          pendingLogoDataUrl = "";
+          pendingLogoName = "기본 이미지";
+          renderLogoPreview(
+            document.querySelector("#hospital-logo-preview"),
+            appliedLogoDataUrl,
+          );
+          renderLogoPreview(
+            document.querySelector("#logo-dialog-preview"),
+            pendingLogoDataUrl,
+          );
+          document.querySelector("#logo-file-name").textContent =
+            pendingLogoName;
+          document.querySelector("#logo-file-input").value = "";
+          setLogoError();
+          renderSchedule();
+          renderExceptions();
+          document.querySelector("#phone").classList.remove("invalid");
+          markClean();
+          if (showFeedback) showToast("시안을 초기 상태로 되돌렸습니다.");
+        }
+
+        renderSchedule();
+        renderExceptions();
+
+        form.querySelectorAll("input, select, textarea").forEach((control) => {
+          initialFormValues.set(control, control.value);
+        });
+
+        renderSettingsPage(resolvePageId(), "replace");
+
+        form.addEventListener("input", (event) => {
+          const key = event.target.dataset.dirtyKey;
+          if (key) markDirty(key);
+          if (event.target.id === "phone")
+            event.target.classList.toggle(
+              "invalid",
+              !event.target.value.trim(),
+            );
+        });
+
+        form.addEventListener("change", (event) => {
+          const key = event.target.dataset.dirtyKey;
+          if (!key) return;
+          markDirty(key);
+          showToast(
+            "설정이 변경되었습니다.",
+            `${key} 변경사항은 저장하면 최종 반영됩니다.`,
+            "info",
+          );
+        });
+
+        scheduleCard.addEventListener("click", (event) => {
+          const row = event.target.closest("[data-day]");
+          if (!row) return;
+          const day = days.find((item) => item.key === row.dataset.day);
+          if (!day) return;
+
+          if (event.target.closest(".workweek-day")) {
+            day.open = !day.open;
+            renderSchedule();
+            markDirty(`${day.label} 운영 상태`);
+            showToast(
+              `${day.label} 운영 상태가 변경되었습니다.`,
+              day.open
+                ? "운영일로 설정되었습니다. 변경사항을 저장해 주세요."
+                : "휴무일로 설정되었습니다. 변경사항을 저장해 주세요.",
+              "info",
+            );
+            return;
+          }
+
+          if (event.target.closest(".edit-day")) openDayDialog(day.key);
+        });
+
+        exceptionRows.addEventListener("click", (event) => {
+          const deleteButton = event.target.closest(".delete-exception");
+          if (!deleteButton) return;
+          const row = deleteButton.closest("[data-exception-id]");
+          exceptions = exceptions.filter(
+            (item) => item.id !== row.dataset.exceptionId,
+          );
+          renderExceptions();
+          markDirty("예외 일정");
+          showToast(
+            "예외 일정이 삭제되었습니다.",
+            "변경사항을 저장하면 최종 반영됩니다.",
+          );
+        });
+
+        document
+          .querySelector("#schedule-save")
+          .addEventListener("click", () => {
+            const day = days.find((item) => item.key === activeDayKey);
+            if (!day) return;
+            day.start = document.querySelector("#day-start").value;
+            day.end = document.querySelector("#day-end").value;
+            day.breakStart = document.querySelector("#break-start").value;
+            day.breakEnd = document.querySelector("#break-end").value;
+            renderSchedule();
+            markDirty(`${day.label} 운영시간`);
+            closeModal(document.querySelector("#schedule-dialog"));
+            showToast(
+              `${day.label} 운영시간이 적용되었습니다.`,
+              "저장 전까지 현재 브라우저에서만 유지됩니다.",
+            );
+          });
+
+        document
+          .querySelector("#exception-type")
+          .addEventListener("change", (event) => {
+            document
+              .querySelector("#exception-hours")
+              .classList.toggle("visible", event.target.value === "custom");
+          });
+
+        fillTimeSelect(document.querySelector("#exception-start"), "09:00");
+        fillTimeSelect(document.querySelector("#exception-end"), "17:00");
+
+        document
+          .querySelector("#exception-add")
+          .addEventListener("click", () => {
+            const date = document.querySelector("#exception-date").value;
+            const name = document.querySelector("#exception-name").value.trim();
+            const type = document.querySelector("#exception-type").value;
+            if (!date || !name) {
+              showToast(
+                "예외 일정을 추가하지 못했습니다.",
+                "날짜와 일정명을 입력해 주세요.",
+                "error",
+              );
+              return;
+            }
+            if (exceptions.some((item) => item.date === date)) {
+              showToast(
+                "이미 등록된 날짜입니다.",
+                "기존 일정을 삭제하거나 다른 날짜를 선택해 주세요.",
+                "error",
+              );
+              return;
+            }
+            exceptions.push({
+              id: date,
+              date,
+              name,
+              type,
+              start:
+                type === "custom"
+                  ? document.querySelector("#exception-start").value
+                  : "",
+              end:
+                type === "custom"
+                  ? document.querySelector("#exception-end").value
+                  : "",
+              note: document.querySelector("#exception-note").value.trim(),
+            });
+            exceptions.sort((a, b) => a.date.localeCompare(b.date));
+            renderExceptions();
+            markDirty("예외 일정");
+            closeModal(document.querySelector("#exception-dialog"));
+            showToast(
+              "예외 일정이 추가되었습니다.",
+              "변경사항을 저장하면 최종 반영됩니다.",
+            );
+          });
+
+        document
+          .querySelector("#hospital-logo-preview")
+          .addEventListener("click", openLogoDialog);
+
+        document
+          .querySelector("#logo-file-input")
+          .addEventListener("change", (event) => {
+            const [file] = event.target.files;
+            if (!file) return;
+            if (!["image/png", "image/jpeg"].includes(file.type)) {
+              event.target.value = "";
+              setLogoError("PNG 또는 JPG 파일을 선택해 주세요.");
+              showToast(
+                "로고 이미지를 선택하지 못했습니다.",
+                "PNG 또는 JPG 파일을 선택해 주세요.",
+                "error",
+              );
+              return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+              event.target.value = "";
+              setLogoError("5MB 이하의 파일을 선택해 주세요.");
+              showToast(
+                "로고 이미지를 선택하지 못했습니다.",
+                "5MB 이하의 파일을 선택해 주세요.",
+                "error",
+              );
+              return;
+            }
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+              updatePendingLogo(String(reader.result), file.name);
+              showToast(
+                "로고 이미지가 선택되었습니다.",
+                "미리보기를 확인한 후 로고를 적용해 주세요.",
+                "info",
+              );
+            });
+            reader.addEventListener("error", () => {
+              event.target.value = "";
+              setLogoError("파일을 불러오지 못했습니다.");
+              showToast(
+                "로고 이미지를 불러오지 못했습니다.",
+                "파일을 다시 선택해 주세요.",
+                "error",
+              );
+            });
+            reader.readAsDataURL(file);
+          });
+
+        document
+          .querySelector("#use-default-logo")
+          .addEventListener("click", () => {
+            document.querySelector("#logo-file-input").value = "";
+            updatePendingLogo("", "기본 이미지");
+            showToast(
+              "기본 이미지가 선택되었습니다.",
+              "미리보기를 확인한 후 로고를 적용해 주세요.",
+              "info",
+            );
+          });
+
+        document.querySelector("#apply-logo").addEventListener("click", () => {
+          appliedLogoDataUrl = pendingLogoDataUrl;
+          appliedLogoName = pendingLogoName;
+          renderLogoPreview(
+            document.querySelector("#hospital-logo-preview"),
+            appliedLogoDataUrl,
+          );
+          markDirty("병원 로고");
+          closeModal(document.querySelector("#logo-dialog"));
+          showToast(
+            "병원 로고가 적용되었습니다.",
+            "변경사항을 저장하면 최종 반영됩니다.",
+          );
+        });
+
+        document
+          .querySelector("#copy-address")
+          .addEventListener("click", async () => {
+            const address = document.querySelector("#address").value;
+            let copied = false;
+            try {
+              await navigator.clipboard.writeText(address);
+              copied = true;
+            } catch {
+              const helper = document.createElement("textarea");
+              helper.value = address;
+              helper.style.position = "fixed";
+              helper.style.opacity = "0";
+              document.body.append(helper);
+              helper.select();
+              copied = document.execCommand("copy");
+              helper.remove();
+            }
+            if (copied) {
+              showToast("주소가 복사되었습니다.", address);
+            } else {
+              showToast(
+                "주소를 복사하지 못했습니다.",
+                "다시 시도해 주세요.",
+                "error",
+              );
+            }
+          });
+
+        document.querySelectorAll("[data-open-modal]").forEach((button) => {
+          button.addEventListener("click", () =>
+            openModal(button.dataset.openModal),
+          );
+        });
+
+        document.querySelectorAll(".modal-close").forEach((button) => {
+          button.addEventListener("click", () =>
+            closeModal(button.closest(".modal-layer")),
+          );
+        });
+
+        document.querySelectorAll(".modal-layer").forEach((layer) => {
+          layer.addEventListener("mousedown", (event) => {
+            if (event.target === layer) closeModal(layer);
+          });
+        });
+
+        document
+          .querySelector("#request-submit")
+          .addEventListener("click", () => {
+            const checked = document.querySelectorAll(
+              "#request-dialog input:checked",
+            ).length;
+            const detail = document
+              .querySelector("#request-detail")
+              .value.trim();
+            if (!checked || !detail) {
+              showToast(
+                "변경 요청 내용을 확인해 주세요.",
+                "항목과 변경 내용을 모두 입력해 주세요.",
+                "error",
+              );
+              return;
+            }
+            closeModal(document.querySelector("#request-dialog"));
+            showToast(
+              "변경 요청 과정을 확인했습니다.",
+              "시안이므로 실제 요청은 전송되지 않습니다.",
+            );
+          });
+
+        document.querySelector("#save-button").addEventListener("click", () => {
+          const phone = document.querySelector("#phone");
+          if (!phone.value.trim()) {
+            phone.classList.add("invalid");
+            phone.focus();
+            document
+              .querySelector("#contact")
+              .scrollIntoView({ behavior: "smooth", block: "start" });
+            showToast(
+              "변경사항을 저장하지 못했습니다.",
+              "대표 전화번호를 입력해 주세요.",
+              "error",
+            );
+            return;
+          }
+          markClean("방금 저장됨");
+          showToast(
+            "변경사항이 저장되었습니다.",
+            "현재 인터랙티브 시안에 반영되었습니다.",
+          );
+          window.setTimeout(() => {
+            if (!dirtyKeys.size)
+              saveStateText.textContent = "모든 변경사항이 저장됨";
+          }, 2200);
+        });
+
+        document
+          .querySelector("#revert-button")
+          .addEventListener("click", () => resetPrototype());
+        document
+          .querySelector("#reset-prototype")
+          .addEventListener("click", () => resetPrototype());
+
+        const navItems = [
+          ...document.querySelectorAll(".nav-item[data-target]"),
+        ];
+        navItems.forEach((button) => {
+          button.addEventListener("click", () => {
+            requestPageNavigation(button.dataset.target);
+          });
+        });
+
+        document
+          .querySelector("#navigation-stay")
+          .addEventListener("click", () => {
+            pendingNavigation = null;
+            closeModal(document.querySelector("#navigation-dialog"));
+          });
+
+        document
+          .querySelector("#navigation-close")
+          .addEventListener("click", () => {
+            pendingNavigation = null;
+          });
+
+        document
+          .querySelector("#navigation-discard")
+          .addEventListener("click", () => {
+            if (!pendingNavigation) return;
+            const navigation = pendingNavigation;
+            pendingNavigation = null;
+            resetPrototype(false);
+            closeModal(document.querySelector("#navigation-dialog"));
+            renderSettingsPage(
+              navigation.pageId,
+              navigation.historyMode === "pop" ? "replace" : "push",
+            );
+            showToast(
+              "변경사항을 삭제하고 이동했습니다.",
+              `${settingsPages[navigation.pageId].title} 화면입니다.`,
+            );
+          });
+
+        window.addEventListener("popstate", () => {
+          const requestedPageId = resolvePageId();
+          if (requestedPageId === currentPageId) return;
+          if (dirtyKeys.size) {
+            pendingNavigation = {
+              pageId: requestedPageId,
+              historyMode: "pop",
+            };
+            window.history.pushState(
+              { settingsPage: currentPageId },
+              "",
+              pageHash(currentPageId),
+            );
+            openModal("navigation-dialog");
+            return;
+          }
+          renderSettingsPage(requestedPageId);
+        });
+
+        document.querySelector("#mobile-menu").addEventListener("click", () => {
+          document
+            .querySelector("#settings-nav")
+            .classList.toggle("mobile-open");
+        });
+        document.querySelector("#close-nav").addEventListener("click", () => {
+          if (window.matchMedia("(max-width: 920px)").matches) {
+            document
+              .querySelector("#settings-nav")
+              .classList.remove("mobile-open");
+            return;
+          }
+          document.querySelector(".app").classList.add("nav-collapsed");
+        });
+        document
+          .querySelector("#hospital-nav-toggle")
+          .addEventListener("click", () => {
+            if (window.matchMedia("(max-width: 920px)").matches) {
+              document
+                .querySelector("#settings-nav")
+                .classList.toggle("mobile-open");
+              return;
+            }
+            document.querySelector(".app").classList.remove("nav-collapsed");
+          });
+
+        window
+          .matchMedia("(max-width: 920px)")
+          .addEventListener("change", () => {
+            document.querySelector(".app").classList.remove("nav-collapsed");
+            document
+              .querySelector("#settings-nav")
+              .classList.remove("mobile-open");
+          });
+
+        document
+          .querySelector("#settings-nav")
+          .addEventListener("transitionend", () => {
+            const collapsed = document
+              .querySelector(".app")
+              .classList.contains("nav-collapsed");
+            document
+              .querySelector("#close-nav")
+              .setAttribute("aria-expanded", String(!collapsed));
+          });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && activeModal) closeModal();
+        });
+
+        window.addEventListener("beforeunload", (event) => {
+          if (!dirtyKeys.size) return;
+          event.preventDefault();
+          event.returnValue = "";
+        });
+      })();
+    </script>
+  </body>
+</html>

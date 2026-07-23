@@ -1,11 +1,14 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  applyScheduleRangeToOpenDays,
   createInitialHospitalBasicSettingsDraft,
   createTimeOptions,
   hasHospitalBasicSettingsChanges,
+  hasContactSettingsChanges,
   hasOperatingHoursChanges,
+  setOpenWeekdays,
+  validateContactSettingsDraft,
+  validateOperatingHoursDraft,
   validateHospitalBasicSettingsDraft,
   resolveEffectiveOperatingHours,
 } from "@/features/hospital-admin/settings/hospital-basic-settings-model";
@@ -31,13 +34,41 @@ test("contact changes do not count as operating-hours changes", () => {
   expect(hasOperatingHoursChanges(draft, saved)).toBe(false);
 });
 
-test("schedule propagation updates operating days and preserves closed days", () => {
+test("operating day selection is the single source of open flags and preserves retained times", () => {
   const draft = createInitialHospitalBasicSettingsDraft();
-  const next = applyScheduleRangeToOpenDays(draft, "monday", "treatment");
+  const retainedSunday = structuredClone(draft.weeklyHours.sunday);
+  const next = setOpenWeekdays(draft, ["monday", "wednesday", "sunday"]);
 
-  expect(next.weeklyHours.tuesday.treatment).toEqual(draft.weeklyHours.monday.treatment);
-  expect(next.weeklyHours.saturday.treatment).toEqual(draft.weeklyHours.monday.treatment);
-  expect(next.weeklyHours.sunday).toEqual(draft.weeklyHours.sunday);
+  expect(next.weeklyHours.monday.isOpen).toBe(true);
+  expect(next.weeklyHours.tuesday.isOpen).toBe(false);
+  expect(next.weeklyHours.wednesday.isOpen).toBe(true);
+  expect(next.weeklyHours.sunday).toEqual({ ...retainedSunday, isOpen: true });
+  expect(draft.weeklyHours.sunday).toEqual(retainedSunday);
+});
+
+test("split settings validation and dirty checks stay inside their own screen", () => {
+  const saved = createInitialHospitalBasicSettingsDraft();
+  const contactDraft = structuredClone(saved);
+  contactDraft.contact.phone = "";
+  contactDraft.contact.customerGuideMemo = "가".repeat(301);
+  contactDraft.weeklyHours.monday.treatment = { start: "19:00", end: "09:00" };
+
+  expect(hasContactSettingsChanges(contactDraft, saved)).toBe(true);
+  expect(hasOperatingHoursChanges(contactDraft, saved)).toBe(true);
+  expect(validateContactSettingsDraft(contactDraft).map((issue) => issue.code)).toEqual([
+    "required_phone",
+    "customer_guide_memo_too_long",
+  ]);
+  expect(validateOperatingHoursDraft(contactDraft).map((issue) => issue.code)).toEqual([
+    "treatment_range",
+  ]);
+});
+
+test("operating validation skips retained time values for closed days", () => {
+  const draft = createInitialHospitalBasicSettingsDraft();
+  draft.weeklyHours.sunday.treatment = { start: "19:00", end: "09:00" };
+
+  expect(validateOperatingHoursDraft(draft)).toEqual([]);
 });
 
 test("validation rejects inverted hours and duplicate exception dates", () => {

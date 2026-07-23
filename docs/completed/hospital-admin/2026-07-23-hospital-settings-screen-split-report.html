@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>병원 설정 화면 분리 구현 결과</title>
+    <style>
+      :root { color-scheme: light; font-family: Pretendard, system-ui, sans-serif; color: #17171a; background: #f7f7f8; }
+      body { margin: 0; }
+      main { width: min(880px, calc(100% - 40px)); margin: 64px auto; }
+      h1 { margin: 0 0 12px; font-size: 32px; }
+      h2 { margin: 36px 0 12px; font-size: 20px; }
+      p, li { color: #54545b; line-height: 1.7; }
+      .status { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: #e9f7ef; color: #18794e; font-weight: 700; font-size: 13px; }
+      .card { margin-top: 28px; padding: 24px; border: 1px solid #dedee3; border-radius: 14px; background: white; }
+      code { font-family: ui-monospace, monospace; color: #2c2c31; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="status">로컬 구현·검증 완료</span>
+      <h1>병원 설정 화면 분리</h1>
+      <p>2026-07-23 · HOSPITAL-ADMIN-PR-007</p>
+      <section class="card">
+        <h2>요청과 결과</h2>
+        <p>
+          한 페이지에서 스크롤하던 병원 설정을 <strong>병원 기본 설정</strong>,
+          <strong>연락처 및 채널</strong>, <strong>운영시간 관리</strong>의 독립 화면으로
+          분리했습니다. 사이드 패널도 병원 설정, 조직 및 접근, 진료 카탈로그로
+          그룹화했습니다.
+        </p>
+        <h2>주요 변경</h2>
+        <ul>
+          <li>브레드크럼과 상단 저장 상태 툴바 제거</li>
+          <li>요일 선택을 단일 ToggleGroup으로 통합하고 중복 스위치 제거</li>
+          <li>요일 행은 왼쪽 설명, 오른쪽 시간 편집 액션으로 정리</li>
+          <li>연락처 메모를 다중 행 Textarea로 확대</li>
+          <li>로고 hover/focus 편집 버튼과 접근 가능한 Dialog 적용</li>
+          <li>저장·삭제·복사·검증 등 명시적 액션 결과를 Toast로 안내</li>
+        </ul>
+        <h2>검증</h2>
+        <p>
+          병원관리 브라우저 테스트 35건, 전체 lint, TypeScript, 프로덕션 빌드,
+          Storybook 빌드, 문서 링크 검사, 한국어 존댓말 검사를 통과했습니다.
+        </p>
+        <h2>남은 경계</h2>
+        <p>원격 배포와 실제 환경 검수는 수행하지 않았습니다.</p>
+      </section>
+    </main>
+  </body>
+</html>
