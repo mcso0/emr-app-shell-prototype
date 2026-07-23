@@ -11,6 +11,33 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.locator('[data-selected="true"]')).toHaveCount(1);
   await expect(page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: /^전체/ })).toHaveCount(0);
   await expect(page.getByTestId("order-set-placeholder")).toContainText("미구현");
+  const expectedTopLevelMenuOrder = [
+    "병원기본설정",
+    "병원구성원 관리",
+    "감사 로그",
+    "근무표",
+    "역할 및 권한",
+    "공간/시간 관리",
+    "바이탈 관리",
+    "Order 관리",
+    "진료과 분리운영",
+    "차트 템플릿",
+    "장비 관리",
+    "마약류 관리",
+    "Order 세트",
+    "프린터 설정",
+    "데이터랩",
+  ];
+  const actualTopLevelMenuOrder = await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button")
+    .evaluateAll((buttons, expectedLabels) =>
+      buttons.flatMap((button) => {
+        const text = button.textContent ?? "";
+        const label = expectedLabels.find((candidate) => text.includes(candidate));
+        return label ? [label] : [];
+      }), expectedTopLevelMenuOrder);
+  expect(actualTopLevelMenuOrder).toEqual(expectedTopLevelMenuOrder);
   const sidePanelMetrics = await page.getByTestId("hospital-admin-menu-order-management").evaluate((trigger) => {
     const section = trigger.closest("section");
     const panel = trigger.closest('[data-testid="hospital-admin-side-panel"]');

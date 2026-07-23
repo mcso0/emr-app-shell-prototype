@@ -1118,32 +1118,33 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       };
     }),
   ]);
-  const sidePanelItems: EmrModuleListSidePanelItem[] = [
-    ...hospitalAdminMenuItems.map((item) => {
-      const Icon = item.icon;
-      const nextSection = item.section;
+  const hospitalAdminSidePanelItems = hospitalAdminMenuItems.map((item) => {
+    const Icon = item.icon;
+    const nextSection = item.section;
 
-      return {
-        type: "button" as const,
-        id: item.label,
-        active: nextSection ? activeSection === nextSection : false,
-        disabled: !nextSection,
-        icon: <Icon className="size-4 shrink-0" />,
-        label: item.label,
-        onClick: nextSection
-          ? () => {
-              const shouldConfirmNavigation =
-                activeSection === "settings" && settingsDirty && nextSection !== "settings";
-              requestSectionChange(nextSection);
-              if (shouldConfirmNavigation) return;
-              if (typeof window !== "undefined" && window.innerWidth < 768) {
-                setModulePanelOpen(false);
-              }
+    return {
+      type: "button" as const,
+      id: item.label,
+      active: nextSection ? activeSection === nextSection : false,
+      disabled: !nextSection,
+      icon: <Icon className="size-4 shrink-0" />,
+      label: item.label,
+      onClick: nextSection
+        ? () => {
+            const shouldConfirmNavigation =
+              activeSection === "settings" && settingsDirty && nextSection !== "settings";
+            requestSectionChange(nextSection);
+            if (shouldConfirmNavigation) return;
+            if (typeof window !== "undefined" && window.innerWidth < 768) {
+              setModulePanelOpen(false);
             }
-          : undefined,
-        testId: item.testId,
-      };
-    }),
+          }
+        : undefined,
+      testId: item.testId,
+    };
+  });
+  const sidePanelItems: EmrModuleListSidePanelItem[] = [
+    ...hospitalAdminSidePanelItems.filter((item) => !item.disabled),
     {
       type: "section",
       id: "orders",
@@ -1153,6 +1154,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       testId: "hospital-admin-menu-order-management",
       children: orderSectionChildren,
     },
+    ...hospitalAdminSidePanelItems.filter((item) => item.disabled),
     {
       type: "button",
       id: "order-set",
