@@ -24,7 +24,7 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 - `권한 역할`, `직무`, and `업무 기본값` as one grouped settings hub that opens independent detail screens in the existing hospital-admin panel.
 - Role summary/detail view, grouped permission explanations, locked system roles, and assigned-member sheet.
 - Human Review refinement: match the hospital-basic-settings `920px` content boundary, express detail state with `roleSettings` in the URL, and keep permission categories visible only inside the `권한 역할` detail screen.
-- Role-item refinement: replace the detached segmented selector with one-open role items. Each item shows all assigned member names and owns its expanded member summary and permission sections.
+- Role-item refinement: replace the detached segmented selector with at-most-one-open role items. Each item shows all assigned member names and owns its expanded member summary and permission sections; selecting the open item collapses it.
 - Permission rows use switches with explicit `허용` / `차단` text. System roles remain disabled; custom roles support inline draft, cancel, and save against the existing safe allow-list.
 - Custom role creation/editing limited to the existing safe allow-only permission set.
 - Job creation/editing outside the invitation sheet; invitations only assign a person to an existing role and job.
@@ -48,7 +48,9 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 - 2026-07-22 hub/detail refinement: focused coverage now targets the `920px` boundary, URL-backed detail navigation, browser back, role tabs, visible permission sections, mobile overflow, and keyboard activation.
 - Broader hospital-admin run on 2026-07-22: 25/26 passed. The unrelated hospital-basic-settings save test repeatedly timed out while waiting for the existing `대표 전화 *` label; the role/permission tests stayed green.
 - 2026-07-23 role-item refinement: focused Playwright coverage passed for exclusive role expansion, system-role read-only switches, custom-role inline permission save, member-management navigation, work-default persistence, and URL/history behavior.
-- 2026-07-23 browser QA: `1440×1000` and `390×844` both had no horizontal overflow; one role panel remained open through role changes; no console errors were reported.
+- 2026-07-23 browser QA: `1440×1000` and `390×844` both had no horizontal overflow; role changes kept at most one panel open; no console errors were reported.
+- 2026-07-23 human-review correction: the open role item now collapses when selected again. Focused Playwright, targeted ESLint, TypeScript, and authenticated local-browser verification passed.
+- 2026-07-23 UX audit follow-up: 7 focused Playwright scenarios passed for deterministic detail back, dirty role/work-default navigation, browser-back draft preservation, cross-tab saved defaults, static system jobs, and compact keyboard behavior. Authenticated local-browser verification also passed.
 
 ## Handoff
 
@@ -69,3 +71,10 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 - Permission categories remain visible inside the selected role and must not become nested accordions.
 - The reviewed structure was implemented on 2026-07-23 without changing permission policy, API, RLS, or assignment behavior.
 - Interactive review report: `docs/completed/hospital-admin/2026-07-22-role-permission-role-item-structure-review.html`.
+
+## 2026-07-23 UX Audit Follow-up
+
+- Fixed locally: selecting the currently open role item collapses it; selecting another role still closes the previous item and opens only the new item.
+- Fixed locally: the detail header back action now deterministically returns to the settings hub, including direct deep-link entry.
+- Fixed locally: dirty role/work-default navigation uses the existing confirmation dialog; browser back preserves the draft and the hub identifies unsaved changes.
+- Fixed locally: system and read-only job-position rows are static. Only editable custom positions expose button, chevron, hover, and focus affordances.

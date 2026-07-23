@@ -132,7 +132,11 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
   pendingSection: null,
   requestSectionChange: (section) => {
     const state = get();
-    if (state.activeSection === "settings" && state.settingsDirty && section !== "settings") {
+    const guardsUnsavedSettings =
+      (state.activeSection === "settings" || state.activeSection === "roles") &&
+      state.settingsDirty &&
+      section !== state.activeSection;
+    if (guardsUnsavedSettings) {
       set({ pendingSection: section });
       return;
     }

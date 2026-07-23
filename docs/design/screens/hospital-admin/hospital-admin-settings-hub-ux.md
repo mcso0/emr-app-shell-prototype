@@ -93,13 +93,14 @@ flowchart LR
 
 1. Admin selects `역할 및 권한`.
 2. One divided settings surface lists `권한 역할`, `직무`, and `업무 기본값` with summaries and chevrons.
-3. Selecting a row opens its independent URL-backed detail screen; the detail back action and browser back return to the hub.
-4. `권한 역할` detail uses one-open `소유자` / `관리자` / `일반` role items; `관리자` is the initial selection and opening another item closes the previous item.
+3. Selecting a row opens its independent URL-backed detail screen. The detail back action deterministically removes `roleSettings`, while browser back preserves any unsaved draft and returns to the hub.
+4. `권한 역할` detail uses at-most-one-open `소유자` / `관리자` / `일반` role items; `관리자` is the initial selection, opening another item closes the previous item, and selecting the open item collapses it.
 5. Each role header shows every assigned member name together with member and allowed-permission counts. The open item's role summary, member action, and permissions continue inside the same divided surface.
 6. Permission categories remain visible as titled sections with divided switch rows; they do not use nested disclosure.
 7. System-role switches are disabled but keep explicit `허용` / `차단` status. Custom roles can edit only the safe allow-list and use a contextual cancel/save bar; owner-only powers stay locked.
-8. `직무` manages job labels without changing screen/action permissions.
-9. `업무 기본값` saves only browser-local defaults and states that it does not change authorization.
+8. Collapsing or switching away from a dirty custom role requires discard confirmation. Browser-back drafts stay in memory and the hub row exposes `저장하지 않은 변경`.
+9. `직무` manages job labels without changing screen/action permissions. System or read-only rows are static; only editable custom rows use button and chevron affordances.
+10. `업무 기본값` saves only browser-local defaults and states that it does not change authorization. Dirty navigation uses discard confirmation, and a browser-back draft remains visible through the hub summary.
 
 ### 공간/시간 관리
 
