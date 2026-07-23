@@ -12,15 +12,17 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: /^전체/ })).toHaveCount(0);
   await expect(page.getByTestId("order-set-placeholder")).toContainText("미구현");
   const expectedTopLevelMenuOrder = [
-    "병원기본설정",
-    "병원구성원 관리",
-    "감사 로그",
-    "근무표",
-    "역할 및 권한",
+    "병원 기본 설정",
+    "연락처 및 채널",
+    "운영시간 관리",
     "공간 관리",
     "바이탈 관리",
-    "Order 관리",
     "진료과 분리운영",
+    "병원 구성원",
+    "역할 및 권한",
+    "근무표",
+    "감사 로그",
+    "Order 관리",
     "차트 템플릿",
     "장비 관리",
     "마약류 관리",
@@ -77,7 +79,7 @@ test("hospital admin order management opens with category and subcategory naviga
   expect(Math.round(sidePanelMetrics.leafRightInset)).toBe(16);
   const topItemMetrics = await page
     .getByTestId("hospital-admin-side-panel")
-    .getByRole("button", { name: /병원구성원 관리/ })
+    .getByRole("button", { name: /병원 구성원/ })
     .evaluate((trigger) => {
       const icon = trigger.querySelector('[data-emr-module-list-item-icon="true"]');
       const label = trigger.querySelector(".emr-text-dense");
@@ -478,137 +480,6 @@ test("hospital vital settings follows the reviewed V3 interaction", async ({ pag
   )).toBe(true);
 });
 
-test("hospital basic settings uses the reviewed information hierarchy", async ({ page }) => {
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto("/w/clair-demo/orders?modulePanel=open");
-  await page.getByTestId("hospital-admin-menu-settings").click();
-
-  const screen = page.getByTestId("hospital-admin-settings-screen");
-  await expect(screen.getByRole("heading", { level: 1, name: "병원 기본 설정" })).toBeVisible();
-  await expect(screen).toContainText("병원 정보와 운영시간을 관리합니다.");
-  await expect(screen).not.toContainText("workspace-clair-cheongdam");
-  await expect(screen).not.toContainText("영향 범위");
-  await expect(screen).not.toContainText("향후 데이터");
-  await expect(screen).not.toContainText("Phase 1");
-  await expect(screen.getByLabel("병원명")).toHaveAttribute("readonly", "");
-  await expect(screen.getByLabel("대표자/원장명")).toHaveAttribute("readonly", "");
-  await expect(screen.getByLabel("주소")).toHaveAttribute("readonly", "");
-  await expect(screen.getByTestId("hospital-settings-change-bar")).toBeHidden();
-
-  await screen.getByRole("button", { name: "주소 복사" }).click();
-  await expect(screen.getByRole("button", { name: "복사됨" })).toBeVisible();
-  await expect(screen.getByRole("status")).toHaveText("주소가 복사되었습니다.");
-
-  await screen.getByRole("button", { name: "병원 정보 변경 요청" }).click();
-  const requestDialog = page.getByRole("dialog", { name: "병원 정보 변경 요청" });
-  await requestDialog.getByRole("button", { name: "내용 확인" }).click();
-  await expect(requestDialog.getByText("변경 사유를 입력해 주세요.")).toBeVisible();
-  await requestDialog.getByLabel("변경 사유").fill("사업자 정보가 변경되었습니다.");
-  await requestDialog.getByRole("button", { name: "내용 확인" }).click();
-  await expect(screen.getByText("변경 요청 내용을 확인했습니다.")).toBeVisible();
-
-  await screen.getByLabel("홈페이지").fill("clair.example.com");
-  await screen.getByTestId("hospital-settings-change-bar").getByRole("button", { name: "변경사항 저장" }).click();
-  await expect(screen.getByText("홈페이지 주소를 http:// 또는 https:// 형식으로 입력해 주세요.")).toBeVisible();
-  await expect(screen.getByLabel("홈페이지")).toBeFocused();
-});
-
-test("hospital basic settings saves a session draft and distinguishes operating-hours feedback", async ({ page }) => {
-  await page.goto("/w/clair-demo/orders?modulePanel=open");
-  await page.getByTestId("hospital-admin-menu-settings").click();
-
-  const changeBar = page.getByTestId("hospital-settings-change-bar");
-  await page.getByLabel("팩스").fill("02-6203-9999");
-  await expect(changeBar).toBeVisible();
-  await changeBar.getByRole("button", { name: "변경사항 저장" }).click();
-  await expect(changeBar).toBeHidden();
-  await expect(page.getByText("병원 기본 설정이 저장되었습니다.")).toBeVisible();
-  await expect(page.getByText("운영시간이 변경되었습니다.")).toBeHidden();
-
-  await page.getByTestId("hospital-admin-menu-roles").click();
-  await page.getByTestId("hospital-admin-menu-settings").click();
-  await expect(page.getByLabel("팩스")).toHaveValue("02-6203-9999");
-
-  await page.getByRole("combobox", { name: "월요일 진료 종료" }).click();
-  await page.getByRole("option", { name: "18:00", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "다른 운영일에도 적용할까요?" })).toBeVisible();
-  await page.getByRole("button", { name: "모든 운영일에 적용" }).click();
-  await expect(page.getByRole("combobox", { name: "화요일 진료 종료" })).toContainText("18:00");
-  await page.getByRole("combobox", { name: "월요일 진료 종료" }).click();
-  await page.getByRole("option", { name: "18:30", exact: true }).click();
-  await page.getByRole("button", { name: "이 요일만 적용" }).click();
-  await expect(page.getByRole("combobox", { name: "월요일 진료 종료" })).toContainText("18:30");
-  await expect(page.getByRole("combobox", { name: "화요일 진료 종료" })).toContainText("18:00");
-  await changeBar.getByRole("button", { name: "변경사항 저장" }).click();
-  await expect(page.getByText("운영시간이 변경되었습니다.")).toBeVisible();
-
-  await page.getByLabel("대표 전화 *").fill("02-6203-0000");
-  await changeBar.getByRole("button", { name: "변경 전으로 되돌리기" }).click();
-  await expect(page.getByRole("dialog", { name: "저장하지 않은 변경사항을 되돌릴까요?" })).toBeVisible();
-  await page.getByRole("button", { name: "모두 되돌리기" }).click();
-  await expect(changeBar).toBeHidden();
-  await expect(page.getByLabel("대표 전화 *")).toHaveValue("02-6203-7582");
-});
-
-test("hospital basic settings supports exception editing and guarded navigation", async ({ page }) => {
-  await page.goto("/w/clair-demo/orders?modulePanel=open");
-  await page.getByTestId("hospital-admin-menu-settings").click();
-
-  const exceptionEmptyState = page.getByTestId("hospital-settings-exception-empty-state");
-  await expect(exceptionEmptyState).toHaveAttribute("data-size", "sm");
-  await expect(exceptionEmptyState).toHaveAttribute("data-surface", "table");
-  await expect(exceptionEmptyState).toContainText("등록된 예외 일정이 없습니다");
-
-  await page.getByRole("button", { name: "예외 일정 추가" }).click();
-  const createDialog = page.getByRole("dialog", { name: "예외 일정 추가" });
-  await createDialog.getByLabel("날짜").fill("2026-07-14");
-  await createDialog.getByRole("button", { name: "추가" }).click();
-  const exceptionRow = page.getByTestId("hospital-settings-exception-2026-07-14");
-  await expect(exceptionRow).toContainText("휴무일");
-  await exceptionRow.getByRole("button", { name: "수정" }).click();
-  const editDialog = page.getByRole("dialog", { name: "예외 일정 수정" });
-  await editDialog.getByRole("combobox", { name: "운영 방식" }).click();
-  await page.getByRole("option", { name: "직접 설정", exact: true }).click();
-  await editDialog.getByRole("button", { name: "저장" }).click();
-  await expect(exceptionRow).toContainText("직접 설정");
-  await expect(exceptionRow.getByRole("button", { name: "삭제" })).toHaveClass(
-    /bg-\[var\(--emr-status-danger-bg\)\]/
-  );
-
-  await page.getByTestId("hospital-admin-menu-roles").click();
-  await expect(page.getByRole("dialog", { name: "저장하지 않은 변경사항이 있습니다" })).toBeVisible();
-  await page.getByRole("button", { name: "계속 편집" }).click();
-  await expect(page.getByTestId("hospital-admin-settings-screen")).toBeVisible();
-
-  await page
-    .getByTestId("hospital-admin-menu-order-management")
-    .locator("xpath=ancestor::section")
-    .getByRole("button", { name: /처방/ })
-    .click();
-  await expect(page.getByRole("dialog", { name: "저장하지 않은 변경사항이 있습니다" })).toBeVisible();
-  await page.getByRole("button", { name: "변경사항 버리고 이동" }).click();
-  await expect(page.getByRole("heading", { name: "처방", exact: true })).toBeVisible();
-});
-
-test("hospital basic settings stays single-column and keeps the change bar reachable on compact screens", async ({ page }) => {
-  await page.setViewportSize({ width: 768, height: 900 });
-  await page.goto("/w/clair-demo/orders?modulePanel=open");
-  await page.getByTestId("hospital-admin-menu-settings").click();
-
-  const columnCount = await page.getByTestId("hospital-settings-contact-fields").evaluate((element) =>
-    getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length
-  );
-  expect(columnCount).toBe(1);
-
-  await page.getByLabel("팩스").fill("02-6203-9999");
-  const changeBar = page.getByTestId("hospital-settings-change-bar");
-  await expect(changeBar).toBeVisible();
-  const changeBarBox = await changeBar.boundingBox();
-  expect(changeBarBox).not.toBeNull();
-  expect(changeBarBox!.x).toBeGreaterThanOrEqual(0);
-  expect(changeBarBox!.x + changeBarBox!.width).toBeLessThanOrEqual(768);
-});
-
 test("hospital schedule supports editing, personal requests, approval, and publish review", async ({ page }) => {
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
@@ -769,7 +640,7 @@ test("hospital admin preserves unsaved work defaults and confirms destructive na
   await workDefaultsSection.click();
   await expect(screen.getByLabel("기본 접수 담당")).toContainText("수의사");
 
-  await sidePanel.getByRole("button", { name: "병원기본설정" }).click();
+  await sidePanel.getByRole("button", { name: "병원 기본 설정" }).click();
   const sideNavigationDialog = page.getByRole("dialog", {
     name: "저장하지 않은 변경사항이 있습니다",
   });

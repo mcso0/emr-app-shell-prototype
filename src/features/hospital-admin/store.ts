@@ -21,6 +21,8 @@ export type HospitalAdminSection =
   | "roles"
   | "schedule"
   | "settings"
+  | "settings-contact"
+  | "settings-hours"
   | "space-time"
   | "vitals";
 
@@ -133,7 +135,12 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
   requestSectionChange: (section) => {
     const state = get();
     const guardsUnsavedSettings =
-      (state.activeSection === "settings" || state.activeSection === "roles") &&
+      (
+        state.activeSection === "settings" ||
+        state.activeSection === "settings-contact" ||
+        state.activeSection === "settings-hours" ||
+        state.activeSection === "roles"
+      ) &&
       state.settingsDirty &&
       section !== state.activeSection;
     if (guardsUnsavedSettings) {

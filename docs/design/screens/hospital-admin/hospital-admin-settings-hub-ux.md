@@ -14,6 +14,9 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-006-role-permission-management-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-020-space-management-persistence.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-007-hospital-settings-screen-split.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-021-hospital-profile-contact-persistence.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-022-hospital-logo-storage.md"
 last_updated: 2026-07-23
 ---
 
@@ -31,14 +34,15 @@ Do not introduce a separate settings route, landing page, or marketing-style set
 
 ```mermaid
 flowchart LR
-  A["병원관리 side panel"] --> B["병원기본설정"]
-  A --> C["병원구성원 관리"]
-  A --> D["역할 및 권한"]
-  A --> E["공간 관리"]
-  A --> F["근무표"]
-  A --> G["바이탈 관리"]
-  A --> H["감사 로그"]
-  A --> I["Order 관리"]
+  A["병원관리 side panel"] --> B["병원 설정"]
+  A --> C["조직 및 접근"]
+  A --> D["진료 카탈로그"]
+  B --> E["병원 기본 설정"]
+  B --> F["연락처 및 채널"]
+  B --> G["운영시간 관리"]
+  C --> H["병원 구성원"]
+  C --> I["역할 및 권한"]
+  D --> J["Order 관리"]
 ```
 
 ## Global UX Rules
@@ -47,6 +51,9 @@ flowchart LR
 - Remove the top-bar gear button from the app chrome while it has no separate personal-setting role.
 - Keep account/profile settings under the profile menu.
 - Open each target item from the existing hospital-admin side panel.
+- Use the side-panel groups `병원 설정`, `조직 및 접근`, and `진료 카탈로그`; group labels are presentational and not focusable.
+- Keep hospital identity, contact/channel, and operating-time tasks on independent URL-backed screens. Do not use scroll anchors between them.
+- Do not render a breadcrumb/page toolbar above these screens.
 - Hide save controls until the user changes an editable value. Show one fixed bottom change bar with save and revert actions while a draft is dirty.
 - `공간 관리` is the narrow-command exception: category and space commands submit from their inline row or confirmation dialog and replace the view with the server snapshot.
 - Use explicit `취소` and `시안 저장` controls for static screen-only mocks, add/edit/approval/publish controls for `근무표`, and role-specific save/cancel with local dirty state for `역할 및 권한`.
@@ -57,8 +64,10 @@ flowchart LR
 
 | Screen | Primary pattern | Secondary pattern | Notes |
 | --- | --- | --- | --- |
-| 병원기본설정 | Read-only identity + editable contact cards | Day-by-day operating-hours editor + exception dialogs | Dedicated session-local implementation; no development metadata in the visible UI |
-| 병원구성원 관리 | Existing table + invite/edit sheets | Role/job assignment controls | Assign people here and link to definitions in `역할 및 권한` |
+| 병원 기본 설정 | Read-only identity/region rows + private logo editor | Registered-information request dialog and address-copy action | Logo image is the trigger; hover/focus dims it and reveals an edit icon |
+| 연락처 및 채널 | Divided setting rows with right-aligned controls | Multiline customer guidance memo + fixed dirty bar | Profile API/RPC persistence; meaningful results use toasts |
+| 운영시간 관리 | One weekday ToggleGroup + terminal day rows | Time dialog + holiday/exception rows | ToggleGroup is the only open/closed control; no duplicate switches |
+| 병원 구성원 | Existing table + invite/edit sheets | Role/job assignment controls | Assign people here and link to definitions in `역할 및 권한` |
 | 역할 및 권한 | `920px` grouped settings hub + URL-backed independent detail screen | One-open role items, divided switch rows, and contextual save state | Keep the hub concise; each role item owns its assigned members, summary, and permission controls |
 | 공간 관리 | Category settings list + two-level category detail | Inline category/space CRUD with confirmations and toasts | Categories navigate; terminal space rows use direct edit/delete actions |
 | 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Supabase mode uses route/RPC persistence; mock mode remains explicit session-only fallback |
@@ -67,20 +76,35 @@ flowchart LR
 
 ## UX Flows
 
-### 병원기본설정
+### 병원 기본 설정
 
 1. Admin opens `병원관리`.
-2. Admin selects `병원기본설정`.
-3. Screen shows registered hospital identity as read-only fields, with a single `병원 정보 변경 요청` action and address-copy feedback.
-4. Admin changes contact, weekday, holiday, or exception settings locally.
-5. A fixed bottom change bar appears. Admin can save or confirm a full revert.
-6. The session snapshot is updated and a toast distinguishes operating-hour changes from contact-only changes. No DB/API mutation is claimed.
+2. Admin selects `병원 기본 설정`.
+3. Screen shows the private hospital logo, registered hospital identity, timezone, and region in Linear-style divided rows.
+4. Hovering or focusing the logo dims the image and reveals an edit icon. Activating it opens a dialog; closing returns focus to the logo.
+5. The dialog validates JPG/PNG type and size, stages a draft preview, then saves through the signed private upload/finalize boundary.
+6. Registered identity changes use the dedicated request dialog; address copy and every outcome-bearing action show a toast.
+
+### 연락처 및 채널
+
+1. Admin selects `연락처 및 채널`; the URL-backed screen replaces the previous content instead of scrolling.
+2. Representative phone, fax, homepage, and Instagram use right-aligned controls.
+3. `고객 안내 메모` uses a multiline textarea sized for several lines of instructions.
+4. A fixed dirty bar saves through the workspace profile API or confirms revert. Inline validation and first-invalid-field focus remain visible in addition to error toasts.
+
+### 운영시간 관리
+
+1. Admin selects `운영시간 관리`; weekly hours and holiday/exception rules stay on this one screen.
+2. The weekday ToggleGroup selects operating days. Closed days retain their values but show a disabled `휴무` row.
+3. Selecting an open-day time row opens a dialog with start/end consultation and break-time fields only; it has no second operating switch.
+4. `공휴일 기본 정책` and exception rows keep descriptive text on the left and the action control on the right.
+5. Saving uses the existing atomic operating-hours API/RPC and conflict validation; add/edit/delete/save/revert results use toasts.
 
 #### Operating-hours details
 
-- Every weekday has an independent `운영일`/`휴무일` switch. Closed days retain but disable their time values.
-- Time selects use 30-minute increments. After changing a time, the user chooses either the current day only or all open days.
-- Holiday policy stays in the section header beside `예외 일정 추가`.
+- The weekday ToggleGroup is the only open/closed control. Closed days retain but disable their time values.
+- Time selects use 30-minute increments inside the selected-day dialog.
+- Holiday policy and exception actions use the same left-copy/right-action row grammar as the weekly schedule.
 - Exception schedules use a dialog for date, closed/custom mode, and custom hours; duplicate dates are rejected. The list is date-sorted and exposes calendar, edit, and destructive delete affordances.
 - If the user moves to another hospital-admin item with unsaved changes, the navigation guard offers continuing edits or discarding the draft. Browser refresh/close uses the native warning.
 
@@ -146,13 +170,14 @@ flowchart LR
 
 ## Screen-Only Implementation Checklist
 
-- Enable target side-panel items: `병원기본설정`, `근무표`, `역할 및 권한`, `공간 관리`, `바이탈 관리`.
+- Enable target side-panel items: `병원 기본 설정`, `연락처 및 채널`, `운영시간 관리`, `근무표`, `역할 및 권한`, `공간 관리`, `바이탈 관리`.
 - Keep out-of-scope items disabled: `진료과 분리운영`, `차트 템플릿`, `장비 관리`, `마약류 관리`, `Order 세트`, `프린터 설정`, `데이터랩`.
 - Preserve existing `병원구성원 관리`, `감사 로그`, and `Order 관리` behavior.
 - Add test IDs for new screens and stable role/tab/detail contracts.
 - Verify top-bar gear button is removed.
-- Verify the dedicated basic-settings screen keeps save hidden initially, surfaces the change bar after an edit, and preserves its session snapshot across hospital-admin navigation.
-- Verify read-only identity, copy feedback, schedule propagation, exception CRUD, validation focus, and compact single-column layout.
+- Verify the three settings items change the URL-backed screen, never scroll within one long page, and render no breadcrumb toolbar.
+- Verify the logo hover/focus editor, file validation, dialog focus return, signed upload/finalize flow, and outcome toasts.
+- Verify contact/profile save-readback, multiline memo, read-only identity, copy feedback, weekday single-source control, exception CRUD, validation focus, and compact single-column layout.
 - Verify `공간 관리` command CRUD/toasts and `근무표` CRUD, request approval, conflict review, and publish state separately.
 - Verify every new target screen opens from the side panel. `역할 및 권한` must not use `시안 저장`.
 
@@ -160,7 +185,7 @@ flowchart LR
 
 | Scope | Required follow-up |
 | --- | --- |
-| Hospital profile persistence | DB table/RPC/API, RLS, admin-only mutation, asset upload rules |
+| Hospital profile follow-up | Remote migration/Storage application and authenticated production readback after release approval |
 | Role work profiles | Data model, relation to permission policies, Home assignment read model |
 | Space/time | Room model, operating hours model, slot rules, conflict validation |
 | Schedule | Persisted shifts/templates, coverage rules, availability, staff self-view policy, audit events, server authorization, and notifications |

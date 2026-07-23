@@ -7,6 +7,7 @@ import {
 import {
   cloneHospitalBasicSettingsDraft,
   createInitialHospitalBasicSettingsDraft,
+  validateOperatingHoursDraft,
   weekdays,
   type HospitalBasicSettingsDraft,
   type HospitalScheduleException,
@@ -28,6 +29,7 @@ export type HospitalOperatingHoursGateway = {
 
 type Result =
   | { ok: true; status: 200; settings: HospitalOperatingHoursSettings; enforcedBy: "hospital-operating-hours" }
+  | { ok: false; status: 400; error: "invalid_input"; fieldErrors: Array<{ fieldId: string; message: string }> }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
   | { ok: false; status: 409; error: "future_appointment_conflict" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
@@ -48,14 +50,25 @@ export async function readHospitalOperatingHours(input: {
 export async function updateHospitalOperatingHours(input: {
   actorUserId: string | null;
   workspaceId: string;
-  settings: HospitalOperatingHoursSettings;
+  settings: unknown;
   gateway?: HospitalOperatingHoursGateway;
   permissionAdapter?: WorkspacePermissionAdapter;
 }): Promise<Result> {
   const denied = authorize(input, "hospital_settings:manage");
   if (denied) return denied;
+  const parsed = parseHospitalOperatingHoursSettingsInput(input.settings);
+  if (!parsed.ok) {
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: parsed.fieldErrors,
+    };
+  }
   const result = await (input.gateway ?? createMockHospitalOperatingHoursGateway()).replace({
-    actorUserId: input.actorUserId!, workspaceId: input.workspaceId, settings: input.settings,
+    actorUserId: input.actorUserId!,
+    workspaceId: input.workspaceId,
+    settings: parsed.settings,
   });
   if (!result.ok) {
     return result.error === "future_appointment_conflict"
@@ -63,6 +76,105 @@ export async function updateHospitalOperatingHours(input: {
       : { ok: false, status: 500, error: result.error };
   }
   return { ok: true, status: 200, settings: result.settings, enforcedBy: "hospital-operating-hours" };
+}
+
+export type HospitalOperatingHoursInputResult =
+  | { ok: true; settings: HospitalOperatingHoursSettings }
+  | {
+      ok: false;
+      fieldErrors: Array<{ fieldId: string; message: string }>;
+    };
+
+export function parseHospitalOperatingHoursSettingsInput(
+  value: unknown
+): HospitalOperatingHoursInputResult {
+  const malformed = (fieldId: string, message: string): HospitalOperatingHoursInputResult => ({
+    ok: false,
+    fieldErrors: [{ fieldId, message }],
+  });
+
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      "timezone",
+      "weeklyHours",
+      "holidayPolicy",
+      "exceptions",
+    ])
+  ) {
+    return malformed("operating-hours", "운영시간 설정 형식을 확인해 주세요.");
+  }
+  if (!isTimeZone(value.timezone)) {
+    return malformed("hospital-settings-timezone", "유효한 시간대를 선택해 주세요.");
+  }
+  if (
+    value.holidayPolicy !== "closed" &&
+    value.holidayPolicy !== "weekday" &&
+    value.holidayPolicy !== "custom"
+  ) {
+    return malformed(
+      "hospital-settings-holiday-policy",
+      "공휴일 기본 정책을 선택해 주세요."
+    );
+  }
+  if (
+    !isRecord(value.weeklyHours) ||
+    !hasExactKeys(value.weeklyHours, [...weekdays])
+  ) {
+    return malformed(
+      "hospital-settings-weekly-hours",
+      "월요일부터 일요일까지의 운영시간을 모두 입력해 주세요."
+    );
+  }
+
+  const weeklyHours = {} as Record<(typeof weekdays)[number], WeekdaySchedule>;
+  for (const day of weekdays) {
+    const schedule = parseSchedule(value.weeklyHours[day]);
+    if (!schedule) {
+      return malformed(
+        `hospital-settings-${day}`,
+        "진료시간과 휴게시간을 HH:mm 형식으로 입력해 주세요."
+      );
+    }
+    weeklyHours[day] = schedule;
+  }
+
+  if (!Array.isArray(value.exceptions) || value.exceptions.length > 366) {
+    return malformed(
+      "hospital-settings-exceptions",
+      "예외 일정은 최대 366개까지 등록할 수 있습니다."
+    );
+  }
+  const exceptions: HospitalScheduleException[] = [];
+  for (const [index, exception] of value.exceptions.entries()) {
+    const parsed = parseException(exception);
+    if (!parsed) {
+      return malformed(
+        `hospital-settings-exception-${index}`,
+        "예외 일정의 날짜와 운영시간 형식을 확인해 주세요."
+      );
+    }
+    exceptions.push(parsed);
+  }
+
+  const settings: HospitalOperatingHoursSettings = {
+    timezone: value.timezone,
+    weeklyHours,
+    holidayPolicy: value.holidayPolicy,
+    exceptions,
+  };
+  const validationDraft = {
+    ...createInitialHospitalBasicSettingsDraft(),
+    ...settings,
+  };
+  const issues = validateOperatingHoursDraft(validationDraft);
+  if (issues.length > 0) {
+    return {
+      ok: false,
+      fieldErrors: issues.map(({ fieldId, message }) => ({ fieldId, message })),
+    };
+  }
+  return { ok: true, settings: cloneSettings(settings) };
 }
 
 function authorize(
@@ -205,6 +317,112 @@ function cloneSettings(settings: HospitalOperatingHoursSettings): HospitalOperat
     holidayPolicy: cloned.holidayPolicy,
     exceptions: cloned.exceptions,
   };
+}
+
+function parseSchedule(value: unknown): WeekdaySchedule | null {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["isOpen", "treatment", "break"]) ||
+    typeof value.isOpen !== "boolean"
+  ) {
+    return null;
+  }
+  const treatment = parseTimeRange(value.treatment);
+  const breakRange = parseTimeRange(value.break);
+  if (!treatment || !breakRange) return null;
+  return {
+    isOpen: value.isOpen,
+    treatment,
+    break: breakRange,
+  };
+}
+
+function parseException(value: unknown): HospitalScheduleException | null {
+  if (!isRecord(value) || !isExceptionId(value.id) || !isDate(value.date)) {
+    return null;
+  }
+  if (
+    value.mode === "closed" &&
+    hasExactKeys(value, ["id", "date", "mode"])
+  ) {
+    return { id: value.id, date: value.date, mode: "closed" };
+  }
+  if (
+    value.mode === "custom" &&
+    hasExactKeys(value, ["id", "date", "mode", "treatment", "break"])
+  ) {
+    const treatment = parseTimeRange(value.treatment);
+    const breakRange = parseTimeRange(value.break);
+    if (!treatment || !breakRange) return null;
+    return {
+      id: value.id,
+      date: value.date,
+      mode: "custom",
+      treatment,
+      break: breakRange,
+    };
+  }
+  return null;
+}
+
+function parseTimeRange(value: unknown) {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["start", "end"]) ||
+    !isTime(value.start) ||
+    !isTime(value.end)
+  ) {
+    return null;
+  }
+  return { start: value.start, end: value.end };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasExactKeys(value: Record<string, unknown>, expected: string[]) {
+  const keys = Object.keys(value);
+  return (
+    keys.length === expected.length &&
+    keys.every((key) => expected.includes(key))
+  );
+}
+
+function isTime(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)
+  );
+}
+
+function isTimeZone(value: unknown): value is string {
+  if (typeof value !== "string" || value.length === 0 || value.length > 100) {
+    return false;
+  }
+  try {
+    new Intl.DateTimeFormat("ko-KR", { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isExceptionId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 100 &&
+    /^[a-zA-Z0-9_-]+$/.test(value)
+  );
+}
+
+function isDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function demoPermissions() {

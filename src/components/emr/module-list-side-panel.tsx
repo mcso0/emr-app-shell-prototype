@@ -51,6 +51,7 @@ export type EmrModuleListSidePanelSectionItem = EmrModuleListSidePanelBaseItem &
 
 export type EmrModuleListSidePanelItem =
   | EmrModuleListSidePanelButtonItem
+  | EmrModuleListSidePanelGroupLabelItem
   | EmrModuleListSidePanelSectionItem;
 
 type EmrModuleListSidePanelProps = {
@@ -169,7 +170,10 @@ function EmrModuleListSidePanelGroupTitle({
   children: ReactNode;
 }) {
   return (
-    <div className="flex h-[var(--emr-module-list-group-title-height)] items-center px-[var(--emr-module-list-group-title-padding-x)] py-[var(--emr-module-list-group-title-padding-y)] first:mt-0">
+    <div
+      className="flex h-[var(--emr-module-list-group-title-height)] items-center px-[var(--emr-module-list-group-title-padding-x)] py-[var(--emr-module-list-group-title-padding-y)] first:mt-0"
+      data-emr-module-list-group-label="true"
+    >
       <span className="emr-text-metadata truncate font-medium tracking-[var(--emr-type-tracking-metadata)] text-[var(--emr-module-list-group-title-text)]">
         {children}
       </span>
@@ -279,7 +283,11 @@ export function EmrModuleListSidePanel({
       <ScrollArea className="min-h-0 flex-1">
         <div className="grid w-[var(--emr-module-list-panel-width)] gap-[var(--emr-module-list-section-gap)] px-[var(--emr-module-list-body-padding-x)] py-[var(--emr-module-list-body-padding-y)]">
           {items.map((item) =>
-            item.type === "button" ? (
+            item.type === "groupLabel" ? (
+              <EmrModuleListSidePanelGroupTitle key={item.id}>
+                {item.label}
+              </EmrModuleListSidePanelGroupTitle>
+            ) : item.type === "button" ? (
               <EmrModuleListSidePanelItemButton
                 key={item.id}
                 active={item.active}

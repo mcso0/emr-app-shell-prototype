@@ -14,6 +14,9 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-011-schedule-operations-persistence.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-006-role-permission-management-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-020-space-management-persistence.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-007-hospital-settings-screen-split.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-021-hospital-profile-contact-persistence.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-022-hospital-logo-storage.md"
 last_updated: 2026-07-23
 ---
 
@@ -31,8 +34,10 @@ Top-bar settings must not duplicate hospital settings. Top-bar account/profile c
 
 | Area | Responsibility | Phase 1 decision |
 | --- | --- | --- |
-| `병원기본설정` | Workspace-owned hospital identity, editable contact, operating hours, and date exceptions | Dedicated session-local UI implemented; later connect to hospital profile API |
-| `병원구성원 관리` | Staff invites, member status, and assigning one permission role and one job position to a person | Keep people assignment here; role/job catalog definitions live in `역할 및 권한` |
+| `병원 기본 설정` | Workspace-owned hospital identity, private logo, region, and timezone | Profile/logo API, RPC, RLS, private Storage, and signed upload/read boundary implemented locally |
+| `연락처 및 채널` | Representative phone, fax, homepage, Instagram, and customer guidance memo | Workspace profile API/RPC/RLS persistence implemented locally |
+| `운영시간 관리` | Operating weekdays, per-day hours, holiday policy, and date exceptions | Existing workspace operating-hours API/RPC/RLS retained and UX consolidated into one independent screen |
+| `병원 구성원` | Staff invites, member status, and assigning one permission role and one job position to a person | Keep people assignment here; role/job catalog definitions live in `역할 및 권한` |
 | `역할 및 권한` | Permission-role definitions, grouped effective permissions, job-position catalog, and local work defaults | System roles are inspectable/read-only; custom roles are allow-only within the approved catalog |
 | `공간 관리` | Workspace-owned space categories and spaces | Persist through workspace-scoped API/RPC/RLS; time settings are excluded |
 | `근무표` | Weekly shift editing, daily role coverage, personal schedule, and approval requests | Supabase mode persists through route/RPC/RLS; mock mode intentionally remains session-only |
@@ -63,20 +68,20 @@ The role screen is an explanation and local-first management surface, not the se
 
 ## Screen Specs
 
-### 병원기본설정
+### 병원 기본 설정 · 연락처 및 채널 · 운영시간 관리
 
 | Item | Spec |
 | --- | --- |
-| Purpose | Let hospital admins review registered hospital identity and maintain contact and operating settings. |
+| Purpose | Give hospital identity, contact/channel, and operating-time tasks independent URL-backed screens without scroll-anchor navigation. |
 | Primary user | Hospital owner/admin. |
-| Scenario | Admin reviews read-only registered identity, edits contact or operating hours, then saves. Operating hours persist through the workspace API; contact remains session-local. |
-| Information structure | Header → read-only hospital identity → editable contact → day-by-day operating hours → holiday and exception schedule. |
-| Fields/components | Read-only hospital name/director/address, address copy feedback, phone/fax/homepage/Instagram, day switches, 30-minute time selects, holiday policy, exception dialogs, fixed change bar. |
+| Scenario | Admin reviews registered identity and logo, edits contact/channel values, or maintains weekly hours and exceptions on the dedicated screen for that task. |
+| Information structure | Grouped side panel → independent page header → Linear-style divided setting rows; no breadcrumb toolbar. |
+| Fields/components | Hover/focus logo editor dialog, read-only hospital name/director/address, address copy feedback, contact fields plus multiline memo, weekday ToggleGroup, time dialog, holiday policy, exception dialogs, fixed change bar. |
 | Default state | Prefilled synthetic hospital profile and weekday operating hours. |
 | Empty state | Exception schedule shows `등록된 예외 일정이 없습니다.`. |
 | Permission state | Active members can read operating hours; `hospital_settings:manage` and DB workspace-admin enforcement are required to update them. |
-| Save/cancel flow | The change bar appears only after edits. Operating-hour save uses an atomic API/RPC update and blocks if future active appointments would become invalid. Revert confirms before restoring saved values. |
-| Data/API follow-up | Implemented: `workspace_operating_hours`, `workspace_operating_hour_exceptions`, timezone/holiday policy, admin-only update RPC, RLS/grants, audit event, selected-date resolver, and reception calendar/writer adoption. Remaining: contact-profile persistence and trusted public-holiday calendar ingestion. |
+| Save/cancel flow | The change bar appears only after edits. Profile and operating-hour saves use their workspace API/RPC boundaries; logo upload uses quarantine → normalize → finalize/CAS. Meaningful outcomes use toasts and invalid fields retain inline errors/focus. |
+| Data/API boundary | Implemented locally: workspace hospital profile/contact/change requests, private logo Storage/pointer/signed read, existing operating-hours/exceptions, RLS/grants, audit emission, and server permission checks. Remote migration and production readback remain release-gated. |
 | Screen direction | Quiet, minimal form with no workspace ID, phase, impact, or future-data metadata in the customer-facing surface. |
 
 ### 병원구성원 관리 개선
