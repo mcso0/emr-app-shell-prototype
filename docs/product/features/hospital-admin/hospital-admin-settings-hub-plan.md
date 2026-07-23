@@ -101,14 +101,14 @@ The role screen is an explanation and local-first management surface, not the se
 | Purpose | Explain and manage permission roles, job positions, and permission-independent work defaults without mixing their meanings. |
 | Primary user | Hospital admin or owner. |
 | Scenario | Admin selects a role, reads its effective permissions, creates an allow-only custom role, checks assigned members, manages job labels, and separately sets work defaults. |
-| Information structure | `권한 역할`, `직무`, and `업무 기본값` tabs; role list/detail split view. |
+| Information structure | One grouped three-row settings hub—`권한 역할`, `직무`, and `업무 기본값`—inside the shared `920px` boundary. A row opens an independent URL-backed detail screen; the role detail uses one-open role items, and each expanded item owns its member summary and permission rows. |
 | Fields/components | Role name, assigned-member count, grouped permission rows, locked owner-only rows, job catalog, local work-default fields, and contextual save/cancel. |
 | Default state | `관리자` selected; system roles are read-only and custom roles expose approved permissions only. |
 | Empty state | System roles remain visible; a custom-role action explains the available safe catalog. |
 | Permission state | Client UI can restrict mutations, but server enforcement remains authoritative. |
 | Save/cancel flow | Custom role and work-default edits save only to the local/session boundary in this PR. |
 | Data/API follow-up | Live catalog API/RPC/RLS and an approved work-default contract remain follow-up work. |
-| Screen direction | Quiet split view; no KPI strip, phase badges, future-data rail, or database table names in product UI. |
+| Screen direction | Quiet centered settings view; keep top-level summaries in one divided surface, use a clear back action and browser history for details, show permission categories as sectioned switch rows, and avoid nested accordions, KPI strips, phase badges, future-data rails, or database table names. |
 
 ### 공간/시간 관리
 

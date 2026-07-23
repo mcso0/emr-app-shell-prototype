@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>권한 역할 상세 구조 재검토</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #18181b;
+        --muted: #71717a;
+        --line: #e4e4e7;
+        --soft: #f4f4f5;
+        --paper: #ffffff;
+        --canvas: #f7f7f8;
+        --accent: #18181b;
+        --success: #16794a;
+        --warning-bg: #fff8e7;
+        --warning-line: #ead8a8;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; background: var(--canvas); color: var(--ink); }
+      button { font: inherit; }
+      a { color: inherit; }
+
+      .page {
+        width: min(1120px, calc(100% - 32px));
+        margin: 32px auto 80px;
+      }
+
+      .masthead {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 28px;
+        align-items: end;
+        padding: 40px 44px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--paper);
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); line-height: 1.14; letter-spacing: -.035em; }
+      .lead { max-width: 710px; margin: 16px 0 0; color: var(--muted); font-size: 16px; line-height: 1.75; }
+      .stamp { align-self: start; padding: 8px 11px; border-radius: 999px; background: var(--soft); color: #3f3f46; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+      .jump {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 16px 0 0;
+      }
+      .jump a {
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255,255,255,.8);
+        color: #52525b;
+        font-size: 12px;
+        text-decoration: none;
+      }
+      .jump a:hover { border-color: #a1a1aa; color: var(--ink); }
+
+      .section { margin-top: 52px; }
+      .section-head { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 36px; margin-bottom: 20px; }
+      .section-index { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+      h2 { margin: 0; font-size: 24px; line-height: 1.35; letter-spacing: -.02em; }
+      .section-copy { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+
+      .diagnosis {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--line);
+      }
+      .diagnosis article { min-height: 168px; padding: 24px; background: var(--paper); }
+      .diagnosis strong { display: block; margin-bottom: 10px; font-size: 15px; }
+      .diagnosis p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+      .diagnosis .number { display: inline-flex; margin-bottom: 24px; color: #a1a1aa; font-size: 12px; font-weight: 700; }
+
+      .decision {
+        display: grid;
+        grid-template-columns: 1.1fr .9fr;
+        gap: 1px;
+        overflow: hidden;
+        border: 1px solid #d4d4d8;
+        border-radius: 18px;
+        background: #d4d4d8;
+      }
+      .decision > div { padding: 28px; background: var(--paper); }
+      .decision .recommend { background: var(--ink); color: white; }
+      .decision h3 { margin: 0 0 10px; font-size: 19px; }
+      .decision p { margin: 0; color: #d4d4d8; font-size: 14px; line-height: 1.75; }
+      .decision ul { margin: 16px 0 0; padding-left: 18px; color: #e4e4e7; font-size: 13px; line-height: 1.8; }
+      .decision .rule { color: var(--muted); }
+      .decision .rule p { color: var(--muted); }
+
+      .prototype-shell {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--paper);
+      }
+      .prototype-top {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 28px 30px 22px;
+        border-bottom: 1px solid var(--line);
+      }
+      .prototype-top h3 { margin: 0; font-size: 22px; }
+      .prototype-top p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+      .prototype-note { padding: 7px 10px; border-radius: 999px; background: var(--soft); color: #52525b; font-size: 11px; font-weight: 700; }
+      .role-list { padding: 0 30px 30px; }
+      .role-item {
+        border-bottom: 1px solid var(--line);
+        transition: margin 160ms ease-out, padding 160ms ease-out, background 160ms ease-out, box-shadow 160ms ease-out;
+      }
+      .role-item:last-child { border-bottom: 0; }
+      .role-item[aria-expanded="true"] {
+        margin: 10px -10px;
+        padding: 0 10px;
+        border-bottom-color: transparent;
+        border-radius: 12px;
+        background: #fafafa;
+        box-shadow: inset 0 0 0 1px #d4d4d8;
+      }
+      .role-trigger {
+        display: grid;
+        grid-template-columns: minmax(150px, .7fr) minmax(230px, 1.4fr) auto;
+        gap: 22px;
+        align-items: center;
+        width: 100%;
+        padding: 22px 4px;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .role-trigger:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 8px; }
+      .role-name { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+      .role-name strong { font-size: 15px; }
+      .badge { padding: 4px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 10px; font-weight: 700; }
+      .member-preview { min-width: 0; color: #52525b; font-size: 12px; line-height: 1.55; }
+      .role-summary { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+      .role-summary b { color: var(--ink); }
+      .disclosure { display: inline-block; color: #71717a; font-size: 18px; line-height: 1; transform: rotate(0deg); transition: transform 160ms ease-out; }
+      .role-item[aria-expanded="true"] .disclosure { transform: rotate(90deg); }
+      .role-item[aria-expanded="true"] .role-trigger { padding-bottom: 18px; }
+      .role-panel { display: none; padding: 0 4px 28px; }
+      .role-item[aria-expanded="true"] .role-panel { display: block; animation: reveal 160ms ease-out; }
+      @keyframes reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+      .members {
+        display: grid;
+        grid-template-columns: 130px minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: start;
+        padding: 16px 18px;
+        border-radius: 12px;
+        background: var(--soft);
+      }
+      .members strong { font-size: 12px; }
+      .member-names { color: #3f3f46; font-size: 12px; line-height: 1.7; }
+      .text-button { padding: 0; border: 0; background: transparent; color: #3f3f46; font-size: 12px; font-weight: 700; cursor: pointer; }
+      .permission-groups { display: grid; gap: 20px; margin-top: 24px; }
+      .permission-group-head { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+      .permission-group-head strong { font-size: 12px; }
+      .permission-group-head span { color: var(--muted); font-size: 11px; }
+      .permission-rows { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; }
+      .permission-row { display: flex; align-items: center; justify-content: space-between; gap: 22px; min-height: 62px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+      .permission-row:last-child { border-bottom: 0; }
+      .permission-row strong { display: block; font-size: 13px; }
+      .permission-row p { margin: 3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+      .switch-wrap { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+      .switch-label { color: var(--muted); font-size: 10px; font-weight: 700; }
+      .switch {
+        position: relative;
+        width: 34px;
+        height: 20px;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: #d4d4d8;
+      }
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: white;
+        box-shadow: 0 1px 2px rgba(0,0,0,.16);
+      }
+      .switch[aria-checked="true"] { background: var(--ink); }
+      .switch[aria-checked="true"]::after { transform: translateX(14px); }
+      .switch:disabled { cursor: not-allowed; opacity: .72; }
+      .lock-note { margin: 18px 0 0; padding: 12px 14px; border: 1px solid var(--warning-line); border-radius: 10px; background: var(--warning-bg); color: #725618; font-size: 11px; line-height: 1.65; }
+
+      .comparison { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
+      table { width: 100%; border-collapse: collapse; min-width: 760px; }
+      th, td { padding: 16px 18px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 12px; line-height: 1.65; }
+      th { background: var(--soft); color: #52525b; font-size: 11px; }
+      tr:last-child td { border-bottom: 0; }
+      td:first-child { width: 180px; font-weight: 700; }
+      .recommended-row td { background: #fafafa; }
+      .yes { color: var(--success); font-weight: 800; }
+
+      .switch-guidance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .guidance-card { padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+      .guidance-card strong { display: block; font-size: 13px; }
+      .guidance-card p { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+
+      .final-check { display: grid; gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--line); }
+      .check-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 20px; padding: 17px 20px; background: var(--paper); }
+      .check-row strong { font-size: 12px; }
+      .check-row span { color: var(--muted); font-size: 12px; line-height: 1.65; }
+
+      footer { margin-top: 40px; color: var(--muted); font-size: 11px; text-align: right; }
+
+      @media (max-width: 760px) {
+        .page { width: min(100% - 20px, 1120px); margin-top: 10px; }
+        .masthead { grid-template-columns: 1fr; padding: 28px 24px; border-radius: 16px; }
+        .stamp { justify-self: start; }
+        .section { margin-top: 40px; }
+        .section-head { grid-template-columns: 1fr; gap: 8px; }
+        .diagnosis, .decision, .switch-guidance { grid-template-columns: 1fr; }
+        .prototype-top { padding: 22px 18px 18px; }
+        .role-list { padding: 0 18px 22px; }
+        .role-trigger { grid-template-columns: 1fr auto; gap: 10px; }
+        .member-preview { grid-column: 1 / -1; grid-row: 2; }
+        .role-summary { grid-column: 2; grid-row: 1; }
+        .members { grid-template-columns: 1fr; gap: 8px; }
+        .text-button { justify-self: start; }
+        .permission-row { align-items: flex-start; }
+        .check-row { grid-template-columns: 1fr; gap: 6px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">CLAir EMR · Interaction Review</p>
+          <h1>권한 역할 상세 구조 재검토</h1>
+          <p class="lead">현재 탭은 역할 선택과 아래 설정이 서로 다른 덩어리처럼 보여, 역할을 바꿨을 때 내용이 바뀐다는 인과가 약합니다. 역할 자체를 하나의 설정 아이템으로 만들고 그 안에 구성원과 권한을 넣는 방향을 검토합니다.</p>
+          <nav class="jump" aria-label="리포트 바로가기">
+            <a href="#diagnosis">왜 분리돼 보이나</a>
+            <a href="#recommendation">추천 구조</a>
+            <a href="#prototype">인터랙티브 예시</a>
+            <a href="#switches">토글 적용 원칙</a>
+          </nav>
+        </div>
+        <span class="stamp">구조 검토안 · 2026.07.22</span>
+      </header>
+
+      <section class="section" id="diagnosis">
+        <div class="section-head">
+          <span class="section-index">01 · Diagnosis</span>
+          <div>
+            <h2>탭과 아래 내용이 연결되지 않는 이유</h2>
+            <p class="section-copy">문제는 탭 자체보다 선택 영역과 결과 영역 사이의 시각적·데이터적 연결이 약한 데 있습니다.</p>
+          </div>
+        </div>
+        <div class="diagnosis">
+          <article><span class="number">01</span><strong>하나의 컨테이너가 아니다</strong><p>탭은 회색 segmented surface에 있고, 선택 결과는 큰 여백 뒤의 별도 제목과 surface에서 시작합니다. 경계가 끊겨 있어 같은 컴포넌트의 머리와 몸처럼 보이지 않습니다.</p></article>
+          <article><span class="number">02</span><strong>선택 변화의 시각적 신호가 작다</strong><p>역할명과 설명만 바뀌고 레이아웃은 거의 동일합니다. 아래 권한이 스크롤 아래에 있으면 사용자는 무엇이 바뀌었는지 즉시 확인하기 어렵습니다.</p></article>
+          <article><span class="number">03</span><strong>관리자와 일반의 현재 노출 권한이 같다</strong><p>현재 화면에 노출한 16개 기준에서는 관리자와 일반이 모두 12/16으로 보여, 탭을 전환해도 차이가 더 약하게 느껴집니다. 구조 문제와 데이터 표현 문제가 동시에 있습니다.</p></article>
+          <article><span class="number">04</span><strong>구성원이 숫자로만 보인다</strong><p>‘0명/1명’만으로는 역할의 실제 사용자가 떠오르지 않습니다. 구성원 이름이 역할 아이템 안에 들어가야 역할과 사람, 권한이 하나의 설정 단위로 연결됩니다.</p></article>
+        </div>
+      </section>
+
+      <section class="section" id="recommendation">
+        <div class="section-head">
+          <span class="section-index">02 · Recommendation</span>
+          <div>
+            <h2>추천: 역할 아이템 아코디언</h2>
+            <p class="section-copy">상위 ‘역할 및 권한 허브 → 권한 역할 상세’ 구조는 유지하고, 상세 화면 안에서만 소유자·관리자·일반을 역할 아이템으로 묶습니다.</p>
+          </div>
+        </div>
+        <div class="decision">
+          <div class="recommend">
+            <h3>한 번에 한 역할만 연다</h3>
+            <p>세 역할은 동시에 켜지는 독립 설정이 아니라 서로 다른 권한 정의입니다. 하나를 선택하면 그 역할의 구성원과 권한이 바로 아래에 붙어 열리는 방식이 관계를 가장 강하게 보여줍니다.</p>
+            <ul>
+              <li>아이템 헤더: 역할명, 시스템/커스텀 상태, 구성원 이름, 인원, 허용 권한 수</li>
+              <li>펼친 영역: 전체 구성원, 역할 설명, 범주별 권한 토글</li>
+              <li>권한 범주는 다시 접지 않고 항상 노출</li>
+            </ul>
+          </div>
+          <div class="rule">
+            <h3>이전 아코디언과 다른 점</h3>
+            <p>허브의 ‘권한 역할·직무·업무 기본값’은 서로 독립된 목적이므로 페이지 이동이 맞습니다. 반면 상세의 ‘소유자·관리자·일반’은 하나의 역할을 선택해 보는 관계이므로 단일-open 아코디언이 자연스럽습니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="prototype">
+        <div class="section-head">
+          <span class="section-index">03 · Interactive Example</span>
+          <div>
+            <h2>역할을 눌러 연결감을 확인해보세요</h2>
+            <p class="section-copy">구성원 이름은 구조 검토용 예시이며, 실제 구현에서는 현재 워크스페이스 배정 데이터를 사용합니다.</p>
+          </div>
+        </div>
+        <div class="prototype-shell">
+          <div class="prototype-top">
+            <div><h3>권한 역할</h3><p>역할을 열어 배정된 구성원과 사용할 수 있는 기능을 확인합니다.</p></div>
+            <span class="prototype-note">시스템 역할 · 읽기 전용</span>
+          </div>
+          <div class="role-list" id="role-list"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <span class="section-index">04 · Alternatives</span>
+          <div><h2>세 가지 구조 비교</h2><p class="section-copy">역할 수와 관리 목적을 기준으로 비교하면 현재 범위에서는 역할 아이템 아코디언이 가장 직접적입니다.</p></div>
+        </div>
+        <div class="comparison">
+          <table>
+            <thead><tr><th>구조</th><th>연결감</th><th>장점</th><th>주의점</th><th>판단</th></tr></thead>
+            <tbody>
+              <tr><td>연결형 탭 + 동일 panel</td><td>중간</td><td>현재 코드 변경이 가장 작고 전환이 빠름</td><td>구성원과 긴 권한 목록을 담으면 탭과 panel 사이가 다시 멀어질 수 있음</td><td>차선</td></tr>
+              <tr class="recommended-row"><td>역할 아이템 아코디언</td><td>높음</td><td>역할명·구성원·권한이 한 덩어리로 보임</td><td>한 역할의 권한이 길어지므로 동시에 하나만 열어야 함</td><td class="yes">추천</td></tr>
+              <tr><td>좌측 역할 목록 + 우측 상세</td><td>높음</td><td>역할이 8개 이상으로 늘어날 때 탐색과 비교가 좋음</td><td>920px와 모바일에서 2열 구조 부담이 큼</td><td>확장안</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="switches">
+        <div class="section-head">
+          <span class="section-index">05 · Switch Semantics</span>
+          <div><h2>체크박스는 토글로 변경해도 괜찮습니다</h2><p class="section-copy">다만 시스템 역할과 커스텀 역할에서 토글이 의미하는 상태를 분명히 구분해야 합니다.</p></div>
+        </div>
+        <div class="switch-guidance">
+          <article class="guidance-card"><strong>시스템 역할</strong><p>토글 값은 보여주되 disabled 처리하고 ‘읽기 전용’ 설명을 함께 둡니다. 꺼진 것인지 비활성화된 것인지 혼동하지 않게 ‘허용/차단’ 텍스트를 붙입니다.</p></article>
+          <article class="guidance-card"><strong>커스텀 역할</strong><p>토글을 편집 가능하게 하고 변경 시 하단 contextual save bar를 표시합니다. 저장 전에는 ‘저장하지 않은 변경’ 상태가 분명해야 합니다.</p></article>
+          <article class="guidance-card"><strong>소유자 전용</strong><p>일반 역할에서는 토글을 끈 상태로 잠그고 ‘소유자 전용’ 설명을 표시합니다. 토글만 disabled 처리해 이유를 숨기지 않습니다.</p></article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <span class="section-index">06 · Implementation Contract</span>
+          <div><h2>다음 시안 수정 범위</h2><p class="section-copy">실제 화면 수정 시 데이터 정책은 유지하고 표현과 연결감만 바꿉니다.</p></div>
+        </div>
+        <div class="final-check">
+          <div class="check-row"><strong>유지</strong><span>920px 콘텐츠 폭, 허브 → 상세 이동, URL 뒤로가기, 기존 역할/구성원/권한 데이터, 커스텀 역할 dialog와 구성원 관리 sheet</span></div>
+          <div class="check-row"><strong>변경</strong><span>segmented tabs를 역할 아이템 목록으로 교체하고, 선택한 역할의 세부 내용을 같은 아이템 안에 펼칩니다.</span></div>
+          <div class="check-row"><strong>권한 컨트롤</strong><span>체크박스를 switch로 교체합니다. 시스템 역할은 읽기 전용, 커스텀 역할만 편집 가능합니다.</span></div>
+          <div class="check-row"><strong>구성원 표시</strong><span>아이템 헤더에 이름 요약을, 펼친 영역에 배정 구성원 전체 이름을 보여주고 ‘구성원 관리’ 액션을 유지합니다.</span></div>
+          <div class="check-row"><strong>아코디언 규칙</strong><span>역할은 한 번에 하나만 엽니다. 권한 범주는 다시 아코디언으로 감추지 않습니다.</span></div>
+          <div class="check-row"><strong>정책 범위</strong><span>실제 권한 정책, API, RLS, 배정 방식은 변경하지 않습니다. 관리자와 일반의 실질 권한 차이는 별도 제품 정책 결정이 필요합니다.</span></div>
+        </div>
+      </section>
+
+      <footer>CLAir EMR · Hospital Admin · Role &amp; Permission Structure Review</footer>
+    </main>
+
+    <script>
+      const permissionGroups = [
+        { label: "접수 · 고객", rows: [["접수/예약 조회", "접수 현황과 예약 정보를 확인합니다."], ["접수/예약 생성", "새 접수와 예약을 등록합니다."], ["보호자/환자 조회", "보호자와 환자의 기본 정보를 확인합니다."]] },
+        { label: "진료 · 차트", rows: [["차트 조회", "진료 차트와 이전 기록을 확인합니다."], ["차트 작성/수정", "차트 내용을 작성하고 수정합니다."], ["오더 생성", "검사·처치·처방 오더를 요청합니다."]] },
+        { label: "검사 · 조제", rows: [["검사/처치 결과 입력", "검사와 처치 결과를 입력하고 완료합니다."]] },
+        { label: "수납", rows: [["수납 조회", "수납 내역과 청구 정보를 확인합니다."], ["수납 처리", "청구서를 발행하고 수납을 처리합니다."]] },
+        { label: "병원 관리", rows: [["병원 설정 조회", "병원관리 설정과 서비스 목록을 확인합니다."]] },
+        { label: "소유자 전용", ownerOnly: true, rows: [["워크스페이스 삭제", "병원 워크스페이스와 연결 데이터를 삭제합니다."], ["소유권 이전", "소유자 권한을 다른 구성원에게 이전합니다."]] }
+      ];
+
+      const roles = [
+        { key: "owner", name: "소유자", count: 1, members: ["송민재"], allowed: 12, total: 12, description: "워크스페이스 소유권과 위험 작업을 포함한 보호 권한", owner: true },
+        { key: "admin", name: "관리자", count: 1, members: ["최유나"], allowed: 10, total: 12, description: "대부분의 병원 운영 권한, 소유자 전용 위험 작업 제외" },
+        { key: "general", name: "일반", count: 4, members: ["김도윤", "박수지", "이하윤", "한지호"], allowed: 10, total: 12, description: "진료·접수·검사·수납을 포함한 일반 운영 권한" }
+      ];
+
+      const roleList = document.querySelector("#role-list");
+
+      function permissionEnabled(role, group) {
+        return role.owner || !group.ownerOnly;
+      }
+
+      function renderPanel(role) {
+        const groups = permissionGroups.map((group) => {
+          const enabledCount = group.rows.filter(() => permissionEnabled(role, group)).length;
+          const rows = group.rows.map(([name, description]) => {
+            const enabled = permissionEnabled(role, group);
+            return `<div class="permission-row"><div><strong>${name}</strong><p>${description}</p></div><div class="switch-wrap"><span class="switch-label">${enabled ? "허용" : "차단"}</span><button class="switch" type="button" role="switch" aria-checked="${enabled}" aria-label="${name} ${enabled ? "허용" : "차단"}, 시스템 역할 읽기 전용" disabled></button></div></div>`;
+          }).join("");
+          return `<section><div class="permission-group-head"><strong>${group.label}</strong><span>${enabledCount}/${group.rows.length} 허용</span></div><div class="permission-rows">${rows}</div></section>`;
+        }).join("");
+
+        return `<div class="role-panel"><div class="members"><strong>배정 구성원 ${role.count}명</strong><div class="member-names">${role.members.join(" · ")}</div><button class="text-button" type="button">구성원 관리</button></div><div class="permission-groups">${groups}</div><p class="lock-note">이 예시의 소유자·관리자·일반은 시스템 역할입니다. 토글은 상태를 명확하게 보여주지만 직접 변경할 수 없습니다. 커스텀 역할에서만 토글을 켜고 끌 수 있습니다.</p></div>`;
+      }
+
+      roleList.innerHTML = roles.map((role, index) => `<article class="role-item" data-role="${role.key}" aria-expanded="${index === 1}"><button class="role-trigger" type="button" aria-expanded="${index === 1}" aria-controls="role-panel-${role.key}"><span class="role-name"><strong>${role.name}</strong><span class="badge">시스템 · 읽기 전용</span></span><span class="member-preview">${role.description}<br>${role.members.join(" · ")}</span><span class="role-summary"><b>${role.count}명</b><span>${role.allowed}/${role.total} 허용</span><span class="disclosure" aria-hidden="true">›</span></span></button><div id="role-panel-${role.key}">${renderPanel(role)}</div></article>`).join("");
+
+      roleList.addEventListener("click", (event) => {
+        const trigger = event.target.closest(".role-trigger");
+        if (!trigger) return;
+        const target = trigger.closest(".role-item");
+        document.querySelectorAll(".role-item").forEach((item) => {
+          const isSelected = item === target;
+          item.setAttribute("aria-expanded", String(isSelected));
+          item.querySelector(".role-trigger").setAttribute("aria-expanded", String(isSelected));
+        });
+      });
+    </script>
+  </body>
+</html>
