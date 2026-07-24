@@ -9,8 +9,8 @@ status: "active"
 area: design
 doc_type: design-system
 tags: [design-system, ui, ux-writing, tokens, components, density]
-updated: "2026-07-23"
-last_updated: "2026-07-23"
+updated: "2026-07-24"
+last_updated: "2026-07-24"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -156,6 +156,11 @@ Shared primitives should carry the visual system:
 - `EmrSubpanel`: module panels and compact side surfaces
 - `EmrListItem`: selected history and queue rows
 - `EmrSidePanelCard`: order and work queue cards
+- `EmrModuleListSidePanel`: CDS.V2 grouped module navigation. The current
+  geometry source is Figma node `27794:28010`: 296px panel, 8px horizontal
+  group inset, 280px top-level rows, 16px between top-level groups, 2px within
+  groups, 36px top-level rows, 32px leaf rows, 26px child-list offset, and
+  13/18px item typography. Nested group labels and count badges use 12/16px.
 - `EmrDataTable` and `Table`: dense operational tables
 - `SegmentedControl`: compact filters and mode switching
 - `StatusBadge`: stable semantic state labels

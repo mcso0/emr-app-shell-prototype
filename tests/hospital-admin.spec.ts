@@ -44,45 +44,168 @@ test("hospital admin order management opens with category and subcategory naviga
     const section = trigger.closest("section");
     const panel = trigger.closest('[data-testid="hospital-admin-side-panel"]');
     const icon = trigger.querySelector('[data-emr-module-list-section-icon="true"]');
-    const label = trigger.querySelector(".emr-text-dense");
+    const label = trigger.querySelector('[data-emr-module-list-item-label="true"]');
     const rail = section?.querySelector('[data-emr-module-list-child-rail="true"]');
     const childList = section?.querySelector('[data-emr-module-list-child-list="true"]');
     const selectedLeaf = section?.querySelector('[data-selected="true"]');
+    const selectedLeafLabel = selectedLeaf?.querySelector('[data-emr-module-list-item-label="true"]');
+    const selectedLeafBadge = selectedLeaf?.querySelector('[data-emr-module-list-badge="true"]');
+    const action = trigger.querySelector('[data-emr-module-list-action="true"]');
+    const body = panel?.querySelector('[data-emr-module-list-body="true"]');
+    const groups = panel?.querySelectorAll('[data-emr-module-list-group="true"]');
+    const groupLabel = panel?.querySelector('[data-emr-module-list-group-label-size="md"]');
+    const groupLabelText = groupLabel?.firstElementChild;
+    const topLevelItem = groups?.[0]?.querySelector("button");
 
-    if (!section || !panel || !icon || !label || !rail || !childList || !selectedLeaf) {
+    if (
+      !section ||
+      !panel ||
+      !icon ||
+      !label ||
+      !rail ||
+      !childList ||
+      !selectedLeaf ||
+      !selectedLeafLabel ||
+      !selectedLeafBadge ||
+      !action ||
+      !body ||
+      !groups ||
+      groups.length < 2 ||
+      !groupLabel ||
+      !groupLabelText ||
+      !topLevelItem
+    ) {
       throw new Error("Missing module list side-panel layout target");
     }
 
     const sectionRect = section.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const iconRect = icon.getBoundingClientRect();
+    const iconStyle = getComputedStyle(icon);
     const labelRect = label.getBoundingClientRect();
+    const labelStyle = getComputedStyle(label);
     const railRect = rail.getBoundingClientRect();
+    const railStyle = getComputedStyle(rail);
     const childListRect = childList.getBoundingClientRect();
+    const childListStyle = getComputedStyle(childList);
     const leafRect = selectedLeaf.getBoundingClientRect();
+    const leafStyle = getComputedStyle(selectedLeaf);
+    const leafLabelStyle = getComputedStyle(selectedLeafLabel);
+    const leafBadgeRect = selectedLeafBadge.getBoundingClientRect();
+    const leafBadgeStyle = getComputedStyle(selectedLeafBadge);
+    const actionStyle = getComputedStyle(action);
+    const bodyRect = body.getBoundingClientRect();
+    const firstGroupRect = groups[0]!.getBoundingClientRect();
+    const firstGroupStyle = getComputedStyle(groups[0]!);
+    const secondGroupRect = groups[1]!.getBoundingClientRect();
+    const groupLabelStyle = getComputedStyle(groupLabelText);
+    const topLevelItemRect = topLevelItem.getBoundingClientRect();
+    const topLevelItemStyle = getComputedStyle(topLevelItem);
 
     return {
+      actionMarginLeft: actionStyle.marginLeft,
+      bodyTopInset: firstGroupRect.top - bodyRect.top,
       childListOffset: childListRect.left - sectionRect.left,
-      iconCenterX: iconRect.left + iconRect.width / 2,
+      childListRowGap: childListStyle.rowGap,
+      firstGroupRowGap: firstGroupStyle.rowGap,
+      groupGap: secondGroupRect.top - firstGroupRect.bottom,
+      groupLabelFontSize: groupLabelStyle.fontSize,
+      groupLabelColor: groupLabelStyle.color,
+      groupLabelLetterSpacing: groupLabelStyle.letterSpacing,
+      groupLabelLineHeight: groupLabelStyle.lineHeight,
+      groupLabelWeight: groupLabelStyle.fontWeight,
       iconLabelGap: labelRect.left - iconRect.right,
+      iconColor: iconStyle.color,
       iconWidth: iconRect.width,
+      itemLabelColor: labelStyle.color,
+      itemLabelFontSize: labelStyle.fontSize,
+      itemLabelLetterSpacing: labelStyle.letterSpacing,
+      itemLabelLineHeight: labelStyle.lineHeight,
+      itemLabelWeight: labelStyle.fontWeight,
+      leafBadgeBackground: leafBadgeStyle.backgroundColor,
+      leafBadgeColor: leafBadgeStyle.color,
+      leafBadgeFontSize: leafBadgeStyle.fontSize,
+      leafBadgeHeight: leafBadgeRect.height,
+      leafBadgeLineHeight: leafBadgeStyle.lineHeight,
       leafHeight: leafRect.height,
+      leafBackground: leafStyle.backgroundColor,
+      leafLabelColor: leafLabelStyle.color,
+      leafLabelFontSize: leafLabelStyle.fontSize,
+      leafLabelLineHeight: leafLabelStyle.lineHeight,
+      leafPaddingBottom: leafStyle.paddingBottom,
+      leafPaddingLeft: leafStyle.paddingLeft,
+      leafPaddingRight: leafStyle.paddingRight,
+      leafPaddingTop: leafStyle.paddingTop,
       leafRightInset: panelRect.right - leafRect.right,
-      railCenterX: railRect.left + railRect.width / 2,
+      panelWidth: panelRect.width,
+      railOffset: railRect.left + railRect.width / 2 - sectionRect.left,
+      railHeight: railRect.height,
+      railColor: railStyle.backgroundColor,
+      childListHeight: childListRect.height,
+      topLevelItemHeight: topLevelItemRect.height,
+      topLevelItemLeftInset: topLevelItemRect.left - panelRect.left,
+      topLevelItemPaddingBottom: topLevelItemStyle.paddingBottom,
+      topLevelItemPaddingLeft: topLevelItemStyle.paddingLeft,
+      topLevelItemPaddingRight: topLevelItemStyle.paddingRight,
+      topLevelItemPaddingTop: topLevelItemStyle.paddingTop,
+      topLevelItemRightInset: panelRect.right - topLevelItemRect.right,
+      topLevelItemWidth: topLevelItemRect.width,
     };
   });
-  expect(Math.round(sidePanelMetrics.iconCenterX)).toBe(Math.round(sidePanelMetrics.railCenterX));
+  expect(Math.round(sidePanelMetrics.panelWidth)).toBe(296);
+  expect(Math.round(sidePanelMetrics.topLevelItemWidth)).toBe(280);
+  expect(Math.round(sidePanelMetrics.topLevelItemLeftInset)).toBe(8);
+  expect(Math.round(sidePanelMetrics.topLevelItemRightInset)).toBe(8);
+  expect(Math.round(sidePanelMetrics.bodyTopInset)).toBe(8);
+  expect(sidePanelMetrics.firstGroupRowGap).toBe("2px");
+  expect(Math.round(sidePanelMetrics.groupGap)).toBe(16);
+  expect(sidePanelMetrics.groupLabelFontSize).toBe("13px");
+  expect(sidePanelMetrics.groupLabelLineHeight).toBe("18px");
+  expect(sidePanelMetrics.groupLabelLetterSpacing).toBe("0.247px");
+  expect(sidePanelMetrics.groupLabelWeight).toBe("500");
+  expect(sidePanelMetrics.groupLabelColor).toBe("rgb(115, 115, 115)");
   expect(Math.round(sidePanelMetrics.iconWidth)).toBe(14);
   expect(Math.round(sidePanelMetrics.iconLabelGap)).toBe(8);
-  expect(Math.round(sidePanelMetrics.childListOffset)).toBe(30);
+  expect(sidePanelMetrics.iconColor).toBe("rgb(115, 115, 115)");
+  expect(sidePanelMetrics.itemLabelFontSize).toBe("13px");
+  expect(sidePanelMetrics.itemLabelLineHeight).toBe("18px");
+  expect(sidePanelMetrics.itemLabelLetterSpacing).toBe("0.247px");
+  expect(sidePanelMetrics.itemLabelWeight).toBe("500");
+  expect(sidePanelMetrics.itemLabelColor).toBe("rgb(64, 64, 64)");
+  expect(sidePanelMetrics.actionMarginLeft).toBe("16px");
+  expect(Math.round(sidePanelMetrics.topLevelItemHeight)).toBe(36);
+  expect(sidePanelMetrics.topLevelItemPaddingLeft).toBe("8px");
+  expect(sidePanelMetrics.topLevelItemPaddingRight).toBe("8px");
+  expect(sidePanelMetrics.topLevelItemPaddingTop).toBe("6px");
+  expect(sidePanelMetrics.topLevelItemPaddingBottom).toBe("6px");
+  expect(Math.round(sidePanelMetrics.childListOffset)).toBe(26);
+  expect(sidePanelMetrics.childListRowGap).toBe("2px");
   expect(Math.round(sidePanelMetrics.leafHeight)).toBe(32);
-  expect(Math.round(sidePanelMetrics.leafRightInset)).toBe(16);
+  expect(sidePanelMetrics.leafPaddingLeft).toBe("8px");
+  expect(sidePanelMetrics.leafPaddingRight).toBe("8px");
+  expect(sidePanelMetrics.leafPaddingTop).toBe("6px");
+  expect(sidePanelMetrics.leafPaddingBottom).toBe("6px");
+  expect(sidePanelMetrics.leafLabelFontSize).toBe("13px");
+  expect(sidePanelMetrics.leafLabelLineHeight).toBe("18px");
+  expect(sidePanelMetrics.leafLabelColor).toBe("rgb(23, 23, 23)");
+  expect(sidePanelMetrics.leafBackground).toBe("rgba(0, 0, 0, 0.08)");
+  expect(Math.round(sidePanelMetrics.leafBadgeHeight)).toBe(20);
+  expect(sidePanelMetrics.leafBadgeFontSize).toBe("12px");
+  expect(sidePanelMetrics.leafBadgeLineHeight).toBe("16px");
+  expect(sidePanelMetrics.leafBadgeColor).toBe("rgb(23, 23, 23)");
+  expect(sidePanelMetrics.leafBadgeBackground).toBe("rgba(0, 0, 0, 0.04)");
+  expect(Math.round(sidePanelMetrics.leafRightInset)).toBe(8);
+  expect(Math.round(sidePanelMetrics.railOffset)).toBe(14);
+  expect(sidePanelMetrics.railColor).toBe("rgb(229, 229, 229)");
+  expect(Math.round(sidePanelMetrics.railHeight)).toBe(
+    Math.round(sidePanelMetrics.childListHeight),
+  );
   const topItemMetrics = await page
     .getByTestId("hospital-admin-side-panel")
     .getByRole("button", { name: /병원 구성원/ })
     .evaluate((trigger) => {
       const icon = trigger.querySelector('[data-emr-module-list-item-icon="true"]');
-      const label = trigger.querySelector(".emr-text-dense");
+      const label = trigger.querySelector('[data-emr-module-list-item-label="true"]');
 
       if (!icon || !label) {
         throw new Error("Missing module list top item icon target");
@@ -103,7 +226,7 @@ test("hospital admin order management opens with category and subcategory naviga
     .getByRole("button", { name: /진료과 분리운영/ })
     .evaluate((trigger) => {
       const icon = trigger.querySelector('[data-emr-module-list-item-icon="true"]');
-      const label = trigger.querySelector(".emr-text-dense");
+      const label = trigger.querySelector('[data-emr-module-list-item-label="true"]');
 
       if (!icon || !label) {
         throw new Error("Missing disabled module list color target");
@@ -115,6 +238,7 @@ test("hospital admin order management opens with category and subcategory naviga
       };
     });
   expect(disabledTopItemColors.iconColor).toBe(disabledTopItemColors.labelColor);
+  expect(disabledTopItemColors.labelColor).toBe("rgb(163, 163, 163)");
   await page
     .getByTestId("hospital-admin-menu-order-management")
     .locator("xpath=ancestor::section")
@@ -136,7 +260,7 @@ test("hospital admin order management opens with category and subcategory naviga
         return Math.round(panelRect.right - leafRect.right);
       })
     )
-    .toBe(16);
+    .toBe(8);
   await expect(page.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
   await expect(page.getByRole("button", { name: /임상병리 검사/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("group", { name: "임상병리 검사 하위 타입" }).getByRole("button", { name: "전체" })).toHaveAttribute("aria-pressed", "true");
