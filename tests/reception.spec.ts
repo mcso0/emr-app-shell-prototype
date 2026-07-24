@@ -6489,6 +6489,197 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
   await expect(calendarCard).not.toContainText("청담 원장");
 });
 
+test("Cheongdam reception detail shows only values recorded for the selected encounter", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const encounterId = "3d852df9-080b-4cec-81b5-7b5e98514d3d";
+  const patientId = "49121000-0000-4000-8000-000000000004";
+  const guardianId = "49120000-0000-4000-8000-000000000004";
+  const recordedAt = `${getLocalDatePrefix()}T10:07:00+09:00`;
+  const record = {
+    kind: "encounter_queue",
+    encounter: {
+      id: encounterId,
+      workspaceId,
+      patientId,
+      guardianId,
+      encounterNo: "E-260724-VITAL",
+      receptionType: "walk_in",
+      department: "내과",
+      durationMinutes: 15,
+      visitPurpose: "바이탈 상세 표시",
+      status: "waiting",
+      checkedInAt: recordedAt,
+      createdAt: recordedAt,
+      updatedAt: recordedAt,
+    },
+    queueEntry: {
+      id: "queue-reception-vital",
+      workspaceId,
+      encounterId,
+      queueType: "consultation",
+      status: "waiting",
+      priority: "normal",
+      enteredAt: recordedAt,
+    },
+    patient: {
+      id: patientId,
+      workspaceId,
+      patientNo: "CD-P-0004",
+      name: "초코",
+      species: "dog",
+      breed: "Pomeranian",
+      sex: "male",
+      weightKg: 8,
+      handlingCautionLocked: false,
+      status: "active",
+      createdAt: recordedAt,
+      updatedAt: recordedAt,
+    },
+    primaryGuardian: {
+      id: guardianId,
+      workspaceId,
+      name: "최도현",
+      mobilePhone: "010-4911-0004",
+      createdAt: recordedAt,
+      updatedAt: recordedAt,
+    },
+  };
+
+  await page.route(`**/api/workspaces/${workspaceId}/staff?role=vet*`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, staff: [], veterinarians: [] }),
+    });
+  });
+  await page.route(`**/api/workspaces/${workspaceId}/reception/queue`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        queue: [record],
+        enforcedBy: "reception-queue-read",
+      }),
+    });
+  });
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          date: getLocalDatePrefix(),
+          records: [record],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+  await page.route(`**/api/workspaces/${workspaceId}/vital-settings`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        canManage: false,
+        presets: [
+          {
+            key: "weight",
+            label: "체중",
+            description: "환자의 현재 체중",
+            canonicalUnit: "kg",
+            allowedDisplayUnits: ["kg"],
+            requiredInWorkspace: true,
+          },
+          {
+            key: "temperature",
+            label: "체온",
+            description: "체온계로 측정한 체온",
+            canonicalUnit: "°C",
+            allowedDisplayUnits: ["°C"],
+            requiredInWorkspace: true,
+          },
+          {
+            key: "heart_rate",
+            label: "심박수",
+            description: "분당 심장 박동 수",
+            canonicalUnit: "bpm",
+            allowedDisplayUnits: ["bpm"],
+            requiredInWorkspace: false,
+          },
+          {
+            key: "respiratory_rate",
+            label: "호흡수",
+            description: "분당 호흡 횟수",
+            canonicalUnit: "rpm",
+            allowedDisplayUnits: ["rpm"],
+            requiredInWorkspace: false,
+          },
+          {
+            key: "blood_pressure",
+            label: "혈압",
+            description: "수축기/이완기",
+            canonicalUnit: "mmHg",
+            allowedDisplayUnits: ["mmHg"],
+            requiredInWorkspace: false,
+          },
+        ],
+        items: [
+          { key: "weight", enabled: true, displayUnit: "kg", sortOrder: 0 },
+          { key: "temperature", enabled: true, displayUnit: "°C", sortOrder: 1 },
+          { key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 2 },
+          { key: "respiratory_rate", enabled: true, displayUnit: "rpm", sortOrder: 3 },
+          { key: "blood_pressure", enabled: true, displayUnit: "mmHg", sortOrder: 4 },
+        ],
+      }),
+    });
+  });
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/encounters/${encounterId}/vital`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "reception-encounter-vital-read",
+          vital: {
+            id: "vital-reception",
+            patientId,
+            encounterId,
+            measuredAt: recordedAt,
+            weightKg: 8,
+            temperatureC: 38.7,
+            respiratoryRateRpm: 24,
+            bloodPressureSystolicMmhg: 132,
+            bloodPressureDiastolicMmhg: 84,
+          },
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${workspaceId}/reception?modulePanel=open&right=open&drawer=reception-encounter%3A${encounterId}`,
+  );
+
+  const detailPanel = page.getByTestId("reception-right-panel");
+  const vitalSection = detailPanel.getByTestId("reception-encounter-vitals");
+  await expect(vitalSection.getByLabel("체중")).toHaveValue("8.00 kg");
+  await expect(vitalSection.getByLabel("체온")).toHaveValue("38.7°C");
+  await expect(vitalSection.getByLabel("호흡수")).toHaveValue("24 rpm");
+  await expect(vitalSection.getByLabel("혈압")).toHaveValue("132/84 mmHg");
+  await expect(vitalSection.getByLabel("심박수")).toHaveCount(0);
+});
+
 test("Cheongdam walk-in create failure does not say the selected DB patient is missing", async ({
   page,
 }) => {
