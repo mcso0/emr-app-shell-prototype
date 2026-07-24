@@ -324,27 +324,179 @@ test("customer table aligns selection header and row checkboxes", async ({ page 
   ).toBeLessThanOrEqual(1);
 });
 
-test("customer disabled side-panel item uses one muted color for icon and label", async ({ page }) => {
+test("customer side panel matches CDS.V2 module-list geometry, type, and color", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 
-  const disabledItemColors = await page
-    .getByTestId("customer-side-panel")
-    .getByRole("button", { name: /스케줄 관리/ })
-    .evaluate((trigger) => {
-      const icon = trigger.querySelector('[data-emr-module-list-item-icon="true"]');
-      const label = trigger.querySelector(".emr-text-dense");
+  const panelMetrics = await page.getByTestId("customer-side-panel").evaluate((panel) => {
+    const group = panel.querySelector('[data-emr-module-list-group="true"]');
+    const section = group?.querySelector("section");
+    const trigger = section?.querySelector('button[aria-expanded="true"]');
+    const icon = trigger?.querySelector('[data-emr-module-list-section-icon="true"]');
+    const label = trigger?.querySelector('[data-emr-module-list-item-label="true"]');
+    const action = trigger?.querySelector('[data-emr-module-list-action="true"]');
+    const rail = section?.querySelector('[data-emr-module-list-child-rail="true"]');
+    const childList = section?.querySelector('[data-emr-module-list-child-list="true"]');
+    const selectedLeaf = section?.querySelector('[data-testid="customer-side-panel-patient"]');
+    const selectedLeafLabel = selectedLeaf?.querySelector('[data-emr-module-list-item-label="true"]');
+    const selectedLeafBadge = selectedLeaf?.querySelector('[data-emr-module-list-badge="true"]');
+    const disabledItem = [...panel.querySelectorAll("button")].find((item) =>
+      item.textContent?.includes("스케줄 관리"),
+    );
+    const disabledIcon = disabledItem?.querySelector('[data-emr-module-list-item-icon="true"]');
+    const disabledLabel = disabledItem?.querySelector('[data-emr-module-list-item-label="true"]');
 
-      if (!icon || !label) {
-        throw new Error("Missing disabled customer module list color target");
-      }
+    if (
+      !group ||
+      !section ||
+      !trigger ||
+      !icon ||
+      !label ||
+      !action ||
+      !rail ||
+      !childList ||
+      !selectedLeaf ||
+      !selectedLeafLabel ||
+      !selectedLeafBadge ||
+      !disabledItem ||
+      !disabledIcon ||
+      !disabledLabel
+    ) {
+      throw new Error("Missing customer module list layout target");
+    }
 
-      return {
-        iconColor: getComputedStyle(icon).color,
-        labelColor: getComputedStyle(label).color,
-      };
-    });
+    const panelRect = panel.getBoundingClientRect();
+    const sectionRect = section.getBoundingClientRect();
+    const triggerRect = trigger.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+    const labelRect = label.getBoundingClientRect();
+    const railRect = rail.getBoundingClientRect();
+    const childListRect = childList.getBoundingClientRect();
+    const leafRect = selectedLeaf.getBoundingClientRect();
+    const badgeRect = selectedLeafBadge.getBoundingClientRect();
+    const disabledRect = disabledItem.getBoundingClientRect();
+    const triggerStyle = getComputedStyle(trigger);
+    const iconStyle = getComputedStyle(icon);
+    const labelStyle = getComputedStyle(label);
+    const actionStyle = getComputedStyle(action);
+    const railStyle = getComputedStyle(rail);
+    const childListStyle = getComputedStyle(childList);
+    const leafStyle = getComputedStyle(selectedLeaf);
+    const leafLabelStyle = getComputedStyle(selectedLeafLabel);
+    const badgeStyle = getComputedStyle(selectedLeafBadge);
+    const disabledIconStyle = getComputedStyle(disabledIcon);
+    const disabledLabelStyle = getComputedStyle(disabledLabel);
 
-  expect(disabledItemColors.iconColor).toBe(disabledItemColors.labelColor);
+    return {
+      actionMarginLeft: actionStyle.marginLeft,
+      actionSize: action.getBoundingClientRect().width,
+      badgeBackground: badgeStyle.backgroundColor,
+      badgeColor: badgeStyle.color,
+      badgeFontSize: badgeStyle.fontSize,
+      badgeHeight: badgeRect.height,
+      badgeLetterSpacing: badgeStyle.letterSpacing,
+      badgeLineHeight: badgeStyle.lineHeight,
+      badgePaddingBottom: badgeStyle.paddingBottom,
+      badgePaddingLeft: badgeStyle.paddingLeft,
+      badgePaddingRight: badgeStyle.paddingRight,
+      badgePaddingTop: badgeStyle.paddingTop,
+      badgeWeight: badgeStyle.fontWeight,
+      childListHeight: childListRect.height,
+      childListOffset: childListRect.left - sectionRect.left,
+      childListRowGap: childListStyle.rowGap,
+      disabledHeight: disabledRect.height,
+      disabledIconColor: disabledIconStyle.color,
+      disabledLabelColor: disabledLabelStyle.color,
+      disabledWidth: disabledRect.width,
+      groupRowGap: getComputedStyle(group).rowGap,
+      groupWidth: group.getBoundingClientRect().width,
+      iconColor: iconStyle.color,
+      iconLabelGap: labelRect.left - iconRect.right,
+      iconWidth: iconRect.width,
+      itemHeight: triggerRect.height,
+      itemLabelColor: labelStyle.color,
+      itemLabelFontSize: labelStyle.fontSize,
+      itemLabelLetterSpacing: labelStyle.letterSpacing,
+      itemLabelLineHeight: labelStyle.lineHeight,
+      itemLabelWeight: labelStyle.fontWeight,
+      itemPaddingBottom: triggerStyle.paddingBottom,
+      itemPaddingLeft: triggerStyle.paddingLeft,
+      itemPaddingRight: triggerStyle.paddingRight,
+      itemPaddingTop: triggerStyle.paddingTop,
+      itemWidth: triggerRect.width,
+      leafBackground: leafStyle.backgroundColor,
+      leafHeight: leafRect.height,
+      leafLabelColor: leafLabelStyle.color,
+      leafLabelFontSize: leafLabelStyle.fontSize,
+      leafLabelLetterSpacing: leafLabelStyle.letterSpacing,
+      leafLabelLineHeight: leafLabelStyle.lineHeight,
+      leafLabelWeight: leafLabelStyle.fontWeight,
+      leafPaddingBottom: leafStyle.paddingBottom,
+      leafPaddingLeft: leafStyle.paddingLeft,
+      leafPaddingRight: leafStyle.paddingRight,
+      leafPaddingTop: leafStyle.paddingTop,
+      leafRightInset: panelRect.right - leafRect.right,
+      leafWidth: leafRect.width,
+      panelWidth: panel.getBoundingClientRect().width,
+      railColor: railStyle.backgroundColor,
+      railHeight: railRect.height,
+      railOffset: railRect.left + railRect.width / 2 - sectionRect.left,
+    };
+  });
+
+  expect(Math.round(panelMetrics.panelWidth)).toBe(296);
+  expect(Math.round(panelMetrics.groupWidth)).toBe(296);
+  expect(panelMetrics.groupRowGap).toBe("2px");
+  expect(Math.round(panelMetrics.itemWidth)).toBe(280);
+  expect(Math.round(panelMetrics.itemHeight)).toBe(36);
+  expect(panelMetrics.itemPaddingTop).toBe("6px");
+  expect(panelMetrics.itemPaddingRight).toBe("8px");
+  expect(panelMetrics.itemPaddingBottom).toBe("6px");
+  expect(panelMetrics.itemPaddingLeft).toBe("8px");
+  expect(Math.round(panelMetrics.iconWidth)).toBe(14);
+  expect(panelMetrics.iconColor).toBe("rgb(115, 115, 115)");
+  expect(Math.round(panelMetrics.iconLabelGap)).toBe(8);
+  expect(panelMetrics.itemLabelFontSize).toBe("13px");
+  expect(panelMetrics.itemLabelLineHeight).toBe("18px");
+  expect(panelMetrics.itemLabelLetterSpacing).toBe("0.247px");
+  expect(panelMetrics.itemLabelWeight).toBe("500");
+  expect(panelMetrics.itemLabelColor).toBe("rgb(64, 64, 64)");
+  expect(Math.round(panelMetrics.actionSize)).toBe(24);
+  expect(panelMetrics.actionMarginLeft).toBe("16px");
+  expect(Math.round(panelMetrics.childListOffset)).toBe(26);
+  expect(panelMetrics.childListRowGap).toBe("2px");
+  expect(Math.round(panelMetrics.railOffset)).toBe(14);
+  expect(Math.round(panelMetrics.railHeight)).toBe(
+    Math.round(panelMetrics.childListHeight),
+  );
+  expect(panelMetrics.railColor).toBe("rgb(229, 229, 229)");
+  expect(Math.round(panelMetrics.leafWidth)).toBe(254);
+  expect(Math.round(panelMetrics.leafHeight)).toBe(32);
+  expect(Math.round(panelMetrics.leafRightInset)).toBe(8);
+  expect(panelMetrics.leafPaddingTop).toBe("6px");
+  expect(panelMetrics.leafPaddingRight).toBe("8px");
+  expect(panelMetrics.leafPaddingBottom).toBe("6px");
+  expect(panelMetrics.leafPaddingLeft).toBe("8px");
+  expect(panelMetrics.leafLabelFontSize).toBe("13px");
+  expect(panelMetrics.leafLabelLineHeight).toBe("18px");
+  expect(panelMetrics.leafLabelLetterSpacing).toBe("0.247px");
+  expect(panelMetrics.leafLabelWeight).toBe("500");
+  expect(panelMetrics.leafLabelColor).toBe("rgb(23, 23, 23)");
+  expect(panelMetrics.leafBackground).toBe("rgba(0, 0, 0, 0.08)");
+  expect(Math.round(panelMetrics.badgeHeight)).toBe(20);
+  expect(panelMetrics.badgePaddingTop).toBe("2px");
+  expect(panelMetrics.badgePaddingRight).toBe("6px");
+  expect(panelMetrics.badgePaddingBottom).toBe("2px");
+  expect(panelMetrics.badgePaddingLeft).toBe("6px");
+  expect(panelMetrics.badgeFontSize).toBe("12px");
+  expect(panelMetrics.badgeLineHeight).toBe("16px");
+  expect(panelMetrics.badgeLetterSpacing).toBe("0.3px");
+  expect(panelMetrics.badgeWeight).toBe("500");
+  expect(panelMetrics.badgeColor).toBe("rgb(23, 23, 23)");
+  expect(panelMetrics.badgeBackground).toBe("rgba(0, 0, 0, 0.04)");
+  expect(Math.round(panelMetrics.disabledWidth)).toBe(280);
+  expect(Math.round(panelMetrics.disabledHeight)).toBe(36);
+  expect(panelMetrics.disabledIconColor).toBe("rgb(163, 163, 163)");
+  expect(panelMetrics.disabledLabelColor).toBe("rgb(163, 163, 163)");
 });
 
 test("customer side panel switches to guardians and search filters rows", async ({ page }) => {

@@ -2,6 +2,11 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-07-24
+
+- `changed`: Aligned `EmrModuleListSidePanel` spacing and typography to CDS.V2 Figma node `27794:28010` while preserving existing menu content, icons, selection, disabled states, and interactions.
+- `changed`: The current shared contract is a 296px panel with 280px rows, 8px horizontal inset, 16px top-level group spacing, 2px within-group spacing, 26px child-list offset, 8px leaf right inset, 13/18px item typography, and 12/16px metadata typography.
+
 ## 2026-07-23
 
 - `added`: DESIGN-SYSTEM-PR-082 adds the product-wide Korean honorific baseline: system copy uses `합니다체`, user requests use `~해 주세요`, and confirmation questions use `~하시겠습니까?`.

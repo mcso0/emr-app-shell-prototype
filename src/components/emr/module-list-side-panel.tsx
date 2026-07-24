@@ -93,8 +93,9 @@ export function EmrModuleListSidePanelBadge({
   return (
     <Badge
       variant={variant}
+      data-emr-module-list-badge="true"
       className={cn(
-        "emr-text-metadata inline-flex h-[var(--emr-module-list-badge-height)] min-w-[var(--emr-module-list-badge-min-width)] items-center justify-center rounded-[var(--emr-module-list-badge-radius)] border px-[var(--emr-module-list-badge-padding-x)] py-[var(--emr-module-list-badge-padding-y)] font-medium",
+        "inline-flex h-[var(--emr-module-list-badge-height)] min-w-[var(--emr-module-list-badge-min-width)] items-center justify-center rounded-[var(--emr-module-list-badge-radius)] border px-[var(--emr-module-list-badge-padding-x)] py-[var(--emr-module-list-badge-padding-y)] text-[length:var(--emr-module-list-metadata-font-size)] leading-[var(--emr-module-list-metadata-line-height)] font-medium tracking-[var(--emr-type-tracking-metadata)]",
         variant === "secondary"
           ? "border-[var(--emr-module-list-badge-border)] bg-[var(--emr-module-list-badge-bg)] text-[var(--emr-module-list-badge-text)]"
           : "border-[var(--emr-module-list-badge-outline-border)] bg-[var(--emr-module-list-badge-outline-bg)] text-[var(--emr-module-list-badge-outline-text)]"
@@ -156,25 +157,47 @@ function EmrModuleListSidePanelItemButton({
           {icon}
         </span>
       ) : null}
-      <span className="emr-text-dense flex min-w-0 flex-1 items-center gap-[var(--emr-module-list-item-left-gap)] font-medium tracking-[var(--emr-type-tracking-dense-label)]">
+      <span
+        className="flex min-w-0 flex-1 items-center gap-[var(--emr-module-list-item-left-gap)] text-[length:var(--emr-module-list-item-font-size)] leading-[var(--emr-module-list-item-line-height)] font-medium tracking-[var(--emr-type-tracking-dense-label)]"
+        data-emr-module-list-item-label="true"
+      >
         <span className="truncate">{children}</span>
       </span>
-      {trailing ? <span className="ml-[var(--clair-spacing-6)] shrink-0">{trailing}</span> : null}
+      {trailing ? (
+        <span className="ml-[var(--emr-module-list-item-slot-gap)] shrink-0">
+          {trailing}
+        </span>
+      ) : null}
     </button>
   );
 }
 
 function EmrModuleListSidePanelGroupTitle({
   children,
+  size = "md",
 }: {
   children: ReactNode;
+  size?: "md" | "sm";
 }) {
   return (
     <div
-      className="flex h-[var(--emr-module-list-group-title-height)] items-center px-[var(--emr-module-list-group-title-padding-x)] py-[var(--emr-module-list-group-title-padding-y)] first:mt-0"
+      className={cn(
+        "flex items-center first:mt-0",
+        size === "md"
+          ? "h-[var(--emr-module-list-group-title-height)] px-[var(--emr-module-list-group-title-padding-x)] py-[var(--emr-module-list-group-title-padding-y)]"
+          : "h-[var(--emr-module-list-child-group-title-height)] px-[var(--emr-module-list-child-group-title-padding-x)] py-[var(--emr-module-list-child-group-title-padding-y)]",
+      )}
       data-emr-module-list-group-label="true"
+      data-emr-module-list-group-label-size={size}
     >
-      <span className="emr-text-metadata truncate font-medium tracking-[var(--emr-type-tracking-metadata)] text-[var(--emr-module-list-group-title-text)]">
+      <span
+        className={cn(
+          "truncate font-medium",
+          size === "md"
+            ? "text-[length:var(--emr-module-list-item-font-size)] leading-[var(--emr-module-list-item-line-height)] tracking-[var(--emr-type-tracking-dense-label)] text-[var(--emr-module-list-group-title-text)]"
+            : "text-[length:var(--emr-module-list-metadata-font-size)] leading-[var(--emr-module-list-metadata-line-height)] tracking-[var(--emr-type-tracking-metadata)] text-[var(--emr-module-list-child-group-title-text)]",
+        )}
+      >
         {children}
       </span>
     </div>
@@ -219,10 +242,16 @@ function EmrModuleListSidePanelSection({
             {icon}
           </span>
         ) : null}
-        <span className="emr-text-dense min-w-0 flex-1 truncate font-medium tracking-[var(--emr-type-tracking-dense-label)]">
+        <span
+          className="min-w-0 flex-1 truncate text-[length:var(--emr-module-list-item-font-size)] leading-[var(--emr-module-list-item-line-height)] font-medium tracking-[var(--emr-type-tracking-dense-label)]"
+          data-emr-module-list-item-label="true"
+        >
           {title}
         </span>
-        <span className="flex size-[var(--emr-module-list-action-size)] shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-4)]">
+        <span
+          className="ml-[var(--emr-module-list-item-slot-gap)] flex size-[var(--emr-module-list-action-size)] shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-4)]"
+          data-emr-module-list-action="true"
+        >
           <motion.span
             className="flex items-center justify-center"
             animate={{ rotate: open ? 0 : -90 }}
@@ -239,7 +268,7 @@ function EmrModuleListSidePanelSection({
         <div className="grid grid-cols-[var(--emr-module-list-child-rail-column-width)_minmax(0,1fr)] items-start">
           <div className="relative self-stretch overflow-hidden">
             <span
-              className="absolute bottom-[var(--emr-module-list-item-padding-y)] top-[var(--emr-module-list-item-padding-y)] w-[var(--emr-module-list-child-rail-line-width)] bg-[var(--emr-module-list-child-rail-color)]"
+              className="absolute inset-y-0 w-[var(--emr-module-list-child-rail-line-width)] bg-[var(--emr-module-list-child-rail-color)]"
               aria-hidden="true"
               data-emr-module-list-child-rail="true"
               style={{ left: "var(--emr-module-list-child-rail-line-left)" }}
@@ -267,6 +296,16 @@ export function EmrModuleListSidePanel({
   testId,
   title,
 }: EmrModuleListSidePanelProps) {
+  const itemGroups = items.reduce<EmrModuleListSidePanelItem[][]>((groups, item) => {
+    if (item.type === "groupLabel" || groups.length === 0) {
+      groups.push([item]);
+    } else {
+      groups[groups.length - 1]?.push(item);
+    }
+
+    return groups;
+  }, []);
+
   return (
     <aside
       className={cn(
@@ -281,57 +320,84 @@ export function EmrModuleListSidePanel({
         onCollapse={onCollapse}
       />
       <ScrollArea className="min-h-0 flex-1">
-        <div className="grid w-[var(--emr-module-list-panel-width)] gap-[var(--emr-module-list-section-gap)] px-[var(--emr-module-list-body-padding-x)] py-[var(--emr-module-list-body-padding-y)]">
-          {items.map((item) =>
-            item.type === "groupLabel" ? (
-              <EmrModuleListSidePanelGroupTitle key={item.id}>
-                {item.label}
-              </EmrModuleListSidePanelGroupTitle>
-            ) : item.type === "button" ? (
-              <EmrModuleListSidePanelItemButton
-                key={item.id}
-                active={item.active}
-                count={item.count}
-                disabled={item.disabled}
-                disabledBadge={<EmrModuleListSidePanelBadge variant="outline">미구현</EmrModuleListSidePanelBadge>}
-                icon={item.icon}
-                onClick={item.onClick}
-                testId={item.testId}
-              >
-                {item.label}
-              </EmrModuleListSidePanelItemButton>
-            ) : (
-              <EmrModuleListSidePanelSection
-                key={item.id}
-                title={String(item.label)}
-                icon={item.icon}
-                open={openSectionIds.has(item.id)}
-                testId={item.testId}
-                onToggle={() => onToggleSection(item.id)}
-              >
-                {item.children.map((child) =>
-                  child.type === "groupLabel" && item.showGroupLabels !== false ? (
-                    <EmrModuleListSidePanelGroupTitle key={child.id}>
-                      {child.label}
-                    </EmrModuleListSidePanelGroupTitle>
-                  ) : child.type === "leaf" ? (
-                    <EmrModuleListSidePanelItemButton
-                      key={child.id}
-                      active={child.active}
-                      className={moduleListLeafItemClassName}
-                      count={child.count}
-                      disabled={child.disabled}
-                      disabledBadge={<EmrModuleListSidePanelBadge variant="outline">미구현</EmrModuleListSidePanelBadge>}
-                      onClick={child.onClick}
-                      testId={child.testId}
-                    >
-                      {child.label}
-                    </EmrModuleListSidePanelItemButton>
-                  ) : null
-                )}
-              </EmrModuleListSidePanelSection>
-            )
-          )}
+        <div
+          className="grid w-[var(--emr-module-list-panel-width)] gap-[var(--emr-module-list-section-gap)] py-[var(--emr-module-list-body-padding-y)]"
+          data-emr-module-list-body="true"
+        >
+          {itemGroups.map((group) => (
+            <div
+              key={group[0]?.id}
+              className="grid w-full gap-[var(--emr-module-list-group-gap)] px-[var(--emr-module-list-body-padding-x)]"
+              data-emr-module-list-group="true"
+            >
+              {group.map((item) =>
+                item.type === "groupLabel" ? (
+                  <EmrModuleListSidePanelGroupTitle key={item.id}>
+                    {item.label}
+                  </EmrModuleListSidePanelGroupTitle>
+                ) : item.type === "button" ? (
+                  <EmrModuleListSidePanelItemButton
+                    key={item.id}
+                    active={item.active}
+                    count={item.count}
+                    disabled={item.disabled}
+                    disabledBadge={<EmrModuleListSidePanelBadge variant="outline">미구현</EmrModuleListSidePanelBadge>}
+                    icon={item.icon}
+                    onClick={item.onClick}
+                    testId={item.testId}
+                  >
+                    {item.label}
+                  </EmrModuleListSidePanelItemButton>
+                ) : (
+                  <EmrModuleListSidePanelSection
+                    key={item.id}
+                    title={String(item.label)}
+                    icon={item.icon}
+                    open={openSectionIds.has(item.id)}
+                    testId={item.testId}
+                    onToggle={() => onToggleSection(item.id)}
+                  >
+                    {item.children.flatMap((child, childIndex) => {
+                      if (child.type === "groupLabel" && item.showGroupLabels !== false) {
+                        const hasPreviousGroup = item.children
+                          .slice(0, childIndex)
+                          .some((candidate) => candidate.type === "groupLabel");
+
+                        return [
+                          hasPreviousGroup ? (
+                            <span
+                              key={`${child.id}-separator`}
+                              className="h-[var(--emr-module-list-child-group-separator-height)]"
+                              aria-hidden="true"
+                              data-emr-module-list-child-group-separator="true"
+                            />
+                          ) : null,
+                          <EmrModuleListSidePanelGroupTitle key={child.id} size="sm">
+                            {child.label}
+                          </EmrModuleListSidePanelGroupTitle>,
+                        ];
+                      }
+
+                      return child.type === "leaf" ? (
+                        <EmrModuleListSidePanelItemButton
+                          key={child.id}
+                          active={child.active}
+                          className={moduleListLeafItemClassName}
+                          count={child.count}
+                          disabled={child.disabled}
+                          disabledBadge={<EmrModuleListSidePanelBadge variant="outline">미구현</EmrModuleListSidePanelBadge>}
+                          onClick={child.onClick}
+                          testId={child.testId}
+                        >
+                          {child.label}
+                        </EmrModuleListSidePanelItemButton>
+                      ) : null;
+                    })}
+                  </EmrModuleListSidePanelSection>
+                )
+              )}
+            </div>
+          ))}
         </div>
       </ScrollArea>
     </aside>
