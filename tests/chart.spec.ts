@@ -1153,17 +1153,26 @@ test("chart consultation CTA moves from call to start before chart completion", 
     .getByTestId("chart-start-locked-state")
     .getByRole("button", { name: "환자 정보", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("환자 정보");
-  await expect(page.getByRole("dialog")).toContainText("보정 시 보호자 동행 선호");
-  await page.keyboard.press("Escape");
+  const profilePanel = page.getByTestId("profile-side-panel");
+  await expect(profilePanel).toHaveAttribute("data-profile-kind", "patient");
+  await expect(profilePanel).toContainText("초코");
+  await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL(
+    /drawer=patient%3Apatient-choco-call-flow|drawer=patient:patient-choco-call-flow/,
+  );
   await page
     .getByTestId("chart-start-locked-state")
     .getByRole("button", { name: "보호자 정보", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("보호자 정보");
-  await expect(page.getByRole("dialog")).toContainText("최도현");
-  await expect(page.getByRole("dialog")).toContainText("최근 약 복용은 잘했으나");
+  await expect(profilePanel).toHaveAttribute("data-profile-kind", "guardian");
+  await expect(profilePanel).toContainText("최도현");
+  await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
+  await expect(page).toHaveURL(
+    /drawer=guardian%3Aguardian-choi-dohyun|drawer=guardian:guardian-choi-dohyun/,
+  );
   await page.keyboard.press("Escape");
+  await expect(profilePanel).toHaveCount(0);
   await expect(page).toHaveURL(/\/w\/clair-demo\/treatment\?/);
 
   await page.getByTestId(`order-queue-item-action-${encounterId}`).click();
