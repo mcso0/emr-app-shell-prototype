@@ -165,12 +165,23 @@ test("hospital logo hover editor validates files and restores focus", async ({
 
   const screen = page.getByTestId("hospital-admin-settings-screen");
   const editButton = screen.getByRole("button", { name: "병원 로고 편집" });
+  await expect(
+    screen
+      .getByTestId("hospital-logo-trigger")
+      .locator('[data-slot="avatar-fallback"] svg')
+  ).toBeVisible();
+  await expect(screen.getByTestId("hospital-logo-trigger")).not.toContainText(
+    "VIP"
+  );
   await expect(editButton).toHaveCSS("opacity", "0");
   await editButton.hover();
   await expect(editButton).toHaveCSS("opacity", "1");
   await editButton.click();
 
   const dialog = page.getByRole("dialog", { name: "병원 로고 설정" });
+  await expect(
+    dialog.locator('[data-slot="avatar-fallback"] svg')
+  ).toBeVisible();
   await dialog.getByRole("button", { name: "취소" }).click();
   await expect(editButton).toBeFocused();
 
