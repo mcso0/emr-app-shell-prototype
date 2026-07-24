@@ -150,6 +150,7 @@ import {
   getPatientSexLabel,
   getSpeciesLabel,
 } from "@/features/reception/data";
+import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import {
   isLegacySalesDemoWorkspace,
@@ -5555,9 +5556,13 @@ export function ChartContent({
   const {
     contentAsideOpen,
     moduleRefreshActions,
+    setActiveDrawer,
     setContentAsideOpen,
     setSelectedQueueItem,
   } = useLayoutStore();
+  const applyPatientGuardianLookupItem = usePatientProfileStore(
+    (state) => state.applyPatientGuardianLookupItem,
+  );
   const {
     hydrated: authHydrated,
     session: authSession,
@@ -6329,6 +6334,23 @@ export function ChartContent({
   const chartStartLocked =
     currentBundle.encounter.status === "waiting" &&
     effectiveQueueEntry?.status === "waiting";
+  const openPatientProfile = () => {
+    applyPatientGuardianLookupItem({
+      patient: currentBundle.patient,
+      primaryGuardian: currentBundle.primaryGuardian,
+    });
+    setActiveDrawer({ type: "patient", id: currentBundle.patient.id });
+  };
+  const openGuardianProfile = () => {
+    const guardian = currentBundle.primaryGuardian;
+    if (!guardian) return;
+
+    applyPatientGuardianLookupItem({
+      patient: currentBundle.patient,
+      primaryGuardian: guardian,
+    });
+    setActiveDrawer({ type: "guardian", id: guardian.id });
+  };
   const callDialogTitle = `${currentBundle.patient.name}/${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}을 호출하시겠습니까?`;
   const diagnosisSaveStatusText =
     diagnosisLoading
@@ -6837,6 +6859,8 @@ export function ChartContent({
           key={currentBundle.encounter.id}
           actorHeaders={actorHeaders}
           encounterId={currentBundle.encounter.id}
+          onOpenGuardianProfile={openGuardianProfile}
+          onOpenPatientProfile={openPatientProfile}
           onRequestCall={handleOpenCallDialog}
           onReturnToQueue={handleReturnToQueue}
           primaryActionBusy={primaryActionBusy}

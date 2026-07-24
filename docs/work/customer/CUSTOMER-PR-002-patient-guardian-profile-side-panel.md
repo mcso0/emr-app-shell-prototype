@@ -11,7 +11,7 @@ source_docs:
 dependencies:
   - "CUSTOMER-LIVE-PR-004"
   - "CUSTOMER-LIVE-PR-005"
-updated: "2026-07-22"
+updated: "2026-07-24"
 ---
 
 # Patient and Guardian Profile Side Panel
@@ -25,6 +25,7 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
 - Replace the duplicated shell and feature headers with the Figma-owned 151 px identity header and four-tab navigation.
 - Render patient and guardian information, linked identities, upcoming reservations, encounter history, and billing summaries from the existing mock/read-model graph.
 - Preserve profile PATCH save, linked patient/guardian navigation, drawer close, URL selection, and workspace reuse.
+- Route the treatment preconsultation `환자 정보` and `보호자 정보` actions to the same shared profile right-panel slot.
 - Add operating-date grouping for encounter history, including missing or invalid dates.
 - Add invoice/payment hierarchy to billing cards while retaining the Figma card surface.
 - Verify the source viewport against the provided Figma captures with pixel comparison and record explicit masks for the two approved content exceptions.
@@ -43,6 +44,7 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
 - Information, reservation, history, billing, filled, empty, long-content, edit, and keyboard-close paths are usable.
 - Existing profile save and linked-identity navigation continue to work.
 - Patient and guardian profiles render in `workspace-right-panel`; no absolute `workspace-drawer` overlays the customer/reception content.
+- Treatment preconsultation profile actions open the selected encounter's patient or primary guardian in the shared panel instead of the retired chart-specific information sheet.
 - Opening the panel reduces the main workspace width and preserves the same right-panel position when navigating between patient and guardian profiles.
 - Focused lint, typecheck, Playwright, Storybook build, and pixel-comparison evidence are recorded.
 - Pixel differences are iterated to the approved threshold; any remaining mismatch is reported, not described as exact.
@@ -57,6 +59,7 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
 - The broader customer/reception suite was sampled through 49/117 tests, then stopped with 32 passes, 15 unrelated baseline failures in operating-hours, date labels, calendar fixtures, and registration typography, plus one stale profile post-save assertion. The profile assertion was corrected and its focused suite passed on rerun.
 - Captured eight 380 x 1105 DPR 1 Storybook specimens and compared raw DOM screenshots with Figma PNG references after compositing transparent source pixels over white.
 - 2026-07-22 follow-up passed targeted ESLint, `npx tsc --noEmit`, and four focused Playwright scenarios covering content push, 380 px right-panel geometry, patient-to-guardian position retention, edit/navigation behavior, activity tabs, keyboard close, and the absence of the absolute workspace drawer.
+- 2026-07-24 treatment follow-up passed targeted ESLint, `npx tsc --noEmit`, and the focused chart consultation Playwright scenario after a verified red-green regression cycle. It covers patient-to-guardian panel switching, URL-backed drawer identity, Escape close, and the absence of both the retired information dialog and absolute workspace drawer.
 
 ## Pixel Comparison Result
 
@@ -74,3 +77,4 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
 - The activity data remains synthetic/mock in this item. A live tab projection needs separate workspace, RLS, and permission approval.
 - The supplied guardian-info Figma fixture renders two primary-patient cards while its count badge says `1`; production uses the actual item count, while the pixel-reference story isolates the literal Figma badge value.
 - PR #475 shipped the original CDS V2 profile surface. The 2026-07-22 follow-up changes only its shell placement and embedded border ownership; profile data, permissions, persistence, tabs, and actions remain unchanged.
+- The 2026-07-24 treatment consumer hydrates the existing profile store from the selected chart queue record before opening the shared panel. It does not restore the retired chart-specific patient information panel.

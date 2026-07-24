@@ -39,16 +39,8 @@ import {
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import type {
   ChartPreconsultationContext,
   ChartPreconsultationContextResponse,
@@ -93,6 +85,8 @@ type VitalSaveResult =
 export function ChartPreconsultationContextPanel({
   actorHeaders,
   encounterId,
+  onOpenGuardianProfile,
+  onOpenPatientProfile,
   onRequestCall,
   onReturnToQueue,
   primaryActionBusy,
@@ -100,6 +94,8 @@ export function ChartPreconsultationContextPanel({
 }: {
   actorHeaders?: Record<string, string>;
   encounterId: string;
+  onOpenGuardianProfile: () => void;
+  onOpenPatientProfile: () => void;
   onRequestCall: () => void;
   onReturnToQueue: () => void;
   primaryActionBusy: boolean;
@@ -108,8 +104,6 @@ export function ChartPreconsultationContextPanel({
   const { snapshot: vitalSettings } = useWorkspaceVitalSettings({ actorHeaders, workspaceId });
   const [contextState, setContextState] = useState<ContextState>({ status: "loading" });
   const [historyExpanded, setHistoryExpanded] = useState(false);
-  const [guardianInformationOpen, setGuardianInformationOpen] = useState(false);
-  const [patientInformationOpen, setPatientInformationOpen] = useState(false);
   const [vitalDialogOpen, setVitalDialogOpen] = useState(false);
   const [vitalDialogDraft, setVitalDialogDraft] = useState<VitalDialogDraft>(() =>
     createVitalDialogDraft(undefined, vitalSettings),
@@ -250,8 +244,8 @@ export function ChartPreconsultationContextPanel({
         <PreconsultationHeader
           context={context}
           primaryActionBusy={primaryActionBusy}
-          onOpenGuardianInformation={() => setGuardianInformationOpen(true)}
-          onOpenPatientInformation={() => setPatientInformationOpen(true)}
+          onOpenGuardianInformation={onOpenGuardianProfile}
+          onOpenPatientInformation={onOpenPatientProfile}
           onRequestCall={onRequestCall}
         />
         <Separator className="mx-6 w-auto" />
@@ -278,16 +272,6 @@ export function ChartPreconsultationContextPanel({
           </div>
         </main>
       </div>
-      <PatientInformationSheet
-        context={context}
-        open={patientInformationOpen}
-        onOpenChange={setPatientInformationOpen}
-      />
-      <GuardianInformationSheet
-        context={context}
-        open={guardianInformationOpen}
-        onOpenChange={setGuardianInformationOpen}
-      />
       <Dialog
         open={vitalDialogOpen}
         onOpenChange={(open) => {
@@ -1259,77 +1243,6 @@ function HistoryTimeline({
   );
 }
 
-function PatientInformationSheet({
-  context,
-  onOpenChange,
-  open,
-}: {
-  context: ChartPreconsultationContext;
-  onOpenChange: (open: boolean) => void;
-  open: boolean;
-}) {
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full data-[side=right]:sm:max-w-[440px]">
-        <SheetHeader className="border-b border-[var(--emr-line-hairline)] pr-12">
-          <SheetTitle>환자 정보</SheetTitle>
-          <SheetDescription>진료 전 필요한 환자 정보를 확인합니다.</SheetDescription>
-        </SheetHeader>
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-6 px-4 pb-6">
-            <div className="rounded-[var(--clair-radius-atomic-12)] bg-[var(--emr-surface-muted)] p-4">
-              <PatientIdentity context={context} size="medium" />
-              <p className="mt-2 pl-[72px] text-xs text-muted-foreground">차트번호 {context.encounter.encounterNo}</p>
-            </div>
-            <DrawerSection title="기본 정보">
-              <DetailRow label="차트번호" value={context.encounter.encounterNo} />
-              <DetailRow label="종류" value={getSpeciesLabel(context.patient.species)} />
-              <DetailRow label="품종" value={context.patient.breed ?? "미입력"} />
-              <DetailRow label="나이 · 성별" value={`${getPatientAge(context)} · ${getSexLabel(context.patient.sex, context.patient.neutered)}`} />
-              <DetailRow label="내원 유형" value={getVisitType(context)} />
-              <DetailRow label="재진 횟수" value={`${context.priorEncounterCount}회`} />
-            </DrawerSection>
-            <DrawerSection title="진료 전 확인">
-              <DetailRow label="주의사항" value={context.patient.handlingCautionNote ?? "등록된 주의사항 없음"} priority />
-              <DetailRow label="알레르기" value={context.patient.allergyNote ?? "등록된 알레르기 없음"} />
-              <DetailRow label="환자 메모" value={context.patient.specialNote ?? "등록된 환자 메모 없음"} />
-            </DrawerSection>
-          </div>
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function GuardianInformationSheet({
-  context,
-  onOpenChange,
-  open,
-}: {
-  context: ChartPreconsultationContext;
-  onOpenChange: (open: boolean) => void;
-  open: boolean;
-}) {
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full data-[side=right]:sm:max-w-[440px]">
-        <SheetHeader className="border-b border-[var(--emr-line-hairline)] pr-12">
-          <SheetTitle>보호자 정보</SheetTitle>
-          <SheetDescription>진료 전 필요한 보호자 정보를 확인합니다.</SheetDescription>
-        </SheetHeader>
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-6 px-4 pb-6">
-            <DrawerSection title="보호자 정보">
-              <DetailRow label="보호자명" value={context.guardian?.name ?? "미지정"} />
-              <DetailRow label="보호자 메모" value={context.guardian?.memo ?? "등록된 보호자 메모 없음"} />
-            </DrawerSection>
-          </div>
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
 function SectionTitle({
   children,
   icon,
@@ -1368,14 +1281,6 @@ function VeterinarianAvatar({ name }: { name: string }) {
       </AvatarFallback>
     </Avatar>
   );
-}
-
-function DrawerSection({ children, title }: { children: ReactNode; title: string }) {
-  return <section><h3 className="text-sm font-semibold">{title}</h3><dl className="mt-3 border-t border-[var(--emr-line-hairline)]">{children}</dl></section>;
-}
-
-function DetailRow({ label, priority, value }: { label: string; priority?: boolean; value: string }) {
-  return <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-3 border-b border-[var(--emr-line-hairline)] py-3 text-sm"><dt className="text-muted-foreground">{label}</dt><dd className={cn("m-0 font-medium text-[var(--emr-text-secondary)]", priority && "text-[var(--emr-status-warning-text)]")}>{value}</dd></div>;
 }
 
 function getPatientMetadata(context: ChartPreconsultationContext) {
