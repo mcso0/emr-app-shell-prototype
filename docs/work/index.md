@@ -270,6 +270,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-LIVE-PR-014       | implemented  | reception            | P0       | User goal / workspace status message persistence | `docs/work/reception/RECEPTION-LIVE-PR-014-workspace-status-message-persistence.md` |
 | RECEPTION-LIVE-PR-015       | implemented  | reception            | P0       | User goal / private profile avatar | `docs/work/reception/RECEPTION-LIVE-PR-015-private-profile-avatar.md` |
 | RECEPTION-LIVE-PR-016       | implemented  | reception            | P0       | User request / break-time warning creation policy | `docs/work/reception/RECEPTION-LIVE-PR-016-break-time-warning-creation.md` |
+| RECEPTION-LIVE-PR-017       | implemented  | reception            | P0       | Browser comment / selected-encounter vital detail read | `docs/work/reception/RECEPTION-LIVE-PR-017-encounter-vital-detail-read.md` |
 | RECEPTION-QA-PR-012         | human_review | reception            | P0       | User goal / staff profile side panel V2 release closeout | `docs/work/reception/RECEPTION-QA-PR-012-profile-side-panel-v2-release-closeout.md` |
 | RECEPTION-QA-PR-001         | human_review | reception            | P0       | Reception QA / DEN-519 | `docs/work/reception/RECEPTION-QA-PR-001-db-api-fallback-boundary.md`                                |
 | RECEPTION-QA-PR-002         | human_review | reception            | P0       | Reception QA / DEN-514 | `docs/work/reception/RECEPTION-QA-PR-002-date-filter-search.md`                                      |

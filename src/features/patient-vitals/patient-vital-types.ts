@@ -125,6 +125,15 @@ export function formatPatientVitalDisplayItemsForSettings(
   }));
 }
 
+export function formatEnteredPatientVitalDisplayItemsForSettings(
+  measurement: PatientVitalDisplayMeasurement | null | undefined,
+  settings: WorkspaceVitalSettingsSnapshot,
+): PatientVitalDisplayItem[] {
+  return formatPatientVitalDisplayItemsForSettings(measurement, settings).filter(
+    (item) => item.value !== "—",
+  );
+}
+
 function getPatientVitalDisplayLabel(key: WorkspaceVitalKey) {
   return ({
     weight: "체중",

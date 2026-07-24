@@ -208,6 +208,8 @@ import {
   type WorkspaceVitalUnit,
 } from "@/features/patient-vitals/workspace-vital-settings";
 import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
+import { formatEnteredPatientVitalDisplayItemsForSettings } from "@/features/patient-vitals/patient-vital-types";
+import { useReceptionEncounterVital } from "@/features/reception/use-reception-encounter-vital";
 import {
   readChartLiveEncounterHandoff,
   saveChartLiveEncounterHandoff,
@@ -10416,46 +10418,57 @@ function ReceptionSidePanelDetail({
           {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
 
           <ReceptionSidePanelSection title="바이탈" variant={detailVariant}>
-            {selectedVitalOptions.map((option) => (
-              <ReceptionVitalField
-                key={option.id}
-                editDraft={editDraft}
-                editMode={editMode}
-                errorMessage={option.id === "weight" ? editFieldErrors.weightKg : undefined}
-                option={option}
-                removable={canRemoveVital}
-                setEditDraft={setEditDraft}
-                variant={detailVariant}
-                value={
-                  option.id === "weight"
-                    ? patientWeightLabel.replace(/\s*kg$/i, "")
-                    : (extraVitalValues[option.id] ?? option.defaultValue)
-                }
-                onRemove={() =>
-                  setSelectedVitalIds((current) =>
-                    current.length > 1
-                      ? current.filter((id) => id !== option.id)
-                      : current,
-                  )
-                }
-                onUpdateExtraVital={(id, nextValue) =>
-                  setExtraVitalValues((current) => ({
-                    ...current,
-                    [id]: nextValue,
-                  }))
-                }
+            {!editMode &&
+            selectedEncounter &&
+            isPreparedEmptyClinicWorkspace(patient.workspaceId) ? (
+              <ReceptionPersistedEncounterVitals
+                encounterId={selectedEncounter.id}
+                workspaceId={patient.workspaceId}
               />
-            ))}
-            {editMode ? (
-              <ReceptionAddVitalMenu
-                options={availableVitalOptions}
-                onAdd={(id) =>
-                  setSelectedVitalIds((current) =>
-                    current.includes(id) ? current : [...current, id],
-                  )
-                }
-              />
-            ) : null}
+            ) : (
+              <>
+                {selectedVitalOptions.map((option) => (
+                  <ReceptionVitalField
+                    key={option.id}
+                    editDraft={editDraft}
+                    editMode={editMode}
+                    errorMessage={option.id === "weight" ? editFieldErrors.weightKg : undefined}
+                    option={option}
+                    removable={canRemoveVital}
+                    setEditDraft={setEditDraft}
+                    variant={detailVariant}
+                    value={
+                      option.id === "weight"
+                        ? patientWeightLabel.replace(/\s*kg$/i, "")
+                        : (extraVitalValues[option.id] ?? option.defaultValue)
+                    }
+                    onRemove={() =>
+                      setSelectedVitalIds((current) =>
+                        current.length > 1
+                          ? current.filter((id) => id !== option.id)
+                          : current,
+                      )
+                    }
+                    onUpdateExtraVital={(id, nextValue) =>
+                      setExtraVitalValues((current) => ({
+                        ...current,
+                        [id]: nextValue,
+                      }))
+                    }
+                  />
+                ))}
+                {editMode ? (
+                  <ReceptionAddVitalMenu
+                    options={availableVitalOptions}
+                    onAdd={(id) =>
+                      setSelectedVitalIds((current) =>
+                        current.includes(id) ? current : [...current, id],
+                      )
+                    }
+                  />
+                ) : null}
+              </>
+            )}
           </ReceptionSidePanelSection>
           {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
 
@@ -10821,6 +10834,104 @@ function ReceptionSidePanelDetail({
       </EmrRightPanelFooter>
     </>
   );
+}
+
+function ReceptionPersistedEncounterVitals({
+  encounterId,
+  workspaceId,
+}: {
+  encounterId: string;
+  workspaceId: string;
+}) {
+  const vital = useReceptionEncounterVital({ encounterId, workspaceId });
+  const settings = useWorkspaceVitalSettings({ workspaceId });
+
+  if (vital.status === "loading" || settings.status === "loading") {
+    return (
+      <div className="grid gap-2" aria-label="바이탈 불러오는 중">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
+
+  if (
+    vital.status === "denied" ||
+    settings.status === "denied" ||
+    vital.status === "error" ||
+    settings.status === "error"
+  ) {
+    return (
+      <div
+        role="alert"
+        className="flex items-center justify-between gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-2"
+      >
+        <p className="emr-text-dense text-[var(--emr-status-danger-text)]">
+          바이탈 정보를 불러오지 못했습니다.
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            void Promise.all([vital.reload(), settings.reload()]);
+          }}
+        >
+          다시 시도
+        </Button>
+      </div>
+    );
+  }
+
+  const items =
+    vital.vital?.encounterId === encounterId
+      ? formatEnteredPatientVitalDisplayItemsForSettings(
+          vital.vital,
+          settings.snapshot,
+        )
+      : [];
+
+  if (items.length === 0) {
+    return (
+      <p className="emr-text-dense text-[var(--emr-text-secondary)]">
+        이 접수에 입력된 바이탈 정보가 없습니다.
+      </p>
+    );
+  }
+
+  return (
+    <div data-testid="reception-encounter-vitals" className="grid gap-[10px]">
+      {items.map((item) => (
+        <ReceptionSidePanelField
+          key={item.label}
+          icon={getReceptionEncounterVitalIcon(
+            getReceptionEncounterVitalLabel(item.label),
+          )}
+          label={getReceptionEncounterVitalLabel(item.label)}
+          variant="create"
+        >
+          <ReceptionSidePanelInput
+            aria-label={getReceptionEncounterVitalLabel(item.label)}
+            readOnly
+            value={item.value}
+            variant="create"
+          />
+        </ReceptionSidePanelField>
+      ))}
+    </div>
+  );
+}
+
+function getReceptionEncounterVitalLabel(label: string) {
+  return label === "호흡" ? "호흡수" : label;
+}
+
+function getReceptionEncounterVitalIcon(label: string) {
+  if (label === "체온") return <CdsMedicalThermometerIcon className="size-3.5" />;
+  if (label === "심박수" || label === "혈압") {
+    return <CdsMedicalHeartPulseIcon className="size-3.5" />;
+  }
+  return <CdsMedicalActivityIcon className="size-3.5" />;
 }
 
 export function ReceptionDrawer({

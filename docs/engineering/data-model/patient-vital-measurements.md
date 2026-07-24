@@ -13,7 +13,8 @@ related_work:
   - CHART-PR-016
   - HOSPITAL-ADMIN-LIVE-PR-018
   - HOSPITAL-ADMIN-LIVE-PR-019
-last_updated: 2026-07-22
+  - RECEPTION-LIVE-PR-017
+last_updated: 2026-07-24
 tags: [data-model, patient, vital, chart, permissions]
 ---
 
@@ -52,6 +53,7 @@ The direct table remains RLS-protected with direct authenticated table privilege
 
 - `clair_get_chart_preconsultation_context` returns one latest current-encounter vital and, at most, the immediate prior non-cancelled encounter's latest vital. It never falls through an empty prior visit to an older visit.
 - `clair_get_patient_latest_vital_for_encounter` uses the selected encounter only to identify the patient, then returns that patient's latest measurement row. A cleared row is still latest and therefore returns null values rather than older measurements.
+- `clair_get_reception_encounter_vital` returns only the latest measurement row linked to the selected reception encounter. It requires active workspace membership plus `reception:view`; it never substitutes another encounter's patient-latest row. The reception detail renders only non-null values that remain enabled by workspace settings.
 
 The context bar has no vital write UI. It requests the shared latest read model on a later screen selection/load, not through real-time push.
 
@@ -66,3 +68,13 @@ When a submitted vital includes weight, the writer updates `patients.weight_kg` 
 The workspace-settings migration passed local full replay and was applied to the linked synthetic/demo Supabase project as remote version `20260722112553_workspace_vital_settings`. Catalog checks confirmed both settings tables, the heart-rate column, RLS, denied anonymous/direct writes, and authenticated reader/writer execution. An authenticated administrator replacement/readback probe ran inside a rollback-only transaction; the persisted workspace configuration remained the four approved defaults with no probe audit event retained.
 
 The required-vitals follow-up was applied as remote version `20260722130209_required_workspace_vitals`. Catalog checks confirmed required weight/temperature metadata and updated reader/writer contracts. A rollback-only authenticated replay verified missing/disabled required rejection, optional removal/re-add, front-desk denial, and unchanged `patient_vital_measurements` rows.
+
+The reception exact-encounter reader was applied as remote version
+`20260724021247_reception_encounter_vital_read`. Catalog checks confirmed a
+stable `SECURITY DEFINER` function with fixed `search_path`, denied anonymous
+execution, and authenticated-only execution. Read-only inspection of the
+reported synthetic encounter confirmed one encounter-linked 2026-07-24 row
+with weight, temperature, and heart rate while the same patient's earlier
+measurements remain grouped by their own visit dates. Forward hardening version
+`20260724023220_reception_encounter_vital_patient_link_hardening` also requires
+the measurement patient to match the selected encounter patient.
