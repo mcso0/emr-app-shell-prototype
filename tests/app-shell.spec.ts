@@ -767,6 +767,9 @@ test("shared side-panel header uses the 56px frame with horizontal-only inset", 
 });
 
 test("workspace switcher reads persisted workspace display name from server list", async ({ page }) => {
+  let logoRevision = 4;
+  let logoUrl = "/clair-logo-mark.svg";
+
   await page.route("**/api/workspaces", async (route) => {
     if (route.request().method() !== "GET") {
       await route.fallback();
@@ -785,6 +788,10 @@ test("workspace switcher reads persisted workspace display name from server list
             membershipId: "membership-persisted-hanbit",
             roles: ["hospital_admin"],
             status: "active",
+            logo: {
+              revision: logoRevision,
+              url: logoUrl,
+            },
           },
         ],
         enforcedBy: "workspace-membership-reader",
@@ -797,6 +804,26 @@ test("workspace switcher reads persisted workspace display name from server list
   await expect(page.getByTestId("workspace-switcher")).toContainText(
     "Persisted Hanbit Animal Hospital"
   );
+  await expect(
+    page
+      .getByTestId("workspace-switcher")
+      .locator('[data-slot="workspace-switcher-logo-image"]')
+  ).toHaveAttribute("src", "/clair-logo-mark.svg");
+
+  logoRevision = 5;
+  logoUrl = "/pwa-icon-192.png";
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent("clair.workspaceIdentity.changed", {
+        detail: { workspaceId: "persisted-hanbit" },
+      })
+    );
+  });
+  await expect(
+    page
+      .getByTestId("workspace-switcher")
+      .locator('[data-slot="workspace-switcher-logo-image"]')
+  ).toHaveAttribute("src", "/pwa-icon-192.png");
 });
 
 test("app shell keeps compact workspace switcher and nav rail visible on narrow viewports", async ({ page }) => {

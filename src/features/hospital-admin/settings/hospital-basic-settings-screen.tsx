@@ -36,6 +36,7 @@ import { HospitalSettingsPage } from "@/features/hospital-admin/settings/hospita
 import { useHospitalProfile } from "@/features/hospital-admin/settings/use-hospital-profile";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
+import { notifyWorkspaceIdentityChanged } from "@/features/auth/workspace-display";
 
 const changeRequestFields = [
   { id: "hospital_name", label: "병원명" },
@@ -140,6 +141,7 @@ export function HospitalBasicSettingsScreen({
         setLogoDraftOverride(undefined);
         setLogoDraftFile(null);
         syncDirty(false);
+        notifyWorkspaceIdentityChanged(workspaceId);
         toast.success("병원 로고가 기본 이미지로 변경되었습니다.");
         return;
       }
@@ -216,6 +218,7 @@ export function HospitalBasicSettingsScreen({
       setLogoDraftOverride(undefined);
       setLogoDraftFile(null);
       syncDirty(false);
+      notifyWorkspaceIdentityChanged(workspaceId);
       toast.success(
         finalized.cleanupPending
           ? "병원 로고가 저장되었습니다. 이전 파일은 정리 중입니다."

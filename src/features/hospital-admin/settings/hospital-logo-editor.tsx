@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { CdsContentEditIcon } from "@/components/cds-icons/content-and-editor";
+import { WorkspaceLogoMarkIcon } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,7 +73,9 @@ export function HospitalLogoEditor({ value, onChange }: HospitalLogoEditorProps)
       <div className="relative size-16 shrink-0" data-testid="hospital-logo-trigger">
         <Avatar className="size-16" roundness="roundrect">
           {value ? <AvatarImage alt="병원 로고" src={value} /> : null}
-          <AvatarFallback className="text-base font-semibold">VIP</AvatarFallback>
+          <AvatarFallback className="bg-[var(--emr-workspace-button-logo-bg)] text-[var(--emr-workspace-button-logo-fg)]">
+            <WorkspaceLogoMarkIcon className="size-10" size={40} />
+          </AvatarFallback>
         </Avatar>
         <Button
           ref={triggerRef}
@@ -111,7 +114,9 @@ export function HospitalLogoEditor({ value, onChange }: HospitalLogoEditorProps)
           <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-muted/30 p-5">
             <Avatar className="size-28" roundness="roundrect">
               {previewUrl ? <AvatarImage alt="선택한 병원 로고 미리보기" src={previewUrl} /> : null}
-              <AvatarFallback className="text-xl font-semibold">VIP</AvatarFallback>
+              <AvatarFallback className="bg-[var(--emr-workspace-button-logo-bg)] text-[var(--emr-workspace-button-logo-fg)]">
+                <WorkspaceLogoMarkIcon className="size-14" size={56} />
+              </AvatarFallback>
             </Avatar>
             {previewFileName ? (
               <p className="max-w-full truncate text-sm text-muted-foreground">

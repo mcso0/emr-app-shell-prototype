@@ -11,7 +11,8 @@ related_work:
   - HOSPITAL-ADMIN-PR-007
   - HOSPITAL-ADMIN-LIVE-PR-021
   - HOSPITAL-ADMIN-LIVE-PR-022
-last_updated: 2026-07-23
+  - HOSPITAL-ADMIN-LIVE-PR-023
+last_updated: 2026-07-24
 ---
 
 # Workspace Hospital Settings
@@ -146,6 +147,19 @@ the route or replace the existing RPC/tables.
 The browser uploads directly to Storage; raw image bytes do not pass through the
 Next.js route.
 
+### Workspace shell identity
+
+`GET /api/workspaces` remains the authenticated active-membership list used by
+the app shell. Its server gateway additionally reads the matching
+`workspace_hospital_profiles.logo_storage_path` rows in one RLS-scoped query,
+creates short-lived signed reads for current non-empty pointers, and returns
+only `{ revision, url }` as the logo summary.
+
+The response never includes a Storage object path. Logo read or signing failure
+is optional degradation: the workspace membership and display name still
+return, and the shell shows its existing fallback mark. The response is
+`private, no-store`.
+
 ## Private Logo Storage
 
 | Surface | Contract |
@@ -210,6 +224,10 @@ cookies, and raw database errors.
 - Each of the three screens owns an independent dirty draft. Leaving a dirty
   screen requires discard confirmation; browser refresh/close keeps the native
   warning.
+- The workspace switcher reads the same signed current logo as hospital basic
+  settings. Both surfaces use the existing workspace mark when no custom logo
+  is stored. Successful logo upload or removal invalidates the current workspace
+  identity read so the shell updates without a page reload.
 
 ## Verification Gate
 

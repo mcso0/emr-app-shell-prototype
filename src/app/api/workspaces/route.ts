@@ -48,7 +48,10 @@ export async function GET(request: Request) {
       : undefined,
   });
 
-  return Response.json(result, { status: result.status });
+  return Response.json(result, {
+    status: result.status,
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }
 
 export async function POST(request: Request) {

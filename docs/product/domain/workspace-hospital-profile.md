@@ -11,14 +11,15 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-007-hospital-settings-screen-split.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-021-hospital-profile-contact-persistence.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-022-hospital-logo-storage.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-023-workspace-logo-shell-linkage.md"
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-23
+last_updated: 2026-07-24
 ---
 
 # Workspace Hospital Profile
 
-Updated: 2026-07-23
+Updated: 2026-07-24
 
 This document is the product source of truth for the hospital profile and basic hospital settings owned by a workspace. It defines product data requirements only; schema, migrations, RLS, and API implementation belong in engineering docs.
 
