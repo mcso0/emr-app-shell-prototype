@@ -157,6 +157,225 @@ test("contact memo saves through the profile API and stays multiline", async ({
   await expect(screen.getByTestId("hospital-settings-change-bar")).toBeHidden();
 });
 
+test("hospital basic settings matches CDS V2 geometry and stays usable at 390px", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await mockProfile(page);
+  await page.goto("/w/clair-demo/orders?modulePanel=open&section=settings");
+
+  const screen = page.getByTestId("hospital-admin-settings-screen");
+  await expect(
+    screen.getByRole("heading", { level: 1, name: "병원 기본 설정" }),
+  ).toBeVisible();
+  await expect(screen.getByRole("textbox")).toHaveCount(0);
+  await expect(screen.getByLabel("병원명")).toHaveText("테스트 동물병원");
+  await expect(screen.getByLabel("대표자/원장명")).toHaveText("홍길동");
+  await expect(screen.getByLabel("주소", { exact: true })).toHaveText(
+    "서울시 테스트구 123",
+  );
+  await expect(screen.getByLabel("시간대", { exact: true })).toHaveText(
+    "Asia/Seoul (UTC+09:00)",
+  );
+  await expect(screen.getByLabel("지역", { exact: true })).toHaveText(
+    "대한민국",
+  );
+
+  const figmaMetrics = await screen.evaluate((root) => {
+    const required = (selector: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing ${selector}`);
+      return element;
+    };
+    const box = (selector: string) => required(selector).getBoundingClientRect();
+    const rootBox = root.getBoundingClientRect();
+    const mainBox = box("main");
+    const headerBox = box("main > header");
+    const firstSectionBox = box("main > section");
+
+    return {
+      mainWidth: Math.round(mainBox.width),
+      contentTop: Math.round(headerBox.top - rootBox.top),
+      headerHeight: Math.round(headerBox.height),
+      headerGap: Math.round(firstSectionBox.top - headerBox.bottom),
+      sectionTitleHeight: Math.round(box("#hospital-profile-title").height),
+      profileCardWidth: Math.round(
+        box('[data-testid="hospital-profile-card"]').width,
+      ),
+      profileCardHeight: Math.round(
+        box('[data-testid="hospital-profile-card"]').height,
+      ),
+      regionCardHeight: Math.round(
+        box('[data-testid="hospital-region-card"]').height,
+      ),
+      rowHeight: Math.round(
+        box('[data-testid="hospital-settings-row-name"]').height,
+      ),
+      logoSize: Math.round(
+        box('[data-testid="hospital-logo-trigger"]').width,
+      ),
+      copyButtonSize: Math.round(
+        required(
+          '[data-testid="hospital-settings-row-address"] button',
+        ).getBoundingClientRect().width,
+      ),
+      requestButtonHeight: Math.round(
+        required(
+          '[data-testid="hospital-settings-row-change-request"] button',
+        ).getBoundingClientRect().height,
+      ),
+    };
+  });
+
+  expect(figmaMetrics).toEqual({
+    mainWidth: 920,
+    contentTop: 57,
+    headerHeight: 92,
+    headerGap: 16,
+    sectionTitleHeight: 52,
+    profileCardWidth: 920,
+    profileCardHeight: 425,
+    regionCardHeight: 170,
+    rowHeight: 85,
+    logoSize: 44,
+    copyButtonSize: 28,
+    requestButtonHeight: 32,
+  });
+
+  await screen.getByRole("button", { name: "주소 복사" }).click();
+  await expect(
+    screen.getByRole("button", { name: "주소 복사" }),
+  ).toHaveAttribute("data-copy-state", "succeeded");
+  await expect(page.getByText("주소가 복사되었습니다.")).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() =>
+      screen.evaluate(
+        (element) =>
+          element.scrollWidth <= document.documentElement.clientWidth &&
+          element.querySelector("main")!.scrollWidth <=
+            element.querySelector("main")!.clientWidth,
+      ),
+    )
+    .toBe(true);
+  await expect(screen.getByRole("button", { name: "주소 복사" })).toBeVisible();
+  await expect(
+    screen.getByRole("button", { name: "병원 정보 변경 요청" }),
+  ).toBeVisible();
+});
+
+test("hospital profile recovers from read errors and exposes empty and denied states", async ({
+  page,
+}) => {
+  let phase: "error" | "empty" | "denied" = "error";
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/settings/profile",
+    async (route) => {
+      if (phase === "error") {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "profile_read_failed" }),
+        });
+        return;
+      }
+      if (phase === "denied") {
+        await route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "forbidden" }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          profile: {
+            ...profile,
+            representativeName: null,
+            address: null,
+            profileComplete: false,
+          },
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open&section=settings");
+  const screen = page.getByTestId("hospital-admin-settings-screen");
+  await expect(
+    screen.getByText("병원 정보를 불러오지 못했습니다."),
+  ).toBeVisible();
+
+  phase = "empty";
+  await screen.getByRole("button", { name: "다시 시도" }).click();
+  await expect(screen.getByLabel("대표자/원장명")).toHaveText(
+    "등록된 대표자/원장 정보가 없습니다.",
+  );
+  await expect(screen.getByLabel("주소", { exact: true })).toHaveText(
+    "등록된 주소가 없습니다.",
+  );
+  await expect(
+    screen.getByRole("button", { name: "주소 복사" }),
+  ).toBeDisabled();
+
+  phase = "denied";
+  await page.reload();
+  await expect(
+    screen.getByText("병원 정보를 볼 권한이 없습니다."),
+  ).toBeVisible();
+  await expect(
+    screen.getByRole("button", { name: "다시 시도" }),
+  ).toHaveCount(0);
+});
+
+test("registered information request posts and renders pending state", async ({
+  page,
+}) => {
+  await mockProfile(page);
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/settings/profile-change-requests",
+    async (route) => {
+      expect(route.request().postDataJSON()).toEqual({
+        fields: ["hospital_name"],
+        detail: "사업자 등록증과 동일하게 변경해 주세요.",
+      });
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          request: {
+            id: "request-1",
+            fields: ["hospital_name"],
+            status: "pending",
+            createdAt: "2026-07-23T00:00:00.000Z",
+          },
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open&section=settings");
+  const screen = page.getByTestId("hospital-admin-settings-screen");
+  await screen.getByRole("button", { name: "병원 정보 변경 요청" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "병원 등록 정보 변경 요청",
+  });
+  await dialog.getByRole("checkbox", { name: "병원명" }).click();
+  await dialog
+    .getByLabel("변경 내용 및 사유")
+    .fill("사업자 등록증과 동일하게 변경해 주세요.");
+  await dialog.getByRole("button", { name: "변경 요청 제출" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("변경 요청이 접수되었습니다.")).toBeVisible();
+  await expect(screen.getByText("운영팀 확인 대기 중")).toBeVisible();
+});
+
 test("hospital logo hover editor validates files and restores focus", async ({
   page,
 }) => {

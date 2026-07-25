@@ -15,7 +15,7 @@ source_docs:
 dependencies:
   - "HOSPITAL-ADMIN-PR-005"
   - "HOSPITAL-ADMIN-LIVE-PR-012"
-updated: "2026-07-23"
+updated: "2026-07-25"
 ---
 
 # Hospital Settings Screen Split
@@ -35,6 +35,9 @@ screens while preserving the existing operating-hours persistence boundary.
   `section=settings-contact` and `section=settings-hours`.
 - Rebuild the content with existing EMR/shadcn components and the approved
   prototype measurements/copy.
+- Treat CDS V2 node `27801:38531` as the final visual authority for the
+  `병원 기본 설정` content frame while preserving verified product copy and
+  field semantics.
 - Add the shadcn `ToggleGroup` primitive for the seven operating-day controls.
 - Remove per-row operating switches and the operating switch from the time
   dialog. Closed-day time actions are disabled.
@@ -100,4 +103,22 @@ Implemented and locally verified on 2026-07-23.
 - The dedicated settings browser spec passed 4 tests and the latest-main
   hospital-admin regression spec passed 29 tests. Lint, TypeScript, production
   build, Storybook build, docs, and Korean honorific checks passed.
-- Remote deployment and review remain intentionally unclaimed.
+- The 2026-07-23 implementation shipped through PR #489; later visual
+  refinements use a separate release candidate.
+
+### 2026-07-25 CDS V2 visual alignment
+
+- The final Figma reference is CDS V2 node `27801:38531`.
+- The basic-settings content now matches the reviewed `920px` content width,
+  `56px` top offset, `92px` header, `52px` section headings, `85px` rows,
+  `44px` logo, `28px` copy action, card radius/border, and CDS `shadow/xs`.
+- Read-only profile fields render as labelled text instead of disabled-looking
+  inputs. Verified domain labels and descriptions replace Figma placeholders.
+- Existing Card, Button, Avatar, Separator, ScrollArea, and Dialog primitives
+  remain the component boundary; no package, shared primitive, API, schema,
+  migration, RPC, RLS, or Storage change was required.
+- Focused browser coverage asserts Figma geometry, desktop/mobile overflow,
+  address-copy feedback, API hydration, empty/error/denied reads, change-request
+  pending state, logo validation, Dialog focus return, and draft dirty state.
+- No migration application is required for this visual-only follow-up; it uses
+  the normal production release workflow.

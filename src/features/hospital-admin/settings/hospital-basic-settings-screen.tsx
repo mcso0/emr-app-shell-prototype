@@ -7,6 +7,7 @@ import {
   CdsActionsCheckIcon,
   CdsActionsCopyIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsContentEditIcon } from "@/components/cds-icons/content-and-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,7 +28,7 @@ import {
   FieldSet,
   FieldLegend,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { HospitalProfileReadState } from "@/features/hospital-admin/settings/hospital-profile-read-state";
 import { HospitalLogoEditor } from "@/features/hospital-admin/settings/hospital-logo-editor";
@@ -311,6 +312,7 @@ export function HospitalBasicSettingsScreen({
       description="병원에 표시되는 기본 정보와 지역 기준을 확인합니다."
       dirty={isDirty}
       isSaving={isLogoSaving}
+      layout="summary"
       onRevert={() => {
         setLogoDraftOverride(undefined);
         setLogoDraftFile(null);
@@ -326,113 +328,139 @@ export function HospitalBasicSettingsScreen({
         />
       ) : (
         <>
-      <section className="flex flex-col gap-3" aria-labelledby="hospital-profile-title">
-        <h2 id="hospital-profile-title" className="text-base font-semibold">
-          병원 정보
-        </h2>
-        <Card size="sm">
-          <CardContent className="divide-y divide-border p-0">
-            <SettingRow
-              label="병원 로고"
-              description="PNG 또는 JPG, 최대 5MB. 256 × 256px 이상을 권장합니다."
-              action={<HospitalLogoEditor value={logoDraft} onChange={handleLogoChange} />}
-            />
-            <SettingRow
-              label="병원명"
-              action={
-                <Input
-                  id="hospital-settings-name"
-                  aria-label="병원명"
-                  className="w-full bg-muted/40 sm:w-[360px]"
-                  readOnly
-                  value={profile.name}
+          <section
+            className="flex w-full flex-col pb-2"
+            aria-labelledby="hospital-profile-title"
+          >
+            <SectionTitle id="hospital-profile-title">병원 정보</SectionTitle>
+            <Card
+              className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]"
+              data-testid="hospital-profile-card"
+            >
+              <CardContent className="p-0">
+                <SettingRow
+                  testId="hospital-settings-row-logo"
+                  label="병원 로고"
+                  description="PNG 또는 JPG, 최대 5MB. 256 × 256px 이상을 권장합니다."
+                  action={
+                    <HospitalLogoEditor
+                      value={logoDraft}
+                      onChange={handleLogoChange}
+                    />
+                  }
                 />
-              }
-            />
-            <SettingRow
-              label="대표자/원장명"
-              action={
-                <Input
-                  id="hospital-settings-director"
-                  aria-label="대표자/원장명"
-                  className="w-full bg-muted/40 sm:w-[360px]"
-                  readOnly
-                  value={profile.representativeName ?? ""}
-                  placeholder="등록된 대표자/원장 정보가 없습니다."
+                <SettingRow
+                  testId="hospital-settings-row-name"
+                  label="병원명"
+                  description="예약과 고객 안내에 표시되는 공식 병원명입니다."
+                  action={<SettingValue label="병원명" value={profile.name} />}
                 />
-              }
-            />
-            <SettingRow
-              label="주소"
-              action={
-                <div className="flex w-full gap-2 sm:w-[480px]">
-                  <Input
-                    id="hospital-settings-address"
-                    aria-label="주소"
-                    className="min-w-0 bg-muted/40"
-                    readOnly
-                    value={profile.address ?? ""}
-                    placeholder="등록된 주소가 없습니다."
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={!profile.address}
-                    onClick={() => void handleCopyAddress()}
-                  >
-                    {copySucceeded ? (
-                      <CdsActionsCheckIcon data-icon="inline-start" />
+                <SettingRow
+                  testId="hospital-settings-row-representative"
+                  label="대표자/원장명"
+                  description="등록된 대표자 또는 원장 정보입니다."
+                  action={
+                    <SettingValue
+                      label="대표자/원장명"
+                      value={profile.representativeName}
+                      emptyLabel="등록된 대표자/원장 정보가 없습니다."
+                    />
+                  }
+                />
+                <SettingRow
+                  testId="hospital-settings-row-address"
+                  label="주소"
+                  description="고객 안내와 문서에 사용하는 등록 주소입니다."
+                  action={
+                    <div className="flex min-w-0 max-w-full items-center gap-2.5">
+                      <SettingValue
+                        label="주소"
+                        value={profile.address}
+                        emptyLabel="등록된 주소가 없습니다."
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="size-7"
+                        aria-label="주소 복사"
+                        data-copy-state={copySucceeded ? "succeeded" : "idle"}
+                        disabled={!profile.address}
+                        onClick={() => void handleCopyAddress()}
+                      >
+                        {copySucceeded ? (
+                          <CdsActionsCheckIcon aria-hidden="true" />
+                        ) : (
+                          <CdsActionsCopyIcon aria-hidden="true" />
+                        )}
+                      </Button>
+                    </div>
+                  }
+                />
+                <SettingRow
+                  testId="hospital-settings-row-change-request"
+                  label="등록 정보 변경"
+                  description="병원명, 대표자 및 주소 변경은 운영팀 확인이 필요합니다."
+                  action={
+                    profile.pendingChangeRequest ? (
+                      <span className="text-sm leading-5 font-medium tracking-[0.014em] text-muted-foreground">
+                        운영팀 확인 대기 중
+                      </span>
                     ) : (
-                      <CdsActionsCopyIcon data-icon="inline-start" />
-                    )}
-                    {copySucceeded ? "복사됨" : "주소 복사"}
-                  </Button>
-                </div>
-              }
-            />
-            <SettingRow
-              label="등록 정보 변경"
-              description="병원명, 대표자 및 주소 변경은 운영팀 확인이 필요합니다."
-              action={
-                profile.pendingChangeRequest ? (
-                  <span className="text-sm font-medium text-muted-foreground">
-                    운영팀 확인 대기 중
-                  </span>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    aria-label="병원 정보 변경 요청"
-                    onClick={() => setRequestDialogOpen(true)}
-                  >
-                    변경 요청
-                  </Button>
-                )
-              }
-            />
-          </CardContent>
-        </Card>
-      </section>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        aria-label="병원 정보 변경 요청"
+                        onClick={() => setRequestDialogOpen(true)}
+                      >
+                        <CdsContentEditIcon
+                          data-icon="inline-start"
+                          aria-hidden="true"
+                        />
+                        변경 요청
+                      </Button>
+                    )
+                  }
+                />
+              </CardContent>
+            </Card>
+          </section>
 
-      <section className="flex flex-col gap-3" aria-labelledby="hospital-region-title">
-        <h2 id="hospital-region-title" className="text-base font-semibold">
-          지역 및 시간대
-        </h2>
-        <Card size="sm">
-          <CardContent className="divide-y divide-border p-0">
-            <SettingRow
-              label="시간대"
-              description="예약 및 운영시간 계산에 사용됩니다."
-              action={<span className="text-sm">{profile.timezone} (UTC+09:00)</span>}
-            />
-            <SettingRow
-              label="지역"
-              description="워크스페이스 생성 후에는 변경할 수 없습니다."
-              action={<span className="text-sm">대한민국</span>}
-            />
-          </CardContent>
-        </Card>
-      </section>
+          <section
+            className="flex w-full flex-col pb-2"
+            aria-labelledby="hospital-region-title"
+          >
+            <SectionTitle id="hospital-region-title">지역 및 시간대</SectionTitle>
+            <Card
+              className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]"
+              data-testid="hospital-region-card"
+            >
+              <CardContent className="p-0">
+                <SettingRow
+                  testId="hospital-settings-row-timezone"
+                  label="시간대"
+                  description="예약 및 운영시간 계산에 사용됩니다."
+                  action={
+                    <SettingValue
+                      label="시간대"
+                      value={formatTimezone(profile.timezone)}
+                    />
+                  }
+                />
+                <SettingRow
+                  testId="hospital-settings-row-region"
+                  label="지역"
+                  description="워크스페이스 생성 후에는 변경할 수 없습니다."
+                  action={
+                    <SettingValue
+                      label="지역"
+                      value={formatCountry(profile.countryCode)}
+                    />
+                  }
+                />
+              </CardContent>
+            </Card>
+          </section>
         </>
       )}
 
@@ -511,20 +539,96 @@ function SettingRow({
   action,
   description,
   label,
+  testId,
 }: {
   action: React.ReactNode;
   description?: string;
   label: string;
+  testId: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{label}</p>
-        {description ? (
-          <p className="mt-0.5 emr-text-dense text-muted-foreground">{description}</p>
-        ) : null}
+    <div
+      className="px-4 pt-4 md:h-[85px] md:px-6 md:pt-5"
+      data-testid={testId}
+    >
+      <div className="flex min-h-11 flex-col gap-3 md:h-11 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="text-sm leading-5 font-medium tracking-[0.014em] text-foreground">
+            {label}
+          </p>
+          {description ? (
+            <p className="text-sm leading-5 font-medium tracking-[0.014em] text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex min-w-0 shrink-0 justify-start md:justify-end">
+          {action}
+        </div>
       </div>
-      <div className="flex shrink-0 justify-end">{action}</div>
+      <Separator className="mt-4 md:mt-5" />
     </div>
   );
+}
+
+function SectionTitle({
+  children,
+  id,
+}: {
+  children: React.ReactNode;
+  id: string;
+}) {
+  return (
+    <h2
+      id={id}
+      className="flex h-[52px] shrink-0 items-center px-4 text-base leading-6 font-semibold text-foreground"
+    >
+      {children}
+    </h2>
+  );
+}
+
+function SettingValue({
+  emptyLabel = "등록된 정보가 없습니다.",
+  label,
+  value,
+}: {
+  emptyLabel?: string;
+  label: string;
+  value: string | null | undefined;
+}) {
+  const displayValue = value?.trim() || emptyLabel;
+
+  return (
+    <span
+      aria-label={label}
+      className={
+        value?.trim()
+          ? "min-w-0 max-w-[520px] break-words text-left text-sm leading-5 font-medium tracking-[0.014em] text-foreground md:text-right"
+          : "min-w-0 max-w-[520px] break-words text-left text-sm leading-5 font-medium tracking-[0.014em] text-muted-foreground md:text-right"
+      }
+    >
+      {displayValue}
+    </span>
+  );
+}
+
+function formatCountry(countryCode: string) {
+  return countryCode === "KR" ? "대한민국" : countryCode;
+}
+
+function formatTimezone(timezone: string) {
+  try {
+    const offset =
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        timeZoneName: "longOffset",
+      })
+        .formatToParts(new Date())
+        .find((part) => part.type === "timeZoneName")
+        ?.value.replace("GMT", "UTC") ?? "";
+    return offset ? `${timezone} (${offset})` : timezone;
+  } catch {
+    return timezone;
+  }
 }
