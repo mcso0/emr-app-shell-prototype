@@ -62,17 +62,17 @@ flowchart LR
 
 ## Screen Patterns
 
-| Screen | Primary pattern | Secondary pattern | Notes |
-| --- | --- | --- | --- |
-| 병원 기본 설정 | Read-only identity/region rows + private logo editor | Registered-information request dialog and address-copy action | Logo image is the trigger; hover/focus dims it and reveals an edit icon |
-| 연락처 및 채널 | Divided setting rows with right-aligned controls | Multiline customer guidance memo + fixed dirty bar | Profile API/RPC persistence; meaningful results use toasts |
-| 운영시간 관리 | One weekday ToggleGroup + terminal day rows | Time dialog + holiday/exception rows | ToggleGroup is the only open/closed control; no duplicate switches |
-| 병원 구성원 | Existing table + invite/edit sheets | Role/job assignment controls | Assign people here and link to definitions in `역할 및 권한` |
-| 역할 및 권한 | `920px` grouped settings hub + URL-backed independent detail screen | One-open role items, divided switch rows, and contextual save state | Keep the hub concise; each role item owns its assigned members, summary, and permission controls |
-| 공간 관리 | Category settings list + two-level category detail | Inline category/space CRUD with confirmations and toasts | Categories navigate; terminal space rows use direct edit/delete actions |
-| 근무표 | Staff/week grid + unassigned row | Daily coverage timeline, personal schedule, request approval | Supabase mode uses route/RPC persistence; mock mode remains explicit session-only fallback |
-| 바이탈 관리 | Workspace preset order, units, and availability | Required preset protection and optional preset removal | No clinical range or alert automation claim |
-| 감사 로그 | Existing audit table | Search/filter | Keep minimal read-only admin review |
+| Screen         | Primary pattern                                                     | Secondary pattern                                                   | Notes                                                                                            |
+| -------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 병원 기본 설정 | Read-only identity/region rows + private logo editor                | Registered-information request dialog and address-copy action       | Logo image is the trigger; hover/focus dims it and reveals an edit icon                          |
+| 연락처 및 채널 | Divided setting rows with right-aligned controls                    | Multiline customer guidance memo + fixed dirty bar                  | Profile API/RPC persistence; meaningful results use toasts                                       |
+| 운영시간 관리  | One weekday ToggleGroup + terminal day rows                         | Time dialog + holiday/exception rows                                | ToggleGroup is the only open/closed control; no duplicate switches                               |
+| 병원 구성원    | Existing table + invite/edit sheets                                 | Role/job assignment controls                                        | Assign people here and link to definitions in `역할 및 권한`                                     |
+| 역할 및 권한   | `920px` grouped settings hub + URL-backed independent detail screen | One-open role items, divided switch rows, and contextual save state | Keep the hub concise; each role item owns its assigned members, summary, and permission controls |
+| 공간 관리      | Category settings list + two-level category detail                  | Inline category/space CRUD with confirmations and toasts            | Categories navigate; terminal space rows use direct edit/delete actions                          |
+| 근무표         | Staff/week grid + unassigned row                                    | Daily coverage timeline, personal schedule, request approval        | Supabase mode uses route/RPC persistence; mock mode remains explicit session-only fallback       |
+| 바이탈 관리    | Workspace preset order, units, and availability                     | Required preset protection and optional preset removal              | No clinical range or alert automation claim                                                      |
+| 감사 로그      | Existing audit table                                                | Search/filter                                                       | Keep minimal read-only admin review                                                              |
 
 ## UX Flows
 
@@ -154,7 +154,7 @@ flowchart LR
 
 1. Admin selects `바이탈 관리`.
 2. Screen shows the workspace vital preset list, display units, order, and availability.
-3. `체중` and `체온` show `필수`; they can be reordered and change allowed units but cannot be disabled or removed. Measurement entry remains optional.
+3. `체중` and `체온` show the CDS V2 visual label `기본` and retain an accessible “항상 사용” label; they can be reordered and change allowed units but cannot be disabled or removed. Measurement entry remains optional.
 4. Optional presets can be disabled in place or removed through `목록에서 제거`. Removal is draft-only, offers toast undo, and is confirmed only by the page-level save action.
 5. Removed presets return to `바이탈 추가`; historical measurements are never deleted and reappear when the preset is added again.
 6. The drag activator uses a conventional six-dot grip, transparent hover, grab/grabbing cursor, visible keyboard focus, and pointer/touch/keyboard ordering.
@@ -183,11 +183,11 @@ flowchart LR
 
 ## Future Development Spec Backlog
 
-| Scope | Required follow-up |
-| --- | --- |
-| Hospital profile follow-up | Remote migration/Storage application and authenticated production readback after release approval |
-| Role work profiles | Data model, relation to permission policies, Home assignment read model |
-| Space/time | Room model, operating hours model, slot rules, conflict validation |
-| Schedule | Persisted shifts/templates, coverage rules, availability, staff self-view policy, audit events, server authorization, and notifications |
-| Vitals | Curated preset metadata, required flag, workspace inclusion/order/unit/enabled state, audit event |
-| Audit | Add settings mutation events and safe summary mapping |
+| Scope                      | Required follow-up                                                                                                                      |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Hospital profile follow-up | Remote migration/Storage application and authenticated production readback after release approval                                       |
+| Role work profiles         | Data model, relation to permission policies, Home assignment read model                                                                 |
+| Space/time                 | Room model, operating hours model, slot rules, conflict validation                                                                      |
+| Schedule                   | Persisted shifts/templates, coverage rules, availability, staff self-view policy, audit events, server authorization, and notifications |
+| Vitals                     | Curated preset metadata, required flag, workspace inclusion/order/unit/enabled state, audit event                                       |
+| Audit                      | Add settings mutation events and safe summary mapping                                                                                   |

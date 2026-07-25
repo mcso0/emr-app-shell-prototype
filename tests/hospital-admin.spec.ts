@@ -478,50 +478,194 @@ test("hospital space management stays usable on a compact screen", async ({ page
   await expect(screen.getByRole("button", { name: "진료실 1 삭제" })).toBeVisible();
 });
 
-test("hospital vital settings follows the reviewed V3 interaction", async ({ page }) => {
-  let items: Array<{ key: string; enabled: boolean; displayUnit: string; sortOrder: number }> = [
+test("hospital vital settings matches CDS V2 while preserving the reviewed interaction", async ({
+  page,
+}) => {
+  let items: Array<{
+    key: string;
+    enabled: boolean;
+    displayUnit: string;
+    sortOrder: number;
+  }> = [
     { key: "weight", enabled: true, displayUnit: "kg", sortOrder: 0 },
     { key: "temperature", enabled: true, displayUnit: "°C", sortOrder: 1 },
     { key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 2 },
-    { key: "respiratory_rate", enabled: true, displayUnit: "rpm", sortOrder: 3 },
+    { key: "blood_pressure", enabled: true, displayUnit: "mmHg", sortOrder: 3 },
+    {
+      key: "respiratory_rate",
+      enabled: false,
+      displayUnit: "rpm",
+      sortOrder: 4,
+    },
   ];
   const presets = [
-    { key: "weight", label: "체중", description: "환자의 현재 체중", canonicalUnit: "kg", allowedDisplayUnits: ["kg", "g"], requiredInWorkspace: true },
-    { key: "temperature", label: "체온", description: "체온계로 측정한 체온", canonicalUnit: "°C", allowedDisplayUnits: ["°C", "°F"], requiredInWorkspace: true },
-    { key: "heart_rate", label: "심박수", description: "분당 심장 박동 수", canonicalUnit: "bpm", allowedDisplayUnits: ["bpm"], requiredInWorkspace: false },
-    { key: "respiratory_rate", label: "호흡수", description: "분당 호흡 횟수", canonicalUnit: "rpm", allowedDisplayUnits: ["rpm"], requiredInWorkspace: false },
-    { key: "blood_pressure", label: "혈압", description: "수축기 단독 또는 수축기/이완기", canonicalUnit: "mmHg", allowedDisplayUnits: ["mmHg"], requiredInWorkspace: false },
+    {
+      key: "weight",
+      label: "체중",
+      description: "환자의 현재 체중",
+      canonicalUnit: "kg",
+      allowedDisplayUnits: ["kg", "g"],
+      requiredInWorkspace: true,
+    },
+    {
+      key: "temperature",
+      label: "체온",
+      description: "체온계로 측정한 체온",
+      canonicalUnit: "°C",
+      allowedDisplayUnits: ["°C", "°F"],
+      requiredInWorkspace: true,
+    },
+    {
+      key: "heart_rate",
+      label: "심박수",
+      description: "분당 심장 박동 수",
+      canonicalUnit: "bpm",
+      allowedDisplayUnits: ["bpm"],
+      requiredInWorkspace: false,
+    },
+    {
+      key: "respiratory_rate",
+      label: "호흡수",
+      description: "분당 호흡 횟수",
+      canonicalUnit: "rpm",
+      allowedDisplayUnits: ["rpm"],
+      requiredInWorkspace: false,
+    },
+    {
+      key: "blood_pressure",
+      label: "혈압",
+      description: "수축기 단독 또는 수축기/이완기",
+      canonicalUnit: "mmHg",
+      allowedDisplayUnits: ["mmHg"],
+      requiredInWorkspace: false,
+    },
   ];
-  await page.route("**/api/workspaces/clair-demo/vital-settings", async (route) => {
-    if (route.request().method() === "PUT") {
-      items = ((await route.request().postDataJSON()) as { items: typeof items }).items;
-    }
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({ ok: true, status: 200, canManage: true, presets, items }),
-    });
-  });
+  await page.route(
+    "**/api/workspaces/clair-demo/vital-settings",
+    async (route) => {
+      if (route.request().method() === "PUT") {
+        items = (
+          (await route.request().postDataJSON()) as { items: typeof items }
+        ).items;
+      }
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          canManage: true,
+          presets,
+          items,
+        }),
+      });
+    },
+  );
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/w/clair-demo/orders?modulePanel=open");
-  await page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: /바이탈 관리/ }).click();
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: /바이탈 관리/ })
+    .click();
 
   const screen = page.getByTestId("hospital-admin-vitals-screen");
-  await expect(screen.getByRole("heading", { level: 1, name: "바이탈 관리" })).toBeVisible();
-  await expect(screen).toContainText("체중과 체온은 항상 사용되며, 실제 측정값 입력은 선택입니다.");
+  await expect(
+    screen.getByRole("heading", { level: 1, name: "바이탈 관리" }),
+  ).toBeVisible();
+  await expect(screen).toContainText(
+    "체중과 체온은 항상 사용되며, 실제 측정값 입력은 선택입니다.",
+  );
   await expect(screen).not.toContainText("영향 범위");
   await expect(screen).not.toContainText("향후 데이터");
   await expect(screen).not.toContainText("기본 바이탈 정상 범위");
-  await expect(screen.getByRole("button", { name: "바이탈 추가" })).toHaveCount(1);
+  const addButton = screen.getByRole("button", { name: "바이탈 추가" });
+  await expect(addButton).toHaveCount(1);
+  await expect(addButton).toBeDisabled();
+  await expect(page.getByTestId("hospital-settings-change-bar")).toHaveCount(0);
+  await expect(
+    screen
+      .getByTestId("vital-settings-list")
+      .locator('[data-testid^="vital-setting-row-"]'),
+  ).toHaveCount(5);
+  await expect(screen.getByText("기본", { exact: true })).toHaveCount(2);
+  await expect(screen.getByRole("switch", { name: "체중 사용" })).toHaveCount(
+    0,
+  );
+  await expect(screen.getByRole("switch", { name: "체온 사용" })).toHaveCount(
+    0,
+  );
+  await expect(screen.getByRole("button", { name: "체중 작업" })).toHaveCount(
+    0,
+  );
+  await expect(
+    screen.getByRole("button", { name: "체중 기본 항목" }),
+  ).toBeDisabled();
+  await expect(
+    screen.getByRole("button", { name: "심박수 작업" }),
+  ).toBeVisible();
+  await expect(screen.getByLabel("심박수 표시 단위")).toBeEnabled();
+  await expect(screen.getByLabel("호흡수 표시 단위")).toBeDisabled();
 
-  const resetButton = screen.getByTestId("vital-settings-reset");
-  const saveButton = screen.getByTestId("vital-settings-save");
-  await expect(resetButton).toBeDisabled();
-  await expect(saveButton).toBeDisabled();
-  await expect(screen.getByTestId("vital-settings-list").locator('[data-testid^="vital-setting-row-"]')).toHaveCount(4);
-  await expect(screen.getByText("필수", { exact: true })).toHaveCount(2);
-  await expect(screen.getByRole("switch", { name: "체중 사용" })).toHaveCount(0);
-  await expect(screen.getByRole("switch", { name: "체온 사용" })).toHaveCount(0);
-  await expect(screen.getByRole("button", { name: "체중 작업" })).toHaveCount(0);
-  await expect(screen.getByRole("button", { name: "심박수 작업" })).toBeVisible();
+  const figmaMetrics = await screen.evaluate((root) => {
+    const required = (selector: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing ${selector}`);
+      return element;
+    };
+    const box = (selector: string) =>
+      required(selector).getBoundingClientRect();
+    const rootBox = root.getBoundingClientRect();
+    const mainBox = box("main");
+    const headerBox = box("main > header");
+    const cardBox = box('[data-testid="vital-settings-card"]');
+    return {
+      mainWidth: Math.round(mainBox.width),
+      contentTop: Math.round(headerBox.top - rootBox.top),
+      headerHeight: Math.round(headerBox.height),
+      headerGap: Math.round(cardBox.top - headerBox.bottom),
+      cardWidth: Math.round(cardBox.width),
+      cardHeight: Math.round(cardBox.height),
+      cardHeaderHeight: Math.round(
+        required(
+          "#vital-settings-list-title",
+        ).parentElement!.getBoundingClientRect().height,
+      ),
+      rowHeight: Math.round(
+        box('[data-testid="vital-setting-row-weight"]').height,
+      ),
+      gripSize: Math.round(
+        required('[aria-label="체중 순서 변경"]').getBoundingClientRect().width,
+      ),
+      unitWidth: Math.round(
+        required('[aria-label="체중 표시 단위"]').getBoundingClientRect().width,
+      ),
+      switchWidth: Math.round(
+        required('[aria-label="심박수 사용"]').getBoundingClientRect().width,
+      ),
+      actionSize: Math.round(
+        required('[aria-label="심박수 작업"]').getBoundingClientRect().width,
+      ),
+      addHeight: Math.round(
+        required('[data-testid="vital-settings-add"]').getBoundingClientRect()
+          .height,
+      ),
+    };
+  });
+
+  expect(figmaMetrics).toEqual({
+    mainWidth: 920,
+    contentTop: 57,
+    headerHeight: 92,
+    headerGap: 16,
+    cardWidth: 920,
+    cardHeight: 582,
+    cardHeaderHeight: 85,
+    rowHeight: 85,
+    gripSize: 18,
+    unitWidth: 180,
+    switchWidth: 38,
+    actionSize: 32,
+    addHeight: 32,
+  });
 
   const weightGrip = screen.getByRole("button", { name: "체중 순서 변경" });
   await expect(weightGrip.locator(".oi-reorder-alt")).toBeVisible();
@@ -531,14 +675,24 @@ test("hospital vital settings follows the reviewed V3 interaction", async ({ pag
     color: getComputedStyle(element).color,
   }));
   await weightGrip.hover();
-  await expect.poll(() => weightGrip.evaluate((element) => ({
-    background: getComputedStyle(element).backgroundColor,
-    color: getComputedStyle(element).color,
-  }))).toEqual(gripColors);
+  await expect
+    .poll(() =>
+      weightGrip.evaluate((element) => ({
+        background: getComputedStyle(element).backgroundColor,
+        color: getComputedStyle(element).color,
+      })),
+    )
+    .toEqual(gripColors);
   const weightGripBox = await weightGrip.boundingBox();
-  const temperatureRowBox = await screen.getByTestId("vital-setting-row-temperature").boundingBox();
-  if (!weightGripBox || !temperatureRowBox) throw new Error("바이탈 드래그 대상을 찾지 못했습니다.");
-  await page.mouse.move(weightGripBox.x + weightGripBox.width / 2, weightGripBox.y + weightGripBox.height / 2);
+  const temperatureRowBox = await screen
+    .getByTestId("vital-setting-row-temperature")
+    .boundingBox();
+  if (!weightGripBox || !temperatureRowBox)
+    throw new Error("바이탈 드래그 대상을 찾지 못했습니다.");
+  await page.mouse.move(
+    weightGripBox.x + weightGripBox.width / 2,
+    weightGripBox.y + weightGripBox.height / 2,
+  );
   await page.mouse.down();
   await page.mouse.move(
     temperatureRowBox.x + temperatureRowBox.width / 2,
@@ -546,62 +700,100 @@ test("hospital vital settings follows the reviewed V3 interaction", async ({ pag
     { steps: 8 },
   );
   await page.mouse.up();
-  await expect(screen.getByTestId("vital-settings-list").locator('[data-testid^="vital-setting-row-"]').nth(1)).toHaveAttribute(
-    "data-testid",
-    "vital-setting-row-weight",
-  );
-  await resetButton.click();
+  await expect(
+    screen
+      .getByTestId("vital-settings-list")
+      .locator('[data-testid^="vital-setting-row-"]')
+      .nth(1),
+  ).toHaveAttribute("data-testid", "vital-setting-row-weight");
+  let changeBar = page.getByTestId("hospital-settings-change-bar");
+  await expect(changeBar).toBeVisible();
+  await changeBar
+    .getByRole("button", { name: "변경 전으로 되돌리기" })
+    .press("Enter");
+  await page.getByRole("button", { name: "변경사항 되돌리기" }).click();
+  await expect(
+    screen
+      .getByTestId("vital-settings-list")
+      .locator('[data-testid^="vital-setting-row-"]')
+      .nth(0),
+  ).toHaveAttribute("data-testid", "vital-setting-row-weight");
 
   await screen.getByLabel("체중 표시 단위").click();
   await page.getByRole("option", { name: "g", exact: true }).click();
-  await expect(resetButton).toBeEnabled();
-  await expect(saveButton).toBeEnabled();
-  await resetButton.click();
+  changeBar = page.getByTestId("hospital-settings-change-bar");
+  await expect(
+    changeBar.getByRole("button", { name: "변경 전으로 되돌리기" }),
+  ).toBeEnabled();
+  await expect(
+    changeBar.getByRole("button", { name: "변경사항 저장" }),
+  ).toBeEnabled();
+  await changeBar
+    .getByRole("button", { name: "변경 전으로 되돌리기" })
+    .press("Enter");
+  await page.getByRole("button", { name: "변경사항 되돌리기" }).click();
   await expect(screen.getByLabel("체중 표시 단위")).toContainText("kg");
-  await expect(resetButton).toBeDisabled();
-  await expect(saveButton).toBeDisabled();
+  await expect(page.getByTestId("hospital-settings-change-bar")).toHaveCount(0);
 
   await screen.getByRole("button", { name: "심박수 작업" }).click();
   await page.getByRole("menuitem", { name: "목록에서 제거" }).click();
-  await expect(screen.getByTestId("vital-setting-row-heart_rate")).toHaveCount(0);
-  await expect(saveButton).toBeEnabled();
-  await page.getByRole("button", { name: "되돌리기" }).click();
-  await expect(screen.getByTestId("vital-setting-row-heart_rate")).toBeVisible();
+  await expect(screen.getByTestId("vital-setting-row-heart_rate")).toHaveCount(
+    0,
+  );
+  await expect(page.getByTestId("hospital-settings-change-bar")).toBeVisible();
+  await page.getByRole("button", { name: "되돌리기", exact: true }).click();
+  await expect(
+    screen.getByTestId("vital-setting-row-heart_rate"),
+  ).toBeVisible();
 
   await screen.getByRole("button", { name: "심박수 작업" }).click();
   await page.getByRole("menuitem", { name: "목록에서 제거" }).click();
-  await screen.getByRole("button", { name: "바이탈 추가" }).click();
-  let addDialog = page.getByRole("dialog", { name: "바이탈 추가" });
+  await expect(addButton).toBeEnabled();
+  await addButton.click();
+  const addDialog = page.getByRole("dialog", { name: "바이탈 추가" });
   await expect(addDialog.getByRole("button", { name: /심박수/ })).toBeVisible();
   await addDialog.getByRole("button", { name: /심박수/ }).click();
   await screen.getByRole("button", { name: "심박수 작업" }).click();
   await page.getByRole("menuitem", { name: "목록에서 제거" }).click();
 
-  await screen.getByRole("button", { name: "바이탈 추가" }).click();
-  addDialog = page.getByRole("dialog", { name: "바이탈 추가" });
-  await addDialog.getByRole("button", { name: /혈압/ }).click();
-  await expect(screen.getByTestId("vital-setting-row-blood_pressure")).toBeVisible();
-  await saveButton.click();
+  changeBar = page.getByTestId("hospital-settings-change-bar");
+  await changeBar.getByRole("button", { name: "변경사항 저장" }).click();
 
   const saveDialog = page.getByTestId("vital-settings-save-dialog");
-  await expect(saveDialog).toContainText("접수와 진료 화면에 같은 설정이 적용됩니다.");
+  await expect(saveDialog).toContainText(
+    "접수와 진료 화면에 같은 설정이 적용됩니다.",
+  );
   await expect(saveDialog).toContainText("목록에서 제거: 심박수");
-  await expect(saveDialog).toContainText("기존 기록은 삭제되지 않으며, 바이탈 추가에서 다시 추가할 수 있습니다.");
-  await expect(saveDialog).toContainText("체중 · 체온 · 호흡수 · 혈압");
+  await expect(saveDialog).toContainText(
+    "기존 기록은 삭제되지 않으며, 바이탈 추가에서 다시 추가할 수 있습니다.",
+  );
+  await expect(saveDialog).toContainText("체중 · 체온 · 혈압");
   await saveDialog.getByRole("button", { name: "저장", exact: true }).click();
-  await expect(saveButton).toBeDisabled();
-  await expect(resetButton).toBeDisabled();
+  await expect(page.getByTestId("hospital-settings-change-bar")).toHaveCount(0);
   expect(items.some((item) => item.key === "heart_rate")).toBe(false);
   expect(items.find((item) => item.key === "weight")?.enabled).toBe(true);
   expect(items.find((item) => item.key === "temperature")?.enabled).toBe(true);
+  expect(items.find((item) => item.key === "respiratory_rate")?.enabled).toBe(
+    false,
+  );
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect.poll(() => page.evaluate(() =>
-    document.documentElement.scrollWidth <= document.documentElement.clientWidth
-  )).toBe(true);
-  await expect.poll(() => screen.locator('[data-slot="card-content"]').evaluate((element) =>
-    element.scrollWidth > element.clientWidth
-  )).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      screen
+        .locator('[data-slot="card-content"]')
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    )
+    .toBe(true);
 });
 
 test("hospital schedule supports editing, personal requests, approval, and publish review", async ({ page }) => {

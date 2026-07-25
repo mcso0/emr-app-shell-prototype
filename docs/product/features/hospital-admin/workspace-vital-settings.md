@@ -10,7 +10,7 @@ tags: [hospital-admin, vitals, workspace-settings, reception, chart]
 related_work:
   - "HOSPITAL-ADMIN-LIVE-PR-018"
   - "HOSPITAL-ADMIN-LIVE-PR-019"
-last_updated: 2026-07-22
+last_updated: 2026-07-25
 ---
 
 # Workspace Vital Settings
@@ -35,24 +35,24 @@ Give each hospital one workspace-wide list of vital fields. Administrators choos
 
 ## Units And Storage
 
-| Preset | Canonical storage | Allowed display/input units |
-| --- | --- | --- |
-| Weight | `kg` | `kg`, `g` |
-| Temperature | `°C` | `°C`, `°F` |
-| Heart rate | `bpm` | `bpm` |
-| Respiratory rate | `rpm` | `rpm` |
-| Blood pressure | `mmHg` | `mmHg` |
+| Preset           | Canonical storage | Allowed display/input units |
+| ---------------- | ----------------- | --------------------------- |
+| Weight           | `kg`              | `kg`, `g`                   |
+| Temperature      | `°C`              | `°C`, `°F`                  |
+| Heart rate       | `bpm`             | `bpm`                       |
+| Respiratory rate | `rpm`             | `rpm`                       |
+| Blood pressure   | `mmHg`            | `mmHg`                      |
 
 Storage remains canonical. The UI converts grams to kilograms and Fahrenheit to Celsius before writes, then converts canonical values back to the configured unit for display. Unit changes do not rewrite historical measurement rows.
 
 ## Settings UX
 
 - The page uses the hospital-settings constrained content width (`max-width: 920px`).
-- Page-header actions are `초기화` and `변경사항 저장`; both are disabled until the draft differs from the last saved snapshot.
-- `초기화` restores the last saved snapshot.
+- The clean state follows CDS V2 Figma node `27804:117826` and keeps page-header actions hidden. Once the draft changes, the shared hospital-settings change bar exposes `변경 전으로 되돌리기` and `변경사항 저장`.
+- `변경 전으로 되돌리기` confirms before restoring the last saved snapshot.
 - `변경사항 저장` opens a confirmation dialog that names the enabled vital list and explains that reception/chart input will change while historical records remain.
-- `사용할 바이탈` contains the only `추가` action.
-- Rows expose a six-dot drag handle and display-unit control. Required rows show a `필수` badge; optional rows show an enabled switch and `목록에서 제거` menu.
+- `사용할 바이탈 목록` contains the only `바이탈 추가` action, placed in the card footer.
+- Rows expose a six-dot drag handle and display-unit control. Required rows show the visual badge `기본` with an accessible “항상 사용” label; optional rows show an enabled switch and `목록에서 제거` menu.
 - Removing an optional row changes only the draft, offers toast undo, and is persisted through the existing save confirmation. The confirmation explains that historical measurements remain.
 - Reordering must support pointer, touch, and keyboard interaction through a maintained drag-and-drop library.
 
