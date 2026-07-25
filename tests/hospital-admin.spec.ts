@@ -104,6 +104,7 @@ test("hospital admin order management opens with category and subcategory naviga
 
     return {
       actionMarginLeft: actionStyle.marginLeft,
+      bodyWidth: bodyRect.width,
       bodyTopInset: firstGroupRect.top - bodyRect.top,
       childListOffset: childListRect.left - sectionRect.left,
       childListRowGap: childListStyle.rowGap,
@@ -152,8 +153,11 @@ test("hospital admin order management opens with category and subcategory naviga
       topLevelItemWidth: topLevelItemRect.width,
     };
   });
-  expect(Math.round(sidePanelMetrics.panelWidth)).toBe(296);
-  expect(Math.round(sidePanelMetrics.topLevelItemWidth)).toBe(280);
+  expect(Math.round(sidePanelMetrics.panelWidth)).toBe(288);
+  expect(Math.round(sidePanelMetrics.bodyWidth)).toBe(
+    Math.round(sidePanelMetrics.panelWidth),
+  );
+  expect(Math.round(sidePanelMetrics.topLevelItemWidth)).toBe(272);
   expect(Math.round(sidePanelMetrics.topLevelItemLeftInset)).toBe(8);
   expect(Math.round(sidePanelMetrics.topLevelItemRightInset)).toBe(8);
   expect(Math.round(sidePanelMetrics.bodyTopInset)).toBe(8);

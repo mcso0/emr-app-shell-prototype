@@ -249,8 +249,6 @@
   --emr-sidepanel-status-icon-danger-bg: color-mix(in srgb, var(--emr-sidepanel-state-icon-stop-bg) 6%, transparent);
   --emr-sidepanel-status-icon-danger-border: var(--emr-sidepanel-state-icon-stop-border);
   --emr-sidepanel-status-icon-danger-fg: var(--emr-sidepanel-state-icon-stop-fg);
-  --emr-module-list-panel-width: 296px;
-  --emr-module-list-panel-content-width: 280px;
   --emr-module-list-header-padding-x: var(--clair-spacing-16);
   --emr-module-list-header-padding-top: var(--clair-spacing-16);
   --emr-module-list-header-padding-bottom: var(--clair-spacing-10);

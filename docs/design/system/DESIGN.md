@@ -157,10 +157,11 @@ Shared primitives should carry the visual system:
 - `EmrListItem`: selected history and queue rows
 - `EmrSidePanelCard`: order and work queue cards
 - `EmrModuleListSidePanel`: CDS.V2 grouped module navigation. The current
-  geometry source is Figma node `27794:28010`: 296px panel, 8px horizontal
-  group inset, 280px top-level rows, 16px between top-level groups, 2px within
-  groups, 36px top-level rows, 32px leaf rows, 26px child-list offset, and
-  13/18px item typography. Nested group labels and count badges use 12/16px.
+  geometry source is Figma node `27794:28010`. The component fills the shell's
+  allocated module-panel width instead of owning a fixed width; rows keep an
+  8px horizontal inset, 16px between top-level groups, 2px within groups, 36px
+  top-level height, 32px leaf height, 26px child-list offset, and 13/18px item
+  typography. Nested group labels and count badges use 12/16px.
 - `EmrDataTable` and `Table`: dense operational tables
 - `SegmentedControl`: compact filters and mode switching
 - `StatusBadge`: stable semantic state labels

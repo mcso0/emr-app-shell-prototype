@@ -2,6 +2,10 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-07-25
+
+- `changed`: The shared module-list panel and menu body now fill the shell-provided width; rows retain an 8px horizontal inset so hospital-admin and customer-management selected states align with the list on both sides.
+
 ## 2026-07-24
 
 - `changed`: Aligned `EmrModuleListSidePanel` spacing and typography to CDS.V2 Figma node `27794:28010` while preserving existing menu content, icons, selection, disabled states, and interactions.
