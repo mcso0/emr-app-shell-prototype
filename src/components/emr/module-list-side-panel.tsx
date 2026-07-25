@@ -309,7 +309,7 @@ export function EmrModuleListSidePanel({
   return (
     <aside
       className={cn(
-        "group/emr-subpanel flex h-full min-h-0 w-full min-w-[var(--emr-module-list-panel-width)] max-w-[var(--emr-module-list-panel-width)] flex-col bg-[var(--emr-surface-sidepanel)]",
+        "group/emr-subpanel flex h-full min-h-0 w-full min-w-0 flex-col bg-[var(--emr-surface-sidepanel)]",
         className
       )}
       data-testid={testId}
@@ -321,7 +321,7 @@ export function EmrModuleListSidePanel({
       />
       <ScrollArea className="min-h-0 flex-1">
         <div
-          className="grid w-[var(--emr-module-list-panel-width)] gap-[var(--emr-module-list-section-gap)] py-[var(--emr-module-list-body-padding-y)]"
+          className="grid w-full gap-[var(--emr-module-list-section-gap)] py-[var(--emr-module-list-body-padding-y)]"
           data-emr-module-list-body="true"
         >
           {itemGroups.map((group) => (

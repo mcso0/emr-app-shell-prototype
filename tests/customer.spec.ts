@@ -328,6 +328,7 @@ test("customer side panel matches CDS.V2 module-list geometry, type, and color",
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 
   const panelMetrics = await page.getByTestId("customer-side-panel").evaluate((panel) => {
+    const body = panel.querySelector('[data-emr-module-list-body="true"]');
     const group = panel.querySelector('[data-emr-module-list-group="true"]');
     const section = group?.querySelector("section");
     const trigger = section?.querySelector('button[aria-expanded="true"]');
@@ -346,6 +347,7 @@ test("customer side panel matches CDS.V2 module-list geometry, type, and color",
     const disabledLabel = disabledItem?.querySelector('[data-emr-module-list-item-label="true"]');
 
     if (
+      !body ||
       !group ||
       !section ||
       !trigger ||
@@ -365,6 +367,7 @@ test("customer side panel matches CDS.V2 module-list geometry, type, and color",
     }
 
     const panelRect = panel.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
     const sectionRect = section.getBoundingClientRect();
     const triggerRect = trigger.getBoundingClientRect();
     const iconRect = icon.getBoundingClientRect();
@@ -400,6 +403,7 @@ test("customer side panel matches CDS.V2 module-list geometry, type, and color",
       badgePaddingRight: badgeStyle.paddingRight,
       badgePaddingTop: badgeStyle.paddingTop,
       badgeWeight: badgeStyle.fontWeight,
+      bodyWidth: bodyRect.width,
       childListHeight: childListRect.height,
       childListOffset: childListRect.left - sectionRect.left,
       childListRowGap: childListStyle.rowGap,
@@ -443,10 +447,13 @@ test("customer side panel matches CDS.V2 module-list geometry, type, and color",
     };
   });
 
-  expect(Math.round(panelMetrics.panelWidth)).toBe(296);
-  expect(Math.round(panelMetrics.groupWidth)).toBe(296);
+  expect(Math.round(panelMetrics.panelWidth)).toBe(288);
+  expect(Math.round(panelMetrics.bodyWidth)).toBe(
+    Math.round(panelMetrics.panelWidth),
+  );
+  expect(Math.round(panelMetrics.groupWidth)).toBe(288);
   expect(panelMetrics.groupRowGap).toBe("2px");
-  expect(Math.round(panelMetrics.itemWidth)).toBe(280);
+  expect(Math.round(panelMetrics.itemWidth)).toBe(272);
   expect(Math.round(panelMetrics.itemHeight)).toBe(36);
   expect(panelMetrics.itemPaddingTop).toBe("6px");
   expect(panelMetrics.itemPaddingRight).toBe("8px");
@@ -469,7 +476,7 @@ test("customer side panel matches CDS.V2 module-list geometry, type, and color",
     Math.round(panelMetrics.childListHeight),
   );
   expect(panelMetrics.railColor).toBe("rgb(229, 229, 229)");
-  expect(Math.round(panelMetrics.leafWidth)).toBe(254);
+  expect(Math.round(panelMetrics.leafWidth)).toBe(246);
   expect(Math.round(panelMetrics.leafHeight)).toBe(32);
   expect(Math.round(panelMetrics.leafRightInset)).toBe(8);
   expect(panelMetrics.leafPaddingTop).toBe("6px");
@@ -493,7 +500,7 @@ test("customer side panel matches CDS.V2 module-list geometry, type, and color",
   expect(panelMetrics.badgeWeight).toBe("500");
   expect(panelMetrics.badgeColor).toBe("rgb(23, 23, 23)");
   expect(panelMetrics.badgeBackground).toBe("rgba(0, 0, 0, 0.04)");
-  expect(Math.round(panelMetrics.disabledWidth)).toBe(280);
+  expect(Math.round(panelMetrics.disabledWidth)).toBe(272);
   expect(Math.round(panelMetrics.disabledHeight)).toBe(36);
   expect(panelMetrics.disabledIconColor).toBe("rgb(163, 163, 163)");
   expect(panelMetrics.disabledLabelColor).toBe("rgb(163, 163, 163)");

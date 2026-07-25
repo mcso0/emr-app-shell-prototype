@@ -70,3 +70,17 @@ Unify the customer-management and hospital-admin module side panels as shared ch
   nested metadata/badges to 12/16px.
 - Added browser geometry, typography, color, selected-state, badge, rail, and
   disabled-state coverage for hospital admin and customer management.
+
+## 2026-07-25 Fill-Width Follow-Up
+
+- Removed the component-owned 296px width from the shared panel and scroll body.
+- The hospital-admin and customer-management menus now fill the 288px width
+  allocated by the shell, keeping the selected row aligned to the same 8px
+  left and right list inset.
+- Kept menu content, hierarchy, state, and interactions unchanged, and extended
+  both focused browser geometry checks to assert that the menu body fills the
+  rendered panel width.
+- Passed: `npm run security:secrets`, `npm run docs:check`, `git diff --check`,
+  `npm run lint`, `npx tsc --noEmit`, and `npm run build`.
+- Passed: `npx playwright test tests/customer.spec.ts
+  tests/hospital-admin.spec.ts --project=chromium` (`42 passed`).
