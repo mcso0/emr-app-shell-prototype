@@ -63,11 +63,7 @@ test("hospital settings navigation opens three independent grouped screens", asy
       "settings-contact",
       "hospital-admin-settings-contact-screen",
     ],
-    [
-      "운영시간 관리",
-      "settings-hours",
-      "hospital-admin-settings-hours-screen",
-    ],
+    ["운영시간 관리", "settings-hours", "hospital-admin-settings-hours-screen"],
   ] as const;
 
   for (const [label, section, testId] of routes) {
@@ -77,7 +73,9 @@ test("hospital settings navigation opens three independent grouped screens", asy
     await expect(
       page.getByTestId(testId).getByRole("heading", { level: 1, name: label }),
     ).toBeVisible();
-    await expect(page.getByTestId(testId).locator('[aria-label="breadcrumb"]')).toHaveCount(0);
+    await expect(
+      page.getByTestId(testId).locator('[aria-label="breadcrumb"]'),
+    ).toHaveCount(0);
   }
 
   await expect(
@@ -133,6 +131,109 @@ test("operating days have one state source and exceptions guard navigation", asy
   await expect(screen).toBeVisible();
 });
 
+test("operating-hours settings matches the CDS V2 desktop and mobile geometry", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(
+    "/w/clair-demo/orders?modulePanel=open&section=settings-hours",
+  );
+
+  const screen = page.getByTestId("hospital-admin-settings-hours-screen");
+  await expect(
+    screen.getByRole("heading", { level: 2, name: "주간 운영시간" }),
+  ).toBeVisible();
+  await expect(
+    screen.getByRole("heading", { level: 2, name: "공휴일 및 예외일" }),
+  ).toBeVisible();
+  await expect(screen.getByText("운영: 09:00-19:00").first()).toBeVisible();
+  await expect(screen.getByText("휴게: 13:00-14:00").first()).toBeVisible();
+  await expect(
+    screen.getByTestId("hospital-settings-day-sunday"),
+  ).toContainText("휴무일");
+  await expect(
+    screen.getByRole("combobox", { name: "공휴일 기본 정책" }),
+  ).not.toHaveText(/^(closed|custom|weekday)$/);
+
+  const figmaMetrics = await screen.evaluate((root) => {
+    const required = (selector: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing ${selector}`);
+      return element;
+    };
+    const box = (selector: string) =>
+      required(selector).getBoundingClientRect();
+    const rootBox = root.getBoundingClientRect();
+    const mainBox = box("main");
+    const headerBox = box("main > header");
+    const firstSectionBox = box("main > div > section");
+
+    return {
+      mainWidth: Math.round(mainBox.width),
+      contentTop: Math.round(headerBox.top - rootBox.top),
+      headerHeight: Math.round(headerBox.height),
+      headerGap: Math.round(firstSectionBox.top - headerBox.bottom),
+      sectionTitleHeight: Math.round(
+        required(
+          "#hospital-settings-hours-title",
+        ).parentElement!.getBoundingClientRect().height,
+      ),
+      hoursCardWidth: Math.round(
+        box('[data-testid="hospital-settings-hours-card"]').width,
+      ),
+      hoursCardHeight: Math.round(
+        box('[data-testid="hospital-settings-hours-card"]').height,
+      ),
+      weekdayRowHeight: Math.round(
+        box('[data-testid="hospital-settings-day-monday"]').height,
+      ),
+      toggleHeight: Math.round(
+        required('[aria-label="월요일 운영"]').getBoundingClientRect().height,
+      ),
+      timeButtonHeight: Math.round(
+        required(
+          '[data-testid="hospital-settings-day-monday"] button',
+        ).getBoundingClientRect().height,
+      ),
+      policyWidth: Math.round(
+        required('[aria-label="공휴일 기본 정책"]').getBoundingClientRect()
+          .width,
+      ),
+      policyHeight: Math.round(
+        required('[aria-label="공휴일 기본 정책"]').getBoundingClientRect()
+          .height,
+      ),
+    };
+  });
+
+  expect(figmaMetrics).toEqual({
+    mainWidth: 920,
+    contentTop: 57,
+    headerHeight: 92,
+    headerGap: 16,
+    sectionTitleHeight: 74,
+    hoursCardWidth: 920,
+    hoursCardHeight: 679,
+    weekdayRowHeight: 85,
+    toggleHeight: 32,
+    timeButtonHeight: 32,
+    policyWidth: 320,
+    policyHeight: 32,
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() =>
+      screen.evaluate(
+        (element) =>
+          element.scrollWidth <= document.documentElement.clientWidth &&
+          element.querySelector("main")!.scrollWidth <=
+            element.querySelector("main")!.clientWidth,
+      ),
+    )
+    .toBe(true);
+});
+
 test("contact settings matches CDS V2 geometry and saves through the profile API", async ({
   page,
 }) => {
@@ -160,7 +261,8 @@ test("contact settings matches CDS V2 geometry and saves through the profile API
       if (!element) throw new Error(`Missing ${selector}`);
       return element;
     };
-    const box = (selector: string) => required(selector).getBoundingClientRect();
+    const box = (selector: string) =>
+      required(selector).getBoundingClientRect();
     const rootBox = root.getBoundingClientRect();
     const mainBox = box("main");
     const headerBox = box("main > header");
@@ -273,7 +375,8 @@ test("hospital basic settings matches CDS V2 geometry and stays usable at 390px"
       if (!element) throw new Error(`Missing ${selector}`);
       return element;
     };
-    const box = (selector: string) => required(selector).getBoundingClientRect();
+    const box = (selector: string) =>
+      required(selector).getBoundingClientRect();
     const rootBox = root.getBoundingClientRect();
     const mainBox = box("main");
     const headerBox = box("main > header");
@@ -297,9 +400,7 @@ test("hospital basic settings matches CDS V2 geometry and stays usable at 390px"
       rowHeight: Math.round(
         box('[data-testid="hospital-settings-row-name"]').height,
       ),
-      logoSize: Math.round(
-        box('[data-testid="hospital-logo-trigger"]').width,
-      ),
+      logoSize: Math.round(box('[data-testid="hospital-logo-trigger"]').width),
       copyButtonSize: Math.round(
         required(
           '[data-testid="hospital-settings-row-address"] button',
@@ -413,9 +514,9 @@ test("hospital profile recovers from read errors and exposes empty and denied st
   await expect(
     screen.getByText("병원 정보를 볼 권한이 없습니다."),
   ).toBeVisible();
-  await expect(
-    screen.getByRole("button", { name: "다시 시도" }),
-  ).toHaveCount(0);
+  await expect(screen.getByRole("button", { name: "다시 시도" })).toHaveCount(
+    0,
+  );
 });
 
 test("registered information request posts and renders pending state", async ({
@@ -472,10 +573,10 @@ test("hospital logo hover editor validates files and restores focus", async ({
   await expect(
     screen
       .getByTestId("hospital-logo-trigger")
-      .locator('[data-slot="avatar-fallback"] svg')
+      .locator('[data-slot="avatar-fallback"] svg'),
   ).toBeVisible();
   await expect(screen.getByTestId("hospital-logo-trigger")).not.toContainText(
-    "VIP"
+    "VIP",
   );
   await expect(editButton).toHaveCSS("opacity", "0");
   await editButton.hover();
@@ -484,7 +585,7 @@ test("hospital logo hover editor validates files and restores focus", async ({
 
   const dialog = page.getByRole("dialog", { name: "병원 로고 설정" });
   await expect(
-    dialog.locator('[data-slot="avatar-fallback"] svg')
+    dialog.locator('[data-slot="avatar-fallback"] svg'),
   ).toBeVisible();
   await dialog.getByRole("button", { name: "취소" }).click();
   await expect(editButton).toBeFocused();
@@ -499,12 +600,12 @@ test("hospital logo hover editor validates files and restores focus", async ({
     page.getByText("지원하지 않는 로고 파일 형식입니다."),
   ).toBeVisible();
 
-  await dialog
-    .getByLabel("로고 파일")
-    .setInputFiles("public/pwa-icon-512.png");
+  await dialog.getByLabel("로고 파일").setInputFiles("public/pwa-icon-512.png");
   await dialog.getByRole("button", { name: "로고 적용" }).click();
   await expect(
     page.getByText("로고 변경사항이 저장 대기 중입니다."),
   ).toBeVisible();
-  await expect(screen.getByTestId("hospital-settings-change-bar")).toBeVisible();
+  await expect(
+    screen.getByTestId("hospital-settings-change-bar"),
+  ).toBeVisible();
 });

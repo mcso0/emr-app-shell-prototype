@@ -38,6 +38,9 @@ screens while preserving the existing operating-hours persistence boundary.
 - Treat CDS V2 node `27801:38531` as the final visual authority for the
   `병원 기본 설정` content frame while preserving verified product copy and
   field semantics.
+- Treat CDS V2 node `27804:28265` as the final visual authority for the
+  `운영시간 관리` content frame while preserving the live operating-hours
+  read/write, permission, audit, and future-conflict contracts.
 - Add the shadcn `ToggleGroup` primitive for the seven operating-day controls.
 - Remove per-row operating switches and the operating switch from the time
   dialog. Closed-day time actions are disabled.
@@ -144,3 +147,26 @@ Implemented and locally verified on 2026-07-23.
 - Focused browser coverage asserts exact desktop geometry, mobile horizontal
   containment, action focus, memo counting, PATCH readback, and dirty-state
   save completion.
+
+### 2026-07-25 operating-hours CDS V2 alignment
+
+- The final Figma reference for `운영시간 관리` is CDS V2 node
+  `27804:28265`.
+- The screen now uses the reviewed `920px` summary frame, `56px` top offset,
+  `92px` page header, `74px` section headings, `85px` setting rows, `32px`
+  weekday/time/action controls, `22px` schedule badges, and `320px` holiday
+  policy field.
+- Weekly rows expose separate operating and break badges, closed days retain a
+  disabled time action, exception dates use the Korean display format, and
+  edit/delete/add actions use the existing CDS icon and shadcn component
+  boundaries.
+- The existing operating-hours GET/PUT route, workspace scoping,
+  member-read/admin-write enforcement, atomic audit write, future appointment
+  conflict handling, dirty navigation guard, and dialogs remain unchanged.
+- Focused UI/model/server/migration coverage passes 25 tests, including exact
+  desktop geometry and `390px` overflow safety. No package, shared primitive,
+  API shape, schema, migration, RPC, RLS, or Storage change is required.
+- Closeout report:
+  `docs/completed/hospital-admin/2026-07-25-hospital-operating-hours-cds-v2-report.html`.
+- Remote deployment remains intentionally unclaimed until the release gate is
+  approved and completed.

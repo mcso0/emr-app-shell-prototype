@@ -24,21 +24,32 @@ export function HospitalOperatingHoursSettingsScreen({
   const authSession = useMockAuthStore((state) => state.session);
   const demoActorId =
     authSession?.role === "hospital_admin" ? "user-admin" : authSession?.id;
-  const initialDraft = useMemo(() => createInitialHospitalBasicSettingsDraft(), []);
-  const record = useHospitalBasicSettingsStore((state) => state.records[workspaceId]);
-  const ensureWorkspace = useHospitalBasicSettingsStore((state) => state.ensureWorkspace);
+  const initialDraft = useMemo(
+    () => createInitialHospitalBasicSettingsDraft(),
+    [],
+  );
+  const record = useHospitalBasicSettingsStore(
+    (state) => state.records[workspaceId],
+  );
+  const ensureWorkspace = useHospitalBasicSettingsStore(
+    (state) => state.ensureWorkspace,
+  );
   const hydrateOperatingHours = useHospitalBasicSettingsStore(
-    (state) => state.hydrateOperatingHours
+    (state) => state.hydrateOperatingHours,
   );
   const revertOperatingHours = useHospitalBasicSettingsStore(
-    (state) => state.revertOperatingHours
+    (state) => state.revertOperatingHours,
   );
   const saveOperatingHours = useHospitalBasicSettingsStore(
-    (state) => state.saveOperatingHours
+    (state) => state.saveOperatingHours,
   );
   const setDraft = useHospitalBasicSettingsStore((state) => state.setDraft);
-  const setSettingsDirty = useHospitalAdminStore((state) => state.setSettingsDirty);
-  const [validationIssues, setValidationIssues] = useState<HospitalSettingsValidationIssue[]>([]);
+  const setSettingsDirty = useHospitalAdminStore(
+    (state) => state.setSettingsDirty,
+  );
+  const [validationIssues, setValidationIssues] = useState<
+    HospitalSettingsValidationIssue[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -52,7 +63,7 @@ export function HospitalOperatingHoursSettingsScreen({
 
     void fetch(
       `/api/workspaces/${encodeURIComponent(
-        workspaceId
+        workspaceId,
       )}/hospital-admin/basic-settings/operating-hours`,
       {
         cache: "no-store",
@@ -60,7 +71,7 @@ export function HospitalOperatingHoursSettingsScreen({
         headers: demoActorId
           ? { "x-clair-demo-session-user-id": demoActorId }
           : undefined,
-      }
+      },
     )
       .then(async (response) => ({ response, body: await response.json() }))
       .then(({ response, body }) => {
@@ -107,7 +118,7 @@ export function HospitalOperatingHoursSettingsScreen({
     try {
       const response = await fetch(
         `/api/workspaces/${encodeURIComponent(
-          workspaceId
+          workspaceId,
         )}/hospital-admin/basic-settings/operating-hours`,
         {
           method: "PUT",
@@ -123,14 +134,14 @@ export function HospitalOperatingHoursSettingsScreen({
             holidayPolicy: draft.holidayPolicy,
             exceptions: draft.exceptions,
           }),
-        }
+        },
       );
       const body = await response.json();
       if (!response.ok || !body.ok) {
         toast.error(
           body.error === "future_appointment_conflict"
             ? "변경할 운영시간과 겹치는 미래 예약이 있어 저장할 수 없습니다."
-            : "운영시간을 저장하지 못했습니다."
+            : "운영시간을 저장하지 못했습니다.",
         );
         return;
       }
@@ -150,6 +161,7 @@ export function HospitalOperatingHoursSettingsScreen({
       testId="hospital-admin-settings-hours-screen"
       title="운영시간 관리"
       description="주간 진료시간, 휴게시간 및 공휴일·예외 운영 일정을 설정합니다."
+      layout="summary"
       dirty={isDirty}
       isSaving={isSaving}
       onRevert={() => {
