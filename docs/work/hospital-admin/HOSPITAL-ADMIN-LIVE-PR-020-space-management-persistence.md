@@ -9,7 +9,7 @@ source_docs:
   - "docs/design/screens/hospital-admin/hospital-admin-settings-hub-ux.md"
 dependencies:
   - "HOSPITAL-ADMIN-PR-002"
-updated: "2026-07-23"
+updated: "2026-07-25"
 ---
 
 # Persisted Workspace Space Management
@@ -80,6 +80,11 @@ Replace the static `공간/시간 관리` concept with a live `공간 관리` sc
 - Replaced the static concept with the approved category overview, settings dialog, terminal detail actions, confirmations, and result toasts.
 - Added browser coverage for successful CRUD, rejected duplicates, populated-category moves, read error recovery, empty read-only state, and compact-screen use.
 - Removed the former space/time concept entry and every visible time-management label and control.
+- Matched the CDS V2 category overview, category detail, and zero-category
+  states from Figma nodes `27804:32814`, `27804:116703`, and `27804:117918`.
+- Preserved the existing workspace-scoped CRUD contract while changing the
+  screen to a `920px` summary surface with `85px` headers/rows, `44px` category
+  icons, labeled detail actions, and the direct empty-state add CTA.
 
 ## Verification Result
 
@@ -89,8 +94,17 @@ Replace the static `공간/시간 관리` concept with a live `공간 관리` sc
 - The migration applied to local Supabase. An admin read/write probe succeeded and rolled back, while a front-desk write, cross-workspace read, and direct authenticated table insert were rejected.
 - Local database lint no longer reports findings for the new space-management function. It still reports existing findings in unrelated chart, reception, and lab functions.
 - A broader hospital-admin run completed with 46 of 47 tests passing. The remaining existing basic-settings test still waits for the obsolete `대표 전화 *` accessible label; the same known mismatch is documented in the 2026-07-22 role-permission closeout and is outside this change.
+- The 2026-07-25 CDS V2 follow-up passed 20 focused UI, model, server, route,
+  migration, permission, and responsive tests. Targeted ESLint, TypeScript, and
+  `git diff --check` also passed.
 
 ## Current Boundary
 
-- Changes are implemented in the isolated `codex/space-management-live` worktree.
-- No commit, push, pull request, remote migration, deployment, or production action has been performed.
+- The persisted space-management base is present on `origin/main`; the CDS V2
+  follow-up is implemented in the isolated
+  `codex/hospital-space-management-cds-v2` worktree.
+- No API, schema, RPC, RLS, seed, audit, dependency, or shared component API
+  change was required for the Figma follow-up.
+- Commit, pull-request, and merge evidence for the CDS V2 follow-up is tracked
+  in the associated GitHub history. No remote migration, environment, alias, or
+  manual deployment action is part of this follow-up.

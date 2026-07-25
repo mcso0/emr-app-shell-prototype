@@ -299,6 +299,7 @@ test("hospital admin settings hub opens static screens and role management", asy
 });
 
 test("hospital space management supports category and terminal space CRUD with feedback", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/w/clair-demo/orders?modulePanel=open");
   await page
     .getByTestId("hospital-admin-side-panel")
@@ -320,6 +321,51 @@ test("hospital space management supports category and terminal space CRUD with f
     .getAttribute("data-icon-key");
   expect(consultIconKey).not.toBeNull();
   expect(consultIconKey).not.toBe(examIconKey);
+
+  const overviewFigmaMetrics = await screen.evaluate((root) => {
+    const required = (selector: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing ${selector}`);
+      return element;
+    };
+    const box = (selector: string) => required(selector).getBoundingClientRect();
+    const rootBox = root.getBoundingClientRect();
+    const mainBox = box("main");
+    const headerBox = box("main > header");
+    const cardBox = box('[data-testid="space-management-card"]');
+    return {
+      mainWidth: Math.round(mainBox.width),
+      contentTop: Math.round(headerBox.top - rootBox.top),
+      headerHeight: Math.round(headerBox.height),
+      headerGap: Math.round(cardBox.top - headerBox.bottom),
+      cardWidth: Math.round(cardBox.width),
+      cardHeaderHeight: Math.round(
+        required("#space-category-list-title").parentElement!.parentElement!
+          .getBoundingClientRect().height,
+      ),
+      rowHeight: Math.round(
+        box('[data-testid="space-category-row-consult"]').height,
+      ),
+      iconSize: Math.round(
+        box('[data-testid="space-category-icon-consult"]').width,
+      ),
+      actionHeight: Math.round(
+        required('[data-testid="space-category-action"]').getBoundingClientRect()
+          .height,
+      ),
+    };
+  });
+  expect(overviewFigmaMetrics).toEqual({
+    mainWidth: 920,
+    contentTop: 57,
+    headerHeight: 92,
+    headerGap: 16,
+    cardWidth: 920,
+    cardHeaderHeight: 85,
+    rowHeight: 85,
+    iconSize: 44,
+    actionHeight: 32,
+  });
 
   await screen.getByRole("button", { name: "카테고리 설정" }).click();
   const categoryDialog = page.getByRole("dialog", { name: "카테고리 설정" });
@@ -350,12 +396,45 @@ test("hospital space management supports category and terminal space CRUD with f
 
   await screen.getByRole("button", { name: /진료 공간/ }).click();
   await expect(screen.getByRole("heading", { level: 1, name: "진료 공간" })).toBeVisible();
+  await expect(screen).toContainText(
+    "병원에서 사용하는 진료 공간을 묶어 관리합니다",
+  );
   await expect(screen.getByRole("button", { name: "카테고리 설정" })).toHaveCount(0);
   await expect(screen.getByRole("button", { name: "진료실 1 수정" })).toBeVisible();
   await expect(screen.getByRole("button", { name: "진료실 1 삭제" })).toBeVisible();
   await expect(
     screen.getByRole("button", { name: "진료실 1", exact: true }),
   ).toHaveCount(0);
+
+  const detailFigmaMetrics = await screen.evaluate((root) => {
+    const required = (selector: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing ${selector}`);
+      return element;
+    };
+    const box = (selector: string) => required(selector).getBoundingClientRect();
+    return {
+      cardWidth: Math.round(box('[data-testid="space-management-detail-card"]').width),
+      rowHeight: Math.round(box('[data-testid="space-row-space-consult-1"]').height),
+      editHeight: Math.round(
+        required('[aria-label="진료실 1 수정"]').getBoundingClientRect().height,
+      ),
+      deleteHeight: Math.round(
+        required('[aria-label="진료실 1 삭제"]').getBoundingClientRect().height,
+      ),
+      backHeight: Math.round(
+        required('[aria-label="공간 관리로 돌아가기"]').getBoundingClientRect()
+          .height,
+      ),
+    };
+  });
+  expect(detailFigmaMetrics).toEqual({
+    cardWidth: 920,
+    rowHeight: 85,
+    editHeight: 32,
+    deleteHeight: 32,
+    backHeight: 32,
+  });
 
   await screen.getByRole("button", { name: "공간 추가" }).click();
   const spaceInput = screen.getByPlaceholder("예: 진료실 3");
@@ -448,8 +527,61 @@ test("hospital space management recovers from read failure and renders an empty 
   await expect(screen.getByText("공간 정보를 불러오지 못했습니다")).toBeVisible();
   serveSuccess = true;
   await screen.getByRole("button", { name: "다시 시도" }).click();
-  await expect(screen.getByText("등록된 공간 카테고리가 없습니다")).toBeVisible();
-  await expect(screen.getByRole("button", { name: "카테고리 설정" })).toBeDisabled();
+  await expect(screen.getByText("등록된 공간이 없습니다")).toBeVisible();
+  await expect(screen.getByRole("button", { name: "카테고리 추가" })).toBeDisabled();
+  const emptyMetrics = await screen.evaluate((root) => {
+    const card = root
+      .querySelector<HTMLElement>('[data-testid="space-management-card"]')
+      ?.getBoundingClientRect();
+    const empty = root
+      .querySelector<HTMLElement>('[data-testid="space-category-empty"]')
+      ?.getBoundingClientRect();
+    if (!card || !empty) throw new Error("Missing empty space management state");
+    return {
+      cardHeight: Math.round(card.height),
+      emptyHeight: Math.round(empty.height),
+    };
+  });
+  expect(emptyMetrics).toEqual({ cardHeight: 170, emptyHeight: 85 });
+});
+
+test("hospital space management empty administrator state opens the first category form", async ({
+  page,
+}) => {
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/space-management",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "workspace-space-management",
+          workspaceId: "clair-demo",
+          canManage: true,
+          categories: [],
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "공간 관리" })
+    .click();
+
+  const screen = page.getByTestId("hospital-admin-space-management-screen");
+  await expect(screen.getByText("등록된 공간이 없습니다")).toBeVisible();
+  const addCategory = screen.getByRole("button", { name: "카테고리 추가" });
+  await expect(addCategory).toBeEnabled();
+  await addCategory.click();
+
+  const categoryDialog = page.getByRole("dialog", { name: "카테고리 설정" });
+  await expect(categoryDialog).toBeVisible();
+  await expect(
+    categoryDialog.getByRole("textbox", { name: "새 카테고리 이름" }),
+  ).toBeFocused();
 });
 
 test("hospital space management stays usable on a compact screen", async ({ page }) => {
