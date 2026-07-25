@@ -133,9 +133,10 @@ test("operating days have one state source and exceptions guard navigation", asy
   await expect(screen).toBeVisible();
 });
 
-test("contact memo saves through the profile API and stays multiline", async ({
+test("contact settings matches CDS V2 geometry and saves through the profile API", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await mockProfile(page);
   await page.goto(
     "/w/clair-demo/orders?modulePanel=open&section=settings-contact",
@@ -143,8 +144,80 @@ test("contact memo saves through the profile API and stays multiline", async ({
 
   const screen = page.getByTestId("hospital-admin-settings-contact-screen");
   const memo = screen.getByLabel("고객 안내 메모");
-  await expect(memo).toHaveAttribute("rows", "5");
+  await expect(
+    screen.getByRole("heading", { level: 2, name: "연락처" }),
+  ).toBeVisible();
+  await expect(
+    screen.getByRole("heading", { level: 2, name: "병원 채널" }),
+  ).toBeVisible();
+  await expect(screen.getByRole("textbox")).toHaveCount(5);
+  await expect(memo).toHaveAttribute("rows", "3");
+  await expect(screen.getByText("최대 5/300자")).toBeVisible();
+
+  const figmaMetrics = await screen.evaluate((root) => {
+    const required = (selector: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing ${selector}`);
+      return element;
+    };
+    const box = (selector: string) => required(selector).getBoundingClientRect();
+    const rootBox = root.getBoundingClientRect();
+    const mainBox = box("main");
+    const headerBox = box("main > header");
+    const firstSectionBox = box("main > section");
+
+    return {
+      mainWidth: Math.round(mainBox.width),
+      contentTop: Math.round(headerBox.top - rootBox.top),
+      headerHeight: Math.round(headerBox.height),
+      headerGap: Math.round(firstSectionBox.top - headerBox.bottom),
+      sectionTitleHeight: Math.round(box("#hospital-contact-title").height),
+      contactCardWidth: Math.round(
+        box('[data-testid="hospital-contact-card"]').width,
+      ),
+      contactCardHeight: Math.round(
+        box('[data-testid="hospital-contact-card"]').height,
+      ),
+      channelCardHeight: Math.round(
+        box('[data-testid="hospital-channel-card"]').height,
+      ),
+      phoneInputWidth: Math.round(box("#hospital-settings-phone").width),
+      inputHeight: Math.round(box("#hospital-settings-phone").height),
+      memoHeight: Math.round(
+        box("#hospital-settings-customer-guide-memo").height,
+      ),
+      requestButtonHeight: Math.round(
+        required(
+          '[data-testid="hospital-settings-row-phone-change"] button',
+        ).getBoundingClientRect().height,
+      ),
+    };
+  });
+
+  expect(figmaMetrics).toEqual({
+    mainWidth: 920,
+    contentTop: 57,
+    headerHeight: 92,
+    headerGap: 16,
+    sectionTitleHeight: 52,
+    contactCardWidth: 920,
+    contactCardHeight: 398,
+    channelCardHeight: 170,
+    phoneInputWidth: 320,
+    inputHeight: 32,
+    memoHeight: 76,
+    requestButtonHeight: 32,
+  });
+
+  await screen
+    .getByRole("button", { name: "대표 번호 입력란으로 이동" })
+    .click();
+  await expect(
+    screen.getByRole("textbox", { name: "대표 번호", exact: true }),
+  ).toBeFocused();
+
   await memo.fill("변경된 방문 안내");
+  await expect(screen.getByText("최대 9/300자")).toBeVisible();
   await screen
     .getByTestId("hospital-settings-change-bar")
     .getByRole("button", { name: "변경사항 저장" })
@@ -155,6 +228,18 @@ test("contact memo saves through the profile API and stays multiline", async ({
   ).toBeVisible();
   await expect(memo).toHaveValue("변경된 방문 안내");
   await expect(screen.getByTestId("hospital-settings-change-bar")).toBeHidden();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() =>
+      screen.evaluate(
+        (element) =>
+          element.scrollWidth <= document.documentElement.clientWidth &&
+          element.querySelector("main")!.scrollWidth <=
+            element.querySelector("main")!.clientWidth,
+      ),
+    )
+    .toBe(true);
 });
 
 test("hospital basic settings matches CDS V2 geometry and stays usable at 390px", async ({

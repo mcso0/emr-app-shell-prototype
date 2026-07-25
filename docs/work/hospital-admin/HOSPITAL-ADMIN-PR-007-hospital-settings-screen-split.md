@@ -122,3 +122,25 @@ Implemented and locally verified on 2026-07-23.
   pending state, logo validation, Dialog focus return, and draft dirty state.
 - No migration application is required for this visual-only follow-up; it uses
   the normal production release workflow.
+
+### 2026-07-25 contact and channel CDS V2 alignment
+
+- The final Figma reference for `연락처 및 채널` is CDS V2 node
+  `27801:38623`.
+- The screen now uses the same `920px` content width, `56px` top offset,
+  `92px` header, `52px` section headings, `85px` standard rows, `320px`
+  controls, `76px` memo field, card radius/border, and CDS `shadow/xs`
+  contract as the approved design.
+- Contact fields are grouped into `연락처` and `병원 채널` cards in the
+  Figma order. Product-facing descriptions replace placeholder annotations,
+  and the `300`-character memo limit remains visible.
+- The Figma `대표 번호 변경` action focuses the editable representative
+  number field. It does not extend the registered-information request API,
+  whose approved field set remains hospital name, representative name, and
+  address.
+- Existing workspace-scoped profile GET/PATCH, validation, optimistic revision,
+  permission, audit, and RLS boundaries remain unchanged. No dependency,
+  schema, migration, RPC, RLS, or Storage change is required.
+- Focused browser coverage asserts exact desktop geometry, mobile horizontal
+  containment, action focus, memo counting, PATCH readback, and dirty-state
+  save completion.
