@@ -12,7 +12,7 @@ dependencies:
   - "RECEPTION-QA-PR-011"
   - "CHART-PR-015"
   - "CHART-PR-016"
-updated: "2026-07-22"
+updated: "2026-07-25"
 ---
 
 # Workspace Vital Settings
@@ -61,6 +61,9 @@ Replace the static hospital-admin vital concept with a persisted workspace-wide 
 
 ## Result
 
+- Aligned the existing editor to CDS V2 Figma node `27804:117826`: summary page header, 920px content width, 85px card header and rows, 180px unit controls, 38px switches, 32px row actions, and the bottom add action.
+- Reused the shared hospital-settings dirty change bar instead of keeping always-visible page actions. The required weight/temperature rows now display the Figma label `기본`, while their required-workspace semantics and accessible labels remain unchanged.
+- Preserved the established API, RPC/RLS, audit, default-preset, historical-measurement, add/remove, and reception/chart consumer contracts. The five-row Figma state is covered as a UI fixture; new-workspace defaults remain the approved four rows.
 - Implemented the persisted preset/workspace configuration, authenticated API, audit-emitting replacement RPC, and local mock boundary.
 - Replaced the static concept with the approved V3 editor using dnd-kit pointer and keyboard sensors.
 - Connected reception, waiting-chart entry/comparison, and shared latest-vital patient summaries to the same enabled order and display units.
