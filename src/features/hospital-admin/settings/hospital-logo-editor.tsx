@@ -70,11 +70,11 @@ export function HospitalLogoEditor({ value, onChange }: HospitalLogoEditorProps)
 
   return (
     <>
-      <div className="relative size-16 shrink-0" data-testid="hospital-logo-trigger">
-        <Avatar className="size-16" roundness="roundrect">
+      <div className="relative size-11 shrink-0" data-testid="hospital-logo-trigger">
+        <Avatar className="size-11" roundness="roundrect">
           {value ? <AvatarImage alt="병원 로고" src={value} /> : null}
-          <AvatarFallback className="bg-[var(--emr-workspace-button-logo-bg)] text-[var(--emr-workspace-button-logo-fg)]">
-            <WorkspaceLogoMarkIcon className="size-10" size={40} />
+          <AvatarFallback className="!rounded-[var(--clair-radius-atomic-10)] bg-[var(--emr-workspace-button-logo-bg)] text-[var(--emr-workspace-button-logo-fg)]">
+            <WorkspaceLogoMarkIcon className="size-7" size={28} />
           </AvatarFallback>
         </Avatar>
         <Button
@@ -82,7 +82,7 @@ export function HospitalLogoEditor({ value, onChange }: HospitalLogoEditorProps)
           type="button"
           size="icon"
           variant="ghost"
-          className="absolute inset-0 size-16 rounded-[var(--clair-radius-atomic-6)] bg-foreground/0 text-background opacity-0 transition-opacity hover:bg-foreground/60 hover:opacity-100 focus-visible:bg-foreground/60 focus-visible:opacity-100"
+          className="absolute inset-0 size-11 rounded-[var(--clair-radius-atomic-10)] bg-foreground/0 text-background opacity-0 transition-opacity hover:bg-foreground/60 hover:opacity-100 focus-visible:bg-foreground/60 focus-visible:opacity-100"
           aria-label="병원 로고 편집"
           onClick={() => {
             replacePreview(value);

@@ -6,12 +6,14 @@ import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 type HospitalSettingsPageProps = {
   children: ReactNode;
   description: string;
   dirty?: boolean;
   isSaving?: boolean;
+  layout?: "default" | "summary";
   onRevert?: () => void;
   onSave?: () => void | Promise<void>;
   testId: string;
@@ -23,6 +25,7 @@ export function HospitalSettingsPage({
   description,
   dirty = false,
   isSaving = false,
+  layout = "default",
   onRevert,
   onSave,
   testId,
@@ -43,14 +46,47 @@ export function HospitalSettingsPage({
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
+      className={cn(
+        "flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]",
+        layout === "summary" &&
+          "overflow-clip rounded-[var(--clair-radius-atomic-12)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-2)] shadow-[var(--clair-shadow-xs)]"
+      )}
       data-testid={testId}
     >
       <ScrollArea className="min-h-0 flex-1">
-        <main className="mx-auto flex w-full max-w-[920px] flex-col gap-8 px-5 py-8 pb-32 md:px-8">
-          <header>
-            <h1 className="text-[24px] font-semibold leading-8">{title}</h1>
-            <p className="mt-1 emr-text-dense text-muted-foreground">
+        <main
+          className={cn(
+            "mx-auto flex w-full max-w-[920px] flex-col pb-32",
+            layout === "summary"
+              ? "gap-4 px-4 pt-14 md:px-0"
+              : "gap-8 px-5 py-8 md:px-8"
+          )}
+          data-settings-layout={layout}
+        >
+          <header
+            className={cn(
+              layout === "summary" &&
+                "flex h-[92px] shrink-0 flex-col gap-2 px-4 py-4"
+            )}
+          >
+            <h1
+              className={cn(
+                "text-[24px] leading-8",
+                layout === "summary"
+                  ? "[font-family:var(--clair-typography-title-3-font-family)] font-[number:var(--clair-typography-title-3-font-weight)] tracking-[var(--clair-typography-title-3-letter-spacing)] text-[var(--clair-color-atomic-neutral-900)]"
+                  : "font-semibold"
+              )}
+            >
+              {title}
+            </h1>
+            <p
+              className={cn(
+                "text-muted-foreground",
+                layout === "summary"
+                  ? "[font-family:var(--clair-typography-body-2-normal-font-family)] text-[length:var(--clair-typography-body-2-normal-font-size)] leading-[var(--clair-typography-body-2-normal-line-height)] font-[number:var(--clair-typography-body-2-normal-font-weight)] tracking-[var(--clair-typography-body-2-normal-letter-spacing)]"
+                  : "mt-1 emr-text-dense"
+              )}
+            >
               {description}
             </p>
           </header>
