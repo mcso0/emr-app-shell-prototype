@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CdsActionsPlusIcon, CdsActionsTrashIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsContentEdit2Icon, CdsContentScissorsIcon } from "@/components/cds-icons/content-and-editor";
@@ -10,7 +10,7 @@ import {
   CdsMedicalSyringeIcon,
 } from "@/components/cds-icons/medical-and-domain";
 import {
-  CdsNavigationArrowLeftIcon,
+  CdsNavigationChevronLeftIcon,
   CdsNavigationChevronRightIcon,
 } from "@/components/cds-icons/navigation";
 import { EmrEmptyState } from "@/components/emr/empty-state";
@@ -20,9 +20,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -188,12 +185,40 @@ export function WorkspaceSpaceManagementScreen({
     setSpaceToDelete(null);
   };
 
+  const pageTitle = selectedCategory?.name ?? "공간 관리";
+  const pageDescription = selectedCategory
+    ? getCategoryDescription(selectedCategory)
+    : "병원에서 사용하는 공간을 카테고리별로 관리합니다.";
+
   return (
-    <ScrollArea
-      className="h-full"
-      data-testid="hospital-admin-space-management-screen"
-    >
-      <main className="mx-auto flex w-full max-w-[920px] flex-col gap-6 px-6 py-8">
+    <>
+      <SpaceManagementPage
+        backAction={
+          selectedCategory ? (
+            <Button
+              aria-label="공간 관리로 돌아가기"
+              className="-ml-2 !h-8"
+              onClick={() => {
+                setSelectedCategoryId(null);
+                setSpaceDraft(null);
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              <CdsNavigationChevronLeftIcon data-icon="inline-start" />
+              공간 관리
+            </Button>
+          ) : undefined
+        }
+        description={pageDescription}
+        testId="hospital-admin-space-management-screen"
+        title={pageTitle}
+        titleIcon={
+          selectedCategory ? (
+            <CategoryIcon iconKey={selectedCategory.iconKey} size="title" />
+          ) : undefined
+        }
+      >
         {status === "loading" ? (
           <SpaceManagementLoading />
         ) : status === "denied" ? (
@@ -214,10 +239,6 @@ export function WorkspaceSpaceManagementScreen({
             canManage={snapshot.canManage}
             category={selectedCategory}
             categories={snapshot.categories}
-            onBack={() => {
-              setSelectedCategoryId(null);
-              setSpaceDraft(null);
-            }}
             onDeleteSpace={setSpaceToDelete}
             onSpaceDraftChange={setSpaceDraft}
             pending={pending}
@@ -228,11 +249,15 @@ export function WorkspaceSpaceManagementScreen({
           <CategoryOverview
             canManage={snapshot.canManage}
             categories={snapshot.categories}
+            onAddCategory={() => {
+              setCategoryDraft({ mode: "create", value: "" });
+              setCategorySettingsOpen(true);
+            }}
             onOpenCategorySettings={() => setCategorySettingsOpen(true)}
             onSelectCategory={setSelectedCategoryId}
           />
         )}
-      </main>
+      </SpaceManagementPage>
 
       <CategorySettingsDialog
         canManage={snapshot.canManage}
@@ -353,62 +378,124 @@ export function WorkspaceSpaceManagementScreen({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </ScrollArea>
+    </>
+  );
+}
+
+function SpaceManagementPage({
+  backAction,
+  children,
+  description,
+  testId,
+  title,
+  titleIcon,
+}: {
+  backAction?: ReactNode;
+  children: ReactNode;
+  description: string;
+  testId: string;
+  title: string;
+  titleIcon?: ReactNode;
+}) {
+  return (
+    <div
+      className="flex h-full min-h-0 flex-col overflow-clip rounded-[var(--clair-radius-atomic-12)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-2)] shadow-[var(--clair-shadow-xs)]"
+      data-testid={testId}
+    >
+      <ScrollArea className="min-h-0 flex-1">
+        <main
+          className="relative mx-auto flex w-full max-w-[920px] flex-col gap-4 px-4 pt-14 pb-32 md:px-0"
+          data-settings-layout="summary"
+        >
+          {backAction ? (
+            <div className="absolute top-3 left-4 flex h-8 items-center md:left-0">
+              {backAction}
+            </div>
+          ) : null}
+          <header className="flex h-[92px] shrink-0 flex-col gap-2 px-4 py-4">
+            <h1 className="flex items-center gap-2 text-[24px] leading-8 [font-family:var(--clair-typography-title-3-font-family)] font-[number:var(--clair-typography-title-3-font-weight)] tracking-[var(--clair-typography-title-3-letter-spacing)] text-[var(--clair-color-atomic-neutral-900)]">
+              {titleIcon ? (
+                <span className="flex size-6 shrink-0 items-center justify-center" aria-hidden="true">
+                  {titleIcon}
+                </span>
+              ) : null}
+              {title}
+            </h1>
+            <p className="[font-family:var(--clair-typography-body-2-normal-font-family)] text-[length:var(--clair-typography-body-2-normal-font-size)] leading-[var(--clair-typography-body-2-normal-line-height)] font-[number:var(--clair-typography-body-2-normal-font-weight)] tracking-[var(--clair-typography-body-2-normal-letter-spacing)] text-muted-foreground">
+              {description}
+            </p>
+          </header>
+          {children}
+        </main>
+      </ScrollArea>
+    </div>
   );
 }
 
 function CategoryOverview({
   canManage,
   categories,
+  onAddCategory,
   onOpenCategorySettings,
   onSelectCategory,
 }: {
   canManage: boolean;
   categories: WorkspaceSpaceCategory[];
+  onAddCategory: () => void;
   onOpenCategorySettings: () => void;
   onSelectCategory: (categoryId: string) => void;
 }) {
-  return (
-    <>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            공간 관리
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            병원에서 사용하는 공간을 카테고리별로 관리합니다.
-          </p>
-        </div>
-        <Button
-          disabled={!canManage}
-          onClick={onOpenCategorySettings}
-          size="sm"
-        >
-          카테고리 설정
-        </Button>
-      </header>
+  const hasCategories = categories.length > 0;
 
-      <Card className="gap-0 py-0">
-        <CardHeader className="border-b py-4">
-          <CardTitle>공간 카테고리</CardTitle>
-          <CardDescription>
-            카테고리를 선택하면 등록된 공간을 확인하고 관리할 수 있습니다.
-          </CardDescription>
-        </CardHeader>
+  return (
+    <section className="w-full pb-2" aria-labelledby="space-category-list-title">
+      <Card
+        className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]"
+        data-testid="space-management-card"
+      >
         <CardContent className="p-0">
-          {categories.length ? (
-            categories.map((category, index) => (
-              <div key={category.id}>
-                {index > 0 ? <Separator /> : null}
+          <div className="relative flex min-h-[85px] flex-col items-start justify-center gap-3 px-4 py-5 after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-border sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:px-6 md:after:right-6 md:after:left-6">
+            <div className="min-w-0">
+              <h2
+                className="text-sm leading-5 font-medium tracking-[0.014em]"
+                id="space-category-list-title"
+              >
+                공간 카테고리
+              </h2>
+              <p className="text-sm leading-5 font-medium tracking-[0.014em] text-muted-foreground">
+                카테고리를 선택하면 등록된 공간을 확인하고 관리할 수 있습니다
+              </p>
+            </div>
+            <Button
+              className="!h-8 self-end sm:self-auto"
+              data-testid="space-category-action"
+              disabled={!canManage}
+              onClick={hasCategories ? onOpenCategorySettings : onAddCategory}
+              size="sm"
+              variant={hasCategories ? "outline" : "default"}
+            >
+              {hasCategories ? (
+                <CdsContentEdit2Icon data-icon="inline-start" />
+              ) : (
+                <CdsActionsPlusIcon data-icon="inline-start" />
+              )}
+              {hasCategories ? "카테고리 설정" : "카테고리 추가"}
+            </Button>
+          </div>
+          {hasCategories ? (
+            <div data-testid="space-category-list">
+              {categories.map((category, index) => (
                 <button
                   aria-label={`${category.name}, ${category.spaces.length}개 공간`}
-                  className="group flex min-h-20 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+                  className="group relative flex min-h-[85px] w-full items-center gap-3 px-4 py-5 text-left transition-colors after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-border last:after:hidden hover:bg-muted/50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset md:px-6 md:after:right-6 md:after:left-6"
                   data-testid={`space-category-row-${categoryTestId(category)}`}
+                  data-row-index={index}
+                  key={category.id}
                   onClick={() => onSelectCategory(category.id)}
                   type="button"
                 >
                   <span
-                    className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground"
                     data-icon-key={category.iconKey}
                     data-testid={`space-category-icon-${categoryTestId(category)}`}
                   >
@@ -416,38 +503,40 @@ function CategoryOverview({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
-                      <span className="font-medium">{category.name}</span>
-                      <Badge variant="secondary">{category.spaces.length}</Badge>
+                      <span className="text-sm leading-5 font-medium tracking-[0.014em]">
+                        {category.name}
+                      </span>
+                      <Badge className="min-w-5 justify-center" variant="secondary">
+                        {category.spaces.length}
+                      </Badge>
                     </span>
-                    <span className="mt-0.5 block text-sm text-muted-foreground">
-                      병원에서 사용하는 {category.name.replace(" 공간", "")} 공간을 묶어 관리합니다.
+                    <span className="block text-sm leading-5 tracking-[0.014em] text-muted-foreground">
+                      {getCategoryDescription(category)}
                     </span>
                   </span>
-                  <CdsNavigationChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  <span className="flex size-8 shrink-0 items-center justify-center">
+                    <CdsNavigationChevronRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </span>
                 </button>
-              </div>
-            ))
+              ))}
+            </div>
           ) : (
-            <div className="flex min-h-64 items-center justify-center p-6">
-              <EmrEmptyState
-                description="카테고리 설정에서 첫 공간 카테고리를 추가해 주세요."
-                kind="no-data"
-                priority="primary-decision"
-                size="md"
-                surface="content"
-                title="등록된 공간 카테고리가 없습니다"
-              />
+            <div
+              className="flex min-h-[85px] items-center justify-center px-4 py-5 text-sm text-muted-foreground md:px-6"
+              data-testid="space-category-empty"
+            >
+              등록된 공간이 없습니다
             </div>
           )}
         </CardContent>
       </Card>
 
       {!canManage ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="px-4 pt-4 text-sm text-muted-foreground">
           설정 관리 권한이 있는 사용자만 카테고리와 공간을 변경할 수 있습니다.
         </p>
       ) : null}
-    </>
+    </section>
   );
 }
 
@@ -455,7 +544,6 @@ function CategoryDetail({
   canManage,
   categories,
   category,
-  onBack,
   onDeleteSpace,
   onSpaceDraftChange,
   pending,
@@ -465,7 +553,6 @@ function CategoryDetail({
   canManage: boolean;
   categories: WorkspaceSpaceCategory[];
   category: WorkspaceSpaceCategory;
-  onBack: () => void;
   onDeleteSpace: (space: WorkspaceSpace) => void;
   onSpaceDraftChange: (draft: SpaceDraft) => void;
   pending: boolean;
@@ -473,51 +560,26 @@ function CategoryDetail({
   submitSpaceDraft: (event: FormEvent) => void;
 }) {
   return (
-    <>
-      <header className="space-y-3">
-        <Button
-          className="-ml-2 w-fit"
-          onClick={onBack}
-          size="sm"
-          variant="ghost"
-        >
-          <CdsNavigationArrowLeftIcon data-icon="inline-start" />
-          <span className="sr-only">공간 관리로 돌아가기</span>
-          공간 관리
-        </Button>
-        <div className="space-y-1">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            {category.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            이 카테고리에 등록된 공간을 추가하거나 수정·삭제합니다.
-          </p>
-        </div>
-      </header>
-
-      <Card className="gap-0 py-0">
-        <CardHeader className="border-b py-4">
-          <CardTitle>공간 목록</CardTitle>
-          <CardDescription>
-            공간 이름과 소속 카테고리를 관리할 수 있습니다.
-          </CardDescription>
-        </CardHeader>
+    <section className="w-full pb-2" aria-label={`${category.name} 공간 목록`}>
+      <Card
+        className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]"
+        data-testid="space-management-detail-card"
+      >
         <CardContent className="p-0">
           {category.spaces.length === 0 && spaceDraft?.mode !== "create" ? (
-            <div className="flex min-h-48 items-center justify-center p-6">
-              <EmrEmptyState
-                description="아래 공간 추가 버튼으로 첫 공간을 등록해 주세요."
-                kind="no-data"
-                reserveActionSpace={false}
-                size="md"
-                surface="content"
-                title="등록된 공간이 없습니다"
-              />
+            <div
+              className="flex min-h-[85px] items-center justify-center px-4 py-5 text-sm text-muted-foreground md:px-6"
+              data-testid="space-list-empty"
+            >
+              등록된 공간이 없습니다
             </div>
           ) : (
             category.spaces.map((space, index) => (
-              <div key={space.id}>
-                {index > 0 ? <Separator /> : null}
+              <div
+                className="relative after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-border last:after:hidden md:after:right-6 md:after:left-6"
+                data-testid={`space-row-${space.id}`}
+                key={space.id}
+              >
                 {spaceDraft?.mode === "edit" && spaceDraft.spaceId === space.id ? (
                   <SpaceEditRow
                     categories={categories}
@@ -528,12 +590,18 @@ function CategoryDetail({
                     submit={submitSpaceDraft}
                   />
                 ) : (
-                  <div className="flex min-h-16 items-center gap-3 px-4 py-3">
-                    <span className="min-w-0 flex-1 font-medium">{space.name}</span>
+                  <div
+                    className="flex min-h-[85px] items-center gap-3 px-4 py-5 md:px-6"
+                    data-row-index={index}
+                  >
+                    <span className="min-w-0 flex-1 text-sm leading-5 font-medium tracking-[0.014em]">
+                      {space.name}
+                    </span>
                     {canManage ? (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2.5">
                         <Button
                           aria-label={`${space.name} 수정`}
+                          className="!h-8"
                           disabled={pending || Boolean(spaceDraft)}
                           onClick={() => onSpaceDraftChange({
                             mode: "edit",
@@ -541,19 +609,22 @@ function CategoryDetail({
                             categoryId: category.id,
                             value: space.name,
                           })}
-                          size="icon-sm"
-                          variant="ghost"
+                          size="sm"
+                          variant="outline"
                         >
-                          <CdsContentEdit2Icon />
+                          <CdsContentEdit2Icon data-icon="inline-start" />
+                          수정
                         </Button>
                         <Button
                           aria-label={`${space.name} 삭제`}
+                          className="!h-8"
                           disabled={pending || Boolean(spaceDraft)}
                           onClick={() => onDeleteSpace(space)}
-                          size="icon-sm"
-                          variant="ghost"
+                          size="sm"
+                          variant="destructive"
                         >
-                          <CdsActionsTrashIcon className="text-destructive" />
+                          <CdsActionsTrashIcon data-icon="inline-start" />
+                          삭제
                         </Button>
                       </div>
                     ) : null}
@@ -580,9 +651,9 @@ function CategoryDetail({
           {canManage && !spaceDraft ? (
             <>
               <Separator />
-              <div className="p-2">
+              <div className="flex min-h-[72px] items-center px-4 py-5 md:px-6">
                 <Button
-                  className="w-full justify-start"
+                  className="!h-8"
                   disabled={pending}
                   onClick={() => onSpaceDraftChange({ mode: "create", value: "" })}
                   size="sm"
@@ -596,7 +667,12 @@ function CategoryDetail({
           ) : null}
         </CardContent>
       </Card>
-    </>
+      {!canManage ? (
+        <p className="px-4 pt-4 text-sm text-muted-foreground">
+          설정 관리 권한이 있는 사용자만 공간을 변경할 수 있습니다.
+        </p>
+      ) : null}
+    </section>
   );
 }
 
@@ -834,43 +910,43 @@ function SpaceEditRow({
   );
 }
 
-function CategoryIcon({ iconKey }: { iconKey: SpaceCategoryIconKey }) {
+function CategoryIcon({
+  iconKey,
+  size = "row",
+}: {
+  iconKey: SpaceCategoryIconKey;
+  size?: "row" | "title";
+}) {
+  const className = size === "title" ? "size-6" : "size-[18px]";
   switch (iconKey) {
     case "consult":
-      return <CdsMedicalStethoscopeIcon className="size-5" />;
+      return <CdsMedicalStethoscopeIcon className={className} />;
     case "treatment":
-      return <CdsMedicalSyringeIcon className="size-5" />;
+      return <CdsMedicalSyringeIcon className={className} />;
     case "exam":
-      return <CdsMedicalMicroscopeIcon className="size-5" />;
+      return <CdsMedicalMicroscopeIcon className={className} />;
     case "surgery":
-      return <CdsContentScissorsIcon className="size-5" />;
+      return <CdsContentScissorsIcon className={className} />;
     default:
-      return <BuildingIcon className="size-5" />;
+      return <BuildingIcon className={className} />;
   }
 }
 
 function SpaceManagementLoading() {
   return (
-    <>
-      <header className="flex items-start justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-28" />
-          <Skeleton className="h-5 w-72" />
-        </div>
-        <Skeleton className="h-8 w-24" />
-      </header>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-4 w-80" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {[0, 1, 2, 3].map((item) => (
-            <Skeleton className="h-16 w-full" key={item} />
-          ))}
-        </CardContent>
-      </Card>
-    </>
+    <Card className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]">
+      <CardContent className="p-0">
+        {[0, 1, 2, 3, 4].map((item) => (
+          <div className="flex min-h-[85px] items-center gap-3 px-4 md:px-6" key={item}>
+            <Skeleton className="size-11 shrink-0 rounded-lg" />
+            <div className="grid flex-1 gap-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-64 max-w-full" />
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -902,6 +978,13 @@ function SpaceManagementState({
 
 function categoryTestId(category: WorkspaceSpaceCategory) {
   return category.id.replace(/^category-/, "");
+}
+
+function getCategoryDescription(category: WorkspaceSpaceCategory) {
+  const categoryLabel = category.name.endsWith(" 공간")
+    ? category.name.slice(0, -" 공간".length)
+    : category.name;
+  return `병원에서 사용하는 ${categoryLabel} 공간을 묶어 관리합니다`;
 }
 
 function getMutationErrorMessage(error: unknown) {
