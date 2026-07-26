@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use EmrTableCheckbox for table row and header selection cells with EMR table border/disabled treatment. 사용할 때: selection is part of a data grid. 쓰지 말아야 할 때: ordinary form acknowledgements or permission enforcement.",
+          "Use EmrTableCheckbox as the semantic alias for table row and header selection. It reuses the shared Figma-aligned Checkbox visual contract without table-only color or disabled overrides. 사용할 때: selection is part of a data grid. 쓰지 말아야 할 때: ordinary form acknowledgements or permission enforcement.",
       },
     },
   },
@@ -73,6 +73,32 @@ export const HeaderSelection: Story = {
       description: {
         story:
           "사용할 때: 현재 table page나 visible rows 전체 선택. 쓰지 말아야 할 때: 서버 전체 데이터 선택처럼 범위가 모호할 때.",
+      },
+    },
+  },
+};
+
+export const HeaderIndeterminate: Story = {
+  args: {
+    indeterminate: true,
+    "aria-label": "샘플 일부 행 선택",
+  },
+  render: (args) => (
+    <Field orientation="horizontal">
+      <EmrTableCheckbox
+        id="sample-table-checkbox-indeterminate"
+        {...args}
+      />
+      <FieldLabel htmlFor="sample-table-checkbox-indeterminate">
+        일부 행 선택 예시
+      </FieldLabel>
+    </Field>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "사용할 때: 현재 visible rows 중 일부만 선택된 header mixed state. aria-label에는 선택 범위를 명시합니다.",
       },
     },
   },

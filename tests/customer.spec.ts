@@ -271,11 +271,25 @@ test("customer workspace renders animal master list and opens the common patient
   expect(hospitalAdminNavBox!.y - customerNavBox!.y).toBeLessThan(52);
   await expect(page.getByTestId("customer-patient-table")).toBeVisible();
   const patientTable = page.getByRole("table", { name: "동물 고객관리 테이블" });
+  const patientNameHeader = patientTable.locator("th", { hasText: "동물명" });
+  await expect(patientNameHeader).toHaveAttribute(
+    "data-emr-header-interaction",
+    "static",
+  );
+  await expect(patientNameHeader).toHaveAttribute(
+    "data-emr-column-resize",
+    "none",
+  );
   await expect(
-    patientTable.locator('th[data-emr-header-interaction="sortable"][data-emr-column-resize="data-column"]', {
-      hasText: "동물명",
-    })
-  ).toBeVisible();
+    patientNameHeader.getByRole("button", {
+      name: /동물명 오름차순 정렬/,
+    }),
+  ).toBeEnabled();
+  await expect(
+    patientTable.getByRole("button", {
+      name: "품종 정렬은 현재 지원하지 않습니다",
+    }),
+  ).toBeDisabled();
   await expect(patientTable.locator("th", { hasText: "행 작업" })).toHaveAttribute(
     "data-emr-column-resize",
     "none"
@@ -306,22 +320,314 @@ test("customer table aligns selection header and row checkboxes", async ({ page 
   await expect(table).toBeVisible();
   await expect(row).toBeVisible();
 
-  const selectAllPatientBox = await table
-    .getByRole("checkbox", { name: "동물 전체 선택" })
-    .boundingBox();
-  const rowCheckboxBox = await row
-    .getByRole("checkbox", { name: "코코 선택" })
-    .boundingBox();
+  const selectAllPatient = table.getByRole("checkbox", {
+    name: "동물 전체 선택",
+  });
+  const rowCheckbox = row.getByRole("checkbox", { name: "코코 선택" });
+  await expect(selectAllPatient).toHaveCSS("width", "16px");
+  await expect(selectAllPatient).toHaveCSS("height", "16px");
+  await expect(rowCheckbox).toHaveCSS("width", "16px");
+  await expect(rowCheckbox).toHaveCSS("height", "16px");
+  await expect
+    .poll(async () => {
+      const headerCell = await table.locator("th").first().boundingBox();
+      const rowCell = await row.locator("td").first().boundingBox();
+      if (!headerCell || !rowCell) return Number.POSITIVE_INFINITY;
 
-  expect(selectAllPatientBox).not.toBeNull();
-  expect(rowCheckboxBox).not.toBeNull();
+      return Math.abs(
+        headerCell.x +
+          headerCell.width / 2 -
+          (rowCell.x + rowCell.width / 2),
+      );
+    })
+    .toBeLessThanOrEqual(1);
+});
+
+test("guardian list matches the Figma geometry, surfaces, controls, and responsive contract", async ({
+  page,
+}) => {
+  const consoleErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => consoleErrors.push(error.message));
+
+  await page.setViewportSize({ width: 1900, height: 1024 });
+  await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
+  await page.getByTestId("customer-side-panel-guardian").click();
+
+  const section = page.getByTestId("customer-guardian-table");
+  const table = section.getByRole("table", {
+    name: "보호자 고객관리 테이블",
+  });
+  const firstRow = page.getByTestId(
+    "customer-guardian-row-guardian-kang-seoyun",
+  );
+  const firstCellContent = firstRow.locator(
+    '[data-emr-customer-cell-content="true"]',
+  ).first();
+  const footer = section.getByTestId("customer-table-footer");
+
+  await expect(section).toBeVisible();
+  await expect(firstRow).toBeVisible();
+  await expect(footer).toContainText("총 5건");
+  await expect(footer).toContainText("1/1 페이지");
+  await expect(footer.getByRole("button", { name: "이전" })).toBeDisabled();
+  await expect(footer.getByRole("button", { name: "다음" })).toBeDisabled();
+  await expect(
+    section.getByRole("button", { name: "환자/보호자 등록" }),
+  ).toHaveCSS("background-color", "rgb(23, 23, 23)");
+
+  const geometry = await section.evaluate((root) => {
+    const header = root.querySelector(
+      '[data-testid="customer-page-header"]',
+    ) as HTMLElement;
+    const heading = header.querySelector("h1, h2, h3") as HTMLElement;
+    const search = header.querySelector(
+      'input[aria-label="고객관리 검색"]',
+    ) as HTMLElement;
+    const tableContainer = root.querySelector(
+      '[data-slot="table-container"]',
+    ) as HTMLElement;
+    const tableElement = root.querySelector("table") as HTMLElement;
+    const tableHeaderRow = root.querySelector("thead tr") as HTMLElement;
+    const dataRow = root.querySelector(
+      '[data-testid="customer-guardian-row-guardian-kang-seoyun"]',
+    ) as HTMLElement;
+    const longContentRow = root.querySelector(
+      '[data-testid="customer-guardian-row-guardian-lee-jieun"]',
+    ) as HTMLElement;
+    const dataCellContent = dataRow.querySelector(
+      '[data-emr-customer-cell-content="true"]',
+    ) as HTMLElement;
+    const footerElement = root.querySelector(
+      '[data-testid="customer-table-footer"]',
+    ) as HTMLElement;
+    const rootRect = root.getBoundingClientRect();
+    const tableContainerRect = tableContainer.getBoundingClientRect();
+    const tableRect = tableElement.getBoundingClientRect();
+
+    return {
+      rootWidth: rootRect.width,
+      headerHeight: header.getBoundingClientRect().height,
+      headerBackground: getComputedStyle(header).backgroundColor,
+      headerPadding: [
+        getComputedStyle(header).paddingTop,
+        getComputedStyle(header).paddingRight,
+        getComputedStyle(header).paddingBottom,
+        getComputedStyle(header).paddingLeft,
+      ],
+      headerGap: getComputedStyle(header).rowGap,
+      headingFont: [
+        getComputedStyle(heading).fontSize,
+        getComputedStyle(heading).lineHeight,
+        getComputedStyle(heading).fontWeight,
+      ],
+      searchWidth: search.getBoundingClientRect().width,
+      tableContainerClientWidth: tableContainer.clientWidth,
+      tableContainerWidth: tableContainerRect.width,
+      tableWidth: tableRect.width,
+      tableHeaderBackground: getComputedStyle(tableHeaderRow).backgroundColor,
+      tableHeaderHeight: tableHeaderRow.getBoundingClientRect().height,
+      rowBackground: getComputedStyle(dataRow).backgroundColor,
+      rowBorder: getComputedStyle(dataRow).borderBottomColor,
+      rowHeight: dataRow.getBoundingClientRect().height,
+      longContentRowHeight: longContentRow.getBoundingClientRect().height,
+      cellPadding: [
+        getComputedStyle(dataCellContent).paddingLeft,
+        getComputedStyle(dataCellContent).paddingRight,
+      ],
+      footerBackground: getComputedStyle(footerElement).backgroundColor,
+      footerHeight: footerElement.getBoundingClientRect().height,
+      footerPadding: [
+        getComputedStyle(footerElement).paddingTop,
+        getComputedStyle(footerElement).paddingRight,
+        getComputedStyle(footerElement).paddingBottom,
+        getComputedStyle(footerElement).paddingLeft,
+      ],
+    };
+  });
+
+  expect(geometry.headerHeight).toBe(108);
+  expect(geometry.headerBackground).toBe("rgb(255, 255, 255)");
+  expect(geometry.headerPadding).toEqual(["16px", "48px", "16px", "48px"]);
+  expect(geometry.headerGap).toBe("12px");
+  expect(geometry.headingFont).toEqual(["24px", "32px", "700"]);
+  expect(geometry.searchWidth).toBe(320);
+  expect(geometry.tableHeaderBackground).toBe("rgb(250, 250, 250)");
+  expect(geometry.tableHeaderHeight).toBeGreaterThanOrEqual(36);
+  expect(geometry.tableHeaderHeight).toBeLessThanOrEqual(36.5);
+  expect(geometry.rowBackground).toBe("rgb(255, 255, 255)");
+  expect(geometry.rowBorder).toBe("rgb(229, 229, 229)");
+  expect(geometry.rowHeight).toBe(40);
+  expect(geometry.longContentRowHeight).toBeGreaterThanOrEqual(
+    geometry.rowHeight,
+  );
+  expect(geometry.cellPadding).toEqual(["10px", "10px"]);
+  expect(geometry.footerBackground).toBe("rgb(252, 252, 252)");
+  expect(geometry.footerHeight).toBe(64);
+  expect(geometry.footerPadding).toEqual(["14px", "48px", "14px", "48px"]);
   expect(
-    Math.abs(
-      selectAllPatientBox!.x +
-        selectAllPatientBox!.width / 2 -
-        (rowCheckboxBox!.x + rowCheckboxBox!.width / 2),
-    ),
+    Math.abs(geometry.tableWidth - geometry.tableContainerClientWidth),
   ).toBeLessThanOrEqual(1);
+  expect(Math.abs(geometry.rootWidth - geometry.tableContainerWidth)).toBeLessThanOrEqual(1);
+
+  const sortableHeader = table.getByRole("button", {
+    name: /보호자명 오름차순 정렬/,
+  });
+  const plannedSortHeader = table.getByRole("button", {
+    name: "휴대전화 정렬은 현재 지원하지 않습니다",
+  });
+  const sortButtonGeometry = await sortableHeader.evaluate((button) => {
+    const style = getComputedStyle(button);
+    const icon = button.querySelector("img") as HTMLElement;
+    const rect = button.getBoundingClientRect();
+    return {
+      height: rect.height,
+      iconHeight: icon.getBoundingClientRect().height,
+      iconWidth: icon.getBoundingClientRect().width,
+      padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft],
+    };
+  });
+
+  expect(sortButtonGeometry.height).toBe(24);
+  expect(sortButtonGeometry.iconHeight).toBeCloseTo(7.75, 1);
+  expect(sortButtonGeometry.iconWidth).toBeCloseTo(6.75, 1);
+  expect(sortButtonGeometry.padding).toEqual(["4px", "8px", "4px", "8px"]);
+  await expect(sortableHeader).toBeEnabled();
+  await expect(plannedSortHeader).toBeDisabled();
+
+  const firstRowCheckboxInput = firstRow.getByRole("checkbox");
+  const firstRowCheckbox = firstRow.locator('[data-slot="checkbox"]');
+  await firstRow.hover();
+  await expect(firstRowCheckbox).toBeVisible();
+  await firstRowCheckboxInput.focus();
+
+  const uncheckedCheckbox = await firstRowCheckbox.evaluate((checkbox) => {
+    const rootStyle = getComputedStyle(checkbox);
+    const surfaceStyle = getComputedStyle(checkbox, "::before");
+    const rect = checkbox.getBoundingClientRect();
+    return {
+      height: rect.height,
+      width: rect.width,
+      opacity: rootStyle.opacity,
+      borderColor: surfaceStyle.borderColor,
+      background: surfaceStyle.backgroundColor,
+      boxShadow: surfaceStyle.boxShadow,
+    };
+  });
+
+  expect(uncheckedCheckbox).toMatchObject({
+    height: 16,
+    width: 16,
+    opacity: "1",
+    borderColor: "rgb(212, 212, 212)",
+    background: "rgb(255, 255, 255)",
+  });
+  expect(uncheckedCheckbox.boxShadow).not.toBe("none");
+
+  await page.keyboard.press("Space");
+  await expect(firstRowCheckboxInput).toBeChecked();
+  await expect(page.getByText("선택한 보호자 1개")).toBeVisible();
+  await expect(page.getByText("보호자 정보").first()).toHaveCount(0);
+
+  const checkedCheckbox = await firstRowCheckbox.evaluate((checkbox) => {
+    const surfaceStyle = getComputedStyle(checkbox, "::before");
+    const indicator = checkbox.querySelector(
+      '[data-slot="checkbox-indicator"] img',
+    ) as HTMLElement;
+    return {
+      background: surfaceStyle.backgroundColor,
+      borderColor: surfaceStyle.borderColor,
+      indicatorHeight: indicator.getBoundingClientRect().height,
+      indicatorWidth: indicator.getBoundingClientRect().width,
+    };
+  });
+
+  expect(checkedCheckbox.background).toBe("rgb(23, 23, 23)");
+  expect(checkedCheckbox.borderColor).toBe("rgb(23, 23, 23)");
+  expect(checkedCheckbox.indicatorHeight).toBeCloseTo(7.29, 1);
+  expect(checkedCheckbox.indicatorWidth).toBeCloseTo(10.21, 1);
+
+  const headerCheckbox = table.getByRole("checkbox", {
+    name: "보호자 전체 선택",
+  });
+  await expect(headerCheckbox).toBeChecked({ indeterminate: true });
+
+  await section.getByRole("button", { name: "테이블 보기 밀도: 기본" }).click();
+  await page.getByRole("menuitemradio", { name: "넓게" }).click({
+    force: true,
+  });
+  await expect
+    .poll(() =>
+      firstCellContent.evaluate(
+        (element) => element.parentElement?.getBoundingClientRect().height,
+      ),
+    )
+    .toBe(52);
+  await section.getByRole("button", { name: "테이블 보기 밀도: 넓게" }).click();
+  await page.getByRole("menuitemradio", { name: "기본" }).click({
+    force: true,
+  });
+  await expect
+    .poll(() =>
+      firstCellContent.evaluate(
+        (element) => element.parentElement?.getBoundingClientRect().height,
+      ),
+    )
+    .toBe(40);
+
+  await page.getByRole("button", { name: "사이드 패널 접기", exact: true }).click();
+  await page.setViewportSize({ width: 1000, height: 900 });
+
+  const narrowMetrics = await section.evaluate((root) => {
+    const header = root.querySelector(
+      '[data-testid="customer-page-header"]',
+    ) as HTMLElement;
+    const tableContainer = root.querySelector(
+      '[data-slot="table-container"]',
+    ) as HTMLElement;
+    const footerElement = root.querySelector(
+      '[data-testid="customer-table-footer"]',
+    ) as HTMLElement;
+    return {
+      clientWidth: tableContainer.clientWidth,
+      scrollWidth: tableContainer.scrollWidth,
+      headerPaddingLeft: getComputedStyle(header).paddingLeft,
+      headerPaddingRight: getComputedStyle(header).paddingRight,
+      footerPaddingLeft: getComputedStyle(footerElement).paddingLeft,
+      footerPaddingRight: getComputedStyle(footerElement).paddingRight,
+    };
+  });
+
+  expect(narrowMetrics.scrollWidth).toBeGreaterThanOrEqual(1120);
+  expect(narrowMetrics.scrollWidth).toBeGreaterThan(narrowMetrics.clientWidth);
+  expect(narrowMetrics).toMatchObject({
+    headerPaddingLeft: "48px",
+    headerPaddingRight: "48px",
+    footerPaddingLeft: "48px",
+    footerPaddingRight: "48px",
+  });
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect
+    .poll(() =>
+      firstRowCheckbox.evaluate(
+        (checkbox) => getComputedStyle(checkbox.parentElement as HTMLElement).transitionDuration,
+      ),
+    )
+    .toBe("0s");
+  expect(
+    await page.evaluate(
+      () => matchMedia("(prefers-reduced-motion: reduce)").matches,
+    ),
+  ).toBe(true);
+  const unexpectedConsoleErrors = consoleErrors.filter(
+    (message) =>
+      message !==
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+  );
+  expect(unexpectedConsoleErrors).toEqual([]);
 });
 
 test("customer side panel matches CDS.V2 module-list geometry, type, and color", async ({ page }) => {

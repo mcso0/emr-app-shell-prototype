@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { ReactNode } from "react";
 
 import { Field, FieldDescription, FieldLabel } from "./field";
 import { Checkbox } from "./checkbox";
@@ -27,6 +28,11 @@ const meta = {
     disabled: {
       control: "boolean",
       description: "Visual unavailable state. Do not treat disabled as a security boundary.",
+    },
+    indeterminate: {
+      control: "boolean",
+      description:
+        "Mixed selection state for visible table rows or partially selected groups.",
     },
     "aria-invalid": {
       control: "boolean",
@@ -85,6 +91,28 @@ export const Checked: Story = {
   },
 };
 
+export const Indeterminate: Story = {
+  args: {
+    indeterminate: true,
+  },
+  render: (args) => (
+    <Field orientation="horizontal">
+      <Checkbox id="sample-checkbox-indeterminate" {...args} />
+      <FieldLabel htmlFor="sample-checkbox-indeterminate">
+        일부 항목 선택
+      </FieldLabel>
+    </Field>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "사용할 때: 현재 범위 안에서 일부 항목만 선택된 mixed state. 쓰지 말아야 할 때: 제3의 저장 값으로 취급할 때.",
+      },
+    },
+  },
+};
+
 export const Invalid: Story = {
   args: {
     "aria-invalid": true,
@@ -128,3 +156,48 @@ export const Disabled: Story = {
     },
   },
 };
+
+export const FigmaStateMatrix: Story = {
+  render: () => (
+    <div className="grid grid-cols-[repeat(5,minmax(80px,1fr))] gap-6">
+      <StateSample label="기본">
+        <Checkbox aria-label="기본 체크박스" />
+      </StateSample>
+      <StateSample label="선택">
+        <Checkbox aria-label="선택 체크박스" checked />
+      </StateSample>
+      <StateSample label="일부 선택">
+        <Checkbox aria-label="일부 선택 체크박스" indeterminate />
+      </StateSample>
+      <StateSample label="오류">
+        <Checkbox aria-label="오류 체크박스" aria-invalid />
+      </StateSample>
+      <StateSample label="비활성">
+        <Checkbox aria-label="비활성 체크박스" checked disabled />
+      </StateSample>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Figma 27814:152534의 기본·선택·indeterminate·invalid·disabled 표면을 한 화면에서 비교합니다. Focus와 invalid-focus는 Tab 키로 확인합니다.",
+      },
+    },
+  },
+};
+
+function StateSample({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex min-h-20 flex-col items-center justify-center gap-3 rounded-lg border p-4">
+      {children}
+      <span className="text-xs text-muted-foreground">{label}</span>
+    </div>
+  );
+}
