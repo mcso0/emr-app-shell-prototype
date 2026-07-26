@@ -6,6 +6,11 @@ import { cn } from "@/lib/utils"
 import checkboxCheck from "@/assets/figma/checkbox-check.svg"
 import checkboxMinus from "@/assets/figma/checkbox-minus.svg"
 
+const checkboxCheckSrc =
+  typeof checkboxCheck === "string" ? checkboxCheck : checkboxCheck.src ?? ""
+const checkboxMinusSrc =
+  typeof checkboxMinus === "string" ? checkboxMinus : checkboxMinus.src ?? ""
+
 function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
   return (
     <CheckboxPrimitive.Root
@@ -26,7 +31,7 @@ function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
           alt=""
           aria-hidden="true"
           className="block h-[7.29158px] w-[10.2083px] group-data-indeterminate/checkbox:hidden"
-          src={checkboxCheck.src}
+          src={checkboxCheckSrc}
         />
         {/* Exact exported Figma vector; a raw img preserves its subpixel geometry. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -34,7 +39,7 @@ function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
           alt=""
           aria-hidden="true"
           className="hidden h-[0.875px] w-[9.04167px] group-data-indeterminate/checkbox:block"
-          src={checkboxMinus.src}
+          src={checkboxMinusSrc}
         />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

@@ -3,6 +3,11 @@
 import tableSortArrow from "@/assets/figma/table-sort-arrow.svg";
 import { cn } from "@/lib/utils";
 
+const tableSortArrowSrc =
+  typeof tableSortArrow === "string"
+    ? tableSortArrow
+    : tableSortArrow.src ?? "";
+
 type CustomerDataTableColumnHeaderProps = {
   ariaLabel: string;
   canSort: boolean;
@@ -40,7 +45,7 @@ export function CustomerDataTableColumnHeader({
             "h-[7.75px] w-[6.74993px]",
             sortDirection === "asc" && "rotate-180",
           )}
-          src={tableSortArrow.src}
+          src={tableSortArrowSrc}
         />
       </span>
     </button>
