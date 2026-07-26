@@ -1513,7 +1513,7 @@ test("hospital admin row action menu opens details and closes on Escape", async 
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
-test("hospital basic settings renders dividers only between section rows", async ({ page }) => {
+test("hospital settings screens render dividers only between section rows", async ({ page }) => {
   await page.route(
     "**/api/workspaces/clair-demo/hospital-admin/settings/profile",
     async (route) => {
@@ -1567,5 +1567,37 @@ test("hospital basic settings renders dividers only between section rows", async
   expect(await dividerDisplay("hospital-settings-row-address")).toBe("block");
   expect(await dividerDisplay("hospital-settings-row-change-request")).toBe("none");
   expect(await dividerDisplay("hospital-settings-row-region")).toBe("none");
+  await expect(page.locator("html")).toHaveJSProperty("scrollWidth", 390);
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(
+    "/w/clair-demo/orders?modulePanel=open&section=settings-contact",
+  );
+  await expect(
+    page.getByTestId("hospital-admin-settings-contact-screen"),
+  ).toBeVisible();
+
+  expect(await dividerDisplay("hospital-settings-fax-row")).toBe("block");
+  expect(
+    await dividerDisplay("hospital-settings-row-customer-guide-memo"),
+  ).toBe("block");
+  expect(await dividerDisplay("hospital-settings-row-phone-change")).toBe(
+    "none",
+  );
+  expect(await dividerDisplay("hospital-settings-homepage-row")).toBe(
+    "block",
+  );
+  expect(await dividerDisplay("hospital-settings-instagram-row")).toBe(
+    "none",
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  expect(await dividerDisplay("hospital-settings-row-phone-change")).toBe(
+    "none",
+  );
+  expect(await dividerDisplay("hospital-settings-instagram-row")).toBe(
+    "none",
+  );
   await expect(page.locator("html")).toHaveJSProperty("scrollWidth", 390);
 });
