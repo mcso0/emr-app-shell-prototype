@@ -399,7 +399,7 @@ function SpaceManagementPage({
 }) {
   return (
     <div
-      className="flex h-full min-h-0 flex-col overflow-clip rounded-[var(--clair-radius-atomic-12)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-2)] shadow-[var(--clair-shadow-xs)]"
+      className="flex h-full min-h-0 flex-col overflow-clip bg-[var(--emr-surface-2)]"
       data-testid={testId}
     >
       <ScrollArea className="min-h-0 flex-1">

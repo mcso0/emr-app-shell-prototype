@@ -298,6 +298,79 @@ test("hospital admin settings hub opens static screens and role management", asy
   await expect(sidePanel.getByRole("button", { name: /차트 템플릿/ })).toBeDisabled();
 });
 
+test("hospital admin pages keep WorkspaceFrame as the single outer border", async ({
+  page,
+}) => {
+  const targetPages = [
+    { section: "settings", heading: "병원 기본 설정" },
+    { section: "settings-contact", heading: "연락처 및 채널" },
+    { section: "settings-hours", heading: "운영시간 관리" },
+    { section: "space-time", heading: "공간 관리" },
+    { section: "vitals", heading: "바이탈 관리" },
+    { section: "members", heading: "병원 구성원" },
+    { section: "roles", heading: "역할 및 권한" },
+    { section: "schedule", heading: "근무표" },
+    { section: "audit", heading: "감사 로그" },
+  ];
+  const viewports = [
+    { name: "desktop", width: 1440, height: 900 },
+    { name: "mobile", width: 390, height: 844 },
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+
+    for (const target of targetPages) {
+      await page.goto(
+        `/w/clair-demo/orders?modulePanel=open&section=${target.section}`,
+      );
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: target.heading,
+          exact: true,
+        }),
+      ).toBeVisible();
+
+      const nestedOuterBorders = await page
+        .getByTestId("workspace-main-content")
+        .evaluate((root) => {
+          const rootRect = root.getBoundingClientRect();
+
+          return Array.from(root.querySelectorAll<HTMLElement>("*")).flatMap(
+            (element) => {
+              const rect = element.getBoundingClientRect();
+              const style = getComputedStyle(element);
+              const fillsWorkspace =
+                Math.abs(rect.left - rootRect.left) <= 1 &&
+                Math.abs(rect.top - rootRect.top) <= 1 &&
+                Math.abs(rect.width - rootRect.width) <= 2 &&
+                Math.abs(rect.height - rootRect.height) <= 2;
+
+              if (!fillsWorkspace || style.borderTopWidth === "0px") {
+                return [];
+              }
+
+              return [
+                {
+                  testId: element.dataset.testid ?? null,
+                  borderTopWidth: style.borderTopWidth,
+                  borderRadius: style.borderRadius,
+                  boxShadow: style.boxShadow,
+                },
+              ];
+            },
+          );
+        });
+
+      expect(
+        nestedOuterBorders,
+        `${viewport.name} ${target.section} should not redraw the WorkspaceFrame border`,
+      ).toEqual([]);
+    }
+  }
+});
+
 test("hospital space management supports category and terminal space CRUD with feedback", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/w/clair-demo/orders?modulePanel=open");
@@ -357,7 +430,7 @@ test("hospital space management supports category and terminal space CRUD with f
   });
   expect(overviewFigmaMetrics).toEqual({
     mainWidth: 920,
-    contentTop: 57,
+    contentTop: 56,
     headerHeight: 92,
     headerGap: 16,
     cardWidth: 920,
@@ -789,7 +862,7 @@ test("hospital vital settings matches CDS V2 while preserving the reviewed inter
 
   expect(figmaMetrics).toEqual({
     mainWidth: 920,
-    contentTop: 57,
+    contentTop: 56,
     headerHeight: 92,
     headerGap: 16,
     cardWidth: 920,
