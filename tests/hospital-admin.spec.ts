@@ -1439,3 +1439,60 @@ test("hospital admin row action menu opens details and closes on Escape", async 
   await expect(page.getByTestId("hospital-order-drawer")).toContainText("[CBC 검사] #BASO");
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
+
+test("hospital basic settings renders dividers only between section rows", async ({ page }) => {
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/settings/profile",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          profile: {
+            workspaceId: "clair-demo",
+            name: "테스트 동물병원",
+            representativeName: "홍길동",
+            address: "서울시 테스트구 123",
+            countryCode: "KR",
+            timezone: "Asia/Seoul",
+            contact: {
+              phone: "02-1111-2222",
+              fax: "",
+              homepage: "",
+              instagram: "",
+              customerGuideMemo: "",
+            },
+            logo: {
+              hasCustomLogo: false,
+              url: null,
+            },
+            revision: 1,
+            profileComplete: true,
+            pendingChangeRequest: null,
+          },
+        }),
+      });
+    },
+  );
+
+  const dividerDisplay = async (testId: string) =>
+    page.getByTestId(testId).locator('[data-slot="separator"]').evaluate(
+      (separator) => window.getComputedStyle(separator).display,
+    );
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/w/clair-demo/orders?modulePanel=open&section=settings");
+  await expect(page.getByTestId("hospital-admin-settings-screen")).toBeVisible();
+
+  expect(await dividerDisplay("hospital-settings-row-address")).toBe("block");
+  expect(await dividerDisplay("hospital-settings-row-timezone")).toBe("block");
+  expect(await dividerDisplay("hospital-settings-row-change-request")).toBe("none");
+  expect(await dividerDisplay("hospital-settings-row-region")).toBe("none");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  expect(await dividerDisplay("hospital-settings-row-address")).toBe("block");
+  expect(await dividerDisplay("hospital-settings-row-change-request")).toBe("none");
+  expect(await dividerDisplay("hospital-settings-row-region")).toBe("none");
+  await expect(page.locator("html")).toHaveJSProperty("scrollWidth", 390);
+});

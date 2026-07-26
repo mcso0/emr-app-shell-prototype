@@ -548,7 +548,7 @@ function SettingRow({
 }) {
   return (
     <div
-      className="px-4 pt-4 md:h-[85px] md:px-6 md:pt-5"
+      className="px-4 pt-4 last:[&>[data-slot=separator]]:hidden md:h-[85px] md:px-6 md:pt-5"
       data-testid={testId}
     >
       <div className="flex min-h-11 flex-col gap-3 md:h-11 md:flex-row md:items-center md:justify-between md:gap-4">
