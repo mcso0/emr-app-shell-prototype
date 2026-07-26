@@ -43,11 +43,16 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import {
+  CdsActionsPlusIcon,
+  CdsActionsTrashIcon,
+} from "@/components/cds-icons/actions-and-controls";
+import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
+import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  SettingsIcon,
   ShieldIcon,
-  SlidersIcon,
   UsersIcon,
 } from "@/components/icons";
 import {
@@ -112,6 +117,12 @@ const settingsSectionKeys = new Set<SettingsSectionKey>([
   "positions",
   "work-defaults",
 ]);
+
+const settingsSurfaceClassName =
+  "overflow-hidden rounded-[var(--clair-radius-lg)] border border-border bg-card shadow-[var(--clair-shadow-xs)]";
+
+const settingsTitleClassName =
+  "font-[var(--clair-typography-title-3-font-weight)] text-[length:var(--clair-typography-title-3-font-size)] leading-[var(--clair-typography-title-3-line-height)] tracking-[var(--clair-typography-title-3-letter-spacing)] text-foreground";
 
 function haveSamePermissionIds(left: string[], right: string[]) {
   if (left.length !== right.length) return false;
@@ -200,21 +211,26 @@ function WorkDefaultsPanel({
 }) {
   return (
     <div className="grid gap-4">
-      <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-        <p className="text-sm font-medium">권한과 분리된 설정입니다</p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          이 브라우저에서만 저장되며 실제 권한이나 구성원 배정을 바꾸지 않습니다.
-        </p>
-      </div>
-      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+      <div
+        data-testid="role-permission-work-defaults-surface"
+        className={cn("divide-y divide-border", settingsSurfaceClassName)}
+      >
         {workDefaultFields.map((field) => (
           <div
             key={field.key}
-            className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_260px] sm:items-center"
+            data-testid={`role-permission-work-default-row-${field.key}`}
+            className="grid min-h-[85px] gap-3 px-6 py-5 sm:grid-cols-[minmax(0,1fr)_320px] sm:items-center"
           >
             <div>
-              <FieldLabel htmlFor={`role-work-default-${field.key}`}>{field.label}</FieldLabel>
-              <FieldDescription className="mt-1">{field.description}</FieldDescription>
+              <FieldLabel
+                htmlFor={`role-work-default-${field.key}`}
+                className="emr-text-body text-foreground"
+              >
+                {field.label}
+              </FieldLabel>
+              <FieldDescription className="mt-1 emr-text-body text-muted-foreground">
+                {field.description}
+              </FieldDescription>
             </div>
             <Select
               disabled={!canManage}
@@ -226,7 +242,10 @@ function WorkDefaultsPanel({
                 });
               }}
             >
-              <SelectTrigger id={`role-work-default-${field.key}`} className="w-full">
+              <SelectTrigger
+                id={`role-work-default-${field.key}`}
+                className="w-full bg-card"
+              >
                 <SelectValue>
                   {jobPositions.find(
                     (position) => position.positionKey === workDefaultsDraft[field.key]
@@ -245,6 +264,12 @@ function WorkDefaultsPanel({
             </Select>
           </div>
         ))}
+      </div>
+      <div className="px-1">
+        <p className="emr-text-body font-medium text-foreground">권한과 분리된 설정입니다</p>
+        <p className="mt-1 emr-text-metadata text-muted-foreground">
+          이 브라우저에서만 저장되며 실제 권한이나 구성원 배정을 바꾸지 않습니다.
+        </p>
       </div>
       {workDefaultsError ? (
         <p className="text-sm text-destructive" role="alert">
@@ -295,23 +320,26 @@ function SettingsHubRow({
     <button
       type="button"
       data-testid={`role-permission-hub-${id}`}
-      className="group flex min-h-20 w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:gap-4"
+      className="group flex min-h-[85px] w-full items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       onClick={onOpen}
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--clair-radius-md)] bg-[var(--clair-color-atomic-neutral-100)] text-foreground [&_svg]:size-[18px]">
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-foreground">{title}</span>
-        <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{description}</span>
-      </span>
-      <span
-        className={cn(
-          "hidden shrink-0 text-xs text-muted-foreground sm:block",
-          summaryIsDirty && "font-medium text-foreground"
-        )}
-      >
-        {summary}
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className="emr-text-body font-medium text-foreground">{title}</span>
+          <Badge
+            variant="secondary"
+            className={cn(
+              "border-0 bg-[var(--clair-color-atomic-black-alpha-4)] px-1.5 text-foreground",
+              summaryIsDirty && "font-semibold"
+            )}
+          >
+            {summary}
+          </Badge>
+        </span>
+        <span className="mt-1 block emr-text-body text-muted-foreground">{description}</span>
       </span>
       <ChevronRightIcon
         className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
@@ -322,36 +350,62 @@ function SettingsHubRow({
 }
 
 function SettingsDetailHeader({
-  action,
   description,
-  onBack,
   title,
 }: {
-  action?: ReactNode;
   description: string;
-  onBack: () => void;
   title: string;
 }) {
   return (
-    <header>
+    <header
+      data-testid="role-permission-page-title"
+      className="flex h-[92px] flex-col gap-2 px-4 py-4"
+    >
+      <h1 className={settingsTitleClassName}>{title}</h1>
+      <p className="emr-text-body text-muted-foreground">{description}</p>
+    </header>
+  );
+}
+
+function SettingsBackHeader({ onBack }: { onBack: () => void }) {
+  return (
+    <div
+      data-testid="role-permission-detail-back-header"
+      className="flex h-14 shrink-0 items-center px-4"
+    >
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className="-ml-2 mb-4 gap-1.5 text-muted-foreground"
+        className="gap-1 text-foreground"
         onClick={onBack}
       >
         <ChevronLeftIcon className="size-4" aria-hidden="true" />
         역할 및 권한
       </Button>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[24px] font-semibold leading-8">{title}</h1>
-          <p className="mt-1 emr-text-dense text-muted-foreground">{description}</p>
-        </div>
-        {action}
+    </div>
+  );
+}
+
+function SettingsSectionHeader({
+  action,
+  description,
+  title,
+}: {
+  action?: ReactNode;
+  description: string;
+  title: string;
+}) {
+  return (
+    <div
+      data-testid="role-permission-section-header"
+      className="flex min-h-[85px] items-center gap-4 px-6 py-5"
+    >
+      <div className="min-w-0 flex-1">
+        <h2 className="emr-text-body font-medium text-foreground">{title}</h2>
+        <p className="mt-1 emr-text-body text-muted-foreground">{description}</p>
       </div>
-    </header>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
   );
 }
 
@@ -931,19 +985,22 @@ export function RolePermissionManagementScreen({
       className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
     >
       <ScrollArea className="min-h-0 flex-1">
+        {workspace.canView && activeSettingsSection !== null ? (
+          <SettingsBackHeader onBack={returnToSettingsHub} />
+        ) : (
+          <div aria-hidden="true" className="h-14 shrink-0" />
+        )}
         <main
           data-testid="role-permission-content"
-          className="mx-auto grid w-full max-w-[920px] gap-8 px-5 py-8 pb-24 md:px-8"
+          className="mx-auto grid w-full max-w-[952px] px-4 pb-24"
         >
           {!workspace.canView ? (
-            <div className="grid gap-6">
-              <header>
-                <h1 className="text-[24px] font-semibold leading-8">역할 및 권한</h1>
-                <p className="mt-1 emr-text-dense text-muted-foreground">
-                  구성원이 할 수 있는 일과 병원 안에서 맡는 업무를 관리합니다.
-                </p>
-              </header>
-              <Card>
+            <div className="grid gap-4">
+              <SettingsDetailHeader
+                title="역할 및 권한"
+                description="구성원이 할 수 있는 일과 병원 안에서 맡는 업무를 관리합니다."
+              />
+              <Card className="shadow-[var(--clair-shadow-xs)]">
                 <CardHeader>
                   <CardTitle>역할 정보를 볼 수 없습니다</CardTitle>
                   <CardDescription>로그인한 구성원만 역할과 권한을 확인할 수 있습니다.</CardDescription>
@@ -951,31 +1008,30 @@ export function RolePermissionManagementScreen({
               </Card>
             </div>
           ) : activeSettingsSection === null ? (
-            <div className="grid gap-8 animate-in fade-in-0 duration-150">
-              <header>
-                <h1 className="text-[24px] font-semibold leading-8">역할 및 권한</h1>
-                <p className="mt-1 emr-text-dense text-muted-foreground">
-                  구성원이 할 수 있는 일과 병원 안에서 맡는 업무를 관리합니다.
-                </p>
-                {workspace.canManage && workspace.ownerReconciliation?.needsConfirmation ? (
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                    <p>소유자 확인 필요: 기존 병원관리자 중 한 명을 임시 소유자로 지정했습니다.</p>
-                    {onOpenMemberManagement ? (
-                      <Button size="sm" variant="outline" onClick={openMemberManagement}>
-                        구성원 관리 열기
-                      </Button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </header>
-              <section aria-labelledby="role-permission-settings-heading" className="grid gap-3">
-                <div>
-                  <h2 id="role-permission-settings-heading" className="text-sm font-medium">설정 항목</h2>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    관리할 항목을 선택하면 상세 설정 화면으로 이동합니다.
-                  </p>
+            <div className="grid gap-4 animate-in fade-in-0 duration-150">
+              <SettingsDetailHeader
+                title="역할 및 권한"
+                description="구성원이 할 수 있는 일과 병원 안에서 맡는 업무를 관리합니다."
+              />
+              {workspace.canManage && workspace.ownerReconciliation?.needsConfirmation ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  <p>소유자 확인 필요: 기존 병원관리자 중 한 명을 임시 소유자로 지정했습니다.</p>
+                  {onOpenMemberManagement ? (
+                    <Button size="sm" variant="outline" onClick={openMemberManagement}>
+                      구성원 관리 열기
+                    </Button>
+                  ) : null}
                 </div>
-                <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              ) : null}
+              <section
+                aria-labelledby="role-permission-settings-heading"
+                data-testid="role-permission-settings-surface"
+                className={cn("divide-y divide-border", settingsSurfaceClassName)}
+              >
+                <SettingsSectionHeader
+                  title="설정 항목"
+                  description="관리할 항목을 선택하면 상세 설정 화면으로 이동합니다."
+                />
                   <SettingsHubRow
                     id="roles"
                     title="권한 역할"
@@ -984,7 +1040,7 @@ export function RolePermissionManagementScreen({
                       hasRolePermissionDrafts ? "저장하지 않은 변경" : `${roles.length}개 역할`
                     }
                     summaryIsDirty={hasRolePermissionDrafts}
-                    icon={<ShieldIcon className="size-4" aria-hidden="true" />}
+                    icon={<UsersIcon aria-hidden="true" />}
                     onOpen={() => openSettingsSection("roles")}
                   />
                   <SettingsHubRow
@@ -992,7 +1048,7 @@ export function RolePermissionManagementScreen({
                     title="직무"
                     description="병원에서 맡는 업무 표기와 분류를 관리합니다."
                     summary={`${jobPositions.length}개 직무`}
-                    icon={<UsersIcon className="size-4" aria-hidden="true" />}
+                    icon={<ShieldIcon aria-hidden="true" />}
                     onOpen={() => openSettingsSection("positions")}
                   />
                   <SettingsHubRow
@@ -1005,33 +1061,34 @@ export function RolePermissionManagementScreen({
                         : `${workDefaultFields.length}개 업무`
                     }
                     summaryIsDirty={isWorkDefaultsDirty}
-                    icon={<SlidersIcon className="size-4" aria-hidden="true" />}
+                    icon={<SettingsIcon aria-hidden="true" />}
                     onOpen={() => openSettingsSection("work-defaults")}
                   />
-                </div>
               </section>
             </div>
           ) : activeSettingsSection === "roles" ? (
-            <div className="grid gap-8 animate-in fade-in-0 slide-in-from-right-2 duration-150">
+            <div className="grid gap-4 animate-in fade-in-0 slide-in-from-right-2 duration-150">
               <SettingsDetailHeader
                 title="권한 역할"
                 description="역할을 선택해 배정된 구성원과 사용할 수 있는 기능을 확인합니다."
-                onBack={returnToSettingsHub}
-                action={workspace.canManage ? (
-                  <Button size="sm" onClick={() => openRoleDialog()}>새 커스텀 역할</Button>
-                ) : undefined}
               />
-              <section aria-labelledby="role-item-list-heading" className="grid gap-3">
-                <div>
-                  <h2 id="role-item-list-heading" className="text-sm font-medium">역할 목록</h2>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    역할을 열면 배정된 구성원과 세부 권한이 같은 항목 안에 표시됩니다.
-                  </p>
-                </div>
+              <section aria-labelledby="role-item-list-heading">
                 <div
                   data-testid="role-summary-grid"
-                  className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card"
+                  className={settingsSurfaceClassName}
                 >
+                  <SettingsSectionHeader
+                    title="역할 목록"
+                    description="역할을 열면 배정된 구성원과 세부 권한이 같은 항목 안에 표시됩니다."
+                    action={
+                      workspace.canManage ? (
+                        <Button onClick={() => openRoleDialog()}>
+                          <CdsActionsPlusIcon data-icon="inline-start" aria-hidden="true" />
+                          새 커스텀 역할
+                        </Button>
+                      ) : undefined
+                    }
+                  />
                   {roles.map((role) => {
                     const roleMembers = getRoleAssignedMembers(
                       workspace.state,
@@ -1057,15 +1114,12 @@ export function RolePermissionManagementScreen({
                       <section
                         key={role.roleKey}
                         data-state={selected ? "open" : "closed"}
-                        className={cn(
-                          "transition-colors duration-150",
-                          selected && "bg-muted/30"
-                        )}
+                        className="border-t border-border"
                       >
                         <button
                           type="button"
                           data-testid={`role-item-${role.roleKey}`}
-                          className="group grid min-h-20 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:grid-cols-[180px_minmax(0,1fr)_auto]"
+                          className="group flex min-h-[85px] w-full items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                           aria-expanded={selected}
                           aria-controls={panelId}
                           onClick={() => {
@@ -1075,27 +1129,38 @@ export function RolePermissionManagementScreen({
                             });
                           }}
                         >
-                          <span className="flex min-w-0 flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">{role.label}</span>
-                            <Badge variant="outline">
-                              {role.isSystem ? "시스템 · 읽기 전용" : "커스텀 역할"}
-                            </Badge>
-                          </span>
-                          <span className="col-span-2 min-w-0 text-xs leading-5 text-muted-foreground md:col-span-1">
-                            <span className="block">
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              <span className="emr-text-body font-medium text-foreground">
+                                {role.label}
+                              </span>
+                              <Badge
+                                variant="secondary"
+                                className="border-0 bg-[var(--clair-color-atomic-black-alpha-4)] px-1.5 text-foreground"
+                              >
+                                {roleMembers.length}명
+                              </Badge>
+                            </span>
+                            <span className="mt-1 block truncate emr-text-body text-muted-foreground">
                               {role.description ?? "권한 구성과 배정 현황을 확인합니다."}
                             </span>
-                            <span className="mt-0.5 block text-foreground/75">
+                          </span>
+                          <span className="hidden min-w-0 shrink items-center gap-2 text-right emr-text-metadata text-muted-foreground lg:flex">
+                            <span className="max-w-56 truncate">
                               {memberLabels.length > 0
                                 ? memberLabels.join(" · ")
                                 : "배정된 구성원 없음"}
                             </span>
-                          </span>
-                          <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                            <strong className="font-medium text-foreground">{roleMembers.length}명</strong>
-                            <span>
+                            <span aria-hidden="true">·</span>
+                            <span className="whitespace-nowrap">
                               {roleAllowedPermissionCount}/{rolePermissionCount} 허용
                             </span>
+                            <span aria-hidden="true">·</span>
+                            <span className="whitespace-nowrap">
+                              {role.isSystem ? "시스템 · 읽기 전용" : "커스텀 역할"}
+                            </span>
+                          </span>
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--clair-radius-md)]">
                             <ChevronDownIcon
                               className={cn(
                                 "size-4 transition-transform duration-150",
@@ -1110,22 +1175,28 @@ export function RolePermissionManagementScreen({
                           <div
                             id={panelId}
                             data-testid={`role-panel-${role.roleKey}`}
-                            className="grid gap-6 border-t border-border px-4 py-5 md:px-5"
+                            className="grid gap-6 border-t border-border bg-muted/30 px-6 py-6"
                           >
-                            <div className="grid gap-4 rounded-lg bg-muted/45 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                               <div className="min-w-0">
-                                <p className="text-xs font-medium text-muted-foreground">
-                                  배정 구성원 {selectedRoleMembers.length}명
+                                <p className="emr-text-body font-medium text-foreground">
+                                  세부 권한
+                                </p>
+                                <p className="mt-1 emr-text-body text-muted-foreground">
+                                  {selectedRole.isSystem
+                                    ? "시스템 역할은 현재 권한 상태만 확인할 수 있습니다."
+                                    : "토글을 변경한 뒤 아래 저장 버튼으로 적용합니다."}
                                 </p>
                                 <p
                                   data-testid={`role-member-names-${selectedRole.roleKey}`}
-                                  className="mt-1 text-sm leading-6 text-foreground"
+                                  className="mt-3 emr-text-metadata text-foreground"
                                 >
+                                  배정 구성원 {selectedRoleMembers.length}명 ·{" "}
                                   {selectedRoleMembers.length > 0
                                     ? selectedRoleMembers.map(getRoleMemberLabel).join(" · ")
                                     : "아직 배정된 구성원이 없습니다."}
                                 </p>
-                                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                                <p className="mt-1 emr-text-metadata text-muted-foreground">
                                   {allowedPermissionCount}/{permissionCount}개 권한 허용 ·{" "}
                                   {selectedRole.isSystem
                                     ? "시스템 기본 역할"
@@ -1180,37 +1251,31 @@ export function RolePermissionManagementScreen({
                               aria-labelledby={`permission-detail-heading-${selectedRole.roleKey}`}
                               className="grid gap-6"
                             >
-                              <div>
-                                <h3
-                                  id={`permission-detail-heading-${selectedRole.roleKey}`}
-                                  className="text-sm font-medium"
-                                >
-                                  세부 권한
-                                </h3>
-                                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                                  {selectedRole.isSystem
-                                    ? "시스템 역할은 현재 권한 상태만 확인할 수 있습니다."
-                                    : "토글을 변경한 뒤 아래 저장 버튼으로 적용합니다."}
-                                </p>
-                              </div>
+                              <h3
+                                id={`permission-detail-heading-${selectedRole.roleKey}`}
+                                className="sr-only"
+                              >
+                                세부 권한
+                              </h3>
                               {permissionGroups.map((group) => (
                                 <section
                                   key={group.id}
+                                  data-testid={`role-permission-group-${selectedRole.roleKey}-${group.id}`}
                                   aria-labelledby={`permission-group-${selectedRole.roleKey}-${group.id}`}
-                                  className="grid gap-2"
+                                  className="grid gap-2.5"
                                 >
-                                  <div className="flex items-center justify-between gap-3 px-1">
+                                  <div className="flex items-center justify-between gap-3 px-3">
                                     <h4
                                       id={`permission-group-${selectedRole.roleKey}-${group.id}`}
-                                      className="text-sm font-medium"
+                                      className="emr-text-body font-medium"
                                     >
                                       {group.label}
                                     </h4>
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="emr-text-metadata text-muted-foreground">
                                       {group.allowedCount}/{group.rows.length} 허용
                                     </span>
                                   </div>
-                                  <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+                                  <div className="divide-y divide-border overflow-hidden rounded-[var(--clair-radius-md)] border border-border bg-card">
                                     {group.rows.map((permission) => {
                                       const switchDisabled =
                                         !permission.editable ||
@@ -1220,21 +1285,22 @@ export function RolePermissionManagementScreen({
                                       return (
                                         <div
                                           key={permission.id}
+                                          data-testid={`role-permission-row-${selectedRole.roleKey}-${permission.id}`}
                                           className={cn(
-                                            "flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:flex-nowrap sm:gap-4",
+                                            "flex min-h-16 flex-wrap items-center justify-between gap-3 px-5 py-4 sm:flex-nowrap sm:gap-4",
                                             !permission.allowed && "text-muted-foreground"
                                           )}
                                         >
                                           <div className="min-w-0 flex-1">
                                             <div className="flex flex-wrap items-center gap-2">
-                                              <span className="text-sm font-medium">
+                                              <span className="emr-text-body font-medium">
                                                 {permission.label}
                                               </span>
                                               {permission.lockReason === "owner_only" ? (
                                                 <Badge variant="outline">소유자 전용</Badge>
                                               ) : null}
                                             </div>
-                                            <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                                            <p className="mt-1 emr-text-body text-muted-foreground">
                                               {permissionDescriptions[permission.id] ??
                                                 "해당 기능을 사용할 수 있습니다."}
                                             </p>
@@ -1322,35 +1388,29 @@ export function RolePermissionManagementScreen({
               </section>
             </div>
           ) : activeSettingsSection === "positions" ? (
-            <div className="grid gap-8 animate-in fade-in-0 slide-in-from-right-2 duration-150">
+            <div className="grid gap-4 animate-in fade-in-0 slide-in-from-right-2 duration-150">
               <SettingsDetailHeader
                 title="직무"
                 description="구성원의 업무 표기와 분류를 관리합니다."
-                onBack={returnToSettingsHub}
-                action={(
-                  <Button
-                    size="sm"
-                    disabled={!workspace.canManage || savingCatalog}
-                    onClick={() => openJobDialog()}
-                  >
-                    직무 추가
-                  </Button>
-                )}
               />
-              <div className="grid gap-5">
-                  <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-                    <p className="text-sm font-medium">직무와 권한 역할은 별개입니다</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      직무를 바꿔도 사용할 수 있는 화면이나 기능은 달라지지 않습니다.
-                    </p>
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-medium">직무 목록</h2>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      커스텀 직무를 선택하면 기존 편집 창이 열립니다.
-                    </p>
-                  </div>
-                  <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              <div className="grid gap-4">
+                  <div
+                    data-testid="role-permission-positions-surface"
+                    className={cn("divide-y divide-border", settingsSurfaceClassName)}
+                  >
+                    <SettingsSectionHeader
+                      title="직무 목록"
+                      description="커스텀 직무를 선택하면 기존 편집 창이 열립니다."
+                      action={
+                        <Button
+                          disabled={!workspace.canManage || savingCatalog}
+                          onClick={() => openJobDialog()}
+                        >
+                          <CdsActionsPlusIcon data-icon="inline-start" aria-hidden="true" />
+                          직무 추가
+                        </Button>
+                      }
+                    />
                     {jobPositions.map((position) => {
                       const assignedCount = workspace.state.memberships.filter(
                         (member) =>
@@ -1359,9 +1419,19 @@ export function RolePermissionManagementScreen({
                           getSessionWorkspaceEffectiveJobPositionKey(member) === position.positionKey
                       ).length;
                       const rowContent = (
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium">{position.label}</span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="truncate emr-text-body font-medium text-foreground">
+                              {position.label}
+                            </span>
+                            <Badge
+                              variant="secondary"
+                              className="border-0 bg-[var(--clair-color-atomic-black-alpha-4)] px-1.5 text-foreground"
+                            >
+                              {assignedCount}명
+                            </Badge>
+                          </span>
+                          <span className="mt-1 block emr-text-body text-muted-foreground">
                             {position.isSystem ? "시스템 직무" : "커스텀 직무"} · {assignedCount}명 배정
                           </span>
                         </span>
@@ -1372,7 +1442,7 @@ export function RolePermissionManagementScreen({
                           <div
                             key={position.positionKey}
                             data-testid={`job-position-readonly-${position.positionKey}`}
-                            className="flex min-h-16 w-full items-center px-4 py-3.5"
+                            className="flex min-h-[85px] w-full items-center px-6 py-5"
                           >
                             {rowContent}
                           </div>
@@ -1380,26 +1450,52 @@ export function RolePermissionManagementScreen({
                       }
 
                       return (
-                        <button
+                        <div
                           key={position.positionKey}
-                          type="button"
                           data-testid={`job-position-action-${position.positionKey}`}
-                          className="group flex min-h-16 w-full items-center justify-between gap-4 px-4 py-3.5 text-left hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                          onClick={() => {
-                            setSelectedJobPositionKey(position.positionKey);
-                            openJobDialog(position);
-                          }}
+                          className="group flex min-h-[85px] w-full flex-wrap items-center justify-between gap-4 px-6 py-5 transition-colors hover:bg-muted/35 focus-within:bg-muted/35"
                         >
                           {rowContent}
-                          <ChevronRightIcon
-                            className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                            aria-hidden="true"
-                          />
-                        </button>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <Button
+                              variant="outline"
+                              disabled={savingCatalog}
+                              onClick={() => {
+                                setSelectedJobPositionKey(position.positionKey);
+                                openJobDialog(position);
+                              }}
+                            >
+                              <CdsContentEdit2Icon data-icon="inline-start" aria-hidden="true" />
+                              직무 편집
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              disabled={savingCatalog}
+                              onClick={() => {
+                                setSelectedJobPositionKey(position.positionKey);
+                                setCatalogDestructiveAction({
+                                  type: "job.archive",
+                                  label: position.label,
+                                });
+                              }}
+                            >
+                              <CdsActionsTrashIcon data-icon="inline-start" aria-hidden="true" />
+                              직무 보관
+                            </Button>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
 
+                  <div className="px-1">
+                    <p className="emr-text-body font-medium text-foreground">
+                      직무와 권한 역할은 별개입니다
+                    </p>
+                    <p className="mt-1 emr-text-metadata text-muted-foreground">
+                      직무를 바꿔도 사용할 수 있는 화면이나 기능은 달라지지 않습니다.
+                    </p>
+                  </div>
                   {jobPositions.every((position) => position.isSystem) ? (
                     <p className="text-xs leading-5 text-muted-foreground">
                       아직 커스텀 직무가 없습니다. 필요한 업무 분류가 있다면 새 직무를 추가하세요.
@@ -1416,11 +1512,10 @@ export function RolePermissionManagementScreen({
                 </div>
             </div>
           ) : (
-            <div className="grid gap-8 animate-in fade-in-0 slide-in-from-right-2 duration-150">
+            <div className="grid gap-4 animate-in fade-in-0 slide-in-from-right-2 duration-150">
               <SettingsDetailHeader
                 title="업무 기본값"
                 description="업무를 시작할 때 먼저 제안할 담당 직무를 설정합니다."
-                onBack={returnToSettingsHub}
               />
                 <WorkDefaultsPanel
                   canManage={workspace.canManage}

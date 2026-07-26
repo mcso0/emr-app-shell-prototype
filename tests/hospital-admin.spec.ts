@@ -1052,7 +1052,7 @@ test("hospital admin role and permission screen replaces the static role-work co
     screen.getByTestId("role-permission-content").evaluate((element) =>
       Math.round(element.getBoundingClientRect().width)
     )
-  ).resolves.toBeLessThanOrEqual(920);
+  ).resolves.toBeLessThanOrEqual(952);
 });
 
 test("hospital admin saves role work defaults locally without changing permissions", async ({ page }) => {
