@@ -1,6 +1,6 @@
 ---
 id: "DESIGN-SYSTEM-PR-083"
-status: human_review
+status: done
 area: design-system
 priority: P1
 target_pr: "User request / CDS.V2 Toggle ToggleGroup Switch implementation"
@@ -91,3 +91,16 @@ semantics and compatibility for current consumers.
   not change. The newer operating-day screen styling remains consumer-owned.
 - No dependency, global token, persistence, API, permission, or Figma change
   was introduced.
+
+## Production Release
+
+- PR: `#501`
+- Candidate commit: `0fc102040a68e86d19b57c08f0fe1d1a2f106328`
+- `origin/main` merge commit: `5e89e0ddb54e15e790658331ca59529884270263`
+- Release Check: GitHub Actions run `30189263382` passed for the exact
+  candidate.
+- Production deployment: `dpl_5Z9mquje5PnXAFKuuN5zo1oZgrYU` reached Ready
+  and owns `https://emr-app-shell-prototype.vercel.app`.
+- Production smoke: login entry and protected reception route redirect loaded
+  without browser console errors.
+- Rollback candidate: `dpl_ejnsFkXENXCqQFTLqxbbMBC3ZXmR`.
