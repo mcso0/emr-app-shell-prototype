@@ -1,42 +1,20 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import {
-  CdsActionsListFilterIcon,
-  CdsActionsSearchIcon,
-} from "@/components/cds-icons/actions-and-controls";
+import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrPageHeader } from "@/components/emr/page-header";
-import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
   EmrModuleListSidePanel,
   EmrModuleListSidePanelBadge,
   type EmrModuleListSidePanelItem,
 } from "@/components/emr/module-list-side-panel";
-import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
-import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
-import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
-import {
-  createInitialEmrTableFilterBuilderModel,
-  filterRowsByEmrTableFilterBuilder,
-  getEmrTableFilterBuilderActiveCount,
-  type EmrTableFilterBuilderField,
-} from "@/components/emr/table-filter-builder-model";
-import {
-  EmrTableCellText,
-  EmrTableHeaderCell,
-  EmrTableSelectionCell,
-  EmrTableSelectionHeaderCell,
-} from "@/components/emr/table-primitives";
 import {
   CalendarCheckIcon,
-  ChevronDownIcon,
   CircleCloseFillIcon,
   ContactBookIcon,
   DocumentIcon,
-  MenuIcon,
   MessagesIcon,
   SendIcon,
   UserCrossIcon,
@@ -44,38 +22,22 @@ import {
   UsersIcon,
 } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  filterCustomerRows,
   getCustomerGuardianRows,
   getCustomerPatientRows,
   type CustomerGuardianRow,
   type CustomerPatientRow,
-  type CustomerWorkBadge,
 } from "@/features/customer/data";
+import {
+  CustomerDataTable,
+  type CustomerTableReadStatus,
+} from "@/features/customer/components/customer-data-table";
+import {
+  createCustomerGuardianColumns,
+  createCustomerPatientColumns,
+} from "@/features/customer/components/customer-table-columns";
 import { useMockAuthStore } from "@/features/auth/session-store";
 import {
   useCustomerStore,
@@ -91,12 +53,6 @@ import {
 } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
-import type {
-  EmrColumnResize,
-  EmrTableCellTextMode,
-  EmrTableDensity,
-  EmrTableHeaderInteraction,
-} from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 
 const customerSideItems = [
@@ -112,131 +68,10 @@ const placeholderSideItems = [
   { label: "CS내역", icon: MessagesIcon },
   { label: "진료의뢰수신", icon: ContactBookIcon },
 ];
-const customerTableWidthClassNames = {
-  guardian: "min-w-[1120px]",
-  patient: "min-w-[1320px]",
-} as const;
 const customerTableMinWidths = {
   guardian: 1120,
   patient: 1320,
 } as const;
-type CustomerTableSortDirection = "asc" | "desc";
-type CustomerTableSortState = {
-  direction: CustomerTableSortDirection;
-  key: string;
-} | null;
-type CustomerTableSortValue = string | number | null | undefined;
-type CustomerTableFilterOption = {
-  label: string;
-  value: string;
-};
-type CustomerTableReadStatus = Extract<CustomerProfileReadStatus, "ready" | "error">;
-
-const badgeClassName: Record<CustomerWorkBadge["tone"], string> = {
-  blue:
-    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
-  gray:
-    "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
-  green:
-    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
-  orange:
-    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
-  purple:
-    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
-};
-
-function CustomerWorkBadge({ badge }: { badge: CustomerWorkBadge }) {
-  return (
-    <Badge variant="outline" className={cn("h-5 rounded-md px-1.5", badgeClassName[badge.tone])}>
-      {badge.label}
-    </Badge>
-  );
-}
-
-type CustomerTableColumn<TRow> = {
-  align?: "left" | "center" | "right";
-  cell: (row: TRow) => ReactNode;
-  className?: string;
-  defaultVisible?: boolean;
-  filterOptions?: CustomerTableFilterOption[] | ((rows: TRow[]) => CustomerTableFilterOption[]);
-  filterValues?: (row: TRow) => string[];
-  headerClassName?: string;
-  headerInteraction?: EmrTableHeaderInteraction;
-  key: string;
-  label: string;
-  required?: boolean;
-  resize?: EmrColumnResize;
-  sortValue?: (row: TRow) => CustomerTableSortValue;
-  textMode?: EmrTableCellTextMode;
-};
-
-type CustomerDataTableProps<TRow extends { id: string }> = {
-  columns: Array<CustomerTableColumn<TRow>>;
-  countLabel: string;
-  emptyLabel: string;
-  getRowLabel: (row: TRow) => string;
-  isActiveRow: (row: TRow) => boolean;
-  minTableWidthClassName: string;
-  minTableWidth: number;
-  loading?: boolean;
-  onOpenRow: (row: TRow) => void;
-  readStatus?: CustomerTableReadStatus;
-  rowTestId: (row: TRow) => string;
-  rows: TRow[];
-  title: string;
-  testId: string;
-};
-
-function CustomerRowActionMenu({
-  label,
-  onOpen,
-  onUnavailableAction,
-}: {
-  label: string;
-  onOpen: () => void;
-  onUnavailableAction: (feedback: CustomerRowActionFeedback) => void;
-}) {
-  return (
-    <EmrRowActionMenu
-      ariaLabel={`${label} 행 작업`}
-      contentClassName="w-56"
-      items={[
-        {
-          key: "open",
-          label: "상세 보기",
-          description: "프로필 drawer 열기",
-          onSelect: onOpen,
-        },
-        {
-          key: "chart",
-          label: "차트 보러가기",
-          description: "진료/차트 화면 연결 전",
-          onSelect: () =>
-            onUnavailableAction({
-              title: "차트 보기는 아직 직접 연결되지 않았습니다",
-              body: `${label}의 차트 이동은 진료/차트 화면의 환자 선택 흐름에서 확인해 주세요. 여기서는 프로필 drawer와 고객 정보만 열 수 있습니다.`,
-            }),
-        },
-        {
-          key: "kakao",
-          label: "카카오톡 발송",
-          description: "외부 발송 미연동",
-          onSelect: () =>
-            onUnavailableAction({
-              title: "카카오톡 발송은 아직 연결되지 않았습니다",
-              body: "실제 카카오톡, 문자, 이메일 발송은 이번 MVP 범위에 포함되지 않습니다. 동의 상태와 연락처만 이 화면에서 확인해 주세요.",
-            }),
-        },
-      ]}
-      testId={`customer-row-action-${label}`}
-    />
-  );
-}
-
-type CustomerRowActionFeedback = {
-  body: ReactNode;
-  title: string;
-};
 
 function getCustomerWorkspaceId(value?: string | string[]) {
   return resolveWorkspaceRouteParam(value);
@@ -255,598 +90,6 @@ function isCustomerProfileReadLoading({
   if (workspaceIdForState !== workspaceId) return true;
 
   return status === "idle" || status === "loading";
-}
-
-function compareCustomerTableValues(left: CustomerTableSortValue, right: CustomerTableSortValue) {
-  const leftEmpty = left === null || left === undefined || left === "";
-  const rightEmpty = right === null || right === undefined || right === "";
-
-  if (leftEmpty && rightEmpty) return 0;
-  if (leftEmpty) return 1;
-  if (rightEmpty) return -1;
-
-  if (typeof left === "number" && typeof right === "number") return left - right;
-
-  return String(left).localeCompare(String(right), "ko-KR", {
-    numeric: true,
-    sensitivity: "base",
-  });
-}
-
-function sortCustomerTableRows<TRow>(
-  rows: TRow[],
-  columns: Array<CustomerTableColumn<TRow>>,
-  sortState: CustomerTableSortState
-) {
-  if (!sortState) return rows;
-
-  const column = columns.find((item) => item.key === sortState.key);
-  if (!column?.sortValue) return rows;
-
-  return rows
-    .map((row, index) => ({ index, row }))
-    .sort((left, right) => {
-      const compared = compareCustomerTableValues(
-        column.sortValue?.(left.row),
-        column.sortValue?.(right.row)
-      );
-      if (compared === 0) return left.index - right.index;
-
-      return sortState.direction === "asc" ? compared : -compared;
-    })
-    .map((entry) => entry.row);
-}
-
-function getCustomerTableFilterOptions<TRow>(column: CustomerTableColumn<TRow>, rows: TRow[]) {
-  const options =
-    typeof column.filterOptions === "function"
-      ? column.filterOptions(rows)
-      : column.filterOptions;
-
-  return options ?? [];
-}
-
-function getCustomerTableFilterFields<TRow>(
-  columns: Array<CustomerTableColumn<TRow>>,
-  rows: TRow[]
-): Array<EmrTableFilterBuilderField<TRow>> {
-  return columns
-    .filter((column) => column.filterValues)
-    .map((column) => ({
-      getValue: (row: TRow) => column.filterValues?.(row) ?? [],
-      id: column.key,
-      label: column.label,
-      operators: [{ id: "is", label: "Is" }],
-      options: getCustomerTableFilterOptions(column, rows),
-      valuePlaceholder: `${column.label} 선택`,
-    }));
-}
-
-function getUniqueCustomerFilterOptions<TRow>(
-  rows: TRow[],
-  getValues: (row: TRow) => string[]
-): CustomerTableFilterOption[] {
-  const options = new Map<string, CustomerTableFilterOption>();
-
-  rows.forEach((row) => {
-    getValues(row).forEach((value) => {
-      if (value && !options.has(value)) {
-        options.set(value, { label: value, value });
-      }
-    });
-  });
-
-  return Array.from(options.values()).sort((left, right) =>
-    left.label.localeCompare(right.label, "ko-KR", {
-      numeric: true,
-      sensitivity: "base",
-    })
-  );
-}
-
-function CustomerSortableHeader<TRow>({
-  align,
-  className,
-  column,
-  onSort,
-  sortState,
-}: {
-  align?: "left" | "center" | "right";
-  className?: string;
-  column: CustomerTableColumn<TRow>;
-  onSort: (key: string) => void;
-  sortState: CustomerTableSortState;
-}) {
-  const active = sortState?.key === column.key;
-  const nextAction =
-    !active || !sortState
-      ? `${column.label} 오름차순 정렬`
-      : sortState.direction === "asc"
-        ? `${column.label} 내림차순 정렬`
-        : `${column.label} 정렬 해제`;
-  const activeDirectionLabel =
-    sortState?.direction === "asc"
-      ? "오름차순"
-      : sortState?.direction === "desc"
-        ? "내림차순"
-        : "";
-  const ariaLabel = active
-    ? `현재 정렬: ${column.label} ${activeDirectionLabel}. 클릭하면 ${nextAction}.`
-    : `정렬 없음. 클릭하면 ${nextAction}.`;
-
-  return (
-    <EmrTableHeaderCell
-      align={align}
-      className={className}
-      interaction={column.headerInteraction ?? "sortable"}
-      resize={column.resize ?? "data-column"}
-      sortDirection={active ? sortState.direction : undefined}
-      sortLabel={ariaLabel}
-      title={ariaLabel}
-      onSort={() => onSort(column.key)}
-    >
-      {column.label}
-    </EmrTableHeaderCell>
-  );
-}
-
-function CustomerDataTable<TRow extends { id: string }>({
-  columns,
-  countLabel,
-  emptyLabel,
-  getRowLabel,
-  isActiveRow,
-  loading = false,
-  minTableWidthClassName,
-  minTableWidth,
-  onOpenRow,
-  readStatus = "ready",
-  rowTestId,
-  rows,
-  title,
-  testId,
-}: CustomerDataTableProps<TRow>) {
-  const query = useCustomerStore((state) => state.query);
-  const setQuery = useCustomerStore((state) => state.setQuery);
-  const [rowSelection, setRowSelection] = useState<Set<string>>(() => new Set());
-  const [rowActionFeedback, setRowActionFeedback] = useState<CustomerRowActionFeedback | null>(null);
-  const [density, setDensity] = useState<EmrTableDensity>("standard");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filterModel, setFilterModel] = useState(() =>
-    createInitialEmrTableFilterBuilderModel(
-      `${testId}-filter`,
-      `${testId}-filter-rule-1`
-    )
-  );
-  const [sortState, setSortState] = useState<CustomerTableSortState>(null);
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(columns.map((column) => [column.key, column.defaultVisible !== false]))
-  );
-  const filterFields = useMemo(
-    () => getCustomerTableFilterFields(columns, rows),
-    [columns, rows]
-  );
-  const activeFilterCount = getEmrTableFilterBuilderActiveCount(filterModel, filterFields);
-  const visibleRows = useMemo(
-    () =>
-      sortCustomerTableRows(
-        filterRowsByEmrTableFilterBuilder(rows, filterModel, filterFields),
-        columns,
-        sortState
-      ),
-    [columns, filterFields, filterModel, rows, sortState]
-  );
-  const rowIds = useMemo(() => new Set(visibleRows.map((row) => row.id)), [visibleRows]);
-  const visibleRowSelection = useMemo(
-    () => new Set(Array.from(rowSelection).filter((id) => rowIds.has(id))),
-    [rowIds, rowSelection]
-  );
-  const visibleColumns = columns.filter(
-    (column) => column.required || columnVisibility[column.key] !== false
-  );
-  const selectedCount = visibleRowSelection.size;
-  const allRowsSelected = visibleRows.length > 0 && visibleRows.every((row) => visibleRowSelection.has(row.id));
-  const someRowsSelected = visibleRows.some((row) => visibleRowSelection.has(row.id)) && !allRowsSelected;
-  const initialLoading = loading && rows.length === 0;
-  const visibleCountLabel = activeFilterCount > 0 ? `${visibleRows.length}/${rows.length}건` : `${countLabel}건`;
-  const scopeLabel = query || activeFilterCount > 0 ? `표시 ${title}` : `전체 ${title}`;
-  const hasFilterHiddenRows = rows.length > 0 && visibleRows.length === 0;
-  const emptyStateKind = hasFilterHiddenRows ? "no-filter-results" : "no-data";
-  const emptyStatePriority = hasFilterHiddenRows ? "local-recovery" : "supporting";
-  const emptyStateTitle = hasFilterHiddenRows
-    ? `조건에 맞는 ${title} 정보가 없습니다`
-    : emptyLabel.replace(/\.$/, "");
-  const emptyStateDescription = hasFilterHiddenRows
-    ? "조건을 바꾸면 숨겨진 정보가 다시 보입니다."
-    : "등록되면 이 표에 표시됩니다.";
-
-  const toggleAllRows = () => {
-    setRowSelection((current) => {
-      const next = new Set(Array.from(current).filter((id) => !rowIds.has(id)));
-
-      if (visibleRows.length > 0 && visibleRows.every((row) => current.has(row.id))) {
-        return next;
-      }
-
-      visibleRows.forEach((row) => next.add(row.id));
-      return next;
-    });
-  };
-
-  const toggleRow = (rowId: string) => {
-    setRowSelection((current) => {
-      const next = new Set(current);
-
-      if (next.has(rowId)) {
-        next.delete(rowId);
-      } else {
-        next.add(rowId);
-      }
-
-      return next;
-    });
-  };
-  const clearSelection = () => setRowSelection(new Set());
-  const handleSort = (key: string) => {
-    setSortState((current) => {
-      if (current?.key !== key) return { direction: "asc", key };
-      if (current.direction === "asc") return { direction: "desc", key };
-
-      return null;
-    });
-  };
-  const renderCell = (column: CustomerTableColumn<TRow>, row: TRow) => {
-    const content = column.cell(row);
-
-    if (typeof content !== "string" && typeof content !== "number") {
-      return content;
-    }
-
-    const text = String(content);
-
-    return (
-      <EmrTableCellText mode={column.textMode ?? "one-line"} fullText={text}>
-        {text}
-      </EmrTableCellText>
-    );
-  };
-
-  return (
-    <div className="relative flex min-h-[480px] flex-1 flex-col overflow-hidden bg-card" data-testid={testId}>
-      <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-card px-4 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="emr-text-body font-semibold">{scopeLabel}</span>
-          <Badge variant="secondary" className="min-w-10 justify-center">
-            {initialLoading ? (
-              <Skeleton
-                aria-label={`${title} 정보 불러오는 중`}
-                className="h-3 w-7 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]"
-                data-testid={`${testId}-count-skeleton`}
-              />
-            ) : (
-              visibleCountLabel
-            )}
-          </Badge>
-        </div>
-        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-          <CustomerSearchInput
-            value={query}
-            onValueChange={setQuery}
-            className="w-[260px] sm:w-[300px]"
-            placeholder={`${title} 검색`}
-          />
-          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
-          {filterFields.length > 0 ? (
-            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant={activeFilterCount > 0 ? "secondary" : "outline"}
-                    size="sm"
-                    className={cn(
-                      "h-8 bg-card px-2",
-                      activeFilterCount > 0 &&
-                        "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
-                    )}
-                    aria-label={
-                      activeFilterCount > 0
-                        ? `${title} 필터 ${activeFilterCount}개 설정`
-                        : `${title} 필터 설정`
-                    }
-                  />
-                }
-              >
-                <CdsActionsListFilterIcon aria-hidden="true" className="size-3.5" />
-                필터{activeFilterCount > 0 ? ` ${activeFilterCount}` : ""}
-              </PopoverTrigger>
-              <PopoverContent
-                align="end"
-                className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
-                initialFocus={false}
-              >
-                <EmrTableFilterBuilder
-                  clearAllLabel="초기화"
-                  description={`${title} 필터는 완성된 조건만 AND로 적용됩니다.`}
-                  fields={filterFields}
-                  model={filterModel}
-                  title="Filters"
-                  onClose={() => setFilterOpen(false)}
-                  onModelChange={setFilterModel}
-                />
-              </PopoverContent>
-            </Popover>
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={buttonVariants({
-                variant: "outline",
-                size: "sm",
-                className: "h-8 bg-card px-2",
-              })}
-              aria-label={`${title} 컬럼 표시 설정`}
-            >
-              <MenuIcon data-icon="inline-start" />
-              <ChevronDownIcon data-icon="inline-end" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>표시 컬럼</DropdownMenuLabel>
-                {columns.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.key}
-                    checked={columnVisibility[column.key] !== false}
-                    disabled={column.required}
-                    onCheckedChange={() =>
-                      setColumnVisibility((current) => ({
-                        ...current,
-                        [column.key]: !(current[column.key] !== false),
-                      }))
-                    }
-                  >
-                    {column.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      {rowActionFeedback ? (
-        <EmrInlineAlert
-          severity="info"
-          title={rowActionFeedback.title}
-          className="mx-4 my-3 emr-text-metadata"
-          action={
-            <Button size="sm" variant="outline" onClick={() => setRowActionFeedback(null)}>
-              확인
-            </Button>
-          }
-          testId="customer-row-action-feedback"
-        >
-          {rowActionFeedback.body}
-        </EmrInlineAlert>
-      ) : null}
-      <Table
-        aria-label={`${title} 고객관리 테이블`}
-        containerClassName="min-h-[360px] flex-1"
-        density={density}
-        layout="scroll"
-        minWidth={minTableWidth}
-        className={cn(minTableWidthClassName, "h-full")}
-      >
-        <TableHeader className="bg-[var(--emr-surface-muted)]">
-          <TableRow className="border-border hover:bg-transparent">
-            <EmrTableSelectionHeaderCell
-              aria-label={`${title} 선택`}
-              className="w-12"
-            >
-              <span className="sr-only">선택</span>
-              <span
-                data-row-interactive="true"
-                className="inline-flex size-6 items-center justify-center"
-                onClick={(event) => event.stopPropagation()}
-                onKeyDown={(event) => event.stopPropagation()}
-              >
-                <EmrTableCheckbox
-                  aria-label={`${title} 전체 선택`}
-                  checked={allRowsSelected}
-                  indeterminate={someRowsSelected}
-                  onCheckedChange={toggleAllRows}
-                />
-              </span>
-            </EmrTableSelectionHeaderCell>
-            {visibleColumns.map((column) =>
-              column.sortValue ? (
-                <CustomerSortableHeader
-                  key={column.key}
-                  align={column.align}
-                  className={cn("h-11 emr-text-dense", column.headerClassName)}
-                  column={column}
-                  sortState={sortState}
-                  onSort={handleSort}
-                />
-              ) : (
-                <EmrTableHeaderCell
-                  key={column.key}
-                  align={column.align}
-                  className={cn("h-11 emr-text-dense", column.headerClassName)}
-                  interaction={column.headerInteraction ?? "static"}
-                  resize={column.resize ?? "data-column"}
-                >
-                  {column.label}
-                </EmrTableHeaderCell>
-              )
-            )}
-            <EmrTableHeaderCell
-              aria-label={`${title} 행 작업`}
-              className="w-12"
-              interaction="static"
-              resize="none"
-            >
-              <span className="sr-only">행 작업</span>
-            </EmrTableHeaderCell>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {initialLoading ? (
-            <CustomerTableSkeletonRows
-              colSpan={visibleColumns.length + 2}
-              rowCount={6}
-              testId={`${testId}-skeleton-row`}
-              visibleColumnCount={visibleColumns.length}
-            />
-          ) : visibleRows.length ? (
-            visibleRows.map((row) => {
-              const active = isActiveRow(row);
-              const selected = visibleRowSelection.has(row.id);
-              const rowLabel = getRowLabel(row);
-
-              return (
-                <TableRow
-                  key={row.id}
-                  data-testid={rowTestId(row)}
-                  data-state={selected || active ? "selected" : undefined}
-                  className={cn(
-                    "h-12 cursor-pointer border-border bg-card text-foreground hover:bg-[var(--emr-state-hover)]",
-                    active && "bg-[var(--emr-state-selected)] hover:bg-[var(--emr-state-selected)]"
-                  )}
-                  onClick={() => onOpenRow(row)}
-                >
-                  <EmrTableSelectionCell className="w-12">
-                    <span
-                      data-row-interactive="true"
-                      className="inline-flex size-6 items-center justify-center"
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => event.stopPropagation()}
-                    >
-                      <EmrTableCheckbox
-                        aria-label={`${rowLabel} 선택`}
-                        checked={selected}
-                        onCheckedChange={() => toggleRow(row.id)}
-                      />
-                    </span>
-                  </EmrTableSelectionCell>
-                  {visibleColumns.map((column) => (
-                    <TableCell key={column.key} className={cn("h-12", column.className)}>
-                      {renderCell(column, row)}
-                    </TableCell>
-                  ))}
-                  <TableCell className="w-12">
-                    <CustomerRowActionMenu
-                      label={rowLabel}
-                      onOpen={() => onOpenRow(row)}
-                      onUnavailableAction={setRowActionFeedback}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          ) : readStatus === "error" ? (
-            <TableRow className="h-full hover:bg-transparent">
-              <TableCell colSpan={visibleColumns.length + 2} className="h-full min-h-36">
-                <div className="flex justify-center px-4 py-6">
-                  <EmrInlineAlert
-                    severity="warning"
-                    title={`${title} 정보를 불러오지 못했습니다`}
-                    className="max-w-[360px] emr-text-metadata"
-                    testId={`${testId}-read-error`}
-                  >
-                    잠시 후 다시 진입하면 최신 고객 정보를 다시 확인할 수 있습니다.
-                  </EmrInlineAlert>
-                </div>
-              </TableCell>
-            </TableRow>
-          ) : (
-            <TableRow className="h-full hover:bg-transparent">
-              <TableCell colSpan={visibleColumns.length + 2} className="h-full min-h-36">
-                <div className="flex justify-center px-4 py-6">
-                  <EmrEmptyState
-                    kind={emptyStateKind}
-                    priority={emptyStatePriority}
-                    surface="table"
-                    size="md"
-                    title={emptyStateTitle}
-                    description={emptyStateDescription}
-                  />
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-      <div className="flex h-11 items-center justify-between border-t px-4 emr-text-metadata font-medium text-muted-foreground">
-        <span>{initialLoading ? "총 불러오는 중" : `총 ${visibleRows.length}건`}</span>
-        <div className="flex items-center gap-2">
-          <span>{initialLoading ? "- / -" : `${visibleRows.length ? `1-${visibleRows.length}` : "0"} / ${visibleRows.length}`}</span>
-          <Button type="button" variant="outline" size="sm" className="h-7 bg-card" disabled>
-            이전
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="h-7 bg-card" disabled>
-            다음
-          </Button>
-        </div>
-      </div>
-      {selectedCount > 0 ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
-          <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border bg-card px-3 shadow-lg">
-            <span className="emr-text-metadata font-medium text-muted-foreground">
-              선택한 {title} {selectedCount}개
-            </span>
-            <Button size="sm" variant="ghost" onClick={clearSelection}>
-              선택 해제
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function getCustomerSkeletonWidth(index: number) {
-  const widths = ["w-24", "w-32", "w-20", "w-16", "w-28", "w-36", "w-24", "w-28"];
-
-  return widths[index % widths.length];
-}
-
-function CustomerTableSkeletonRows({
-  colSpan,
-  rowCount,
-  testId,
-  visibleColumnCount,
-}: {
-  colSpan: number;
-  rowCount: number;
-  testId: string;
-  visibleColumnCount: number;
-}) {
-  return (
-    <>
-      {Array.from({ length: rowCount }, (_, rowIndex) => (
-        <TableRow key={`${testId}-${rowIndex}`} className="h-12 hover:bg-transparent" data-testid={testId}>
-          <EmrTableSelectionCell className="w-12">
-            <Skeleton className="size-4 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
-          </EmrTableSelectionCell>
-          {Array.from({ length: visibleColumnCount }, (_, columnIndex) => (
-            <TableCell key={`${testId}-${rowIndex}-${columnIndex}`} className="h-12">
-              <Skeleton
-                className={cn(
-                  "h-4 max-w-full rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]",
-                  getCustomerSkeletonWidth(columnIndex),
-                )}
-              />
-            </TableCell>
-          ))}
-          <TableCell className="w-12">
-            <Skeleton className="ml-auto size-7 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-        </TableRow>
-      ))}
-      <TableRow className="sr-only">
-        <TableCell colSpan={colSpan}>고객 정보를 불러오는 중입니다.</TableCell>
-      </TableRow>
-    </>
-  );
 }
 
 export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
@@ -1121,117 +364,11 @@ function PatientTable({
 }) {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const columns = useMemo<Array<CustomerTableColumn<CustomerPatientRow>>>(
-    () => [
-      {
-        key: "patientNo",
-        label: "환자코드",
-        required: true,
-        headerInteraction: "sortable",
-        className: "whitespace-nowrap font-semibold",
-        textMode: "one-line",
-        sortValue: (row) => row.patientNo,
-        cell: (row) => row.patientNo,
-      },
-      {
-        key: "name",
-        label: "동물명",
-        required: true,
-        headerInteraction: "sortable",
-        className: "max-w-40 font-semibold",
-        textMode: "two-line-if-long",
-        sortValue: (row) => row.name,
-        cell: (row) => row.name,
-      },
-      {
-        key: "breed",
-        label: "품종",
-        headerInteraction: "filterable",
-        className: "max-w-56",
-        textMode: "one-line",
-        filterOptions: (rows) => getUniqueCustomerFilterOptions(rows, (row) => [row.breed]),
-        filterValues: (row) => [row.breed],
-        cell: (row) => row.breed,
-      },
-      {
-        key: "sex",
-        label: "성별",
-        headerInteraction: "filterable",
-        className: "whitespace-nowrap",
-        textMode: "one-line",
-        filterOptions: (rows) => getUniqueCustomerFilterOptions(rows, (row) => [row.sex]),
-        filterValues: (row) => [row.sex],
-        cell: (row) => row.sex,
-      },
-      {
-        key: "age",
-        label: "나이(생년월일)",
-        headerInteraction: "sortable",
-        className: "whitespace-nowrap",
-        textMode: "one-line",
-        sortValue: (row) => row.patient.birthDate ?? row.age,
-        cell: (row) => row.age,
-      },
-      {
-        key: "workBadges",
-        label: "상태",
-        headerInteraction: "filterable",
-        className: "min-w-48",
-        textMode: "badge-wrap",
-        filterOptions: (rows) =>
-          getUniqueCustomerFilterOptions(rows, (row) => row.workBadges.map((badge) => badge.label)),
-        filterValues: (row) => row.workBadges.map((badge) => badge.label),
-        cell: (row) => (
-          <div className="flex flex-wrap gap-1">
-            {row.workBadges.map((badge) => (
-              <CustomerWorkBadge key={`${row.id}-${badge.label}`} badge={badge} />
-            ))}
-          </div>
-        ),
-      },
-      {
-        key: "guardianNames",
-        label: "보호자명",
-        headerInteraction: "compound",
-        className: "max-w-52",
-        textMode: "two-line-if-long",
-        cell: (row) => row.guardianNames,
-      },
-      {
-        key: "phone",
-        label: "전화번호",
-        headerInteraction: "static",
-        className: "whitespace-nowrap",
-        textMode: "one-line",
-        cell: (row) => row.phone,
-      },
-      {
-        key: "messageConsent",
-        label: "수신 여부",
-        headerInteraction: "filterable",
-        className: "whitespace-nowrap",
-        textMode: "one-line",
-        filterOptions: (rows) => getUniqueCustomerFilterOptions(rows, (row) => [row.messageConsent]),
-        filterValues: (row) => [row.messageConsent],
-        cell: (row) => row.messageConsent,
-      },
-      {
-        key: "registeredAt",
-        label: "등록일시",
-        headerInteraction: "sortable",
-        className: "whitespace-nowrap",
-        textMode: "one-line",
-        sortValue: (row) => row.patient.createdAt,
-        cell: (row) => row.registeredAt,
-      },
-    ],
-    []
-  );
+  const columns = useMemo(() => createCustomerPatientColumns(), []);
 
   return (
     <CustomerDataTable
       columns={columns}
-      countLabel={`${rows.length}`}
       emptyLabel="동물 정보가 없습니다."
       getRowLabel={(row) => row.name}
       isActiveRow={(row) =>
@@ -1239,7 +376,6 @@ function PatientTable({
         (activeDrawer.type === "patient" || activeDrawer.type === "reception-patient")
       }
       loading={loading}
-      minTableWidthClassName={customerTableWidthClassNames.patient}
       minTableWidth={customerTableMinWidths.patient}
       onOpenRow={(row) => setActiveDrawer({ type: "patient", id: row.id })}
       readStatus={readStatus}
@@ -1262,78 +398,11 @@ function GuardianTable({
 }) {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const columns = useMemo<Array<CustomerTableColumn<CustomerGuardianRow>>>(
-    () => [
-      {
-        key: "name",
-        label: "보호자명",
-        required: true,
-        headerInteraction: "sortable",
-        className: "max-w-44 font-semibold",
-        textMode: "two-line-if-long",
-        sortValue: (row) => row.name,
-        cell: (row) => row.name,
-      },
-      {
-        key: "mobilePhone",
-        label: "휴대전화",
-        required: true,
-        headerInteraction: "static",
-        className: "whitespace-nowrap",
-        textMode: "one-line",
-        cell: (row) => row.mobilePhone,
-      },
-      {
-        key: "patientSummary",
-        label: "연결 동물",
-        headerInteraction: "compound",
-        className: "max-w-64",
-        textMode: "two-line-if-long",
-        cell: (row) => row.patientSummary,
-      },
-      {
-        key: "consentSummary",
-        label: "동의 상태",
-        headerInteraction: "filterable",
-        className: "whitespace-nowrap",
-        textMode: "one-line",
-        filterOptions: (rows) => getUniqueCustomerFilterOptions(rows, (row) => [row.consentSummary]),
-        filterValues: (row) => [row.consentSummary],
-        cell: (row) => row.consentSummary,
-      },
-      {
-        key: "recentCs",
-        label: "최근 CS",
-        headerInteraction: "compound",
-        className: "max-w-72",
-        textMode: "two-line-if-long",
-        cell: (row) => row.recentCs,
-      },
-      {
-        key: "recentWork",
-        label: "최근 발송/업무",
-        headerInteraction: "compound",
-        className: "max-w-64",
-        textMode: "two-line-if-long",
-        cell: (row) => row.recentWork,
-      },
-      {
-        key: "registeredAt",
-        label: "등록일시",
-        headerInteraction: "sortable",
-        className: "whitespace-nowrap",
-        textMode: "one-line",
-        sortValue: (row) => row.guardian.createdAt,
-        cell: (row) => row.registeredAt,
-      },
-    ],
-    []
-  );
+  const columns = useMemo(() => createCustomerGuardianColumns(), []);
 
   return (
     <CustomerDataTable
       columns={columns}
-      countLabel={`${rows.length}`}
       emptyLabel="보호자 정보가 없습니다."
       getRowLabel={(row) => row.name}
       isActiveRow={(row) =>
@@ -1341,7 +410,6 @@ function GuardianTable({
         (activeDrawer.type === "guardian" || activeDrawer.type === "reception-guardian")
       }
       loading={loading}
-      minTableWidthClassName={customerTableWidthClassNames.guardian}
       minTableWidth={customerTableMinWidths.guardian}
       onOpenRow={(row) => setActiveDrawer({ type: "guardian", id: row.id })}
       readStatus={readStatus}
@@ -1357,7 +425,6 @@ export function CustomerContent() {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getCustomerWorkspaceId(params.workspaceId);
   const listMode = useCustomerStore((state) => state.listMode);
-  const query = useCustomerStore((state) => state.query);
   const profileReadState = useCustomerStore((state) => state.profileReadState);
   const setProfileReadState = useCustomerStore((state) => state.setProfileReadState);
   const authSession = useMockAuthStore((state) => state.session);
@@ -1421,19 +488,23 @@ export function CustomerContent() {
   }, [applyPatientGuardianLookupItem, authSession?.id, setProfileReadState, workspaceId]);
   const patientRows = useMemo(
     () =>
-      filterCustomerRows(
-        getCustomerPatientRows({ guardians, patientGuardians, patients, workspaceId }),
-        query,
-      ),
-    [guardians, patientGuardians, patients, query, workspaceId]
+      getCustomerPatientRows({
+        guardians,
+        patientGuardians,
+        patients,
+        workspaceId,
+      }),
+    [guardians, patientGuardians, patients, workspaceId],
   );
   const guardianRows = useMemo(
     () =>
-      filterCustomerRows(
-        getCustomerGuardianRows({ guardians, patientGuardians, patients, workspaceId }),
-        query,
-      ),
-    [guardians, patientGuardians, patients, query, workspaceId]
+      getCustomerGuardianRows({
+        guardians,
+        patientGuardians,
+        patients,
+        workspaceId,
+      }),
+    [guardians, patientGuardians, patients, workspaceId],
   );
   const customerProfileLoading = isCustomerProfileReadLoading({
     status: profileReadState.status,
@@ -1447,31 +518,31 @@ export function CustomerContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="customer-workspace">
-      <CustomerToolbar
-        loading={customerProfileLoading}
-        listMode={listMode}
-        patientCount={patientRows.length}
-        guardianCount={guardianRows.length}
-      />
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex min-h-full flex-col">
-          {listMode === "patient" ? (
-            <PatientTable
-              loading={customerProfileLoading}
-              readStatus={tableReadStatus}
-              rows={patientRows}
-            />
-          ) : null}
-          {listMode === "guardian" ? (
-            <GuardianTable
-              loading={customerProfileLoading}
-              readStatus={tableReadStatus}
-              rows={guardianRows}
-            />
-          ) : null}
-          {listMode === "deleted" ? <DeletedCustomerContent /> : null}
-        </div>
-      </ScrollArea>
+      {listMode === "patient" ? (
+        <PatientTable
+          loading={customerProfileLoading}
+          readStatus={tableReadStatus}
+          rows={patientRows}
+        />
+      ) : null}
+      {listMode === "guardian" ? (
+        <GuardianTable
+          loading={customerProfileLoading}
+          readStatus={tableReadStatus}
+          rows={guardianRows}
+        />
+      ) : null}
+      {listMode === "deleted" ? (
+        <>
+          <CustomerToolbar
+            loading={customerProfileLoading}
+            listMode={listMode}
+            patientCount={patientRows.length}
+            guardianCount={guardianRows.length}
+          />
+          <DeletedCustomerContent />
+        </>
+      ) : null}
     </div>
   );
 }

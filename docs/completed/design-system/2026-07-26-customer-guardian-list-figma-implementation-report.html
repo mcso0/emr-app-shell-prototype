@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>고객관리 보호자 목록 Figma 구현 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #171717;
+        background: #f5f5f5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 20px;
+      }
+      main {
+        width: min(920px, 100%);
+        margin: 0 auto;
+        padding: 40px;
+        border: 1px solid #e5e5e5;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 8px 30px rgb(0 0 0 / 6%);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        line-height: 1.35;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 18px;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      .summary {
+        margin: 0;
+        color: #525252;
+      }
+      .status {
+        display: inline-flex;
+        margin-top: 20px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #e5e5e5;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #fafafa;
+        color: #525252;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+      .note {
+        margin-top: 28px;
+        padding: 14px 16px;
+        border-left: 3px solid #737373;
+        background: #fafafa;
+        color: #404040;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>고객관리 보호자 목록 Figma 구현 결과</h1>
+      <p class="summary">
+        CDS.V2 보호자 목록 시안을 기준으로 UI를 재구성하고, 기존 고객 데이터와
+        검색·필터·정렬·선택·상세 열기 동작은 유지했다.
+      </p>
+      <span class="status">구현 완료 · 사용자 검토 대기</span>
+
+      <h2>무엇이 바뀌었나</h2>
+      <ul>
+        <li>
+          설치돼 있던 TanStack Table과 프로젝트 Table 프리미티브를 조합해
+          customer feature 전용 데이터 테이블 경계를 만들었다.
+        </li>
+        <li>
+          108px 목록 헤더, 36px 컬럼 헤더, 기본 40px 행, 64px 푸터와
+          48/20/10px 인셋을 Figma 기준으로 적용했다.
+        </li>
+        <li>
+          컬럼은 typed ColumnDef schema로 유지하고, 텍스트뿐 아니라 Badge,
+          Button, Avatar 같은 ReactNode 셀을 수용하도록 분리했다.
+        </li>
+        <li>
+          모든 데이터 헤더는 라벨과 정렬 아이콘을 하나의 버튼으로 렌더링한다.
+          현재 데이터 계약이 있는 보호자명·등록일시만 정렬을 실행한다.
+        </li>
+        <li>
+          shared Checkbox는 기존 shadcn/Base UI API를 유지하면서 Figma의
+          checked, mixed, focus, invalid, disabled 표면과 exact SVG indicator를
+          적용했다.
+        </li>
+        <li>
+          실제 페이지네이션은 추가하지 않고, 푸터에 1/1 페이지와 비활성
+          이전·다음 버튼만 표시했다.
+        </li>
+      </ul>
+
+      <h2>주요 파일</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>영역</th>
+            <th>파일</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>고객관리 테이블</td>
+            <td>
+              <code>src/features/customer/components/customer-data-table.tsx</code>,
+              <code>customer-table-columns.tsx</code>
+            </td>
+          </tr>
+          <tr>
+            <td>헤더·푸터·셀</td>
+            <td>
+              <code>customer-list-header.tsx</code>,
+              <code>customer-data-table-footer.tsx</code>,
+              <code>customer-table-cell-content.tsx</code>
+            </td>
+          </tr>
+          <tr>
+            <td>공용 Checkbox</td>
+            <td>
+              <code>src/components/ui/checkbox.tsx</code>,
+              <code>src/components/emr/table-checkbox.tsx</code>
+            </td>
+          </tr>
+          <tr>
+            <td>회귀 검증</td>
+            <td>
+              <code>tests/customer.spec.ts</code>,
+              <code>tests/app-shell.spec.ts</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li>ESLint와 TypeScript: 통과</li>
+        <li>고객관리 Playwright: 14/14 통과</li>
+        <li>1540×1024, 좁은 화면 가로 스크롤, 넓은 화면 유동 폭: 통과</li>
+        <li>키보드 선택, mixed 전체 선택, focus, reduced-motion: 통과</li>
+        <li>Next production build와 Storybook build: 통과</li>
+        <li>문서 링크 검사와 secret scan: 통과</li>
+        <li>독립 HTML 분석 보고서 build, offline test, contract validator: 통과</li>
+      </ul>
+
+      <h2>남은 결정</h2>
+      <p>
+        휴대전화·연결 동물·동의 상태·최근 CS·최근 발송/업무는 Figma처럼
+        버튼 모양을 유지하지만, 비교 기준과 빈 값 정렬 규칙이 정해질 때까지
+        비활성이다. 실제 페이지네이션 역시 별도 데이터 계약 승인 전에는
+        추가하지 않는다.
+      </p>
+
+      <div class="note">
+        공용 Checkbox 소비처 확인에서 billing, home, hospital-admin은 통과했다.
+        dispensing 2개와 chart 1개는 Checkbox 검증 전 기존 데모 행 또는 문구가
+        없어 실패했으므로 별도 baseline 후속 항목으로 남겼다.
+      </div>
+    </main>
+  </body>
+</html>

@@ -936,15 +936,33 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await expect(statusIcon).toHaveCSS("height", "12px");
   await expect(statusIcon).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-neutral-text)"));
   await expect(checkbox).toHaveCSS("opacity", "1");
-  await expect(checkbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-default)"));
+  expect(
+    await checkbox.evaluate(
+      (element) => getComputedStyle(element, "::before").borderColor,
+    ),
+  ).toBe(
+    await resolveCssColor(page, "var(--clair-color-atomic-neutral-300)"),
+  );
   const completedCheckbox = page.getByTestId("order-row-section-0-o-10027").getByRole("checkbox");
   const canceledCheckbox = page.getByTestId("order-row-section-0-o-10028").getByRole("checkbox");
   await expect(completedCheckbox).toBeDisabled();
-  await expect(completedCheckbox).toHaveCSS("opacity", "1");
-  await expect(completedCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-subtle)"));
+  await expect(completedCheckbox).toHaveCSS("opacity", "0.5");
+  expect(
+    await completedCheckbox.evaluate(
+      (element) => getComputedStyle(element, "::before").borderColor,
+    ),
+  ).toBe(
+    await resolveCssColor(page, "var(--clair-color-atomic-neutral-300)"),
+  );
   await expect(canceledCheckbox).toBeDisabled();
-  await expect(canceledCheckbox).toHaveCSS("opacity", "1");
-  await expect(canceledCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-subtle)"));
+  await expect(canceledCheckbox).toHaveCSS("opacity", "0.5");
+  expect(
+    await canceledCheckbox.evaluate(
+      (element) => getComputedStyle(element, "::before").borderColor,
+    ),
+  ).toBe(
+    await resolveCssColor(page, "var(--clair-color-atomic-neutral-300)"),
+  );
 
   await checkbox.click();
   await expect(page.getByText("상세 정보")).toBeHidden();
@@ -954,7 +972,7 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await expect(page.getByText("선택한 오더 1개")).toBeHidden();
   await expect(row.getByText("완료").first()).toBeVisible();
   await expect(checkbox).toBeDisabled();
-  await expect(checkbox).toHaveCSS("opacity", "1");
+  await expect(checkbox).toHaveCSS("opacity", "0.5");
 });
 
 test("dispensing table aligns selection header and row checkboxes", async ({ page }) => {
