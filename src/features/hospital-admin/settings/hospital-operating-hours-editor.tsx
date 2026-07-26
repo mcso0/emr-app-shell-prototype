@@ -270,6 +270,7 @@ export function HospitalOperatingHoursEditor({
                 size="sm"
                 spacing={1}
                 className="flex-wrap justify-start md:flex-nowrap md:justify-end"
+                variant="primary"
                 value={openDays}
                 onValueChange={handleOpenDaysChange}
               >
@@ -278,7 +279,6 @@ export function HospitalOperatingHoursEditor({
                     key={day}
                     value={day}
                     aria-label={`${weekdayLabels[day]} 운영`}
-                    className="size-8 min-w-8 rounded-lg px-0 aria-pressed:bg-neutral-800 aria-pressed:text-white data-[state=on]:bg-neutral-800 data-[state=on]:text-white"
                   >
                     {weekdayShortLabels[day]}
                   </ToggleGroupItem>
