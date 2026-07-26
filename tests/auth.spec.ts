@@ -1012,7 +1012,10 @@ test("role_permission:view fixture can inspect roles but cannot manage invitatio
   );
 
   await page.goto("/w/role-viewer-hospital/orders?modulePanel=open&aside=closed");
-  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "병원 구성원" })
+    .click();
   await expect(page.getByRole("heading", { name: "병원 구성원" })).toBeVisible();
   await expect(page.getByRole("button", { name: "직원 초대" })).toBeDisabled();
 
@@ -1104,7 +1107,10 @@ test("hospital admin manages custom role and job catalogs outside the invitation
   await expect(jobDialog).toBeVisible();
   await jobDialog.getByLabel("직무 이름").fill("CS");
   await jobDialog.getByRole("button", { name: "직무 저장" }).click();
-  await expect(page.getByRole("button", { name: /CS.*0명/ })).toBeVisible();
+  const customJobRow = page.locator('[data-testid^="job-position-action-custom:"]');
+  await expect(customJobRow).toContainText("CS");
+  await expect(customJobRow.getByRole("button", { name: "직무 편집" })).toBeVisible();
+  await expect(customJobRow.getByRole("button", { name: "직무 보관" })).toBeVisible();
 
   await page.getByRole("button", { name: "구성원 관리 열기" }).click();
   await page.getByRole("button", { name: "직원 초대" }).click();

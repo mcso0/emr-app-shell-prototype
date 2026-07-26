@@ -10,7 +10,7 @@ source_docs:
   - "docs/design/screens/hospital-admin/hospital-admin-settings-hub-ux.md"
 dependencies:
   - "HOSPITAL-ADMIN-PR-002"
-updated: "2026-07-23"
+updated: "2026-07-26"
 ---
 
 # Role and Permission Management UI
@@ -51,6 +51,8 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 - 2026-07-23 browser QA: `1440×1000` and `390×844` both had no horizontal overflow; role changes kept at most one panel open; no console errors were reported.
 - 2026-07-23 human-review correction: the open role item now collapses when selected again. Focused Playwright, targeted ESLint, TypeScript, and authenticated local-browser verification passed.
 - 2026-07-23 UX audit follow-up: 7 focused Playwright scenarios passed for deterministic detail back, dirty role/work-default navigation, browser-back draft preservation, cross-tab saved defaults, static system jobs, and compact keyboard behavior. Authenticated local-browser verification also passed.
+- 2026-07-26 CDS.V2 alignment: verified Figma nodes `27804:125858`, `27804:127072`, `27804:128057`, `27804:128167`, and `27804:128277` with node metadata and screenshots, then applied their shared `920px` surface, `85px` row, title, spacing, border, radius, shadow, icon, badge, and expanded-permission patterns without changing product copy or behavior.
+- 2026-07-26 focused verification: 9 Playwright scenarios passed, including exact desktop DOM geometry, narrow-viewport overflow, read-only access, and custom role/job catalog checks. Authenticated local-browser review covered all four screens with no console warnings or errors.
 
 ## Handoff
 
@@ -78,3 +80,10 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 - Fixed locally: the detail header back action now deterministically returns to the settings hub, including direct deep-link entry.
 - Fixed locally: dirty role/work-default navigation uses the existing confirmation dialog; browser back preserves the draft and the hub identifies unsaved changes.
 - Fixed locally: system and read-only job-position rows are static. Only editable custom positions expose button, chevron, hover, and focus affordances.
+
+## 2026-07-26 CDS.V2 Figma Alignment
+
+- Figma remains the visual source of truth; the existing product remains the source of truth for copy, information architecture, URLs, permissions, persistence, and all loading/error/empty/read-only behavior.
+- The two role nodes represent collapsed and expanded role-list states. Both are covered by the existing exclusive open/close interaction and the updated inline permission surface.
+- Current product differences are intentional: the hub and detail title remain `권한 역할`, and work defaults remain the existing four fields even though the Figma reference contains different sample copy and an additional example row.
+- Existing CLAiR semantic variables, shared buttons, badges, switches, selects, dialogs, fields, and icon components were reused. No dependency, API, migration, RLS, permission-model, or data-model change was introduced.
