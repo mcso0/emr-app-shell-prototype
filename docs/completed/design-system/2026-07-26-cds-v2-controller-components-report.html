@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CDS.V2 컨트롤러 컴포넌트 구현 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f6f7f9;
+        --surface: #fff;
+        --line: #e5e5e5;
+        --text: #262626;
+        --muted: #525252;
+        --subtle: #737373;
+        --success-bg: #ecfdf5;
+        --success-text: #047857;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", system-ui, sans-serif;
+      }
+      main { width: min(920px, calc(100% - 32px)); margin: 40px auto; }
+      h1 { margin: 0; font-size: clamp(24px, 4vw, 36px); line-height: 1.25; }
+      h2 { margin: 0 0 14px; font-size: 18px; }
+      p { margin: 10px 0 0; color: var(--muted); line-height: 1.65; }
+      .eyebrow { margin: 0 0 8px; color: var(--subtle); font-size: 12px; font-weight: 700; }
+      .status {
+        display: inline-flex;
+        margin-top: 18px;
+        border-radius: 9999px;
+        background: var(--success-bg);
+        color: var(--success-text);
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .card {
+        margin-top: 24px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--surface);
+        padding: 24px;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { border-bottom: 1px solid var(--line); padding: 12px 8px; text-align: left; }
+      th { color: var(--subtle); font-size: 11px; }
+      td:last-child { color: var(--success-text); font-weight: 700; }
+      ul { margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.75; }
+      code { border-radius: 5px; background: #f5f5f5; padding: 2px 5px; }
+      @media (max-width: 640px) {
+        main { margin: 24px auto; }
+        .card { overflow-x: auto; padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">DESIGN-SYSTEM-PR-083 · 2026-07-26</p>
+      <h1>CDS.V2 컨트롤러 컴포넌트 구현 결과</h1>
+      <p>
+        Figma의 Toggle, ToggleGroup, Switch 시각 계약을 기존 Base UI 기반
+        공유 컴포넌트에 흡수했다. 기존 화면의 의미와 선택 동작은 유지하면서
+        크기, 상태, 그룹 배치, 접근성 문서와 검증 범위를 확장했다.
+      </p>
+      <span class="status">구현 및 회귀 검증 완료 · 사용자 검토 대기</span>
+
+      <section class="card" aria-labelledby="figma-title">
+        <h2 id="figma-title">Figma 대조 결과</h2>
+        <table>
+          <thead><tr><th>항목</th><th>Figma</th><th>구현</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>Toggle 크기</td><td>sm 32px, md 36px</td><td>동일, 기존 소형은 xs로 보존</td><td>일치</td></tr>
+            <tr><td>Toggle 시각</td><td>primary, ghost, outline</td><td>동일, default는 ghost 호환 별칭</td><td>일치</td></tr>
+            <tr><td>ToggleGroup</td><td>primary 4px/6px, ghost 0px, outline 연결형</td><td>동일 컨테이너·모서리 규칙</td><td>일치</td></tr>
+            <tr><td>Switch sm</td><td>32×18px, thumb 16px</td><td>동일, 이동 14px</td><td>일치</td></tr>
+            <tr><td>Switch md</td><td>44×24px, thumb 20px</td><td>동일, 이동 20px</td><td>일치</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" aria-labelledby="scope-title">
+        <h2 id="scope-title">변경 범위</h2>
+        <ul>
+          <li><code>Toggle</code>에 CDS.V2 variant, size, 아이콘 전용 배치를 추가했다.</li>
+          <li><code>ToggleGroup</code>에 primary 컨테이너와 연결형 outline 배치를 추가했다.</li>
+          <li><code>Switch</code>에 xs/sm/md 크기와 neutral on/off 상태를 추가했다.</li>
+          <li>접수의 소형 Switch는 xs로 고정하고, 최신 운영 요일 화면의 전용 스타일은 보존했다.</li>
+          <li>라벨은 외부 label 합성, 필수 단일 선택은 <code>SegmentedControl</code> 책임으로 유지했다.</li>
+          <li>신규 의존성, 전역 토큰, API, 저장 동작, 권한, Figma 파일은 변경하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="verification-title">
+        <h2 id="verification-title">검증</h2>
+        <ul>
+          <li>Storybook 상호작용 테스트 16개 통과.</li>
+          <li>병원 운영일, 역할·직무, 권한 화면, 접수 등록 회귀 테스트 4개 통과.</li>
+          <li>Toggle, ToggleGroup, Switch의 실제 브라우저 치수와 상태 전환을 확인했다.</li>
+          <li>TypeScript, 전체 ESLint, 문서 링크 검사, diff 검사 통과.</li>
+          <li>Storybook 및 Next.js 프로덕션 빌드 통과.</li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="risk-title">
+        <h2 id="risk-title">남은 확인 사항</h2>
+        <p>
+          배포와 Figma 파일 수정은 수행하지 않았다. Storybook의 기존 Pretendard 경로,
+          Lottie eval, 번들 크기 경고와 Next.js NFT 추적 경고는 이번 변경에서 새로
+          발생한 문제가 아니며 별도 정리가 필요하다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

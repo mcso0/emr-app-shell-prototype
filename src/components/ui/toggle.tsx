@@ -6,18 +6,26 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const toggleVariants = cva(
-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted data-[state=on]:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/toggle relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-[var(--clair-radius-atomic-8)] border border-transparent emr-control-text font-medium outline-none after:absolute after:-inset-1 after:content-[''] transition-[color,background-color,border-color,box-shadow] duration-[var(--clair-motion-duration-fast)] ease-[var(--clair-motion-easing-standard)] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&:has(>svg:only-child)]:px-0 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-transparent",
-        outline: "border border-input bg-transparent hover:bg-muted",
+        default:
+          "bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--clair-color-atomic-black-alpha-6)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
+        primary:
+          "bg-background text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-neutral-100)] data-pressed:bg-[var(--clair-color-atomic-neutral-800)] data-pressed:text-white data-pressed:hover:bg-[var(--clair-color-atomic-neutral-900)] dark:bg-background dark:text-foreground dark:hover:bg-muted dark:data-pressed:bg-foreground dark:data-pressed:text-background",
+        ghost:
+          "bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--clair-color-atomic-black-alpha-6)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
+        outline:
+          "border-[var(--emr-border-default)] bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--clair-color-atomic-black-alpha-4)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
       },
       size: {
+        xs: "h-7 min-w-7 px-2.5 text-[0.8rem] [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "h-8 min-w-8 px-3",
+        md: "h-9 min-w-9 px-4",
         default:
-          "h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+          "h-8 min-w-8 px-3",
+        lg: "h-9 min-w-9 px-4",
       },
     },
     defaultVariants: {

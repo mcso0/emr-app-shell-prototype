@@ -20,11 +20,18 @@ const ToggleGroupContext = React.createContext<
   orientation: "horizontal",
 })
 
+const defaultSpacingByVariant = {
+  default: 2,
+  ghost: 0,
+  outline: 0,
+  primary: 1.5,
+} as const
+
 function ToggleGroup({
   className,
   variant,
   size,
-  spacing = 2,
+  spacing,
   orientation = "horizontal",
   children,
   ...props
@@ -33,22 +40,36 @@ function ToggleGroup({
     spacing?: number
     orientation?: "horizontal" | "vertical"
   }) {
+  const resolvedVariant = variant ?? "default"
+  const resolvedSpacing = spacing ?? defaultSpacingByVariant[resolvedVariant]
+  const connected = resolvedSpacing === 0 && resolvedVariant !== "ghost"
+
   return (
     <ToggleGroupPrimitive
       data-slot="toggle-group"
-      data-variant={variant}
+      data-variant={resolvedVariant}
       data-size={size}
-      data-spacing={spacing}
+      data-spacing={resolvedSpacing}
       data-orientation={orientation}
-      style={{ "--gap": spacing } as React.CSSProperties}
+      data-connected={connected}
+      style={
+        {
+          "--toggle-group-gap": resolvedSpacing,
+        } as React.CSSProperties
+      }
       className={cn(
-        "group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] rounded-lg data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-vertical:flex-col data-vertical:items-stretch",
+        "group/toggle-group flex w-fit flex-row items-center gap-[calc(var(--toggle-group-gap)*0.25rem)] rounded-[var(--clair-radius-atomic-10)] data-[variant=primary]:bg-[var(--clair-color-atomic-neutral-100)] data-[variant=primary]:p-1 data-vertical:flex-col data-vertical:items-stretch",
         className
       )}
       {...props}
     >
       <ToggleGroupContext.Provider
-        value={{ variant, size, spacing, orientation }}
+        value={{
+          variant: resolvedVariant,
+          size,
+          spacing: resolvedSpacing,
+          orientation,
+        }}
       >
         {children}
       </ToggleGroupContext.Provider>
@@ -71,12 +92,17 @@ function ToggleGroupItem({
       data-variant={context.variant || variant}
       data-size={context.size || size}
       data-spacing={context.spacing}
+      data-orientation={context.orientation}
       className={cn(
-        "shrink-0 group-data-[spacing=0]/toggle-group:rounded-none group-data-[spacing=0]/toggle-group:px-2 focus:z-10 focus-visible:z-10 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-end]:pr-1.5 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-start]:pl-1.5 group-data-horizontal/toggle-group:data-[spacing=0]:first:rounded-l-lg group-data-vertical/toggle-group:data-[spacing=0]:first:rounded-t-lg group-data-horizontal/toggle-group:data-[spacing=0]:last:rounded-r-lg group-data-vertical/toggle-group:data-[spacing=0]:last:rounded-b-lg group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:border-l-0 group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:border-t-0 group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-l group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-t",
+        "shrink-0 after:hidden focus:z-10 focus-visible:z-10 group-data-[connected=true]/toggle-group:rounded-none",
+        context.orientation === "horizontal"
+          ? "group-data-[connected=true]/toggle-group:first:rounded-l-[var(--clair-radius-atomic-8)] group-data-[connected=true]/toggle-group:last:rounded-r-[var(--clair-radius-atomic-8)] group-data-[connected=true]/toggle-group:data-[variant=outline]:border-l-0 group-data-[connected=true]/toggle-group:data-[variant=outline]:first:border-l"
+          : "group-data-[connected=true]/toggle-group:first:rounded-t-[var(--clair-radius-atomic-8)] group-data-[connected=true]/toggle-group:last:rounded-b-[var(--clair-radius-atomic-8)] group-data-[connected=true]/toggle-group:data-[variant=outline]:border-t-0 group-data-[connected=true]/toggle-group:data-[variant=outline]:first:border-t",
         toggleVariants({
           variant: context.variant || variant,
           size: context.size || size,
         }),
+        "px-0",
         className
       )}
       {...props}
