@@ -87,3 +87,11 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 - The two role nodes represent collapsed and expanded role-list states. Both are covered by the existing exclusive open/close interaction and the updated inline permission surface.
 - Current product differences are intentional: the hub and detail title remain `권한 역할`, and work defaults remain the existing four fields even though the Figma reference contains different sample copy and an additional example row.
 - Existing CLAiR semantic variables, shared buttons, badges, switches, selects, dialogs, fields, and icon components were reused. No dependency, API, migration, RLS, permission-model, or data-model change was introduced.
+
+## 2026-07-26 Role Detail Final Parity
+
+- Preserved the current product copy, URL flow, role data, permission data, exclusive open/close behavior, dialogs, and member-management entry.
+- Matched the confirmed role-detail surfaces and geometry: page `#FCFCFC`, expanded detail `rgba(0,0,0,0.02)`, `84px` role-row content height, `44px` detail header, and `24px` detail padding/gap.
+- Matched the action and permission dimensions: `129×32px` custom-role action, `113×32px` member action with edit icon, `872px` permission lists, and `75px` permission-row content height.
+- Rejected the earlier `90px` vertical-offset finding after matching the expanded role state: it came from comparing Figma's first expanded role with a runtime capture of the second expanded role.
+- No API, persistence, permission-policy, dependency, Figma, or deployment changes are included.
