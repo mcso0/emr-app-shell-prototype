@@ -2101,7 +2101,7 @@ export function NewPatientDialog({
                   actions={
                     <label className="flex items-center gap-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
                       <Switch
-                        size="sm"
+                        size="xs"
                         checked={draft.estimatedAge}
                         onCheckedChange={(estimatedAge) =>
                           setDraft((current) => ({ ...current, estimatedAge }))
