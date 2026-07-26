@@ -179,7 +179,7 @@ export function HospitalContactSettingsScreen({ workspaceId }: { workspaceId: st
                   onChange={(value) => updateContact("fax", value)}
                 />
                 <div
-                  className="px-4 pt-4 md:min-h-[143px] md:px-6 md:pt-5"
+                  className="px-4 pt-4 last:[&>[data-slot=separator]]:hidden md:min-h-[143px] md:px-6 md:pt-5"
                   data-testid="hospital-settings-row-customer-guide-memo"
                 >
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
@@ -334,7 +334,10 @@ function ContactSettingRow({
   value: string;
 }) {
   return (
-    <div className="px-4 pt-4 md:h-[85px] md:px-6 md:pt-5">
+    <div
+      className="px-4 pt-4 last:[&>[data-slot=separator]]:hidden md:h-[85px] md:px-6 md:pt-5"
+      data-testid={`${id}-row`}
+    >
       <div className="flex min-h-11 flex-col gap-3 md:h-11 md:flex-row md:items-center md:justify-between md:gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="text-sm leading-5 font-medium tracking-[0.014em] text-foreground">
@@ -381,7 +384,7 @@ function ContactActionRow({
 }) {
   return (
     <div
-      className="px-4 pt-4 md:h-[85px] md:px-6 md:pt-5"
+      className="px-4 pt-4 last:[&>[data-slot=separator]]:hidden md:h-[85px] md:px-6 md:pt-5"
       data-testid="hospital-settings-row-phone-change"
     >
       <div className="flex min-h-11 flex-col gap-3 md:h-11 md:flex-row md:items-center md:justify-between md:gap-4">
