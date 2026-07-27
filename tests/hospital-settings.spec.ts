@@ -207,12 +207,12 @@ test("operating-hours settings matches the CDS V2 desktop and mobile geometry", 
   });
 
   expect(figmaMetrics).toEqual({
-    mainWidth: 920,
-    contentTop: 57,
+    mainWidth: 720,
+    contentTop: 56,
     headerHeight: 92,
     headerGap: 16,
     sectionTitleHeight: 74,
-    hoursCardWidth: 920,
+    hoursCardWidth: 720,
     hoursCardHeight: 679,
     weekdayRowHeight: 85,
     toggleHeight: 32,
@@ -297,12 +297,12 @@ test("contact settings matches CDS V2 geometry and saves through the profile API
   });
 
   expect(figmaMetrics).toEqual({
-    mainWidth: 920,
-    contentTop: 57,
+    mainWidth: 720,
+    contentTop: 56,
     headerHeight: 92,
     headerGap: 16,
     sectionTitleHeight: 52,
-    contactCardWidth: 920,
+    contactCardWidth: 720,
     contactCardHeight: 398,
     channelCardHeight: 170,
     phoneInputWidth: 320,
@@ -415,12 +415,12 @@ test("hospital basic settings matches CDS V2 geometry and stays usable at 390px"
   });
 
   expect(figmaMetrics).toEqual({
-    mainWidth: 920,
-    contentTop: 57,
+    mainWidth: 720,
+    contentTop: 56,
     headerHeight: 92,
     headerGap: 16,
     sectionTitleHeight: 52,
-    profileCardWidth: 920,
+    profileCardWidth: 720,
     profileCardHeight: 425,
     regionCardHeight: 170,
     rowHeight: 85,

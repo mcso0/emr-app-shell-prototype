@@ -122,7 +122,7 @@ const settingsSectionKeys = new Set<SettingsSectionKey>([
 ]);
 
 const settingsSurfaceClassName =
-  "overflow-hidden rounded-[var(--clair-radius-lg)] border border-border bg-card shadow-[var(--clair-shadow-xs)]";
+  "min-w-0 w-full overflow-hidden rounded-[var(--clair-radius-lg)] border border-border bg-card shadow-[var(--clair-shadow-xs)]";
 
 const settingsTitleClassName =
   "font-[var(--clair-typography-title-3-font-weight)] text-[length:var(--clair-typography-title-3-font-size)] leading-[var(--clair-typography-title-3-line-height)] tracking-[var(--clair-typography-title-3-letter-spacing)] text-foreground";
@@ -987,7 +987,7 @@ export function RolePermissionManagementScreen({
         )}
         <main
           data-testid="role-permission-content"
-          className="mx-auto grid w-full max-w-[952px] px-4 pb-24"
+          className="mx-auto grid w-full min-w-0 max-w-[calc(var(--clair-layout-hospital-settings-content)+2rem)] grid-cols-[minmax(0,1fr)] px-4 pb-24"
         >
           {!workspace.canView ? (
             <div className="grid gap-4">
@@ -1062,12 +1062,15 @@ export function RolePermissionManagementScreen({
               </section>
             </div>
           ) : activeSettingsSection === "roles" ? (
-            <div className="grid gap-4 animate-in fade-in-0 slide-in-from-right-2 duration-150">
+            <div className="grid min-w-0 gap-4 animate-in fade-in-0 slide-in-from-right-2 duration-150">
               <SettingsDetailHeader
                 title="권한 역할"
                 description="역할을 선택해 배정된 구성원과 사용할 수 있는 기능을 확인합니다."
               />
-              <section aria-labelledby="role-item-list-heading">
+              <section
+                aria-labelledby="role-item-list-heading"
+                className="min-w-0 w-full"
+              >
                 <div
                   data-testid="role-summary-grid"
                   className={settingsSurfaceClassName}

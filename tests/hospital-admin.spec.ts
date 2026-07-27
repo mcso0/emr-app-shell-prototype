@@ -429,11 +429,11 @@ test("hospital space management supports category and terminal space CRUD with f
     };
   });
   expect(overviewFigmaMetrics).toEqual({
-    mainWidth: 920,
+    mainWidth: 720,
     contentTop: 56,
     headerHeight: 92,
     headerGap: 16,
-    cardWidth: 920,
+    cardWidth: 720,
     cardHeaderHeight: 85,
     rowHeight: 85,
     iconSize: 44,
@@ -502,7 +502,7 @@ test("hospital space management supports category and terminal space CRUD with f
     };
   });
   expect(detailFigmaMetrics).toEqual({
-    cardWidth: 920,
+    cardWidth: 720,
     rowHeight: 85,
     editHeight: 32,
     deleteHeight: 32,
@@ -861,11 +861,11 @@ test("hospital vital settings matches CDS V2 while preserving the reviewed inter
   });
 
   expect(figmaMetrics).toEqual({
-    mainWidth: 920,
+    mainWidth: 720,
     contentTop: 56,
     headerHeight: 92,
     headerGap: 16,
-    cardWidth: 920,
+    cardWidth: 720,
     cardHeight: 582,
     cardHeaderHeight: 85,
     rowHeight: 85,
@@ -919,7 +919,7 @@ test("hospital vital settings matches CDS V2 while preserving the reviewed inter
   await expect(changeBar).toBeVisible();
   await changeBar
     .getByRole("button", { name: "변경 전으로 되돌리기" })
-    .press("Enter");
+    .click();
   await page.getByRole("button", { name: "변경사항 되돌리기" }).click();
   await expect(
     screen
@@ -1125,7 +1125,7 @@ test("hospital admin role and permission screen replaces the static role-work co
     screen.getByTestId("role-permission-content").evaluate((element) =>
       Math.round(element.getBoundingClientRect().width)
     )
-  ).resolves.toBeLessThanOrEqual(952);
+  ).resolves.toBeLessThanOrEqual(752);
 });
 
 test("hospital admin saves role work defaults locally without changing permissions", async ({ page }) => {

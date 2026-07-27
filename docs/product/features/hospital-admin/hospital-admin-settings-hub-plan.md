@@ -15,14 +15,15 @@ related_work:
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-006-role-permission-management-ui.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-020-space-management-persistence.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-007-hospital-settings-screen-split.md"
+  - "docs/work/hospital-admin/HOSPITAL-ADMIN-PR-008-hospital-settings-content-width.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-021-hospital-profile-contact-persistence.md"
   - "docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-022-hospital-logo-storage.md"
-last_updated: 2026-07-23
+last_updated: 2026-07-27
 ---
 
 # Hospital Admin Settings Hub
 
-Updated: 2026-07-23
+Updated: 2026-07-27
 
 ## Product Position
 
@@ -107,7 +108,7 @@ The role screen is an explanation and local-first management surface, not the se
 | Purpose | Explain and manage permission roles, job positions, and permission-independent work defaults without mixing their meanings. |
 | Primary user | Hospital admin or owner. |
 | Scenario | Admin selects a role, reads its effective permissions, creates an allow-only custom role, checks assigned members, manages job labels, and separately sets work defaults. |
-| Information structure | One grouped three-row settings hub—`권한 역할`, `직무`, and `업무 기본값`—inside the shared `920px` boundary. A row opens an independent URL-backed detail screen; the role detail uses one-open role items, and each expanded item owns its member summary and permission rows. |
+| Information structure | One grouped three-row settings hub—`권한 역할`, `직무`, and `업무 기본값`—inside the shared `720px` settings-content boundary. The outer wrapper retains `16px` side gutters, so it may reach `752px`. A row opens an independent URL-backed detail screen; the role detail uses one-open role items, and each expanded item owns its member summary and permission rows. |
 | Fields/components | Role name, assigned-member count, grouped permission rows, locked owner-only rows, job catalog, local work-default fields, and contextual save/cancel. |
 | Default state | `관리자` selected; system roles are read-only and custom roles expose approved permissions only. |
 | Empty state | System roles remain visible; a custom-role action explains the available safe catalog. |
@@ -130,7 +131,7 @@ The role screen is an explanation and local-first management surface, not the se
 | Permission state | `hospital_settings:view` reads; `hospital_settings:manage` plus server/RPC workspace checks mutate. Client visibility is not the security boundary. |
 | Save/cancel flow | Every command saves immediately and returns an authoritative snapshot. Success and rejection always show a toast; cancel only discards the inline draft. |
 | Data/API boundary | `workspace_space_categories` and `workspace_spaces`, active-name uniqueness, archive-based deletion, GET/command API, atomic RPC, tenant RLS, explicit grants, default seeding, and safe audit events. |
-| Screen direction | Quiet `920px` settings surface using existing cards, dialogs, inline inputs, selects, icon buttons, and tokens. No time, capacity, allocation, status, or scheduling controls. |
+| Screen direction | Quiet `720px` settings surface using existing cards, dialogs, inline inputs, selects, icon buttons, and tokens. No time, capacity, allocation, status, or scheduling controls. |
 
 ### 근무표
 

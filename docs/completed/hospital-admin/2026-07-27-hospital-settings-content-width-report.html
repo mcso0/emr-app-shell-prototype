@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>병원관리 설정 콘텐츠 폭 통일 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          Inter,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #17191c;
+        background: #f4f6f8;
+      }
+      body {
+        margin: 0;
+        padding: 48px 24px;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      header,
+      section {
+        padding: 28px;
+        border: 1px solid #dfe3e8;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+      }
+      section {
+        margin-top: 16px;
+      }
+      h1,
+      h2 {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      p,
+      li {
+        line-height: 1.7;
+      }
+      .meta {
+        color: #69707a;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .metric {
+        padding: 16px;
+        border-radius: 12px;
+        background: #f7f8fa;
+      }
+      .metric strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 20px;
+      }
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: #eef1f4;
+      }
+      ul {
+        margin-bottom: 0;
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">HOSPITAL-ADMIN-PR-008 · 2026-07-27</p>
+        <h1>병원관리 설정 콘텐츠 폭 통일 결과</h1>
+        <p>
+          병원관리의 주요 설정 화면이 같은 시각 경계를 사용하도록 본문 최대
+          너비를 <code>920px</code>에서 <code>720px</code>로 통일했다.
+        </p>
+        <div class="grid">
+          <div class="metric"><strong>720px</strong>실제 설정 surface</div>
+          <div class="metric"><strong>6개</strong>공통 적용 화면</div>
+          <div class="metric"><strong>752px</strong>역할 화면 외부 래퍼</div>
+          <div class="metric"><strong>390px</strong>모바일 검증 너비</div>
+        </div>
+      </header>
+
+      <section>
+        <h2>변경 범위</h2>
+        <ul>
+          <li>병원 기본 설정, 연락처 및 채널, 운영시간 관리</li>
+          <li>공간 관리, 바이탈 관리</li>
+          <li>역할 및 권한 허브와 권한 역할·직무·업무 기본값 상세 화면</li>
+          <li>공통 레이아웃 토큰을 사용해 화면별 폭 재분산 방지</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>보존한 계약</h2>
+        <ul>
+          <li>가로 중앙 정렬, 좁은 화면의 자연스러운 축소, 모바일 좌우 여백</li>
+          <li>카드·폼·버튼·Dialog·저장·권한·API·데이터 모델</li>
+          <li>역할 화면의 16px 외부 여백과 실제 720px 설정 surface 관계</li>
+          <li>본문과 별도인 808px 하단 변경사항 바</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증과 현재 상태</h2>
+        <ul>
+          <li>데스크톱 DOM 폭과 390px 좁은 화면 overflow 검증 통과</li>
+          <li>역할 상세의 긴 메타데이터도 720px 경계 안에서 수축 확인</li>
+          <li>데스크톱·모바일·Dialog를 포함한 집중 Playwright 8개 통과</li>
+          <li>전체 lint·타입·빌드·문서·비밀정보·diff 검사 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 위험과 다음 단계</h2>
+        <ul>
+          <li>콘텐츠 밀도가 높아진 화면은 운영 배포 후 실제 데이터 길이로 한 번 더 확인</li>
+          <li>이번 변경에는 데이터·권한·저장 동작 변경이 없음</li>
+          <li>PR 검증 완료 후 승인된 운영 머지 절차로 배포</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

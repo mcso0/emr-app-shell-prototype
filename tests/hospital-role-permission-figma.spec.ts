@@ -65,8 +65,8 @@ test("role permission screens keep the Figma desktop geometry contract", async (
 
   expect(hubMetrics).toEqual({
     backgroundColor: "rgb(252, 252, 252)",
-    contentWidth: 952,
-    surfaceWidth: 920,
+    contentWidth: 752,
+    surfaceWidth: 720,
     surfaceInset: 16,
     titleHeight: 92,
     titleToSurfaceGap: 16,
@@ -143,13 +143,13 @@ test("role permission screens keep the Figma desktop geometry contract", async (
 
   expect(roleMetrics).toEqual({
     backHeaderHeight: 56,
-    surfaceWidth: 920,
+    surfaceWidth: 720,
     roleRowHeight: 84,
     detailHeaderHeight: 44,
     panelBackground: "oklab(0 0 0 / 0.02)",
     panelPadding: "24px",
     panelRowGap: "24px",
-    permissionListWidth: 872,
+    permissionListWidth: 672,
     permissionRowHeight: 75,
     permissionPaddingX: 20,
     permissionPaddingY: 0,
@@ -172,7 +172,13 @@ test("role permission screens keep the Figma desktop geometry contract", async (
 
   await screen.getByRole("button", { name: "역할 및 권한", exact: true }).click();
   await screen.getByTestId("role-permission-hub-positions").click();
-  await expect(screen.getByTestId("role-permission-positions-surface")).toBeVisible();
+  const positionsSurface = screen.getByTestId("role-permission-positions-surface");
+  await expect(positionsSurface).toBeVisible();
+  await expect(
+    positionsSurface.evaluate((element) =>
+      Math.round(element.getBoundingClientRect().width)
+    )
+  ).resolves.toBe(720);
   await expect(
     screen.getByTestId("job-position-readonly-hospital_director").evaluate((element) =>
       Math.round(element.getBoundingClientRect().height)
@@ -181,6 +187,11 @@ test("role permission screens keep the Figma desktop geometry contract", async (
 
   await screen.getByRole("button", { name: "역할 및 권한", exact: true }).click();
   await screen.getByTestId("role-permission-hub-work-defaults").click();
+  await expect(
+    screen.getByTestId("role-permission-work-defaults-surface").evaluate((element) =>
+      Math.round(element.getBoundingClientRect().width)
+    )
+  ).resolves.toBe(720);
 
   const workDefaultMetrics = await screen
     .getByTestId("role-permission-work-default-row-receptionPositionKey")
