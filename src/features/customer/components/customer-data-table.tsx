@@ -6,12 +6,14 @@ import {
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
+  type Column,
   type ColumnDef,
+  type ColumnPinningState,
   type RowSelectionState,
   type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
@@ -70,6 +72,7 @@ import type {
 import styles from "./customer-data-table.module.css";
 
 export type CustomerTableReadStatus = "ready" | "error";
+export type CustomerTablePinningMode = "none" | "first-data-column";
 
 type CustomerRowActionFeedback = {
   body: ReactNode;
@@ -84,6 +87,7 @@ type CustomerDataTableProps<TRow extends { id: string; searchText: string }> = {
   loading?: boolean;
   minTableWidth: number;
   onOpenRow: (row: TRow) => void;
+  pinningMode?: CustomerTablePinningMode;
   readStatus?: CustomerTableReadStatus;
   rowTestId: (row: TRow) => string;
   rows: TRow[];
@@ -305,6 +309,7 @@ export function CustomerDataTable<
   loading = false,
   minTableWidth,
   onOpenRow,
+  pinningMode = "none",
   readStatus = "ready",
   rowTestId,
   rows,
@@ -433,6 +438,15 @@ export function CustomerDataTable<
     ],
     [columns, getRowLabel, onOpenRow, title],
   );
+  const pinnedColumnId =
+    pinningMode === "first-data-column" ? columns[0]?.id : undefined;
+  const columnPinning = useMemo<ColumnPinningState>(
+    () => ({
+      left: pinnedColumnId ? [pinnedColumnId] : [],
+      right: [],
+    }),
+    [pinnedColumnId],
+  );
 
   // TanStack Table intentionally owns mutable headless state methods that React
   // Compiler must not memoize.
@@ -440,6 +454,7 @@ export function CustomerDataTable<
   const table = useReactTable({
     columns: tableColumns,
     data: filteredRows,
+    enableColumnPinning: pinningMode !== "none",
     enableMultiSort: false,
     enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
@@ -458,12 +473,33 @@ export function CustomerDataTable<
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     state: {
+      columnPinning,
       columnVisibility,
       globalFilter: query,
       rowSelection,
       sorting,
     },
   });
+  const getPinnedColumnStyle = (
+    column: Column<TRow, unknown>,
+    surface: "header" | "cell",
+  ): CSSProperties | undefined => {
+    const pinned = column.getIsPinned();
+
+    if (!pinned) return undefined;
+
+    const lastLeftPinned =
+      pinned === "left" && column.getIsLastColumn("left");
+
+    return {
+      boxShadow: lastLeftPinned
+        ? "1px 0 0 var(--emr-border-default), 10px 0 16px -16px color-mix(in srgb, var(--emr-text-primary) 55%, transparent)"
+        : undefined,
+      left: pinned === "left" ? column.getStart("left") : undefined,
+      position: "sticky",
+      zIndex: surface === "header" ? 12 : 2,
+    };
+  };
 
   const visibleRows = table.getRowModel().rows;
   const selectedCount = visibleRows.filter((row) => row.getIsSelected()).length;
@@ -486,6 +522,11 @@ export function CustomerDataTable<
     .getVisibleLeafColumns()
     .filter((column) => column.id !== "select" && column.id !== "actions")
     .length;
+  const orderedVisibleColumns = [
+    ...table.getLeftVisibleLeafColumns(),
+    ...table.getCenterVisibleLeafColumns(),
+    ...table.getRightVisibleLeafColumns(),
+  ];
   const headerHeightClassName =
     density === "comfortable" ? "!h-11" : "!h-9";
   const rowHeightClassName =
@@ -639,20 +680,28 @@ export function CustomerDataTable<
 
       <Table
         aria-label={`${title} 고객관리 테이블`}
-        containerClassName="min-h-0 min-w-0 flex-1 overflow-auto bg-[var(--clair-color-atomic-common-100)]"
+        containerClassName="isolate min-h-0 min-w-0 flex-1 overflow-auto bg-[var(--clair-color-atomic-common-100)]"
+        data-customer-pinning-mode={pinningMode}
         density={density}
         layout="scroll"
         minWidth={minTableWidth}
         className="table-fixed"
+        style={
+          pinningMode === "none"
+            ? undefined
+            : { borderCollapse: "separate", borderSpacing: 0 }
+        }
       >
         <colgroup>
-          {table.getVisibleLeafColumns().map((column) => {
+          {orderedVisibleColumns.map((column) => {
             const width =
               column.id === "select"
                 ? "44px"
                 : column.id === "actions"
                   ? "52px"
-                  : `calc((100% - 96px) / ${Math.max(dataColumnCount, 1)})`;
+                  : pinningMode === "none"
+                    ? `calc((100% - 96px) / ${Math.max(dataColumnCount, 1)})`
+                    : `${column.getSize()}px`;
             return <col key={column.id} style={{ width }} />;
           })}
         </colgroup>
@@ -720,13 +769,19 @@ export function CustomerDataTable<
                     className={cn(
                       headerHeightClassName,
                       "!p-0 text-left [&_.emr-table-cell-content]:!p-0",
+                      header.column.getIsPinned() && "bg-[#fafafa]",
                       density === "comfortable"
                         ? "[&_.emr-table-cell-content]:!h-11"
                         : "[&_.emr-table-cell-content]:!h-9",
                       meta?.headerClassName,
                     )}
+                    data-customer-column-key={header.column.id}
+                    data-emr-column-pinned={
+                      header.column.getIsPinned() || undefined
+                    }
                     interaction="static"
                     resize="none"
+                    style={getPinnedColumnStyle(header.column, "header")}
                   >
                     <CustomerDataTableColumnHeader
                       label={label}
@@ -839,7 +894,16 @@ export function CustomerDataTable<
                     return (
                       <TableCell
                         key={cell.id}
-                        className={cn(rowHeightClassName, "!p-0")}
+                        className={cn(
+                          rowHeightClassName,
+                          "!p-0 overflow-hidden whitespace-nowrap",
+                          cell.column.getIsPinned() && "bg-inherit",
+                        )}
+                        data-customer-column-key={cell.column.id}
+                        data-emr-column-pinned={
+                          cell.column.getIsPinned() || undefined
+                        }
+                        style={getPinnedColumnStyle(cell.column, "cell")}
                       >
                         <CustomerTableCellContent
                           align={meta?.align}

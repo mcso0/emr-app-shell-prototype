@@ -297,7 +297,7 @@ test("customer workspace renders animal master list and opens the common patient
   await expect(page.getByTestId("customer-patient-row-patient-dubu")).toContainText("두부");
   await expect(page.getByTestId("customer-patient-row-patient-dubu")).toContainText("정하린");
   const dubuRow = page.getByTestId("customer-patient-row-patient-dubu");
-  await expect(dubuRow.locator('[data-emr-cell-text-mode="two-line-if-long"]', { hasText: "두부" })).toBeVisible();
+  await expect(dubuRow.locator('[data-emr-cell-text-mode="one-line"]', { hasText: "두부" })).toBeVisible();
   await expect(dubuRow.locator('[data-emr-cell-text-mode="one-line"]', { hasText: /010-/ })).toBeVisible();
   await page.getByTestId("customer-patient-table").getByRole("button", { name: "컬럼" }).click();
   await expect(page.getByText("표시 컬럼")).toBeVisible();
@@ -309,6 +309,53 @@ test("customer workspace renders animal master list and opens the common patient
   await expect(page.getByRole("tab", { name: "환자 정보" })).toBeVisible();
   await expect(page.getByRole("button", { name: "카카오톡 발송" })).toBeVisible();
   await expect(page).toHaveURL(/drawer=patient%3Apatient-dubu|drawer=patient:patient-dubu/);
+});
+
+test("customer patient table keeps animal identity pinned while data columns scroll", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
+
+  const patientTable = page.getByRole("table", { name: "동물 고객관리 테이블" });
+  const scrollContainer = patientTable.locator("xpath=..");
+  const animalHeader = patientTable.locator('th[data-customer-column-key="name"]');
+  const patientCodeHeader = patientTable.locator('th[data-customer-column-key="patientNo"]');
+  const dubuRow = page.getByTestId("customer-patient-row-patient-dubu");
+  const animalCell = dubuRow.locator('td[data-customer-column-key="name"]');
+
+  await expect(patientTable).toHaveAttribute("data-customer-pinning-mode", "first-data-column");
+  await expect(patientTable).toHaveCSS("min-width", "1480px");
+  await expect(animalHeader).toHaveAttribute("data-emr-column-pinned", "left");
+  await expect(patientCodeHeader).not.toHaveAttribute("data-emr-column-pinned", "left");
+  await expect(animalCell).toHaveCSS("position", "sticky");
+  await expect(animalCell).toHaveCSS("white-space", "nowrap");
+  await expect(dubuRow.locator('[data-emr-cell-text-mode="two-line-if-long"]')).toHaveCount(0);
+
+  const visibleDataColumnOrder = await patientTable
+    .locator("thead [data-customer-column-key]")
+    .evaluateAll((headers) => headers.map((header) => header.getAttribute("data-customer-column-key")));
+  expect(visibleDataColumnOrder.slice(0, 2)).toEqual(["name", "patientNo"]);
+
+  const avatarBox = await animalCell.getByTestId("animal-patient-avatar").boundingBox();
+  expect(avatarBox).not.toBeNull();
+  expect(avatarBox!.width).toBe(28);
+  expect(avatarBox!.height).toBe(28);
+
+  await scrollContainer.evaluate((container) => {
+    container.scrollLeft = 600;
+  });
+
+  await expect.poll(async () => scrollContainer.evaluate((container) => container.scrollLeft)).toBeGreaterThan(0);
+  const [containerBox, pinnedHeaderBox] = await Promise.all([
+    scrollContainer.boundingBox(),
+    animalHeader.boundingBox(),
+  ]);
+  expect(containerBox).not.toBeNull();
+  expect(pinnedHeaderBox).not.toBeNull();
+  expect(Math.abs(pinnedHeaderBox!.x - containerBox!.x)).toBeLessThanOrEqual(1);
+
+  await page.getByTestId("customer-side-panel-guardian").click();
+  const guardianTable = page.getByRole("table", { name: "보호자 고객관리 테이블" });
+  await expect(guardianTable).toHaveAttribute("data-customer-pinning-mode", "none");
+  await expect(guardianTable.locator('[data-emr-column-pinned="left"]')).toHaveCount(0);
 });
 
 test("customer table aligns selection header and row checkboxes", async ({ page }) => {

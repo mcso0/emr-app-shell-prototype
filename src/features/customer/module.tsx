@@ -70,7 +70,7 @@ const placeholderSideItems = [
 ];
 const customerTableMinWidths = {
   guardian: 1120,
-  patient: 1320,
+  patient: 1480,
 } as const;
 
 function getCustomerWorkspaceId(value?: string | string[]) {
@@ -378,6 +378,7 @@ function PatientTable({
       loading={loading}
       minTableWidth={customerTableMinWidths.patient}
       onOpenRow={(row) => setActiveDrawer({ type: "patient", id: row.id })}
+      pinningMode="first-data-column"
       readStatus={readStatus}
       rowTestId={(row) => `customer-patient-row-${row.id}`}
       rows={rows}
