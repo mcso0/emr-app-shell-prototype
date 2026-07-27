@@ -109,7 +109,7 @@
           동물명을 왼쪽에 유지하면서 환자코드 이후 정보를 가로로 탐색할 수
           있도록 구현했다.
         </p>
-        <span class="status">최신 main 이식 완료 · Release candidate</span>
+        <span class="status">origin/main 머지 · 프로덕션 배포 검증 완료</span>
       </header>
 
       <section>
@@ -184,6 +184,33 @@
           <li>
             로컬 mock-auth 셸의 기존 workspace/tab API 401 응답은 유지되지만
             고객 화면의 15개 회귀와 핵심 동작에는 영향을 주지 않았다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>릴리스 결과</h2>
+        <ul>
+          <li>
+            PR #511의 후보
+            <code>1b9abf566ebf23e77dccb9253f6121068d66d6be</code>는 동일
+            SHA의 Release Check와 Preview 검증을 통과했다.
+          </li>
+          <li>
+            <code>origin/main</code> 머지 SHA는
+            <code>24fde6c9e40c5b5a02151a58d5f175491e9c8521</code>이고,
+            프로덕션 배포
+            <code>dpl_FvMfhzD9n1mCtPhYBTP23CEkahbL</code>은 Ready 상태다.
+          </li>
+          <li>
+            로그인된 프로덕션 고객관리 화면에서 439px 가로 스크롤 후에도
+            동물명 컬럼의 왼쪽 위치 차이는 0px였고, 환자코드는 스크롤 영역과
+            함께 이동했다.
+          </li>
+          <li>
+            직전 프로덕션 배포
+            <code>dpl_AwNTRCgbADxd3Qc58ezrUGmspNwS</code>를 롤백 후보로
+            기록했다.
           </li>
         </ul>
       </section>

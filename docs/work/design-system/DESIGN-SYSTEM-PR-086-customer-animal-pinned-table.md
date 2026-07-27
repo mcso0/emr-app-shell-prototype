@@ -3,7 +3,7 @@ id: "DESIGN-SYSTEM-PR-086"
 status: "human_review"
 area: "design-system"
 priority: "P1"
-target_pr: "User approval / customer animal pinned table"
+target_pr: "PR #511"
 source_docs:
   - "docs/agent-start-here.md"
   - "docs/engineering/current-status.md"
@@ -80,7 +80,16 @@ Verification completed on 2026-07-27:
 - Browser QA: 1024px and 1536px passed; document overflow 0, table overflow 993px/481px, pinned-left delta 0px, avatar 28px, patient code overflow 0px, and no critical page/runtime error.
 - The local mock-auth shell continues to log its existing unauthenticated workspace/tab API 401 responses; the focused customer workflow and all 15 regressions passed.
 
-The candidate SHA, Release Check, Preview, merge SHA, production deployment, and rollback reference are recorded at the release gate.
+Release completed on 2026-07-27:
+
+- PR: [#511](https://github.com/mcso0/emr-app-shell-prototype/pull/511)
+- Candidate SHA: `1b9abf566ebf23e77dccb9253f6121068d66d6be`
+- Release Check: [run 30267621911](https://github.com/mcso0/emr-app-shell-prototype/actions/runs/30267621911), passed against the exact candidate SHA.
+- Preview deployment: `dpl_5NoBzebLbWQPvCVbqFePpGZLPCiw`, Ready.
+- Merge SHA on `origin/main`: `24fde6c9e40c5b5a02151a58d5f175491e9c8521`
+- Production deployment: `dpl_FvMfhzD9n1mCtPhYBTP23CEkahbL`, Ready and aliased to `https://emr-app-shell-prototype.vercel.app`.
+- Rollback candidate: `dpl_AwNTRCgbADxd3Qc58ezrUGmspNwS`
+- Signed-in production smoke: customer animal table rendered 25 rows; the 184px animal-name column remained fixed with 0px left-position drift while the remaining data scrolled 439px; the patient-code column moved with the scroll area; the fallback avatar measured 28px; document overflow was 0; and no browser runtime log was emitted.
 
 Result report:
 
