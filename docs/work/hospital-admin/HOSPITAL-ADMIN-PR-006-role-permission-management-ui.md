@@ -23,7 +23,7 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 
 - `권한 역할`, `직무`, and `업무 기본값` as one grouped settings hub that opens independent detail screens in the existing hospital-admin panel.
 - Role summary/detail view, grouped permission explanations, locked system roles, and assigned-member sheet.
-- Human Review refinement: match the hospital-basic-settings `920px` content boundary, express detail state with `roleSettings` in the URL, and keep permission categories visible only inside the `권한 역할` detail screen.
+- Human Review refinement: match the shared hospital-settings `720px` surface boundary, retain the outer wrapper's `16px` side gutters, express detail state with `roleSettings` in the URL, and keep permission categories visible only inside the `권한 역할` detail screen.
 - Role-item refinement: replace the detached segmented selector with at-most-one-open role items. Each item shows all assigned member names and owns its expanded member summary and permission sections; selecting the open item collapses it.
 - Permission rows use switches with explicit `허용` / `차단` text. System roles remain disabled; custom roles support inline draft, cancel, and save against the existing safe allow-list.
 - Custom role creation/editing limited to the existing safe allow-only permission set.
@@ -53,6 +53,7 @@ Replace the static role-work concept with a dedicated, local-first `역할 및 �
 - 2026-07-23 UX audit follow-up: 7 focused Playwright scenarios passed for deterministic detail back, dirty role/work-default navigation, browser-back draft preservation, cross-tab saved defaults, static system jobs, and compact keyboard behavior. Authenticated local-browser verification also passed.
 - 2026-07-26 CDS.V2 alignment: verified Figma nodes `27804:125858`, `27804:127072`, `27804:128057`, `27804:128167`, and `27804:128277` with node metadata and screenshots, then applied their shared `920px` surface, `85px` row, title, spacing, border, radius, shadow, icon, badge, and expanded-permission patterns without changing product copy or behavior.
 - 2026-07-26 focused verification: 9 Playwright scenarios passed, including exact desktop DOM geometry, narrow-viewport overflow, read-only access, and custom role/job catalog checks. Authenticated local-browser review covered all four screens with no console warnings or errors.
+- 2026-07-27 shared-width follow-up: HOSPITAL-ADMIN-PR-008 supersedes the active surface boundary with `720px`; the role wrapper remains `752px` including its `16px` side gutters, and all hub/detail surfaces are constrained to `720px`.
 
 ## Handoff
 

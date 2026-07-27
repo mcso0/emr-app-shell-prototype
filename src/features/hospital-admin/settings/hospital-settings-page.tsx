@@ -56,7 +56,7 @@ export function HospitalSettingsPage({
       <ScrollArea className="min-h-0 flex-1">
         <main
           className={cn(
-            "mx-auto flex w-full max-w-[920px] flex-col pb-32",
+            "mx-auto flex w-full max-w-[var(--clair-layout-hospital-settings-content)] flex-col pb-32",
             layout === "summary"
               ? "gap-4 px-4 pt-14 md:px-0"
               : "gap-8 px-5 py-8 md:px-8"

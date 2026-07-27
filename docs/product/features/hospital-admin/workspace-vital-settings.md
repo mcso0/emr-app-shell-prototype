@@ -10,7 +10,8 @@ tags: [hospital-admin, vitals, workspace-settings, reception, chart]
 related_work:
   - "HOSPITAL-ADMIN-LIVE-PR-018"
   - "HOSPITAL-ADMIN-LIVE-PR-019"
-last_updated: 2026-07-25
+  - "HOSPITAL-ADMIN-PR-008"
+last_updated: 2026-07-27
 ---
 
 # Workspace Vital Settings
@@ -47,7 +48,7 @@ Storage remains canonical. The UI converts grams to kilograms and Fahrenheit to 
 
 ## Settings UX
 
-- The page uses the hospital-settings constrained content width (`max-width: 920px`).
+- The page uses the shared hospital-settings constrained content width (`max-width: 720px`).
 - The clean state follows CDS V2 Figma node `27804:117826` and keeps page-header actions hidden. Once the draft changes, the shared hospital-settings change bar exposes `변경 전으로 되돌리기` and `변경사항 저장`.
 - `변경 전으로 되돌리기` confirms before restoring the last saved snapshot.
 - `변경사항 저장` opens a confirmation dialog that names the enabled vital list and explains that reception/chart input will change while historical records remain.

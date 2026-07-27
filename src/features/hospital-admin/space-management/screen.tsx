@@ -404,7 +404,7 @@ function SpaceManagementPage({
     >
       <ScrollArea className="min-h-0 flex-1">
         <main
-          className="relative mx-auto flex w-full max-w-[920px] flex-col gap-4 px-4 pt-14 pb-32 md:px-0"
+          className="relative mx-auto flex w-full max-w-[var(--clair-layout-hospital-settings-content)] flex-col gap-4 px-4 pt-14 pb-32 md:px-0"
           data-settings-layout="summary"
         >
           {backAction ? (
