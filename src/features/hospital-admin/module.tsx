@@ -1539,8 +1539,16 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
-      <section className="border-b bg-card px-5 py-4">
+    <div
+      className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
+      data-testid="hospital-admin-order-content"
+    >
+      <div
+        aria-hidden="true"
+        className="h-14 shrink-0"
+        data-emr-content-top-slot="true"
+      />
+      <section className="border-b bg-transparent px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -1574,7 +1582,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           </div>
         </div>
       </section>
-      <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-card px-5 py-2">
+      <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-transparent px-5 py-2">
         <LineTabs
           aria-label={`${selectedLeafLabel} 하위 타입`}
           className="max-w-full min-w-0 flex-1 overflow-x-auto"
@@ -1975,8 +1983,13 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
   }, [canReview, eventType, hydrated, query, session, workspaceId]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="hospital-admin-audit-review">
-      <section className="border-b bg-card px-5 py-4">
+    <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]" data-testid="hospital-admin-audit-review">
+      <div
+        aria-hidden="true"
+        className="h-14 shrink-0"
+        data-emr-content-top-slot="true"
+      />
+      <section className="border-b bg-transparent px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -1989,7 +2002,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
           </div>
         </div>
       </section>
-      <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 border-b bg-card px-4 py-2">
+      <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 border-b bg-transparent px-4 py-2">
         <div className="flex h-8 min-w-0 flex-1 items-center rounded-lg border bg-card px-2.5 sm:min-w-[280px]">
           <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
           <Input

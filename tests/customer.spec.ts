@@ -354,6 +354,20 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
 
   await page.setViewportSize({ width: 1900, height: 1024 });
   await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
+
+  const patientSection = page.getByTestId("customer-patient-table");
+  await expect(patientSection).toHaveCSS(
+    "background-color",
+    "rgb(252, 252, 252)",
+  );
+  await expect
+    .poll(() =>
+      patientSection
+        .locator('[data-emr-content-top-slot="true"]')
+        .evaluate((slot) => slot.getBoundingClientRect().height),
+    )
+    .toBe(56);
+
   await page.getByTestId("customer-side-panel-guardian").click();
 
   const section = page.getByTestId("customer-guardian-table");
@@ -379,6 +393,9 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   ).toHaveCSS("background-color", "rgb(23, 23, 23)");
 
   const geometry = await section.evaluate((root) => {
+    const topSlot = root.querySelector(
+      '[data-emr-content-top-slot="true"]',
+    ) as HTMLElement;
     const header = root.querySelector(
       '[data-testid="customer-page-header"]',
     ) as HTMLElement;
@@ -391,6 +408,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     ) as HTMLElement;
     const tableElement = root.querySelector("table") as HTMLElement;
     const tableHeaderRow = root.querySelector("thead tr") as HTMLElement;
+    const firstTableRow = root.querySelector("tbody tr") as HTMLElement;
     const dataRow = root.querySelector(
       '[data-testid="customer-guardian-row-guardian-kang-seoyun"]',
     ) as HTMLElement;
@@ -404,12 +422,19 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
       '[data-testid="customer-table-footer"]',
     ) as HTMLElement;
     const rootRect = root.getBoundingClientRect();
+    const topSlotRect = topSlot.getBoundingClientRect();
+    const headerRect = header.getBoundingClientRect();
     const tableContainerRect = tableContainer.getBoundingClientRect();
     const tableRect = tableElement.getBoundingClientRect();
+    const tableHeaderRect = tableHeaderRow.getBoundingClientRect();
+    const firstTableRowRect = firstTableRow.getBoundingClientRect();
 
     return {
       rootWidth: rootRect.width,
-      headerHeight: header.getBoundingClientRect().height,
+      rootBackground: getComputedStyle(root).backgroundColor,
+      topSlotHeight: topSlotRect.height,
+      headerOffset: headerRect.top - rootRect.top,
+      headerHeight: headerRect.height,
       headerBackground: getComputedStyle(header).backgroundColor,
       headerPadding: [
         getComputedStyle(header).paddingTop,
@@ -428,7 +453,9 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
       tableContainerWidth: tableContainerRect.width,
       tableWidth: tableRect.width,
       tableHeaderBackground: getComputedStyle(tableHeaderRow).backgroundColor,
-      tableHeaderHeight: tableHeaderRow.getBoundingClientRect().height,
+      tableHeaderHeight: tableHeaderRect.height,
+      tableHeaderToFirstRowGap:
+        firstTableRowRect.top - tableHeaderRect.bottom,
       rowBackground: getComputedStyle(dataRow).backgroundColor,
       rowBorder: getComputedStyle(dataRow).borderBottomColor,
       rowHeight: dataRow.getBoundingClientRect().height,
@@ -448,8 +475,11 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     };
   });
 
+  expect(geometry.rootBackground).toBe("rgb(252, 252, 252)");
+  expect(geometry.topSlotHeight).toBe(56);
+  expect(geometry.headerOffset).toBe(56);
   expect(geometry.headerHeight).toBe(108);
-  expect(geometry.headerBackground).toBe("rgb(255, 255, 255)");
+  expect(geometry.headerBackground).toBe("rgb(252, 252, 252)");
   expect(geometry.headerPadding).toEqual(["16px", "48px", "16px", "48px"]);
   expect(geometry.headerGap).toBe("12px");
   expect(geometry.headingFont).toEqual(["24px", "32px", "700"]);
@@ -457,6 +487,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   expect(geometry.tableHeaderBackground).toBe("rgb(250, 250, 250)");
   expect(geometry.tableHeaderHeight).toBeGreaterThanOrEqual(36);
   expect(geometry.tableHeaderHeight).toBeLessThanOrEqual(36.5);
+  expect(Math.abs(geometry.tableHeaderToFirstRowGap)).toBeLessThanOrEqual(0.5);
   expect(geometry.rowBackground).toBe("rgb(255, 255, 255)");
   expect(geometry.rowBorder).toBe("rgb(229, 229, 229)");
   expect(geometry.rowHeight).toBe(40);
@@ -555,9 +586,12 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   await expect(headerCheckbox).toBeChecked({ indeterminate: true });
 
   await section.getByRole("button", { name: "테이블 보기 밀도: 기본" }).click();
-  await page.getByRole("menuitemradio", { name: "넓게" }).click({
-    force: true,
+  const comfortableDensityOption = page.getByRole("menuitemradio", {
+    name: "넓게",
   });
+  await expect(comfortableDensityOption).toBeVisible();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
   await expect
     .poll(() =>
       firstCellContent.evaluate(
@@ -566,9 +600,13 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     )
     .toBe(52);
   await section.getByRole("button", { name: "테이블 보기 밀도: 넓게" }).click();
-  await page.getByRole("menuitemradio", { name: "기본" }).click({
-    force: true,
+  const standardDensityOption = page.getByRole("menuitemradio", {
+    name: "기본",
   });
+  await expect(standardDensityOption).toBeVisible();
+  await standardDensityOption.evaluate((option) =>
+    (option as HTMLElement).click(),
+  );
   await expect
     .poll(() =>
       firstCellContent.evaluate(

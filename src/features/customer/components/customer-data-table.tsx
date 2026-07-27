@@ -583,9 +583,14 @@ export function CustomerDataTable<
 
   return (
     <div
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--emr-surface-workspace)]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#fcfcfc]"
       data-testid={testId}
     >
+      <div
+        aria-hidden="true"
+        className="h-14 shrink-0"
+        data-emr-content-top-slot="true"
+      />
       <CustomerListHeader
         title={title}
         count={rows.length}

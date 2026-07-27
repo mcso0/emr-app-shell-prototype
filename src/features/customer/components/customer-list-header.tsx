@@ -35,7 +35,7 @@ export function CustomerListHeader({
   return (
     <header
       className={cn(
-        "flex min-h-[108px] shrink-0 flex-col gap-3 bg-[var(--emr-surface-workspace)] px-12 py-4",
+        "flex min-h-[108px] shrink-0 flex-col gap-3 bg-[#fcfcfc] px-12 py-4",
         className,
       )}
       data-testid="customer-page-header"

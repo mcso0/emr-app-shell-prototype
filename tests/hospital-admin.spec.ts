@@ -1300,6 +1300,80 @@ test("hospital admin order table uses shared header and cell text primitives", a
   await expect(row.locator('[data-emr-cell-text-mode="one-line"]').filter({ hasText: "12,000원" })).toBeVisible();
 });
 
+test("hospital admin table pages keep the 56px content slot and zero header-row gap", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const orderContent = page.getByTestId("hospital-admin-order-content");
+  const orderRow = page.getByTestId("hospital-order-row-ord-lab-cbc-baso");
+  await expect(orderContent).toBeVisible();
+  await expect(orderRow).toBeVisible();
+
+  const orderMetrics = await orderContent.evaluate((root) => {
+    const slot = root.querySelector(
+      '[data-emr-content-top-slot="true"]',
+    ) as HTMLElement;
+    const titleSection = slot.nextElementSibling as HTMLElement;
+    const headerRow = root.querySelector("thead tr") as HTMLElement;
+    const firstRow = root.querySelector(
+      '[data-testid="hospital-order-row-ord-lab-cbc-baso"]',
+    ) as HTMLElement;
+    const rootRect = root.getBoundingClientRect();
+    const slotRect = slot.getBoundingClientRect();
+    const headerRect = headerRow.getBoundingClientRect();
+
+    return {
+      background: getComputedStyle(root).backgroundColor,
+      slotHeight: slotRect.height,
+      titleOffset: titleSection.getBoundingClientRect().top - rootRect.top,
+      headerRowGap: firstRow.getBoundingClientRect().top - headerRect.bottom,
+    };
+  });
+
+  expect(orderMetrics).toMatchObject({
+    background: "rgb(252, 252, 252)",
+    slotHeight: 56,
+    titleOffset: 56,
+  });
+  expect(Math.abs(orderMetrics.headerRowGap)).toBeLessThanOrEqual(0.5);
+
+  await page.getByTestId("hospital-admin-menu-audit").click();
+
+  const auditContent = page.getByTestId("hospital-admin-audit-review");
+  const auditRow = auditContent.locator('[data-testid^="audit-review-row-"]').first();
+  await expect(auditContent).toBeVisible();
+  await expect(auditRow).toBeVisible();
+
+  const auditMetrics = await auditContent.evaluate((root) => {
+    const slot = root.querySelector(
+      '[data-emr-content-top-slot="true"]',
+    ) as HTMLElement;
+    const titleSection = slot.nextElementSibling as HTMLElement;
+    const headerRow = root.querySelector("thead tr") as HTMLElement;
+    const firstRow = root.querySelector(
+      '[data-testid^="audit-review-row-"]',
+    ) as HTMLElement;
+    const rootRect = root.getBoundingClientRect();
+    const slotRect = slot.getBoundingClientRect();
+    const headerRect = headerRow.getBoundingClientRect();
+
+    return {
+      background: getComputedStyle(root).backgroundColor,
+      slotHeight: slotRect.height,
+      titleOffset: titleSection.getBoundingClientRect().top - rootRect.top,
+      headerRowGap: firstRow.getBoundingClientRect().top - headerRect.bottom,
+    };
+  });
+
+  expect(auditMetrics).toMatchObject({
+    background: "rgb(252, 252, 252)",
+    slotHeight: 56,
+    titleOffset: 56,
+  });
+  expect(Math.abs(auditMetrics.headerRowGap)).toBeLessThanOrEqual(0.5);
+});
+
 test("hospital admin order drawer edits and saves a selected order", async ({ page }) => {
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
