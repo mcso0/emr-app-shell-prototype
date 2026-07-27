@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-export type AnimalPatientAvatarSize = "sm" | "md" | "lg";
+export type AnimalPatientAvatarSize = "table" | "sm" | "md" | "lg";
 export type AnimalPatientAvatarState = "ready" | "loading" | "error";
 
 export type AnimalPatientAvatarProps = {
@@ -22,6 +22,7 @@ export type AnimalPatientAvatarProps = {
 };
 
 const sizeClassName: Record<AnimalPatientAvatarSize, string> = {
+  table: "size-7 !rounded-[var(--clair-radius-atomic-8)] [&_[data-slot=avatar-fallback]]:!rounded-[var(--clair-radius-atomic-8)] [&_[data-slot=avatar-image]]:!rounded-[var(--clair-radius-atomic-8)] [&_svg]:size-4",
   sm: "size-10 !rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-fallback]]:!rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-image]]:!rounded-[var(--clair-radius-atomic-12)] [&_svg]:size-5",
   md: "size-14 !rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-fallback]]:!rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-image]]:!rounded-[var(--clair-radius-atomic-12)] [&_svg]:size-7",
   lg: "size-20 !rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-fallback]]:!rounded-[var(--clair-radius-atomic-12)] [&_[data-slot=avatar-image]]:!rounded-[var(--clair-radius-atomic-12)] [&_svg]:size-8",

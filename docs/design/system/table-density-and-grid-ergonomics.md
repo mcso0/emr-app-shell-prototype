@@ -190,6 +190,19 @@ Acceptance rules:
 - Do not add sticky columns in Project 12 unless a later issue explicitly scopes the keyboard/focus behavior.
 - Page-level document width must remain equal to the viewport width at 1440, 1280, and 1024 screenshots.
 
+### Customer Animal Identity Pinning
+
+DESIGN-SYSTEM-PR-086 is the scoped exception that adds a sticky identity column to the customer animal master-data grid.
+
+- Use the existing TanStack column-pinning state and the shared `Table layout="scroll"` container; do not add another overflow owner.
+- Keep animal name as the first data column and patient code as the first scrollable data column.
+- Use `pinningMode="first-data-column"` for the animal table and `pinningMode="none"` for the guardian table.
+- Keep the animal identity column between 160px and 220px, with 184px as the default.
+- Keep patient scalar values and status badges on one line; the table owns a minimum width of 1480px.
+- Sticky header and body cells must share the same hover, selected, loading, and error surface tokens as their row.
+- Horizontal scrolling must not hide sort controls, checkbox focus rings, row actions, or the single table overflow owner.
+- Real patient image storage remains outside the visual table contract. Use the shared fallback avatar until a separately approved image-data contract exists.
+
 ## Header Interaction Rules
 
 Define each column with a header role:
