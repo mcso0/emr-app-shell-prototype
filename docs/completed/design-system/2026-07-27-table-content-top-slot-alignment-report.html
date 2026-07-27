@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>테이블 콘텐츠 상단 슬롯 구현 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: #171717;
+        background: #f5f5f5;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 40px 20px 72px; }
+      main {
+        width: min(1040px, 100%);
+        margin: 0 auto;
+        border: 1px solid #e5e5e5;
+        border-radius: 16px;
+        background: #fcfcfc;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+      }
+      header { padding: 40px; border-bottom: 1px solid #e5e5e5; }
+      h1 { margin: 0 0 12px; font-size: 32px; line-height: 1.3; }
+      h2 { margin: 0 0 14px; font-size: 20px; }
+      p { margin: 0; color: #525252; line-height: 1.7; }
+      section { padding: 28px 40px; border-bottom: 1px solid #e5e5e5; }
+      section:last-child { border-bottom: 0; }
+      .status {
+        display: inline-flex;
+        margin-bottom: 18px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+      .metric {
+        padding: 18px;
+        border: 1px solid #e5e5e5;
+        border-radius: 12px;
+        background: white;
+      }
+      .metric strong { display: block; font-size: 26px; margin-bottom: 4px; }
+      .metric span { color: #737373; font-size: 13px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 14px; background: white; }
+      th, td { padding: 12px 14px; border: 1px solid #e5e5e5; text-align: left; }
+      th { background: #fafafa; font-size: 13px; }
+      td { color: #404040; font-size: 14px; }
+      ul { margin: 10px 0 0; padding-left: 20px; color: #404040; line-height: 1.8; }
+      code { padding: 2px 6px; border-radius: 5px; background: #f5f5f5; }
+      .note {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-left: 3px solid #737373;
+        background: white;
+      }
+      @media (max-width: 720px) {
+        body { padding: 0; }
+        main { border: 0; border-radius: 0; box-shadow: none; }
+        header, section { padding: 24px 20px; }
+        .metrics { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="status">구현 완료 · Human Review</span>
+        <h1>테이블 콘텐츠 상단 슬롯 구현 결과</h1>
+        <p>
+          고객관리와 병원관리의 테이블 화면에 빠져 있던 기본 상단 공간을
+          복원하고, 콘텐츠 배경과 테이블 경계를 Figma 기준에 맞췄습니다.
+        </p>
+        <div class="metrics">
+          <div class="metric"><strong>56px</strong><span>콘텐츠 상단 슬롯</span></div>
+          <div class="metric"><strong>#FCFCFC</strong><span>콘텐츠 프레임 배경</span></div>
+          <div class="metric"><strong>0px</strong><span>헤더와 첫 Row 간격</span></div>
+        </div>
+      </header>
+
+      <section>
+        <h2>적용 화면</h2>
+        <table>
+          <thead>
+            <tr><th>영역</th><th>화면</th><th>적용 방식</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>고객관리</td><td>동물 · 보호자</td><td>공유 테이블 경계에서 함께 적용</td></tr>
+            <tr><td>병원관리</td><td>Order 관리</td><td>기존 제목·필터·테이블 기능을 유지한 채 적용</td></tr>
+            <tr><td>병원관리</td><td>감사 로그</td><td>권한·검색·필터·감사 데이터 동작을 유지한 채 적용</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>핵심 구현</h2>
+        <ul>
+          <li>제목 영역 앞에 포커스를 받지 않는 장식용 56px 슬롯을 추가했습니다.</li>
+          <li>콘텐츠 프레임과 제목·필터 영역은 <code>#FCFCFC</code>를 사용합니다.</li>
+          <li>테이블 데이터 면은 흰색, 고객관리 컬럼 헤더는 <code>#FAFAFA</code>를 유지합니다.</li>
+          <li>테이블 헤더와 첫 Row 사이에 별도 margin·padding·wrapper를 추가하지 않았습니다.</li>
+          <li>전역 셸은 변경하지 않아 이미 56px 바를 가진 진료·접수 화면의 중복 여백을 방지했습니다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li>ESLint와 TypeScript 검사 통과</li>
+          <li>고객관리 핵심 Playwright 3/3 통과</li>
+          <li>병원관리 Order·감사 로그 핵심 Playwright 3/3 통과</li>
+          <li>고객관리·병원관리 전체 47개 중 46개 통과, 실패 1개는 격리 재실행 통과</li>
+          <li>프로덕션 빌드 통과</li>
+          <li>1540×1024 실제 화면 검토에서 겹침과 의도하지 않은 여백 없음</li>
+        </ul>
+        <p class="note">
+          전체 실행에서 병원 바이탈 설정의 되돌리기 버튼 대기 테스트 1개가
+          30초 타임아웃으로 실패했지만, 같은 테스트를 단독 재실행했을 때는
+          8.8초에 통과했습니다. 이번 변경과 직접 연결된 테스트는 모두
+          통과했습니다.
+        </p>
+      </section>
+
+      <section>
+        <h2>의도적으로 제외한 범위</h2>
+        <p>
+          삭제 목록, 병원 구성원·설정 화면, 전역 셸, 데이터/API/권한,
+          프로덕션 배포는 이번 변경에 포함하지 않았습니다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

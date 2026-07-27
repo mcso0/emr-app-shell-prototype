@@ -2,6 +2,11 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-07-27
+
+- `changed`: Customer animal/guardian tables and hospital-admin Order/audit tables now reserve a feature-owned 56px content-top slot, use `#FCFCFC` for the content frame, and preserve a 0px table-header-to-first-row gap.
+- `clarified`: The 56px slot is not a global shell insertion because several clinical, reception, and calendar surfaces already own that height through their context or date/filter bars.
+
 ## 2026-07-25
 
 - `changed`: The shared module-list panel and menu body now fill the shell-provided width; rows retain an 8px horizontal inset so hospital-admin and customer-management selected states align with the list on both sides.
