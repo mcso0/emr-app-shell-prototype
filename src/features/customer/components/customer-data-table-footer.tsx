@@ -15,6 +15,7 @@ export function CustomerDataTableFooter({
   return (
     <footer
       className="flex min-h-16 shrink-0 flex-wrap items-center gap-6 bg-[#fcfcfc] px-12 py-3.5 text-[14px] font-normal leading-5 text-muted-foreground"
+      data-emr-table-workspace-footer="true"
       data-testid="customer-table-footer"
     >
       <span className="min-w-0 flex-1">

@@ -11,8 +11,8 @@ const tableSortArrowSrc =
 type CustomerDataTableColumnHeaderProps = {
   ariaLabel: string;
   canSort: boolean;
+  identity?: boolean;
   label: string;
-  leadingOffset?: number;
   onToggleSort?: () => void;
   sortDirection?: false | "asc" | "desc";
 };
@@ -20,8 +20,8 @@ type CustomerDataTableColumnHeaderProps = {
 export function CustomerDataTableColumnHeader({
   ariaLabel,
   canSort,
+  identity = false,
   label,
-  leadingOffset,
   onToggleSort,
   sortDirection = false,
 }: CustomerDataTableColumnHeaderProps) {
@@ -33,10 +33,10 @@ export function CustomerDataTableColumnHeader({
       disabled={!canSort}
       className={cn(
         "inline-flex min-h-6 max-w-full items-center justify-center gap-1 rounded-lg bg-transparent px-2.5 py-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-500)] outline-none hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-neutral-300)] disabled:cursor-default disabled:opacity-100",
+        identity && "px-0",
         sortDirection && "text-[var(--clair-color-atomic-neutral-700)]",
       )}
       onClick={canSort ? onToggleSort : undefined}
-      style={{ marginInlineStart: leadingOffset }}
     >
       <span
         className="min-w-0 truncate"

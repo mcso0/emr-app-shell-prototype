@@ -2,9 +2,6 @@
 
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
-import { EmrEmptyState } from "@/components/emr/empty-state";
-import { EmrPageHeader } from "@/components/emr/page-header";
 import {
   EmrModuleListSidePanel,
   EmrModuleListSidePanelBadge,
@@ -12,7 +9,6 @@ import {
 } from "@/components/emr/module-list-side-panel";
 import {
   CalendarCheckIcon,
-  CircleCloseFillIcon,
   ContactBookIcon,
   DocumentIcon,
   MessagesIcon,
@@ -21,8 +17,6 @@ import {
   UserIcon,
   UsersIcon,
 } from "@/components/icons";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getCustomerGuardianRows,
@@ -34,6 +28,7 @@ import {
   CustomerDataTable,
   type CustomerTableReadStatus,
 } from "@/features/customer/components/customer-data-table";
+import { CustomerArchiveTable } from "@/features/customer/components/customer-archive-table";
 import {
   createCustomerGuardianColumns,
   createCustomerPatientColumns,
@@ -44,14 +39,12 @@ import {
   type CustomerListMode,
   type CustomerProfileReadStatus,
 } from "@/features/customer/store";
-import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import type { ReceptionPatientGuardianLookupResponse } from "@/features/reception/patient-guardian-lookup";
 import {
   isPreparedEmptyClinicWorkspace,
   resolveWorkspaceRouteParam,
 } from "@/lib/emr-domain/demo-workspaces";
-import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 
@@ -101,6 +94,10 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const patients = usePatientProfileStore((state) => state.patients);
   const profileReadState = useCustomerStore((state) => state.profileReadState);
+  const archiveCount = useCustomerStore((state) => state.archiveCount);
+  const archiveCountLoading = useCustomerStore(
+    (state) => state.archiveCountLoading,
+  );
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["master"]));
   const patientCount = useMemo(
@@ -124,7 +121,7 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
     [guardians, patientGuardians, patients, workspaceId]
   );
   const customerCounts: Record<CustomerListMode, number> = {
-    deleted: 0,
+    deleted: archiveCount,
     guardian: guardianCount,
     patient: patientCount,
   };
@@ -162,7 +159,11 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
           count: (
             <CustomerSidePanelCountBadge
               count={customerCounts[item.value]}
-              loading={profileReadLoading && item.value !== "deleted" && customerCounts[item.value] === 0}
+              loading={
+                item.value === "deleted"
+                  ? archiveCountLoading
+                  : profileReadLoading && customerCounts[item.value] === 0
+              }
               label={item.label}
             />
           ),
@@ -220,136 +221,6 @@ function CustomerSidePanelCountBadge({
         count
       )}
     </EmrModuleListSidePanelBadge>
-  );
-}
-
-function CustomerSearchInput({
-  value,
-  onValueChange,
-  className,
-  placeholder = "동물명, 보호자명, 전화번호, 환자코드 검색",
-}: {
-  className?: string;
-  placeholder?: string;
-  value: string;
-  onValueChange: (value: string) => void;
-}) {
-  return (
-    <div className={cn("relative w-[320px] max-w-full min-w-0", className)}>
-      <CdsActionsSearchIcon
-        className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-        aria-hidden="true"
-      />
-      <Input
-        aria-label="고객관리 검색"
-        placeholder={placeholder}
-        value={value}
-        className={cn("h-9 pl-8", value ? "pr-8" : "pr-3")}
-        onValueChange={onValueChange}
-      />
-      {value ? (
-        <button
-          type="button"
-          className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-          aria-label="고객관리 검색어 초기화"
-          onClick={() => onValueChange("")}
-        >
-          <CircleCloseFillIcon className="size-4" aria-hidden="true" />
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-function CustomerToolbar({
-  loading,
-  listMode,
-  patientCount,
-  guardianCount,
-}: {
-  guardianCount: number;
-  listMode: CustomerListMode;
-  loading: boolean;
-  patientCount: number;
-}) {
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const activeCount = listMode === "patient" ? patientCount : listMode === "guardian" ? guardianCount : 0;
-  const activeLabel =
-    listMode === "patient" ? "동물" : listMode === "guardian" ? "보호자" : "삭제된 보호자/동물";
-  const countLoading = loading && listMode !== "deleted" && activeCount === 0;
-
-  return (
-    <div className="shrink-0 border-b bg-card px-4 py-3" data-testid="customer-page-header">
-      <EmrPageHeader
-        title={activeLabel}
-        className="h-auto flex-wrap gap-y-3"
-        actionsClassName="ml-auto flex-wrap justify-end"
-        icon={
-          <UsersIcon
-            className="size-5 shrink-0 text-[var(--emr-text-tertiary)]"
-            aria-hidden="true"
-          />
-        }
-        badge={
-          <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
-            {countLoading ? (
-              <Skeleton
-                aria-label={`${activeLabel} 수 불러오는 중`}
-                className="h-3 w-5 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]"
-                data-testid="customer-page-header-count-skeleton"
-              />
-            ) : (
-              activeCount
-            )}
-          </Badge>
-        }
-        actions={
-          <NewUnifiedRegistrationButton onPatientReady={(patientId) => setActiveDrawer({ type: "patient", id: patientId })} />
-        }
-      />
-      <span className="sr-only">
-        {countLoading
-          ? `${activeLabel} 정보를 불러오는 중`
-          : `${activeLabel} ${activeCount}`}
-      </span>
-    </div>
-  );
-}
-
-function DeletedCustomerContent() {
-  const query = useCustomerStore((state) => state.query);
-  const setQuery = useCustomerStore((state) => state.setQuery);
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-card">
-      <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-card px-4 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="emr-text-body font-semibold">
-            {query ? "표시 삭제 항목" : "전체 삭제 항목"}
-          </span>
-          <Badge variant="secondary">0건</Badge>
-        </div>
-        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-          <CustomerSearchInput
-            value={query}
-            onValueChange={setQuery}
-            className="w-[260px] sm:w-[300px]"
-            placeholder="삭제 항목 검색"
-          />
-        </div>
-      </div>
-      <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center border-b bg-card text-center">
-        <EmrEmptyState
-          kind={query.trim() ? "no-filter-results" : "no-data"}
-          priority={query.trim() ? "local-recovery" : "supporting"}
-          surface="table"
-          size="md"
-          testId="customer-deleted-empty-state"
-          title={query.trim() ? "조건에 맞는 삭제 항목이 없습니다" : "삭제된 보호자/동물이 없습니다"}
-          description={query.trim() ? "검색어를 바꾸면 삭제 이력이 다시 보입니다." : "삭제 이력이 없습니다."}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -413,6 +284,7 @@ function GuardianTable({
       loading={loading}
       minTableWidth={customerTableMinWidths.guardian}
       onOpenRow={(row) => setActiveDrawer({ type: "guardian", id: row.id })}
+      pinningMode="first-data-column"
       readStatus={readStatus}
       rowTestId={(row) => `customer-guardian-row-${row.id}`}
       rows={rows}
@@ -534,15 +406,7 @@ export function CustomerContent() {
         />
       ) : null}
       {listMode === "deleted" ? (
-        <>
-          <CustomerToolbar
-            loading={customerProfileLoading}
-            listMode={listMode}
-            patientCount={patientRows.length}
-            guardianCount={guardianRows.length}
-          />
-          <DeletedCustomerContent />
-        </>
+        <CustomerArchiveTable workspaceId={workspaceId} />
       ) : null}
     </div>
   );

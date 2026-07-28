@@ -38,6 +38,7 @@ export function CustomerListHeader({
         "flex min-h-[108px] shrink-0 flex-col gap-3 bg-[#fcfcfc] px-12 py-4",
         className,
       )}
+      data-emr-table-workspace-header="true"
       data-testid="customer-page-header"
     >
       <EmrPageHeader

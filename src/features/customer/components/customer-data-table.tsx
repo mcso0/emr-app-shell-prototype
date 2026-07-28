@@ -27,7 +27,9 @@ import {
   type EmrTableFilterBuilderField,
 } from "@/components/emr/table-filter-builder-model";
 import {
+  EmrPinnedTableWorkspace,
   EmrTableHeaderCell,
+  EmrTableIdentityCellContent,
   EmrTableSelectionCell,
   EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
@@ -184,16 +186,16 @@ function CustomerTableSkeletonRows({
 }) {
   const rowHeightClassName =
     density === "compact"
-      ? "!h-[35px]"
+      ? "!h-9"
       : density === "comfortable"
-        ? "!h-[51px]"
-        : "!h-[39px]";
+        ? "!h-[52px]"
+        : "!h-10";
   const contentHeightClassName =
     density === "compact"
-      ? "!min-h-[35px]"
+      ? "!min-h-9"
       : density === "comfortable"
-        ? "!min-h-[51px]"
-        : "!min-h-[39px]";
+        ? "!min-h-[52px]"
+        : "!min-h-10";
 
   return (
     <>
@@ -229,19 +231,30 @@ function CustomerTableSkeletonRows({
                     }
                   : {})}
               >
-                <div
-                  className={cn(
-                    contentHeightClassName,
-                    "flex items-center px-2.5",
-                  )}
-                >
-                  <Skeleton
+                {pinningMode === "first-data-column" && columnIndex === 0 ? (
+                  <EmrTableIdentityCellContent className={contentHeightClassName}>
+                    <Skeleton
+                      className={cn(
+                        "h-4 max-w-full rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]",
+                        getCustomerSkeletonWidth(columnIndex),
+                      )}
+                    />
+                  </EmrTableIdentityCellContent>
+                ) : (
+                  <div
                     className={cn(
-                      "h-4 max-w-full rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]",
-                      getCustomerSkeletonWidth(columnIndex),
+                      contentHeightClassName,
+                      "flex items-center px-2.5",
                     )}
-                  />
-                </div>
+                  >
+                    <Skeleton
+                      className={cn(
+                        "h-4 max-w-full rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]",
+                        getCustomerSkeletonWidth(columnIndex),
+                      )}
+                    />
+                  </div>
+                )}
               </TableCell>
             ),
           )}
@@ -520,16 +533,16 @@ export function CustomerDataTable<
     density === "comfortable" ? "!h-11" : "!h-9";
   const rowHeightClassName =
     density === "compact"
-      ? "!h-[35px]"
+      ? "!h-9"
       : density === "comfortable"
-        ? "!h-[51px]"
-        : "!h-[39px]";
+        ? "!h-[52px]"
+        : "!h-10";
   const contentHeightClassName =
     density === "compact"
-      ? "!min-h-[35px]"
+      ? "!min-h-9"
       : density === "comfortable"
-        ? "!min-h-[51px]"
-        : "!min-h-[39px]";
+        ? "!min-h-[52px]"
+        : "!min-h-10";
 
   const filterControl =
     filterFields.length > 0 ? (
@@ -612,9 +625,10 @@ export function CustomerDataTable<
   );
 
   return (
-    <div
+    <EmrPinnedTableWorkspace
       className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#fcfcfc]"
       data-testid={testId}
+      identityTextInset={48}
     >
       <div
         aria-hidden="true"
@@ -746,6 +760,7 @@ export function CustomerDataTable<
                 const sortDirection = header.column.getIsSorted();
                 const label = meta?.label ?? header.column.id;
                 const canSort = header.column.getCanSort();
+                const identity = header.column.id === pinnedColumnId;
 
                 return (
                   <EmrTableHeaderCell
@@ -753,13 +768,15 @@ export function CustomerDataTable<
                     aria-sort={getAriaSort(sortDirection)}
                     className={cn(
                       headerHeightClassName,
-                      "!p-0 text-left [&_.emr-table-cell-content]:!p-0",
+                      "!p-0 text-left",
+                      !identity && "[&_.emr-table-cell-content]:!p-0",
                       density === "comfortable"
                         ? "[&_.emr-table-cell-content]:!h-11"
                         : "[&_.emr-table-cell-content]:!h-9",
                       meta?.headerClassName,
                     )}
                     data-customer-column-key={header.column.id}
+                    identity={identity}
                     interaction="static"
                     resize="none"
                     {...getEmrPinnedColumnProps(header.column)}
@@ -767,7 +784,7 @@ export function CustomerDataTable<
                     <CustomerDataTableColumnHeader
                       label={label}
                       canSort={canSort}
-                      leadingOffset={meta?.headerLeadingOffset}
+                      identity={identity}
                       sortDirection={sortDirection}
                       ariaLabel={
                         canSort
@@ -828,10 +845,10 @@ export function CustomerDataTable<
                             rowHeightClassName,
                             "w-11 !p-0 !pl-5 !pr-2 [&_.emr-table-cell-content]:!p-0",
                             density === "compact"
-                              ? "[&_.emr-table-cell-content]:!min-h-[35px]"
+                              ? "[&_.emr-table-cell-content]:!min-h-9"
                               : density === "comfortable"
-                                ? "[&_.emr-table-cell-content]:!min-h-[51px]"
-                                : "[&_.emr-table-cell-content]:!min-h-[39px]",
+                                ? "[&_.emr-table-cell-content]:!min-h-[52px]"
+                                : "[&_.emr-table-cell-content]:!min-h-10",
                           )}
                         >
                           {flexRender(
@@ -867,6 +884,7 @@ export function CustomerDataTable<
                     }
 
                     const meta = getColumnMeta(cell.column.columnDef);
+                    const identity = cell.column.id === pinnedColumnId;
                     const content = cell.column.columnDef.cell
                       ? flexRender(
                           cell.column.columnDef.cell,
@@ -890,6 +908,7 @@ export function CustomerDataTable<
                             contentHeightClassName,
                             meta?.className,
                           )}
+                          identity={identity}
                           rich={meta?.cellKind === "rich"}
                           textMode={meta?.textMode}
                         >
@@ -962,6 +981,6 @@ export function CustomerDataTable<
           </div>
         </div>
       ) : null}
-    </div>
+    </EmrPinnedTableWorkspace>
   );
 }

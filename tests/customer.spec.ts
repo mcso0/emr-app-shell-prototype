@@ -150,6 +150,9 @@ test("Cheongdam customer table shows skeleton while seeded profiles are loading"
     "background-color",
     "rgba(0, 0, 0, 0)",
   );
+  await expect(
+    pinnedSkeletonCell.locator('[data-emr-table-identity-content="true"]'),
+  ).toHaveCount(1);
   await expect(page.getByTestId("customer-page-header-count-skeleton")).toBeVisible();
   await expect(patientTable).not.toContainText("동물 정보가 없습니다");
   await expect(patientTable).not.toContainText("0건");
@@ -341,9 +344,21 @@ test("customer patient table keeps animal identity pinned while data columns scr
   const animalNameText = animalCell.locator(
     '[data-emr-cell-text-mode="one-line"]',
   );
+  const footerTotal = patientSection
+    .getByTestId("customer-table-footer")
+    .locator("span")
+    .first();
 
+  await expect(patientSection).toHaveAttribute(
+    "data-emr-pinned-table-workspace",
+    "true",
+  );
   await expect(patientTable).toHaveAttribute("data-customer-pinning-mode", "first-data-column");
   await expect(patientTable).toHaveCSS("min-width", "1480px");
+  await expect(patientSection.getByTestId("customer-page-header")).toHaveCSS(
+    "padding-top",
+    "0px",
+  );
   await expect(animalHeader).toHaveAttribute("data-emr-column-pinned", "left");
   await expect(patientCodeHeader).not.toHaveAttribute("data-emr-column-pinned", "left");
   await expect(animalCell).toHaveCSS("position", "sticky");
@@ -360,23 +375,26 @@ test("customer patient table keeps animal identity pinned while data columns scr
   expect(avatarBox!.width).toBe(28);
   expect(avatarBox!.height).toBe(28);
 
-  const [headingBox, searchBox, headerLabelBox, animalNameBox] =
+  const [headingBox, searchBox, headerLabelBox, animalNameBox, footerTotalBox] =
     await Promise.all([
       pageHeading.boundingBox(),
       searchInput.boundingBox(),
       animalHeaderLabel.boundingBox(),
       animalNameText.boundingBox(),
+      footerTotal.boundingBox(),
     ]);
 
   expect(headingBox).not.toBeNull();
   expect(searchBox).not.toBeNull();
   expect(headerLabelBox).not.toBeNull();
   expect(animalNameBox).not.toBeNull();
+  expect(footerTotalBox).not.toBeNull();
   expect(Math.abs(searchBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(headerLabelBox!.x - animalNameBox!.x)).toBeLessThanOrEqual(2);
-  expect(Math.abs(animalNameBox!.x - headingBox!.x)).toBeLessThanOrEqual(8);
+  expect(Math.abs(headerLabelBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(animalNameBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(footerTotalBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
 
-  for (const width of [1900, 1280, 1024]) {
+  for (const width of [1900, 1440, 1280, 1024]) {
     await page.setViewportSize({ width, height: 1024 });
     await scrollContainer.evaluate((container) => {
       container.scrollLeft = 600;
@@ -404,6 +422,16 @@ test("customer patient table keeps animal identity pinned while data columns scr
     ).toBeLessThanOrEqual(1);
     expect(documentOverflow).toBe(0);
   }
+
+  const horizontalOverflowOwners = await patientSection.evaluate((root) =>
+    Array.from(root.querySelectorAll<HTMLElement>("*"))
+      .filter((element) => {
+        const overflowX = getComputedStyle(element).overflowX;
+        return overflowX === "auto" || overflowX === "scroll";
+      })
+      .map((element) => element.getAttribute("data-slot")),
+  );
+  expect(horizontalOverflowOwners).toEqual(["table-container"]);
 
   await page.setViewportSize({ width: 1900, height: 1024 });
   await scrollContainer.evaluate((container) => {
@@ -444,8 +472,21 @@ test("customer patient table keeps animal identity pinned while data columns scr
 
   await page.getByTestId("customer-side-panel-guardian").click();
   const guardianTable = page.getByRole("table", { name: "보호자 고객관리 테이블" });
-  await expect(guardianTable).toHaveAttribute("data-customer-pinning-mode", "none");
-  await expect(guardianTable.locator('[data-emr-column-pinned="left"]')).toHaveCount(0);
+  const guardianHeader = guardianTable.locator(
+    'th[data-customer-column-key="name"]',
+  );
+  const guardianCell = page
+    .getByTestId("customer-guardian-row-guardian-kang-seoyun")
+    .locator('td[data-customer-column-key="name"]');
+  await expect(guardianTable).toHaveAttribute(
+    "data-customer-pinning-mode",
+    "first-data-column",
+  );
+  await expect(guardianHeader).toHaveAttribute(
+    "data-emr-column-pinned",
+    "left",
+  );
+  await expect(guardianCell).toHaveCSS("position", "sticky");
 });
 
 test("customer table aligns selection header and row checkboxes", async ({ page }) => {
@@ -518,8 +559,30 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     '[data-emr-customer-cell-content="true"]',
   ).first();
   const footer = section.getByTestId("customer-table-footer");
+  const guardianHeading = section.getByRole("heading", {
+    name: "보호자",
+  });
+  const guardianSearch = section.getByPlaceholder("보호자 검색");
+  const guardianHeaderLabel = table
+    .locator('th[data-customer-column-key="name"]')
+    .locator('[data-customer-column-header-label="true"]');
+  const guardianNameText = firstRow
+    .locator('td[data-customer-column-key="name"]')
+    .locator('[data-emr-cell-text-mode="two-line-if-long"]');
+  const footerTotal = footer.locator("span").first();
 
   await expect(section).toBeVisible();
+  await expect(section).toHaveAttribute(
+    "data-emr-pinned-table-workspace",
+    "true",
+  );
+  await expect(table).toHaveAttribute(
+    "data-customer-pinning-mode",
+    "first-data-column",
+  );
+  await expect(
+    table.locator('th[data-customer-column-key="name"]'),
+  ).toHaveAttribute("data-emr-column-pinned", "left");
   await expect(firstRow).toBeVisible();
   await expect(footer).toContainText("총 5건");
   await expect(footer).toContainText("1/1 페이지");
@@ -528,6 +591,37 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   await expect(
     section.getByRole("button", { name: "환자/보호자 등록" }),
   ).toHaveCSS("background-color", "rgb(23, 23, 23)");
+
+  const [
+    guardianHeadingBox,
+    guardianSearchBox,
+    guardianHeaderLabelBox,
+    guardianNameBox,
+    footerTotalBox,
+  ] = await Promise.all([
+    guardianHeading.boundingBox(),
+    guardianSearch.boundingBox(),
+    guardianHeaderLabel.boundingBox(),
+    guardianNameText.boundingBox(),
+    footerTotal.boundingBox(),
+  ]);
+  expect(guardianHeadingBox).not.toBeNull();
+  expect(guardianSearchBox).not.toBeNull();
+  expect(guardianHeaderLabelBox).not.toBeNull();
+  expect(guardianNameBox).not.toBeNull();
+  expect(footerTotalBox).not.toBeNull();
+  expect(
+    Math.abs(guardianSearchBox!.x - guardianHeadingBox!.x),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(guardianHeaderLabelBox!.x - guardianHeadingBox!.x),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(guardianNameBox!.x - guardianHeadingBox!.x),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(footerTotalBox!.x - guardianHeadingBox!.x),
+  ).toBeLessThanOrEqual(1);
 
   const geometry = await section.evaluate((root) => {
     const topSlot = root.querySelector(
@@ -617,7 +711,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   expect(geometry.headerOffset).toBe(56);
   expect(geometry.headerHeight).toBe(108);
   expect(geometry.headerBackground).toBe("rgb(252, 252, 252)");
-  expect(geometry.headerPadding).toEqual(["16px", "48px", "16px", "48px"]);
+  expect(geometry.headerPadding).toEqual(["0px", "48px", "16px", "48px"]);
   expect(geometry.headerGap).toBe("12px");
   expect(geometry.headingFont).toEqual(["24px", "32px", "700"]);
   expect(geometry.searchWidth).toBe(320);
@@ -631,7 +725,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   expect(geometry.longContentRowHeight).toBeGreaterThanOrEqual(
     geometry.rowHeight,
   );
-  expect(geometry.cellPadding).toEqual(["10px", "10px"]);
+  expect(geometry.cellPadding).toEqual(["0px", "0px"]);
   expect(geometry.footerBackground).toBe("rgb(252, 252, 252)");
   expect(geometry.footerHeight).toBe(64);
   expect(geometry.footerPadding).toEqual(["14px", "48px", "14px", "48px"]);
@@ -661,7 +755,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   expect(sortButtonGeometry.height).toBe(24);
   expect(sortButtonGeometry.iconHeight).toBeCloseTo(7.75, 1);
   expect(sortButtonGeometry.iconWidth).toBeCloseTo(6.75, 1);
-  expect(sortButtonGeometry.padding).toEqual(["4px", "10px", "4px", "10px"]);
+  expect(sortButtonGeometry.padding).toEqual(["4px", "0px", "4px", "0px"]);
   await expect(sortableHeader).toBeEnabled();
   await expect(plannedSortHeader).toBeDisabled();
 
@@ -1089,10 +1183,245 @@ test("customer deleted history uses the mg table empty state and distinguishes s
   await expect(emptyState).toContainText("삭제된 보호자/동물이 없습니다");
   await expect(emptyState).toContainText("삭제 이력이 없습니다");
 
-  await page.getByPlaceholder("삭제 항목 검색").fill("없는 삭제 기록");
+  await page
+    .getByPlaceholder("삭제된 보호자/동물 검색")
+    .fill("없는 삭제 기록");
   await expect(emptyState).toHaveAttribute("data-kind", "no-filter-results");
   await expect(emptyState).toContainText("조건에 맞는 삭제 항목이 없습니다");
   await expect(emptyState).toContainText("검색어를 바꾸면 삭제 이력이 다시 보입니다");
+});
+
+test("customer archive table pins identity and restores through the existing target API", async ({
+  page,
+}) => {
+  const archiveRecord = {
+    id: "patient-archived-mango",
+    target: "patient",
+    workspaceId: "clair-demo",
+    displayName: "망고",
+    status: "soft_deleted",
+    deletedAt: "2026-07-20T04:30:00.000Z",
+    deletedByUserId: "user-admin",
+    auditEvent: {
+      action: "soft_delete",
+      actorUserId: "user-admin",
+      occurredAt: "2026-07-20T04:30:00.000Z",
+      target: "patient",
+      targetId: "patient-archived-mango",
+    },
+  };
+  let restoreBody: unknown;
+
+  await page.route(
+    "**/api/workspaces/clair-demo/customer/archive?status=soft_deleted",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 200,
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [archiveRecord],
+          enforcedBy: "customer-archive-list",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/customer/patients/patient-archived-mango/archive",
+    async (route) => {
+      restoreBody = route.request().postDataJSON();
+      await route.fulfill({
+        contentType: "application/json",
+        status: 200,
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          record: {
+            ...archiveRecord,
+            status: "active",
+            restoredAt: "2026-07-28T12:00:00.000Z",
+            restoredByUserId: "playwright-default-session",
+          },
+          locks: [],
+          enforcedBy: "customer-archive-mutation",
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
+  await page.getByTestId("customer-side-panel-deleted").click();
+
+  const section = page.getByTestId("customer-archive-table");
+  const table = section.getByRole("table", {
+    name: "삭제된 보호자/동물 고객관리 테이블",
+  });
+  const row = page.getByTestId(
+    "customer-archive-row-patient-patient-archived-mango",
+  );
+  const identityHeader = table.locator(
+    'th[data-customer-archive-column="displayName"]',
+  );
+  const identityCell = row.locator(
+    'td[data-customer-archive-column="displayName"]',
+  );
+
+  await expect(section).toHaveAttribute(
+    "data-emr-pinned-table-workspace",
+    "true",
+  );
+  await expect(identityHeader).toHaveAttribute(
+    "data-emr-column-pinned",
+    "left",
+  );
+  await expect(identityCell).toHaveCSS("position", "sticky");
+  await expect(row).toContainText("망고");
+  await expect(row).toContainText("동물");
+
+  const heading = section.getByRole("heading", {
+    name: "삭제된 보호자/동물",
+  });
+  const search = section.getByPlaceholder("삭제된 보호자/동물 검색");
+  const headerText = identityHeader.locator(
+    '[data-emr-table-identity-text="true"]',
+  );
+  const rowText = identityCell.locator(
+    '[data-emr-table-identity-text="true"]',
+  );
+  const footerTotal = section
+    .getByTestId("customer-table-footer")
+    .locator("span")
+    .first();
+  const [headingBox, searchBox, headerBox, rowBox, footerBox] =
+    await Promise.all([
+      heading.boundingBox(),
+      search.boundingBox(),
+      headerText.boundingBox(),
+      rowText.boundingBox(),
+      footerTotal.boundingBox(),
+    ]);
+  expect(headingBox).not.toBeNull();
+  expect(searchBox).not.toBeNull();
+  expect(headerBox).not.toBeNull();
+  expect(rowBox).not.toBeNull();
+  expect(footerBox).not.toBeNull();
+  expect(Math.abs(searchBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(headerBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(rowBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(footerBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+
+  await row.getByRole("button", { name: "망고 복원" }).click();
+  await expect(row).toHaveCount(0);
+  expect(restoreBody).toEqual({ action: "restore" });
+  await expect(page.getByTestId("customer-deleted-empty-state")).toContainText(
+    "삭제된 보호자/동물이 없습니다",
+  );
+});
+
+test("customer archive surfaces read and restore permission or retryable failures", async ({
+  page,
+}) => {
+  let allowReadSuccess = false;
+  const archiveRecords = [
+    {
+      id: "patient-archive-denied",
+      target: "patient",
+      workspaceId: "clair-demo",
+      displayName: "권한동물",
+      status: "soft_deleted",
+      deletedAt: "2026-07-20T04:30:00.000Z",
+      deletedByUserId: "user-admin",
+      auditEvent: null,
+    },
+    {
+      id: "guardian-archive-error",
+      target: "guardian",
+      workspaceId: "clair-demo",
+      displayName: "실패보호자",
+      status: "soft_deleted",
+      deletedAt: "2026-07-21T04:30:00.000Z",
+      deletedByUserId: "user-admin",
+      auditEvent: null,
+    },
+  ];
+
+  await page.route(
+    "**/api/workspaces/clair-demo/customer/archive?status=soft_deleted",
+    async (route) => {
+      if (!allowReadSuccess) {
+        await route.fulfill({
+          contentType: "application/json",
+          status: 500,
+          body: JSON.stringify({ ok: false, error: "db_read_failed" }),
+        });
+        return;
+      }
+      await route.fulfill({
+        contentType: "application/json",
+        status: 200,
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: archiveRecords,
+          enforcedBy: "customer-archive-list",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/customer/patients/patient-archive-denied/archive",
+    (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        status: 403,
+        body: JSON.stringify({
+          ok: false,
+          status: 403,
+          denialReason: "permission_missing",
+        }),
+      }),
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/customer/guardians/guardian-archive-error/archive",
+    (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        status: 500,
+        body: JSON.stringify({
+          ok: false,
+          status: 500,
+          error: "db_write_failed",
+        }),
+      }),
+  );
+
+  await page.goto("/w/clair-demo/customer?modulePanel=open");
+  await page.getByTestId("customer-side-panel-deleted").click();
+
+  const readError = page.getByTestId("customer-archive-read-error");
+  await expect(readError).toContainText("삭제 이력을 불러오지 못했습니다");
+  allowReadSuccess = true;
+  await readError.getByRole("button", { name: "다시 시도" }).click();
+
+  const deniedRow = page.getByTestId(
+    "customer-archive-row-patient-patient-archive-denied",
+  );
+  const errorRow = page.getByTestId(
+    "customer-archive-row-guardian-guardian-archive-error",
+  );
+  await expect(deniedRow).toBeVisible();
+  await deniedRow.getByRole("button", { name: "권한동물 복원" }).click();
+  await expect(
+    page.getByTestId("customer-archive-mutation-alert"),
+  ).toContainText("삭제 항목을 복원할 권한이 없습니다");
+  await expect(deniedRow).toBeVisible();
+
+  await errorRow.getByRole("button", { name: "실패보호자 복원" }).click();
+  await expect(
+    page.getByTestId("customer-archive-mutation-alert"),
+  ).toContainText("삭제 항목을 복원하지 못했습니다");
+  await expect(errorRow).toBeVisible();
 });
 
 test("common patient and guardian drawers are available outside reception", async ({ page }) => {
