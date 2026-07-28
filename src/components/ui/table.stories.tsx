@@ -15,6 +15,7 @@ type TableStoryArgs = {
   density: "compact" | "standard" | "comfortable";
   layout: "fill" | "scroll";
   minWidth: number;
+  pinning: "none" | "columns";
   showCaption: boolean;
 };
 
@@ -24,9 +25,14 @@ const sampleRows = [
   { area: "수납", owner: "샘플 데스크", status: "준비", time: "10:05" },
 ];
 
-function TableExample({ density, layout, minWidth, showCaption }: TableStoryArgs) {
+function TableExample({ density, layout, minWidth, pinning, showCaption }: TableStoryArgs) {
   return (
-    <Table density={density} layout={layout} minWidth={layout === "scroll" ? minWidth : undefined}>
+    <Table
+      density={density}
+      layout={layout}
+      minWidth={layout === "scroll" ? minWidth : undefined}
+      pinning={pinning}
+    >
       {showCaption ? (
         <TableCaption>합성 업무 흐름만 보여주는 샘플 테이블입니다.</TableCaption>
       ) : null}
@@ -85,6 +91,11 @@ const meta = {
       control: { type: "number", min: 480, max: 1200 },
       description: "Minimum table width used when layout is scroll.",
     },
+    pinning: {
+      control: "radio",
+      options: ["none", "columns"],
+      description: "Whether shared cells may use fixed-column presentation.",
+    },
     showCaption: {
       control: "boolean",
       description: "Whether to render a table caption.",
@@ -94,6 +105,7 @@ const meta = {
     density: "standard",
     layout: "fill",
     minWidth: 720,
+    pinning: "none",
     showCaption: true,
   },
   render: (args) => <TableExample {...args} />,
@@ -141,6 +153,92 @@ export const ScrollLayout: Story = {
           "사용할 때: column 수가 많아 최소 너비를 유지해야 할 때. 쓰지 말아야 할 때: 작은 표를 불필요하게 가로 스크롤로 숨길 때.",
       },
     },
+  },
+};
+
+export const PinnedColumns: Story = {
+  render: (args) => (
+    <Table
+      data-testid="pinned-table"
+      density={args.density}
+      layout="scroll"
+      minWidth={840}
+      pinning="columns"
+    >
+      <TableHeader>
+        <TableRow>
+          <TableHead pinned="left" pinnedOffset={0} pinnedEdge>
+            대상
+          </TableHead>
+          <TableHead>상태</TableHead>
+          <TableHead>담당</TableHead>
+          <TableHead pinned="right" pinnedOffset={0} pinnedEdge>
+            작업
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow>
+          <TableCell pinned="left" pinnedOffset={0} pinnedEdge>
+            합성 환자 A
+          </TableCell>
+          <TableCell>대기</TableCell>
+          <TableCell>샘플 담당</TableCell>
+          <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
+            보기
+          </TableCell>
+        </TableRow>
+        <TableRow data-state="selected">
+          <TableCell pinned="left" pinnedOffset={0} pinnedEdge>
+            합성 환자 B
+          </TableCell>
+          <TableCell>진행</TableCell>
+          <TableCell>샘플 담당</TableCell>
+          <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
+            보기
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
+  ),
+  play: async ({ canvasElement }) => {
+    const table = canvasElement.querySelector(
+      '[data-testid="pinned-table"]',
+    ) as HTMLTableElement | null;
+    const container = table?.parentElement;
+    const leftCell = table?.querySelector(
+      'tbody [data-emr-column-pinned="left"]',
+    ) as HTMLTableCellElement | null;
+    const rightCell = table?.querySelector(
+      'tbody [data-emr-column-pinned="right"]',
+    ) as HTMLTableCellElement | null;
+    const selectedCell = table?.querySelector(
+      'tbody tr[data-state="selected"] [data-emr-column-pinned="left"]',
+    ) as HTMLTableCellElement | null;
+
+    if (!table || !container || !leftCell || !rightCell || !selectedCell) {
+      throw new Error("Pinned table story did not render the required cells.");
+    }
+
+    const initialLeft = leftCell.getBoundingClientRect().left;
+    container.scrollLeft = 240;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    if (table.dataset.emrPinning !== "columns") {
+      throw new Error("Table did not expose the shared pinning mode.");
+    }
+    if (getComputedStyle(leftCell).position !== "sticky") {
+      throw new Error("Left pinned cell is not sticky.");
+    }
+    if (getComputedStyle(rightCell).position !== "sticky") {
+      throw new Error("Right pinned cell is not sticky.");
+    }
+    if (Math.abs(leftCell.getBoundingClientRect().left - initialLeft) > 1) {
+      throw new Error("Left pinned cell moved during horizontal scroll.");
+    }
+    if (getComputedStyle(selectedCell).backgroundColor === "rgba(0, 0, 0, 0)") {
+      throw new Error("Selected pinned cell has a transparent surface.");
+    }
   },
 };
 
