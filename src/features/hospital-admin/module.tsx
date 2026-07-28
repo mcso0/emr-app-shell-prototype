@@ -19,8 +19,10 @@ import {
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import {
+  EmrPinnedTableWorkspace,
   EmrTableCellText,
   EmrTableHeaderCell,
+  EmrTableIdentityCellContent,
   EmrTableSelectionCell,
   EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
@@ -223,17 +225,17 @@ type HospitalOrderTableHeaderColumn = {
 
 const hospitalOrderTableHeaderColumns: HospitalOrderTableHeaderColumn[] = [
   {
-    key: "type",
-    label: "유형",
-    interaction: "filterable",
-    resize: "data-column",
-  },
-  {
     key: "standardName",
     label: "표준 Order명",
     interaction: "sortable",
     resize: "data-column",
     sortKey: "standardName",
+  },
+  {
+    key: "type",
+    label: "유형",
+    interaction: "filterable",
+    resize: "data-column",
   },
   {
     key: "inHospitalName",
@@ -270,6 +272,9 @@ const hospitalOrderTableHeaderColumns: HospitalOrderTableHeaderColumn[] = [
     resize: "data-column",
   },
 ];
+
+const [hospitalOrderIdentityHeaderColumn, ...hospitalOrderScrollableHeaderColumns] =
+  hospitalOrderTableHeaderColumns;
 
 const hospitalOrderNameTextMode: EmrTableCellTextMode = "two-line-if-long";
 const hospitalOrderTableSortLabels: Record<HospitalOrderTableSortKey, string> = {
@@ -720,10 +725,12 @@ function getSubcategoryCount(orders: HospitalOrderCatalogItem[], subcategoryId: 
 
 function HospitalOrderSortableHeader({
   column,
+  identity = false,
   onSort,
   sortState,
 }: {
   column: HospitalOrderTableHeaderColumn & { sortKey: HospitalOrderTableSortKey };
+  identity?: boolean;
   onSort: (key: HospitalOrderTableSortKey) => void;
   sortState: HospitalOrderTableSortState;
 }) {
@@ -749,7 +756,12 @@ function HospitalOrderSortableHeader({
     <EmrTableHeaderCell
       align={column.align}
       className={cn(hospitalOrderTableColumnClasses[column.key], column.className)}
+      data-hospital-order-column={column.key}
+      identity={identity}
       interaction={column.interaction}
+      pinned={identity ? "left" : undefined}
+      pinnedEdge={identity || undefined}
+      pinnedOffset={identity ? 0 : undefined}
       resize={column.resize}
       sortDirection={active ? sortState.direction : undefined}
       sortLabel={ariaLabel}
@@ -1539,16 +1551,20 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   };
 
   return (
-    <div
+    <EmrPinnedTableWorkspace
       className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
       data-testid="hospital-admin-order-content"
+      identityTextInset={20}
     >
       <div
         aria-hidden="true"
         className="h-14 shrink-0"
         data-emr-content-top-slot="true"
       />
-      <section className="border-b bg-transparent px-5 py-4">
+      <section
+        className="border-b bg-transparent px-5 py-4"
+        data-emr-table-workspace-header="true"
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -1685,17 +1701,28 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         </div>
       </section>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
           <Table
             aria-label="병원관리 Order 관리 테이블"
+            containerClassName="h-full min-h-0 overflow-auto"
             data-testid="hospital-order-table"
             density={tableDensity}
             layout="scroll"
             minWidth={hospitalOrderTableMinWidth}
+            pinning="columns"
             className={cn(hospitalOrderTableMinWidthClass, "table-fixed")}
           >
             <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
               <TableRow className="hover:bg-transparent">
+                <HospitalOrderSortableHeader
+                  column={
+                    hospitalOrderIdentityHeaderColumn as HospitalOrderTableHeaderColumn & {
+                      sortKey: HospitalOrderTableSortKey;
+                    }
+                  }
+                  identity
+                  sortState={orderSortState}
+                  onSort={handleOrderSort}
+                />
                 <EmrTableSelectionHeaderCell
                   className={hospitalOrderTableColumnClasses.select}
                 >
@@ -1708,7 +1735,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                     }
                   />
                 </EmrTableSelectionHeaderCell>
-                {hospitalOrderTableHeaderColumns.map((column) =>
+                {hospitalOrderScrollableHeaderColumns.map((column) =>
                   column.sortKey ? (
                     <HospitalOrderSortableHeader
                       key={column.key}
@@ -1721,6 +1748,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                       key={column.key}
                       align={column.align}
                       className={cn(hospitalOrderTableColumnClasses[column.key], column.className)}
+                      data-hospital-order-column={column.key}
                       interaction={column.interaction}
                       resize={column.resize}
                     >
@@ -1759,6 +1787,22 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                     )}
                     onClick={() => openDrawer(order)}
                   >
+                    <TableCell
+                      className="overflow-hidden !p-0 font-semibold"
+                      data-hospital-order-column="standardName"
+                      pinned="left"
+                      pinnedEdge
+                      pinnedOffset={0}
+                    >
+                      <EmrTableIdentityCellContent className="min-h-11">
+                        <EmrTableCellText
+                          mode={hospitalOrderNameTextMode}
+                          fullText={order.standardName}
+                        >
+                          {order.standardName}
+                        </EmrTableCellText>
+                      </EmrTableIdentityCellContent>
+                    </TableCell>
                     <EmrTableSelectionCell onClick={(event) => event.stopPropagation()}>
                       <EmrTableCheckbox
                         aria-label={`${order.standardName} 선택`}
@@ -1767,11 +1811,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                       />
                     </EmrTableSelectionCell>
                     <TableCell><Badge variant="outline">개별</Badge></TableCell>
-                    <TableCell className="overflow-hidden font-semibold">
-                      <EmrTableCellText mode={hospitalOrderNameTextMode} fullText={order.standardName}>
-                        {order.standardName}
-                      </EmrTableCellText>
-                    </TableCell>
                     <TableCell className="overflow-hidden">
                       <EmrTableCellText mode={hospitalOrderNameTextMode} fullText={order.inHospitalName}>
                         {order.inHospitalName}
@@ -1848,7 +1887,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
               ) : null}
             </TableBody>
           </Table>
-        </ScrollArea>
       </div>
       {selectedOrderIds.length > 0 ? (
         <div className="pointer-events-none sticky bottom-3 z-20 mt-[-52px] flex justify-center">
@@ -1865,7 +1903,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           </div>
         </div>
       ) : null}
-    </div>
+    </EmrPinnedTableWorkspace>
   );
 }
 
@@ -1874,14 +1912,21 @@ function HospitalOrderTableSkeletonRows() {
     <>
       {Array.from({ length: 6 }, (_, index) => (
         <TableRow key={`hospital-order-skeleton-${index}`} data-testid="hospital-order-table-skeleton-row">
-          <TableCell>
-            <div className="h-4 w-4 rounded bg-[var(--emr-surface-muted)]" />
+          <TableCell
+            className="!p-0"
+            pinned="left"
+            pinnedEdge
+            pinnedOffset={0}
+          >
+            <EmrTableIdentityCellContent className="min-h-11">
+              <div className="h-4 w-36 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+            </EmrTableIdentityCellContent>
           </TableCell>
+          <EmrTableSelectionCell>
+            <div className="h-4 w-4 rounded bg-[var(--emr-surface-muted)]" />
+          </EmrTableSelectionCell>
           <TableCell>
             <div className="h-5 w-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-36 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
           </TableCell>
           <TableCell>
             <div className="h-4 w-32 animate-pulse rounded bg-[var(--emr-surface-muted)]" />

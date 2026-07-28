@@ -23,6 +23,7 @@ type EmrTableHeaderCellProps = Omit<
   align?: "left" | "center" | "right";
   children: React.ReactNode;
   filterActive?: boolean;
+  identity?: boolean;
   interaction?: EmrTableHeaderInteraction;
   isResizing?: boolean;
   menuActive?: boolean;
@@ -46,6 +47,16 @@ type EmrTableCellTextProps = {
   title?: string;
 };
 
+type EmrPinnedTableWorkspaceProps = React.ComponentProps<"div"> & {
+  identityTextInset: number | string;
+};
+
+type EmrTableIdentityCellContentProps = React.ComponentProps<"div"> & {
+  leading?: React.ReactNode;
+  leadingGap?: number | string;
+  leadingWidth?: number | string;
+};
+
 type EmrTableSelectionHeaderCellProps = Omit<
   React.ComponentProps<typeof EmrTableHeaderCell>,
   "children" | "interaction" | "resize"
@@ -66,6 +77,10 @@ function getStringLabel(children: React.ReactNode) {
   return typeof children === "string" ? children : "컬럼";
 }
 
+function toCssLength(value: number | string) {
+  return typeof value === "number" ? `${value}px` : value;
+}
+
 function SortIcon({ direction }: { direction?: "asc" | "desc" }) {
   const Icon = direction === "desc" ? ChevronDownIcon : ChevronUpIcon;
 
@@ -77,6 +92,7 @@ export function EmrTableHeaderCell({
   children,
   className,
   filterActive = false,
+  identity = false,
   interaction = "static",
   isResizing = false,
   menuActive = false,
@@ -105,8 +121,10 @@ export function EmrTableHeaderCell({
       aria-sort={getAriaSort(sortDirection)}
       data-emr-column-resize={resize}
       data-emr-header-interaction={interaction}
+      data-emr-table-identity-cell={identity ? "true" : undefined}
       className={cn(
         "emr-table-header-cell emr-text-body relative select-none bg-[var(--emr-surface-muted)] font-medium text-muted-foreground",
+        identity && "!p-0",
         align === "right" && "text-right",
         align === "center" && "text-center",
         className,
@@ -121,7 +139,12 @@ export function EmrTableHeaderCell({
           align === "center" && "justify-center",
         )}
       >
-        <span className="min-w-0 truncate">{children}</span>
+        <span
+          className="min-w-0 truncate"
+          data-emr-table-identity-text={identity ? "true" : undefined}
+        >
+          {children}
+        </span>
         {sortable ? (
           <button
             data-row-interactive="true"
@@ -190,6 +213,65 @@ export function EmrTableHeaderCell({
         />
       ) : null}
     </TableHead>
+  );
+}
+
+export function EmrPinnedTableWorkspace({
+  children,
+  identityTextInset,
+  style,
+  ...props
+}: EmrPinnedTableWorkspaceProps) {
+  return (
+    <div
+      data-emr-pinned-table-workspace="true"
+      style={{
+        ...style,
+        "--emr-table-identity-text-inset": toCssLength(identityTextInset),
+      } as React.CSSProperties}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function EmrTableIdentityCellContent({
+  children,
+  className,
+  leading,
+  leadingGap = 0,
+  leadingWidth = 0,
+  style,
+  ...props
+}: EmrTableIdentityCellContentProps) {
+  return (
+    <div
+      data-emr-table-identity-content="true"
+      className={cn("relative flex min-w-0 items-center", className)}
+      style={{
+        ...style,
+        "--emr-table-identity-leading-gap": toCssLength(leadingGap),
+        "--emr-table-identity-leading-width": toCssLength(leadingWidth),
+      } as React.CSSProperties}
+      {...props}
+    >
+      {leading ? (
+        <span
+          aria-hidden="true"
+          className="absolute inline-flex shrink-0 items-center justify-center"
+          data-emr-table-identity-leading="true"
+        >
+          {leading}
+        </span>
+      ) : null}
+      <span
+        className="flex min-w-0 flex-1 items-center"
+        data-emr-table-identity-text="true"
+      >
+        {children}
+      </span>
+    </div>
   );
 }
 

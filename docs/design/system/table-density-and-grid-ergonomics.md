@@ -198,22 +198,37 @@ Acceptance rules:
 - Pass typed `pinned`, `pinnedOffset`, and `pinnedEdge` props to shared cells; feature code must not set sticky z-index, edge shadow, or inherited background directly.
 - Pinned cells own opaque semantic surfaces for default, hover, selected, header, and loading states.
 - Use the single `Table layout="scroll"` overflow owner.
-- Keep header labels aligned with the scalar text baseline of their body cells. When a body cell has a leading avatar/icon slot, pass an explicit feature metadata offset rather than shifting the whole column.
+- Wrap cross-family pinned table workspaces in `EmrPinnedTableWorkspace` and provide the feature-owned local identity inset once.
+- Use `EmrTableHeaderCell identity` and `EmrTableIdentityCellContent` so header and row identity text inherit the same exact axis.
+- When a body identity has a leading avatar/icon, pass its measured width and gap to `EmrTableIdentityCellContent`; the visual occupies the space before the shared text axis and must not move the identity text.
+- Mark the opted-in title/header block with `data-emr-table-workspace-header="true"`; the shared pinned workspace contract owns its 0px padding-top.
+- Mark the aligned footer with `data-emr-table-workspace-footer="true"` so its total text inherits the same identity inset.
 - Verify left/right offsets, multiple pinned cells, keyboard focus visibility, loading, hover, selected, and narrow desktop behavior.
 
-### Customer Animal Identity Pinning
+### Customer Identity Pinning
 
 DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYSTEM-PR-087 migrated its presentation to the shared pinned-column contract.
 
 - Use the existing TanStack column-pinning state and the shared `Table layout="scroll"` container; do not add another overflow owner.
 - Adapt TanStack offsets with `getEmrPinnedColumnProps`; customer feature code must not duplicate sticky position, z-index, or edge-shadow styling.
-- Keep animal name as the first data column and patient code as the first scrollable data column.
-- Use `pinningMode="first-data-column"` for the animal table and `pinningMode="none"` for the guardian table.
+- Keep animal name, guardian name, and archived-record display name as the first pinned identity column in their respective tables.
+- Use `pinningMode="first-data-column"` for both the animal and guardian tables; the archive table uses the same shared fixed-cell props directly.
 - Keep the animal identity column between 160px and 220px, with 184px as the default.
-- Align the animal-name header label with the row-name text by offsetting the header label for the existing 28px avatar and 8px gap.
+- Set one workspace identity axis through `EmrPinnedTableWorkspace`; the animal avatar occupies the measured 28px width plus 8px gap before that text axis.
+- Align the title, search field, pinned header, pinned row text, and footer total through the same workspace axis instead of feature-local padding arithmetic.
 - Keep patient scalar values and status badges on one line; the table owns a minimum width of 1480px.
 - Sticky header and body cells must share the same hover, selected, loading, and error surface tokens as their row.
 - Horizontal scrolling must not hide sort controls, checkbox focus rings, row actions, or the single table overflow owner.
+- The deleted guardian/patient screen must read the existing archive endpoint and restore through the target-specific existing mutation endpoint; permission denial and retryable read/mutation failure states stay visible.
+
+### Hospital Admin Order Identity Pinning
+
+- All 15 Order management leaf screens use the single shared renderer in `src/features/hospital-admin/module.tsx`.
+- `표준 Order명` is the physical first column and the only left-pinned identity column.
+- The selection column and all other Order columns remain scrollable behind the opaque identity surface.
+- The Order title and pinned header/row identity text use a 20px local workspace axis.
+- The Order table container owns both vertical and horizontal table scrolling; do not wrap it in a second `ScrollArea`.
+- Preserve sorting, filtering, selection, row actions, drawers, and workspace catalog read/mutation behavior when changing the presentation.
 - Real patient image storage remains outside the visual table contract. Use the shared fallback avatar until a separately approved image-data contract exists.
 
 ## Header Interaction Rules

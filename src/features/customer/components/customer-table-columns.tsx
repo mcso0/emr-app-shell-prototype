@@ -3,7 +3,10 @@
 import type { ColumnDef, SortingFn } from "@tanstack/react-table";
 import { CdsActionsCheckCircleIcon } from "@/components/cds-icons/actions-and-controls";
 import { AnimalPatientAvatar } from "@/components/emr/animal-patient-avatar";
-import { EmrTableCellText } from "@/components/emr/table-primitives";
+import {
+  EmrTableCellText,
+  EmrTableIdentityCellContent,
+} from "@/components/emr/table-primitives";
 import type {
   EmrColumnResize,
   EmrTableCellTextMode,
@@ -33,7 +36,6 @@ export type CustomerTableColumnMeta<TRow> = {
     | ((rows: TRow[]) => CustomerTableFilterOption[]);
   filterValues?: (row: TRow) => string[];
   headerClassName?: string;
-  headerLeadingOffset?: number;
   headerInteraction?: EmrTableHeaderInteraction;
   label: string;
   required?: boolean;
@@ -120,13 +122,16 @@ export function createCustomerPatientColumns(): Array<
       size: 184,
       maxSize: 220,
       cell: ({ row }) => (
-        <div className="flex min-w-0 items-center gap-2">
-          <span aria-hidden="true" className="shrink-0">
+        <EmrTableIdentityCellContent
+          leading={
             <AnimalPatientAvatar
               alt={`${row.original.name} 동물 프로필`}
               size="table"
             />
-          </span>
+          }
+          leadingGap={8}
+          leadingWidth={28}
+        >
           <EmrTableCellText
             as="span"
             className="flex-1 font-semibold"
@@ -135,11 +140,10 @@ export function createCustomerPatientColumns(): Array<
           >
             {row.original.name}
           </EmrTableCellText>
-        </div>
+        </EmrTableIdentityCellContent>
       ),
       meta: {
         cellKind: "rich",
-        headerLeadingOffset: 36,
         label: "동물명",
         required: true,
         headerInteraction: "sortable",
@@ -354,7 +358,20 @@ export function createCustomerGuardianColumns(): Array<
       enableSorting: true,
       sortingFn,
       sortUndefined: "last",
+      cell: ({ row }) => (
+        <EmrTableIdentityCellContent>
+          <EmrTableCellText
+            as="span"
+            className="flex-1 font-semibold"
+            fullText={row.original.name}
+            mode="two-line-if-long"
+          >
+            {row.original.name}
+          </EmrTableCellText>
+        </EmrTableIdentityCellContent>
+      ),
       meta: {
+        cellKind: "rich",
         label: "보호자명",
         required: true,
         headerInteraction: "sortable",

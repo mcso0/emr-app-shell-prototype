@@ -1,6 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import {
+  EmrPinnedTableWorkspace,
+  EmrTableHeaderCell,
+  EmrTableIdentityCellContent,
+} from "@/components/emr/table-primitives";
+import {
   Table,
   TableBody,
   TableCaption,
@@ -158,48 +163,73 @@ export const ScrollLayout: Story = {
 
 export const PinnedColumns: Story = {
   render: (args) => (
-    <Table
-      data-testid="pinned-table"
-      density={args.density}
-      layout="scroll"
-      minWidth={840}
-      pinning="columns"
+    <EmrPinnedTableWorkspace
+      className="w-[520px] overflow-hidden"
+      data-testid="pinned-table-workspace"
+      identityTextInset={48}
     >
-      <TableHeader>
-        <TableRow>
-          <TableHead pinned="left" pinnedOffset={0} pinnedEdge>
-            대상
-          </TableHead>
-          <TableHead>상태</TableHead>
-          <TableHead>담당</TableHead>
-          <TableHead pinned="right" pinnedOffset={0} pinnedEdge>
-            작업
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <TableRow>
-          <TableCell pinned="left" pinnedOffset={0} pinnedEdge>
-            합성 환자 A
-          </TableCell>
-          <TableCell>대기</TableCell>
-          <TableCell>샘플 담당</TableCell>
-          <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
-            보기
-          </TableCell>
-        </TableRow>
-        <TableRow data-state="selected">
-          <TableCell pinned="left" pinnedOffset={0} pinnedEdge>
-            합성 환자 B
-          </TableCell>
-          <TableCell>진행</TableCell>
-          <TableCell>샘플 담당</TableCell>
-          <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
-            보기
-          </TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
+      <Table
+        data-testid="pinned-table"
+        density={args.density}
+        layout="scroll"
+        minWidth={840}
+        pinning="columns"
+      >
+        <TableHeader>
+          <TableRow>
+            <EmrTableHeaderCell
+              className="!p-0"
+              identity
+              pinned="left"
+              pinnedOffset={0}
+              pinnedEdge
+            >
+              대상
+            </EmrTableHeaderCell>
+            <TableHead>상태</TableHead>
+            <TableHead>담당</TableHead>
+            <TableHead pinned="right" pinnedOffset={0} pinnedEdge>
+              작업
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell
+              className="!p-0"
+              pinned="left"
+              pinnedOffset={0}
+              pinnedEdge
+            >
+              <EmrTableIdentityCellContent
+                leading={
+                  <span className="inline-block size-7 rounded-full bg-muted" />
+                }
+                leadingGap={8}
+                leadingWidth={28}
+              >
+                합성 환자 A
+              </EmrTableIdentityCellContent>
+            </TableCell>
+            <TableCell>대기</TableCell>
+            <TableCell>샘플 담당</TableCell>
+            <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
+              보기
+            </TableCell>
+          </TableRow>
+          <TableRow data-state="selected">
+            <TableCell pinned="left" pinnedOffset={0} pinnedEdge>
+              합성 환자 B
+            </TableCell>
+            <TableCell>진행</TableCell>
+            <TableCell>샘플 담당</TableCell>
+            <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
+              보기
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </EmrPinnedTableWorkspace>
   ),
   play: async ({ canvasElement }) => {
     const table = canvasElement.querySelector(
@@ -215,8 +245,26 @@ export const PinnedColumns: Story = {
     const selectedCell = table?.querySelector(
       'tbody tr[data-state="selected"] [data-emr-column-pinned="left"]',
     ) as HTMLTableCellElement | null;
+    const workspace = canvasElement.querySelector(
+      '[data-testid="pinned-table-workspace"]',
+    ) as HTMLDivElement | null;
+    const headerIdentity = table?.querySelector(
+      'thead [data-emr-table-identity-text="true"]',
+    ) as HTMLSpanElement | null;
+    const rowIdentity = table?.querySelector(
+      'tbody [data-emr-table-identity-text="true"]',
+    ) as HTMLSpanElement | null;
 
-    if (!table || !container || !leftCell || !rightCell || !selectedCell) {
+    if (
+      !table ||
+      !container ||
+      !leftCell ||
+      !rightCell ||
+      !selectedCell ||
+      !workspace ||
+      !headerIdentity ||
+      !rowIdentity
+    ) {
       throw new Error("Pinned table story did not render the required cells.");
     }
 
@@ -238,6 +286,26 @@ export const PinnedColumns: Story = {
     }
     if (getComputedStyle(selectedCell).backgroundColor === "rgba(0, 0, 0, 0)") {
       throw new Error("Selected pinned cell has a transparent surface.");
+    }
+    if (
+      Math.abs(
+        headerIdentity.getBoundingClientRect().left -
+          rowIdentity.getBoundingClientRect().left,
+      ) > 1
+    ) {
+      throw new Error("Pinned identity header and row text do not share one axis.");
+    }
+    const horizontalOwners = Array.from(
+      workspace.querySelectorAll<HTMLElement>("*"),
+    ).filter((element) => {
+      const overflowX = getComputedStyle(element).overflowX;
+      return overflowX === "auto" || overflowX === "scroll";
+    });
+    if (
+      horizontalOwners.length !== 1 ||
+      horizontalOwners[0] !== container
+    ) {
+      throw new Error("Pinned table has more than one horizontal overflow owner.");
     }
   },
 };
