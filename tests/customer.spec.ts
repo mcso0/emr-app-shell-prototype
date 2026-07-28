@@ -376,18 +376,39 @@ test("customer patient table keeps animal identity pinned while data columns scr
   expect(Math.abs(headerLabelBox!.x - animalNameBox!.x)).toBeLessThanOrEqual(2);
   expect(Math.abs(animalNameBox!.x - headingBox!.x)).toBeLessThanOrEqual(8);
 
+  for (const width of [1900, 1280, 1024]) {
+    await page.setViewportSize({ width, height: 1024 });
+    await scrollContainer.evaluate((container) => {
+      container.scrollLeft = 600;
+    });
+
+    await expect
+      .poll(async () =>
+        scrollContainer.evaluate((container) => container.scrollLeft),
+      )
+      .toBeGreaterThan(0);
+    const [containerBox, pinnedHeaderBox, documentOverflow] =
+      await Promise.all([
+        scrollContainer.boundingBox(),
+        animalHeader.boundingBox(),
+        page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        ),
+      ]);
+    expect(containerBox).not.toBeNull();
+    expect(pinnedHeaderBox).not.toBeNull();
+    expect(
+      Math.abs(pinnedHeaderBox!.x - containerBox!.x),
+    ).toBeLessThanOrEqual(1);
+    expect(documentOverflow).toBe(0);
+  }
+
+  await page.setViewportSize({ width: 1900, height: 1024 });
   await scrollContainer.evaluate((container) => {
     container.scrollLeft = 600;
   });
-
-  await expect.poll(async () => scrollContainer.evaluate((container) => container.scrollLeft)).toBeGreaterThan(0);
-  const [containerBox, pinnedHeaderBox] = await Promise.all([
-    scrollContainer.boundingBox(),
-    animalHeader.boundingBox(),
-  ]);
-  expect(containerBox).not.toBeNull();
-  expect(pinnedHeaderBox).not.toBeNull();
-  expect(Math.abs(pinnedHeaderBox!.x - containerBox!.x)).toBeLessThanOrEqual(1);
 
   await dubuRow.hover();
   const [hoverPinnedBackground, expectedHoverBackground] = await Promise.all([
