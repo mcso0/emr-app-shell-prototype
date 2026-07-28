@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-07-12"
+updated: "2026-07-28"
 linear_issue: "DEN-225"
 linear_project: "12 CLAiR EMR Table Density & Data Grid Ergonomics"
 source_docs:
@@ -72,7 +72,8 @@ Runtime source:
   - `--emr-table-cell-padding-y-compact|standard|comfortable`
 - `src/components/emr/table-density.ts` owns density/layout/header role types and view option copy.
 - `src/components/emr/table-density-selector.tsx` owns the visible selected-value density dropdown.
-- `src/components/ui/table.tsx` accepts `density`, `layout`, `minWidth`, and `containerClassName`.
+- `src/components/ui/table.tsx` accepts `density`, `layout`, `minWidth`, `pinning`, and `containerClassName`.
+- `src/components/emr/table-pinning.ts` converts TanStack column state into typed shared pinned-cell props.
 
 Density API:
 
@@ -81,6 +82,7 @@ Density API:
 | `density`  | `compact`, `standard`, `comfortable` | `standard` | Maps to shared row/header height and cell padding tokens.                             |
 | `layout`   | `fill`, `scroll`                     | `fill`     | `scroll` gives the outer wrapper horizontal overflow and the table an unbroken width. |
 | `minWidth` | number or CSS length                 | none       | Required for `scroll` tables with meaningful column minimums.                         |
+| `pinning`  | `none`, `columns`                    | `none`     | Enables the shared fixed-cell layering and opaque semantic surface contract.          |
 
 View option copy:
 
@@ -187,17 +189,28 @@ Acceptance rules:
 - `data-slot="table-container"` is the only horizontal overflow owner.
 - `minWidth` is set on the table element, not separately on header/body rows.
 - Do not wrap `TableHeader`, `TableBody`, row warning banners, or empty states in separate overflow containers.
-- Do not add sticky columns in Project 12 unless a later issue explicitly scopes the keyboard/focus behavior.
+- Adopt sticky columns only through the shared pinned-column contract below and with focused keyboard/focus verification.
 - Page-level document width must remain equal to the viewport width at 1440, 1280, and 1024 screenshots.
+
+### Shared Pinned Column Contract
+
+- Use `Table pinning="columns"` whenever one or more header/body cells are fixed.
+- Pass typed `pinned`, `pinnedOffset`, and `pinnedEdge` props to shared cells; feature code must not set sticky z-index, edge shadow, or inherited background directly.
+- Pinned cells own opaque semantic surfaces for default, hover, selected, header, and loading states.
+- Use the single `Table layout="scroll"` overflow owner.
+- Keep header labels aligned with the scalar text baseline of their body cells. When a body cell has a leading avatar/icon slot, pass an explicit feature metadata offset rather than shifting the whole column.
+- Verify left/right offsets, multiple pinned cells, keyboard focus visibility, loading, hover, selected, and narrow desktop behavior.
 
 ### Customer Animal Identity Pinning
 
-DESIGN-SYSTEM-PR-086 is the scoped exception that adds a sticky identity column to the customer animal master-data grid.
+DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYSTEM-PR-087 migrated its presentation to the shared pinned-column contract.
 
 - Use the existing TanStack column-pinning state and the shared `Table layout="scroll"` container; do not add another overflow owner.
+- Adapt TanStack offsets with `getEmrPinnedColumnProps`; customer feature code must not duplicate sticky position, z-index, or edge-shadow styling.
 - Keep animal name as the first data column and patient code as the first scrollable data column.
 - Use `pinningMode="first-data-column"` for the animal table and `pinningMode="none"` for the guardian table.
 - Keep the animal identity column between 160px and 220px, with 184px as the default.
+- Align the animal-name header label with the row-name text by offsetting the header label for the existing 28px avatar and 8px gap.
 - Keep patient scalar values and status badges on one line; the table owns a minimum width of 1480px.
 - Sticky header and body cells must share the same hover, selected, loading, and error surface tokens as their row.
 - Horizontal scrolling must not hide sort controls, checkbox focus rings, row actions, or the single table overflow owner.

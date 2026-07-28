@@ -18,7 +18,7 @@
 - Support both `left` and `right` shared pinning props, but migrate only the already-approved animal-name left pin in this work.
 - Pinned header and body cells must own opaque backgrounds for default, hover, selected, and loading surfaces; never use `background: inherit` for a pinned cell.
 - Use `--emr-surface-panel`, `--emr-surface-hover`, `--emr-surface-selected`, and `--emr-surface-muted`; do not add palette literals.
-- Keep the guardian table unpinned and preserve its current geometry.
+- Keep the guardian table unpinned; limit its geometry change to the shared 2px header-label alignment correction.
 - Align animal header label text to animal row-name text within 2px, and keep animal row-name text within 8px of the page title/search left baseline at the 1900px verification viewport.
 - Keep the avatar as the leading visual slot; do not move the entire row identity text to compensate for the header.
 - Use test-first red/green cycles for each behavior change.
@@ -144,7 +144,7 @@ git commit -m "docs: plan shared table pinning fix"
   - `Table` prop `pinning?: TablePinningMode`
   - `TableHead` and `TableCell` props `pinned`, `pinnedOffset`, and `pinnedEdge`
 
-- [ ] **Step 1: Write the failing shared-table story**
+- [x] **Step 1: Write the failing shared-table story**
 
 Extend `TableStoryArgs` with `pinning: "none" | "columns"` and add a `PinnedColumns` story that:
 
@@ -239,7 +239,7 @@ play: async ({ canvasElement }) => {
 }
 ```
 
-- [ ] **Step 2: Run the story test and verify RED**
+- [x] **Step 2: Run the story test and verify RED**
 
 Run:
 
@@ -249,7 +249,7 @@ npx vitest run --project storybook src/components/ui/table.stories.tsx
 
 Expected: FAIL because `pinning`, `pinned`, `pinnedOffset`, and `pinnedEdge` do not exist on the shared table primitives.
 
-- [ ] **Step 3: Add typed shared pinning props**
+- [x] **Step 3: Add typed shared pinning props**
 
 In `src/components/ui/table.tsx`, export:
 
@@ -311,7 +311,7 @@ Render shared attributes from `Table`, `TableHead`, and `TableCell`:
 
 Use the equivalent attributes and style call for `<td>`.
 
-- [ ] **Step 4: Add shared pinned surface CSS**
+- [x] **Step 4: Add shared pinned surface CSS**
 
 Add the following contract next to `.emr-table-surface` in `src/app/globals.css`:
 
@@ -379,7 +379,7 @@ Add the following contract next to `.emr-table-surface` in `src/app/globals.css`
 
 The selected rule must remain after the hover rule so selection stays opaque while hovered.
 
-- [ ] **Step 5: Add the TanStack adapter**
+- [x] **Step 5: Add the TanStack adapter**
 
 Create `src/components/emr/table-pinning.ts`:
 
@@ -409,7 +409,7 @@ export function getEmrPinnedColumnProps<TRow>(
 }
 ```
 
-- [ ] **Step 6: Run focused shared verification and verify GREEN**
+- [x] **Step 6: Run focused shared verification and verify GREEN**
 
 Run:
 
@@ -421,7 +421,7 @@ npx tsc --noEmit
 
 Expected: the story test, lint, and TypeScript all pass. If ESLint reports that CSS is outside its supported file set, rerun the command without `src/app/globals.css` and record that CSS was covered by Storybook/build verification.
 
-- [ ] **Step 7: Commit the shared primitive**
+- [x] **Step 7: Commit the shared primitive**
 
 ```bash
 git add src/components/ui/table.tsx src/components/ui/table.stories.tsx src/components/emr/table-pinning.ts src/app/globals.css
@@ -448,7 +448,7 @@ git commit -m "fix(ui): centralize pinned table surfaces"
   - `CustomerDataTableColumnHeader.leadingOffset?: number`
   - stable `data-customer-column-header-label` measurement hook
 
-- [ ] **Step 1: Write the failing opacity and alignment regression**
+- [x] **Step 1: Write the failing opacity and alignment regression**
 
 Extend the existing test named `customer patient table keeps animal identity pinned while data columns scroll`.
 
@@ -517,7 +517,7 @@ expect(hoverPinnedBackground).toBe(expectedHoverBackground);
 
 Click the row and assert selected opacity using the same probe pattern with `--emr-surface-selected`.
 
-- [ ] **Step 2: Run the customer regression and verify RED**
+- [x] **Step 2: Run the customer regression and verify RED**
 
 Run:
 
@@ -527,7 +527,7 @@ npx playwright test tests/customer.spec.ts --grep "customer patient table keeps 
 
 Expected: FAIL because the header label hook and alignment offset do not exist, and the hovered pinned cell inherits the translucent row background.
 
-- [ ] **Step 3: Replace local sticky styling with the shared contract**
+- [x] **Step 3: Replace local sticky styling with the shared contract**
 
 In `customer-data-table.tsx`:
 
@@ -576,7 +576,7 @@ In `customer-data-table.tsx`:
 
 This makes loading rows use the same opaque pinned surface.
 
-- [ ] **Step 4: Add the customer identity-header offset**
+- [x] **Step 4: Add the customer identity-header offset**
 
 In `customer-table-columns.tsx`, add:
 
@@ -635,7 +635,7 @@ This yields the measured target:
 - animal header label: approximately `root + 46px`
 - guardian header/row text remains approximately `root + 54px`
 
-- [ ] **Step 5: Run focused customer verification and verify GREEN**
+- [x] **Step 5: Run focused customer verification and verify GREEN**
 
 Run:
 
@@ -648,7 +648,7 @@ npx tsc --noEmit
 
 Expected: both customer pinning/alignment and guardian geometry checks pass.
 
-- [ ] **Step 6: Commit the customer migration**
+- [x] **Step 6: Commit the customer migration**
 
 ```bash
 git add tests/customer.spec.ts src/features/customer/components/customer-data-table.tsx src/features/customer/components/customer-data-table-column-header.tsx src/features/customer/components/customer-table-columns.tsx
@@ -669,7 +669,7 @@ git commit -m "fix(customer): align pinned animal identity column"
 - Consumes: verified shared pinning API and customer migration.
 - Produces: durable design-system guidance and decision-oriented completion evidence.
 
-- [ ] **Step 1: Promote pinning from a customer exception to a shared contract**
+- [x] **Step 1: Promote pinning from a customer exception to a shared contract**
 
 Update `table-density-and-grid-ergonomics.md` so the pinning section states:
 
@@ -686,7 +686,7 @@ Update `table-density-and-grid-ergonomics.md` so the pinning section states:
 
 Keep the customer-specific name width and patient-code ordering below the shared section as an adoption note.
 
-- [ ] **Step 2: Update the table debt inventory**
+- [x] **Step 2: Update the table debt inventory**
 
 Clarify that:
 
@@ -694,7 +694,7 @@ Clarify that:
 - `EmrDataTable` remains order-specific;
 - broad migration is only needed when another table actually adopts pinning.
 
-- [ ] **Step 3: Record result evidence**
+- [x] **Step 3: Record result evidence**
 
 Set PR-087 to `human_review`, list the exact verification commands/results, and create the Korean HTML report containing:
 
@@ -706,7 +706,7 @@ Set PR-087 to `human_review`, list the exact verification commands/results, and 
 - risks and out-of-scope items;
 - no push, PR, merge, deploy, or production change.
 
-- [ ] **Step 4: Run the full verification matrix**
+- [x] **Step 4: Run the full verification matrix**
 
 Run:
 
@@ -727,7 +727,7 @@ Expected:
 - only already-documented baseline warnings may remain;
 - no new browser runtime error is introduced.
 
-- [ ] **Step 5: Perform signed-in browser verification**
+- [x] **Step 5: Perform local production-equivalent visual verification**
 
 At the production-equivalent local route and at 1900px, 1280px, and 1024px:
 
@@ -741,7 +741,7 @@ At the production-equivalent local route and at 1900px, 1280px, and 1024px:
 
 Capture accepted screenshots for Animal default/hover/selected and Guardian reference.
 
-- [ ] **Step 6: Commit the verified documentation**
+- [x] **Step 6: Commit the verified documentation**
 
 ```bash
 git add docs/design/system/table-density-and-grid-ergonomics.md docs/design/system/ui-debt-inventory.md docs/work/design-system/DESIGN-SYSTEM-PR-087-shared-table-pinning-surface.md docs/completed/design/2026-07-28-shared-table-pinning-surface-report.html
