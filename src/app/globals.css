@@ -409,6 +409,38 @@
     scrollbar-gutter: stable;
   }
 
+  [data-emr-pinned-table-workspace="true"] {
+    --emr-table-identity-text-inset: 0px;
+  }
+
+  [data-emr-pinned-table-workspace="true"]
+    [data-emr-table-workspace-header="true"] {
+    padding-block-start: 0;
+  }
+
+  [data-emr-pinned-table-workspace="true"]
+    [data-emr-table-workspace-footer="true"] {
+    padding-inline: var(--emr-table-identity-text-inset);
+  }
+
+  [data-emr-table-identity-cell="true"] {
+    padding-inline: 0;
+  }
+
+  [data-emr-table-identity-cell="true"] > .emr-table-cell-content,
+  [data-emr-table-identity-content="true"] {
+    padding-inline-start: var(--emr-table-identity-text-inset);
+  }
+
+  [data-emr-table-identity-leading="true"] {
+    inline-size: var(--emr-table-identity-leading-width);
+    inset-inline-start: calc(
+      var(--emr-table-identity-text-inset) -
+        var(--emr-table-identity-leading-width) -
+        var(--emr-table-identity-leading-gap)
+    );
+  }
+
   .emr-table-surface {
     border-collapse: collapse;
   }

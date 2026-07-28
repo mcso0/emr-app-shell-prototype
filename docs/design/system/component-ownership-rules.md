@@ -140,7 +140,7 @@ Do not add or update upstream shadcn components during a screen issue unless the
 
 | Pattern | Current state | Rule |
 |---|---|---|
-| Tables | `src/components/ui/table.tsx` is generic; `src/components/emr/emr-data-table.tsx` is order-specific despite the broad name | use `Table` for generic tables; do not force billing, chart, customer, or hospital admin into `EmrDataTable` |
+| Tables | `src/components/ui/table.tsx` owns generic table/scroll/pinning mechanics; `EmrPinnedTableWorkspace` and identity-content primitives own the cross-family EMR identity axis; `src/components/emr/emr-data-table.tsx` remains order-specific despite the broad name | compose the generic `Table` with EMR pinned-workspace primitives; do not force billing, chart, customer, or hospital admin into `EmrDataTable` |
 | Side panels | `EmrSubpanel`, `EmrSidePanelCard`, `EmrOrderQueueSidePanel`, `EmrTextSideNavButton`, and `EmrContentHistoryList` already exist | reuse first; add variants only after a second screen proves a stable role |
 | Status badges | `EmrStatusBadge` is label-based for a limited set; feature screens still have local tone maps | keep domain-specific statuses local until a tone resolver contract is defined |
 | Confirm dialogs | `EmrConfirmDialogContent` exists and is used across chart, profile, auth, and hospital admin; `EmrDialogShell` defines the forward-looking confirm/form/wide-form shell | keep existing simple confirmations stable; use `EmrDialogShell` for new or migrated dialog work when a screen issue includes visual QA |

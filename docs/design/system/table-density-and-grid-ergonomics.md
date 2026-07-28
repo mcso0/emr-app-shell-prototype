@@ -198,7 +198,11 @@ Acceptance rules:
 - Pass typed `pinned`, `pinnedOffset`, and `pinnedEdge` props to shared cells; feature code must not set sticky z-index, edge shadow, or inherited background directly.
 - Pinned cells own opaque semantic surfaces for default, hover, selected, header, and loading states.
 - Use the single `Table layout="scroll"` overflow owner.
-- Keep header labels aligned with the scalar text baseline of their body cells. When a body cell has a leading avatar/icon slot, pass an explicit feature metadata offset rather than shifting the whole column.
+- Wrap cross-family pinned table workspaces in `EmrPinnedTableWorkspace` and provide the feature-owned local identity inset once.
+- Use `EmrTableHeaderCell identity` and `EmrTableIdentityCellContent` so header and row identity text inherit the same exact axis.
+- When a body identity has a leading avatar/icon, pass its measured width and gap to `EmrTableIdentityCellContent`; the visual occupies the space before the shared text axis and must not move the identity text.
+- Mark the opted-in title/header block with `data-emr-table-workspace-header="true"`; the shared pinned workspace contract owns its 0px padding-top.
+- Mark the aligned footer with `data-emr-table-workspace-footer="true"` so its total text inherits the same identity inset.
 - Verify left/right offsets, multiple pinned cells, keyboard focus visibility, loading, hover, selected, and narrow desktop behavior.
 
 ### Customer Animal Identity Pinning
