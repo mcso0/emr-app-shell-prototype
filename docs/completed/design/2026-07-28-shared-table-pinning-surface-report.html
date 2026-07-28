@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>공통 테이블 고정 컬럼 수정 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #202321;
+        background: #f4f6f5;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        width: min(920px, calc(100% - 40px));
+        margin: 40px auto;
+      }
+      header,
+      section {
+        border: 1px solid #dfe3e1;
+        border-radius: 16px;
+        background: #fff;
+      }
+      header {
+        padding: 32px;
+        background: #17201c;
+        color: #fff;
+      }
+      section {
+        margin-top: 16px;
+        padding: 24px;
+      }
+      h1 {
+        margin: 8px 0 12px;
+        font-size: 30px;
+      }
+      h2 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 6px;
+        background: #eef1ef;
+        padding: 2px 5px;
+        font-size: 12px;
+      }
+      .eyebrow {
+        color: #9fb5aa;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      .status {
+        display: inline-flex;
+        border-radius: 999px;
+        background: #dff7e8;
+        color: #17643a;
+        padding: 5px 9px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      .metric {
+        border-radius: 12px;
+        background: #f4f6f5;
+        padding: 16px;
+      }
+      .metric strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 22px;
+      }
+      @media (max-width: 720px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">DESIGN-SYSTEM-PR-087 · 2026-07-28</div>
+        <h1>공통 테이블 고정 컬럼 수정 결과</h1>
+        <p>
+          가로 스크롤 콘텐츠가 왼쪽 고정 컬럼 안으로 비치던 문제를
+          공통 테이블 계층에서 막고, 동물명 헤더와 행 텍스트 기준선을 맞췄습니다.
+        </p>
+        <span class="status">검증 완료 · 검토 대기</span>
+      </header>
+
+      <section>
+        <h2>요청과 해결</h2>
+        <ul>
+          <li>
+            고정 셀이 행의 투명 배경을 상속하던 구조를 제거하고, 기본·호버·선택·
+            로딩 상태마다 불투명 시맨틱 표면을 직접 칠하도록 변경했습니다.
+          </li>
+          <li>
+            고정 위치, z-index, 좌·우 오프셋, 경계 그림자를 공통
+            <code>Table</code> primitive로 이동했습니다.
+          </li>
+          <li>
+            동물명 헤더에는 기존 28px 아바타와 8px 간격을 합친 36px
+            메타데이터 오프셋을 적용했습니다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>측정 결과</h2>
+        <div class="grid">
+          <div class="metric">
+            <strong>38px → 0px</strong>
+            동물명 헤더와 행 이름의 가로 차이
+          </div>
+          <div class="metric">
+            <strong>2px</strong>
+            제목/검색과 행 이름의 가로 차이
+          </div>
+          <div class="metric">
+            <strong>0px</strong>
+            1900·1280·1024px 문서 가로 오버플로
+          </div>
+        </div>
+        <p>
+          1900px에서 제목/검색은 x=419, 동물명 헤더와 행 이름은 모두
+          x=417로 측정됐습니다. 고정 헤더는 세 검증 폭 모두 스크롤 컨테이너
+          왼쪽에서 1px 이내를 유지했습니다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 영역</h2>
+        <ul>
+          <li>
+            공통: <code>src/components/ui/table.tsx</code>,
+            <code>src/components/emr/table-pinning.ts</code>,
+            <code>src/app/globals.css</code>, Table Storybook
+          </li>
+          <li>
+            고객관리: 데이터 테이블, 컬럼 헤더, 컬럼 메타데이터, 고객
+            Playwright 회귀 테스트
+          </li>
+          <li>
+            문서: 테이블 UX 계약, UI debt inventory, PR-087 업무 항목
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Secret scan 3480개 파일, docs check 886개 문서 통과</li>
+          <li>ESLint, TypeScript 통과</li>
+          <li>Table Storybook 5/5, 고객 Playwright 15/15 통과</li>
+          <li>Storybook build, Next production build 통과</li>
+          <li>
+            기본·호버·선택·로딩·보호자 화면과 1900·1280·1024px 시각 QA 통과
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위와 남은 사항</h2>
+        <p>
+          데이터, 검색, 정렬, 필터, 선택, drawer, API, 권한, Supabase,
+          의존성은 변경하지 않았습니다. 다른 테이블은 실제로 고정 컬럼을 도입할
+          때 이 공통 계약을 사용하면 됩니다. 아직 push, PR, merge, 배포,
+          production 변경은 하지 않았습니다.
+        </p>
+        <p>
+          Storybook의 기존 MDX·폰트·lottie·chunk 경고와 Next의 기존 NFT
+          tracing 경고는 남아 있지만 이번 변경으로 새 오류는 발생하지 않았습니다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

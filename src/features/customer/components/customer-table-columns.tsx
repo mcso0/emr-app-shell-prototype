@@ -33,6 +33,7 @@ export type CustomerTableColumnMeta<TRow> = {
     | ((rows: TRow[]) => CustomerTableFilterOption[]);
   filterValues?: (row: TRow) => string[];
   headerClassName?: string;
+  headerLeadingOffset?: number;
   headerInteraction?: EmrTableHeaderInteraction;
   label: string;
   required?: boolean;
@@ -138,6 +139,7 @@ export function createCustomerPatientColumns(): Array<
       ),
       meta: {
         cellKind: "rich",
+        headerLeadingOffset: 36,
         label: "동물명",
         required: true,
         headerInteraction: "sortable",

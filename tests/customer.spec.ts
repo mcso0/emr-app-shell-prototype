@@ -138,7 +138,18 @@ test("Cheongdam customer table shows skeleton while seeded profiles are loading"
   await page.goto(`/w/${workspaceId}/customer?modulePanel=open`);
 
   const patientTable = page.getByTestId("customer-patient-table");
-  await expect(patientTable.getByTestId("customer-patient-table-skeleton-row").first()).toBeVisible();
+  const firstSkeletonRow = patientTable
+    .getByTestId("customer-patient-table-skeleton-row")
+    .first();
+  const pinnedSkeletonCell = firstSkeletonRow.locator(
+    'td[data-emr-column-pinned="left"]',
+  );
+  await expect(firstSkeletonRow).toBeVisible();
+  await expect(pinnedSkeletonCell).toHaveCSS("position", "sticky");
+  await expect(pinnedSkeletonCell).not.toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   await expect(page.getByTestId("customer-page-header-count-skeleton")).toBeVisible();
   await expect(patientTable).not.toContainText("동물 정보가 없습니다");
   await expect(patientTable).not.toContainText("0건");
@@ -312,14 +323,24 @@ test("customer workspace renders animal master list and opens the common patient
 });
 
 test("customer patient table keeps animal identity pinned while data columns scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 1900, height: 1024 });
   await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
 
+  const patientSection = page.getByTestId("customer-patient-table");
   const patientTable = page.getByRole("table", { name: "동물 고객관리 테이블" });
   const scrollContainer = patientTable.locator("xpath=..");
   const animalHeader = patientTable.locator('th[data-customer-column-key="name"]');
   const patientCodeHeader = patientTable.locator('th[data-customer-column-key="patientNo"]');
   const dubuRow = page.getByTestId("customer-patient-row-patient-dubu");
   const animalCell = dubuRow.locator('td[data-customer-column-key="name"]');
+  const pageHeading = patientSection.getByRole("heading", { name: "동물" });
+  const searchInput = patientSection.getByPlaceholder("동물 검색");
+  const animalHeaderLabel = animalHeader.locator(
+    '[data-customer-column-header-label="true"]',
+  );
+  const animalNameText = animalCell.locator(
+    '[data-emr-cell-text-mode="one-line"]',
+  );
 
   await expect(patientTable).toHaveAttribute("data-customer-pinning-mode", "first-data-column");
   await expect(patientTable).toHaveCSS("min-width", "1480px");
@@ -339,18 +360,87 @@ test("customer patient table keeps animal identity pinned while data columns scr
   expect(avatarBox!.width).toBe(28);
   expect(avatarBox!.height).toBe(28);
 
+  const [headingBox, searchBox, headerLabelBox, animalNameBox] =
+    await Promise.all([
+      pageHeading.boundingBox(),
+      searchInput.boundingBox(),
+      animalHeaderLabel.boundingBox(),
+      animalNameText.boundingBox(),
+    ]);
+
+  expect(headingBox).not.toBeNull();
+  expect(searchBox).not.toBeNull();
+  expect(headerLabelBox).not.toBeNull();
+  expect(animalNameBox).not.toBeNull();
+  expect(Math.abs(searchBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(headerLabelBox!.x - animalNameBox!.x)).toBeLessThanOrEqual(2);
+  expect(Math.abs(animalNameBox!.x - headingBox!.x)).toBeLessThanOrEqual(8);
+
+  for (const width of [1900, 1280, 1024]) {
+    await page.setViewportSize({ width, height: 1024 });
+    await scrollContainer.evaluate((container) => {
+      container.scrollLeft = 600;
+    });
+
+    await expect
+      .poll(async () =>
+        scrollContainer.evaluate((container) => container.scrollLeft),
+      )
+      .toBeGreaterThan(0);
+    const [containerBox, pinnedHeaderBox, documentOverflow] =
+      await Promise.all([
+        scrollContainer.boundingBox(),
+        animalHeader.boundingBox(),
+        page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        ),
+      ]);
+    expect(containerBox).not.toBeNull();
+    expect(pinnedHeaderBox).not.toBeNull();
+    expect(
+      Math.abs(pinnedHeaderBox!.x - containerBox!.x),
+    ).toBeLessThanOrEqual(1);
+    expect(documentOverflow).toBe(0);
+  }
+
+  await page.setViewportSize({ width: 1900, height: 1024 });
   await scrollContainer.evaluate((container) => {
     container.scrollLeft = 600;
   });
 
-  await expect.poll(async () => scrollContainer.evaluate((container) => container.scrollLeft)).toBeGreaterThan(0);
-  const [containerBox, pinnedHeaderBox] = await Promise.all([
-    scrollContainer.boundingBox(),
-    animalHeader.boundingBox(),
+  await dubuRow.hover();
+  const [hoverPinnedBackground, expectedHoverBackground] = await Promise.all([
+    animalCell.evaluate((cell) => getComputedStyle(cell).backgroundColor),
+    page.evaluate(() => {
+      const probe = document.createElement("div");
+      probe.style.backgroundColor = "var(--emr-surface-hover)";
+      document.body.appendChild(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    }),
   ]);
-  expect(containerBox).not.toBeNull();
-  expect(pinnedHeaderBox).not.toBeNull();
-  expect(Math.abs(pinnedHeaderBox!.x - containerBox!.x)).toBeLessThanOrEqual(1);
+
+  expect(hoverPinnedBackground).toBe(expectedHoverBackground);
+
+  await dubuRow.click();
+  await expect(dubuRow).toHaveAttribute("data-state", "selected");
+  const [selectedPinnedBackground, expectedSelectedBackground] =
+    await Promise.all([
+      animalCell.evaluate((cell) => getComputedStyle(cell).backgroundColor),
+      page.evaluate(() => {
+        const probe = document.createElement("div");
+        probe.style.backgroundColor = "var(--emr-surface-selected)";
+        document.body.appendChild(probe);
+        const color = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return color;
+      }),
+    ]);
+
+  expect(selectedPinnedBackground).toBe(expectedSelectedBackground);
 
   await page.getByTestId("customer-side-panel-guardian").click();
   const guardianTable = page.getByRole("table", { name: "보호자 고객관리 테이블" });
@@ -571,7 +661,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   expect(sortButtonGeometry.height).toBe(24);
   expect(sortButtonGeometry.iconHeight).toBeCloseTo(7.75, 1);
   expect(sortButtonGeometry.iconWidth).toBeCloseTo(6.75, 1);
-  expect(sortButtonGeometry.padding).toEqual(["4px", "8px", "4px", "8px"]);
+  expect(sortButtonGeometry.padding).toEqual(["4px", "10px", "4px", "10px"]);
   await expect(sortableHeader).toBeEnabled();
   await expect(plannedSortHeader).toBeDisabled();
 

@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-05-20"
+updated: "2026-07-28"
 linear_issue: "DEN-140"
 linear_project: "00 UI 시스템 인벤토리 및 리팩토링 기준"
 source_docs:
@@ -81,7 +81,7 @@ Existing shared raw controls in `src/components/ui/*` and `src/components/emr/*`
 
 | Family | Concrete files | Current pattern | Recommended destination |
 |---|---|---|---|
-| Dense tables | `src/features/chart/module.tsx`, `src/features/billing/module.tsx`, `src/features/hospital-admin/module.tsx`, `src/features/inpatient/module.tsx`, `src/features/home/components/home-kanban-workspace.tsx`, `src/features/customer/module.tsx`, `src/components/emr/emr-data-table.tsx`, `src/components/ui/table.tsx` | shared `Table` exists; `EmrDataTable` is order-specific and not a generic data table despite its name; table widths and empty rows are local | use shadcn `Table` for generic tables; keep `EmrDataTable` order/dispensing-specific until redesigned; consider a new EMR table recipe guide before a new component |
+| Dense tables | `src/features/chart/module.tsx`, `src/features/billing/module.tsx`, `src/features/hospital-admin/module.tsx`, `src/features/inpatient/module.tsx`, `src/features/home/components/home-kanban-workspace.tsx`, `src/features/customer/module.tsx`, `src/components/emr/emr-data-table.tsx`, `src/components/ui/table.tsx` | shared `Table` owns density, overflow, and typed pinned-cell presentation; `EmrDataTable` remains order-specific despite its name; table widths and empty rows stay feature-local | use shared `Table` for generic tables and adopt its pinning contract only when a table actually fixes columns; keep `EmrDataTable` order/dispensing-specific until redesigned |
 | Forms and field groups | `src/features/reception/profile-drawer.tsx`, `src/features/reception/module.tsx`, `src/features/hospital-admin/module.tsx`, `src/features/auth/login-form.tsx`, `src/features/auth/personal-profile-settings.tsx`, `src/features/auth/workspace-onboarding.tsx` | shadcn `Field`, `Input`, `Select`, `Textarea`, `Switch` exist, but feature-local field wrappers differ | use existing shadcn primitives first; consider a new EMR `FieldRow` or `DrawerField` only after profile, hospital admin, and auth forms are compared |
 | Dialogs and confirmations | `src/components/emr/confirm-dialog-content.tsx`, `src/features/chart/module.tsx`, `src/features/reception/module.tsx`, `src/features/reception/profile-drawer.tsx`, `src/features/auth/workspace-membership-management.tsx`, `src/features/hospital-admin/module.tsx`, `src/features/lab-imaging/module.tsx` | confirm dialogs use `EmrConfirmDialogContent`, but large create/edit dialogs define local header/body/footer shells | use existing `EmrConfirmDialogContent` for confirmations; keep workflow dialogs feature-local; consider a new EMR dialog shell only if reception/profile/hospital-admin share the same structure after split |
 | Side panels and list items | `src/components/emr/subpanel.tsx`, `src/components/emr/side-panel-card.tsx`, `src/components/emr/order-queue-side-panel.tsx`, `src/components/emr/content-history-list.tsx`, `src/components/emr/text-side-panel.tsx`, `src/features/reception/module.tsx`, `src/features/lab-imaging/module.tsx`, `src/features/home/components/home-kanban-workspace.tsx` | strong EMR primitives already exist; some feature modules still implement local cards, status grouping, and meta badges | prefer existing EMR primitives; add variants only when a second screen proves the same role cannot be expressed |
@@ -106,6 +106,7 @@ Existing shared raw controls in `src/components/ui/*` and `src/components/emr/*`
 
 - `src/features/auth/workspace-membership-management.tsx`: UI duplication exists, but auth/session/security behavior must not change. Refactor only in project `07` with focused regression coverage.
 - `src/components/emr/emr-data-table.tsx`: name suggests generic reuse, but implementation is order/technician/status-specific. Do not force unrelated tables into it.
+- Shared `Table` now owns fixed-cell position, stacking, edge shadow, and opaque semantic surfaces. Migrate another feature only when it actually adopts column pinning; do not create a broad speculative table rewrite.
 - `src/components/emr/status-badge.tsx`: current label-based Korean status map works for a narrow order/status set. Expand only through an explicit tone API or domain mapper.
 - `src/shell/workspace-frame.tsx`, `src/shell/workspace-tabs-bar.tsx`, and `src/shell/workspace-chrome-tabs.tsx`: shell behavior is cross-cutting. Any UI extraction must preserve tab route history, drawer routing, and panel layout semantics.
 - Local fixed widths in dense tables should not be removed blindly. Some are intentional column readability constraints and need responsive overflow QA before changes.
