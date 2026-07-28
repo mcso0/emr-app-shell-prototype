@@ -1265,20 +1265,28 @@ test("hospital admin role screen stays compact and keyboard-safe", async ({ page
 });
 
 test("hospital admin order table uses shared header and cell text primitives", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
+  const workspace = page.getByTestId("hospital-admin-order-content");
   const table = page.getByTestId("hospital-order-table");
   const headers = table.locator("thead th");
+  const identityHeader = headers.filter({ hasText: "표준 Order명" });
 
-  await expect(headers.nth(0)).toHaveAttribute("data-emr-header-interaction", "static");
-  await expect(headers.nth(0)).toHaveAttribute("data-emr-column-resize", "none");
-  await expect(headers.filter({ hasText: "표준 Order명" })).toHaveAttribute("data-emr-header-interaction", "sortable");
-  await expect(headers.filter({ hasText: "표준 Order명" })).toHaveAttribute("data-emr-column-resize", "data-column");
+  await expect(workspace).toHaveAttribute("data-emr-pinned-table-workspace", "true");
+  await expect(table).toHaveAttribute("data-emr-pinning", "columns");
+  await expect(headers.nth(0)).toContainText("표준 Order명");
+  await expect(headers.nth(0)).toHaveAttribute("data-emr-column-pinned", "left");
+  await expect(headers.nth(1)).toHaveAttribute("data-emr-header-interaction", "static");
+  await expect(headers.nth(1)).toHaveAttribute("data-emr-column-resize", "none");
+  await expect(identityHeader).toHaveAttribute("data-emr-header-interaction", "sortable");
+  await expect(identityHeader).toHaveAttribute("data-emr-column-resize", "data-column");
   await expect(headers.filter({ hasText: "사용여부" })).toHaveAttribute("data-emr-header-interaction", "filterable");
   await expect(headers.filter({ hasText: "작업" })).toHaveAttribute("data-emr-column-resize", "none");
 
   await expect(page.getByTestId("hospital-order-catalog-read-status")).toContainText("Workspace catalog 기준");
   const row = page.getByTestId("hospital-order-row-ord-lab-cbc-baso");
+  const identityCell = row.locator('[data-hospital-order-column="standardName"]');
   const selectAllOrderBox = await table
     .getByRole("checkbox", { name: "보이는 오더 전체 선택" })
     .boundingBox();
@@ -1298,6 +1306,113 @@ test("hospital admin order table uses shared header and cell text primitives", a
   await expect(row.locator('[data-emr-cell-text-mode="two-line-if-long"]').filter({ hasText: "[CBC 검사] #BASO" }).first()).toBeVisible();
   await expect(row.locator('[data-emr-cell-text-mode="one-line"]').filter({ hasText: "사용" })).toBeVisible();
   await expect(row.locator('[data-emr-cell-text-mode="one-line"]').filter({ hasText: "12,000원" })).toBeVisible();
+
+  const alignment = await workspace.evaluate((element) => {
+    const title = element.querySelector("h1");
+    const headerText = element.querySelector(
+      'thead [data-emr-table-identity-text="true"]',
+    );
+    const rowText = element.querySelector(
+      'tbody [data-emr-table-identity-text="true"]',
+    );
+    const tableContainer = element.querySelector(
+      '[data-slot="table-container"]',
+    ) as HTMLElement | null;
+    const tableRegion = tableContainer?.parentElement;
+    const horizontalOwners = Array.from(
+      tableRegion?.querySelectorAll<HTMLElement>("*") ?? [],
+    ).filter((candidate) => {
+      const overflowX = getComputedStyle(candidate).overflowX;
+      return overflowX === "auto" || overflowX === "scroll";
+    });
+
+    if (!title || !headerText || !rowText || !tableContainer || !tableRegion) {
+      throw new Error("Order identity alignment targets are missing.");
+    }
+
+    return {
+      headerLeft: headerText.getBoundingClientRect().left,
+      ownerCount: horizontalOwners.length,
+      ownerIsTableContainer:
+        horizontalOwners.length === 1 &&
+        horizontalOwners[0] === tableContainer,
+      rowLeft: rowText.getBoundingClientRect().left,
+      titleLeft: title.getBoundingClientRect().left,
+    };
+  });
+  expect(Math.abs(alignment.titleLeft - alignment.headerLeft)).toBeLessThanOrEqual(1);
+  expect(Math.abs(alignment.headerLeft - alignment.rowLeft)).toBeLessThanOrEqual(1);
+  expect(alignment.ownerCount).toBe(1);
+  expect(alignment.ownerIsTableContainer).toBe(true);
+  await expect(
+    workspace.locator('[data-emr-table-workspace-header="true"]'),
+  ).toHaveCSS("padding-top", "0px");
+
+  const tableContainer = table.locator("..");
+  const initialPinnedLeft = (await identityCell.boundingBox())?.x;
+  const initialSelectionLeft = firstOrderCheckboxBox?.x;
+  await tableContainer.evaluate((element) => {
+    element.scrollLeft = 220;
+  });
+  await page.waitForTimeout(50);
+  const scrolledPinnedLeft = (await identityCell.boundingBox())?.x;
+  const scrolledSelectionLeft = (
+    await row
+      .getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" })
+      .boundingBox()
+  )?.x;
+  expect(initialPinnedLeft).toBeDefined();
+  expect(scrolledPinnedLeft).toBeDefined();
+  expect(Math.abs(initialPinnedLeft! - scrolledPinnedLeft!)).toBeLessThanOrEqual(1);
+  expect(initialSelectionLeft).toBeDefined();
+  expect(scrolledSelectionLeft).toBeDefined();
+  expect(scrolledSelectionLeft!).toBeLessThan(initialSelectionLeft!);
+
+  await row.getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" }).click();
+  await expect(identityCell).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+});
+
+test("all hospital admin Order leaves use the pinned standard Order identity table", async ({
+  page,
+}) => {
+  const orderLeaves = [
+    "기본 진료비",
+    "기타 진료비",
+    "예방",
+    "영상검사",
+    "임상병리 검사",
+    "계통 검사",
+    "의뢰 검사",
+    "처치",
+    "마취",
+    "수술",
+    "입원",
+    "치료",
+    "처방",
+    "조제",
+    "의료물품",
+  ];
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  for (const label of orderLeaves) {
+    await sidePanel
+      .getByRole("button", { name: new RegExp(`^${label}(?:\\s|$)`) })
+      .click();
+    await expect(page.getByRole("heading", { level: 1, name: label, exact: true })).toBeVisible();
+    await expect(page.getByTestId("hospital-admin-order-content")).toHaveAttribute(
+      "data-emr-pinned-table-workspace",
+      "true",
+    );
+    await expect(page.getByTestId("hospital-order-table")).toHaveAttribute(
+      "data-emr-pinning",
+      "columns",
+    );
+    await expect(
+      page.getByTestId("hospital-order-table").locator("thead th").first(),
+    ).toContainText("표준 Order명");
+  }
 });
 
 test("hospital admin table pages keep the 56px content slot and zero header-row gap", async ({
@@ -1474,7 +1589,15 @@ test("hospital admin order table shows skeleton rows while loading catalog", asy
 
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
-  await expect(page.getByTestId("hospital-order-table-skeleton-row").first()).toBeVisible();
+  const skeletonRow = page.getByTestId("hospital-order-table-skeleton-row").first();
+  await expect(skeletonRow).toBeVisible();
+  await expect(skeletonRow.locator("td").first()).toHaveAttribute(
+    "data-emr-column-pinned",
+    "left",
+  );
+  await expect(
+    skeletonRow.locator('[data-emr-table-identity-content="true"]'),
+  ).toHaveCount(1);
   await expect(page.getByTestId("hospital-order-catalog-read-status")).toContainText("Workspace catalog 기준");
 });
 

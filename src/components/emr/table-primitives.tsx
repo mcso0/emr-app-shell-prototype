@@ -124,6 +124,7 @@ export function EmrTableHeaderCell({
       data-emr-table-identity-cell={identity ? "true" : undefined}
       className={cn(
         "emr-table-header-cell emr-text-body relative select-none bg-[var(--emr-surface-muted)] font-medium text-muted-foreground",
+        identity && "!p-0",
         align === "right" && "text-right",
         align === "center" && "text-center",
         className,

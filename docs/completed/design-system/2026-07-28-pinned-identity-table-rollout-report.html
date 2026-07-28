@@ -4,19 +4,233 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>고정 식별 컬럼 데이터 테이블 확장 작업 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #171717;
+        background: #f5f6f8;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        width: min(920px, calc(100% - 40px));
+        margin: 40px auto;
+      }
+      article {
+        padding: 40px;
+        border: 1px solid #e4e6eb;
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 16px 40px rgb(15 23 42 / 8%);
+      }
+      h1 {
+        margin: 12px 0 8px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 19px;
+      }
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .eyebrow,
+      .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .eyebrow {
+        color: #475569;
+        background: #f1f5f9;
+      }
+      .status {
+        color: #166534;
+        background: #dcfce7;
+      }
+      .lead {
+        max-width: 720px;
+        color: #475569;
+        font-size: 17px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .metric {
+        padding: 18px;
+        border: 1px solid #e4e6eb;
+        border-radius: 14px;
+        background: #fafafa;
+      }
+      .metric strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 24px;
+      }
+      .metric span {
+        color: #64748b;
+        font-size: 13px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f1f5f9;
+        font-size: 0.92em;
+      }
+      .note {
+        padding: 16px 18px;
+        border-left: 4px solid #64748b;
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+      @media (max-width: 720px) {
+        main {
+          width: min(100% - 24px, 920px);
+          margin: 12px auto;
+        }
+        article {
+          padding: 24px 20px;
+          border-radius: 14px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
     <main>
-      <h1>고정 식별 컬럼 데이터 테이블 확장</h1>
-      <p>상태: 구현 진행 중</p>
-      <p>
-        고객관리 3개 화면과 병원관리 Order 15개 화면에 공통 고정 식별
-        컬럼, 텍스트 정렬축, 단일 가로 스크롤 계약을 적용하고 있습니다.
-      </p>
-      <p>
-        최종 변경 파일, 검증 결과, 위험과 다음 단계는 구현 및 전체 검증 후
-        이 보고서에 기록합니다.
-      </p>
+      <article>
+        <span class="eyebrow">DESIGN-SYSTEM-PR-088</span>
+        <h1>고정 식별 컬럼 데이터 테이블 확장</h1>
+        <p class="lead">
+          가로 스크롤 중 고정 영역 뒤로 다른 셀 내용이 비치던 문제를 공통
+          테이블 계약에서 해결하고, 고객관리 3개 화면과 병원관리 Order
+          15개 화면에 동일한 정렬·스크롤 규칙을 적용했습니다.
+        </p>
+        <span class="status">구현 및 기능 검증 완료 · 사용자 검토 대기</span>
+
+        <div class="grid">
+          <div class="metric">
+            <strong>3개</strong>
+            <span>고객관리 테이블 화면</span>
+          </div>
+          <div class="metric">
+            <strong>15개</strong>
+            <span>Order 관리 하위 화면</span>
+          </div>
+          <div class="metric">
+            <strong>1개</strong>
+            <span>테이블 가로 스크롤 소유자</span>
+          </div>
+        </div>
+
+        <h2>요청 사항과 결과</h2>
+        <ul>
+          <li>
+            동물·보호자·삭제 화면의 첫 식별 컬럼을 불투명한 왼쪽 고정
+            컬럼으로 통일했습니다.
+          </li>
+          <li>
+            제목, 검색창, 고정 헤더, 행 식별 텍스트, 하단 합계가 화면별
+            하나의 수평축을 공유합니다.
+          </li>
+          <li>
+            고정 테이블 헤더의 위쪽 패딩을 공통 계약에서 0px로 적용했습니다.
+          </li>
+          <li>
+            Order 관리의 모든 하위 화면은 <code>표준 Order명</code>을 첫
+            고정 컬럼으로 사용하는 하나의 공통 렌더러를 사용합니다.
+          </li>
+          <li>
+            Order의 바깥 <code>ScrollArea</code>를 제거하고 공통 Table
+            컨테이너만 가로·세로 테이블 스크롤을 소유하도록 정리했습니다.
+          </li>
+        </ul>
+
+        <h2>삭제 화면 연결</h2>
+        <p>
+          단순한 빈 화면 교체가 아니라 기존 archive GET API로 삭제된
+          동물·보호자를 조회하고, 대상별 기존 PATCH API로 복원하도록
+          연결했습니다. 로딩, 데이터 없음, 검색 결과 없음, 조회 권한 없음,
+          재시도 가능한 조회 실패, 복원 권한 없음, 복원 실패 상태를 각각
+          화면에 표시합니다. 복원 성공 시 행과 좌측 삭제 건수가 함께
+          갱신됩니다.
+        </p>
+
+        <h2>공통 구현 기준</h2>
+        <ul>
+          <li>
+            <code>EmrPinnedTableWorkspace</code>가 화면별 식별 텍스트 축을
+            한 번만 정의합니다.
+          </li>
+          <li>
+            <code>EmrTableHeaderCell identity</code>와
+            <code>EmrTableIdentityCellContent</code>가 헤더·행 정렬을
+            공유합니다.
+          </li>
+          <li>
+            고정 셀의 기본·호버·선택·로딩 배경과 경계 그림자는 공통 Table
+            스타일이 소유합니다.
+          </li>
+          <li>
+            기능 화면은 sticky 위치, z-index, 배경을 개별 계산하지 않습니다.
+          </li>
+        </ul>
+
+        <h2>변경 범위</h2>
+        <p>
+          공통 Table primitive와 스타일, 고객관리 테이블 렌더러·archive
+          화면·store·권한 어댑터, 병원관리 Order 공통 렌더러, Playwright 및
+          Storybook 검증, 설계 문서와 작업 문서를 변경했습니다.
+        </p>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li>공통 Table Storybook 상호작용 테스트 5/5 통과</li>
+          <li>고객관리 및 archive Playwright 테스트 23/23 통과</li>
+          <li>
+            병원관리 전체 테스트에서 변경 관련 33개 테스트 통과; 기존
+            바이탈 설정 테스트 1건은 전체 실행에서 시간 초과했지만 단독
+            재실행 통과(전체 타임아웃을 60초로 늘려도 같은 격리 실패 유지)
+          </li>
+          <li>집중 ESLint 및 TypeScript 검사 통과</li>
+          <li>
+            전체 lint, TypeScript, 문서 링크 888건, 비밀정보 스캔 3,485개
+            파일, Storybook 빌드, Next 프로덕션 빌드 통과
+          </li>
+        </ul>
+
+        <h2>제외 범위와 위험</h2>
+        <p class="note">
+          스키마·마이그레이션·하드 삭제·새 의존성·실데이터·Order drawer
+          업무 흐름은 변경하지 않았습니다. 이번 로컬 작업은 원격 push,
+          PR, main 병합, 배포를 포함하지 않습니다.
+        </p>
+
+        <h2>권장 다음 단계</h2>
+        <p>
+          사용자 화면 검토에서 고정 컬럼 폭과 48px/20px 정렬축을 확인한 뒤,
+          승인 시 현재 브랜치를 push하고 PR·병합·배포 검증으로 이어가는
+          것이 안전합니다.
+        </p>
+      </article>
     </main>
   </body>
 </html>
