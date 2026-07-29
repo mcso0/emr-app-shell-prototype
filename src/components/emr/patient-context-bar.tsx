@@ -147,9 +147,12 @@ export function EmrPatientContextBar({
   return (
     <div
       data-slot="patient-context-bar"
-      className={cn("border-b border-[var(--emr-context-bar-divider)] bg-[var(--emr-surface-workspace)]", className)}
+      className={cn(
+        "flex h-full min-h-[var(--emr-context-bar-min-height)] flex-col border-b border-[var(--emr-context-bar-divider)] bg-[var(--emr-surface-workspace)]",
+        className,
+      )}
     >
-      <div className="flex min-h-[var(--emr-context-bar-min-height)] items-center gap-[var(--emr-context-bar-section-gap)] px-[var(--emr-context-bar-padding-x)] py-[var(--emr-context-bar-padding-y)]">
+      <div className="flex min-h-0 flex-1 items-center gap-[var(--emr-context-bar-section-gap)] px-[var(--emr-context-bar-padding-x)] py-[var(--emr-context-bar-padding-y)]">
         {historyButton ? (
           <>
             <Button

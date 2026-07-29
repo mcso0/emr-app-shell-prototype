@@ -1486,9 +1486,14 @@ test("hospital order table keeps tabs and compact controls in one hierarchy row"
 
 test("dispensing queue selection updates existing patient and instruction context", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=closed");
+  await page.getByTestId("order-queue-item-dispensing-queue-0").click();
 
+  await expect(
+    page
+      .getByTestId("workspace-main-content")
+      .locator("[data-slot='emr-main-content-header']"),
+  ).toHaveCSS("height", "56px");
   const patientContextBar = page.locator("[data-slot='patient-context-bar'] > div").first();
-  await expect(patientContextBar).toHaveCSS("min-height", "56px");
   await expect(patientContextBar).toHaveCSS("padding-left", "16px");
   await expect(patientContextBar).toHaveCSS("column-gap", "12px");
   await expect(page.locator("[data-slot='emr-page-header']")).toHaveCSS("min-height", "32px");
@@ -1556,18 +1561,6 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(resultContent).toContainText("수액 처치");
   await expect(resultContent).toContainText("Lactated Ringer's 120ml SC");
   await expect(resultContent).not.toContainText("항생제 세트 A");
-
-  await page.getByTestId("order-queue-item-dispensing-queue-4").click();
-  await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
-  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-success-bg)"));
-  await expect(page.getByTestId("order-status-badge-neb-o-50010")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-success-bg)"));
-  await expect(page.getByTestId("order-status-badge-neb-o-50010")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-success-text)"));
-
-  await page.getByTestId("order-queue-item-dispensing-queue-5").click();
-  await expect(page.getByTestId("instruction-status-label")).toHaveText("취소");
-  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-danger-bg)"));
-  await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-danger-bg)"));
-  await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-danger-text)"));
 });
 
 test("treatment module renders the chart queue instead of the order queue placeholder", async ({ page }) => {

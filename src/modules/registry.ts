@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import {
   BedIcon,
   BoneIcon,
@@ -10,6 +11,7 @@ import {
   PillIcon,
   StethoscopeIcon,
 } from "@/components/icons";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import type { ModuleDefinition } from "@/types/emr";
 import {
   ChartContent,
@@ -68,12 +70,20 @@ import {
   ReceptionSidePanel,
 } from "@/features/reception/module";
 
+function FixedEmptyMainContentHeader() {
+  return createElement(EmrMainContentHeader, {
+    "aria-hidden": true,
+    heightMode: "fixed",
+  });
+}
+
 export const modules: ModuleDefinition[] = [
   {
     id: "home",
     label: "원내 현황",
     icon: HomeIcon,
     sidePanel: HomeSidePanel,
+    contentHeader: FixedEmptyMainContentHeader,
     content: HomeContent,
   },
   {
@@ -81,6 +91,7 @@ export const modules: ModuleDefinition[] = [
     label: "접수/예약",
     icon: BuildingIcon,
     sidePanel: ReceptionSidePanel,
+    contentHeader: FixedEmptyMainContentHeader,
     content: ReceptionContent,
     rightPanel: ReceptionRightPanel,
     rightPanelWidth: 380,
@@ -158,6 +169,7 @@ export const modules: ModuleDefinition[] = [
     id: "inpatient",
     label: "입원",
     icon: BedIcon,
+    contentHeader: FixedEmptyMainContentHeader,
     content: InpatientContent,
     drawer: InpatientDrawer,
   },

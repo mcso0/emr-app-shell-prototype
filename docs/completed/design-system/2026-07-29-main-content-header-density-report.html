@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Main Content Header 공통화 결과 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #171717;
+        background: #f5f6f8;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        width: min(960px, calc(100% - 40px));
+        margin: 40px auto;
+      }
+      article {
+        padding: 40px;
+        border: 1px solid #e4e6eb;
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 16px 40px rgb(15 23 42 / 8%);
+      }
+      h1 {
+        margin: 12px 0 8px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 19px;
+      }
+      p,
+      li,
+      th,
+      td {
+        font-size: 15px;
+        line-height: 1.65;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 12px 14px;
+        border: 1px solid #e4e6eb;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f8fafc;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f1f5f9;
+        font-size: 0.92em;
+      }
+      .eyebrow,
+      .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .eyebrow {
+        color: #475569;
+        background: #f1f5f9;
+      }
+      .status {
+        color: #166534;
+        background: #dcfce7;
+      }
+      .lead {
+        max-width: 760px;
+        color: #475569;
+        font-size: 17px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .metric {
+        padding: 18px;
+        border: 1px solid #e4e6eb;
+        border-radius: 14px;
+        background: #fafafa;
+      }
+      .metric strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 24px;
+      }
+      .metric span {
+        color: #64748b;
+        font-size: 13px;
+      }
+      .note {
+        padding: 16px 18px;
+        border-left: 4px solid #64748b;
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+      @media (max-width: 720px) {
+        main {
+          width: min(100% - 24px, 960px);
+          margin: 12px auto;
+        }
+        article {
+          padding: 24px 20px;
+          border-radius: 14px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .table-wrap {
+          overflow-x: auto;
+        }
+        table {
+          min-width: 680px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <span class="eyebrow">DESIGN-SYSTEM-PR-089</span>
+        <h1>Main Content Header 공통화</h1>
+        <p class="lead">
+          페이지마다 따로 두던 56px·48px·상단 여백을 하나의 공통 Header와
+          디자인 토큰으로 통합했습니다. 이제 높이 정책을 한 곳에서
+          변경하면서도 진료 화면의 환자 정보와 병원·고객관리의 기존 업무
+          흐름은 그대로 유지할 수 있습니다.
+        </p>
+        <span class="status">구현 및 로컬 품질 게이트 통과</span>
+
+        <div class="grid">
+          <div class="metric">
+            <strong>8개</strong>
+            <span>항상 56px인 상단 메뉴</span>
+          </div>
+          <div class="metric">
+            <strong>13개</strong>
+            <span>Adaptive 검증 화면</span>
+          </div>
+          <div class="metric">
+            <strong>1곳</strong>
+            <span>높이 토큰·breakpoint 관리</span>
+          </div>
+        </div>
+
+        <h2>최종 높이 정책</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>정책</th>
+                <th>대상</th>
+                <th>계산 높이</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Fixed</td>
+                <td>
+                  원내 현황, 접수/예약, 진료/차트, 검사, 영상, 조제, 수납,
+                  입원
+                </td>
+                <td>항상 56px</td>
+              </tr>
+              <tr>
+                <td>Adaptive</td>
+                <td>
+                  병원관리 10개 화면, 고객관리의 동물·보호자·삭제된 고객
+                </td>
+                <td>
+                  viewport 너비 1024px 이상이면서 높이 820px 이하일 때만
+                  44px, 그 외 56px
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>구조 변경</h2>
+        <ul>
+          <li>
+            <code>EmrMainContentHeader</code>가
+            <code>fixed</code>·<code>adaptive</code> 모드와
+            <code>data-slot</code> 검증 계약을 제공합니다.
+          </li>
+          <li>
+            기본 56px, 압축 44px, Adaptive media query를 공통 EMR 토큰
+            스타일 한 곳에서 관리합니다.
+          </li>
+          <li>
+            모든 상단 메뉴는 Main Content에 정확히 하나의 공통 Header를
+            렌더링합니다.
+          </li>
+          <li>
+            진료·검사·영상·조제·수납은 선택 전에도 빈 56px 프레임을
+            유지하고, 선택 후에는 기존 환자 정보 내용을 그 안에
+            렌더링합니다.
+          </li>
+          <li>
+            역할 및 권한·공간 관리의 뒤로가기 버튼은 기존 페이지가 계속
+            소유하며 공통 Header 안에서 표시됩니다.
+          </li>
+        </ul>
+
+        <h2>Viewport 검증</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Viewport</th>
+                <th>Fixed</th>
+                <th>Adaptive</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1440 × 800</td>
+                <td>56px</td>
+                <td>44px</td>
+              </tr>
+              <tr>
+                <td>1440 × 821</td>
+                <td>56px</td>
+                <td>56px</td>
+              </tr>
+              <tr>
+                <td>1023 × 800</td>
+                <td>56px</td>
+                <td>56px</td>
+              </tr>
+              <tr>
+                <td>1920 × 1080</td>
+                <td>56px</td>
+                <td>56px</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li>공통 Header 및 전체 메뉴·viewport Playwright 5/5 통과</li>
+          <li>고객관리·병원관리 회귀 Playwright 57/57 통과</li>
+          <li>임상 선택 전후 대표 회귀 Playwright 9/9 통과</li>
+          <li>비밀정보 스캔 3,485개 파일 통과</li>
+          <li>문서 링크 890개 파일과 한국어 UX 문구 검사 통과</li>
+          <li>Git diff, ESLint, TypeScript 검사 통과</li>
+          <li>Storybook 정적 빌드와 Next 프로덕션 빌드 통과</li>
+        </ul>
+
+        <h2>제외 범위와 위험</h2>
+        <p class="note">
+          Shell 구조, 메뉴·라우팅, 페이지 상태 소유권, 데이터, API,
+          Supabase, 권한, 우측 패널, 환자 정보 내용, 환경 설정은 변경하지
+          않았습니다. 기존 Next 빌드의 NFT 추적 경고와 Storybook의
+          Pretendard·lottie 경고는 유지되지만 빌드는 정상 통과했습니다.
+        </p>
+
+        <h2>릴리스 단계</h2>
+        <p>
+          이 보고서가 포함된 동일 후보를 PR로 올린 뒤 정확한 head SHA의
+          Release Check와 Vercel Preview를 확인합니다. 모든 게이트가
+          통과한 경우에만 merge commit으로 <code>main</code>에 병합하고
+          Production Ready 및 synthetic/demo smoke를 확인합니다.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -372,9 +373,10 @@ function SettingsDetailHeader({
 
 function SettingsBackHeader({ onBack }: { onBack: () => void }) {
   return (
-    <div
+    <EmrMainContentHeader
       data-testid="role-permission-detail-back-header"
-      className="flex h-14 shrink-0 items-center px-4"
+      className="items-start justify-center px-4"
+      heightMode="adaptive"
     >
       <Button
         type="button"
@@ -385,7 +387,7 @@ function SettingsBackHeader({ onBack }: { onBack: () => void }) {
         <ChevronLeftIcon className="size-4" aria-hidden="true" />
         역할 및 권한
       </Button>
-    </div>
+    </EmrMainContentHeader>
   );
 }
 
@@ -948,28 +950,34 @@ export function RolePermissionManagementScreen({
 
   if (!workspace.hydrated || (workspace.usesServerCatalog && workspace.catalogStatus === "loading")) {
     return (
-      <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc] p-5">
-        <EmrPageHeader title="역할 및 권한" />
-        <p className="mt-6 text-sm text-muted-foreground">권한 정보를 준비하고 있습니다.</p>
+      <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]">
+        <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
+        <div className="p-5">
+          <EmrPageHeader title="역할 및 권한" />
+          <p className="mt-6 text-sm text-muted-foreground">권한 정보를 준비하고 있습니다.</p>
+        </div>
       </div>
     );
   }
 
   if (workspace.usesServerCatalog && workspace.catalogStatus === "error") {
     return (
-      <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc] p-5">
-        <EmrPageHeader title="역할 및 권한" />
-        <Card className="mt-6 max-w-xl">
-          <CardHeader>
-            <CardTitle>역할 정보를 불러오지 못했습니다</CardTitle>
-            <CardDescription role="alert">
-              {workspace.catalogError ?? "권한 또는 연결 상태를 확인한 뒤 다시 시도하세요."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => void workspace.reloadCatalog()}>다시 시도</Button>
-          </CardContent>
-        </Card>
+      <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]">
+        <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
+        <div className="p-5">
+          <EmrPageHeader title="역할 및 권한" />
+          <Card className="mt-6 max-w-xl">
+            <CardHeader>
+              <CardTitle>역할 정보를 불러오지 못했습니다</CardTitle>
+              <CardDescription role="alert">
+                {workspace.catalogError ?? "권한 또는 연결 상태를 확인한 뒤 다시 시도하세요."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => void workspace.reloadCatalog()}>다시 시도</Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -979,12 +987,12 @@ export function RolePermissionManagementScreen({
       data-testid="hospital-admin-role-permission-screen"
       className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
     >
+      {workspace.canView && activeSettingsSection !== null ? (
+        <SettingsBackHeader onBack={returnToSettingsHub} />
+      ) : (
+        <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
+      )}
       <ScrollArea className="min-h-0 flex-1">
-        {workspace.canView && activeSettingsSection !== null ? (
-          <SettingsBackHeader onBack={returnToSettingsHub} />
-        ) : (
-          <div aria-hidden="true" className="h-14 shrink-0" />
-        )}
         <main
           data-testid="role-permission-content"
           className="mx-auto grid w-full min-w-0 max-w-[calc(var(--clair-layout-hospital-settings-content)+2rem)] grid-cols-[minmax(0,1fr)] px-4 pb-24"

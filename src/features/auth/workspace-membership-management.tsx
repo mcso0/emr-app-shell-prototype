@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { EmrRowActionMenu, type EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
@@ -1082,8 +1083,11 @@ export function WorkspaceMembershipManagement({
 
   if (!hydrated) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
-        구성원 정보를 불러옵니다.
+      <div className="flex h-full flex-col bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
+        <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          구성원 정보를 불러옵니다.
+        </div>
       </div>
     );
   }
@@ -1097,7 +1101,8 @@ export function WorkspaceMembershipManagement({
             "lg:grid-cols-[minmax(0,1fr)_var(--emr-profile-panel-width)] lg:gap-[var(--emr-profile-panel-gap)]"
         )}
       >
-        <main className="flex min-h-0 min-w-0 flex-col overflow-auto bg-[var(--emr-surface-workspace)] lg:overflow-hidden">
+        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--emr-surface-workspace)]">
+          <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
           <section className="border-b bg-card px-5 py-4">
         <EmrPageHeader
           title="병원 구성원"

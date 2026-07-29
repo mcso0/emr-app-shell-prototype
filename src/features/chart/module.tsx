@@ -45,6 +45,7 @@ import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import {
   EmrListHeaderIconButton,
 } from "@/components/emr/subpanel";
@@ -1304,59 +1305,68 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
     workspaceId,
   });
 
-  if (!bundle || chartStartLocked) return null;
+  if (!bundle || chartStartLocked) {
+    return (
+      <EmrMainContentHeader
+        aria-hidden="true"
+        heightMode="fixed"
+      />
+    );
+  }
 
   const veterinarianName = getChartBundleVeterinarianName(bundle);
 
   return (
-    <EmrPatientContextBar
-      patientItems={[
-        { label: "차트번호", value: bundle.encounter.encounterNo },
-        {
-          label: "환자",
-          value: `${bundle.patient.name} · 보호자 ${bundle.primaryGuardian?.name ?? "미지정"}`,
-        },
-        {
-          label: "품종",
-          value: bundle.patient.breed ?? getSpeciesLabel(bundle.patient),
-        },
-        { label: "나이", value: getPatientDisplayAge(bundle.patient) },
-        { label: "성별", value: getPatientSexLabel(bundle.patient) },
-      ]}
-      vitalItems={latestVitals.items}
-      memoActions={[
-        {
-          label: "방문목적",
-          summary:
-            bundle.encounter.visitPurpose ??
-            bundle.encounter.chiefComplaint ??
-            "방문 목적 기록 없음",
-        },
-        {
-          label: "보호자 메모",
-          locked: true,
-          summary: bundle.primaryGuardian?.memo ?? "보호자 메모 없음",
-          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
-        },
-        {
-          label: "환자 메모",
-          summary:
-            [
-              bundle.patient.allergyNote,
-              bundle.patient.specialNote,
-              bundle.patient.handlingCautionNote,
-            ]
-              .filter(Boolean)
-              .join(" · ") || "환자 특이 메모 없음",
-        },
-        {
-          label: "수납 메모",
-          disabled: true,
-          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
-        },
-      ]}
-      trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
-    />
+    <EmrMainContentHeader heightMode="fixed">
+      <EmrPatientContextBar
+        patientItems={[
+          { label: "차트번호", value: bundle.encounter.encounterNo },
+          {
+            label: "환자",
+            value: `${bundle.patient.name} · 보호자 ${bundle.primaryGuardian?.name ?? "미지정"}`,
+          },
+          {
+            label: "품종",
+            value: bundle.patient.breed ?? getSpeciesLabel(bundle.patient),
+          },
+          { label: "나이", value: getPatientDisplayAge(bundle.patient) },
+          { label: "성별", value: getPatientSexLabel(bundle.patient) },
+        ]}
+        vitalItems={latestVitals.items}
+        memoActions={[
+          {
+            label: "방문목적",
+            summary:
+              bundle.encounter.visitPurpose ??
+              bundle.encounter.chiefComplaint ??
+              "방문 목적 기록 없음",
+          },
+          {
+            label: "보호자 메모",
+            locked: true,
+            summary: bundle.primaryGuardian?.memo ?? "보호자 메모 없음",
+            unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+          },
+          {
+            label: "환자 메모",
+            summary:
+              [
+                bundle.patient.allergyNote,
+                bundle.patient.specialNote,
+                bundle.patient.handlingCautionNote,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "환자 특이 메모 없음",
+          },
+          {
+            label: "수납 메모",
+            disabled: true,
+            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+          },
+        ]}
+        trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
+      />
+    </EmrMainContentHeader>
   );
 }
 

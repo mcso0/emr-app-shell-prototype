@@ -60,6 +60,7 @@ import {
   EmrEmptyState,
   type EmrEmptyStateKind,
 } from "@/components/emr/empty-state";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
@@ -2340,54 +2341,63 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
     workspaceId,
   });
 
-  if (!detail) return null;
+  if (!detail) {
+    return (
+      <EmrMainContentHeader
+        aria-hidden="true"
+        heightMode="fixed"
+      />
+    );
+  }
 
   return (
-    <EmrPatientContextBar
-      patientItems={[
-        { label: "환자", value: detail.patient.name },
-        { label: "보호자", value: detail.primaryGuardian?.name ?? "보호자 미지정" },
-        { label: "품종", value: detail.patient.breed ?? getSpeciesLabel(detail.patient) },
-        { label: "나이", value: getPatientDisplayAge(detail.patient) },
-        { label: "성별", value: getPatientSexLabel(detail.patient) },
-      ]}
-      vitalItems={latestVitals.items}
-      memoActions={[
-        {
-          label: "방문목적",
-          summary:
-            detail.encounter.visitPurpose ??
-            detail.encounter.chiefComplaint ??
-            "방문 목적 기록 없음",
-        },
-        {
-          label: "보호자 메모",
-          locked: true,
-          summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
-          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
-        },
-        {
-          label: "환자 메모",
-          summary:
-            [
-              detail.patient.allergyNote,
-              detail.patient.specialNote,
-              detail.patient.handlingCautionNote,
-            ]
-              .filter(Boolean)
-              .join(" · ") || "환자 특이 메모 없음",
-        },
-        {
-          label: "수납 메모",
-          disabled: true,
-          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
-        },
-      ]}
-      trailingItems={[
-        { label: "검사", value: detail.result.resultName },
-        { label: "상태", value: getStatusLabel("labResult", detail.result.status) },
-      ]}
-    />
+    <EmrMainContentHeader heightMode="fixed">
+      <EmrPatientContextBar
+        patientItems={[
+          { label: "환자", value: detail.patient.name },
+          { label: "보호자", value: detail.primaryGuardian?.name ?? "보호자 미지정" },
+          { label: "품종", value: detail.patient.breed ?? getSpeciesLabel(detail.patient) },
+          { label: "나이", value: getPatientDisplayAge(detail.patient) },
+          { label: "성별", value: getPatientSexLabel(detail.patient) },
+        ]}
+        vitalItems={latestVitals.items}
+        memoActions={[
+          {
+            label: "방문목적",
+            summary:
+              detail.encounter.visitPurpose ??
+              detail.encounter.chiefComplaint ??
+              "방문 목적 기록 없음",
+          },
+          {
+            label: "보호자 메모",
+            locked: true,
+            summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
+            unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+          },
+          {
+            label: "환자 메모",
+            summary:
+              [
+                detail.patient.allergyNote,
+                detail.patient.specialNote,
+                detail.patient.handlingCautionNote,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "환자 특이 메모 없음",
+          },
+          {
+            label: "수납 메모",
+            disabled: true,
+            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+          },
+        ]}
+        trailingItems={[
+          { label: "검사", value: detail.result.resultName },
+          { label: "상태", value: getStatusLabel("labResult", detail.result.status) },
+        ]}
+      />
+    </EmrMainContentHeader>
   );
 }
 
@@ -3065,59 +3075,68 @@ export function ImagingHeader({ hasRightPanel, workspaceId }: ShellComponentProp
     workspaceId,
   });
 
-  if (!detail) return null;
+  if (!detail) {
+    return (
+      <EmrMainContentHeader
+        aria-hidden="true"
+        heightMode="fixed"
+      />
+    );
+  }
 
   return (
-    <EmrPatientContextBar
-      patientItems={[
-        { label: "환자", value: detail.patient.name },
-        { label: "보호자", value: detail.primaryGuardian?.name ?? "보호자 미지정" },
-        { label: "품종", value: detail.patient.breed ?? getSpeciesLabel(detail.patient) },
-        { label: "나이", value: getPatientDisplayAge(detail.patient) },
-        { label: "성별", value: getPatientSexLabel(detail.patient) },
-      ]}
-      vitalItems={latestVitals.items}
-      memoActions={[
-        {
-          label: "방문목적",
-          summary:
-            detail.encounter.visitPurpose ??
-            detail.encounter.chiefComplaint ??
-            "방문 목적 기록 없음",
-        },
-        {
-          label: "보호자 메모",
-          locked: true,
-          summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
-          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
-        },
-        {
-          label: "환자 메모",
-          summary:
-            [
-              detail.patient.allergyNote,
-              detail.patient.specialNote,
-              detail.patient.handlingCautionNote,
-            ]
-              .filter(Boolean)
-              .join(" · ") || "환자 특이 메모 없음",
-        },
-        {
-          label: "수납 메모",
-          disabled: true,
-          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
-        },
-      ]}
-      trailingItems={[
-        { label: "영상", value: detail.order?.displayName ?? `${detail.study.modality} ${detail.study.bodyPart}` },
-        { label: "상태", value: getStatusLabel("imagingStudy", detail.study.status) },
-      ]}
-      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-      rightPanelBadgeCount={detail.attachments.length}
-      rightPanelDisabled={!hasRightPanel}
-      rightPanelOpen={rightPanelOpen}
-      rightPanelToggleLabel="종합소견"
-    />
+    <EmrMainContentHeader heightMode="fixed">
+      <EmrPatientContextBar
+        patientItems={[
+          { label: "환자", value: detail.patient.name },
+          { label: "보호자", value: detail.primaryGuardian?.name ?? "보호자 미지정" },
+          { label: "품종", value: detail.patient.breed ?? getSpeciesLabel(detail.patient) },
+          { label: "나이", value: getPatientDisplayAge(detail.patient) },
+          { label: "성별", value: getPatientSexLabel(detail.patient) },
+        ]}
+        vitalItems={latestVitals.items}
+        memoActions={[
+          {
+            label: "방문목적",
+            summary:
+              detail.encounter.visitPurpose ??
+              detail.encounter.chiefComplaint ??
+              "방문 목적 기록 없음",
+          },
+          {
+            label: "보호자 메모",
+            locked: true,
+            summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
+            unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+          },
+          {
+            label: "환자 메모",
+            summary:
+              [
+                detail.patient.allergyNote,
+                detail.patient.specialNote,
+                detail.patient.handlingCautionNote,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "환자 특이 메모 없음",
+          },
+          {
+            label: "수납 메모",
+            disabled: true,
+            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+          },
+        ]}
+        trailingItems={[
+          { label: "영상", value: detail.order?.displayName ?? `${detail.study.modality} ${detail.study.bodyPart}` },
+          { label: "상태", value: getStatusLabel("imagingStudy", detail.study.status) },
+        ]}
+        onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+        rightPanelBadgeCount={detail.attachments.length}
+        rightPanelDisabled={!hasRightPanel}
+        rightPanelOpen={rightPanelOpen}
+        rightPanelToggleLabel="종합소견"
+      />
+    </EmrMainContentHeader>
   );
 }
 

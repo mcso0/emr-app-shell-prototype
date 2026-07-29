@@ -23,6 +23,7 @@ import {
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import {
   EmrRightPanel,
   EmrRightPanelBody,
@@ -1743,7 +1744,7 @@ function BillingGuardianContextBar({
     (summary.unpaid.count > 0 ? "미납 주의" : "메모 없음");
 
   return (
-    <div className="flex h-12 items-center gap-3 border-b border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] px-4">
+    <div className="flex h-full items-center gap-3 border-b border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] px-4">
       <div className="relative min-w-0 flex-1">
         <div
           className="flex min-w-0 items-center gap-3 overflow-x-auto overflow-y-hidden pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -1825,9 +1826,20 @@ function BillingGuardianContextIcon({
 export function BillingHeader() {
   const { detail } = useBillingWorkspaceData();
 
-  if (!detail) return null;
+  if (!detail) {
+    return (
+      <EmrMainContentHeader
+        aria-hidden="true"
+        heightMode="fixed"
+      />
+    );
+  }
 
-  return <BillingGuardianContextBar detail={detail} />;
+  return (
+    <EmrMainContentHeader heightMode="fixed">
+      <BillingGuardianContextBar detail={detail} />
+    </EmrMainContentHeader>
+  );
 }
 
 function BillingInstructionInfo({ detail }: { detail: BillingDetail }) {

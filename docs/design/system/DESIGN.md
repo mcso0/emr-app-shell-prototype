@@ -146,13 +146,19 @@ CLAiR screens favor operational density:
 - patient context bars near clinical work
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
-- table workspaces without an existing context bar reserve a feature-owned
-  56px content-top slot before their title and controls, use `#FCFCFC` for the
-  content frame, and keep the table header directly adjacent to the first row
-  with no added gap
-- the 56px slot is opt-in at the feature content boundary; do not inject it
-  globally because clinical, reception, and calendar screens may already own
-  that height through patient context or date/filter bars
+- every top-level module renders exactly one shared `EmrMainContentHeader` at
+  its existing shell or feature ownership boundary
+- home, reception, treatment, lab, imaging, dispensing, billing, and inpatient
+  use the fixed 56px mode; clinical features keep their selected patient
+  context inside this frame and preserve an empty frame before selection
+- hospital-admin and customer use the adaptive mode: 44px only when the
+  browser viewport matches `(min-width: 1024px) and (max-height: 820px)`,
+  otherwise 56px
+- the shared frame centralizes height only. It does not move feature state,
+  patient content, back actions, routes, menus, or side-panel ownership into
+  the shell
+- table workspaces use `#FCFCFC` for the content frame and keep the table
+  header directly adjacent to the first row with no added gap
 
 The first viewport should show real product state. Avoid landing-page composition inside application routes.
 
