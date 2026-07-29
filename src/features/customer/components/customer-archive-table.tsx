@@ -261,11 +261,6 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
       data-testid="customer-archive-table"
       identityTextInset={48}
     >
-      <div
-        aria-hidden="true"
-        className="h-14 shrink-0"
-        data-emr-content-top-slot="true"
-      />
       <CustomerListHeader
         count={records.length}
         countLoading={readStatus === "idle" || readStatus === "loading"}

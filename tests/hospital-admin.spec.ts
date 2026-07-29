@@ -1767,9 +1767,10 @@ test("all hospital admin Order leaves use the pinned standard Order identity tab
   }
 });
 
-test("hospital admin table pages keep the 56px content slot and zero header-row gap", async ({
+test("hospital admin table pages keep the adaptive main-content header and zero header-row gap", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
   const orderContent = page.getByTestId("hospital-admin-order-content");
@@ -1779,7 +1780,7 @@ test("hospital admin table pages keep the 56px content slot and zero header-row 
 
   const orderMetrics = await orderContent.evaluate((root) => {
     const slot = root.querySelector(
-      '[data-emr-content-top-slot="true"]',
+      '[data-slot="emr-main-content-header"]',
     ) as HTMLElement;
     const titleSection = slot.nextElementSibling as HTMLElement;
     const headerRow = root.querySelector("thead tr") as HTMLElement;
@@ -1816,7 +1817,7 @@ test("hospital admin table pages keep the 56px content slot and zero header-row 
 
   const auditMetrics = await auditContent.evaluate((root) => {
     const slot = root.querySelector(
-      '[data-emr-content-top-slot="true"]',
+      '[data-slot="emr-main-content-header"]',
     ) as HTMLElement;
     const titleSection = slot.nextElementSibling as HTMLElement;
     const headerRow = root.querySelector("thead tr") as HTMLElement;

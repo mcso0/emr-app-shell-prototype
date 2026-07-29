@@ -642,11 +642,6 @@ export function CustomerDataTable<
       identityTextInset={48}
       selectionColumnWidth={pinnedColumnId ? 44 : 0}
     >
-      <div
-        aria-hidden="true"
-        className="h-14 shrink-0"
-        data-emr-content-top-slot="true"
-      />
       <CustomerListHeader
         title={title}
         count={rows.length}

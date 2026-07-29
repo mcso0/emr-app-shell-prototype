@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -874,6 +875,7 @@ export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string 
 
   return (
     <main data-testid="hospital-admin-schedule-screen" className="flex min-h-full flex-col bg-[var(--emr-surface-canvas)]">
+      <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <div className="border-b bg-card px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

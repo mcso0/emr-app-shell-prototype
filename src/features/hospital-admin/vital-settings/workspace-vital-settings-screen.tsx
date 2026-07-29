@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsFilesMoreVerticalIcon } from "@/components/cds-icons/files-and-layout";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -561,24 +562,27 @@ function VitalSettingsState({
 }) {
   return (
     <div
-      className="flex h-full items-center justify-center p-6"
+      className="flex h-full flex-col"
       data-testid="hospital-admin-vitals-screen"
     >
-      <EmrEmptyState
-        description="잠시 후 다시 시도하거나 관리자에게 문의하세요."
-        kind={onRetry ? "read-error" : "no-permission"}
-        primaryAction={
-          onRetry ? (
-            <Button onClick={onRetry} variant="outline">
-              다시 시도
-            </Button>
-          ) : undefined
-        }
-        priority={onRetry ? "local-recovery" : "supporting"}
-        size="lg"
-        surface="content"
-        title={title}
-      />
+      <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
+      <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+        <EmrEmptyState
+          description="잠시 후 다시 시도하거나 관리자에게 문의하세요."
+          kind={onRetry ? "read-error" : "no-permission"}
+          primaryAction={
+            onRetry ? (
+              <Button onClick={onRetry} variant="outline">
+                다시 시도
+              </Button>
+            ) : undefined
+          }
+          priority={onRetry ? "local-recovery" : "supporting"}
+          size="lg"
+          surface="content"
+          title={title}
+        />
+      </div>
     </div>
   );
 }

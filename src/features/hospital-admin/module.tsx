@@ -9,6 +9,7 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
 import {
   EmrModuleListSidePanel,
@@ -1883,11 +1884,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       identityTextInset={48}
       selectionColumnWidth={hospitalOrderSelectionColumnWidth}
     >
-      <div
-        aria-hidden="true"
-        className="h-14 shrink-0"
-        data-emr-content-top-slot="true"
-      />
+      <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <section
         className="border-b bg-transparent px-12 py-4"
         data-emr-table-workspace-header="true"
@@ -2510,11 +2507,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
       className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
       data-testid="hospital-admin-audit-review"
     >
-      <div
-        aria-hidden="true"
-        className="h-14 shrink-0"
-        data-emr-content-top-slot="true"
-      />
+      <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <section className="border-b bg-transparent px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">

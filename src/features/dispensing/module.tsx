@@ -22,6 +22,7 @@ import {
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
@@ -742,40 +743,49 @@ export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps)
     workspaceId,
   });
 
-  if (!selectedQueueItem) return null;
+  if (!selectedQueueItem) {
+    return (
+      <EmrMainContentHeader
+        aria-hidden="true"
+        heightMode="fixed"
+      />
+    );
+  }
 
   return (
-    <EmrPatientContextBar
-      patientItems={[
-        { label: "환자", value: selectedQueueItem?.patientName ?? patient.name },
-        { label: "보호자", value: selectedQueueItem?.guardianName ?? patient.guardian },
-        { label: "품종", value: selectedQueueItem?.patientBreed ?? patient.breed },
-        { label: "나이", value: selectedQueueItem?.patientAge ?? patient.age },
-        { label: "성별", value: selectedQueueItem?.patientSex ?? patient.sex },
-      ]}
-      vitalItems={latestVitals.items}
-      memoActions={[
-        {
-          label: "방문목적",
-          summary: selectedQueueItem?.receptionType ?? "방문 목적 기록 없음",
-        },
-        {
-          label: "보호자 메모",
-          locked: true,
-          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
-        },
-        {
-          label: "환자 메모",
-          disabled: true,
-          unavailableReason: "환자 상세 메모는 현재 조제/처치 큐 스냅샷에서 제공하지 않습니다.",
-        },
-        {
-          label: "수납 메모",
-          disabled: true,
-          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
-        },
-      ]}
-    />
+    <EmrMainContentHeader heightMode="fixed">
+      <EmrPatientContextBar
+        patientItems={[
+          { label: "환자", value: selectedQueueItem?.patientName ?? patient.name },
+          { label: "보호자", value: selectedQueueItem?.guardianName ?? patient.guardian },
+          { label: "품종", value: selectedQueueItem?.patientBreed ?? patient.breed },
+          { label: "나이", value: selectedQueueItem?.patientAge ?? patient.age },
+          { label: "성별", value: selectedQueueItem?.patientSex ?? patient.sex },
+        ]}
+        vitalItems={latestVitals.items}
+        memoActions={[
+          {
+            label: "방문목적",
+            summary: selectedQueueItem?.receptionType ?? "방문 목적 기록 없음",
+          },
+          {
+            label: "보호자 메모",
+            locked: true,
+            unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+          },
+          {
+            label: "환자 메모",
+            disabled: true,
+            unavailableReason: "환자 상세 메모는 현재 조제/처치 큐 스냅샷에서 제공하지 않습니다.",
+          },
+          {
+            label: "수납 메모",
+            disabled: true,
+            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+          },
+        ]}
+      />
+    </EmrMainContentHeader>
   );
 }
 

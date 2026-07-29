@@ -14,6 +14,7 @@ import {
   CdsNavigationChevronRightIcon,
 } from "@/components/cds-icons/navigation";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { BuildingIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -402,16 +403,21 @@ function SpaceManagementPage({
       className="flex h-full min-h-0 flex-col overflow-clip bg-[var(--emr-surface-2)]"
       data-testid={testId}
     >
+      <EmrMainContentHeader
+        aria-hidden={backAction ? undefined : true}
+        heightMode="adaptive"
+      >
+        {backAction ? (
+          <div className="mx-auto flex h-full w-full max-w-[var(--clair-layout-hospital-settings-content)] items-center px-4 md:px-0">
+            {backAction}
+          </div>
+        ) : null}
+      </EmrMainContentHeader>
       <ScrollArea className="min-h-0 flex-1">
         <main
-          className="relative mx-auto flex w-full max-w-[var(--clair-layout-hospital-settings-content)] flex-col gap-4 px-4 pt-14 pb-32 md:px-0"
+          className="mx-auto flex w-full max-w-[var(--clair-layout-hospital-settings-content)] flex-col gap-4 px-4 pb-32 md:px-0"
           data-settings-layout="summary"
         >
-          {backAction ? (
-            <div className="absolute top-3 left-4 flex h-8 items-center md:left-0">
-              {backAction}
-            </div>
-          ) : null}
           <header className="flex h-[92px] shrink-0 flex-col gap-2 px-4 py-4">
             <h1 className="flex items-center gap-2 text-[24px] leading-8 [font-family:var(--clair-typography-title-3-font-family)] font-[number:var(--clair-typography-title-3-font-weight)] tracking-[var(--clair-typography-title-3-letter-spacing)] text-[var(--clair-color-atomic-neutral-900)]">
               {titleIcon ? (

@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -53,12 +54,13 @@ export function HospitalSettingsPage({
       )}
       data-testid={testId}
     >
+      <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <ScrollArea className="min-h-0 flex-1">
         <main
           className={cn(
             "mx-auto flex w-full max-w-[var(--clair-layout-hospital-settings-content)] flex-col pb-32",
             layout === "summary"
-              ? "gap-4 px-4 pt-14 md:px-0"
+              ? "gap-4 px-4 md:px-0"
               : "gap-8 px-5 py-8 md:px-8"
           )}
           data-settings-layout={layout}

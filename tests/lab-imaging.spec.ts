@@ -69,7 +69,11 @@ test("lab no-work empty state hides history aside", async ({ page }) => {
 
   await expect(page.locator("#lab-content-aside")).toHaveCount(0);
   await expect(page.locator('section[data-surface="content"]')).toBeVisible();
-  await expect(page.getByRole("heading", { name: "오늘 임상병리검사 요청이 없습니다" })).toBeVisible();
+  await expect(
+    page
+      .getByTestId("workspace-main-content")
+      .getByRole("heading", { name: "검사 업무가 없습니다" }),
+  ).toBeVisible();
 });
 
 test("imaging no-work empty state hides history aside", async ({ page }) => {
@@ -97,7 +101,11 @@ test("imaging no-work empty state hides history aside", async ({ page }) => {
 
   await expect(page.locator("#imaging-content-aside")).toHaveCount(0);
   await expect(page.locator('section[data-surface="content"]')).toBeVisible();
-  await expect(page.getByRole("heading", { name: "오늘 영상검사 요청이 없습니다" })).toBeVisible();
+  await expect(
+    page
+      .getByTestId("workspace-main-content")
+      .getByRole("heading", { name: "영상 업무가 없습니다" }),
+  ).toBeVisible();
 });
 
 test("lab workspace renders result input, equipment receipts, and attachments", async ({ page }) => {

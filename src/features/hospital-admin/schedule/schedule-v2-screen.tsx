@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { addDaysToIsoDate } from "@/lib/emr-domain/demo-date";
@@ -276,6 +277,7 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
 
   return (
     <main data-testid="hospital-admin-schedule-v2-screen" className="flex h-full min-h-0 flex-col overflow-y-auto bg-[var(--emr-surface-canvas)]">
+      <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <SchedulePageHeader
         busy={pendingAction !== null}
         dataState={state}

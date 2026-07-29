@@ -794,8 +794,9 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   );
   await expect
     .poll(() =>
-      patientSection
-        .locator('[data-emr-content-top-slot="true"]')
+      page
+        .getByTestId("customer-workspace")
+        .locator('[data-slot="emr-main-content-header"]')
         .evaluate((slot) => slot.getBoundingClientRect().height),
     )
     .toBe(56);
@@ -875,9 +876,6 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   ).toBeLessThanOrEqual(1);
 
   const geometry = await section.evaluate((root) => {
-    const topSlot = root.querySelector(
-      '[data-emr-content-top-slot="true"]',
-    ) as HTMLElement;
     const header = root.querySelector(
       '[data-testid="customer-page-header"]',
     ) as HTMLElement;
@@ -904,7 +902,6 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
       '[data-testid="customer-table-footer"]',
     ) as HTMLElement;
     const rootRect = root.getBoundingClientRect();
-    const topSlotRect = topSlot.getBoundingClientRect();
     const headerRect = header.getBoundingClientRect();
     const tableContainerRect = tableContainer.getBoundingClientRect();
     const tableRect = tableElement.getBoundingClientRect();
@@ -914,7 +911,6 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     return {
       rootWidth: rootRect.width,
       rootBackground: getComputedStyle(root).backgroundColor,
-      topSlotHeight: topSlotRect.height,
       headerOffset: headerRect.top - rootRect.top,
       headerHeight: headerRect.height,
       headerBackground: getComputedStyle(header).backgroundColor,
@@ -957,8 +953,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   });
 
   expect(geometry.rootBackground).toBe("rgb(252, 252, 252)");
-  expect(geometry.topSlotHeight).toBe(56);
-  expect(geometry.headerOffset).toBe(56);
+  expect(geometry.headerOffset).toBe(0);
   expect(geometry.headerHeight).toBe(108);
   expect(geometry.headerBackground).toBe("rgb(252, 252, 252)");
   expect(geometry.headerPadding).toEqual(["0px", "48px", "16px", "48px"]);

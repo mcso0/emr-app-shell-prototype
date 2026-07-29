@@ -186,6 +186,8 @@
   --emr-sidepanel-header-height: 56px;
   --emr-sidepanel-header-padding-x: var(--clair-spacing-16);
   --emr-sidepanel-header-padding-y: 0px;
+  --emr-main-content-header-height-default: 56px;
+  --emr-main-content-header-height-compact: 44px;
   --emr-rightpanel-header-height: 56px;
   --emr-rightpanel-footer-compact-height: 53px;
   --emr-rightpanel-footer-single-height: 65px;
@@ -601,4 +603,16 @@
   --emr-table-cell-padding-y-compact: var(--clair-spacing-4);
   --emr-table-cell-padding-y-standard: var(--clair-spacing-8);
   --emr-table-cell-padding-y-comfortable: var(--clair-spacing-10);
+}
+
+[data-slot="emr-main-content-header"] {
+  height: var(--emr-main-content-header-height-default);
+  min-height: var(--emr-main-content-header-height-default);
+}
+
+@media (min-width: 1024px) and (max-height: 820px) {
+  [data-slot="emr-main-content-header"][data-height-mode="adaptive"] {
+    height: var(--emr-main-content-header-height-compact);
+    min-height: var(--emr-main-content-header-height-compact);
+  }
 }

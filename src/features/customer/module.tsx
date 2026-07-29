@@ -7,6 +7,7 @@ import {
   EmrModuleListSidePanelBadge,
   type EmrModuleListSidePanelItem,
 } from "@/components/emr/module-list-side-panel";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import {
   CalendarCheckIcon,
   ContactBookIcon,
@@ -439,6 +440,10 @@ export function CustomerContent() {
       className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
       data-testid="customer-workspace"
     >
+      <EmrMainContentHeader
+        aria-hidden="true"
+        heightMode="adaptive"
+      />
       {listMode === "patient" ? (
         <PatientTable
           loading={customerProfileLoading}
