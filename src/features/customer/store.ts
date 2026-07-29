@@ -3,7 +3,8 @@
 import { create } from "zustand";
 
 export type CustomerListMode = "patient" | "guardian" | "deleted";
-export type CustomerProfileReadStatus = "idle" | "loading" | "ready" | "error";
+export type CustomerProfileReadStatus =
+  "idle" | "loading" | "ready" | "denied" | "error";
 
 type CustomerProfileReadState = {
   status: CustomerProfileReadStatus;
@@ -30,8 +31,7 @@ export const useCustomerStore = create<CustomerStore>()((set) => ({
   listMode: "patient",
   query: "",
   setArchiveCount: (archiveCount) => set({ archiveCount }),
-  setArchiveCountLoading: (archiveCountLoading) =>
-    set({ archiveCountLoading }),
+  setArchiveCountLoading: (archiveCountLoading) => set({ archiveCountLoading }),
   setListMode: (listMode) => set({ listMode }),
   setProfileReadState: (profileReadState) => set({ profileReadState }),
   setQuery: (query) => set({ query }),

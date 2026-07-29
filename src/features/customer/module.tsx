@@ -51,7 +51,11 @@ import type { ShellComponentProps } from "@/types/emr";
 const customerSideItems = [
   { value: "patient" as const, label: "동물", icon: UserIcon },
   { value: "guardian" as const, label: "보호자", icon: UsersIcon },
-  { value: "deleted" as const, label: "삭제된 보호자/동물", icon: UserCrossIcon },
+  {
+    value: "deleted" as const,
+    label: "삭제된 보호자/동물",
+    icon: UserCrossIcon,
+  },
 ];
 
 const placeholderSideItems = [
@@ -91,15 +95,21 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
   const listMode = useCustomerStore((state) => state.listMode);
   const setListMode = useCustomerStore((state) => state.setListMode);
   const guardians = usePatientProfileStore((state) => state.guardians);
-  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
+  );
   const patients = usePatientProfileStore((state) => state.patients);
   const profileReadState = useCustomerStore((state) => state.profileReadState);
   const archiveCount = useCustomerStore((state) => state.archiveCount);
   const archiveCountLoading = useCustomerStore(
     (state) => state.archiveCountLoading,
   );
-  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["master"]));
+  const setModulePanelOpen = useLayoutStore(
+    (state) => state.setModulePanelOpen,
+  );
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    () => new Set(["master"]),
+  );
   const patientCount = useMemo(
     () =>
       getCustomerPatientRows({
@@ -108,7 +118,7 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
         patients,
         workspaceId,
       }).length,
-    [guardians, patientGuardians, patients, workspaceId]
+    [guardians, patientGuardians, patients, workspaceId],
   );
   const guardianCount = useMemo(
     () =>
@@ -118,7 +128,7 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
         patients,
         workspaceId,
       }).length,
-    [guardians, patientGuardians, patients, workspaceId]
+    [guardians, patientGuardians, patients, workspaceId],
   );
   const customerCounts: Record<CustomerListMode, number> = {
     deleted: archiveCount,
@@ -180,7 +190,11 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
       return {
         type: "button" as const,
         id: item.label,
-        count: <EmrModuleListSidePanelBadge variant="outline">후속</EmrModuleListSidePanelBadge>,
+        count: (
+          <EmrModuleListSidePanelBadge variant="outline">
+            후속
+          </EmrModuleListSidePanelBadge>
+        ),
         disabled: true,
         icon: <Icon className="size-4 shrink-0" />,
         label: item.label,
@@ -226,10 +240,12 @@ function CustomerSidePanelCountBadge({
 
 function PatientTable({
   loading,
+  onRetry,
   readStatus,
   rows,
 }: {
   loading: boolean;
+  onRetry: () => void;
   readStatus: CustomerTableReadStatus;
   rows: CustomerPatientRow[];
 }) {
@@ -240,16 +256,19 @@ function PatientTable({
   return (
     <CustomerDataTable
       columns={columns}
+      emptyActionLabel="신규 동물"
       emptyLabel="동물 정보가 없습니다."
       getRowLabel={(row) => row.name}
       isActiveRow={(row) =>
         activeDrawer?.id === row.id &&
-        (activeDrawer.type === "patient" || activeDrawer.type === "reception-patient")
+        (activeDrawer.type === "patient" ||
+          activeDrawer.type === "reception-patient")
       }
       loading={loading}
       minTableWidth={customerTableMinWidths.patient}
       onOpenRow={(row) => setActiveDrawer({ type: "patient", id: row.id })}
-      pinningMode="first-data-column"
+      onRetry={onRetry}
+      pinnedIdentityColumnId="name"
       readStatus={readStatus}
       rowTestId={(row) => `customer-patient-row-${row.id}`}
       rows={rows}
@@ -261,10 +280,12 @@ function PatientTable({
 
 function GuardianTable({
   loading,
+  onRetry,
   readStatus,
   rows,
 }: {
   loading: boolean;
+  onRetry: () => void;
   readStatus: CustomerTableReadStatus;
   rows: CustomerGuardianRow[];
 }) {
@@ -275,16 +296,19 @@ function GuardianTable({
   return (
     <CustomerDataTable
       columns={columns}
+      emptyActionLabel="신규 보호자"
       emptyLabel="보호자 정보가 없습니다."
       getRowLabel={(row) => row.name}
       isActiveRow={(row) =>
         activeDrawer?.id === row.id &&
-        (activeDrawer.type === "guardian" || activeDrawer.type === "reception-guardian")
+        (activeDrawer.type === "guardian" ||
+          activeDrawer.type === "reception-guardian")
       }
       loading={loading}
       minTableWidth={customerTableMinWidths.guardian}
       onOpenRow={(row) => setActiveDrawer({ type: "guardian", id: row.id })}
-      pinningMode="first-data-column"
+      onRetry={onRetry}
+      pinnedIdentityColumnId="name"
       readStatus={readStatus}
       rowTestId={(row) => `customer-guardian-row-${row.id}`}
       rows={rows}
@@ -299,14 +323,19 @@ export function CustomerContent() {
   const workspaceId = getCustomerWorkspaceId(params.workspaceId);
   const listMode = useCustomerStore((state) => state.listMode);
   const profileReadState = useCustomerStore((state) => state.profileReadState);
-  const setProfileReadState = useCustomerStore((state) => state.setProfileReadState);
+  const setProfileReadState = useCustomerStore(
+    (state) => state.setProfileReadState,
+  );
   const authSession = useMockAuthStore((state) => state.session);
   const applyPatientGuardianLookupItem = usePatientProfileStore(
     (state) => state.applyPatientGuardianLookupItem,
   );
   const guardians = usePatientProfileStore((state) => state.guardians);
-  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
+  );
   const patients = usePatientProfileStore((state) => state.patients);
+  const [profileReadAttempt, setProfileReadAttempt] = useState(0);
 
   useLayoutEffect(() => {
     if (!isPreparedEmptyClinicWorkspace(workspaceId)) return;
@@ -340,7 +369,13 @@ export function CustomerContent() {
 
         if (cancelled) return;
         if (!response.ok || !result.ok) {
-          setProfileReadState({ status: "error", workspaceId });
+          setProfileReadState({
+            status:
+              response.status === 401 || response.status === 403
+                ? "denied"
+                : "error",
+            workspaceId,
+          });
           return;
         }
 
@@ -358,7 +393,13 @@ export function CustomerContent() {
     return () => {
       cancelled = true;
     };
-  }, [applyPatientGuardianLookupItem, authSession?.id, setProfileReadState, workspaceId]);
+  }, [
+    applyPatientGuardianLookupItem,
+    authSession?.id,
+    profileReadAttempt,
+    setProfileReadState,
+    workspaceId,
+  ]);
   const patientRows = useMemo(
     () =>
       getCustomerPatientRows({
@@ -385,15 +426,23 @@ export function CustomerContent() {
     workspaceIdForState: profileReadState.workspaceId,
   });
   const tableReadStatus: CustomerTableReadStatus =
-    profileReadState.workspaceId === workspaceId && profileReadState.status === "error"
-      ? "error"
+    profileReadState.workspaceId === workspaceId &&
+    (profileReadState.status === "denied" ||
+      profileReadState.status === "error")
+      ? profileReadState.status
       : "ready";
+  const retryCustomerProfiles = () =>
+    setProfileReadAttempt((current) => current + 1);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="customer-workspace">
+    <div
+      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
+      data-testid="customer-workspace"
+    >
       {listMode === "patient" ? (
         <PatientTable
           loading={customerProfileLoading}
+          onRetry={retryCustomerProfiles}
           readStatus={tableReadStatus}
           rows={patientRows}
         />
@@ -401,6 +450,7 @@ export function CustomerContent() {
       {listMode === "guardian" ? (
         <GuardianTable
           loading={customerProfileLoading}
+          onRetry={retryCustomerProfiles}
           readStatus={tableReadStatus}
           rows={guardianRows}
         />
