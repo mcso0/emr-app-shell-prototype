@@ -136,10 +136,9 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await popover.getByLabel("필터 필드").last().click();
     await page.getByRole("option", { name: "판매금액" }).click();
     await popover.getByRole("textbox", { name: "필터 값" }).fill("999999");
-    const orderEmptyState = orderTable.locator(
-      'section[data-kind="no-filter-results"][data-surface="table"]'
-    );
+    const orderEmptyState = page.getByTestId("hospital-order-empty-state");
     await expect(orderEmptyState).toBeVisible();
+    await expect(orderTable).toHaveCount(0);
     await expect(orderEmptyState).toContainText("조건에 맞는 Order가 없습니다");
     await expect(orderEmptyState).toContainText("조건을 초기화하면 숨겨진 Order가 다시 보입니다.");
     popover = page.locator('[data-slot="popover-content"]').last();

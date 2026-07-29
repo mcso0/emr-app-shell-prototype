@@ -2,7 +2,6 @@
 
 import type { ColumnDef, SortingFn } from "@tanstack/react-table";
 import { CdsActionsCheckCircleIcon } from "@/components/cds-icons/actions-and-controls";
-import { AnimalPatientAvatar } from "@/components/emr/animal-patient-avatar";
 import {
   EmrTableCellText,
   EmrTableIdentityCellContent,
@@ -49,10 +48,8 @@ export type CustomerTableColumnDef<TRow> = ColumnDef<TRow, unknown> & {
 };
 
 const badgeClassName: Record<CustomerWorkBadge["tone"], string> = {
-  blue:
-    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
-  gray:
-    "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
+  blue: "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
+  gray: "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
   green:
     "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
   orange:
@@ -122,16 +119,7 @@ export function createCustomerPatientColumns(): Array<
       size: 184,
       maxSize: 220,
       cell: ({ row }) => (
-        <EmrTableIdentityCellContent
-          leading={
-            <AnimalPatientAvatar
-              alt={`${row.original.name} 동물 프로필`}
-              size="table"
-            />
-          }
-          leadingGap={8}
-          leadingWidth={28}
-        >
+        <EmrTableIdentityCellContent>
           <EmrTableCellText
             as="span"
             className="flex-1 font-semibold"
@@ -250,8 +238,7 @@ export function createCustomerPatientColumns(): Array<
           getUniqueCustomerFilterOptions(rows, (row) =>
             row.workBadges.map((badge) => badge.label),
           ),
-        filterValues: (row) =>
-          row.workBadges.map((badge) => badge.label),
+        filterValues: (row) => row.workBadges.map((badge) => badge.label),
       },
     },
     {
@@ -306,10 +293,7 @@ export function createCustomerPatientColumns(): Array<
                 className="size-3.5"
               />
             ) : (
-              <CircleCloseFillIcon
-                aria-hidden="true"
-                className="size-3.5"
-              />
+              <CircleCloseFillIcon aria-hidden="true" className="size-3.5" />
             )}
             <span className="truncate">{row.original.messageConsent}</span>
           </Badge>
@@ -321,9 +305,7 @@ export function createCustomerPatientColumns(): Array<
         headerInteraction: "filterable",
         textMode: "one-line",
         filterOptions: (rows) =>
-          getUniqueCustomerFilterOptions(rows, (row) => [
-            row.messageConsent,
-          ]),
+          getUniqueCustomerFilterOptions(rows, (row) => [row.messageConsent]),
         filterValues: (row) => [row.messageConsent],
       },
     },
@@ -409,9 +391,7 @@ export function createCustomerGuardianColumns(): Array<
         headerInteraction: "filterable",
         textMode: "one-line",
         filterOptions: (rows) =>
-          getUniqueCustomerFilterOptions(rows, (row) => [
-            row.consentSummary,
-          ]),
+          getUniqueCustomerFilterOptions(rows, (row) => [row.consentSummary]),
         filterValues: (row) => [row.consentSummary],
       },
     },

@@ -4,7 +4,10 @@ import {
   EmrPinnedTableWorkspace,
   EmrTableHeaderCell,
   EmrTableIdentityCellContent,
+  EmrTableSelectionCell,
+  EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
+import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import {
   Table,
   TableBody,
@@ -30,7 +33,13 @@ const sampleRows = [
   { area: "수납", owner: "샘플 데스크", status: "준비", time: "10:05" },
 ];
 
-function TableExample({ density, layout, minWidth, pinning, showCaption }: TableStoryArgs) {
+function TableExample({
+  density,
+  layout,
+  minWidth,
+  pinning,
+  showCaption,
+}: TableStoryArgs) {
   return (
     <Table
       density={density}
@@ -39,7 +48,9 @@ function TableExample({ density, layout, minWidth, pinning, showCaption }: Table
       pinning={pinning}
     >
       {showCaption ? (
-        <TableCaption>합성 업무 흐름만 보여주는 샘플 테이블입니다.</TableCaption>
+        <TableCaption>
+          합성 업무 흐름만 보여주는 샘플 테이블입니다.
+        </TableCaption>
       ) : null}
       <TableHeader>
         <TableRow>
@@ -90,7 +101,8 @@ const meta = {
     layout: {
       control: "radio",
       options: ["fill", "scroll"],
-      description: "Whether the table fills the container or keeps a scroll min-width.",
+      description:
+        "Whether the table fills the container or keeps a scroll min-width.",
     },
     minWidth: {
       control: { type: "number", min: 480, max: 1200 },
@@ -167,6 +179,7 @@ export const PinnedColumns: Story = {
       className="w-[520px] overflow-hidden"
       data-testid="pinned-table-workspace"
       identityTextInset={48}
+      selectionColumnWidth={44}
     >
       <Table
         data-testid="pinned-table"
@@ -175,13 +188,27 @@ export const PinnedColumns: Story = {
         minWidth={840}
         pinning="columns"
       >
+        <colgroup>
+          <col style={{ width: 44 }} />
+          <col style={{ width: 180 }} />
+          <col style={{ width: 120 }} />
+          <col />
+          <col style={{ width: 80 }} />
+        </colgroup>
         <TableHeader>
           <TableRow>
+            <EmrTableSelectionHeaderCell
+              className="w-11 min-w-11 max-w-11"
+              pinned="left"
+              pinnedOffset={0}
+            >
+              <EmrTableCheckbox aria-label="전체 선택" />
+            </EmrTableSelectionHeaderCell>
             <EmrTableHeaderCell
               className="!p-0"
               identity
               pinned="left"
-              pinnedOffset={0}
+              pinnedOffset={44}
               pinnedEdge
             >
               대상
@@ -195,19 +222,21 @@ export const PinnedColumns: Story = {
         </TableHeader>
         <TableBody>
           <TableRow>
+            <EmrTableSelectionCell
+              className="w-11 min-w-11 max-w-11"
+              controlVisibility="contextual"
+              pinned="left"
+              pinnedOffset={0}
+            >
+              <EmrTableCheckbox aria-label="합성 환자 A 선택" />
+            </EmrTableSelectionCell>
             <TableCell
               className="!p-0"
               pinned="left"
-              pinnedOffset={0}
+              pinnedOffset={44}
               pinnedEdge
             >
-              <EmrTableIdentityCellContent
-                leading={
-                  <span className="inline-block size-7 rounded-full bg-muted" />
-                }
-                leadingGap={8}
-                leadingWidth={28}
-              >
+              <EmrTableIdentityCellContent>
                 합성 환자 A
               </EmrTableIdentityCellContent>
             </TableCell>
@@ -218,7 +247,15 @@ export const PinnedColumns: Story = {
             </TableCell>
           </TableRow>
           <TableRow data-state="selected">
-            <TableCell pinned="left" pinnedOffset={0} pinnedEdge>
+            <EmrTableSelectionCell
+              className="w-11 min-w-11 max-w-11"
+              controlVisibility="contextual"
+              pinned="left"
+              pinnedOffset={0}
+            >
+              <EmrTableCheckbox aria-label="합성 환자 B 선택" checked />
+            </EmrTableSelectionCell>
+            <TableCell pinned="left" pinnedOffset={44} pinnedEdge>
               합성 환자 B
             </TableCell>
             <TableCell>진행</TableCell>
@@ -236,9 +273,11 @@ export const PinnedColumns: Story = {
       '[data-testid="pinned-table"]',
     ) as HTMLTableElement | null;
     const container = table?.parentElement;
-    const leftCell = table?.querySelector(
-      'tbody [data-emr-column-pinned="left"]',
-    ) as HTMLTableCellElement | null;
+    const leftCells = Array.from(
+      table?.querySelectorAll<HTMLTableCellElement>(
+        'tbody tr:first-child [data-emr-column-pinned="left"]',
+      ) ?? [],
+    );
     const rightCell = table?.querySelector(
       'tbody [data-emr-column-pinned="right"]',
     ) as HTMLTableCellElement | null;
@@ -258,7 +297,7 @@ export const PinnedColumns: Story = {
     if (
       !table ||
       !container ||
-      !leftCell ||
+      leftCells.length !== 2 ||
       !rightCell ||
       !selectedCell ||
       !workspace ||
@@ -268,21 +307,41 @@ export const PinnedColumns: Story = {
       throw new Error("Pinned table story did not render the required cells.");
     }
 
-    const initialLeft = leftCell.getBoundingClientRect().left;
+    const initialLeftPositions = leftCells.map(
+      (cell) => cell.getBoundingClientRect().left,
+    );
     container.scrollLeft = 240;
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
     if (table.dataset.emrPinning !== "columns") {
       throw new Error("Table did not expose the shared pinning mode.");
     }
-    if (getComputedStyle(leftCell).position !== "sticky") {
-      throw new Error("Left pinned cell is not sticky.");
+    if (
+      leftCells.some((cell) => getComputedStyle(cell).position !== "sticky")
+    ) {
+      throw new Error("A left pinned cell is not sticky.");
     }
     if (getComputedStyle(rightCell).position !== "sticky") {
       throw new Error("Right pinned cell is not sticky.");
     }
-    if (Math.abs(leftCell.getBoundingClientRect().left - initialLeft) > 1) {
-      throw new Error("Left pinned cell moved during horizontal scroll.");
+    if (
+      leftCells.some(
+        (cell, index) =>
+          Math.abs(
+            cell.getBoundingClientRect().left - initialLeftPositions[index],
+          ) > 1,
+      )
+    ) {
+      throw new Error("A left pinned cell moved during horizontal scroll.");
+    }
+    if (
+      Math.abs(
+        leftCells[1].getBoundingClientRect().left -
+          leftCells[0].getBoundingClientRect().left -
+          44,
+      ) > 1
+    ) {
+      throw new Error("Pinned identity cell does not start after selection.");
     }
     if (getComputedStyle(selectedCell).backgroundColor === "rgba(0, 0, 0, 0)") {
       throw new Error("Selected pinned cell has a transparent surface.");
@@ -293,7 +352,9 @@ export const PinnedColumns: Story = {
           rowIdentity.getBoundingClientRect().left,
       ) > 1
     ) {
-      throw new Error("Pinned identity header and row text do not share one axis.");
+      throw new Error(
+        "Pinned identity header and row text do not share one axis.",
+      );
     }
     const horizontalOwners = Array.from(
       workspace.querySelectorAll<HTMLElement>("*"),
@@ -301,11 +362,10 @@ export const PinnedColumns: Story = {
       const overflowX = getComputedStyle(element).overflowX;
       return overflowX === "auto" || overflowX === "scroll";
     });
-    if (
-      horizontalOwners.length !== 1 ||
-      horizontalOwners[0] !== container
-    ) {
-      throw new Error("Pinned table has more than one horizontal overflow owner.");
+    if (horizontalOwners.length !== 1 || horizontalOwners[0] !== container) {
+      throw new Error(
+        "Pinned table has more than one horizontal overflow owner.",
+      );
     }
   },
 };
@@ -321,7 +381,10 @@ export const EmptyRows: Story = {
       </TableHeader>
       <TableBody>
         <TableRow>
-          <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+          <TableCell
+            colSpan={2}
+            className="h-24 text-center text-muted-foreground"
+          >
             조건에 맞는 샘플 행이 없습니다.
           </TableCell>
         </TableRow>

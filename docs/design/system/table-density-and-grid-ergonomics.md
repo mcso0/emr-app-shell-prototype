@@ -199,11 +199,19 @@ Acceptance rules:
 - Pinned cells own opaque semantic surfaces for default, hover, selected, header, and loading states.
 - Use the single `Table layout="scroll"` overflow owner.
 - Wrap cross-family pinned table workspaces in `EmrPinnedTableWorkspace` and provide the feature-owned local identity inset once.
+- When a selectable table fixes both selection and identity, provide the
+  selection-column width to `EmrPinnedTableWorkspace`, pin selection at offset
+  `0`, and pin identity at the selection width. The identity inset remains the
+  workspace text axis, not the identity cell's physical left edge.
 - Use `EmrTableHeaderCell identity` and `EmrTableIdentityCellContent` so header and row identity text inherit the same exact axis.
 - When a body identity has a leading avatar/icon, pass its measured width and gap to `EmrTableIdentityCellContent`; the visual occupies the space before the shared text axis and must not move the identity text.
 - Mark the opted-in title/header block with `data-emr-table-workspace-header="true"`; the shared pinned workspace contract owns its 0px padding-top.
 - Mark the aligned footer with `data-emr-table-workspace-footer="true"` so its total text inherits the same identity inset.
 - Verify left/right offsets, multiple pinned cells, keyboard focus visibility, loading, hover, selected, and narrow desktop behavior.
+- Use `EmrTableFeedbackSurface` around `EmrEmptyState` for terminal no-data,
+  no-filter-results, read-error, and no-permission states. Do not leave the
+  table header, stale rows, or table footer visible when the normal table
+  cannot be rendered.
 
 ### Customer Identity Pinning
 
@@ -211,10 +219,16 @@ DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYS
 
 - Use the existing TanStack column-pinning state and the shared `Table layout="scroll"` container; do not add another overflow owner.
 - Adapt TanStack offsets with `getEmrPinnedColumnProps`; customer feature code must not duplicate sticky position, z-index, or edge-shadow styling.
-- Keep animal name, guardian name, and archived-record display name as the first pinned identity column in their respective tables.
-- Use `pinningMode="first-data-column"` for both the animal and guardian tables; the archive table uses the same shared fixed-cell props directly.
+- Keep animal name, guardian name, and archived-record display name as the
+  domain identity in their respective tables.
+- Use explicit `pinnedIdentityColumnId` values for animal and guardian tables.
+  Pin `select` first and the identity second; the non-selectable archive table
+  uses identity-only shared fixed-cell props.
 - Keep the animal identity column between 160px and 220px, with 184px as the default.
-- Set one workspace identity axis through `EmrPinnedTableWorkspace`; the animal avatar occupies the measured 28px width plus 8px gap before that text axis.
+- Set one 48px workspace identity axis through `EmrPinnedTableWorkspace`.
+  Customer animal rows do not render an avatar in the identity cell; the 44px
+  selection column occupies the leading control region without moving the
+  animal-name text.
 - Align the title, search field, pinned header, pinned row text, and footer total through the same workspace axis instead of feature-local padding arithmetic.
 - Keep patient scalar values and status badges on one line; the table owns a minimum width of 1480px.
 - Sticky header and body cells must share the same hover, selected, loading, and error surface tokens as their row.
@@ -224,12 +238,15 @@ DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYS
 ### Hospital Admin Order Identity Pinning
 
 - All 15 Order management leaf screens use the single shared renderer in `src/features/hospital-admin/module.tsx`.
-- `표준 Order명` is the physical first column and the only left-pinned identity column.
-- The selection column and all other Order columns remain scrollable behind the opaque identity surface.
-- The Order title and pinned header/row identity text use a 20px local workspace axis.
+- The 44px selection column is the physical first column and `표준 Order명` is
+  the second column. Both are left-pinned, and only `표준 Order명` is the
+  domain identity column.
+- The Order title and pinned header/row identity text use a 48px local
+  workspace axis.
 - The Order table container owns both vertical and horizontal table scrolling; do not wrap it in a second `ScrollArea`.
 - Preserve sorting, filtering, selection, row actions, drawers, and workspace catalog read/mutation behavior when changing the presentation.
-- Real patient image storage remains outside the visual table contract. Use the shared fallback avatar until a separately approved image-data contract exists.
+- Let one non-pinned data column absorb remaining table width so the fixed
+  selection and identity widths do not scale.
 
 ## Header Interaction Rules
 

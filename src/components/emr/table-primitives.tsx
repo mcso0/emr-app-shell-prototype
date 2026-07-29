@@ -49,6 +49,7 @@ type EmrTableCellTextProps = {
 
 type EmrPinnedTableWorkspaceProps = React.ComponentProps<"div"> & {
   identityTextInset: number | string;
+  selectionColumnWidth?: number | string;
 };
 
 type EmrTableIdentityCellContentProps = React.ComponentProps<"div"> & {
@@ -65,6 +66,12 @@ type EmrTableSelectionHeaderCellProps = Omit<
 };
 
 type EmrTableSelectionCellProps = React.ComponentProps<typeof TableCell>;
+
+type EmrTableContextualSelectionCellProps = EmrTableSelectionCellProps & {
+  controlVisibility?: "always" | "contextual";
+};
+
+type EmrTableFeedbackSurfaceProps = React.ComponentProps<"div">;
 
 function getAriaSort(sortDirection: EmrTableHeaderCellProps["sortDirection"]) {
   if (sortDirection === "asc") return "ascending";
@@ -219,16 +226,21 @@ export function EmrTableHeaderCell({
 export function EmrPinnedTableWorkspace({
   children,
   identityTextInset,
+  selectionColumnWidth = 0,
   style,
   ...props
 }: EmrPinnedTableWorkspaceProps) {
   return (
     <div
       data-emr-pinned-table-workspace="true"
-      style={{
-        ...style,
-        "--emr-table-identity-text-inset": toCssLength(identityTextInset),
-      } as React.CSSProperties}
+      style={
+        {
+          ...style,
+          "--emr-table-identity-text-inset": toCssLength(identityTextInset),
+          "--emr-table-selection-column-width":
+            toCssLength(selectionColumnWidth),
+        } as React.CSSProperties
+      }
       {...props}
     >
       {children}
@@ -249,11 +261,13 @@ export function EmrTableIdentityCellContent({
     <div
       data-emr-table-identity-content="true"
       className={cn("relative flex min-w-0 items-center", className)}
-      style={{
-        ...style,
-        "--emr-table-identity-leading-gap": toCssLength(leadingGap),
-        "--emr-table-identity-leading-width": toCssLength(leadingWidth),
-      } as React.CSSProperties}
+      style={
+        {
+          ...style,
+          "--emr-table-identity-leading-gap": toCssLength(leadingGap),
+          "--emr-table-identity-leading-width": toCssLength(leadingWidth),
+        } as React.CSSProperties
+      }
       {...props}
     >
       {leading ? (
@@ -284,7 +298,7 @@ export function EmrTableSelectionHeaderCell({
     <EmrTableHeaderCell
       {...props}
       className={cn(
-        "w-10 [&_.emr-table-cell-content]:justify-center [&_.emr-table-cell-content>*]:shrink-0",
+        "w-10 min-w-10 max-w-10 [&_.emr-table-cell-content]:justify-center [&_.emr-table-cell-content>*]:shrink-0",
         className,
       )}
       interaction="static"
@@ -298,14 +312,38 @@ export function EmrTableSelectionHeaderCell({
 export function EmrTableSelectionCell({
   children,
   className,
+  controlVisibility = "always",
   ...props
-}: EmrTableSelectionCellProps) {
+}: EmrTableContextualSelectionCellProps) {
   return (
-    <TableCell className={cn("w-10", className)} {...props}>
+    <TableCell
+      className={cn("w-10 min-w-10 max-w-10", className)}
+      data-emr-table-selection-visibility={controlVisibility}
+      {...props}
+    >
       <span className="emr-table-cell-content flex min-w-0 items-center justify-center gap-1 [&>*]:shrink-0">
         {children}
       </span>
     </TableCell>
+  );
+}
+
+export function EmrTableFeedbackSurface({
+  children,
+  className,
+  ...props
+}: EmrTableFeedbackSurfaceProps) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 min-w-0 flex-1 items-center justify-center bg-[var(--emr-surface-panel)] px-4 py-6",
+        className,
+      )}
+      data-emr-table-feedback-surface="true"
+      {...props}
+    >
+      {children}
+    </div>
   );
 }
 
