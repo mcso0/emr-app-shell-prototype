@@ -146,11 +146,13 @@ CLAiR screens favor operational density:
 - patient context bars near clinical work
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
-- every top-level module renders exactly one shared `EmrMainContentHeader` at
+- every top-level module exposes exactly one effective main-content header at
   its existing shell or feature ownership boundary
-- home, reception, treatment, lab, imaging, dispensing, billing, and inpatient
-  use the fixed 56px mode; clinical features keep their selected patient
+- home, treatment, lab, imaging, dispensing, billing, and inpatient use the
+  fixed 56px shared-header mode; clinical features keep their selected patient
   context inside this frame and preserve an empty frame before selection
+- reception uses its feature-owned 56px `ScheduleToolbar` as the effective
+  main-content header and does not register an additional shared header
 - hospital-admin and customer use the adaptive mode: 44px only when the
   browser viewport matches `(min-width: 1024px) and (max-height: 820px)`,
   otherwise 56px

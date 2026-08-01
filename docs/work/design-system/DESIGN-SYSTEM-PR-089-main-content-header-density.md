@@ -35,6 +35,14 @@ query.
 - Empty clinical selections keep the header frame instead of returning no
   frame.
 
+## Follow-up correction (2026-08-01)
+
+- Reception is the intentional exception to the empty shared-header rule: its
+  feature-owned `ScheduleToolbar` is the effective 56px main-content header.
+- The reception module must not register `FixedEmptyMainContentHeader`; the
+  shared `data-slot="emr-main-content-header"` remains unchanged for modules
+  that do not already own an equivalent top bar.
+
 ## In Scope
 
 - Shared component, fixed/adaptive tokens, and Storybook examples.
@@ -56,8 +64,9 @@ query.
 
 ## Done Criteria
 
-- Every current top-level module exposes exactly one
-  `data-slot="emr-main-content-header"`.
+- Every current top-level module exposes exactly one effective main-content
+  header; reception satisfies this with its feature-owned `ScheduleToolbar`
+  rather than a `data-slot="emr-main-content-header"` element.
 - Fixed headers compute to 56px at every verified viewport.
 - Adaptive headers compute to 44px at `1440x800` and to 56px at `1440x821`,
   `1023x800`, and `1920x1080`.
@@ -83,8 +92,9 @@ candidate before merge. Stop on any failed gate or scope drift.
   adaptive modes.
 - Centralized the 56px/44px values and the adaptive viewport query in the EMR
   foundation tokens.
-- Registered one shared header for every top-level module while retaining each
-  feature's existing state and interaction ownership.
+- Registered shared headers only where a module did not already own the
+  effective top-bar surface, while retaining each feature's existing state and
+  interaction ownership.
 - Removed only the page-local top spacers superseded by the shared frame.
 - Added Fixed, Adaptive, content, and empty Storybook examples.
 

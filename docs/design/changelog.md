@@ -2,6 +2,11 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-08-01
+
+- `fixed`: Reception keeps its feature-owned 56px calendar toolbar at the top
+  of the content frame and no longer reserves a duplicate empty shared header.
+
 ## 2026-07-27
 
 - `changed`: Customer animal/guardian tables and hospital-admin Order/audit tables now reserve a feature-owned 56px content-top slot, use `#FCFCFC` for the content frame, and preserve a 0px table-header-to-first-row gap.
