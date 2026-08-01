@@ -65,7 +65,7 @@ test("main-content header applies the fixed and adaptive viewport-height contrac
   }
 });
 
-test("every top-level module owns exactly one main-content header", async ({
+test("top-level modules use the intended main-content header ownership", async ({
   page,
 }) => {
   await page.setViewportSize({ height: 1080, width: 1920 });
@@ -75,7 +75,6 @@ test("every top-level module owns exactly one main-content header", async ({
     moduleId: string;
   }> = [
     { mode: "fixed", moduleId: "home" },
-    { mode: "fixed", moduleId: "reception" },
     { mode: "fixed", moduleId: "treatment" },
     { mode: "fixed", moduleId: "lab" },
     { mode: "fixed", moduleId: "imaging" },

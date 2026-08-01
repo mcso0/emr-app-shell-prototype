@@ -91,7 +91,6 @@ export const modules: ModuleDefinition[] = [
     label: "접수/예약",
     icon: BuildingIcon,
     sidePanel: ReceptionSidePanel,
-    contentHeader: FixedEmptyMainContentHeader,
     content: ReceptionContent,
     rightPanel: ReceptionRightPanel,
     rightPanelWidth: 380,

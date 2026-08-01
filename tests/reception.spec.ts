@@ -9044,8 +9044,22 @@ test("reception toolbar follows the browser annotation spacing and date icon rem
 
   const scheduleToolbar = page.getByTestId("schedule-toolbar");
   const dateControl = page.getByTestId("reception-date-control");
+  const workspace = page.getByTestId("workspace-main-content");
 
   await expect(scheduleToolbar).toBeVisible();
+  await expect(
+    workspace.locator('[data-slot="emr-main-content-header"]'),
+  ).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const workspaceBox = await workspace.boundingBox();
+      const toolbarBox = await scheduleToolbar.boundingBox();
+
+      return workspaceBox && toolbarBox
+        ? Math.round(toolbarBox.y - workspaceBox.y)
+        : -1;
+    })
+    .toBe(0);
   await expect(scheduleToolbar).toHaveCSS("height", "56px");
   await expect(scheduleToolbar).toHaveCSS("padding-top", "12px");
   await expect(scheduleToolbar).toHaveCSS("padding-right", "12px");
@@ -9053,6 +9067,6 @@ test("reception toolbar follows the browser annotation spacing and date icon rem
   await expect(scheduleToolbar).toHaveCSS("padding-left", "20px");
   await expect(dateControl.locator("svg")).toHaveCount(0);
   await expect(dateControl.locator('[aria-label$="표시 중"]')).toHaveText(
-    "26.05.01 (금)",
+    "26년 5월 1일(금)",
   );
 });
