@@ -29,7 +29,8 @@ async function restoreKongOrderDraftDefaults(page: Page) {
 
 async function expectFilterControls(popover: Locator) {
   await expect(popover.getByRole("button", { name: "초기화" })).toBeVisible();
-  await expect(popover.getByRole("button", { name: /Add filter/ })).toBeVisible();
+  await expect(popover.getByRole("button", { name: "필터 추가" })).toBeVisible();
+  await expect(popover.getByRole("button", { name: "그룹 필터" })).toBeVisible();
 
   if ((await popover.locator('[data-emr-table-filter-builder="true"]').count()) > 0) {
     await expect(popover.getByRole("button", { name: "필터 닫기" })).toBeVisible();
@@ -99,12 +100,12 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     const patientTable = page.getByTestId("customer-patient-table");
     await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
     let popover = page.locator('[data-slot="popover-content"]').last();
-    await popover.getByRole("button", { name: "Add filter" }).click();
+    await popover.getByRole("button", { name: "그룹 필터" }).click();
     await popover.getByLabel("필터 필드").first().click();
     await page.getByRole("option", { name: "품종" }).click();
     await popover.getByRole("combobox", { name: "필터 값" }).first().click();
     await page.getByRole("option", { name: "푸들" }).click();
-    await popover.getByRole("button", { name: "Add filter" }).click();
+    await popover.getByRole("button", { name: "그룹 필터" }).click();
     await popover.getByLabel("필터 필드").nth(1).click();
     await page.getByRole("option", { name: "성별" }).click();
     await popover.getByRole("combobox", { name: "필터 값" }).nth(1).click();
@@ -132,7 +133,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     const orderTable = page.getByTestId("hospital-order-table");
     await page.getByRole("button", { name: "오더 필터 설정" }).click();
     popover = page.locator('[data-slot="popover-content"]').last();
-    await popover.getByRole("button", { name: "Add filter" }).click();
+    await popover.getByRole("button", { name: "그룹 필터" }).click();
     await popover.getByLabel("필터 필드").last().click();
     await page.getByRole("option", { name: "판매금액" }).click();
     await popover.getByRole("textbox", { name: "필터 값" }).fill("999999");
@@ -173,5 +174,38 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await page.getByRole("button", { name: "오더 필터 설정" }).click();
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible();
     await expectEscapeClosesFilter(page);
+  });
+
+  test("advanced filter groups expose working AND OR controls and aligned surfaces", async ({
+    page,
+  }) => {
+    await page.goto("/w/clair-demo/customer?modulePanel=open");
+    const patientTable = page.getByTestId("customer-patient-table");
+    await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
+    const builder = page.locator('[data-emr-table-filter-builder="true"]');
+
+    await builder.getByRole("button", { name: "그룹 필터" }).click();
+    const innerCombinator = builder.getByRole("combobox", {
+      name: "그룹 1 조건 2 조합 방식",
+    });
+    await expect(innerCombinator).toHaveText(/AND/);
+    await innerCombinator.click();
+    await page.getByRole("option", { name: "OR", exact: true }).click();
+    await expect(innerCombinator).toHaveText(/OR/);
+
+    await builder.getByRole("button", { name: "필터 추가" }).click();
+    await expect(builder.locator("[data-filter-group]")).toHaveCount(2);
+    await expect(
+      builder.getByRole("combobox", { name: "그룹 2와 이전 그룹 조합 방식" }),
+    ).toHaveText(/AND/);
+
+    const groupSurfaceX = await builder.locator("[data-filter-group] > section").evaluateAll(
+      (surfaces) => surfaces.map((surface) => surface.getBoundingClientRect().x),
+    );
+    expect(new Set(groupSurfaceX.map((value) => Math.round(value))).size).toBe(1);
+
+    const help = builder.getByRole("button", { name: "필터 적용 방식 안내" });
+    await help.hover();
+    await expect(page.getByRole("tooltip")).toContainText("완성된 조건만 자동 적용");
   });
 });

@@ -13,13 +13,13 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import { useMemo, useState, type ReactNode } from "react";
-import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
+import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
 import {
   createInitialEmrTableFilterBuilderModel,
   filterRowsByEmrTableFilterBuilder,
@@ -560,15 +560,8 @@ export function CustomerDataTable<
       <Popover open={filterOpen} onOpenChange={setFilterOpen}>
         <PopoverTrigger
           render={
-            <Button
-              type="button"
-              variant={activeFilterCount > 0 ? "secondary" : "outline"}
-              size="sm"
-              className={cn(
-                "h-8 min-h-8 rounded-lg bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5 shadow-[var(--clair-shadow-xs)]",
-                activeFilterCount > 0 &&
-                  "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
-              )}
+            <EmrTableFilterTrigger
+              activeCount={activeFilterCount}
               aria-label={
                 activeFilterCount > 0
                   ? `${title} 필터 ${activeFilterCount}개 설정`
@@ -576,21 +569,18 @@ export function CustomerDataTable<
               }
             />
           }
-        >
-          <CdsActionsListFilterIcon aria-hidden="true" />
-          필터{activeFilterCount > 0 ? ` ${activeFilterCount}` : ""}
-        </PopoverTrigger>
+        />
         <PopoverContent
           align="end"
-          className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
+          className="w-[min(720px,calc(100vw-32px))] gap-0 overflow-visible p-0"
           initialFocus={false}
         >
           <EmrTableFilterBuilder
             clearAllLabel="초기화"
-            description={`${title} 필터는 완성된 조건만 AND로 적용됩니다.`}
+            description={`${title} 필터는 완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다.`}
             fields={filterFields}
             model={filterModel}
-            title="Filters"
+            title="필터"
             onClose={() => setFilterOpen(false)}
             onModelChange={setFilterModel}
           />

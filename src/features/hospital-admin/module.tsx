@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
-  CdsActionsListFilterIcon,
   CdsActionsCopyIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
@@ -30,6 +29,7 @@ import {
 } from "@/components/emr/table-primitives";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
+import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
 import {
   createInitialEmrTableFilterBuilderModel,
   filterRowsByEmrTableFilterBuilder,
@@ -2028,15 +2028,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           <Popover open={orderFilterOpen} onOpenChange={setOrderFilterOpen}>
             <PopoverTrigger
               render={
-                <Button
-                  type="button"
-                  variant={activeOrderFilterCount > 0 ? "secondary" : "outline"}
-                  size="sm"
-                  className={cn(
-                    "h-8 bg-card px-2",
-                    activeOrderFilterCount > 0 &&
-                      "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
-                  )}
+                <EmrTableFilterTrigger
+                  activeCount={activeOrderFilterCount}
                   aria-label={
                     activeOrderFilterCount > 0
                       ? `오더 필터 ${activeOrderFilterCount}개 설정`
@@ -2044,25 +2037,18 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                   }
                 />
               }
-            >
-              <CdsActionsListFilterIcon
-                aria-hidden="true"
-                className="size-3.5"
-              />
-              필터
-              {activeOrderFilterCount > 0 ? ` ${activeOrderFilterCount}` : ""}
-            </PopoverTrigger>
+            />
             <PopoverContent
               align="end"
-              className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
+              className="w-[min(720px,calc(100vw-32px))] gap-0 overflow-visible p-0"
               initialFocus={false}
             >
               <EmrTableFilterBuilder
                 clearAllLabel="초기화"
-                description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 AND로 적용됩니다."
+                description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다."
                 fields={orderFilterFields}
                 model={orderFilterModel}
-                title="Filters"
+                title="필터"
                 onClose={() => setOrderFilterOpen(false)}
                 onModelChange={setOrderFilterModel}
               />
