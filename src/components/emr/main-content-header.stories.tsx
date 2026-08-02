@@ -49,7 +49,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use EmrMainContentHeader for the shared frame between the workspace shell and a module's primary content. Fixed stays 56px. Adaptive becomes 44px only when the viewport is at least 1024px wide and at most 820px high.",
+          "Use EmrMainContentHeader for the shared frame between the workspace shell and a module's primary content. Fixed stays 56px. Adaptive becomes 44px only when the viewport is at least 1024px wide and below 1080px high.",
       },
     },
   },
