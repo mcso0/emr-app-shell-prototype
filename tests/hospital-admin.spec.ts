@@ -2229,7 +2229,7 @@ test("hospital admin order catalog supports single sort and section filter build
   await expect(
     filterBuilder.getByRole("combobox", { name: "필터 필드" }),
   ).toHaveCount(1);
-  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await expect(page.getByRole("option", { name: "대상" })).toBeVisible();
   await page.getByRole("option", { name: "대상" }).click();
   await expect(
     page.getByRole("button", { name: "오더 필터 설정" }),

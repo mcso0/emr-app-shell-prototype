@@ -35,7 +35,7 @@ export const EmrTableFilterTrigger = React.forwardRef<
       className={cn(
         "h-8 min-h-8 gap-1 rounded-lg bg-card px-3 py-1.5 text-sm leading-5 font-medium tracking-[0.014em] shadow-[var(--clair-shadow-xs)]",
         "aria-expanded:bg-card aria-expanded:text-foreground aria-expanded:shadow-[var(--clair-shadow-xs)]",
-        selected && "border-[var(--emr-state-selected-border)]",
+        selected && "border-[var(--clair-color-atomic-sky-200)]",
         className
       )}
       {...props}
