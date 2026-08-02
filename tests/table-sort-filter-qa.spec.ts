@@ -192,6 +192,17 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     const reset = builder.getByRole("button", { name: "초기화" });
 
     await expect(page.getByRole("option", { name: "품종" })).toBeVisible();
+    const firstFieldTrigger = builder.getByRole("combobox", {
+      name: "그룹 1 조건 1 필터 필드",
+    });
+    const firstFieldTriggerBox = await firstFieldTrigger.boundingBox();
+    const openFieldMenu = page.locator('[data-slot="select-content"]:visible').first();
+    const openFieldMenuBox = await openFieldMenu.boundingBox();
+    expect(firstFieldTriggerBox).not.toBeNull();
+    expect(openFieldMenuBox).not.toBeNull();
+    expect(openFieldMenuBox!.y).toBeGreaterThanOrEqual(
+      firstFieldTriggerBox!.y + firstFieldTriggerBox!.height - 1,
+    );
     await expect(firstDelete).toBeDisabled();
     await expect(reset).toBeDisabled();
 
