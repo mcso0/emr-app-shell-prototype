@@ -38,8 +38,12 @@ test("main-content header applies the fixed and adaptive viewport-height contrac
       viewport: { height: 800, width: 1440 },
     },
     {
+      adaptiveHeight: 44,
+      viewport: { height: 880, width: 1440 },
+    },
+    {
       adaptiveHeight: 56,
-      viewport: { height: 821, width: 1440 },
+      viewport: { height: 881, width: 1440 },
     },
     {
       adaptiveHeight: 56,

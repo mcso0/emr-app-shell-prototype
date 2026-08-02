@@ -12,7 +12,7 @@ source_docs:
   - "docs/design/system/ui-refactor-dod.md"
 dependencies:
   - "DESIGN-SYSTEM-PR-085"
-updated: "2026-07-29"
+updated: "2026-08-02"
 ---
 
 # Shared Main-Content Header Density
@@ -28,7 +28,7 @@ query.
 - `home`, `reception`, `treatment`, `lab`, `imaging`, `dispensing`, `billing`,
   and `inpatient` always use a 56px main-content header.
 - Every hospital-admin and customer-management page uses 44px only when the
-  browser viewport is at least 1024px wide and at most 820px high; otherwise it
+  browser viewport is at least 1024px wide and at most 880px high; otherwise it
   uses 56px.
 - Existing feature and page owners keep their state. Shell ownership,
   registration APIs, and route restructuring are not part of this work.
@@ -42,6 +42,12 @@ query.
 - The reception module must not register `FixedEmptyMainContentHeader`; the
   shared `data-slot="emr-main-content-header"` remains unchanged for modules
   that do not already own an equivalent top bar.
+
+## Follow-up correction (2026-08-02)
+
+- The adaptive compact-header breakpoint is now a viewport height of 880px:
+  customer-management and hospital-admin pages use 44px at or below 880px
+  when the viewport is at least 1024px wide, and 56px above that height.
 
 ## In Scope
 
@@ -68,8 +74,8 @@ query.
   header; reception satisfies this with its feature-owned `ScheduleToolbar`
   rather than a `data-slot="emr-main-content-header"` element.
 - Fixed headers compute to 56px at every verified viewport.
-- Adaptive headers compute to 44px at `1440x800` and to 56px at `1440x821`,
-  `1023x800`, and `1920x1080`.
+- Adaptive headers compute to 44px at `1440x800` and `1440x880`, and to 56px
+  at `1440x881`, `1023x800`, and `1920x1080`.
 - All ten hospital-admin sections and all three customer list modes use the
   adaptive contract without duplicate top spacing.
 - Clinical headers remain 56px with and without selected context; billing no
