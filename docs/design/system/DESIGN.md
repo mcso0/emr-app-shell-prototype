@@ -154,7 +154,7 @@ CLAiR screens favor operational density:
 - reception uses its feature-owned 56px `ScheduleToolbar` as the effective
   main-content header and does not register an additional shared header
 - hospital-admin and customer use the adaptive mode: 44px only when the
-  browser viewport matches `(min-width: 1024px) and (max-height: 1079px)`,
+  browser viewport matches `(min-width: 1024px) and (max-height: 1279px)`,
   otherwise 56px
 - the shared frame centralizes height only. It does not move feature state,
   patient content, back actions, routes, menus, or side-panel ownership into
