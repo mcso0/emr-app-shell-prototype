@@ -41,9 +41,9 @@ Use three density modes:
 
 | Mode          | Korean UI copy | Intended use                                                | Row target | Header target |
 | ------------- | -------------- | ----------------------------------------------------------- | ---------: | ------------: |
-| `compact`     | 좁게           | clinical/order/admin tables where visible row count matters |       36px |          36px |
-| `standard`    | 기본           | default operational tables                                  |       44px |          40px |
-| `comfortable` | 넓게           | review-heavy rows, multi-line summaries, low row count      |       52px |          44px |
+| `compact`     | 좁은 간격      | clinical/order/admin tables where visible row count matters |       36px |          36px |
+| `standard`    | 기본 간격      | default operational tables                                  |       44px |          40px |
+| `comfortable` | 넓은 간격      | review-heavy rows, multi-line summaries, low row count      |       52px |          44px |
 
 Density controls:
 
@@ -86,15 +86,15 @@ Density API:
 
 View option copy:
 
-- `compact`: `좁게`
-- `standard`: `기본`
-- `comfortable`: `넓게`
+- `compact`: `좁은 간격`
+- `standard`: `기본 간격`
+- `comfortable`: `넓은 간격`
 
 Density selector UX:
 
-- The visible selector is one compact outline button with the active row-spacing icon, Korean option copy, and downward chevron.
-- The trigger must expose the generic label and active option through its accessible name, for example `테이블 보기 밀도: 좁게`.
-- Opening the control shows exactly `좁게`, `기본`, and `넓게` as one radio-menu group; the active item has a check indicator.
+- The visible selector is one compact 32px outline button with Korean interval copy and a downward chevron; it has no leading density icon.
+- The trigger must expose the generic label and active option through its accessible name, for example `테이블 보기 밀도: 좁은 간격`.
+- Opening the control shows exactly `좁은 간격`, `기본 간격`, and `넓은 간격` as one radio-menu group; the active item has a check indicator.
 - The selector may sit near the relevant table header or table body when header action space is already constrained.
 - Do not render a separate visible `밀도` label beside the trigger.
 - Density remains a presentation preference, so the menu is not a content tab or data filter.
