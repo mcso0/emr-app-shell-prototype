@@ -102,7 +102,7 @@ function CombinatorSelect({
       <SelectTrigger aria-label={ariaLabel} size="sm" className="w-full bg-card uppercase">
         {value.toUpperCase()}
       </SelectTrigger>
-      <SelectContent align="start" className="min-w-24">
+      <SelectContent align="start" alignItemWithTrigger={false} className="min-w-24">
         <SelectGroup>
           <SelectItem value="and">AND</SelectItem>
           <SelectItem value="or">OR</SelectItem>
@@ -213,7 +213,11 @@ function ConditionRow<TRow>({
         >
           <span className="min-w-0 flex-1 truncate text-left">{getRuleFieldLabel(rule, fields)}</span>
         </SelectTrigger>
-        <SelectContent align="start" className="z-[90] min-w-52">
+        <SelectContent
+          align="start"
+          alignItemWithTrigger={false}
+          className="z-[90] min-w-52"
+        >
           <SelectGroup>
             <SelectItem value={unsetFieldValue}>필터 선택</SelectItem>
             {fields.map((item) => (
@@ -247,7 +251,7 @@ function ConditionRow<TRow>({
           >
             <span className="min-w-0 flex-1 truncate text-left">{getRuleOperatorLabel(rule, fields)}</span>
           </SelectTrigger>
-          <SelectContent align="start" className="min-w-36">
+          <SelectContent align="start" alignItemWithTrigger={false} className="min-w-36">
             <SelectGroup>
               <SelectItem value={unsetOperatorValue}>조건 선택</SelectItem>
               {operators.map((item) => <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>)}
@@ -306,7 +310,7 @@ function ConditionRow<TRow>({
             >
               <span className="min-w-0 flex-1 truncate text-left">{getRuleValueLabel(rule, field)}</span>
             </SelectTrigger>
-            <SelectContent align="start" className="min-w-52">
+            <SelectContent align="start" alignItemWithTrigger={false} className="min-w-52">
               <SelectGroup>
                 <SelectItem value={unsetSelectValue}>{field.valuePlaceholder ?? "값 선택"}</SelectItem>
                 {(field.options ?? []).map((option) => (
