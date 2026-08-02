@@ -12,12 +12,12 @@ test("chart order table changes density from the selected-value dropdown", async
     has: page.getByRole("tablist", { name: "처방/오더 분류" }),
   });
   const densityTrigger = orderArea.getByRole("button", {
-    name: "테이블 보기 밀도: 좁게",
+    name: "테이블 보기 밀도: 좁은 간격",
   });
 
   await expect(densityTrigger).toBeVisible();
   await densityTrigger.click();
-  await page.getByRole("menuitemradio", { name: "넓게" }).click();
+  await page.getByRole("menuitemradio", { name: "넓은 간격" }).click();
 
   await expect(orderArea.locator("table[data-emr-density]")).toHaveAttribute(
     "data-emr-density",

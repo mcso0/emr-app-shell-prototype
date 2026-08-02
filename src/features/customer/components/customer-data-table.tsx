@@ -36,7 +36,7 @@ import {
 } from "@/components/emr/table-primitives";
 import { getEmrPinnedColumnProps } from "@/components/emr/table-pinning";
 import { ChevronDownIcon } from "@/components/icons";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -601,13 +601,15 @@ export function CustomerDataTable<
   const columnControl = (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={buttonVariants({
-          variant: "outline",
-          size: "sm",
-          className:
-            "h-8 min-h-8 rounded-lg bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5 shadow-[var(--clair-shadow-xs)]",
-        })}
-        aria-label={`${title} 컬럼 표시 설정`}
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 min-h-8 rounded-lg bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5 shadow-[var(--clair-shadow-xs)]"
+            aria-label={`${title} 컬럼 표시 설정`}
+          />
+        }
       >
         전체 컬럼
         <ChevronDownIcon data-icon="inline-end" />

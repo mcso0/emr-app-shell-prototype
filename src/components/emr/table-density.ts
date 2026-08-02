@@ -35,9 +35,9 @@ export type EmrTableHeaderRoleDefinition = {
 };
 
 export const emrTableDensityOptions: EmrTableViewOption[] = [
-  { value: "compact", label: "좁게", rowHeight: 36, headerHeight: 36 },
-  { value: "standard", label: "기본", rowHeight: 44, headerHeight: 40 },
-  { value: "comfortable", label: "넓게", rowHeight: 52, headerHeight: 44 },
+  { value: "compact", label: "좁은 간격", rowHeight: 36, headerHeight: 36 },
+  { value: "standard", label: "기본 간격", rowHeight: 44, headerHeight: 40 },
+  { value: "comfortable", label: "넓은 간격", rowHeight: 52, headerHeight: 44 },
 ];
 
 export const defaultEmrTableDensity: EmrTableDensity = "standard";
