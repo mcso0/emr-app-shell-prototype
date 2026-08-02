@@ -39,18 +39,18 @@ test("main-content header applies the fixed and adaptive viewport-height contrac
     },
     {
       adaptiveHeight: 44,
-      viewport: { height: 1079, width: 1440 },
+      viewport: { height: 1279, width: 1440 },
     },
     {
       adaptiveHeight: 56,
-      viewport: { height: 1080, width: 1440 },
+      viewport: { height: 1280, width: 1440 },
     },
     {
       adaptiveHeight: 56,
       viewport: { height: 800, width: 1023 },
     },
     {
-      adaptiveHeight: 56,
+      adaptiveHeight: 44,
       viewport: { height: 1080, width: 1920 },
     },
   ] as const;
@@ -72,7 +72,7 @@ test("main-content header applies the fixed and adaptive viewport-height contrac
 test("top-level modules use the intended main-content header ownership", async ({
   page,
 }) => {
-  await page.setViewportSize({ height: 1080, width: 1920 });
+  await page.setViewportSize({ height: 1280, width: 1920 });
 
   const modules: Array<{
     mode: HeaderHeightMode;
