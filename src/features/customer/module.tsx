@@ -442,6 +442,7 @@ export function CustomerContent() {
     >
       <EmrMainContentHeader
         aria-hidden="true"
+        className="bg-[#fcfcfc]"
         heightMode="adaptive"
       />
       {listMode === "patient" ? (
