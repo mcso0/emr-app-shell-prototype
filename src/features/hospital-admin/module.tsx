@@ -1577,6 +1577,9 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const [catalogRetryKey, setCatalogRetryKey] = useState(0);
   const [tableDensity, setTableDensity] = useState<EmrTableDensity>("standard");
   const [orderFilterOpen, setOrderFilterOpen] = useState(false);
+  const [orderFilterPopoverReady, setOrderFilterPopoverReady] = useState(false);
+  const [orderFilterAutoOpenConsumed, setOrderFilterAutoOpenConsumed] =
+    useState(false);
   const [orderFilterModel, setOrderFilterModel] = useState(() =>
     createInitialEmrTableFilterBuilderModel(
       "hospital-order-catalog-filter",
@@ -2025,7 +2028,17 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             value={tableDensity}
             onValueChange={setTableDensity}
           />
-          <Popover open={orderFilterOpen} onOpenChange={setOrderFilterOpen}>
+          <Popover
+            open={orderFilterOpen}
+            onOpenChange={(open) => {
+              setOrderFilterOpen(open);
+              if (!open) {
+                setOrderFilterPopoverReady(false);
+                setOrderFilterAutoOpenConsumed(false);
+              }
+            }}
+            onOpenChangeComplete={setOrderFilterPopoverReady}
+          >
             <PopoverTrigger
               render={
                 <EmrTableFilterTrigger
@@ -2040,17 +2053,27 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             />
             <PopoverContent
               align="end"
-              className="w-[min(720px,calc(100vw-32px))] gap-0 overflow-visible p-0"
+              className="w-[min(640px,calc(100vw-32px))] gap-0 overflow-visible p-0"
               initialFocus={false}
             >
               <EmrTableFilterBuilder
+                autoOpenFirstField={
+                  orderFilterPopoverReady && !orderFilterAutoOpenConsumed
+                }
                 clearAllLabel="초기화"
                 description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다."
                 fields={orderFilterFields}
                 model={orderFilterModel}
                 title="필터"
-                onClose={() => setOrderFilterOpen(false)}
-                onModelChange={setOrderFilterModel}
+                onClose={() => {
+                  setOrderFilterOpen(false);
+                  setOrderFilterPopoverReady(false);
+                  setOrderFilterAutoOpenConsumed(false);
+                }}
+                onModelChange={(model) => {
+                  setOrderFilterAutoOpenConsumed(true);
+                  setOrderFilterModel(model);
+                }}
               />
             </PopoverContent>
           </Popover>

@@ -345,6 +345,8 @@ export function CustomerDataTable<
     useState<CustomerRowActionFeedback | null>(null);
   const [density, setDensity] = useState<EmrTableDensity>("standard");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [filterPopoverReady, setFilterPopoverReady] = useState(false);
+  const [filterAutoOpenConsumed, setFilterAutoOpenConsumed] = useState(false);
   const [registrationOpenRequestKey, setRegistrationOpenRequestKey] =
     useState(0);
   const [filterModel, setFilterModel] = useState(() =>
@@ -557,7 +559,17 @@ export function CustomerDataTable<
 
   const filterControl =
     filterFields.length > 0 ? (
-      <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+      <Popover
+        open={filterOpen}
+        onOpenChange={(open) => {
+          setFilterOpen(open);
+          if (!open) {
+            setFilterPopoverReady(false);
+            setFilterAutoOpenConsumed(false);
+          }
+        }}
+        onOpenChangeComplete={setFilterPopoverReady}
+      >
         <PopoverTrigger
           render={
             <EmrTableFilterTrigger
@@ -572,17 +584,25 @@ export function CustomerDataTable<
         />
         <PopoverContent
           align="end"
-          className="w-[min(720px,calc(100vw-32px))] gap-0 overflow-visible p-0"
+          className="w-[min(640px,calc(100vw-32px))] gap-0 overflow-visible p-0"
           initialFocus={false}
         >
           <EmrTableFilterBuilder
+            autoOpenFirstField={filterPopoverReady && !filterAutoOpenConsumed}
             clearAllLabel="초기화"
             description={`${title} 필터는 완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다.`}
             fields={filterFields}
             model={filterModel}
             title="필터"
-            onClose={() => setFilterOpen(false)}
-            onModelChange={setFilterModel}
+            onClose={() => {
+              setFilterOpen(false);
+              setFilterPopoverReady(false);
+              setFilterAutoOpenConsumed(false);
+            }}
+            onModelChange={(model) => {
+              setFilterAutoOpenConsumed(true);
+              setFilterModel(model);
+            }}
           />
         </PopoverContent>
       </Popover>
