@@ -799,7 +799,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
         .locator('[data-slot="emr-main-content-header"]')
         .evaluate((slot) => slot.getBoundingClientRect().height),
     )
-    .toBe(56);
+    .toBe(44);
 
   await page.getByTestId("customer-side-panel-guardian").click();
 
@@ -843,6 +843,16 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   await expect(
     section.getByRole("button", { name: "환자/보호자 등록" }),
   ).toHaveCSS("background-color", "rgb(23, 23, 23)");
+
+  for (const controlName of [
+    "보호자 필터 설정",
+    "테이블 보기 밀도: 기본 간격",
+    "보호자 컬럼 표시 설정",
+  ]) {
+    const control = section.getByRole("button", { name: controlName });
+    await expect(control).toBeVisible();
+    await expect(control).toHaveCSS("height", "32px");
+  }
 
   const [
     guardianHeadingBox,
@@ -1068,9 +1078,11 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   });
   await expect(headerCheckbox).toBeChecked({ indeterminate: true });
 
-  await section.getByRole("button", { name: "테이블 보기 밀도: 기본" }).click();
+  await section
+    .getByRole("button", { name: "테이블 보기 밀도: 기본 간격" })
+    .click();
   const comfortableDensityOption = page.getByRole("menuitemradio", {
-    name: "넓게",
+    name: "넓은 간격",
   });
   await expect(comfortableDensityOption).toBeVisible();
   await page.keyboard.press("End");
@@ -1082,9 +1094,11 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
       ),
     )
     .toBe(52);
-  await section.getByRole("button", { name: "테이블 보기 밀도: 넓게" }).click();
+  await section
+    .getByRole("button", { name: "테이블 보기 밀도: 넓은 간격" })
+    .click();
   const standardDensityOption = page.getByRole("menuitemradio", {
-    name: "기본",
+    name: "기본 간격",
   });
   await expect(standardDensityOption).toBeVisible();
   await standardDensityOption.evaluate((option) =>

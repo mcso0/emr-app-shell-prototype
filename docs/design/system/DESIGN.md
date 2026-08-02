@@ -190,7 +190,7 @@ Tabs and density controls have a stricter UX contract:
 - section tabs switch peer panels in one screen context
 - segmented controls and filter buttons narrow or mode-switch data without pretending to be navigation
 - table density is presentation-only and uses `compact`, `standard`, and `comfortable`
-- table density uses one compact selected-value dropdown button with a row-spacing icon and downward chevron; the menu exposes `좁게`, `기본`, and `넓게`
+- table density uses one compact outline selected-value dropdown button with Korean interval copy and a downward chevron; the menu exposes `좁은 간격`, `기본 간격`, and `넓은 간격`
 
 The CDS.V2 medium segmented control maps to `SegmentedControl` with `variant="tabs"` and `size="md"`: a 32px neutral-alpha group with 2px inset, 12px outer radius, contiguous 28px items with 8px horizontal padding and 10px radius, `body/2/normal` typography, and `shadow-sm` on the selected white item. Compact `xs` and `sm` modes keep their existing denser contracts.
 

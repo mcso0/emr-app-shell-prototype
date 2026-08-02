@@ -60,7 +60,7 @@ type Story = StoryObj<typeof meta>;
 
 async function selectCompact(canvasElement: HTMLElement) {
   const trigger = canvasElement.querySelector(
-    "button[aria-label='샘플 테이블 보기 밀도: 기본']",
+    "button[aria-label='샘플 테이블 보기 밀도: 기본 간격']",
   );
   if (!(trigger instanceof HTMLElement)) {
     throw new Error("Expected table density dropdown trigger.");
@@ -71,7 +71,7 @@ async function selectCompact(canvasElement: HTMLElement) {
 
   const compactOption = Array.from(
     canvasElement.ownerDocument.querySelectorAll("[role='menuitemradio']"),
-  ).find((option) => option.textContent?.trim() === "좁게");
+  ).find((option) => option.textContent?.trim() === "좁은 간격");
   if (!(compactOption instanceof HTMLElement)) {
     throw new Error("Expected compact density menu option.");
   }
