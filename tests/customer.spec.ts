@@ -1439,7 +1439,7 @@ test("customer patient table supports single sort and section filter builder", a
   await expect(
     filterBuilder.getByRole("combobox", { name: "필터 필드" }),
   ).toHaveCount(1);
-  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await expect(page.getByRole("option", { name: "품종" })).toBeVisible();
   await page.getByRole("option", { name: "품종" }).click();
   await expect(
     patientTableSection.getByRole("button", { name: "동물 필터 설정" }),

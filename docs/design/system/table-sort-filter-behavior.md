@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-05-25"
+updated: "2026-08-02"
 linear_issue: "DEN-270"
 linear_project: "13 CLAiR EMR Table Sort & Filter Behavior"
 source_docs:
@@ -277,6 +277,16 @@ DEN-294 applies the DEN-293 shared builder to two real Project 13 table surfaces
 - Incomplete draft rules are ignored by filtering and active count.
 - Customer management and hospital admin order catalog still use their existing feature-local builders after DEN-294 and should be migrated only in a separate scoped follow-up.
 - The shared select popup layer is above popover content so dropdowns inside the builder remain clickable.
+
+## Advanced Filter Builder Interaction Refinements
+
+The shared advanced builder keeps the approved visual surface while making its empty and multi-condition states explicit:
+
+- On a pristine open (one group, one empty rule, zero active rules), the first field selector opens automatically. Existing drafts do not auto-open a selector.
+- The only empty rule in the pristine state keeps its delete action and `초기화` action visible but disabled. Both become enabled once the model differs from its pristine state.
+- A single rule or group does not reserve an invisible AND/OR gutter. When a second rule or group creates a real AND/OR control, the first item receives the same gutter so all option surfaces share one start line.
+- The information mark is a non-button focusable icon with the existing explanation exposed through hover and keyboard focus tooltip behavior.
+- An active section Filter trigger uses the `--clair-color-atomic-sky-200` border token. Rule deletion uses `EmrIconButton` with the CDS trash icon, while footer `필터 추가` and `초기화` remain shared `Button` controls with equal horizontal padding.
 
 ## DEN-295 Advanced Filter Builder Rollout QA
 

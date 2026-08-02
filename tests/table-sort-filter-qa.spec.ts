@@ -44,6 +44,10 @@ async function expectFilterControls(popover: Locator) {
 }
 
 async function expectEscapeClosesFilter(page: Page) {
+  const openListbox = page.getByRole("listbox").last();
+  if ((await openListbox.count()) > 0 && (await openListbox.isVisible())) {
+    await page.keyboard.press("Escape");
+  }
   await page.keyboard.press("Escape");
   await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
 }
@@ -183,8 +187,90 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     const patientTable = page.getByTestId("customer-patient-table");
     await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
     const builder = page.locator('[data-emr-table-filter-builder="true"]');
+    const firstRow = builder.locator("[data-filter-condition-row]").first();
+    const firstDelete = builder.getByRole("button", { name: "그룹 1 조건 1 삭제" });
+    const reset = builder.getByRole("button", { name: "초기화" });
+
+    await expect(page.getByRole("option", { name: "품종" })).toBeVisible();
+    await expect(firstDelete).toBeDisabled();
+    await expect(reset).toBeDisabled();
+
+    const singleRuleX = await firstRow.evaluate((row) => {
+      const field = row.querySelector<HTMLElement>('[aria-label$="필터 필드"]');
+      if (!field) throw new Error("Expected the first filter field trigger.");
+      return {
+        field: Math.round(field.getBoundingClientRect().x),
+        row: Math.round(row.getBoundingClientRect().x),
+      };
+    });
+    expect(singleRuleX.field).toBe(singleRuleX.row);
+
+    const singleGroupX = await builder.locator("[data-filter-group]").first().evaluate((group) => {
+      const surface = group.querySelector<HTMLElement>(":scope > section");
+      if (!surface) throw new Error("Expected the first filter group surface.");
+      return {
+        group: Math.round(group.getBoundingClientRect().x),
+        surface: Math.round(surface.getBoundingClientRect().x),
+      };
+    });
+    expect(singleGroupX.surface).toBe(singleGroupX.group);
+
+    const footerButtonPadding = await builder.locator("footer > button").evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const style = getComputedStyle(button);
+        return [style.paddingLeft, style.paddingRight];
+      })
+    );
+    expect(footerButtonPadding).toEqual([
+      ["8px", "8px"],
+      ["8px", "8px"],
+    ]);
+
+    const help = builder.getByLabel("필터 적용 방식 안내");
+    await expect(help).toHaveJSProperty("tagName", "SPAN");
+    await help.hover();
+    await expect(page.getByRole("tooltip")).toContainText("완성된 조건만 자동 적용");
+
+    await page.getByRole("option", { name: "품종" }).click();
+    await expect(firstDelete).toBeEnabled();
+    await expect(reset).toBeEnabled();
+    await builder.getByRole("combobox", { name: "필터 값" }).click();
+    await page.getByRole("option", { name: "푸들" }).click();
+
+    const activeTrigger = patientTable.getByRole("button", {
+      name: "동물 필터 1개 설정",
+    });
+    const activeBorderColors = await activeTrigger.evaluate((trigger) => {
+      const tokenValue = getComputedStyle(document.documentElement)
+        .getPropertyValue("--clair-color-atomic-sky-200")
+        .trim();
+      return {
+        className: trigger.className,
+        borderColor: getComputedStyle(trigger).borderTopColor,
+        tokenValue,
+      };
+    });
+    expect(activeBorderColors.className).toContain(
+      "border-[var(--clair-color-atomic-sky-200)]"
+    );
+    expect(activeBorderColors.tokenValue).toMatch(/^#[\da-f]{6}$/i);
+    expect(activeBorderColors.borderColor).not.toBe("rgb(226, 232, 240)");
 
     await builder.getByRole("button", { name: "그룹 필터" }).click();
+    const multipleRuleX = await builder
+      .locator("[data-filter-condition-row]")
+      .evaluateAll((rows) =>
+        rows.map((row) => {
+          const field = row.querySelector<HTMLElement>('[aria-label$="필터 필드"]');
+          if (!field) throw new Error("Expected a filter field trigger.");
+          return {
+            field: Math.round(field.getBoundingClientRect().x),
+            row: Math.round(row.getBoundingClientRect().x),
+          };
+        })
+      );
+    expect(multipleRuleX[0].field).toBe(multipleRuleX[1].field);
+    expect(multipleRuleX[0].field).toBeGreaterThan(multipleRuleX[0].row);
     const innerCombinator = builder.getByRole("combobox", {
       name: "그룹 1 조건 2 조합 방식",
     });
@@ -203,9 +289,13 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
       (surfaces) => surfaces.map((surface) => surface.getBoundingClientRect().x),
     );
     expect(new Set(groupSurfaceX.map((value) => Math.round(value))).size).toBe(1);
+    const firstMultipleGroupX = await builder.locator("[data-filter-group]").first().evaluate((group) => ({
+      group: Math.round(group.getBoundingClientRect().x),
+      surface: Math.round(
+        group.querySelector<HTMLElement>(":scope > section")?.getBoundingClientRect().x ?? 0
+      ),
+    }));
+    expect(firstMultipleGroupX.surface).toBeGreaterThan(firstMultipleGroupX.group);
 
-    const help = builder.getByRole("button", { name: "필터 적용 방식 안내" });
-    await help.hover();
-    await expect(page.getByRole("tooltip")).toContainText("완성된 조건만 자동 적용");
   });
 });

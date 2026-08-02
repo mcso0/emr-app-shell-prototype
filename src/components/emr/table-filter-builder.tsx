@@ -9,6 +9,7 @@ import {
   CdsActionsTrashIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { EmrIconButton } from "@/components/emr/icon-button";
 import { InfoIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,6 +113,8 @@ function CombinatorSelect({
 }
 
 function ConditionRow<TRow>({
+  autoOpenField,
+  disableRemove,
   fields,
   group,
   groupIndex,
@@ -121,6 +124,8 @@ function ConditionRow<TRow>({
   rule,
   ruleIndex,
 }: {
+  autoOpenField: boolean;
+  disableRemove: boolean;
   fields: Array<EmrTableFilterBuilderField<TRow>>;
   group: EmrTableFilterBuilderGroup;
   groupIndex: number;
@@ -134,6 +139,7 @@ function ConditionRow<TRow>({
   const operators = getEmrTableFilterBuilderOperators(field);
   const operator = getEmrTableFilterBuilderOperator(field, rule.operatorId);
   const valueKind = field?.valueKind ?? "select";
+  const multipleRules = group.rules.length > 1;
   const ruleLabel = `그룹 ${groupIndex + 1} 조건 ${ruleIndex + 1}`;
   const modelRef = React.useRef(model);
   const textCommitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -157,24 +163,33 @@ function ConditionRow<TRow>({
 
   return (
     <div
-      className="grid min-w-0 items-center gap-2 max-sm:grid-cols-[minmax(0,1fr)_32px] sm:grid-cols-[79px_minmax(152px,2fr)_minmax(79px,1fr)_minmax(180px,2fr)_32px]"
+      className={cn(
+        "grid min-w-0 items-center gap-2 max-sm:grid-cols-[minmax(0,1fr)_32px]",
+        multipleRules
+          ? "sm:grid-cols-[79px_minmax(152px,2fr)_minmax(79px,1fr)_minmax(180px,2fr)_32px]"
+          : "sm:grid-cols-[minmax(152px,2fr)_minmax(79px,1fr)_minmax(180px,2fr)_32px]"
+      )}
       data-filter-condition-row
     >
-      <div className="max-sm:col-span-2">
-        {ruleIndex > 0 ? (
-          <CombinatorSelect
-            ariaLabel={`${ruleLabel} 조합 방식`}
-            value={group.combinator}
-            onChange={(combinator) =>
-              onModelChange(updateEmrTableFilterBuilderGroupCombinator(model, group.id, combinator))
-            }
-          />
-        ) : (
-          <span aria-hidden="true" className="hidden h-8 sm:block" />
-        )}
-      </div>
+      {multipleRules ? (
+        <div className="max-sm:col-span-2">
+          {ruleIndex > 0 ? (
+            <CombinatorSelect
+              ariaLabel={`${ruleLabel} 조합 방식`}
+              value={group.combinator}
+              onChange={(combinator) =>
+                onModelChange(updateEmrTableFilterBuilderGroupCombinator(model, group.id, combinator))
+              }
+            />
+          ) : (
+            <span aria-hidden="true" className="hidden h-8 sm:block" />
+          )}
+        </div>
+      ) : null}
 
       <Select
+        key={autoOpenField ? "auto-open-field" : "field"}
+        defaultOpen={autoOpenField}
         value={rule.fieldId ?? unsetFieldValue}
         onValueChange={(value) =>
           onModelChange(
@@ -303,17 +318,16 @@ function ConditionRow<TRow>({
         )
       ) : <span aria-hidden="true" />}
 
-      <Button
+      <EmrIconButton
         type="button"
-        variant="ghost"
-        size="icon-sm"
         aria-label={`${ruleLabel} 삭제`}
-        className="justify-self-end text-[var(--emr-text-tertiary)] hover:text-[var(--emr-text-danger)] max-sm:col-start-2 max-sm:row-start-2"
+        className="justify-self-end hover:text-[var(--emr-text-danger)] max-sm:col-start-2 max-sm:row-start-2"
         data-filter-rule-delete
+        disabled={disableRemove}
         onClick={onRemove}
       >
-        <CdsActionsTrashIcon aria-hidden="true" className="size-3.5" />
-      </Button>
+        <CdsActionsTrashIcon aria-hidden="true" />
+      </EmrIconButton>
     </div>
   );
 }
@@ -340,6 +354,14 @@ export function EmrTableFilterBuilder<TRow = unknown>({
   const normalizedModel = ensureEmrTableFilterBuilderDraft(model);
   const activeCount = getEmrTableFilterBuilderActiveCount(normalizedModel, fields);
   const multipleGroups = normalizedModel.groups.length > 1;
+  const firstRule = normalizedModel.groups[0]?.rules[0];
+  const isPristine =
+    normalizedModel.groups.length === 1 &&
+    normalizedModel.groups[0]?.rules.length === 1 &&
+    firstRule?.fieldId === null &&
+    firstRule?.operatorId === null &&
+    firstRule?.value === "" &&
+    firstRule?.applied === null;
 
   const createGroupId = () => `${model.id}-group-${++nextGroupId.current}`;
   const createRuleId = () => `${model.id}-rule-${++nextRuleId.current}`;
@@ -365,9 +387,9 @@ export function EmrTableFilterBuilder<TRow = unknown>({
         <div className="flex min-w-0 items-center gap-1.5">
           <h2 className="emr-text-panel-title font-semibold">{title}</h2>
           <span className="relative inline-flex">
-            <button
-              type="button"
-              className="inline-grid size-5 place-items-center rounded-[var(--emr-radius-control)] text-[var(--emr-text-tertiary)] outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50"
+            <span
+              tabIndex={0}
+              className="inline-grid size-4 place-items-center text-[var(--emr-text-tertiary)] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               aria-describedby={descriptionOpen ? "emr-table-filter-description" : undefined}
               aria-label="필터 적용 방식 안내"
               onBlur={() => setDescriptionOpen(false)}
@@ -376,7 +398,7 @@ export function EmrTableFilterBuilder<TRow = unknown>({
               onMouseLeave={() => setDescriptionOpen(false)}
             >
               <InfoIcon aria-hidden="true" className="size-4" />
-            </button>
+            </span>
             {descriptionOpen ? (
               <span
                 id="emr-table-filter-description"
@@ -428,6 +450,8 @@ export function EmrTableFilterBuilder<TRow = unknown>({
                 return (
                   <ConditionRow
                     key={rule.id}
+                    autoOpenField={isPristine && groupIndex === 0 && ruleIndex === 0}
+                    disableRemove={isPristine && groupIndex === 0 && ruleIndex === 0}
                     fields={fields}
                     group={group}
                     groupIndex={groupIndex}
@@ -443,7 +467,10 @@ export function EmrTableFilterBuilder<TRow = unknown>({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="justify-self-start text-[var(--emr-text-tertiary)] sm:ml-[87px]"
+                className={cn(
+                  "justify-self-start text-[var(--emr-text-tertiary)]",
+                  group.rules.length > 1 && "sm:ml-[87px]"
+                )}
                 disabled={group.rules.length >= maxRuleCount}
                 aria-label={group.rules.length >= maxRuleCount ? `그룹 ${groupIndex + 1}은 조건을 최대 ${maxRuleCount}개까지 추가할 수 있습니다` : undefined}
                 data-filter-add-rule
@@ -464,7 +491,7 @@ export function EmrTableFilterBuilder<TRow = unknown>({
           type="button"
           variant="outline"
           size="sm"
-          className="bg-card"
+          className="bg-card !px-2"
           disabled={normalizedModel.groups.length >= maxGroupCount}
           aria-label={normalizedModel.groups.length >= maxGroupCount ? `필터 그룹은 최대 ${maxGroupCount}개까지 추가할 수 있습니다` : undefined}
           data-filter-add-group
@@ -480,7 +507,8 @@ export function EmrTableFilterBuilder<TRow = unknown>({
           type="button"
           variant="outline"
           size="sm"
-          className="border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)] hover:bg-[var(--emr-status-danger-hover-bg)]"
+          className="border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] !px-2 text-[var(--emr-status-danger-text)] hover:bg-[var(--emr-status-danger-hover-bg)]"
+          disabled={isPristine}
           onClick={() => onModelChange(createInitialEmrTableFilterBuilderModel(model.id))}
         >
           <CdsActionsRefreshCcwIcon data-icon="inline-start" />
