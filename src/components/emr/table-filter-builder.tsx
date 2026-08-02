@@ -58,6 +58,7 @@ type EmrTableFilterBuilderProps<TRow = unknown> = {
   className?: string;
   closeLabel?: string;
   description?: string;
+  autoOpenFirstField?: boolean;
   fields: Array<EmrTableFilterBuilderField<TRow>>;
   model: EmrTableFilterBuilderModel;
   onClose?: () => void;
@@ -166,8 +167,8 @@ function ConditionRow<TRow>({
       className={cn(
         "grid min-w-0 items-center gap-2 max-sm:grid-cols-[minmax(0,1fr)_32px]",
         multipleRules
-          ? "sm:grid-cols-[79px_minmax(152px,2fr)_minmax(79px,1fr)_minmax(180px,2fr)_32px]"
-          : "sm:grid-cols-[minmax(152px,2fr)_minmax(79px,1fr)_minmax(180px,2fr)_32px]"
+          ? "sm:grid-cols-[79px_minmax(0,2fr)_minmax(72px,1fr)_minmax(0,2fr)_32px]"
+          : "sm:grid-cols-[minmax(0,2fr)_minmax(72px,1fr)_minmax(0,2fr)_32px]"
       )}
       data-filter-condition-row
     >
@@ -339,6 +340,7 @@ function ConditionRow<TRow>({
 export function EmrTableFilterBuilder<TRow = unknown>({
   addFilterLabel = "필터 추가",
   addGroupFilterLabel = "그룹 필터",
+  autoOpenFirstField = false,
   clearAllLabel = "초기화",
   className,
   closeLabel = "필터 닫기",
@@ -385,6 +387,7 @@ export function EmrTableFilterBuilder<TRow = unknown>({
       ref={rootRef}
       className={cn("grid rounded-xl bg-popover text-popover-foreground", className)}
       data-active-filter-count={activeCount}
+      data-filter-auto-open-ready={autoOpenFirstField ? "true" : "false"}
       data-emr-table-filter-builder="true"
     >
       <header className="flex min-h-10 items-start justify-between gap-3 px-4 pt-4">
@@ -454,7 +457,9 @@ export function EmrTableFilterBuilder<TRow = unknown>({
                 return (
                   <ConditionRow
                     key={rule.id}
-                    autoOpenField={isPristine && groupIndex === 0 && ruleIndex === 0}
+                    autoOpenField={
+                      autoOpenFirstField && isPristine && groupIndex === 0 && ruleIndex === 0
+                    }
                     disableRemove={isPristine && groupIndex === 0 && ruleIndex === 0}
                     fields={fields}
                     group={group}
