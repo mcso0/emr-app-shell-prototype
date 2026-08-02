@@ -44,6 +44,33 @@ export type HospitalOrderType = "individual";
 export type HospitalOrderStatusFilter = "all" | "active" | "inactive";
 export type HospitalOrderBillingFilter = "all" | "billable" | "not-billable";
 export type HospitalOrderWorkTypeFilter = "all" | ServiceItemType;
+export type ClinicalPathologyCategoryId =
+  | "in-house-blood"
+  | "microbiology"
+  | "electrolyte-abg"
+  | "chemistry"
+  | "cbc"
+  | "csf"
+  | "cell"
+  | "fluid"
+  | "urinalysis"
+  | "etc";
+
+export const clinicalPathologyCategoryOptions: Array<{
+  label: string;
+  value: ClinicalPathologyCategoryId;
+}> = [
+  { label: "원내 혈액 검사", value: "in-house-blood" },
+  { label: "임상 미생물 검사", value: "microbiology" },
+  { label: "전해질검사/동맥혈", value: "electrolyte-abg" },
+  { label: "혈액화학검사", value: "chemistry" },
+  { label: "CBC검사", value: "cbc" },
+  { label: "CSF검사", value: "csf" },
+  { label: "세포 검사", value: "cell" },
+  { label: "체액 검사", value: "fluid" },
+  { label: "요검사", value: "urinalysis" },
+  { label: "기타 병리 검사", value: "etc" },
+];
 
 export type HospitalOrderCategory = {
   id: HospitalOrderCategoryId;
@@ -72,6 +99,7 @@ export type HospitalOrderCatalogItem = {
   billingName: string;
   careGuide: string;
   categoryId: HospitalOrderCategoryId;
+  clinicalPathologyCategoryId?: ClinicalPathologyCategoryId;
   delivery: HospitalOrderDelivery;
   hospitalInstruction: string;
   inHospitalName: string;
@@ -282,6 +310,7 @@ export const hospitalOrderSeedItems: HospitalOrderCatalogItem[] = [
     billingName: "심전도 검사",
     careGuide: "검사 전후 보호자 안내가 필요한 경우 케어가이드를 작성합니다.",
     categoryId: "lab",
+    clinicalPathologyCategoryId: "etc",
     delivery: "deliver",
     hospitalInstruction: "검사 후 원장 확인 전까지 결과지를 임시 저장합니다.",
     inHospitalName: "심전도 기록",
@@ -311,6 +340,7 @@ export const hospitalOrderSeedItems: HospitalOrderCatalogItem[] = [
     billingName: "CBC 검사",
     careGuide: "",
     categoryId: "lab",
+    clinicalPathologyCategoryId: "cbc",
     delivery: "deliver",
     hospitalInstruction: "장비결과 수신 후 검사결과지에 붙여넣습니다.",
     inHospitalName: "CBC",
@@ -611,6 +641,10 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     billingName: item.billingName,
     careGuide: item.careGuide ?? "",
     categoryId: placement.categoryId,
+    clinicalPathologyCategoryId:
+      placement.subcategoryId === "clinical-pathology"
+        ? resolveClinicalPathologyCategoryId(item.categoryLabel)
+        : undefined,
     delivery: item.defaultTaskRequired ? "deliver" : "do-not-deliver",
     hospitalInstruction: item.internalInstruction ?? "",
     inHospitalName: item.inHospitalOrderName,
@@ -634,6 +668,27 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     updatedAtLabel: formatCatalogUpdatedAt(item.updatedAt),
     updatedBy: item.lastCustomizedByUserId ?? "CLAiR preset",
   };
+}
+
+function resolveClinicalPathologyCategoryId(
+  categoryLabel: string,
+): ClinicalPathologyCategoryId {
+  const normalizedLabel = categoryLabel.replaceAll(" ", "").replace("/", "");
+  const categoryByLabel: Record<string, ClinicalPathologyCategoryId> = {
+    CBC검사: "cbc",
+    CSF검사: "csf",
+    기타병리검사: "etc",
+    세포검사: "cell",
+    요검사: "urinalysis",
+    원내혈액검사: "in-house-blood",
+    임상미생물검사: "microbiology",
+    전해질검사동맥혈: "electrolyte-abg",
+    전해질검사동맥혈검사: "electrolyte-abg",
+    체액검사: "fluid",
+    혈액화학검사: "chemistry",
+  };
+
+  return categoryByLabel[normalizedLabel] ?? "etc";
 }
 
 export function mapWorkspaceCatalogItemsToHospitalOrders(items: OrderCatalogItem[]) {

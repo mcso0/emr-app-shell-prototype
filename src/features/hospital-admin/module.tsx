@@ -30,6 +30,7 @@ import {
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
 import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
+import { EmrTableWorkspaceHeader } from "@/components/emr/table-workspace-header";
 import {
   createInitialEmrTableFilterBuilderModel,
   filterRowsByEmrTableFilterBuilder,
@@ -104,6 +105,7 @@ import {
   formatHospitalOrderAmount,
   buildWorkspaceCatalogMutationFromHospitalOrder,
   buildWorkspaceCatalogPauseMutation,
+  clinicalPathologyCategoryOptions,
   getHospitalOrderCategory,
   getHospitalOrderSubcategory,
   mapWorkspaceCatalogItemToHospitalOrder,
@@ -529,30 +531,6 @@ const orderMenuGroups: OrderMenuGroup[] = [
   },
 ];
 
-const orderTypeTabsBySubcategory: Partial<
-  Record<HospitalOrderSubcategoryId, Array<{ label: string; value: string }>>
-> = {
-  "clinical-pathology": [
-    { label: "전체", value: "all" },
-    { label: "원내 혈액 검사", value: "in-house-blood" },
-    { label: "임상 미생물 검사", value: "microbiology" },
-    { label: "전해질검사/동맥혈", value: "electrolyte-abg" },
-    { label: "혈액화학검사", value: "chemistry" },
-    { label: "CBC검사", value: "cbc" },
-    { label: "CSF검사", value: "csf" },
-    { label: "세포 검사", value: "cell" },
-    { label: "체액 검사", value: "fluid" },
-    { label: "요검사", value: "urinalysis" },
-    { label: "기타 병리 검사", value: "etc" },
-  ],
-};
-
-const defaultOrderTypeTabs = [
-  { label: "전체", value: "all" },
-  { label: "원내 항목", value: "in-house" },
-  { label: "외부 항목", value: "external" },
-];
-
 const auditEventFilterItems = [
   { label: "전체", value: "all" },
   { label: "구성원 역할 변경", value: "workspace.membership_roles_changed" },
@@ -810,8 +788,9 @@ function parseHospitalOrderPriceFilterValue(value: string) {
 
 function getHospitalOrderTableFilterFields(
   orders: HospitalOrderCatalogItem[],
+  selectedSubcategoryId: HospitalOrderSubcategoryId,
 ): Array<EmrTableFilterBuilderField<HospitalOrderCatalogItem>> {
-  return [
+  const fields: Array<EmrTableFilterBuilderField<HospitalOrderCatalogItem>> = [
     {
       getValue: (order) => (order.isActive ? "active" : "inactive"),
       id: "status",
@@ -881,6 +860,20 @@ function getHospitalOrderTableFilterFields(
       valueKind: "text",
       valuePlaceholder: "금액 입력",
     },
+  ];
+
+  if (selectedSubcategoryId !== "clinical-pathology") return fields;
+
+  return [
+    {
+      getValue: (order) => order.clinicalPathologyCategoryId,
+      id: "clinicalPathologyCategory",
+      label: "검사 카테고리",
+      operators: [{ id: "is", label: "Is" }],
+      options: clinicalPathologyCategoryOptions,
+      valuePlaceholder: "검사 카테고리 선택",
+    },
+    ...fields,
   ];
 }
 
@@ -1591,8 +1584,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const selectedSubcategory = getHospitalOrderSubcategory(
     selectedSubcategoryId,
   );
-  const orderTypeTabs =
-    orderTypeTabsBySubcategory[selectedSubcategoryId] ?? defaultOrderTypeTabs;
   const selectedLeafLabel =
     orderMenuGroups
       .flatMap((group) => group.children)
@@ -1663,8 +1654,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     ],
   );
   const orderFilterFields = useMemo(
-    () => getHospitalOrderTableFilterFields(baseVisibleOrders),
-    [baseVisibleOrders],
+    () =>
+      getHospitalOrderTableFilterFields(
+        baseVisibleOrders,
+        selectedSubcategoryId,
+      ),
+    [baseVisibleOrders, selectedSubcategoryId],
   );
   const activeOrderFilterCount = getEmrTableFilterBuilderActiveCount(
     orderFilterModel,
@@ -1879,6 +1874,16 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       });
     }
   };
+  const catalogReadStatusLabel =
+    catalogReadStatus === "loading"
+      ? "Workspace catalog 불러오는 중"
+      : catalogReadStatus === "ready"
+        ? "Workspace catalog 기준"
+        : catalogReadStatus === "denied"
+          ? "Workspace catalog 접근 제한"
+          : catalogReadStatus === "error"
+            ? "Workspace catalog 조회 실패"
+            : "Workspace catalog 대기";
 
   return (
     <EmrPinnedTableWorkspace
@@ -1888,73 +1893,24 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       selectionColumnWidth={hospitalOrderSelectionColumnWidth}
     >
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
-      <section
-        className="border-b bg-transparent px-12 py-4"
-        data-emr-table-workspace-header="true"
-      >
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[20px] font-semibold leading-7">
-                {selectedLeafLabel}
-              </h1>
-              <Badge variant="secondary">{visibleOrders.length}</Badge>
-            </div>
-            <div className="mt-1 max-w-2xl emr-text-dense leading-5 text-muted-foreground">
-              병원관리 / Order 관리 / {selectedLeafLabel}
-            </div>
-            <div
-              className="mt-1 emr-text-metadata text-muted-foreground"
-              data-testid="hospital-order-catalog-read-status"
-            >
-              {catalogReadStatus === "loading"
-                ? "Workspace catalog 불러오는 중"
-                : catalogReadStatus === "ready"
-                  ? "Workspace catalog 기준"
-                  : catalogReadStatus === "denied"
-                    ? "Workspace catalog 접근 제한"
-                    : catalogReadStatus === "error"
-                      ? "Workspace catalog 조회 실패"
-                      : "Workspace catalog 대기"}
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={selectedOrderIds.length !== 1}
-              onClick={handleDuplicateFirstSelected}
-            >
-              <CdsActionsCopyIcon data-icon="inline-start" />
-              복제
-            </Button>
-            <Button size="sm" onClick={handleCreateOrder}>
-              + Order
-            </Button>
-          </div>
-        </div>
-      </section>
-      <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-transparent px-5 py-2">
-        <LineTabs
-          aria-label={`${selectedLeafLabel} 하위 타입`}
-          className="max-w-full min-w-0 flex-1 overflow-x-auto"
-          value="all"
-          items={orderTypeTabs}
-          itemClassName="emr-text-body"
-          onValueChange={() => undefined}
-          size="default"
-        />
-        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-          <div className="flex h-8 w-[180px] min-w-0 items-center rounded-lg border bg-card px-2.5">
-            <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
-            <Input
-              aria-label="오더 검색"
-              className="h-8 border-0 bg-transparent px-2 emr-text-dense shadow-none focus-visible:ring-0"
-              placeholder="오더 검색"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-          </div>
+      <EmrTableWorkspaceHeader
+        count={visibleOrders.length}
+        countLoading={
+          catalogReadStatus === "idle" || catalogReadStatus === "loading"
+        }
+        countSkeletonTestId="hospital-order-page-header-count-skeleton"
+        onSearchChange={setSearchQuery}
+        primaryAction={
+          <Button size="sm" onClick={handleCreateOrder}>
+            + Order
+          </Button>
+        }
+        searchAriaLabel="오더 검색"
+        searchClearAriaLabel="오더 검색어 초기화"
+        searchPlaceholder="오더 검색"
+        searchValue={searchQuery}
+        tableControls={
+          <>
           <Select
             value={statusFilter}
             onValueChange={(value) =>
@@ -2080,8 +2036,26 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           <Button size="icon-sm" variant="outline" aria-label="컬럼 표시 설정">
             <SlidersIcon />
           </Button>
-        </div>
-      </section>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={selectedOrderIds.length !== 1}
+            onClick={handleDuplicateFirstSelected}
+          >
+            <CdsActionsCopyIcon data-icon="inline-start" />
+            복제
+          </Button>
+          </>
+        }
+        testId="hospital-order-page-header"
+        title={selectedLeafLabel}
+      />
+      <span
+        className="sr-only"
+        data-testid="hospital-order-catalog-read-status"
+      >
+        {catalogReadStatusLabel}
+      </span>
       {catalogReadStatus === "denied" ? (
         <EmrTableFeedbackSurface>
           <EmrEmptyState

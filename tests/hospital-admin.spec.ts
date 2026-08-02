@@ -331,11 +331,14 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(
     page.getByRole("button", { name: /임상병리 검사/ }),
   ).toHaveAttribute("aria-pressed", "true");
+  const orderHeader = page.getByTestId("hospital-order-page-header");
   await expect(
-    page
-      .getByRole("group", { name: "임상병리 검사 하위 타입" })
-      .getByRole("button", { name: "전체" }),
-  ).toHaveAttribute("aria-pressed", "true");
+    orderHeader.getByRole("textbox", { name: "오더 검색" }),
+  ).toBeVisible();
+  await expect(orderHeader).not.toContainText("병원관리 / Order 관리");
+  await expect(
+    page.getByRole("group", { name: "임상병리 검사 하위 타입" }),
+  ).toHaveCount(0);
   await expect(
     page.getByTestId("hospital-order-catalog-read-status"),
   ).toContainText("Workspace catalog 기준");
@@ -1743,6 +1746,17 @@ test("all hospital admin Order leaves use the pinned standard Order identity tab
     await expect(
       page.getByTestId("hospital-admin-order-content"),
     ).toHaveAttribute("data-emr-pinned-table-workspace", "true");
+    await expect(
+      page.getByTestId("hospital-order-page-header"),
+    ).toHaveAttribute("data-emr-table-workspace-header", "true");
+    await expect(
+      page.getByTestId("hospital-order-page-header").getByRole("textbox", {
+        name: "오더 검색",
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: `${label} 하위 타입` }),
+    ).toHaveCount(0);
     if (!hasRows) {
       await expect(
         page.getByTestId("hospital-order-empty-state"),
@@ -2264,6 +2278,45 @@ test("hospital admin order catalog supports single sort and section filter build
     page.getByRole("button", { name: "오더 필터 설정" }),
   ).toBeVisible();
   await expect(orderRows).toHaveCount(2);
+});
+
+test("hospital admin exposes 검사 카테고리 only for 임상병리 검사", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  await page.getByRole("button", { name: "오더 필터 설정" }).click();
+  let filterBuilder = page.locator('[data-emr-table-filter-builder="true"]');
+  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await expect(
+    page.getByRole("option", { name: "검사 카테고리" }),
+  ).toBeVisible();
+  await page
+    .getByRole("option", { name: "검사 카테고리" })
+    .click({ force: true });
+  await filterBuilder.getByRole("combobox", { name: "필터 값" }).click();
+  await expect(page.getByRole("option", { name: "CBC검사" })).toBeVisible();
+  await page.getByRole("option", { name: "CBC검사" }).click({ force: true });
+
+  await expect(
+    page.getByRole("button", { name: "오더 필터 1개 설정" }),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-testid^="hospital-order-row-"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.getByTestId("hospital-order-row-ord-lab-cbc-baso"),
+  ).toBeVisible();
+
+  await filterBuilder.getByRole("button", { name: "필터 닫기" }).click();
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  await sidePanel.getByRole("button", { name: /^처방(?:\s|$)/ }).click();
+  await page.getByRole("button", { name: "오더 필터 설정" }).click();
+  filterBuilder = page.locator('[data-emr-table-filter-builder="true"]');
+  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await expect(page.getByRole("option", { name: "검사 카테고리" })).toHaveCount(
+    0,
+  );
 });
 
 test("hospital admin row action menu opens details and closes on Escape", async ({
