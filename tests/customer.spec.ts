@@ -1448,7 +1448,7 @@ test("customer patient table supports single sort and section filter builder", a
 
   await filterBuilder.getByRole("combobox", { name: "필터 값" }).click();
   await page.getByRole("option", { name: "푸들" }).click();
-  await filterBuilder.getByRole("button", { name: "Add filter" }).click();
+  await filterBuilder.getByRole("button", { name: "그룹 필터" }).click();
   await filterBuilder
     .getByRole("combobox", { name: "필터 필드" })
     .nth(1)

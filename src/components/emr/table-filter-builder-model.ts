@@ -1,4 +1,4 @@
-export type EmrTableFilterBuilderCombinator = "and";
+export type EmrTableFilterBuilderCombinator = "and" | "or";
 
 export type EmrTableFilterBuilderValueKind = "select" | "text";
 
@@ -26,23 +26,35 @@ export type EmrTableFilterBuilderField<TRow = unknown> = {
   valuePlaceholder?: string;
 };
 
+export type EmrTableFilterBuilderRuleSnapshot = {
+  fieldId: string;
+  operatorId: string;
+  value: string;
+};
+
 export type EmrTableFilterBuilderRule = {
-  combinator: EmrTableFilterBuilderCombinator;
+  applied: EmrTableFilterBuilderRuleSnapshot | null;
   fieldId: string | null;
   id: string;
   operatorId: string | null;
   value: string;
 };
 
-export type EmrTableFilterBuilderModel = {
+export type EmrTableFilterBuilderGroup = {
   combinator: EmrTableFilterBuilderCombinator;
   id: string;
   rules: EmrTableFilterBuilderRule[];
 };
 
+export type EmrTableFilterBuilderModel = {
+  combinator: EmrTableFilterBuilderCombinator;
+  groups: EmrTableFilterBuilderGroup[];
+  id: string;
+};
+
 export const emrTableFilterBuilderDefaultOperators: EmrTableFilterBuilderOperator[] = [
-  { id: "is", label: "Is" },
-  { id: "contains", label: "포함되어 있음" },
+  { id: "is", label: "같음" },
+  { id: "contains", label: "포함" },
 ];
 
 export function createEmrTableFilterBuilderRule(
@@ -50,7 +62,7 @@ export function createEmrTableFilterBuilderRule(
   overrides: Partial<Omit<EmrTableFilterBuilderRule, "id">> = {}
 ): EmrTableFilterBuilderRule {
   return {
-    combinator: "and",
+    applied: null,
     fieldId: null,
     id,
     operatorId: null,
@@ -59,14 +71,25 @@ export function createEmrTableFilterBuilderRule(
   };
 }
 
-export function createInitialEmrTableFilterBuilderModel(
+export function createEmrTableFilterBuilderGroup(
   id: string,
   ruleId = `${id}-rule-1`
-): EmrTableFilterBuilderModel {
+): EmrTableFilterBuilderGroup {
   return {
     combinator: "and",
     id,
     rules: [createEmrTableFilterBuilderRule(ruleId)],
+  };
+}
+
+export function createInitialEmrTableFilterBuilderModel(
+  id: string,
+  ruleId = `${id}-group-1-rule-1`
+): EmrTableFilterBuilderModel {
+  return {
+    combinator: "and",
+    groups: [createEmrTableFilterBuilderGroup(`${id}-group-1`, ruleId)],
+    id,
   };
 }
 
@@ -99,7 +122,7 @@ export function getEmrTableFilterBuilderOperator<TRow>(
 }
 
 export function isEmrTableFilterBuilderRuleComplete<TRow>(
-  rule: EmrTableFilterBuilderRule,
+  rule: Pick<EmrTableFilterBuilderRule, "fieldId" | "operatorId" | "value">,
   fields: Array<EmrTableFilterBuilderField<TRow>>
 ) {
   const field = getEmrTableFilterBuilderField(fields, rule.fieldId);
@@ -111,12 +134,50 @@ export function isEmrTableFilterBuilderRuleComplete<TRow>(
   return rule.value.trim().length > 0;
 }
 
+function snapshotRule(rule: EmrTableFilterBuilderRule): EmrTableFilterBuilderRuleSnapshot {
+  return {
+    fieldId: rule.fieldId ?? "",
+    operatorId: rule.operatorId ?? "",
+    value: rule.value,
+  };
+}
+
+function commitRuleWhenComplete<TRow>(
+  rule: EmrTableFilterBuilderRule,
+  fields: Array<EmrTableFilterBuilderField<TRow>>
+) {
+  return isEmrTableFilterBuilderRuleComplete(rule, fields)
+    ? { ...rule, applied: snapshotRule(rule) }
+    : rule;
+}
+
+function getEffectiveRule<TRow>(
+  rule: EmrTableFilterBuilderRule,
+  fields: Array<EmrTableFilterBuilderField<TRow>>
+): EmrTableFilterBuilderRule | null {
+  if (!rule.applied) return null;
+
+  const effectiveRule = {
+    ...rule,
+    fieldId: rule.applied.fieldId,
+    operatorId: rule.applied.operatorId,
+    value: rule.applied.value,
+  };
+
+  return isEmrTableFilterBuilderRuleComplete(effectiveRule, fields)
+    ? effectiveRule
+    : null;
+}
+
 export function getActiveEmrTableFilterBuilderRules<TRow>(
   model: EmrTableFilterBuilderModel,
   fields: Array<EmrTableFilterBuilderField<TRow>>
 ) {
-  return model.rules.filter((rule) =>
-    isEmrTableFilterBuilderRuleComplete(rule, fields)
+  return model.groups.flatMap((group) =>
+    group.rules.flatMap((rule) => {
+      const effectiveRule = getEffectiveRule(rule, fields);
+      return effectiveRule ? [effectiveRule] : [];
+    })
   );
 }
 
@@ -130,17 +191,35 @@ export function getEmrTableFilterBuilderActiveCount<TRow>(
 export function ensureEmrTableFilterBuilderDraft(
   model: EmrTableFilterBuilderModel
 ): EmrTableFilterBuilderModel {
-  if (model.rules.length > 0) return model;
+  if (model.groups.length > 0) return model;
 
+  return createInitialEmrTableFilterBuilderModel(model.id);
+}
+
+function updateRule(
+  model: EmrTableFilterBuilderModel,
+  groupId: string,
+  ruleId: string,
+  updater: (rule: EmrTableFilterBuilderRule) => EmrTableFilterBuilderRule
+) {
   return {
     ...model,
-    combinator: "and",
-    rules: [createEmrTableFilterBuilderRule(`${model.id}-rule-1`)],
+    groups: model.groups.map((group) =>
+      group.id === groupId
+        ? {
+            ...group,
+            rules: group.rules.map((rule) =>
+              rule.id === ruleId ? updater(rule) : rule
+            ),
+          }
+        : group
+    ),
   };
 }
 
 export function updateEmrTableFilterBuilderRuleField<TRow>(
   model: EmrTableFilterBuilderModel,
+  groupId: string,
   ruleId: string,
   fieldId: string | null,
   fields: Array<EmrTableFilterBuilderField<TRow>>
@@ -148,68 +227,121 @@ export function updateEmrTableFilterBuilderRuleField<TRow>(
   const field = getEmrTableFilterBuilderField(fields, fieldId);
   const firstOperator = field ? getEmrTableFilterBuilderOperators(field)[0] : undefined;
 
-  return {
-    ...model,
-    rules: model.rules.map((rule) =>
-      rule.id === ruleId
-        ? {
-            ...rule,
-            fieldId: field?.id ?? null,
-            operatorId: firstOperator?.id ?? null,
-            value: "",
-          }
-        : rule
-    ),
-  };
+  return updateRule(model, groupId, ruleId, (rule) =>
+    commitRuleWhenComplete(
+      {
+        ...rule,
+        fieldId: field?.id ?? null,
+        operatorId: firstOperator?.id ?? null,
+        value: "",
+      },
+      fields
+    )
+  );
 }
 
-export function updateEmrTableFilterBuilderRuleOperator(
+export function updateEmrTableFilterBuilderRuleOperator<TRow>(
   model: EmrTableFilterBuilderModel,
+  groupId: string,
   ruleId: string,
-  operatorId: string | null
+  operatorId: string | null,
+  fields: Array<EmrTableFilterBuilderField<TRow>>
 ): EmrTableFilterBuilderModel {
-  return {
-    ...model,
-    rules: model.rules.map((rule) =>
-      rule.id === ruleId ? { ...rule, operatorId, value: "" } : rule
-    ),
-  };
+  return updateRule(model, groupId, ruleId, (rule) =>
+    commitRuleWhenComplete({ ...rule, operatorId, value: "" }, fields)
+  );
 }
 
-export function updateEmrTableFilterBuilderRuleValue(
+export function updateEmrTableFilterBuilderRuleValue<TRow>(
   model: EmrTableFilterBuilderModel,
+  groupId: string,
+  ruleId: string,
+  value: string,
+  fields: Array<EmrTableFilterBuilderField<TRow>>
+): EmrTableFilterBuilderModel {
+  return updateRule(model, groupId, ruleId, (rule) =>
+    commitRuleWhenComplete({ ...rule, value }, fields)
+  );
+}
+
+export function updateEmrTableFilterBuilderRuleDraftValue(
+  model: EmrTableFilterBuilderModel,
+  groupId: string,
   ruleId: string,
   value: string
 ): EmrTableFilterBuilderModel {
+  return updateRule(model, groupId, ruleId, (rule) => ({ ...rule, value }));
+}
+
+export function commitEmrTableFilterBuilderRule<TRow>(
+  model: EmrTableFilterBuilderModel,
+  groupId: string,
+  ruleId: string,
+  fields: Array<EmrTableFilterBuilderField<TRow>>
+): EmrTableFilterBuilderModel {
+  return updateRule(model, groupId, ruleId, (rule) =>
+    commitRuleWhenComplete(rule, fields)
+  );
+}
+
+export function updateEmrTableFilterBuilderGroupCombinator(
+  model: EmrTableFilterBuilderModel,
+  groupId: string,
+  combinator: EmrTableFilterBuilderCombinator
+): EmrTableFilterBuilderModel {
   return {
     ...model,
-    rules: model.rules.map((rule) =>
-      rule.id === ruleId ? { ...rule, value } : rule
+    groups: model.groups.map((group) =>
+      group.id === groupId ? { ...group, combinator } : group
     ),
   };
+}
+
+export function updateEmrTableFilterBuilderCombinator(
+  model: EmrTableFilterBuilderModel,
+  combinator: EmrTableFilterBuilderCombinator
+): EmrTableFilterBuilderModel {
+  return { ...model, combinator };
 }
 
 export function addEmrTableFilterBuilderDraftRule(
   model: EmrTableFilterBuilderModel,
+  groupId: string,
   ruleId: string
 ): EmrTableFilterBuilderModel {
   return {
     ...model,
-    rules: [
-      ...model.rules,
-      createEmrTableFilterBuilderRule(ruleId),
-    ],
+    groups: model.groups.map((group) =>
+      group.id === groupId
+        ? { ...group, rules: [...group.rules, createEmrTableFilterBuilderRule(ruleId)] }
+        : group
+    ),
+  };
+}
+
+export function addEmrTableFilterBuilderDraftGroup(
+  model: EmrTableFilterBuilderModel,
+  groupId: string,
+  ruleId: string
+): EmrTableFilterBuilderModel {
+  return {
+    ...model,
+    groups: [...model.groups, createEmrTableFilterBuilderGroup(groupId, ruleId)],
   };
 }
 
 export function removeEmrTableFilterBuilderRule(
   model: EmrTableFilterBuilderModel,
+  groupId: string,
   ruleId: string
 ): EmrTableFilterBuilderModel {
-  return ensureEmrTableFilterBuilderDraft({
-    ...model,
-    rules: model.rules.filter((rule) => rule.id !== ruleId),
+  const groups = model.groups.flatMap((group) => {
+    if (group.id !== groupId) return [group];
+    const rules = group.rules.filter((rule) => rule.id !== ruleId);
+    return rules.length > 0 ? [{ ...group, rules }] : [];
   });
+
+  return ensureEmrTableFilterBuilderDraft({ ...model, groups });
 }
 
 function normalizeFilterValue(value: unknown) {
@@ -224,18 +356,13 @@ function defaultRuleMatch<TRow>(
   const normalizedRuleValue = normalizeFilterValue(ruleValue);
 
   if (Array.isArray(fieldValue)) {
-    return fieldValue.some((item) =>
-      defaultRuleMatch(item, operator, ruleValue)
-    );
+    return fieldValue.some((item) => defaultRuleMatch(item, operator, ruleValue));
   }
 
   const normalizedFieldValue = normalizeFilterValue(fieldValue);
-
-  if (operator.id === "contains") {
-    return normalizedFieldValue.includes(normalizedRuleValue);
-  }
-
-  return normalizedFieldValue === normalizedRuleValue;
+  return operator.id === "contains"
+    ? normalizedFieldValue.includes(normalizedRuleValue)
+    : normalizedFieldValue === normalizedRuleValue;
 }
 
 export function doesEmrTableFilterBuilderRuleMatchRow<TRow>(
@@ -247,8 +374,6 @@ export function doesEmrTableFilterBuilderRuleMatchRow<TRow>(
   const operator = getEmrTableFilterBuilderOperator(field, rule.operatorId);
 
   if (!field || !operator) return true;
-  if (!isEmrTableFilterBuilderRuleComplete(rule, fields)) return true;
-
   const fieldValue = field.getValue?.(row);
 
   return operator.match
@@ -261,13 +386,25 @@ export function filterRowsByEmrTableFilterBuilder<TRow>(
   model: EmrTableFilterBuilderModel,
   fields: Array<EmrTableFilterBuilderField<TRow>>
 ) {
-  const activeRules = getActiveEmrTableFilterBuilderRules(model, fields);
+  const activeGroups = model.groups.flatMap((group) => {
+    const rules = group.rules.flatMap((rule) => {
+      const effectiveRule = getEffectiveRule(rule, fields);
+      return effectiveRule ? [effectiveRule] : [];
+    });
+    return rules.length > 0 ? [{ ...group, rules }] : [];
+  });
 
-  if (activeRules.length === 0) return rows;
+  if (activeGroups.length === 0) return rows;
 
-  return rows.filter((row) =>
-    activeRules.every((rule) =>
-      doesEmrTableFilterBuilderRuleMatchRow(rule, row, fields)
-    )
-  );
+  return rows.filter((row) => {
+    const groupResults = activeGroups.map((group) => {
+      const matches = group.rules.map((rule) =>
+        doesEmrTableFilterBuilderRuleMatchRow(rule, row, fields)
+      );
+      return group.combinator === "or" ? matches.some(Boolean) : matches.every(Boolean);
+    });
+    return model.combinator === "or"
+      ? groupResults.some(Boolean)
+      : groupResults.every(Boolean);
+  });
 }
