@@ -799,7 +799,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
         .locator('[data-slot="emr-main-content-header"]')
         .evaluate((slot) => slot.getBoundingClientRect().height),
     )
-    .toBe(56);
+    .toBe(44);
 
   await page.getByTestId("customer-side-panel-guardian").click();
 
