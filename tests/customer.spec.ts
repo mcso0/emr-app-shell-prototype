@@ -544,8 +544,32 @@ test("customer patient table keeps animal identity pinned while data columns scr
   const patientCodeHeader = patientTable.locator(
     'th[data-customer-column-key="patientNo"]',
   );
+  const patientRows = patientTable.locator(
+    'tbody tr[data-customer-table-row="true"]',
+  );
+  const firstPatientRow = patientRows.first();
+  const subsequentPatientRow = patientRows.nth(1);
+  const firstPatientCodeCell = firstPatientRow.locator(
+    'td[data-customer-column-key="patientNo"]',
+  );
+  const subsequentPatientCodeCell = subsequentPatientRow.locator(
+    'td[data-customer-column-key="patientNo"]',
+  );
+  const firstPatientCodeSurface = firstPatientCodeCell.locator("code");
+  const subsequentPatientCodeSurface =
+    subsequentPatientCodeCell.locator("code");
+  const patientCodeHeaderSurface = patientCodeHeader.locator("button");
+  const pinnedHeaderEdge = patientTable.locator(
+    'thead th[data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
+  );
+  const firstPinnedBodyEdge = firstPatientRow.locator(
+    'td[data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
+  );
   const dubuRow = page.getByTestId("customer-patient-row-patient-dubu");
   const animalCell = dubuRow.locator('td[data-customer-column-key="name"]');
+  const dubuPatientCodeCell = dubuRow.locator(
+    'td[data-customer-column-key="patientNo"]',
+  );
   const selectionCell = dubuRow
     .locator('td[data-emr-column-pinned="left"]')
     .first();
@@ -585,6 +609,11 @@ test("customer patient table keeps animal identity pinned while data columns scr
     "data-emr-column-pinned",
     "left",
   );
+  await expect(firstPatientRow).toBeVisible();
+  await expect(subsequentPatientRow).toBeVisible();
+  await expect(patientCodeHeaderSurface).toBeVisible();
+  await expect(firstPatientCodeSurface).toBeVisible();
+  await expect(subsequentPatientCodeSurface).toBeVisible();
   await expect(animalCell).toHaveCSS("position", "sticky");
   await expect(animalCell).toHaveCSS("white-space", "nowrap");
   await expect(
@@ -618,6 +647,180 @@ test("customer patient table keeps animal identity pinned while data columns scr
   expect(Math.abs(headerLabelBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(animalNameBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(footerTotalBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+
+  await scrollContainer.evaluate((container) => {
+    container.scrollLeft = 0;
+  });
+  await expect
+    .poll(async () =>
+      scrollContainer.evaluate((container) => container.scrollLeft),
+    )
+    .toBe(0);
+
+  const [
+    pinnedHeaderEdgeBox,
+    patientCodeHeaderBox,
+    patientCodeHeaderSurfaceBox,
+    firstPinnedBodyEdgeBox,
+    firstPatientCodeCellBox,
+    firstPatientCodeSurfaceBox,
+    subsequentPatientCodeCellBox,
+    subsequentPatientCodeSurfaceBox,
+  ] = await Promise.all([
+    pinnedHeaderEdge.boundingBox(),
+    patientCodeHeader.boundingBox(),
+    patientCodeHeaderSurface.boundingBox(),
+    firstPinnedBodyEdge.boundingBox(),
+    firstPatientCodeCell.boundingBox(),
+    firstPatientCodeSurface.boundingBox(),
+    subsequentPatientCodeCell.boundingBox(),
+    subsequentPatientCodeSurface.boundingBox(),
+  ]);
+
+  for (const [label, box] of [
+    ["pinned header edge", pinnedHeaderEdgeBox],
+    ["patient-code header", patientCodeHeaderBox],
+    ["patient-code header surface", patientCodeHeaderSurfaceBox],
+    ["pinned body edge", firstPinnedBodyEdgeBox],
+    ["first patient-code cell", firstPatientCodeCellBox],
+    ["first patient-code surface", firstPatientCodeSurfaceBox],
+    ["subsequent patient-code cell", subsequentPatientCodeCellBox],
+    ["subsequent patient-code surface", subsequentPatientCodeSurfaceBox],
+  ] as const) {
+    expect(box, `${label} is not measurable`).not.toBeNull();
+  }
+
+  for (const [label, edgeBox, cellBox, surfaceBox] of [
+    [
+      "header",
+      pinnedHeaderEdgeBox,
+      patientCodeHeaderBox,
+      patientCodeHeaderSurfaceBox,
+    ],
+    [
+      "first body",
+      firstPinnedBodyEdgeBox,
+      firstPatientCodeCellBox,
+      firstPatientCodeSurfaceBox,
+    ],
+    [
+      "subsequent body",
+      firstPinnedBodyEdgeBox,
+      subsequentPatientCodeCellBox,
+      subsequentPatientCodeSurfaceBox,
+    ],
+  ] as const) {
+    expect(
+      surfaceBox!.x - (edgeBox!.x + edgeBox!.width),
+      `${label} inset`,
+    ).toBeGreaterThanOrEqual(9);
+    expect(
+      surfaceBox!.x - (edgeBox!.x + edgeBox!.width),
+      `${label} inset`,
+    ).toBeLessThanOrEqual(11);
+    expect(surfaceBox!.x).toBeGreaterThanOrEqual(cellBox!.x - 1);
+    expect(surfaceBox!.y).toBeGreaterThanOrEqual(cellBox!.y - 1);
+    expect(surfaceBox!.x + surfaceBox!.width).toBeLessThanOrEqual(
+      cellBox!.x + cellBox!.width + 1,
+    );
+    expect(surfaceBox!.y + surfaceBox!.height).toBeLessThanOrEqual(
+      cellBox!.y + cellBox!.height + 1,
+    );
+  }
+
+  const [
+    headerSurfaceStyles,
+    firstBodySurfaceStyles,
+    subsequentBodySurfaceStyles,
+  ] = await Promise.all(
+    [
+      patientCodeHeaderSurface,
+      firstPatientCodeSurface,
+      subsequentPatientCodeSurface,
+    ].map((surface) =>
+      surface.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          borderRadius: styles.borderRadius,
+          backgroundColor: styles.backgroundColor,
+        };
+      }),
+    ),
+  );
+
+  for (const [label, styles] of [
+    ["header", headerSurfaceStyles],
+    ["first body", firstBodySurfaceStyles],
+    ["subsequent body", subsequentBodySurfaceStyles],
+  ] as const) {
+    expect(parseFloat(styles.borderRadius), `${label} radius`).toBeGreaterThan(
+      0,
+    );
+    if (label !== "header") {
+      expect(styles.backgroundColor, `${label} surface background`).not.toBe(
+        "rgba(0, 0, 0, 0)",
+      );
+    }
+  }
+
+  const contentHookStyles = await Promise.all(
+    [
+      patientCodeHeader.locator('[data-emr-table-content="true"]'),
+      firstPatientCodeCell.locator('[data-emr-table-content="true"]'),
+      subsequentPatientCodeCell.locator('[data-emr-table-content="true"]'),
+    ].map((hook) =>
+      hook.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          marginInlineStart: styles.marginInlineStart,
+          paddingInlineStart: styles.paddingInlineStart,
+        };
+      }),
+    ),
+  );
+  for (const [label, styles] of [
+    ["header", contentHookStyles[0]],
+    ["first body", contentHookStyles[1]],
+    ["subsequent body", contentHookStyles[2]],
+  ] as const) {
+    expect(styles.marginInlineStart, `${label} content margin`).toBe("10px");
+    expect(styles.paddingInlineStart, `${label} content padding`).toBe("0px");
+  }
+
+  const edgeShadows = await Promise.all(
+    [pinnedHeaderEdge, firstPinnedBodyEdge].map((edge) =>
+      edge.evaluate((element) => {
+        const layers = Array.from(
+          getComputedStyle(element).boxShadow.matchAll(
+            /(-?\d+(?:\.\d+)?)px 0px (-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px/g,
+          ),
+          (match) => ({
+            offset: Number.parseFloat(match[1]),
+            blur: Number.parseFloat(match[2]),
+            spread: Number.parseFloat(match[3]),
+          }),
+        );
+        return {
+          solid: layers.filter(
+            (layer) => layer.blur === 0 && layer.spread === 0,
+          ),
+          gradient: layers.filter(
+            (layer) => layer.blur > 0 && layer.spread < 0,
+          ),
+        };
+      }),
+    ),
+  );
+  for (const [label, shadow] of [
+    ["header", edgeShadows[0]],
+    ["body", edgeShadows[1]],
+  ] as const) {
+    expect(shadow.solid, `${label} divider layers`).toHaveLength(1);
+    expect(shadow.solid[0].offset, `${label} divider offset`).toBe(1);
+    expect(shadow.gradient.length, `${label} gradient layer`).toBeGreaterThan(
+      0,
+    );
+  }
 
   for (const width of [1900, 1440, 1280, 1024]) {
     await page.setViewportSize({ width, height: 1024 });
@@ -699,6 +902,10 @@ test("customer patient table keeps animal identity pinned while data columns scr
   ]);
 
   expect(hoverPinnedBackground).toBe(expectedHoverBackground);
+  await expect(dubuPatientCodeCell).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
 
   await dubuRow.click();
   await expect(dubuRow).toHaveAttribute("data-state", "selected");
@@ -716,6 +923,10 @@ test("customer patient table keeps animal identity pinned while data columns scr
     ]);
 
   expect(selectedPinnedBackground).toBe(expectedSelectedBackground);
+  await expect(dubuPatientCodeCell).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
 
   await page.getByTestId("customer-side-panel-guardian").click();
   const guardianTable = page.getByRole("table", {

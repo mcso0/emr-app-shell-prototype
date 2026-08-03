@@ -34,6 +34,7 @@ export function CustomerTableCellContent({
         align === "right" && "justify-end text-right",
         className,
       )}
+      data-emr-table-content="true"
       data-emr-customer-cell-content="true"
     >
       {!rich ? (

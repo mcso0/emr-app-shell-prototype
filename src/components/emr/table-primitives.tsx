@@ -145,6 +145,7 @@ export function EmrTableHeaderCell({
           align === "right" && "justify-end",
           align === "center" && "justify-center",
         )}
+        data-emr-table-content="true"
       >
         <span
           className="min-w-0 truncate"
