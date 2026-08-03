@@ -879,6 +879,11 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(page.getByLabel("환자 컨텍스트 정보")).toHaveCount(0);
   await expect(page.locator("[data-slot='chart-instruction-info-card']")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "차트 공유" })).toHaveCount(0);
+  await expect(
+    page
+      .getByTestId("workspace-main-content")
+      .locator("[data-slot='emr-main-content-header']"),
+  ).toHaveCount(0);
   const lockedState = page.getByTestId("chart-start-locked-state");
   const preconsultationCallButtons = lockedState.getByRole("button", {
     name: "호출하기",
