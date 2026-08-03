@@ -1444,12 +1444,16 @@ test("customer table uses compact scope controls and checkbox bulk selection", a
   const header = page.getByTestId("customer-page-header");
   const table = page.getByTestId("customer-patient-table");
 
-  await expect(header.getByRole("textbox", { name: "고객관리 검색" })).toHaveCount(0);
+  await expect(
+    header.getByRole("textbox", { name: "고객관리 검색" }),
+  ).toBeVisible();
   await expect(header.getByRole("button", { name: "환자/보호자 등록" })).toBeVisible();
   await expect(table).toBeVisible();
   await expect(table).toHaveCSS("border-radius", "0px");
-  await expect(table.getByRole("textbox", { name: "고객관리 검색" })).toBeVisible();
-  await expect(table).toContainText("전체 동물");
+  await expect(
+    table.getByRole("textbox", { name: "고객관리 검색" }),
+  ).toHaveCount(1);
+  await expect(header.getByRole("heading", { name: "동물" })).toBeVisible();
   await expect(table).not.toContainText("0 / 5 선택");
   const workspaceBox = await page.getByTestId("customer-workspace").boundingBox();
   const tableBox = await table.boundingBox();
@@ -1462,26 +1466,23 @@ test("customer table uses compact scope controls and checkbox bulk selection", a
   await expect(page.getByText("환자 정보")).toHaveCount(0);
 
   await page.getByTestId("customer-patient-row-patient-coco").click({ position: { x: 120, y: 20 } });
-  await expect(page.getByText("환자 정보")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "환자 정보" })).toBeVisible();
 });
 
-test("hospital order table keeps tabs and compact controls in one hierarchy row", async ({ page }) => {
+test("hospital order table uses the shared data-table header without category tabs", async ({ page }) => {
   await page.goto("/w/clair-demo/orders?modulePanel=open&aside=closed");
 
-  const tabGroup = page.getByRole("group", { name: "임상병리 검사 하위 타입" });
-  const activeTab = tabGroup.getByRole("button", { name: "전체" });
-  const search = page.getByRole("textbox", { name: "오더 검색" });
-  await expect(activeTab).toBeVisible();
-  await expect(activeTab).toHaveAttribute("aria-pressed", "true");
+  const header = page.getByTestId("hospital-order-page-header");
+  const search = header.getByRole("textbox", { name: "오더 검색" });
+  await expect(header).toHaveAttribute("data-emr-table-workspace-header", "true");
   await expect(search).toBeVisible();
+  await expect(header.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
+  await expect(header).not.toContainText("병원관리 / Order 관리");
+  await expect(
+    page.getByRole("group", { name: "임상병리 검사 하위 타입" }),
+  ).toHaveCount(0);
   await expect(page.getByRole("button", { name: "오더 필터 설정" })).toBeVisible();
   await expect(page.getByTestId("hospital-order-table")).toBeVisible();
-
-  const activeTabBox = await activeTab.boundingBox();
-  const searchBox = await search.boundingBox();
-  expectRect(activeTabBox);
-  expectRect(searchBox);
-  expect(Math.abs(Math.round(activeTabBox.y - searchBox.y))).toBeLessThanOrEqual(8);
 });
 
 test("dispensing queue selection updates existing patient and instruction context", async ({ page }) => {
