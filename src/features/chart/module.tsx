@@ -1305,7 +1305,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
     workspaceId,
   });
 
-  if (!bundle || chartStartLocked) {
+  if (!bundle) {
     return (
       <EmrMainContentHeader
         aria-hidden="true"
@@ -1313,6 +1313,8 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
       />
     );
   }
+
+  if (chartStartLocked) return null;
 
   const veterinarianName = getChartBundleVeterinarianName(bundle);
 
