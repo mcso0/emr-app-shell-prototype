@@ -407,6 +407,14 @@ function RelatedCard({
       onClick={() => onOpen(item)}
     >
       {content}
+      <span className={styles.relatedCardAffordanceClip} aria-hidden="true">
+        <span className={styles.relatedCardAffordance}>
+          <span className={styles.relatedCardAffordanceGradient} />
+          <span className={styles.relatedCardAffordanceFrame}>
+            <CdsNavigationChevronRightIcon aria-hidden="true" />
+          </span>
+        </span>
+      </span>
     </button>
   );
 }
