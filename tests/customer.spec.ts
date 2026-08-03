@@ -1795,6 +1795,22 @@ test("patient and guardian profiles share the right-panel slot and push customer
   const profilePanel = page.getByTestId("profile-side-panel");
 
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "patient");
+  await expect
+    .poll(() =>
+      profilePanel
+        .locator("[data-profile-definition-icon]")
+        .evaluateAll((icons) => icons.map((icon) => icon.getAttribute("data-profile-definition-icon"))),
+    )
+    .toEqual([
+      "pet",
+      "paw-print",
+      "user",
+      "clock",
+      "calendar",
+      "scan-line",
+      "file-user",
+      "notebook-text",
+    ]);
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   await expect
     .poll(async () => (await rightPanel.boundingBox())?.width)
@@ -1818,6 +1834,13 @@ test("patient and guardian profiles share the right-panel slot and push customer
 
   await page.getByRole("button", { name: "보호자 이지은 보기" }).click();
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "guardian");
+  await expect
+    .poll(() =>
+      profilePanel
+        .locator("[data-profile-definition-icon]")
+        .evaluateAll((icons) => icons.map((icon) => icon.getAttribute("data-profile-definition-icon"))),
+    )
+    .toEqual(["user", "calendar", "phone", "mail", "map-pin", "notebook-text"]);
 
   const guardianRightPanelBox = await rightPanel.boundingBox();
   expect(guardianRightPanelBox).not.toBeNull();

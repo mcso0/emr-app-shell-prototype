@@ -501,26 +501,13 @@
   letter-spacing: 0.196px;
 }
 
-.definitionMarker {
-  position: relative;
+.definitionIcon {
+  display: block;
   width: 14px;
   height: 14px;
   flex: 0 0 14px;
   margin-top: 3px;
-  border: 1px dashed var(--profile-neutral-500);
-  border-radius: 2px;
-  box-sizing: border-box;
-}
-
-.definitionMarker::after {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 2px;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--profile-neutral-500);
-  content: "";
+  color: var(--profile-neutral-500);
 }
 
 .definitionValue {

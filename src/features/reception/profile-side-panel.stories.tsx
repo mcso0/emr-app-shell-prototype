@@ -43,14 +43,15 @@ const patientModel: ProfileSidePanelModel = {
   history: historyRows,
   infoHeading: "환자 정보",
   infoRows: [
-    { label: "환자명", value: "초코" },
-    { label: "종류/품종", value: "개/포메라니안" },
-    { label: "성별", value: "중성화 암컷" },
-    { label: "나이", value: "88년 88개월(추정)" },
-    { label: "생년월일", value: "8888년 88월 88일(추정)" },
-    { label: "마이크로칩", value: "888888888888888" },
-    { label: "동물등록번호", value: "888888888" },
+    { icon: "pet", label: "환자명", value: "초코" },
+    { icon: "paw-print", label: "종류/품종", value: "개/포메라니안" },
+    { icon: "user", label: "성별", value: "중성화 암컷" },
+    { icon: "clock", label: "나이", value: "88년 88개월(추정)" },
+    { icon: "calendar", label: "생년월일", value: "8888년 88월 88일(추정)" },
+    { icon: "scan-line", label: "마이크로칩", value: "888888888888888" },
+    { icon: "file-user", label: "동물등록번호", value: "888888888" },
     {
+      icon: "notebook-text",
       label: "환자 메모",
       value: (
         <>
@@ -127,11 +128,12 @@ const guardianModel: ProfileSidePanelModel = {
   avatarSrc: "/avatars/figma-guardian-profile.png",
   infoHeading: "보호자 정보",
   infoRows: [
-    { label: "보호자명", value: "한서연" },
-    { label: "생년월일", value: "1988-88-88" },
-    { label: "전화번호", value: "010-8888-8888" },
-    { label: "이메일", value: "userEmail@email.com" },
+    { icon: "user", label: "보호자명", value: "한서연" },
+    { icon: "calendar", label: "생년월일", value: "1988-88-88" },
+    { icon: "phone", label: "전화번호", value: "010-8888-8888" },
+    { icon: "mail", label: "이메일", value: "userEmail@email.com" },
     {
+      icon: "map-pin",
       label: "주소",
       value: (
         <>
@@ -142,6 +144,7 @@ const guardianModel: ProfileSidePanelModel = {
       ),
     },
     {
+      icon: "notebook-text",
       label: "보호자메모",
       value: (
         <>
