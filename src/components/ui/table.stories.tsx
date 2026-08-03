@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { userEvent } from "storybook/test";
 
 import {
   EmrPinnedTableWorkspace,
@@ -213,7 +214,18 @@ export const PinnedColumns: Story = {
             >
               대상
             </EmrTableHeaderCell>
-            <TableHead>상태</TableHead>
+            <EmrTableHeaderCell
+              className="!p-0"
+              data-testid="pinned-scroll-header"
+            >
+              <button
+                type="button"
+                data-testid="pinned-scroll-header-surface"
+                className="inline-flex min-h-6 items-center rounded-lg bg-[var(--emr-state-hover)] px-2.5 py-1 text-xs"
+              >
+                상태
+              </button>
+            </EmrTableHeaderCell>
             <TableHead>담당</TableHead>
             <TableHead pinned="right" pinnedOffset={0} pinnedEdge>
               작업
@@ -240,7 +252,19 @@ export const PinnedColumns: Story = {
                 합성 환자 A
               </EmrTableIdentityCellContent>
             </TableCell>
-            <TableCell>대기</TableCell>
+            <TableCell>
+              <div
+                data-emr-table-content="true"
+                className="emr-table-cell-content flex items-center px-2"
+              >
+                <span
+                  data-testid="pinned-scroll-body-surface"
+                  className="inline-flex rounded-md bg-[var(--emr-surface-muted)] px-2 py-1"
+                >
+                  대기
+                </span>
+              </div>
+            </TableCell>
             <TableCell>샘플 담당</TableCell>
             <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
               보기
@@ -258,7 +282,19 @@ export const PinnedColumns: Story = {
             <TableCell pinned="left" pinnedOffset={44} pinnedEdge>
               합성 환자 B
             </TableCell>
-            <TableCell>진행</TableCell>
+            <TableCell>
+              <div
+                data-emr-table-content="true"
+                className="emr-table-cell-content flex items-center px-2"
+              >
+                <span
+                  data-testid="selected-pinned-scroll-body-surface"
+                  className="inline-flex rounded-md bg-[var(--emr-surface-muted)] px-2 py-1"
+                >
+                  진행
+                </span>
+              </div>
+            </TableCell>
             <TableCell>샘플 담당</TableCell>
             <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
               보기
@@ -290,6 +326,24 @@ export const PinnedColumns: Story = {
     const bodyPinnedEdge = table?.querySelector(
       'tbody tr:first-child [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
     ) as HTMLTableCellElement | null;
+    const firstScrollHeader = table?.querySelector(
+      'thead [data-slot="table-head"]:not([data-emr-column-pinned])',
+    ) as HTMLTableCellElement | null;
+    const firstScrollBodyCell = table?.querySelector(
+      'tbody tr:first-child [data-slot="table-cell"]:not([data-emr-column-pinned])',
+    ) as HTMLTableCellElement | null;
+    const selectedScrollBodyCell = table?.querySelector(
+      'tbody tr[data-state="selected"] [data-slot="table-cell"]:not([data-emr-column-pinned])',
+    ) as HTMLTableCellElement | null;
+    const firstScrollHeaderSurface = table?.querySelector(
+      '[data-testid="pinned-scroll-header-surface"]',
+    ) as HTMLElement | null;
+    const firstScrollBodySurface = table?.querySelector(
+      '[data-testid="pinned-scroll-body-surface"]',
+    ) as HTMLElement | null;
+    const selectedScrollBodySurface = table?.querySelector(
+      '[data-testid="selected-pinned-scroll-body-surface"]',
+    ) as HTMLElement | null;
     const workspace = canvasElement.querySelector(
       '[data-testid="pinned-table-workspace"]',
     ) as HTMLDivElement | null;
@@ -308,6 +362,12 @@ export const PinnedColumns: Story = {
       !selectedCell ||
       !headerPinnedEdge ||
       !bodyPinnedEdge ||
+      !firstScrollHeader ||
+      !firstScrollBodyCell ||
+      !selectedScrollBodyCell ||
+      !firstScrollHeaderSurface ||
+      !firstScrollBodySurface ||
+      !selectedScrollBodySurface ||
       !workspace ||
       !headerIdentity ||
       !rowIdentity
@@ -354,6 +414,84 @@ export const PinnedColumns: Story = {
     if (getComputedStyle(selectedCell).backgroundColor === "rgba(0, 0, 0, 0)") {
       throw new Error("Selected pinned cell has a transparent surface.");
     }
+
+    container.scrollLeft = 0;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    for (const [label, cell] of [
+      ["header", firstScrollHeader],
+      ["first body", firstScrollBodyCell],
+      ["subsequent body", selectedScrollBodyCell],
+    ] as const) {
+      const styles = getComputedStyle(cell);
+      if (
+        styles
+          .getPropertyValue("--emr-table-pinned-scroll-content-inset")
+          .trim() !== "10px" ||
+        styles.paddingInlineStart !== "0px"
+      ) {
+        throw new Error(
+          `Pinned ${label} cell did not receive the automatic shared inset contract.`,
+        );
+      }
+    }
+
+    const contentHooks = [
+      ["header", firstScrollHeader],
+      ["first body", firstScrollBodyCell],
+      ["subsequent body", selectedScrollBodyCell],
+    ] as const;
+    for (const [label, cell] of contentHooks) {
+      const contentHook = cell.firstElementChild;
+      if (
+        !(contentHook instanceof HTMLElement) ||
+        contentHook.dataset.emrTableContent !== "true"
+      ) {
+        throw new Error(`Pinned ${label} cell is missing its content hook.`);
+      }
+      const hookStyles = getComputedStyle(contentHook);
+      if (
+        hookStyles.marginInlineStart !== "10px" ||
+        hookStyles.paddingInlineStart !== "0px"
+      ) {
+        throw new Error(
+          `Pinned ${label} content hook does not own the 10px inset normalization.`,
+        );
+      }
+    }
+
+    for (const [label, cell, surface] of [
+      ["header", firstScrollHeader, firstScrollHeaderSurface],
+      ["first body", firstScrollBodyCell, firstScrollBodySurface],
+      ["subsequent body", selectedScrollBodyCell, selectedScrollBodySurface],
+    ] as const) {
+      const cellRect = cell.getBoundingClientRect();
+      const surfaceRect = surface.getBoundingClientRect();
+      if (
+        surfaceRect.left < cellRect.left - 1 ||
+        surfaceRect.right > cellRect.right + 1 ||
+        getComputedStyle(surface).borderRadius === "0px"
+      ) {
+        throw new Error(
+          `Pinned ${label} rounded content surface is clipped by its cell.`,
+        );
+      }
+    }
+
+    for (const [label, edgeCell, surface] of [
+      ["header", headerPinnedEdge, firstScrollHeaderSurface],
+      ["body", bodyPinnedEdge, firstScrollBodySurface],
+    ] as const) {
+      const inset =
+        surface.getBoundingClientRect().left -
+        edgeCell.getBoundingClientRect().right;
+      if (inset < 9 || inset > 11) {
+        throw new Error(
+          `Pinned ${label} scroll content inset is ${inset}px, expected about 10px.`,
+        );
+      }
+    }
+
     for (const [label, edgeCell] of [
       ["header", headerPinnedEdge],
       ["body", bodyPinnedEdge],
@@ -370,31 +508,55 @@ export const PinnedColumns: Story = {
         }),
       );
       const dividerLayer = shadowLayers[0];
-      const gapLayer = shadowLayers[1];
       const gradientLayer = shadowLayers.find(
-        (layer, index) => index > 1 && layer.blur > 0 && layer.spread < 0,
+        (layer) => layer.blur > 0 && layer.spread < 0,
       );
-      const gapWidth =
-        dividerLayer && gapLayer ? gapLayer.offset - dividerLayer.offset : 0;
+      const solidLayers = shadowLayers.filter(
+        (layer) => layer.blur === 0 && layer.spread === 0,
+      );
 
       if (
         !dividerLayer ||
         dividerLayer.offset !== 1 ||
         dividerLayer.blur !== 0 ||
         dividerLayer.spread !== 0 ||
-        !gapLayer ||
-        gapLayer.blur !== 0 ||
-        gapLayer.spread !== 0 ||
-        gapWidth < 9 ||
-        gapWidth > 11 ||
+        solidLayers.length !== 1 ||
         !gradientLayer ||
-        gradientLayer.offset < gapLayer.offset ||
-        edgeStyles.overflow !== "hidden"
+        gradientLayer.offset < dividerLayer.offset
       ) {
         throw new Error(
-          `Pinned ${label} edge does not expose the visible 1px divider and 10px gap.`,
+          `Pinned ${label} edge must keep only its 1px divider and subtle gradient.`,
         );
       }
+    }
+
+    const firstBodyRow = table.querySelector(
+      "tbody tr:first-child",
+    ) as HTMLTableRowElement;
+    await userEvent.hover(firstBodyRow);
+    const hoverCellBackground =
+      getComputedStyle(firstScrollBodyCell).backgroundColor;
+    if (hoverCellBackground !== "rgba(0, 0, 0, 0)") {
+      throw new Error(
+        "Hover surface is not continuous through the first scroll cell.",
+      );
+    }
+
+    const selectedRow = selectedScrollBodyCell.closest("tr");
+    if (!(selectedRow instanceof HTMLTableRowElement)) {
+      throw new Error("Selected pinned table row is missing.");
+    }
+    const selectedRowBackground = getComputedStyle(selectedRow).backgroundColor;
+    const selectedCellBackground = getComputedStyle(
+      selectedScrollBodyCell,
+    ).backgroundColor;
+    if (
+      selectedRowBackground === "rgba(0, 0, 0, 0)" ||
+      selectedCellBackground !== "rgba(0, 0, 0, 0)"
+    ) {
+      throw new Error(
+        "Selected surface is not continuous through the first scroll cell.",
+      );
     }
     if (
       Math.abs(
