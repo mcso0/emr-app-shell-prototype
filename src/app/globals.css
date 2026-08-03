@@ -515,10 +515,24 @@
 
   .emr-table-surface[data-emr-pinning="columns"]
     [data-emr-column-pinned="left"][data-emr-pinned-edge="true"] {
+    --emr-table-pinned-edge-gap-width: var(--clair-spacing-10);
+    --emr-table-pinned-edge-gap-surface: var(--emr-surface-panel);
     box-shadow:
       1px 0 0 var(--emr-border-default),
-      10px 0 16px -16px
+      calc(var(--emr-table-pinned-edge-gap-width) + 1px) 0 0
+        var(--emr-table-pinned-edge-gap-surface),
+      calc(
+          var(--emr-table-pinned-edge-gap-width) +
+            var(--emr-table-pinned-edge-gap-width)
+        )
+        0 16px -16px
         color-mix(in srgb, var(--emr-text-primary) 55%, transparent);
+  }
+
+  .emr-table-surface[data-emr-pinning="columns"]
+    thead
+    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"] {
+    --emr-table-pinned-edge-gap-surface: var(--emr-surface-muted);
   }
 
   .emr-table-surface[data-emr-pinning="columns"]

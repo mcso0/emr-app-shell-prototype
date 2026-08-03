@@ -205,7 +205,7 @@ export const PinnedColumns: Story = {
               <EmrTableCheckbox aria-label="전체 선택" />
             </EmrTableSelectionHeaderCell>
             <EmrTableHeaderCell
-              className="!p-0"
+              className="!p-0 overflow-hidden"
               identity
               pinned="left"
               pinnedOffset={44}
@@ -231,7 +231,7 @@ export const PinnedColumns: Story = {
               <EmrTableCheckbox aria-label="합성 환자 A 선택" />
             </EmrTableSelectionCell>
             <TableCell
-              className="!p-0"
+              className="!p-0 overflow-hidden"
               pinned="left"
               pinnedOffset={44}
               pinnedEdge
@@ -284,6 +284,12 @@ export const PinnedColumns: Story = {
     const selectedCell = table?.querySelector(
       'tbody tr[data-state="selected"] [data-emr-column-pinned="left"]',
     ) as HTMLTableCellElement | null;
+    const headerPinnedEdge = table?.querySelector(
+      'thead [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
+    ) as HTMLTableCellElement | null;
+    const bodyPinnedEdge = table?.querySelector(
+      'tbody tr:first-child [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
+    ) as HTMLTableCellElement | null;
     const workspace = canvasElement.querySelector(
       '[data-testid="pinned-table-workspace"]',
     ) as HTMLDivElement | null;
@@ -300,6 +306,8 @@ export const PinnedColumns: Story = {
       leftCells.length !== 2 ||
       !rightCell ||
       !selectedCell ||
+      !headerPinnedEdge ||
+      !bodyPinnedEdge ||
       !workspace ||
       !headerIdentity ||
       !rowIdentity
@@ -345,6 +353,48 @@ export const PinnedColumns: Story = {
     }
     if (getComputedStyle(selectedCell).backgroundColor === "rgba(0, 0, 0, 0)") {
       throw new Error("Selected pinned cell has a transparent surface.");
+    }
+    for (const [label, edgeCell] of [
+      ["header", headerPinnedEdge],
+      ["body", bodyPinnedEdge],
+    ] as const) {
+      const edgeStyles = getComputedStyle(edgeCell);
+      const shadowLayers = Array.from(
+        edgeStyles.boxShadow.matchAll(
+          /(-?\d+(?:\.\d+)?)px 0px (-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px/g,
+        ),
+        (match) => ({
+          offset: Number.parseFloat(match[1]),
+          blur: Number.parseFloat(match[2]),
+          spread: Number.parseFloat(match[3]),
+        }),
+      );
+      const dividerLayer = shadowLayers[0];
+      const gapLayer = shadowLayers[1];
+      const gradientLayer = shadowLayers.find(
+        (layer, index) => index > 1 && layer.blur > 0 && layer.spread < 0,
+      );
+      const gapWidth =
+        dividerLayer && gapLayer ? gapLayer.offset - dividerLayer.offset : 0;
+
+      if (
+        !dividerLayer ||
+        dividerLayer.offset !== 1 ||
+        dividerLayer.blur !== 0 ||
+        dividerLayer.spread !== 0 ||
+        !gapLayer ||
+        gapLayer.blur !== 0 ||
+        gapLayer.spread !== 0 ||
+        gapWidth < 9 ||
+        gapWidth > 11 ||
+        !gradientLayer ||
+        gradientLayer.offset < gapLayer.offset ||
+        edgeStyles.overflow !== "hidden"
+      ) {
+        throw new Error(
+          `Pinned ${label} edge does not expose the visible 1px divider and 10px gap.`,
+        );
+      }
     }
     if (
       Math.abs(
