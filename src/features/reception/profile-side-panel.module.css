@@ -544,6 +544,7 @@
 }
 
 .relatedCard {
+  position: relative;
   display: flex;
   min-height: 52px;
   align-items: center;
@@ -557,8 +558,56 @@ button.relatedCard {
   cursor: pointer;
 }
 
-button.relatedCard:hover {
-  background: var(--profile-neutral-50);
+button.relatedCard:hover,
+button.relatedCard:focus-visible {
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+}
+
+.relatedCardAffordanceClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.relatedCardAffordance {
+  position: absolute;
+  bottom: 10px;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  width: 56px;
+  height: 32px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+button.relatedCard:hover .relatedCardAffordance,
+button.relatedCard:focus-visible .relatedCardAffordance {
+  opacity: 1;
+}
+
+.relatedCardAffordanceGradient {
+  width: 24px;
+  height: 32px;
+  flex: 0 0 24px;
+  background: linear-gradient(to right, rgb(255 255 255 / 0%), #fff 100%);
+}
+
+.relatedCardAffordanceFrame {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  background: #fff;
+}
+
+.relatedCardAffordanceFrame svg {
+  width: 16px;
+  height: 16px;
 }
 
 .relatedAvatar {
