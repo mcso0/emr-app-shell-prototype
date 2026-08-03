@@ -10,18 +10,28 @@ import {
 } from "react";
 
 import { CdsActionsPlusIcon, CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
-import { CdsCommunicationMessageSquareIcon } from "@/components/cds-icons/communication-and-media";
+import {
+  CdsCommunicationMailIcon,
+  CdsCommunicationMessageSquareIcon,
+  CdsCommunicationPhoneIcon,
+} from "@/components/cds-icons/communication-and-media";
 import {
   CdsFilesCalendarIcon,
   CdsFilesClockIcon,
   CdsFilesFileTextIcon,
 } from "@/components/cds-icons/files-and-layout";
 import {
+  CdsMedicalFileUserIcon,
+  CdsMedicalNotebookTextIcon,
+  CdsMedicalPawPrintIcon,
+  CdsMedicalScanLineIcon,
+} from "@/components/cds-icons/medical-and-domain";
+import {
   CdsNavigationChevronLeftIcon,
   CdsNavigationChevronRightIcon,
   CdsNavigationSidebarIcon,
 } from "@/components/cds-icons/navigation";
-import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
+import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -30,10 +40,38 @@ import styles from "./profile-side-panel.module.css";
 
 export type ProfileSidePanelTab = "info" | "history" | "reservations" | "billing";
 
+export type ProfileDefinitionIcon =
+  | "calendar"
+  | "clock"
+  | "file-user"
+  | "mail"
+  | "map-pin"
+  | "notebook-text"
+  | "paw-print"
+  | "pet"
+  | "phone"
+  | "scan-line"
+  | "user";
+
 export type ProfileDefinitionRow = {
   label: string;
   value: ReactNode;
+  icon: ProfileDefinitionIcon;
 };
+
+const profileDefinitionIconMap = {
+  calendar: CdsFilesCalendarIcon,
+  clock: CdsFilesClockIcon,
+  "file-user": CdsMedicalFileUserIcon,
+  mail: CdsCommunicationMailIcon,
+  "map-pin": CdsPeopleMapPinIcon,
+  "notebook-text": CdsMedicalNotebookTextIcon,
+  "paw-print": CdsMedicalPawPrintIcon,
+  pet: CdsGnbPetGnbIcon,
+  phone: CdsCommunicationPhoneIcon,
+  "scan-line": CdsMedicalScanLineIcon,
+  user: CdsPeopleUserIcon,
+} satisfies Record<ProfileDefinitionIcon, typeof CdsGnbPetGnbIcon>;
 
 export type ProfileRelatedItem = {
   badge?: string;
@@ -455,15 +493,24 @@ function InformationTab({
               </button>
             ) : null}
             <dl className={cn(styles.sectionBody, styles.definitionList)}>
-              {model.infoRows.map((row) => (
-                <div key={row.label} className={styles.definitionRow}>
-                  <dt className={styles.definitionTerm}>
-                    <span className={styles.definitionMarker} aria-hidden="true" />
-                    {row.label}
-                  </dt>
-                  <dd className={styles.definitionValue}>{row.value}</dd>
-                </div>
-              ))}
+              {model.infoRows.map((row) => {
+                const Icon = profileDefinitionIconMap[row.icon];
+
+                return (
+                  <div key={row.label} className={styles.definitionRow}>
+                    <dt className={styles.definitionTerm}>
+                      <Icon
+                        aria-hidden="true"
+                        className={styles.definitionIcon}
+                        data-profile-definition-icon={row.icon}
+                        size={14}
+                      />
+                      {row.label}
+                    </dt>
+                    <dd className={styles.definitionValue}>{row.value}</dd>
+                  </div>
+                );
+              })}
             </dl>
           </section>
 
