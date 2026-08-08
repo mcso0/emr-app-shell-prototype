@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>워크스페이스 진입 스플래시 구현 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #171717;
+        background: #f5f6f8;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        width: min(920px, calc(100% - 40px));
+        margin: 40px auto;
+      }
+      article {
+        padding: 40px;
+        border: 1px solid #e4e6eb;
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 16px 40px rgb(15 23 42 / 8%);
+      }
+      h1 {
+        margin: 12px 0 8px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 19px;
+      }
+      p,
+      li,
+      th,
+      td {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 11px 13px;
+        border: 1px solid #e4e6eb;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f8fafc;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f1f5f9;
+      }
+      .eyebrow,
+      .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .eyebrow {
+        color: #475569;
+        background: #f1f5f9;
+      }
+      .status {
+        color: #166534;
+        background: #dcfce7;
+      }
+      .lead {
+        max-width: 760px;
+        color: #475569;
+        font-size: 17px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .metric {
+        padding: 18px;
+        border: 1px solid #e4e6eb;
+        border-radius: 14px;
+        background: #fafafa;
+      }
+      .metric strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 24px;
+      }
+      .metric span {
+        color: #64748b;
+        font-size: 13px;
+      }
+      .note {
+        padding: 16px 18px;
+        border-left: 4px solid #64748b;
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+      @media (max-width: 720px) {
+        main {
+          width: min(100% - 24px, 920px);
+          margin: 12px auto;
+        }
+        article {
+          padding: 24px 20px;
+          border-radius: 14px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .table-wrap {
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <span class="eyebrow">DESIGN-SYSTEM-PR-090</span>
+        <h1>워크스페이스 진입 스플래시</h1>
+        <p class="lead">
+          로그인 뒤 업무 화면이 준비되는 짧은 공백을 하나의 일관된 브랜드
+          motion으로 연결했습니다. 로딩이 언제 끝나더라도 로고가 pulse 중간에서
+          갑자기 끊기지 않고 원래 크기와 밝기로 돌아온 뒤 화면이 열립니다.
+        </p>
+        <span class="status">구현 및 핵심 브라우저 검증 완료</span>
+
+        <div class="grid">
+          <div class="metric">
+            <strong>600ms</strong>
+            <span>fade in + scale up</span>
+          </div>
+          <div class="metric">
+            <strong>1.6초</strong>
+            <span>breathing pulse 전체 주기</span>
+          </div>
+          <div class="metric">
+            <strong>180ms</strong>
+            <span>메인 화면 fade 전환</span>
+          </div>
+        </div>
+
+        <h2>무엇이 달라졌나</h2>
+        <ul>
+          <li>흰 배경 중앙에 옅은 회색 CLAiR mark를 표시합니다.</li>
+          <li>로고는 85% 크기에서 진입한 뒤 100%와 92% 사이를 호흡하듯 반복합니다.</li>
+          <li>로딩 완료 신호는 진행 중인 pulse를 끝까지 마친 뒤 반영합니다.</li>
+          <li>업무 화면은 스플래시 아래에 먼저 준비되고, 마지막 180ms 동안 자연스럽게 드러납니다.</li>
+          <li>동작 줄이기 환경에서는 반복 animation 없이 즉시 전환합니다.</li>
+        </ul>
+
+        <h2>적용 범위</h2>
+        <p>
+          이번 구현은 로그인 성공부터 워크스페이스 셸 진입까지만 담당합니다.
+          세션·권한 확인용 skeleton과 각 업무 화면의 데이터 loading 상태는 기존
+          흐름을 유지합니다. 접근 실패 시에도 스플래시가 무한히 남지 않고 기존
+          로그인 또는 오류 화면이 나타납니다.
+        </p>
+
+        <h2>motion 계약</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>구간</th>
+                <th>opacity</th>
+                <th>scale</th>
+                <th>시간·이징</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>진입</td>
+                <td>0 → 1</td>
+                <td>0.85 → 1</td>
+                <td>600ms ease-out</td>
+              </tr>
+              <tr>
+                <td>pulse 한 방향</td>
+                <td>1 ↔ 0.5</td>
+                <td>1 ↔ 0.92</td>
+                <td>800ms ease-in-out</td>
+              </tr>
+              <tr>
+                <td>종료</td>
+                <td>overlay 1 → 0</td>
+                <td>로고 1 유지</td>
+                <td>180ms ease-out</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li>전용 motion·auth Playwright 검증 6개가 통과했습니다.</li>
+          <li>전체 ESLint, Next production build, Storybook static build가 통과했습니다.</li>
+          <li>Storybook에 무한 로딩과 정상 종료 예시가 추가되었습니다.</li>
+          <li>문서 링크, secret, 한국어 UX copy 검사도 통과했습니다.</li>
+        </ul>
+        <p class="note">
+          별도 TypeScript 명령은 이번 작업과 무관한 고객 프로필 test fixture의
+          기존 generic type 오류로 중단됐습니다. Next production build의 TypeScript
+          단계와 이번 변경 대상 lint는 통과했습니다.
+        </p>
+
+        <h2>다음 확인</h2>
+        <p>
+          실제 데스크톱 창에서 제공된 영상과 나란히 비교해 로고의 시각적 중심과
+          호흡 속도를 최종 승인하는 것이 다음 단계입니다. native 앱 시작 창이
+          별도로 생기면 renderer splash와 분리된 lifecycle로 연결해야 합니다.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>
