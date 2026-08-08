@@ -341,6 +341,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CUSTOMER-LIVE-PR-006        | human_review | customer             | P0       | Project 06 / DEN-108 | `docs/work/customer/CUSTOMER-LIVE-PR-006-relationship-management-persistence.md`                       |
 | CUSTOMER-LIVE-PR-007        | human_review | customer             | P0       | Project 06 / DEN-109 | `docs/work/customer/CUSTOMER-LIVE-PR-007-soft-delete-restore-persistence.md`                           |
 | CUSTOMER-LIVE-PR-008        | human_review | customer             | P0       | Project 06 / DEN-110 | `docs/work/customer/CUSTOMER-LIVE-PR-008-customer-management-regression-handoff.md`                    |
+| CUSTOMER-LIVE-PR-009        | human_review | customer             | P0       | User-approved live read projection | `docs/work/customer/CUSTOMER-LIVE-PR-009-profile-tab-live-read-projection.md` |
 | CUSTOMER-PR-002             | in_progress  | customer             | P0       | User request         | `docs/work/customer/CUSTOMER-PR-002-patient-guardian-profile-side-panel.md`                            |
 | CHART-PR-001                | done         | chart                | P1       | PR 1                 | `docs/work/chart/CHART-PR-001-workspace-restructure.md`                                                |
 | CHART-PR-002                | done         | chart                | P1       | PR 2                 | `docs/work/chart/CHART-PR-002-soap-order-scroll-boundary.md`                                           |

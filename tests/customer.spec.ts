@@ -93,6 +93,122 @@ test("Cheongdam customer workspace renders seeded DB patients instead of legacy 
   );
 });
 
+test("prepared profile reads overview first and lazy-loads only the selected live section", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const patientId = "49121000-0000-4000-8000-000000000999";
+  let historyRequests = 0;
+  let reservationRequests = 0;
+
+  await page.route(`**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        patients: [{
+          patient: {
+            id: patientId,
+            workspaceId,
+            patientNo: "CD-P-999",
+            name: "목록 환자",
+            species: "cat",
+            breed: "Siamese",
+            birthDate: "2020-10-30",
+            sex: "female",
+            neutered: true,
+            handlingCautionLocked: true,
+            status: "active",
+            createdAt: "2026-06-12T00:00:00.000Z",
+            updatedAt: "2026-06-12T00:00:00.000Z",
+          },
+          primaryGuardian: null,
+          searchText: "목록 환자 CD-P-999 Siamese",
+        }],
+      }),
+    }),
+  );
+  await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        overview: {
+          subjectType: "patient",
+          subjectId: patientId,
+          profile: {
+            id: patientId,
+            workspaceId,
+            patientNo: "CD-P-999",
+            name: "실데이터 환자",
+            species: "cat",
+            breed: "Siamese",
+            birthDate: "2020-10-30",
+            sex: "female",
+            neutered: true,
+            status: "active",
+            createdAt: "2026-06-12T00:00:00.000Z",
+            updatedAt: "2026-06-12T00:00:00.000Z",
+          },
+          relationships: { guardians: [] },
+          access: {
+            information: { allowed: true, requiredPermission: "patient:view" },
+            history: { allowed: true, requiredPermission: "chart:view" },
+            reservations: { allowed: false, requiredPermission: "reception:view" },
+            billing: { allowed: true, requiredPermission: "billing:view" },
+          },
+        },
+      }),
+    }),
+  );
+  await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview/history?**`, async (route) => {
+    historyRequests += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        section: "history",
+        items: [{
+          id: "encounter-live-1",
+          patientId,
+          patientName: "실데이터 환자",
+          occurredAt: "2026-07-14T09:00:00.000Z",
+          status: "completed",
+          visitPurpose: "검증 방문",
+          clinicianName: "담당 의료진",
+        }],
+        nextCursor: null,
+      }),
+    });
+  });
+  await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview/reservations?**`, async (route) => {
+    reservationRequests += 1;
+    await route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ ok: false, denialReason: "permission_missing" }) });
+  });
+
+  await page.goto(`/w/${workspaceId}/customer?modulePanel=open`);
+  await page.getByText("목록 환자").click();
+  const panel = page.getByTestId("profile-side-panel");
+  await expect(panel.getByRole("heading", { name: "실데이터 환자" })).toBeVisible();
+  await expect(panel.getByRole("tab", { name: "예약" })).toHaveAttribute("aria-disabled", "true");
+  expect(historyRequests).toBe(0);
+
+  await panel.getByRole("tab", { name: "진료 이력" }).click();
+  await expect(panel.getByText("검증 방문")).toBeVisible();
+  expect(historyRequests).toBe(1);
+
+  await expect(panel.getByRole("tab", { name: "예약" })).toHaveAttribute(
+    "title",
+    "reception:view 권한이 필요합니다",
+  );
+  await panel.getByRole("tab", { name: "예약" }).dispatchEvent("click");
+  await expect(panel.getByRole("tab", { name: "진료 이력" })).toHaveAttribute("aria-selected", "true");
+  expect(reservationRequests).toBe(0);
+});
+
 test("customer no-data uses the shared whole-table empty state and screen CTA", async ({
   page,
 }) => {
@@ -2071,4 +2187,17 @@ test("patient and guardian profiles share the right-panel slot and push customer
   expect(guardianRightPanelBox?.x).toBe(rightPanelBox?.x);
   expect(guardianRightPanelBox?.width).toBe(rightPanelBox?.width);
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
+});
+
+test("profile panels keep one scroll-fade viewport", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/customer?modulePanel=open&drawer=patient:patient-coco",
+  );
+
+  const profilePanel = page.getByTestId("profile-side-panel");
+  const viewport = profilePanel.locator('[data-slot="scroll-area-viewport"]');
+
+  await expect(viewport).toHaveCount(1);
+  await expect(viewport).toHaveClass(/scroll-fade-y/);
+  await expect(viewport).toHaveClass(/scroll-fade-8/);
 });

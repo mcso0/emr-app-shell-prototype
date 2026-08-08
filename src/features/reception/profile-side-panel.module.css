@@ -285,6 +285,14 @@
   color: var(--profile-neutral-900);
 }
 
+.tab[aria-disabled="true"] {
+  color: var(--profile-neutral-400);
+}
+
+.tab[aria-disabled="true"] .tabLabel {
+  cursor: not-allowed;
+}
+
 .tab[aria-selected="true"]::after {
   background: var(--profile-neutral-900);
 }
@@ -303,13 +311,14 @@
   position: relative;
   min-height: 0;
   flex: 1 1 auto;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   scrollbar-gutter: stable;
 }
 
-.scrollContent::-webkit-scrollbar {
-  width: 0;
+.scrollContent > [data-slot="scroll-area-viewport"] {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
 }
 
 .infoContent {
@@ -681,17 +690,6 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   text-overflow: ellipsis;
 }
 
-.scrollGradient {
-  position: absolute;
-  right: 1px;
-  bottom: 1px;
-  left: 1px;
-  z-index: 2;
-  height: 48px;
-  pointer-events: none;
-  background: linear-gradient(to bottom, rgb(255 255 255 / 0%), #fff 100%);
-}
-
 .toolbar {
   display: flex;
   width: 100%;
@@ -768,6 +766,29 @@ button.relatedCard:focus-visible .relatedCardAffordance {
 .select:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+.retryButton,
+.loadMoreButton {
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--profile-neutral-700);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.retryButton:hover,
+.loadMoreButton:hover {
+  background: var(--profile-neutral-50);
+}
+
+.loadMoreButton {
+  width: 100%;
 }
 
 .activityList {
