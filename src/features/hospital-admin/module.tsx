@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -203,6 +209,7 @@ type DrawerTab = (typeof drawerTabs)[number]["value"];
 const hospitalOrderTableMinWidthClass = "min-w-[1060px]";
 const hospitalOrderTableMinWidth = 1060;
 const hospitalOrderSelectionColumnWidth = 44;
+const hospitalOrderIdentityColumnWidth = 180;
 const hospitalOrderTableColumnClasses = {
   select: "w-11 min-w-11 max-w-11",
   type: "w-[72px]",
@@ -1891,6 +1898,14 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       data-testid="hospital-admin-order-content"
       identityTextInset={48}
       selectionColumnWidth={hospitalOrderSelectionColumnWidth}
+      data-emr-order-pinned-table="true"
+      style={
+        {
+          "--emr-table-pinned-column-width": `${
+            hospitalOrderSelectionColumnWidth + hospitalOrderIdentityColumnWidth
+          }px`,
+        } as CSSProperties
+      }
     >
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <EmrTableWorkspaceHeader
@@ -2127,7 +2142,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           >
             <colgroup>
               <col style={{ width: hospitalOrderSelectionColumnWidth }} />
-              <col style={{ width: 180 }} />
+              <col style={{ width: hospitalOrderIdentityColumnWidth }} />
               <col style={{ width: 72 }} />
               <col style={{ width: 170 }} />
               <col style={{ width: 160 }} />

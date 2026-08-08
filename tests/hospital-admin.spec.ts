@@ -1712,6 +1712,45 @@ test("hospital admin order table uses shared header and cell text primitives", a
   );
 });
 
+test("hospital admin Order table extends pinned and scroll backgrounds to the table viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const table = page.getByTestId("hospital-order-table");
+  const tableContainer = table.locator("xpath=..");
+  const metrics = await tableContainer.evaluate((element) => {
+    const tableElement = element.querySelector("table");
+    const pinnedCell = tableElement?.querySelector(
+      'tbody [data-emr-column-pinned="left"]',
+    );
+    const containerStyle = getComputedStyle(element);
+
+    if (!tableElement || !pinnedCell) {
+      throw new Error("Order table geometry targets are missing.");
+    }
+
+    return {
+      containerHeight: element.getBoundingClientRect().height,
+      tableHeight: tableElement.getBoundingClientRect().height,
+      pinnedBackground: getComputedStyle(pinnedCell).backgroundColor,
+      scrollBackground: containerStyle.backgroundColor,
+      backgroundImage: containerStyle.backgroundImage,
+      pinnedColumnWidth: getComputedStyle(
+        element.closest("[data-emr-order-pinned-table='true']") ?? element,
+      ).getPropertyValue("--emr-table-pinned-column-width"),
+    };
+  });
+
+  expect(metrics.containerHeight).toBeGreaterThan(metrics.tableHeight);
+  expect(metrics.pinnedBackground).toBe("rgb(255, 255, 255)");
+  expect(metrics.scrollBackground).toBe("rgb(252, 252, 252)");
+  expect(metrics.backgroundImage).toContain("rgb(255, 255, 255)");
+  expect(metrics.backgroundImage).toContain("rgb(252, 252, 252)");
+  expect(metrics.pinnedColumnWidth.trim()).toBe("224px");
+});
+
 test("all hospital admin Order leaves use the pinned standard Order identity table", async ({
   page,
 }) => {

@@ -430,6 +430,17 @@
     scrollbar-gutter: stable;
   }
 
+  [data-emr-order-pinned-table="true"] [data-slot="table-container"] {
+    background-color: #fcfcfc;
+    background-image: linear-gradient(
+      to right,
+      #ffffff 0,
+      #ffffff var(--emr-table-pinned-column-width, 0px),
+      #fcfcfc var(--emr-table-pinned-column-width, 0px),
+      #fcfcfc 100%
+    );
+  }
+
   [data-emr-pinned-table-workspace="true"] {
     --emr-table-identity-text-inset: 0px;
     --emr-table-selection-column-width: 0px;
