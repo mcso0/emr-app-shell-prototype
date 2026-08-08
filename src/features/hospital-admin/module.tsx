@@ -2128,7 +2128,10 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           />
         </EmrTableFeedbackSurface>
       ) : (
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div
+          className="relative min-h-0 flex-1 overflow-hidden"
+          data-emr-order-table-viewport="true"
+        >
           <Table
             aria-label="병원관리 Order 관리 테이블"
             containerClassName="h-full min-h-0 overflow-auto"
