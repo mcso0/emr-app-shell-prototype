@@ -1720,14 +1720,29 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
 
   const table = page.getByTestId("hospital-order-table");
   const tableContainer = table.locator("xpath=..");
-  const metrics = await tableContainer.evaluate((element) => {
-    const tableElement = element.querySelector("table");
+  const tableViewport = tableContainer.locator("xpath=..");
+  await expect(tableViewport).toHaveAttribute(
+    "data-emr-order-table-viewport",
+    "true",
+  );
+  const metrics = await tableViewport.evaluate((element) => {
+    const tableContainerElement = element.querySelector(
+      '[data-slot="table-container"]',
+    );
+    const tableElement = tableContainerElement?.querySelector("table");
     const pinnedCell = tableElement?.querySelector(
       'tbody [data-emr-column-pinned="left"]',
     );
-    const containerStyle = getComputedStyle(element);
+    const containerStyle = tableContainerElement
+      ? getComputedStyle(tableContainerElement)
+      : null;
 
-    if (!tableElement || !pinnedCell) {
+    if (
+      !tableContainerElement ||
+      !tableElement ||
+      !pinnedCell ||
+      !containerStyle
+    ) {
       throw new Error("Order table geometry targets are missing.");
     }
 
@@ -1737,6 +1752,36 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
       pinnedBackground: getComputedStyle(pinnedCell).backgroundColor,
       scrollBackground: containerStyle.backgroundColor,
       backgroundImage: containerStyle.backgroundImage,
+      pinnedDivider: (() => {
+        const dividerStyle = getComputedStyle(element, "::before");
+
+        return {
+          content: dividerStyle.content,
+          position: dividerStyle.position,
+          top: dividerStyle.top,
+          bottom: dividerStyle.bottom,
+          left: dividerStyle.left,
+          width: dividerStyle.width,
+          height: Number.parseFloat(dividerStyle.height),
+          backgroundColor: dividerStyle.backgroundColor,
+          pointerEvents: dividerStyle.pointerEvents,
+        };
+      })(),
+      pinnedEdgeOverlay: (() => {
+        const overlayStyle = getComputedStyle(element, "::after");
+
+        return {
+          content: overlayStyle.content,
+          position: overlayStyle.position,
+          top: overlayStyle.top,
+          bottom: overlayStyle.bottom,
+          left: overlayStyle.left,
+          width: overlayStyle.width,
+          height: Number.parseFloat(overlayStyle.height),
+          backgroundColor: overlayStyle.backgroundColor,
+          pointerEvents: overlayStyle.pointerEvents,
+        };
+      })(),
       pinnedColumnWidth: getComputedStyle(
         element.closest("[data-emr-order-pinned-table='true']") ?? element,
       ).getPropertyValue("--emr-table-pinned-column-width"),
@@ -1748,7 +1793,62 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
   expect(metrics.scrollBackground).toBe("rgb(252, 252, 252)");
   expect(metrics.backgroundImage).toContain("rgb(255, 255, 255)");
   expect(metrics.backgroundImage).toContain("rgb(252, 252, 252)");
+  expect(metrics.pinnedDivider).toMatchObject({
+    content: '""',
+    position: "absolute",
+    top: "0px",
+    bottom: "0px",
+    left: "223px",
+    width: "1px",
+    pointerEvents: "none",
+    backgroundColor: "rgb(212, 212, 212)",
+  });
+  expect(
+    Math.abs(metrics.pinnedDivider.height - metrics.containerHeight),
+  ).toBeLessThanOrEqual(0.5);
+  expect(metrics.pinnedEdgeOverlay).toMatchObject({
+    content: '""',
+    position: "absolute",
+    top: "0px",
+    bottom: "0px",
+    left: "224px",
+    width: "6px",
+    pointerEvents: "none",
+  });
+  expect(metrics.pinnedEdgeOverlay.backgroundColor).toBe(
+    "rgba(0, 0, 0, 0.016)",
+  );
+  expect(
+    Math.abs(metrics.pinnedEdgeOverlay.height - metrics.containerHeight),
+  ).toBeLessThanOrEqual(0.5);
   expect(metrics.pinnedColumnWidth.trim()).toBe("224px");
+
+  const scrollMetrics = await tableContainer.evaluate((element) => {
+    const pinnedCell = element.querySelector(
+      'tbody [data-emr-column-pinned="left"]',
+    );
+    const viewport = element.parentElement;
+
+    if (!pinnedCell || !viewport) {
+      throw new Error("Order table scroll targets are missing.");
+    }
+
+    const pinnedLeftBefore = pinnedCell.getBoundingClientRect().left;
+    element.scrollLeft = element.scrollWidth;
+
+    return {
+      tableScrollLeft: element.scrollLeft,
+      viewportScrollLeft: viewport.scrollLeft,
+      pinnedLeftBefore,
+      pinnedLeftAfter: pinnedCell.getBoundingClientRect().left,
+    };
+  });
+
+  expect(scrollMetrics.tableScrollLeft).toBeGreaterThan(0);
+  expect(scrollMetrics.viewportScrollLeft).toBe(0);
+  expect(
+    Math.abs(scrollMetrics.pinnedLeftAfter - scrollMetrics.pinnedLeftBefore),
+  ).toBeLessThanOrEqual(0.5);
 });
 
 test("all hospital admin Order leaves use the pinned standard Order identity table", async ({
