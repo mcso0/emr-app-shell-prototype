@@ -203,10 +203,40 @@ test("auth gate uses workspace shell skeleton while checking access", () => {
 test("logo loading is scoped to post-login workspace entry", () => {
   const loginForm = readFileSync("src/features/auth/login-form.tsx", "utf8");
   const authGate = readFileSync("src/features/auth/auth-gate.tsx", "utf8");
+  const appShell = readFileSync("src/shell/app-shell.tsx", "utf8");
+  const rootLayout = readFileSync("src/app/layout.tsx", "utf8");
+  const splashProvider = readFileSync(
+    "src/features/auth/workspace-entry-splash-provider.tsx",
+    "utf8"
+  );
 
-  expect(loginForm).toContain("login-workspace-entry-loading");
-  expect(loginForm).toContain("WorkspaceEntryLoadingScreen");
+  expect(loginForm).toContain("beginWorkspaceEntrySplash");
+  expect(loginForm).not.toContain("WorkspaceEntryLoadingScreen");
+  expect(rootLayout).toContain("WorkspaceEntrySplashProvider");
+  expect(splashProvider).toContain("login-workspace-entry-loading");
+  expect(appShell).toContain("completeWorkspaceEntrySplash");
+  expect(authGate).toContain("completeWorkspaceEntrySplash");
   expect(authGate).not.toContain("WorkspaceEntryLoadingScreen");
+});
+
+test("post-login workspace entry shows and completes the branded splash", async ({ page }) => {
+  await page.goto("/login?next=%2Fw%2Fclair-demo%2Fbilling");
+
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+
+  const splash = page.getByTestId("login-workspace-entry-loading");
+  const splashLogo = splash.locator('[data-splash-logo="true"]');
+
+  await expect(splash).toBeVisible();
+  await expect(splash).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(splashLogo.locator("svg")).toHaveCSS("color", "rgb(199, 204, 209)");
+  await expect(splashLogo.locator("svg")).toHaveAttribute("width", "128");
+  await expect(splashLogo.locator("svg")).toHaveAttribute("height", "128");
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
+  await expect(splash).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "수납", exact: true })).toBeVisible();
 });
 
 test("root starts at login", async ({ page }) => {

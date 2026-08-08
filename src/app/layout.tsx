@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { WorkspaceEntrySplashProvider } from "@/features/auth/workspace-entry-splash-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -36,8 +37,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <TooltipProvider>
-          {children}
-          <Toaster position="top-right" visibleToasts={3} />
+          <WorkspaceEntrySplashProvider>
+            {children}
+            <Toaster position="top-right" visibleToasts={3} />
+          </WorkspaceEntrySplashProvider>
         </TooltipProvider>
       </body>
     </html>
