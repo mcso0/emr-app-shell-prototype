@@ -34,6 +34,7 @@ import {
 import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 import styles from "./profile-side-panel.module.css";
@@ -117,6 +118,24 @@ export type ProfileBillingItem = ProfileHistoryItem & {
   paymentLabel: string;
 };
 
+export type ProfileTabAccess = {
+  allowed: boolean;
+  disabledReason?: string;
+  requiredPermission: string;
+};
+
+export type ProfileTabState = {
+  errorStatus?: number;
+  nextCursor?: string | null;
+  status: "idle" | "loading" | "ready" | "error" | "denied" | "not_found";
+};
+
+export type ProfileTabFilter = {
+  month?: string;
+  months?: 6 | 12;
+  patientId?: string;
+};
+
 export type ProfileSidePanelModel = {
   avatarAlt: string;
   avatarSrc?: string;
@@ -140,12 +159,16 @@ type ProfileSidePanelProps = {
   embedded?: boolean;
   editing?: boolean;
   model: ProfileSidePanelModel;
+  onLoadSection?: (section: ProfileSidePanelTab, filter?: ProfileTabFilter, append?: boolean) => void;
   onBeginEdit?: () => void;
   onCancelEdit?: () => void;
   onClose: () => void;
   onHeaderAction: (action: "message" | "reception") => void;
   onOpenRelated?: (item: ProfileRelatedItem) => void;
+  onRetryOverview?: () => void;
   onSaveEdit?: () => void;
+  sectionStates?: Partial<Record<ProfileSidePanelTab, ProfileTabState>>;
+  tabAccess?: Partial<Record<ProfileSidePanelTab, ProfileTabAccess>>;
   saving?: boolean;
 };
 
@@ -271,12 +294,14 @@ function ProfileHeader({
   model,
   onClose,
   onHeaderAction,
+  tabAccess,
   onTabChange,
 }: {
   activeTab: ProfileSidePanelTab;
   model: ProfileSidePanelModel;
   onClose: () => void;
   onHeaderAction: ProfileSidePanelProps["onHeaderAction"];
+  tabAccess?: ProfileSidePanelProps["tabAccess"];
   onTabChange: (tab: ProfileSidePanelTab) => void;
 }) {
   const tabRefs = useRef<Partial<Record<ProfileSidePanelTab, HTMLButtonElement | null>>>({});
@@ -354,25 +379,35 @@ function ProfileHeader({
         </button>
       </div>
       <div className={styles.tabs} role="tablist" aria-label={`${firstLabel} 탭`}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            ref={(node) => {
-              tabRefs.current[tab.value] = node;
-            }}
-            type="button"
-            id={`profile-tab-${tab.value}`}
-            role="tab"
-            aria-controls={`profile-tabpanel-${tab.value}`}
-            aria-selected={activeTab === tab.value}
-            className={styles.tab}
-            tabIndex={activeTab === tab.value ? 0 : -1}
-            onClick={() => onTabChange(tab.value)}
-            onKeyDown={(event) => onTabKeyDown(event, tab.value)}
-          >
-            <span className={styles.tabLabel}>{tab.label}</span>
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const access = tabAccess?.[tab.value];
+          const disabledReason = access?.allowed === false
+            ? access.disabledReason ?? `${access.requiredPermission} 권한이 필요합니다`
+            : undefined;
+
+          return (
+            <button
+              key={tab.value}
+              ref={(node) => {
+                tabRefs.current[tab.value] = node;
+              }}
+              type="button"
+              id={`profile-tab-${tab.value}`}
+              role="tab"
+              aria-controls={`profile-tabpanel-${tab.value}`}
+              aria-selected={activeTab === tab.value}
+              aria-disabled={access?.allowed === false ? true : undefined}
+              aria-label={disabledReason ? `${tab.label}, ${disabledReason}` : undefined}
+              title={disabledReason}
+              className={styles.tab}
+              tabIndex={activeTab === tab.value ? 0 : -1}
+              onClick={() => onTabChange(tab.value)}
+              onKeyDown={(event) => onTabKeyDown(event, tab.value)}
+            >
+              <span className={styles.tabLabel}>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
     </header>
   );
@@ -461,14 +496,32 @@ function InformationTab({
   editContent,
   editing,
   model,
+  overviewState,
   onBeginEdit,
   onOpenRelated,
+  onRetryOverview,
 }: Pick<
   ProfileSidePanelProps,
-  "editContent" | "editing" | "model" | "onBeginEdit" | "onOpenRelated"
->) {
+  "editContent" | "editing" | "model" | "onBeginEdit" | "onOpenRelated" | "onRetryOverview"
+> & { overviewState?: ProfileTabState }) {
+  if (overviewState && overviewState.status !== "ready") {
+    const label = overviewState.status === "loading"
+      ? "프로필 정보를 불러오는 중입니다."
+      : overviewState.status === "denied"
+        ? "프로필 정보를 볼 권한이 없습니다."
+        : overviewState.status === "not_found"
+          ? "프로필 정보를 찾을 수 없습니다."
+          : "프로필 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
+
+    return (
+      <ScrollArea className={cn(styles.scrollContent, styles.infoContent)} viewportClassName="scroll-fade-y scroll-fade-8">
+        <PanelState label={label} actionLabel={overviewState.status === "error" ? "다시 시도" : undefined} onAction={onRetryOverview} />
+      </ScrollArea>
+    );
+  }
+
   return (
-    <div className={cn(styles.scrollContent, styles.infoContent)}>
+    <ScrollArea className={cn(styles.scrollContent, styles.infoContent)} viewportClassName="scroll-fade-y scroll-fade-8">
       {model.today ? (
         <>
           <section className={styles.infoSection}>
@@ -561,7 +614,7 @@ function InformationTab({
           ) : null}
         </>
       )}
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -587,12 +640,48 @@ function EmptyTab({ kind }: { kind: ProfileSidePanelTab }) {
   );
 }
 
+function PanelState({
+  actionLabel,
+  label,
+  onAction,
+}: {
+  actionLabel?: string;
+  label: string;
+  onAction?: () => void;
+}) {
+  return (
+    <div className={styles.emptyState} role="status">
+      <span className={styles.emptyIcon} aria-hidden="true"><CdsFilesFileTextIcon /></span>
+      <p>{label}</p>
+      {onAction && actionLabel ? (
+        <button type="button" className={styles.retryButton} onClick={onAction}>{actionLabel}</button>
+      ) : null}
+    </div>
+  );
+}
+
+function LoadMoreButton({ onClick }: { onClick?: () => void }) {
+  return (
+    <button type="button" className={styles.loadMoreButton} onClick={onClick}>
+      더 보기
+    </button>
+  );
+}
+
 function ReservationsTab({
   initialMonth,
   items,
+  onFilterChange,
+  onLoadMore,
+  onRetry,
+  state,
 }: {
   initialMonth?: string;
   items: ProfileReservationItem[];
+  onFilterChange?: (filter: ProfileTabFilter) => void;
+  onLoadMore?: (filter?: ProfileTabFilter) => void;
+  onRetry?: () => void;
+  state?: ProfileTabState;
 }) {
   const [monthKey, setMonthKey] = useState(() => initialMonth ?? getInitialMonth(items));
   const visibleItems = useMemo(
@@ -608,15 +697,34 @@ function ReservationsTab({
     [items, monthKey],
   );
 
+  if (state && state.status !== "ready") {
+    const label = state.status === "loading" || state.status === "idle"
+      ? "예약 일정을 불러오는 중입니다."
+      : state.status === "denied"
+        ? "예약 정보를 볼 권한이 없습니다."
+        : state.status === "not_found"
+          ? "프로필 정보를 찾을 수 없습니다."
+          : "예약 일정을 불러오지 못했습니다.";
+    return (
+      <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+        <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
+      </ScrollArea>
+    );
+  }
+
   return (
-    <div className={styles.scrollContent}>
+    <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
       <div className={styles.toolbar}>
         <div className={styles.monthNavigator}>
           <button
             type="button"
             aria-label="이전 달"
             className={styles.monthButton}
-            onClick={() => setMonthKey((current) => shiftMonth(current, -1))}
+            onClick={() => setMonthKey((current) => {
+              const next = shiftMonth(current, -1);
+              onFilterChange?.({ month: next });
+              return next;
+            })}
           >
             <CdsNavigationChevronLeftIcon aria-hidden="true" />
           </button>
@@ -624,7 +732,11 @@ function ReservationsTab({
             type="button"
             aria-label="다음 달"
             className={styles.monthButton}
-            onClick={() => setMonthKey((current) => shiftMonth(current, 1))}
+            onClick={() => setMonthKey((current) => {
+              const next = shiftMonth(current, 1);
+              onFilterChange?.({ month: next });
+              return next;
+            })}
           >
             <CdsNavigationChevronRightIcon aria-hidden="true" />
           </button>
@@ -652,11 +764,12 @@ function ReservationsTab({
               </div>
             </div>
           ))}
+          {state?.nextCursor ? <LoadMoreButton onClick={() => onLoadMore?.({ month: monthKey })} /> : null}
         </div>
       ) : (
         <EmptyTab kind="reservations" />
       )}
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -690,7 +803,21 @@ function ActivityCard({ item }: { item: ProfileHistoryItem }) {
   );
 }
 
-function HistoryTab({ items, kind }: { items: ProfileHistoryItem[]; kind: ProfileSidePanelModel["kind"] }) {
+function HistoryTab({
+  items,
+  kind,
+  onFilterChange,
+  onLoadMore,
+  onRetry,
+  state,
+}: {
+  items: ProfileHistoryItem[];
+  kind: ProfileSidePanelModel["kind"];
+  onFilterChange?: (filter: ProfileTabFilter) => void;
+  onLoadMore?: (filter?: ProfileTabFilter) => void;
+  onRetry?: () => void;
+  state?: ProfileTabState;
+}) {
   const [months, setMonths] = useState(6);
   const patientOptions = useMemo(
     () =>
@@ -708,8 +835,23 @@ function HistoryTab({ items, kind }: { items: ProfileHistoryItem[]; kind: Profil
   );
   const groups = useMemo(() => getDateGroups(visibleItems), [visibleItems]);
 
+  if (state && state.status !== "ready") {
+    const label = state.status === "loading" || state.status === "idle"
+      ? "진료 이력을 불러오는 중입니다."
+      : state.status === "denied"
+        ? "진료 이력을 볼 권한이 없습니다."
+        : state.status === "not_found"
+          ? "프로필 정보를 찾을 수 없습니다."
+          : "진료 이력을 불러오지 못했습니다.";
+    return (
+      <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+        <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
+      </ScrollArea>
+    );
+  }
+
   return (
-    <div className={styles.scrollContent}>
+    <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
       <div className={styles.toolbar}>
         <div className={styles.toolbarStart}>
           전체 진료 이력 <span className={styles.countBadge}>{visibleItems.length}</span>
@@ -720,7 +862,11 @@ function HistoryTab({ items, kind }: { items: ProfileHistoryItem[]; kind: Profil
               className={styles.select}
               aria-label="진료 이력 환자 필터"
               value={patientId}
-              onChange={(event) => setPatientId(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setPatientId(next);
+                onFilterChange?.({ months: months as 6 | 12, patientId: next === "all" ? undefined : next });
+              }}
             >
               <option value="all">전체</option>
               {patientOptions.map(([id, name]) => (
@@ -732,7 +878,11 @@ function HistoryTab({ items, kind }: { items: ProfileHistoryItem[]; kind: Profil
             className={styles.select}
             aria-label="진료 이력 조회 기간"
             value={months}
-            onChange={(event) => setMonths(Number(event.target.value))}
+            onChange={(event) => {
+              const next = Number(event.target.value) as 6 | 12;
+              setMonths(next);
+                onFilterChange?.({ months: next as 6 | 12, patientId: patientId === "all" ? undefined : patientId });
+            }}
           >
             <option value="6">6개월</option>
             <option value="12">12개월</option>
@@ -747,11 +897,12 @@ function HistoryTab({ items, kind }: { items: ProfileHistoryItem[]; kind: Profil
               {group.items.map((item) => <ActivityCard key={item.id} item={item} />)}
             </section>
           ))}
+          {state?.nextCursor ? <LoadMoreButton onClick={() => onLoadMore?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} /> : null}
         </div>
       ) : (
         <EmptyTab kind="history" />
       )}
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -789,7 +940,21 @@ function BillingCard({ item }: { item: ProfileBillingItem }) {
   );
 }
 
-function BillingTab({ items, kind }: { items: ProfileBillingItem[]; kind: ProfileSidePanelModel["kind"] }) {
+function BillingTab({
+  items,
+  kind,
+  onFilterChange,
+  onLoadMore,
+  onRetry,
+  state,
+}: {
+  items: ProfileBillingItem[];
+  kind: ProfileSidePanelModel["kind"];
+  onFilterChange?: (filter: ProfileTabFilter) => void;
+  onLoadMore?: (filter?: ProfileTabFilter) => void;
+  onRetry?: () => void;
+  state?: ProfileTabState;
+}) {
   const [months, setMonths] = useState(6);
   const patientOptions = useMemo(
     () =>
@@ -807,8 +972,23 @@ function BillingTab({ items, kind }: { items: ProfileBillingItem[]; kind: Profil
   );
   const groups = useMemo(() => getDateGroups(visibleItems), [visibleItems]);
 
+  if (state && state.status !== "ready") {
+    const label = state.status === "loading" || state.status === "idle"
+      ? "수납 이력을 불러오는 중입니다."
+      : state.status === "denied"
+        ? "수납 정보를 볼 권한이 없습니다."
+        : state.status === "not_found"
+          ? "프로필 정보를 찾을 수 없습니다."
+          : "수납 이력을 불러오지 못했습니다.";
+    return (
+      <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+        <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
+      </ScrollArea>
+    );
+  }
+
   return (
-    <div className={styles.scrollContent}>
+    <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
       <div className={styles.toolbar}>
         <div className={styles.toolbarStart}>
           전체 수납 이력 <span className={styles.countBadge}>{visibleItems.length}</span>
@@ -819,7 +999,11 @@ function BillingTab({ items, kind }: { items: ProfileBillingItem[]; kind: Profil
               className={styles.select}
               aria-label="수납 이력 환자 필터"
               value={patientId}
-              onChange={(event) => setPatientId(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setPatientId(next);
+                onFilterChange?.({ months: months as 6 | 12, patientId: next === "all" ? undefined : next });
+              }}
             >
               <option value="all">전체</option>
               {patientOptions.map(([id, name]) => (
@@ -831,7 +1015,11 @@ function BillingTab({ items, kind }: { items: ProfileBillingItem[]; kind: Profil
             className={styles.select}
             aria-label="수납 이력 조회 기간"
             value={months}
-            onChange={(event) => setMonths(Number(event.target.value))}
+            onChange={(event) => {
+              const next = Number(event.target.value) as 6 | 12;
+              setMonths(next);
+                onFilterChange?.({ months: next as 6 | 12, patientId: patientId === "all" ? undefined : patientId });
+            }}
           >
             <option value="6">6개월</option>
             <option value="12">12개월</option>
@@ -846,11 +1034,12 @@ function BillingTab({ items, kind }: { items: ProfileBillingItem[]; kind: Profil
               {group.items.map((item) => <BillingCard key={item.id} item={item} />)}
             </section>
           ))}
+          {state?.nextCursor ? <LoadMoreButton onClick={() => onLoadMore?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} /> : null}
         </div>
       ) : (
         <EmptyTab kind="billing" />
       )}
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -864,11 +1053,23 @@ export function ProfileSidePanel({
   onCancelEdit,
   onClose,
   onHeaderAction,
+  onLoadSection,
   onOpenRelated,
+  onRetryOverview,
   onSaveEdit,
   saving = false,
+  sectionStates,
+  tabAccess,
 }: ProfileSidePanelProps) {
   const [activeTab, setActiveTab] = useState<ProfileSidePanelTab>(defaultTab);
+
+  const changeTab = (tab: ProfileSidePanelTab) => {
+    if (tabAccess?.[tab]?.allowed === false) return;
+    setActiveTab(tab);
+    if (tab === "history") onLoadSection?.("history", { months: 6 });
+    if (tab === "billing") onLoadSection?.("billing", { months: 6 });
+    if (tab === "reservations") onLoadSection?.("reservations", { month: model.reservationMonth ?? getInitialMonth(model.reservations) });
+  };
 
   useEffect(() => {
     const closeOnEscape = (event: globalThis.KeyboardEvent) => {
@@ -893,7 +1094,8 @@ export function ProfileSidePanel({
         model={model}
         onClose={onClose}
         onHeaderAction={onHeaderAction}
-        onTabChange={setActiveTab}
+        onTabChange={changeTab}
+        tabAccess={tabAccess}
       />
       <div
         id={`profile-tabpanel-${activeTab}`}
@@ -907,15 +1109,42 @@ export function ProfileSidePanel({
             editContent={editContent}
             editing={editing}
             model={model}
+            overviewState={sectionStates?.info}
             onBeginEdit={onBeginEdit}
             onOpenRelated={onOpenRelated}
+            onRetryOverview={onRetryOverview}
           />
         ) : null}
         {activeTab === "reservations" ? (
-          <ReservationsTab initialMonth={model.reservationMonth} items={model.reservations} />
+          <ReservationsTab
+            initialMonth={model.reservationMonth}
+            items={model.reservations}
+            onFilterChange={(filter) => onLoadSection?.("reservations", filter)}
+            onLoadMore={(filter) => onLoadSection?.("reservations", filter ?? { month: model.reservationMonth }, true)}
+            onRetry={() => onLoadSection?.("reservations", { month: model.reservationMonth }, false)}
+            state={sectionStates?.reservations}
+          />
         ) : null}
-        {activeTab === "history" ? <HistoryTab items={model.history} kind={model.kind} /> : null}
-        {activeTab === "billing" ? <BillingTab items={model.billing} kind={model.kind} /> : null}
+        {activeTab === "history" ? (
+          <HistoryTab
+            items={model.history}
+            kind={model.kind}
+            onFilterChange={(filter) => onLoadSection?.("history", filter)}
+            onLoadMore={(filter) => onLoadSection?.("history", filter ?? { months: 6 }, true)}
+            onRetry={() => onLoadSection?.("history", { months: 6 }, false)}
+            state={sectionStates?.history}
+          />
+        ) : null}
+        {activeTab === "billing" ? (
+          <BillingTab
+            items={model.billing}
+            kind={model.kind}
+            onFilterChange={(filter) => onLoadSection?.("billing", filter)}
+            onLoadMore={(filter) => onLoadSection?.("billing", filter ?? { months: 6 }, true)}
+            onRetry={() => onLoadSection?.("billing", { months: 6 }, false)}
+            state={sectionStates?.billing}
+          />
+        ) : null}
       </div>
       {activeTab === "info" && editing ? (
         <div className={styles.editFooter}>
@@ -923,7 +1152,6 @@ export function ProfileSidePanel({
           <Button type="button" onClick={onSaveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
         </div>
       ) : null}
-      {activeTab === "info" && !editing ? <div className={styles.scrollGradient} aria-hidden="true" /> : null}
     </section>
   );
 }
