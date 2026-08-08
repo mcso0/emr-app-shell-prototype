@@ -908,6 +908,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "max-width",
     "1024px",
   );
+  await expect(lockedState).toHaveClass(/scroll-fade-y/);
+  await expect(lockedState).toHaveClass(/scroll-fade-8/);
+  await expect(lockedState).toHaveCSS("overflow-y", "auto");
   await expect(lockedState).toContainText("진료 대기");
   await expect(lockedState).toContainText("차트번호 E-260625-0001");
   await expect(lockedState).toContainText("초코");
