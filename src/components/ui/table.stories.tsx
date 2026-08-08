@@ -164,11 +164,88 @@ export const ScrollLayout: Story = {
     layout: "scroll",
     minWidth: 840,
   },
+  play: async ({ canvasElement }) => {
+    const table = canvasElement.querySelector("table");
+    const container = table?.parentElement;
+    if (!container) {
+      throw new Error(
+        "Scroll layout story did not render its scroll container.",
+      );
+    }
+
+    const styles = getComputedStyle(container);
+    if (
+      styles.overscrollBehaviorX !== "none" ||
+      styles.overscrollBehaviorY !== "auto"
+    ) {
+      throw new Error(
+        "The default scroll table must block horizontal overscroll without trapping vertical page scroll.",
+      );
+    }
+  },
   parameters: {
     docs: {
       description: {
         story:
           "사용할 때: column 수가 많아 최소 너비를 유지해야 할 때. 쓰지 말아야 할 때: 작은 표를 불필요하게 가로 스크롤로 숨길 때.",
+      },
+    },
+  },
+};
+
+export const BothAxisOverscroll: Story = {
+  render: () => (
+    <Table
+      containerClassName="max-h-32 overflow-auto"
+      data-testid="both-axis-overscroll-table"
+      layout="scroll"
+      minWidth={840}
+      overscrollAxes="both"
+    >
+      <TableHeader>
+        <TableRow>
+          <TableHead>영역</TableHead>
+          <TableHead>담당</TableHead>
+          <TableHead>상태</TableHead>
+          <TableHead>예정</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {Array.from({ length: 8 }, (_, index) => (
+          <TableRow key={index}>
+            <TableCell>샘플 영역 {index + 1}</TableCell>
+            <TableCell>샘플 담당</TableCell>
+            <TableCell>대기</TableCell>
+            <TableCell>09:{String(index).padStart(2, "0")}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  ),
+  play: async ({ canvasElement }) => {
+    const table = canvasElement.querySelector(
+      '[data-testid="both-axis-overscroll-table"]',
+    );
+    const container = table?.parentElement;
+    if (!container) {
+      throw new Error("Both-axis story did not render its scroll container.");
+    }
+
+    const styles = getComputedStyle(container);
+    if (
+      styles.overscrollBehaviorX !== "none" ||
+      styles.overscrollBehaviorY !== "none"
+    ) {
+      throw new Error(
+        "Both-axis table overscroll must be blocked on both axes.",
+      );
+    }
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "세로·가로 스크롤을 모두 테이블이 소유하는 경우에만 두 축을 차단하는 재사용 API 예시.",
       },
     },
   },

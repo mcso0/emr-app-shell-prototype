@@ -883,6 +883,9 @@ test("customer patient table keeps animal identity pinned while data columns scr
   );
   expect(horizontalOverflowOwners).toEqual(["table-container"]);
 
+  await expect(scrollContainer).toHaveCSS("overscroll-behavior-x", "none");
+  await expect(scrollContainer).toHaveCSS("overscroll-behavior-y", "none");
+
   await page.setViewportSize({ width: 1900, height: 1024 });
   await scrollContainer.evaluate((container) => {
     container.scrollLeft = 600;
@@ -1861,6 +1864,16 @@ test("customer archive table pins identity and restores through the existing tar
   expect(Math.abs(headerBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(rowBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(footerBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+
+  const archiveScrollContainer = table.locator("xpath=..");
+  await expect(archiveScrollContainer).toHaveCSS(
+    "overscroll-behavior-x",
+    "none",
+  );
+  await expect(archiveScrollContainer).toHaveCSS(
+    "overscroll-behavior-y",
+    "none",
+  );
 
   await row.getByRole("button", { name: "망고 복원" }).click();
   await expect(row).toHaveCount(0);
