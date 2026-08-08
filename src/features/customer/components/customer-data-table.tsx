@@ -770,6 +770,7 @@ export function CustomerDataTable<
             density={density}
             layout="scroll"
             minWidth={minTableWidth}
+            overscrollAxes="both"
             pinning={pinnedColumnId ? "columns" : "none"}
             className="table-fixed"
           >

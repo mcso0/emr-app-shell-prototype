@@ -343,6 +343,7 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
             density="standard"
             layout="scroll"
             minWidth={customerArchiveTableMinWidth}
+            overscrollAxes="both"
             pinning="columns"
             className="table-fixed"
           >

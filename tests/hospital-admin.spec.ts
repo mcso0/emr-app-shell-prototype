@@ -1768,6 +1768,17 @@ test("all hospital admin Order leaves use the pinned standard Order identity tab
       "data-emr-pinning",
       "columns",
     );
+    const orderTableContainer = page
+      .getByTestId("hospital-order-table")
+      .locator("xpath=..");
+    await expect(orderTableContainer).toHaveCSS(
+      "overscroll-behavior-x",
+      "none",
+    );
+    await expect(orderTableContainer).toHaveCSS(
+      "overscroll-behavior-y",
+      "none",
+    );
     await expect(
       page
         .getByTestId("hospital-order-table")

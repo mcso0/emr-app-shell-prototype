@@ -2121,6 +2121,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             density={tableDensity}
             layout="scroll"
             minWidth={hospitalOrderTableMinWidth}
+            overscrollAxes="both"
             pinning="columns"
             className={cn(hospitalOrderTableMinWidthClass, "table-fixed")}
           >

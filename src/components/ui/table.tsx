@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 
 export type TablePinningMode = "none" | "columns"
 export type TablePinnedSide = "left" | "right"
+export type TableOverscrollAxes = "none" | "horizontal" | "vertical" | "both"
 
 export type TablePinnedCellOptions = {
   pinned?: TablePinnedSide
@@ -24,6 +25,7 @@ type TableProps = React.ComponentProps<"table"> & {
   density?: EmrTableDensity
   layout?: EmrTableLayout
   minWidth?: number | string
+  overscrollAxes?: TableOverscrollAxes
   pinning?: TablePinningMode
 }
 
@@ -59,11 +61,22 @@ function Table({
   density = defaultEmrTableDensity,
   layout = defaultEmrTableLayout,
   minWidth,
+  overscrollAxes,
   pinning = "none",
   style,
   ...props
 }: TableProps) {
   const tableMinWidth = toTableWidth(minWidth)
+  const resolvedOverscrollAxes =
+    overscrollAxes ?? (layout === "scroll" ? "horizontal" : "none")
+  const overscrollClassName = cn(
+    (resolvedOverscrollAxes === "horizontal" ||
+      resolvedOverscrollAxes === "both") &&
+      "overscroll-x-none",
+    (resolvedOverscrollAxes === "vertical" ||
+      resolvedOverscrollAxes === "both") &&
+      "overscroll-y-none",
+  )
 
   return (
     <div
@@ -72,6 +85,7 @@ function Table({
       className={cn(
         "relative w-full",
         layout === "scroll" ? "emr-table-scroll-container overflow-x-auto" : "overflow-x-auto",
+        overscrollClassName,
         containerClassName
       )}
     >
