@@ -644,6 +644,7 @@ test("customer patient table keeps animal identity pinned while data columns scr
   page,
 }) => {
   await page.setViewportSize({ width: 1900, height: 1024 });
+  await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
 
   const patientSection = page.getByTestId("customer-patient-table");
@@ -651,6 +652,15 @@ test("customer patient table keeps animal identity pinned while data columns scr
     name: "동물 고객관리 테이블",
   });
   const scrollContainer = patientTable.locator("xpath=..");
+  const pinnedViewport = patientSection.locator(
+    '[data-emr-pinned-table-viewport="true"]',
+  );
+  const pinnedDimmer = pinnedViewport.locator(
+    '[data-emr-pinned-table-dimmer="true"]',
+  );
+  const pinnedDivider = pinnedViewport.locator(
+    '[data-emr-pinned-table-divider="true"]',
+  );
   const animalHeader = patientTable.locator(
     'th[data-customer-column-key="name"]',
   );
@@ -903,39 +913,75 @@ test("customer patient table keeps animal identity pinned while data columns scr
     expect(styles.paddingInlineStart, `${label} content padding`).toBe("0px");
   }
 
-  const edgeShadows = await Promise.all(
+  const edgeStyles = await Promise.all(
     [pinnedHeaderEdge, firstPinnedBodyEdge].map((edge) =>
       edge.evaluate((element) => {
-        const layers = Array.from(
-          getComputedStyle(element).boxShadow.matchAll(
-            /(-?\d+(?:\.\d+)?)px 0px (-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px/g,
-          ),
-          (match) => ({
-            offset: Number.parseFloat(match[1]),
-            blur: Number.parseFloat(match[2]),
-            spread: Number.parseFloat(match[3]),
-          }),
-        );
         return {
-          solid: layers.filter(
-            (layer) => layer.blur === 0 && layer.spread === 0,
-          ),
-          blur: layers.filter(
-            (layer) => layer.blur > 0 || layer.spread < 0,
-          ),
+          boxShadow: getComputedStyle(element).boxShadow,
         };
       }),
     ),
   );
-  for (const [label, shadow] of [
-    ["header", edgeShadows[0]],
-    ["body", edgeShadows[1]],
+  for (const [label, styles] of [
+    ["header", edgeStyles[0]],
+    ["body", edgeStyles[1]],
   ] as const) {
-    expect(shadow.solid, `${label} edge layers`).toHaveLength(2);
-    expect(shadow.solid[0].offset, `${label} divider offset`).toBe(1);
-    expect(shadow.solid[1].offset, `${label} dimmed gap offset`).toBe(11);
-    expect(shadow.blur, `${label} blur layers`).toHaveLength(0);
+    expect(styles.boxShadow, `${label} edge shadow`).toBe("none");
   }
+
+  const boundaryStyles = await pinnedViewport.evaluate((viewport) => {
+    const dimmer = viewport.querySelector(
+      '[data-emr-pinned-table-dimmer="true"]',
+    );
+    const divider = viewport.querySelector(
+      '[data-emr-pinned-table-divider="true"]',
+    );
+    if (!(dimmer instanceof HTMLElement) || !(divider instanceof HTMLElement)) {
+      throw new Error("Pinned boundary layers are missing.");
+    }
+    const dimmerStyle = getComputedStyle(dimmer);
+    const dividerStyle = getComputedStyle(divider);
+    return {
+      pinnedColumnWidth: getComputedStyle(viewport)
+        .getPropertyValue("--emr-table-pinned-column-width")
+        .trim(),
+      dimmer: {
+        backgroundColor: dimmerStyle.backgroundColor,
+        boxShadow: dimmerStyle.boxShadow,
+        opacity: dimmerStyle.opacity,
+        pointerEvents: dimmerStyle.pointerEvents,
+        position: dimmerStyle.position,
+        width: dimmerStyle.width,
+        zIndex: Number.parseInt(dimmerStyle.zIndex, 10),
+      },
+      divider: {
+        backgroundColor: dividerStyle.backgroundColor,
+        pointerEvents: dividerStyle.pointerEvents,
+        position: dividerStyle.position,
+        width: dividerStyle.width,
+        zIndex: Number.parseInt(dividerStyle.zIndex, 10),
+      },
+    };
+  });
+  expect(boundaryStyles.pinnedColumnWidth).toBe("228px");
+  expect(boundaryStyles.dimmer).toMatchObject({
+    backgroundColor: "rgb(0, 0, 0)",
+    boxShadow: "none",
+    opacity: "0.4",
+    pointerEvents: "none",
+    position: "absolute",
+    width: "10px",
+  });
+  expect(boundaryStyles.dimmer.zIndex).toBeGreaterThan(12);
+  expect(boundaryStyles.divider).toMatchObject({
+    pointerEvents: "none",
+    position: "absolute",
+    width: "1px",
+  });
+  expect(boundaryStyles.divider.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(boundaryStyles.divider.zIndex).toBeGreaterThan(
+    boundaryStyles.dimmer.zIndex,
+  );
 
   for (const width of [1900, 1440, 1280, 1024]) {
     await page.setViewportSize({ width, height: 1024 });
@@ -960,23 +1006,32 @@ test("customer patient table keeps animal identity pinned while data columns scr
         .toBe(0);
     }
     const [
+      viewportBox,
       containerBox,
       selectionHeaderBox,
       pinnedHeaderBox,
+      dimmerBox,
+      dividerBox,
       documentOverflow,
     ] = await Promise.all([
+      pinnedViewport.boundingBox(),
       scrollContainer.boundingBox(),
       selectionHeader.boundingBox(),
       animalHeader.boundingBox(),
+      pinnedDimmer.boundingBox(),
+      pinnedDivider.boundingBox(),
       page.evaluate(
         () =>
           document.documentElement.scrollWidth -
           document.documentElement.clientWidth,
       ),
     ]);
+    expect(viewportBox).not.toBeNull();
     expect(containerBox).not.toBeNull();
     expect(selectionHeaderBox).not.toBeNull();
     expect(pinnedHeaderBox).not.toBeNull();
+    expect(dimmerBox).not.toBeNull();
+    expect(dividerBox).not.toBeNull();
     expect(
       Math.abs(selectionHeaderBox!.x - containerBox!.x),
     ).toBeLessThanOrEqual(1);
@@ -985,6 +1040,14 @@ test("customer patient table keeps animal identity pinned while data columns scr
         pinnedHeaderBox!.x - selectionHeaderBox!.x - selectionHeaderBox!.width,
       ),
     ).toBeLessThanOrEqual(1);
+    expect(Math.abs(dimmerBox!.x - viewportBox!.x - 228)).toBeLessThanOrEqual(1);
+    expect(Math.abs(dividerBox!.x - viewportBox!.x - 227)).toBeLessThanOrEqual(1);
+    expect(Math.abs(dimmerBox!.height - viewportBox!.height)).toBeLessThanOrEqual(
+      1,
+    );
+    expect(Math.abs(dividerBox!.height - viewportBox!.height)).toBeLessThanOrEqual(
+      1,
+    );
     expect(documentOverflow).toBe(0);
   }
 
@@ -1064,6 +1127,9 @@ test("customer patient table keeps animal identity pinned while data columns scr
   const guardianCell = page
     .getByTestId("customer-guardian-row-guardian-kang-seoyun")
     .locator('td[data-customer-column-key="name"]');
+  const guardianPinnedViewport = page
+    .getByTestId("customer-guardian-table")
+    .locator('[data-emr-pinned-table-viewport="true"]');
   await expect(guardianTable).toHaveAttribute(
     "data-customer-pinned-identity",
     "name",
@@ -1073,6 +1139,15 @@ test("customer patient table keeps animal identity pinned while data columns scr
     "left",
   );
   await expect(guardianCell).toHaveCSS("position", "sticky");
+  await expect(guardianPinnedViewport).toHaveCSS(
+    "--emr-table-pinned-column-width",
+    "228px",
+  );
+  await expect(
+    guardianPinnedViewport.locator(
+      '[data-emr-pinned-table-dimmer="true"]',
+    ),
+  ).toHaveCount(1);
 });
 
 test("customer table aligns selection header and row checkboxes", async ({
@@ -1873,6 +1948,7 @@ test("customer deleted history uses the mg table empty state and distinguishes s
 test("customer archive table pins identity and restores through the existing target API", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
   const archiveRecord = {
     id: "patient-archived-mango",
     target: "patient",
@@ -1945,6 +2021,15 @@ test("customer archive table pins identity and restores through the existing tar
   const identityCell = row.locator(
     'td[data-customer-archive-column="displayName"]',
   );
+  const pinnedViewport = section.locator(
+    '[data-emr-pinned-table-viewport="true"]',
+  );
+  const pinnedDimmer = pinnedViewport.locator(
+    '[data-emr-pinned-table-dimmer="true"]',
+  );
+  const pinnedDivider = pinnedViewport.locator(
+    '[data-emr-pinned-table-divider="true"]',
+  );
 
   await expect(section).toHaveAttribute(
     "data-emr-pinned-table-workspace",
@@ -1996,6 +2081,68 @@ test("customer archive table pins identity and restores through the existing tar
   await expect(archiveScrollContainer).toHaveCSS(
     "overscroll-behavior-y",
     "none",
+  );
+  const archiveBoundaryStyles = await pinnedViewport.evaluate((viewport) => {
+    const dimmer = viewport.querySelector(
+      '[data-emr-pinned-table-dimmer="true"]',
+    );
+    const divider = viewport.querySelector(
+      '[data-emr-pinned-table-divider="true"]',
+    );
+    if (!(dimmer instanceof HTMLElement) || !(divider instanceof HTMLElement)) {
+      throw new Error("Archive pinned boundary layers are missing.");
+    }
+    const dimmerStyle = getComputedStyle(dimmer);
+    return {
+      pinnedColumnWidth: getComputedStyle(viewport)
+        .getPropertyValue("--emr-table-pinned-column-width")
+        .trim(),
+      dimmerBackground: dimmerStyle.backgroundColor,
+      dimmerOpacity: dimmerStyle.opacity,
+      dimmerWidth: dimmerStyle.width,
+      dividerWidth: getComputedStyle(divider).width,
+    };
+  });
+  expect(archiveBoundaryStyles).toEqual({
+    pinnedColumnWidth: "220px",
+    dimmerBackground: "rgb(0, 0, 0)",
+    dimmerOpacity: "0.4",
+    dimmerWidth: "10px",
+    dividerWidth: "1px",
+  });
+  const [viewportBefore, dimmerBefore, dividerBefore] = await Promise.all([
+    pinnedViewport.boundingBox(),
+    pinnedDimmer.boundingBox(),
+    pinnedDivider.boundingBox(),
+  ]);
+  await archiveScrollContainer.evaluate((container) => {
+    container.scrollLeft = container.scrollWidth;
+  });
+  const [viewportAfter, dimmerAfter, dividerAfter] = await Promise.all([
+    pinnedViewport.boundingBox(),
+    pinnedDimmer.boundingBox(),
+    pinnedDivider.boundingBox(),
+  ]);
+  for (const [label, box] of [
+    ["viewport before", viewportBefore],
+    ["dimmer before", dimmerBefore],
+    ["divider before", dividerBefore],
+    ["viewport after", viewportAfter],
+    ["dimmer after", dimmerAfter],
+    ["divider after", dividerAfter],
+  ] as const) {
+    expect(box, label).not.toBeNull();
+  }
+  expect(Math.abs(dimmerBefore!.x - viewportBefore!.x - 220)).toBeLessThanOrEqual(
+    1,
+  );
+  expect(Math.abs(dividerBefore!.x - viewportBefore!.x - 219)).toBeLessThanOrEqual(
+    1,
+  );
+  expect(Math.abs(dimmerAfter!.x - dimmerBefore!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(dividerAfter!.x - dividerBefore!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(dimmerAfter!.height - viewportAfter!.height)).toBeLessThanOrEqual(
+    1,
   );
 
   await row.getByRole("button", { name: "망고 복원" }).click();

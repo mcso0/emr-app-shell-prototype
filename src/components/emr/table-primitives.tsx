@@ -52,6 +52,10 @@ type EmrPinnedTableWorkspaceProps = React.ComponentProps<"div"> & {
   selectionColumnWidth?: number | string;
 };
 
+type EmrPinnedTableViewportProps = React.ComponentProps<"div"> & {
+  pinnedColumnWidth: number | string;
+};
+
 type EmrTableIdentityCellContentProps = React.ComponentProps<"div"> & {
   leading?: React.ReactNode;
   leadingGap?: number | string;
@@ -245,6 +249,35 @@ export function EmrPinnedTableWorkspace({
       {...props}
     >
       {children}
+    </div>
+  );
+}
+
+export function EmrPinnedTableViewport({
+  children,
+  className,
+  pinnedColumnWidth,
+  style,
+  ...props
+}: EmrPinnedTableViewportProps) {
+  return (
+    <div
+      data-emr-pinned-table-viewport="true"
+      className={cn(
+        "relative isolate min-h-0 min-w-0 overflow-hidden",
+        className,
+      )}
+      style={
+        {
+          ...style,
+          "--emr-table-pinned-column-width": toCssLength(pinnedColumnWidth),
+        } as React.CSSProperties
+      }
+      {...props}
+    >
+      {children}
+      <div aria-hidden="true" data-emr-pinned-table-dimmer="true" />
+      <div aria-hidden="true" data-emr-pinned-table-divider="true" />
     </div>
   );
 }

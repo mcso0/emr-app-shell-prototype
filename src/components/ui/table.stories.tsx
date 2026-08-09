@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { userEvent } from "storybook/test";
 
 import {
+  EmrPinnedTableViewport,
   EmrPinnedTableWorkspace,
   EmrTableHeaderCell,
   EmrTableIdentityCellContent,
@@ -259,6 +260,7 @@ export const PinnedColumns: Story = {
       identityTextInset={48}
       selectionColumnWidth={44}
     >
+      <EmrPinnedTableViewport pinnedColumnWidth={224}>
       <Table
         data-testid="pinned-table"
         density={args.density}
@@ -379,6 +381,7 @@ export const PinnedColumns: Story = {
           </TableRow>
         </TableBody>
       </Table>
+      </EmrPinnedTableViewport>
     </EmrPinnedTableWorkspace>
   ),
   play: async ({ canvasElement }) => {
@@ -386,6 +389,15 @@ export const PinnedColumns: Story = {
       '[data-testid="pinned-table"]',
     ) as HTMLTableElement | null;
     const container = table?.parentElement;
+    const viewport = table?.closest(
+      '[data-emr-pinned-table-viewport="true"]',
+    ) as HTMLDivElement | null;
+    const dimmer = viewport?.querySelector(
+      '[data-emr-pinned-table-dimmer="true"]',
+    ) as HTMLDivElement | null;
+    const divider = viewport?.querySelector(
+      '[data-emr-pinned-table-divider="true"]',
+    ) as HTMLDivElement | null;
     const leftCells = Array.from(
       table?.querySelectorAll<HTMLTableCellElement>(
         'tbody tr:first-child [data-emr-column-pinned="left"]',
@@ -434,6 +446,9 @@ export const PinnedColumns: Story = {
     if (
       !table ||
       !container ||
+      !viewport ||
+      !dimmer ||
+      !divider ||
       leftCells.length !== 2 ||
       !rightCell ||
       !selectedCell ||
@@ -455,6 +470,8 @@ export const PinnedColumns: Story = {
     const initialLeftPositions = leftCells.map(
       (cell) => cell.getBoundingClientRect().left,
     );
+    const initialDimmerLeft = dimmer.getBoundingClientRect().left;
+    const initialDividerLeft = divider.getBoundingClientRect().left;
     container.scrollLeft = 240;
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
@@ -478,6 +495,12 @@ export const PinnedColumns: Story = {
       )
     ) {
       throw new Error("A left pinned cell moved during horizontal scroll.");
+    }
+    if (
+      Math.abs(dimmer.getBoundingClientRect().left - initialDimmerLeft) > 1 ||
+      Math.abs(divider.getBoundingClientRect().left - initialDividerLeft) > 1
+    ) {
+      throw new Error("Pinned boundary layers moved during horizontal scroll.");
     }
     if (
       Math.abs(
@@ -574,45 +597,43 @@ export const PinnedColumns: Story = {
       ["body", bodyPinnedEdge],
     ] as const) {
       const edgeStyles = getComputedStyle(edgeCell);
-      const shadowLayers = Array.from(
-        edgeStyles.boxShadow.matchAll(
-          /(-?\d+(?:\.\d+)?)px 0px (-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px/g,
-        ),
-        (match) => ({
-          offset: Number.parseFloat(match[1]),
-          blur: Number.parseFloat(match[2]),
-          spread: Number.parseFloat(match[3]),
-        }),
-      );
-      const dividerLayer = shadowLayers[0];
-      const hasBlurLayer = shadowLayers.some(
-        (layer) => layer.blur > 0 || layer.spread < 0,
-      );
-      const solidLayers = shadowLayers.filter(
-        (layer) => layer.blur === 0 && layer.spread === 0,
-      );
-      const gapLayer = shadowLayers[1];
-      const gapWidth =
-        dividerLayer && gapLayer ? gapLayer.offset - dividerLayer.offset : 0;
-
-      if (
-        !dividerLayer ||
-        dividerLayer.offset !== 1 ||
-        dividerLayer.blur !== 0 ||
-        dividerLayer.spread !== 0 ||
-        solidLayers.length !== 2 ||
-        !gapLayer ||
-        gapLayer.blur !== 0 ||
-        gapLayer.spread !== 0 ||
-        gapWidth < 9 ||
-        gapWidth > 11 ||
-        hasBlurLayer ||
-        edgeStyles.overflow !== "hidden"
-      ) {
+      if (edgeStyles.boxShadow !== "none" || edgeStyles.overflow !== "hidden") {
         throw new Error(
-          `Pinned ${label} edge does not expose the visible 1px divider and 10px gap without a blur shadow.`,
+          `Pinned ${label} edge still owns a cell shadow or clips incorrectly.`,
         );
       }
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const dimmerRect = dimmer.getBoundingClientRect();
+    const dividerRect = divider.getBoundingClientRect();
+    const dimmerStyles = getComputedStyle(dimmer);
+    const dividerStyles = getComputedStyle(divider);
+    if (
+      dimmerStyles.position !== "absolute" ||
+      dimmerStyles.width !== "10px" ||
+      dimmerStyles.backgroundColor !== "rgb(0, 0, 0)" ||
+      dimmerStyles.opacity !== "0.4" ||
+      dimmerStyles.pointerEvents !== "none" ||
+      Math.abs(dimmerRect.left - viewportRect.left - 224) > 1 ||
+      Math.abs(dimmerRect.height - viewportRect.height) > 1 ||
+      Number.parseInt(dimmerStyles.zIndex, 10) <= 12
+    ) {
+      throw new Error(
+        "Pinned dimmer is not the fixed 10px black layer with opacity 0.4.",
+      );
+    }
+    if (
+      dividerStyles.position !== "absolute" ||
+      dividerStyles.width !== "1px" ||
+      dividerStyles.backgroundColor === "rgba(0, 0, 0, 0)" ||
+      dividerStyles.pointerEvents !== "none" ||
+      Math.abs(dividerRect.left - viewportRect.left - 223) > 1 ||
+      Math.abs(dividerRect.height - viewportRect.height) > 1 ||
+      Number.parseInt(dividerStyles.zIndex, 10) <=
+        Number.parseInt(dimmerStyles.zIndex, 10)
+    ) {
+      throw new Error("Pinned divider is not fixed above the dimmer layer.");
     }
 
     const firstBodyRow = table.querySelector(
