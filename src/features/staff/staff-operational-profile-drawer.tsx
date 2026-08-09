@@ -406,7 +406,7 @@ export function StaffOperationalProfilePanel({
   return (
     <section
       aria-label="직원 운영 프로필"
-      className="h-full min-h-0 bg-[var(--emr-surface-rightpanel)]"
+      className="h-full min-h-0 overscroll-x-none touch-pan-y bg-[var(--emr-surface-rightpanel)]"
       data-testid="staff-operational-profile-panel"
     >
       <TabGroup
@@ -485,7 +485,7 @@ export function StaffOperationalProfilePanel({
           </TabsList>
         </header>
 
-        <TabPanel className="min-h-0 overflow-y-auto p-4" value="profile">
+        <TabPanel className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4" value="profile">
           {requestState === "loading" ? (
             <ProfileLoadingState />
           ) : requestState === "error" ? (
@@ -540,7 +540,7 @@ export function StaffOperationalProfilePanel({
           ) : null}
         </TabPanel>
 
-        <TabPanel className="min-h-0 overflow-y-auto p-4" value="work">
+        <TabPanel className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4" value="work">
           <ProfileWorkStatusTab
             groups={workGroups}
             hasNextPage={Boolean(workRead.nextCursor)}
@@ -566,7 +566,7 @@ export function StaffOperationalProfilePanel({
           />
         </TabPanel>
 
-        <TabPanel className="min-h-0 overflow-y-auto p-4" value="schedule">
+        <TabPanel className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4" value="schedule">
           <ScheduleNavigationSection
             onOpenSchedule={
               response?.capabilities.scheduleHref

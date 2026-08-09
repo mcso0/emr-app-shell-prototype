@@ -139,6 +139,34 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
   await expect(panel).toBeVisible();
+  await expect
+    .poll(() =>
+      panel.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          overscrollBehaviorX: styles.overscrollBehaviorX,
+          touchAction: styles.touchAction,
+        };
+      }),
+    )
+    .toEqual({ overscrollBehaviorX: "none", touchAction: "pan-y" });
+  for (const tabName of ["프로필", "업무현황", "일정"]) {
+    await panel.getByRole("tab", { name: tabName, exact: true }).click();
+    const activeTabPanel = panel.locator('[data-slot="tabs-content"]:visible');
+    await expect(activeTabPanel).toHaveCount(1);
+    await expect
+      .poll(() =>
+        activeTabPanel.evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return {
+            overscrollBehaviorX: styles.overscrollBehaviorX,
+            touchAction: styles.touchAction,
+          };
+        }),
+      )
+      .toEqual({ overscrollBehaviorX: "none", touchAction: "pan-y" });
+  }
+  await panel.getByRole("tab", { name: "프로필", exact: true }).click();
   await expect(panel).toContainText("이수지");
   await expect(panel).toContainText("계정 정보");
   await expect(panel).toContainText("오늘 근무 정보");
