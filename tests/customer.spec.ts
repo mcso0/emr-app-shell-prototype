@@ -965,12 +965,12 @@ test("customer patient table keeps animal identity pinned while data columns scr
   });
   expect(boundaryStyles.pinnedColumnWidth).toBe("228px");
   expect(boundaryStyles.dimmer).toMatchObject({
-    backgroundColor: "rgb(0, 0, 0)",
+    backgroundColor: "rgba(0, 0, 0, 0.04)",
     boxShadow: "none",
-    opacity: "0.4",
+    opacity: "1",
     pointerEvents: "none",
     position: "absolute",
-    width: "10px",
+    width: "6px",
   });
   expect(boundaryStyles.dimmer.zIndex).toBeGreaterThan(12);
   expect(boundaryStyles.divider).toMatchObject({
@@ -2105,9 +2105,9 @@ test("customer archive table pins identity and restores through the existing tar
   });
   expect(archiveBoundaryStyles).toEqual({
     pinnedColumnWidth: "220px",
-    dimmerBackground: "rgb(0, 0, 0)",
-    dimmerOpacity: "0.4",
-    dimmerWidth: "10px",
+    dimmerBackground: "rgba(0, 0, 0, 0.04)",
+    dimmerOpacity: "1",
+    dimmerWidth: "6px",
     dividerWidth: "1px",
   });
   const [viewportBefore, dimmerBefore, dividerBefore] = await Promise.all([
