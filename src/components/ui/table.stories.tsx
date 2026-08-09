@@ -591,17 +591,26 @@ export const PinnedColumns: Story = {
       const solidLayers = shadowLayers.filter(
         (layer) => layer.blur === 0 && layer.spread === 0,
       );
+      const gapLayer = shadowLayers[1];
+      const gapWidth =
+        dividerLayer && gapLayer ? gapLayer.offset - dividerLayer.offset : 0;
 
       if (
         !dividerLayer ||
         dividerLayer.offset !== 1 ||
         dividerLayer.blur !== 0 ||
         dividerLayer.spread !== 0 ||
-        solidLayers.length !== 1 ||
-        hasBlurLayer
+        solidLayers.length !== 2 ||
+        !gapLayer ||
+        gapLayer.blur !== 0 ||
+        gapLayer.spread !== 0 ||
+        gapWidth < 9 ||
+        gapWidth > 11 ||
+        hasBlurLayer ||
+        edgeStyles.overflow !== "hidden"
       ) {
         throw new Error(
-          `Pinned ${label} edge must keep only its 1px divider without a blur shadow.`,
+          `Pinned ${label} edge does not expose the visible 1px divider and 10px gap without a blur shadow.`,
         );
       }
     }

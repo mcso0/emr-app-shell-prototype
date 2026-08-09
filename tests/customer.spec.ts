@@ -931,8 +931,9 @@ test("customer patient table keeps animal identity pinned while data columns scr
     ["header", edgeShadows[0]],
     ["body", edgeShadows[1]],
   ] as const) {
-    expect(shadow.solid, `${label} divider layers`).toHaveLength(1);
+    expect(shadow.solid, `${label} edge layers`).toHaveLength(2);
     expect(shadow.solid[0].offset, `${label} divider offset`).toBe(1);
+    expect(shadow.solid[1].offset, `${label} dimmed gap offset`).toBe(11);
     expect(shadow.blur, `${label} blur layers`).toHaveLength(0);
   }
 
