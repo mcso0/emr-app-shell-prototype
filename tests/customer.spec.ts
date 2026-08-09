@@ -920,8 +920,8 @@ test("customer patient table keeps animal identity pinned while data columns scr
           solid: layers.filter(
             (layer) => layer.blur === 0 && layer.spread === 0,
           ),
-          gradient: layers.filter(
-            (layer) => layer.blur > 0 && layer.spread < 0,
+          blur: layers.filter(
+            (layer) => layer.blur > 0 || layer.spread < 0,
           ),
         };
       }),
@@ -933,9 +933,7 @@ test("customer patient table keeps animal identity pinned while data columns scr
   ] as const) {
     expect(shadow.solid, `${label} divider layers`).toHaveLength(1);
     expect(shadow.solid[0].offset, `${label} divider offset`).toBe(1);
-    expect(shadow.gradient.length, `${label} gradient layer`).toBeGreaterThan(
-      0,
-    );
+    expect(shadow.blur, `${label} blur layers`).toHaveLength(0);
   }
 
   for (const width of [1900, 1440, 1280, 1024]) {
