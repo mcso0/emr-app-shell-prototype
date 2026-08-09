@@ -119,7 +119,7 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
           </TabsList>
         </header>
 
-        <TabsContent value="profile" className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4">
+        <TabsContent value="profile" className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4">
           <div className="grid gap-4">
             <section className="px-2">
               <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">오늘 근무 정보</h3>
@@ -154,14 +154,14 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
             </section>
           </div>
         </TabsContent>
-        <TabsContent value="work" className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4">
+        <TabsContent value="work" className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4">
           <ProfileWorkStatusTab
             groups={[{ dateLabel: "오늘", items: [sampleWorkItem] }]}
             state="ready"
             onRequestNavigation={() => undefined}
           />
         </TabsContent>
-        <TabsContent value="schedule" className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4">
+        <TabsContent value="schedule" className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4">
           <section className="px-2">
             <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">일정</h3>
             <div className="mt-3 flex min-h-[72px] items-center justify-between gap-3 rounded-xl border px-4 text-sm text-[var(--emr-text-tertiary)]">
@@ -187,14 +187,22 @@ export const FullPanelThreeTabFigmaContract: Story = {
     const avatar = panel.querySelector("[data-slot='avatar']");
     const header = panel.querySelector("header");
     const tabs = canvas.getAllByRole("tab");
+    const getActiveTabPanel = () =>
+      panel.querySelector<HTMLElement>('[role="tabpanel"]:not([inert])');
 
     expect(tabs).toHaveLength(3);
     expect(getComputedStyle(panel).width).toBe("380px");
+    expect(getComputedStyle(panel).overflowX).toBe("hidden");
+    expect(getComputedStyle(getActiveTabPanel()!).overflowX).toBe("hidden");
     expect(header ? getComputedStyle(header).height : "").toBe("150px");
     expect(avatar ? getComputedStyle(avatar).width : "").toBe("84px");
     await userEvent.click(canvas.getByRole("tab", { name: "업무현황" }));
+    await waitFor(() => expect(getActiveTabPanel()).not.toBeNull());
+    expect(getComputedStyle(getActiveTabPanel()!).overflowX).toBe("hidden");
     expect(canvas.getByRole("heading", { name: "합성 업무 항목" })).toBeInTheDocument();
     await userEvent.click(canvas.getByRole("tab", { name: "일정" }));
+    await waitFor(() => expect(getActiveTabPanel()).not.toBeNull());
+    expect(getComputedStyle(getActiveTabPanel()!).overflowX).toBe("hidden");
     expect(canvas.getByRole("heading", { name: "일정" })).toBeInTheDocument();
   },
 };

@@ -144,12 +144,17 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
       panel.evaluate((element) => {
         const styles = getComputedStyle(element);
         return {
+          overflowX: styles.overflowX,
           overscrollBehaviorX: styles.overscrollBehaviorX,
           touchAction: styles.touchAction,
         };
       }),
     )
-    .toEqual({ overscrollBehaviorX: "none", touchAction: "pan-y" });
+    .toEqual({
+      overflowX: "hidden",
+      overscrollBehaviorX: "none",
+      touchAction: "pan-y",
+    });
   for (const tabName of ["프로필", "업무현황", "일정"]) {
     await panel.getByRole("tab", { name: tabName, exact: true }).click();
     const activeTabPanel = panel.locator('[data-slot="tabs-content"]:visible');
@@ -159,12 +164,24 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
         activeTabPanel.evaluate((element) => {
           const styles = getComputedStyle(element);
           return {
+            overflowX: styles.overflowX,
             overscrollBehaviorX: styles.overscrollBehaviorX,
+            scrollLeft: element.scrollLeft,
             touchAction: styles.touchAction,
           };
         }),
       )
-      .toEqual({ overscrollBehaviorX: "none", touchAction: "pan-y" });
+      .toEqual({
+        overflowX: "hidden",
+        overscrollBehaviorX: "none",
+        scrollLeft: 0,
+        touchAction: "pan-y",
+      });
+    await activeTabPanel.hover();
+    await page.mouse.wheel(120, 0);
+    await expect
+      .poll(() => activeTabPanel.evaluate((element) => element.scrollLeft))
+      .toBe(0);
   }
   await panel.getByRole("tab", { name: "프로필", exact: true }).click();
   await expect(panel).toContainText("이수지");

@@ -1000,6 +1000,14 @@ test("customer patient table keeps animal identity pinned while data columns scr
 
   await expect(scrollContainer).toHaveCSS("overscroll-behavior-x", "none");
   await expect(scrollContainer).toHaveCSS("overscroll-behavior-y", "none");
+  await scrollContainer.evaluate((container) => {
+    container.scrollLeft = 0;
+  });
+  await scrollContainer.hover();
+  await page.mouse.wheel(120, 0);
+  await expect
+    .poll(() => scrollContainer.evaluate((container) => container.scrollLeft))
+    .toBeGreaterThan(0);
 
   await page.setViewportSize({ width: 1900, height: 1024 });
   await scrollContainer.evaluate((container) => {
@@ -2132,7 +2140,7 @@ test("patient and guardian profiles share the right-panel slot and push customer
   const mainContent = page.getByTestId("workspace-main-content");
   const rightPanel = page.getByTestId("workspace-right-panel");
   const profilePanel = page.getByTestId("profile-side-panel");
-  const getProfileGestureStyles = () =>
+  const getProfileGestureState = () =>
     profilePanel.evaluate((panel) => {
       const viewport = panel.querySelector<HTMLElement>(
         '[data-slot="scroll-area-viewport"]',
@@ -2147,11 +2155,27 @@ test("patient and guardian profiles share the right-panel slot and push customer
           touchAction: panelStyles.touchAction,
         },
         viewport: {
+          overflowX: viewportStyles.overflowX,
           overscrollBehaviorX: viewportStyles.overscrollBehaviorX,
+          scrollLeft: viewport.scrollLeft,
           touchAction: viewportStyles.touchAction,
         },
       };
     });
+  const expectHorizontalWheelLocked = async () => {
+    const viewport = profilePanel.locator('[data-slot="scroll-area-viewport"]');
+    await viewport.evaluate((element) => {
+      element.scrollLeft = 0;
+    });
+    await viewport.hover();
+    await page.mouse.wheel(120, 0);
+    await expect.poll(getProfileGestureState).toMatchObject({
+      viewport: {
+        overflowX: "hidden",
+        scrollLeft: 0,
+      },
+    });
+  };
 
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "patient");
   await expect
@@ -2170,10 +2194,16 @@ test("patient and guardian profiles share the right-panel slot and push customer
       "file-user",
       "notebook-text",
     ]);
-  await expect.poll(getProfileGestureStyles).toEqual({
+  await expect.poll(getProfileGestureState).toEqual({
     panel: { overscrollBehaviorX: "none", touchAction: "pan-y" },
-    viewport: { overscrollBehaviorX: "none", touchAction: "pan-y" },
+    viewport: {
+      overflowX: "hidden",
+      overscrollBehaviorX: "none",
+      scrollLeft: 0,
+      touchAction: "pan-y",
+    },
   });
+  await expectHorizontalWheelLocked();
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   await expect
     .poll(async () => (await rightPanel.boundingBox())?.width)
@@ -2204,10 +2234,16 @@ test("patient and guardian profiles share the right-panel slot and push customer
         .evaluateAll((icons) => icons.map((icon) => icon.getAttribute("data-profile-definition-icon"))),
     )
     .toEqual(["user", "calendar", "phone", "mail", "map-pin", "notebook-text"]);
-  await expect.poll(getProfileGestureStyles).toEqual({
+  await expect.poll(getProfileGestureState).toEqual({
     panel: { overscrollBehaviorX: "none", touchAction: "pan-y" },
-    viewport: { overscrollBehaviorX: "none", touchAction: "pan-y" },
+    viewport: {
+      overflowX: "hidden",
+      overscrollBehaviorX: "none",
+      scrollLeft: 0,
+      touchAction: "pan-y",
+    },
   });
+  await expectHorizontalWheelLocked();
 
   const guardianRightPanelBox = await rightPanel.boundingBox();
   expect(guardianRightPanelBox).not.toBeNull();

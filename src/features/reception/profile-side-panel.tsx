@@ -39,6 +39,8 @@ import { cn } from "@/lib/utils";
 
 import styles from "./profile-side-panel.module.css";
 
+const PROFILE_SCROLL_VIEWPORT_STYLE = { overflowX: "hidden" } as const;
+
 export type ProfileSidePanelTab = "info" | "history" | "reservations" | "billing";
 
 export type ProfileDefinitionIcon =
@@ -514,14 +516,22 @@ function InformationTab({
           : "프로필 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
 
     return (
-      <ScrollArea className={cn(styles.scrollContent, styles.infoContent)} viewportClassName="scroll-fade-y scroll-fade-8">
+      <ScrollArea
+        className={cn(styles.scrollContent, styles.infoContent)}
+        viewportClassName="scroll-fade-y scroll-fade-8"
+        viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
+      >
         <PanelState label={label} actionLabel={overviewState.status === "error" ? "다시 시도" : undefined} onAction={onRetryOverview} />
       </ScrollArea>
     );
   }
 
   return (
-    <ScrollArea className={cn(styles.scrollContent, styles.infoContent)} viewportClassName="scroll-fade-y scroll-fade-8">
+    <ScrollArea
+      className={cn(styles.scrollContent, styles.infoContent)}
+      viewportClassName="scroll-fade-y scroll-fade-8"
+      viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
+    >
       {model.today ? (
         <>
           <section className={styles.infoSection}>
@@ -706,14 +716,22 @@ function ReservationsTab({
           ? "프로필 정보를 찾을 수 없습니다."
           : "예약 일정을 불러오지 못했습니다.";
     return (
-      <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+      <ScrollArea
+        className={styles.scrollContent}
+        viewportClassName="scroll-fade-y scroll-fade-8"
+        viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
+      >
         <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
       </ScrollArea>
     );
   }
 
   return (
-    <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+    <ScrollArea
+      className={styles.scrollContent}
+      viewportClassName="scroll-fade-y scroll-fade-8"
+      viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
+    >
       <div className={styles.toolbar}>
         <div className={styles.monthNavigator}>
           <button
@@ -844,14 +862,22 @@ function HistoryTab({
           ? "프로필 정보를 찾을 수 없습니다."
           : "진료 이력을 불러오지 못했습니다.";
     return (
-      <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+      <ScrollArea
+        className={styles.scrollContent}
+        viewportClassName="scroll-fade-y scroll-fade-8"
+        viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
+      >
         <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
       </ScrollArea>
     );
   }
 
   return (
-    <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+    <ScrollArea
+      className={styles.scrollContent}
+      viewportClassName="scroll-fade-y scroll-fade-8"
+      viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
+    >
       <div className={styles.toolbar}>
         <div className={styles.toolbarStart}>
           전체 진료 이력 <span className={styles.countBadge}>{visibleItems.length}</span>
@@ -981,14 +1007,22 @@ function BillingTab({
           ? "프로필 정보를 찾을 수 없습니다."
           : "수납 이력을 불러오지 못했습니다.";
     return (
-      <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+      <ScrollArea
+        className={styles.scrollContent}
+        viewportClassName="scroll-fade-y scroll-fade-8"
+        viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
+      >
         <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
       </ScrollArea>
     );
   }
 
   return (
-    <ScrollArea className={styles.scrollContent} viewportClassName="scroll-fade-y scroll-fade-8">
+    <ScrollArea
+      className={styles.scrollContent}
+      viewportClassName="scroll-fade-y scroll-fade-8"
+      viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
+    >
       <div className={styles.toolbar}>
         <div className={styles.toolbarStart}>
           전체 수납 이력 <span className={styles.countBadge}>{visibleItems.length}</span>
