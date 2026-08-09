@@ -611,16 +611,16 @@ export const PinnedColumns: Story = {
     const dividerStyles = getComputedStyle(divider);
     if (
       dimmerStyles.position !== "absolute" ||
-      dimmerStyles.width !== "10px" ||
-      dimmerStyles.backgroundColor !== "rgb(0, 0, 0)" ||
-      dimmerStyles.opacity !== "0.4" ||
+      dimmerStyles.width !== "6px" ||
+      dimmerStyles.backgroundColor !== "rgba(0, 0, 0, 0.04)" ||
+      dimmerStyles.opacity !== "1" ||
       dimmerStyles.pointerEvents !== "none" ||
       Math.abs(dimmerRect.left - viewportRect.left - 224) > 1 ||
       Math.abs(dimmerRect.height - viewportRect.height) > 1 ||
       Number.parseInt(dimmerStyles.zIndex, 10) <= 12
     ) {
       throw new Error(
-        "Pinned dimmer is not the fixed 10px black layer with opacity 0.4.",
+        "Pinned dimmer does not match the fixed 6px black-alpha-4 Figma layer.",
       );
     }
     if (

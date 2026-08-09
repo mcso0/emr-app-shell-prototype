@@ -1824,11 +1824,11 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
   expect(metrics.pinnedDimmer).toMatchObject({
     position: "absolute",
     left: "224px",
-    width: "10px",
+    width: "6px",
     leftOffset: 224,
-    backgroundColor: "rgb(0, 0, 0)",
+    backgroundColor: "rgba(0, 0, 0, 0.04)",
     boxShadow: "none",
-    opacity: "0.4",
+    opacity: "1",
     pointerEvents: "none",
   });
   expect(

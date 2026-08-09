@@ -380,9 +380,8 @@
   [data-emr-pinned-table-dimmer="true"] {
     z-index: 13;
     inset-inline-start: var(--emr-table-pinned-column-width);
-    inline-size: var(--clair-spacing-10);
-    background: var(--clair-color-atomic-common-0);
-    opacity: var(--clair-opacity-40);
+    inline-size: var(--clair-spacing-6);
+    background: var(--clair-color-atomic-black-alpha-4);
   }
 
   [data-emr-pinned-table-divider="true"] {
