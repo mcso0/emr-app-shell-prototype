@@ -5,7 +5,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -25,6 +24,7 @@ import {
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import {
+  EmrPinnedTableViewport,
   EmrPinnedTableWorkspace,
   EmrTableCellText,
   EmrTableFeedbackSurface,
@@ -1899,13 +1899,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       identityTextInset={48}
       selectionColumnWidth={hospitalOrderSelectionColumnWidth}
       data-emr-order-pinned-table="true"
-      style={
-        {
-          "--emr-table-pinned-column-width": `${
-            hospitalOrderSelectionColumnWidth + hospitalOrderIdentityColumnWidth
-          }px`,
-        } as CSSProperties
-      }
     >
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <EmrTableWorkspaceHeader
@@ -2128,9 +2121,11 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           />
         </EmrTableFeedbackSurface>
       ) : (
-        <div
-          className="relative min-h-0 flex-1 overflow-hidden"
-          data-emr-order-table-viewport="true"
+        <EmrPinnedTableViewport
+          className="min-h-0 flex-1"
+          pinnedColumnWidth={
+            hospitalOrderSelectionColumnWidth + hospitalOrderIdentityColumnWidth
+          }
         >
           <Table
             aria-label="병원관리 Order 관리 테이블"
@@ -2346,7 +2341,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                 : null}
             </TableBody>
           </Table>
-        </div>
+        </EmrPinnedTableViewport>
       )}
       {catalogReadStatus === "ready" && selectedOrderIds.length > 0 ? (
         <div className="pointer-events-none sticky bottom-3 z-20 mt-[-52px] flex justify-center">

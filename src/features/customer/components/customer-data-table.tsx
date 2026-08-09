@@ -27,6 +27,7 @@ import {
   type EmrTableFilterBuilderField,
 } from "@/components/emr/table-filter-builder-model";
 import {
+  EmrPinnedTableViewport,
   EmrPinnedTableWorkspace,
   EmrTableFeedbackSurface,
   EmrTableHeaderCell,
@@ -524,6 +525,9 @@ export function CustomerDataTable<
     ...table.getCenterVisibleLeafColumns(),
     ...table.getRightVisibleLeafColumns(),
   ];
+  const pinnedColumnWidth = table
+    .getLeftVisibleLeafColumns()
+    .reduce((total, column) => total + column.getSize(), 0);
   const flexibleColumnId = pinnedColumnId
     ? [...orderedVisibleColumns]
         .reverse()
@@ -763,9 +767,13 @@ export function CustomerDataTable<
         </EmrTableFeedbackSurface>
       ) : (
         <>
+          <EmrPinnedTableViewport
+            className="min-h-0 min-w-0 flex-1"
+            pinnedColumnWidth={pinnedColumnWidth}
+          >
           <Table
             aria-label={`${title} 고객관리 테이블`}
-            containerClassName="isolate min-h-0 min-w-0 flex-1 overflow-auto bg-[var(--clair-color-atomic-common-100)]"
+            containerClassName="isolate h-full min-h-0 min-w-0 overflow-auto bg-[var(--clair-color-atomic-common-100)]"
             data-customer-pinned-identity={pinnedColumnId}
             density={density}
             layout="scroll"
@@ -1022,6 +1030,7 @@ export function CustomerDataTable<
               ) : null}
             </TableBody>
           </Table>
+          </EmrPinnedTableViewport>
 
           <CustomerDataTableFooter
             loading={initialLoading}

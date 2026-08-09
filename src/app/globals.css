@@ -361,30 +361,37 @@
     );
   }
 
-  [data-emr-order-pinned-table="true"]
-    [data-emr-order-table-viewport="true"]::after {
-    position: absolute;
-    z-index: 13;
-    inset-block: 0;
-    inset-inline-start: var(--emr-table-pinned-column-width, 0px);
-    inline-size: 6px;
-    content: "";
-    background: rgb(0 0 0 / 1.5%);
-    pointer-events: none;
+  [data-emr-pinned-table-viewport="true"] {
+    --emr-table-pinned-divider-color: var(--emr-border-default);
   }
 
   [data-emr-order-pinned-table="true"]
-    [data-emr-order-table-viewport="true"]::before {
+    [data-emr-pinned-table-viewport="true"] {
+    --emr-table-pinned-divider-color: var(--emr-border-strong);
+  }
+
+  [data-emr-pinned-table-dimmer="true"],
+  [data-emr-pinned-table-divider="true"] {
     position: absolute;
-    z-index: 14;
     inset-block: 0;
+    pointer-events: none;
+  }
+
+  [data-emr-pinned-table-dimmer="true"] {
+    z-index: 13;
+    inset-inline-start: var(--emr-table-pinned-column-width);
+    inline-size: var(--clair-spacing-10);
+    background: var(--clair-color-atomic-common-0);
+    opacity: var(--clair-opacity-40);
+  }
+
+  [data-emr-pinned-table-divider="true"] {
+    z-index: 14;
     inset-inline-start: calc(
-      var(--emr-table-pinned-column-width, 0px) - 1px
+      var(--emr-table-pinned-column-width) - 1px
     );
     inline-size: 1px;
-    content: "";
-    background: var(--emr-border-strong);
-    pointer-events: none;
+    background: var(--emr-table-pinned-divider-color);
   }
 
   [data-emr-pinned-table-workspace="true"] {
@@ -468,22 +475,6 @@
     tr[data-state="selected"]
     > [data-emr-column-pinned] {
     background-color: var(--emr-surface-selected);
-  }
-
-  .emr-table-surface[data-emr-pinning="columns"]
-    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"] {
-    --emr-table-pinned-edge-gap-width: var(--clair-spacing-10);
-    --emr-table-pinned-edge-gap-surface: var(--emr-surface-panel);
-    box-shadow:
-      1px 0 0 var(--emr-border-default),
-      calc(var(--emr-table-pinned-edge-gap-width) + 1px) 0 0
-        var(--emr-table-pinned-edge-gap-surface);
-  }
-
-  .emr-table-surface[data-emr-pinning="columns"]
-    thead
-    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"] {
-    --emr-table-pinned-edge-gap-surface: var(--emr-surface-muted);
   }
 
   .emr-table-surface[data-emr-pinning="columns"]

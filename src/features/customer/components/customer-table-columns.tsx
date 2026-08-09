@@ -340,6 +340,9 @@ export function createCustomerGuardianColumns(): Array<
       enableSorting: true,
       sortingFn,
       sortUndefined: "last",
+      minSize: 160,
+      size: 184,
+      maxSize: 220,
       cell: ({ row }) => (
         <EmrTableIdentityCellContent>
           <EmrTableCellText

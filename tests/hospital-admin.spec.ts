@@ -1712,7 +1712,7 @@ test("hospital admin order table uses shared header and cell text primitives", a
   );
 });
 
-test("hospital admin Order table extends pinned and scroll backgrounds to the table viewport", async ({
+test("hospital admin Order table keeps the shared pinned boundary fixed over the viewport", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
@@ -1722,9 +1722,20 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
   const tableContainer = table.locator("xpath=..");
   const tableViewport = tableContainer.locator("xpath=..");
   await expect(tableViewport).toHaveAttribute(
-    "data-emr-order-table-viewport",
+    "data-emr-pinned-table-viewport",
     "true",
   );
+  await expect(
+    page.locator('[data-emr-order-table-viewport="true"]'),
+  ).toHaveCount(0);
+  const pinnedDimmer = tableViewport.locator(
+    '[data-emr-pinned-table-dimmer="true"]',
+  );
+  const pinnedDivider = tableViewport.locator(
+    '[data-emr-pinned-table-divider="true"]',
+  );
+  await expect(pinnedDimmer).toHaveCount(1);
+  await expect(pinnedDivider).toHaveCount(1);
   const metrics = await tableViewport.evaluate((element) => {
     const tableContainerElement = element.querySelector(
       '[data-slot="table-container"]',
@@ -1732,6 +1743,12 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
     const tableElement = tableContainerElement?.querySelector("table");
     const pinnedCell = tableElement?.querySelector(
       'tbody [data-emr-column-pinned="left"]',
+    );
+    const dimmer = element.querySelector(
+      '[data-emr-pinned-table-dimmer="true"]',
+    );
+    const divider = element.querySelector(
+      '[data-emr-pinned-table-divider="true"]',
     );
     const containerStyle = tableContainerElement
       ? getComputedStyle(tableContainerElement)
@@ -1741,50 +1758,50 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
       !tableContainerElement ||
       !tableElement ||
       !pinnedCell ||
+      !(dimmer instanceof HTMLElement) ||
+      !(divider instanceof HTMLElement) ||
       !containerStyle
     ) {
       throw new Error("Order table geometry targets are missing.");
     }
 
+    const viewportRect = element.getBoundingClientRect();
+    const dimmerRect = dimmer.getBoundingClientRect();
+    const dividerRect = divider.getBoundingClientRect();
+    const dimmerStyle = getComputedStyle(dimmer);
+    const dividerStyle = getComputedStyle(divider);
+
     return {
-      containerHeight: element.getBoundingClientRect().height,
+      containerHeight: viewportRect.height,
       tableHeight: tableElement.getBoundingClientRect().height,
       pinnedBackground: getComputedStyle(pinnedCell).backgroundColor,
       scrollBackground: containerStyle.backgroundColor,
       backgroundImage: containerStyle.backgroundImage,
-      pinnedDivider: (() => {
-        const dividerStyle = getComputedStyle(element, "::before");
-
-        return {
-          content: dividerStyle.content,
-          position: dividerStyle.position,
-          top: dividerStyle.top,
-          bottom: dividerStyle.bottom,
-          left: dividerStyle.left,
-          width: dividerStyle.width,
-          height: Number.parseFloat(dividerStyle.height),
-          backgroundColor: dividerStyle.backgroundColor,
-          pointerEvents: dividerStyle.pointerEvents,
-        };
-      })(),
-      pinnedEdgeOverlay: (() => {
-        const overlayStyle = getComputedStyle(element, "::after");
-
-        return {
-          content: overlayStyle.content,
-          position: overlayStyle.position,
-          top: overlayStyle.top,
-          bottom: overlayStyle.bottom,
-          left: overlayStyle.left,
-          width: overlayStyle.width,
-          height: Number.parseFloat(overlayStyle.height),
-          backgroundColor: overlayStyle.backgroundColor,
-          pointerEvents: overlayStyle.pointerEvents,
-        };
-      })(),
-      pinnedColumnWidth: getComputedStyle(
-        element.closest("[data-emr-order-pinned-table='true']") ?? element,
-      ).getPropertyValue("--emr-table-pinned-column-width"),
+      pinnedDivider: {
+        position: dividerStyle.position,
+        left: dividerStyle.left,
+        width: dividerStyle.width,
+        height: dividerRect.height,
+        leftOffset: dividerRect.left - viewportRect.left,
+        backgroundColor: dividerStyle.backgroundColor,
+        pointerEvents: dividerStyle.pointerEvents,
+        zIndex: Number.parseInt(dividerStyle.zIndex, 10),
+      },
+      pinnedDimmer: {
+        position: dimmerStyle.position,
+        left: dimmerStyle.left,
+        width: dimmerStyle.width,
+        height: dimmerRect.height,
+        leftOffset: dimmerRect.left - viewportRect.left,
+        backgroundColor: dimmerStyle.backgroundColor,
+        boxShadow: dimmerStyle.boxShadow,
+        opacity: dimmerStyle.opacity,
+        pointerEvents: dimmerStyle.pointerEvents,
+        zIndex: Number.parseInt(dimmerStyle.zIndex, 10),
+      },
+      pinnedColumnWidth: getComputedStyle(element).getPropertyValue(
+        "--emr-table-pinned-column-width",
+      ),
     };
   });
 
@@ -1794,46 +1811,56 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
   expect(metrics.backgroundImage).toContain("rgb(255, 255, 255)");
   expect(metrics.backgroundImage).toContain("rgb(252, 252, 252)");
   expect(metrics.pinnedDivider).toMatchObject({
-    content: '""',
     position: "absolute",
-    top: "0px",
-    bottom: "0px",
     left: "223px",
     width: "1px",
+    leftOffset: 223,
     pointerEvents: "none",
     backgroundColor: "rgb(212, 212, 212)",
   });
   expect(
     Math.abs(metrics.pinnedDivider.height - metrics.containerHeight),
   ).toBeLessThanOrEqual(0.5);
-  expect(metrics.pinnedEdgeOverlay).toMatchObject({
-    content: '""',
+  expect(metrics.pinnedDimmer).toMatchObject({
     position: "absolute",
-    top: "0px",
-    bottom: "0px",
     left: "224px",
-    width: "6px",
+    width: "10px",
+    leftOffset: 224,
+    backgroundColor: "rgb(0, 0, 0)",
+    boxShadow: "none",
+    opacity: "0.4",
     pointerEvents: "none",
   });
-  expect(metrics.pinnedEdgeOverlay.backgroundColor).toBe(
-    "rgba(0, 0, 0, 0.016)",
-  );
   expect(
-    Math.abs(metrics.pinnedEdgeOverlay.height - metrics.containerHeight),
+    Math.abs(metrics.pinnedDimmer.height - metrics.containerHeight),
   ).toBeLessThanOrEqual(0.5);
+  expect(metrics.pinnedDimmer.zIndex).toBeGreaterThan(12);
+  expect(metrics.pinnedDivider.zIndex).toBeGreaterThan(
+    metrics.pinnedDimmer.zIndex,
+  );
   expect(metrics.pinnedColumnWidth.trim()).toBe("224px");
 
   const scrollMetrics = await tableContainer.evaluate((element) => {
     const pinnedCell = element.querySelector(
       'tbody [data-emr-column-pinned="left"]',
     );
-    const viewport = element.parentElement;
+    const viewport = element.closest(
+      '[data-emr-pinned-table-viewport="true"]',
+    );
+    const dimmer = viewport?.querySelector(
+      '[data-emr-pinned-table-dimmer="true"]',
+    );
+    const divider = viewport?.querySelector(
+      '[data-emr-pinned-table-divider="true"]',
+    );
 
-    if (!pinnedCell || !viewport) {
+    if (!pinnedCell || !viewport || !dimmer || !divider) {
       throw new Error("Order table scroll targets are missing.");
     }
 
     const pinnedLeftBefore = pinnedCell.getBoundingClientRect().left;
+    const dimmerLeftBefore = dimmer.getBoundingClientRect().left;
+    const dividerLeftBefore = divider.getBoundingClientRect().left;
     element.scrollLeft = element.scrollWidth;
 
     return {
@@ -1841,6 +1868,10 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
       viewportScrollLeft: viewport.scrollLeft,
       pinnedLeftBefore,
       pinnedLeftAfter: pinnedCell.getBoundingClientRect().left,
+      dimmerLeftBefore,
+      dimmerLeftAfter: dimmer.getBoundingClientRect().left,
+      dividerLeftBefore,
+      dividerLeftAfter: divider.getBoundingClientRect().left,
     };
   });
 
@@ -1848,6 +1879,12 @@ test("hospital admin Order table extends pinned and scroll backgrounds to the ta
   expect(scrollMetrics.viewportScrollLeft).toBe(0);
   expect(
     Math.abs(scrollMetrics.pinnedLeftAfter - scrollMetrics.pinnedLeftBefore),
+  ).toBeLessThanOrEqual(0.5);
+  expect(
+    Math.abs(scrollMetrics.dimmerLeftAfter - scrollMetrics.dimmerLeftBefore),
+  ).toBeLessThanOrEqual(0.5);
+  expect(
+    Math.abs(scrollMetrics.dividerLeftAfter - scrollMetrics.dividerLeftBefore),
   ).toBeLessThanOrEqual(0.5);
 });
 

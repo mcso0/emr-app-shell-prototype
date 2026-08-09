@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
+  EmrPinnedTableViewport,
   EmrPinnedTableWorkspace,
   EmrTableCellText,
   EmrTableFeedbackSurface,
@@ -337,9 +338,13 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
         </EmrTableFeedbackSurface>
       ) : (
         <>
+          <EmrPinnedTableViewport
+            className="min-h-0 min-w-0 flex-1"
+            pinnedColumnWidth={220}
+          >
           <Table
             aria-label="삭제된 보호자/동물 고객관리 테이블"
-            containerClassName="isolate min-h-0 min-w-0 flex-1 overflow-auto bg-[var(--emr-surface-panel)]"
+            containerClassName="isolate h-full min-h-0 min-w-0 overflow-auto bg-[var(--emr-surface-panel)]"
             density="standard"
             layout="scroll"
             minWidth={customerArchiveTableMinWidth}
@@ -449,6 +454,7 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
                 : null}
             </TableBody>
           </Table>
+          </EmrPinnedTableViewport>
 
           <CustomerDataTableFooter
             loading={readStatus === "idle" || readStatus === "loading"}
