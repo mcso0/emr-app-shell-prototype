@@ -585,8 +585,8 @@ export const PinnedColumns: Story = {
         }),
       );
       const dividerLayer = shadowLayers[0];
-      const gradientLayer = shadowLayers.find(
-        (layer) => layer.blur > 0 && layer.spread < 0,
+      const hasBlurLayer = shadowLayers.some(
+        (layer) => layer.blur > 0 || layer.spread < 0,
       );
       const solidLayers = shadowLayers.filter(
         (layer) => layer.blur === 0 && layer.spread === 0,
@@ -598,11 +598,10 @@ export const PinnedColumns: Story = {
         dividerLayer.blur !== 0 ||
         dividerLayer.spread !== 0 ||
         solidLayers.length !== 1 ||
-        !gradientLayer ||
-        gradientLayer.offset < dividerLayer.offset
+        hasBlurLayer
       ) {
         throw new Error(
-          `Pinned ${label} edge must keep only its 1px divider and subtle gradient.`,
+          `Pinned ${label} edge must keep only its 1px divider without a blur shadow.`,
         );
       }
     }

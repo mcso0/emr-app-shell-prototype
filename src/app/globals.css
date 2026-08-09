@@ -472,10 +472,7 @@
 
   .emr-table-surface[data-emr-pinning="columns"]
     [data-emr-column-pinned="left"][data-emr-pinned-edge="true"] {
-    box-shadow:
-      1px 0 0 var(--emr-border-default),
-      var(--clair-spacing-10) 0 16px -16px
-        color-mix(in srgb, var(--emr-text-primary) 55%, transparent);
+    box-shadow: 1px 0 0 var(--emr-border-default);
   }
 
   .emr-table-surface[data-emr-pinning="columns"]
@@ -509,10 +506,7 @@
 
   .emr-table-surface[data-emr-pinning="columns"]
     [data-emr-column-pinned="right"][data-emr-pinned-edge="true"] {
-    box-shadow:
-      -1px 0 0 var(--emr-border-default),
-      -10px 0 16px -16px
-        color-mix(in srgb, var(--emr-text-primary) 55%, transparent);
+    box-shadow: -1px 0 0 var(--emr-border-default);
   }
 
   .emr-table-surface[data-emr-layout="scroll"] {
