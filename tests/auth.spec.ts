@@ -231,8 +231,8 @@ test("post-login workspace entry shows and completes the branded splash", async 
   await expect(splash).toBeVisible();
   await expect(splash).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(splashLogo.locator("svg")).toHaveCSS("color", "rgb(199, 204, 209)");
-  await expect(splashLogo.locator("svg")).toHaveAttribute("width", "128");
-  await expect(splashLogo.locator("svg")).toHaveAttribute("height", "128");
+  await expect(splashLogo.locator("svg")).toHaveAttribute("width", "104");
+  await expect(splashLogo.locator("svg")).toHaveAttribute("height", "104");
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
   await expect(splash).toHaveCount(0);

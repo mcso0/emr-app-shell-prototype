@@ -119,7 +119,7 @@ export function WorkspaceEntryLoadingScreen({
       role="status"
       style={{ zIndex: "calc(var(--clair-z-index-tooltip) + 1)" }}
     >
-      <div className="flex size-32 items-center justify-center">
+      <div className="flex size-[104px] items-center justify-center">
         <motion.div
           animate={logoControls}
           data-splash-logo="true"
@@ -128,8 +128,8 @@ export function WorkspaceEntryLoadingScreen({
         >
           <WorkspaceLogoMarkIcon
             aria-hidden="true"
-            className="block size-32 text-[#C7CCD1]"
-            size={128}
+            className="block size-[104px] text-[#C7CCD1]"
+            size={104}
           />
         </motion.div>
       </div>
