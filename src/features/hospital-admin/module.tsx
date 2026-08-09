@@ -1,17 +1,20 @@
 "use client";
 
 import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type RowSelectionState,
+  type SortingState,
+  type Updater,
+} from "@tanstack/react-table";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import {
-  CdsActionsCopyIcon,
-} from "@/components/cds-icons/actions-and-controls";
+import { CdsActionsCopyIcon } from "@/components/cds-icons/actions-and-controls";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
@@ -24,14 +27,10 @@ import {
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import {
-  EmrPinnedTableViewport,
   EmrPinnedTableWorkspace,
   EmrTableCellText,
   EmrTableFeedbackSurface,
-  EmrTableHeaderCell,
   EmrTableIdentityCellContent,
-  EmrTableSelectionCell,
-  EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
@@ -144,10 +143,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type {
-  EmrColumnResize,
   EmrTableCellTextMode,
   EmrTableDensity,
-  EmrTableHeaderInteraction,
 } from "@/components/emr/table-density";
 import type { OrderCatalogItem } from "@/features/hospital-admin/server-order-catalog";
 import type { OrderCatalogMutationInput } from "@/features/hospital-admin/server-order-catalog";
@@ -206,108 +203,14 @@ const drawerTabs = [
 
 type DrawerTab = (typeof drawerTabs)[number]["value"];
 
-const hospitalOrderTableMinWidthClass = "min-w-[1060px]";
-const hospitalOrderTableMinWidth = 1060;
 const hospitalOrderSelectionColumnWidth = 44;
 const hospitalOrderIdentityColumnWidth = 180;
-const hospitalOrderTableColumnClasses = {
-  select: "w-11 min-w-11 max-w-11",
-  type: "w-[72px]",
-  standardName: "w-[180px]",
-  inHospitalName: "w-[170px]",
-  billingName: "w-[160px]",
-  status: "w-[86px]",
-  price: "w-[110px]",
-  target: "min-w-[96px]",
-  actions: "w-[80px]",
-} as const;
-
-type HospitalOrderTableColumnKey = keyof typeof hospitalOrderTableColumnClasses;
-type HospitalOrderTableSortDirection = "asc" | "desc";
-type HospitalOrderTableSortKey =
-  "standardName" | "inHospitalName" | "billingName" | "price";
-type HospitalOrderTableSortState = {
-  direction: HospitalOrderTableSortDirection;
-  key: HospitalOrderTableSortKey;
-} | null;
 type HospitalOrderTableFilterOption = {
   label: string;
   value: string;
 };
 
-type HospitalOrderTableHeaderColumn = {
-  align?: "left" | "right";
-  className?: string;
-  interaction: EmrTableHeaderInteraction;
-  key: HospitalOrderTableColumnKey;
-  label: string;
-  resize: EmrColumnResize;
-  sortKey?: HospitalOrderTableSortKey;
-};
-
-const hospitalOrderTableHeaderColumns: HospitalOrderTableHeaderColumn[] = [
-  {
-    key: "standardName",
-    label: "표준 Order명",
-    interaction: "sortable",
-    resize: "data-column",
-    sortKey: "standardName",
-  },
-  {
-    key: "type",
-    label: "유형",
-    interaction: "filterable",
-    resize: "data-column",
-  },
-  {
-    key: "inHospitalName",
-    label: "원내 Order명",
-    interaction: "sortable",
-    resize: "data-column",
-    sortKey: "inHospitalName",
-  },
-  {
-    key: "billingName",
-    label: "청구서명",
-    interaction: "sortable",
-    resize: "data-column",
-    sortKey: "billingName",
-  },
-  {
-    key: "status",
-    label: "사용여부",
-    interaction: "filterable",
-    resize: "data-column",
-  },
-  {
-    key: "price",
-    label: "판매금액",
-    align: "right",
-    interaction: "sortable",
-    resize: "data-column",
-    sortKey: "price",
-  },
-  {
-    key: "target",
-    label: "대상",
-    interaction: "filterable",
-    resize: "data-column",
-  },
-];
-
-const [
-  hospitalOrderIdentityHeaderColumn,
-  ...hospitalOrderScrollableHeaderColumns
-] = hospitalOrderTableHeaderColumns;
-
 const hospitalOrderNameTextMode: EmrTableCellTextMode = "two-line-if-long";
-const hospitalOrderTableSortLabels: Record<HospitalOrderTableSortKey, string> =
-  {
-    billingName: "청구서명",
-    inHospitalName: "원내 Order명",
-    price: "판매금액",
-    standardName: "표준 Order명",
-  };
 const hospitalOrderStatusFilterOptions: HospitalOrderTableFilterOption[] = [
   { label: "사용", value: "active" },
   { label: "중지", value: "inactive" },
@@ -739,35 +642,6 @@ function compareHospitalOrderValues(
   });
 }
 
-function getHospitalOrderSortValue(
-  order: HospitalOrderCatalogItem,
-  key: HospitalOrderTableSortKey,
-) {
-  if (key === "price") return order.price;
-
-  return order[key];
-}
-
-function sortHospitalOrderTableRows(
-  orders: HospitalOrderCatalogItem[],
-  sortState: HospitalOrderTableSortState,
-) {
-  if (!sortState) return orders;
-
-  return orders
-    .map((order, index) => ({ index, order }))
-    .sort((left, right) => {
-      const compared = compareHospitalOrderValues(
-        getHospitalOrderSortValue(left.order, sortState.key),
-        getHospitalOrderSortValue(right.order, sortState.key),
-      );
-      if (compared === 0) return left.index - right.index;
-
-      return sortState.direction === "asc" ? compared : -compared;
-    })
-    .map((entry) => entry.order);
-}
-
 function getUniqueHospitalOrderFilterOptions(
   orders: HospitalOrderCatalogItem[],
   getValue: (order: HospitalOrderCatalogItem) => string,
@@ -889,61 +763,6 @@ function getSubcategoryCount(
   subcategoryId: string,
 ) {
   return orders.filter((order) => order.subcategoryId === subcategoryId).length;
-}
-
-function HospitalOrderSortableHeader({
-  column,
-  identity = false,
-  onSort,
-  sortState,
-}: {
-  column: HospitalOrderTableHeaderColumn & {
-    sortKey: HospitalOrderTableSortKey;
-  };
-  identity?: boolean;
-  onSort: (key: HospitalOrderTableSortKey) => void;
-  sortState: HospitalOrderTableSortState;
-}) {
-  const active = sortState?.key === column.sortKey;
-  const label = hospitalOrderTableSortLabels[column.sortKey];
-  const nextAction =
-    !active || !sortState
-      ? `${label} 오름차순 정렬`
-      : sortState.direction === "asc"
-        ? `${label} 내림차순 정렬`
-        : `${label} 정렬 해제`;
-  const activeDirectionLabel =
-    sortState?.direction === "asc"
-      ? "오름차순"
-      : sortState?.direction === "desc"
-        ? "내림차순"
-        : "";
-  const ariaLabel = active
-    ? `현재 정렬: ${label} ${activeDirectionLabel}. 클릭하면 ${nextAction}.`
-    : `정렬 없음. 클릭하면 ${nextAction}.`;
-
-  return (
-    <EmrTableHeaderCell
-      align={column.align}
-      className={cn(
-        hospitalOrderTableColumnClasses[column.key],
-        column.className,
-      )}
-      data-hospital-order-column={column.key}
-      identity={identity}
-      interaction={column.interaction}
-      pinned={identity ? "left" : undefined}
-      pinnedEdge={identity || undefined}
-      pinnedOffset={identity ? hospitalOrderSelectionColumnWidth : undefined}
-      resize={column.resize}
-      sortDirection={active ? sortState.direction : undefined}
-      sortLabel={ariaLabel}
-      title={ariaLabel}
-      onSort={() => onSort(column.sortKey)}
-    >
-      {column.label}
-    </EmrTableHeaderCell>
-  );
 }
 
 type HospitalAdminConceptSection = "vitals";
@@ -1568,9 +1387,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const toggleOrderSelection = useHospitalAdminStore(
     (state) => state.toggleOrderSelection,
   );
-  const toggleVisibleOrderSelection = useHospitalAdminStore(
-    (state) => state.toggleVisibleOrderSelection,
-  );
   const workTypeFilter = useHospitalAdminStore((state) => state.workTypeFilter);
   const [catalogReadStatus, setCatalogReadStatus] =
     useState<OrderCatalogReadStatus>("idle");
@@ -1586,8 +1402,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       "hospital-order-catalog-filter-rule-1",
     ),
   );
-  const [orderSortState, setOrderSortState] =
-    useState<HospitalOrderTableSortState>(null);
+  const [orderSorting, setOrderSorting] = useState<SortingState>([]);
   const selectedSubcategory = getHospitalOrderSubcategory(
     selectedSubcategoryId,
   );
@@ -1672,26 +1487,328 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     orderFilterModel,
     orderFilterFields,
   );
-  const visibleOrders = useMemo(
+  const filteredOrderRows = useMemo(
     () =>
-      sortHospitalOrderTableRows(
-        filterRowsByEmrTableFilterBuilder(
-          baseVisibleOrders,
-          orderFilterModel,
-          orderFilterFields,
-        ),
-        orderSortState,
+      filterRowsByEmrTableFilterBuilder(
+        baseVisibleOrders,
+        orderFilterModel,
+        orderFilterFields,
       ),
-    [baseVisibleOrders, orderFilterFields, orderFilterModel, orderSortState],
+    [baseVisibleOrders, orderFilterFields, orderFilterModel],
   );
-  const visibleOrderIds = visibleOrders.map((order) => order.id);
-  const selectedVisibleCount = visibleOrderIds.filter((id) =>
-    selectedOrderIds.includes(id),
-  ).length;
-  const allVisibleSelected =
-    visibleOrderIds.length > 0 &&
-    selectedVisibleCount === visibleOrderIds.length;
-  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+  const openDrawer = useCallback(
+    (order: HospitalOrderCatalogItem) => {
+      const hospitalOrderDrawerOpen = activeDrawer?.type === "hospital-order";
+      if (selectedOrderIds.length > 0 && !hospitalOrderDrawerOpen) return;
+
+      if (hospitalOrderDrawerOpen && selectedOrderIds.length > 0) {
+        clearSelectedOrders();
+      }
+      setFocusedOrderId(order.id);
+      setActiveDrawer({
+        type: "hospital-order",
+        id: order.id,
+        subtitle: order.inHospitalName,
+      });
+    },
+    [
+      activeDrawer?.type,
+      clearSelectedOrders,
+      selectedOrderIds.length,
+      setActiveDrawer,
+      setFocusedOrderId,
+    ],
+  );
+
+  const handleCreateOrder = () => {
+    const order = createOrder();
+
+    setFocusedOrderId(order.id);
+    setActiveDrawer({
+      type: "hospital-order",
+      id: order.id,
+      subtitle: getNewOrderDrawerTitle(selectedSubcategory?.label),
+    });
+  };
+
+  const handleDuplicateFirstSelected = () => {
+    const duplicated = selectedOrderIds[0]
+      ? duplicateOrder(selectedOrderIds[0])
+      : null;
+    clearSelectedOrders();
+
+    if (duplicated) {
+      setFocusedOrderId(duplicated.id);
+      setActiveDrawer({
+        type: "hospital-order",
+        id: duplicated.id,
+        subtitle: duplicated.inHospitalName,
+      });
+    }
+  };
+
+  const hospitalOrderColumns = useMemo<
+    Array<ColumnDef<HospitalOrderCatalogItem, unknown>>
+  >(
+    () => [
+      {
+        id: "select",
+        enableHiding: false,
+        enableSorting: false,
+        meta: { label: "오더 선택", role: "selection" },
+        size: hospitalOrderSelectionColumnWidth,
+        header: ({ table }) => {
+          const allSelected = table.getIsAllRowsSelected();
+          const someSelected = table.getIsSomeRowsSelected();
+
+          return (
+            <span
+              data-row-interactive="true"
+              className="inline-flex size-6 items-center justify-center"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <EmrTableCheckbox
+                aria-label="보이는 오더 전체 선택"
+                checked={allSelected}
+                indeterminate={someSelected}
+                onCheckedChange={(checked) =>
+                  table.toggleAllRowsSelected(Boolean(checked))
+                }
+              />
+            </span>
+          );
+        },
+        cell: ({ row }) => (
+          <span
+            data-row-interactive="true"
+            className="inline-flex size-6 items-center justify-center"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <EmrTableCheckbox
+              aria-label={`${row.original.standardName} 선택`}
+              checked={row.getIsSelected()}
+              onCheckedChange={(checked) => row.toggleSelected(checked)}
+            />
+          </span>
+        ),
+      },
+      {
+        accessorKey: "standardName",
+        id: "standardName",
+        enableSorting: true,
+        meta: {
+          identity: true,
+          label: "표준 Order명",
+          resize: "data-column",
+          role: "data",
+          textMode: hospitalOrderNameTextMode,
+        },
+        size: hospitalOrderIdentityColumnWidth,
+        cell: ({ row }) => (
+          <EmrTableIdentityCellContent>
+            <EmrTableCellText
+              fullText={row.original.standardName}
+              mode={hospitalOrderNameTextMode}
+            >
+              {row.original.standardName}
+            </EmrTableCellText>
+          </EmrTableIdentityCellContent>
+        ),
+        sortingFn: (left, right, id) =>
+          compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
+      },
+      {
+        accessorFn: () => "개별",
+        id: "type",
+        enableSorting: false,
+        meta: {
+          label: "유형",
+          resize: "data-column",
+          role: "data",
+          textMode: "one-line",
+        },
+        size: 72,
+        cell: () => <Badge variant="outline">개별</Badge>,
+      },
+      {
+        accessorKey: "inHospitalName",
+        id: "inHospitalName",
+        enableSorting: true,
+        meta: {
+          label: "원내 Order명",
+          resize: "data-column",
+          role: "data",
+          textMode: hospitalOrderNameTextMode,
+        },
+        size: 170,
+        cell: ({ row }) => (
+          <EmrTableCellText
+            fullText={row.original.inHospitalName}
+            mode={hospitalOrderNameTextMode}
+          >
+            {row.original.inHospitalName}
+          </EmrTableCellText>
+        ),
+        sortingFn: (left, right, id) =>
+          compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
+      },
+      {
+        accessorKey: "billingName",
+        id: "billingName",
+        enableSorting: true,
+        meta: {
+          label: "청구서명",
+          resize: "data-column",
+          role: "data",
+          textMode: hospitalOrderNameTextMode,
+        },
+        size: 160,
+        cell: ({ row }) => (
+          <EmrTableCellText
+            fullText={row.original.billingName}
+            mode={hospitalOrderNameTextMode}
+          >
+            {row.original.billingName}
+          </EmrTableCellText>
+        ),
+        sortingFn: (left, right, id) =>
+          compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
+      },
+      {
+        accessorFn: (row) => (row.isActive ? "active" : "inactive"),
+        id: "status",
+        enableSorting: false,
+        meta: {
+          label: "사용여부",
+          resize: "data-column",
+          role: "data",
+          textMode: "one-line",
+        },
+        size: 86,
+        cell: ({ row }) => (
+          <EmrTableCellText
+            className={cn(
+              "font-semibold",
+              row.original.isActive
+                ? "text-[var(--emr-status-success-text)]"
+                : "text-muted-foreground",
+            )}
+            mode="one-line"
+          >
+            {row.original.isActive ? "사용" : "중지"}
+          </EmrTableCellText>
+        ),
+      },
+      {
+        accessorKey: "price",
+        id: "price",
+        enableSorting: true,
+        meta: {
+          align: "right",
+          label: "판매금액",
+          resize: "data-column",
+          role: "data",
+          textMode: "one-line",
+        },
+        size: 110,
+        cell: ({ row }) => (
+          <EmrTableCellText className="font-semibold" mode="one-line">
+            {formatHospitalOrderAmount(row.original.price)}
+          </EmrTableCellText>
+        ),
+        sortingFn: (left, right, id) =>
+          compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
+      },
+      {
+        accessorFn: (row) => targetLabels[row.target],
+        id: "target",
+        enableSorting: false,
+        meta: {
+          grow: true,
+          label: "대상",
+          resize: "data-column",
+          role: "data",
+          textMode: "one-line",
+        },
+        size: 158,
+        cell: ({ row }) => (
+          <EmrTableCellText mode="one-line">
+            {targetLabels[row.original.target]}
+          </EmrTableCellText>
+        ),
+      },
+      {
+        id: "actions",
+        enableHiding: false,
+        enableSorting: false,
+        meta: { align: "right", label: "작업", role: "actions" },
+        size: 80,
+        cell: ({ row }) => (
+          <EmrRowActionMenu
+            ariaLabel={`${row.original.standardName} Order 행 작업`}
+            contentClassName="w-48"
+            items={[
+              {
+                key: "detail",
+                label: "상세 보기",
+                description: "Order drawer 열기",
+                onSelect: () => openDrawer(row.original),
+              },
+              {
+                key: "duplicate",
+                label: "복제",
+                description: "현재 row 기준으로 복사",
+                onSelect: () => duplicateOrder(row.original.id),
+              },
+            ]}
+            testId={`hospital-order-action-${row.original.id}`}
+          />
+        ),
+      },
+    ],
+    [duplicateOrder, openDrawer],
+  );
+  const orderRowSelection = useMemo<RowSelectionState>(
+    () => Object.fromEntries(selectedOrderIds.map((id) => [id, true])),
+    [selectedOrderIds],
+  );
+  const handleOrderRowSelectionChange = (
+    updater: Updater<RowSelectionState>,
+  ) => {
+    const nextSelection =
+      typeof updater === "function" ? updater(orderRowSelection) : updater;
+
+    filteredOrderRows.forEach((order) => {
+      const current = selectedOrderIds.includes(order.id);
+      const next = Boolean(nextSelection[order.id]);
+      if (current !== next) toggleOrderSelection(order.id, next);
+    });
+  };
+  // TanStack Table owns sorting, pinning, and the rendered row model; domain
+  // filters and selection persistence stay in the hospital-admin store.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const orderTable = useReactTable({
+    columns: hospitalOrderColumns,
+    data: filteredOrderRows,
+    enableColumnPinning: true,
+    enableMultiSort: false,
+    enableRowSelection: true,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
+    getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: handleOrderRowSelectionChange,
+    onSortingChange: setOrderSorting,
+    state: {
+      columnPinning: { left: ["select", "standardName"], right: [] },
+      rowSelection: orderRowSelection,
+      sorting: orderSorting,
+    },
+  });
+  const visibleOrders = orderTable
+    .getRowModel()
+    .rows.map((row) => row.original);
   const hasSelectedLeafRows = selectedLeafOrders.length > 0;
   const orderEmptyStateKind = hasSelectedLeafRows
     ? "no-filter-results"
@@ -1716,14 +1833,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         "hospital-order-catalog-filter-rule-1",
       ),
     );
-  };
-  const handleOrderSort = (key: HospitalOrderTableSortKey) => {
-    setOrderSortState((current) => {
-      if (current?.key !== key) return { direction: "asc", key };
-      if (current.direction === "asc") return { direction: "desc", key };
-
-      return null;
-    });
   };
   useEffect(() => {
     hydrate();
@@ -1840,47 +1949,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     );
   }
 
-  const openDrawer = (order: HospitalOrderCatalogItem) => {
-    const hospitalOrderDrawerOpen = activeDrawer?.type === "hospital-order";
-    if (selectedOrderIds.length > 0 && !hospitalOrderDrawerOpen) return;
-
-    if (hospitalOrderDrawerOpen && selectedOrderIds.length > 0) {
-      clearSelectedOrders();
-    }
-    setFocusedOrderId(order.id);
-    setActiveDrawer({
-      type: "hospital-order",
-      id: order.id,
-      subtitle: order.inHospitalName,
-    });
-  };
-
-  const handleCreateOrder = () => {
-    const order = createOrder();
-
-    setFocusedOrderId(order.id);
-    setActiveDrawer({
-      type: "hospital-order",
-      id: order.id,
-      subtitle: getNewOrderDrawerTitle(selectedSubcategory?.label),
-    });
-  };
-
-  const handleDuplicateFirstSelected = () => {
-    const duplicated = selectedOrderIds[0]
-      ? duplicateOrder(selectedOrderIds[0])
-      : null;
-    clearSelectedOrders();
-
-    if (duplicated) {
-      setFocusedOrderId(duplicated.id);
-      setActiveDrawer({
-        type: "hospital-order",
-        id: duplicated.id,
-        subtitle: duplicated.inHospitalName,
-      });
-    }
-  };
   const catalogReadStatusLabel =
     catalogReadStatus === "loading"
       ? "Workspace catalog 불러오는 중"
@@ -1898,7 +1966,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       data-testid="hospital-admin-order-content"
       identityTextInset={48}
       selectionColumnWidth={hospitalOrderSelectionColumnWidth}
-      data-emr-order-pinned-table="true"
     >
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <EmrTableWorkspaceHeader
@@ -1919,140 +1986,144 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         searchValue={searchQuery}
         tableControls={
           <>
-          <Select
-            value={statusFilter}
-            onValueChange={(value) =>
-              setStatusFilter(value as HospitalOrderStatusFilter)
-            }
-          >
-            <SelectTrigger
-              aria-label="사용여부 필터"
-              size="sm"
-              className="w-[96px] bg-card"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {statusFilterItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Select
-            value={billingFilter}
-            onValueChange={(value) =>
-              setBillingFilter(value as HospitalOrderBillingFilter)
-            }
-          >
-            <SelectTrigger
-              aria-label="청구 필터"
-              size="sm"
-              className="w-[104px] bg-card"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {billingFilterItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Select
-            value={workTypeFilter}
-            onValueChange={(value) =>
-              setWorkTypeFilter(value as HospitalOrderWorkTypeFilter)
-            }
-          >
-            <SelectTrigger
-              aria-label="업무유형 필터"
-              size="sm"
-              className="w-[104px] bg-card"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {workTypeFilterItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <EmrTableDensitySelector
-            value={tableDensity}
-            onValueChange={setTableDensity}
-          />
-          <Popover
-            open={orderFilterOpen}
-            onOpenChange={(open) => {
-              setOrderFilterOpen(open);
-              if (!open) {
-                setOrderFilterPopoverReady(false);
-                setOrderFilterAutoOpenConsumed(false);
+            <Select
+              value={statusFilter}
+              onValueChange={(value) =>
+                setStatusFilter(value as HospitalOrderStatusFilter)
               }
-            }}
-            onOpenChangeComplete={setOrderFilterPopoverReady}
-          >
-            <PopoverTrigger
-              render={
-                <EmrTableFilterTrigger
-                  activeCount={activeOrderFilterCount}
-                  aria-label={
-                    activeOrderFilterCount > 0
-                      ? `오더 필터 ${activeOrderFilterCount}개 설정`
-                      : "오더 필터 설정"
-                  }
-                />
+            >
+              <SelectTrigger
+                aria-label="사용여부 필터"
+                size="sm"
+                className="w-[96px] bg-card"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {statusFilterItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select
+              value={billingFilter}
+              onValueChange={(value) =>
+                setBillingFilter(value as HospitalOrderBillingFilter)
               }
+            >
+              <SelectTrigger
+                aria-label="청구 필터"
+                size="sm"
+                className="w-[104px] bg-card"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {billingFilterItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select
+              value={workTypeFilter}
+              onValueChange={(value) =>
+                setWorkTypeFilter(value as HospitalOrderWorkTypeFilter)
+              }
+            >
+              <SelectTrigger
+                aria-label="업무유형 필터"
+                size="sm"
+                className="w-[104px] bg-card"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {workTypeFilterItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <EmrTableDensitySelector
+              value={tableDensity}
+              onValueChange={setTableDensity}
             />
-            <PopoverContent
-              align="end"
-              className="w-[min(640px,calc(100vw-32px))] gap-0 overflow-visible p-0"
-              initialFocus={false}
-            >
-              <EmrTableFilterBuilder
-                autoOpenFirstField={
-                  orderFilterPopoverReady && !orderFilterAutoOpenConsumed
-                }
-                clearAllLabel="초기화"
-                description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다."
-                fields={orderFilterFields}
-                model={orderFilterModel}
-                title="필터"
-                onClose={() => {
-                  setOrderFilterOpen(false);
+            <Popover
+              open={orderFilterOpen}
+              onOpenChange={(open) => {
+                setOrderFilterOpen(open);
+                if (!open) {
                   setOrderFilterPopoverReady(false);
                   setOrderFilterAutoOpenConsumed(false);
-                }}
-                onModelChange={(model) => {
-                  setOrderFilterAutoOpenConsumed(true);
-                  setOrderFilterModel(model);
-                }}
+                }
+              }}
+              onOpenChangeComplete={setOrderFilterPopoverReady}
+            >
+              <PopoverTrigger
+                render={
+                  <EmrTableFilterTrigger
+                    activeCount={activeOrderFilterCount}
+                    aria-label={
+                      activeOrderFilterCount > 0
+                        ? `오더 필터 ${activeOrderFilterCount}개 설정`
+                        : "오더 필터 설정"
+                    }
+                  />
+                }
               />
-            </PopoverContent>
-          </Popover>
-          <Button size="icon-sm" variant="outline" aria-label="컬럼 표시 설정">
-            <SlidersIcon />
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={selectedOrderIds.length !== 1}
-            onClick={handleDuplicateFirstSelected}
-          >
-            <CdsActionsCopyIcon data-icon="inline-start" />
-            복제
-          </Button>
+              <PopoverContent
+                align="end"
+                className="w-[min(640px,calc(100vw-32px))] gap-0 overflow-visible p-0"
+                initialFocus={false}
+              >
+                <EmrTableFilterBuilder
+                  autoOpenFirstField={
+                    orderFilterPopoverReady && !orderFilterAutoOpenConsumed
+                  }
+                  clearAllLabel="초기화"
+                  description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다."
+                  fields={orderFilterFields}
+                  model={orderFilterModel}
+                  title="필터"
+                  onClose={() => {
+                    setOrderFilterOpen(false);
+                    setOrderFilterPopoverReady(false);
+                    setOrderFilterAutoOpenConsumed(false);
+                  }}
+                  onModelChange={(model) => {
+                    setOrderFilterAutoOpenConsumed(true);
+                    setOrderFilterModel(model);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+            <Button
+              size="icon-sm"
+              variant="outline"
+              aria-label="컬럼 표시 설정"
+            >
+              <SlidersIcon />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={selectedOrderIds.length !== 1}
+              onClick={handleDuplicateFirstSelected}
+            >
+              <CdsActionsCopyIcon data-icon="inline-start" />
+              복제
+            </Button>
           </>
         }
         testId="hospital-order-page-header"
@@ -2121,227 +2192,37 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           />
         </EmrTableFeedbackSurface>
       ) : (
-        <EmrPinnedTableViewport
-          className="min-h-0 flex-1"
-          pinnedColumnWidth={
-            hospitalOrderSelectionColumnWidth + hospitalOrderIdentityColumnWidth
-          }
+        <div
+          className="min-h-0 min-w-0 flex-1"
+          data-testid="hospital-order-table"
         >
-          <Table
+          <EmrDataTable
             aria-label="병원관리 Order 관리 테이블"
+            className="table-fixed"
             containerClassName="h-full min-h-0 overflow-auto"
-            data-testid="hospital-order-table"
             density={tableDensity}
-            layout="scroll"
-            minWidth={hospitalOrderTableMinWidth}
+            initialLoading={
+              catalogReadStatus === "idle" || catalogReadStatus === "loading"
+            }
             overscrollAxes="both"
-            pinning="columns"
-            className={cn(hospitalOrderTableMinWidthClass, "table-fixed")}
-          >
-            <colgroup>
-              <col style={{ width: hospitalOrderSelectionColumnWidth }} />
-              <col style={{ width: hospitalOrderIdentityColumnWidth }} />
-              <col style={{ width: 72 }} />
-              <col style={{ width: 170 }} />
-              <col style={{ width: 160 }} />
-              <col style={{ width: 86 }} />
-              <col style={{ width: 110 }} />
-              <col />
-              <col style={{ width: 80 }} />
-            </colgroup>
-            <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
-              <TableRow className="hover:bg-transparent">
-                <EmrTableSelectionHeaderCell
-                  className={hospitalOrderTableColumnClasses.select}
-                  pinned="left"
-                  pinnedOffset={0}
-                >
-                  <EmrTableCheckbox
-                    aria-label="보이는 오더 전체 선택"
-                    checked={allVisibleSelected}
-                    indeterminate={someVisibleSelected}
-                    onCheckedChange={(checked) =>
-                      toggleVisibleOrderSelection(
-                        visibleOrderIds,
-                        Boolean(checked),
-                      )
-                    }
-                  />
-                </EmrTableSelectionHeaderCell>
-                <HospitalOrderSortableHeader
-                  column={
-                    hospitalOrderIdentityHeaderColumn as HospitalOrderTableHeaderColumn & {
-                      sortKey: HospitalOrderTableSortKey;
-                    }
-                  }
-                  identity
-                  sortState={orderSortState}
-                  onSort={handleOrderSort}
-                />
-                {hospitalOrderScrollableHeaderColumns.map((column) =>
-                  column.sortKey ? (
-                    <HospitalOrderSortableHeader
-                      key={column.key}
-                      column={
-                        column as HospitalOrderTableHeaderColumn & {
-                          sortKey: HospitalOrderTableSortKey;
-                        }
-                      }
-                      sortState={orderSortState}
-                      onSort={handleOrderSort}
-                    />
-                  ) : (
-                    <EmrTableHeaderCell
-                      key={column.key}
-                      align={column.align}
-                      className={cn(
-                        hospitalOrderTableColumnClasses[column.key],
-                        column.className,
-                      )}
-                      data-hospital-order-column={column.key}
-                      interaction={column.interaction}
-                      resize={column.resize}
-                    >
-                      {column.label}
-                    </EmrTableHeaderCell>
-                  ),
-                )}
-                <EmrTableHeaderCell
-                  align="right"
-                  className={hospitalOrderTableColumnClasses.actions}
-                  interaction="static"
-                  resize="none"
-                >
-                  작업
-                </EmrTableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {catalogReadStatus === "idle" ||
-              catalogReadStatus === "loading" ? (
-                <HospitalOrderTableSkeletonRows />
-              ) : null}
-              {catalogReadStatus === "ready"
-                ? visibleOrders.map((order) => {
-                    const selected = selectedOrderIds.includes(order.id);
-                    const focused = focusedOrderId === order.id;
+            skeletonRowCount={6}
+            table={orderTable}
+            getRowProps={(row) => {
+              const focused = focusedOrderId === row.original.id;
 
-                    return (
-                      <TableRow
-                        key={order.id}
-                        data-testid={`hospital-order-row-${order.id}`}
-                        data-focused={focused ? "true" : undefined}
-                        data-state={selected ? "selected" : undefined}
-                        className={cn(
-                          "h-11 cursor-pointer bg-card hover:bg-[var(--emr-state-hover)] data-[state=selected]:bg-[var(--emr-state-selected)]",
-                          focused &&
-                            "bg-[var(--emr-state-selected)] shadow-[inset_3px_0_0_var(--emr-state-selected-border)]",
-                        )}
-                        onClick={() => openDrawer(order)}
-                      >
-                        <EmrTableSelectionCell
-                          controlVisibility="contextual"
-                          pinned="left"
-                          pinnedOffset={0}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <EmrTableCheckbox
-                            aria-label={`${order.standardName} 선택`}
-                            checked={selected}
-                            onCheckedChange={(checked) =>
-                              toggleOrderSelection(order.id, Boolean(checked))
-                            }
-                          />
-                        </EmrTableSelectionCell>
-                        <TableCell
-                          className="overflow-hidden !p-0 font-semibold"
-                          data-hospital-order-column="standardName"
-                          pinned="left"
-                          pinnedEdge
-                          pinnedOffset={hospitalOrderSelectionColumnWidth}
-                        >
-                          <EmrTableIdentityCellContent className="min-h-11">
-                            <EmrTableCellText
-                              mode={hospitalOrderNameTextMode}
-                              fullText={order.standardName}
-                            >
-                              {order.standardName}
-                            </EmrTableCellText>
-                          </EmrTableIdentityCellContent>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">개별</Badge>
-                        </TableCell>
-                        <TableCell className="overflow-hidden">
-                          <EmrTableCellText
-                            mode={hospitalOrderNameTextMode}
-                            fullText={order.inHospitalName}
-                          >
-                            {order.inHospitalName}
-                          </EmrTableCellText>
-                        </TableCell>
-                        <TableCell className="overflow-hidden">
-                          <EmrTableCellText
-                            mode={hospitalOrderNameTextMode}
-                            fullText={order.billingName}
-                          >
-                            {order.billingName}
-                          </EmrTableCellText>
-                        </TableCell>
-                        <TableCell>
-                          <EmrTableCellText
-                            className={cn(
-                              "font-semibold",
-                              order.isActive
-                                ? "text-[var(--emr-status-success-text)]"
-                                : "text-muted-foreground",
-                            )}
-                            mode="one-line"
-                          >
-                            {order.isActive ? "사용" : "중지"}
-                          </EmrTableCellText>
-                        </TableCell>
-                        <TableCell className="overflow-hidden text-right font-semibold">
-                          <EmrTableCellText mode="one-line">
-                            {formatHospitalOrderAmount(order.price)}
-                          </EmrTableCellText>
-                        </TableCell>
-                        <TableCell className="overflow-hidden">
-                          <EmrTableCellText mode="one-line">
-                            {targetLabels[order.target]}
-                          </EmrTableCellText>
-                        </TableCell>
-                        <TableCell
-                          className="text-right"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <EmrRowActionMenu
-                            ariaLabel={`${order.standardName} Order 행 작업`}
-                            contentClassName="w-48"
-                            items={[
-                              {
-                                key: "detail",
-                                label: "상세 보기",
-                                description: "Order drawer 열기",
-                                onSelect: () => openDrawer(order),
-                              },
-                              {
-                                key: "duplicate",
-                                label: "복제",
-                                description: "현재 row 기준으로 복사",
-                                onSelect: () => duplicateOrder(order.id),
-                              },
-                            ]}
-                            testId={`hospital-order-action-${order.id}`}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                : null}
-            </TableBody>
-          </Table>
-        </EmrPinnedTableViewport>
+              return {
+                className: cn(
+                  "cursor-pointer bg-card",
+                  focused &&
+                    "bg-[var(--emr-state-selected)] shadow-[inset_3px_0_0_var(--emr-state-selected-border)]",
+                ),
+                "data-focused": focused ? "true" : undefined,
+                "data-testid": `hospital-order-row-${row.original.id}`,
+                onClick: () => openDrawer(row.original),
+              };
+            }}
+          />
+        </div>
       )}
       {catalogReadStatus === "ready" && selectedOrderIds.length > 0 ? (
         <div className="pointer-events-none sticky bottom-3 z-20 mt-[-52px] flex justify-center">
@@ -2366,54 +2247,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   );
 }
 
-function HospitalOrderTableSkeletonRows() {
-  return (
-    <>
-      {Array.from({ length: 6 }, (_, index) => (
-        <TableRow
-          key={`hospital-order-skeleton-${index}`}
-          data-testid="hospital-order-table-skeleton-row"
-        >
-          <EmrTableSelectionCell pinned="left" pinnedOffset={0}>
-            <div className="h-4 w-4 rounded bg-[var(--emr-surface-muted)]" />
-          </EmrTableSelectionCell>
-          <TableCell
-            className="!p-0"
-            pinned="left"
-            pinnedEdge
-            pinnedOffset={hospitalOrderSelectionColumnWidth}
-          >
-            <EmrTableIdentityCellContent className="min-h-11">
-              <div className="h-4 w-36 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-            </EmrTableIdentityCellContent>
-          </TableCell>
-          <TableCell>
-            <div className="h-5 w-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-32 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-28 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-12 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <div className="ml-auto h-4 w-16 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-14 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <div className="ml-auto h-7 w-7 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
-  );
-}
-
 function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
   const { hydrated, hydrate, session } = useAuthClient();
   const [eventType, setEventType] = useState("all");
@@ -2432,6 +2265,104 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
   const auditEmptyStateDescription = hasAuditFilters
     ? "검색어나 필터를 바꾸면 감사 로그가 다시 표시됩니다."
     : "기록이 생성되면 이 표에 표시됩니다.";
+  const columns = useMemo<ColumnDef<AuditReviewEventRow, unknown>[]>(
+    () => [
+      {
+        id: "occurredAt",
+        accessorKey: "occurredAt",
+        size: 170,
+        minSize: 150,
+        enableSorting: false,
+        enableResizing: false,
+        header: "시간",
+        meta: { label: "시간", resize: "none" },
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {formatAuditTime(row.original.occurredAt)}
+          </span>
+        ),
+      },
+      {
+        id: "eventType",
+        accessorKey: "eventType",
+        size: 180,
+        minSize: 150,
+        enableSorting: false,
+        enableResizing: false,
+        header: "이벤트",
+        meta: { label: "이벤트", resize: "none" },
+        cell: ({ row }) => (
+          <Badge variant="outline" className="rounded-md">
+            {auditEventLabels[row.original.eventType] ?? row.original.eventType}
+          </Badge>
+        ),
+      },
+      {
+        id: "actor",
+        accessorFn: (row) => row.actorUserId ?? "system",
+        size: 150,
+        minSize: 120,
+        enableSorting: false,
+        enableResizing: false,
+        header: "Actor",
+        meta: { label: "Actor", resize: "none" },
+        cell: ({ row }) => row.original.actorUserId ?? "system",
+      },
+      {
+        id: "target",
+        accessorFn: (row) => row.targetType + " " + row.targetId,
+        size: 220,
+        minSize: 180,
+        enableSorting: false,
+        enableResizing: false,
+        header: "Target",
+        meta: {
+          label: "Target",
+          resize: "none",
+          textMode: "two-line-if-long",
+        },
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <span className="font-medium">{row.original.targetType}</span>
+            <span className="ml-2 text-muted-foreground">
+              {row.original.targetId}
+            </span>
+          </div>
+        ),
+      },
+      {
+        id: "summary",
+        accessorFn: (row) => buildAuditSummary(row),
+        size: 260,
+        minSize: 220,
+        enableSorting: false,
+        enableResizing: false,
+        header: "요약",
+        meta: {
+          grow: true,
+          label: "요약",
+          resize: "none",
+          textMode: "two-line-if-long",
+        },
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {buildAuditSummary(row.original)}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
+  // TanStack Table owns the audit grid renderer; access and feedback remain here.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({
+    columns,
+    data: events,
+    enableColumnResizing: false,
+    enableSorting: false,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
+  });
 
   useEffect(() => {
     hydrate();
@@ -2570,85 +2501,51 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
           </div>
         ) : (
           <ScrollArea className="h-full">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="h-9 w-[170px] px-4 emr-text-metadata">
-                    시간
-                  </TableHead>
-                  <TableHead className="h-9 w-[180px] px-2 emr-text-metadata">
-                    이벤트
-                  </TableHead>
-                  <TableHead className="h-9 w-[150px] px-2 emr-text-metadata">
-                    Actor
-                  </TableHead>
-                  <TableHead className="h-9 w-[220px] px-2 emr-text-metadata">
-                    Target
-                  </TableHead>
-                  <TableHead className="h-9 px-2 emr-text-metadata">
-                    요약
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map((event) => (
-                  <TableRow
-                    key={event.id}
-                    data-testid={`audit-review-row-${event.id}`}
-                    className="h-12 border-border bg-card emr-text-dense"
-                  >
-                    <TableCell className="px-4 font-medium">
-                      {formatAuditTime(event.occurredAt)}
-                    </TableCell>
-                    <TableCell className="px-2">
-                      <Badge variant="outline" className="rounded-md">
-                        {auditEventLabels[event.eventType] ?? event.eventType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-2">
-                      {event.actorUserId ?? "system"}
-                    </TableCell>
-                    <TableCell className="px-2">
-                      <span className="font-medium">{event.targetType}</span>
-                      <span className="ml-2 text-muted-foreground">
-                        {event.targetId}
-                      </span>
-                    </TableCell>
-                    <TableCell className="px-2 text-muted-foreground">
-                      {buildAuditSummary(event)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {status === "loading" ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={5}
-                      className="h-24 text-center emr-text-dense text-muted-foreground"
-                    >
-                      불러오는 중
-                    </TableCell>
-                  </TableRow>
-                ) : events.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-36">
-                      <div className="flex justify-center px-4 py-6">
-                        <EmrEmptyState
-                          kind={auditEmptyStateKind}
-                          priority={
-                            hasAuditFilters ? "local-recovery" : "supporting"
-                          }
-                          surface="table"
-                          size="md"
-                          testId="hospital-audit-empty-state"
-                          title={auditEmptyStateTitle}
-                          description={auditEmptyStateDescription}
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+            <EmrDataTable
+              aria-label="감사 로그"
+              className="table-fixed"
+              density="standard"
+              initialLoading={status === "loading" && events.length === 0}
+              renderAfterRows={({ visibleColumnCount }) => (
+                <>
+                  {status === "loading" && events.length > 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={visibleColumnCount}
+                        className="h-24 text-center emr-text-dense text-muted-foreground"
+                      >
+                        불러오는 중
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  {status !== "loading" && events.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={visibleColumnCount} className="h-36">
+                        <div className="flex justify-center px-4 py-6">
+                          <EmrEmptyState
+                            kind={auditEmptyStateKind}
+                            priority={
+                              hasAuditFilters ? "local-recovery" : "supporting"
+                            }
+                            surface="table"
+                            size="md"
+                            testId="hospital-audit-empty-state"
+                            title={auditEmptyStateTitle}
+                            description={auditEmptyStateDescription}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </>
+              )}
+              skeletonRowCount={5}
+              table={table}
+              getRowProps={(row) => ({
+                className: undefined,
+                "data-testid": "audit-review-row-" + row.original.id,
+              })}
+            />
           </ScrollArea>
         )}
       </section>

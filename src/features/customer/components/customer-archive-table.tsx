@@ -1,27 +1,24 @@
 "use client";
 
+import {
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+  type ColumnPinningState,
+} from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
-  EmrPinnedTableViewport,
   EmrPinnedTableWorkspace,
   EmrTableCellText,
   EmrTableFeedbackSurface,
-  EmrTableHeaderCell,
   EmrTableIdentityCellContent,
 } from "@/components/emr/table-primitives";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { CustomerDataTableFooter } from "@/features/customer/components/customer-data-table-footer";
 import { CustomerListHeader } from "@/features/customer/components/customer-list-header";
 import { useMockAuthStore } from "@/features/auth/session-store";
@@ -41,7 +38,6 @@ type CustomerArchiveListResponse = {
   records?: CustomerArchiveRecord[];
 };
 
-const customerArchiveTableMinWidth = 880;
 const archiveDateFormatter = new Intl.DateTimeFormat("ko-KR", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -68,38 +64,6 @@ function getArchiveMutationPath(
     record.target === "patient" ? "patients" : "guardians";
 
   return `/api/workspaces/${encodeURIComponent(workspaceId)}/customer/${targetCollection}/${encodeURIComponent(record.id)}/archive`;
-}
-
-function CustomerArchiveSkeletonRows() {
-  return (
-    <>
-      {Array.from({ length: 6 }, (_, index) => (
-        <TableRow
-          key={`customer-archive-skeleton-${index}`}
-          className="h-10 bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]"
-          data-testid="customer-archive-skeleton-row"
-        >
-          <TableCell className="!p-0" pinned="left" pinnedEdge pinnedOffset={0}>
-            <EmrTableIdentityCellContent className="min-h-10">
-              <Skeleton className="h-4 w-24 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
-            </EmrTableIdentityCellContent>
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-14 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-32 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-4 w-24 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="ml-auto h-7 w-14 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
-  );
 }
 
 export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
@@ -255,6 +219,99 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
   const emptyDescription = hasFilteredRecords
     ? "검색어를 바꾸면 삭제 이력이 다시 보입니다."
     : "삭제 이력이 없습니다.";
+  const columns = useMemo<ColumnDef<CustomerArchiveRecord, unknown>[]>(
+    () => [
+      {
+        accessorKey: "displayName",
+        id: "displayName",
+        meta: {
+          identity: true,
+          label: "이름",
+          role: "data",
+          textMode: "one-line",
+        },
+        size: 220,
+        cell: ({ row }) => (
+          <EmrTableIdentityCellContent>
+            <EmrTableCellText
+              className="font-semibold"
+              fullText={row.original.displayName}
+              mode="one-line"
+            >
+              {row.original.displayName}
+            </EmrTableCellText>
+          </EmrTableIdentityCellContent>
+        ),
+      },
+      {
+        accessorFn: (row) => getArchiveTargetLabel(row.target),
+        id: "target",
+        meta: { label: "구분", role: "data", textMode: "one-line" },
+        size: 120,
+        cell: ({ row }) => (
+          <Badge variant="outline">
+            {getArchiveTargetLabel(row.original.target)}
+          </Badge>
+        ),
+      },
+      {
+        accessorFn: (row) => row.deletedAt ?? "",
+        id: "deletedAt",
+        meta: { label: "삭제일시", role: "data", textMode: "one-line" },
+        size: 220,
+        cell: ({ row }) => (
+          <EmrTableCellText mode="one-line">
+            {formatArchiveDate(row.original.deletedAt)}
+          </EmrTableCellText>
+        ),
+      },
+      {
+        accessorFn: (row) => row.deletedByUserId ?? "-",
+        id: "deletedBy",
+        meta: { label: "삭제한 사용자", role: "data", textMode: "one-line" },
+        size: 220,
+        cell: ({ row }) => (
+          <EmrTableCellText
+            fullText={row.original.deletedByUserId ?? "-"}
+            mode="one-line"
+          >
+            {row.original.deletedByUserId ?? "-"}
+          </EmrTableCellText>
+        ),
+      },
+      {
+        id: "actions",
+        meta: { align: "right", label: "작업", role: "actions" },
+        size: 100,
+        cell: ({ row }) => (
+          <Button
+            aria-label={`${row.original.displayName} 복원`}
+            disabled={pendingRestoreId === row.original.id}
+            size="sm"
+            variant="outline"
+            onClick={() => void restoreRecord(row.original)}
+          >
+            {pendingRestoreId === row.original.id ? "복원 중" : "복원"}
+          </Button>
+        ),
+      },
+    ],
+    [pendingRestoreId, restoreRecord],
+  );
+  const columnPinning = useMemo<ColumnPinningState>(
+    () => ({ left: ["displayName"], right: [] }),
+    [],
+  );
+  // TanStack Table owns the archive table's column order and row model.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({
+    columns,
+    data: filteredRecords,
+    enableColumnPinning: true,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => `${row.target}-${row.id}`,
+    state: { columnPinning },
+  });
 
   return (
     <EmrPinnedTableWorkspace
@@ -338,123 +395,20 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
         </EmrTableFeedbackSurface>
       ) : (
         <>
-          <EmrPinnedTableViewport
-            className="min-h-0 min-w-0 flex-1"
-            pinnedColumnWidth={220}
-          >
-          <Table
+          <EmrDataTable
             aria-label="삭제된 보호자/동물 고객관리 테이블"
+            className="table-fixed"
             containerClassName="isolate h-full min-h-0 min-w-0 overflow-auto bg-[var(--emr-surface-panel)]"
             density="standard"
-            layout="scroll"
-            minWidth={customerArchiveTableMinWidth}
+            initialLoading={readStatus === "idle" || readStatus === "loading"}
             overscrollAxes="both"
-            pinning="columns"
-            className="table-fixed"
-          >
-            <colgroup>
-              <col className="w-[220px]" />
-              <col className="w-[120px]" />
-              <col className="w-[220px]" />
-              <col className="w-[220px]" />
-              <col className="w-[100px]" />
-            </colgroup>
-            <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
-              <TableRow className="h-9 border-0 hover:bg-[var(--emr-surface-muted)]">
-                <EmrTableHeaderCell
-                  className="!p-0"
-                  data-customer-archive-column="displayName"
-                  identity
-                  interaction="sortable"
-                  pinned="left"
-                  pinnedEdge
-                  pinnedOffset={0}
-                  resize="none"
-                >
-                  이름
-                </EmrTableHeaderCell>
-                <EmrTableHeaderCell interaction="static" resize="none">
-                  구분
-                </EmrTableHeaderCell>
-                <EmrTableHeaderCell interaction="static" resize="none">
-                  삭제일시
-                </EmrTableHeaderCell>
-                <EmrTableHeaderCell interaction="static" resize="none">
-                  삭제한 사용자
-                </EmrTableHeaderCell>
-                <EmrTableHeaderCell
-                  align="right"
-                  interaction="static"
-                  resize="none"
-                >
-                  작업
-                </EmrTableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {readStatus === "idle" || readStatus === "loading" ? (
-                <CustomerArchiveSkeletonRows />
-              ) : null}
-
-              {readStatus === "ready"
-                ? filteredRecords.map((record) => (
-                    <TableRow
-                      key={`${record.target}-${record.id}`}
-                      className="h-10 bg-[var(--emr-surface-panel)]"
-                      data-testid={`customer-archive-row-${record.target}-${record.id}`}
-                    >
-                      <TableCell
-                        className="!p-0 font-semibold"
-                        data-customer-archive-column="displayName"
-                        pinned="left"
-                        pinnedEdge
-                        pinnedOffset={0}
-                      >
-                        <EmrTableIdentityCellContent className="min-h-10">
-                          <EmrTableCellText
-                            className="font-semibold"
-                            fullText={record.displayName}
-                            mode="one-line"
-                          >
-                            {record.displayName}
-                          </EmrTableCellText>
-                        </EmrTableIdentityCellContent>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {getArchiveTargetLabel(record.target)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <EmrTableCellText mode="one-line">
-                          {formatArchiveDate(record.deletedAt)}
-                        </EmrTableCellText>
-                      </TableCell>
-                      <TableCell>
-                        <EmrTableCellText
-                          fullText={record.deletedByUserId ?? "-"}
-                          mode="one-line"
-                        >
-                          {record.deletedByUserId ?? "-"}
-                        </EmrTableCellText>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          aria-label={`${record.displayName} 복원`}
-                          disabled={pendingRestoreId === record.id}
-                          size="sm"
-                          variant="outline"
-                          onClick={() => void restoreRecord(record)}
-                        >
-                          {pendingRestoreId === record.id ? "복원 중" : "복원"}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                : null}
-            </TableBody>
-          </Table>
-          </EmrPinnedTableViewport>
+            skeletonRowCount={6}
+            table={table}
+            getRowProps={(row) => ({
+              className: "bg-[var(--emr-surface-panel)]",
+              "data-testid": `customer-archive-row-${row.original.target}-${row.original.id}`,
+            })}
+          />
 
           <CustomerDataTableFooter
             loading={readStatus === "idle" || readStatus === "loading"}

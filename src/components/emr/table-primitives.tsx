@@ -2,12 +2,8 @@
 
 import * as React from "react";
 
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  FilterIcon,
-  MenuIcon,
-} from "@/components/icons";
+import tableSortArrow from "@/assets/figma/table-sort-arrow.svg";
+import { FilterIcon, MenuIcon } from "@/components/icons";
 import { TableCell, TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type {
@@ -36,6 +32,7 @@ type EmrTableHeaderCellProps = Omit<
   resizeLabel?: string;
   sortDirection?: "asc" | "desc";
   sortLabel?: string;
+  label?: string;
 };
 
 type EmrTableCellTextProps = {
@@ -53,7 +50,9 @@ type EmrPinnedTableWorkspaceProps = React.ComponentProps<"div"> & {
 };
 
 type EmrPinnedTableViewportProps = React.ComponentProps<"div"> & {
-  pinnedColumnWidth: number | string;
+  leftPinnedColumnWidth?: number | string;
+  pinnedColumnWidth?: number | string;
+  rightPinnedColumnWidth?: number | string;
 };
 
 type EmrTableIdentityCellContentProps = React.ComponentProps<"div"> & {
@@ -84,18 +83,32 @@ function getAriaSort(sortDirection: EmrTableHeaderCellProps["sortDirection"]) {
   return undefined;
 }
 
-function getStringLabel(children: React.ReactNode) {
-  return typeof children === "string" ? children : "컬럼";
+function getStringLabel(children: React.ReactNode, label?: string) {
+  return label ?? (typeof children === "string" ? children : "컬럼");
 }
 
 function toCssLength(value: number | string) {
   return typeof value === "number" ? `${value}px` : value;
 }
 
-function SortIcon({ direction }: { direction?: "asc" | "desc" }) {
-  const Icon = direction === "desc" ? ChevronDownIcon : ChevronUpIcon;
+const tableSortArrowSrc =
+  typeof tableSortArrow === "string"
+    ? tableSortArrow
+    : (tableSortArrow.src ?? "");
 
-  return <Icon aria-hidden="true" className="size-3" />;
+function SortIcon({ direction }: { direction?: "asc" | "desc" }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      alt=""
+      aria-hidden="true"
+      className={cn(
+        "h-[7.75px] w-[6.74993px]",
+        direction === "asc" && "rotate-180",
+      )}
+      src={tableSortArrowSrc}
+    />
+  );
 }
 
 export function EmrTableHeaderCell({
@@ -116,10 +129,16 @@ export function EmrTableHeaderCell({
   resizeLabel,
   sortDirection,
   sortLabel,
+  label: labelProp,
   style,
   ...props
 }: EmrTableHeaderCellProps) {
-  const label = getStringLabel(children);
+  const label = getStringLabel(children, labelProp);
+  const displayedChildren =
+    labelProp &&
+    (typeof children === "string" || React.Children.count(children) === 0)
+      ? labelProp
+      : children;
   const resizable =
     resize === "data-column" &&
     Boolean(onResizeMouseDown || onResizeTouchStart);
@@ -134,7 +153,7 @@ export function EmrTableHeaderCell({
       data-emr-header-interaction={interaction}
       data-emr-table-identity-cell={identity ? "true" : undefined}
       className={cn(
-        "emr-table-header-cell emr-text-body relative select-none bg-[var(--emr-surface-muted)] font-medium text-muted-foreground",
+        "emr-table-header-cell relative select-none bg-[var(--emr-table-header-surface,var(--emr-surface-muted))] font-medium text-muted-foreground",
         identity && "!p-0",
         align === "right" && "text-right",
         align === "center" && "text-center",
@@ -151,12 +170,6 @@ export function EmrTableHeaderCell({
         )}
         data-emr-table-content="true"
       >
-        <span
-          className="min-w-0 truncate"
-          data-emr-table-identity-text={identity ? "true" : undefined}
-        >
-          {children}
-        </span>
         {sortable ? (
           <button
             data-row-interactive="true"
@@ -164,17 +177,33 @@ export function EmrTableHeaderCell({
             aria-label={sortLabel ?? `${label} 정렬`}
             title={sortLabel ?? `${label} 정렬`}
             className={cn(
-              "inline-flex size-5 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
-              sortDirection && "text-[var(--emr-text-secondary)]",
+              "inline-flex min-h-6 max-w-full min-w-0 items-center justify-center gap-1 rounded-lg bg-transparent px-2.5 py-1 text-left text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-500)] outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+              identity && "px-0",
+              sortDirection && "text-[var(--clair-color-atomic-neutral-700)]",
             )}
             onClick={(event) => {
               event.stopPropagation();
               onSort?.();
             }}
           >
-            <SortIcon direction={sortDirection} />
+            <span
+              className="min-w-0 truncate"
+              data-emr-table-identity-text={identity ? "true" : undefined}
+            >
+              {displayedChildren}
+            </span>
+            <span className="grid size-3 shrink-0 place-items-center">
+              <SortIcon direction={sortDirection} />
+            </span>
           </button>
-        ) : null}
+        ) : (
+          <span
+            className="min-w-0 truncate"
+            data-emr-table-identity-text={identity ? "true" : undefined}
+          >
+            {displayedChildren}
+          </span>
+        )}
         {filterable ? (
           <button
             data-row-interactive="true"
@@ -256,10 +285,14 @@ export function EmrPinnedTableWorkspace({
 export function EmrPinnedTableViewport({
   children,
   className,
-  pinnedColumnWidth,
+  leftPinnedColumnWidth,
+  pinnedColumnWidth = 0,
+  rightPinnedColumnWidth = 0,
   style,
   ...props
 }: EmrPinnedTableViewportProps) {
+  const leftWidth = leftPinnedColumnWidth ?? pinnedColumnWidth;
+
   return (
     <div
       data-emr-pinned-table-viewport="true"
@@ -270,14 +303,44 @@ export function EmrPinnedTableViewport({
       style={
         {
           ...style,
-          "--emr-table-pinned-column-width": toCssLength(pinnedColumnWidth),
+          "--emr-table-left-pinned-column-width": toCssLength(leftWidth),
+          "--emr-table-pinned-column-width": toCssLength(leftWidth),
+          "--emr-table-right-pinned-column-width": toCssLength(
+            rightPinnedColumnWidth,
+          ),
         } as React.CSSProperties
       }
       {...props}
     >
       {children}
-      <div aria-hidden="true" data-emr-pinned-table-dimmer="true" />
-      <div aria-hidden="true" data-emr-pinned-table-divider="true" />
+      {leftWidth ? (
+        <>
+          <div
+            aria-hidden="true"
+            data-emr-pinned-side="left"
+            data-emr-pinned-table-dimmer="true"
+          />
+          <div
+            aria-hidden="true"
+            data-emr-pinned-side="left"
+            data-emr-pinned-table-divider="true"
+          />
+        </>
+      ) : null}
+      {rightPinnedColumnWidth ? (
+        <>
+          <div
+            aria-hidden="true"
+            data-emr-pinned-side="right"
+            data-emr-pinned-table-dimmer="true"
+          />
+          <div
+            aria-hidden="true"
+            data-emr-pinned-side="right"
+            data-emr-pinned-table-divider="true"
+          />
+        </>
+      ) : null}
     </div>
   );
 }

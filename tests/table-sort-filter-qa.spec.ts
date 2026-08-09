@@ -75,7 +75,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await expectWorkspaceScreen(page, orderArea);
     await orderArea.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();
     await expect(
-      orderArea.getByRole("button", { name: /현재 정렬: 청구금액 오름차순/ }),
+      orderArea.getByRole("button", { name: /청구금액 내림차순 정렬/ }),
     ).toBeVisible();
     await expect(
       orderArea.getByRole("button", { name: "오더 필터 설정" }),
@@ -86,7 +86,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await expectWorkspaceScreen(page, patientTable);
     await patientTable.getByRole("button", { name: /등록일시 오름차순 정렬/ }).click();
     await expect(
-      patientTable.getByRole("button", { name: /현재 정렬: 등록일시 오름차순/ }),
+      patientTable.getByRole("button", { name: /등록일시 내림차순 정렬/ }),
     ).toBeVisible();
     await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
     await expectFilterControls(page.locator('[data-slot="popover-content"]'));
@@ -97,7 +97,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await expectWorkspaceScreen(page, orderTable);
     await orderTable.getByRole("button", { name: /판매금액 오름차순 정렬/ }).click();
     await expect(
-      orderTable.getByRole("button", { name: /현재 정렬: 판매금액 오름차순/ }),
+      orderTable.getByRole("button", { name: /판매금액 내림차순 정렬/ }),
     ).toBeVisible();
     await page.getByRole("button", { name: "오더 필터 설정" }).click();
     await expectFilterControls(page.locator('[data-slot="popover-content"]'));
