@@ -76,7 +76,7 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
   return (
     <section
       aria-label="직원 운영 프로필 Storybook 예시"
-      className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:rounded-none max-md:border-0 max-md:shadow-none md:h-[1105px] md:w-[var(--emr-profile-panel-width)] md:rounded-[var(--emr-radius-panel)] md:border md:border-[var(--emr-border-strong)] md:shadow-[var(--clair-shadow-xs)]"
+      className="flex h-dvh w-full flex-col overscroll-x-none touch-pan-y overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:rounded-none max-md:border-0 max-md:shadow-none md:h-[1105px] md:w-[var(--emr-profile-panel-width)] md:rounded-[var(--emr-radius-panel)] md:border md:border-[var(--emr-border-strong)] md:shadow-[var(--clair-shadow-xs)]"
       data-testid="profile-v2-panel-specimen"
     >
       <Tabs defaultValue={defaultTab} className="min-h-0 flex-1 gap-0">
@@ -119,7 +119,7 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
           </TabsList>
         </header>
 
-        <TabsContent value="profile" className="min-h-0 overflow-y-auto p-4">
+        <TabsContent value="profile" className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4">
           <div className="grid gap-4">
             <section className="px-2">
               <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">오늘 근무 정보</h3>
@@ -154,14 +154,14 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
             </section>
           </div>
         </TabsContent>
-        <TabsContent value="work" className="min-h-0 overflow-y-auto p-4">
+        <TabsContent value="work" className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4">
           <ProfileWorkStatusTab
             groups={[{ dateLabel: "오늘", items: [sampleWorkItem] }]}
             state="ready"
             onRequestNavigation={() => undefined}
           />
         </TabsContent>
-        <TabsContent value="schedule" className="min-h-0 overflow-y-auto p-4">
+        <TabsContent value="schedule" className="min-h-0 overflow-y-auto overscroll-x-none touch-pan-y p-4">
           <section className="px-2">
             <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">일정</h3>
             <div className="mt-3 flex min-h-[72px] items-center justify-between gap-3 rounded-xl border px-4 text-sm text-[var(--emr-text-tertiary)]">

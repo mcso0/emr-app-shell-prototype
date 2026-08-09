@@ -2132,6 +2132,26 @@ test("patient and guardian profiles share the right-panel slot and push customer
   const mainContent = page.getByTestId("workspace-main-content");
   const rightPanel = page.getByTestId("workspace-right-panel");
   const profilePanel = page.getByTestId("profile-side-panel");
+  const getProfileGestureStyles = () =>
+    profilePanel.evaluate((panel) => {
+      const viewport = panel.querySelector<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]',
+      );
+      if (!viewport) throw new Error("profile_scroll_viewport_missing");
+
+      const panelStyles = getComputedStyle(panel);
+      const viewportStyles = getComputedStyle(viewport);
+      return {
+        panel: {
+          overscrollBehaviorX: panelStyles.overscrollBehaviorX,
+          touchAction: panelStyles.touchAction,
+        },
+        viewport: {
+          overscrollBehaviorX: viewportStyles.overscrollBehaviorX,
+          touchAction: viewportStyles.touchAction,
+        },
+      };
+    });
 
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "patient");
   await expect
@@ -2150,6 +2170,10 @@ test("patient and guardian profiles share the right-panel slot and push customer
       "file-user",
       "notebook-text",
     ]);
+  await expect.poll(getProfileGestureStyles).toEqual({
+    panel: { overscrollBehaviorX: "none", touchAction: "pan-y" },
+    viewport: { overscrollBehaviorX: "none", touchAction: "pan-y" },
+  });
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   await expect
     .poll(async () => (await rightPanel.boundingBox())?.width)
@@ -2180,6 +2204,10 @@ test("patient and guardian profiles share the right-panel slot and push customer
         .evaluateAll((icons) => icons.map((icon) => icon.getAttribute("data-profile-definition-icon"))),
     )
     .toEqual(["user", "calendar", "phone", "mail", "map-pin", "notebook-text"]);
+  await expect.poll(getProfileGestureStyles).toEqual({
+    panel: { overscrollBehaviorX: "none", touchAction: "pan-y" },
+    viewport: { overscrollBehaviorX: "none", touchAction: "pan-y" },
+  });
 
   const guardianRightPanelBox = await rightPanel.boundingBox();
   expect(guardianRightPanelBox).not.toBeNull();
