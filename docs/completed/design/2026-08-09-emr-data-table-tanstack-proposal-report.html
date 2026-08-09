@@ -1,0 +1,1673 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="고객관리 스타일을 기준으로 구현한 TanStack Table v8 기반 공통 EmrDataTable의 조사·구현·검증 보고서"
+    />
+    <title>TanStack 기반 EmrDataTable 구현·검증 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #18181b;
+        --ink-muted: #52525b;
+        --ink-soft: #71717a;
+        --line: #e4e4e7;
+        --line-strong: #d4d4d8;
+        --surface: #ffffff;
+        --surface-soft: #fafafa;
+        --surface-muted: #f4f4f5;
+        --navy: #18243a;
+        --navy-soft: #273651;
+        --blue: #2563eb;
+        --blue-soft: #eff6ff;
+        --green: #13795b;
+        --green-soft: #ecfdf5;
+        --amber: #a16207;
+        --amber-soft: #fffbeb;
+        --red: #b42318;
+        --red-soft: #fff1f2;
+        --radius: 18px;
+        --shadow: 0 24px 60px rgb(24 36 58 / 10%);
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: var(--ink);
+        background: #eef1f5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(
+            circle at 10% 0%,
+            rgb(37 99 235 / 7%),
+            transparent 28rem
+          ),
+          #eef1f5;
+      }
+
+      a {
+        color: #1d4ed8;
+        text-underline-offset: 3px;
+      }
+
+      code,
+      pre {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      code {
+        padding: 0.08em 0.35em;
+        border-radius: 5px;
+        background: #f1f5f9;
+        color: #334155;
+        font-size: 0.9em;
+        overflow-wrap: anywhere;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 248px minmax(0, 1fr);
+        width: min(1440px, 100%);
+        min-height: 100vh;
+        margin: 0 auto;
+      }
+
+      aside {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 28px 22px;
+        color: #e2e8f0;
+        background: var(--navy);
+      }
+
+      .brand {
+        display: flex;
+        gap: 11px;
+        align-items: center;
+        margin-bottom: 28px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid rgb(255 255 255 / 18%);
+        border-radius: 10px;
+        background: rgb(255 255 255 / 8%);
+        font-weight: 800;
+      }
+
+      .brand strong,
+      .brand span {
+        display: block;
+      }
+
+      .brand strong {
+        font-size: 14px;
+      }
+
+      .brand span {
+        margin-top: 2px;
+        color: #94a3b8;
+        font-size: 11px;
+      }
+
+      nav a {
+        display: block;
+        margin: 3px 0;
+        padding: 9px 10px;
+        border-radius: 8px;
+        color: #cbd5e1;
+        font-size: 13px;
+        text-decoration: none;
+      }
+
+      nav a:hover,
+      nav a:focus-visible {
+        color: white;
+        background: rgb(255 255 255 / 9%);
+        outline: none;
+      }
+
+      .aside-note {
+        position: absolute;
+        right: 22px;
+        bottom: 24px;
+        left: 22px;
+        padding-top: 16px;
+        border-top: 1px solid rgb(255 255 255 / 12%);
+        color: #94a3b8;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      main {
+        min-width: 0;
+        padding: 44px clamp(24px, 5vw, 72px) 80px;
+      }
+
+      article {
+        width: min(1050px, 100%);
+        margin: 0 auto;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: clamp(30px, 5vw, 56px);
+        border-radius: 26px;
+        color: white;
+        background:
+          linear-gradient(130deg, rgb(255 255 255 / 5%), transparent 48%),
+          var(--navy);
+        box-shadow: var(--shadow);
+      }
+
+      .hero::after {
+        position: absolute;
+        top: -120px;
+        right: -90px;
+        width: 360px;
+        height: 360px;
+        border: 1px solid rgb(255 255 255 / 10%);
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 48px rgb(255 255 255 / 3%),
+          0 0 0 96px rgb(255 255 255 / 2%);
+        content: "";
+      }
+
+      .eyebrow {
+        position: relative;
+        z-index: 1;
+        margin: 0 0 16px;
+        color: #93c5fd;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        position: relative;
+        z-index: 1;
+        max-width: 760px;
+        margin: 0;
+        font-size: clamp(34px, 5vw, 56px);
+        line-height: 1.12;
+        letter-spacing: -0.04em;
+      }
+
+      .hero-copy {
+        position: relative;
+        z-index: 1;
+        max-width: 760px;
+        margin: 22px 0 0;
+        color: #cbd5e1;
+        font-size: 16px;
+        line-height: 1.75;
+      }
+
+      .meta {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 28px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 5px 10px;
+        border: 1px solid rgb(255 255 255 / 14%);
+        border-radius: 999px;
+        color: #e2e8f0;
+        background: rgb(255 255 255 / 7%);
+        font-size: 12px;
+      }
+
+      section {
+        scroll-margin-top: 28px;
+        margin-top: 64px;
+      }
+
+      .section-kicker {
+        margin: 0 0 6px;
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: clamp(24px, 3vw, 34px);
+        line-height: 1.25;
+        letter-spacing: -0.03em;
+      }
+
+      h3 {
+        margin: 0 0 9px;
+        font-size: 17px;
+        line-height: 1.45;
+        letter-spacing: -0.015em;
+      }
+
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      p {
+        margin: 0;
+        color: var(--ink-muted);
+      }
+
+      .lead {
+        max-width: 820px;
+        font-size: 16px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card {
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: 0 8px 22px rgb(24 36 58 / 4%);
+      }
+
+      .card p + p {
+        margin-top: 10px;
+      }
+
+      .metric {
+        color: var(--navy);
+        font-size: 28px;
+        font-weight: 850;
+        letter-spacing: -0.04em;
+      }
+
+      .metric-label {
+        margin-top: 4px;
+        color: var(--ink-soft);
+        font-size: 12px;
+      }
+
+      .decision {
+        margin-top: 18px;
+        padding: 22px 24px;
+        border: 1px solid #bfdbfe;
+        border-radius: var(--radius);
+        background: var(--blue-soft);
+      }
+
+      .decision strong {
+        display: block;
+        margin-bottom: 7px;
+        color: #1e3a8a;
+        font-size: 16px;
+      }
+
+      .decision p {
+        color: #1e40af;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        margin-top: 20px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: white;
+      }
+
+      table {
+        width: 100%;
+        min-width: 720px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 13px 15px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--ink-muted);
+        background: var(--surface-soft);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .architecture {
+        display: grid;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .layer {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr) 210px;
+        gap: 18px;
+        align-items: center;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: white;
+      }
+
+      .layer-number {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .layer-number b {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border-radius: 50%;
+        color: white;
+        background: var(--navy);
+      }
+
+      .layer p {
+        font-size: 13px;
+      }
+
+      .layer-tag {
+        justify-self: end;
+        padding: 6px 9px;
+        border-radius: 7px;
+        color: #475569;
+        background: #f1f5f9;
+        font:
+          11px/1.4 "SFMono-Regular",
+          Consolas,
+          monospace;
+      }
+
+      .mode-card {
+        overflow: hidden;
+        padding: 0;
+      }
+
+      .mode-head {
+        padding: 20px 22px 16px;
+      }
+
+      .mode-demo {
+        overflow: hidden;
+        margin: 0 18px 18px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: white;
+      }
+
+      .demo-row {
+        display: grid;
+        grid-template-columns: 44px 150px 120px 130px 140px;
+        width: 584px;
+        min-height: 40px;
+      }
+
+      .demo-row.header {
+        min-height: 36px;
+        color: #71717a;
+        background: #fafafa;
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .demo-cell {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid #e4e4e7;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .demo-row:last-child .demo-cell {
+        border-bottom: 0;
+      }
+
+      .pinned .demo-cell:nth-child(-n + 2) {
+        position: relative;
+        z-index: 1;
+        background: white;
+        box-shadow: 1px 0 #e4e4e7;
+      }
+
+      .pinned .header .demo-cell:nth-child(-n + 2) {
+        background: #fafafa;
+      }
+
+      .check {
+        width: 14px;
+        height: 14px;
+        border: 1px solid #d4d4d8;
+        border-radius: 4px;
+        background: white;
+      }
+
+      .scroll-hint {
+        padding: 7px 12px;
+        color: #64748b;
+        background: #f8fafc;
+        font-size: 10px;
+        text-align: right;
+      }
+
+      .scope-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 18px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .scope-list li {
+        padding: 11px 13px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--ink-muted);
+        background: white;
+      }
+
+      .scope-list .yes::before,
+      .scope-list .no::before {
+        display: inline-grid;
+        width: 19px;
+        height: 19px;
+        margin-right: 8px;
+        place-items: center;
+        border-radius: 50%;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .scope-list .yes::before {
+        color: var(--green);
+        background: var(--green-soft);
+        content: "✓";
+      }
+
+      .scope-list .no::before {
+        color: var(--ink-soft);
+        background: var(--surface-muted);
+        content: "–";
+      }
+
+      pre {
+        overflow-x: auto;
+        margin: 20px 0 0;
+        padding: 22px;
+        border-radius: 14px;
+        color: #dbeafe;
+        background: #111827;
+        font-size: 12px;
+        line-height: 1.65;
+      }
+
+      pre code {
+        padding: 0;
+        color: inherit;
+        background: transparent;
+      }
+
+      .timeline {
+        margin-top: 22px;
+        padding: 0;
+        list-style: none;
+        counter-reset: step;
+      }
+
+      .timeline li {
+        position: relative;
+        margin-left: 20px;
+        padding: 0 0 26px 38px;
+        border-left: 1px solid var(--line-strong);
+        counter-increment: step;
+      }
+
+      .timeline li:last-child {
+        padding-bottom: 0;
+        border-left-color: transparent;
+      }
+
+      .timeline li::before {
+        position: absolute;
+        top: -2px;
+        left: -16px;
+        display: grid;
+        width: 31px;
+        height: 31px;
+        place-items: center;
+        border: 4px solid #eef1f5;
+        border-radius: 50%;
+        color: white;
+        background: var(--navy);
+        content: counter(step);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .timeline strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .timeline p {
+        max-width: 780px;
+      }
+
+      .callout {
+        margin-top: 20px;
+        padding: 18px 20px;
+        border-left: 4px solid var(--amber);
+        border-radius: 0 12px 12px 0;
+        background: var(--amber-soft);
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #854d0e;
+      }
+
+      .callout p {
+        color: #713f12;
+      }
+
+      .delete-card {
+        border-color: #fecdd3;
+        background: var(--red-soft);
+      }
+
+      .delete-card h3 {
+        color: var(--red);
+      }
+
+      .checklist {
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .checklist li {
+        position: relative;
+        margin-top: 8px;
+        padding-left: 24px;
+        color: var(--ink-muted);
+      }
+
+      .checklist li::before {
+        position: absolute;
+        top: 0.1em;
+        left: 0;
+        color: var(--green);
+        content: "✓";
+        font-weight: 900;
+      }
+
+      .footer {
+        margin-top: 72px;
+        padding: 24px 0 0;
+        border-top: 1px solid var(--line-strong);
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.7;
+      }
+
+      @media (max-width: 1000px) {
+        .shell {
+          display: block;
+        }
+
+        aside {
+          position: static;
+          height: auto;
+          padding: 18px 24px;
+        }
+
+        nav,
+        .aside-note {
+          display: none;
+        }
+
+        .brand {
+          margin: 0;
+        }
+
+        .grid.three {
+          grid-template-columns: 1fr;
+        }
+
+        .layer {
+          grid-template-columns: 145px minmax(0, 1fr);
+        }
+
+        .layer-tag {
+          grid-column: 2;
+          justify-self: start;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          padding: 22px 16px 60px;
+        }
+
+        .hero {
+          border-radius: 20px;
+        }
+
+        .grid.two,
+        .scope-list {
+          grid-template-columns: 1fr;
+        }
+
+        .layer {
+          display: block;
+        }
+
+        .layer p,
+        .layer-tag {
+          margin-top: 10px;
+        }
+      }
+
+      @media print {
+        :root {
+          background: white;
+        }
+
+        body {
+          background: white;
+        }
+
+        .shell {
+          display: block;
+        }
+
+        aside {
+          display: none;
+        }
+
+        main {
+          padding: 0;
+        }
+
+        .hero {
+          color: var(--ink);
+          background: white;
+          box-shadow: none;
+          border: 1px solid var(--line);
+        }
+
+        .hero-copy,
+        .chip {
+          color: var(--ink-muted);
+        }
+
+        section {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <div class="brand-mark">C</div>
+          <div>
+            <strong>CLAiR EMR</strong>
+            <span>Architecture proposal</span>
+          </div>
+        </div>
+        <nav aria-label="보고서 목차">
+          <a href="#decision">1. 결론</a>
+          <a href="#current-state">2. 현재 WIP 반영</a>
+          <a href="#research">3. 조사 결과</a>
+          <a href="#comparison">4. 현재와 제안 비교</a>
+          <a href="#architecture">5. 컴포넌트 구조</a>
+          <a href="#modes">6. 두 가지 컬럼 모드</a>
+          <a href="#style">7. 고객관리 스타일</a>
+          <a href="#scope">8. 적용 범위</a>
+          <a href="#migration">9. 마이그레이션</a>
+          <a href="#verification">10. 검증 기준</a>
+          <a href="#sources">11. 근거 자료</a>
+        </nav>
+        <div class="aside-note">
+          구현·검증 보고서<br />
+          별도 origin/main 작업공간 반영본<br />
+          2026-08-09
+        </div>
+      </aside>
+
+      <main>
+        <article>
+          <header class="hero">
+            <p class="eyebrow">UI Component Architecture · Proposal</p>
+            <h1>TanStack 기반<br />EmrDataTable 개편 제안</h1>
+            <p class="hero-copy">
+              고객관리의 데이터 테이블 스타일을 기준으로 공통 UI 컴포넌트를 다시
+              세우고, 진료/차트부터 병원관리까지 같은 변경이 이어지게 하는
+              구조를 제안한다.
+            </p>
+            <div class="meta">
+              <span class="chip">공식 TanStack v8 문서 조사</span>
+              <span class="chip">현재 코드 사용처 점검</span>
+              <span class="chip">새 의존성 없음</span>
+              <span class="chip">현재 WIP 반영</span>
+            </div>
+          </header>
+
+          <section id="decision">
+            <p class="section-kicker">Executive decision</p>
+            <h2>결론부터 말하면, TanStack을 공통 엔진으로 쓰는 게 맞다.</h2>
+            <p class="lead">
+              단, TanStack에 CLAiR의 디자인과 업무 로직을 모두 떠넘기는 구조는
+              피해야 한다. TanStack은 상태와 행·컬럼 모델을 계산하고,
+              <code>EmrDataTable</code>은 고객관리 스타일과 표 렌더링을
+              책임진다. 검색, API 호출, 담당자 지정 같은 업무 동작은 각 기능에
+              남긴다.
+            </p>
+
+            <div class="grid three" style="margin-top: 22px">
+              <div class="card">
+                <div class="metric">2개</div>
+                <div class="metric-label">유지할 표 컴포넌트 계열</div>
+                <p style="margin-top: 12px">
+                  단순 표용 <code>Table</code>과 업무용
+                  <code>EmrDataTable</code>을 구분한다.
+                </p>
+              </div>
+              <div class="card">
+                <div class="metric">2가지</div>
+                <div class="metric-label">지원할 컬럼 동작</div>
+                <p style="margin-top: 12px">
+                  전체 가로 스크롤형과 고정 컬럼형을 같은 렌더러에서 지원한다.
+                </p>
+              </div>
+              <div class="card">
+                <div class="metric">0개</div>
+                <div class="metric-label">새로 추가할 테이블 의존성</div>
+                <p style="margin-top: 12px">
+                  설치된 <code>@tanstack/react-table</code> 8.21.3과 현재
+                  pinning primitive를 재사용한다.
+                </p>
+              </div>
+            </div>
+
+            <div class="decision">
+              <strong>권장 책임 배분</strong>
+              <p>
+                기능 영역이 <code>useReactTable</code>로 table instance를
+                만들고, 공통 <code>EmrDataTable&lt;TData&gt;</code>이 그
+                instance를 받아 고객관리 기준 UI로 렌더링한다.
+              </p>
+            </div>
+          </section>
+
+          <section id="current-state">
+            <p class="section-kicker">Implementation snapshot</p>
+            <h2>제안한 공통 렌더러와 주요 업무 표 전환을 반영했다.</h2>
+            <p class="lead">
+              별도 <code>origin/main</code> 작업공간에서
+              <code>EmrDataTable&lt;TData&gt;</code>을 TanStack table instance
+              기반의 공통 렌더러로 구현했다. 원래 혼합 WIP 작업공간은 보존했고,
+              이 보고서에는 구현 결과와 남은 승인 경계까지 반영했다.
+            </p>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>구분</th>
+                    <th>반영한 내용</th>
+                    <th>확인 결과</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Workspace 상단 헤더</td>
+                    <td>
+                      <code>EmrTableWorkspaceHeader</code>는
+                      <code>EmrDataTable</code>과 분리된 형제 컴포넌트로 유지
+                    </td>
+                    <td>상단 제어와 표 렌더링의 책임이 섞이지 않음</td>
+                  </tr>
+                  <tr>
+                    <td>스크롤 경계</td>
+                    <td>
+                      <code>overscrollAxes</code>와 한 개의 overflow owner를
+                      공통 렌더러에 연결
+                    </td>
+                    <td>전체 스크롤형·고정 컬럼형을 같은 API로 지원</td>
+                  </tr>
+                  <tr>
+                    <td>고정 컬럼 표면</td>
+                    <td>
+                      TanStack <code>columnPinning</code>의 좌우 폭을 계산하고
+                      양쪽 divider/dimmer를 viewport 전체 높이에 표시
+                    </td>
+                    <td>왼쪽만 고정하던 계약을 좌우 고정 계약으로 확장</td>
+                  </tr>
+                  <tr>
+                    <td>TanStack 공통 렌더러</td>
+                    <td>
+                      고객관리 스타일을 <code>data-emr-data-table</code> 범위에
+                      적용하고 공통 ColumnMeta·density·skeleton을 사용
+                    </td>
+                    <td>기능은 각 화면의 controller와 adapter에 남김</td>
+                  </tr>
+                  <tr>
+                    <td>전환 범위</td>
+                    <td>
+                      고객·병원 Order·차트·조제/처치·임상병리·영상검사·입원·수납·
+                      구성원·감사 로그를 공통 렌더러로 전환
+                    </td>
+                    <td>
+                      모바일 카드와 정적 요약/정보표는 일반 <code>Table</code>로
+                      유지
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="research">
+            <p class="section-kicker">Research findings</p>
+            <h2>공식 문서와 현재 코드는 같은 방향을 가리킨다.</h2>
+            <p class="lead">
+              TanStack Table은 완성된 표 UI가 아니라 headless 상태 엔진이다.
+              제품이 마크업과 스타일을 소유해야 하므로, CLAiR의 고객관리
+              스타일을 공통 컴포넌트에 넣는 데 적합하다.
+            </p>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>확인 항목</th>
+                    <th>공식 문서의 핵심</th>
+                    <th>CLAiR 적용 판단</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Headless 구조</td>
+                    <td>
+                      행·컬럼 모델과 상태 API를 제공하고 DOM·스타일은 제공하지
+                      않는다.
+                    </td>
+                    <td>
+                      고객관리 시각 규칙은 <code>EmrDataTable</code>이 직접
+                      소유한다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>상태 제어</td>
+                    <td>
+                      외부에서 필요한 상태만 선택적으로 controlled로 끌어올린다.
+                    </td>
+                    <td>
+                      <code>rowSelection</code> 등 업무에 쓰는 상태만 기능
+                      영역에서 관리한다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>컬럼 고정</td>
+                    <td>
+                      sticky CSS와 column pinning API로 단일 table 구현이
+                      가능하다.
+                    </td>
+                    <td>
+                      기존 단일 overflow와
+                      <code>getEmrPinnedColumnProps</code>를 유지한다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>행 선택</td>
+                    <td>
+                      안정된 <code>getRowId</code>로 선택 상태를 데이터 ID에
+                      연결한다.
+                    </td>
+                    <td>
+                      정렬·필터 이후에도 일괄 선택이 깨지지 않도록 화면별 ID를
+                      지정한다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>컬럼 크기</td>
+                    <td>
+                      React에서는 기본 <code>onEnd</code>가 안전하며 실시간
+                      변경은 최적화가 필요하다.
+                    </td>
+                    <td>
+                      측정된 요구가 생기기 전까지 <code>onChange</code>를
+                      기본값으로 만들지 않는다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>가상화</td>
+                    <td>
+                      Table 자체 기능이 아니며 TanStack Virtual 같은 별도 도구가
+                      필요하다.
+                    </td>
+                    <td>
+                      수천 행 문제가 측정되기 전에는 이번 범위에서 제외한다.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="comparison">
+            <p class="section-kicker">Before · After · Why</p>
+            <h2>이름만 공통인 컴포넌트를 실제 공통 컴포넌트로 바꾼다.</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Before</th>
+                    <th>After</th>
+                    <th>Why</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <code>emr-data-table.tsx</code>가 Order·담당자·완료 처리에
+                      결합
+                    </td>
+                    <td>조제 전용 표는 <code>OrderWorkTable</code>로 이동</td>
+                    <td>
+                      공유 계층에서 도메인 로직을 제거하고 이름과 책임을 맞춘다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>상단 헤더와 데이터 테이블을 화면마다 함께 조립</td>
+                    <td>
+                      공유 <code>EmrTableWorkspaceHeader</code>와
+                      <code>EmrDataTable</code>을 형제 컴포넌트로 구성
+                    </td>
+                    <td>
+                      제목·건수·검색·필터와 <code>thead</code>·행·셀의 책임을
+                      섞지 않는다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      고객관리만 TanStack 렌더링과 완성된 시각 규칙을 보유
+                    </td>
+                    <td>
+                      공통 <code>EmrDataTable&lt;TData&gt;</code>이 렌더링과
+                      스타일을 소유
+                    </td>
+                    <td>
+                      한 곳의 스타일 변경이 모든 업무용 데이터 테이블에
+                      이어진다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>화면마다 header·row·hover·selected 클래스를 반복</td>
+                    <td>
+                      고객관리 기준 스타일을 데이터 테이블 범위의 token으로 이동
+                    </td>
+                    <td>
+                      시각 회귀와 중복 CSS를 줄이고 일반 <code>Table</code>에는
+                      영향 주지 않는다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      고정 경계와 행 아래 남는 viewport를 화면별 CSS·gradient로
+                      보정
+                    </td>
+                    <td>
+                      TanStack pinning 상태와 총 고정 폭을 공유
+                      sticky·full-height 표면 계약에 전달
+                    </td>
+                    <td>
+                      하나의 table·overflow owner를 유지하면서 마지막 행
+                      아래까지 고정 영역을 끊김 없이 이어 간다.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>공통화할수록 props와 wrapper가 늘어날 위험</td>
+                    <td>
+                      공통 컴포넌트는 table instance를 받고 최소 확장점만 제공
+                    </td>
+                    <td>
+                      정렬·필터·선택·업무 콜백이 거대한 props API로 번지는 것을
+                      막는다.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="architecture">
+            <p class="section-kicker">Proposed architecture</p>
+            <h2>세 계층으로 나누면 코드가 오히려 단순해진다.</h2>
+            <p class="lead">
+              핵심은 “무엇이 공통인가”를 스타일과 렌더링에 한정하는 것이다.
+              데이터 준비와 업무 동작까지 공통화하지 않는다.
+            </p>
+
+            <div class="decision">
+              <strong>먼저 용어와 화면 구성을 분리한다.</strong>
+              <p>
+                <code>EmrTableWorkspaceHeader</code>는 제목·건수·검색·필터·주요
+                액션을 맡는다. <code>EmrDataTable</code>의 header는
+                <code>thead/th</code> 컬럼 헤더를 뜻한다. 기능 화면은 두
+                컴포넌트와 feedback surface를 조립하며, workspace 상단 헤더를
+                <code>EmrDataTable</code> 내부 props로 넣지 않는다.
+              </p>
+            </div>
+
+            <div class="architecture" aria-label="권장 컴포넌트 계층">
+              <div class="layer">
+                <div class="layer-number"><b>1</b> 기능 controller</div>
+                <p>
+                  data, columns, <code>getRowId</code>, 필요한 controlled
+                  state와 업무 콜백을 구성한다.
+                </p>
+                <span class="layer-tag">feature/use-*-table.ts</span>
+              </div>
+              <div class="layer">
+                <div class="layer-number"><b>2</b> EmrDataTable</div>
+                <p>
+                  TanStack header group·row model·visible cell을 렌더링하고
+                  고객관리 스타일, 선택 상태, 스크롤, 고정 표면을 소유한다.
+                </p>
+                <span class="layer-tag">components/emr</span>
+              </div>
+              <div class="layer">
+                <div class="layer-number"><b>3</b> Table primitive</div>
+                <p>
+                  semantic table 요소와 density, min-width, overflow, sticky
+                  cell의 저수준 계약과 축별 <code>overscrollAxes</code>를
+                  제공한다.
+                </p>
+                <span class="layer-tag">components/ui/table.tsx</span>
+              </div>
+            </div>
+
+            <pre><code>const table = useReactTable({
+  data: rows,
+  columns,
+  getRowId: (row) =&gt; row.id,
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  state: { sorting, rowSelection, columnPinning },
+  onSortingChange: setSorting,
+  onRowSelectionChange: setRowSelection,
+});
+
+return (
+  &lt;EmrDataTable
+    aria-label="처방/오더 테이블"
+    density={density}
+    overscrollAxes="both"
+    table={table}
+  /&gt;
+);</code></pre>
+
+            <div class="callout">
+              <strong>피해야 할 API</strong>
+              <p>
+                <code>EmrDataTable</code>이 data와 columns부터 sorting,
+                filtering, pagination, pinning, visibility, sizing 콜백을 모두
+                직접 받는 구조는 만들지 않는다. 처음에는 간단해 보여도 화면이
+                늘수록 props가 끝없이 추가된다. 다만
+                <code>overscrollAxes</code>처럼 이미 저수준 <code>Table</code>이
+                소유한 layout 계약을 선택적으로 전달하는 것은 업무 props 확장과
+                구분한다.
+              </p>
+            </div>
+          </section>
+
+          <section id="modes">
+            <p class="section-kicker">Column behavior</p>
+            <h2>같은 컴포넌트에서 두 가지 컬럼 모드를 지원한다.</h2>
+            <div class="grid two" style="margin-top: 22px">
+              <div class="card mode-card">
+                <div class="mode-head">
+                  <h3>전체 가로 스크롤형</h3>
+                  <p>
+                    <code>columnPinning</code>을 비워 둔다. 모든 header와 cell이
+                    같은 스크롤 안에서 움직인다.
+                  </p>
+                </div>
+                <div class="mode-demo" aria-label="전체 가로 스크롤형 예시">
+                  <div class="demo-row header">
+                    <div class="demo-cell"><span class="check"></span></div>
+                    <div class="demo-cell">Order명 ↓</div>
+                    <div class="demo-cell">유형</div>
+                    <div class="demo-cell">담당자</div>
+                    <div class="demo-cell">상태</div>
+                  </div>
+                  <div class="demo-row">
+                    <div class="demo-cell"><span class="check"></span></div>
+                    <div class="demo-cell">요검사</div>
+                    <div class="demo-cell">검사</div>
+                    <div class="demo-cell">이수의</div>
+                    <div class="demo-cell">진행 중</div>
+                  </div>
+                  <div class="scroll-hint">← 전체 컬럼이 함께 이동 →</div>
+                </div>
+              </div>
+
+              <div class="card mode-card">
+                <div class="mode-head">
+                  <h3>고정 컬럼형</h3>
+                  <p>
+                    <code>columnPinning.left/right</code>에 ID를 넣는다. 정체성
+                    컬럼은 남고 나머지만 가로로 움직인다.
+                  </p>
+                </div>
+                <div class="mode-demo pinned" aria-label="고정 컬럼형 예시">
+                  <div class="demo-row header">
+                    <div class="demo-cell"><span class="check"></span></div>
+                    <div class="demo-cell">동물명 ↓</div>
+                    <div class="demo-cell">환자코드</div>
+                    <div class="demo-cell">품종</div>
+                    <div class="demo-cell">보호자</div>
+                  </div>
+                  <div class="demo-row">
+                    <div class="demo-cell"><span class="check"></span></div>
+                    <div class="demo-cell">구름</div>
+                    <div class="demo-cell">CD-P-016</div>
+                    <div class="demo-cell">Samoyed</div>
+                    <div class="demo-cell">김클레어</div>
+                  </div>
+                  <div class="scroll-hint">앞 2개 고정 · 나머지 이동 →</div>
+                </div>
+              </div>
+            </div>
+            <p style="margin-top: 16px">
+              두 모드 모두 하나의 <code>table</code>과 하나의 overflow
+              container를 쓴다. 고정 영역과 스크롤 영역을 별도 table로 나누지
+              않아야 header와 body 높이, hover·selected 배경, focus ring이
+              어긋나지 않는다. 페이지 자체가 세로로 움직이는 표는 기본
+              <code>horizontal</code> overscroll 억제를 사용하고, 고객관리처럼
+              내부 viewport가 가로·세로 스크롤을 모두 소유하는 표는
+              <code>overscrollAxes="both"</code>를 사용한다.
+            </p>
+          </section>
+
+          <section id="style">
+            <p class="section-kicker">Shared visual contract</p>
+            <h2>고객관리 스타일은 EmrDataTable의 기본값이 된다.</h2>
+            <p class="lead">
+              일반 <code>Table</code>의 전역 token은 바꾸지 않는다.
+              <code>data-emr-data-table</code> 같은 범위 안에서 고객관리 값을
+              덮어쓰면 단순 정보표까지 높이가 바뀌는 문제를 피할 수 있다.
+            </p>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>항목</th>
+                    <th>EmrDataTable 기본값</th>
+                    <th>소유 위치</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>헤더</td>
+                    <td>
+                      <code>#fafafa</code> · 12px medium · neutral-500 · 36px
+                    </td>
+                    <td>공통 EmrDataTable</td>
+                  </tr>
+                  <tr>
+                    <td>행</td>
+                    <td>흰색 · 14px medium neutral-700 · standard 40px</td>
+                    <td>공통 EmrDataTable</td>
+                  </tr>
+                  <tr>
+                    <td>상태 표면</td>
+                    <td>
+                      neutral-200 divider · black-alpha-4 hover · selected
+                      surface
+                    </td>
+                    <td>공통 EmrDataTable</td>
+                  </tr>
+                  <tr>
+                    <td>선택 컬럼</td>
+                    <td>44px</td>
+                    <td>공통 checkbox column primitive</td>
+                  </tr>
+                  <tr>
+                    <td>고정 컬럼 경계</td>
+                    <td>
+                      1px divider · 10px 불투명 gap · blur shadow 없음 · 행 아래
+                      남는 viewport까지 같은 경계 유지
+                    </td>
+                    <td>공통 EmrDataTable viewport·Table pinning primitive</td>
+                  </tr>
+                  <tr>
+                    <td>Density selector</td>
+                    <td>
+                      <code>좁은 간격</code> · <code>기본 간격</code> ·
+                      <code>넓은 간격</code> · 선행 아이콘 없음
+                    </td>
+                    <td>공통 density selector</td>
+                  </tr>
+                  <tr>
+                    <td>도메인 셀</td>
+                    <td>Badge, Input, Select, 금액·결과 표현</td>
+                    <td>각 기능의 <code>columnDef.cell</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="scope">
+            <p class="section-kicker">Adoption scope</p>
+            <h2>모든 표가 아니라, 업무용 데이터 그리드만 옮긴다.</h2>
+            <div class="grid two" style="margin-top: 22px">
+              <div class="card">
+                <h3>EmrDataTable로 이동</h3>
+                <ul class="scope-list" style="grid-template-columns: 1fr">
+                  <li class="yes">고객관리 메인·보관 목록</li>
+                  <li class="yes">병원관리 Order 하위 페이지</li>
+                  <li class="yes">진료/차트 Order</li>
+                  <li class="yes">조제/처치 작업 목록</li>
+                  <li class="yes">임상병리 결과 입력</li>
+                  <li class="yes">영상검사 Order 상세</li>
+                  <li class="yes">입원·구성원·감사 로그·수납 목록</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>일반 Table로 유지</h3>
+                <ul class="scope-list" style="grid-template-columns: 1fr">
+                  <li class="no">단순 key-value 정보표</li>
+                  <li class="no">차트 바이탈 비교표</li>
+                  <li class="no">우측 패널 요약표</li>
+                  <li class="no">설명 목적의 정적 비교표</li>
+                  <li class="no">모바일 카드형 목록</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section id="migration">
+            <p class="section-kicker">Migration plan</p>
+            <h2>한 번에 갈아엎지 않고, 실제 사용처로 계약을 검증한다.</h2>
+            <ol class="timeline">
+              <li>
+                <strong>이름 충돌 해소와 공통 기반</strong>
+                <p>
+                  기존 조제 전용 <code>EmrDataTable</code>을
+                  <code>src/features/dispensing</code> 아래
+                  <code>OrderWorkTable</code>로 옮기고, 새 공통 렌더러와
+                  Storybook의 전체 스크롤형·고정 컬럼형 사례를 만들었다.
+                </p>
+              </li>
+              <li>
+                <strong>고객관리 기준선과 병원관리 고정 컬럼</strong>
+                <p>
+                  고객관리 메인·보관 목록의 렌더링을 공통 컴포넌트로 교체했다.
+                  이어 병원관리 Order 하위 화면에 표 controller와 고정 컬럼
+                  계약을 연결했다.
+                </p>
+              </li>
+              <li>
+                <strong>진료/차트와 조제/처치</strong>
+                <p>
+                  편집 셀, 일괄 선택, 담당자 지정, 완료 처리, 경고 추가 행을
+                  기능 adapter와 공통 renderer 조합으로 유지했다.
+                </p>
+              </li>
+              <li>
+                <strong>나머지 업무 화면과 정리</strong>
+                <p>
+                  임상병리, 영상검사, 입원, 감사 로그, 구성원, 수납도 옮겼다.
+                  사용처가 사라진 고객관리 header/cell helper와 feature 전용
+                  표 반복 렌더링은 삭제했다.
+                </p>
+              </li>
+            </ol>
+
+            <div class="grid two" style="margin-top: 28px">
+              <div class="card delete-card">
+                <h3>마이그레이션 뒤 삭제</h3>
+                <ul class="checklist">
+                  <li>
+                    기존 조제 전용
+                    <code>src/components/emr/emr-data-table.tsx</code> 파일
+                  </li>
+                  <li><code>CustomerDataTableColumnHeader</code></li>
+                  <li><code>CustomerTableCellContent</code></li>
+                  <li>고객관리 전용 row/header 높이 클래스</li>
+                  <li>
+                    공통 full-height pinned lane 계약으로 대체가 끝난 병원관리
+                    Order의 전용 gradient·divider·6px overlay CSS
+                  </li>
+                  <li>
+                    화면별로 반복한 배경·구분선·hover·selected·폰트 클래스
+                  </li>
+                  <li>
+                    의미·접근성 기본값을 고정하지 않고 props만 그대로 넘기는
+                    얇은 wrapper
+                  </li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>기능 영역에 남길 것</h3>
+                <ul class="checklist">
+                  <li>고객 검색과 서버 상태</li>
+                  <li>drawer와 footer 제어</li>
+                  <li>검사 결과 저장과 담당자 지정</li>
+                  <li>화면별 정렬·선택 상태</li>
+                  <li>도메인 Badge·Input·Select 셀</li>
+                  <li>화면별 empty·error·denied 문구와 복구 동작</li>
+                  <li>
+                    여러 호출처의 aria-label·test 계약을 고정하는
+                    <code>CustomerListHeader</code> 같은 feature adapter
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section id="verification">
+            <p class="section-kicker">Acceptance gates</p>
+            <h2>스타일 통일만 확인하면 끝나는 작업은 아니다.</h2>
+            <div class="grid three" style="margin-top: 22px">
+              <div class="card">
+                <h3>시각 계약</h3>
+                <ul class="checklist">
+                  <li>전체 스크롤·좌우 고정</li>
+                  <li>3가지 density</li>
+                  <li>긴 텍스트와 고정 경계</li>
+                  <li>1px divider·10px gap·blur 없음</li>
+                  <li>마지막 행 아래까지 이어지는 pinned lane</li>
+                  <li>hover·selected·focus</li>
+                  <li>header/body offset 일치</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>기능 계약</h3>
+                <ul class="checklist">
+                  <li>정렬 순환과 컬럼 표시</li>
+                  <li>density 문구와 아이콘 없는 selector</li>
+                  <li><code>getRowId</code> 기반 선택</li>
+                  <li>필터 뒤 선택 유지</li>
+                  <li>editable cell·drawer</li>
+                  <li>일괄 작업·경고 행</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>성능 계약</h3>
+                <ul class="checklist">
+                  <li>data·columns 안정 참조</li>
+                  <li>불필요한 fully controlled state 금지</li>
+                  <li>column resize 기본 <code>onEnd</code></li>
+                  <li>페이지 전체 너비 증가 금지</li>
+                  <li>scroll owner별 x/y overscroll 동작</li>
+                  <li>가상화는 측정 후 별도 결정</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="callout">
+              <strong>문서 계약도 함께 바뀌어야 한다.</strong>
+              <p>
+                기존 설계 문서의 “다른 화면을 현재 EmrDataTable에 강제로 넣지
+                않는다”는 규칙은 조제 전용 컴포넌트를 전제로 한 내용이었다.
+                이제 component ownership 문서의 표 책임을 새 공통 계약으로
+                교체했고, 일반 <code>Table</code>과 업무용
+                <code>EmrDataTable</code>의 경계도 함께 기록했다.
+              </p>
+            </div>
+
+            <div class="decision" style="margin-top: 20px">
+              <strong>구현 확인 상태</strong>
+              <p>
+                TypeScript·ESLint·문서 링크·secret scan·한국어 UX copy 검사를
+                통과했고, Storybook build와 Next production build도
+                완료했다. 고객관리·병원관리 pinned 회귀 8개, 차트 업무 회귀
+                6개, 정렬·필터 QA 4개, 임상 업무 대표 회귀와 1440·1280·1024px
+                document overflow 검사를 확인했다. 조제·영상·구성원 일부
+                기존 화면 테스트는 표 전환 지점이 아닌 mock 인증·선택 상태
+                전제에서 실패해 별도 후속 항목으로 남겼다. merge·deploy와
+                Quick Tunnel 공유는 수행하지 않았다.
+              </p>
+            </div>
+          </section>
+
+          <section id="sources">
+            <p class="section-kicker">Evidence</p>
+            <h2>조사 근거</h2>
+
+            <h3 style="margin-top: 22px">현재 코드에서 확인한 핵심 파일</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>파일</th>
+                    <th>확인 내용</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>src/components/ui/table.tsx</code></td>
+                    <td>
+                      일반 semantic primitive, density, minWidth, overflow,
+                      overscrollAxes, pinning 계약
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <code>src/components/emr/table-workspace-header.tsx</code>
+                    </td>
+                    <td>
+                      고객관리와 병원관리 Order가 공유하는 제목·건수·검색·테이블
+                      제어·주요 액션 영역
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><code>src/components/emr/emr-data-table.tsx</code></td>
+                    <td>
+                      TanStack table instance를 고객관리 스타일로 렌더링하는
+                      공통 업무용 table
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <code
+                        >src/features/customer/components/customer-data-table.tsx</code
+                      >
+                    </td>
+                    <td>
+                      TanStack, 고객관리 스타일, 선택·정렬·고정 컬럼의 현재
+                      기준선
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><code>src/components/emr/table-pinning.ts</code></td>
+                    <td>
+                      TanStack column 상태를 sticky cell props로 바꾸는 기존
+                      adapter
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <code>src/components/emr/table-density.ts</code>,
+                      <code>table-density-selector.tsx</code>
+                    </td>
+                    <td>
+                      3가지 density 높이와 간격 문구, 아이콘 없는 선택 컨트롤
+                      계약
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><code>src/features/hospital-admin/module.tsx</code></td>
+                    <td>
+                      공유 workspace header 적용, Order controller와 고정 컬럼을
+                      공통 EmrPinnedTableViewport에 연결
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <code>src/features/chart/module.tsx</code>,
+                      <code>src/features/inpatient/module.tsx</code>
+                    </td>
+                    <td>
+                      업무 상태를 소유하고 공통 renderer와 추가 행·feedback을
+                      조합하는 화면 사례
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><code>src/features/billing/module.tsx</code></td>
+                    <td>
+                      수납 항목은 공통 renderer로 전환하고 합계 footer만
+                      저수준 Table row로 유지
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 style="margin-top: 30px">TanStack Table v8 공식 문서</h3>
+            <ul class="checklist">
+              <li>
+                <a href="https://tanstack.com/table/v8/docs/introduction"
+                  >Introduction</a
+                >
+                · headless 구조와 제품 소유 UI
+              </li>
+              <li>
+                <a href="https://tanstack.com/table/v8/docs/overview"
+                  >Overview</a
+                >
+                · 기능 모델과 adapter 개요
+              </li>
+              <li>
+                <a href="https://tanstack.com/table/v8/docs/guide/tables"
+                  >Table instance</a
+                >
+                · data·columns와 table API
+              </li>
+              <li>
+                <a
+                  href="https://tanstack.com/table/v8/docs/framework/react/guide/table-state"
+                  >React table state</a
+                >
+                · 선택적 controlled state
+              </li>
+              <li>
+                <a
+                  href="https://tanstack.com/table/v8/docs/guide/column-pinning"
+                  >Column pinning</a
+                >
+                · 좌우 고정과 sticky offset API
+              </li>
+              <li>
+                <a href="https://tanstack.com/table/v8/docs/guide/row-selection"
+                  >Row selection</a
+                >
+                · <code>getRowId</code>와 선택 상태
+              </li>
+              <li>
+                <a href="https://tanstack.com/table/v8/docs/guide/column-sizing"
+                  >Column sizing</a
+                >
+                · resize mode와 React 성능 고려
+              </li>
+              <li>
+                <a
+                  href="https://tanstack.com/table/v8/docs/guide/virtualization"
+                  >Virtualization</a
+                >
+                · 별도 가상화 도구와 조합
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <div class="decision">
+              <strong>최종 제안</strong>
+              <p>
+                TanStack Table v8을 <code>EmrDataTable</code>의 상태·행·컬럼
+                엔진으로 채택한다. 일반 <code>Table</code>은 유지하고 업무용
+                데이터 그리드만 새 컴포넌트로 옮긴다. 이렇게 하면 고객관리
+                스타일을 한 곳에서 바꿨을 때 연결된 화면이 함께 바뀌면서도
+                고객·Order·검사·수납 로직은 각 기능 경계 안에 남는다.
+              </p>
+            </div>
+          </section>
+
+          <footer class="footer">
+            이 문서는 2026-08-09 기준 별도
+            <code>codex/emr-data-table-tanstack</code> 작업공간의 구현·검증
+            상태를 반영한다. 원래 혼합 WIP 작업공간은 수정하지 않았으며,
+            merge·deploy와 Quick Tunnel 공유는 범위에 포함하지 않았다.<br />
+            문장 정리는 humanize-korean strict workflow로 검토했으며 기술 용어,
+            버전, 수치, 파일 경로와 공식 문서 URL을 보존했다.
+          </footer>
+        </article>
+      </main>
+    </div>
+  </body>
+</html>

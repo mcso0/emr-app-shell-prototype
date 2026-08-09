@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
@@ -14,6 +13,7 @@ import {
 } from "@tanstack/react-table";
 import { useMemo, useState, type ReactNode } from "react";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
@@ -27,15 +27,9 @@ import {
   type EmrTableFilterBuilderField,
 } from "@/components/emr/table-filter-builder-model";
 import {
-  EmrPinnedTableViewport,
   EmrPinnedTableWorkspace,
   EmrTableFeedbackSurface,
-  EmrTableHeaderCell,
-  EmrTableIdentityCellContent,
-  EmrTableSelectionCell,
-  EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
-import { getEmrPinnedColumnProps } from "@/components/emr/table-pinning";
 import { ChevronDownIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,26 +45,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useCustomerStore } from "@/features/customer/store";
 import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { EmrTableDensity } from "@/components/emr/table-density";
-import { CustomerDataTableColumnHeader } from "./customer-data-table-column-header";
 import { CustomerDataTableFooter } from "./customer-data-table-footer";
 import { CustomerListHeader } from "./customer-list-header";
-import { CustomerTableCellContent } from "./customer-table-cell-content";
 import type {
   CustomerTableColumnDef,
-  CustomerTableColumnMeta,
   CustomerTableFilterOption,
 } from "./customer-table-columns";
 import styles from "./customer-data-table.module.css";
@@ -89,7 +72,6 @@ type CustomerDataTableProps<TRow extends { id: string; searchText: string }> = {
   getRowLabel: (row: TRow) => string;
   isActiveRow: (row: TRow) => boolean;
   loading?: boolean;
-  minTableWidth: number;
   onOpenRow: (row: TRow) => void;
   onRetry?: () => void;
   pinnedIdentityColumnId?: string;
@@ -99,12 +81,6 @@ type CustomerDataTableProps<TRow extends { id: string; searchText: string }> = {
   title: string;
   testId: string;
 };
-
-function getColumnMeta<TRow>(
-  column: ColumnDef<TRow, unknown>,
-): CustomerTableColumnMeta<TRow> | undefined {
-  return column.meta as CustomerTableColumnMeta<TRow> | undefined;
-}
 
 function getCustomerTableFilterOptions<TRow>(
   column: CustomerTableColumnDef<TRow>,
@@ -132,145 +108,6 @@ function getCustomerTableFilterFields<TRow>(
       options: getCustomerTableFilterOptions(column, rows),
       valuePlaceholder: `${column.meta.label} 선택`,
     }));
-}
-
-function getSortAriaLabel(
-  label: string,
-  sortDirection: false | "asc" | "desc",
-) {
-  const nextAction =
-    sortDirection === "asc"
-      ? `${label} 내림차순 정렬`
-      : sortDirection === "desc"
-        ? `${label} 정렬 해제`
-        : `${label} 오름차순 정렬`;
-
-  if (!sortDirection) return `정렬 없음. 클릭하면 ${nextAction}.`;
-
-  const current = sortDirection === "asc" ? "오름차순" : "내림차순";
-  return `현재 정렬: ${label} ${current}. 클릭하면 ${nextAction}.`;
-}
-
-function getAriaSort(sortDirection: false | "asc" | "desc") {
-  if (sortDirection === "asc") return "ascending" as const;
-  if (sortDirection === "desc") return "descending" as const;
-  return undefined;
-}
-
-function getCustomerSkeletonWidth(index: number) {
-  const widths = [
-    "w-24",
-    "w-32",
-    "w-20",
-    "w-16",
-    "w-28",
-    "w-36",
-    "w-24",
-    "w-28",
-  ];
-
-  return widths[index % widths.length];
-}
-
-function CustomerTableSkeletonRows({
-  colSpan,
-  density,
-  pinnedIdentityColumn,
-  rowCount,
-  testId,
-  visibleColumnCount,
-}: {
-  colSpan: number;
-  density: EmrTableDensity;
-  pinnedIdentityColumn: boolean;
-  rowCount: number;
-  testId: string;
-  visibleColumnCount: number;
-}) {
-  const rowHeightClassName =
-    density === "compact"
-      ? "!h-9"
-      : density === "comfortable"
-        ? "!h-[52px]"
-        : "!h-10";
-  const contentHeightClassName =
-    density === "compact"
-      ? "!min-h-9"
-      : density === "comfortable"
-        ? "!min-h-[52px]"
-        : "!min-h-10";
-
-  return (
-    <>
-      {Array.from({ length: rowCount }, (_, rowIndex) => (
-        <TableRow
-          key={`${testId}-${rowIndex}`}
-          className={cn(
-            rowHeightClassName,
-            "bg-[var(--clair-color-atomic-common-100)] hover:!bg-[var(--clair-color-atomic-common-100)]",
-          )}
-          data-testid={testId}
-        >
-          <EmrTableSelectionCell
-            className={cn(
-              rowHeightClassName,
-              "w-11 min-w-11 max-w-11 !p-0 !pl-5 !pr-2",
-            )}
-            pinned={pinnedIdentityColumn ? "left" : undefined}
-            pinnedOffset={pinnedIdentityColumn ? 0 : undefined}
-          >
-            <Skeleton className="size-4 rounded-[var(--clair-radius-atomic-4)] bg-[var(--emr-surface-muted)]" />
-          </EmrTableSelectionCell>
-          {Array.from({ length: visibleColumnCount }, (_, columnIndex) => (
-            <TableCell
-              key={`${testId}-${rowIndex}-${columnIndex}`}
-              className={cn(rowHeightClassName, "!p-0")}
-              {...(pinnedIdentityColumn && columnIndex === 0
-                ? {
-                    pinned: "left" as const,
-                    pinnedEdge: true,
-                    pinnedOffset: 44,
-                  }
-                : {})}
-            >
-              {pinnedIdentityColumn && columnIndex === 0 ? (
-                <EmrTableIdentityCellContent className={contentHeightClassName}>
-                  <Skeleton
-                    className={cn(
-                      "h-4 max-w-full rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]",
-                      getCustomerSkeletonWidth(columnIndex),
-                    )}
-                  />
-                </EmrTableIdentityCellContent>
-              ) : (
-                <div
-                  className={cn(
-                    contentHeightClassName,
-                    "flex items-center px-2.5",
-                  )}
-                >
-                  <Skeleton
-                    className={cn(
-                      "h-4 max-w-full rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]",
-                      getCustomerSkeletonWidth(columnIndex),
-                    )}
-                  />
-                </div>
-              )}
-            </TableCell>
-          ))}
-          <TableCell
-            className={cn(rowHeightClassName, "w-[52px] !p-0 !pl-2 !pr-5")}
-          >
-            <Skeleton className="ml-auto size-6 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)]" />
-          </TableCell>
-        </TableRow>
-      ))}
-      <TableRow className="sr-only">
-        <TableCell colSpan={colSpan}>고객 정보를 불러오는 중입니다.</TableCell>
-      </TableRow>
-    </>
-  );
 }
 
 function CustomerRowActionMenu({
@@ -329,7 +166,6 @@ export function CustomerDataTable<
   getRowLabel,
   isActiveRow,
   loading = false,
-  minTableWidth,
   onOpenRow,
   onRetry,
   pinnedIdentityColumnId,
@@ -379,6 +215,11 @@ export function CustomerDataTable<
     () => filterRowsByEmrTableFilterBuilder(rows, filterModel, filterFields),
     [filterFields, filterModel, rows],
   );
+  const pinnedColumnId = columns.some(
+    (column) => column.id === pinnedIdentityColumnId,
+  )
+    ? pinnedIdentityColumnId
+    : undefined;
 
   const tableColumns = useMemo<Array<ColumnDef<TRow, unknown>>>(
     () => [
@@ -386,19 +227,14 @@ export function CustomerDataTable<
         id: "select",
         enableHiding: false,
         enableSorting: false,
+        meta: {
+          label: `${title} 선택`,
+          role: "selection",
+        },
         size: 44,
         header: ({ table }) => {
-          const visibleRows = table.getRowModel().rows;
-          const allSelected =
-            visibleRows.length > 0 &&
-            visibleRows.every((row) => row.getIsSelected());
-          const someSelected =
-            visibleRows.some((row) => row.getIsSelected()) && !allSelected;
-
-          const toggleVisibleRows = () => {
-            const nextSelected = !allSelected;
-            visibleRows.forEach((row) => row.toggleSelected(nextSelected));
-          };
+          const allSelected = table.getIsAllRowsSelected();
+          const someSelected = table.getIsSomeRowsSelected();
 
           return (
             <span
@@ -411,7 +247,9 @@ export function CustomerDataTable<
                 aria-label={`${title} 전체 선택`}
                 checked={allSelected}
                 indeterminate={someSelected}
-                onCheckedChange={toggleVisibleRows}
+                onCheckedChange={(checked) =>
+                  table.toggleAllRowsSelected(Boolean(checked))
+                }
               />
             </span>
           );
@@ -431,11 +269,22 @@ export function CustomerDataTable<
           </span>
         ),
       },
-      ...columns,
+      ...columns.map((column) => ({
+        ...column,
+        meta: {
+          ...column.meta,
+          identity: column.id === pinnedColumnId,
+          role: "data" as const,
+        },
+      })),
       {
         id: "actions",
         enableHiding: false,
         enableSorting: false,
+        meta: {
+          label: "행 작업",
+          role: "actions",
+        },
         size: 52,
         cell: ({ row }) => (
           <span
@@ -453,13 +302,8 @@ export function CustomerDataTable<
         ),
       },
     ],
-    [columns, getRowLabel, onOpenRow, title],
+    [columns, getRowLabel, onOpenRow, pinnedColumnId, title],
   );
-  const pinnedColumnId = columns.some(
-    (column) => column.id === pinnedIdentityColumnId,
-  )
-    ? pinnedIdentityColumnId
-    : undefined;
   const columnPinning = useMemo<ColumnPinningState>(
     () => ({
       left: pinnedColumnId ? ["select", pinnedColumnId] : [],
@@ -515,42 +359,6 @@ export function CustomerDataTable<
   const emptyStateDescription = hasFilterHiddenRows
     ? "조건을 바꾸면 숨겨진 정보가 다시 보입니다."
     : "등록되면 이 표에 표시됩니다.";
-  const dataColumnCount = table
-    .getVisibleLeafColumns()
-    .filter(
-      (column) => column.id !== "select" && column.id !== "actions",
-    ).length;
-  const orderedVisibleColumns = [
-    ...table.getLeftVisibleLeafColumns(),
-    ...table.getCenterVisibleLeafColumns(),
-    ...table.getRightVisibleLeafColumns(),
-  ];
-  const pinnedColumnWidth = table
-    .getLeftVisibleLeafColumns()
-    .reduce((total, column) => total + column.getSize(), 0);
-  const flexibleColumnId = pinnedColumnId
-    ? [...orderedVisibleColumns]
-        .reverse()
-        .find(
-          (column) =>
-            column.id !== "select" &&
-            column.id !== "actions" &&
-            column.id !== pinnedColumnId,
-        )?.id
-    : undefined;
-  const headerHeightClassName = density === "comfortable" ? "!h-11" : "!h-9";
-  const rowHeightClassName =
-    density === "compact"
-      ? "!h-9"
-      : density === "comfortable"
-        ? "!h-[52px]"
-        : "!h-10";
-  const contentHeightClassName =
-    density === "compact"
-      ? "!min-h-9"
-      : density === "comfortable"
-        ? "!min-h-[52px]"
-        : "!min-h-10";
   const resetFilters = () => {
     setQuery("");
     setFilterModel(
@@ -767,270 +575,30 @@ export function CustomerDataTable<
         </EmrTableFeedbackSurface>
       ) : (
         <>
-          <EmrPinnedTableViewport
-            className="min-h-0 min-w-0 flex-1"
-            pinnedColumnWidth={pinnedColumnWidth}
-          >
-          <Table
+          <EmrDataTable
             aria-label={`${title} 고객관리 테이블`}
-            containerClassName="isolate h-full min-h-0 min-w-0 overflow-auto bg-[var(--clair-color-atomic-common-100)]"
-            data-customer-pinned-identity={pinnedColumnId}
-            density={density}
-            layout="scroll"
-            minWidth={minTableWidth}
-            overscrollAxes="both"
-            pinning={pinnedColumnId ? "columns" : "none"}
             className="table-fixed"
-          >
-            <colgroup>
-              {orderedVisibleColumns.map((column) => {
-                const width =
-                  column.id === "select"
-                    ? "44px"
-                    : column.id === "actions"
-                      ? "52px"
-                      : column.id === flexibleColumnId
-                        ? "auto"
-                        : !pinnedColumnId
-                          ? `calc((100% - 96px) / ${Math.max(dataColumnCount, 1)})`
-                          : `${column.getSize()}px`;
-                return (
-                  <col
-                    key={column.id}
-                    style={{
-                      minWidth:
-                        column.id === flexibleColumnId
-                          ? `${column.getSize()}px`
-                          : undefined,
-                      width,
-                    }}
-                  />
-                );
-              })}
-            </colgroup>
-            <TableHeader className="sticky top-0 z-10 bg-[#fafafa]">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow
-                  key={headerGroup.id}
-                  data-customer-table-header="true"
-                  className={cn(
-                    headerHeightClassName,
-                    "group/customer-header border-0 bg-[#fafafa] hover:bg-[#fafafa]",
-                  )}
-                >
-                  {headerGroup.headers.map((header) => {
-                    if (header.column.id === "select") {
-                      return (
-                        <EmrTableSelectionHeaderCell
-                          key={header.id}
-                          aria-label={`${title} 선택`}
-                          className={cn(
-                            headerHeightClassName,
-                            "w-11 min-w-11 max-w-11 !p-0 !pl-5 !pr-2 [&_.emr-table-cell-content]:!p-0",
-                            density === "comfortable"
-                              ? "[&_.emr-table-cell-content]:!h-11"
-                              : "[&_.emr-table-cell-content]:!h-9",
-                          )}
-                          {...getEmrPinnedColumnProps(header.column)}
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                        </EmrTableSelectionHeaderCell>
-                      );
-                    }
+            containerClassName="isolate h-full min-h-0 min-w-0 overflow-auto bg-[var(--clair-color-atomic-common-100)]"
+            density={density}
+            initialLoading={initialLoading}
+            overscrollAxes="both"
+            skeletonRowCount={6}
+            table={table}
+            getRowProps={(row) => {
+              const active = isActiveRow(row.original);
 
-                    if (header.column.id === "actions") {
-                      return (
-                        <EmrTableHeaderCell
-                          key={header.id}
-                          aria-label={`${title} 행 작업`}
-                          className={cn(
-                            headerHeightClassName,
-                            "w-[52px] !p-0 !pl-2 !pr-5 [&_.emr-table-cell-content]:!p-0",
-                            density === "comfortable"
-                              ? "[&_.emr-table-cell-content]:!h-11"
-                              : "[&_.emr-table-cell-content]:!h-9",
-                          )}
-                          interaction="static"
-                          resize="none"
-                        >
-                          <span className="sr-only">행 작업</span>
-                        </EmrTableHeaderCell>
-                      );
-                    }
-
-                    const meta = getColumnMeta(header.column.columnDef);
-                    const sortDirection = header.column.getIsSorted();
-                    const label = meta?.label ?? header.column.id;
-                    const canSort = header.column.getCanSort();
-                    const identity = header.column.id === pinnedColumnId;
-
-                    return (
-                      <EmrTableHeaderCell
-                        key={header.id}
-                        aria-sort={getAriaSort(sortDirection)}
-                        className={cn(
-                          headerHeightClassName,
-                          "!p-0 text-left",
-                          !identity && "[&_.emr-table-cell-content]:!p-0",
-                          density === "comfortable"
-                            ? "[&_.emr-table-cell-content]:!h-11"
-                            : "[&_.emr-table-cell-content]:!h-9",
-                          meta?.headerClassName,
-                        )}
-                        data-customer-column-key={header.column.id}
-                        identity={identity}
-                        interaction="static"
-                        resize="none"
-                        {...getEmrPinnedColumnProps(header.column)}
-                      >
-                        <CustomerDataTableColumnHeader
-                          label={label}
-                          canSort={canSort}
-                          identity={identity}
-                          sortDirection={sortDirection}
-                          ariaLabel={
-                            canSort
-                              ? getSortAriaLabel(label, sortDirection)
-                              : `${label} 정렬은 현재 지원하지 않습니다`
-                          }
-                          onToggleSort={() => {
-                            if (!sortDirection) {
-                              header.column.toggleSorting(false);
-                            } else if (sortDirection === "asc") {
-                              header.column.toggleSorting(true);
-                            } else {
-                              header.column.clearSorting();
-                            }
-                          }}
-                        />
-                      </EmrTableHeaderCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {initialLoading ? (
-                <CustomerTableSkeletonRows
-                  colSpan={dataColumnCount + 2}
-                  density={density}
-                  pinnedIdentityColumn={Boolean(pinnedColumnId)}
-                  rowCount={6}
-                  testId={`${testId}-skeleton-row`}
-                  visibleColumnCount={dataColumnCount}
-                />
-              ) : visibleRows.length ? (
-                visibleRows.map((row) => {
-                  const active = isActiveRow(row.original);
-                  const selected = row.getIsSelected();
-
-                  return (
-                    <TableRow
-                      key={row.id}
-                      data-customer-table-row="true"
-                      data-testid={rowTestId(row.original)}
-                      data-state={selected || active ? "selected" : undefined}
-                      className={cn(
-                        rowHeightClassName,
-                        "group/customer-row cursor-pointer border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] text-foreground hover:!bg-[var(--clair-color-atomic-black-alpha-4)]",
-                        active &&
-                          "bg-[var(--emr-state-selected)] hover:!bg-[var(--emr-state-selected)]",
-                      )}
-                      onClick={() => onOpenRow(row.original)}
-                    >
-                      {row.getVisibleCells().map((cell) => {
-                        if (cell.column.id === "select") {
-                          return (
-                            <EmrTableSelectionCell
-                              key={cell.id}
-                              className={cn(
-                                rowHeightClassName,
-                                "w-11 min-w-11 max-w-11 !p-0 !pl-5 !pr-2 [&_.emr-table-cell-content]:!p-0",
-                                density === "compact"
-                                  ? "[&_.emr-table-cell-content]:!min-h-9"
-                                  : density === "comfortable"
-                                    ? "[&_.emr-table-cell-content]:!min-h-[52px]"
-                                    : "[&_.emr-table-cell-content]:!min-h-10",
-                              )}
-                              controlVisibility="contextual"
-                              {...getEmrPinnedColumnProps(cell.column)}
-                            >
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext(),
-                              )}
-                            </EmrTableSelectionCell>
-                          );
-                        }
-
-                        if (cell.column.id === "actions") {
-                          return (
-                            <TableCell
-                              key={cell.id}
-                              className={cn(
-                                rowHeightClassName,
-                                "w-[52px] !p-0 !pl-2 !pr-5",
-                              )}
-                            >
-                              <div
-                                className={cn(
-                                  contentHeightClassName,
-                                  "flex items-center justify-end",
-                                )}
-                              >
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext(),
-                                )}
-                              </div>
-                            </TableCell>
-                          );
-                        }
-
-                        const meta = getColumnMeta(cell.column.columnDef);
-                        const identity = cell.column.id === pinnedColumnId;
-                        const content = cell.column.columnDef.cell
-                          ? flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            )
-                          : (cell.getValue() as ReactNode);
-
-                        return (
-                          <TableCell
-                            key={cell.id}
-                            className={cn(
-                              rowHeightClassName,
-                              "!p-0 overflow-hidden whitespace-nowrap",
-                            )}
-                            data-customer-column-key={cell.column.id}
-                            {...getEmrPinnedColumnProps(cell.column)}
-                          >
-                            <CustomerTableCellContent
-                              align={meta?.align}
-                              className={cn(
-                                contentHeightClassName,
-                                meta?.className,
-                              )}
-                              identity={identity}
-                              rich={meta?.cellKind === "rich"}
-                              textMode={meta?.textMode}
-                            >
-                              {content}
-                            </CustomerTableCellContent>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  );
-                })
-              ) : null}
-            </TableBody>
-          </Table>
-          </EmrPinnedTableViewport>
+              return {
+                className: cn(
+                  "group/customer-row cursor-pointer",
+                  active &&
+                    "bg-[var(--emr-state-selected)] hover:!bg-[var(--emr-state-selected)]",
+                ),
+                "data-state": active ? "selected" : undefined,
+                "data-testid": rowTestId(row.original),
+                onClick: () => onOpenRow(row.original),
+              };
+            }}
+          />
 
           <CustomerDataTableFooter
             loading={initialLoading}

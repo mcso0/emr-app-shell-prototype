@@ -1901,7 +1901,7 @@ test("chart order table supports single sort without a filter control", async ({
   await expect(orderRows.first()).toContainText("Maropitant 16mg T");
 
   await orderArea
-    .getByRole("button", { name: /현재 정렬: 청구금액 오름차순/ })
+    .getByRole("button", { name: /청구금액 내림차순 정렬/ })
     .click();
   await expect(orderRows.first()).toContainText("복부 초음파");
 

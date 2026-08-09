@@ -66,11 +66,6 @@ const placeholderSideItems = [
   { label: "CS내역", icon: MessagesIcon },
   { label: "진료의뢰수신", icon: ContactBookIcon },
 ];
-const customerTableMinWidths = {
-  guardian: 1120,
-  patient: 1480,
-} as const;
-
 function getCustomerWorkspaceId(value?: string | string[]) {
   return resolveWorkspaceRouteParam(value);
 }
@@ -266,7 +261,6 @@ function PatientTable({
           activeDrawer.type === "reception-patient")
       }
       loading={loading}
-      minTableWidth={customerTableMinWidths.patient}
       onOpenRow={(row) => setActiveDrawer({ type: "patient", id: row.id })}
       onRetry={onRetry}
       pinnedIdentityColumnId="name"
@@ -306,7 +300,6 @@ function GuardianTable({
           activeDrawer.type === "reception-guardian")
       }
       loading={loading}
-      minTableWidth={customerTableMinWidths.guardian}
       onOpenRow={(row) => setActiveDrawer({ type: "guardian", id: row.id })}
       onRetry={onRetry}
       pinnedIdentityColumnId="name"

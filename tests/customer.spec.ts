@@ -385,7 +385,7 @@ test("Cheongdam customer table shows skeleton while seeded profiles are loading"
 
   const patientTable = page.getByTestId("customer-patient-table");
   const firstSkeletonRow = patientTable
-    .getByTestId("customer-patient-table-skeleton-row")
+    .locator('[data-emr-data-table-skeleton-row="true"]')
     .first();
   const pinnedSkeletonCells = firstSkeletonRow.locator(
     'td[data-emr-column-pinned="left"]',
@@ -416,7 +416,7 @@ test("Cheongdam customer table shows skeleton while seeded profiles are loading"
   await expect(page.getByText("라온")).toBeVisible();
   await expect(page.getByText("박민준")).toBeVisible();
   await expect(
-    patientTable.getByTestId("customer-patient-table-skeleton-row"),
+    patientTable.locator('[data-emr-data-table-skeleton-row="true"]'),
   ).toHaveCount(0);
   await expect(page.getByTestId("customer-side-panel-patient")).toContainText(
     "1",
@@ -504,7 +504,9 @@ test("Cheongdam customer table does not flash empty copy on SPA re-entry with st
 
   await page.getByRole("link", { name: "고객관리" }).click();
   await expect(
-    patientTable.getByTestId("customer-patient-table-skeleton-row").first(),
+    patientTable
+      .locator('[data-emr-data-table-skeleton-row="true"]')
+      .first(),
   ).toBeVisible();
   await expect(patientTable).not.toContainText("동물 정보가 없습니다");
   await expect(patientTable).not.toContainText("0건");
@@ -662,24 +664,24 @@ test("customer patient table keeps animal identity pinned while data columns scr
     '[data-emr-pinned-table-divider="true"]',
   );
   const animalHeader = patientTable.locator(
-    'th[data-customer-column-key="name"]',
+    'th[data-column-id="name"]',
   );
   const selectionHeader = patientTable
     .locator('thead th[data-emr-column-pinned="left"]')
     .first();
   const patientCodeHeader = patientTable.locator(
-    'th[data-customer-column-key="patientNo"]',
+    'th[data-column-id="patientNo"]',
   );
   const patientRows = patientTable.locator(
-    'tbody tr[data-customer-table-row="true"]',
+    'tbody tr[data-emr-data-table-row="true"]',
   );
   const firstPatientRow = patientRows.first();
   const subsequentPatientRow = patientRows.nth(1);
   const firstPatientCodeCell = firstPatientRow.locator(
-    'td[data-customer-column-key="patientNo"]',
+    'td[data-column-id="patientNo"]',
   );
   const subsequentPatientCodeCell = subsequentPatientRow.locator(
-    'td[data-customer-column-key="patientNo"]',
+    'td[data-column-id="patientNo"]',
   );
   const firstPatientCodeSurface = firstPatientCodeCell.locator("code");
   const subsequentPatientCodeSurface =
@@ -692,9 +694,9 @@ test("customer patient table keeps animal identity pinned while data columns scr
     'td[data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
   );
   const dubuRow = page.getByTestId("customer-patient-row-patient-dubu");
-  const animalCell = dubuRow.locator('td[data-customer-column-key="name"]');
+  const animalCell = dubuRow.locator('td[data-column-id="name"]');
   const dubuPatientCodeCell = dubuRow.locator(
-    'td[data-customer-column-key="patientNo"]',
+    'td[data-column-id="patientNo"]',
   );
   const selectionCell = dubuRow
     .locator('td[data-emr-column-pinned="left"]')
@@ -702,7 +704,7 @@ test("customer patient table keeps animal identity pinned while data columns scr
   const pageHeading = patientSection.getByRole("heading", { name: "동물" });
   const searchInput = patientSection.getByPlaceholder("동물 검색");
   const animalHeaderLabel = animalHeader.locator(
-    '[data-customer-column-header-label="true"]',
+    '[data-emr-table-identity-text="true"]',
   );
   const animalNameText = animalCell.locator(
     '[data-emr-cell-text-mode="one-line"]',
@@ -717,10 +719,10 @@ test("customer patient table keeps animal identity pinned while data columns scr
     "true",
   );
   await expect(patientTable).toHaveAttribute(
-    "data-customer-pinned-identity",
-    "name",
+    "data-emr-pinning",
+    "columns",
   );
-  await expect(patientTable).toHaveCSS("min-width", "1480px");
+  await expect(patientTable).toHaveCSS("min-width", "1620px");
   await expect(patientSection.getByTestId("customer-page-header")).toHaveCSS(
     "padding-top",
     "0px",
@@ -747,9 +749,11 @@ test("customer patient table keeps animal identity pinned while data columns scr
   ).toHaveCount(0);
 
   const visibleDataColumnOrder = await patientTable
-    .locator("thead [data-customer-column-key]")
+    .locator("thead [data-column-id]")
     .evaluateAll((headers) =>
-      headers.map((header) => header.getAttribute("data-customer-column-key")),
+      headers
+        .map((header) => header.getAttribute("data-column-id"))
+        .filter((columnId) => columnId !== "select"),
     );
   expect(visibleDataColumnOrder.slice(0, 2)).toEqual(["name", "patientNo"]);
 
@@ -1082,7 +1086,7 @@ test("customer patient table keeps animal identity pinned while data columns scr
     animalCell.evaluate((cell) => getComputedStyle(cell).backgroundColor),
     page.evaluate(() => {
       const probe = document.createElement("div");
-      probe.style.backgroundColor = "var(--emr-surface-hover)";
+      probe.style.backgroundColor = "var(--clair-color-atomic-black-alpha-4)";
       document.body.appendChild(probe);
       const color = getComputedStyle(probe).backgroundColor;
       probe.remove();
@@ -1122,17 +1126,17 @@ test("customer patient table keeps animal identity pinned while data columns scr
     name: "보호자 고객관리 테이블",
   });
   const guardianHeader = guardianTable.locator(
-    'th[data-customer-column-key="name"]',
+    'th[data-column-id="name"]',
   );
   const guardianCell = page
     .getByTestId("customer-guardian-row-guardian-kang-seoyun")
-    .locator('td[data-customer-column-key="name"]');
+    .locator('td[data-column-id="name"]');
   const guardianPinnedViewport = page
     .getByTestId("customer-guardian-table")
     .locator('[data-emr-pinned-table-viewport="true"]');
   await expect(guardianTable).toHaveAttribute(
-    "data-customer-pinned-identity",
-    "name",
+    "data-emr-pinning",
+    "columns",
   );
   await expect(guardianHeader).toHaveAttribute(
     "data-emr-column-pinned",
@@ -1223,7 +1227,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     "customer-guardian-row-guardian-kang-seoyun",
   );
   const firstCellContent = firstRow
-    .locator('[data-emr-customer-cell-content="true"]')
+    .locator(".emr-data-table-cell-content")
     .first();
   const footer = section.getByTestId("customer-table-footer");
   const guardianHeading = section.getByRole("heading", {
@@ -1231,10 +1235,10 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   });
   const guardianSearch = section.getByPlaceholder("보호자 검색");
   const guardianHeaderLabel = table
-    .locator('th[data-customer-column-key="name"]')
-    .locator('[data-customer-column-header-label="true"]');
+    .locator('th[data-column-id="name"]')
+    .locator('[data-emr-table-identity-text="true"]');
   const guardianNameText = firstRow
-    .locator('td[data-customer-column-key="name"]')
+    .locator('td[data-column-id="name"]')
     .locator('[data-emr-cell-text-mode="two-line-if-long"]');
   const footerTotal = footer.locator("span").first();
 
@@ -1243,9 +1247,9 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     "data-emr-pinned-table-workspace",
     "true",
   );
-  await expect(table).toHaveAttribute("data-customer-pinned-identity", "name");
+  await expect(table).toHaveAttribute("data-emr-pinning", "columns");
   await expect(
-    table.locator('th[data-customer-column-key="name"]'),
+    table.locator('th[data-column-id="name"]'),
   ).toHaveAttribute("data-emr-column-pinned", "left");
   await expect(firstRow).toBeVisible();
   await expect(footer).toContainText("총 5건");
@@ -1318,7 +1322,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
       '[data-testid="customer-guardian-row-guardian-lee-jieun"]',
     ) as HTMLElement;
     const dataCellContent = dataRow.querySelector(
-      '[data-emr-customer-cell-content="true"]',
+      ".emr-data-table-cell-content",
     ) as HTMLElement;
     const footerElement = root.querySelector(
       '[data-testid="customer-table-footer"]',
@@ -1406,9 +1410,9 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   const sortableHeader = table.getByRole("button", {
     name: /보호자명 오름차순 정렬/,
   });
-  const plannedSortHeader = table.getByRole("button", {
-    name: "휴대전화 정렬은 현재 지원하지 않습니다",
-  });
+  const plannedSortHeader = table.locator(
+    'th[data-column-id="mobilePhone"]',
+  );
   const sortButtonGeometry = await sortableHeader.evaluate((button) => {
     const style = getComputedStyle(button);
     const icon = button.querySelector("img") as HTMLElement;
@@ -1431,7 +1435,11 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   expect(sortButtonGeometry.iconWidth).toBeCloseTo(6.75, 1);
   expect(sortButtonGeometry.padding).toEqual(["4px", "0px", "4px", "0px"]);
   await expect(sortableHeader).toBeEnabled();
-  await expect(plannedSortHeader).toBeDisabled();
+  await expect(plannedSortHeader).toHaveAttribute(
+    "data-emr-header-interaction",
+    "static",
+  );
+  await expect(plannedSortHeader.getByRole("button")).toHaveCount(0);
 
   const firstRowCheckboxInput = firstRow.getByRole("checkbox");
   const firstRowCheckbox = firstRow.locator('[data-slot="checkbox"]');
@@ -1840,7 +1848,7 @@ test("customer patient table supports single sort and section filter builder", a
   await expect(patientRows.first()).toContainText("코코");
 
   await patientTableSection
-    .getByRole("button", { name: /현재 정렬: 등록일시 오름차순/ })
+    .getByRole("button", { name: /등록일시 내림차순 정렬/ })
     .click();
   await expect(patientRows.first()).toContainText("콩이");
 
@@ -2016,10 +2024,10 @@ test("customer archive table pins identity and restores through the existing tar
     "customer-archive-row-patient-patient-archived-mango",
   );
   const identityHeader = table.locator(
-    'th[data-customer-archive-column="displayName"]',
+    'th[data-column-id="displayName"]',
   );
   const identityCell = row.locator(
-    'td[data-customer-archive-column="displayName"]',
+    'td[data-column-id="displayName"]',
   );
   const pinnedViewport = section.locator(
     '[data-emr-pinned-table-viewport="true"]',

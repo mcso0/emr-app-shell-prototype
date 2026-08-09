@@ -36,7 +36,7 @@ export type EmrTableHeaderRoleDefinition = {
 
 export const emrTableDensityOptions: EmrTableViewOption[] = [
   { value: "compact", label: "좁은 간격", rowHeight: 36, headerHeight: 36 },
-  { value: "standard", label: "기본 간격", rowHeight: 44, headerHeight: 40 },
+  { value: "standard", label: "기본 간격", rowHeight: 40, headerHeight: 36 },
   { value: "comfortable", label: "넓은 간격", rowHeight: 52, headerHeight: 44 },
 ];
 
@@ -45,9 +45,25 @@ export const defaultEmrTableLayout: EmrTableLayout = "fill";
 
 export const emrTableHeaderRoleDefinitions: EmrTableHeaderRoleDefinition[] = [
   { value: "static", label: "정적", allowedAffordance: "none" },
-  { value: "sortable", label: "정렬", allowedAffordance: "sort indicator and keyboard sort" },
-  { value: "filterable", label: "필터", allowedAffordance: "filter trigger or explicit menu item" },
-  { value: "sortable-filterable", label: "정렬/필터", allowedAffordance: "sort indicator plus explicit filter trigger" },
-  { value: "menu", label: "메뉴", allowedAffordance: "explicit column menu button" },
+  {
+    value: "sortable",
+    label: "정렬",
+    allowedAffordance: "sort indicator and keyboard sort",
+  },
+  {
+    value: "filterable",
+    label: "필터",
+    allowedAffordance: "filter trigger or explicit menu item",
+  },
+  {
+    value: "sortable-filterable",
+    label: "정렬/필터",
+    allowedAffordance: "sort indicator plus explicit filter trigger",
+  },
+  {
+    value: "menu",
+    label: "메뉴",
+    allowedAffordance: "explicit column menu button",
+  },
   { value: "compound", label: "복합", allowedAffordance: "static by default" },
 ];

@@ -2,6 +2,7 @@
 
 import type { ColumnDef, SortingFn } from "@tanstack/react-table";
 import { CdsActionsCheckCircleIcon } from "@/components/cds-icons/actions-and-controls";
+import type { EmrDataTableColumnMeta } from "@/components/emr/emr-data-table";
 import {
   EmrTableCellText,
   EmrTableIdentityCellContent,
@@ -25,8 +26,7 @@ export type CustomerTableFilterOption = {
   value: string;
 };
 
-export type CustomerTableColumnMeta<TRow> = {
-  align?: "left" | "center" | "right";
+export type CustomerTableColumnMeta<TRow> = EmrDataTableColumnMeta & {
   cellKind?: "text" | "rich";
   className?: string;
   defaultVisible?: boolean;
