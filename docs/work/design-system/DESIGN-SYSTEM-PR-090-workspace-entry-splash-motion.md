@@ -14,7 +14,7 @@
 ## Source Contract
 
 - 배경: `#FFFFFF`
-- 로고: 화면 중앙, `#C7CCD1`, 128px 아이콘 슬롯, `transform-origin: center center`
+- 로고: 화면 중앙, `#C7CCD1`, 104px 아이콘 슬롯, `transform-origin: center center`
 - 진입: 600ms, `opacity 0 → 1`, `scale 0.85 → 1`, ease-out
 - pulse: 한 방향 800ms, `opacity 1 ↔ 0.5`, `scale 1 ↔ 0.92`, ease-in-out
 - 종료: 현재 pulse가 full 상태로 돌아온 뒤 overlay만 180ms ease-out
