@@ -34,7 +34,11 @@ import {
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
-import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
+import {
+  CdsNavigationChevronDownIcon,
+  CdsNavigationChevronLeftIcon,
+  CdsNavigationChevronRightIcon,
+} from "@/components/cds-icons/navigation";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
@@ -45,11 +49,6 @@ import {
   EmrContentHistoryGroup,
   EmrContentHistoryItem,
 } from "@/components/emr/content-history-list";
-import {
-  EmrInstructionHeaderStack,
-  EmrInstructionHistoryToggle,
-  EmrInstructionTitleBar,
-} from "@/components/emr/instruction-header-stack";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
@@ -58,7 +57,6 @@ import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrListHeaderIconButton } from "@/components/emr/subpanel";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
-import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
@@ -137,7 +135,13 @@ import type {
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
-import { ChartSectionTitle } from "@/features/chart/components/chart-section-title";
+import {
+  ChartActionBar,
+  ChartPanelActions,
+  ChartPanelIconButton,
+  ChartPatientContextBar,
+  ChartWorkspacePanel,
+} from "@/features/chart/components/chart-figma-workspace";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { useChartStore } from "@/features/chart/store";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
@@ -381,10 +385,10 @@ type ChartOrderCatalogRouteResponse =
       error?: string;
     };
 
-const CHART_TOP_DEFAULT_PERCENT = 50;
+const CHART_TOP_DEFAULT_PERCENT = 55.3;
 const CHART_TOP_MIN_PX = 180;
 const CHART_ORDER_MIN_PX = 170;
-const CHART_RESIZER_HEIGHT_PX = 16;
+const CHART_RESIZER_HEIGHT_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
 const chartDetailPendingDelayMs = 200;
 const chartSelectedEncounterStoragePrefix =
@@ -809,13 +813,9 @@ function useSelectedChartBundle(workspaceId: string) {
 
 export function ChartSlotAvailabilityProvider({
   children,
-  workspaceId,
 }: WorkspaceSlotAvailabilityProviderProps) {
-  const bundle = useSelectedChartBundle(workspaceId);
-  const hasSelectedDetail = Boolean(bundle);
-
   return children({
-    hasContentAside: hasSelectedDetail,
+    hasContentAside: false,
   });
 }
 
@@ -1314,22 +1314,22 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
 
   return (
     <EmrMainContentHeader heightMode="fixed">
-      <EmrPatientContextBar
-        patientItems={[
-          { label: "차트번호", value: bundle.encounter.encounterNo },
-          {
-            label: "환자",
-            value: `${bundle.patient.name} · 보호자 ${bundle.primaryGuardian?.name ?? "미지정"}`,
-          },
-          {
-            label: "품종",
-            value: bundle.patient.breed ?? getSpeciesLabel(bundle.patient),
-          },
-          { label: "나이", value: getPatientDisplayAge(bundle.patient) },
-          { label: "성별", value: getPatientSexLabel(bundle.patient) },
-        ]}
+      <ChartPatientContextBar
+        patientName={bundle.patient.name}
+        patientMeta={[
+          bundle.patient.breed ?? getSpeciesLabel(bundle.patient),
+          getPatientSexLabel(bundle.patient),
+          getPatientDisplayAge(bundle.patient),
+        ].join(" · ")}
+        guardianName={`${bundle.primaryGuardian?.name ?? "보호자 미지정"}${bundle.primaryGuardian ? "(주보호자)" : ""}`}
+        guardianPhone={
+          bundle.primaryGuardian?.mobilePhone ??
+          bundle.primaryGuardian?.phone ??
+          "연락처 미입력"
+        }
         vitalItems={latestVitals.items}
-        memoActions={[
+        doctorName={veterinarianName}
+        memoItems={[
           {
             label: "방문목적",
             summary:
@@ -1338,14 +1338,11 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
               "방문 목적 기록 없음",
           },
           {
-            label: "보호자 메모",
-            locked: true,
+            label: "보호자메모",
             summary: bundle.primaryGuardian?.memo ?? "보호자 메모 없음",
-            unavailableReason:
-              "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
           },
           {
-            label: "환자 메모",
+            label: "환자메모",
             summary:
               [
                 bundle.patient.allergyNote,
@@ -1356,12 +1353,11 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
                 .join(" · ") || "환자 특이 메모 없음",
           },
           {
-            label: "수납 메모",
+            label: "수납메모",
             disabled: true,
-            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+            summary: "수납 화면 연동 후 사용할 수 있습니다.",
           },
         ]}
-        trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
       />
     </EmrMainContentHeader>
   );
@@ -1473,6 +1469,143 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
         <Button size="default">외래 차트 추가</Button>
       </div>
     </EmrContentAsidePanel>
+  );
+}
+
+function ChartInlineHistoryPanel({
+  bundle,
+  onSelectEncounter,
+  selectedEncounterId,
+}: {
+  bundle: ChartBundle;
+  onSelectEncounter: (encounterId: string) => void;
+  selectedEncounterId: string;
+}) {
+  const [query, setQuery] = useState("");
+  const historyRows = useMemo(
+    () => getChartHistoryRowsForBundle(bundle),
+    [bundle],
+  );
+  const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
+  const visibleRows = useMemo(
+    () =>
+      normalizedQuery
+        ? historyRows.filter((row) => {
+            const diagnosisText = row.diagnoses
+              .map((diagnosis) => diagnosis.diagnosisText)
+              .join(" ");
+            return [
+              diagnosisText,
+              row.encounter.encounterNo,
+              row.encounter.chiefComplaint,
+              row.encounter.visitPurpose,
+              row.soapNote?.assessment,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLocaleLowerCase("ko-KR")
+              .includes(normalizedQuery);
+          })
+        : historyRows,
+    [historyRows, normalizedQuery],
+  );
+  const historyGroups = useMemo(
+    () =>
+      visibleRows.reduce<Array<{ date: string; rows: ChartHistoryRow[] }>>(
+        (groups, row) => {
+          const date = getShortDateTime(
+            row.encounter.checkedInAt ?? row.encounter.createdAt,
+          ).slice(0, 8);
+          const currentGroup = groups.at(-1);
+          if (currentGroup?.date === date) currentGroup.rows.push(row);
+          else groups.push({ date, rows: [row] });
+          return groups;
+        },
+        [],
+      ),
+    [visibleRows],
+  );
+
+  return (
+    <ChartWorkspacePanel
+      title="History"
+      actions={<ChartPanelActions />}
+      toolbar={
+        <div className="flex w-full min-w-0 items-center gap-2">
+          <Select defaultValue="diagnosis">
+            <SelectTrigger
+              aria-label="차트 이력 종류"
+              className="h-7 w-[92px] shrink-0 rounded-lg bg-card px-2 text-xs"
+            >
+              진단이력
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="diagnosis">진단이력</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="relative min-w-0 flex-1">
+            <CdsActionsSearchIcon
+              aria-hidden="true"
+              className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              aria-label="차트 이력 검색"
+              placeholder="키워드를 입력해주세요"
+              value={query}
+              className="h-7 rounded-lg bg-card px-2 pr-8 text-xs"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="h-7 rounded-lg bg-card px-2 text-xs"
+            disabled
+            title="준비 중"
+          >
+            <CdsActionsListFilterIcon data-icon="inline-start" />
+            필터
+          </Button>
+        </div>
+      }
+    >
+      <ScrollArea className="h-full bg-[var(--emr-surface-panel)]">
+        <div className="flex min-h-full flex-col gap-1 p-3">
+          {historyGroups.map((group) => (
+            <EmrContentHistoryGroup
+              key={group.date}
+              collapsed={false}
+              count={group.rows.length}
+              dataTestId={`chart-inline-history-group-${group.date}`}
+              label={group.date}
+              onToggle={() => undefined}
+            >
+              {group.rows.map((row) => (
+                <ChartHistoryItem
+                  key={row.encounter.id}
+                  bundle={bundle}
+                  row={row}
+                  selected={row.encounter.id === selectedEncounterId}
+                  onSelect={() => onSelectEncounter(row.encounter.id)}
+                />
+              ))}
+            </EmrContentHistoryGroup>
+          ))}
+          {!visibleRows.length ? (
+            <div className="flex min-h-52 flex-1 items-center justify-center">
+              <EmrEmptyState
+                kind="no-filter-results"
+                priority="local-recovery"
+                surface="content"
+                title="검색 결과가 없습니다"
+                description="다른 키워드로 차트 이력을 찾아보세요."
+              />
+            </div>
+          ) : null}
+        </div>
+      </ScrollArea>
+    </ChartWorkspacePanel>
   );
 }
 
@@ -2378,6 +2511,7 @@ function SoapPanel({
   const updateActiveSoapContent = (content: string) => {
     if (writeDisabled) return;
     if (!activeSection) return;
+    if (content === activeSection.content) return;
     updateSectionOverride({ ...activeSection, content });
     if (activeSection.id === "default") {
       latestDefaultContentRef.current = content;
@@ -2389,6 +2523,7 @@ function SoapPanel({
   const persistDefaultSoapContent = useCallback(
     async (content: string, mode: "autosave" | "manual_save") => {
       if (writeDisabled) return;
+      if (mode === "manual_save") setPendingDefaultContent(null);
       setSaveState("saving");
       const result = await saveChartSoapNote({
         actorHeaders,
@@ -2637,21 +2772,25 @@ function SoapPanel({
               );
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]">
-      <div className="relative z-10 flex h-12 min-h-12 shrink-0 items-stretch justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
-        {soapTabs}
+    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+      <div className="relative z-30 flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
+        <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
+          Subject/Object
+        </h2>
+        <div className="flex items-center gap-1">
+          <ChartPanelIconButton label="패널 확대 준비 중" disabled />
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="self-center bg-card"
+                variant="ghost"
+                size="icon-xs"
+                className="size-6 rounded-md text-[var(--emr-text-secondary)]"
+                aria-label="SOAP 추가"
                 disabled={writeDisabled}
               >
-                <CdsActionsPlusIcon data-icon="inline-start" />
-                SOAP 추가
+                <CdsActionsPlusIcon className="size-3.5" />
               </Button>
             }
           />
@@ -2675,22 +2814,35 @@ function SoapPanel({
             })}
           </DropdownMenuContent>
         </DropdownMenu>
-        {activeSection ? (
+          {activeSection ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon-xs"
                   aria-label={`${activeSection.title}${activeSection.title.endsWith("SOAP") ? "" : " SOAP"} 작업`}
-                  className="relative z-30 self-center text-muted-foreground"
+                  className="size-6 rounded-md text-muted-foreground"
                 >
-                  <CdsFilesMoreHorizontalIcon className="size-4" />
+                  <CdsFilesMoreHorizontalIcon className="size-3.5" />
                 </Button>
               }
             />
             <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem
+                className="h-8 cursor-pointer"
+                disabled={writeDisabled || activeSection.id !== "default"}
+                onClick={() =>
+                  void persistDefaultSoapContent(
+                    latestDefaultContentRef.current,
+                    "manual_save",
+                  )
+                }
+              >
+                <CdsActionsSaveIcon data-icon="inline-start" />
+                SOAP 저장
+              </DropdownMenuItem>
               <DropdownMenuItem
                 className="h-8 cursor-pointer"
                 disabled={writeDisabled}
@@ -2727,6 +2879,10 @@ function SoapPanel({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
+        </div>
+      </div>
+      <div className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-line-hairline)] px-3">
+        {soapTabs}
       </div>
       {saveState === "conflict" ? (
         <div
@@ -2746,6 +2902,9 @@ function SoapPanel({
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
+        <span className="sr-only" aria-live="polite">
+          {activeStatusText}
+        </span>
         {activeSection ? (
           <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
             <SoapRichTextEditor
@@ -2755,51 +2914,6 @@ function SoapPanel({
               label={activeSection.title}
               onContentChange={updateActiveSoapContent}
             />
-            <div className="flex min-h-9 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 emr-text-metadata text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  className="text-muted-foreground"
-                  disabled={writeDisabled}
-                  onClick={() => setResetSoapId(activeSection.id)}
-                >
-                  <CdsActionsRotateCcwIcon data-icon="inline-start" />
-                  초기화
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  className="text-destructive hover:text-destructive"
-                  disabled={writeDisabled || !activeSection.deletable}
-                  onClick={() => setDeleteSoapId(activeSection.id)}
-                >
-                  <CdsActionsTrash2Icon data-icon="inline-start" />
-                  삭제
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  className="text-muted-foreground"
-                  disabled={writeDisabled || activeSection.id !== "default"}
-                  onClick={() =>
-                    void persistDefaultSoapContent(
-                      latestDefaultContentRef.current,
-                      "manual_save",
-                    )
-                  }
-                >
-                  <CdsActionsSaveIcon data-icon="inline-start" />
-                  SOAP 저장
-                </Button>
-                <span>{activeStatusText}</span>
-              </div>
-            </div>
           </div>
         ) : null}
       </div>
@@ -2974,34 +3088,40 @@ function AssessmentPanel({
   return (
     <section
       aria-label="진단명 관리"
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
     >
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
-        <span className="flex min-w-0 items-center gap-2">
-          <ChartSectionTitle title="진단명" />
+      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
+        <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
+          Assessment
+        </h2>
+        <span className="sr-only" aria-live="polite">
           <span
             data-testid="chart-diagnosis-save-status"
-            className="emr-text-metadata font-medium text-muted-foreground"
           >
             {saveStatusText}
           </span>
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="bg-card"
-          disabled={writeDisabled}
-          onClick={() => {
-            setSearchOpen(true);
-            searchInputRef.current?.focus();
-          }}
-        >
-          분류검색
-        </Button>
+        <div className="flex items-center gap-1">
+          <ChartPanelActions />
+        </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-4">
-        <div className="grid gap-3">
-          <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-2">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
+        <div className="grid gap-0">
+          <div className="grid h-11 grid-cols-[84px_minmax(0,1fr)_64px] items-center gap-2 border-b border-[var(--emr-line-hairline)] px-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="h-7 justify-between rounded-lg bg-card px-2 text-xs"
+              disabled={writeDisabled}
+              onClick={() => {
+                setSearchOpen(true);
+                searchInputRef.current?.focus();
+              }}
+            >
+              계통 전체
+              <CdsNavigationChevronDownIcon data-icon="inline-end" />
+            </Button>
             <Popover
               open={searchOpen}
               onOpenChange={(open) => !writeDisabled && setSearchOpen(open)}
@@ -3019,9 +3139,9 @@ function AssessmentPanel({
                   aria-label="진단명 검색"
                   autoComplete="off"
                   disabled={writeDisabled}
-                  placeholder="한글, 영문, 약자, 연관검색어로 진단명 검색"
+                  placeholder="키워드를 입력해주세요"
                   value={searchQuery}
-                  className="h-9 bg-[var(--emr-surface-panel)] pl-9 emr-text-dense"
+                  className="h-7 rounded-lg bg-card pl-9 text-xs"
                   onFocus={() => setSearchOpen(true)}
                   onValueChange={(value) => {
                     setSearchQuery(value);
@@ -3099,18 +3219,18 @@ function AssessmentPanel({
             </Popover>
             <Button
               variant="outline"
-              size="sm"
-              className="h-9 bg-card px-0"
+              size="xs"
+              className="h-7 rounded-lg bg-card px-2 text-xs"
               disabled={writeDisabled}
               onClick={() => {
                 setSearchOpen(true);
                 searchInputRef.current?.focus();
               }}
             >
-              검색
+              분류 검색
             </Button>
           </div>
-          <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+          <div className="m-3 overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
             <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--emr-surface-muted)] px-3 py-2 emr-text-metadata font-semibold text-muted-foreground">
               <span>계통분류</span>
               <span>진단명</span>
@@ -3579,7 +3699,6 @@ function ChartOrderTable({
   hasCommittedRows,
   invalidOrderIds,
   loading,
-  onAddOrder,
   onDeleteOrder,
   onSort,
   onToggleOrder,
@@ -3595,7 +3714,6 @@ function ChartOrderTable({
   hasCommittedRows: boolean;
   invalidOrderIds: Set<string>;
   loading: boolean;
-  onAddOrder: () => void;
   onDeleteOrder: (orderId: string) => void;
   onSort: (key: ChartOrderSortKey) => void;
   onToggleOrder: (orderId: string, checked: boolean) => void;
@@ -3998,11 +4116,11 @@ function ChartOrderTable({
   });
 
   return (
-    <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+    <div className="h-full overflow-hidden border-y border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
       <EmrDataTable
         aria-label="처방/오더 테이블"
         className="bg-[var(--emr-surface-panel)]"
-        containerClassName="min-h-0 min-w-0 overflow-auto"
+        containerClassName="h-full min-h-0 min-w-0 overflow-auto"
         density={density}
         initialLoading={loading && rows.length === 0}
         overscrollAxes="horizontal"
@@ -4037,20 +4155,6 @@ function ChartOrderTable({
                 </TableCell>
               </TableRow>
             ) : null}
-            <TableRow className="h-10 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
-              <TableCell />
-              <TableCell colSpan={Math.max(visibleColumnCount - 1, 1)}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-fit justify-start"
-                  disabled={writeDisabled || loading}
-                  onClick={onAddOrder}
-                >
-                  + Order 추가하기
-                </Button>
-              </TableCell>
-            </TableRow>
           </>
         )}
         skeletonRowCount={5}
@@ -4072,13 +4176,9 @@ function ChartOrderTable({
 }
 type OrderActionDialogType = "bill" | "confirm";
 type ChartUnavailableAction =
-  "chart-share" | "order-history" | "order-print" | "order-request";
+  "order-history" | "order-print" | "order-request";
 
 const chartUnavailableActionCopy = {
-  "chart-share": {
-    title: "차트 공유는 아직 연결되지 않았습니다",
-    body: "실제 공유, 이메일, 카카오톡, 외부 문서 전송은 이번 MVP 범위에 포함되지 않습니다. 현재 화면에서 차트 상태를 확인해 주세요.",
-  },
   "order-history": {
     title: "Order 이력 상세는 아직 연결되지 않았습니다",
     body: "선택 오더의 상세 이력 화면은 후속 상세 화면 범위에 포함됩니다. 현재 테이블의 상태와 갱신 시간을 기준으로 확인해 주세요.",
@@ -4962,31 +5062,155 @@ function OrderArea({
             : "Workspace catalog 검색 대기";
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]">
-      <div className="flex min-h-12 shrink-0 items-stretch justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
-        <ChartLineTabGroup
+    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
+        <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
+          Plan/Order
+        </h2>
+        <div className="flex items-center gap-1">
+          <ChartPanelIconButton label="패널 확대 준비 중" disabled />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-6 rounded-md text-muted-foreground"
+                  aria-label="Plan/Order 작업"
+                >
+                  <CdsFilesMoreHorizontalIcon className="size-3.5" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => setUnavailableAction({ action: "order-print" })}
+              >
+                Order 출력 · 준비 중
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={writeDisabled || !hasDraftChanges}
+                onClick={resetDraftRows}
+              >
+                변경 취소
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={writeDisabled || !canUpdateOrders}
+                onClick={() => void commitDraftRows()}
+              >
+                Order 업데이트
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={writeDisabled || !hasSelectedOrders}
+                onClick={() => setOrderActionDialog("bill")}
+              >
+                Order 청구
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={writeDisabled || !hasSelectedOrders}
+                onClick={() => setOrderActionDialog("confirm")}
+              >
+                Order 확정
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-line-hairline)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          className="flex min-w-max shrink-0 items-center rounded-lg bg-[var(--clair-color-atomic-black-alpha-4)] p-[3px]"
+          role="tablist"
           aria-label="처방/오더 분류"
-          items={orderTabItems}
-          value={orderFilter}
-          onValueChange={setOrderFilter}
-        />
-        <div className="flex items-center gap-2 py-2">
+        >
+          {orderTabItems.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-label={`${tab.label} ${tab.count}`}
+              aria-selected={orderFilter === tab.value}
+              className={cn(
+                "inline-flex h-6 min-w-12 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors",
+                orderFilter === tab.value &&
+                  "bg-[var(--emr-surface-panel)] text-foreground shadow-[var(--clair-shadow-xs)]",
+              )}
+              onClick={() => setOrderFilter(tab.value)}
+            >
+              {tab.label === "전체오더" ? "전체" : tab.label}
+              <span className="tabular-nums">{tab.count}</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="h-7 rounded-lg bg-card px-2 text-xs"
+            title="준비 중"
+            disabled
+          >
+            <CdsActionsSearchIcon data-icon="inline-start" />
+            검색
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="h-7 rounded-lg bg-card px-2 text-xs"
+            title="준비 중"
+            disabled
+          >
+            <CdsActionsListFilterIcon data-icon="inline-start" />
+            필터
+          </Button>
           <EmrTableDensitySelector
             value={orderTableDensity}
             onValueChange={setOrderTableDensity}
           />
           <Button
+            type="button"
             variant="outline"
-            size="sm"
-            className="bg-card"
-            onClick={() => setUnavailableAction({ action: "order-print" })}
+            size="xs"
+            className="h-7 rounded-lg bg-card px-2 text-xs"
+            title="준비 중"
+            disabled
           >
-            Order 출력
+            총괄지시사항
           </Button>
           <Button
+            type="button"
             variant="outline"
-            size="sm"
-            className="bg-card"
+            size="xs"
+            className="h-7 rounded-lg bg-card px-2 text-xs"
+            title="준비 중"
+            disabled
+          >
+            검사결과 분석
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="h-7 rounded-lg bg-card px-2 text-xs"
+            title="준비 중"
+            disabled
+          >
+            PACS
+          </Button>
+          <div className="h-5 w-px bg-[var(--emr-line-hairline)]" />
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="h-7 rounded-lg bg-card px-2 text-xs"
             disabled={writeDisabled}
             onClick={openCatalogDialog}
           >
@@ -5002,13 +5226,12 @@ function OrderArea({
           onDismiss={() => setUnavailableAction(null)}
         />
       ) : null}
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] px-3 pt-2 pb-0">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
         <ChartOrderTable
           density={orderTableDensity}
           hasCommittedRows={committedRowIds.size > 1}
           invalidOrderIds={invalidOrderIds}
           loading={orderLoading}
-          onAddOrder={openCatalogDialog}
           onDeleteOrder={setDeleteOrderId}
           onSort={handleOrderSort}
           onToggleOrder={toggleOrder}
@@ -5040,66 +5263,37 @@ function OrderArea({
         onQueryChange={setCatalogQuery}
         onRetry={() => void loadCatalogRows()}
       />
-      <div className="grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-2 emr-text-metadata">
-        <div className="min-w-0 text-muted-foreground">
-          <div className="truncate">
-            선택 오더 {selectedOrderIds.size}건 · 확정 대상{" "}
-            {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건
-            <span className="font-medium text-[var(--emr-status-info-text)]">
-              {draftStatusText}
-            </span>
-          </div>
-        </div>
-        <div className="flex min-w-0 items-center justify-end gap-2 text-muted-foreground">
-          <span className="whitespace-nowrap">
-            선택 오더 합계: {selectedAmount.toLocaleString()}
+      <div
+        data-testid="chart-order-footer"
+        className="flex h-16 min-h-16 shrink-0 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 text-[13px] leading-[18px] text-muted-foreground"
+      >
+        <div className="min-w-0">
+          <span>총 {visibleOrderRows.length}건</span>
+          <span className="sr-only">
+            선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 ·
+            재확인 필요 {recheckOrderCount}건 · 선택 오더 합계 {selectedAmount.toLocaleString()}원 ·
+            청구 예상 총액 {totalAmount.toLocaleString()}원 {draftStatusText}
           </span>
-          <span className="whitespace-nowrap">Order 별 할인/할증 합계: 0</span>
-          <Input
-            readOnly
-            value="0%"
-            className="h-7 w-[72px] bg-[var(--emr-surface-panel)] text-right"
-          />
         </div>
-        <div className="min-w-0 truncate font-semibold text-foreground">
-          청구 예상 총액: {totalAmount.toLocaleString()}
-        </div>
-        <div className="flex shrink-0 justify-end gap-2">
+        <div className="flex items-center gap-2">
+          <span className="mr-2 tabular-nums">1/1 페이지</span>
           <Button
             variant="outline"
             size="sm"
-            className="bg-card"
-            disabled={writeDisabled || !hasDraftChanges}
-            onClick={resetDraftRows}
+            className="h-8 rounded-lg bg-card px-3"
+            disabled
           >
-            <CdsActionsRotateCcwIcon data-icon="inline-start" />
-            변경 취소
+            <CdsNavigationChevronLeftIcon data-icon="inline-start" />
+            이전
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="bg-card"
-            disabled={writeDisabled || !canUpdateOrders}
-            onClick={() => void commitDraftRows()}
+            className="h-8 rounded-lg bg-card px-3"
+            disabled
           >
-            <CdsActionsSaveIcon data-icon="inline-start" />
-            Order 업데이트
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-card"
-            disabled={writeDisabled || !hasSelectedOrders}
-            onClick={() => setOrderActionDialog("bill")}
-          >
-            Order 청구
-          </Button>
-          <Button
-            size="sm"
-            disabled={writeDisabled || !hasSelectedOrders}
-            onClick={() => setOrderActionDialog("confirm")}
-          >
-            Order 확정
+            다음
+            <CdsNavigationChevronRightIcon data-icon="inline-end" />
           </Button>
         </div>
       </div>
@@ -5197,90 +5391,6 @@ function OrderArea({
       </Dialog>
     </section>
   );
-}
-
-function ChartInstructionInfo({
-  bundle,
-  latestSoap,
-  queueEntry,
-}: {
-  bundle: ChartBundle;
-  latestSoap?: SoapNote;
-  queueEntry?: WaitingQueueEntry;
-}) {
-  const veterinarianName = getChartBundleVeterinarianName(bundle);
-  const chartWorkflowStatus = getConsultationWorkflowStatusText(
-    bundle.encounter,
-    queueEntry,
-  );
-  const soapStatus = getSoapStatusText(latestSoap);
-  const infoItems: Array<{ label: string; value: ReactNode }> = [
-    {
-      label: "접수 일시",
-      value: getShortDateTime(
-        bundle.encounter.checkedInAt ?? bundle.encounter.createdAt,
-      ),
-    },
-    {
-      label: "환자 정보",
-      value: `${bundle.patient.name}(${getPatientDisplayAge(bundle.patient)}) · 보호자 ${bundle.primaryGuardian?.name ?? "미지정"} · ${bundle.patient.breed ?? getSpeciesLabel(bundle.patient)}`,
-    },
-    { label: "담당 수의사", value: veterinarianName },
-    {
-      label: "차트 상태",
-      value: (
-        <span className="inline-flex min-w-0 max-w-full items-center gap-1 overflow-hidden whitespace-nowrap">
-          <span
-            data-testid="chart-completion-status"
-            className="shrink-0 emr-text-dense font-semibold text-[var(--emr-status-info-text)]"
-          >
-            {chartWorkflowStatus}
-          </span>
-          <span aria-hidden="true" className="shrink-0 text-muted-foreground">
-            ·
-          </span>
-          <span
-            data-testid="chart-soap-status"
-            className="min-w-0 truncate emr-text-metadata font-medium text-muted-foreground"
-          >
-            {soapStatus}
-          </span>
-        </span>
-      ),
-    },
-  ];
-
-  return (
-    <div
-      data-slot="chart-instruction-info-card"
-      className="grid grid-cols-4 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3"
-    >
-      {infoItems.map(({ label, value }) => (
-        <div
-          key={label}
-          className="min-w-0 border-r border-[var(--emr-line-hairline)] px-3 last:border-r-0"
-        >
-          <div className="truncate emr-text-metadata font-medium text-muted-foreground">
-            {label}
-          </div>
-          <div
-            data-slot="chart-instruction-info-value"
-            className="mt-1 flex min-h-6 min-w-0 items-center overflow-hidden whitespace-nowrap emr-text-dense font-medium text-foreground"
-          >
-            {renderChartInstructionInfoValue(value)}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function renderChartInstructionInfoValue(value: ReactNode) {
-  if (typeof value === "string" || typeof value === "number") {
-    return <span className="block min-w-0 truncate">{value}</span>;
-  }
-
-  return value;
 }
 
 function ChartPreflightLine({
@@ -5527,10 +5637,8 @@ export function ChartContent({
     isLegacySalesDemoWorkspace(workspaceId) &&
     (allowStoreMockFallback || selectedEncounterId === demoScenarioEncounterId);
   const {
-    contentAsideOpen,
     moduleRefreshActions,
     setActiveDrawer,
-    setContentAsideOpen,
     setSelectedQueueItem,
   } = useLayoutStore();
   const applyPatientGuardianLookupItem = usePatientProfileStore(
@@ -5611,8 +5719,6 @@ export function ChartContent({
     status: "idle" | "saving" | "error";
     message?: string;
   }>({ status: "idle" });
-  const [chartUnavailableAction, setChartUnavailableAction] =
-    useState<ChartUnavailableAction | null>(null);
   const [diagnosisState, setDiagnosisState] = useState<{
     encounterId?: string;
     rows: EditableDiagnosis[];
@@ -6343,116 +6449,100 @@ export function ChartContent({
             : "저장 대기"
       : "저장 대기";
 
+  const chartCheckedInAt =
+    currentBundle.encounter.checkedInAt ?? currentBundle.encounter.createdAt;
+  const chartDate = getShortDateTime(chartCheckedInAt).split(" ")[0] ?? "-";
+  const chartStartTime = getShortClockTime(chartCheckedInAt);
+  const chartHistoryCount = getChartHistoryRowsForBundle(currentBundle).length;
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       {!chartStartLocked ? (
-        <EmrInstructionHeaderStack
-          titleBar={
-            <EmrInstructionTitleBar
-              title="진료 차트"
-              icon={
-                <EmrInstructionHistoryToggle
-                  ariaLabelPrefix="차트 이력"
-                  controls="chart-content-aside"
-                  expanded={contentAsideOpen}
-                  tooltipLabel="과거 이력 보기"
-                  onClick={() => setContentAsideOpen(!contentAsideOpen)}
-                />
-              }
-              badge={
-                <Badge
-                  variant="secondary"
-                  className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
+        <>
+          <ChartActionBar
+            chartDate={chartDate}
+            doctorName={getChartBundleVeterinarianName(currentBundle)}
+            encounterNo={currentBundle.encounter.encounterNo}
+            startTime={chartStartTime}
+            visitLabel={chartHistoryCount > 1 ? "재진" : "초진"}
+            pendingIndicator={
+              showDetailPendingIndicator ? <ChartDetailPendingIndicator /> : null
+            }
+            completionAction={
+              primaryAction === "call" ? (
+                <Button
+                  size="xs"
+                  disabled={primaryActionBusy}
+                  onClick={handleOpenCallDialog}
                 >
-                  {currentBundle.encounter.encounterNo}
-                </Badge>
-              }
-              actions={
-                <>
-                  {showDetailPendingIndicator ? (
-                    <ChartDetailPendingIndicator />
-                  ) : null}
-                  <Button
-                    variant="outline"
-                    className="bg-card"
-                    onClick={() => setChartUnavailableAction("chart-share")}
+                  호출하기
+                </Button>
+              ) : primaryAction === "complete" ? (
+                <ButtonGroup aria-label="진료 완료 보조 액션">
+                  <ButtonGroupPrimaryButton
+                    aria-label="진료 완료"
+                    className="h-7 rounded-l-lg px-3 text-xs"
+                    disabled={primaryActionBusy}
+                    onClick={() => setChartCompleteDialogOpen(true)}
                   >
-                    차트 공유
-                  </Button>
-                  {primaryAction === "call" ? (
-                    <Button
-                      disabled={primaryActionBusy}
-                      onClick={handleOpenCallDialog}
-                    >
-                      호출하기
-                    </Button>
-                  ) : null}
-                  {primaryAction === "complete" ? (
-                    <ButtonGroup aria-label="진료 완료 보조 액션">
-                      <ButtonGroupPrimaryButton
-                        disabled={primaryActionBusy}
-                        onClick={() => setChartCompleteDialogOpen(true)}
-                      >
-                        진료 완료
-                      </ButtonGroupPrimaryButton>
-                      {canUseConsultationSecondaryActions ? (
-                        <>
-                          <ButtonGroupDivider />
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={
-                                <ButtonGroupIconButton
-                                  aria-label="진료 보조 액션 열기"
-                                  disabled={primaryActionBusy}
-                                />
+                    차트 작성 완료
+                  </ButtonGroupPrimaryButton>
+                  {canUseConsultationSecondaryActions ? (
+                    <>
+                      <ButtonGroupDivider />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <ButtonGroupIconButton
+                              aria-label="진료 보조 액션 열기"
+                              className="h-7 w-7 rounded-r-lg"
+                              disabled={primaryActionBusy}
+                            />
+                          }
+                        >
+                          <CdsNavigationChevronDownIcon aria-hidden="true" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              if (hasChartWorkContent) {
+                                setReturnToWaitingDialogOpen(true);
+                                return;
                               }
-                            >
-                              <CdsNavigationChevronDownIcon aria-hidden="true" />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem
-                                className="cursor-pointer"
-                                onClick={() => {
-                                  if (hasChartWorkContent) {
-                                    setReturnToWaitingDialogOpen(true);
-                                    return;
-                                  }
-                                  void handleConsultationFlowMutation(
-                                    "return_to_waiting",
-                                  );
-                                }}
-                              >
-                                대기로 변경
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="cursor-pointer text-[var(--emr-status-danger-text)]"
-                                onClick={() => {
-                                  setCancelEncounterReason("");
-                                  setEncounterCancelState({ status: "idle" });
-                                  setCancelEncounterDialogOpen(true);
-                                }}
-                              >
-                                진료 취소
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </>
-                      ) : null}
-                    </ButtonGroup>
+                              void handleConsultationFlowMutation(
+                                "return_to_waiting",
+                              );
+                            }}
+                          >
+                            대기로 변경
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="cursor-pointer text-[var(--emr-status-danger-text)]"
+                            onClick={() => {
+                              setCancelEncounterReason("");
+                              setEncounterCancelState({ status: "idle" });
+                              setCancelEncounterDialogOpen(true);
+                            }}
+                          >
+                            진료 취소
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </>
                   ) : null}
-                </>
-              }
-            />
-          }
-          orderInfo={
-            <ChartInstructionInfo
-              bundle={currentBundle}
-              latestSoap={effectiveLatestSoap}
-              queueEntry={effectiveQueueEntry}
-            />
-          }
-        />
+                </ButtonGroup>
+              ) : null
+            }
+          />
+          <span className="sr-only" data-testid="chart-completion-status">
+            {chartCompletionStatusText}
+          </span>
+          <span className="sr-only" data-testid="chart-soap-status">
+            {getSoapStatusText(effectiveLatestSoap)}
+          </span>
+        </>
       ) : null}
       <Dialog
         open={callDialogOpen}
@@ -6830,31 +6920,26 @@ export function ChartContent({
           ) : null}
         </EmrDialogShell>
       </Dialog>
-      {chartUnavailableAction ? (
-        <ChartUnavailableAlert
-          action={chartUnavailableAction}
-          className="mt-2 shrink-0"
-          onDismiss={() => setChartUnavailableAction(null)}
-        />
-      ) : null}
       {chartStartLocked ? (
-        <ChartPreconsultationContextPanel
-          key={currentBundle.encounter.id}
-          actorHeaders={actorHeaders}
-          encounterId={currentBundle.encounter.id}
-          onOpenGuardianProfile={openGuardianProfile}
-          onOpenPatientProfile={openPatientProfile}
-          onRequestCall={handleOpenCallDialog}
-          onReturnToQueue={handleReturnToQueue}
-          primaryActionBusy={primaryActionBusy}
-          workspaceId={activeWorkspaceId ?? workspaceId}
-        />
+        <div className="min-h-0 flex-1 px-4 py-3">
+          <ChartPreconsultationContextPanel
+            key={currentBundle.encounter.id}
+            actorHeaders={actorHeaders}
+            encounterId={currentBundle.encounter.id}
+            onOpenGuardianProfile={openGuardianProfile}
+            onOpenPatientProfile={openPatientProfile}
+            onRequestCall={handleOpenCallDialog}
+            onReturnToQueue={handleReturnToQueue}
+            primaryActionBusy={primaryActionBusy}
+            workspaceId={activeWorkspaceId ?? workspaceId}
+          />
+        </div>
       ) : (
         <div
           ref={chartWorkspaceRef}
           data-slot="chart-workspace"
           className={cn(
-            "mt-2 grid min-h-0 flex-1 border-t border-[var(--emr-line-hairline)] pt-2",
+            "grid min-h-0 flex-1 px-2",
             isChartResizing && "select-none",
           )}
           style={{
@@ -6863,7 +6948,7 @@ export function ChartContent({
         >
           <div
             data-testid="chart-soap-diagnosis-grid"
-            className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 [&>*]:min-w-0"
+            className="grid min-h-0 min-w-0 grid-cols-3 gap-2 max-[1180px]:grid-cols-[minmax(360px,1fr)_minmax(360px,1fr)_minmax(360px,1fr)] max-[1180px]:overflow-x-auto [&>*]:min-w-0"
           >
             <SoapPanel
               key={`chart-soap-${bundle.encounter.id}-${effectiveLatestSoap?.id ?? "empty"}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
@@ -6892,6 +6977,11 @@ export function ChartContent({
               soapNote={effectiveLatestSoap}
               writeDisabled={detailHydrationPending}
             />
+            <ChartInlineHistoryPanel
+              bundle={currentBundle}
+              selectedEncounterId={selectedEncounterId}
+              onSelectEncounter={selectEncounter}
+            />
           </div>
           <button
             type="button"
@@ -6902,7 +6992,7 @@ export function ChartContent({
             aria-valuemax={100}
             aria-valuenow={Math.round(chartTopPercent)}
             className={cn(
-              "group relative -mx-1 flex cursor-row-resize items-center justify-center rounded-md outline-none",
+              "group relative flex cursor-row-resize items-center justify-center rounded-md opacity-0 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100",
               "focus-visible:ring-3 focus-visible:ring-ring/50",
               isChartResizing && "bg-[var(--emr-state-hover)]",
             )}
@@ -6913,8 +7003,7 @@ export function ChartContent({
             onPointerMove={handleChartResizePointerMove}
             onPointerUp={stopChartResize}
           >
-            <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-[var(--emr-line-hairline)]" />
-            <span className="relative h-1.5 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
+            <span className="relative h-1 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
           </button>
           <div className="min-h-0 min-w-0">
             <OrderArea

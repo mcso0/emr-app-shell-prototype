@@ -1577,7 +1577,10 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await chartQueueAction.click({ force: true });
   await expect(page.getByRole("menu", { name: /더보기/ })).toContainText("차트 열기");
   await expect(page.getByRole("menu", { name: /더보기/ })).toContainText("보호자 정보");
-  await expect(page.getByRole("button", { name: "차트 이력 패널 열기" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /차트 이력 패널/ }),
+  ).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "기본 SOAP" })).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
@@ -1694,14 +1697,16 @@ test("workspace tabs warn only before opening the same concrete work surface in 
 
   await page.getByTestId("order-queue-item-encounter-coco-260501").click();
   await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
-  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("코코 · 보호자 이지은")).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("코코", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("이지은(주보호자)")).toBeVisible();
 
   const chartTabs = getWorkspaceTablist(page).getByRole("tab", { name: /진료\/차트/ });
 
   await expect(chartTabs).toHaveCount(2);
   await chartTabs.nth(0).click();
   await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
-  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이 · 보호자 김하늘")).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("김하늘(주보호자)")).toBeVisible();
   await chartTabs.nth(1).click();
   await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
 
