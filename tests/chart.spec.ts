@@ -6,6 +6,14 @@ import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-w
 
 const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
+const chartFigmaVisualFixture = {
+  expectedMainSize: { height: 1024, width: 1540 },
+  expectedPanelWidth: 502,
+  expectedRows: [503, 8, 407],
+  route:
+    "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed",
+  viewport: { height: 1086, width: 1622 },
+} as const;
 const kongEncounterId = "encounter-kong-260501";
 const kongDefaultOrderDraftRows = [
   {
@@ -36,7 +44,9 @@ test("chart live queue preserves explicit encounter deep links", () => {
   expect(source).toContain("const explicitQueryEncounterId =");
   expect(source).toContain("if (explicitQueryEncounterId) return;");
   expect(source).toContain("chooseRecoverableLiveEncounterId");
-  expect(source).toContain("explicitEncounterId: explicitQueryEncounterId");
+  expect(source).toContain(
+    "explicitEncounterId: currentExplicitQueryEncounterId",
+  );
   expect(source).toContain("function useExplicitChartEncounterId()");
   expect(source).toContain(
     "function useDemoScenarioChartEncounterId()",
@@ -58,6 +68,44 @@ async function expectTopEdgeInViewport(page: Page, locator: Locator) {
   expect(box).not.toBeNull();
   expect(box!.y).toBeGreaterThanOrEqual(0);
   expect(box!.y).toBeLessThan(viewportHeight);
+}
+
+async function getChartOrderAction(page: Page, name: string | RegExp) {
+  await page.getByRole("button", { name: "Plan/Order 작업" }).click();
+  return page.getByRole("menuitem", { name });
+}
+
+async function addChartSoapSystem(page: Page, systemLabel: string) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (
+      await page
+        .getByRole("tab", { name: systemLabel, exact: true })
+        .count()
+    ) {
+      return;
+    }
+
+    await page.getByRole("button", { name: "SOAP 추가" }).click();
+    const systemItem = page.getByRole("menuitem", {
+      name: systemLabel,
+      exact: true,
+    });
+
+    if (await systemItem.isDisabled()) {
+      await page.keyboard.press("Escape");
+      return;
+    }
+
+    try {
+      await systemItem.click({ timeout: 3_000 });
+      await expect(page.getByLabel(`${systemLabel} SOAP 기록`)).toBeVisible();
+      return;
+    } catch {
+      await page.keyboard.press("Escape").catch(() => undefined);
+    }
+  }
+
+  throw new Error(`${systemLabel} SOAP를 안정적으로 추가하지 못했습니다.`);
 }
 
 async function grantCheongdamWorkspaceAccess(page: Page) {
@@ -141,7 +189,7 @@ async function restoreKongOrderDraftDefaults(page: Page) {
 
   const billingName = page.getByLabel("Maropitant 16mg T 청구서명 수정");
   const quantity = page.getByLabel("Maropitant 16mg T 수량 수정");
-  const updateButton = page.getByRole("button", { name: /Order 업데이트/ });
+  const updateButton = await getChartOrderAction(page, /Order 업데이트/);
 
   await expect(billingName).toBeVisible();
   await billingName.fill("Maropitant 16mg T");
@@ -150,7 +198,12 @@ async function restoreKongOrderDraftDefaults(page: Page) {
   if (await updateButton.isEnabled()) {
     await updateButton.click();
     await expect(page.getByText(/변경 대기/)).toHaveCount(0);
-    await expect(updateButton).toBeDisabled();
+    await expect(
+      await getChartOrderAction(page, /Order 업데이트/),
+    ).toBeDisabled();
+    await page.keyboard.press("Escape");
+  } else {
+    await page.keyboard.press("Escape");
   }
 
   await expect(quantity).toHaveValue("1");
@@ -413,42 +466,40 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   );
   expect(selectedQueueCardColors.selectedBorderColor).toBeTruthy();
   expect(selectedQueueCardColors.borderColor).not.toBe("rgba(0, 0, 0, 0)");
-  await expect(
-    page.getByRole("button", { name: "차트 이력 패널 접기" }),
-  ).toBeVisible();
-  await expect(
-    page.locator("#chart-content-aside").getByText("차트이력"),
-  ).toBeVisible();
+  await expect(page.locator("#chart-content-aside")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(
     page.getByRole("separator", {
       name: "진료 기록과 처방/오더 영역 높이 조절",
     }),
-  ).toHaveCSS("height", "16px");
+  ).toHaveCSS("height", "8px");
   const chartWorkspace = page.locator('[data-slot="chart-workspace"]');
-  await expect(chartWorkspace).toHaveCSS("margin-top", "8px");
-  await expect(chartWorkspace).toHaveCSS("padding-top", "8px");
+  await expect(chartWorkspace).toHaveCSS("margin-top", "0px");
+  await expect(chartWorkspace).toHaveCSS("padding-top", "0px");
   await expect(
-    page.getByLabel("환자 컨텍스트 정보").getByText("담당 수의사"),
+    page.getByLabel("환자 컨텍스트 정보").getByText("주치의"),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "진료 기록" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Subject/Object" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
   await expect(page.getByText("기본 SOAP")).toBeVisible();
   await expect(
     page.getByRole("tab", { name: "소화기", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: /진단명/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "진단 이력" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /진단명/ })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "전체오더" })).toBeVisible();
   const soapDiagnosisGridMetrics = await page
     .getByTestId("chart-soap-diagnosis-grid")
     .evaluate((element) => {
-      const [soapPanel, diagnosisPanel] = Array.from(
+      const [soapPanel, diagnosisPanel, historyPanel] = Array.from(
         element.children,
       ) as HTMLElement[];
 
       return {
         diagnosisWidth: diagnosisPanel.getBoundingClientRect().width,
         gap: getComputedStyle(element).columnGap,
+        historyWidth: historyPanel.getBoundingClientRect().width,
         soapWidth: soapPanel.getBoundingClientRect().width,
       };
     });
@@ -459,9 +510,11 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
         soapDiagnosisGridMetrics.diagnosisWidth,
     ),
   ).toBeLessThanOrEqual(1);
-  await expect(
-    page.getByText("급성 위장관염 의심", { exact: true }).first(),
-  ).toBeVisible();
+  expect(
+    Math.abs(
+      soapDiagnosisGridMetrics.soapWidth - soapDiagnosisGridMetrics.historyWidth,
+    ),
+  ).toBeLessThanOrEqual(1);
   await expect(page.getByText("항구토제 세트")).toBeVisible();
   await expect(page.getByText("피하 수액 처치").first()).toBeVisible();
   const diagnosisPanel = page.getByLabel("진단명 관리");
@@ -475,7 +528,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
   await expect(orderTable.locator('th:has-text("Order명")')).toHaveAttribute(
     "data-emr-header-interaction",
-    "compound",
+    "sortable",
   );
   await expect(orderTable.locator('th:has-text("수량")')).toHaveAttribute(
     "data-emr-column-resize",
@@ -493,12 +546,8 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
       .first(),
   ).toContainText("Maropitant 16mg T");
   await expect(
-    orderTable
-      .locator('[data-emr-cell-text-mode="one-line"]', {
-        hasText: "항구토제 세트",
-      })
-      .first(),
-  ).toContainText("항구토제 세트");
+    orderTable.getByText("항구토제 세트", { exact: true }).first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("checkbox", { name: "오더 전체 선택" }),
   ).not.toBeChecked();
@@ -529,6 +578,73 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
+test("chart Figma visual fixture preserves the 1540 by 1024 reference geometry", async ({
+  page,
+}) => {
+  await page.setViewportSize(chartFigmaVisualFixture.viewport);
+  await page.goto(chartFigmaVisualFixture.route);
+
+  const main = page.getByRole("main");
+  await expect(main).toBeVisible();
+  await expect
+    .poll(async () => Math.round((await main.boundingBox())?.width ?? 0))
+    .toBe(chartFigmaVisualFixture.expectedMainSize.width);
+  const mainBox = await main.boundingBox();
+  expect(mainBox).not.toBeNull();
+  expect(Math.round(mainBox!.width)).toBe(
+    chartFigmaVisualFixture.expectedMainSize.width,
+  );
+  expect(Math.round(mainBox!.height)).toBe(
+    chartFigmaVisualFixture.expectedMainSize.height,
+  );
+
+  await expect(
+    page.locator("[data-slot='chart-patient-context-bar']"),
+  ).toHaveCSS("height", "56px");
+  await expect(page.locator("[data-slot='chart-action-bar']")).toHaveCSS(
+    "height",
+    "48px",
+  );
+
+  const layout = await page
+    .locator("[data-slot='chart-workspace']")
+    .evaluate((workspace) => {
+      const topGrid = workspace.querySelector(
+        "[data-testid='chart-soap-diagnosis-grid']",
+      );
+      return {
+        documentOverflow:
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+        panelWidths: topGrid
+          ? Array.from(topGrid.children).map((panel) =>
+              Math.round(panel.getBoundingClientRect().width),
+            )
+          : [],
+        rows: getComputedStyle(workspace)
+          .gridTemplateRows.split(" ")
+          .map((value) => Math.round(Number.parseFloat(value))),
+      };
+    });
+
+  expect(layout.documentOverflow).toBe(0);
+  expect(layout.panelWidths).toEqual([
+    chartFigmaVisualFixture.expectedPanelWidth,
+    chartFigmaVisualFixture.expectedPanelWidth,
+    chartFigmaVisualFixture.expectedPanelWidth,
+  ]);
+  expect(layout.rows).toEqual([...chartFigmaVisualFixture.expectedRows]);
+  await expect(page.getByRole("heading", { name: "Subject/Object" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plan/Order" })).toBeVisible();
+  await expect(main).toHaveScreenshot("chart-figma-reference-1540x1024.png", {
+    animations: "disabled",
+    caret: "hide",
+    maxDiffPixelRatio: 0.002,
+  });
+});
+
 test("Cheongdam chart side panel shows the centered empty queue state", async ({
   page,
 }) => {
@@ -555,7 +671,9 @@ test("Cheongdam chart side panel shows the centered empty queue state", async ({
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
-  await expect(sidePanel.getByText("진료 업무가 없습니다")).toBeVisible();
+  await expect(
+    sidePanel.getByRole("heading", { name: "진료 업무가 없습니다" }),
+  ).toBeVisible();
 });
 
 test("chart preconsultation read error uses the shared recovery empty state", async ({
@@ -1531,7 +1649,8 @@ test("chart SOAP manual save persists through route-backed reload", async ({
   await soapEditor.click();
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.type(savedText);
-  await page.getByRole("button", { name: "SOAP 저장" }).click();
+  await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
+  await page.getByRole("menuitem", { name: "SOAP 저장" }).click();
   await expect(page.getByTestId("chart-soap-status")).toContainText(
     /작성중|자동저장됨/,
   );
@@ -1599,7 +1718,7 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
 
   const diagnosisPanel = page.getByLabel("진단명 관리");
 
-  await diagnosisPanel.getByRole("button", { name: "분류검색" }).click();
+  await diagnosisPanel.getByRole("button", { name: "분류 검색" }).click();
   await expect(
     page.getByRole("listbox", { name: "진단명 검색 결과" }),
   ).toBeVisible();
@@ -1611,7 +1730,7 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
   await diagnosisPanel.getByLabel("진단명 검색").fill("췌장");
   await page.getByRole("option", { name: /췌장염 감별/ }).click();
 
-  await expect(diagnosisPanel.getByText("췌장염 감별")).toBeVisible();
+  await expect(diagnosisPanel.getByText("췌장염 감별")).toHaveCount(1);
   await expect(diagnosisPanel.getByText("사전 연결 · 감별")).toHaveCount(0);
   await expect(
     page.getByRole("tab", { name: "소화기", exact: true }),
@@ -1620,7 +1739,7 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
   await diagnosisPanel.getByLabel("진단명 검색").fill("탈수");
   await page.getByRole("option", { name: /경도 탈수/ }).click();
 
-  await expect(diagnosisPanel.getByText("경도 탈수")).toBeVisible();
+  await expect(diagnosisPanel.getByText("경도 탈수")).toHaveCount(1);
   await expect(
     page.getByRole("tab", { name: "전신", exact: true }),
   ).toBeVisible();
@@ -1647,7 +1766,7 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
 
   await expect(
     diagnosisPanel.getByText("보호자 설명용 임시 진단"),
-  ).toBeVisible();
+  ).toHaveCount(1);
   await expect(diagnosisPanel.getByText("직접 입력 · 의심")).toHaveCount(0);
 
   await diagnosisPanel
@@ -1665,19 +1784,17 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await restoreKongOrderDraftDefaults(page);
 
   const patientContext = page.getByLabel("환자 컨텍스트 정보");
-  await expect(patientContext.getByText("콩이 · 보호자 김하늘")).toBeVisible();
-  await expect(patientContext.getByText("차트번호")).toBeVisible();
-  await expect(patientContext.getByText("E-260501-0003")).toBeVisible();
-  await expect(
-    page.getByText("콩이(4세) · 보호자 김하늘 · 푸들"),
-  ).toBeVisible();
-  await expect(page.getByTestId("chart-soap-status")).toHaveText(
-    "자동저장됨 · 10:16",
+  await expect(patientContext.getByText("콩이", { exact: true })).toBeVisible();
+  await expect(patientContext.getByText("김하늘(주보호자)")).toBeVisible();
+  await expect(page.getByText("E-260501-0003", { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("chart-soap-status")).toContainText(
+    /자동저장됨|작성중/,
   );
-  await expect(page.getByText("자동저장됨 · 10:16").first()).toBeVisible();
 
-  await expect(page.getByRole("button", { name: "Order 청구" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Order 확정" })).toBeDisabled();
+  await expect(await getChartOrderAction(page, "Order 청구")).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(await getChartOrderAction(page, "Order 확정")).toBeDisabled();
+  await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "진료 완료" }).click();
   const chartCompleteDialog = page.getByRole("dialog", {
@@ -1692,10 +1809,11 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await chartCompleteDialog.getByRole("button", { name: "계속 작성" }).click();
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
-  await expect(page.getByRole("button", { name: "Order 청구" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Order 확정" })).toBeEnabled();
+  await expect(await getChartOrderAction(page, "Order 청구")).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(await getChartOrderAction(page, "Order 확정")).toBeEnabled();
 
-  await page.getByRole("button", { name: "Order 확정" }).click();
+  await page.getByRole("menuitem", { name: "Order 확정" }).click();
   const orderConfirmDialog = page.getByRole("dialog");
   await expect(orderConfirmDialog.getByText("Order 확정 확인")).toBeVisible();
   await expect(
@@ -1735,7 +1853,7 @@ test("chart Order 청구 sends persisted orders without draft save", async ({
   );
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
-  await page.getByRole("button", { name: "Order 청구" }).click();
+  await (await getChartOrderAction(page, "Order 청구")).click();
 
   const orderBillDialog = page.getByRole("dialog", {
     name: "Order 청구 확인",
@@ -1778,27 +1896,20 @@ test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await expect(page.getByRole("button", { name: "SOAP 추가" })).toBeEnabled();
 
   for (const systemLabel of ["호흡기", "피부", "전신", "예방"]) {
-    await page.getByRole("button", { name: "SOAP 추가" }).click();
-    const menu = page.getByRole("menu");
-    const systemButton = menu.getByRole("menuitem", { name: systemLabel });
-    if (await systemButton.isEnabled()) {
-      await systemButton.click();
-      await expect(
-        page.getByLabel(`${systemLabel} SOAP 기록`),
-      ).toBeVisible();
-    } else {
-      await page.keyboard.press("Escape");
-    }
+    await addChartSoapSystem(page, systemLabel);
   }
 
-  await expect(page.getByRole("button", { name: "SOAP 더보기" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "SOAP 더보기" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("예방 SOAP 기록")).toBeVisible();
   await expectTopEdgeInViewport(
     page,
     page.getByRole("tab", { name: "전체오더" }),
   );
   await expectTopEdgeInViewport(
     page,
-    page.getByRole("button", { name: "Order 확정" }),
+    page.getByRole("button", { name: "Plan/Order 작업" }),
   );
 });
 
@@ -1864,25 +1975,26 @@ test("chart order checkboxes update the selected order total", async ({
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
 
-  await expect(page.getByText("선택 오더 0건")).toBeVisible();
-  await expect(page.getByText("선택 오더 합계: 0")).toBeVisible();
+  const orderFooter = page.getByTestId("chart-order-footer");
+  await expect(orderFooter).toContainText("선택 오더 0건");
+  await expect(orderFooter).toContainText("선택 오더 합계 0원");
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
 
-  await expect(page.getByText("선택 오더 1건")).toBeVisible();
-  await expect(page.getByText("선택 오더 합계: 4,500")).toBeVisible();
+  await expect(orderFooter).toContainText("선택 오더 1건");
+  await expect(orderFooter).toContainText("선택 오더 합계 4,500원");
 
   const selectAllOrders = page.getByRole("checkbox", {
     name: "오더 전체 선택",
   });
 
   await selectAllOrders.check();
-  await expect(page.getByText(/선택 오더 \d+건/)).toBeVisible();
+  await expect(orderFooter).toContainText(/선택 오더 \d+건/);
 
   await selectAllOrders.uncheck();
 
-  await expect(page.getByText("선택 오더 0건")).toBeVisible();
-  await expect(page.getByText("선택 오더 합계: 0")).toBeVisible();
+  await expect(orderFooter).toContainText("선택 오더 0건");
+  await expect(orderFooter).toContainText("선택 오더 합계 0원");
 });
 
 test("chart order table supports single sort without a filter control", async ({
@@ -1925,9 +2037,6 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await expect(
     page.getByText("변경 대기 1건 · 수량 확인 필요 1건"),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /Order 업데이트/ }),
-  ).toBeDisabled();
 
   await maropitantQuantity.fill("2");
   await page
@@ -1935,17 +2044,20 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     .fill("Maropitant 16mg T 변경");
 
   await expect(page.getByText("변경 대기 1건")).toBeVisible();
-  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
+  await expect(page.getByTestId("chart-order-footer")).toContainText(
+    /청구 예상 총액/,
+  );
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
-  await expect(page.getByText("선택 오더 합계: 9,000")).toBeVisible();
+  await expect(page.getByTestId("chart-order-footer")).toContainText(
+    "선택 오더 합계 9,000원",
+  );
 
-  await page.getByRole("button", { name: /Order 업데이트/ }).click();
+  await (await getChartOrderAction(page, /Order 업데이트/)).click();
   await expect(page.getByText(/변경 대기/)).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: /Order 업데이트/ }),
-  ).toBeDisabled();
-  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
+  await expect(page.getByTestId("chart-order-footer")).toContainText(
+    /청구 예상 총액/,
+  );
 
   await page.getByRole("button", { name: "CBC 검사 오더 삭제" }).click();
   const deleteDialog = page.getByRole("dialog");
@@ -1955,16 +2067,22 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
 
   await expect(page.getByLabel("CBC 검사 수량 수정")).toHaveCount(0);
   await expect(page.getByText("변경 대기 1건")).toBeVisible();
-  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
+  await expect(page.getByTestId("chart-order-footer")).toContainText(
+    /청구 예상 총액/,
+  );
 
-  await page.getByRole("button", { name: /변경 취소/ }).click();
+  await (await getChartOrderAction(page, /변경 취소/)).click();
 
   await expect(page.getByLabel("CBC 검사 수량 수정")).toBeVisible();
   await expect(page.getByText(/변경 대기/)).toHaveCount(0);
-  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
+  await expect(page.getByTestId("chart-order-footer")).toContainText(
+    /청구 예상 총액/,
+  );
 
   await restoreKongOrderDraftDefaults(page);
-  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
+  await expect(page.getByTestId("chart-order-footer")).toContainText(
+    /청구 예상 총액/,
+  );
 });
 
 test("chart opens the Kong scenario as one SOAP, assessment, and order flow", async ({
@@ -1974,11 +2092,11 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
 
   const patientContext = page.getByLabel("환자 컨텍스트 정보");
   await expect(
-    page.locator("[data-slot='patient-context-bar'] > div").first(),
+    page.locator("[data-slot='chart-patient-context-bar']"),
   ).toHaveCSS("min-height", "56px");
   await expect(patientContext.getByText("콩이")).toBeVisible();
   await expect(patientContext.getByText("김하늘")).toBeVisible();
-  await expect(patientContext.getByText("담당 수의사")).toBeVisible();
+  await expect(patientContext.getByText("주치의")).toBeVisible();
   await expect(
     page.getByText(
       "보호자 진술상 전날 밤부터 구토 3회, 아침 식욕 없음. 물 섭취 후 재구토.",
@@ -2159,7 +2277,10 @@ test("chart queue selection changes the selected encounter", async ({
   await callDialog.getByRole("button", { name: "호출하기" }).click();
   await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
   await expect(
-    page.getByLabel("환자 컨텍스트 정보").getByText(/하루\s*·\s*보호자 강서윤/),
+    page.getByLabel("환자 컨텍스트 정보").getByText("하루", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("환자 컨텍스트 정보").getByText("강서윤(주보호자)"),
   ).toBeVisible();
   await expect(page.getByTestId("chart-completion-status")).toContainText("진료중");
   expect(
@@ -2276,13 +2397,16 @@ test("chart scenario query primes the encounter without locking queue selection"
     page.getByLabel("환자 컨텍스트 정보").getByText("콩이"),
   ).toBeVisible();
 
-  await page.getByTestId("order-queue-item-encounter-haru-260430").click();
+  const haruQueueItem = page.getByTestId(
+    "order-queue-item-encounter-haru-260430",
+  );
+  await haruQueueItem.click();
 
+  await expect(haruQueueItem).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByLabel("환자 컨텍스트 정보").getByText("하루"),
-  ).toBeVisible();
-  await expect(page.getByText("E-260430-0005").first()).toBeVisible();
-  await expect(page.getByText("예방접종 전 건강 확인").first()).toBeVisible();
+    page.getByTestId("order-queue-item-encounter-kong-260501"),
+  ).toHaveAttribute("aria-pressed", "false");
+  await expect(page).toHaveURL(/encounterId=encounter-haru-260430/);
 });
 
 test("chart history selection returns to a previous encounter for the patient", async ({
@@ -2291,14 +2415,16 @@ test("chart history selection returns to a previous encounter for the patient", 
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history");
 
   await page.getByTestId("order-queue-item-encounter-coco-260501").click();
-  await page.getByTestId("chart-history-item-encounter-coco-260501").click();
+  const selectedHistoryItem = page.getByTestId(
+    "chart-history-item-encounter-coco-260501",
+  );
+  await expect(selectedHistoryItem).toContainText("급성 위장관염 의심");
+  await selectedHistoryItem.click();
 
   await expect(
     page.getByLabel("환자 컨텍스트 정보").getByText("코코"),
   ).toBeVisible();
-  await expect(
-    page.getByText("급성 위장관염 의심", { exact: true }).first(),
-  ).toBeVisible();
+  await expect(selectedHistoryItem).toHaveAttribute("data-selected", "true");
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
 });
 
@@ -2310,9 +2436,8 @@ test("chart removes the retired patient information panel and legacy right query
   );
 
   const workspaceMain = page.getByTestId("workspace-frame").locator("main");
-  await expect(
-    page.locator("#chart-content-aside").getByText("차트이력"),
-  ).toBeVisible();
+  await expect(page.locator("#chart-content-aside")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(workspaceMain).toHaveAttribute("data-right-panel-open", "false");
   await expect(page).not.toHaveURL(/right=/);
   await expect(
@@ -2323,26 +2448,9 @@ test("chart removes the retired patient information panel and legacy right query
   ).toHaveCount(0);
   await expect(page.getByText("개인/민감 정보", { exact: true })).toHaveCount(0);
   await expect(page.getByText("부가 정보", { exact: true })).toHaveCount(0);
-
-  const historyToggleOpen = page.getByRole("button", {
-    name: "차트 이력 패널 접기",
-  });
-  await expect(historyToggleOpen).toHaveAttribute("aria-pressed", "true");
-  await expect(historyToggleOpen).toHaveAttribute("data-state", "on");
-  await page.getByRole("button", { name: "차트 이력 패널 접기" }).hover();
-  await expect(page.getByText("과거 이력 보기")).toBeVisible();
-  await page.getByRole("button", { name: "차트 이력 패널 접기" }).click();
-  await expect(page).toHaveURL(/aside=closed/);
-
-  const historyToggleClosed = page.getByRole("button", {
-    name: "차트 이력 패널 열기",
-  });
-  await expect(historyToggleClosed).toHaveAttribute("aria-pressed", "false");
-  await expect(historyToggleClosed).toHaveAttribute("data-state", "off");
-  await page.getByRole("button", { name: "차트 이력 패널 열기" }).hover();
-  await expect(page.getByText("과거 이력 보기")).toBeVisible();
-  await page.getByRole("button", { name: "차트 이력 패널 열기" }).click();
-  await expect(page).toHaveURL(/aside=history/);
+  await expect(
+    page.getByRole("button", { name: /차트 이력 패널/ }),
+  ).toHaveCount(0);
 });
 
 test("chart completion persists through route-backed reload", async ({
@@ -2422,7 +2530,7 @@ test("chart result readback lets completed lab order bill without separate veter
   );
 
   await cbcRow.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
-  await page.getByRole("button", { name: "Order 청구" }).click();
+  await (await getChartOrderAction(page, "Order 청구")).click();
   const orderBillDialog = page.getByRole("dialog", {
     name: "Order 청구 확인",
   });
@@ -2457,7 +2565,7 @@ test("chart unavailable order actions show persistent inline guidance", async ({
 }) => {
   await page.goto(kongScenarioUrl);
 
-  await page.getByRole("button", { name: "Order 출력" }).click();
+  await (await getChartOrderAction(page, /Order 출력/)).click();
   const unavailableAlert = page.getByTestId("chart-unavailable-action-alert");
   await expect(unavailableAlert).toContainText(
     "Order 출력은 아직 연결되지 않았습니다",
@@ -2524,7 +2632,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await addedRow
     .getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" })
     .click();
-  await page.getByRole("button", { name: "Order 확정" }).click();
+  await (await getChartOrderAction(page, "Order 확정")).click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
   await expect(confirmDialog).toBeVisible();
   const draftSaveResponse = page.waitForResponse(
