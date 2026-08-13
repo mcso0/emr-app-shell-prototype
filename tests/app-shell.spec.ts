@@ -1580,7 +1580,7 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: /차트 이력 패널/ }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   await expect(page.getByRole("tab", { name: "기본 SOAP" })).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });

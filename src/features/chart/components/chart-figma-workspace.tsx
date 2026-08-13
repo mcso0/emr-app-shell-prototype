@@ -392,8 +392,9 @@ export function ChartWorkspacePanel({
 }) {
   return (
     <section
+      data-slot="chart-workspace-panel"
       className={cn(
-        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]",
+        "group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)]",
         className,
       )}
     >
@@ -401,7 +402,7 @@ export function ChartWorkspacePanel({
         <h2 className="min-w-0 truncate text-sm font-semibold leading-5 text-foreground">
           {title}
         </h2>
-        <div className="flex shrink-0 items-center gap-1">{actions}</div>
+        <ChartPanelActionGroup>{actions}</ChartPanelActionGroup>
       </div>
       {toolbar ? (
         <div className="flex h-11 min-h-11 shrink-0 items-center overflow-x-auto border-b border-[var(--emr-line-hairline)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -418,6 +419,7 @@ export function ChartActionBar({
   completionAction,
   doctorName,
   encounterNo,
+  historyAction,
   pendingIndicator,
   startTime,
   visitLabel,
@@ -426,6 +428,7 @@ export function ChartActionBar({
   completionAction?: ReactNode;
   doctorName: string;
   encounterNo: string;
+  historyAction: ReactNode;
   pendingIndicator?: ReactNode;
   startTime: string;
   visitLabel: string;
@@ -433,15 +436,10 @@ export function ChartActionBar({
   return (
     <div
       data-slot="chart-action-bar"
-      className="flex h-12 min-h-12 shrink-0 items-center justify-between gap-4 overflow-x-auto border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex h-12 min-h-12 shrink-0 items-center justify-between gap-4 overflow-x-auto bg-[#fcfcfc] px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div className="flex min-w-max items-center gap-2">
-        <span
-          className="inline-flex size-6 items-center justify-center rounded-md border border-input bg-card"
-          aria-hidden="true"
-        >
-          <span className="text-[11px] font-semibold">◴</span>
-        </span>
+        {historyAction}
         <h1 className="whitespace-nowrap text-base font-semibold leading-6 text-foreground">
           차트 <span className="text-muted-foreground">{chartDate}</span>
         </h1>
@@ -480,6 +478,17 @@ export function ChartActionBar({
         />
         {completionAction}
       </div>
+    </div>
+  );
+}
+
+export function ChartPanelActionGroup({ children }: { children?: ReactNode }) {
+  return (
+    <div
+      data-slot="chart-panel-actions"
+      className="flex shrink-0 items-center gap-1 has-[[aria-expanded=true]]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chart-panel:opacity-100 [@media(hover:hover)]:group-focus-within/chart-panel:opacity-100"
+    >
+      {children}
     </div>
   );
 }
