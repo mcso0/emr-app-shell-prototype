@@ -70,6 +70,32 @@ async function expectTopEdgeInViewport(page: Page, locator: Locator) {
   expect(box!.y).toBeLessThan(viewportHeight);
 }
 
+async function tabBackwardTo(
+  page: Page,
+  target: Locator,
+  maxSteps: number,
+) {
+  for (let step = 0; step < maxSteps; step += 1) {
+    await page.keyboard.press("Shift+Tab");
+    if (await target.evaluate((element) => element === document.activeElement)) {
+      return;
+    }
+  }
+
+  throw new Error("키보드 역방향 탭 순서에서 목표 요소를 찾지 못했습니다.");
+}
+
+async function tabForwardTo(page: Page, target: Locator, maxSteps: number) {
+  for (let step = 0; step < maxSteps; step += 1) {
+    await page.keyboard.press("Tab");
+    if (await target.evaluate((element) => element === document.activeElement)) {
+      return;
+    }
+  }
+
+  throw new Error("키보드 정방향 탭 순서에서 목표 요소를 찾지 못했습니다.");
+}
+
 async function getChartOrderAction(page: Page, name: string | RegExp) {
   await page.getByRole("button", { name: "Plan/Order 작업" }).click();
   return page.getByRole("menuitem", { name });
@@ -734,6 +760,134 @@ test("chart Figma visual fixture preserves the 1540 by 1024 reference geometry",
     caret: "hide",
     maxDiffPixelRatio: 0.002,
   });
+});
+
+test("chart clinical panels collapse independently without unmounting their content", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(kongScenarioUrl);
+
+  const panelGroup = page.getByTestId("chart-soap-diagnosis-grid");
+  const soapPanel = panelGroup.locator('[data-panel-id="soap"]');
+  const assessmentPanel = panelGroup.locator('[data-panel-id="assessment"]');
+  const historyPanel = panelGroup.locator('[data-panel-id="history"]');
+  const soapContent = page.locator("#chart-soap-panel-content");
+  const soapEditor = page.getByLabel("기본 SOAP 기록");
+
+  await expect(panelGroup).toHaveAttribute("data-collapsed-count", "0");
+  await expect(historyPanel).toHaveAttribute("data-collapsed", "false");
+  await expect(
+    page.getByRole("button", { name: "History 패널 접기" }),
+  ).toHaveAttribute("aria-controls", "chart-history-panel-content");
+  await expect(
+    page.getByRole("button", { name: "History 패널 접기" }),
+  ).toHaveAttribute("aria-expanded", "true");
+  await expect(panelGroup).toHaveCSS("column-gap", "8px");
+  await expect(panelGroup).toHaveCSS("transition-property", "none");
+
+  await soapContent.evaluate((element) => {
+    element.setAttribute("data-collapse-mount-probe", "preserved");
+  });
+
+  const soapCollapseButton = page.getByRole("button", {
+    name: "S/O 패널 접기",
+  });
+  await expect(soapCollapseButton).toHaveCSS("opacity", "0");
+  await soapPanel.hover();
+  await expect(soapCollapseButton).toHaveCSS("opacity", "1");
+  await page.mouse.move(0, 0);
+  await page.getByRole("button", { name: "SOAP 추가" }).focus();
+  await tabForwardTo(page, soapCollapseButton, 4);
+  await expect(soapCollapseButton).toBeFocused();
+  await expect(soapCollapseButton).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Enter");
+
+  await expect(soapPanel).toHaveAttribute("data-collapsed", "true");
+  await expect(soapPanel).toHaveCSS("width", "46px");
+  await expect(soapEditor).toBeAttached();
+  await expect(soapContent).toHaveAttribute(
+    "data-collapse-mount-probe",
+    "preserved",
+  );
+  const soapExpandButton = page.getByRole("button", {
+    name: "S/O 패널 펼치기",
+  });
+  await expect(soapExpandButton).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(soapPanel).toHaveAttribute("data-collapsed", "false");
+  await expect(soapCollapseButton).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Subject/Object" })).toBeVisible();
+
+  const diagnosisSearch = page.getByRole("textbox", { name: "진단명 검색" });
+  const assessmentCollapseButton = page.getByRole("button", {
+    name: "Assessment 패널 접기",
+  });
+  await diagnosisSearch.fill("위장염");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "계통 전체" }).focus();
+  await tabBackwardTo(page, assessmentCollapseButton, 4);
+  await expect(assessmentCollapseButton).toBeFocused();
+  await page.keyboard.press("Enter");
+  const assessmentExpandButton = page.getByRole("button", {
+    name: "Assessment 패널 펼치기",
+  });
+  await expect(assessmentExpandButton).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(assessmentPanel).toHaveAttribute("data-collapsed", "false");
+  await expect(diagnosisSearch).toHaveValue("위장염");
+  await expect(assessmentCollapseButton).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(assessmentExpandButton).toBeFocused();
+  await soapPanel.hover();
+  await soapCollapseButton.click();
+  await expect(panelGroup).toHaveAttribute("data-collapsed-count", "2");
+  await expect(assessmentPanel).toHaveCSS("width", "46px");
+
+  await page.getByRole("button", { name: "History 패널 접기" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(panelGroup).toHaveAttribute("data-collapsed-count", "3");
+  await expect(page).toHaveURL(/aside=closed/);
+  await expect(historyPanel).toHaveAttribute("data-collapsed", "true");
+  const historyExpandButton = page.getByRole("button", {
+    name: "History 패널 펼치기",
+  });
+  await expect(historyExpandButton).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(page).toHaveURL(/aside=closed/);
+  await expect(historyPanel).toHaveAttribute("data-collapsed", "false");
+  await expect(
+    page.getByRole("button", { name: "History 패널 접기" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(historyPanel).toHaveAttribute("data-collapsed", "true");
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await soapExpandButton.click();
+  await assessmentExpandButton.click();
+  await historyExpandButton.click();
+  await expect
+    .poll(() =>
+      panelGroup.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    )
+    .toBe(true);
+
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await expect
+    .poll(() =>
+      panelGroup.evaluate((element) => ({
+        hasInternalOverflow: element.scrollWidth > element.clientWidth,
+        panelWidths: Array.from(element.children).map((child) =>
+          Math.round(child.getBoundingClientRect().width),
+        ),
+      })),
+    )
+    .toEqual({
+      hasInternalOverflow: true,
+      panelWidths: [360, 360, 360],
+    });
 });
 
 test("Cheongdam chart side panel shows the centered empty queue state", async ({
@@ -2520,9 +2674,9 @@ test("chart history selection returns to a previous encounter for the patient", 
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history");
 
   await page.getByTestId("order-queue-item-encounter-coco-260501").click();
-  const selectedHistoryItem = page.getByTestId(
-    "chart-history-item-encounter-coco-260501",
-  );
+  const selectedHistoryItem = page
+    .locator("#chart-content-aside")
+    .getByTestId("chart-history-item-encounter-coco-260501");
   await expect(selectedHistoryItem).toContainText("급성 위장관염 의심");
   await selectedHistoryItem.click();
 

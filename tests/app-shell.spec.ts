@@ -1577,6 +1577,14 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await chartQueueAction.click({ force: true });
   await expect(page.getByRole("menu", { name: /더보기/ })).toContainText("차트 열기");
   await expect(page.getByRole("menu", { name: /더보기/ })).toContainText("보호자 정보");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await page.locator('[data-panel-id="history"]').hover();
+  await page.getByRole("button", { name: "History 패널 접기" }).click();
+  await expect(page).toHaveURL(/aside=closed/);
+  await expect(page.getByRole("heading", { name: "History" })).toBeHidden();
+  await page.getByRole("button", { name: "History 패널 펼치기" }).click();
+  await expect(page).toHaveURL(/aside=closed/);
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: /차트 이력 패널/ }),
