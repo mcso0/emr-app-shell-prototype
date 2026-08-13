@@ -5,6 +5,8 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type ColumnOrderState,
+  type ColumnPinningState,
   type RowSelectionState,
   type SortingState,
   type Updater,
@@ -24,6 +26,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
+  CdsActionsCheckIcon,
   CdsActionsRefreshCcwIcon,
   CdsActionsRotateCcwIcon,
   CdsActionsSaveIcon,
@@ -33,14 +36,12 @@ import {
   CdsActionsSearchIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
-import {
-  CdsNavigationChevronDownIcon,
-  CdsNavigationChevronLeftIcon,
-  CdsNavigationChevronRightIcon,
-} from "@/components/cds-icons/navigation";
+import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
-import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import {
+  CdsUtilitiesCircleIcon,
+  CdsUtilitiesSortIcon,
+} from "@/components/cds-icons/utilities-and-misc";
 import {
   EmrContentAsideHeader,
   EmrContentAsidePanel,
@@ -96,6 +97,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   BuildingIcon,
   ClockIcon,
@@ -149,6 +151,7 @@ import {
   ChartPanelIconButton,
   ChartPatientContextBar,
   ChartWorkspacePanel,
+  chartWorkspacePanelClassName,
 } from "@/features/chart/components/chart-figma-workspace";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { useChartStore } from "@/features/chart/store";
@@ -393,10 +396,11 @@ type ChartOrderCatalogRouteResponse =
       error?: string;
     };
 
-const CHART_TOP_DEFAULT_PERCENT = 55.3;
+const CHART_TOP_DEFAULT_PERCENT = 50;
 const CHART_TOP_MIN_PX = 180;
 const CHART_ORDER_MIN_PX = 170;
 const CHART_RESIZER_HEIGHT_PX = 8;
+const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
 const chartDetailPendingDelayMs = 200;
 const chartSelectedEncounterStoragePrefix =
@@ -1620,11 +1624,20 @@ function ChartInlineHistoryPanel({
           {!visibleRows.length ? (
             <div className="flex min-h-52 flex-1 items-center justify-center">
               <EmrEmptyState
-                kind="no-filter-results"
-                priority="local-recovery"
+                kind={historyRows.length ? "no-filter-results" : "no-data"}
+                priority={historyRows.length ? "local-recovery" : "supporting"}
                 surface="content"
-                title="검색 결과가 없습니다"
-                description="다른 키워드로 차트 이력을 찾아보세요."
+                title={
+                  historyRows.length
+                    ? "검색 결과가 없습니다"
+                    : "과거 진료 이력이 없습니다"
+                }
+                description={
+                  historyRows.length
+                    ? "다른 키워드로 차트 이력을 찾아보세요."
+                    : "이 환자의 이전 진료가 기록되면 여기에 표시됩니다."
+                }
+                testId="chart-history-empty-state"
               />
             </div>
           ) : null}
@@ -2465,6 +2478,7 @@ function SoapPanel({
     string | null
   >(null);
   const [saveState, setSaveState] = useState<SoapSaveState>("idle");
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const latestDefaultContentRef = useRef(defaultSection.content);
   const expectedUpdatedAtRef = useRef<string | null>(
     soapNote?.updatedAt ?? null,
@@ -2553,6 +2567,7 @@ function SoapPanel({
     async (content: string, mode: "autosave" | "manual_save") => {
       if (writeDisabled) return;
       if (mode === "manual_save") setPendingDefaultContent(null);
+      setSaveErrorMessage(null);
       setSaveState("saving");
       const result = await saveChartSoapNote({
         actorHeaders,
@@ -2565,13 +2580,20 @@ function SoapPanel({
 
       if (!result.ok || !result.soapNote) {
         if (!result.ok && result.denialReason === "soap_note_conflict") {
+          setSaveErrorMessage(null);
           setSaveState("conflict");
           return;
         }
+        setSaveErrorMessage(
+          !result.ok && result.denialReason === "permission_missing"
+            ? "SOAP 저장 권한이 없어 서버에 반영하지 못했습니다."
+            : "입력한 내용은 화면에 남아 있지만 서버에 저장되지 않았습니다.",
+        );
         setSaveState("error");
         return;
       }
 
+      setSaveErrorMessage(null);
       setSaveState("saved");
       latestDefaultContentRef.current = content;
       expectedUpdatedAtRef.current = result.soapNote.updatedAt;
@@ -2803,7 +2825,7 @@ function SoapPanel({
   return (
     <section
       data-slot="chart-workspace-panel"
-      className="group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)]"
+      className={chartWorkspacePanelClassName}
     >
       <div className="relative z-30 flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
@@ -2811,42 +2833,6 @@ function SoapPanel({
         </h2>
         <ChartPanelActionGroup>
           <ChartPanelIconButton label="패널 확대 준비 중" disabled />
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="size-6 rounded-md text-[var(--emr-text-secondary)]"
-                aria-label="SOAP 추가"
-                disabled={writeDisabled}
-              >
-                <CdsActionsPlusIcon className="size-3.5" />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end" className="w-40">
-            {soapSystemOptions.map((systemLabel) => {
-              const alreadyAdded = addedSystemLabels.has(systemLabel);
-
-              return (
-                <DropdownMenuItem
-                  key={systemLabel}
-                  className="h-8 cursor-pointer justify-between"
-                  disabled={writeDisabled || alreadyAdded}
-                  onClick={() => addSystemSoap(systemLabel, true)}
-                >
-                  <span>{systemLabel}</span>
-                  {alreadyAdded ? (
-                    <Badge variant="outline">이미 추가됨</Badge>
-                  ) : null}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-          {activeSection ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -2854,63 +2840,99 @@ function SoapPanel({
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  aria-label={`${activeSection.title}${activeSection.title.endsWith("SOAP") ? "" : " SOAP"} 작업`}
-                  className="size-6 rounded-md text-muted-foreground"
+                  className="size-7 rounded-lg text-[var(--emr-text-secondary)]"
+                  aria-label="SOAP 추가"
+                  disabled={writeDisabled}
                 >
-                  <CdsFilesMoreHorizontalIcon className="size-3.5" />
+                  <CdsActionsPlusIcon className="size-3.5" />
                 </Button>
               }
             />
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem
-                className="h-8 cursor-pointer"
-                disabled={writeDisabled || activeSection.id !== "default"}
-                onClick={() =>
-                  void persistDefaultSoapContent(
-                    latestDefaultContentRef.current,
-                    "manual_save",
-                  )
-                }
-              >
-                <CdsActionsSaveIcon data-icon="inline-start" />
-                SOAP 저장
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="h-8 cursor-pointer"
-                disabled={writeDisabled}
-                onClick={() => setResetSoapId(activeSection.id)}
-              >
-                <CdsActionsRotateCcwIcon data-icon="inline-start" />
-                초기화
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="h-8 cursor-pointer"
-                disabled={writeDisabled}
-                onClick={() => {
-                  updateSectionOverride({
-                    ...activeSection,
-                    attachmentCount: activeSection.attachmentCount + 1,
-                  });
-                }}
-              >
-                첨부
-                {activeSection.attachmentCount
-                  ? ` ${activeSection.attachmentCount}`
-                  : ""}
-              </DropdownMenuItem>
-              {activeSection.deletable ? (
-                <DropdownMenuItem
-                  className="h-8 cursor-pointer text-destructive focus:text-destructive"
-                  disabled={writeDisabled}
-                  onClick={() => setDeleteSoapId(activeSection.id)}
-                >
-                  <CdsActionsTrash2Icon data-icon="inline-start" />
-                  삭제
-                </DropdownMenuItem>
-              ) : null}
+              {soapSystemOptions.map((systemLabel) => {
+                const alreadyAdded = addedSystemLabels.has(systemLabel);
+
+                return (
+                  <DropdownMenuItem
+                    key={systemLabel}
+                    className="h-8 cursor-pointer justify-between"
+                    disabled={writeDisabled || alreadyAdded}
+                    onClick={() => addSystemSoap(systemLabel, true)}
+                  >
+                    <span>{systemLabel}</span>
+                    {alreadyAdded ? (
+                      <Badge variant="outline">이미 추가됨</Badge>
+                    ) : null}
+                  </DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : null}
+          {activeSection ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={`${activeSection.title}${activeSection.title.endsWith("SOAP") ? "" : " SOAP"} 작업`}
+                    className="size-7 rounded-lg text-muted-foreground"
+                  >
+                    <CdsFilesMoreHorizontalIcon className="size-3.5" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem
+                  className="h-8 cursor-pointer"
+                  disabled={writeDisabled || activeSection.id !== "default"}
+                  onClick={() =>
+                    void persistDefaultSoapContent(
+                      latestDefaultContentRef.current,
+                      "manual_save",
+                    )
+                  }
+                >
+                  <CdsActionsSaveIcon data-icon="inline-start" />
+                  SOAP 저장
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="h-8 cursor-pointer"
+                  disabled={writeDisabled}
+                  onClick={() => setResetSoapId(activeSection.id)}
+                >
+                  <CdsActionsRotateCcwIcon data-icon="inline-start" />
+                  초기화
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="h-8 cursor-pointer"
+                  disabled={writeDisabled}
+                  onClick={() => {
+                    updateSectionOverride({
+                      ...activeSection,
+                      attachmentCount: activeSection.attachmentCount + 1,
+                    });
+                  }}
+                >
+                  첨부
+                  {activeSection.attachmentCount
+                    ? ` ${activeSection.attachmentCount}`
+                    : ""}
+                </DropdownMenuItem>
+                {activeSection.deletable ? (
+                  <DropdownMenuItem
+                    className="h-8 cursor-pointer text-destructive focus:text-destructive"
+                    disabled={writeDisabled}
+                    onClick={() => setDeleteSoapId(activeSection.id)}
+                  >
+                    <CdsActionsTrash2Icon data-icon="inline-start" />
+                    삭제
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
           <ChartPanelCollapseButton
             contentId={collapseContentId}
             label="S/O"
@@ -2919,7 +2941,10 @@ function SoapPanel({
           />
         </ChartPanelActionGroup>
       </div>
-      <div className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-line-hairline)] px-3">
+      <div
+        data-slot="chart-soap-toolbar"
+        className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-line-hairline)] px-3"
+      >
         {soapTabs}
       </div>
       {saveState === "conflict" ? (
@@ -2930,6 +2955,32 @@ function SoapPanel({
           다른 탭이나 사용자가 먼저 SOAP를 저장했습니다. 현재 입력은 유지되며,
           최신 내용을 확인한 뒤 다시 저장해 주세요.
         </div>
+      ) : null}
+      {saveState === "error" ? (
+        <EmrInlineAlert
+          severity="error"
+          title="SOAP를 저장하지 못했습니다"
+          className="mx-3 mb-2 mt-2 w-auto shrink-0 emr-text-metadata"
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={writeDisabled}
+              onClick={() =>
+                void persistDefaultSoapContent(
+                  latestDefaultContentRef.current,
+                  "manual_save",
+                )
+              }
+            >
+              다시 저장
+            </Button>
+          }
+          testId="chart-soap-save-error"
+        >
+          {saveErrorMessage ??
+            "입력한 내용은 화면에 남아 있지만 서버에 저장되지 않았습니다."}
+        </EmrInlineAlert>
       ) : null}
       {loading ? (
         <div className="border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-2">
@@ -3131,16 +3182,14 @@ function AssessmentPanel({
     <section
       aria-label="진단명 관리"
       data-slot="chart-workspace-panel"
-      className="group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)]"
+      className={chartWorkspacePanelClassName}
     >
       <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Assessment
         </h2>
         <span className="sr-only" aria-live="polite">
-          <span
-            data-testid="chart-diagnosis-save-status"
-          >
+          <span data-testid="chart-diagnosis-save-status">
             {saveStatusText}
           </span>
         </span>
@@ -3156,7 +3205,10 @@ function AssessmentPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
         <div className="grid gap-0">
-          <div className="grid h-11 grid-cols-[84px_minmax(0,1fr)_64px] items-center gap-2 border-b border-[var(--emr-line-hairline)] px-3">
+          <div
+            data-slot="chart-assessment-toolbar"
+            className="grid h-11 grid-cols-[84px_minmax(0,1fr)_64px] items-center gap-2 border-b border-[var(--emr-line-hairline)] px-3"
+          >
             <Button
               type="button"
               variant="outline"
@@ -3181,7 +3233,7 @@ function AssessmentPanel({
               >
                 <CdsActionsSearchIcon
                   aria-hidden="true"
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                 />
                 <Input
                   ref={searchInputRef}
@@ -3190,7 +3242,7 @@ function AssessmentPanel({
                   disabled={writeDisabled}
                   placeholder="키워드를 입력해주세요"
                   value={searchQuery}
-                  className="h-7 rounded-lg bg-card pl-9 text-xs"
+                  className="h-7 rounded-lg bg-card px-2 pr-8 text-xs"
                   onFocus={() => setSearchOpen(true)}
                   onValueChange={(value) => {
                     setSearchQuery(value);
@@ -3279,8 +3331,22 @@ function AssessmentPanel({
               분류 검색
             </Button>
           </div>
-          <div className="m-3 overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-            <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--emr-surface-muted)] px-3 py-2 emr-text-metadata font-semibold text-muted-foreground">
+          {saveStatusText === "저장 실패" ? (
+            <EmrInlineAlert
+              severity="error"
+              title="진단명을 저장하지 못했습니다"
+              className="mx-3 mt-2 w-auto emr-text-metadata"
+              testId="chart-diagnosis-save-error"
+            >
+              변경 내용은 화면에 남아 있지만 서버에는 반영되지 않았습니다.
+              권한과 연결 상태를 확인한 뒤 다시 시도해 주세요.
+            </EmrInlineAlert>
+          ) : null}
+          <div className="overflow-hidden bg-[var(--emr-surface-panel)]">
+            <div
+              data-slot="chart-assessment-table-header"
+              className="grid h-9 grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center bg-[var(--emr-surface-muted)] px-3 emr-text-metadata font-semibold text-muted-foreground"
+            >
               <span>계통분류</span>
               <span>진단명</span>
               <span>확진</span>
@@ -3298,7 +3364,8 @@ function AssessmentPanel({
             {diagnosisRows.map((diagnosis) => (
               <div
                 key={diagnosis.id}
-                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-2 emr-text-dense"
+                data-slot="chart-assessment-table-row"
+                className="grid min-h-10 grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 emr-text-dense"
               >
                 <Badge variant="outline">{diagnosis.systemLabel}</Badge>
                 <EmrTableCellText
@@ -3351,8 +3418,15 @@ function AssessmentPanel({
               </div>
             ))}
             {!loading && !diagnosisRows.length ? (
-              <div className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-6 text-center emr-text-dense text-muted-foreground">
-                진단 입력 전입니다.
+              <div className="flex min-h-52 items-center justify-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-6">
+                <EmrEmptyState
+                  kind="no-data"
+                  priority="supporting"
+                  surface="table"
+                  title="진단 입력 전입니다"
+                  description="검색창에서 현재 차트에 필요한 진단명을 추가해 주세요."
+                  testId="chart-assessment-empty-state"
+                />
               </div>
             ) : null}
           </div>
@@ -3413,6 +3487,26 @@ const chartOrderStatusOrder: EmrOrderStatus[] = [
   "completed",
   "cancelled",
 ];
+
+const CHART_ORDER_SCROLL_COLUMN_WIDTH_PX = 137.25;
+const chartOrderColumnOrder: ColumnOrderState = [
+  "select",
+  "orderType",
+  "status",
+  "displayName",
+  "groupTitle",
+  "instruction",
+  "billingName",
+  "quantity",
+  "unitPrice",
+  "lineTotal",
+  "requestedBy",
+  "actions",
+];
+const chartOrderColumnPinning: ColumnPinningState = {
+  left: ["select", "orderType", "status", "displayName"],
+  right: [],
+};
 
 const getChartOrderDraftRows = (
   orderGroups: ChartOrderGroup[],
@@ -3745,10 +3839,12 @@ function compareChartOrderValues(
 
 function ChartOrderTable({
   density,
+  hasAnyRows,
   hasCommittedRows,
   invalidOrderIds,
   loading,
   onDeleteOrder,
+  onAddOrder,
   onSort,
   onToggleOrder,
   onUpdateBillingName,
@@ -3760,9 +3856,11 @@ function ChartOrderTable({
   writeDisabled,
 }: {
   density: EmrTableDensity;
+  hasAnyRows: boolean;
   hasCommittedRows: boolean;
   invalidOrderIds: Set<string>;
   loading: boolean;
+  onAddOrder: () => void;
   onDeleteOrder: (orderId: string) => void;
   onSort: (key: ChartOrderSortKey) => void;
   onToggleOrder: (orderId: string, checked: boolean) => void;
@@ -3819,9 +3917,9 @@ function ChartOrderTable({
     () => [
       {
         id: "select",
-        size: 44,
-        minSize: 44,
-        maxSize: 44,
+        size: 28,
+        minSize: 28,
+        maxSize: 28,
         enableResizing: false,
         enableSorting: false,
         header: ({ table }) => (
@@ -3852,8 +3950,8 @@ function ChartOrderTable({
       {
         id: "groupTitle",
         accessorKey: "groupTitle",
-        size: 132,
-        minSize: 96,
+        size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         header: chartOrderSortLabels.groupTitle,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "groupTitle"),
@@ -3867,8 +3965,10 @@ function ChartOrderTable({
       {
         id: "orderType",
         accessorFn: (row) => row.order.orderType,
-        size: 72,
-        minSize: 72,
+        size: 80,
+        minSize: 80,
+        maxSize: 80,
+        enableResizing: false,
         header: chartOrderSortLabels.orderType,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "orderType"),
@@ -3880,14 +3980,16 @@ function ChartOrderTable({
         meta: {
           label: chartOrderSortLabels.orderType,
           headerInteraction: "sortable",
-          resize: "data-column",
+          resize: "none",
         },
       },
       {
         id: "status",
         accessorFn: (row) => row.order.status,
-        size: 76,
-        minSize: 76,
+        size: 88,
+        minSize: 88,
+        maxSize: 88,
+        enableResizing: false,
         header: chartOrderSortLabels.status,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "status"),
@@ -3900,54 +4002,69 @@ function ChartOrderTable({
         meta: {
           label: chartOrderSortLabels.status,
           headerInteraction: "sortable",
-          resize: "data-column",
+          resize: "none",
         },
       },
       {
         id: "displayName",
         accessorFn: (row) => row.order.displayName,
-        size: 260,
-        minSize: 180,
+        size: 198,
+        minSize: 198,
+        maxSize: 198,
+        enableResizing: false,
         header: chartOrderSortLabels.displayName,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "displayName"),
         cell: ({ row }) => {
           const { order } = row.original;
-          const handoff =
-            order.instruction ?? orderTypeMeta[order.orderType].handoff;
 
           return (
-            <div className="min-w-0 whitespace-normal py-2">
-              <EmrTableCellText
-                mode="two-line-if-long"
-                fullText={order.displayName}
-                className="font-medium"
-              >
-                {order.displayName}
-              </EmrTableCellText>
-              <EmrTableCellText
-                mode="one-line"
-                fullText={handoff}
-                className="emr-text-metadata text-muted-foreground"
-              >
-                {handoff}
-              </EmrTableCellText>
-            </div>
+            <EmrTableCellText
+              mode="one-line"
+              fullText={order.displayName}
+              className="font-medium"
+            >
+              {order.displayName}
+            </EmrTableCellText>
           );
         },
         meta: {
           label: chartOrderSortLabels.displayName,
           headerInteraction: "sortable",
+          resize: "none",
+          textMode: "one-line",
+        },
+      },
+      {
+        id: "instruction",
+        accessorFn: (row) =>
+          row.order.instruction ?? orderTypeMeta[row.order.orderType].handoff,
+        size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        enableSorting: false,
+        header: "지시사항",
+        cell: ({ row }) => {
+          const instruction =
+            row.original.order.instruction ??
+            orderTypeMeta[row.original.order.orderType].handoff;
+
+          return (
+            <EmrTableCellText mode="one-line" fullText={instruction}>
+              {instruction}
+            </EmrTableCellText>
+          );
+        },
+        meta: {
+          label: "지시사항",
           resize: "data-column",
-          textMode: "two-line-if-long",
-          verticalAlign: "top",
+          textMode: "one-line",
         },
       },
       {
         id: "billingName",
         accessorKey: "billingName",
-        size: 220,
-        minSize: 160,
+        size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         header: chartOrderSortLabels.billingName,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "billingName"),
@@ -3972,8 +4089,8 @@ function ChartOrderTable({
       {
         id: "quantity",
         accessorFn: (row) => getDraftQuantity(row.quantityInput),
-        size: 68,
-        minSize: 68,
+        size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         header: chartOrderSortLabels.quantity,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "quantity"),
@@ -4011,8 +4128,8 @@ function ChartOrderTable({
       {
         id: "unitPrice",
         accessorFn: (row) => row.unitPrice ?? null,
-        size: 84,
-        minSize: 84,
+        size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         header: chartOrderSortLabels.unitPrice,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "unitPrice"),
@@ -4033,8 +4150,8 @@ function ChartOrderTable({
       {
         id: "lineTotal",
         accessorFn: (row) => getDraftLineTotal(row) ?? null,
-        size: 96,
-        minSize: 96,
+        size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         header: chartOrderSortLabels.lineTotal,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "lineTotal"),
@@ -4054,8 +4171,8 @@ function ChartOrderTable({
         id: "requestedBy",
         accessorFn: (row) =>
           getChartStaffName(row.order.requestedByUserId) ?? "미정",
-        size: 76,
-        minSize: 76,
+        size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         header: chartOrderSortLabels.requestedBy,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "requestedBy"),
@@ -4077,8 +4194,8 @@ function ChartOrderTable({
       },
       {
         id: "actions",
-        size: 116,
-        minSize: 116,
+        size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+        minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         enableResizing: false,
         enableSorting: false,
         header: "작업",
@@ -4148,6 +4265,7 @@ function ChartOrderTable({
   const table = useReactTable({
     columns,
     data: rows,
+    enableColumnPinning: true,
     columnResizeMode: "onChange",
     enableColumnResizing: true,
     enableRowSelection: !writeDisabled,
@@ -4158,6 +4276,8 @@ function ChartOrderTable({
     onRowSelectionChange: handleRowSelectionChange,
     onSortingChange: handleSortingChange,
     state: {
+      columnOrder: chartOrderColumnOrder,
+      columnPinning: chartOrderColumnPinning,
       columnSizing,
       rowSelection,
       sorting,
@@ -4168,7 +4288,7 @@ function ChartOrderTable({
     <div className="h-full overflow-hidden border-y border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
       <EmrDataTable
         aria-label="처방/오더 테이블"
-        className="bg-[var(--emr-surface-panel)]"
+        className="bg-[var(--emr-surface-panel)] [--emr-table-row-height-compact:40px]"
         containerClassName="h-full min-h-0 min-w-0 overflow-auto"
         density={density}
         initialLoading={loading && rows.length === 0}
@@ -4194,11 +4314,33 @@ function ChartOrderTable({
                 >
                   <div className="flex justify-center">
                     <EmrEmptyState
-                      kind="no-filter-results"
-                      priority="local-recovery"
+                      kind={hasAnyRows ? "no-filter-results" : "no-data"}
+                      priority={hasAnyRows ? "local-recovery" : "supporting"}
                       surface="table"
-                      title="표시할 오더가 없습니다"
-                      description="분류나 필터를 바꾸면 오더가 다시 보입니다."
+                      title={
+                        hasAnyRows
+                          ? "표시할 오더가 없습니다"
+                          : "등록된 오더가 없습니다"
+                      }
+                      description={
+                        hasAnyRows
+                          ? "분류나 필터를 바꾸면 오더가 다시 보입니다."
+                          : "+ Order에서 현재 차트에 필요한 오더를 추가해 주세요."
+                      }
+                      primaryAction={
+                        hasAnyRows ? undefined : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={writeDisabled}
+                            onClick={onAddOrder}
+                          >
+                            + Order
+                          </Button>
+                        )
+                      }
+                      testId="chart-order-empty-state"
                     />
                   </div>
                 </TableCell>
@@ -4224,8 +4366,7 @@ function ChartOrderTable({
   );
 }
 type OrderActionDialogType = "bill" | "confirm";
-type ChartUnavailableAction =
-  "order-history" | "order-print" | "order-request";
+type ChartUnavailableAction = "order-history" | "order-print" | "order-request";
 
 const chartUnavailableActionCopy = {
   "order-history": {
@@ -5113,7 +5254,7 @@ function OrderArea({
   return (
     <section
       data-slot="chart-workspace-panel"
-      className="group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)]"
+      className={chartWorkspacePanelClassName}
     >
       <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
@@ -5128,7 +5269,7 @@ function OrderArea({
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  className="size-6 rounded-md text-muted-foreground"
+                  className="size-7 rounded-lg text-muted-foreground"
                   aria-label="Plan/Order 작업"
                 >
                   <CdsFilesMoreHorizontalIcon className="size-3.5" />
@@ -5282,12 +5423,25 @@ function OrderArea({
           onDismiss={() => setUnavailableAction(null)}
         />
       ) : null}
+      {orderDraftSaveState === "error" ? (
+        <EmrInlineAlert
+          severity="error"
+          title="오더 정보를 반영하지 못했습니다"
+          className="mx-3 mt-2 w-auto shrink-0 emr-text-metadata"
+          testId="chart-order-state-error"
+        >
+          현재 표의 내용은 유지됩니다. 권한과 연결 상태를 확인한 뒤 변경사항을
+          다시 저장해 주세요.
+        </EmrInlineAlert>
+      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
         <ChartOrderTable
           density={orderTableDensity}
+          hasAnyRows={draftRows.length > 0}
           hasCommittedRows={committedRowIds.size > 1}
           invalidOrderIds={invalidOrderIds}
           loading={orderLoading}
+          onAddOrder={openCatalogDialog}
           onDeleteOrder={setDeleteOrderId}
           onSort={handleOrderSort}
           onToggleOrder={toggleOrder}
@@ -5321,14 +5475,15 @@ function OrderArea({
       />
       <div
         data-testid="chart-order-footer"
-        className="flex h-16 min-h-16 shrink-0 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 text-[13px] leading-[18px] text-muted-foreground"
+        className="flex h-[52px] min-h-[52px] shrink-0 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 text-[13px] leading-[18px] text-muted-foreground"
       >
         <div className="min-w-0">
           <span>총 {visibleOrderRows.length}건</span>
           <span className="sr-only">
-            선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 ·
-            재확인 필요 {recheckOrderCount}건 · 선택 오더 합계 {selectedAmount.toLocaleString()}원 ·
-            청구 예상 총액 {totalAmount.toLocaleString()}원 {draftStatusText}
+            선택 오더 {selectedOrderIds.size}건 · 확정 대상{" "}
+            {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건
+            · 선택 오더 합계 {selectedAmount.toLocaleString()}원 · 청구 예상
+            총액 {totalAmount.toLocaleString()}원 {draftStatusText}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -5337,19 +5492,20 @@ function OrderArea({
             variant="outline"
             size="sm"
             className="h-8 rounded-lg bg-card px-3"
-            disabled
+            disabled={writeDisabled || !hasSelectedOrders}
+            onClick={() => setOrderActionDialog("bill")}
           >
-            <CdsNavigationChevronLeftIcon data-icon="inline-start" />
-            이전
+            <CdsUtilitiesCircleIcon data-icon="inline-start" />
+            Order 청구
           </Button>
           <Button
-            variant="outline"
             size="sm"
-            className="h-8 rounded-lg bg-card px-3"
-            disabled
+            className="h-8 rounded-lg px-3"
+            disabled={writeDisabled || !hasSelectedOrders}
+            onClick={() => setOrderActionDialog("confirm")}
           >
-            다음
-            <CdsNavigationChevronRightIcon data-icon="inline-end" />
+            <CdsActionsCheckIcon data-icon="inline-start" />
+            Order 확정
           </Button>
         </div>
       </div>
@@ -5555,27 +5711,49 @@ function writeCallRoomPreference({
 
 function EmptyChartState({
   onRefresh,
+  permissionDenied = false,
   queueEmpty = false,
+  readError = false,
   refreshing = false,
 }: {
   onRefresh?: () => void | Promise<void>;
+  permissionDenied?: boolean;
   queueEmpty?: boolean;
+  readError?: boolean;
   refreshing?: boolean;
 }) {
+  const kind = permissionDenied
+    ? "no-permission"
+    : readError
+      ? "read-error"
+      : queueEmpty
+        ? "upstream-pending"
+        : "no-scope-result";
+  const title = permissionDenied
+    ? "진료 차트 조회 권한이 없습니다"
+    : readError
+      ? "진료 업무를 불러오지 못했습니다"
+      : queueEmpty
+        ? "진료 업무가 없습니다"
+        : "환자를 선택해 주세요";
+  const description = permissionDenied
+    ? "현재 계정의 병원·역할 권한을 확인해 주세요."
+    : readError
+      ? "연결 상태를 확인한 뒤 다시 시도해 주세요."
+      : queueEmpty
+        ? "오늘 표시할 진료 업무가 없습니다."
+        : "대기열에서 환자를 선택하면 차트가 표시됩니다.";
+
   return (
     <div className="flex h-full items-center justify-center px-6 py-10">
       <EmrEmptyState
-        kind={queueEmpty ? "upstream-pending" : "no-scope-result"}
+        kind={kind}
         priority="supporting"
         surface="content"
-        title={queueEmpty ? "진료 업무가 없습니다" : "환자를 선택해 주세요"}
-        description={
-          queueEmpty
-            ? "오늘 표시할 진료 업무가 없습니다."
-            : "대기열에서 환자를 선택하면 차트가 표시됩니다."
-        }
+        title={title}
+        description={description}
         primaryAction={
-          queueEmpty && onRefresh ? (
+          (queueEmpty || readError || permissionDenied) && onRefresh ? (
             <Button
               size="default"
               variant="outline"
@@ -5588,11 +5766,12 @@ function EmptyChartState({
                 data-icon="inline-start"
                 aria-hidden="true"
               />
-              새로고침
+              {readError || permissionDenied ? "다시 시도" : "새로고침"}
             </Button>
           ) : undefined
         }
         size="xl"
+        testId="chart-content-empty-state"
       />
     </div>
   );
@@ -5624,8 +5803,11 @@ function ChartDetailPendingIndicator() {
       data-testid="chart-detail-pending-indicator"
       role="status"
     >
-      <CdsAlertsLoaderIcon className="size-3 animate-spin" aria-hidden="true" />
-      <span>상세 정보 불러오는 중</span>
+      <span className="sr-only">상세 정보 불러오는 중</span>
+      <Skeleton
+        aria-hidden="true"
+        className="h-3 w-28 motion-reduce:animate-none"
+      />
     </span>
   );
 }
@@ -5643,21 +5825,18 @@ function ChartPanelPendingState({
     <div
       role="status"
       aria-live="polite"
-      className={cn(
-        "flex min-w-0 items-center gap-2 emr-text-metadata text-[var(--emr-text-secondary)]",
-        className,
-      )}
+      data-slot="chart-panel-skeleton"
+      data-loading-label={title}
+      className={cn("grid min-w-0 flex-1 gap-2", className)}
     >
-      <CdsAlertsLoaderIcon
-        className="size-3.5 shrink-0 animate-spin"
-        aria-hidden="true"
-      />
-      <span className="min-w-0">
-        <span className="font-semibold text-foreground">{title}</span>
-        {description ? (
-          <span className="ml-1 text-muted-foreground">{description}</span>
-        ) : null}
+      <span className="sr-only">
+        {title}
+        {description ? `. ${description}` : ""}
       </span>
+      <div aria-hidden="true" className="flex min-w-0 items-center gap-2">
+        <Skeleton className="h-3 w-20 shrink-0 motion-reduce:animate-none" />
+        <Skeleton className="h-3 min-w-16 max-w-72 flex-1 motion-reduce:animate-none" />
+      </div>
     </div>
   );
 }
@@ -5680,6 +5859,7 @@ export function ChartContent({
     (state) => state.clearPendingConsultationCall,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
+  const liveQueueError = useChartStore((state) => state.liveQueueError);
   const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
   const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
   const updateLiveQueueRecord = useChartStore(
@@ -5888,7 +6068,9 @@ export function ChartContent({
   const getChartSplitBounds = () => {
     const workspace = chartWorkspaceRef.current;
     const availableHeight = workspace
-      ? workspace.getBoundingClientRect().height - CHART_RESIZER_HEIGHT_PX
+      ? workspace.getBoundingClientRect().height -
+        CHART_RESIZER_HEIGHT_PX -
+        CHART_WORKSPACE_BOTTOM_PADDING_PX
       : 0;
 
     if (availableHeight <= CHART_TOP_MIN_PX + CHART_ORDER_MIN_PX) {
@@ -5911,7 +6093,8 @@ export function ChartContent({
     if (!workspace) return;
 
     const rect = workspace.getBoundingClientRect();
-    const availableHeight = rect.height - CHART_RESIZER_HEIGHT_PX;
+    const availableHeight =
+      rect.height - CHART_RESIZER_HEIGHT_PX - CHART_WORKSPACE_BOTTOM_PADDING_PX;
 
     if (availableHeight <= 0) return;
 
@@ -6455,7 +6638,11 @@ export function ChartContent({
 
     return (
       <EmptyChartState
+        permissionDenied={
+          liveQueueStatus === "error" && liveQueueError === "permission_missing"
+        }
         queueEmpty={queueEmpty}
+        readError={liveQueueStatus === "error"}
         refreshing={
           refreshAction?.isRefreshing ?? liveQueueStatus === "loading"
         }
@@ -6537,7 +6724,10 @@ export function ChartContent({
   const chartHistoryCount = getChartHistoryRowsForBundle(currentBundle).length;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]">
+    <div
+      data-slot="chart-content"
+      className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
+    >
       {!chartStartLocked ? (
         <>
           <ChartActionBar
@@ -6558,7 +6748,9 @@ export function ChartContent({
             startTime={chartStartTime}
             visitLabel={chartHistoryCount > 1 ? "재진" : "초진"}
             pendingIndicator={
-              showDetailPendingIndicator ? <ChartDetailPendingIndicator /> : null
+              showDetailPendingIndicator ? (
+                <ChartDetailPendingIndicator />
+              ) : null
             }
             completionAction={
               primaryAction === "call" ? (
@@ -7031,16 +7223,14 @@ export function ChartContent({
           ref={chartWorkspaceRef}
           data-slot="chart-workspace"
           className={cn(
-            "grid min-h-0 flex-1 bg-[#fcfcfc] px-2",
+            "grid min-h-0 flex-1 bg-[#fcfcfc] px-2 pb-2",
             isChartResizing && "select-none",
           )}
           style={{
             gridTemplateRows: `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
           }}
         >
-          <ChartCollapsiblePanelGroup
-            collapsedPanels={collapsedClinicalPanels}
-          >
+          <ChartCollapsiblePanelGroup collapsedPanels={collapsedClinicalPanels}>
             <ChartCollapsiblePanel
               panelId="soap"
               label="S/O"
@@ -7082,9 +7272,7 @@ export function ChartContent({
                 collapseContentId="chart-assessment-panel-content"
                 diagnosisRows={diagnosisRows}
                 loading={diagnosisLoading}
-                onCollapse={() =>
-                  setClinicalPanelCollapsed("assessment", true)
-                }
+                onCollapse={() => setClinicalPanelCollapsed("assessment", true)}
                 onDiagnosisRowsChange={handleDiagnosisRowsChange}
                 saveStatusText={diagnosisSaveStatusText}
                 setDiagnosisRows={setDiagnosisRows}

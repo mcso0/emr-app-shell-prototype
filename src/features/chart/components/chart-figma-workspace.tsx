@@ -26,9 +26,20 @@ import {
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+export const chartWorkspacePanelClassName =
+  "group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)] shadow-xs";
 
 type ChartPatientVitalItem = {
   label: string;
@@ -57,7 +68,7 @@ type ScrollState = {
 };
 
 const getAssetSrc = (asset: string | { src?: string }) =>
-  typeof asset === "string" ? asset : asset.src ?? "";
+  typeof asset === "string" ? asset : (asset.src ?? "");
 
 function getScrollState(element: HTMLDivElement | null): ScrollState {
   if (!element) return { canScrollLeft: false, canScrollRight: false };
@@ -133,7 +144,11 @@ export function ChartPatientContextBar({
             <ContextIcon>
               <CdsPeopleUserIcon />
             </ContextIcon>
-            <ContextText primary={guardianName} secondary={guardianPhone} inline />
+            <ContextText
+              primary={guardianName}
+              secondary={guardianPhone}
+              inline
+            />
           </ContextSection>
           <ContextDivider />
           <ContextSection className="min-w-[365px]">
@@ -221,9 +236,7 @@ function ContextSection({
 }
 
 function ContextDivider() {
-  return (
-    <div className="h-5 w-px shrink-0 bg-[var(--emr-border-default)]" />
-  );
+  return <div className="h-5 w-px shrink-0 bg-[var(--emr-border-default)]" />;
 }
 
 function ContextIllustration({ src }: { src: string }) {
@@ -342,7 +355,9 @@ function PatientMemoButton({ item }: { item: ChartPatientMemoItem }) {
         {item.label}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-3">
-        <div className="text-sm font-semibold text-foreground">{item.label}</div>
+        <div className="text-sm font-semibold text-foreground">
+          {item.label}
+        </div>
         <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
           {item.summary}
         </p>
@@ -393,10 +408,7 @@ export function ChartWorkspacePanel({
   return (
     <section
       data-slot="chart-workspace-panel"
-      className={cn(
-        "group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)]",
-        className,
-      )}
+      className={cn(chartWorkspacePanelClassName, className)}
     >
       <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
         <h2 className="min-w-0 truncate text-sm font-semibold leading-5 text-foreground">
@@ -461,9 +473,7 @@ export function ChartActionBar({
         <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
           진료 시작 {startTime}
         </span>
-        <span
-          className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium"
-        >
+        <span className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium">
           <CdsPeopleUserIcon className="size-3.5" aria-hidden="true" />
           {doctorName}
         </span>
@@ -503,7 +513,9 @@ function UnavailableActionButton({
   return (
     <Tooltip>
       <TooltipTrigger
-        render={<span className="inline-flex cursor-not-allowed" tabIndex={0} />}
+        render={
+          <span className="inline-flex cursor-not-allowed" tabIndex={0} />
+        }
       >
         <Button
           type="button"
@@ -518,7 +530,9 @@ function UnavailableActionButton({
           {label}
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="bottom">준비 중 · 업무 흐름 연결 후 제공됩니다.</TooltipContent>
+      <TooltipContent side="bottom">
+        준비 중 · 업무 흐름 연결 후 제공됩니다.
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -550,7 +564,7 @@ export function ChartPanelIconButton({
             type="button"
             variant="ghost"
             size="icon-xs"
-            className="size-6 rounded-md text-[var(--emr-text-secondary)] opacity-50 [&_svg]:size-3.5"
+            className="size-7 rounded-lg text-[var(--emr-text-secondary)] opacity-50 [&_svg]:size-3.5"
             tabIndex={-1}
             disabled
           >
@@ -570,7 +584,7 @@ export function ChartPanelIconButton({
             type="button"
             variant="ghost"
             size="icon-xs"
-            className="size-6 rounded-md text-[var(--emr-text-secondary)] [&_svg]:size-3.5"
+            className="size-7 rounded-lg text-[var(--emr-text-secondary)] [&_svg]:size-3.5"
             aria-label={label}
             onClick={onClick}
           />
@@ -583,11 +597,7 @@ export function ChartPanelIconButton({
   );
 }
 
-export function ChartPanelActions({
-  onMore,
-}: {
-  onMore?: () => void;
-}) {
+export function ChartPanelActions({ onMore }: { onMore?: () => void }) {
   return (
     <>
       <ChartPanelIconButton label="패널 확대 준비 중" disabled />

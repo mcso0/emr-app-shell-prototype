@@ -244,21 +244,35 @@ function EmrDataTableSkeletonRows<TData>({
         const meta = getColumnMeta(column);
         const pinnedProps = getEmrPinnedColumnProps(column);
         const isSelection = meta?.role === "selection";
+        const selectionColumnSize = column.getSize();
 
         return (
           <TableCell
             key={column.id}
             className={cn(
               "overflow-hidden !p-0",
-              isSelection && "w-11 min-w-11 max-w-11",
+              isSelection && "!p-0",
+              isSelection && selectionColumnSize === 28 && "!pl-3 !pr-0",
             )}
             data-column-id={column.id}
+            style={
+              isSelection
+                ? {
+                    maxWidth: selectionColumnSize,
+                    minWidth: selectionColumnSize,
+                    width: selectionColumnSize,
+                  }
+                : undefined
+            }
             {...pinnedProps}
           >
             <div
               className={cn(
                 "emr-data-table-cell-content flex",
                 isSelection ? "justify-center" : "justify-start",
+                isSelection &&
+                  selectionColumnSize === 28 &&
+                  "!px-0 !justify-start",
                 meta?.identity && "!px-0",
               )}
               data-emr-table-identity-content={
@@ -267,6 +281,7 @@ function EmrDataTableSkeletonRows<TData>({
             >
               <Skeleton
                 className={cn(
+                  "motion-reduce:animate-none",
                   isSelection ? "size-4" : "h-4",
                   !isSelection &&
                     ["w-20", "w-24", "w-28", "w-32"][columnIndex % 4],
@@ -322,12 +337,22 @@ function EmrDataTableHeader<TData>({ group }: { group: HeaderGroup<TData> }) {
               : label;
 
         if (isSelection) {
+          const selectionColumnSize = column.getSize();
+
           return (
             <EmrTableSelectionHeaderCell
               key={header.id}
               aria-label={label}
-              className="w-11 min-w-11 max-w-11 !p-0 !pl-5 !pr-2 [&_.emr-table-cell-content]:!p-0"
+              className={cn(
+                "!p-0 [&_.emr-table-cell-content]:!p-0",
+                selectionColumnSize === 28 ? "!pl-3 !pr-0" : "!pl-5 !pr-2",
+              )}
               data-column-id={column.id}
+              style={{
+                maxWidth: selectionColumnSize,
+                minWidth: selectionColumnSize,
+                width: selectionColumnSize,
+              }}
               {...pinnedProps}
             >
               {headerContent}
@@ -391,12 +416,22 @@ function EmrDataTableBodyRow<TData>({
           const isActions = role === "actions";
 
           if (isSelection) {
+            const selectionColumnSize = cell.column.getSize();
+
             return (
               <EmrTableSelectionCell
                 key={cell.id}
-                className="w-11 min-w-11 max-w-11 !p-0 !pl-5 !pr-2 [&_.emr-table-cell-content]:!p-0"
+                className={cn(
+                  "!p-0 [&_.emr-table-cell-content]:!p-0",
+                  selectionColumnSize === 28 ? "!pl-3 !pr-0" : "!pl-5 !pr-2",
+                )}
                 controlVisibility="contextual"
                 data-column-id={cell.column.id}
+                style={{
+                  maxWidth: selectionColumnSize,
+                  minWidth: selectionColumnSize,
+                  width: selectionColumnSize,
+                }}
                 {...pinnedProps}
               >
                 {getRenderedCellContent(cell)}

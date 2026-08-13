@@ -1,5 +1,11 @@
 import { readFileSync } from "node:fs";
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Locator,
+  type Page,
+  type Route,
+} from "@playwright/test";
 
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
@@ -7,12 +13,12 @@ import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-w
 const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
 const chartFigmaVisualFixture = {
-  expectedMainSize: { height: 1024, width: 1540 },
-  expectedPanelWidth: 502,
-  expectedRows: [503, 8, 407],
+  expectedContentSize: { height: 968, width: 1540 },
+  expectedPanelWidths: [567, 567, 375],
+  expectedRows: [452, 8, 452],
   route:
     "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed",
-  viewport: { height: 1086, width: 1622 },
+  viewport: { height: 1088, width: 1624 },
 } as const;
 const kongEncounterId = "encounter-kong-260501";
 const kongDefaultOrderDraftRows = [
@@ -48,12 +54,8 @@ test("chart live queue preserves explicit encounter deep links", () => {
     "explicitEncounterId: currentExplicitQueryEncounterId",
   );
   expect(source).toContain("function useExplicitChartEncounterId()");
-  expect(source).toContain(
-    "function useDemoScenarioChartEncounterId()",
-  );
-  expect(source).toContain(
-    "selectedEncounterId === demoScenarioEncounterId",
-  );
+  expect(source).toContain("function useDemoScenarioChartEncounterId()");
+  expect(source).toContain("selectedEncounterId === demoScenarioEncounterId");
   expect(source).toContain(
     "saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId)",
   );
@@ -70,14 +72,12 @@ async function expectTopEdgeInViewport(page: Page, locator: Locator) {
   expect(box!.y).toBeLessThan(viewportHeight);
 }
 
-async function tabBackwardTo(
-  page: Page,
-  target: Locator,
-  maxSteps: number,
-) {
+async function tabBackwardTo(page: Page, target: Locator, maxSteps: number) {
   for (let step = 0; step < maxSteps; step += 1) {
     await page.keyboard.press("Shift+Tab");
-    if (await target.evaluate((element) => element === document.activeElement)) {
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
       return;
     }
   }
@@ -88,7 +88,9 @@ async function tabBackwardTo(
 async function tabForwardTo(page: Page, target: Locator, maxSteps: number) {
   for (let step = 0; step < maxSteps; step += 1) {
     await page.keyboard.press("Tab");
-    if (await target.evaluate((element) => element === document.activeElement)) {
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
       return;
     }
   }
@@ -104,9 +106,7 @@ async function getChartOrderAction(page: Page, name: string | RegExp) {
 async function addChartSoapSystem(page: Page, systemLabel: string) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (
-      await page
-        .getByRole("tab", { name: systemLabel, exact: true })
-        .count()
+      await page.getByRole("tab", { name: systemLabel, exact: true }).count()
     ) {
       return;
     }
@@ -182,7 +182,8 @@ async function routePreconsultationContext(
   await page.route(
     "**/api/workspaces/*/chart/preconsultation-context?*",
     async (route) => {
-      const encounterId = new URL(route.request().url()).searchParams.get("encounterId") ?? "";
+      const encounterId =
+        new URL(route.request().url()).searchParams.get("encounterId") ?? "";
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -236,7 +237,9 @@ async function restoreKongOrderDraftDefaults(page: Page) {
   await expect(billingName).toHaveValue("Maropitant 16mg T");
 }
 
-test("waiting chart saves and clears only today's vital values through the dialog", async ({ page }) => {
+test("waiting chart saves and clears only today's vital values through the dialog", async ({
+  page,
+}) => {
   const workspaceId = "clair-demo";
   const encounterId = "encounter-haru-260430";
   let vital: Record<string, unknown> | null = null;
@@ -268,39 +271,50 @@ test("waiting chart saves and clears only today's vital values through the dialo
     history: [],
   });
 
-  await page.route("**/api/workspaces/*/chart/preconsultation-context?*", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        status: 200,
-        canWriteVitals: true,
-        enforcedBy: "chart-preconsultation-context-read",
-        context: context(),
-      }),
-    });
-  });
-  await page.route("**/api/workspaces/*/chart/preconsultation-vitals", async (route) => {
-    expect(route.request().method()).toBe("PATCH");
-    const body = (await route.request().postDataJSON()) as {
-      encounterId: string;
-      vitals: Record<string, unknown>;
-    };
-    expect(body.encounterId).toBe(encounterId);
-    writes.push(body.vitals);
-    vital = {
-      id: "vital-haru-today",
-      encounterId,
-      measuredAt: "2026-07-20T09:30:00.000Z",
-      ...Object.fromEntries(
-        Object.entries(body.vitals).filter(([, value]) => value !== null),
-      ),
-    };
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({ ok: true, status: 200, enforcedBy: "patient-vital-write", vital }),
-    });
-  });
+  await page.route(
+    "**/api/workspaces/*/chart/preconsultation-context?*",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          canWriteVitals: true,
+          enforcedBy: "chart-preconsultation-context-read",
+          context: context(),
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/*/chart/preconsultation-vitals",
+    async (route) => {
+      expect(route.request().method()).toBe("PATCH");
+      const body = (await route.request().postDataJSON()) as {
+        encounterId: string;
+        vitals: Record<string, unknown>;
+      };
+      expect(body.encounterId).toBe(encounterId);
+      writes.push(body.vitals);
+      vital = {
+        id: "vital-haru-today",
+        encounterId,
+        measuredAt: "2026-07-20T09:30:00.000Z",
+        ...Object.fromEntries(
+          Object.entries(body.vitals).filter(([, value]) => value !== null),
+        ),
+      };
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "patient-vital-write",
+          vital,
+        }),
+      });
+    },
+  );
 
   await page.goto(
     `/w/${workspaceId}/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`,
@@ -315,7 +329,9 @@ test("waiting chart saves and clears only today's vital values through the dialo
   await dialog.getByLabel("호흡수").fill("24");
   await dialog.getByRole("button", { name: "저장" }).click();
 
-  await expect(lockedState.getByRole("button", { name: "오늘 바이탈 수정" })).toBeVisible();
+  await expect(
+    lockedState.getByRole("button", { name: "오늘 바이탈 수정" }),
+  ).toBeVisible();
   await expect(lockedState).toContainText("5.12 kg");
   expect(writes[0]).toEqual({
     weightKg: 5.12,
@@ -333,7 +349,11 @@ test("waiting chart saves and clears only today's vital values through the dialo
   }
   await editDialog.getByRole("button", { name: "저장" }).click();
 
-  await expect(lockedState.getByLabel("환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다")).toContainText("—");
+  await expect(
+    lockedState.getByLabel(
+      "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
+    ),
+  ).toContainText("—");
   expect(writes).toHaveLength(2);
   expect(writes[1]).toEqual({
     weightKg: null,
@@ -345,7 +365,9 @@ test("waiting chart saves and clears only today's vital values through the dialo
   });
 });
 
-test("chart vital history follows workspace omission and re-add without rewriting measurements", async ({ page }) => {
+test("chart vital history follows workspace omission and re-add without rewriting measurements", async ({
+  page,
+}) => {
   const workspaceId = "clair-demo";
   const encounterId = "encounter-haru-260430";
   let includeHeartRate = false;
@@ -359,11 +381,46 @@ test("chart vital history follows workspace omission and re-add without rewritin
     respiratoryRateRpm: 24,
   };
   const presets = [
-    { key: "weight", label: "체중", description: "환자의 현재 체중", canonicalUnit: "kg", allowedDisplayUnits: ["kg", "g"], requiredInWorkspace: true },
-    { key: "temperature", label: "체온", description: "체온계로 측정한 체온", canonicalUnit: "°C", allowedDisplayUnits: ["°C", "°F"], requiredInWorkspace: true },
-    { key: "heart_rate", label: "심박수", description: "분당 심장 박동 수", canonicalUnit: "bpm", allowedDisplayUnits: ["bpm"], requiredInWorkspace: false },
-    { key: "respiratory_rate", label: "호흡수", description: "분당 호흡 횟수", canonicalUnit: "rpm", allowedDisplayUnits: ["rpm"], requiredInWorkspace: false },
-    { key: "blood_pressure", label: "혈압", description: "수축기 단독 또는 수축기/이완기", canonicalUnit: "mmHg", allowedDisplayUnits: ["mmHg"], requiredInWorkspace: false },
+    {
+      key: "weight",
+      label: "체중",
+      description: "환자의 현재 체중",
+      canonicalUnit: "kg",
+      allowedDisplayUnits: ["kg", "g"],
+      requiredInWorkspace: true,
+    },
+    {
+      key: "temperature",
+      label: "체온",
+      description: "체온계로 측정한 체온",
+      canonicalUnit: "°C",
+      allowedDisplayUnits: ["°C", "°F"],
+      requiredInWorkspace: true,
+    },
+    {
+      key: "heart_rate",
+      label: "심박수",
+      description: "분당 심장 박동 수",
+      canonicalUnit: "bpm",
+      allowedDisplayUnits: ["bpm"],
+      requiredInWorkspace: false,
+    },
+    {
+      key: "respiratory_rate",
+      label: "호흡수",
+      description: "분당 호흡 횟수",
+      canonicalUnit: "rpm",
+      allowedDisplayUnits: ["rpm"],
+      requiredInWorkspace: false,
+    },
+    {
+      key: "blood_pressure",
+      label: "혈압",
+      description: "수축기 단독 또는 수축기/이완기",
+      canonicalUnit: "mmHg",
+      allowedDisplayUnits: ["mmHg"],
+      requiredInWorkspace: false,
+    },
   ];
 
   await page.route("**/api/workspaces/*/vital-settings", async (route) => {
@@ -371,7 +428,14 @@ test("chart vital history follows workspace omission and re-add without rewritin
       { key: "weight", enabled: true, displayUnit: "kg", sortOrder: 0 },
       { key: "temperature", enabled: true, displayUnit: "°C", sortOrder: 1 },
       ...(includeHeartRate
-        ? [{ key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 2 }]
+        ? [
+            {
+              key: "heart_rate",
+              enabled: true,
+              displayUnit: "bpm",
+              sortOrder: 2,
+            },
+          ]
         : []),
       {
         key: "respiratory_rate",
@@ -382,51 +446,62 @@ test("chart vital history follows workspace omission and re-add without rewritin
     ];
     await route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({ ok: true, status: 200, canManage: true, presets, items }),
-    });
-  });
-  await page.route("**/api/workspaces/*/chart/preconsultation-context?*", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
       body: JSON.stringify({
         ok: true,
         status: 200,
-        canWriteVitals: true,
-        enforcedBy: "chart-preconsultation-context-read",
-        context: {
-          encounter: {
-            id: encounterId,
-            encounterNo: "E-260430-0005",
-            receptionType: "walk_in",
-            visitPurpose: "예방접종",
-            chiefComplaint: "예방접종 전 건강 확인",
-            checkedInAt: "2026-04-30T16:05:00+09:00",
-            status: "waiting",
-          },
-          queue: { id: "queue-haru-consultation", status: "waiting" },
-          patient: {
-            id: "patient-haru",
-            patientNo: "P-HARU",
-            name: "하루",
-            species: "cat",
-            breed: "Korean Shorthair",
-            estimatedAgeText: "2세",
-            sex: "female",
-          },
-          guardian: { id: "guardian-kang-seoyun", name: "강서윤" },
-          veterinarian: { id: "user-vet", displayName: "이수지" },
-          priorEncounterCount: 1,
-          vitals: [historicalVital],
-          history: [],
-        },
+        canManage: true,
+        presets,
+        items,
       }),
     });
   });
-
-  await page.goto(`/w/${workspaceId}/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`);
-  const vitalTable = page.getByTestId("chart-start-locked-state").getByLabel(
-    "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
+  await page.route(
+    "**/api/workspaces/*/chart/preconsultation-context?*",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          canWriteVitals: true,
+          enforcedBy: "chart-preconsultation-context-read",
+          context: {
+            encounter: {
+              id: encounterId,
+              encounterNo: "E-260430-0005",
+              receptionType: "walk_in",
+              visitPurpose: "예방접종",
+              chiefComplaint: "예방접종 전 건강 확인",
+              checkedInAt: "2026-04-30T16:05:00+09:00",
+              status: "waiting",
+            },
+            queue: { id: "queue-haru-consultation", status: "waiting" },
+            patient: {
+              id: "patient-haru",
+              patientNo: "P-HARU",
+              name: "하루",
+              species: "cat",
+              breed: "Korean Shorthair",
+              estimatedAgeText: "2세",
+              sex: "female",
+            },
+            guardian: { id: "guardian-kang-seoyun", name: "강서윤" },
+            veterinarian: { id: "user-vet", displayName: "이수지" },
+            priorEncounterCount: 1,
+            vitals: [historicalVital],
+            history: [],
+          },
+        }),
+      });
+    },
   );
+
+  await page.goto(
+    `/w/${workspaceId}/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`,
+  );
+  const vitalTable = page
+    .getByTestId("chart-start-locked-state")
+    .getByLabel("환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다");
   await expect(vitalTable).not.toContainText("심박수");
   await expect(vitalTable).not.toContainText("88 bpm");
   expect(historicalVital.heartRateBpm).toBe(88);
@@ -441,9 +516,7 @@ test("chart vital history follows workspace omission and re-add without rewritin
 test("chart workspace renders queue, history, SOAP, assessment, and orders", async ({
   page,
 }) => {
-  await page.goto(
-    "/w/clair-demo/treatment?modulePanel=open&aside=history",
-  );
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history");
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
@@ -453,9 +526,9 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(
     sidePanel.getByTestId("order-queue-sort-control"),
   ).toHaveAttribute("aria-label", "대기열 정렬");
-  await expect(
-    sidePanel.getByTestId("order-queue-sort-control"),
-  ).toHaveText("");
+  await expect(sidePanel.getByTestId("order-queue-sort-control")).toHaveText(
+    "",
+  );
   await expect(
     sidePanel.getByTestId("order-queue-filter-control"),
   ).toHaveAttribute("aria-label", "대기열 필터");
@@ -509,7 +582,9 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
     page.getByLabel("환자 컨텍스트 정보").getByText("주치의"),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "진료 기록" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Subject/Object" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Subject/Object" }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
   await expect(page.getByText("기본 SOAP")).toBeVisible();
   await expect(
@@ -541,9 +616,12 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   ).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
-      soapDiagnosisGridMetrics.soapWidth - soapDiagnosisGridMetrics.historyWidth,
+      soapDiagnosisGridMetrics.soapWidth /
+        soapDiagnosisGridMetrics.historyWidth -
+        chartFigmaVisualFixture.expectedPanelWidths[0] /
+          chartFigmaVisualFixture.expectedPanelWidths[2],
     ),
-  ).toBeLessThanOrEqual(1);
+  ).toBeLessThanOrEqual(0.01);
   await expect(page.getByText("항구토제 세트")).toBeVisible();
   await expect(page.getByText("피하 수액 처치").first()).toBeVisible();
   const diagnosisPanel = page.getByLabel("진단명 관리");
@@ -569,11 +647,14 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   );
   await expect(
     orderTable
-      .locator('[data-emr-cell-text-mode="two-line-if-long"]', {
+      .locator('[data-emr-cell-text-mode="one-line"]', {
         hasText: "Maropitant 16mg T",
       })
       .first(),
   ).toContainText("Maropitant 16mg T");
+  await expect(
+    orderTable.getByText("0.5T x 3일, 보호자 복약 안내 포함"),
+  ).toBeVisible();
   await expect(
     orderTable.getByText("항구토제 세트", { exact: true }).first(),
   ).toBeVisible();
@@ -642,10 +723,34 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(subjectActions).toHaveCSS("opacity", "0");
   await subjectPanel.hover();
   await expect(subjectActions).toHaveCSS("opacity", "1");
+  await expect(subjectPanel).toHaveCSS("border-radius", "8px");
+  await expect(subjectPanel).not.toHaveCSS("box-shadow", "none");
+  const subjectActionButtons = subjectActions.locator("button");
+  await expect(subjectActionButtons).toHaveCount(4);
+  for (const button of await subjectActionButtons.all()) {
+    await expect(button).toHaveCSS("width", "28px");
+    await expect(button).toHaveCSS("height", "28px");
+  }
+
+  await expect(page.locator("[data-slot='chart-soap-toolbar']")).toHaveCSS(
+    "height",
+    "44px",
+  );
+  await expect(
+    page.locator("[data-slot='chart-assessment-toolbar']"),
+  ).toHaveCSS("height", "44px");
+  await expect(
+    page.locator("[data-slot='chart-assessment-table-header']"),
+  ).toHaveCSS("height", "36px");
+  await expect(
+    page.locator("[data-slot='chart-assessment-table-row']").first(),
+  ).toHaveCSS("height", "40px");
   await page.mouse.move(1, 1);
   await subjectPanel.getByRole("button", { name: "SOAP 추가" }).focus();
   await expect(subjectActions).toHaveCSS("opacity", "1");
-  const soapAddTrigger = subjectPanel.getByRole("button", { name: "SOAP 추가" });
+  const soapAddTrigger = subjectPanel.getByRole("button", {
+    name: "SOAP 추가",
+  });
   await soapAddTrigger.click();
   const soapAddMenu = page.getByRole("menu");
   await expect(soapAddMenu).toBeVisible();
@@ -674,7 +779,9 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(page.locator("#chart-content-aside")).toHaveCount(0);
 });
 
-test("chart panel actions remain visible on touch input", async ({ browser }) => {
+test("chart panel actions remain visible on touch input", async ({
+  browser,
+}) => {
   const context = await browser.newContext({
     hasTouch: true,
     isMobile: true,
@@ -684,9 +791,11 @@ test("chart panel actions remain visible on touch input", async ({ browser }) =>
 
   try {
     await page.goto(chartFigmaVisualFixture.route);
-    const subjectPanel = page.locator("[data-slot='chart-workspace-panel']").filter({
-      has: page.getByRole("heading", { name: "Subject/Object" }),
-    });
+    const subjectPanel = page
+      .locator("[data-slot='chart-workspace-panel']")
+      .filter({
+        has: page.getByRole("heading", { name: "Subject/Object" }),
+      });
     await expect(
       subjectPanel.locator("[data-slot='chart-panel-actions']"),
     ).toHaveCSS("opacity", "1");
@@ -695,24 +804,24 @@ test("chart panel actions remain visible on touch input", async ({ browser }) =>
   }
 });
 
-test("chart Figma visual fixture preserves the 1540 by 1024 reference geometry", async ({
+test("chart contents preserve the Figma 1540 by 968 reference geometry", async ({
   page,
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
 
-  const main = page.getByRole("main");
-  await expect(main).toBeVisible();
+  const content = page.locator("[data-slot='chart-content']");
+  await expect(content).toBeVisible();
   await expect
-    .poll(async () => Math.round((await main.boundingBox())?.width ?? 0))
-    .toBe(chartFigmaVisualFixture.expectedMainSize.width);
-  const mainBox = await main.boundingBox();
-  expect(mainBox).not.toBeNull();
-  expect(Math.round(mainBox!.width)).toBe(
-    chartFigmaVisualFixture.expectedMainSize.width,
+    .poll(async () => Math.round((await content.boundingBox())?.width ?? 0))
+    .toBe(chartFigmaVisualFixture.expectedContentSize.width);
+  const contentBox = await content.boundingBox();
+  expect(contentBox).not.toBeNull();
+  expect(Math.round(contentBox!.width)).toBe(
+    chartFigmaVisualFixture.expectedContentSize.width,
   );
-  expect(Math.round(mainBox!.height)).toBe(
-    chartFigmaVisualFixture.expectedMainSize.height,
+  expect(Math.round(contentBox!.height)).toBe(
+    chartFigmaVisualFixture.expectedContentSize.height,
   );
 
   await expect(
@@ -746,20 +855,131 @@ test("chart Figma visual fixture preserves the 1540 by 1024 reference geometry",
 
   expect(layout.documentOverflow).toBe(0);
   expect(layout.panelWidths).toEqual([
-    chartFigmaVisualFixture.expectedPanelWidth,
-    chartFigmaVisualFixture.expectedPanelWidth,
-    chartFigmaVisualFixture.expectedPanelWidth,
+    ...chartFigmaVisualFixture.expectedPanelWidths,
   ]);
   expect(layout.rows).toEqual([...chartFigmaVisualFixture.expectedRows]);
-  await expect(page.getByRole("heading", { name: "Subject/Object" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Subject/Object" }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Plan/Order" })).toBeVisible();
-  await expect(main).toHaveScreenshot("chart-figma-reference-1540x1024.png", {
-    animations: "disabled",
-    caret: "hide",
-    maxDiffPixelRatio: 0.002,
+  await expect(content).toHaveScreenshot(
+    "chart-contents-v2-reference-1540x968.png",
+    {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixelRatio: 0.002,
+    },
+  );
+});
+
+test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", async ({
+  page,
+}) => {
+  await page.setViewportSize(chartFigmaVisualFixture.viewport);
+  await page.goto(chartFigmaVisualFixture.route);
+
+  const chartContent = page.locator("[data-slot='chart-content']");
+  const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
+  const pinnedViewport = orderTable.locator(
+    "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
+  );
+  const scrollContainer = pinnedViewport.locator(
+    "> [data-slot='table-container']",
+  );
+
+  await expect(pinnedViewport).toBeVisible();
+  await expect
+    .poll(async () =>
+      Math.round((await chartContent.boundingBox())?.width ?? 0),
+    )
+    .toBe(chartFigmaVisualFixture.expectedContentSize.width);
+  await expect(orderTable).toHaveAttribute("data-emr-pinning", "columns");
+  await expect(page.getByTestId("chart-order-footer")).toHaveCSS(
+    "height",
+    "52px",
+  );
+
+  const referenceMetrics = await pinnedViewport.evaluate((viewport) => {
+    const leftPinnedWidth = Number.parseFloat(
+      getComputedStyle(viewport).getPropertyValue(
+        "--emr-table-left-pinned-column-width",
+      ),
+    );
+
+    return {
+      leftPinnedWidth,
+      scrollRegionWidth:
+        viewport.getBoundingClientRect().width - leftPinnedWidth,
+    };
   });
+
+  expect(referenceMetrics.leftPinnedWidth).toBe(394);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1128);
+  await expect(
+    orderTable
+      .locator("[data-slot='table-body'] [data-slot='table-row']")
+      .first(),
+  ).toHaveCSS("height", "40px");
+
+  const pinnedColumnIds = await orderTable
+    .locator("[data-slot='table-head'][data-emr-column-pinned='left']")
+    .evaluateAll((headers) =>
+      headers.map((header) => header.getAttribute("data-column-id")),
+    );
+  expect(pinnedColumnIds).toEqual([
+    "select",
+    "orderType",
+    "status",
+    "displayName",
+  ]);
+
+  const orderFooter = page.getByTestId("chart-order-footer");
+  const footerBillAction = orderFooter.getByRole("button", {
+    name: "Order 청구",
+  });
+  const footerConfirmAction = orderFooter.getByRole("button", {
+    name: "Order 확정",
+  });
+  await expect(footerBillAction).toBeDisabled();
+  await expect(footerConfirmAction).toBeDisabled();
+  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+  await expect(footerBillAction).toBeEnabled();
+  await expect(footerConfirmAction).toBeEnabled();
+  await footerConfirmAction.click();
+  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
+  await expect(confirmDialog).toBeVisible();
+  await confirmDialog.getByRole("button", { name: "다시 확인" }).click();
+
+  await page.setViewportSize({ height: 650, width: 900 });
+  await expect(scrollContainer).toBeVisible();
+  const pinnedIdentityHeader = orderTable.locator(
+    "[data-slot='table-head'][data-column-id='displayName']",
+  );
+  const scrollHeader = orderTable.locator(
+    "[data-slot='table-head'][data-column-id='billingName']",
+  );
+  const pinnedXBefore = (await pinnedIdentityHeader.boundingBox())?.x ?? 0;
+  const scrollXBefore = (await scrollHeader.boundingBox())?.x ?? 0;
+
+  const scrollLeft = await scrollContainer.evaluate((container) => {
+    container.scrollLeft = container.scrollWidth - container.clientWidth;
+    return container.scrollLeft;
+  });
+  const pinnedXAfter = (await pinnedIdentityHeader.boundingBox())?.x ?? 0;
+  const scrollXAfter = (await scrollHeader.boundingBox())?.x ?? 0;
+
+  expect(scrollLeft).toBeGreaterThan(0);
+  expect(Math.abs(pinnedXAfter - pinnedXBefore)).toBeLessThanOrEqual(1);
+  expect(scrollXAfter).toBeLessThan(scrollXBefore);
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(0);
 });
 
 test("chart clinical panels collapse independently without unmounting their content", async ({
@@ -817,7 +1037,9 @@ test("chart clinical panels collapse independently without unmounting their cont
   await page.keyboard.press("Space");
   await expect(soapPanel).toHaveAttribute("data-collapsed", "false");
   await expect(soapCollapseButton).toBeFocused();
-  await expect(page.getByRole("heading", { name: "Subject/Object" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Subject/Object" }),
+  ).toBeVisible();
 
   const diagnosisSearch = page.getByRole("textbox", { name: "진단명 검색" });
   const assessmentCollapseButton = page.getByRole("button", {
@@ -921,6 +1143,209 @@ test("Cheongdam chart side panel shows the centered empty queue state", async ({
   ).toBeVisible();
 });
 
+test("chart content shows a permission empty state when the live queue is denied", async ({
+  page,
+}) => {
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 403,
+          denialReason: "permission_missing",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=closed&aside=closed`,
+  );
+
+  const emptyState = page.getByTestId("chart-content-empty-state");
+  await expect(emptyState).toHaveAttribute("data-kind", "no-permission");
+  await expect(
+    emptyState.getByRole("heading", {
+      name: "진료 차트 조회 권한이 없습니다",
+    }),
+  ).toBeVisible();
+  await expect(
+    emptyState.getByRole("button", { name: "다시 시도" }),
+  ).toBeVisible();
+});
+
+test("chart detail loading uses shared shadcn Skeleton and resolves to real empty states", async ({
+  page,
+}) => {
+  const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+  const encounterId = "encounter-chart-skeleton";
+  const updatedAt = "2026-08-13T09:00:00+09:00";
+  const delayedFulfill = async (
+    route: Route,
+    body: Record<string, unknown>,
+  ) => {
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  };
+
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/live-queue?*`,
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-live-queue-read",
+          queue: [
+            {
+              encounter: {
+                id: encounterId,
+                workspaceId,
+                patientId: "patient-chart-skeleton",
+                guardianId: "guardian-chart-skeleton",
+                primaryVeterinarianId: "user-vet",
+                encounterNo: "E-260813-0001",
+                visitPurpose: "건강검진",
+                chiefComplaint: "정기 건강검진",
+                status: "in_consultation",
+                checkedInAt: updatedAt,
+                startedAt: updatedAt,
+                createdAt: updatedAt,
+                updatedAt,
+              },
+              patient: {
+                id: "patient-chart-skeleton",
+                workspaceId,
+                patientNo: "P-SKELETON",
+                name: "초롱이",
+                species: "dog",
+                breed: "Maltese",
+                estimatedAgeText: "5세",
+                sex: "female",
+                status: "active",
+                createdAt: updatedAt,
+                updatedAt,
+              },
+              primaryGuardian: {
+                id: "guardian-chart-skeleton",
+                workspaceId,
+                name: "박보호",
+                createdAt: updatedAt,
+                updatedAt,
+              },
+              queueEntry: {
+                id: "queue-chart-skeleton",
+                workspaceId,
+                encounterId,
+                queueType: "consultation",
+                status: "in_progress",
+                priority: "normal",
+                sortOrder: 1,
+                enteredAt: updatedAt,
+              },
+              veterinarianName: "이수지",
+            },
+          ],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/soap-notes?*`,
+    (route) => delayedFulfill(route, { ok: true, status: 200, soapNote: null }),
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/diagnoses?*`,
+    (route) => delayedFulfill(route, { ok: true, status: 200, diagnoses: [] }),
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/completion?*`,
+    (route) =>
+      delayedFulfill(route, {
+        ok: true,
+        status: 200,
+        completion: {
+          encounterId,
+          workspaceId,
+          status: "in_consultation",
+          updatedAt,
+        },
+      }),
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/order-drafts?*`,
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, status: 200, orderDrafts: [] }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/order-actions?*`,
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, status: 200, orderActions: [] }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/order-lifecycle?*`,
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, status: 200, lifecycles: [] }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/billing/invoice-candidates?*`,
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, status: 200, candidates: [] }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${workspaceId}/treatment?encounterId=${encounterId}&modulePanel=closed&aside=closed`,
+  );
+
+  const chartContent = page.locator("[data-slot='chart-content']");
+  await expect(
+    page.getByRole("heading", { name: "Subject/Object" }),
+  ).toBeVisible();
+  await expect
+    .poll(() => chartContent.locator("[data-slot='skeleton']").count())
+    .toBeGreaterThan(2);
+  await expect(
+    chartContent.locator("[data-slot='chart-panel-skeleton']"),
+  ).toHaveCount(2);
+  await expect(chartContent.locator(".animate-spin")).toHaveCount(0);
+
+  await expect(page.getByTestId("chart-assessment-empty-state")).toBeVisible();
+  await expect(page.getByTestId("chart-order-empty-state")).toBeVisible();
+  await expect(
+    page
+      .getByTestId("chart-order-empty-state")
+      .getByRole("button", { name: "+ Order" }),
+  ).toBeVisible();
+  await expect(
+    chartContent.locator("[data-slot='chart-panel-skeleton']"),
+  ).toHaveCount(0);
+});
+
 test("chart preconsultation read error uses the shared recovery empty state", async ({
   page,
 }) => {
@@ -949,9 +1374,15 @@ test("chart preconsultation read error uses the shared recovery empty state", as
   const feedback = page.getByTestId("preconsultation-feedback-state");
   await expect(feedback).toHaveAttribute("data-kind", "read-error");
   await expect(feedback).toContainText("접수 정보를 불러오지 못했어요");
-  await expect(feedback).toContainText("대기 목록의 접수 정보는 변경되지 않았어요.");
-  await expect(feedback.getByRole("button", { name: "대기 목록으로" })).toBeVisible();
-  await expect(feedback.getByRole("button", { name: "다시 시도" })).toBeVisible();
+  await expect(feedback).toContainText(
+    "대기 목록의 접수 정보는 변경되지 않았어요.",
+  );
+  await expect(
+    feedback.getByRole("button", { name: "대기 목록으로" }),
+  ).toBeVisible();
+  await expect(
+    feedback.getByRole("button", { name: "다시 시도" }),
+  ).toBeVisible();
 
   await feedback.getByRole("button", { name: "다시 시도" }).click();
   await expect.poll(() => requestCount).toBeGreaterThan(1);
@@ -1024,25 +1455,28 @@ test("chart consultation CTA moves from call to start before chart completion", 
     calledAt: undefined as string | undefined,
   };
 
-  await page.route("**/api/workspaces/clair-demo/chart/live-queue**", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        status: 200,
-        queue: [
-          {
-            encounter,
-            patient,
-            primaryGuardian,
-            queueEntry,
-            veterinarianName: "청담 원장",
-          },
-        ],
-        enforcedBy: "chart-live-queue-read",
-      }),
-    });
-  });
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/live-queue**",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [
+            {
+              encounter,
+              patient,
+              primaryGuardian,
+              queueEntry,
+              veterinarianName: "청담 원장",
+            },
+          ],
+          enforcedBy: "chart-live-queue-read",
+        }),
+      });
+    },
+  );
   await routePreconsultationContext(page, () => ({
     encounter: {
       id: encounter.id,
@@ -1144,25 +1578,28 @@ test("chart consultation CTA moves from call to start before chart completion", 
       },
     ],
   }));
-  await page.route("**/api/workspaces/clair-demo/chart/completion**", async (route) => {
-    if (route.request().method() === "GET") {
-      await route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          status: 200,
-          completion: {
-            encounterId,
-            workspaceId,
-            status: encounter.status,
-            updatedAt: encounter.updatedAt,
-          },
-        }),
-      });
-      return;
-    }
-    await route.continue();
-  });
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/completion**",
+    async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            status: 200,
+            completion: {
+              encounterId,
+              workspaceId,
+              status: encounter.status,
+              updatedAt: encounter.updatedAt,
+            },
+          }),
+        });
+        return;
+      }
+      await route.continue();
+    },
+  );
   await page.route(
     "**/api/workspaces/clair-demo/chart/consultation-flow",
     async (route) => {
@@ -1240,7 +1677,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
 
   await expect(page.getByTestId("chart-completion-status")).toHaveCount(0);
   await expect(page.getByLabel("환자 컨텍스트 정보")).toHaveCount(0);
-  await expect(page.locator("[data-slot='chart-instruction-info-card']")).toHaveCount(0);
+  await expect(
+    page.locator("[data-slot='chart-instruction-info-card']"),
+  ).toHaveCount(0);
   await expect(page.getByRole("button", { name: "차트 공유" })).toHaveCount(0);
   await expect(
     page
@@ -1382,38 +1821,59 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(weightDelta).toContainText("(0.06)");
   await expect(weightDelta).not.toContainText(/kg|증가|상승/);
   await expect(weightDelta.locator("svg")).toHaveCount(1);
-  await expect(weightDelta.locator('[data-direction="increase"]')).toHaveCount(1);
+  await expect(weightDelta.locator('[data-direction="increase"]')).toHaveCount(
+    1,
+  );
 
   const respiratoryDelta = vitalTable.getByLabel("호흡수 변화: 2 감소");
   await expect(respiratoryDelta).toContainText("(2)");
   await expect(respiratoryDelta).not.toContainText(/rpm|회\/분|감소|하강/);
   await expect(respiratoryDelta.locator("svg")).toHaveCount(1);
-  await expect(respiratoryDelta.locator('[data-direction="decrease"]')).toHaveCount(1);
+  await expect(
+    respiratoryDelta.locator('[data-direction="decrease"]'),
+  ).toHaveCount(1);
 
   await expect(vitalTable.getByLabel(/^체온 변화:/)).toHaveCount(0);
 
   await expect(vitalTable).toContainText("심박수");
   await expect(vitalTable).not.toContainText("혈압");
-  const currentVitalDateCell = vitalTable.locator("tbody tr").first().locator("th");
-  await expect(currentVitalDateCell.getByText("오늘", { exact: true })).toBeVisible();
-  await expect(currentVitalDateCell.getByText("(26.06.25)", { exact: true })).toBeVisible();
+  const currentVitalDateCell = vitalTable
+    .locator("tbody tr")
+    .first()
+    .locator("th");
+  await expect(
+    currentVitalDateCell.getByText("오늘", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    currentVitalDateCell.getByText("(26.06.25)", { exact: true }),
+  ).toBeVisible();
   await expect(vitalTable.locator("table")).toHaveCSS("min-width", "960px");
   await expect(currentVitalDateCell).toHaveCSS("height", "52px");
-  await expect(currentVitalDateCell).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  await expect(currentVitalDateCell).toHaveCSS("border-top-color", "rgb(229, 229, 229)");
-  const lastVitalCells = vitalTable.locator("tbody tr").last().locator("th, td");
+  await expect(currentVitalDateCell).toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 255)",
+  );
+  await expect(currentVitalDateCell).toHaveCSS(
+    "border-top-color",
+    "rgb(229, 229, 229)",
+  );
+  const lastVitalCells = vitalTable
+    .locator("tbody tr")
+    .last()
+    .locator("th, td");
   await expect(lastVitalCells).toHaveCount(5);
   for (let index = 0; index < 5; index += 1) {
-    await expect(lastVitalCells.nth(index)).toHaveCSS("border-bottom-width", "0px");
+    await expect(lastVitalCells.nth(index)).toHaveCSS(
+      "border-bottom-width",
+      "0px",
+    );
   }
-  await expect(currentVitalDateCell.getByText("오늘", { exact: true })).toHaveCSS(
-    "color",
-    "rgb(38, 38, 38)",
-  );
-  await expect(currentVitalDateCell.getByText("(26.06.25)", { exact: true })).toHaveCSS(
-    "color",
-    "rgb(115, 115, 115)",
-  );
+  await expect(
+    currentVitalDateCell.getByText("오늘", { exact: true }),
+  ).toHaveCSS("color", "rgb(38, 38, 38)");
+  await expect(
+    currentVitalDateCell.getByText("(26.06.25)", { exact: true }),
+  ).toHaveCSS("color", "rgb(115, 115, 115)");
   const animalPatientAvatar = lockedState.getByTestId("animal-patient-avatar");
   await expect(animalPatientAvatar).toHaveAttribute(
     "data-avatar-state",
@@ -1480,7 +1940,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
     );
   }
   const historySection = lockedState.getByTestId("preconsultation-history");
-  const historyTimeline = historySection.getByTestId("preconsultation-history-timeline");
+  const historyTimeline = historySection.getByTestId(
+    "preconsultation-history-timeline",
+  );
   await expect(historySection).toHaveCSS("row-gap", "16px");
   await expect(
     historySection.getByRole("button", { name: "전체 진료이력 보기" }),
@@ -1495,10 +1957,12 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(historySection).toContainText("예방접종 및 건강검진");
   await expect(historySection).not.toContainText("2026년 06월 25일");
   await expect(historySection).not.toContainText("완료");
-  const preconsultationScrollMetrics = await lockedState.evaluate((element) => ({
-    clientHeight: element.clientHeight,
-    scrollHeight: element.scrollHeight,
-  }));
+  const preconsultationScrollMetrics = await lockedState.evaluate(
+    (element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }),
+  );
   expect(preconsultationScrollMetrics.scrollHeight).toBeGreaterThan(
     preconsultationScrollMetrics.clientHeight,
   );
@@ -1517,10 +1981,16 @@ test("chart consultation CTA moves from call to start before chart completion", 
   const historyGroups = historyTimeline.locator(":scope > li");
   await expect(historyGroups).toHaveCount(2);
   await expect(historyGroups.nth(0)).toHaveCSS("column-gap", "8px");
-  const firstHistoryTimeContainer = historyGroups.nth(0).locator(":scope > div").first();
+  const firstHistoryTimeContainer = historyGroups
+    .nth(0)
+    .locator(":scope > div")
+    .first();
   await expect(firstHistoryTimeContainer).toHaveCSS("width", "19px");
   await expect(firstHistoryTimeContainer).toHaveCSS("row-gap", "8px");
-  const firstHistoryContent = historyGroups.nth(0).locator(":scope > div").nth(1);
+  const firstHistoryContent = historyGroups
+    .nth(0)
+    .locator(":scope > div")
+    .nth(1);
   await expect(firstHistoryContent).toHaveCSS("row-gap", "8px");
   const firstHistoryDetails = firstHistoryContent.locator(":scope > ol");
   await expect(firstHistoryDetails).toHaveCSS("row-gap", "8px");
@@ -1529,9 +1999,16 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(firstHistoryCard).toHaveCSS("height", "56px");
   await expect(firstHistoryCard).toHaveCSS("column-gap", "12px");
   await expect(firstHistoryCard).toHaveCSS("padding-left", "16px");
-  await expect(firstHistoryCard.locator("span").last()).toHaveCSS("font-size", "15px");
+  await expect(firstHistoryCard.locator("span").last()).toHaveCSS(
+    "font-size",
+    "15px",
+  );
   await expect(
-    historyGroups.nth(1).locator(":scope > div").nth(1).locator(":scope > ol > li"),
+    historyGroups
+      .nth(1)
+      .locator(":scope > div")
+      .nth(1)
+      .locator(":scope > ol > li"),
   ).toHaveCount(1);
   await expect(page.getByTestId("chart-soap-diagnosis-grid")).toHaveCount(0);
   await page
@@ -1600,14 +2077,18 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(callDialog).not.toContainText("DID 표시 preview");
   await expect(callDialog).not.toContainText("현재 상태");
   await expect(callDialog).not.toContainText("local outbox");
-  await expect(callDialog.getByRole("button", { name: "호출하기" })).toBeDisabled();
+  await expect(
+    callDialog.getByRole("button", { name: "호출하기" }),
+  ).toBeDisabled();
   const defaultRoomCheckbox = callDialog.getByRole("checkbox", {
     name: "이 진료실을 내 기본 진료실로 저장",
   });
   await expect(defaultRoomCheckbox).toBeDisabled();
   await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
   await page.getByRole("option", { name: "2진료실" }).click();
-  await expect(callDialog.getByRole("combobox", { name: "호출 진료실" })).toContainText("2진료실");
+  await expect(
+    callDialog.getByRole("combobox", { name: "호출 진료실" }),
+  ).toContainText("2진료실");
   await expect(defaultRoomCheckbox).toBeEnabled();
   await defaultRoomCheckbox.click();
   await expect(defaultRoomCheckbox).toBeChecked();
@@ -1686,64 +2167,71 @@ test("chart renders legacy called consultation queue rows as in consultation", a
     calledAt: "2026-06-25T05:20:00.000Z",
   };
 
-  await page.route("**/api/workspaces/clair-demo/chart/live-queue**", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        status: 200,
-        queue: [
-          {
-            encounter,
-            patient: {
-              id: "patient-legacy-called-flow",
-              patientNo: "CD-P-CALLED",
-              workspaceId,
-              name: "초코",
-              species: "dog",
-              breed: "Pomeranian",
-              estimatedAgeText: "9세",
-              sex: "male",
-              neutered: true,
-              handlingCautionLocked: false,
-              status: "active",
-              createdAt: "2026-06-25T14:00:00+09:00",
-              updatedAt: "2026-06-25T14:00:00+09:00",
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/live-queue**",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [
+            {
+              encounter,
+              patient: {
+                id: "patient-legacy-called-flow",
+                patientNo: "CD-P-CALLED",
+                workspaceId,
+                name: "초코",
+                species: "dog",
+                breed: "Pomeranian",
+                estimatedAgeText: "9세",
+                sex: "male",
+                neutered: true,
+                handlingCautionLocked: false,
+                status: "active",
+                createdAt: "2026-06-25T14:00:00+09:00",
+                updatedAt: "2026-06-25T14:00:00+09:00",
+              },
+              primaryGuardian: {
+                id: "guardian-legacy-called-flow",
+                workspaceId,
+                name: "최도현",
+                mobilePhone: "010-0000-0000",
+                createdAt: "2026-06-25T14:00:00+09:00",
+                updatedAt: "2026-06-25T14:00:00+09:00",
+              },
+              queueEntry,
+              veterinarianName: "청담 원장",
             },
-            primaryGuardian: {
-              id: "guardian-legacy-called-flow",
-              workspaceId,
-              name: "최도현",
-              mobilePhone: "010-0000-0000",
-              createdAt: "2026-06-25T14:00:00+09:00",
-              updatedAt: "2026-06-25T14:00:00+09:00",
-            },
-            queueEntry,
-            veterinarianName: "청담 원장",
+          ],
+          enforcedBy: "chart-live-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/completion**",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          completion: {
+            encounterId,
+            workspaceId,
+            status: encounter.status,
+            updatedAt: encounter.updatedAt,
           },
-        ],
-        enforcedBy: "chart-live-queue-read",
-      }),
-    });
-  });
-  await page.route("**/api/workspaces/clair-demo/chart/completion**", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        status: 200,
-        completion: {
-          encounterId,
-          workspaceId,
-          status: encounter.status,
-          updatedAt: encounter.updatedAt,
-        },
-      }),
-    });
-  });
+        }),
+      });
+    },
+  );
 
   await page.goto(
-    "/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=" + encounterId,
+    "/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=" +
+      encounterId,
   );
 
   await expect(page.getByTestId("chart-completion-status")).toContainText(
@@ -1786,16 +2274,12 @@ test("chart side panel date navigator refetches the selected operating date", as
   await expect(initialDateButton).toBeVisible();
   await expect(initialDateButton).toContainText("26.05.01(금)");
   await expect(initialDateButton).toContainText("오늘");
-  await expect
-    .poll(() => requestedDates.join(","))
-    .toContain("2026-05-01");
+  await expect.poll(() => requestedDates.join(",")).toContain("2026-05-01");
 
   await sidePanel.getByRole("button", { name: "다음 날짜" }).click({
     force: true,
   });
-  await expect
-    .poll(() => requestedDates.join(","))
-    .toContain("2026-05-02");
+  await expect.poll(() => requestedDates.join(",")).toContain("2026-05-02");
   await expect(
     sidePanel.getByRole("button", { name: "26.05.02(토) 날짜 선택" }),
   ).toBeVisible();
@@ -1815,15 +2299,15 @@ test("chart side panel date navigator refetches the selected operating date", as
 
   await todayDateButton.click();
   await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
-  await expect
-    .poll(() => requestedDates.join(","))
-    .toContain("2026-05-08");
+  await expect.poll(() => requestedDates.join(",")).toContain("2026-05-08");
   await expect(
     sidePanel.getByRole("button", { name: "26.05.08(금) 날짜 선택" }),
   ).toBeVisible();
   await expect(sidePanel.getByText("오늘", { exact: true })).toHaveCount(0);
 
-  await sidePanel.getByRole("button", { name: "26.05.08(금) 날짜 선택" }).click();
+  await sidePanel
+    .getByRole("button", { name: "26.05.08(금) 날짜 선택" })
+    .click();
   await expect(
     page.getByRole("button", { name: "오늘 26.05.01 (금) 선택" }),
   ).toBeVisible();
@@ -1898,9 +2382,7 @@ test("chart SOAP editor keeps SOAP fields structured and uses an inline link pop
 test("chart SOAP manual save persists through route-backed reload", async ({
   page,
 }) => {
-  await page.goto(
-    "/w/clair-demo/treatment?modulePanel=open&aside=history",
-  );
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history");
 
   const soapEditor = page.getByLabel("기본 SOAP 기록");
   const savedText = `DEN-69 SOAP route-backed save ${Date.now()}`;
@@ -2023,9 +2505,9 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
     .fill("보호자 설명용 임시 진단");
   await page.getByRole("option", { name: /보호자 설명용 임시 진단/ }).click();
 
-  await expect(
-    diagnosisPanel.getByText("보호자 설명용 임시 진단"),
-  ).toHaveCount(1);
+  await expect(diagnosisPanel.getByText("보호자 설명용 임시 진단")).toHaveCount(
+    1,
+  );
   await expect(diagnosisPanel.getByText("직접 입력 · 의심")).toHaveCount(0);
 
   await diagnosisPanel
@@ -2045,7 +2527,9 @@ test("chart safety context and confirmation dialogs identify the active patient"
   const patientContext = page.getByLabel("환자 컨텍스트 정보");
   await expect(patientContext.getByText("콩이", { exact: true })).toBeVisible();
   await expect(patientContext.getByText("김하늘(주보호자)")).toBeVisible();
-  await expect(page.getByText("E-260501-0003", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("E-260501-0003", { exact: true }).first(),
+  ).toBeVisible();
   await expect(page.getByTestId("chart-soap-status")).toContainText(
     /자동저장됨|작성중/,
   );
@@ -2059,9 +2543,7 @@ test("chart safety context and confirmation dialogs identify the active patient"
   const chartCompleteDialog = page.getByRole("dialog", {
     name: "진료 완료 확인",
   });
-  await expect(
-    chartCompleteDialog.getByText("진료 완료 확인"),
-  ).toBeVisible();
+  await expect(chartCompleteDialog.getByText("진료 완료 확인")).toBeVisible();
   await expect(chartCompleteDialog.getByText("콩이 / 김하늘")).toBeVisible();
   await expect(chartCompleteDialog.getByText("E-260501-0003")).toBeVisible();
   await expect(chartCompleteDialog.getByText(/\d+건 \/ 4건/)).toBeVisible();
@@ -2131,7 +2613,9 @@ test("chart Order 청구 sends persisted orders without draft save", async ({
 
   const orderActionRequest = page.waitForRequest(
     (request) =>
-      request.url().includes("/api/workspaces/clair-demo/chart/order-actions") &&
+      request
+        .url()
+        .includes("/api/workspaces/clair-demo/chart/order-actions") &&
       request.method() === "PATCH",
   );
   await orderBillDialog.getByRole("button", { name: "Order 청구" }).click();
@@ -2158,9 +2642,7 @@ test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
     await addChartSoapSystem(page, systemLabel);
   }
 
-  await expect(
-    page.getByRole("button", { name: "SOAP 더보기" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "SOAP 더보기" })).toBeVisible();
   await expect(page.getByLabel("예방 SOAP 기록")).toBeVisible();
   await expectTopEdgeInViewport(
     page,
@@ -2418,7 +2900,9 @@ test("chart queue selection changes the selected encounter", async ({
         receptionType: "walk_in",
         visitPurpose: isHaru ? "예방접종" : "정기 검진",
         chiefComplaint: isHaru ? "예방접종 전 건강 확인" : "정기 검진",
-        checkedInAt: isHaru ? "2026-04-30T16:05:00+09:00" : "2026-05-01T09:50:00+09:00",
+        checkedInAt: isHaru
+          ? "2026-04-30T16:05:00+09:00"
+          : "2026-05-01T09:50:00+09:00",
         status: "waiting",
       },
       queue: { id: `queue-${encounterId}`, status: "waiting" },
@@ -2499,7 +2983,9 @@ test("chart queue selection changes the selected encounter", async ({
   );
   await page.goto("/w/clair-demo/treatment");
 
-  const haruQueueCard = page.getByTestId("order-queue-item-encounter-haru-260430");
+  const haruQueueCard = page.getByTestId(
+    "order-queue-item-encounter-haru-260430",
+  );
   await expect(haruQueueCard).toBeVisible();
   await haruQueueCard.click();
   await expect(haruQueueCard).toHaveAttribute("aria-pressed", "true");
@@ -2541,7 +3027,9 @@ test("chart queue selection changes the selected encounter", async ({
   await expect(
     page.getByLabel("환자 컨텍스트 정보").getByText("강서윤(주보호자)"),
   ).toBeVisible();
-  await expect(page.getByTestId("chart-completion-status")).toContainText("진료중");
+  await expect(page.getByTestId("chart-completion-status")).toContainText(
+    "진료중",
+  );
   expect(
     consoleErrors.filter((message) =>
       message.includes("Encountered two children with the same key"),
@@ -2552,63 +3040,66 @@ test("chart queue selection changes the selected encounter", async ({
 test("chart explicit encounter does not crash when the refreshed queue temporarily omits it", async ({
   page,
 }) => {
-  await page.route("**/api/workspaces/clair-demo/chart/live-queue**", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        status: 200,
-        enforcedBy: "chart-live-queue-read",
-        queue: [
-          {
-            encounter: {
-              id: "encounter-coco-260501",
-              workspaceId: "clair-demo",
-              patientId: "patient-coco",
-              guardianId: "guardian-coco",
-              encounterNo: "E-260501-0002",
-              visitPurpose: "정기 검진",
-              status: "waiting",
-              checkedInAt: "2026-05-01T09:50:00+09:00",
-              createdAt: "2026-05-01T09:50:00+09:00",
-              updatedAt: "2026-05-01T09:50:00+09:00",
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/live-queue**",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-live-queue-read",
+          queue: [
+            {
+              encounter: {
+                id: "encounter-coco-260501",
+                workspaceId: "clair-demo",
+                patientId: "patient-coco",
+                guardianId: "guardian-coco",
+                encounterNo: "E-260501-0002",
+                visitPurpose: "정기 검진",
+                status: "waiting",
+                checkedInAt: "2026-05-01T09:50:00+09:00",
+                createdAt: "2026-05-01T09:50:00+09:00",
+                updatedAt: "2026-05-01T09:50:00+09:00",
+              },
+              patient: {
+                id: "patient-coco",
+                workspaceId: "clair-demo",
+                patientNo: "P-COCO",
+                name: "코코",
+                species: "dog",
+                breed: "Poodle",
+                estimatedAgeText: "4세",
+                sex: "male",
+                status: "active",
+                createdAt: "2026-05-01T09:30:00+09:00",
+                updatedAt: "2026-05-01T09:30:00+09:00",
+              },
+              primaryGuardian: {
+                id: "guardian-coco",
+                workspaceId: "clair-demo",
+                name: "보호자",
+                createdAt: "2026-05-01T09:30:00+09:00",
+                updatedAt: "2026-05-01T09:30:00+09:00",
+              },
+              queueEntry: {
+                id: "queue-coco-consultation",
+                workspaceId: "clair-demo",
+                encounterId: "encounter-coco-260501",
+                queueType: "consultation",
+                status: "waiting",
+                priority: "normal",
+                sortOrder: 1,
+                enteredAt: "2026-05-01T09:50:00+09:00",
+              },
+              veterinarianName: "이수지",
             },
-            patient: {
-              id: "patient-coco",
-              workspaceId: "clair-demo",
-              patientNo: "P-COCO",
-              name: "코코",
-              species: "dog",
-              breed: "Poodle",
-              estimatedAgeText: "4세",
-              sex: "male",
-              status: "active",
-              createdAt: "2026-05-01T09:30:00+09:00",
-              updatedAt: "2026-05-01T09:30:00+09:00",
-            },
-            primaryGuardian: {
-              id: "guardian-coco",
-              workspaceId: "clair-demo",
-              name: "보호자",
-              createdAt: "2026-05-01T09:30:00+09:00",
-              updatedAt: "2026-05-01T09:30:00+09:00",
-            },
-            queueEntry: {
-              id: "queue-coco-consultation",
-              workspaceId: "clair-demo",
-              encounterId: "encounter-coco-260501",
-              queueType: "consultation",
-              status: "waiting",
-              priority: "normal",
-              sortOrder: 1,
-              enteredAt: "2026-05-01T09:50:00+09:00",
-            },
-            veterinarianName: "이수지",
-          },
-        ],
-      }),
-    });
-  });
+          ],
+        }),
+      });
+    },
+  );
 
   await routePreconsultationContext(page, (encounterId) => ({
     encounter: {
@@ -2644,7 +3135,9 @@ test("chart explicit encounter does not crash when the refreshed queue temporari
   await expect(
     page.getByRole("heading", { name: "환자를 선택해 주세요" }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "This page couldn’t load" })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "This page couldn’t load" }),
+  ).toHaveCount(0);
 });
 
 test("chart scenario query primes the encounter without locking queue selection", async ({
@@ -2705,7 +3198,9 @@ test("chart removes the retired patient information panel and keeps the history 
   await expect(
     page.getByRole("button", { name: "환자 정보 패널 접기" }),
   ).toHaveCount(0);
-  await expect(page.getByText("개인/민감 정보", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("개인/민감 정보", { exact: true })).toHaveCount(
+    0,
+  );
   await expect(page.getByText("부가 정보", { exact: true })).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: /차트 이력 패널/ }),
@@ -2725,9 +3220,7 @@ test("chart completion persists through route-backed reload", async ({
   const chartCompleteDialog = page.getByRole("dialog", {
     name: "진료 완료 확인",
   });
-  await expect(
-    chartCompleteDialog.getByText("진료 완료 확인"),
-  ).toBeVisible();
+  await expect(chartCompleteDialog.getByText("진료 완료 확인")).toBeVisible();
   await expect(
     chartCompleteDialog
       .getByText("오더 진행중", { exact: true })
@@ -2842,7 +3335,8 @@ test("chart unavailable order actions show persistent inline guidance", async ({
       const parent = element.parentElement;
 
       return parent
-        ? element.getBoundingClientRect().right > parent.getBoundingClientRect().right
+        ? element.getBoundingClientRect().right >
+            parent.getBoundingClientRect().right
         : true;
     },
   );
@@ -2879,9 +3373,12 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   }
   await dialog.getByRole("button", { name: "닫기" }).click();
 
-  const addedRow = page.getByRole("row").filter({
-    hasText: "[CBC 검사] #BASO",
-  }).first();
+  const addedRow = page
+    .getByRole("row")
+    .filter({
+      hasText: "[CBC 검사] #BASO",
+    })
+    .first();
   await expect(addedRow).toContainText("[CBC 검사] #BASO");
   await expect(addedRow).toContainText("12,000");
   await expect(
@@ -2896,12 +3393,16 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await expect(confirmDialog).toBeVisible();
   const draftSaveResponse = page.waitForResponse(
     (response) =>
-      response.url().includes("/api/workspaces/clair-demo/chart/order-drafts") &&
+      response
+        .url()
+        .includes("/api/workspaces/clair-demo/chart/order-drafts") &&
       response.request().method() === "PATCH",
   );
   const orderActionResponse = page.waitForResponse(
     (response) =>
-      response.url().includes("/api/workspaces/clair-demo/chart/order-actions") &&
+      response
+        .url()
+        .includes("/api/workspaces/clair-demo/chart/order-actions") &&
       response.request().method() === "PATCH",
   );
   await confirmDialog.getByRole("button", { name: "Order 확정" }).click();
@@ -2911,9 +3412,12 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await expect(addedRow).toContainText("확정");
 
   await page.reload();
-  const restoredRow = page.getByRole("row").filter({
-    hasText: "[CBC 검사] #BASO",
-  }).first();
+  const restoredRow = page
+    .getByRole("row")
+    .filter({
+      hasText: "[CBC 검사] #BASO",
+    })
+    .first();
   await expect(restoredRow).toContainText("[CBC 검사] #BASO");
   await expect(restoredRow).toContainText("확정");
 });
