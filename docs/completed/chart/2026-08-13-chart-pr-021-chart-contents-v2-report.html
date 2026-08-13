@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>차트 Contents V2 구현 결과 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #667085;
+        --line: #d8dee9;
+        --surface: #ffffff;
+        --canvas: #f4f6f8;
+        --accent: #0f766e;
+        --accent-soft: #e7f4f1;
+        --ok: #067647;
+        --ok-soft: #ecfdf3;
+        --warn: #9a6700;
+        --warn-soft: #fff7d6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      button { font: inherit; }
+      main { max-width: 1180px; margin: 0 auto; padding: 44px 24px 72px; }
+      h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); letter-spacing: -0.035em; }
+      h2 { margin: 0 0 14px; font-size: 20px; letter-spacing: -0.02em; }
+      h3 { margin: 0 0 8px; font-size: 15px; }
+      p { margin: 0; }
+      a { color: var(--accent); }
+      code { border-radius: 5px; background: #eef1f5; padding: 2px 5px; }
+      .eyebrow { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+      .lede { max-width: 780px; margin-top: 12px; color: var(--muted); font-size: 17px; }
+      .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+      .pill { border: 1px solid var(--line); border-radius: 999px; background: var(--surface); padding: 5px 10px; color: var(--muted); font-size: 12px; }
+      .pill.ok { border-color: #a6f4c5; background: var(--ok-soft); color: var(--ok); font-weight: 700; }
+      nav { position: sticky; top: 12px; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 0; border: 1px solid var(--line); border-radius: 10px; background: rgb(255 255 255 / 92%); padding: 8px; backdrop-filter: blur(10px); }
+      nav a { border-radius: 7px; padding: 7px 10px; color: var(--muted); font-size: 13px; font-weight: 650; text-decoration: none; }
+      nav a:hover, nav a:focus-visible { background: var(--accent-soft); color: var(--accent); outline: none; }
+      section { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 22px; box-shadow: 0 1px 2px rgb(16 24 40 / 4%); }
+      .summary-grid, .state-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .card { border: 1px solid var(--line); border-radius: 9px; padding: 14px; }
+      .card p { color: var(--muted); font-size: 13px; }
+      .number { display: block; margin-bottom: 4px; color: var(--accent); font-size: 25px; font-weight: 780; letter-spacing: -0.04em; }
+      .compare-controls { display: flex; gap: 8px; margin-bottom: 14px; }
+      .compare-controls button { cursor: pointer; border: 1px solid var(--line); border-radius: 7px; background: white; padding: 7px 12px; color: var(--muted); }
+      .compare-controls button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+      figure { margin: 0; }
+      figure img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 9px; background: #fcfcfc; }
+      figcaption { margin-top: 8px; color: var(--muted); font-size: 12px; }
+      [data-shot][hidden] { display: none; }
+      .geometry { width: 100%; border-collapse: collapse; font-size: 13px; }
+      .geometry th, .geometry td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align: left; vertical-align: top; }
+      .geometry th { color: var(--muted); font-size: 12px; }
+      .geometry tr:last-child td { border-bottom: 0; }
+      .done { color: var(--ok); font-weight: 750; }
+      .state-grid .card { min-height: 128px; }
+      .state-grid strong { display: block; margin-bottom: 7px; }
+      details { border-top: 1px solid var(--line); padding: 13px 0; }
+      details:first-of-type { border-top: 0; padding-top: 0; }
+      details:last-of-type { padding-bottom: 0; }
+      summary { cursor: pointer; font-weight: 720; }
+      details p, details ul { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+      ul { padding-left: 20px; }
+      .evidence { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 18px; align-items: center; }
+      .evidence div { border-bottom: 1px solid var(--line); padding: 9px 0; }
+      .evidence div:nth-last-child(-n + 2) { border-bottom: 0; }
+      .caution { margin-top: 12px; border: 1px solid #fedf89; border-radius: 8px; background: var(--warn-soft); padding: 12px; color: var(--warn); font-size: 13px; }
+      @media (max-width: 760px) {
+        main { padding: 28px 14px 48px; }
+        section { padding: 17px; }
+        .summary-grid, .state-grid { grid-template-columns: 1fr; }
+        .evidence { grid-template-columns: 1fr; gap: 0; }
+        .evidence div:nth-child(even) { padding-top: 0; color: var(--ok); }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">CHART-PR-021 · Implementation Result</p>
+        <h1>차트 Contents V2 구현 결과</h1>
+        <p class="lede">Figma의 차트 콘텐츠 구조와 픽셀 규격을 현재 애플리케이션의 실제 데이터·API·저장·권한 계약 위에 적용했다. 환자 정보바, 전역 네비게이션, 탑바, 모듈 사이드패널은 구현 범위에서 제외했다.</p>
+        <div class="meta">
+          <span class="pill ok">차트 회귀 40/40 통과</span>
+          <span class="pill">2026-08-13</span>
+          <span class="pill">Figma contents 27946:59005</span>
+          <span class="pill">branch codex/chart-content-v2</span>
+        </div>
+      </header>
+
+      <nav aria-label="보고서 섹션">
+        <a href="#outcome">결과</a>
+        <a href="#compare">전후 비교</a>
+        <a href="#geometry">노드·px</a>
+        <a href="#states">상태 설계</a>
+        <a href="#data">데이터 연결</a>
+        <a href="#evidence">검증</a>
+      </nav>
+
+      <section id="outcome">
+        <h2>구현 결과</h2>
+        <div class="summary-grid">
+          <div class="card"><span class="number">1540 × 968</span><h3>콘텐츠 기준 크기</h3><p>48px 액션바와 920px 워크스페이스를 합친, 환자 정보바 제외 기준이다.</p></div>
+          <div class="card"><span class="number">567 / 567 / 375</span><h3>상단 패널 트랙</h3><p>S/O와 Assessment는 같은 비율, History는 Figma의 좁은 보조 트랙을 유지한다.</p></div>
+          <div class="card"><span class="number">394 + 1128</span><h3>Plan/Order 분할</h3><p>식별 컬럼은 고정하고 실제 상세 컬럼은 독립 가로 스크롤로 분리했다.</p></div>
+        </div>
+      </section>
+
+      <section id="compare">
+        <h2>구현 전후 캡처</h2>
+        <div class="compare-controls" role="group" aria-label="캡처 선택">
+          <button type="button" data-shot-button="before" aria-pressed="false">구현 전</button>
+          <button type="button" data-shot-button="after" aria-pressed="true">구현 후</button>
+        </div>
+        <figure data-shot="before" hidden>
+          <img src="../../../tests/chart.spec.ts-snapshots/chart-figma-reference-1540x1024-chromium-darwin.png" alt="구현 전 차트 화면 캡처" />
+          <figcaption>기존 1540 × 1024 회귀 캡처. 환자 정보바가 포함되어 있고, 상단 패널이 균등 분할되며 Plan/Order의 고정·스크롤 경계가 Figma와 달랐다.</figcaption>
+        </figure>
+        <figure data-shot="after">
+          <img src="../../../tests/chart.spec.ts-snapshots/chart-contents-v2-reference-1540x968-chromium-darwin.png" alt="구현 후 차트 콘텐츠 화면 캡처" />
+          <figcaption>구현 후 1540 × 968 콘텐츠 전용 회귀 캡처. Figma 더미 문구 대신 현재 앱의 콩이 진료 데이터가 표시된다.</figcaption>
+        </figure>
+      </section>
+
+      <section id="geometry">
+        <h2>Figma 노드와 px 매핑</h2>
+        <table class="geometry">
+          <thead><tr><th>영역</th><th>Figma 노드</th><th>구현 규격</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>Contents</td><td><code>27946:59005</code></td><td>1540 × 968</td><td class="done">일치</td></tr>
+            <tr><td>Action bar</td><td><code>27946:59006</code></td><td>1540 × 48</td><td class="done">일치</td></tr>
+            <tr><td>Workspace</td><td><code>27946:59032</code></td><td>1540 × 920, 좌우·하단 8px</td><td class="done">일치</td></tr>
+            <tr><td>S/O</td><td><code>27985:67438</code></td><td>566.5px 트랙, header 38px, toolbar 44px</td><td class="done">일치</td></tr>
+            <tr><td>Assessment</td><td><code>27985:75982</code></td><td>566.5px 트랙, table header 36px, row 40px</td><td class="done">일치</td></tr>
+            <tr><td>History</td><td><code>27985:104643</code></td><td>375px 트랙, 접힘 rail 46px</td><td class="done">일치</td></tr>
+            <tr><td>Plan/Order</td><td><code>27959:73769</code></td><td>top 452px / resizer 8px / order 452px, footer 52px</td><td class="done">일치</td></tr>
+          </tbody>
+        </table>
+        <p class="caution">패널 폭은 1540px 기준에서 위 절대값이며, 다른 데스크톱 폭에서는 같은 Figma 비율로 유동 확장된다. 좁은 화면에서는 각 임상 패널의 안전 최소폭 360px과 내부 가로 스크롤을 유지한다.</p>
+      </section>
+
+      <section id="states">
+        <h2>엣지·엠티·로딩·에러 상태</h2>
+        <div class="state-grid">
+          <div class="card"><strong>로딩</strong><p>기존 shadcn <code>Skeleton</code>만 사용한다. 감소 모션에서는 pulse를 끄며 커스텀 스피너·스켈레톤을 추가하지 않았다.</p></div>
+          <div class="card"><strong>엠티</strong><p>Assessment, History, Order는 공용 <code>EmrEmptyState</code>를 사용하고, 필터 결과 없음과 원본 데이터 없음을 구분한다.</p></div>
+          <div class="card"><strong>권한 없음</strong><p>라이브 큐 403은 조회 권한 안내와 재시도를 제공하고, 쓰기 권한 없음은 기존 disabled-write 계약을 보존한다.</p></div>
+          <div class="card"><strong>저장 실패</strong><p>SOAP·진단·Order 입력을 화면에서 지우지 않고 지속형 인라인 오류와 유효한 재시도 안내를 표시한다.</p></div>
+          <div class="card"><strong>오버플로</strong><p>Plan/Order 고정 컬럼은 움직이지 않으며 상세 컬럼만 스크롤한다. 페이지 수준 가로 오버플로는 0이다.</p></div>
+          <div class="card"><strong>입력 방식</strong><p>패널 액션은 rest 상태에서 숨고 hover·focus-within에 표시된다. 터치·coarse pointer에서는 항상 접근 가능하다.</p></div>
+        </div>
+      </section>
+
+      <section id="data">
+        <h2>컴포넌트와 데이터 연결</h2>
+        <details open><summary>기존 컴포넌트 재사용</summary><p><code>EmrDataTable</code>, TanStack column pinning, <code>EmrEmptyState</code>, <code>EmrInlineAlert</code>, shadcn <code>Skeleton</code>, 기존 버튼·다이얼로그·패널 접기 컴포넌트를 확장했다. 새 디자인 시스템 계층이나 새 의존성은 만들지 않았다.</p></details>
+        <details><summary>현재 데이터와 API</summary><p>라이브 큐, SOAP note, diagnosis, chart history, Order draft/action/lifecycle, invoice candidate 응답을 그대로 사용한다. Figma의 예시 환자·오더 문자열을 애플리케이션 데이터로 복사하지 않았다.</p></details>
+        <details><summary>Plan/Order 컬럼 계약</summary><p>고정 영역은 선택 28px, 분류 80px, 상태 88px, Order명 198px로 합계 394px이다. 그룹, 지시사항, 청구서명, 수량, 단가, 청구금액, 수의사, 작업은 상세 스크롤 영역에 남는다.</p></details>
+        <details><summary>기존 동작 보존</summary><p>SOAP 자동·수동 저장, 충돌 처리, 진단 추가·삭제·확진·중점, 오더 정렬·리사이즈·선택·수정·삭제, 청구·확정 확인 다이얼로그, 진료 시작·완료 흐름, 패널 접기와 높이 리사이즈를 회귀 테스트로 확인했다.</p></details>
+      </section>
+
+      <section id="evidence">
+        <h2>검증 증거</h2>
+        <div class="evidence">
+          <div>Playwright <code>tests/chart.spec.ts</code></div><div class="done">40 / 40 통과</div>
+          <div>집중 geometry·pinning·loading·permission</div><div class="done">6 / 6 통과</div>
+          <div>ESLint + TypeScript</div><div class="done">통과</div>
+          <div>Next.js production build</div><div class="done">통과</div>
+          <div>문서 링크 + 시크릿 + 한국어 UX 문구 + diff</div><div class="done">통과</div>
+        </div>
+        <p class="caution">빌드의 기존 NFT tracing 경고와 개발 테스트 로그의 Tiptap 중복 extension·MaxListeners 경고는 남아 있다. 이번 차트 변경에서 새로 발생한 오류는 아니며, 차트 회귀와 프로덕션 빌드는 통과했다.</p>
+      </section>
+    </main>
+    <script>
+      const buttons = Array.from(document.querySelectorAll("[data-shot-button]"));
+      const shots = Array.from(document.querySelectorAll("[data-shot]"));
+      for (const button of buttons) {
+        button.addEventListener("click", () => {
+          const target = button.getAttribute("data-shot-button");
+          for (const candidate of buttons) {
+            candidate.setAttribute("aria-pressed", String(candidate === button));
+          }
+          for (const shot of shots) {
+            shot.hidden = shot.getAttribute("data-shot") !== target;
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

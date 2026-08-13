@@ -14,7 +14,11 @@ import {
   CdsNavigationChevronRightIcon,
 } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export type ChartCollapsiblePanelId = "soap" | "assessment" | "history";
@@ -42,6 +46,11 @@ export type ChartPanelCollapseButtonProps = {
 };
 
 const COLLAPSED_TRACK_PX = 46;
+const EXPANDED_TRACK_WEIGHT: Record<ChartCollapsiblePanelId, number> = {
+  soap: 566.5,
+  assessment: 566.5,
+  history: 375,
+};
 
 export function ChartCollapsiblePanelGroup({
   children,
@@ -49,22 +58,22 @@ export function ChartCollapsiblePanelGroup({
   collapsedPanels,
 }: ChartCollapsiblePanelGroupProps) {
   const childArray = Children.toArray(children);
-  const getGridTemplateColumns = (expandedTrack: string) =>
+  const getGridTemplateColumns = (minimumWidth: number | null) =>
     childArray
       .map((child) => {
         if (!isValidElement<ChartCollapsiblePanelProps>(child)) {
-          return expandedTrack;
+          return minimumWidth === null
+            ? "minmax(0, 1fr)"
+            : `minmax(${minimumWidth}px, 1fr)`;
         }
 
         return collapsedPanels.has(child.props.panelId)
           ? `${COLLAPSED_TRACK_PX}px`
-          : expandedTrack;
+          : `minmax(${minimumWidth ?? 0}px, ${EXPANDED_TRACK_WEIGHT[child.props.panelId]}fr)`;
       })
       .join(" ");
-  const gridTemplateColumns = getGridTemplateColumns("minmax(0, 1fr)");
-  const narrowGridTemplateColumns = getGridTemplateColumns(
-    "minmax(360px, 1fr)",
-  );
+  const gridTemplateColumns = getGridTemplateColumns(null);
+  const narrowGridTemplateColumns = getGridTemplateColumns(360);
 
   return (
     <div
@@ -126,7 +135,7 @@ export function ChartCollapsiblePanel({
         aria-expanded={false}
         aria-label={`${label} 패널 펼치기`}
         className={cn(
-          "absolute inset-x-0 top-0 flex h-fit min-h-0 w-[46px] flex-col items-center overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-2 text-sm font-semibold leading-5 text-foreground shadow-xs outline-none transition-[background-color,box-shadow,opacity] duration-[var(--clair-motion-duration-fast)] ease-[var(--clair-motion-easing-standard)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none",
+          "absolute inset-x-0 top-0 flex h-fit min-h-0 w-[46px] flex-col items-center overflow-hidden rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-2 text-sm font-semibold leading-5 text-foreground shadow-xs outline-none transition-[background-color,box-shadow,opacity] duration-[var(--clair-motion-duration-fast)] ease-[var(--clair-motion-easing-standard)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none",
           collapsed
             ? "pointer-events-auto visible opacity-100"
             : "pointer-events-none invisible opacity-0",
