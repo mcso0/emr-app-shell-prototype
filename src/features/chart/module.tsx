@@ -137,6 +137,12 @@ import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
 import {
+  ChartCollapsiblePanel,
+  ChartCollapsiblePanelGroup,
+  ChartPanelCollapseButton,
+  type ChartCollapsiblePanelId,
+} from "@/features/chart/components/chart-collapsible-panel-group";
+import {
   ChartActionBar,
   ChartPanelActionGroup,
   ChartPanelActions,
@@ -1479,10 +1485,14 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
 
 function ChartInlineHistoryPanel({
   bundle,
+  collapseContentId,
+  onCollapse,
   onSelectEncounter,
   selectedEncounterId,
 }: {
   bundle: ChartBundle;
+  collapseContentId: string;
+  onCollapse: () => void;
   onSelectEncounter: (encounterId: string) => void;
   selectedEncounterId: string;
 }) {
@@ -1534,7 +1544,17 @@ function ChartInlineHistoryPanel({
   return (
     <ChartWorkspacePanel
       title="History"
-      actions={<ChartPanelActions />}
+      actions={
+        <>
+          <ChartPanelActions />
+          <ChartPanelCollapseButton
+            contentId={collapseContentId}
+            label="History"
+            onCollapse={onCollapse}
+            panelId="history"
+          />
+        </>
+      }
       toolbar={
         <div className="flex w-full min-w-0 items-center gap-2">
           <Select defaultValue="diagnosis">
@@ -2396,18 +2416,22 @@ async function cancelEncounterRoute({
 
 function SoapPanel({
   actorHeaders,
+  collapseContentId,
   diagnoses,
   encounterId,
   loading,
+  onCollapse,
   onPersistedSoapNote,
   soapNote,
   writeDisabled,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
+  collapseContentId: string;
   diagnoses: Diagnosis[];
   encounterId: string;
   loading: boolean;
+  onCollapse: () => void;
   onPersistedSoapNote: (soapNote: SoapNote) => void;
   soapNote?: SoapNote;
   writeDisabled: boolean;
@@ -2887,6 +2911,12 @@ function SoapPanel({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
+          <ChartPanelCollapseButton
+            contentId={collapseContentId}
+            label="S/O"
+            onCollapse={onCollapse}
+            panelId="soap"
+          />
         </ChartPanelActionGroup>
       </div>
       <div className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-line-hairline)] px-3">
@@ -2967,16 +2997,20 @@ function SoapPanel({
 }
 
 function AssessmentPanel({
+  collapseContentId,
   diagnosisRows,
   loading,
+  onCollapse,
   onDiagnosisRowsChange,
   saveStatusText,
   setDiagnosisRows,
   soapNote,
   writeDisabled,
 }: {
+  collapseContentId: string;
   diagnosisRows: EditableDiagnosis[];
   loading: boolean;
+  onCollapse: () => void;
   onDiagnosisRowsChange: (rows: EditableDiagnosis[]) => void;
   saveStatusText: string;
   setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>>;
@@ -3112,6 +3146,12 @@ function AssessmentPanel({
         </span>
         <ChartPanelActionGroup>
           <ChartPanelActions />
+          <ChartPanelCollapseButton
+            contentId={collapseContentId}
+            label="Assessment"
+            onCollapse={onCollapse}
+            panelId="assessment"
+          />
         </ChartPanelActionGroup>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
@@ -5659,6 +5699,29 @@ export function ChartContent({
     setContentAsideOpen,
     setSelectedQueueItem,
   } = useLayoutStore();
+  const [collapsedClinicalPanels, setCollapsedClinicalPanels] = useState<
+    Set<ChartCollapsiblePanelId>
+  >(() => new Set());
+  const setClinicalPanelCollapsed = useCallback(
+    (panelId: ChartCollapsiblePanelId, collapsed: boolean) => {
+      setCollapsedClinicalPanels((current) => {
+        const next = new Set(current);
+        if (collapsed) next.add(panelId);
+        else next.delete(panelId);
+        return next;
+      });
+
+      window.requestAnimationFrame(() => {
+        const targetAttribute = collapsed
+          ? "data-chart-panel-expand"
+          : "data-chart-panel-collapse";
+        document
+          .querySelector<HTMLElement>(`[${targetAttribute}="${panelId}"]`)
+          ?.focus();
+      });
+    },
+    [],
+  );
   const applyPatientGuardianLookupItem = usePatientProfileStore(
     (state) => state.applyPatientGuardianLookupItem,
   );
@@ -6975,43 +7038,77 @@ export function ChartContent({
             gridTemplateRows: `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
           }}
         >
-          <div
-            data-testid="chart-soap-diagnosis-grid"
-            className="grid min-h-0 min-w-0 grid-cols-3 gap-2 bg-[#fcfcfc] max-[1180px]:grid-cols-[minmax(360px,1fr)_minmax(360px,1fr)_minmax(360px,1fr)] max-[1180px]:overflow-x-auto [&>*]:min-w-0"
+          <ChartCollapsiblePanelGroup
+            collapsedPanels={collapsedClinicalPanels}
           >
-            <SoapPanel
-              key={`chart-soap-${bundle.encounter.id}-${effectiveLatestSoap?.id ?? "empty"}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
-              actorHeaders={actorHeaders}
-              diagnoses={diagnosisRows}
-              encounterId={bundle.encounter.id}
-              loading={soapLoading}
-              onPersistedSoapNote={(soapNote) =>
-                setPersistedSoapState({
-                  encounterId: bundle.encounter.id,
-                  soapNote,
-                  status: "idle",
-                })
+            <ChartCollapsiblePanel
+              panelId="soap"
+              label="S/O"
+              contentId="chart-soap-panel-content"
+              onCollapsedChange={(collapsed) =>
+                setClinicalPanelCollapsed("soap", collapsed)
               }
-              soapNote={effectiveLatestSoap}
-              writeDisabled={detailHydrationPending}
-              workspaceId={bundle.encounter.workspaceId}
-            />
-            <AssessmentPanel
-              key={`chart-assessment-${bundle.encounter.id}`}
-              diagnosisRows={diagnosisRows}
-              loading={diagnosisLoading}
-              onDiagnosisRowsChange={handleDiagnosisRowsChange}
-              saveStatusText={diagnosisSaveStatusText}
-              setDiagnosisRows={setDiagnosisRows}
-              soapNote={effectiveLatestSoap}
-              writeDisabled={detailHydrationPending}
-            />
-            <ChartInlineHistoryPanel
-              bundle={currentBundle}
-              selectedEncounterId={selectedEncounterId}
-              onSelectEncounter={selectEncounter}
-            />
-          </div>
+            >
+              <SoapPanel
+                key={`chart-soap-${bundle.encounter.id}-${effectiveLatestSoap?.id ?? "empty"}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
+                actorHeaders={actorHeaders}
+                collapseContentId="chart-soap-panel-content"
+                diagnoses={diagnosisRows}
+                encounterId={bundle.encounter.id}
+                loading={soapLoading}
+                onCollapse={() => setClinicalPanelCollapsed("soap", true)}
+                onPersistedSoapNote={(soapNote) =>
+                  setPersistedSoapState({
+                    encounterId: bundle.encounter.id,
+                    soapNote,
+                    status: "idle",
+                  })
+                }
+                soapNote={effectiveLatestSoap}
+                writeDisabled={detailHydrationPending}
+                workspaceId={bundle.encounter.workspaceId}
+              />
+            </ChartCollapsiblePanel>
+            <ChartCollapsiblePanel
+              panelId="assessment"
+              label="Assessment"
+              contentId="chart-assessment-panel-content"
+              onCollapsedChange={(collapsed) =>
+                setClinicalPanelCollapsed("assessment", collapsed)
+              }
+            >
+              <AssessmentPanel
+                key={`chart-assessment-${bundle.encounter.id}`}
+                collapseContentId="chart-assessment-panel-content"
+                diagnosisRows={diagnosisRows}
+                loading={diagnosisLoading}
+                onCollapse={() =>
+                  setClinicalPanelCollapsed("assessment", true)
+                }
+                onDiagnosisRowsChange={handleDiagnosisRowsChange}
+                saveStatusText={diagnosisSaveStatusText}
+                setDiagnosisRows={setDiagnosisRows}
+                soapNote={effectiveLatestSoap}
+                writeDisabled={detailHydrationPending}
+              />
+            </ChartCollapsiblePanel>
+            <ChartCollapsiblePanel
+              panelId="history"
+              label="History"
+              contentId="chart-history-panel-content"
+              onCollapsedChange={(collapsed) =>
+                setClinicalPanelCollapsed("history", collapsed)
+              }
+            >
+              <ChartInlineHistoryPanel
+                bundle={currentBundle}
+                collapseContentId="chart-history-panel-content"
+                onCollapse={() => setClinicalPanelCollapsed("history", true)}
+                selectedEncounterId={selectedEncounterId}
+                onSelectEncounter={selectEncounter}
+              />
+            </ChartCollapsiblePanel>
+          </ChartCollapsiblePanelGroup>
           <button
             type="button"
             role="separator"

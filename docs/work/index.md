@@ -361,6 +361,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CHART-PR-017                | human_review | chart                | P1       | User-approved preservation / chart-writing efficiency concept package | `docs/work/chart/CHART-PR-017-chart-writing-efficiency-concepts.md` |
 | CHART-PR-018                | implemented  | chart                | P0       | Production hotfix / explicit chart encounter refresh loop | `docs/work/chart/CHART-PR-018-explicit-encounter-refresh-loop-hotfix.md` |
 | CHART-PR-019                | implemented  | chart                | P0       | User request / Figma-exact chart workspace implementation | `docs/work/chart/CHART-PR-019-figma-exact-chart-screen.md` |
+| CHART-PR-020                | implemented  | chart                | P1       | User request / collapsible clinical chart panels | `docs/work/chart/CHART-PR-020-collapsible-clinical-panels.md` |
 | LAB-PR-001                  | done         | lab                  | P1       | PR 1                 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md`                                               |
 | IMAGING-PR-001              | done         | imaging              | P1       | PR 1                 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md`                                            |
 | HOSPITAL-ADMIN-PR-001       | done         | hospital-admin       | P1       | PR 1                 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md`                           |
