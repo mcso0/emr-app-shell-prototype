@@ -466,8 +466,11 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   );
   expect(selectedQueueCardColors.selectedBorderColor).toBeTruthy();
   expect(selectedQueueCardColors.borderColor).not.toBe("rgba(0, 0, 0, 0)");
-  await expect(page.locator("#chart-content-aside")).toHaveCount(0);
+  await expect(page.locator("#chart-content-aside")).toBeVisible();
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "차트 이력 패널 접기" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("separator", {
       name: "진료 기록과 처방/오더 영역 높이 조절",
@@ -576,6 +579,94 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("menuitem", { name: "첨부 1" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
+});
+
+test("chart Figma follow-up restores history and panel chrome contracts", async ({
+  page,
+}) => {
+  await page.setViewportSize(chartFigmaVisualFixture.viewport);
+  await page.goto(chartFigmaVisualFixture.route);
+
+  const actionBar = page.locator("[data-slot='chart-action-bar']");
+  const workspace = page.locator("[data-slot='chart-workspace']");
+  const panels = page.locator("[data-slot='chart-workspace-panel']");
+  const historyToggle = page.getByRole("button", {
+    name: "차트 이력 패널 열기",
+  });
+
+  await expect(actionBar).toHaveCSS("height", "48px");
+  await expect(actionBar).toHaveCSS("border-bottom-width", "0px");
+  await expect(actionBar).toHaveCSS("background-color", "rgb(252, 252, 252)");
+  await expect(workspace).toHaveCSS("background-color", "rgb(252, 252, 252)");
+  await expect(historyToggle).toHaveCSS("width", "24px");
+  await expect(historyToggle).toHaveCSS("height", "24px");
+
+  await expect(panels).toHaveCount(4);
+  for (const panel of await panels.all()) {
+    await expect(panel).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  }
+
+  const subjectPanel = panels.filter({
+    has: page.getByRole("heading", { name: "Subject/Object" }),
+  });
+  const subjectActions = subjectPanel.locator(
+    "[data-slot='chart-panel-actions']",
+  );
+  await page.mouse.move(1, 1);
+  await expect(subjectActions).toHaveCSS("opacity", "0");
+  await subjectPanel.hover();
+  await expect(subjectActions).toHaveCSS("opacity", "1");
+  await page.mouse.move(1, 1);
+  await subjectPanel.getByRole("button", { name: "SOAP 추가" }).focus();
+  await expect(subjectActions).toHaveCSS("opacity", "1");
+  const soapAddTrigger = subjectPanel.getByRole("button", { name: "SOAP 추가" });
+  await soapAddTrigger.click();
+  const soapAddMenu = page.getByRole("menu");
+  await expect(soapAddMenu).toBeVisible();
+  await expect(soapAddTrigger).toHaveAttribute("aria-expanded", "true");
+  await expect(subjectActions).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Escape");
+
+  const orderToolbar = page.locator(
+    "[data-slot='chart-order-toolbar-actions']",
+  );
+  const orderToolbarButtons = orderToolbar.getByRole("button");
+  await expect(orderToolbarButtons).toHaveCount(7);
+  for (const button of await orderToolbarButtons.all()) {
+    await expect(button).toHaveCSS("height", "28px");
+  }
+
+  await historyToggle.click();
+  await expect(page).toHaveURL(/aside=history/);
+  await expect(page.locator("#chart-content-aside")).toBeVisible();
+  const expandedToggle = page.getByRole("button", {
+    name: "차트 이력 패널 접기",
+  });
+  await expect(expandedToggle).toHaveAttribute("aria-expanded", "true");
+  await expandedToggle.click();
+  await expect(page).toHaveURL(/aside=closed/);
+  await expect(page.locator("#chart-content-aside")).toHaveCount(0);
+});
+
+test("chart panel actions remain visible on touch input", async ({ browser }) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { height: 800, width: 1024 },
+  });
+  const page = await context.newPage();
+
+  try {
+    await page.goto(chartFigmaVisualFixture.route);
+    const subjectPanel = page.locator("[data-slot='chart-workspace-panel']").filter({
+      has: page.getByRole("heading", { name: "Subject/Object" }),
+    });
+    await expect(
+      subjectPanel.locator("[data-slot='chart-panel-actions']"),
+    ).toHaveCSS("opacity", "1");
+  } finally {
+    await context.close();
+  }
 });
 
 test("chart Figma visual fixture preserves the 1540 by 1024 reference geometry", async ({
@@ -2428,7 +2519,7 @@ test("chart history selection returns to a previous encounter for the patient", 
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
 });
 
-test("chart removes the retired patient information panel and legacy right query", async ({
+test("chart removes the retired patient information panel and keeps the history aside", async ({
   page,
 }) => {
   await page.goto(
@@ -2436,7 +2527,7 @@ test("chart removes the retired patient information panel and legacy right query
   );
 
   const workspaceMain = page.getByTestId("workspace-frame").locator("main");
-  await expect(page.locator("#chart-content-aside")).toHaveCount(0);
+  await expect(page.locator("#chart-content-aside")).toBeVisible();
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(workspaceMain).toHaveAttribute("data-right-panel-open", "false");
   await expect(page).not.toHaveURL(/right=/);
@@ -2450,7 +2541,7 @@ test("chart removes the retired patient information panel and legacy right query
   await expect(page.getByText("부가 정보", { exact: true })).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: /차트 이력 패널/ }),
-  ).toHaveCount(0);
+  ).toBeVisible();
 });
 
 test("chart completion persists through route-backed reload", async ({

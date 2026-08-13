@@ -54,6 +54,7 @@ import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrInstructionHistoryToggle } from "@/components/emr/instruction-header-stack";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrListHeaderIconButton } from "@/components/emr/subpanel";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
@@ -137,6 +138,7 @@ import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
 import {
   ChartActionBar,
+  ChartPanelActionGroup,
   ChartPanelActions,
   ChartPanelIconButton,
   ChartPatientContextBar,
@@ -813,9 +815,12 @@ function useSelectedChartBundle(workspaceId: string) {
 
 export function ChartSlotAvailabilityProvider({
   children,
+  workspaceId,
 }: WorkspaceSlotAvailabilityProviderProps) {
+  const bundle = useSelectedChartBundle(workspaceId);
+
   return children({
-    hasContentAside: false,
+    hasContentAside: Boolean(bundle),
   });
 }
 
@@ -2772,12 +2777,15 @@ function SoapPanel({
               );
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+    <section
+      data-slot="chart-workspace-panel"
+      className="group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)]"
+    >
       <div className="relative z-30 flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Subject/Object
         </h2>
-        <div className="flex items-center gap-1">
+        <ChartPanelActionGroup>
           <ChartPanelIconButton label="패널 확대 준비 중" disabled />
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -2879,7 +2887,7 @@ function SoapPanel({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
-        </div>
+        </ChartPanelActionGroup>
       </div>
       <div className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-line-hairline)] px-3">
         {soapTabs}
@@ -3088,7 +3096,8 @@ function AssessmentPanel({
   return (
     <section
       aria-label="진단명 관리"
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
+      data-slot="chart-workspace-panel"
+      className="group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)]"
     >
       <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
@@ -3101,9 +3110,9 @@ function AssessmentPanel({
             {saveStatusText}
           </span>
         </span>
-        <div className="flex items-center gap-1">
+        <ChartPanelActionGroup>
           <ChartPanelActions />
-        </div>
+        </ChartPanelActionGroup>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
         <div className="grid gap-0">
@@ -5062,12 +5071,15 @@ function OrderArea({
             : "Workspace catalog 검색 대기";
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+    <section
+      data-slot="chart-workspace-panel"
+      className="group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)]"
+    >
       <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Plan/Order
         </h2>
-        <div className="flex items-center gap-1">
+        <ChartPanelActionGroup>
           <ChartPanelIconButton label="패널 확대 준비 중" disabled />
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -5121,7 +5133,7 @@ function OrderArea({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+        </ChartPanelActionGroup>
       </div>
       <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-line-hairline)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div
@@ -5148,12 +5160,15 @@ function OrderArea({
             </button>
           ))}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div
+          data-slot="chart-order-toolbar-actions"
+          className="flex shrink-0 items-center gap-2"
+        >
           <Button
             type="button"
             variant="outline"
-            size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs"
+            size="sm"
+            className="rounded-lg bg-card px-2 text-xs"
             title="준비 중"
             disabled
           >
@@ -5163,8 +5178,8 @@ function OrderArea({
           <Button
             type="button"
             variant="outline"
-            size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs"
+            size="sm"
+            className="rounded-lg bg-card px-2 text-xs"
             title="준비 중"
             disabled
           >
@@ -5172,14 +5187,15 @@ function OrderArea({
             필터
           </Button>
           <EmrTableDensitySelector
+            className="h-[var(--clair-control-height-sm)] min-h-[var(--clair-control-height-sm)] px-2 py-0 text-xs"
             value={orderTableDensity}
             onValueChange={setOrderTableDensity}
           />
           <Button
             type="button"
             variant="outline"
-            size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs"
+            size="sm"
+            className="rounded-lg bg-card px-2 text-xs"
             title="준비 중"
             disabled
           >
@@ -5188,8 +5204,8 @@ function OrderArea({
           <Button
             type="button"
             variant="outline"
-            size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs"
+            size="sm"
+            className="rounded-lg bg-card px-2 text-xs"
             title="준비 중"
             disabled
           >
@@ -5198,8 +5214,8 @@ function OrderArea({
           <Button
             type="button"
             variant="outline"
-            size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs"
+            size="sm"
+            className="rounded-lg bg-card px-2 text-xs"
             title="준비 중"
             disabled
           >
@@ -5209,8 +5225,8 @@ function OrderArea({
           <Button
             type="button"
             variant="outline"
-            size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs"
+            size="sm"
+            className="rounded-lg bg-card px-2 text-xs"
             disabled={writeDisabled}
             onClick={openCatalogDialog}
           >
@@ -5637,8 +5653,10 @@ export function ChartContent({
     isLegacySalesDemoWorkspace(workspaceId) &&
     (allowStoreMockFallback || selectedEncounterId === demoScenarioEncounterId);
   const {
+    contentAsideOpen,
     moduleRefreshActions,
     setActiveDrawer,
+    setContentAsideOpen,
     setSelectedQueueItem,
   } = useLayoutStore();
   const applyPatientGuardianLookupItem = usePatientProfileStore(
@@ -6456,13 +6474,24 @@ export function ChartContent({
   const chartHistoryCount = getChartHistoryRowsForBundle(currentBundle).length;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
+    <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]">
       {!chartStartLocked ? (
         <>
           <ChartActionBar
             chartDate={chartDate}
             doctorName={getChartBundleVeterinarianName(currentBundle)}
             encounterNo={currentBundle.encounter.encounterNo}
+            historyAction={
+              <span className="inline-flex [&_button]:size-6">
+                <EmrInstructionHistoryToggle
+                  ariaLabelPrefix="차트 이력"
+                  controls="chart-content-aside"
+                  expanded={contentAsideOpen}
+                  tooltipLabel="과거 이력 보기"
+                  onClick={() => setContentAsideOpen(!contentAsideOpen)}
+                />
+              </span>
+            }
             startTime={chartStartTime}
             visitLabel={chartHistoryCount > 1 ? "재진" : "초진"}
             pendingIndicator={
@@ -6939,7 +6968,7 @@ export function ChartContent({
           ref={chartWorkspaceRef}
           data-slot="chart-workspace"
           className={cn(
-            "grid min-h-0 flex-1 px-2",
+            "grid min-h-0 flex-1 bg-[#fcfcfc] px-2",
             isChartResizing && "select-none",
           )}
           style={{
@@ -6948,7 +6977,7 @@ export function ChartContent({
         >
           <div
             data-testid="chart-soap-diagnosis-grid"
-            className="grid min-h-0 min-w-0 grid-cols-3 gap-2 max-[1180px]:grid-cols-[minmax(360px,1fr)_minmax(360px,1fr)_minmax(360px,1fr)] max-[1180px]:overflow-x-auto [&>*]:min-w-0"
+            className="grid min-h-0 min-w-0 grid-cols-3 gap-2 bg-[#fcfcfc] max-[1180px]:grid-cols-[minmax(360px,1fr)_minmax(360px,1fr)_minmax(360px,1fr)] max-[1180px]:overflow-x-auto [&>*]:min-w-0"
           >
             <SoapPanel
               key={`chart-soap-${bundle.encounter.id}-${effectiveLatestSoap?.id ?? "empty"}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
