@@ -1341,6 +1341,20 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(historySection).toContainText("예방접종 및 건강검진");
   await expect(historySection).not.toContainText("2026년 06월 25일");
   await expect(historySection).not.toContainText("완료");
+  const preconsultationScrollMetrics = await lockedState.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(preconsultationScrollMetrics.scrollHeight).toBeGreaterThan(
+    preconsultationScrollMetrics.clientHeight,
+  );
+  await lockedState.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect
+    .poll(() => lockedState.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  await expect(historySection).toBeInViewport();
   await expect(historyTimeline).toHaveClass(/px-6/);
   await expect(historyTimeline).not.toHaveClass(/border-t/);
   await expect(historyTimeline).toHaveCSS("row-gap", "12px");
