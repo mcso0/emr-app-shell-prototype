@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-07-12"
+updated: "2026-07-28"
 linear_issue: "DEN-225"
 linear_project: "12 CLAiR EMR Table Density & Data Grid Ergonomics"
 source_docs:
@@ -41,9 +41,9 @@ Use three density modes:
 
 | Mode          | Korean UI copy | Intended use                                                | Row target | Header target |
 | ------------- | -------------- | ----------------------------------------------------------- | ---------: | ------------: |
-| `compact`     | 좁게           | clinical/order/admin tables where visible row count matters |       36px |          36px |
-| `standard`    | 기본           | default operational tables                                  |       44px |          40px |
-| `comfortable` | 넓게           | review-heavy rows, multi-line summaries, low row count      |       52px |          44px |
+| `compact`     | 좁은 간격      | clinical/order/admin tables where visible row count matters |       36px |          36px |
+| `standard`    | 기본 간격      | default operational tables                                  |       44px |          40px |
+| `comfortable` | 넓은 간격      | review-heavy rows, multi-line summaries, low row count      |       52px |          44px |
 
 Density controls:
 
@@ -72,7 +72,8 @@ Runtime source:
   - `--emr-table-cell-padding-y-compact|standard|comfortable`
 - `src/components/emr/table-density.ts` owns density/layout/header role types and view option copy.
 - `src/components/emr/table-density-selector.tsx` owns the visible selected-value density dropdown.
-- `src/components/ui/table.tsx` accepts `density`, `layout`, `minWidth`, and `containerClassName`.
+- `src/components/ui/table.tsx` accepts `density`, `layout`, `minWidth`, `pinning`, and `containerClassName`.
+- `src/components/emr/table-pinning.ts` converts TanStack column state into typed shared pinned-cell props.
 
 Density API:
 
@@ -81,18 +82,19 @@ Density API:
 | `density`  | `compact`, `standard`, `comfortable` | `standard` | Maps to shared row/header height and cell padding tokens.                             |
 | `layout`   | `fill`, `scroll`                     | `fill`     | `scroll` gives the outer wrapper horizontal overflow and the table an unbroken width. |
 | `minWidth` | number or CSS length                 | none       | Required for `scroll` tables with meaningful column minimums.                         |
+| `pinning`  | `none`, `columns`                    | `none`     | Enables the shared fixed-cell layering and opaque semantic surface contract.          |
 
 View option copy:
 
-- `compact`: `좁게`
-- `standard`: `기본`
-- `comfortable`: `넓게`
+- `compact`: `좁은 간격`
+- `standard`: `기본 간격`
+- `comfortable`: `넓은 간격`
 
 Density selector UX:
 
-- The visible selector is one compact outline button with the active row-spacing icon, Korean option copy, and downward chevron.
-- The trigger must expose the generic label and active option through its accessible name, for example `테이블 보기 밀도: 좁게`.
-- Opening the control shows exactly `좁게`, `기본`, and `넓게` as one radio-menu group; the active item has a check indicator.
+- The visible selector is one compact 32px outline button with Korean interval copy and a downward chevron; it has no leading density icon.
+- The trigger must expose the generic label and active option through its accessible name, for example `테이블 보기 밀도: 좁은 간격`.
+- Opening the control shows exactly `좁은 간격`, `기본 간격`, and `넓은 간격` as one radio-menu group; the active item has a check indicator.
 - The selector may sit near the relevant table header or table body when header action space is already constrained.
 - Do not render a separate visible `밀도` label beside the trigger.
 - Density remains a presentation preference, so the menu is not a content tab or data filter.
@@ -187,8 +189,64 @@ Acceptance rules:
 - `data-slot="table-container"` is the only horizontal overflow owner.
 - `minWidth` is set on the table element, not separately on header/body rows.
 - Do not wrap `TableHeader`, `TableBody`, row warning banners, or empty states in separate overflow containers.
-- Do not add sticky columns in Project 12 unless a later issue explicitly scopes the keyboard/focus behavior.
+- Adopt sticky columns only through the shared pinned-column contract below and with focused keyboard/focus verification.
 - Page-level document width must remain equal to the viewport width at 1440, 1280, and 1024 screenshots.
+
+### Shared Pinned Column Contract
+
+- Use `Table pinning="columns"` whenever one or more header/body cells are fixed.
+- Pass typed `pinned`, `pinnedOffset`, and `pinnedEdge` props to shared cells; feature code must not set sticky z-index, edge shadow, or inherited background directly.
+- Pinned cells own opaque semantic surfaces for default, hover, selected, header, and loading states.
+- Use the single `Table layout="scroll"` overflow owner.
+- Wrap cross-family pinned table workspaces in `EmrPinnedTableWorkspace` and provide the feature-owned local identity inset once.
+- When a selectable table fixes both selection and identity, provide the
+  selection-column width to `EmrPinnedTableWorkspace`, pin selection at offset
+  `0`, and pin identity at the selection width. The identity inset remains the
+  workspace text axis, not the identity cell's physical left edge.
+- Use `EmrTableHeaderCell identity` and `EmrTableIdentityCellContent` so header and row identity text inherit the same exact axis.
+- When a body identity has a leading avatar/icon, pass its measured width and gap to `EmrTableIdentityCellContent`; the visual occupies the space before the shared text axis and must not move the identity text.
+- Mark the opted-in title/header block with `data-emr-table-workspace-header="true"`; the shared pinned workspace contract owns its 0px padding-top.
+- Mark the aligned footer with `data-emr-table-workspace-footer="true"` so its total text inherits the same identity inset.
+- Verify left/right offsets, multiple pinned cells, keyboard focus visibility, loading, hover, selected, and narrow desktop behavior.
+- Use `EmrTableFeedbackSurface` around `EmrEmptyState` for terminal no-data,
+  no-filter-results, read-error, and no-permission states. Do not leave the
+  table header, stale rows, or table footer visible when the normal table
+  cannot be rendered.
+
+### Customer Identity Pinning
+
+DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYSTEM-PR-087 migrated its presentation to the shared pinned-column contract.
+
+- Use the existing TanStack column-pinning state and the shared `Table layout="scroll"` container; do not add another overflow owner.
+- Adapt TanStack offsets with `getEmrPinnedColumnProps`; customer feature code must not duplicate sticky position, z-index, or edge-shadow styling.
+- Keep animal name, guardian name, and archived-record display name as the
+  domain identity in their respective tables.
+- Use explicit `pinnedIdentityColumnId` values for animal and guardian tables.
+  Pin `select` first and the identity second; the non-selectable archive table
+  uses identity-only shared fixed-cell props.
+- Keep the animal identity column between 160px and 220px, with 184px as the default.
+- Set one 48px workspace identity axis through `EmrPinnedTableWorkspace`.
+  Customer animal rows do not render an avatar in the identity cell; the 44px
+  selection column occupies the leading control region without moving the
+  animal-name text.
+- Align the title, search field, pinned header, pinned row text, and footer total through the same workspace axis instead of feature-local padding arithmetic.
+- Keep patient scalar values and status badges on one line; the table owns a minimum width of 1480px.
+- Sticky header and body cells must share the same hover, selected, loading, and error surface tokens as their row.
+- Horizontal scrolling must not hide sort controls, checkbox focus rings, row actions, or the single table overflow owner.
+- The deleted guardian/patient screen must read the existing archive endpoint and restore through the target-specific existing mutation endpoint; permission denial and retryable read/mutation failure states stay visible.
+
+### Hospital Admin Order Identity Pinning
+
+- All 15 Order management leaf screens use the single shared renderer in `src/features/hospital-admin/module.tsx`.
+- The 44px selection column is the physical first column and `표준 Order명` is
+  the second column. Both are left-pinned, and only `표준 Order명` is the
+  domain identity column.
+- The Order title and pinned header/row identity text use a 48px local
+  workspace axis.
+- The Order table container owns both vertical and horizontal table scrolling; do not wrap it in a second `ScrollArea`.
+- Preserve sorting, filtering, selection, row actions, drawers, and workspace catalog read/mutation behavior when changing the presentation.
+- Let one non-pinned data column absorb remaining table width so the fixed
+  selection and identity widths do not scale.
 
 ## Header Interaction Rules
 

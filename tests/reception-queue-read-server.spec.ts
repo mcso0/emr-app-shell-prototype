@@ -256,6 +256,7 @@ test("supabase reception queue gateway accepts snake_case readback rows with emb
               patient_id: "patient-live-luna",
               guardian_id: "guardian-live-jiyu",
               primary_veterinarian_id: "user-vet-suji",
+              assigned_staff_user_ids: ["user-vet-suji", "user-tech-hayun"],
               encounter_no: "E-LIVE-0002",
               reception_type: "walk_in",
               duration_minutes: 30,
@@ -318,6 +319,7 @@ test("supabase reception queue gateway accepts snake_case readback rows with emb
           id: "encounter-db-walkin-live",
           patientId: "patient-live-luna",
           primaryVeterinarianId: "user-vet-suji",
+          assignedStaffUserIds: ["user-vet-suji", "user-tech-hayun"],
           checkedInAt: "2026-05-19T11:15:00+09:00",
         },
         patient: { id: "patient-live-luna", name: "루나" },
@@ -719,6 +721,14 @@ function createRecordingNotificationPersistenceGateway(
         enforcedBy: "notification-user-state-persistence-gateway",
       };
     },
+    async markNotificationUserStatesRead() {
+      return {
+        ok: true,
+        status: 200,
+        updatedCount: 0,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
   };
 }
 
@@ -747,6 +757,14 @@ function createThrowingNotificationPersistenceGateway(): NotificationPersistence
       return {
         ok: true,
         status: 200,
+        enforcedBy: "notification-user-state-persistence-gateway",
+      };
+    },
+    async markNotificationUserStatesRead() {
+      return {
+        ok: true,
+        status: 200,
+        updatedCount: 0,
         enforcedBy: "notification-user-state-persistence-gateway",
       };
     },

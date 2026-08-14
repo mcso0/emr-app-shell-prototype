@@ -83,7 +83,7 @@ export function getScheduleAssignmentSuggestions({
     )
     .map((member) => ({
       staffId: member.id,
-      reason: "역할과 시간이 맞고 이번 주 배정 시간이 가장 적어.",
+      reason: "역할과 시간이 맞고 이번 주 배정 시간이 가장 적습니다.",
     }));
 }
 

@@ -235,6 +235,12 @@ export const mockPermissionSeeds: PermissionSeed[] = [
     label: "차트 작성",
   },
   {
+    id: "vital:write",
+    resource: "vital",
+    action: "write",
+    label: "오늘 바이탈 입력",
+  },
+  {
     id: "order:view",
     resource: "order",
     action: "view",
@@ -311,7 +317,7 @@ export const mockPermissionSeeds: PermissionSeed[] = [
     resource: "service_catalog",
     action: "manage",
     label: "서비스 카탈로그 관리",
-    description: "후속 설정 화면용 seed이며 현재 화면 권한 enforcement에는 연결하지 않는다.",
+    description: "후속 설정 화면용 seed이며 현재 화면 권한 enforcement에는 연결되지 않습니다.",
   },
   {
     id: "hospital_settings:view",
@@ -336,7 +342,7 @@ export const mockPermissionSeeds: PermissionSeed[] = [
     resource: "role_permission",
     action: "manage",
     label: "역할/권한 관리",
-    description: "후속 병원관리용 seed이며 현재 화면 권한 enforcement에는 연결하지 않는다.",
+    description: "후속 병원관리용 seed이며 현재 화면 권한 enforcement에는 연결되지 않습니다.",
   },
 ];
 
@@ -371,6 +377,7 @@ export const mockRoleSeeds: RoleSeed[] = [
       "encounter:view",
       "chart:view",
       "chart:update",
+      "vital:write",
       "order:view",
       "order:request",
       "order:update",
@@ -391,6 +398,7 @@ export const mockRoleSeeds: RoleSeed[] = [
       "patient:view",
       "encounter:view",
       "chart:view",
+      "vital:write",
       "order:view",
       "dispensing:view",
       "dispensing:complete",
@@ -692,6 +700,7 @@ export const mockAppointments: Appointment[] = [
     patientId: "patient-coco",
     guardianId: "guardian-lee-jieun",
     assignedVeterinarianId: "user-vet-suji",
+    assignedStaffUserIds: ["user-vet-suji", "user-tech-hayun"],
     scheduledStartAt: "2026-05-01T10:00:00+09:00",
     scheduledEndAt: "2026-05-01T10:30:00+09:00",
     visitPurpose: "구토 및 식욕저하",
@@ -785,6 +794,7 @@ export const mockEncounters: Encounter[] = [
     patientId: "patient-dubu",
     guardianId: "guardian-jung-harin",
     primaryVeterinarianId: "user-vet-doyun",
+    assignedStaffUserIds: ["user-vet-doyun", "user-tech-hayun"],
     encounterNo: "E-260501-0002",
     chiefComplaint: "수술 후 보행 확인",
     visitPurpose: "정형외과 재진",

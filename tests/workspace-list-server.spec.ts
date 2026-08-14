@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { mapActiveWorkspaceListData } from "../src/features/auth/server-workspace-list-core";
+import {
+  mapActiveWorkspaceListData,
+  mergeWorkspaceLogoSummaries,
+} from "../src/features/auth/server-workspace-list-core";
 
 test("workspace list server route requires an actor and preserves mock fallback", async ({
   request,
@@ -30,7 +33,11 @@ test("workspace list route defines persisted membership reader boundary", () => 
 
   expect(routeSource).toContain("listActorWorkspaces");
   expect(routeSource).toContain("readServerSession");
+  expect(routeSource).toContain('"Cache-Control": "private, no-store"');
   expect(readerSource).toContain('import "server-only"');
+  expect(readerSource).toContain('.from("workspace_hospital_profiles")');
+  expect(readerSource).toContain("createSignedUrl");
+  expect(readerSource).toContain("PRIVATE_HOSPITAL_LOGO_BUCKET");
   expect(readerSource).not.toMatch(/service_role|sb_secret|SUPABASE_SECRET/);
   expect(migrationSource).toContain("create or replace function public.clair_list_active_workspaces_for_current_user");
   expect(migrationSource).toContain("auth.uid()");
@@ -76,8 +83,44 @@ test("workspace list gateway exposes active memberships only even if the persist
         membershipId: "membership-active",
         roles: ["hospital_admin"],
         status: "active",
+        logo: { revision: null, url: null },
       },
     ]);
+});
+
+test("workspace list merges signed hospital logos without exposing storage paths", () => {
+  const workspaces = mapActiveWorkspaceListData([
+    {
+      id: "workspace-active",
+      displayName: "Active Hospital",
+      membershipId: "membership-active",
+      roles: ["hospital_admin"],
+      status: "active",
+    },
+  ]);
+
+  const result = mergeWorkspaceLogoSummaries(workspaces, [
+    {
+      workspaceId: "workspace-active",
+      revision: 4,
+      url: "https://signed.local/workspace-active-logo.webp",
+    },
+  ]);
+
+  expect(result).toEqual([
+      {
+        id: "workspace-active",
+        displayName: "Active Hospital",
+        membershipId: "membership-active",
+        roles: ["hospital_admin"],
+        status: "active",
+        logo: {
+          revision: 4,
+          url: "https://signed.local/workspace-active-logo.webp",
+        },
+      },
+    ]);
+  expect(JSON.stringify(result)).not.toContain("logo_storage_path");
 });
 
 async function expectJson(response: { json(): Promise<unknown> }, expected: Record<string, unknown>) {

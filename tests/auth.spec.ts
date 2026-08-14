@@ -203,10 +203,40 @@ test("auth gate uses workspace shell skeleton while checking access", () => {
 test("logo loading is scoped to post-login workspace entry", () => {
   const loginForm = readFileSync("src/features/auth/login-form.tsx", "utf8");
   const authGate = readFileSync("src/features/auth/auth-gate.tsx", "utf8");
+  const appShell = readFileSync("src/shell/app-shell.tsx", "utf8");
+  const rootLayout = readFileSync("src/app/layout.tsx", "utf8");
+  const splashProvider = readFileSync(
+    "src/features/auth/workspace-entry-splash-provider.tsx",
+    "utf8"
+  );
 
-  expect(loginForm).toContain("login-workspace-entry-loading");
-  expect(loginForm).toContain("WorkspaceEntryLoadingScreen");
+  expect(loginForm).toContain("beginWorkspaceEntrySplash");
+  expect(loginForm).not.toContain("WorkspaceEntryLoadingScreen");
+  expect(rootLayout).toContain("WorkspaceEntrySplashProvider");
+  expect(splashProvider).toContain("login-workspace-entry-loading");
+  expect(appShell).toContain("completeWorkspaceEntrySplash");
+  expect(authGate).toContain("completeWorkspaceEntrySplash");
   expect(authGate).not.toContain("WorkspaceEntryLoadingScreen");
+});
+
+test("post-login workspace entry shows and completes the branded splash", async ({ page }) => {
+  await page.goto("/login?next=%2Fw%2Fclair-demo%2Fbilling");
+
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+
+  const splash = page.getByTestId("login-workspace-entry-loading");
+  const splashLogo = splash.locator('[data-splash-logo="true"]');
+
+  await expect(splash).toBeVisible();
+  await expect(splash).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(splashLogo.locator("svg")).toHaveCSS("color", "rgb(199, 204, 209)");
+  await expect(splashLogo.locator("svg")).toHaveAttribute("width", "104");
+  await expect(splashLogo.locator("svg")).toHaveAttribute("height", "104");
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
+  await expect(splash).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "수납", exact: true })).toBeVisible();
 });
 
 test("root starts at login", async ({ page }) => {
@@ -759,20 +789,18 @@ test("hospital admin can manage route-backed member invitations", async ({
   await page.goto("/w/hanbit-animal-hospital/orders?modulePanel=open&aside=closed");
   await page.getByRole("button", { name: "병원구성원 관리" }).click();
 
-  await expect(page.getByRole("heading", { name: "구성원 및 초대" })).toBeVisible();
-  await expect(page.getByText("활성 1명")).toBeVisible();
-  await expect(page.getByText("대기 0건")).toBeVisible();
-  await expect(page.getByText("비활성 0명")).toBeVisible();
-  const permissionRoleGroup = page.getByRole("group", { name: "권한 역할" });
-  const jobPositionGroup = page.getByRole("group", { name: "직무" });
+  await expect(page.getByRole("heading", { name: "병원 구성원" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "직군 필터" })).toHaveText("모든 직군");
+  await expect(page.getByRole("combobox", { name: "부서 필터" })).toHaveText("모든 부서");
+  await page.getByRole("button", { name: "직원 초대" }).click();
+  const invitationDialog = page.getByRole("dialog", { name: "직원 초대" });
+  const permissionRoleGroup = invitationDialog.getByRole("group", { name: "권한 역할" });
+  const jobPositionGroup = invitationDialog.getByRole("group", { name: "직무" });
   await expect(permissionRoleGroup).toBeVisible();
   await expect(jobPositionGroup).toBeVisible();
   await expect(permissionRoleGroup.getByText("소유자", { exact: true })).toBeVisible();
   await expect(permissionRoleGroup.getByText("관리자", { exact: true })).toBeVisible();
   await expect(permissionRoleGroup.getByText("일반", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("커스텀 역할은 아직 없습니다. 필요한 권한만 골라 추가할 수 있습니다.")
-  ).toBeVisible();
   await expect(jobPositionGroup.getByText("병원장", { exact: true })).toBeVisible();
   await expect(jobPositionGroup.getByText("수의사", { exact: true })).toBeVisible();
   await expect(jobPositionGroup.getByText("테크니션", { exact: true })).toBeVisible();
@@ -783,7 +811,7 @@ test("hospital admin can manage route-backed member invitations", async ({
 
   await page.getByLabel("초대 이메일").fill("vet@hanbit.test");
   await page.getByLabel("직책").fill("진료팀장");
-  await page.getByLabel("부서").fill("진료팀");
+  await page.getByLabel("부서", { exact: true }).fill("진료팀");
   await page.getByRole("radio", { name: "일반" }).check();
   await page.getByRole("radio", { name: "수의사" }).check();
   const invitationRequest = page.waitForRequest(
@@ -805,18 +833,16 @@ test("hospital admin can manage route-backed member invitations", async ({
   });
   await expect((await invitationResponse).status()).toBe(201);
 
-  await expect(page.getByText("vet@hanbit.test")).toBeVisible();
-  await expect(page.getByRole("row").filter({ hasText: "vet@hanbit.test" })).toContainText(
-    "일반"
-  );
-  await expect(page.getByRole("row").filter({ hasText: "vet@hanbit.test" })).toContainText(
-    "수의사"
-  );
-  await expect(page.getByText("대기 1건")).toBeVisible();
+  const createdInvitationRow = page.getByRole("row").filter({ hasText: "vet@hanbit.test" });
+  await expect(createdInvitationRow).toContainText("일반");
+  await expect(createdInvitationRow).toContainText("수의사");
+  await expect(invitationDialog).toHaveCount(0);
 
+  await page.getByRole("button", { name: "직원 초대" }).click();
   await page.getByLabel("초대 이메일").fill("VET@HANBIT.TEST");
   await page.getByRole("button", { name: "초대 만들기" }).click();
   await expect(page.getByText("이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.")).toBeVisible();
+  await page.getByRole("button", { name: "닫기" }).click();
 
   const resendResponse = page.waitForResponse(
     (response) =>
@@ -824,9 +850,10 @@ test("hospital admin can manage route-backed member invitations", async ({
       response.url().endsWith("/resend") &&
       response.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "초대 재발송" }).click();
+  const invitationRow = page.getByRole("row").filter({ hasText: "vet@hanbit.test" });
+  await invitationRow.getByRole("button", { name: "vet@hanbit.test 작업" }).click();
+  await page.getByRole("menuitem", { name: "초대 재발송" }).click();
   await expect((await resendResponse).status()).toBe(200);
-  await expect(page.getByText("재발송 1회")).toBeVisible();
 
   const acceptResponse = page.waitForResponse(
     (response) =>
@@ -834,11 +861,10 @@ test("hospital admin can manage route-backed member invitations", async ({
       response.url().endsWith("/accept") &&
       response.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "수락 시뮬레이션" }).click();
+  await invitationRow.getByRole("button", { name: "vet@hanbit.test 작업" }).click();
+  await page.getByRole("menuitem", { name: "수락 시뮬레이션" }).click();
   await expect((await acceptResponse).status()).toBe(200);
-  await expect(page.getByText("활성 2명")).toBeVisible();
-  await expect(page.getByText("대기 0건")).toBeVisible();
-  await expect(page.getByText("accepted")).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "accepted" })).toBeVisible();
 
   const stored = await page.evaluate((key) => {
     const value = window.localStorage.getItem(key);
@@ -868,6 +894,53 @@ test("hospital admin can manage route-backed member invitations", async ({
   );
 });
 
+test("member directory separates browseable profile context from focused invitations", async ({
+  page,
+}) => {
+  await page.goto("/workspace/new");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await fillLoginCredentials(page);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+
+  await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
+  await page.getByLabel("대표/관리자 이름").fill("김승욱");
+  await page.getByLabel("연락 이메일").fill("owner@hanbit.test");
+  await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
+
+  await page.goto("/w/hanbit-animal-hospital/orders?modulePanel=open&aside=closed");
+  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+
+  await expect(page.getByRole("combobox", { name: "직군 필터" })).toHaveText("모든 직군");
+  await expect(page.getByRole("combobox", { name: "부서 필터" })).toHaveText("모든 부서");
+  await expect(page.getByText("all", { exact: true })).toHaveCount(0);
+
+  const memberRow = page.getByRole("row", { name: /owner@hanbit\.test 상세 보기/ });
+  await memberRow.click();
+
+  const profilePanel = page.getByRole("complementary", { name: "구성원 정보" });
+  await expect(profilePanel).toBeVisible();
+  await expect(profilePanel).toHaveAttribute("data-testid", "hospital-member-profile-panel");
+  await expect(profilePanel).toHaveCSS("width", "380px");
+  await expect(page.locator('[data-slot="sheet-overlay"]')).toHaveCount(0);
+  await expect(page.getByLabel("구성원 검색")).toBeEnabled();
+  await page.getByLabel("구성원 검색").click();
+  await expect(page.getByLabel("구성원 검색")).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(profilePanel).toHaveCount(0);
+  await expect(memberRow).toBeFocused();
+
+  await page.getByRole("button", { name: "직원 초대" }).click();
+  const invitationDialog = page.getByRole("dialog", { name: "직원 초대" });
+  await expect(invitationDialog).toBeVisible();
+  await expect(invitationDialog).toHaveAttribute("data-slot", "dialog-content");
+  await expect(invitationDialog).toHaveCSS("width", "640px");
+  await expect(page.locator('[data-slot="dialog-overlay"]')).toBeVisible();
+  await expect(page.locator('[data-slot="sheet-content"]')).toHaveCount(0);
+});
+
 test("pending invitations can be canceled in session-only state", async ({
   page,
 }) => {
@@ -884,23 +957,25 @@ test("pending invitations can be canceled in session-only state", async ({
 
   await page.goto("/w/hanbit-animal-hospital/orders?modulePanel=open&aside=closed");
   await page.getByRole("button", { name: "병원구성원 관리" }).click();
+  await page.getByRole("button", { name: "직원 초대" }).click();
   await page.getByLabel("초대 이메일").fill("desk@hanbit.test");
   await page.getByRole("radio", { name: "일반" }).check();
   await page.getByRole("radio", { name: "데스크" }).check();
   await page.getByRole("button", { name: "초대 만들기" }).click();
 
-  await expect(page.getByText("desk@hanbit.test")).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "desk@hanbit.test" })).toBeVisible();
   const cancelResponse = page.waitForResponse(
     (response) =>
       response.url().includes("/api/workspaces/hanbit-animal-hospital/invitations/") &&
       response.url().endsWith("/cancel") &&
       response.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "초대 취소" }).click();
+  const invitationRow = page.getByRole("row").filter({ hasText: "desk@hanbit.test" });
+  await invitationRow.getByRole("button", { name: "desk@hanbit.test 작업" }).click();
+  await page.getByRole("menuitem", { name: "초대 취소" }).click();
   await expect((await cancelResponse).status()).toBe(200);
 
-  await expect(page.getByText("canceled")).toBeVisible();
-  await expect(page.getByText("대기 0건")).toBeVisible();
+  await expect(invitationRow).toContainText("canceled");
 });
 
 test("role_permission:view fixture can inspect roles but cannot manage invitations or catalogs", async ({
@@ -967,7 +1042,10 @@ test("role_permission:view fixture can inspect roles but cannot manage invitatio
   );
 
   await page.goto("/w/role-viewer-hospital/orders?modulePanel=open&aside=closed");
-  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+  await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: "병원 구성원" })
+    .click();
   await expect(page.getByRole("heading", { name: "병원 구성원" })).toBeVisible();
   await expect(page.getByRole("button", { name: "직원 초대" })).toBeDisabled();
 
@@ -975,13 +1053,14 @@ test("role_permission:view fixture can inspect roles but cannot manage invitatio
   const roleScreen = page.getByTestId("hospital-admin-role-permission-screen");
   await expect(roleScreen.getByRole("heading", { name: "역할 및 권한" })).toBeVisible();
   await expect(roleScreen.getByRole("button", { name: "새 커스텀 역할" })).toHaveCount(0);
-  await roleScreen.getByRole("tab", { name: "직무" }).click();
+  await roleScreen.getByTestId("role-permission-hub-positions").click();
   await expect(roleScreen.getByRole("button", { name: "직무 추가" })).toBeDisabled();
-  await roleScreen.getByRole("tab", { name: "업무 기본값" }).click();
+  await roleScreen.getByRole("button", { name: "역할 및 권한", exact: true }).click();
+  await roleScreen.getByTestId("role-permission-hub-work-defaults").click();
   await expect(roleScreen.getByLabel("기본 접수 담당")).toBeDisabled();
 });
 
-test("hospital admin manages custom role and job catalogs outside the invitation sheet", async ({
+test("hospital admin manages custom role and job catalogs outside the invitation dialog", async ({
   page,
 }) => {
   await page.goto("/workspace/new");
@@ -1002,6 +1081,8 @@ test("hospital admin manages custom role and job catalogs outside the invitation
   await expect(page.getByText("CS", { exact: true })).toHaveCount(0);
   await expect(page.getByText("마케터", { exact: true })).toHaveCount(0);
   await expect(page.getByText("디자이너", { exact: true })).toHaveCount(0);
+  await page.getByTestId("role-permission-hub-roles").click();
+  await page.getByRole("button", { name: /소유자.*1명/ }).click();
   await expect(page.getByText("워크스페이스 삭제")).toBeVisible();
   await expect(page.getByText("소유권 이전")).toBeVisible();
   await expect(page.getByText("소유자 전용").first()).toBeVisible();
@@ -1011,24 +1092,55 @@ test("hospital admin manages custom role and job catalogs outside the invitation
   await page.getByRole("checkbox", { name: "접수/예약 조회" }).check();
   await page.getByRole("checkbox", { name: "검사/처치 결과 입력" }).check();
   await page.getByRole("button", { name: "역할 저장" }).click();
-  await expect(page.getByRole("button", { name: /검사 보조.*0명/ })).toBeVisible();
+  const customRole = page.getByRole("button", { name: /검사 보조.*0명/ });
+  await expect(customRole).toBeVisible();
 
-  await page.getByRole("button", { name: /검사 보조.*0명/ }).click();
-  await page.getByRole("button", { name: "역할 편집" }).click();
+  await expect(customRole).toHaveAttribute("aria-expanded", "true");
+  const customRolePanel = page.locator('[data-testid^="role-panel-custom:"]');
+  const chartViewSwitch = customRolePanel.getByRole("switch", { name: /차트 조회/ });
+  await expect(chartViewSwitch).toBeEnabled();
+  await chartViewSwitch.click();
+  await expect(customRolePanel.getByRole("button", { name: "권한 저장" })).toBeVisible();
+
+  await customRole.click();
+  const unsavedRoleDialog = page.getByRole("dialog", {
+    name: "저장하지 않은 변경사항이 있습니다",
+  });
+  await expect(unsavedRoleDialog).toBeVisible();
+  await unsavedRoleDialog.getByRole("button", { name: "계속 편집" }).click();
+  await expect(customRole).toHaveAttribute("aria-expanded", "true");
+  await expect(chartViewSwitch).toBeChecked();
+
+  await customRole.click();
+  await unsavedRoleDialog.getByRole("button", { name: "변경사항 버리기" }).click();
+  await expect(customRole).toHaveAttribute("aria-expanded", "false");
+  await customRole.click();
+  await chartViewSwitch.click();
+  await customRolePanel.getByRole("button", { name: "권한 저장" }).click();
+  await expect(customRolePanel.getByRole("status")).toContainText("역할 권한을 저장했습니다.");
+
+  await page.getByRole("button", { name: "역할 정보 편집" }).click();
   const roleEditDialog = page.getByRole("dialog", { name: "커스텀 역할 편집" });
   await expect(roleEditDialog.getByRole("button", { name: "역할 저장" })).toBeDisabled();
-  await roleEditDialog.getByRole("checkbox", { name: "차트 조회" }).check();
+  await roleEditDialog.getByLabel("설명").fill("검사 결과 확인과 입력을 담당합니다.");
   await expect(roleEditDialog.getByRole("button", { name: "역할 저장" })).toBeEnabled();
   await roleEditDialog.getByRole("button", { name: "역할 저장" }).click();
   await expect(roleEditDialog).toHaveCount(0);
 
-  await page.getByRole("tab", { name: "직무" }).click();
+  await page
+    .getByTestId("hospital-admin-role-permission-screen")
+    .getByRole("button", { name: "역할 및 권한", exact: true })
+    .click();
+  await page.getByTestId("role-permission-hub-positions").click();
   await page.getByRole("button", { name: "직무 추가" }).click();
   const jobDialog = page.getByRole("dialog", { name: "직무 추가" });
   await expect(jobDialog).toBeVisible();
   await jobDialog.getByLabel("직무 이름").fill("CS");
   await jobDialog.getByRole("button", { name: "직무 저장" }).click();
-  await expect(page.getByRole("button", { name: /CS.*0명/ })).toBeVisible();
+  const customJobRow = page.locator('[data-testid^="job-position-action-custom:"]');
+  await expect(customJobRow).toContainText("CS");
+  await expect(customJobRow.getByRole("button", { name: "직무 편집" })).toBeVisible();
+  await expect(customJobRow.getByRole("button", { name: "직무 보관" })).toBeVisible();
 
   await page.getByRole("button", { name: "구성원 관리 열기" }).click();
   await page.getByRole("button", { name: "직원 초대" }).click();
@@ -1071,7 +1183,7 @@ test("hospital admin can edit active member permission role with permission summ
 
   await page.getByLabel("초대 이메일").fill("vet@hanbit.test");
   await page.getByLabel("직책").fill("진료팀장");
-  await page.getByLabel("부서").fill("진료팀");
+  await page.getByLabel("부서", { exact: true }).fill("진료팀");
   await page.getByRole("radio", { name: "일반" }).check();
   await page.getByRole("radio", { name: "수의사" }).check();
   await page.getByRole("button", { name: "초대 만들기" }).click();

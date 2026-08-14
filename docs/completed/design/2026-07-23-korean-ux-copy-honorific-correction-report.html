@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR 존댓말 교정 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #202124;
+        background: #f6f7f8;
+      }
+      body {
+        margin: 0;
+        padding: 40px 20px;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 40px;
+        border: 1px solid #e1e4e8;
+        border-radius: 16px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 19px;
+      }
+      p,
+      li {
+        line-height: 1.7;
+      }
+      .meta {
+        color: #687078;
+      }
+      .status {
+        display: inline-block;
+        margin-top: 16px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        color: #17633a;
+        background: #e8f5ed;
+        font-weight: 700;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 12px;
+        border: 1px solid #e1e4e8;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        width: 28%;
+        background: #f7f8f9;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f1f3f4;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DESIGN-SYSTEM-PR-082 · 2026-07-23</p>
+      <h1>CLAiR EMR 존댓말 교정 결과</h1>
+      <p>
+        사용자에게 노출되던 명확한 반말을 존댓말로 교정했습니다. 진료·접수·수납
+        등 기존 업무 동작과 권한, 데이터, 오류 복구 흐름은 변경하지 않았습니다.
+      </p>
+      <span class="status">Human Review 준비 완료</span>
+
+      <h2>적용한 임시 기준</h2>
+      <table>
+        <tbody>
+          <tr>
+            <th>시스템 상태·설명</th>
+            <td><code>합니다체</code></td>
+          </tr>
+          <tr>
+            <th>사용자 행동 요청</th>
+            <td><code>~해 주세요</code></td>
+          </tr>
+          <tr>
+            <th>확인 질문</th>
+            <td><code>~하시겠습니까?</code></td>
+          </tr>
+          <tr>
+            <th>이번 작업 제외</th>
+            <td>정상적인 해요체 전면 통일, 용어 사전, 임상 문구 원칙, 사용자 작성 기록</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>변경 범위</h2>
+      <ul>
+        <li>Shell 검색, CLAiR Docs, PRD viewer, 구성원 관리</li>
+        <li>접수, 고객관리, 차트, 수납, Home 운영 안내</li>
+        <li>병원 근무표 v1·v2, 데모 세션 초기화, 공통 inline alert 예시</li>
+        <li>정확한 화면 문구를 검증하는 테스트</li>
+        <li>새 반말 문구 유입을 막는 <code>npm run ux-copy:check</code></li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li>존댓말 검사, TypeScript, ESLint, 문서, 시크릿, diff 검사 통과</li>
+        <li>프로덕션 빌드 통과</li>
+        <li>집중 Playwright 15개 중 14개 통과</li>
+        <li>
+          접수 카드 메뉴 테스트 1개는 Escape 후 메뉴 재오픈 단계에서
+          타임아웃됐으며, 변경 전 <code>origin/main</code>에서도 같은 줄에서
+          재현됐습니다. 교정된 문구 검증 단계에는 도달하지 않았습니다.
+        </li>
+      </ul>
+
+      <h2>남은 범위</h2>
+      <p>
+        기존의 정상적인 <code>해요체</code>를 모두 <code>합니다체</code>로 통일할지,
+        개발 용어를 사용자 언어로 바꿀지, 오류·빈 상태·임상 안내의 구조를 어떻게
+        표준화할지는 다음 UX 라이팅 원칙 작업에서 결정합니다.
+      </p>
+    </main>
+  </body>
+</html>

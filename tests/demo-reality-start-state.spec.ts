@@ -401,10 +401,10 @@ test("Cheongdam admin can invoke synthetic demo session reset from workspace top
 
   await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/home`);
   await page.getByTestId("demo-session-reset-button").click();
-  await expect(page.getByText("데모 세션을 처음 상태로 초기화할까?")).toBeVisible();
+  await expect(page.getByText("데모 세션을 처음 상태로 초기화하시겠습니까?")).toBeVisible();
   await page.getByRole("button", { name: "초기화", exact: true }).click();
 
-  await expect(page.getByText("데모 세션을 초기화했어.")).toBeVisible();
+  await expect(page.getByText("데모 세션을 초기화했습니다.")).toBeVisible();
   await expect
     .poll(() => resetCalled)
     .toBe(true);

@@ -2,6 +2,31 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-08-01
+
+- `fixed`: Reception keeps its feature-owned 56px calendar toolbar at the top
+  of the content frame and no longer reserves a duplicate empty shared header.
+
+## 2026-07-27
+
+- `changed`: Customer animal/guardian tables and hospital-admin Order/audit tables now reserve a feature-owned 56px content-top slot, use `#FCFCFC` for the content frame, and preserve a 0px table-header-to-first-row gap.
+- `clarified`: The 56px slot is not a global shell insertion because several clinical, reception, and calendar surfaces already own that height through their context or date/filter bars.
+
+## 2026-07-25
+
+- `changed`: The shared module-list panel and menu body now fill the shell-provided width; rows retain an 8px horizontal inset so hospital-admin and customer-management selected states align with the list on both sides.
+
+## 2026-07-24
+
+- `changed`: Aligned `EmrModuleListSidePanel` spacing and typography to CDS.V2 Figma node `27794:28010` while preserving existing menu content, icons, selection, disabled states, and interactions.
+- `changed`: The current shared contract is a 296px panel with 280px rows, 8px horizontal inset, 16px top-level group spacing, 2px within-group spacing, 26px child-list offset, 8px leaf right inset, 13/18px item typography, and 12/16px metadata typography.
+
+## 2026-07-23
+
+- `added`: DESIGN-SYSTEM-PR-082 adds the product-wide Korean honorific baseline: system copy uses `합니다체`, user requests use `~해 주세요`, and confirmation questions use `~하시겠습니까?`.
+- `changed`: Confirmed informal product copy was corrected across shell, docs/PRD viewers, auth, reception, customer, chart, billing, Home, hospital scheduling, and demo-session surfaces without changing workflow behavior.
+- `added`: A dependency-free source check now blocks clear informal Korean product-copy endings while preserving polite `해요체`, user-authored clinical content, and developer-only guidance.
+
 ## 2026-06-06
 
 - `added`: DEN-433 defines the shared border, radius, and shadow depth contract for common EMR surfaces and follow-up screen implementation issues.

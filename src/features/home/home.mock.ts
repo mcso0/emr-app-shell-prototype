@@ -148,7 +148,7 @@ const roleNextActions: HomeRoleNextActionHypothesis[] = [
   {
     role: "desk",
     roleLabel: "프론트 데스크",
-    hypothesis: "대기실 혼잡과 보호자 안내 누락을 먼저 줄이면 전체 외래 흐름이 빨라진다.",
+    hypothesis: "대기실 혼잡과 보호자 안내 누락을 먼저 줄이면 전체 외래 흐름이 빨라집니다.",
     primarySignal: "대기 30분 초과, 예약 도착 임박, 데스크 큐 미배정",
     successMetric: "대기 안내 누락 0건 / 예약 도착 확인 10초 이내",
     actions: [
@@ -183,7 +183,7 @@ const roleNextActions: HomeRoleNextActionHypothesis[] = [
   {
     role: "veterinarian",
     roleLabel: "수의사",
-    hypothesis: "진료자는 새 환자보다 결과 확인과 차트 완료 병목을 먼저 처리해야 재방문 설명과 후속 오더가 끊기지 않는다.",
+    hypothesis: "진료자는 새 환자보다 결과 확인과 차트 완료 병목을 먼저 처리해야 재방문 설명과 후속 오더가 끊기지 않습니다.",
     primarySignal: "검사 결과 완료, 차트 미완료, 담당의 지정 대기",
     successMetric: "결과 확인 5분 이내 / 미완성 차트 당일 0건",
     actions: [
@@ -218,7 +218,7 @@ const roleNextActions: HomeRoleNextActionHypothesis[] = [
   {
     role: "technician",
     roleLabel: "간호사",
-    hypothesis: "간호사는 미배정 검사/처치 큐와 지연 처치를 먼저 잡아야 진료실의 다음 오더가 막히지 않는다.",
+    hypothesis: "간호사는 미배정 검사/처치 큐와 지연 처치를 먼저 잡아야 진료실의 다음 오더가 막히지 않습니다.",
     primarySignal: "처치 지연, 샘플 채취 미배정, 입원 바이탈 예정",
     successMetric: "미배정 처치 0건 / 검사 샘플 채취 지연 0건",
     actions: [
@@ -253,7 +253,7 @@ const roleNextActions: HomeRoleNextActionHypothesis[] = [
   {
     role: "billing",
     roleLabel: "수납 관리자",
-    hypothesis: "수납 담당자는 진료 완료 직후 청구 묶음과 미수를 먼저 잡아야 보호자 대기와 누락 청구가 줄어든다.",
+    hypothesis: "수납 담당자는 진료 완료 직후 청구 묶음과 미수를 먼저 잡아야 보호자 대기와 누락 청구가 줄어듭니다.",
     primarySignal: "수납 미배정, 미수 지연, 입원 중간 정산",
     successMetric: "수납 대기 10분 이하 / 미수 후속 안내 당일 완료",
     actions: [
@@ -288,7 +288,7 @@ const roleNextActions: HomeRoleNextActionHypothesis[] = [
   {
     role: "owner",
     roleLabel: "병원 관리자",
-    hypothesis: "관리자는 개별 업무보다 병목 단계와 미배정 큐를 먼저 해소해야 팀 전체 처리량이 오른다.",
+    hypothesis: "관리자는 개별 업무보다 병목 단계와 미배정 큐를 먼저 해소해야 팀 전체 처리량이 오릅니다.",
     primarySignal: "단계별 SLA 초과, 미배정 큐, 지연 업무 집중",
     successMetric: "SLA 초과 2건 이하 / 미배정 큐 30분 내 해소",
     actions: [

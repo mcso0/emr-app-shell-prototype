@@ -7,7 +7,6 @@ import {
   useRef,
   useState,
   type ComponentProps,
-  type ReactNode,
 } from "react";
 import { useParams } from "next/navigation";
 import {
@@ -17,7 +16,6 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsNavigationChevronDownIcon,
-  CdsNavigationExternalLinkIcon,
 } from "@/components/cds-icons/navigation";
 import { BoneIcon, UserIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +62,6 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { LineTabs } from "@/components/ui/line-tabs";
 import {
   Popover,
   PopoverContent,
@@ -114,76 +111,68 @@ import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import {
   getMockGuardianBundle,
-  getMockLatestWorkShortcutsForPatient,
   getMockPatientBundle,
-  mockCsHistories,
   mockStaffUsers,
 } from "@/mocks/emr-domain";
 import { resolveWorkspaceRouteParam } from "@/lib/emr-domain/demo-workspaces";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import {
+  useCustomerProfileOverview,
+  type CustomerProfileOverviewState,
+} from "@/features/customer/use-customer-profile-overview";
+import type {
+  CustomerProfileBillingProjection,
+  CustomerProfileHistoryProjection,
+  CustomerProfileOverview,
+  CustomerProfileReservationProjection,
+} from "@/features/customer/server-profile-overview-core";
 import { useLayoutStore } from "@/stores/layout-store";
 import type {
-  CsHistoryChannel,
-  CsHistoryEntry,
   Consent,
   EmrId,
   Encounter,
   Guardian,
   Appointment,
-  LatestWorkShortcut,
+  Invoice,
+  InvoiceLine,
+  Payment,
   Patient,
   PatientGuardian,
   PatientSex,
   Species,
 } from "@/types/emr-domain";
+import {
+  ProfileSidePanel,
+  type ProfileBillingItem,
+  type ProfileHistoryItem,
+  type ProfileReservationItem,
+  type ProfileSidePanelModel,
+  type ProfileTabAccess,
+} from "@/features/reception/profile-side-panel";
 
 type PatientProfileBundle = {
   activeEncounter?: Encounter;
-  latestAppointment?: Appointment;
+  appointments: Appointment[];
+  encounters: Encounter[];
+  invoiceLines: InvoiceLine[];
+  invoices: Invoice[];
+  payments: Payment[];
   patient: Patient;
   guardians: Guardian[];
   patientGuardians: PatientGuardian[];
   primaryGuardian?: Guardian;
-  csHistories: CsHistoryEntry[];
-  latestWorkShortcuts: LatestWorkShortcut[];
 };
 
 type GuardianProfileBundle = {
+  appointments: Appointment[];
   consents: Consent[];
+  encounters: Encounter[];
   guardian: Guardian;
+  invoiceLines: InvoiceLine[];
+  invoices: Invoice[];
+  payments: Payment[];
   patients: Patient[];
   patientGuardians: PatientGuardian[];
-  csHistories: typeof mockCsHistories;
-  latestWorkShortcuts: LatestWorkShortcut[];
-};
-
-const patientProfileTabs = [
-  { value: "summary" as const, label: "동물 정보" },
-  { value: "cs" as const, label: "CS 이력" },
-  { value: "latest" as const, label: "최신내역" },
-];
-
-const guardianProfileTabs = [
-  { value: "summary" as const, label: "보호자 정보" },
-  { value: "cs" as const, label: "CS 이력" },
-  { value: "latest" as const, label: "최신내역" },
-];
-
-const csTabs = [
-  { value: "call" as const, label: "전화/응대" },
-  { value: "kakao" as const, label: "KakaoTalk" },
-];
-
-type ProfileTab = (typeof patientProfileTabs)[number]["value"];
-type CsTab = (typeof csTabs)[number]["value"];
-
-const getShortDateTime = (dateTime?: string) =>
-  dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
-
-const getChannelLabel = (channel: CsHistoryChannel) => {
-  if (channel === "phone") return "전화";
-  if (channel === "kakao_alimtalk") return "카카오";
-  if (channel === "sms") return "문자";
-  return "방문";
 };
 
 const getStaffDisplayName = (userId?: EmrId) =>
@@ -275,15 +264,6 @@ const getNewPatientSexPayload = (sex: NewPatientSexValue): { neutered: boolean; 
   if (sex === "neutered_female") return { neutered: true, sex: "female" };
 
   return { neutered: false, sex };
-};
-
-const getConsentLabel = (consent: Consent) => {
-  if (consent.consentType === "privacy") return "개인정보 수집";
-  if (consent.consentType === "marketing") return "마케팅 수신";
-  if (consent.consentType === "messaging") return "메시지 수신";
-  if (consent.consentType === "treatment") return "진료";
-  if (consent.consentType === "surgery") return "수술";
-  return "입원";
 };
 
 const getGuardianPatientCount = (guardianId: EmrId, links: PatientGuardian[]) =>
@@ -513,39 +493,18 @@ const createNewPatientDraft = ({
   weight: "",
 });
 
-const getPatientVisitReason = (bundle: PatientProfileBundle) =>
-  bundle.activeEncounter?.chiefComplaint ??
-  bundle.latestAppointment?.symptomNote ??
-  bundle.latestAppointment?.visitPurpose ??
-  bundle.patient.specialNote ??
-  "내원 목적 확인";
-
-const getPatientVisitSummary = (bundle: PatientProfileBundle) => {
-  const time = bundle.activeEncounter?.checkedInAt
-    ? `${getShortDateTime(bundle.activeEncounter.checkedInAt)} 접수`
-    : bundle.latestAppointment?.scheduledStartAt
-      ? `${getShortDateTime(bundle.latestAppointment.scheduledStartAt)} 예약`
-      : "오늘 내원";
-  const veterinarianName =
-    getStaffDisplayName(bundle.activeEncounter?.primaryVeterinarianId) ??
-    getStaffDisplayName(bundle.latestAppointment?.assignedVeterinarianId) ??
-    "담당의 미지정";
-  const encounterNo = bundle.activeEncounter?.encounterNo ?? "encounter 생성 전";
-
-  return `${time} · ${veterinarianName} · ${encounterNo}`;
-};
-
 const getProfileBundle = (
   patientId: EmrId,
   patients: Patient[],
   guardians: Guardian[],
-  patientGuardians: PatientGuardian[]
+  patientGuardians: PatientGuardian[],
+  allowLegacyMockBundle = true,
 ): PatientProfileBundle | null => {
   const patient = patients.find((item) => item.id === patientId);
 
   if (!patient) return null;
 
-  const baseBundle = getMockPatientBundle(patientId);
+  const baseBundle = allowLegacyMockBundle ? getMockPatientBundle(patientId) : undefined;
   const links = patientGuardians.filter((link) => link.patientId === patientId);
   const guardianIds = new Set(links.map((link) => link.guardianId));
   const linkedGuardians = guardians.filter((guardian) => guardianIds.has(guardian.id));
@@ -556,22 +515,17 @@ const getProfileBundle = (
     baseBundle?.encounters.find((encounter) =>
       ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
     ) ?? baseBundle?.encounters[0];
-  const latestAppointment = baseBundle?.appointments.at(-1);
-
   return {
     activeEncounter,
-    latestAppointment,
+    appointments: baseBundle?.appointments ?? [],
+    encounters: baseBundle?.encounters ?? [],
+    invoiceLines: baseBundle?.invoiceLines ?? [],
+    invoices: baseBundle?.invoices ?? [],
+    payments: baseBundle?.payments ?? [],
     patient,
     guardians: linkedGuardians,
     patientGuardians: links,
     primaryGuardian,
-    csHistories:
-      baseBundle?.csHistories ??
-      mockCsHistories.filter(
-        (entry) => entry.patientId === patientId || Boolean(entry.guardianId && guardianIds.has(entry.guardianId))
-      ),
-    latestWorkShortcuts:
-      baseBundle?.latestWorkShortcuts ?? getMockLatestWorkShortcutsForPatient(patientId),
   };
 };
 
@@ -580,32 +534,673 @@ const getGuardianProfileBundle = (
   patients: Patient[],
   guardians: Guardian[],
   patientGuardians: PatientGuardian[],
-  consents: Consent[]
+  consents: Consent[],
+  allowLegacyMockBundle = true,
 ): GuardianProfileBundle | null => {
   const guardian = guardians.find((item) => item.id === guardianId);
 
   if (!guardian) return null;
 
-  const baseBundle = getMockGuardianBundle(guardianId);
+  const baseBundle = allowLegacyMockBundle ? getMockGuardianBundle(guardianId) : undefined;
   const links = patientGuardians.filter((link) => link.guardianId === guardianId);
   const patientIds = new Set(links.map((link) => link.patientId));
   const linkedPatients = patients.filter((patient) => patientIds.has(patient.id));
 
   return {
+    appointments: baseBundle?.appointments ?? [],
     consents: consents.filter((consent) => consent.guardianId === guardianId),
+    encounters: baseBundle?.encounters ?? [],
     guardian,
+    invoiceLines: baseBundle?.invoiceLines ?? [],
+    invoices: baseBundle?.invoices ?? [],
+    payments: baseBundle?.payments ?? [],
     patients: linkedPatients,
     patientGuardians: links,
-    csHistories:
-      baseBundle?.csHistories ??
-      mockCsHistories.filter(
-        (entry) => entry.guardianId === guardianId || Boolean(entry.patientId && patientIds.has(entry.patientId))
-      ),
-    latestWorkShortcuts:
-      baseBundle?.latestWorkShortcuts ??
-      linkedPatients.flatMap((patient) => getMockLatestWorkShortcutsForPatient(patient.id)),
   };
 };
+
+const formatProfileDate = (value?: string) => {
+  if (!value || Number.isNaN(new Date(value).getTime())) return "미입력";
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+  })
+    .format(new Date(value))
+    .replace(/\. /g, ".")
+    .replace(/\.$/, "");
+};
+
+const formatProfileSchedule = (value?: string) => {
+  if (!value || Number.isNaN(new Date(value).getTime())) return "일정 미정";
+
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    day: "numeric",
+    hour: "numeric",
+    hour12: true,
+    minute: "2-digit",
+    month: "long",
+    timeZone: "Asia/Seoul",
+  }).formatToParts(new Date(value));
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? "";
+  const dayPeriod = part("dayPeriod");
+  const rawHour = Number(part("hour"));
+  const hour = dayPeriod === "오후" && rawHour !== 12 ? rawHour + 12 : rawHour === 12 && dayPeriod === "오전" ? 0 : rawHour;
+
+  return `${part("month")} ${part("day")}일 ${hour}시 ${part("minute")}분`;
+};
+
+const formatProfileTime = (value?: string) => {
+  if (!value || Number.isNaN(new Date(value).getTime())) return undefined;
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).format(new Date(value));
+};
+
+const getProfileSpeciesLabel = (patient: Patient) =>
+  patient.species === "dog" ? "개" : patient.species === "cat" ? "고양이" : getSpeciesLabel(patient);
+
+const getProfileSexLabel = (patient: Patient) =>
+  getPatientSexLabel(patient).replace("중성화·", "중성화 ");
+
+const getProfileMemo = (patient: Patient) =>
+  patient.specialNote ?? patient.allergyNote ?? patient.handlingCautionNote ?? "환자 메모 미입력";
+
+const getAppointmentReservationItem = ({
+  appointment,
+  patient,
+  showPatientName,
+}: {
+  appointment: Appointment;
+  patient?: Patient;
+  showPatientName: boolean;
+}): ProfileReservationItem => ({
+  description: appointment.symptomNote ?? appointment.visitPurpose ?? "예약 메모가 없습니다.",
+  id: appointment.id,
+  patientId: appointment.patientId,
+  patientName: patient?.name,
+  scheduledAt: appointment.scheduledStartAt,
+  title: [
+    showPatientName ? patient?.name ?? "환자 미상" : undefined,
+    formatProfileSchedule(appointment.scheduledStartAt),
+    getStatusLabel("appointment", appointment.status),
+  ]
+    .filter(Boolean)
+    .join(" · "),
+});
+
+const getEncounterReservationItem = ({
+  encounter,
+  patient,
+  showPatientName,
+}: {
+  encounter: Encounter;
+  patient?: Patient;
+  showPatientName: boolean;
+}): ProfileReservationItem => ({
+  description: encounter.receptionMemo ?? encounter.chiefComplaint ?? encounter.visitPurpose ?? "접수 메모가 없습니다.",
+  id: encounter.id,
+  patientId: encounter.patientId,
+  patientName: patient?.name,
+  scheduledAt: encounter.checkedInAt ?? encounter.createdAt,
+  title: [
+    showPatientName ? patient?.name ?? "환자 미상" : undefined,
+    formatProfileSchedule(encounter.checkedInAt ?? encounter.createdAt),
+    encounter.receptionType === "appointment" ? "예약" : "접수",
+  ]
+    .filter(Boolean)
+    .join(" · "),
+});
+
+const getHistoryItems = ({
+  encounters,
+  guardian,
+  patientById,
+}: {
+  encounters: Encounter[];
+  guardian?: Guardian;
+  patientById: Map<EmrId, Patient>;
+}): ProfileHistoryItem[] =>
+  encounters.map((encounter) => {
+    const patient = patientById.get(encounter.patientId);
+    const time = formatProfileTime(encounter.checkedInAt ?? encounter.createdAt);
+
+    return {
+      clinicianLabel: getStaffDisplayName(encounter.primaryVeterinarianId) ?? "담당의 미지정",
+      dateAt: encounter.checkedInAt ?? encounter.createdAt,
+      id: encounter.id,
+      kindLabel: "외래",
+      patientId: encounter.patientId,
+      patientName: patient?.name,
+      requestedAtLabel: time ? `${time} 접수` : undefined,
+      statusLabel: getStatusLabel("encounter", encounter.status),
+      subjectLabel: encounter.visitPurpose ?? encounter.chiefComplaint ?? "진료 주제 미입력",
+      title: `${patient?.name ?? "환자 미상"} · ${guardian?.name ?? "보호자 미상"}`,
+    };
+  });
+
+const getPaymentMethodLabel = (method?: Payment["paymentMethod"]) => {
+  if (method === "card") return "카드";
+  if (method === "cash") return "현금";
+  if (method === "transfer") return "계좌이체";
+  if (method === "other") return "기타";
+  return "결제 전";
+};
+
+const getBillingItems = ({
+  encounters,
+  guardian,
+  invoiceLines,
+  invoices,
+  patientById,
+  payments,
+}: {
+  encounters: Encounter[];
+  guardian?: Guardian;
+  invoiceLines: InvoiceLine[];
+  invoices: Invoice[];
+  patientById: Map<EmrId, Patient>;
+  payments: Payment[];
+}): ProfileBillingItem[] => {
+  const encounterById = new Map(encounters.map((encounter) => [encounter.id, encounter]));
+
+  return invoices.map((invoice) => {
+    const encounter = encounterById.get(invoice.encounterId);
+    const patient = encounter ? patientById.get(encounter.patientId) : undefined;
+    const lines = invoiceLines.filter((line) => line.invoiceId === invoice.id);
+    const invoicePayments = payments.filter((payment) => payment.invoiceId === invoice.id);
+    const approvedAmount = invoicePayments
+      .filter((payment) => payment.status === "approved")
+      .reduce((total, payment) => total + payment.amount, 0);
+    const payment = invoicePayments.at(-1);
+    const dateAt = invoice.paidAt ?? invoice.issuedAt ?? invoice.createdAt;
+    const time = formatProfileTime(dateAt);
+
+    return {
+      amountLabel: `${invoice.totalAmount.toLocaleString("ko-KR")}원`,
+      clinicianLabel: encounter
+        ? getStaffDisplayName(encounter.primaryVeterinarianId) ?? "담당의 미지정"
+        : "담당의 미지정",
+      dateAt,
+      id: invoice.id,
+      kindLabel: "외래",
+      patientId: encounter?.patientId,
+      patientName: patient?.name,
+      paymentLabel: approvedAmount
+        ? `${getPaymentMethodLabel(payment?.paymentMethod)} ${approvedAmount.toLocaleString("ko-KR")}원 승인`
+        : invoice.status === "refunded"
+          ? "환불 처리"
+          : "결제 전",
+      requestedAtLabel: time ? `${time} ${invoice.paidAt ? "수납" : "청구"}` : undefined,
+      statusLabel: getStatusLabel("invoice", invoice.status),
+      subjectLabel: [invoice.invoiceNo, lines[0]?.description ?? encounter?.visitPurpose]
+        .filter(Boolean)
+        .join(" · "),
+      title: `${patient?.name ?? "환자 미상"} · ${guardian?.name ?? "보호자 미상"}`,
+    };
+  });
+};
+
+const getPatientProfileSidePanelModel = (bundle: PatientProfileBundle): ProfileSidePanelModel => {
+  const patientById = new Map([[bundle.patient.id, bundle.patient]]);
+  const reservations = bundle.appointments.map((appointment) =>
+    getAppointmentReservationItem({ appointment, patient: bundle.patient, showPatientName: false })
+  );
+  const today = bundle.activeEncounter
+    ? getEncounterReservationItem({
+        encounter: bundle.activeEncounter,
+        patient: bundle.patient,
+        showPatientName: false,
+      })
+    : reservations[0];
+
+  return {
+    avatarAlt: `${bundle.patient.name} 환자 프로필`,
+    avatarSrc: "/avatars/figma-patient-profile.jpg",
+    billing: getBillingItems({
+      encounters: bundle.encounters,
+      guardian: bundle.primaryGuardian,
+      invoiceLines: bundle.invoiceLines,
+      invoices: bundle.invoices,
+      patientById,
+      payments: bundle.payments,
+    }),
+    history: getHistoryItems({
+      encounters: bundle.encounters,
+      guardian: bundle.primaryGuardian,
+      patientById,
+    }),
+    infoHeading: "환자 정보",
+    infoRows: [
+      { icon: "pet", label: "환자명", value: bundle.patient.name },
+      {
+        icon: "paw-print",
+        label: "종류/품종",
+        value: [getProfileSpeciesLabel(bundle.patient), bundle.patient.breed].filter(Boolean).join("/"),
+      },
+      { icon: "user", label: "성별", value: getProfileSexLabel(bundle.patient) },
+      { icon: "clock", label: "나이", value: getPatientDisplayAge(bundle.patient) },
+      { icon: "calendar", label: "생년월일", value: formatProfileDate(bundle.patient.birthDate) },
+      { icon: "scan-line", label: "마이크로칩", value: bundle.patient.microchipNo ?? "미등록" },
+      {
+        icon: "file-user",
+        label: "동물등록번호",
+        value: bundle.patient.patientRegistrationNo ?? "미등록",
+      },
+      { icon: "notebook-text", label: "환자 메모", value: getProfileMemo(bundle.patient) },
+    ],
+    kind: "patient",
+    meta: [
+      getProfileSpeciesLabel(bundle.patient),
+      bundle.patient.breed ?? "품종 미입력",
+      getPatientDisplayAge(bundle.patient),
+      getProfileSexLabel(bundle.patient),
+    ],
+    name: bundle.patient.name,
+    relatedGroups: [
+      {
+        id: "guardians",
+        items: bundle.guardians.map((guardian) => {
+          const link = bundle.patientGuardians.find((item) => item.guardianId === guardian.id);
+
+          return {
+            badge: link?.isPrimary ? "주" : "추가",
+            badgeTone: link?.isPrimary ? "primary" : "default",
+            id: guardian.id,
+            imageSrc: "/avatars/figma-guardian-glyph.svg",
+            meta: guardian.mobilePhone ?? "연락처 미입력",
+            name: guardian.name,
+          };
+        }),
+        title: "등록된 보호자",
+      },
+    ],
+    reservations,
+    today,
+    upcoming: reservations[0],
+  };
+};
+
+const getGuardianProfileSidePanelModel = (bundle: GuardianProfileBundle): ProfileSidePanelModel => {
+  const patientById = new Map(bundle.patients.map((patient) => [patient.id, patient]));
+  const reservations = bundle.appointments.map((appointment) =>
+    getAppointmentReservationItem({
+      appointment,
+      patient: patientById.get(appointment.patientId),
+      showPatientName: true,
+    })
+  );
+  const todayEncounter = bundle.encounters[0];
+  const today = todayEncounter
+    ? getEncounterReservationItem({
+        encounter: todayEncounter,
+        patient: patientById.get(todayEncounter.patientId),
+        showPatientName: true,
+      })
+    : reservations[0];
+  const primaryItems = bundle.patients.filter((patient) =>
+    bundle.patientGuardians.some((link) => link.patientId === patient.id && link.isPrimary)
+  );
+  const additionalItems = bundle.patients.filter((patient) =>
+    bundle.patientGuardians.some((link) => link.patientId === patient.id && !link.isPrimary)
+  );
+  const toRelatedItem = (patient: Patient) => ({
+    id: patient.id,
+    imageSrc: "/avatars/figma-patient-glyph.svg",
+    meta: [
+      getProfileSpeciesLabel(patient),
+      patient.breed ?? "품종 미입력",
+      getPatientDisplayAge(patient),
+      getProfileSexLabel(patient),
+    ].join(" · "),
+    name: patient.name,
+  });
+
+  return {
+    avatarAlt: `${bundle.guardian.name} 보호자 프로필`,
+    avatarSrc: "/avatars/figma-guardian-profile.png",
+    billing: getBillingItems({
+      encounters: bundle.encounters,
+      guardian: bundle.guardian,
+      invoiceLines: bundle.invoiceLines,
+      invoices: bundle.invoices,
+      patientById,
+      payments: bundle.payments,
+    }),
+    history: getHistoryItems({
+      encounters: bundle.encounters,
+      guardian: bundle.guardian,
+      patientById,
+    }),
+    infoHeading: "보호자 정보",
+    infoRows: [
+      { icon: "user", label: "보호자명", value: bundle.guardian.name },
+      { icon: "calendar", label: "생년월일", value: formatProfileDate(bundle.guardian.birthDate) },
+      {
+        icon: "phone",
+        label: "전화번호",
+        value: bundle.guardian.mobilePhone ?? bundle.guardian.phone ?? "미입력",
+      },
+      { icon: "mail", label: "이메일", value: bundle.guardian.email ?? "미입력" },
+      { icon: "map-pin", label: "주소", value: bundle.guardian.address ?? "미입력" },
+      {
+        icon: "notebook-text",
+        label: "보호자메모",
+        value: bundle.guardian.memo ?? "보호자 메모 미입력",
+      },
+    ],
+    kind: "guardian",
+    meta: [formatProfileDate(bundle.guardian.birthDate), bundle.guardian.mobilePhone ?? "연락처 미입력"],
+    name: bundle.guardian.name,
+    relatedGroups: [
+      {
+        accentPrefix: "주 보호자",
+        id: "primary-patients",
+        items: primaryItems.map(toRelatedItem),
+        title: "로 등록된 환자",
+      },
+      {
+        id: "additional-patients",
+        items: additionalItems.map(toRelatedItem),
+        title: "추가 보호자로 등록된 환자",
+      },
+    ],
+    reservations,
+    today,
+    upcoming: reservations[0],
+  };
+};
+
+const liveValue = (value: unknown) => (typeof value === "string" && value.length ? value : undefined);
+const liveNumber = (value: unknown) => (typeof value === "number" ? value : undefined);
+const liveBoolean = (value: unknown) => (typeof value === "boolean" ? value : undefined);
+const getLiveMonthKey = (value?: string) => {
+  if (!value || Number.isNaN(new Date(value).getTime())) return undefined;
+  return new Intl.DateTimeFormat("en-CA", {
+    month: "2-digit",
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+  }).format(new Date(value));
+};
+
+function mapLivePatient(profile: Record<string, unknown>, workspaceId: string): Patient {
+  const status = liveValue(profile.status);
+  const sex = liveValue(profile.sex);
+
+  return {
+    id: liveValue(profile.id) ?? "",
+    patientNo: liveValue(profile.patientNo) ?? "",
+    workspaceId,
+    name: liveValue(profile.name) ?? "환자 미상",
+    species: (liveValue(profile.species) as Species | undefined) ?? "other",
+    breed: liveValue(profile.breed),
+    birthDate: liveValue(profile.birthDate),
+    estimatedAgeText: liveValue(profile.estimatedAgeText),
+    sex: sex === "male" || sex === "female" ? sex : "unknown",
+    neutered: liveBoolean(profile.neutered),
+    microchipNo: liveValue(profile.microchipNo),
+    patientRegistrationNo: liveValue(profile.patientRegistrationNo),
+    weightKg: liveNumber(profile.weightKg),
+    allergyNote: liveValue(profile.allergyNote),
+    specialNote: liveValue(profile.specialNote) ?? liveValue(profile.profileMemo),
+    handlingCautionNote: liveValue(profile.handlingCautionNote),
+    handlingCautionLocked: liveBoolean(profile.handlingCautionLocked) ?? false,
+    status: status === "inactive" || status === "deceased" ? status : "active",
+    createdAt: liveValue(profile.createdAt) ?? "",
+    updatedAt: liveValue(profile.updatedAt) ?? "",
+  };
+}
+
+function mapLiveGuardian(profile: Record<string, unknown>, workspaceId: string): Guardian {
+  return {
+    id: liveValue(profile.id) ?? "",
+    workspaceId,
+    name: liveValue(profile.name) ?? "보호자 미상",
+    mobilePhone: liveValue(profile.mobilePhone),
+    phone: liveValue(profile.phone),
+    email: liveValue(profile.email),
+    birthDate: liveValue(profile.birthDate),
+    address: liveValue(profile.address),
+    memo: liveValue(profile.memo),
+    createdAt: liveValue(profile.createdAt) ?? "",
+    updatedAt: liveValue(profile.updatedAt) ?? "",
+  };
+}
+
+function mapLiveHistoryItems(
+  items: CustomerProfileHistoryProjection[],
+  guardianName?: string,
+): ProfileHistoryItem[] {
+  return items.map((item) => {
+    const time = formatProfileTime(item.occurredAt);
+    return {
+      clinicianLabel: item.clinicianName ?? "담당의 미지정",
+      dateAt: item.occurredAt,
+      id: item.id,
+      kindLabel: "외래",
+      patientId: item.patientId,
+      patientName: item.patientName,
+      requestedAtLabel: time ? `${time} 접수` : undefined,
+      statusLabel: getStatusLabel("encounter", item.status as Encounter["status"]),
+      subjectLabel: item.visitPurpose ?? "진료 주제 미입력",
+      title: `${item.patientName ?? "환자 미상"}${guardianName ? ` · ${guardianName}` : ""}`,
+    };
+  });
+}
+
+function mapLiveReservationItems(
+  items: CustomerProfileReservationProjection[],
+  showPatientName: boolean,
+): ProfileReservationItem[] {
+  return items.map((item) => ({
+    description: item.symptomNote ?? item.visitPurpose ?? "예약 메모가 없습니다.",
+    id: item.id,
+    patientId: item.patientId,
+    patientName: item.patientName,
+    scheduledAt: item.scheduledStartAt,
+    title: [
+      showPatientName ? item.patientName ?? "환자 미상" : undefined,
+      formatProfileSchedule(item.scheduledStartAt),
+      getStatusLabel("appointment", item.status as Appointment["status"]),
+    ].filter(Boolean).join(" · "),
+  }));
+}
+
+function mapLiveBillingItems(
+  items: CustomerProfileBillingProjection[],
+  guardianName?: string,
+): ProfileBillingItem[] {
+  return items.map((item) => {
+    const time = formatProfileTime(item.activityAt);
+    const approvedAmount = item.approvedAmount ?? 0;
+    return {
+      amountLabel: `${item.totalAmount.toLocaleString("ko-KR")}원`,
+      clinicianLabel: undefined,
+      dateAt: item.activityAt,
+      id: item.id,
+      kindLabel: "외래",
+      patientId: item.patientId,
+      patientName: item.patientName,
+      paymentLabel: approvedAmount
+        ? `승인 ${approvedAmount.toLocaleString("ko-KR")}원`
+        : item.paymentState === "refunded" || item.status === "refunded"
+          ? "환불 처리"
+          : "결제 전",
+      requestedAtLabel: time ? `${time} ${item.paymentState === "paid" ? "수납" : "청구"}` : undefined,
+      statusLabel: getStatusLabel("invoice", item.status as Invoice["status"]),
+      subjectLabel: [item.invoiceNo, item.lineSummary].filter(Boolean).join(" · "),
+      title: `${item.patientName ?? "환자 미상"}${guardianName ? ` · ${guardianName}` : ""}`,
+    };
+  });
+}
+
+function getLivePatientProfileSidePanelModel(
+  overview: CustomerProfileOverview,
+  state: CustomerProfileOverviewState,
+  workspaceId: string,
+): ProfileSidePanelModel {
+  const patient = mapLivePatient(overview.profile, workspaceId);
+  const guardianRows = Array.isArray(overview.relationships.guardians)
+    ? overview.relationships.guardians as Array<Record<string, unknown>>
+    : [];
+  const guardians = guardianRows.map((row) => mapLiveGuardian(row, workspaceId));
+  const links = guardianRows.map((row) => ({
+    id: `${patient.id}:${liveValue(row.id) ?? "guardian"}`,
+    patientId: patient.id,
+    guardianId: liveValue(row.id) ?? "",
+    relationship: liveValue(row.relationship),
+    isPrimary: row.isPrimary === true,
+    canReceiveMessages: true,
+    createdAt: "",
+  }));
+  const primaryGuardian = guardians.find((guardian) => links.some((link) => link.guardianId === guardian.id && link.isPrimary));
+  const reservations = mapLiveReservationItems(
+    state.sectionStates.reservations.items,
+    false,
+  );
+
+  return {
+    avatarAlt: `${patient.name} 환자 프로필`,
+    avatarSrc: "/avatars/figma-patient-profile.jpg",
+    billing: mapLiveBillingItems(state.sectionStates.billing.items, primaryGuardian?.name),
+    history: mapLiveHistoryItems(state.sectionStates.history.items, primaryGuardian?.name),
+    infoHeading: "환자 정보",
+    infoRows: [
+      { icon: "pet", label: "환자명", value: patient.name },
+      { icon: "paw-print", label: "종류/품종", value: [getProfileSpeciesLabel(patient), patient.breed].filter(Boolean).join("/") },
+      { icon: "user", label: "성별", value: getProfileSexLabel(patient) },
+      { icon: "clock", label: "나이", value: getPatientDisplayAge(patient) },
+      { icon: "calendar", label: "생년월일", value: formatProfileDate(patient.birthDate) },
+      { icon: "scan-line", label: "마이크로칩", value: patient.microchipNo ?? "미등록" },
+      { icon: "file-user", label: "동물등록번호", value: patient.patientRegistrationNo ?? "미등록" },
+      { icon: "notebook-text", label: "환자 메모", value: getProfileMemo(patient) },
+    ],
+    kind: "patient",
+    meta: [getProfileSpeciesLabel(patient), patient.breed ?? "품종 미입력", getPatientDisplayAge(patient), getProfileSexLabel(patient)],
+    name: patient.name,
+    relatedGroups: [{
+      id: "guardians",
+      items: guardians.map((guardian) => {
+        const link = links.find((item) => item.guardianId === guardian.id);
+        return {
+          badge: link?.isPrimary ? "주" : "추가",
+          badgeTone: link?.isPrimary ? "primary" : "default",
+          id: guardian.id,
+          imageSrc: "/avatars/figma-guardian-glyph.svg",
+          meta: guardian.mobilePhone ?? "연락처 미입력",
+          name: guardian.name,
+        };
+      }),
+      title: "등록된 보호자",
+    }],
+    reservations,
+    reservationMonth: getLiveMonthKey(reservations[0]?.scheduledAt) ?? getLiveMonthKey(new Date().toISOString())!,
+  };
+}
+
+function getLiveGuardianProfileSidePanelModel(
+  overview: CustomerProfileOverview,
+  state: CustomerProfileOverviewState,
+  workspaceId: string,
+): ProfileSidePanelModel {
+  const guardian = mapLiveGuardian(overview.profile, workspaceId);
+  const patientRows = Array.isArray(overview.relationships.patients)
+    ? overview.relationships.patients as Array<Record<string, unknown>>
+    : [];
+  const patients = patientRows.map((row) => mapLivePatient(row, workspaceId));
+  const links = patientRows.map((row) => ({
+    id: `${liveValue(row.id) ?? "patient"}:${guardian.id}`,
+    patientId: liveValue(row.id) ?? "",
+    guardianId: guardian.id,
+    relationship: liveValue(row.relationship),
+    isPrimary: row.isPrimary === true,
+    canReceiveMessages: true,
+    createdAt: "",
+  }));
+  const reservations = mapLiveReservationItems(state.sectionStates.reservations.items, true);
+  const toRelatedItem = (patient: Patient) => ({
+    id: patient.id,
+    imageSrc: "/avatars/figma-patient-glyph.svg",
+    meta: [getProfileSpeciesLabel(patient), patient.breed ?? "품종 미입력", getPatientDisplayAge(patient), getProfileSexLabel(patient)].join(" · "),
+    name: patient.name,
+  });
+
+  return {
+    avatarAlt: `${guardian.name} 보호자 프로필`,
+    avatarSrc: "/avatars/figma-guardian-profile.png",
+    billing: mapLiveBillingItems(state.sectionStates.billing.items, guardian.name),
+    history: mapLiveHistoryItems(state.sectionStates.history.items, guardian.name),
+    infoHeading: "보호자 정보",
+    infoRows: [
+      { icon: "user", label: "보호자명", value: guardian.name },
+      { icon: "calendar", label: "생년월일", value: formatProfileDate(guardian.birthDate) },
+      { icon: "phone", label: "전화번호", value: guardian.mobilePhone ?? guardian.phone ?? "미입력" },
+      { icon: "mail", label: "이메일", value: guardian.email ?? "미입력" },
+      { icon: "map-pin", label: "주소", value: guardian.address ?? "미입력" },
+      { icon: "notebook-text", label: "보호자메모", value: guardian.memo ?? "보호자 메모 미입력" },
+    ],
+    kind: "guardian",
+    meta: [formatProfileDate(guardian.birthDate), guardian.mobilePhone ?? "연락처 미입력"],
+    name: guardian.name,
+    relatedGroups: [
+      { accentPrefix: "주 보호자", id: "primary-patients", items: patients.filter((patient) => links.some((link) => link.patientId === patient.id && link.isPrimary)).map(toRelatedItem), title: "로 등록된 환자" },
+      { id: "additional-patients", items: patients.filter((patient) => links.some((link) => link.patientId === patient.id && !link.isPrimary)).map(toRelatedItem), title: "추가 보호자로 등록된 환자" },
+    ],
+    reservations,
+    reservationMonth: getLiveMonthKey(reservations[0]?.scheduledAt) ?? getLiveMonthKey(new Date().toISOString())!,
+  };
+}
+
+function getLiveUnavailableProfileSidePanelModel(
+  kind: ProfileSidePanelModel["kind"],
+): ProfileSidePanelModel {
+  const subjectLabel = kind === "patient" ? "환자" : "보호자";
+
+  return {
+    avatarAlt: `${subjectLabel} 프로필을 불러오는 중입니다`,
+    billing: [],
+    history: [],
+    infoHeading: `${subjectLabel} 정보`,
+    infoRows: [],
+    kind,
+    meta: [],
+    name: `${subjectLabel} 프로필`,
+    relatedGroups: [],
+    reservations: [],
+  };
+}
+
+function getLiveTabAccess(state: CustomerProfileOverviewState): Record<"info" | "history" | "reservations" | "billing", ProfileTabAccess> {
+  if (state.access) {
+    return {
+      info: state.access.information,
+      history: state.access.history,
+      reservations: state.access.reservations,
+      billing: state.access.billing,
+    };
+  }
+
+  const reason = state.overviewStatus === "loading" || state.overviewStatus === "idle"
+    ? "프로필 정보를 불러오는 중입니다."
+    : state.overviewStatus === "denied"
+      ? "프로필 정보를 볼 권한이 없습니다."
+      : state.overviewStatus === "not_found"
+        ? "프로필 정보를 찾을 수 없습니다."
+        : "프로필 정보를 불러오지 못했습니다.";
+  return {
+    info: { allowed: true, requiredPermission: "patient:view" },
+    history: { allowed: false, disabledReason: reason, requiredPermission: "chart:view" },
+    reservations: { allowed: false, disabledReason: reason, requiredPermission: "reception:view" },
+    billing: { allowed: false, disabledReason: reason, requiredPermission: "billing:view" },
+  };
+}
 
 function Field({
   children,
@@ -1106,179 +1701,19 @@ function BreedMultiSelect({
   );
 }
 
-function ProfileHeader({
-  meta,
-  title,
-  onEdit,
-  editing,
-  actions,
-}: {
-  actions?: ReactNode;
-  editing: boolean;
-  meta: string;
-  title: string;
-  onEdit: () => void;
-}) {
-  return (
-    <section className="rounded-lg border bg-[var(--emr-surface-muted)] p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate text-[18px] font-semibold">{title}</div>
-          <div className="mt-1 emr-text-metadata text-muted-foreground">{meta}</div>
-        </div>
-        <Button size="sm" variant="outline" onClick={onEdit}>
-          {editing ? "취소" : "수정"}
-        </Button>
-      </div>
-      {actions ? <div className="mt-3 flex flex-wrap gap-2">{actions}</div> : null}
-    </section>
-  );
-}
-
-function ProfileHeaderAction({
-  children,
-  onClick,
-}: {
-  children: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <Button size="sm" variant="outline" className="bg-card" onClick={onClick}>
-      {children}
-    </Button>
-  );
-}
-
-function CsHistoryTable({
-  entries,
-}: {
-  entries: PatientProfileBundle["csHistories"];
-}) {
-  const [csTab, setCsTab] = useState<CsTab>("call");
-  const visibleEntries = entries.filter((entry) =>
-    csTab === "kakao" ? entry.channel === "kakao_alimtalk" : entry.channel !== "kakao_alimtalk"
-  );
-
-  return (
-    <section className="flex flex-col gap-3">
-      <LineTabs
-        aria-label="CS 이력 유형"
-        value={csTab}
-        items={csTabs}
-        itemClassName="emr-text-dense"
-        onValueChange={setCsTab}
-      />
-      <div className="overflow-hidden rounded-lg border">
-        {visibleEntries.length ? (
-          visibleEntries.map((entry) => (
-            <div key={entry.id} className="border-b p-3 last:border-b-0">
-              <div className="flex items-center justify-between gap-2">
-                <div className="font-medium">{entry.category}</div>
-                <Badge variant="outline">{getStatusLabel("csHistory", entry.status)}</Badge>
-              </div>
-              <div className="mt-1 emr-text-metadata text-muted-foreground">
-                {getChannelLabel(entry.channel)} · {entry.direction === "inbound" ? "수신" : "발신"} ·{" "}
-                {getShortDateTime(entry.occurredAt)}
-              </div>
-              <p className="mt-2 emr-text-dense leading-5">{entry.summary}</p>
-            </div>
-          ))
-        ) : (
-          <div className="p-4 emr-text-dense text-muted-foreground">표시할 CS 이력이 없습니다.</div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function LatestWorkGrid({
-  shortcuts,
-}: {
-  shortcuts: LatestWorkShortcut[];
-}) {
-  return (
-    <section className="grid grid-cols-2 gap-2">
-      {shortcuts.map((shortcut) => {
-        const content = (
-          <>
-            <div className="flex items-center justify-between gap-2">
-              <div className="font-medium">{shortcut.title}</div>
-              {shortcut.enabled ? <CdsNavigationExternalLinkIcon className="size-3" /> : null}
-            </div>
-            <div className="mt-1 line-clamp-2 min-h-8 emr-text-metadata text-muted-foreground">
-              {shortcut.description}
-            </div>
-            <div className="mt-2 emr-text-micro text-muted-foreground">
-              {getShortDateTime(shortcut.occurredAt)}
-            </div>
-          </>
-        );
-
-        if (shortcut.enabled && shortcut.href) {
-          return (
-            <a
-              key={shortcut.id}
-              href={shortcut.href}
-              className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--emr-state-hover)]"
-            >
-              {content}
-            </a>
-          );
-        }
-
-        return (
-          <button
-            key={shortcut.id}
-            type="button"
-            disabled
-            className="rounded-lg border bg-card p-3 text-left opacity-70"
-          >
-            {content}
-          </button>
-        );
-      })}
-    </section>
-  );
-}
-
-function PatientVisitContextCard({ bundle }: { bundle: PatientProfileBundle }) {
-  const reason = getPatientVisitReason(bundle);
-  const summary = getPatientVisitSummary(bundle);
-  const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
-
-  return (
-    <section className="rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="emr-text-metadata font-semibold text-[var(--emr-status-info-text)]">
-            오늘 내원 맥락
-          </div>
-          <div className="mt-1 emr-text-body font-semibold text-foreground">
-            {guardianName} 보호자가 {bundle.patient.name}를 {reason}로 접수
-          </div>
-          <div className="mt-1 emr-text-metadata text-muted-foreground">{summary}</div>
-        </div>
-        <Badge variant="outline" className="bg-card">
-          session-only
-        </Badge>
-      </div>
-    </section>
-  );
-}
-
 function PatientSummaryFields({
-  bundle,
   draft,
   editing,
+  patient,
+  primaryGuardian,
   onDraftChange,
 }: {
-  bundle: PatientProfileBundle;
   draft: Pick<Patient, "allergyNote" | "breed" | "handlingCautionNote" | "microchipNo" | "name" | "specialNote">;
   editing: boolean;
+  patient: Patient;
+  primaryGuardian?: Guardian;
   onDraftChange: (patch: Partial<typeof draft>) => void;
 }) {
-  const patient = bundle.patient;
-
   return (
     <section className="grid grid-cols-2 gap-3">
       <Field label="환자명">
@@ -1321,7 +1756,7 @@ function PatientSummaryFields({
       </Field>
       <Field label="주보호자">
         <Input
-          value={getGuardianDisplay(bundle.primaryGuardian)}
+          value={getGuardianDisplay(primaryGuardian)}
           readOnly
           className="h-9 bg-card"
         />
@@ -1354,77 +1789,23 @@ function PatientSummaryFields({
   );
 }
 
-function GuardianLinkList({ bundle }: { bundle: PatientProfileBundle }) {
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const setPrimaryGuardian = usePatientProfileStore((state) => state.setPrimaryGuardian);
-  const toggleGuardianMessageConsent = usePatientProfileStore(
-    (state) => state.toggleGuardianMessageConsent
-  );
-
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="emr-text-dense font-semibold">보호자 연결</div>
-      {bundle.guardians.map((guardian) => {
-        const link = bundle.patientGuardians.find((item) => item.guardianId === guardian.id);
-
-        return (
-          <div key={guardian.id} className="rounded-lg border bg-card p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{guardian.name}</span>
-                  {link?.isPrimary ? <Badge>주보호자</Badge> : <Badge variant="outline">연결</Badge>}
-                </div>
-                <div className="mt-1 emr-text-metadata text-muted-foreground">
-                  {guardian.mobilePhone ?? "연락처 미입력"} · {link?.relationship ?? "관계 미입력"}
-                </div>
-              </div>
-              <Button
-                aria-label={`보호자 ${guardian.name} 보기`}
-                size="sm"
-                variant="ghost"
-                onClick={() => setActiveDrawer({ type: "guardian", id: guardian.id })}
-              >
-                보기
-              </Button>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={link?.isPrimary}
-                onClick={() => setPrimaryGuardian(bundle.patient.id, guardian.id)}
-              >
-                주보호자 지정
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toggleGuardianMessageConsent(bundle.patient.id, guardian.id)}
-              >
-                {link?.canReceiveMessages ? "수신 중지" : "수신 허용"}
-              </Button>
-            </div>
-          </div>
-        );
-      })}
-    </section>
-  );
-}
-
 export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
+  const preparedWorkspace = isPreparedEmptyClinicWorkspace(workspaceId);
   const authSession = useMockAuthStore((state) => state.session);
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const updatePatient = usePatientProfileStore((state) => state.updatePatient);
-  const bundle = useMemo(
-    () => getProfileBundle(patientId, patients, guardians, patientGuardians),
-    [guardians, patientGuardians, patientId, patients]
-  );
-  const [activeTab, setActiveTab] = useState<ProfileTab>("summary");
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const bundle = getProfileBundle(patientId, patients, guardians, patientGuardians, !preparedWorkspace);
+  const liveRead = useCustomerProfileOverview({
+    enabled: preparedWorkspace,
+    subjectId: patientId,
+    subjectType: "patient",
+    workspaceId,
+  });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<
@@ -1438,18 +1819,36 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
     specialNote: "",
   });
 
-  if (!bundle) {
-    return <div className="p-4 emr-text-dense text-muted-foreground">환자 정보를 찾을 수 없습니다.</div>;
+  if (!bundle && !preparedWorkspace) {
+    return (
+      <div className="p-4 emr-text-dense text-muted-foreground">
+        환자 정보를 찾을 수 없습니다.
+      </div>
+    );
   }
 
+  const editablePatient = liveRead.overview
+    ? mapLivePatient(liveRead.overview.profile, workspaceId)
+    : bundle?.patient;
+  const liveGuardianRows = Array.isArray(liveRead.overview?.relationships.guardians)
+    ? liveRead.overview.relationships.guardians as Array<Record<string, unknown>>
+    : [];
+  const editablePrimaryGuardian = liveRead.overview
+    ? (() => {
+        const row = liveGuardianRows.find((item) => item.isPrimary === true);
+        return row ? mapLiveGuardian(row, workspaceId) : undefined;
+      })()
+    : bundle?.primaryGuardian;
+
   const beginEdit = () => {
+    if (!editablePatient) return;
     setDraft({
-      allergyNote: bundle.patient.allergyNote ?? "",
-      breed: bundle.patient.breed ?? "",
-      handlingCautionNote: bundle.patient.handlingCautionNote ?? "",
-      microchipNo: bundle.patient.microchipNo ?? "",
-      name: bundle.patient.name,
-      specialNote: bundle.patient.specialNote ?? "",
+      allergyNote: editablePatient.allergyNote ?? "",
+      breed: editablePatient.breed ?? "",
+      handlingCautionNote: editablePatient.handlingCautionNote ?? "",
+      microchipNo: editablePatient.microchipNo ?? "",
+      name: editablePatient.name,
+      specialNote: editablePatient.specialNote ?? "",
     });
     setEditing(true);
   };
@@ -1458,7 +1857,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
     setEditing(false);
   };
   const saveEdit = async () => {
-    if (saving) return;
+    if (saving || !editablePatient) return;
     const patch: CustomerPatientProfileUpdateInput = {
       allergyNote: draft.allergyNote || undefined,
       breed: draft.breed || undefined,
@@ -1472,7 +1871,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
     const result = await submitPatientProfileUpdate({
       actorRole: authSession?.role,
       input: patch,
-      patientId: bundle.patient.id,
+      patientId: editablePatient.id,
       workspaceId,
     });
     setSaving(false);
@@ -1482,7 +1881,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
       return;
     }
 
-    updatePatient(bundle.patient.id, {
+    updatePatient(editablePatient.id, {
       allergyNote: result.profile.allergyNote,
       breed: result.profile.breed,
       handlingCautionNote: result.profile.handlingCautionNote,
@@ -1490,70 +1889,66 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
       name: result.profile.name,
       specialNote: result.profile.specialNote,
     });
+    if (preparedWorkspace) liveRead.reloadOverview();
     setEditing(false);
     toast.success("환자 정보가 저장되었습니다.");
   };
+  const model = liveRead.overview
+    ? getLivePatientProfileSidePanelModel(liveRead.overview, liveRead, workspaceId)
+    : preparedWorkspace
+      ? getLiveUnavailableProfileSidePanelModel("patient")
+      : getPatientProfileSidePanelModel(bundle!);
   const showMockAction = (label: string) => {
-    toast.info(`${bundle.patient.name} ${label}은 mock 동작입니다.`);
+    toast.info(`${model.name} ${label}은 mock 동작입니다.`);
   };
+  const tabAccess = preparedWorkspace ? getLiveTabAccess(liveRead) : undefined;
+  const sectionStates = preparedWorkspace
+    ? {
+        info: { status: liveRead.overviewStatus },
+        history: liveRead.sectionStates.history,
+        reservations: liveRead.sectionStates.reservations,
+        billing: liveRead.sectionStates.billing,
+      }
+    : undefined;
 
   return (
-    <div className="flex h-[calc(100%-48px)] flex-col">
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-4 p-4">
-          <ProfileHeader
-            editing={editing}
-            title={bundle.patient.name}
-            meta={`${bundle.patient.patientNo} · ${getSpeciesLabel(bundle.patient)} · ${getPatientDisplayAge(bundle.patient)}`}
-            onEdit={editing ? cancelEdit : beginEdit}
-            actions={
-              <>
-                <ProfileHeaderAction onClick={() => showMockAction("접수")}>접수</ProfileHeaderAction>
-                <ProfileHeaderAction onClick={() => showMockAction("예약")}>예약</ProfileHeaderAction>
-                <ProfileHeaderAction onClick={() => showMockAction("차트 보기")}>차트 보러가기</ProfileHeaderAction>
-                <ProfileHeaderAction onClick={() => showMockAction("카카오톡 발송")}>카카오톡 발송</ProfileHeaderAction>
-              </>
-            }
-          />
-          <LineTabs
-            aria-label="환자 정보 탭"
-            value={activeTab}
-            items={patientProfileTabs}
-            itemClassName="emr-text-dense"
-            onValueChange={setActiveTab}
-          />
-          {activeTab === "summary" ? (
-            <>
-              <PatientVisitContextCard bundle={bundle} />
-              <PatientSummaryFields
-                bundle={bundle}
-                draft={editing ? draft : {
-                  allergyNote: bundle.patient.allergyNote ?? "",
-                  breed: bundle.patient.breed ?? "",
-                  handlingCautionNote: bundle.patient.handlingCautionNote ?? "",
-                  microchipNo: bundle.patient.microchipNo ?? "",
-                  name: bundle.patient.name,
-                  specialNote: bundle.patient.specialNote ?? "",
-                }}
-                editing={editing}
-                onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
-              />
-              <GuardianLinkList bundle={bundle} />
-            </>
-          ) : null}
-          {activeTab === "cs" ? <CsHistoryTable entries={bundle.csHistories} /> : null}
-          {activeTab === "latest" ? (
-            <LatestWorkGrid shortcuts={bundle.latestWorkShortcuts} />
-          ) : null}
-        </div>
-      </ScrollArea>
-      {editing ? (
-        <div className="flex justify-end gap-2 border-t bg-card p-4">
-          <Button size="default" variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
-          <Button size="default" onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
-        </div>
-      ) : null}
-    </div>
+    <ProfileSidePanel
+      embedded
+      model={model}
+      onLoadSection={(section, filter, append = false) => {
+        if (section === "info") return;
+        liveRead.loadSection(section, filter, { append, force: !append });
+      }}
+      sectionStates={sectionStates}
+      tabAccess={tabAccess}
+      onRetryOverview={liveRead.reloadOverview}
+      editing={editing}
+      saving={saving}
+      onBeginEdit={editablePatient ? beginEdit : undefined}
+      onCancelEdit={cancelEdit}
+      onSaveEdit={editablePatient ? saveEdit : undefined}
+      onClose={() => setActiveDrawer(null)}
+      onHeaderAction={(action) =>
+        showMockAction(action === "reception" ? "접수/예약" : "카카오톡 발송")
+      }
+      onOpenRelated={(item) => setActiveDrawer({ type: "guardian", id: item.id })}
+      editContent={editablePatient ? (
+        <PatientSummaryFields
+          patient={editablePatient}
+          primaryGuardian={editablePrimaryGuardian}
+          draft={editing ? draft : {
+            allergyNote: editablePatient.allergyNote ?? "",
+            breed: editablePatient.breed ?? "",
+            handlingCautionNote: editablePatient.handlingCautionNote ?? "",
+            microchipNo: editablePatient.microchipNo ?? "",
+            name: editablePatient.name,
+            specialNote: editablePatient.specialNote ?? "",
+          }}
+          editing={editing}
+          onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+        />
+      ) : undefined}
+    />
   );
 }
 
@@ -1620,47 +2015,10 @@ function GuardianSummaryFields({
   );
 }
 
-function GuardianConsentSummary({ consents }: { consents: Consent[] }) {
-  const sortedConsents = [...consents].sort((a, b) =>
-    getConsentLabel(a).localeCompare(getConsentLabel(b), ["ko", "en"])
-  );
-
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="emr-text-dense font-semibold">동의 이력</div>
-      <div className="grid gap-2">
-        {sortedConsents.length ? (
-          sortedConsents.map((consent) => (
-            <div
-              key={consent.id}
-              className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3"
-            >
-              <div className="min-w-0">
-                <div className="emr-text-dense font-semibold text-foreground">
-                  {getConsentLabel(consent)}
-                </div>
-                <div className="mt-1 emr-text-metadata text-muted-foreground">
-                  {consent.signedAt ? `${getShortDateTime(consent.signedAt)} 서명` : "서명일 미기록"}
-                </div>
-              </div>
-              <Badge variant={consent.status === "granted" ? "default" : "outline"}>
-                {consent.status === "granted" ? "동의" : "철회"}
-              </Badge>
-            </div>
-          ))
-        ) : (
-          <div className="rounded-lg border border-dashed bg-card p-3 emr-text-metadata text-muted-foreground">
-            등록된 동의 이력이 없습니다.
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
 export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
+  const preparedWorkspace = isPreparedEmptyClinicWorkspace(workspaceId);
   const authSession = useMockAuthStore((state) => state.session);
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
@@ -1668,11 +2026,13 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   const consents = usePatientProfileStore((state) => state.consents);
   const updateGuardian = usePatientProfileStore((state) => state.updateGuardian);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const bundle = useMemo(
-    () => getGuardianProfileBundle(guardianId, patients, guardians, patientGuardians, consents),
-    [consents, guardianId, guardians, patientGuardians, patients]
-  );
-  const [activeTab, setActiveTab] = useState<ProfileTab>("summary");
+  const bundle = getGuardianProfileBundle(guardianId, patients, guardians, patientGuardians, consents, !preparedWorkspace);
+  const liveRead = useCustomerProfileOverview({
+    enabled: preparedWorkspace,
+    subjectId: guardianId,
+    subjectType: "guardian",
+    workspaceId,
+  });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<
@@ -1686,18 +2046,27 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
     phone: "",
   });
 
-  if (!bundle) {
-    return <div className="p-4 emr-text-dense text-muted-foreground">보호자 정보를 찾을 수 없습니다.</div>;
+  if (!bundle && !preparedWorkspace) {
+    return (
+      <div className="p-4 emr-text-dense text-muted-foreground">
+        보호자 정보를 찾을 수 없습니다.
+      </div>
+    );
   }
 
+  const editableGuardian = liveRead.overview
+    ? mapLiveGuardian(liveRead.overview.profile, workspaceId)
+    : bundle?.guardian;
+
   const beginEdit = () => {
+    if (!editableGuardian) return;
     setDraft({
-      address: bundle.guardian.address ?? "",
-      email: bundle.guardian.email ?? "",
-      memo: bundle.guardian.memo ?? "",
-      mobilePhone: bundle.guardian.mobilePhone ?? "",
-      name: bundle.guardian.name,
-      phone: bundle.guardian.phone ?? "",
+      address: editableGuardian.address ?? "",
+      email: editableGuardian.email ?? "",
+      memo: editableGuardian.memo ?? "",
+      mobilePhone: editableGuardian.mobilePhone ?? "",
+      name: editableGuardian.name,
+      phone: editableGuardian.phone ?? "",
     });
     setEditing(true);
   };
@@ -1706,7 +2075,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
     setEditing(false);
   };
   const saveEdit = async () => {
-    if (saving) return;
+    if (saving || !editableGuardian) return;
     const patch: CustomerGuardianProfileUpdateInput = {
       address: draft.address || undefined,
       email: draft.email || undefined,
@@ -1719,7 +2088,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
     setSaving(true);
     const result = await submitGuardianProfileUpdate({
       actorRole: authSession?.role,
-      guardianId: bundle.guardian.id,
+      guardianId: editableGuardian.id,
       input: patch,
       workspaceId,
     });
@@ -1730,7 +2099,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
       return;
     }
 
-    updateGuardian(bundle.guardian.id, {
+    updateGuardian(editableGuardian.id, {
       address: result.profile.address,
       email: result.profile.email,
       memo: result.profile.memo,
@@ -1738,91 +2107,64 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
       name: result.profile.name,
       phone: result.profile.phone,
     });
+    if (preparedWorkspace) liveRead.reloadOverview();
     setEditing(false);
     toast.success("보호자 정보가 저장되었습니다.");
   };
+  const model = liveRead.overview
+    ? getLiveGuardianProfileSidePanelModel(liveRead.overview, liveRead, workspaceId)
+    : preparedWorkspace
+      ? getLiveUnavailableProfileSidePanelModel("guardian")
+      : getGuardianProfileSidePanelModel(bundle!);
   const showMockAction = (label: string) => {
-    toast.info(`${bundle.guardian.name} 보호자 ${label}은 mock 동작입니다.`);
+    toast.info(`${model.name} 보호자 ${label}은 mock 동작입니다.`);
   };
+  const tabAccess = preparedWorkspace ? getLiveTabAccess(liveRead) : undefined;
+  const sectionStates = preparedWorkspace
+    ? {
+        info: { status: liveRead.overviewStatus },
+        history: liveRead.sectionStates.history,
+        reservations: liveRead.sectionStates.reservations,
+        billing: liveRead.sectionStates.billing,
+      }
+    : undefined;
 
   return (
-    <div className="flex h-[calc(100%-48px)] flex-col">
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-4 p-4">
-          <ProfileHeader
-            editing={editing}
-            title={bundle.guardian.name}
-            meta={bundle.guardian.mobilePhone ?? "연락처 미입력"}
-            onEdit={editing ? cancelEdit : beginEdit}
-            actions={
-              <>
-                <ProfileHeaderAction onClick={() => showMockAction("접수")}>접수</ProfileHeaderAction>
-                <ProfileHeaderAction onClick={() => showMockAction("예약")}>예약</ProfileHeaderAction>
-                <ProfileHeaderAction onClick={() => showMockAction("차트 보기")}>차트 보러가기</ProfileHeaderAction>
-                <ProfileHeaderAction onClick={() => showMockAction("카카오톡 발송")}>카카오톡 발송</ProfileHeaderAction>
-              </>
-            }
-          />
-          <LineTabs
-            aria-label="보호자 정보 탭"
-            value={activeTab}
-            items={guardianProfileTabs}
-            itemClassName="emr-text-dense"
-            onValueChange={setActiveTab}
-          />
-          {activeTab === "summary" ? (
-            <>
-              <GuardianSummaryFields
-                draft={editing ? draft : {
-                  address: bundle.guardian.address ?? "",
-                  email: bundle.guardian.email ?? "",
-                  memo: bundle.guardian.memo ?? "",
-                  mobilePhone: bundle.guardian.mobilePhone ?? "",
-                  name: bundle.guardian.name,
-                  phone: bundle.guardian.phone ?? "",
-                }}
-                editing={editing}
-                onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
-              />
-              <GuardianConsentSummary consents={bundle.consents} />
-              <section className="flex flex-col gap-2">
-                <div className="emr-text-dense font-semibold">연결 환자</div>
-                {bundle.patients.map((patient) => {
-                  const link = bundle.patientGuardians.find((item) => item.patientId === patient.id);
-
-                  return (
-                    <button
-                      key={patient.id}
-                      type="button"
-                      className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--emr-state-hover)]"
-                      onClick={() => setActiveDrawer({ type: "patient", id: patient.id })}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{patient.name}</span>
-                        {link?.isPrimary ? <Badge>주보호자</Badge> : <Badge variant="outline">연결</Badge>}
-                      </div>
-                      <div className="mt-1 emr-text-metadata text-muted-foreground">
-                        {patient.patientNo} · {getSpeciesLabel(patient)} · {getPatientDisplayAge(patient)}
-                      </div>
-                    </button>
-                  );
-                })}
-              </section>
-            </>
-          ) : null}
-          {activeTab === "cs" ? <CsHistoryTable entries={bundle.csHistories} /> : null}
-          {activeTab === "latest" ? (
-            <LatestWorkGrid shortcuts={bundle.latestWorkShortcuts} />
-          ) : null}
-        </div>
-      </ScrollArea>
-      {editing ? (
-        <div className="flex justify-end gap-2 border-t bg-card p-4">
-          <Button size="default" variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
-          <Button size="default" onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
-        </div>
-      ) : null}
-    </div>
+    <ProfileSidePanel
+      embedded
+      model={model}
+      onLoadSection={(section, filter, append = false) => {
+        if (section === "info") return;
+        liveRead.loadSection(section, filter, { append, force: !append });
+      }}
+      sectionStates={sectionStates}
+      tabAccess={tabAccess}
+      onRetryOverview={liveRead.reloadOverview}
+      editing={editing}
+      saving={saving}
+      onBeginEdit={editableGuardian ? beginEdit : undefined}
+      onCancelEdit={cancelEdit}
+      onSaveEdit={editableGuardian ? saveEdit : undefined}
+      onClose={() => setActiveDrawer(null)}
+      onHeaderAction={(action) =>
+        showMockAction(action === "reception" ? "접수/예약" : "카카오톡 발송")
+      }
+      onOpenRelated={(item) => setActiveDrawer({ type: "patient", id: item.id })}
+      editContent={editableGuardian ? (
+        <GuardianSummaryFields
+          draft={editing ? draft : {
+            address: editableGuardian.address ?? "",
+            email: editableGuardian.email ?? "",
+            memo: editableGuardian.memo ?? "",
+            mobilePhone: editableGuardian.mobilePhone ?? "",
+            name: editableGuardian.name,
+            phone: editableGuardian.phone ?? "",
+          }}
+          editing={editing}
+          onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+        />
+      ) : undefined}
+    />
   );
 }
 
@@ -2148,7 +2490,7 @@ export function NewPatientDialog({
                   actions={
                     <label className="flex items-center gap-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
                       <Switch
-                        size="sm"
+                        size="xs"
                         checked={draft.estimatedAge}
                         onCheckedChange={(estimatedAge) =>
                           setDraft((current) => ({ ...current, estimatedAge }))

@@ -47,6 +47,8 @@ Current Storybook coverage from PR-048 through PR-070:
 | UI primitives | `Design System/UI/Checkbox` | independent binary selections, checked, invalid, disabled states |
 | UI primitives | `Design System/UI/RadioGroup` | visible mutually exclusive option sets, invalid and disabled states |
 | UI primitives | `Design System/UI/Switch` | immediate on/off settings, checked, small, disabled states |
+| UI primitives | `Design System/UI/Toggle` | independent pressed state, CDS.V2 variants, sizes, icons, disabled state |
+| UI primitives | `Design System/UI/ToggleGroup` | single/multiple pressed sets, CDS.V2 group variants, orientation, disabled state |
 | UI primitives | `Design System/UI/Tooltip` | short helper text, icon-button hints, placement, disabled-trigger caveat |
 | UI primitives | `Design System/UI/Skeleton` | loading placeholders, compact/list loading shapes |
 | UI primitives | `Design System/UI/Table` | structured row/column data, density, scroll layout, empty rows |

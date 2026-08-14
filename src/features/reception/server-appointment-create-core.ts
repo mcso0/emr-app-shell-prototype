@@ -26,12 +26,13 @@ export type ReceptionAppointmentCreateDenialReason =
   | "guardian_unavailable"
   | "patient_guardian_link_missing"
   | "primary_veterinarian_unavailable"
+  | "assigned_staff_unavailable"
   | "appointment_slot_unavailable"
   | "appointment_outside_business_hours"
   | "appointment_closed_day";
 
 export type ReceptionAppointmentCreateFieldErrors = Partial<
-  Record<"patientId" | "durationMinutes" | "scheduledStartAt", string>
+  Record<"patientId" | "durationMinutes" | "scheduledStartAt" | "assignedStaffUserIds", string>
 >;
 
 export type ReceptionAppointmentCreateGatewayResult =
@@ -205,6 +206,18 @@ export function createMockReceptionAppointmentCreateGateway(
         return { ok: false, status: 409, denialReason: "primary_veterinarian_unavailable" };
       }
 
+      if (
+        input.assignedStaffUserIds?.some(
+          (staffUserId) =>
+            !mockStaffUsers.some(
+              (staff) =>
+                staff.id === staffUserId && staff.workspaceId === workspaceId,
+            ),
+        )
+      ) {
+        return { ok: false, status: 409, denialReason: "assigned_staff_unavailable" };
+      }
+
       const slot = getAppointmentSlot(input);
       if (!slot) return { ok: false, status: 409, denialReason: "appointment_outside_business_hours" };
       const availability = isReceptionTimeAllowed({
@@ -229,6 +242,7 @@ export function createMockReceptionAppointmentCreateGateway(
         patientId: patient.id,
         guardianId: input.guardianId,
         assignedVeterinarianId: input.assignedVeterinarianId,
+        assignedStaffUserIds: getAssignedStaffUserIds(input),
         scheduledStartAt: input.scheduledStartAt,
         scheduledEndAt: formatSeoulIsoFromMs(slot.endMs),
         visitPurpose: input.reservationMemo,
@@ -269,6 +283,9 @@ export function createSupabaseReceptionAppointmentCreateGateway(
           denialReason: "primary_veterinarian_unavailable",
         };
       }
+      if (input.assignedStaffUserIds?.some((staffUserId) => !uuidPattern.test(staffUserId))) {
+        return { ok: false, status: 409, denialReason: "assigned_staff_unavailable" };
+      }
 
       const { data, error } = await client.rpc("clair_create_reception_appointment", {
         p_workspace_id: workspaceId,
@@ -294,6 +311,7 @@ function normalizeAppointmentCreateInput(
   input: ReceptionAppointmentCreateInput,
 ): ReceptionAppointmentCreateInput {
   return {
+    assignedStaffUserIds: normalizeAssignedStaffUserIds(input.assignedStaffUserIds),
     assignedVeterinarianId: trimToUndefined(input.assignedVeterinarianId),
     durationMinutes:
       typeof input.durationMinutes === "number" ? Math.round(input.durationMinutes) : 0,
@@ -377,6 +395,7 @@ function mapAppointmentCreateDbDenial(message?: string): ReceptionAppointmentCre
   if (message.includes("guardian_unavailable")) return "guardian_unavailable";
   if (message.includes("patient_guardian_link_missing")) return "patient_guardian_link_missing";
   if (message.includes("primary_veterinarian_unavailable")) return "primary_veterinarian_unavailable";
+  if (message.includes("assigned_staff_unavailable")) return "assigned_staff_unavailable";
   if (message.includes("appointment_slot_unavailable")) return "appointment_slot_unavailable";
   if (message.includes("appointment_outside_business_hours")) {
     return "appointment_outside_business_hours";
@@ -400,13 +419,15 @@ function mapAppointment(value: unknown): Appointment | null {
     return null;
   }
 
+  const assignedVeterinarianId =
+    getString(row.assignedVeterinarianId) ?? getString(row.assigned_veterinarian_id);
   return {
     id,
     workspaceId,
     patientId,
     guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
-    assignedVeterinarianId:
-      getString(row.assignedVeterinarianId) ?? getString(row.assigned_veterinarian_id),
+    assignedVeterinarianId,
+    assignedStaffUserIds: getAssignedStaffUserIdsFromRow(row, assignedVeterinarianId),
     scheduledStartAt,
     scheduledEndAt: getString(row.scheduledEndAt) ?? getString(row.scheduled_end_at),
     visitPurpose: getString(row.visitPurpose) ?? getString(row.visit_purpose),
@@ -416,6 +437,36 @@ function mapAppointment(value: unknown): Appointment | null {
     createdAt,
     updatedAt,
   };
+}
+
+function normalizeAssignedStaffUserIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return [
+    ...new Set(
+      value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())),
+    ),
+  ];
+}
+
+function getAssignedStaffUserIds(input: ReceptionAppointmentCreateInput): string[] {
+  return [
+    ...new Set(
+      [input.assignedVeterinarianId, ...(input.assignedStaffUserIds ?? [])].filter(
+        (value): value is string => Boolean(value),
+      ),
+    ),
+  ];
+}
+
+function getAssignedStaffUserIdsFromRow(
+  row: Record<string, unknown>,
+  assignedVeterinarianId?: string,
+): string[] | undefined {
+  const raw = row.assignedStaffUserIds ?? row.assigned_staff_user_ids;
+  if (Array.isArray(raw)) {
+    return raw.filter((value): value is string => typeof value === "string");
+  }
+  return assignedVeterinarianId ? [assignedVeterinarianId] : undefined;
 }
 
 function createDemoReceptionAppointmentCreatePermissionAdapter() {

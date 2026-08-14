@@ -14,7 +14,7 @@ tags:
   - workspace-membership
   - fulfillment
 created: 2026-07-14
-last_updated: 2026-07-18
+last_updated: 2026-07-20
 ---
 
 # Staff Operational Profile Side Panel V2
@@ -43,13 +43,13 @@ A workspace member can inspect a colleague without leaving the current task,
 understand the colleague's operational availability, and navigate to permitted
 assigned work. A user can edit only their own status message and avatar.
 
-The visible order is:
+The visible profile-tab order is:
 
 1. header: avatar, Presence, name, editable-or-read-only status message, and
    member-management menu when permitted
 2. tabs: `프로필`, `업무현황`, `일정`
-3. profile account information: role, department, email, phone
-4. today's published/changed shift
+3. today's published/changed shift
+4. profile account information: role, department, email, phone
 5. next availability event within 14 days and the following return-to-work date
 6. schedule tab: a safe navigation affordance to the existing authorized
    schedule destination, if present
@@ -67,7 +67,7 @@ metadata, or inferred clinical competence.
 | header             | height `150px`, 16px horizontal padding, bottom border                                                                               |
 | avatar             | `84px` square, 6px radius, cover crop; compose locally instead of adding a global Avatar size                                        |
 | presence           | `20px` badge with dot and text for online, offline, or unknown                                                                       |
-| status message     | `28px` high; default/hover max width `217px`; input/result width `217px`                                                             |
+| status message     | `28px` high; default/hover width `173px`; editable input/result remain bounded by the existing `217px` feature-local width           |
 | tabs               | three Base UI line tabs: 53px `프로필`, 65px `업무현황`, and 41px `일정`, with 8px gaps, 34px group height, and 1px active underline |
 | content            | 16px horizontal padding, internal vertical scroll, section spacing from approved design tokens                                       |
 | avatar action menu | `180px` wide; upload group, separator, remove group                                                                                  |
@@ -162,10 +162,19 @@ success or failure.
 
 ### Today's Shift
 
-Use only the current published or changed hospital schedule snapshot. Show the
-time, work label, location, and computed status when present. No schedule row is
-not an error; read failure is an explicit section error with retry. Do not expose
-draft schedules or private notes.
+Use only the current published or changed hospital schedule, time-clock,
+operating-hours, and active-consultation facts. This contract applies to every
+active workspace member regardless of role. Normal work shows the published
+time and one of `근무 예정`, `근무중`, `퇴근`, or `업무 종료`. `진료중` and a
+room label appear only while the member is the veterinarian on an
+`in_consultation` encounter whose latest call event has that room. Leave, same-day
+leave, personal off, and hospital closure render as `연차`, `당일 연차`, `휴무일`,
+and `병원 휴무일` respectively.
+
+No schedule row on an open day is an honest empty state; read failure is an
+explicit section error with retry. Do not infer work from a calendar lane,
+membership role, reservation, or walk-in assignment, and do not expose patient
+labels, draft schedules, private notes, or leave reasons in this section.
 
 ### Availability
 
@@ -183,7 +192,17 @@ permission, schedule, or absence event.
 
 ## Work Status Tab
 
-The tab reads actual fulfillment work items assigned to the target member.
+The tab reads actual fulfillment work items assigned to the target member. In
+the reception calendar context it also prepends the target member's assigned,
+non-cancelled reservation(s) for the selected operating date as `접수/예약`
+work cards. These cards use the same authorized calendar state as the visible
+lane, link back to reception, and are not converted into fulfillment items or
+leave/schedule events.
+
+`assigned_veterinarian_id` remains the veterinarian-only clinical owner.
+`appointment_staff_assignments` is the separate role-agnostic operational
+assignment relation used by the reservation cards. A leave/off or another
+schedule event must not be inferred from either relation.
 
 - Sort by `requestedAt DESC, id DESC` and page with a stable opaque cursor.
 - Return at most 20 items per request.

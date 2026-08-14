@@ -117,15 +117,16 @@ As of `DESIGN-SYSTEM-PR-080`, `EmrEmptyState` covers the shared empty-state laye
 
 ## CDS.V2 Visual Size Contract
 
-The shared component follows the CDS.V2 EmptyPlaceholder visual tiers from Figma node `27540:70134`:
+The shared component follows the CDS.V2 EmptyPlaceholder visual tiers. The `lg`/`md`/`sm` source is Figma node `27540:70134`; the full-workspace `xl` source is Figma nodes `27540:70130`, `27751:87237`, and `27751:87245`:
 
 | Size | Intended surface | Icon slot | Title | Description | Outer gap | Default action-space reservation |
 | --- | --- | --- | --- | --- | --- | --- |
+| `xl` | Full workspace content area | 80px outer area, 76px inner gradient surface, 36px icon slot, 28px/26px radii | Pretendard SemiBold 18/26 | Pretendard Medium 16/24 | 24px | 28px |
 | `lg` | Main content area | 48px area, 24px icon slot, 14px radius | Pretendard Medium 16/24 | Pretendard Medium 14/20 | 16px | 28px |
 | `md` | Side panel and large tables; product usage label `mg` | 40px area, 24px icon slot, 10px radius, 4px bottom wrapper space | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
 | `sm` | Modal and small table areas | No icon slot | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
 
-The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. Empty State colors use existing CLAiR tokens: `black-alpha-4` for the icon area background, `black-alpha-48` for the icon and title, and `black-alpha-36` for descriptions. One action uses the outline button treatment; two actions render outline secondary first and dark primary second.
+The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. `xl` uses the Figma two-layer icon treatment: Neutral/200 outer area, a 2px white-bordered 76px inner gradient surface, and Black Alpha/64 for the icon and title. Existing tiers use `black-alpha-4` for the icon area background and `black-alpha-48` for the icon and title. Every tier uses `black-alpha-36` for descriptions. `xl` actions are 32px high; one action uses the outline button treatment, and two actions render outline secondary first and dark primary second with an 8px gap.
 
 ### Side-panel queue coverage
 
@@ -137,6 +138,7 @@ The icon artwork is supplied by the caller/current motion-icon mapping; Figma de
 
 | Surface | Current default | `EmrEmptyState` adoption rule | Action ownership |
 | --- | --- | --- | --- |
+| Full workspace content | Use explicit `size="xl"` only when the entire operational workspace has no selected or source work to render | Keep `xl` explicit at the caller so ordinary content surfaces continue to resolve to `lg`. | The workspace may own one local recovery action such as refresh; keep navigation or creation actions in the feature caller. |
 | Queue side panel | Use `EmrQueueEmptyState` with the `md` visual tier | Keep queue-specific placement and list-local behavior, but use the shared 40px icon area / 24px icon slot, typography, alpha tokens, and reserved action-space contract. | Queue may own only local recovery such as clearing search or filters. It should not own screen-level create/navigation actions when content is also empty. |
 | Content body | Adopt for main operational absence states and narrowly scoped whole-content read failure | Use `surface="content"` when the main work area has no selected object, no upstream work object, no scope result, or cannot render because its required read failed. Use `kind="read-error"` only when no usable body remains; keep partial/degraded failures in `EmrInlineAlert`. | Content body carries the primary information/action weight for the screen-level absence or read-recovery state. Queue/list placeholders remain compact supporting states and do not own the primary screen-level action. |
 | Table body | Preferred second pilot surface | Use `surface="table"` for no rows, no filter results, or no search results inside table/list bodies when the table layout can preserve header/scroll alignment. Keep very dense tables on the existing empty row until spacing is verified. | Table owns local recovery such as reset filters. It should not trigger source workflow navigation unless the whole content surface is table-only. |
@@ -157,11 +159,11 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 | Chart order table | `src/features/chart/module.tsx` order table empty row | `EmrEmptyState` table pilot for filter/category-empty order rows | Adopted as the first table-body pilot on 2026-07-01. It keeps local recovery copy and no CTA until a table-local reset action is wired. |
 | Customer tables | `src/features/customer/module.tsx` `CustomerDataTable`, `DeletedCustomerContent` | `EmrEmptyState` table surface with explicit `size="md"` (`mg`) for no-data and filter-empty rows; skeleton rows for unresolved initial profile reads | Adopted for animal, guardian, and deleted-history table bodies. Deleted history distinguishes no records from search-filter-empty results; drawer/profile behavior is unchanged. |
 | Hospital admin tables | `src/features/hospital-admin/module.tsx`, `src/features/auth/workspace-membership-management.tsx` | Order catalog, audit log, and membership directory use `EmrEmptyState` table surface with explicit `size="md"` (`mg`) for no-data and filter/search-empty rows | Adopted for the large table/list bodies. Loading, permission, and read-failure branches remain separate. |
-| Dispensing/treatment content body | `src/features/dispensing/module.tsx` | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the history aside | Adopted for the operational content surface. Shared queue panels remain on compact queue placeholders. Selected work item states keep their detail/history surfaces where applicable. |
-| Lab content body | `src/features/lab-imaging/module.tsx` lab branch | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the lab history aside | Adopted for the operational content surface. Lab result table empty, permission, retry, save, and catalog states remain separate. Selected detail states keep their aside/history where applicable. |
-| Imaging content body | `src/features/lab-imaging/module.tsx` imaging branch | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the imaging history aside | Adopted for the operational content surface. Shared queue panels remain compact. Selected detail states keep their aside/history where applicable. |
-| Billing content body | `src/features/billing/module.tsx` | Main content true-empty/no-selection branches use `EmrEmptyState` with `surface="content"`; no-upstream-work states suppress the billing history aside | Adopted for the operational content surface without changing checkout, ledger, payment, or API state handling. Selected invoice states keep their aside/history where applicable. |
-| Home and notification widgets | `src/features/home/components/*`, `src/features/notifications/global-notification-drawer.tsx` | Home work-status source-empty now uses `EmrEmptyState` in the main board and `EmrQueueEmptyState` in the side panel; small notification/widget empty messages remain local | Adopt Home work-status source-empty through the operational queue-empty contract. Keep unrelated notification/widget one-line empties local until repeated structure needs icon/copy/action. |
+| Dispensing/treatment content body | `src/features/dispensing/module.tsx` | Main content true-empty/no-selection branches use explicit `size="xl"`; no-upstream-work states suppress the history aside | Adopted for the full operational workspace. Shared queue panels remain on compact queue placeholders. Selected work item states keep their detail/history surfaces where applicable. |
+| Lab content body | `src/features/lab-imaging/module.tsx` lab branch | Main content true-empty/no-selection branches use explicit `size="xl"`; no-upstream-work states suppress the lab history aside | Adopted for the full operational workspace. Lab result table empty, permission, retry, save, and catalog states remain separate. Selected detail states keep their aside/history where applicable. |
+| Imaging content body | `src/features/lab-imaging/module.tsx` imaging branch | Main content true-empty/no-selection branches use explicit `size="xl"`; no-upstream-work states suppress the imaging history aside | Adopted for the full operational workspace. Shared queue panels remain compact. Selected detail states keep their aside/history surfaces where applicable. |
+| Billing content body | `src/features/billing/module.tsx` | Main content true-empty/no-selection branches use explicit `size="xl"`; no-upstream-work states suppress the billing history aside | Adopted for the full operational workspace without changing checkout, ledger, payment, or API state handling. Selected invoice states keep their aside/history where applicable. |
+| Home and notification widgets | `src/features/home/components/*`, `src/features/notifications/global-notification-drawer.tsx` | Home work-status source-empty/error/permission states use explicit `size="xl"` in the main board and `EmrQueueEmptyState` in the side panel; small notification/widget empty messages remain local | The full Home board uses the workspace-level XL contract. Keep unrelated notification/widget one-line empties local until repeated structure needs icon/copy/action. |
 | Reception profile drawer | `src/features/reception/profile-drawer.tsx` | Not-found, no linked item, no history, and permission-like copy | Do not bulk replace. Classify each case as drawer empty, info box, inline alert, or field/toast feedback first. |
 | Lab/imaging detail content | `src/features/lab-imaging/module.tsx` | Lab result input table uses `EmrEmptyState` for true-empty result rows; linked result, preview, permission, save, and retry states remain separate | True-empty lab result rows adopted as a table-body follow-up. Permission/save failure and retry states remain `EmrInlineAlert` or feature-local recovery UI. |
 
@@ -226,6 +228,14 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 - The caller owns retry, safe exit, navigation, logging, and request state. The shared component owns presentation only.
 - The patient pre-call prototype demonstrates this state with `surface="content"`, `priority="local-recovery"`, a secondary safe-exit action, and a primary retry action.
 - Partial reads, stale data, save/write failure, permission blockers, loading, and usable degraded screens remain outside this exception.
+
+## 2026-07-19 Full-Workspace XL Adoption
+
+- Home, chart, lab, imaging, dispensing/treatment, and billing now use explicit `size="xl"` when their full operational content body has no source work or no selected work item to render.
+- Home keeps the same XL geometry for full-board error and permission states so state changes do not shift visual hierarchy.
+- Source-empty copy follows the domain pattern `[업무명] 업무가 없습니다` and `오늘 표시할 [업무명] 업무가 없습니다.`; no-selection guidance remains a distinct state.
+- Refresh/retry actions use the Figma XL 32px rounded outline treatment. Queue-side actions and compact surfaces are unchanged.
+- `surface="content"` still resolves to `lg` by default. Callers must opt into `xl`; table, queue, drawer, widget, schedule-panel, and partial-error states must not inherit XL accidentally.
 
 ## Implementation Acceptance Criteria
 

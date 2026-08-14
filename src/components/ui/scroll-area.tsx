@@ -7,11 +7,13 @@ import { cn } from "@/lib/utils"
 
 type ScrollAreaProps = ScrollAreaPrimitive.Root.Props & {
   readonly viewportClassName?: string
+  readonly viewportStyle?: React.CSSProperties
 }
 
 function ScrollArea({
   className,
   viewportClassName,
+  viewportStyle,
   children,
   ...props
 }: ScrollAreaProps) {
@@ -27,6 +29,7 @@ function ScrollArea({
           "size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1",
           viewportClassName
         )}
+        style={viewportStyle}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

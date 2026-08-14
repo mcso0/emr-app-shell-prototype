@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>운영시간 관리 CDS V2 정합성 완료 보고</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #182230;
+        background: #f5f7fa;
+      }
+
+      body {
+        margin: 0;
+        padding: 48px 24px;
+      }
+
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+      }
+
+      header,
+      section {
+        padding: 28px 32px;
+        border: 1px solid #e4e7ec;
+        border-radius: 16px;
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgb(16 24 40 / 5%);
+      }
+
+      section {
+        margin-top: 16px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.35;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        line-height: 1.65;
+      }
+
+      .status {
+        display: inline-block;
+        margin-bottom: 12px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        color: #067647;
+        background: #ecfdf3;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      dl {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 12px 20px;
+        margin: 20px 0 0;
+      }
+
+      dt {
+        color: #667085;
+      }
+
+      dd {
+        margin: 0;
+        font-weight: 600;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.9em;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 20px 12px;
+        }
+
+        header,
+        section {
+          padding: 22px 20px;
+        }
+
+        dl {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+
+        dd {
+          margin-bottom: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="status">구현 및 로컬 검증 완료</span>
+        <h1>운영시간 관리 CDS V2 정합성 완료 보고</h1>
+        <p>
+          병원 관리의 운영시간 관리 화면을 CDS V2 Figma 시안과 맞추고, 기존
+          운영시간 저장·권한·감사 계약이 그대로 유지되는지 함께 확인했습니다.
+        </p>
+        <dl>
+          <dt>기준 시안</dt>
+          <dd>CDS V2 node <code>27804:28265</code></dd>
+          <dt>작업 성격</dt>
+          <dd>화면 정합성 개선 및 기존 데이터 계약 회귀 검증</dd>
+          <dt>원격 반영</dt>
+          <dd>PR Preview 검증 후 별도 승인 게이트에서 진행</dd>
+        </dl>
+      </header>
+
+      <section>
+        <h2>사용자에게 달라지는 점</h2>
+        <ul>
+          <li>
+            주간 운영시간과 공휴일·예외일 설정이 시안의 920px 콘텐츠 폭, 구역
+            간격, 행 높이, 버튼 및 배지 규격으로 정렬됩니다.
+          </li>
+          <li>
+            운영시간과 휴게시간이 서로 다른 배지로 구분되고, 휴무일은 비활성
+            시간 버튼과 상태 배지로 명확히 표시됩니다.
+          </li>
+          <li>
+            예외일 날짜가 한국어 형식으로 표시되며 추가·수정·삭제 동작은 기존
+            CDS 아이콘과 공용 컴포넌트를 사용합니다.
+          </li>
+          <li>
+            모바일 390px 화면에서도 가로 스크롤 없이 설정 내용을 확인하고 편집할
+            수 있습니다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>데이터 및 보안 계약</h2>
+        <ul>
+          <li>
+            기존 운영시간 GET/PUT API와 workspace 범위 제한을 변경하지
+            않았습니다.
+          </li>
+          <li>
+            구성원 조회, 관리자 수정 권한, 감사 로그 원자성, 향후 예약 충돌
+            검증을 그대로 유지했습니다.
+          </li>
+          <li>
+            API 형식, DB 스키마, migration, RPC, RLS, Storage 및 패키지 의존성
+            변경은 없습니다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li>운영시간 UI·모델·서버·migration 집중 테스트 25건 통과</li>
+          <li>ESLint, TypeScript, 프로덕션 빌드 통과</li>
+          <li>Storybook 빌드, 문서 검사, UX 문구 검사 통과</li>
+          <li>비밀정보 검사 및 diff 공백 오류 검사 통과</li>
+          <li>데스크톱·모바일 인증 브라우저 시각 검수 완료</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 배포 절차</h2>
+        <p>
+          작업 브랜치를 PR로 올린 뒤 Preview 배포와 필수 체크를 확인합니다. 이후
+          정확한 커밋, 롤백 대상, 중단 조건을 포함한 승인 패킷을 제시하고 승인
+          후에만 <code>origin/main</code> 병합과 프로덕션 배포를 진행합니다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

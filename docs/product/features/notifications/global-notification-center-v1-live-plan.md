@@ -269,7 +269,7 @@ Notification creation should start as an internal server helper used after appro
 
 | Parameter | Values | Default | Meaning |
 |---|---|---|---|
-| `filter` | `all`, `unread`, `important`, `archived` | `all` | Server-side row filter matching the drawer filter. |
+| `filter` | `all`, `unread`, `important`, `archived`, `snapshot` | `all` | Server-side row filter. `snapshot` returns the bounded active and archived startup set in one response. |
 | `limit` | 1-50 | 20 | Maximum rows returned. |
 | `cursor` | opaque string | none | Pagination cursor for older rows. |
 
@@ -416,7 +416,7 @@ The second implementation slice adopts the live API in the visible AppShell noti
 
 Implemented deliverables:
 
-- AppShell fetches active and archived notification rows from `/api/workspaces/:workspaceId/notifications`.
+- AppShell fetches active and archived notification rows from `/api/workspaces/:workspaceId/notifications`; the current contract uses one bounded `filter=snapshot` request.
 - Top-bar badge and drawer count summary use server counts.
 - Read, read-all, archive, and restore actions call server mutation routes.
 - Drawer source navigation uses only server-sanitized `sourceRoute`; null routes show fallback detail.
@@ -623,6 +623,32 @@ Still out of scope after this slice:
 - Standalone billing invoice-candidate PATCH notification emission.
 - Remote Supabase migration execution, staging/live replay, production deploy, or monitoring.
 - Realtime/SSE delivery and polling cadence changes.
+- External channels or provider/device/PACS integrations.
+
+## Twelfth Implementation Slice
+
+The twelfth implementation slice removes bounded duplicate reads and per-item
+writes before production traffic grows.
+
+Implemented deliverables:
+
+- AppShell startup loads active and archived rows with one `filter=snapshot`
+  request instead of two separately authorized requests.
+- `clair_mark_notification_user_states_read` persists a server-selected visible
+  notification set with one authenticated RPC.
+- Read-all keeps the existing recipient and source-permission filtering before
+  passing notification identifiers to the batch RPC.
+- The notification persistence foundation and batch RPC migrations are applied
+  to the connected remote Supabase project.
+- Public and anonymous execution is revoked for the notification persistence RPCs;
+  authenticated execution remains intentional because the route uses the caller's
+  Supabase session and validates actor/workspace boundaries inside each RPC.
+
+Still out of scope after this slice:
+
+- Realtime/SSE delivery or background scheduler ownership.
+- Cross-request permission caching.
+- Broad advisor-driven index creation or deletion without measured query evidence.
 - External channels or provider/device/PACS integrations.
 
 ## Open Questions

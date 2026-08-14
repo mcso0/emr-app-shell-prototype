@@ -34,12 +34,14 @@ import type {
 } from "@/types/emr-domain";
 
 export type ReceptionWalkInEncounterFieldErrorKey =
+  | "assignedStaffUserIds"
   | "patientId"
   | "durationMinutes"
   | "plannedStartAt"
   | "vitals"
   | "vitals.weightKg"
   | "vitals.temperatureC"
+  | "vitals.heartRateBpm"
   | "vitals.respiratoryRateRpm"
   | "vitals.bloodPressure"
   | "vitals.bloodPressure.systolicMmhg"
@@ -80,6 +82,7 @@ export type ReceptionWalkInEncounterGatewayResult =
 	        | "guardian_unavailable"
 	        | "patient_guardian_link_missing"
 	        | "primary_veterinarian_unavailable"
+	        | "assigned_staff_unavailable"
 	        | "walk_in_outside_business_hours";
     }
   | { ok: false; status: 500; error: "db_write_failed" };
@@ -119,6 +122,7 @@ export type ReceptionWalkInEncounterResult =
 	        | "guardian_unavailable"
 	        | "patient_guardian_link_missing"
 	        | "primary_veterinarian_unavailable"
+	        | "assigned_staff_unavailable"
 	        | "walk_in_outside_business_hours";
     }
   | {
@@ -289,6 +293,7 @@ export function createMockReceptionWalkInEncounterGateway(
         patientId: patient.id,
         guardianId: input.guardianId,
         primaryVeterinarianId: input.primaryVeterinarianId,
+        assignedStaffUserIds: getWalkInAssignedStaffUserIds(input),
         encounterNo: `E-WALKIN-${seed.slice(-6).toUpperCase()}`,
         receptionType: "walk_in",
         department: input.department,
@@ -470,6 +475,7 @@ function normalizeWalkInInput(
   const vitals = normalizeVitals(input.vitals);
 
   return {
+    assignedStaffUserIds: normalizeAssignedStaffUserIds(input.assignedStaffUserIds),
     department: trimToUndefined(input.department),
     durationMinutes:
       typeof input.durationMinutes === "number" &&
@@ -498,13 +504,18 @@ function normalizeVitals(
   if (vitals.temperatureC !== undefined) {
     normalized.temperatureC = Math.round(vitals.temperatureC * 10) / 10;
   }
+  if (vitals.heartRateBpm !== undefined) {
+    normalized.heartRateBpm = vitals.heartRateBpm;
+  }
   if (vitals.respiratoryRateRpm !== undefined) {
     normalized.respiratoryRateRpm = vitals.respiratoryRateRpm;
   }
   if (vitals.bloodPressure) {
     normalized.bloodPressure = {
       systolicMmhg: vitals.bloodPressure.systolicMmhg,
-      diastolicMmhg: vitals.bloodPressure.diastolicMmhg,
+      ...(vitals.bloodPressure.diastolicMmhg === undefined
+        ? {}
+        : { diastolicMmhg: vitals.bloodPressure.diastolicMmhg }),
     };
   }
 
@@ -519,6 +530,18 @@ function normalizeSupabaseWalkInRpcInput(
 
 function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
   const fieldErrors: ReceptionWalkInEncounterFieldErrors = {};
+
+  const rawAssignedStaffUserIds = (input as { assignedStaffUserIds?: unknown })
+    .assignedStaffUserIds;
+  if (
+    rawAssignedStaffUserIds !== undefined &&
+    (!Array.isArray(rawAssignedStaffUserIds) ||
+      rawAssignedStaffUserIds.some(
+        (value) => typeof value !== "string" || !value.trim(),
+      ))
+  ) {
+    fieldErrors.assignedStaffUserIds = "업무 담당자를 확인해 주세요.";
+  }
 
   if (!trimToUndefined(input.patientId)) {
     fieldErrors.patientId = "환자를 선택해 주세요.";
@@ -565,6 +588,13 @@ function validateVitals(
     fieldErrors,
   );
   validatePositiveNumber(
+    rawVitals.heartRateBpm,
+    "vitals.heartRateBpm",
+    "심박수는 0보다 큰 정수로 입력해 주세요.",
+    fieldErrors,
+    true,
+  );
+  validatePositiveNumber(
     rawVitals.respiratoryRateRpm,
     "vitals.respiratoryRateRpm",
     "호흡수는 0보다 큰 정수로 입력해 주세요.",
@@ -598,10 +628,7 @@ function validateVitals(
       true,
     );
   }
-  if (diastolic === undefined) {
-    fieldErrors["vitals.bloodPressure.diastolicMmhg"] =
-      "이완기 혈압을 입력해 주세요.";
-  } else {
+  if (diastolic !== undefined) {
     validatePositiveNumber(
       diastolic,
       "vitals.bloodPressure.diastolicMmhg",
@@ -645,6 +672,9 @@ function mapWalkInDbDenial(message?: string) {
 	  }
 	  if (message.includes("primary_veterinarian_unavailable")) {
 	    return "primary_veterinarian_unavailable" as const;
+	  }
+	  if (message.includes("assigned_staff_unavailable")) {
+	    return "assigned_staff_unavailable" as const;
 	  }
 	  if (message.includes("walk_in_outside_business_hours")) {
 	    return "walk_in_outside_business_hours" as const;
@@ -736,6 +766,7 @@ function mapEncounter(value: unknown): Encounter | null {
     primaryVeterinarianId:
       trimToUndefined(row.primaryVeterinarianId) ??
       trimToUndefined(row.primary_veterinarian_id),
+    assignedStaffUserIds: getAssignedStaffUserIdsFromRow(row),
     encounterNo,
     receptionType: (trimToUndefined(row.receptionType) ??
       trimToUndefined(row.reception_type)) as Encounter["receptionType"],
@@ -760,6 +791,40 @@ function mapEncounter(value: unknown): Encounter | null {
       trimToUndefined(row.updated_at) ??
       new Date(0).toISOString(),
   };
+}
+
+function normalizeAssignedStaffUserIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const normalized = Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function getWalkInAssignedStaffUserIds(
+  input: ReceptionWalkInEncounterInput,
+): string[] | undefined {
+  return normalizeAssignedStaffUserIds([
+    input.primaryVeterinarianId,
+    ...(input.assignedStaffUserIds ?? []),
+  ]);
+}
+
+function getAssignedStaffUserIdsFromRow(
+  row: Record<string, unknown>,
+): string[] | undefined {
+  const raw = row.assignedStaffUserIds ?? row.assigned_staff_user_ids;
+  const assigned = normalizeAssignedStaffUserIds(raw);
+  if (assigned) return assigned;
+  const primaryVeterinarianId =
+    trimToUndefined(row.primaryVeterinarianId) ??
+    trimToUndefined(row.primary_veterinarian_id);
+  return primaryVeterinarianId ? [primaryVeterinarianId] : undefined;
 }
 
 function mapQueueEntry(value: unknown): WaitingQueueEntry | null {

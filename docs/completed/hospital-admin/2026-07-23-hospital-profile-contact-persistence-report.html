@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>병원 프로필·연락처 저장 구현 결과</title>
+    <style>
+      :root { color-scheme: light; font-family: Pretendard, system-ui, sans-serif; color: #17171a; background: #f7f7f8; }
+      body { margin: 0; }
+      main { width: min(880px, calc(100% - 40px)); margin: 64px auto; }
+      h1 { margin: 0 0 12px; font-size: 32px; }
+      h2 { margin: 36px 0 12px; font-size: 20px; }
+      p, li { color: #54545b; line-height: 1.7; }
+      .status { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: #e9f7ef; color: #18794e; font-weight: 700; font-size: 13px; }
+      .card { margin-top: 28px; padding: 24px; border: 1px solid #dedee3; border-radius: 14px; background: white; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="status">로컬 구현·검증 완료</span>
+      <h1>병원 프로필·연락처 저장</h1>
+      <p>2026-07-23 · HOSPITAL-ADMIN-LIVE-PR-021</p>
+      <section class="card">
+        <h2>요청과 결과</h2>
+        <p>
+          병원 정보와 연락처가 화면 임시값에 머물지 않도록 워크스페이스 단위의
+          DB, RPC, API, 권한 경계를 연결했습니다. 등록 정보 변경은 즉시 덮어쓰지
+          않고 검토 대기 요청으로 저장됩니다.
+        </p>
+        <h2>주요 변경</h2>
+        <ul>
+          <li>병원 프로필 및 등록 정보 변경 요청 테이블 추가</li>
+          <li>활성 멤버 읽기, 관리자 변경, 교차 워크스페이스 차단</li>
+          <li>revision 기반 동시 수정 충돌 방지</li>
+          <li>엄격한 입력 키·본문 크기·URL·메모 길이 검증과 rate limit</li>
+          <li>연락처 원문이나 요청 상세를 남기지 않는 안전한 감사 이벤트</li>
+          <li>화면별 독립 draft, 저장, 되돌리기, 새로고침 readback</li>
+        </ul>
+        <h2>검증</h2>
+        <p>
+          로컬 Supabase 전체 마이그레이션과 프로필/RLS/감사 트랜잭션 재생,
+          모델·서버·마이그레이션·운영시간 회귀 테스트를 통과했습니다.
+        </p>
+        <h2>남은 경계</h2>
+        <p>
+          원격 마이그레이션, 외부 알림 전송, 운영자 승인 화면, 프로덕션 배포는
+          수행하지 않았습니다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

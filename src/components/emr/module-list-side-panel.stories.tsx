@@ -98,3 +98,48 @@ export const Default: Story = {
     },
   },
 };
+
+const groupedItems: EmrModuleListSidePanelItem[] = [
+  { id: "hospital-settings-label", type: "groupLabel", label: "병원 설정" },
+  {
+    id: "hospital",
+    type: "button",
+    active: true,
+    icon: <CdsFilesGridIcon aria-hidden="true" />,
+    label: "병원 기본 설정",
+  },
+  {
+    id: "contact",
+    type: "button",
+    icon: <CdsFilesGridIcon aria-hidden="true" />,
+    label: "연락처 및 채널",
+  },
+  { id: "organization-label", type: "groupLabel", label: "조직 및 접근" },
+  {
+    id: "members",
+    type: "button",
+    icon: <CdsFilesDocumentAltFillIcon aria-hidden="true" />,
+    label: "병원 구성원",
+  },
+];
+
+export const GroupedNavigation: Story = {
+  render: (args) => (
+    <div className="h-[420px]">
+      <EmrModuleListSidePanel
+        items={groupedItems}
+        openSectionIds={new Set()}
+        title={args.title}
+        onToggleSection={() => undefined}
+      />
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "서로 독립적인 설정 영역을 정적 그룹 레이블로 구분합니다. 그룹 레이블은 탐색 버튼이나 포커스 대상이 아닙니다.",
+      },
+    },
+  },
+};

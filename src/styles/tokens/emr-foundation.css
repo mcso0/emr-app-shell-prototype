@@ -79,6 +79,29 @@
   --emr-surface-disabled: oklch(0.955 0.001 286);
   --emr-surface-floating: var(--emr-surface-3);
 
+  /* Schedule v2: feature aliases only. Components must not embed palette or geometry values. */
+  --emr-schedule-grid-staff-column: 13rem;
+  --emr-schedule-grid-day-column-min: 9rem;
+  --emr-schedule-grid-row-min-height: 7rem;
+  --emr-schedule-grid-cell-padding: var(--clair-spacing-8);
+  --emr-schedule-grid-header-bg: var(--emr-surface-muted);
+  --emr-schedule-grid-divider: var(--emr-line-hairline);
+  --emr-schedule-shift-clinical-bg: var(--emr-status-info-bg);
+  --emr-schedule-shift-clinical-border: var(--emr-status-info-border);
+  --emr-schedule-shift-clinical-text: var(--emr-status-info-text);
+  --emr-schedule-shift-support-bg: color-mix(in srgb, var(--clair-color-atomic-purple-400) 8%, var(--emr-surface-panel));
+  --emr-schedule-shift-support-border: var(--clair-color-atomic-purple-200);
+  --emr-schedule-shift-support-text: var(--clair-color-atomic-purple-800);
+  --emr-schedule-shift-reception-bg: var(--emr-status-success-bg);
+  --emr-schedule-shift-reception-border: var(--emr-status-success-border);
+  --emr-schedule-shift-reception-text: var(--emr-status-success-text);
+  --emr-schedule-shift-leave-bg: var(--emr-status-warning-bg);
+  --emr-schedule-shift-leave-border: var(--emr-status-warning-border);
+  --emr-schedule-shift-leave-text: var(--emr-status-warning-text);
+  --emr-schedule-shift-off-bg: var(--emr-surface-muted);
+  --emr-schedule-shift-off-border: var(--emr-border-default);
+  --emr-schedule-shift-off-text: var(--emr-text-secondary);
+
   --emr-navrail-bg: var(--clair-color-atomic-gray-900);
   --emr-navrail-width: 52px;
   --emr-navrail-padding: var(--clair-spacing-10);
@@ -163,7 +186,12 @@
   --emr-sidepanel-header-height: 56px;
   --emr-sidepanel-header-padding-x: var(--clair-spacing-16);
   --emr-sidepanel-header-padding-y: 0px;
+  --emr-main-content-header-height-default: 56px;
+  --emr-main-content-header-height-compact: 44px;
   --emr-rightpanel-header-height: 56px;
+  --emr-rightpanel-footer-compact-height: 53px;
+  --emr-rightpanel-footer-single-height: 65px;
+  --emr-rightpanel-footer-stacked-height: 105px;
   --emr-profile-panel-width: 380px;
   --emr-profile-panel-gap: var(--clair-spacing-10);
   --emr-profile-header-height: 150px;
@@ -223,8 +251,6 @@
   --emr-sidepanel-status-icon-danger-bg: color-mix(in srgb, var(--emr-sidepanel-state-icon-stop-bg) 6%, transparent);
   --emr-sidepanel-status-icon-danger-border: var(--emr-sidepanel-state-icon-stop-border);
   --emr-sidepanel-status-icon-danger-fg: var(--emr-sidepanel-state-icon-stop-fg);
-  --emr-module-list-panel-width: 288px;
-  --emr-module-list-panel-content-width: 272px;
   --emr-module-list-header-padding-x: var(--clair-spacing-16);
   --emr-module-list-header-padding-top: var(--clair-spacing-16);
   --emr-module-list-header-padding-bottom: var(--clair-spacing-10);
@@ -232,12 +258,15 @@
   --emr-module-list-body-padding-x: var(--clair-spacing-8);
   --emr-module-list-body-padding-y: var(--clair-spacing-8);
   --emr-module-list-group-gap: var(--clair-spacing-2);
-  --emr-module-list-section-gap: var(--emr-module-list-group-gap);
+  --emr-module-list-section-gap: var(--clair-spacing-16);
   --emr-module-list-item-height: 36px;
   --emr-module-list-item-padding-x: var(--clair-spacing-8);
   --emr-module-list-item-padding-y: var(--clair-spacing-6);
   --emr-module-list-item-gap: var(--clair-spacing-8);
   --emr-module-list-item-left-gap: var(--clair-spacing-6);
+  --emr-module-list-item-slot-gap: var(--clair-spacing-16);
+  --emr-module-list-item-font-size: var(--clair-typography-label-1-font-size);
+  --emr-module-list-item-line-height: 18px;
   --emr-module-list-item-radius: var(--clair-radius-atomic-8);
   --emr-module-list-item-hover-bg: var(--emr-state-hover);
   --emr-module-list-item-selected-bg: var(--emr-state-active);
@@ -252,27 +281,27 @@
   );
   --emr-module-list-leaf-item-height: var(--clair-spacing-32);
   --emr-module-list-leaf-item-padding-x: var(--clair-spacing-8);
-  --emr-module-list-leaf-item-padding-y: var(--clair-spacing-4);
-  --emr-module-list-leaf-item-panel-right-inset: var(--clair-spacing-16);
-  --emr-module-list-leaf-list-padding-right: calc(
-    var(--emr-module-list-leaf-item-panel-right-inset) -
-      var(--emr-module-list-body-padding-x)
-  );
+  --emr-module-list-leaf-item-padding-y: var(--clair-spacing-6);
+  --emr-module-list-leaf-item-panel-right-inset: var(--clair-spacing-8);
+  --emr-module-list-leaf-list-padding-right: 0px;
   --emr-module-list-action-size: var(--clair-spacing-24);
   --emr-module-list-action-icon-size: 14px;
   --emr-module-list-action-icon: var(--clair-color-atomic-neutral-500);
   --emr-module-list-group-title-height: var(--clair-spacing-24);
   --emr-module-list-group-title-padding-x: var(--clair-spacing-8);
-  --emr-module-list-group-title-padding-y: var(--clair-spacing-2);
-  --emr-module-list-group-title-text: var(--clair-color-atomic-neutral-400);
+  --emr-module-list-group-title-padding-y: var(--clair-spacing-8);
+  --emr-module-list-group-title-text: var(--clair-color-atomic-neutral-500);
+  --emr-module-list-child-group-title-height: var(--clair-spacing-20);
+  --emr-module-list-child-group-title-padding-x: var(--clair-spacing-8);
+  --emr-module-list-child-group-title-padding-y: var(--clair-spacing-2);
+  --emr-module-list-child-group-title-text: var(--clair-color-atomic-neutral-400);
+  --emr-module-list-child-group-separator-height: var(--clair-spacing-8);
+  --emr-module-list-metadata-font-size: var(--clair-typography-label-2-font-size);
+  --emr-module-list-metadata-line-height: 16px;
   --emr-module-list-child-indent: var(--clair-spacing-16);
   --emr-module-list-child-rail-line-width: 1px;
-  --emr-module-list-child-rail-column-width: calc(
-    var(--emr-module-list-item-padding-x) +
-      var(--emr-module-list-item-icon-size) +
-      var(--emr-module-list-item-gap)
-  );
-  --emr-module-list-child-rail-line-x: var(--emr-module-list-section-icon-center-x);
+  --emr-module-list-child-rail-column-width: 26px;
+  --emr-module-list-child-rail-line-x: 14px;
   --emr-module-list-child-rail-line-left: calc(
     var(--emr-module-list-child-rail-line-x) -
       (var(--emr-module-list-child-rail-line-width) / 2)
@@ -417,11 +446,11 @@
       (var(--emr-calendar-current-time-dot-size) * 0.5)
   );
   --emr-context-bar-min-height: 56px;
-  --emr-context-bar-padding-x: var(--clair-spacing-16);
-  --emr-context-bar-padding-y: var(--clair-spacing-12);
-  --emr-context-bar-section-gap: var(--clair-spacing-12);
-  --emr-context-bar-item-gap: var(--clair-spacing-6);
-  --emr-context-bar-divider-height: 18px;
+  --emr-context-bar-padding-x: var(--clair-spacing-12);
+  --emr-context-bar-padding-y: var(--clair-spacing-10);
+  --emr-context-bar-section-gap: var(--clair-spacing-8);
+  --emr-context-bar-item-gap: var(--clair-spacing-8);
+  --emr-context-bar-divider-height: 16px;
   --emr-context-bar-divider: var(--emr-border-default);
   --emr-context-bar-chip-height: 22px;
   --emr-context-bar-chip-bg: var(--clair-color-atomic-black-alpha-4);
@@ -432,8 +461,11 @@
   --emr-context-bar-control-size: var(--clair-control-height-xs);
   --emr-context-bar-control-radius: var(--clair-radius-atomic-4);
   --emr-context-bar-button-radius: var(--clair-radius-atomic-8);
-  --emr-context-bar-icon-size: var(--clair-spacing-20);
+  --emr-context-bar-icon-size: var(--clair-spacing-24);
   --emr-context-bar-inline-icon-size: var(--clair-spacing-12);
+  --emr-context-bar-hover-bg: var(--clair-color-atomic-neutral-100);
+  --emr-context-bar-hover-icon-bg: var(--clair-color-atomic-white-alpha-80);
+  --emr-context-bar-hover-action-icon-size: var(--clair-spacing-14);
   --emr-page-title-height: var(--clair-control-height-md);
   --emr-page-title-section-gap: var(--clair-spacing-24);
   --emr-page-title-left-gap: var(--clair-spacing-10);
@@ -574,4 +606,16 @@
   --emr-table-cell-padding-y-compact: var(--clair-spacing-4);
   --emr-table-cell-padding-y-standard: var(--clair-spacing-8);
   --emr-table-cell-padding-y-comfortable: var(--clair-spacing-10);
+}
+
+[data-slot="emr-main-content-header"] {
+  height: var(--emr-main-content-header-height-default);
+  min-height: var(--emr-main-content-header-height-default);
+}
+
+@media (min-width: 1024px) and (max-height: 1279px) {
+  [data-slot="emr-main-content-header"][data-height-mode="adaptive"] {
+    height: var(--emr-main-content-header-height-compact);
+    min-height: var(--emr-main-content-header-height-compact);
+  }
 }

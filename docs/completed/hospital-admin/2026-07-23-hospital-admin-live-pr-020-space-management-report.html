@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>공간 관리 구현 및 검증 결과</title>
+    <style>
+      :root { color-scheme: light; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      body { margin: 0; background: #f6f7f8; color: #18181b; }
+      main { width: min(880px, calc(100% - 32px)); margin: 40px auto; padding: 32px; box-sizing: border-box; background: #fff; border: 1px solid #e4e4e7; border-radius: 16px; }
+      h1 { margin: 0 0 8px; font-size: 26px; }
+      h2 { margin: 28px 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      .status { display: inline-block; margin-top: 8px; padding: 5px 9px; border-radius: 999px; background: #eef7ef; color: #216e39; font-size: 12px; font-weight: 700; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { padding: 2px 5px; border-radius: 5px; background: #f1f3f5; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>공간 관리 구현 및 검증</h1>
+      <p>기존 공간·시간 개념 화면을 병원별 공간 카테고리와 실제 공간만 관리하는 영속 설정 화면으로 교체했습니다.</p>
+      <span class="status">Human Review 준비</span>
+
+      <h2>정보 구조와 화면</h2>
+      <ul>
+        <li>첫 화면에는 진료·처치·검사·수술 등 큰 카테고리만 아이콘, 공간 수, 이동 화살표와 함께 표시합니다.</li>
+        <li>상단 <strong>카테고리 설정</strong> 모달에서 카테고리를 인라인으로 추가·이름 변경·삭제할 수 있습니다.</li>
+        <li>공간이 있는 카테고리를 삭제할 때는 이동 대상을 먼저 선택하고, 이동과 보관을 하나의 작업으로 처리합니다.</li>
+        <li>카테고리 상세는 마지막 깊이이며 공간을 직접 추가·수정·이동·삭제합니다. 더 깊은 화면으로 가는 화살표는 없습니다.</li>
+        <li>추가·수정·삭제의 성공 또는 실패 결과는 모두 토스트로 안내합니다.</li>
+      </ul>
+
+      <h2>데이터와 권한</h2>
+      <ul>
+        <li>카테고리와 공간을 워크스페이스별 테이블에 저장하고 삭제 대신 보관 처리합니다.</li>
+        <li>조회는 활성 구성원, 변경은 <code>hospital_settings:manage</code> 권한으로 서버와 RPC에서 다시 확인합니다.</li>
+        <li>클라이언트가 사용자나 워크스페이스 소유권을 지정할 수 없고, 직접 테이블 쓰기는 차단합니다.</li>
+        <li>카테고리·공간 변경 6종은 감사 이벤트와 변경 전후 스냅샷을 남깁니다.</li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li>모델·마이그레이션·서버·API 집중 테스트 14개 통과</li>
+        <li>카테고리/공간 CRUD, 토스트, 삭제 전 이동, 오류 복구, 읽기 전용 빈 상태, 좁은 화면 브라우저 테스트 5개 통과</li>
+        <li>TypeScript, ESLint, Next.js 프로덕션 빌드, 문서 링크, 비밀정보 스캔, diff 형식 검사 통과</li>
+        <li>로컬 Supabase에서 관리자 읽기/쓰기와 롤백을 확인하고, 일반 직원 쓰기·다른 워크스페이스 조회·직접 테이블 쓰기 차단 확인</li>
+      </ul>
+
+      <h2>범위와 주의점</h2>
+      <p>시간, 수용 인원, 배정 방식, 상태, 장비, 예약 정책과 다른 업무 화면의 공간 선택 연동은 이번 범위에 포함하지 않았습니다.</p>
+      <p>전체 병원관리 테스트는 47개 중 46개가 통과했습니다. 남은 1개는 이번 변경과 관계없는 기존 기본 설정 테스트의 <code>대표 전화 *</code> 라벨 기대치 불일치이며, 공간 관리 집중 테스트는 모두 통과했습니다.</p>
+      <p>현재 결과는 격리된 로컬 브랜치와 로컬 Supabase에만 있습니다. 커밋, 푸시, PR, 원격 마이그레이션, 배포는 수행하지 않았습니다.</p>
+    </main>
+  </body>
+</html>

@@ -10,12 +10,27 @@ import {
 } from "@/components/emr/table-density"
 import { cn } from "@/lib/utils"
 
+export type TablePinningMode = "none" | "columns"
+export type TablePinnedSide = "left" | "right"
+export type TableOverscrollAxes = "none" | "horizontal" | "vertical" | "both"
+
+export type TablePinnedCellOptions = {
+  pinned?: TablePinnedSide
+  pinnedEdge?: boolean
+  pinnedOffset?: number | string
+}
+
 type TableProps = React.ComponentProps<"table"> & {
   containerClassName?: string
   density?: EmrTableDensity
   layout?: EmrTableLayout
   minWidth?: number | string
+  overscrollAxes?: TableOverscrollAxes
+  pinning?: TablePinningMode
 }
+
+type TableHeadProps = React.ComponentProps<"th"> & TablePinnedCellOptions
+type TableCellProps = React.ComponentProps<"td"> & TablePinnedCellOptions
 
 function toTableWidth(value: number | string | undefined) {
   if (typeof value === "number") {
@@ -25,16 +40,43 @@ function toTableWidth(value: number | string | undefined) {
   return value
 }
 
+function getPinnedCellStyle(
+  pinned: TablePinnedSide | undefined,
+  pinnedOffset: number | string | undefined,
+  style: React.CSSProperties | undefined
+) {
+  if (!pinned) return style
+
+  const offset = toTableWidth(pinnedOffset ?? 0)
+
+  return {
+    ...style,
+    ...(pinned === "left" ? { left: offset } : { right: offset }),
+  }
+}
+
 function Table({
   className,
   containerClassName,
   density = defaultEmrTableDensity,
   layout = defaultEmrTableLayout,
   minWidth,
+  overscrollAxes,
+  pinning = "none",
   style,
   ...props
 }: TableProps) {
   const tableMinWidth = toTableWidth(minWidth)
+  const resolvedOverscrollAxes =
+    overscrollAxes ?? (layout === "scroll" ? "horizontal" : "none")
+  const overscrollClassName = cn(
+    (resolvedOverscrollAxes === "horizontal" ||
+      resolvedOverscrollAxes === "both") &&
+      "overscroll-x-none",
+    (resolvedOverscrollAxes === "vertical" ||
+      resolvedOverscrollAxes === "both") &&
+      "overscroll-y-none",
+  )
 
   return (
     <div
@@ -43,6 +85,7 @@ function Table({
       className={cn(
         "relative w-full",
         layout === "scroll" ? "emr-table-scroll-container overflow-x-auto" : "overflow-x-auto",
+        overscrollClassName,
         containerClassName
       )}
     >
@@ -50,6 +93,7 @@ function Table({
         data-slot="table"
         data-emr-density={density}
         data-emr-layout={layout}
+        data-emr-pinning={pinning}
         className={cn("emr-table-surface w-full caption-bottom text-sm", className)}
         style={{
           minWidth: tableMinWidth,
@@ -107,27 +151,47 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   )
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+function TableHead({
+  className,
+  pinned,
+  pinnedEdge,
+  pinnedOffset,
+  style,
+  ...props
+}: TableHeadProps) {
   return (
     <th
       data-slot="table-head"
+      data-emr-column-pinned={pinned}
+      data-emr-pinned-edge={pinnedEdge ? "true" : undefined}
       className={cn(
         "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
         className
       )}
+      style={getPinnedCellStyle(pinned, pinnedOffset, style)}
       {...props}
     />
   )
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+function TableCell({
+  className,
+  pinned,
+  pinnedEdge,
+  pinnedOffset,
+  style,
+  ...props
+}: TableCellProps) {
   return (
     <td
       data-slot="table-cell"
+      data-emr-column-pinned={pinned}
+      data-emr-pinned-edge={pinnedEdge ? "true" : undefined}
       className={cn(
         "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
         className
       )}
+      style={getPinnedCellStyle(pinned, pinnedOffset, style)}
       {...props}
     />
   )

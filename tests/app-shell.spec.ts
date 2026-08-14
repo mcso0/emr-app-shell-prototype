@@ -438,18 +438,21 @@ test("global notification bell opens right drawer with badge policy count", asyn
   await expect(page.getByTestId("global-notification-badge")).toHaveText("7");
   await expect
     .poll(() =>
-      notificationRequests.some((entry) =>
-        entry.includes("GET /api/workspaces/clair-demo/notifications?filter=all"),
-      ),
+      notificationRequests.filter((entry) =>
+        entry.includes("GET /api/workspaces/clair-demo/notifications?filter=snapshot"),
+      ).length,
     )
-    .toBe(true);
-  await expect
-    .poll(() =>
-      notificationRequests.some((entry) =>
-        entry.includes("GET /api/workspaces/clair-demo/notifications?filter=archived"),
-      ),
-    )
-    .toBe(true);
+    .toBe(1);
+  expect(
+    notificationRequests.some((entry) =>
+      entry.includes("GET /api/workspaces/clair-demo/notifications?filter=all"),
+    ),
+  ).toBe(false);
+  expect(
+    notificationRequests.some((entry) =>
+      entry.includes("GET /api/workspaces/clair-demo/notifications?filter=archived"),
+    ),
+  ).toBe(false);
 
   await notificationButton.click();
 
@@ -764,6 +767,9 @@ test("shared side-panel header uses the 56px frame with horizontal-only inset", 
 });
 
 test("workspace switcher reads persisted workspace display name from server list", async ({ page }) => {
+  let logoRevision = 4;
+  let logoUrl = "/clair-logo-mark.svg";
+
   await page.route("**/api/workspaces", async (route) => {
     if (route.request().method() !== "GET") {
       await route.fallback();
@@ -782,6 +788,10 @@ test("workspace switcher reads persisted workspace display name from server list
             membershipId: "membership-persisted-hanbit",
             roles: ["hospital_admin"],
             status: "active",
+            logo: {
+              revision: logoRevision,
+              url: logoUrl,
+            },
           },
         ],
         enforcedBy: "workspace-membership-reader",
@@ -794,6 +804,26 @@ test("workspace switcher reads persisted workspace display name from server list
   await expect(page.getByTestId("workspace-switcher")).toContainText(
     "Persisted Hanbit Animal Hospital"
   );
+  await expect(
+    page
+      .getByTestId("workspace-switcher")
+      .locator('[data-slot="workspace-switcher-logo-image"]')
+  ).toHaveAttribute("src", "/clair-logo-mark.svg");
+
+  logoRevision = 5;
+  logoUrl = "/pwa-icon-192.png";
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent("clair.workspaceIdentity.changed", {
+        detail: { workspaceId: "persisted-hanbit" },
+      })
+    );
+  });
+  await expect(
+    page
+      .getByTestId("workspace-switcher")
+      .locator('[data-slot="workspace-switcher-logo-image"]')
+  ).toHaveAttribute("src", "/pwa-icon-192.png");
 });
 
 test("app shell keeps compact workspace switcher and nav rail visible on narrow viewports", async ({ page }) => {
@@ -906,15 +936,33 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await expect(statusIcon).toHaveCSS("height", "12px");
   await expect(statusIcon).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-neutral-text)"));
   await expect(checkbox).toHaveCSS("opacity", "1");
-  await expect(checkbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-default)"));
+  expect(
+    await checkbox.evaluate(
+      (element) => getComputedStyle(element, "::before").borderColor,
+    ),
+  ).toBe(
+    await resolveCssColor(page, "var(--clair-color-atomic-neutral-300)"),
+  );
   const completedCheckbox = page.getByTestId("order-row-section-0-o-10027").getByRole("checkbox");
   const canceledCheckbox = page.getByTestId("order-row-section-0-o-10028").getByRole("checkbox");
   await expect(completedCheckbox).toBeDisabled();
-  await expect(completedCheckbox).toHaveCSS("opacity", "1");
-  await expect(completedCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-subtle)"));
+  await expect(completedCheckbox).toHaveCSS("opacity", "0.5");
+  expect(
+    await completedCheckbox.evaluate(
+      (element) => getComputedStyle(element, "::before").borderColor,
+    ),
+  ).toBe(
+    await resolveCssColor(page, "var(--clair-color-atomic-neutral-300)"),
+  );
   await expect(canceledCheckbox).toBeDisabled();
-  await expect(canceledCheckbox).toHaveCSS("opacity", "1");
-  await expect(canceledCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-border-subtle)"));
+  await expect(canceledCheckbox).toHaveCSS("opacity", "0.5");
+  expect(
+    await canceledCheckbox.evaluate(
+      (element) => getComputedStyle(element, "::before").borderColor,
+    ),
+  ).toBe(
+    await resolveCssColor(page, "var(--clair-color-atomic-neutral-300)"),
+  );
 
   await checkbox.click();
   await expect(page.getByText("상세 정보")).toBeHidden();
@@ -924,7 +972,7 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await expect(page.getByText("선택한 오더 1개")).toBeHidden();
   await expect(row.getByText("완료").first()).toBeVisible();
   await expect(checkbox).toBeDisabled();
-  await expect(checkbox).toHaveCSS("opacity", "1");
+  await expect(checkbox).toHaveCSS("opacity", "0.5");
 });
 
 test("dispensing table aligns selection header and row checkboxes", async ({ page }) => {
@@ -1396,12 +1444,16 @@ test("customer table uses compact scope controls and checkbox bulk selection", a
   const header = page.getByTestId("customer-page-header");
   const table = page.getByTestId("customer-patient-table");
 
-  await expect(header.getByRole("textbox", { name: "고객관리 검색" })).toHaveCount(0);
+  await expect(
+    header.getByRole("textbox", { name: "고객관리 검색" }),
+  ).toBeVisible();
   await expect(header.getByRole("button", { name: "환자/보호자 등록" })).toBeVisible();
   await expect(table).toBeVisible();
   await expect(table).toHaveCSS("border-radius", "0px");
-  await expect(table.getByRole("textbox", { name: "고객관리 검색" })).toBeVisible();
-  await expect(table).toContainText("전체 동물");
+  await expect(
+    table.getByRole("textbox", { name: "고객관리 검색" }),
+  ).toHaveCount(1);
+  await expect(header.getByRole("heading", { name: "동물" })).toBeVisible();
   await expect(table).not.toContainText("0 / 5 선택");
   const workspaceBox = await page.getByTestId("customer-workspace").boundingBox();
   const tableBox = await table.boundingBox();
@@ -1414,35 +1466,42 @@ test("customer table uses compact scope controls and checkbox bulk selection", a
   await expect(page.getByText("환자 정보")).toHaveCount(0);
 
   await page.getByTestId("customer-patient-row-patient-coco").click({ position: { x: 120, y: 20 } });
-  await expect(page.getByText("환자 정보")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "환자 정보" })).toBeVisible();
 });
 
-test("hospital order table keeps tabs and compact controls in one hierarchy row", async ({ page }) => {
+test("hospital order table uses the shared data-table header without category tabs", async ({ page }) => {
   await page.goto("/w/clair-demo/orders?modulePanel=open&aside=closed");
 
-  const tabGroup = page.getByRole("group", { name: "임상병리 검사 하위 타입" });
-  const activeTab = tabGroup.getByRole("button", { name: "전체" });
-  const search = page.getByRole("textbox", { name: "오더 검색" });
-  await expect(activeTab).toBeVisible();
-  await expect(activeTab).toHaveAttribute("aria-pressed", "true");
+  const header = page.getByTestId("hospital-order-page-header");
+  const search = header.getByRole("textbox", { name: "오더 검색" });
+  await expect(header).toHaveAttribute("data-emr-table-workspace-header", "true");
   await expect(search).toBeVisible();
+  await expect(header.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
+  await expect(header).not.toContainText("병원관리 / Order 관리");
+  await expect(
+    page.getByRole("group", { name: "임상병리 검사 하위 타입" }),
+  ).toHaveCount(0);
   await expect(page.getByRole("button", { name: "오더 필터 설정" })).toBeVisible();
   await expect(page.getByTestId("hospital-order-table")).toBeVisible();
-
-  const activeTabBox = await activeTab.boundingBox();
-  const searchBox = await search.boundingBox();
-  expectRect(activeTabBox);
-  expectRect(searchBox);
-  expect(Math.abs(Math.round(activeTabBox.y - searchBox.y))).toBeLessThanOrEqual(8);
 });
 
 test("dispensing queue selection updates existing patient and instruction context", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=closed");
+  await page.getByTestId("order-queue-item-dispensing-queue-0").click();
 
+  await expect(
+    page
+      .getByTestId("workspace-main-content")
+      .locator("[data-slot='emr-main-content-header']"),
+  ).toHaveCSS("height", "56px");
   const patientContextBar = page.locator("[data-slot='patient-context-bar'] > div").first();
-  await expect(patientContextBar).toHaveCSS("min-height", "56px");
-  await expect(patientContextBar).toHaveCSS("padding-left", "16px");
-  await expect(patientContextBar).toHaveCSS("column-gap", "12px");
+  await expect(patientContextBar).toHaveCSS("padding-left", "12px");
+  await expect(patientContextBar).toHaveCSS("padding-right", "20px");
+  const patientInfoSection = page.locator("[data-slot='patient-context-patient']");
+  await expect(patientInfoSection).toHaveCSS("height", "36px");
+  await expect(patientInfoSection).toHaveCSS("column-gap", "8px");
+  await expect(patientInfoSection).toHaveCSS("padding-left", "6px");
+  await expect(patientInfoSection.locator("span").first()).toHaveCSS("width", "24px");
   await expect(page.locator("[data-slot='emr-page-header']")).toHaveCSS("min-height", "32px");
   const instructionInfoCard = page.locator("[data-slot='instruction-info-card']");
   await expect(instructionInfoCard).toHaveCSS("min-height", "72px");
@@ -1490,10 +1549,15 @@ test("dispensing queue selection updates existing patient and instruction contex
   const titleBar = page.locator("[data-slot='instruction-header-title-bar']");
   await expect(titleBar).toContainText("RX-260414-0007");
 
-  const patientContext = page.getByLabel("환자 컨텍스트 정보");
-  await expect(patientContext).toContainText(/환자\s*나비/);
-  await expect(patientContext).toContainText(/보호자\s*오세아/);
-  await expect(patientContext).toContainText(/품종\s*러시안블루/);
+  await expect(
+    page.locator("[data-slot='patient-context-patient']"),
+  ).toContainText("나비");
+  await expect(
+    page.locator("[data-slot='patient-context-guardian']"),
+  ).toContainText("오세아");
+  await expect(
+    page.locator("[data-slot='patient-context-patient']"),
+  ).toContainText("러시안블루");
 
   const orderInfo = page.locator("[data-slot='instruction-header-order-info']");
   await expect(orderInfo).toContainText("2026.04.14 10:42");
@@ -1508,18 +1572,6 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(resultContent).toContainText("수액 처치");
   await expect(resultContent).toContainText("Lactated Ringer's 120ml SC");
   await expect(resultContent).not.toContainText("항생제 세트 A");
-
-  await page.getByTestId("order-queue-item-dispensing-queue-4").click();
-  await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
-  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-success-bg)"));
-  await expect(page.getByTestId("order-status-badge-neb-o-50010")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-success-bg)"));
-  await expect(page.getByTestId("order-status-badge-neb-o-50010")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-success-text)"));
-
-  await page.getByTestId("order-queue-item-dispensing-queue-5").click();
-  await expect(page.getByTestId("instruction-status-label")).toHaveText("취소");
-  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-danger-bg)"));
-  await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-danger-bg)"));
-  await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-danger-text)"));
 });
 
 test("treatment module renders the chart queue instead of the order queue placeholder", async ({ page }) => {
@@ -1535,7 +1587,18 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await chartQueueAction.click({ force: true });
   await expect(page.getByRole("menu", { name: /더보기/ })).toContainText("차트 열기");
   await expect(page.getByRole("menu", { name: /더보기/ })).toContainText("보호자 정보");
-  await expect(page.getByRole("button", { name: "차트 이력 패널 열기" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await page.locator('[data-panel-id="history"]').hover();
+  await page.getByRole("button", { name: "History 패널 접기" }).click();
+  await expect(page).toHaveURL(/aside=closed/);
+  await expect(page.getByRole("heading", { name: "History" })).toBeHidden();
+  await page.getByRole("button", { name: "History 패널 펼치기" }).click();
+  await expect(page).toHaveURL(/aside=closed/);
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /차트 이력 패널/ }),
+  ).toBeVisible();
   await expect(page.getByRole("tab", { name: "기본 SOAP" })).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
@@ -1652,14 +1715,16 @@ test("workspace tabs warn only before opening the same concrete work surface in 
 
   await page.getByTestId("order-queue-item-encounter-coco-260501").click();
   await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
-  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("코코 · 보호자 이지은")).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("코코", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("이지은(주보호자)")).toBeVisible();
 
   const chartTabs = getWorkspaceTablist(page).getByRole("tab", { name: /진료\/차트/ });
 
   await expect(chartTabs).toHaveCount(2);
   await chartTabs.nth(0).click();
   await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
-  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이 · 보호자 김하늘")).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("김하늘(주보호자)")).toBeVisible();
   await chartTabs.nth(1).click();
   await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
 

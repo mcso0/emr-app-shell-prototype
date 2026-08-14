@@ -18,7 +18,7 @@ const meta = {
     },
   },
   argTypes: {
-    size: { control: "inline-radio", options: ["sm", "md", "lg"] },
+    size: { control: "inline-radio", options: ["table", "sm", "md", "lg"] },
     state: { control: "inline-radio", options: ["ready", "loading", "error"] },
     src: { control: "text" },
   },
@@ -52,6 +52,7 @@ export const Error: Story = {
 export const SizeScale: Story = {
   render: () => (
     <div className="flex items-end gap-4">
+      <AnimalPatientAvatar alt="테이블 동물 환자 프로필" size="table" />
       <AnimalPatientAvatar alt="소형 동물 환자 프로필" size="sm" />
       <AnimalPatientAvatar alt="중형 동물 환자 프로필" size="md" />
       <AnimalPatientAvatar alt="대형 동물 환자 프로필" size="lg" />

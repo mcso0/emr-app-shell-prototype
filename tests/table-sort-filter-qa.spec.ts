@@ -29,7 +29,8 @@ async function restoreKongOrderDraftDefaults(page: Page) {
 
 async function expectFilterControls(popover: Locator) {
   await expect(popover.getByRole("button", { name: "초기화" })).toBeVisible();
-  await expect(popover.getByRole("button", { name: /Add filter/ })).toBeVisible();
+  await expect(popover.getByRole("button", { name: "필터 추가" })).toBeVisible();
+  await expect(popover.getByRole("button", { name: "그룹 필터" })).toBeVisible();
 
   if ((await popover.locator('[data-emr-table-filter-builder="true"]').count()) > 0) {
     await expect(popover.getByRole("button", { name: "필터 닫기" })).toBeVisible();
@@ -43,8 +44,21 @@ async function expectFilterControls(popover: Locator) {
 }
 
 async function expectEscapeClosesFilter(page: Page) {
+  const openListbox = page.getByRole("listbox").last();
+  if ((await openListbox.count()) > 0 && (await openListbox.isVisible())) {
+    await page.keyboard.press("Escape");
+  }
   await page.keyboard.press("Escape");
   await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
+}
+
+async function expectNoHorizontalOverflow(locator: Locator) {
+  const metrics = await locator.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
 }
 
 test.describe("DEN-275 adopted table sort/filter QA", () => {
@@ -61,7 +75,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await expectWorkspaceScreen(page, orderArea);
     await orderArea.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();
     await expect(
-      orderArea.getByRole("button", { name: /현재 정렬: 청구금액 오름차순/ }),
+      orderArea.getByRole("button", { name: /청구금액 내림차순 정렬/ }),
     ).toBeVisible();
     await expect(
       orderArea.getByRole("button", { name: "오더 필터 설정" }),
@@ -72,7 +86,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await expectWorkspaceScreen(page, patientTable);
     await patientTable.getByRole("button", { name: /등록일시 오름차순 정렬/ }).click();
     await expect(
-      patientTable.getByRole("button", { name: /현재 정렬: 등록일시 오름차순/ }),
+      patientTable.getByRole("button", { name: /등록일시 내림차순 정렬/ }),
     ).toBeVisible();
     await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
     await expectFilterControls(page.locator('[data-slot="popover-content"]'));
@@ -83,7 +97,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await expectWorkspaceScreen(page, orderTable);
     await orderTable.getByRole("button", { name: /판매금액 오름차순 정렬/ }).click();
     await expect(
-      orderTable.getByRole("button", { name: /현재 정렬: 판매금액 오름차순/ }),
+      orderTable.getByRole("button", { name: /판매금액 내림차순 정렬/ }),
     ).toBeVisible();
     await page.getByRole("button", { name: "오더 필터 설정" }).click();
     await expectFilterControls(page.locator('[data-slot="popover-content"]'));
@@ -99,12 +113,10 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     const patientTable = page.getByTestId("customer-patient-table");
     await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
     let popover = page.locator('[data-slot="popover-content"]').last();
-    await popover.getByRole("button", { name: "Add filter" }).click();
-    await popover.getByLabel("필터 필드").first().click();
     await page.getByRole("option", { name: "품종" }).click();
     await popover.getByRole("combobox", { name: "필터 값" }).first().click();
     await page.getByRole("option", { name: "푸들" }).click();
-    await popover.getByRole("button", { name: "Add filter" }).click();
+    await popover.getByRole("button", { name: "그룹 필터" }).click();
     await popover.getByLabel("필터 필드").nth(1).click();
     await page.getByRole("option", { name: "성별" }).click();
     await popover.getByRole("combobox", { name: "필터 값" }).nth(1).click();
@@ -132,14 +144,11 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     const orderTable = page.getByTestId("hospital-order-table");
     await page.getByRole("button", { name: "오더 필터 설정" }).click();
     popover = page.locator('[data-slot="popover-content"]').last();
-    await popover.getByRole("button", { name: "Add filter" }).click();
-    await popover.getByLabel("필터 필드").last().click();
     await page.getByRole("option", { name: "판매금액" }).click();
     await popover.getByRole("textbox", { name: "필터 값" }).fill("999999");
-    const orderEmptyState = orderTable.locator(
-      'section[data-kind="no-filter-results"][data-surface="table"]'
-    );
+    const orderEmptyState = page.getByTestId("hospital-order-empty-state");
     await expect(orderEmptyState).toBeVisible();
+    await expect(orderTable).toHaveCount(0);
     await expect(orderEmptyState).toContainText("조건에 맞는 Order가 없습니다");
     await expect(orderEmptyState).toContainText("조건을 초기화하면 숨겨진 Order가 다시 보입니다.");
     popover = page.locator('[data-slot="popover-content"]').last();
@@ -174,5 +183,184 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await page.getByRole("button", { name: "오더 필터 설정" }).click();
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible();
     await expectEscapeClosesFilter(page);
+  });
+
+  test("advanced filter groups expose working AND OR controls and aligned surfaces", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/w/clair-demo/customer?modulePanel=open");
+    const patientTable = page.getByTestId("customer-patient-table");
+    await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
+    const builder = page.locator('[data-emr-table-filter-builder="true"]');
+    const popover = page.locator('[data-slot="popover-content"]').last();
+    const firstRow = builder.locator("[data-filter-condition-row]").first();
+    const firstDelete = builder.getByRole("button", { name: "그룹 1 조건 1 삭제" });
+    const reset = builder.getByRole("button", { name: "초기화" });
+
+    await expect(popover).toHaveCSS("width", "640px");
+    await expect(builder).toHaveAttribute("data-filter-auto-open-ready", "true");
+    await expect(page.getByRole("option", { name: "품종" })).toBeVisible();
+    const firstFieldTrigger = builder.getByRole("combobox", {
+      name: "그룹 1 조건 1 필터 필드",
+    });
+    const firstFieldTriggerBox = await firstFieldTrigger.boundingBox();
+    const openFieldMenu = page.locator('[data-slot="select-content"]:visible').first();
+    const openFieldMenuBox = await openFieldMenu.boundingBox();
+    expect(firstFieldTriggerBox).not.toBeNull();
+    expect(openFieldMenuBox).not.toBeNull();
+    expect(openFieldMenuBox!.y).toBeGreaterThanOrEqual(
+      firstFieldTriggerBox!.y + firstFieldTriggerBox!.height - 1,
+    );
+    await page.waitForTimeout(300);
+    const openFieldMenuBoxAfter300ms = await openFieldMenu.boundingBox();
+    await page.waitForTimeout(700);
+    const openFieldMenuBoxAfter1s = await openFieldMenu.boundingBox();
+    expect(openFieldMenuBoxAfter300ms).not.toBeNull();
+    expect(openFieldMenuBoxAfter1s).not.toBeNull();
+    for (const coordinate of ["x", "y", "width", "height"] as const) {
+      expect(
+        Math.abs(
+          openFieldMenuBoxAfter1s![coordinate] -
+            openFieldMenuBoxAfter300ms![coordinate],
+        ),
+      ).toBeLessThanOrEqual(1);
+    }
+    await expectNoHorizontalOverflow(popover);
+    await expectNoHorizontalOverflow(builder);
+    await expectNoHorizontalOverflow(firstRow);
+    await expect(firstDelete).toBeDisabled();
+    await expect(reset).toBeDisabled();
+
+    const singleRuleX = await firstRow.evaluate((row) => {
+      const field = row.querySelector<HTMLElement>('[aria-label$="필터 필드"]');
+      if (!field) throw new Error("Expected the first filter field trigger.");
+      return {
+        field: Math.round(field.getBoundingClientRect().x),
+        row: Math.round(row.getBoundingClientRect().x),
+      };
+    });
+    expect(singleRuleX.field).toBe(singleRuleX.row);
+
+    const singleGroupX = await builder.locator("[data-filter-group]").first().evaluate((group) => {
+      const surface = group.querySelector<HTMLElement>(":scope > section");
+      if (!surface) throw new Error("Expected the first filter group surface.");
+      return {
+        group: Math.round(group.getBoundingClientRect().x),
+        surface: Math.round(surface.getBoundingClientRect().x),
+      };
+    });
+    expect(singleGroupX.surface).toBe(singleGroupX.group);
+
+    const footerButtonPadding = await builder.locator("footer > button").evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const style = getComputedStyle(button);
+        return [style.paddingLeft, style.paddingRight];
+      })
+    );
+    expect(footerButtonPadding).toEqual([
+      ["8px", "8px"],
+      ["8px", "8px"],
+    ]);
+
+    const help = builder.getByLabel("필터 적용 방식 안내");
+    await expect(help).toHaveJSProperty("tagName", "SPAN");
+    await help.hover();
+    await expect(page.getByRole("tooltip")).toContainText("완성된 조건만 자동 적용");
+
+    await page.getByRole("option", { name: "품종" }).click();
+    await expect(firstDelete).toBeEnabled();
+    await expect(reset).toBeEnabled();
+    await builder.getByRole("combobox", { name: "필터 값" }).click();
+    await page.getByRole("option", { name: "푸들" }).click();
+
+    const activeTrigger = patientTable.getByRole("button", {
+      name: "동물 필터 1개 설정",
+    });
+    const activeBorderColors = await activeTrigger.evaluate((trigger) => {
+      const tokenValue = getComputedStyle(document.documentElement)
+        .getPropertyValue("--clair-color-atomic-sky-200")
+        .trim();
+      return {
+        className: trigger.className,
+        borderColor: getComputedStyle(trigger).borderTopColor,
+        tokenValue,
+      };
+    });
+    expect(activeBorderColors.className).toContain(
+      "border-[var(--clair-color-atomic-sky-200)]"
+    );
+    expect(activeBorderColors.tokenValue).toMatch(/^#[\da-f]{6}$/i);
+    expect(activeBorderColors.borderColor).not.toBe("rgb(226, 232, 240)");
+
+    await builder.getByRole("button", { name: "그룹 필터" }).click();
+    const multipleRuleX = await builder
+      .locator("[data-filter-condition-row]")
+      .evaluateAll((rows) =>
+        rows.map((row) => {
+          const field = row.querySelector<HTMLElement>('[aria-label$="필터 필드"]');
+          if (!field) throw new Error("Expected a filter field trigger.");
+          return {
+            field: Math.round(field.getBoundingClientRect().x),
+            row: Math.round(row.getBoundingClientRect().x),
+          };
+        })
+      );
+    expect(multipleRuleX[0].field).toBe(multipleRuleX[1].field);
+    expect(multipleRuleX[0].field).toBeGreaterThan(multipleRuleX[0].row);
+    await expectNoHorizontalOverflow(popover);
+    await expectNoHorizontalOverflow(builder);
+    await expectNoHorizontalOverflow(
+      builder.locator("[data-filter-condition-row]").first(),
+    );
+    const innerCombinator = builder.getByRole("combobox", {
+      name: "그룹 1 조건 2 조합 방식",
+    });
+    await expect(innerCombinator).toHaveText(/AND/);
+    await innerCombinator.click();
+    await page.getByRole("option", { name: "OR", exact: true }).click();
+    await expect(innerCombinator).toHaveText(/OR/);
+
+    await builder.getByRole("button", { name: "필터 추가" }).click();
+    await expect(builder.locator("[data-filter-group]")).toHaveCount(2);
+    await expect(
+      builder.getByRole("combobox", { name: "그룹 2와 이전 그룹 조합 방식" }),
+    ).toHaveText(/AND/);
+
+    const groupSurfaceX = await builder.locator("[data-filter-group] > section").evaluateAll(
+      (surfaces) => surfaces.map((surface) => surface.getBoundingClientRect().x),
+    );
+    expect(new Set(groupSurfaceX.map((value) => Math.round(value))).size).toBe(1);
+    const firstMultipleGroupX = await builder.locator("[data-filter-group]").first().evaluate((group) => ({
+      group: Math.round(group.getBoundingClientRect().x),
+      surface: Math.round(
+        group.querySelector<HTMLElement>(":scope > section")?.getBoundingClientRect().x ?? 0
+      ),
+    }));
+    expect(firstMultipleGroupX.surface).toBeGreaterThan(firstMultipleGroupX.group);
+    await expectNoHorizontalOverflow(popover);
+    await expectNoHorizontalOverflow(builder);
+    for (const group of await builder.locator("[data-filter-group]").all()) {
+      await expectNoHorizontalOverflow(group);
+      await expectNoHorizontalOverflow(group.locator(":scope > section"));
+    }
+    await reset.click();
+    await expect(firstDelete).toBeDisabled();
+    await expect(reset).toBeDisabled();
+    await expect(
+      page.locator('[data-slot="select-content"]:visible'),
+    ).toHaveCount(0);
+
+    await page.goto("/w/clair-demo/orders?modulePanel=open");
+    const orderTable = page.getByTestId("hospital-order-table");
+    await expectWorkspaceScreen(page, orderTable);
+    await page.getByRole("button", { name: "오더 필터 설정" }).click();
+    const orderPopover = page.locator('[data-slot="popover-content"]').last();
+    const orderBuilder = page.locator('[data-emr-table-filter-builder="true"]');
+    await expect(orderPopover).toHaveCSS("width", "640px");
+    await expect(orderBuilder).toHaveAttribute("data-filter-auto-open-ready", "true");
+    await expect(page.getByRole("option", { name: "사용여부" })).toBeVisible();
+    await expectNoHorizontalOverflow(orderPopover);
+    await expectNoHorizontalOverflow(orderBuilder);
   });
 });

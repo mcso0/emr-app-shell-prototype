@@ -6,7 +6,12 @@ import type { Transition } from "framer-motion";
 import { WorkspaceLogoMarkIcon } from "@/components/icons";
 import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
-import { useSessionWorkspaceDisplayName } from "@/features/auth/workspace-display";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { useSessionWorkspaceIdentity } from "@/features/auth/workspace-display";
 import { cn } from "@/lib/utils";
 
 type WorkspaceSwitcherProps = {
@@ -18,7 +23,8 @@ type WorkspaceSwitcherProps = {
 const WORKSPACE_LABEL_EASE = [0.16, 0, 0.2, 1] as const;
 
 export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }: WorkspaceSwitcherProps) {
-  const workspaceDisplayName = useSessionWorkspaceDisplayName(workspaceId);
+  const { displayName: workspaceDisplayName, logoUrl } =
+    useSessionWorkspaceIdentity(workspaceId);
   const reduceMotion = useReducedMotion();
   const [isLabelMounted, setIsLabelMounted] = useState(!collapsed);
   const labelTransition: Transition = reduceMotion
@@ -59,7 +65,23 @@ export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }:
         className="flex size-[18px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-workspace-button-logo-bg)] text-[var(--emr-workspace-button-logo-fg)]"
         aria-hidden="true"
       >
-        <WorkspaceLogoMarkIcon size={18} className="size-[18px]" />
+        <Avatar
+          className="size-[18px] after:hidden"
+          roundness="roundrect"
+          aria-hidden="true"
+        >
+          {logoUrl ? (
+            <AvatarImage
+              src={logoUrl}
+              alt=""
+              data-slot="workspace-switcher-logo-image"
+              className="object-contain"
+            />
+          ) : null}
+          <AvatarFallback className="bg-[var(--emr-workspace-button-logo-bg)] text-[var(--emr-workspace-button-logo-fg)]">
+            <WorkspaceLogoMarkIcon size={18} className="size-[18px]" />
+          </AvatarFallback>
+        </Avatar>
       </span>
       {isLabelMounted ? (
         <span

@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { useAuthClient } from "@/features/auth/auth-client";
+import { useWorkspaceEntrySplash } from "@/features/auth/workspace-entry-splash-provider";
 import { WorkspaceStaffPresenceReporter } from "@/features/staff/workspace-staff-presence";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
 import {
@@ -126,6 +127,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const tabsInitializedRef = useRef<string | null>(null);
   const urlStateReadyRef = useRef(false);
   const { hydrated: authHydrated, session: authSession, hydrate: hydrateAuth } = useAuthClient();
+  const { completeWorkspaceEntrySplash } = useWorkspaceEntrySplash();
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [notificationFallbackDetailId, setNotificationFallbackDetailId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<GlobalNotification[]>(emptyGlobalNotifications);
@@ -167,6 +169,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     setRightPanelOpen,
   } = useLayoutStore();
   const moduleRefreshAction = moduleRefreshActions[moduleDefinition.id];
+
+  useEffect(() => {
+    completeWorkspaceEntrySplash();
+  }, [completeWorkspaceEntrySplash]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;

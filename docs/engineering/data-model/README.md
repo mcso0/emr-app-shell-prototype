@@ -7,7 +7,7 @@ status: active
 area: engineering
 doc_type: area-index
 tags: [data-model, schema, persistence, migrations]
-last_updated: 2026-07-16
+last_updated: 2026-07-23
 ---
 
 # Data Model
@@ -27,6 +27,8 @@ Canonical engineering data model documents live here. Use this README as the Git
 | 직원의 workspace-scoped Presence와 최근 접속 기록 | `workspace-member-activity-presence.md` |
 | 직원의 workspace-scoped 상태 메시지와 self-write 경계 | `workspace-member-status-messages.md` |
 | 직원의 private self-service 아바타, Storage/RLS, signed-read 경계 | `private-profile-avatars.md` |
+| 병원 프로필·연락처·등록정보 변경 요청과 private 병원 로고 | `workspace-hospital-settings.md` |
+| 대기 중 오늘 바이탈 입력, 값 비움 감사, 최신 요약 조회 | `patient-vital-measurements.md` |
 | Guardian-centered combined checkout, payment allocation, and adjustment proposal | `billing-checkout-session-allocation-adjustment-model.md` |
 
 ## Current Files
@@ -43,6 +45,8 @@ Canonical engineering data model documents live here. Use this README as the Git
 | `workspace-member-activity-presence.md` | Private workspace Presence, throttled last-seen persistence, RLS/RPC, stale semantics, and rollout boundary. |
 | `workspace-member-status-messages.md` | Workspace-scoped staff status message, same-workspace read, self-only RLS/RPC mutation, CAS, and content-free audit contract. |
 | `private-profile-avatars.md` | Private self-service staff avatar pointer, signed direct-upload quarantine, image normalization, Storage/RLS ownership, legacy fallback, and cleanup contract. |
+| `workspace-hospital-settings.md` | Workspace hospital profile/contact, registered-information change requests, private logo signed-upload/finalize/CAS flow, RLS, audit, and API boundaries. |
+| `patient-vital-measurements.md` | Selected waiting-encounter vital write, auditable clear state, and shared latest-vital read contract. |
 
 ## Boundaries
 

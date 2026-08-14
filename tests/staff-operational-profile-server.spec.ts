@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+
 import { expect, test } from "@playwright/test";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
@@ -5,6 +7,29 @@ import * as operationalProfileModule from "../src/features/staff/server-operatio
 
 const route =
   "/api/workspaces/clair-demo/staff/user-vet-suji/operational-profile?date=2026-05-01";
+
+const roleAgnosticCurrentWorkMigrationPath =
+  "supabase/migrations/20260720132051_role_agnostic_staff_current_work_status.sql";
+const currentWorkIndexMigrationPath =
+  "supabase/migrations/20260720132846_staff_current_work_status_indexes.sql";
+
+test("current work migration provisions every active workspace member and derives truthful status", () => {
+  expect(existsSync(roleAgnosticCurrentWorkMigrationPath)).toBe(true);
+  if (!existsSync(roleAgnosticCurrentWorkMigrationPath)) return;
+
+  const migration = readFileSync(roleAgnosticCurrentWorkMigrationPath, "utf8");
+  expect(migration).toContain("role_agnostic_staff_current_work_status");
+  expect(migration).toContain("from public.user_memberships membership");
+  expect(migration).toContain("membership.status = 'active'");
+  expect(migration).toContain("staff_current_work_status_snapshot");
+  expect(migration).toContain("encounter_call_events");
+  expect(migration).toContain("clock_out_at");
+  expect(migration).toContain("leave_subtype");
+  expect(migration).not.toContain("operational_role = 'veterinarian'");
+  expect(readFileSync(currentWorkIndexMigrationPath, "utf8")).toContain(
+    "hospital_schedule_shifts_staff_day_idx",
+  );
+});
 
 test("operational profile route never falls back to runtime demo staff data", async ({
   request,
@@ -158,6 +183,14 @@ test("Supabase operational profile gateway joins membership, job position, avata
           },
         ],
       },
+      currentWorkSnapshot: {
+        date: "2026-07-14",
+        state: "in_consultation",
+        startMinutes: 540,
+        endMinutes: 1080,
+        detailLabel: "1진료실",
+        source: "encounter",
+      },
     }) as unknown as operationalProfileModule.SupabaseStaffOperationalProfileClient,
   );
 
@@ -192,6 +225,14 @@ test("Supabase operational profile gateway joins membership, job position, avata
       statusMessage: "진료 중입니다",
       statusMessageUpdatedAt: "2026-07-14T12:00:00.000Z",
       title: "진료팀장",
+    },
+    currentWork: {
+      date: "2026-07-14",
+      state: "in_consultation",
+      startMinutes: 540,
+      endMinutes: 1080,
+      detailLabel: "1진료실",
+      source: "encounter",
     },
     shift: {
       date: "2026-07-14",
@@ -576,6 +617,8 @@ type SupabaseProfileRows = {
   scheduleError?: boolean;
   scheduleSnapshot?: Record<string, unknown>;
   scheduleSnapshots?: Record<string, Record<string, unknown>>;
+  currentWorkError?: boolean;
+  currentWorkSnapshot?: Record<string, unknown> | null;
 };
 
 function createSupabaseProfileClient(rows: SupabaseProfileRows) {
@@ -620,17 +663,19 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
       };
       return query;
     },
-    rpc(_functionName: string, args: Record<string, unknown>) {
-      const weekStart = args.p_week_start;
+    rpc(functionName: string, args: Record<string, unknown>) {
+      if (functionName === "staff_current_work_status_snapshot") {
+        return Promise.resolve(
+          rows.currentWorkError
+            ? { data: null, error: { message: "current_work_read_failed" } }
+            : { data: rows.currentWorkSnapshot ?? null, error: null },
+        );
+      }
       return Promise.resolve(
         rows.scheduleError
           ? { data: null, error: { message: "schedule_read_failed" } }
           : {
-              data:
-                (typeof weekStart === "string"
-                  ? rows.scheduleSnapshots?.[weekStart]
-                  : undefined) ??
-                rows.scheduleSnapshot ?? { staff: [], shifts: [] },
+              data: createProfileScheduleProjection(rows, args),
               error: null,
             },
       );
@@ -654,5 +699,55 @@ function createSupabaseProfileClient(rows: SupabaseProfileRows) {
         };
       },
     },
+  };
+}
+
+function createProfileScheduleProjection(
+  rows: SupabaseProfileRows,
+  args: Record<string, unknown>,
+) {
+  const startDate = typeof args.p_start_date === "string" ? args.p_start_date : "0000-00-00";
+  const endDate = typeof args.p_end_date === "string" ? args.p_end_date : "9999-12-31";
+  const snapshots = rows.scheduleSnapshots
+    ? Object.values(rows.scheduleSnapshots)
+    : [rows.scheduleSnapshot ?? { staff: [], shifts: [] }];
+  const publishedSnapshots = snapshots.filter((snapshot) => {
+    const week = snapshot.week;
+    return typeof week === "object" && week !== null &&
+      ((week as { publicationState?: unknown }).publicationState === "published" ||
+        (week as { publicationState?: unknown }).publicationState === "changed");
+  });
+  const staffProfileId = publishedSnapshots
+    .flatMap((snapshot) => (Array.isArray(snapshot.staff) ? snapshot.staff : []))
+    .find((staff) =>
+      typeof staff === "object" &&
+      staff !== null &&
+      (staff as { membershipId?: unknown }).membershipId === "membership-suji",
+    );
+  const shifts = publishedSnapshots
+    .flatMap((snapshot) => (Array.isArray(snapshot.shifts) ? snapshot.shifts : []))
+    .filter((shift) => {
+      const date = typeof shift === "object" && shift !== null
+        ? (shift as { date?: unknown }).date
+        : undefined;
+      return typeof date === "string" && date >= startDate && date <= endDate;
+    })
+    .map((shift) => {
+      const record = shift as Record<string, unknown>;
+      return {
+        date: record.date,
+        start_minutes: record.startMinutes,
+        end_minutes: record.endMinutes,
+        kind: record.kind,
+        work_label: record.workLabel,
+        location_label: record.locationLabel,
+      };
+    });
+  return {
+    scheduleProfileId:
+      staffProfileId && typeof (staffProfileId as { id?: unknown }).id === "string"
+        ? (staffProfileId as { id: string }).id
+        : null,
+    shifts,
   };
 }

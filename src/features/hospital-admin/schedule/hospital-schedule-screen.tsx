@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ import type {
   HospitalScheduleShift,
   HospitalScheduleShiftKind,
 } from "./types";
+import { HospitalScheduleV2Screen } from "./schedule-v2-screen";
 
 const weekdayLabels = ["월", "화", "수", "목", "금", "토", "일"];
 const roleLabels: Record<HospitalScheduleRole, string> = {
@@ -130,10 +132,10 @@ function ScheduleDataState() {
   }
 
   const messages = {
-    loading: ["근무표를 불러오는 중", "최신 편성 정보를 준비하고 있어."],
-    empty: ["등록된 근무가 없어", "직원을 선택해 첫 근무를 추가해줘."],
-    error: ["근무표를 불러오지 못했어", "세션 데이터를 다시 확인해줘."],
-    "read-only": ["읽기 전용 근무표", "게시된 근무표는 이 화면에서만 확인할 수 있어."],
+    loading: ["근무표를 불러오는 중", "최신 편성 정보를 준비하고 있습니다."],
+    empty: ["등록된 근무가 없습니다", "직원을 선택해 첫 근무를 추가해 주세요."],
+    error: ["근무표를 불러오지 못했습니다", "세션 데이터를 다시 확인해 주세요."],
+    "read-only": ["읽기 전용 근무표", "게시된 근무표는 이 화면에서만 확인할 수 있습니다."],
   } as const;
   const [title, description] = messages[dataState];
 
@@ -230,7 +232,7 @@ function ShiftSheetEditor({ state, onClose }: { state: Exclude<ShiftSheetState, 
         <SheetHeader>
           <SheetTitle>{isEdit ? "근무 수정" : "근무 추가"}</SheetTitle>
           <SheetDescription>
-            직원, 시간, 업무를 한 번에 확인하고 저장해줘.
+            직원, 시간, 업무를 한 번에 확인한 뒤 저장해 주세요.
           </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 overflow-y-auto px-4 pb-4">
@@ -388,7 +390,7 @@ function RequestSheetEditor({ onClose }: { onClose: () => void }) {
     <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle>휴무·근무 변경 요청</SheetTitle>
-          <SheetDescription>요청은 승인 전까지 현재 근무표에 반영되지 않아.</SheetDescription>
+          <SheetDescription>요청은 승인 전까지 현재 근무표에 반영되지 않습니다.</SheetDescription>
         </SheetHeader>
         <div className="space-y-4 px-4 pb-4">
           <Field>
@@ -408,7 +410,7 @@ function RequestSheetEditor({ onClose }: { onClose: () => void }) {
           <div className="rounded-lg border bg-muted/30 p-3 text-sm">
             <p className="font-medium">{getDateLabel(activeDate)}</p>
             <p className="mt-1 text-muted-foreground">
-              {personalShift ? `${personalShift.workLabel} · ${shiftTimeLabel(personalShift)}` : "해당 날짜에 배정된 근무가 없어."}
+              {personalShift ? `${personalShift.workLabel} · ${shiftTimeLabel(personalShift)}` : "해당 날짜에 배정된 근무가 없습니다."}
             </p>
           </div>
           <Field>
@@ -417,7 +419,7 @@ function RequestSheetEditor({ onClose }: { onClose: () => void }) {
               <Textarea
                 id="schedule-request-reason"
                 aria-label="사유"
-                placeholder="관리자가 확인할 내용을 적어줘"
+                placeholder="관리자가 확인할 내용을 입력해 주세요"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
               />
@@ -564,7 +566,7 @@ function DailyCoverage({ onEdit, onDelete }: { onEdit: (shift: HospitalScheduleS
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
           <p className="text-sm font-semibold">{getDateLabel(activeDate)}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">직원 행과 시간축으로 역할별 커버리지를 확인해.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">직원 행과 시간축에서 역할별 커버리지를 확인할 수 있습니다.</p>
         </div>
         <Badge variant="outline">{issues.length ? `공백 ${issues.length}건` : "커버리지 정상"}</Badge>
       </div>
@@ -649,7 +651,7 @@ function PersonalSchedule({ onRequest }: { onRequest: () => void }) {
         <div className="flex items-center justify-between gap-3 border-b p-4">
           <div>
             <p className="text-sm font-semibold">{personal?.name}의 이번 주</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">근무 가능 시간과 확정 근무를 함께 보여줘.</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">근무 가능 시간과 확정 근무를 함께 확인할 수 있습니다.</p>
           </div>
           <Button size="sm" onClick={onRequest}>휴무·변경 요청</Button>
         </div>
@@ -673,7 +675,7 @@ function PersonalSchedule({ onRequest }: { onRequest: () => void }) {
         <div className="rounded-xl border bg-card p-4">
           <p className="text-sm font-semibold">근무 가능 시간</p>
           <p className="mt-2 text-sm text-muted-foreground">평일 10:00–18:00</p>
-          <p className="mt-1 text-xs text-muted-foreground">금요일 18시 이후는 요청 승인 후 반영돼.</p>
+          <p className="mt-1 text-xs text-muted-foreground">금요일 18시 이후는 요청 승인 후 반영됩니다.</p>
         </div>
         <div className="rounded-xl border bg-card p-4">
           <div className="flex items-center justify-between">
@@ -756,8 +758,11 @@ function StaffDetailSheet({ staffId, onClose }: { staffId: string | null; onClos
   );
 }
 
-export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string }) {
+export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string }) {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const currentQuery = searchParams.toString();
   const { hydrated, hydrate, session } = useAuthClient();
   const surface = useHospitalScheduleStore((state) => state.surface);
   const setSurface = useHospitalScheduleStore((state) => state.setSurface);
@@ -815,6 +820,11 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
         return;
       }
       hydrateRemoteSchedule(remote);
+      if (remote.weekStart !== requestedWeekStart) {
+        const params = new URLSearchParams(currentQuery);
+        params.set("weekStart", remote.weekStart);
+        router.replace(`${pathname}?${params.toString()}`);
+      }
     };
 
     setDataState("loading");
@@ -823,14 +833,14 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
         workspaceId,
         onRefreshed: refresh,
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : "근무표 저장에 실패했어.");
+          toast.error(error instanceof Error ? error.message : "근무표를 저장하지 못했습니다.");
         },
       }),
     );
     void refresh().catch((error: unknown) => {
       if (!cancelled) {
         setDataState("error");
-        toast.error(error instanceof Error ? error.message : "근무표를 불러오지 못했어.");
+        toast.error(error instanceof Error ? error.message : "근무표를 불러오지 못했습니다.");
       }
     });
 
@@ -841,7 +851,10 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
   }, [
     hydrateRemoteSchedule,
     hydrated,
+    currentQuery,
+    pathname,
     requestedWeekStart,
+    router,
     session?.role,
     setDataState,
     workspaceId,
@@ -862,6 +875,7 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
 
   return (
     <main data-testid="hospital-admin-schedule-screen" className="flex min-h-full flex-col bg-[var(--emr-surface-canvas)]">
+      <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <div className="border-b bg-card px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -872,7 +886,7 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
                 {publication.state === "published" ? "게시됨" : publication.state === "changed" ? "재게시 필요" : "초안"}
               </Badge>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">편성, 커버리지, 개인 일정을 한 곳에서 관리해. Supabase 연결 시 변경 내용은 안전하게 저장돼.</p>
+            <p className="mt-1 text-sm text-muted-foreground">편성, 커버리지, 개인 일정을 한 곳에서 관리할 수 있습니다. Supabase 연결 시 변경 내용은 안전하게 저장됩니다.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}><SettingsIcon aria-hidden="true" /> 설정</Button>
@@ -913,13 +927,13 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <CalendarIcon className="size-4" aria-hidden="true" />
-            {publication.publishedAtLabel ? `최근 게시 ${publication.publishedAtLabel}` : "아직 게시하지 않았어"}
+            {publication.publishedAtLabel ? `최근 게시 ${publication.publishedAtLabel}` : "아직 게시하지 않았습니다"}
           </div>
         </div>
 
         {publication.state === "changed" ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--clair-color-atomic-yellow-200)] bg-[var(--clair-color-atomic-yellow-50)] px-3 py-2 text-sm text-[var(--clair-color-atomic-yellow-800)]">
-            <span>승인되거나 수정된 근무가 있어. 게시하면 구성원에게 최신 근무표가 보여.</span>
+            <span>승인되거나 수정된 근무가 있습니다. 게시하면 구성원에게 최신 근무표가 표시됩니다.</span>
             <Button size="sm" variant="outline" onClick={() => setPublishOpen(true)}>재게시 검토</Button>
           </div>
         ) : null}
@@ -931,11 +945,11 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
             <MobileDayList onEdit={(shift) => setShiftSheet({ mode: "edit", shift })} onDelete={setDeleteTarget} />
             <div className="grid gap-3 md:grid-cols-3">
               <SummaryCard icon={<UsersIcon />} label="이번 주 배정" value={`${staff.length}명`} description={`미배정 ${shifts.filter((shift) => shift.staffId === null).length}건`} />
-              <SummaryCard icon={<WarningIcon />} label="게시 전 확인" value={`${conflicts.length + coverageIssues.length}건`} description={publishBlocked ? "충돌과 커버리지 공백을 해결해야 해" : "게시할 수 있어"} tone={publishBlocked ? "warning" : "success"} />
+              <SummaryCard icon={<WarningIcon />} label="게시 전 확인" value={`${conflicts.length + coverageIssues.length}건`} description={publishBlocked ? "충돌과 커버리지 공백을 해결해야 합니다" : "게시할 수 있습니다"} tone={publishBlocked ? "warning" : "success"} />
               <button type="button" className="rounded-xl border bg-card p-4 text-left hover:bg-muted/40" onClick={() => setStaffSheetId("staff-suji")}>
                 <p className="text-xs text-muted-foreground">승인 대기 요청</p>
                 <p className="mt-2 text-lg font-semibold">{pendingRequests.length}건</p>
-                <p className="mt-1 text-xs text-muted-foreground">직원 일정에서 승인·반려할 수 있어</p>
+                <p className="mt-1 text-xs text-muted-foreground">직원 일정에서 승인하거나 반려할 수 있습니다</p>
               </button>
             </div>
           </>
@@ -951,8 +965,8 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
           cancelLabel="취소"
           confirmLabel="삭제"
           confirmButtonVariant="destructive"
-          title="근무를 삭제할까?"
-          description={deleteTarget ? `${deleteTarget.workLabel} 근무가 목록에서 사라지고, 근무표는 재게시 필요 상태가 돼.` : ""}
+          title="근무를 삭제하시겠습니까?"
+          description={deleteTarget ? `${deleteTarget.workLabel} 근무가 목록에서 사라지고, 근무표는 재게시 필요 상태가 됩니다.` : ""}
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => { if (deleteTarget) deleteShift(deleteTarget.id); setDeleteTarget(null); }}
         />
@@ -962,12 +976,12 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>게시 전 충돌 검토</DialogTitle>
-            <DialogDescription>충돌과 역할별 커버리지 공백이 없을 때만 이 주의 근무표를 게시할 수 있어.</DialogDescription>
+            <DialogDescription>충돌과 역할별 커버리지 공백이 없을 때만 이 주의 근무표를 게시할 수 있습니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-sm">
             {conflicts.map((conflict) => <p key={`${conflict.kind}-${conflict.shiftId}`} className="flex gap-2"><WarningIcon className="mt-0.5 size-4 text-[var(--clair-color-atomic-yellow-700)]" />{conflict.message}</p>)}
-            {coverageIssues.map((issue) => <p key={`${issue.date}-${issue.role}-${issue.startMinutes}`} className="flex gap-2"><WarningIcon className="mt-0.5 size-4 text-[var(--clair-color-atomic-yellow-700)]" />{getDateLabel(issue.date, true)} {roleLabels[issue.role]} {formatScheduleMinutes(issue.startMinutes)}–{formatScheduleMinutes(issue.endMinutes)} 커버리지가 비어 있어.</p>)}
-            {!publishBlocked ? <p className="text-[var(--clair-color-atomic-green-800)]">게시 가능한 근무표야.</p> : null}
+            {coverageIssues.map((issue) => <p key={`${issue.date}-${issue.role}-${issue.startMinutes}`} className="flex gap-2"><WarningIcon className="mt-0.5 size-4 text-[var(--clair-color-atomic-yellow-700)]" />{getDateLabel(issue.date, true)} {roleLabels[issue.role]} {formatScheduleMinutes(issue.startMinutes)}–{formatScheduleMinutes(issue.endMinutes)} 커버리지가 비어 있습니다.</p>)}
+            {!publishBlocked ? <p className="text-[var(--clair-color-atomic-green-800)]">게시할 수 있는 근무표입니다.</p> : null}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPublishOpen(false)}>닫기</Button>
@@ -980,7 +994,7 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
         <DialogContent>
           <DialogHeader>
             <DialogTitle>근무표 설정</DialogTitle>
-            <DialogDescription>첫 구현에서는 이 브라우저 세션에만 적용돼.</DialogDescription>
+            <DialogDescription>첫 구현에서는 이 브라우저 세션에만 적용됩니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Field>
@@ -992,13 +1006,41 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
                 </Select>
               </FieldContent>
             </Field>
-            <p className="text-sm text-muted-foreground"><ClockIcon className="mr-1 inline size-4" />{formatScheduleMinutes(settings.lockMinutes)}에 편성을 잠그도록 표시해.</p>
+            <p className="text-sm text-muted-foreground"><ClockIcon className="mr-1 inline size-4" />{formatScheduleMinutes(settings.lockMinutes)}에 편성을 잠그도록 표시합니다.</p>
           </div>
           <DialogFooter><Button onClick={() => setSettingsOpen(false)}>완료</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </main>
   );
+}
+
+export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string }) {
+  const { hydrated, hydrate, session } = useAuthClient();
+  const [modelVersion, setModelVersion] = useState<"v1" | "v2">("v1");
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated || session?.role !== "supabase") return;
+    let cancelled = false;
+    void fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/schedule`)
+      .then(async (response) => {
+        const body = (await response.json().catch(() => null)) as { modelVersion?: unknown } | null;
+        if (!cancelled) setModelVersion(body?.modelVersion === "v2" ? "v2" : "v1");
+      })
+      .catch(() => {
+        if (!cancelled) setModelVersion("v1");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, session?.role, workspaceId]);
+
+  if (modelVersion === "v2") return <HospitalScheduleV2Screen workspaceId={workspaceId} />;
+  return <HospitalScheduleV1Screen workspaceId={workspaceId} />;
 }
 
 function SummaryCard({ icon, label, value, description, tone = "default" }: { icon: ReactNode; label: string; value: string; description: string; tone?: "default" | "success" | "warning" }) {

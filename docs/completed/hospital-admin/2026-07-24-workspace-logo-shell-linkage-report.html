@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>병원 로고 워크스페이스 연동 구현 결과</title>
+    <style>
+      :root { color-scheme: light; font-family: Pretendard, system-ui, sans-serif; color: #17171a; background: #f7f7f8; }
+      body { margin: 0; }
+      main { width: min(880px, calc(100% - 40px)); margin: 64px auto; }
+      h1 { margin: 0 0 12px; font-size: 32px; }
+      h2 { margin: 36px 0 12px; font-size: 20px; }
+      p, li { color: #54545b; line-height: 1.7; }
+      .status { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: #e9f7ef; color: #18794e; font-weight: 700; font-size: 13px; }
+      .card { margin-top: 28px; padding: 24px; border: 1px solid #dedee3; border-radius: 14px; background: white; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="status">구현·릴리스 후보 검증 완료</span>
+      <h1>병원 로고 워크스페이스 연동</h1>
+      <p>2026-07-24 · HOSPITAL-ADMIN-LIVE-PR-023</p>
+      <section class="card">
+        <h2>요청과 결과</h2>
+        <p>
+          병원 기본 설정과 워크스페이스 스위처가 서로 다른 로고를 보여 주던 문제를
+          하나의 병원 프로필 데이터로 연결했습니다. 저장된 로고가 있으면 두 화면에
+          같은 이미지가 보이고, 없으면 두 화면 모두 같은 기본 마크를 사용합니다.
+        </p>
+        <h2>주요 변경</h2>
+        <ul>
+          <li>워크스페이스 목록 API에 만료 시간이 있는 로고 열람 URL과 리비전 추가</li>
+          <li>비공개 Storage 경로와 업로드 정보는 응답에서 제외</li>
+          <li>워크스페이스 스위처와 병원 로고 편집기의 기본 마크 통일</li>
+          <li>로고 저장·삭제 직후 새로고침 없이 셸 로고 갱신</li>
+          <li>선택적 로고 조회 실패 시에도 워크스페이스 진입과 기본 마크 유지</li>
+        </ul>
+        <h2>검증</h2>
+        <p>
+          서버 계약과 브라우저 회귀 테스트 10건, 전체 lint, TypeScript,
+          문서 검사, 비밀정보 검사, UX 문구 검사, 프로덕션 빌드를 통과했습니다.
+        </p>
+        <h2>변경 범위와 주의점</h2>
+        <p>
+          데이터베이스 스키마, Storage 정책, 원격 로고 파일은 바꾸지 않았습니다.
+          실제 로고가 아직 저장되지 않은 워크스페이스는 통일된 기본 마크가 표시됩니다.
+          배포 후에는 인증된 프로덕션 화면에서 동일 표시 여부를 최종 확인합니다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

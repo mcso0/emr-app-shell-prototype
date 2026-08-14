@@ -31,7 +31,7 @@ export function createHospitalSchedulePersistenceAdapter({
       );
       const body = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
       if (!response.ok || !body?.ok) {
-        throw new Error(body?.message ?? "근무표 저장에 실패했어.");
+        throw new Error(body?.message ?? "근무표를 저장하지 못했습니다.");
       }
       await onRefreshed();
     },
@@ -45,14 +45,20 @@ export async function readPersistedHospitalSchedule({
   weekStart?: string;
   workspaceId: string;
 }): Promise<HospitalScheduleRemoteState | null> {
-  const params = new URLSearchParams({ weekStart: weekStart ?? "2026-07-06" });
+  const params = new URLSearchParams();
+  if (weekStart) params.set("weekStart", weekStart);
   const response = await fetch(
     `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/schedule?${params.toString()}`,
   );
   if (response.status === 503) return null;
-  const body = (await response.json().catch(() => null)) as { ok?: boolean; snapshot?: unknown; message?: string } | null;
-  if (!response.ok || !body?.ok) throw new Error(body?.message ?? "근무표를 불러오지 못했어.");
-  return parseRemoteState(body.snapshot);
+  const body = (await response.json().catch(() => null)) as {
+    ok?: boolean;
+    snapshot?: unknown;
+    canonicalWeekStart?: unknown;
+    message?: string;
+  } | null;
+  if (!response.ok || !body?.ok) throw new Error(body?.message ?? "근무표를 불러오지 못했습니다.");
+  return parseRemoteState(body.snapshot, body.canonicalWeekStart);
 }
 
 function toApiAction(action: HospitalSchedulePersistenceAction) {
@@ -78,12 +84,18 @@ function toApiAction(action: HospitalSchedulePersistenceAction) {
   }
 }
 
-function parseRemoteState(value: unknown): HospitalScheduleRemoteState {
+function parseRemoteState(value: unknown, canonicalWeekStart: unknown): HospitalScheduleRemoteState {
   const snapshot = asRecord(value);
   const week = asRecord(snapshot.week);
+  const weekStart =
+    typeof canonicalWeekStart === "string" && isIsoDate(canonicalWeekStart)
+      ? canonicalWeekStart
+      : typeof week.weekStart === "string" && isIsoDate(week.weekStart)
+        ? week.weekStart
+        : null;
+  if (!weekStart) throw new Error("근무표 주차 정보가 올바르지 않습니다.");
   return {
-    weekStart:
-      typeof week.weekStart === "string" ? week.weekStart : "2026-07-06",
+    weekStart,
     staff: asArray(snapshot.staff).map(parseStaff).filter(isStaff),
     shifts: asArray(snapshot.shifts).map(parseShift).filter(isShift),
     requests: asArray(snapshot.requests).map(parseRequest).filter(isRequest),
@@ -153,6 +165,10 @@ function asArray(value: unknown) {
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
+}
+
+function isIsoDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function isMinute(value: unknown): value is number {

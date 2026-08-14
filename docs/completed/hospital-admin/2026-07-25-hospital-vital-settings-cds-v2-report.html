@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>병원 바이탈 관리 CDS V2 구현 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          Inter,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #17191c;
+        background: #f4f6f8;
+      }
+      body {
+        margin: 0;
+        padding: 48px 24px;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+      }
+      header,
+      section {
+        padding: 28px;
+        border: 1px solid #dfe3e8;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+      }
+      section {
+        margin-top: 16px;
+      }
+      h1,
+      h2 {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      p,
+      li {
+        line-height: 1.7;
+      }
+      .meta {
+        color: #69707a;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .metric {
+        padding: 16px;
+        border-radius: 12px;
+        background: #f7f8fa;
+      }
+      .metric strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 20px;
+      }
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: #eef1f4;
+      }
+      ul {
+        margin-bottom: 0;
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">HOSPITAL-ADMIN-LIVE-PR-018 · 2026-07-25</p>
+        <h1>병원 바이탈 관리 CDS V2 구현 결과</h1>
+        <p>
+          기존 워크스페이스 바이탈 데이터 계약과 임상 소비 경로를 유지하면서
+          Figma node <code>27804:117826</code>의 화면 구조와 밀도에 맞췄다.
+        </p>
+        <div class="grid">
+          <div class="metric"><strong>920px</strong>콘텐츠 최대 너비</div>
+          <div class="metric"><strong>85px</strong>카드 헤더와 바이탈 행</div>
+          <div class="metric"><strong>180px</strong>단위 선택 컨트롤</div>
+          <div class="metric"><strong>38px</strong>선택 바이탈 스위치</div>
+        </div>
+      </header>
+
+      <section>
+        <h2>변경 범위</h2>
+        <ul>
+          <li>CDS V2 요약형 헤더, 단일 카드, 하단 추가 액션 구조 적용</li>
+          <li>필수 행의 시각 라벨을 <code>기본</code>으로 정합화</li>
+          <li>변경 시에만 공용 저장/되돌리기 바 노출</li>
+          <li>모바일에서 행 컨트롤을 2단으로 재배치하고 가로 넘침 방지</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>보존한 계약</h2>
+        <ul>
+          <li>체중과 체온은 항상 구성 및 활성화</li>
+          <li>선택 바이탈 비활성화, 제거, 토스트 되돌리기, 재추가</li>
+          <li>워크스페이스 범위 GET/PUT, 관리자 쓰기, 멤버 읽기, 감사 로그</li>
+          <li>과거 측정값 보존과 접수/차트의 설정 순서·단위 소비</li>
+          <li>신규 워크스페이스 기본 4개와 혈압 선택 추가 정책</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Figma 수치 및 전체 설정 상호작용 Playwright 테스트 통과</li>
+          <li>모델·서버·마이그레이션 14개 테스트 통과</li>
+          <li>접수와 차트 소비 경로 2개 테스트 통과</li>
+          <li>1920×1080 및 390×844 실화면 시각 확인 완료</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

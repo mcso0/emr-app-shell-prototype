@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EMR 엠티 스테이트 XL 구현 및 적용 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f6f7f9;
+        --surface: #fff;
+        --line: #e5e5e5;
+        --text: #262626;
+        --muted: #525252;
+        --subtle: #737373;
+        --success-bg: #ecfdf5;
+        --success-text: #047857;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", system-ui, sans-serif;
+      }
+      main { width: min(920px, calc(100% - 32px)); margin: 40px auto; }
+      h1 { margin: 0; font-size: clamp(24px, 4vw, 36px); line-height: 1.25; }
+      h2 { margin: 0 0 14px; font-size: 18px; }
+      p { margin: 10px 0 0; color: var(--muted); line-height: 1.65; }
+      .eyebrow { margin: 0 0 8px; color: var(--subtle); font-size: 12px; font-weight: 700; }
+      .status {
+        display: inline-flex;
+        margin-top: 18px;
+        border-radius: 9999px;
+        background: var(--success-bg);
+        color: var(--success-text);
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .card {
+        margin-top: 24px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--surface);
+        padding: 24px;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { border-bottom: 1px solid var(--line); padding: 12px 8px; text-align: left; }
+      th { color: var(--subtle); font-size: 11px; }
+      td:last-child { color: var(--success-text); font-weight: 700; }
+      ul { margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.75; }
+      code { border-radius: 5px; background: #f5f5f5; padding: 2px 5px; }
+      @media (max-width: 640px) {
+        main { margin: 24px auto; }
+        .card { overflow-x: auto; padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">DESIGN-SYSTEM-PR-070 · 2026-07-19</p>
+      <h1>EMR 엠티 스테이트 XL 구현 및 적용 결과</h1>
+      <p>
+        넓은 진료 작업 영역에서 기존 LG 엠티 스테이트가 작게 보이던 문제를 해결했다.
+        CDS.V2 Figma의 XL 기본형·1액션·2액션 노드를 공용 컴포넌트 계약으로 옮기고,
+        진료 화면을 기준으로 Home, 검사, 영상, 조제/처치, 수납의 전체 작업영역에도 적용했다.
+      </p>
+      <span class="status">구현 및 브라우저 검증 완료</span>
+
+      <section class="card" aria-labelledby="figma-title">
+        <h2 id="figma-title">Figma 대조 결과</h2>
+        <table>
+          <thead><tr><th>항목</th><th>Figma</th><th>구현</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>전체 너비·간격</td><td>220px, 24px</td><td>220px, 24px</td><td>일치</td></tr>
+            <tr><td>아이콘 영역</td><td>80px 외곽, 76px 내부, 36px 아이콘</td><td>동일 계층과 치수</td><td>일치</td></tr>
+            <tr><td>타이포</td><td>제목 18/26 SemiBold, 설명 16/24 Medium</td><td>동일</td><td>일치</td></tr>
+            <tr><td>액션</td><td>32px, 2액션 가로 8px 간격</td><td>동일</td><td>일치</td></tr>
+            <tr><td>색상·표면</td><td>Neutral/200, White 2px, Black Alpha/64</td><td>동일 토큰과 그라데이션</td><td>일치</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" aria-labelledby="scope-title">
+        <h2 id="scope-title">변경 범위</h2>
+        <ul>
+          <li><code>EmrEmptyStateSize</code>에 <code>xl</code>을 추가했다.</li>
+          <li>기존 <code>lg</code>, <code>md</code>, <code>sm</code> 기본 매핑은 변경하지 않았다.</li>
+          <li>Home, 진료, 검사, 영상, 조제/처치, 수납의 전체 작업영역 빈 상태를 XL로 전환했다.</li>
+          <li>업무 없음 문구를 도메인별 제목·설명·새로고침 규칙으로 통일했다.</li>
+          <li>복구 버튼을 Figma XL의 32px rounded outline 계약으로 맞췄다.</li>
+          <li>대기열, 데이터 로딩, 권한, API, RLS, 저장 동작은 변경하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="verification-title">
+        <h2 id="verification-title">검증</h2>
+        <ul>
+          <li>Storybook 상호작용 테스트 14개 통과.</li>
+          <li>운영 화면 6종의 XL 속성·중심 정렬·상세 패널 비노출 회귀 검증을 추가했다.</li>
+          <li>집중 Chromium 라우트 테스트 3개 통과.</li>
+          <li>Secret scan, TypeScript, 전체 ESLint, 문서 링크 검사 통과.</li>
+          <li>Next.js 프로덕션 빌드 통과. 기존 NFT 추적 경고 1건은 이번 변경 범위 밖이다.</li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="risk-title">
+        <h2 id="risk-title">남은 확인 사항</h2>
+        <p>
+          큐, 표, 드로어, 위젯, 근무표 상태 패널은 전체 작업영역이 아니므로 기존 MD/SM/LG 계약을 유지한다.
+          공용 content 기본값도 LG로 유지해 부분 화면이 의도치 않게 커지는 회귀를 막았다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

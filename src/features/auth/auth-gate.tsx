@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthClient } from "@/features/auth/auth-client";
+import { useWorkspaceEntrySplash } from "@/features/auth/workspace-entry-splash-provider";
 import {
   readSessionWorkspacesState,
   resolveSessionWorkspaceAccess,
@@ -42,6 +43,7 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const { hydrated, session, hydrate } = useAuthClient();
+  const { completeWorkspaceEntrySplash } = useWorkspaceEntrySplash();
   const [workspaceAccess, setWorkspaceAccess] =
     useState<WorkspaceAccessState>("checking");
 
@@ -52,8 +54,9 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
   useEffect(() => {
     if (!hydrated || session) return;
 
+    completeWorkspaceEntrySplash();
     router.replace(buildLoginHref(pathname, search, "session_required"));
-  }, [hydrated, pathname, router, search, session]);
+  }, [completeWorkspaceEntrySplash, hydrated, pathname, router, search, session]);
 
   useEffect(() => {
     let ignore = false;
@@ -79,6 +82,7 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
 
       if (sessionAccess !== "unknown") {
         setWorkspaceAccess("denied");
+        completeWorkspaceEntrySplash();
         router.replace(buildLoginHref(pathname, search, "unauthorized"));
         return;
       }
@@ -112,6 +116,7 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
 
       if (!ignore) {
         setWorkspaceAccess("denied");
+        completeWorkspaceEntrySplash();
         router.replace(buildLoginHref(pathname, search, "unauthorized"));
       }
     }
@@ -121,7 +126,15 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
     return () => {
       ignore = true;
     };
-  }, [hydrated, pathname, router, search, session, workspaceId]);
+  }, [
+    completeWorkspaceEntrySplash,
+    hydrated,
+    pathname,
+    router,
+    search,
+    session,
+    workspaceId,
+  ]);
 
   if (!hydrated || !session || workspaceAccess !== "allowed") {
     return <AuthGateShellSkeleton />;

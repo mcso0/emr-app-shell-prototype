@@ -547,15 +547,17 @@ export function HomeKanbanWorkspace({
               <EmrEmptyState
                 kind="upstream-pending"
                 priority="supporting"
+                size="xl"
                 surface="content"
                 testId="home-kanban-empty-state"
                 title="원내 업무가 없습니다"
                 description="오늘 표시할 원내 업무가 없습니다."
                 primaryAction={
                   <Button
-                    size="sm"
+                    size="default"
                     variant="outline"
-                    className="bg-card"
+                    roundness="round"
+                    className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                     disabled={loading}
                     onClick={onRefresh ?? (() => router.refresh())}
                   >
@@ -624,6 +626,7 @@ function HomeOperationsState({
       <EmrEmptyState
         kind={permissionDenied ? "no-permission" : "upstream-pending"}
         priority="supporting"
+        size="xl"
         surface="content"
         testId={permissionDenied ? "home-kanban-permission-state" : "home-kanban-error-state"}
         title={permissionDenied ? "원내 현황을 볼 수 없습니다" : "원내 현황을 불러오지 못했습니다"}
@@ -635,9 +638,10 @@ function HomeOperationsState({
         primaryAction={
           permissionDenied ? undefined : (
             <Button
-              size="sm"
+              size="default"
               variant="outline"
-              className="bg-card"
+              roundness="round"
+              className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
               onClick={onRefresh}
             >
               <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />

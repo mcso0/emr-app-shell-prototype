@@ -65,12 +65,13 @@ export function WorkspaceFrame({
     : isGuardianDrawer
       ? GuardianProfileDrawer
       : undefined;
+  const hasCommonProfileRightPanel = Boolean(CommonProfileDrawer && activeDrawer);
   const EffectiveModuleDrawer =
     isReceptionDrawer && !routeReceptionDrawerToRightPanel
       ? ReceptionDrawer
       : ModuleDrawer;
   const shouldRenderWorkspaceDrawer =
-    Boolean(activeDrawer && (CommonProfileDrawer || EffectiveModuleDrawer)) &&
+    Boolean(activeDrawer && !CommonProfileDrawer && EffectiveModuleDrawer) &&
     !(routeReceptionDrawerToRightPanel && isReceptionDrawer);
   const drawerTitle =
     isPatientDrawer
@@ -97,7 +98,7 @@ export function WorkspaceFrame({
       ? undefined
       : activeDrawer?.id);
   const drawerWidth =
-    activeDrawer?.type === "hospital-order" || CommonProfileDrawer
+    activeDrawer?.type === "hospital-order"
       ? SHELL_LAYOUT.drawer.largeWidth
       : SHELL_LAYOUT.drawer.defaultWidth;
   const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
@@ -109,9 +110,11 @@ export function WorkspaceFrame({
     SHELL_LAYOUT.contentAside.minWidth
   );
   const resolvedRightPanelWidth =
-    activeDrawer?.rightPanelPresentation?.width ??
-    moduleDefinition.rightPanelWidth ??
-    rightPanelWidth;
+    hasCommonProfileRightPanel
+      ? 380
+      : (activeDrawer?.rightPanelPresentation?.width ??
+        moduleDefinition.rightPanelWidth ??
+        rightPanelWidth);
   const effectiveRightPanelWidth = Math.max(
     resolvedRightPanelWidth,
     SHELL_LAYOUT.rightPanel.defaultWidth
@@ -128,17 +131,22 @@ export function WorkspaceFrame({
       {(availability) => {
         const hasContentAside =
           Boolean(ContentAside) && (availability.hasContentAside ?? true);
-        const hasRightPanel =
+        const hasModuleRightPanel =
           Boolean(RightPanel) && (availability.hasRightPanel ?? true);
+        const hasRightPanel = hasCommonProfileRightPanel || hasModuleRightPanel;
         const contentAsideVisible = hasContentAside && contentAsideOpen;
-        const rightPanelVisible = hasRightPanel && rightPanelOpen;
+        const rightPanelVisible =
+          hasCommonProfileRightPanel || (hasModuleRightPanel && rightPanelOpen);
         const rightPanelGap = rightPanelVisible
-          ? (activeDrawer?.rightPanelPresentation?.gap ??
-            (moduleDefinition.rightPanelGap ? SHELL_LAYOUT.shell.gap : 0))
+          ? hasCommonProfileRightPanel
+            ? SHELL_LAYOUT.shell.gap
+            : (activeDrawer?.rightPanelPresentation?.gap ??
+              (moduleDefinition.rightPanelGap ? SHELL_LAYOUT.shell.gap : 0))
           : 0;
         const rightPanelDetached = rightPanelGap > 0;
         const rightPanelMobileFullWidth = Boolean(
-          activeDrawer?.rightPanelPresentation?.mobileFullWidth,
+          hasCommonProfileRightPanel ||
+            activeDrawer?.rightPanelPresentation?.mobileFullWidth,
         );
         const slotProps = {
           ...baseSlotProps,
@@ -229,7 +237,15 @@ export function WorkspaceFrame({
                 className="flex h-full w-full flex-col"
                 style={{ minWidth: rightPanelVisible ? effectiveRightPanelWidth : 0 }}
               >
-                {RightPanel && rightPanelVisible ? <RightPanel {...slotProps} /> : null}
+                {CommonProfileDrawer && activeDrawer ? (
+                  isPatientDrawer ? (
+                    <PatientProfileDrawer patientId={activeDrawer.id} />
+                  ) : (
+                    <GuardianProfileDrawer guardianId={activeDrawer.id} />
+                  )
+                ) : RightPanel && rightPanelVisible ? (
+                  <RightPanel {...slotProps} />
+                ) : null}
               </div>
             </aside>
 
@@ -272,13 +288,7 @@ export function WorkspaceFrame({
                       </Button>
                     </div>
                   ) : null}
-                  {CommonProfileDrawer && activeDrawer ? (
-                    isPatientDrawer ? (
-                      <PatientProfileDrawer patientId={activeDrawer.id} />
-                    ) : (
-                      <GuardianProfileDrawer guardianId={activeDrawer.id} />
-                    )
-                  ) : EffectiveModuleDrawer ? (
+                  {EffectiveModuleDrawer ? (
                     <EffectiveModuleDrawer {...slotProps} />
                   ) : null}
                 </motion.aside>

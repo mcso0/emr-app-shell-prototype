@@ -184,7 +184,7 @@ export function StatusMessageEditor({
         <button
           type="button"
           aria-label="상태 메시지 수정"
-          className="group flex h-[var(--emr-profile-status-control-height)] w-fit max-w-[var(--emr-profile-status-control-max-width)] items-center gap-1 rounded-[var(--clair-radius-atomic-6)] px-1.5 text-left text-sm text-[var(--emr-text-secondary)] outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex h-[var(--emr-profile-status-control-height)] w-[173px] max-w-full items-center rounded-[var(--clair-radius-atomic-6)] px-1.5 text-left text-sm text-[var(--emr-text-secondary)] outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
           disabled={isSaving}
           onClick={() => {
             setDraft(displayedValue);
@@ -193,9 +193,8 @@ export function StatusMessageEditor({
           }}
         >
           <span className="min-w-0 truncate">
-            {displayedValue || "상태 메시지 입력"}
+            {displayedValue || "상태메세지 추가하기..."}
           </span>
-          <CdsContentEditIcon aria-hidden="true" className="size-4 shrink-0" />
         </button>
       ) : (
         <p className="h-[var(--emr-profile-status-control-height)] max-w-[var(--emr-profile-status-control-max-width)] truncate px-1.5 py-1 text-sm text-[var(--emr-text-secondary)]">

@@ -12,6 +12,10 @@ import {
   mockPatientGuardians,
   mockPatients,
 } from "@/mocks/emr-domain";
+import {
+  LEGACY_SALES_DEMO_WORKSPACE_ID,
+  PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+} from "@/lib/emr-domain/demo-workspaces";
 import type { Appointment, Encounter, Guardian, Invoice, Patient, PatientGuardian } from "@/types/emr-domain";
 
 export type CustomerArchiveTarget = "guardian" | "patient";
@@ -276,6 +280,30 @@ export function createMockCustomerArchiveGateway(
 }
 
 export function createDemoCustomerArchivePermissionAdapter() {
+  const demoMembers = [
+    {
+      id: "playwright-admin",
+      userId: "playwright-default-session",
+      roles: ["hospital_admin"] as const,
+    },
+    {
+      id: "admin",
+      userId: "user-admin",
+      roles: ["hospital_admin"] as const,
+    },
+    {
+      id: "front-desk",
+      userId: "user-front-desk",
+      roles: ["front_desk"] as const,
+    },
+    { id: "vet", userId: "user-vet", roles: ["vet"] as const },
+    {
+      id: "tech",
+      userId: "user-tech",
+      roles: ["technician"] as const,
+    },
+  ];
+
   return createMockWorkspacePermissionAdapter({
     users: [
       { id: "playwright-default-session", status: "active" },
@@ -285,12 +313,17 @@ export function createDemoCustomerArchivePermissionAdapter() {
       { id: "user-tech", status: "active" },
     ],
     memberships: [
-      { id: "membership-playwright-admin", workspaceId: "clair-demo", userId: "playwright-default-session", roles: ["hospital_admin"], status: "active" },
-      { id: "membership-admin", workspaceId: "clair-demo", userId: "user-admin", roles: ["hospital_admin"], status: "active" },
-      { id: "membership-front-desk", workspaceId: "clair-demo", userId: "user-front-desk", roles: ["front_desk"], status: "active" },
-      { id: "membership-vet", workspaceId: "clair-demo", userId: "user-vet", roles: ["vet"], status: "active" },
-      { id: "membership-tech", workspaceId: "clair-demo", userId: "user-tech", roles: ["technician"], status: "active" },
-    ],
+      LEGACY_SALES_DEMO_WORKSPACE_ID,
+      PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+    ].flatMap((workspaceId) =>
+      demoMembers.map((member) => ({
+        id: `membership-${workspaceId}-${member.id}`,
+        workspaceId,
+        userId: member.userId,
+        roles: [...member.roles],
+        status: "active" as const,
+      })),
+    ),
   });
 }
 
