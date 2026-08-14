@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>워크스페이스 바이탈 설정 구현 보고서</title>
+  <style>
+    body{margin:0;background:#f6f7f9;color:#18202a;font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:860px;margin:40px auto;padding:36px;background:#fff;border:1px solid #e5e7eb;border-radius:16px}h1{margin-top:0;font-size:28px}h2{margin-top:30px;font-size:18px}ul{padding-left:22px}.status{display:inline-block;padding:4px 10px;border-radius:999px;background:#e8f5ed;color:#176b3a;font-weight:700}.note{padding:14px 16px;border-radius:10px;background:#f3f4f6}code{font-size:13px}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>워크스페이스 바이탈 설정 구현 보고서</h1>
+    <p class="status">구현 완료 · Human review</p>
+    <p>병원마다 실제로 사용하는 바이탈을 한 곳에서 정하고, 접수와 진료 화면이 같은 설정을 쓰도록 만들었다. 설정을 꺼도 과거 측정값은 삭제되지 않는다.</p>
+    <h2>요청과 결과</h2>
+    <ul>
+      <li>기본 프리셋은 체중, 체온, 심박수, 호흡수이며 혈압을 추가할 수 있다.</li>
+      <li>관리자는 그립 드래그로 순서를 바꾸고, 사용 여부와 안전한 표시 단위를 정할 수 있다.</li>
+      <li>변경 전에는 초기화/저장이 비활성화되고, 저장 전 영향 범위를 다시 확인한다.</li>
+      <li>접수와 진료의 입력 항목은 모두 선택 사항이며 저장된 워크스페이스 설정을 공통 사용한다.</li>
+      <li>진료·검사·조제의 최신 바이탈 요약도 같은 활성 여부와 순서를 사용한다.</li>
+    </ul>
+    <h2>데이터와 권한</h2>
+    <ul>
+      <li><code>hospital_settings:view</code>는 조회, <code>hospital_settings:manage</code>는 변경을 허용한다.</li>
+      <li>DB는 체중 kg, 체온 °C를 기준으로 저장하며 g/°F 표시는 UI에서 안전하게 변환한다.</li>
+      <li>심박수 컬럼을 추가했고, 혈압은 수축기 단독을 허용하되 이완기 단독은 거부한다.</li>
+      <li>설정 변경은 중앙 감사 이벤트로 남고 구성 테이블의 직접 브라우저 쓰기는 막았다.</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li>설정 모델·서버·마이그레이션·바이탈 쓰기·접수·진료 UI 집중 회귀를 통과했다.</li>
+      <li>로컬 Supabase 전체 마이그레이션 재생과 실제 설정 RPC 교체/조회 롤백 검증을 통과했다.</li>
+      <li>원격 synthetic/demo DB에는 <code>20260722112553_workspace_vital_settings</code>로 적용했고, RLS·권한·관리자 롤백 읽기/쓰기·기본값 보존을 재확인했다.</li>
+      <li>PR #479의 Release Check와 production 배포를 통과했으며, 인증된 화면 점검에서 설정 관리와 접수 입력 흐름을 확인했다.</li>
+      <li>TypeScript, ESLint, 프로덕션 빌드, 문서 링크 검사, 시크릿 스캔, 최종 diff 검사를 통과했다.</li>
+      <li>전체 차트·접수 통합 묶음은 기존 차트 영역 실패 5건과 소켓 리스너 누적 경고로 중단했으며, 이번 변경 영향 범위의 집중 테스트 43건은 모두 통과했다.</li>
+    </ul>
+    <h2>제외 및 다음 단계</h2>
+    <p class="note">개·고양이 정상 범위, 경고 기준, 품종/연령/상황별 임상 의사결정 지원은 이번 범위에서 제외했다. 실제 병원 설정은 승인된 기본 4개를 유지했고, 검증용 변경은 모두 롤백했다.</p>
+  </main>
+</body>
+</html>

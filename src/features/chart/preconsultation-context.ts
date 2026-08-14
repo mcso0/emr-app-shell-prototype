@@ -4,6 +4,7 @@ export type ChartPreconsultationVitalMeasurement = {
   measuredAt: string;
   weightKg?: number;
   temperatureC?: number;
+  heartRateBpm?: number;
   respiratoryRateRpm?: number;
   bloodPressureSystolicMmhg?: number;
   bloodPressureDiastolicMmhg?: number;
@@ -78,6 +79,7 @@ export type ChartPreconsultationContextResponse =
       ok: true;
       status: 200;
       context: ChartPreconsultationContext;
+      canWriteVitals: boolean;
       enforcedBy: "chart-preconsultation-context-read";
     }
   | {

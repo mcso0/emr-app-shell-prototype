@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-05-20"
+updated: "2026-08-09"
 linear_issue: "DEN-141"
 linear_project: "00 UI 시스템 인벤토리 및 리팩토링 기준"
 source_docs:
@@ -140,7 +140,7 @@ Do not add or update upstream shadcn components during a screen issue unless the
 
 | Pattern | Current state | Rule |
 |---|---|---|
-| Tables | `src/components/ui/table.tsx` is generic; `src/components/emr/emr-data-table.tsx` is order-specific despite the broad name | use `Table` for generic tables; do not force billing, chart, customer, or hospital admin into `EmrDataTable` |
+| Tables | `src/components/ui/table.tsx` owns low-level semantic table/overflow/sticky primitives; `src/components/emr/emr-data-table.tsx` owns TanStack-driven dense operational table rendering; `EmrTableWorkspaceHeader`, `EmrTableFeedbackSurface`, and feature adapters own controls, terminal states, and workflow behavior | use `Table` for generic information tables and static summaries; use `EmrDataTable<TData>` when a screen has a TanStack table instance and needs the shared customer-style header/row, density, sizing, or optional pinning contract; keep data fetching, sorting/filtering/selection state, drawers, mutations, and domain cells in the feature; pin selection before identity when both are present |
 | Side panels | `EmrSubpanel`, `EmrSidePanelCard`, `EmrOrderQueueSidePanel`, `EmrTextSideNavButton`, and `EmrContentHistoryList` already exist | reuse first; add variants only after a second screen proves a stable role |
 | Status badges | `EmrStatusBadge` is label-based for a limited set; feature screens still have local tone maps | keep domain-specific statuses local until a tone resolver contract is defined |
 | Confirm dialogs | `EmrConfirmDialogContent` exists and is used across chart, profile, auth, and hospital admin; `EmrDialogShell` defines the forward-looking confirm/form/wide-form shell | keep existing simple confirmations stable; use `EmrDialogShell` for new or migrated dialog work when a screen issue includes visual QA |

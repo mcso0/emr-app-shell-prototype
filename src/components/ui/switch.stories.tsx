@@ -1,3 +1,5 @@
+import { useState } from "react";
+import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import {
@@ -7,6 +9,21 @@ import {
   FieldLabel,
 } from "./field";
 import { Switch } from "./switch";
+
+type SwitchArgs = ComponentProps<typeof Switch>;
+
+function ControlledSwitch(args: SwitchArgs) {
+  const [checked, setChecked] = useState(Boolean(args.defaultChecked));
+
+  return (
+    <Switch
+      {...args}
+      checked={checked}
+      defaultChecked={undefined}
+      onCheckedChange={setChecked}
+    />
+  );
+}
 
 const meta = {
   title: "Design System/UI/Switch",
@@ -35,8 +52,9 @@ const meta = {
     },
     size: {
       control: "radio",
-      options: ["sm", "default"],
-      description: "Switch size. Use sm in dense rows and default in form settings.",
+      options: ["xs", "sm", "md", "default"],
+      description:
+        "xs preserves the legacy compact control; sm/md are the CDS.V2 32×18 and 44×24 controls. default remains the sm compatibility alias.",
     },
     "aria-invalid": {
       control: "boolean",
@@ -105,7 +123,7 @@ export const Checked: Story = {
 export const Small: Story = {
   args: {
     defaultChecked: true,
-    size: "sm",
+    size: "xs",
   },
   render: (args) => (
     <Field orientation="horizontal" className="max-w-sm">
@@ -120,6 +138,60 @@ export const Small: Story = {
           "사용할 때: 표 행이나 compact panel의 작은 binary setting. 쓰지 말아야 할 때: 터치 면적이 충분하지 않은 주요 설정.",
       },
     },
+  },
+};
+
+export const Sizes: Story = {
+  render: () => (
+    <div className="grid gap-4">
+      {(["xs", "sm", "md"] as const).map((size) => (
+        <Field key={size} orientation="horizontal">
+          <Switch
+            id={`sample-switch-${size}`}
+            defaultChecked
+            size={size}
+          />
+          <FieldLabel htmlFor={`sample-switch-${size}`}>
+            {size === "xs"
+              ? "xs · 24×14"
+              : size === "sm"
+                ? "sm · 32×18"
+                : "md · 44×24"}
+          </FieldLabel>
+        </Field>
+      ))}
+    </div>
+  ),
+};
+
+export const ControlledInteraction: Story = {
+  args: {
+    defaultChecked: false,
+    size: "md",
+  },
+  render: (args) => (
+    <Field orientation="horizontal">
+      <ControlledSwitch id="sample-switch-controlled" {...args} />
+      <FieldLabel htmlFor="sample-switch-controlled">
+        샘플 설정 사용
+      </FieldLabel>
+    </Field>
+  ),
+  play: async ({ canvasElement }) => {
+    const control = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="switch"]'
+    );
+
+    if (!control || control.getAttribute("aria-checked") !== "false") {
+      throw new Error("Switch should start unchecked.");
+    }
+
+    control.click();
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
+    if (control.getAttribute("aria-checked") !== "true") {
+      throw new Error("Switch should expose checked state after activation.");
+    }
   },
 };
 

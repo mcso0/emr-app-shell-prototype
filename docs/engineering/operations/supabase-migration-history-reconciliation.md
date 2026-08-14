@@ -6,14 +6,24 @@ tags:
   - supabase
   - migrations
   - release
-last_updated: 2026-07-16
+last_updated: 2026-08-08
 ---
 
 # Supabase Migration History Reconciliation
 
 ## Current Contract
 
-The linked synthetic/demo Supabase project and `supabase/migrations` now share every remotely recorded migration version. Remote-only history count is `0` as of 2026-07-16.
+The linked synthetic/demo Supabase project and `supabase/migrations` now share every remotely recorded migration version. Remote-only history count is `0` as of 2026-07-22.
+
+> **Revalidation notice (2026-08-08):** The statement above is a historical
+> checkpoint, not a current parity claim. A read-only catalog comparison against
+> `clair-emr-staging` (`qmerxgzrwaaahpkhjqlc`) found 116 remote records and 144
+> local migration files: 108 exact version IDs in common, 8 remote-only IDs, and
+> 36 local-only IDs. Several differences are timestamp aliases, but the newer
+> remote-only records are not yet represented in this summary. Do not use this
+> document as evidence for a clean `db push` until a separate reconciliation
+> review updates the alias/pending tables. `CUSTOMER-LIVE-PR-009` records this
+> gate and intentionally does not repair history or apply pending migrations.
 
 Do not delete or rename the compatibility aliases below. Their SQL was applied remotely under the remote timestamp, while an identical canonical file exists locally under a different timestamp. The alias files intentionally contain comments only so fresh local replay does not execute the same SQL twice.
 
@@ -40,6 +50,8 @@ Do not delete or rename the compatibility aliases below. Their SQL was applied r
 | `20260715164007_remote_history_alias_workspace_member_status_messages.sql` | `20260716010000_workspace_member_status_messages.sql` |
 | `20260715164307_remote_history_alias_workspace_status_message_rls_initplan.sql` | `20260716011000_workspace_status_message_rls_initplan.sql` |
 | `20260715172425_remote_history_alias_private_profile_avatars.sql` | `20260716020000_private_profile_avatars.sql` |
+| `20260722112553_remote_history_alias_workspace_vital_settings.sql` | `20260722143000_workspace_vital_settings.sql` |
+| `20260722130209_remote_history_alias_required_workspace_vitals.sql` | `20260722190000_required_workspace_vitals.sql` |
 
 The following remote-only SQL is preserved verbatim so a fresh local reset includes the actual remote behavior:
 
@@ -81,6 +93,12 @@ The private profile-avatar schema and Storage policies are also no longer
 pending behavior. Their exact SQL was applied and verified on 2026-07-16 under
 remote version `20260715172425`; the alias preserves that history version while
 the canonical migration remains the deterministic fresh-replay source.
+
+The workspace vital-settings foundation and required-vitals follow-up are also
+no longer pending behavior. Their exact SQL was applied and verified on
+2026-07-22 under remote versions `20260722112553` and `20260722130209`;
+comment-only aliases preserve those history versions while canonical migrations
+remain the deterministic fresh-replay source.
 
 Do not use `migration repair --status applied` for these entries merely to make `db push` look clean. Supabase repair changes only the history table; it does not execute the migration SQL.
 

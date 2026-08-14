@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
@@ -7,6 +7,7 @@ import {
   createSupabaseReceptionWalkInEncounterGateway,
   createReceptionWalkInEncounter,
 } from "../src/features/reception/server-walk-in-encounter-core";
+import type { ReceptionWalkInEncounterInput } from "../src/features/reception/walk-in-encounter";
 
 type SupabaseWalkInClient = Parameters<
   typeof createSupabaseReceptionWalkInEncounterGateway
@@ -192,8 +193,12 @@ test("walk-in encounter core validates nested vitals before gateway access", asy
       field: "vitals.respiratoryRateRpm",
     },
     {
-      vitals: { bloodPressure: { systolicMmhg: 132 } },
-      field: "vitals.bloodPressure.diastolicMmhg",
+      vitals: { heartRateBpm: 88.5 },
+      field: "vitals.heartRateBpm",
+    },
+    {
+      vitals: { bloodPressure: { diastolicMmhg: 84 } },
+      field: "vitals.bloodPressure.systolicMmhg",
     },
     {
       vitals: { bloodPressure: { systolicMmhg: 0, diastolicMmhg: 84 } },
@@ -275,10 +280,33 @@ test("walk-in encounter core rejects reception times outside business hours", as
   });
 });
 
+test("walk-in encounter core allows a reception that overlaps the configured break", async () => {
+  const result = await createReceptionWalkInEncounter({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: {
+      ...validWalkInInput,
+      plannedStartAt: "2026-05-19T13:45:00+09:00",
+    },
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    status: 201,
+    walkIn: {
+      encounter: {
+        checkedInAt: "2026-05-19T13:45:00+09:00",
+        durationMinutes: 30,
+      },
+    },
+  });
+});
+
 test("supabase walk-in encounter gateway keeps workspace scope in the RPC write", async () => {
   const calls: string[] = [];
   let createPayload:
     | {
+        assignedStaffUserIds?: string[];
         durationMinutes?: number;
         plannedStartAt?: string;
         primaryVeterinarianId?: string;
@@ -325,6 +353,7 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
 
       const createArgs = args as {
         p_walk_in: {
+          assignedStaffUserIds?: string[];
           durationMinutes?: number;
           patientId: string;
           plannedStartAt?: string;
@@ -344,7 +373,11 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
             workspaceId: "clair-demo",
 	            patientId: "19421000-0000-4000-8000-000000000005",
 	            guardianId: "19420000-0000-4000-8000-000000000005",
-	            primaryVeterinarianId: "49110000-0000-4000-8000-000000000003",
+            primaryVeterinarianId: "49110000-0000-4000-8000-000000000003",
+            assignedStaffUserIds: [
+              "49110000-0000-4000-8000-000000000003",
+              "49111000-0000-4000-8000-000000000004",
+            ],
             encounterNo: "E-DB-0001",
             receptionType: "walk_in",
             department: "내과",
@@ -375,7 +408,10 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
   const result = await gateway.createWalkInEncounter({
     actorUserId: "user-front-desk",
     workspaceId: "clair-demo",
-    input: validWalkInInput,
+    input: {
+      ...validWalkInInput,
+      assignedStaffUserIds: ["49111000-0000-4000-8000-000000000004"],
+    } as ReceptionWalkInEncounterInput & { assignedStaffUserIds: string[] },
   });
 
   expect(calls).toEqual([
@@ -385,6 +421,9 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
   expect(createPayload?.primaryVeterinarianId).toBe(
     "49110000-0000-4000-8000-000000000003",
   );
+  expect(createPayload?.assignedStaffUserIds).toEqual([
+    "49111000-0000-4000-8000-000000000004",
+  ]);
   expect(createPayload?.durationMinutes).toBe(30);
   expect(createPayload?.plannedStartAt).toBe("2026-05-19T11:15:00+09:00");
   expect(createPayload?.vitals).toEqual(validVitals);
@@ -392,7 +431,14 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
   expect(result).toMatchObject({
     ok: true,
     walkIn: {
-      encounter: { id: "encounter-db-walkin-coco", workspaceId: "clair-demo" },
+      encounter: {
+        id: "encounter-db-walkin-coco",
+        workspaceId: "clair-demo",
+        assignedStaffUserIds: [
+          "49110000-0000-4000-8000-000000000003",
+          "49111000-0000-4000-8000-000000000004",
+        ],
+      },
       queueEntry: { id: "queue-db-walkin-coco", workspaceId: "clair-demo" },
     },
   });
@@ -489,6 +535,42 @@ test("walk-in encounter writer migration keeps encounter and queue writes scoped
   );
   expect(migrationSource).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET/i,
+  );
+});
+
+test("encounter staff assignment migration persists every active-role assignee and returns them in reception reads", () => {
+  const migrationPath =
+    "supabase/migrations/20260720124138_encounter_staff_assignments.sql";
+  expect(existsSync(migrationPath)).toBe(true);
+  if (!existsSync(migrationPath)) return;
+
+  const migration = readFileSync(migrationPath, "utf8");
+  expect(migration).toContain("encounters_workspace_id_id_key unique (workspace_id, id)");
+  expect(migration).toContain("create table public.encounter_staff_assignments");
+  expect(migration).toContain("alter table public.encounter_staff_assignments enable row level security");
+  expect(migration).toContain("insert into public.encounter_staff_assignments");
+  expect(migration).toContain("e.primary_veterinarian_id");
+  expect(migration).toContain("assignedStaffUserIds");
+  expect(migration).toContain("assigned_staff_unavailable");
+  expect(migration).toContain("um.status <> 'active'");
+  expect(migration).toContain("cardinality(um.roles) = 0");
+  expect(migration).toContain("u.status <> 'active'");
+  expect(migration).toContain("private.clair_list_reception_day_calendar_records");
+  expect(migration).toContain("private.clair_list_reception_queue_internal");
+  expect(migration).toContain(
+    "grant execute on function public.clair_create_reception_walk_in_encounter",
+  );
+  expect(migration).not.toMatch(/grant\s+select\s+on\s+public\.encounter_staff_assignments/i);
+});
+
+test("encounter staff assignment audit actor foreign key has a covering index", () => {
+  const migrationSource = readdirSync("supabase/migrations")
+    .filter((name) => name.includes("encounter_staff_assignments"))
+    .map((name) => readFileSync(`supabase/migrations/${name}`, "utf8"))
+    .join("\n");
+
+  expect(migrationSource).toContain(
+    "create index encounter_staff_assignments_created_by_idx",
   );
 });
 

@@ -16,7 +16,6 @@ import {
   CdsCommunicationMailIcon,
   CdsCommunicationPhoneIcon,
 } from "@/components/cds-icons/communication-and-media";
-import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsMedicalStethoscopeIcon } from "@/components/cds-icons/medical-and-domain";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
@@ -38,10 +37,10 @@ import {
   type ProfileWorkDateGroup,
 } from "@/features/staff/components/profile-side-panel-v2-work";
 import type {
+  StaffCurrentWorkInfo,
   StaffOperationalAvailability,
   StaffOperationalProfile,
   StaffOperationalProfileCapabilities,
-  StaffOperationalShift,
 } from "@/features/staff/server-operational-profile-core";
 import type { StaffAssignedWorkItem } from "@/features/staff/server-staff-assigned-work-items-core";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -55,8 +54,8 @@ type StaffOperationalProfileResponse =
       ok: true;
       availability: StaffOperationalAvailability | null;
       capabilities: StaffOperationalProfileCapabilities;
+      currentWork: StaffCurrentWorkInfo | null;
       profile: StaffOperationalProfile;
-      shift: StaffOperationalShift | null;
       sectionErrors?: {
         availability?: "schedule_read_failed";
         shift?: "schedule_read_failed";
@@ -82,6 +81,18 @@ type WorkReadState = {
   timezone: string | null;
 };
 
+export type StaffCalendarAppointmentWork = {
+  href: string;
+  id: string;
+  operatingDate: string;
+  scheduledEndAt?: string;
+  scheduledStartAt: string;
+  status: "requested" | "confirmed" | "changed" | "checked_in";
+  title: string;
+  workKind?: "appointment" | "encounter";
+  workLabel?: "예약 진료" | "현장 접수";
+};
+
 const initialWorkReadState: WorkReadState = {
   items: [],
   loadingNextPage: false,
@@ -93,14 +104,15 @@ const initialWorkReadState: WorkReadState = {
 
 export function StaffOperationalProfilePanel({
   actorUserId,
-  currentMinutes,
+  calendarAppointments = [],
+  date,
   onClose,
   todayDate,
   userId,
   workspaceId,
 }: {
   actorUserId?: string;
-  currentMinutes: number;
+  calendarAppointments?: StaffCalendarAppointmentWork[];
   date: string;
   onClose: () => void;
   todayDate: string;
@@ -125,7 +137,7 @@ export function StaffOperationalProfilePanel({
     () => setRetryNonce((value) => value + 1),
     [],
   );
-  const requestKey = `${workspaceId}:${userId}:${todayDate}:${retryNonce}`;
+  const requestKey = `${workspaceId}:${userId}:${date}:${retryNonce}`;
   const requestState =
     loadResult?.key === requestKey
       ? loadResult.state === "ready"
@@ -151,7 +163,7 @@ export function StaffOperationalProfilePanel({
   useEffect(() => {
     const controller = new AbortController();
     void fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff/${encodeURIComponent(userId)}/operational-profile?date=${encodeURIComponent(todayDate)}`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff/${encodeURIComponent(userId)}/operational-profile?date=${encodeURIComponent(date)}`,
       {
         cache: "no-store",
         headers: actorUserId
@@ -170,7 +182,7 @@ export function StaffOperationalProfilePanel({
         setLoadResult({ key: requestKey, response: null, state: "error" });
       });
     return () => controller.abort();
-  }, [actorUserId, requestKey, todayDate, userId, workspaceId]);
+  }, [actorUserId, date, requestKey, userId, workspaceId]);
 
   const loadWorkPage = useCallback(
     async (cursor: string | null, append: boolean) => {
@@ -223,11 +235,16 @@ export function StaffOperationalProfilePanel({
   const workGroups = useMemo(
     () =>
       buildWorkGroups(
-        workRead.items,
+        [
+          ...calendarAppointments.map(toProfileAppointmentWorkItem),
+          ...workRead.items.map((item) =>
+            toProfileAssignedWorkItem(item, workRead.timezone),
+          ),
+        ],
         workRead.timezone,
         todayDate,
       ),
-    [todayDate, workRead.items, workRead.timezone],
+    [calendarAppointments, todayDate, workRead.items, workRead.timezone],
   );
 
   const navigate = (href: string | null | undefined) => {
@@ -389,7 +406,7 @@ export function StaffOperationalProfilePanel({
   return (
     <section
       aria-label="직원 운영 프로필"
-      className="h-full min-h-0 bg-[var(--emr-surface-rightpanel)]"
+      className="h-full min-h-0 overflow-x-hidden overscroll-x-none touch-pan-y bg-[var(--emr-surface-rightpanel)]"
       data-testid="staff-operational-profile-panel"
     >
       <TabGroup
@@ -468,7 +485,7 @@ export function StaffOperationalProfilePanel({
           </TabsList>
         </header>
 
-        <TabPanel className="min-h-0 overflow-y-auto p-4" value="profile">
+        <TabPanel className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4" value="profile">
           {requestState === "loading" ? (
             <ProfileLoadingState />
           ) : requestState === "error" ? (
@@ -485,28 +502,26 @@ export function StaffOperationalProfilePanel({
             </EmrInlineAlert>
           ) : profile && response ? (
             <div className="grid gap-4">
+              <TodayShiftSection
+                currentWork={response.currentWork}
+                error={Boolean(response.sectionErrors?.shift)}
+                onRetry={loadProfile}
+                todayDate={todayDate}
+              />
+              <div
+                aria-hidden="true"
+                className="mx-2 h-px bg-[var(--emr-border-subtle)]"
+              />
               <AccountInformation profile={profile} />
               <div
                 aria-hidden="true"
-                className="mx-2 h-px bg-[var(--emr-border-default)]"
-              />
-              <TodayShiftSection
-                currentMinutes={currentMinutes}
-                error={Boolean(response.sectionErrors?.shift)}
-                onOpenSchedule={
-                  response.capabilities.scheduleHref
-                    ? () => navigate(response.capabilities.scheduleHref)
-                    : undefined
-                }
-                onRetry={loadProfile}
-                shift={response.shift}
-                todayDate={todayDate}
+                className="mx-2 h-px bg-[var(--emr-border-subtle)]"
               />
               <section aria-labelledby="staff-availability-heading" className="px-2">
                 <SectionTitle id="staff-availability-heading">
-                  다가오는 부재와 다음 복귀
+                  다가오는 일정
                 </SectionTitle>
-                <div className="mt-2.5">
+                <div className="mt-3">
                   <ProfileAvailabilitySummary
                     eventLabel={formatAvailabilityEvent(response.availability)}
                     onRetry={loadProfile}
@@ -525,7 +540,7 @@ export function StaffOperationalProfilePanel({
           ) : null}
         </TabPanel>
 
-        <TabPanel className="min-h-0 overflow-y-auto p-4" value="work">
+        <TabPanel className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4" value="work">
           <ProfileWorkStatusTab
             groups={workGroups}
             hasNextPage={Boolean(workRead.nextCursor)}
@@ -536,7 +551,7 @@ export function StaffOperationalProfilePanel({
                 ? "loading"
                 : workRead.state === "error"
                   ? "error"
-                  : workRead.items.length === 0
+                  : workGroups.length === 0
                     ? "empty"
                     : "ready"
             }
@@ -551,7 +566,7 @@ export function StaffOperationalProfilePanel({
           />
         </TabPanel>
 
-        <TabPanel className="min-h-0 overflow-y-auto p-4" value="schedule">
+        <TabPanel className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4" value="schedule">
           <ScheduleNavigationSection
             onOpenSchedule={
               response?.capabilities.scheduleHref
@@ -598,7 +613,7 @@ function ProfileHeader({
   profile: StaffOperationalProfile;
 }) {
   return (
-    <div className="grid h-[var(--emr-profile-avatar-size)] grid-cols-[var(--emr-profile-avatar-size)_minmax(0,1fr)_auto] items-start gap-2.5">
+    <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
       <EditableProfileAvatar
         alt={profile.displayName}
         editable={canEditAvatar}
@@ -607,7 +622,7 @@ function ProfileHeader({
         onUpload={onUploadAvatar}
         src={profile.avatarUrl}
       />
-      <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-col gap-1">
+      <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-1 flex-col gap-1">
         <div className="flex h-7 min-w-0 items-center gap-2 px-1.5">
           <h2 className="min-w-0 truncate text-xl leading-7 font-semibold tracking-[-0.015em] text-[var(--emr-text-primary)]">
             {profile.displayName}
@@ -629,7 +644,9 @@ function ProfileHeader({
           </span>
         </p>
       </div>
-      <div className="flex items-start gap-1">{actions}</div>
+      <div className="absolute -top-1.5 -right-1.5 flex items-start gap-2">
+        {actions}
+      </div>
     </div>
   );
 }
@@ -662,14 +679,16 @@ type AvatarRemoveResponse =
 
 function ProfileHeaderSkeleton({ action }: { action: ReactNode }) {
   return (
-    <div className="grid h-[var(--emr-profile-avatar-size)] grid-cols-[var(--emr-profile-avatar-size)_minmax(0,1fr)_auto] items-start gap-2.5">
+    <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
       <Skeleton className="size-[var(--emr-profile-avatar-size)] shrink-0 rounded-md" />
-      <div className="min-w-0 space-y-1 px-1.5 pt-1">
+      <div className="min-w-0 flex-1 space-y-1 px-1.5 pt-1">
         <Skeleton className="h-7 w-32" />
         <Skeleton className="h-7 w-full" />
         <Skeleton className="h-5 w-24" />
       </div>
-      <div className="flex items-start">{action}</div>
+      <div className="absolute -top-1.5 -right-1.5 flex items-start">
+        {action}
+      </div>
     </div>
   );
 }
@@ -682,12 +701,14 @@ function ProfileLoadingState() {
       data-testid="staff-operational-profile-loading"
     >
       <span className="sr-only">직원 운영 프로필 불러오는 중</span>
-      <Skeleton className="h-6 w-20" />
+      <Skeleton className="h-8 w-24" />
+      <Skeleton className="h-[70px] w-full rounded-xl" />
+      <Skeleton className="h-px w-full" />
+      <Skeleton className="h-8 w-20" />
       <Skeleton className="h-32 w-full rounded-xl" />
-      <Skeleton className="h-6 w-24" />
-      <Skeleton className="h-[72px] w-full rounded-xl" />
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-24 w-full rounded-xl" />
+      <Skeleton className="h-px w-full" />
+      <Skeleton className="h-8 w-24" />
+      <Skeleton className="h-[70px] w-full rounded-xl" />
     </div>
   );
 }
@@ -695,7 +716,7 @@ function ProfileLoadingState() {
 function SectionTitle({ children, id }: { children: string; id: string }) {
   return (
     <h3
-      className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]"
+      className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]"
       id={id}
     >
       {children}
@@ -762,7 +783,7 @@ function AccountRow({
             aria-label={copyLabel}
             size="icon-xs"
             variant="ghost"
-            className="pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+            className="shrink-0"
             onClick={() => void copyValue(value, label)}
           >
             <CdsActionsCopyIcon aria-hidden="true" size={14} />
@@ -774,18 +795,14 @@ function AccountRow({
 }
 
 function TodayShiftSection({
-  currentMinutes,
+  currentWork,
   error,
-  onOpenSchedule,
   onRetry,
-  shift,
   todayDate,
 }: {
-  currentMinutes: number;
+  currentWork: StaffCurrentWorkInfo | null;
   error: boolean;
-  onOpenSchedule?: () => void;
   onRetry: () => void;
-  shift: StaffOperationalShift | null;
   todayDate: string;
 }) {
   return (
@@ -804,13 +821,8 @@ function TodayShiftSection({
           >
             조회 실패를 휴무로 표시하지 않았어요.
           </EmrInlineAlert>
-        ) : shift ? (
-          <ShiftSummary
-            currentMinutes={currentMinutes}
-            onOpenSchedule={onOpenSchedule}
-            shift={shift}
-            todayDate={todayDate}
-          />
+        ) : currentWork ? (
+          <CurrentWorkSummary currentWork={currentWork} todayDate={todayDate} />
         ) : (
           <p className="flex min-h-[72px] items-center rounded-xl border border-dashed border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] px-4 text-sm text-[var(--emr-text-tertiary)]">
             오늘 게시된 근무가 없어요
@@ -852,52 +864,53 @@ function ScheduleNavigationSection({
   );
 }
 
-function ShiftSummary({
-  currentMinutes,
-  onOpenSchedule,
-  shift,
+function CurrentWorkSummary({
+  currentWork,
   todayDate,
 }: {
-  currentMinutes: number;
-  onOpenSchedule?: () => void;
-  shift: StaffOperationalShift;
+  currentWork: StaffCurrentWorkInfo;
   todayDate: string;
 }) {
-  const state = getShiftStateLabel({ currentMinutes, shift, todayDate });
-  const kindLabel =
-    shift.kind === "leave"
-      ? "휴가"
-      : shift.kind === "off"
-        ? "휴무"
-        : shift.workLabel;
+  const absence =
+    currentWork.state === "leave" ||
+    currentWork.state === "same_day_leave" ||
+    currentWork.state === "off" ||
+    currentWork.state === "hospital_closed";
+  const title = getCurrentWorkTitle(currentWork);
+  const detailLabel = getCurrentWorkDetail(currentWork, todayDate);
+  const accentClassName =
+    currentWork.state === "leave" || currentWork.state === "same_day_leave"
+      ? "text-[var(--emr-status-success-text)]"
+      : currentWork.state === "off" || currentWork.state === "hospital_closed"
+        ? "text-[var(--emr-text-tertiary)]"
+        : "text-[var(--clair-color-atomic-sky-500)]";
   return (
-    <div className="flex h-[72px] items-center gap-3 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] py-[11px] pl-3 pr-4">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)]">
-          <CdsFilesCalendarIcon aria-hidden="true" size={24} />
+    <div className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-[14px]">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div
+          aria-hidden="true"
+          className="grid size-[42px] shrink-0 overflow-hidden rounded-md border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
+        >
+          <span className="h-3 bg-[var(--emr-surface-muted)]" />
+          <span className={`flex items-center justify-center pb-0.5 text-base leading-4 font-semibold tabular-nums ${accentClassName}`}>
+            {todayDate.slice(-2)}
+          </span>
         </div>
         <div className="min-w-0">
           <p className="truncate text-base leading-6 font-medium tracking-[0.006em] tabular-nums text-[var(--emr-text-primary)]">
-            {formatMinutes(shift.startMinutes)}–{formatMinutes(shift.endMinutes)}
+            {title}
           </p>
-          <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
-            <span className="shrink-0 text-[var(--clair-color-atomic-sky-500)]">{state}</span>
-            {kindLabel || shift.locationLabel ? <span aria-hidden="true">·</span> : null}
-            <span className="truncate">{[kindLabel, shift.locationLabel].filter(Boolean).join(" · ")}</span>
+          <p className="flex min-w-0 items-center gap-1.5 truncate text-sm leading-[18px] font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
+            {!absence ? (
+              <span className={`shrink-0 ${accentClassName}`}>
+                {getCurrentWorkStateLabel(currentWork.state)}
+              </span>
+            ) : null}
+            {!absence && detailLabel ? <span aria-hidden="true">·</span> : null}
+            {detailLabel ? <span className="truncate">{detailLabel}</span> : null}
           </p>
         </div>
       </div>
-      {onOpenSchedule ? (
-        <Button
-          type="button"
-          size="xs"
-          variant="outline"
-          className="w-[66px] px-0 text-xs"
-          onClick={onOpenSchedule}
-        >
-          일정 확인
-        </Button>
-      ) : null}
     </div>
   );
 }
@@ -915,34 +928,98 @@ function formatProfileLastSeenDetail(
 }
 
 function buildWorkGroups(
-  items: StaffAssignedWorkItem[],
+  items: ProfilePanelWorkItem[],
   timezone: string | null,
   todayDate: string,
 ): ProfileWorkDateGroup[] {
   const groups = new Map<string, ProfileAssignedWorkItem[]>();
   for (const item of items) {
     const existing = groups.get(item.operatingDate) ?? [];
-    existing.push({
-      category: item.category,
-      categoryLabel: item.categoryLabel,
-      guardianName: item.guardianName,
-      href: item.href,
-      id: item.id,
-      navigationAvailable: Boolean(item.href),
-      patientName: item.patientName,
-      requestedAtLabel: formatRequestedAt(item.requestedAt, timezone),
-      requestedByName: item.requestedByName,
-      status: item.status,
-      statusLabel: item.statusLabel,
-      subtitle: item.description,
-      title: item.title,
-    });
+    existing.push(item);
     groups.set(item.operatingDate, existing);
   }
   return Array.from(groups, ([date, groupedItems]) => ({
     dateLabel: date === todayDate ? "오늘" : formatDateLabel(date),
     items: groupedItems,
   }));
+}
+
+type ProfilePanelWorkItem = ProfileAssignedWorkItem & {
+  operatingDate: string;
+  requestedAt: string;
+};
+
+function toProfileAssignedWorkItem(
+  item: StaffAssignedWorkItem,
+  timezone: string | null,
+): ProfilePanelWorkItem {
+  return {
+    category: item.category,
+    categoryLabel: item.categoryLabel,
+    guardianName: item.guardianName,
+    href: item.href,
+    id: item.id,
+    navigationAvailable: Boolean(item.href),
+    operatingDate: item.operatingDate,
+    patientName: item.patientName,
+    requestedAt: item.requestedAt,
+    requestedAtLabel: formatRequestedAt(item.requestedAt, timezone),
+    requestedByName: item.requestedByName,
+    status: item.status,
+    statusLabel: item.statusLabel,
+    subtitle: item.description,
+    title: item.title,
+  };
+}
+
+function toProfileAppointmentWorkItem(
+  appointment: StaffCalendarAppointmentWork,
+): ProfilePanelWorkItem {
+  const workLabel = appointment.workLabel ?? "예약 진료";
+  return {
+    category: "other",
+    categoryLabel: "접수/예약",
+    href: appointment.href,
+    id: `${appointment.workKind ?? "appointment"}-${appointment.id}`,
+    navigationAvailable: true,
+    operatingDate: appointment.operatingDate,
+    requestedAt: appointment.scheduledStartAt,
+    requestedAtLabel: formatAppointmentTimeRange(appointment),
+    requestedByName: appointment.workKind === "encounter" ? "접수" : "예약",
+    status: mapAppointmentWorkStatus(appointment.status),
+    statusLabel: mapAppointmentWorkStatusLabel(appointment.status),
+    subtitle: workLabel,
+    title: appointment.title,
+  };
+}
+
+function formatAppointmentTimeRange(appointment: StaffCalendarAppointmentWork) {
+  const start = new Date(appointment.scheduledStartAt);
+  const end = appointment.scheduledEndAt
+    ? new Date(appointment.scheduledEndAt)
+    : new Date(start.getTime() + 30 * 60_000);
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Seoul",
+  });
+  return `${formatter.format(start)} - ${formatter.format(end)}`;
+}
+
+function mapAppointmentWorkStatus(
+  status: StaffCalendarAppointmentWork["status"],
+): ProfileAssignedWorkItem["status"] {
+  return status === "checked_in" ? "in_progress" : "requested";
+}
+
+function mapAppointmentWorkStatusLabel(
+  status: StaffCalendarAppointmentWork["status"],
+) {
+  if (status === "checked_in") return "접수 완료";
+  if (status === "changed") return "변경됨";
+  if (status === "requested") return "예약 요청";
+  return "예약";
 }
 
 function mergeWorkItems(
@@ -981,22 +1058,41 @@ function formatRequestedAt(value: string, timezone: string | null) {
   }).format(new Date(value));
 }
 
-function getShiftStateLabel({
-  currentMinutes,
-  shift,
-  todayDate,
-}: {
-  currentMinutes: number;
-  shift: StaffOperationalShift;
-  todayDate: string;
-}) {
-  if (shift.kind === "leave") return "휴가";
-  if (shift.kind === "off") return "휴무";
-  if (shift.date < todayDate) return "근무 종료";
-  if (shift.date > todayDate) return "근무 예정";
-  if (currentMinutes < shift.startMinutes) return "근무 전";
-  if (currentMinutes >= shift.endMinutes) return "근무 종료";
-  return "근무 중";
+function getCurrentWorkTitle(currentWork: StaffCurrentWorkInfo) {
+  if (currentWork.state === "same_day_leave") return "당일 연차";
+  if (currentWork.state === "leave") return "연차";
+  if (currentWork.state === "off") return "휴무일";
+  if (currentWork.state === "hospital_closed") return "병원 휴무일";
+  if (currentWork.startMinutes === null || currentWork.endMinutes === null) {
+    return "근무 시간 미등록";
+  }
+  return `${formatMinutes(currentWork.startMinutes)} - ${formatMinutes(currentWork.endMinutes)}`;
+}
+
+function getCurrentWorkStateLabel(state: StaffCurrentWorkInfo["state"]) {
+  if (state === "scheduled") return "근무 예정";
+  if (state === "in_consultation") return "진료중";
+  if (state === "clocked_out") return "퇴근";
+  if (state === "shift_ended") return "업무 종료";
+  return "근무중";
+}
+
+function getCurrentWorkDetail(
+  currentWork: StaffCurrentWorkInfo,
+  todayDate: string,
+) {
+  if (currentWork.state === "in_consultation") {
+    return currentWork.detailLabel;
+  }
+  if (currentWork.state === "off") return "개인 일정";
+  if (
+    currentWork.state === "leave" ||
+    currentWork.state === "same_day_leave" ||
+    currentWork.state === "hospital_closed"
+  ) {
+    return formatDateLabel(currentWork.date || todayDate);
+  }
+  return null;
 }
 
 function formatMinutes(minutes: number) {

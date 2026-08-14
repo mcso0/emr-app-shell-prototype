@@ -43,7 +43,10 @@ import {
   CdsPeopleUserMinusIcon,
 } from "@/components/cds-icons/people-and-places";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
-import { StaffOperationalProfilePanel } from "@/features/staff/staff-operational-profile-drawer";
+import {
+  StaffOperationalProfilePanel,
+  type StaffCalendarAppointmentWork,
+} from "@/features/staff/staff-operational-profile-drawer";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
@@ -56,6 +59,11 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import {
+  EmrRightPanel,
+  EmrRightPanelBody,
+  EmrRightPanelFooter,
+} from "@/components/emr/right-panel";
 import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
@@ -131,6 +139,7 @@ import {
 } from "@/features/reception/calendar-time-layout";
 import { createCalendarTimeScale, type CalendarTimeScale } from "@/features/reception/calendar-time-scale";
 import {
+  getOperatingTimeClassification,
   getOperatingScheduleLabel,
   getSelectableOperatingStartMinutes,
   toOperatingMinutes,
@@ -191,6 +200,17 @@ import type {
   ReceptionWalkInEncounterResponse,
 } from "@/features/reception/walk-in-encounter";
 import {
+  fromCanonicalVitalValue,
+  getEnabledWorkspaceVitalSettings,
+  toCanonicalVitalValue,
+  type WorkspaceVitalKey,
+  type WorkspaceVitalSettingsSnapshot,
+  type WorkspaceVitalUnit,
+} from "@/features/patient-vitals/workspace-vital-settings";
+import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
+import { formatEnteredPatientVitalDisplayItemsForSettings } from "@/features/patient-vitals/patient-vital-types";
+import { useReceptionEncounterVital } from "@/features/reception/use-reception-encounter-vital";
+import {
   readChartLiveEncounterHandoff,
   saveChartLiveEncounterHandoff,
 } from "@/features/chart/live-encounter-handoff";
@@ -199,6 +219,16 @@ import {
   type ReceptionCalendarDraftSelection,
   type ReceptionCalendarView,
 } from "@/features/reception/store";
+import {
+  emptyReceptionStaffMembers,
+  emptyReceptionStaffVeterinarians,
+  getReceptionStaffResourceKey,
+  useReceptionStaffResourceStore,
+  type ReceptionStaffOperationalStatus,
+  type ReceptionStaffMember,
+  type ReceptionStaffReadStatus,
+  type ReceptionStaffVeterinarian,
+} from "@/features/reception/staff-resource-store";
 import {
   ReceptionEmptyState,
 } from "@/features/reception/reception-list-search";
@@ -246,6 +276,17 @@ const allVeterinarians = mockStaffUsers.filter(
   name: user.name,
   role: "veterinarian" as const,
 }));
+const allReceptionStaff: ReceptionStaffMember[] = mockStaffUsers
+  .map((user) => ({
+    avatarUrl: user.avatarUrl ?? undefined,
+    department: user.department,
+    id: user.id,
+    initial: user.initial,
+    name: user.name,
+    roles: getMockReceptionStaffRoles(user.role),
+    title: getMockReceptionStaffTitle(user.role),
+  }))
+  .filter((staff) => staff.roles.length > 0);
 const defaultVeterinarian = allVeterinarians[0];
 type ReceptionDrawerPresentation = "drawer" | "side-panel";
 
@@ -463,18 +504,7 @@ const monthDays = Array.from({ length: 35 }, (_, index) => index + 1);
 
 type ReceptionSideListMode = (typeof receptionQueueTabItems)[number]["value"];
 type CalendarTaskBadgeType = "예약" | "외래" | "노쇼";
-type VeterinarianOperationalStatus = {
-  code:
-    | "available"
-    | "clocked_out"
-    | "in_consultation"
-    | "leave"
-    | "off"
-    | "scheduled"
-    | "shift_ended";
-  label: string;
-  source: "reception" | "schedule" | "time_clock";
-};
+type VeterinarianOperationalStatus = ReceptionStaffOperationalStatus;
 const veterinarianOperationalStatusToneClasses: Record<
   VeterinarianOperationalStatus["code"],
   string
@@ -493,17 +523,8 @@ const veterinarianOperationalStatusToneClasses: Record<
   shift_ended:
     "[--emr-calendar-lane-status-text:var(--emr-calendar-lane-status-text-clocked-out)]",
 };
-type Veterinarian = {
-  avatarUrl?: string;
-  department?: string;
-  id: string;
-  initial?: string;
-  name: string;
-  operationalStatus?: VeterinarianOperationalStatus;
-  role: "veterinarian";
-  title?: string;
-};
-type WorkspaceStaffReadStatus = "idle" | "loading" | "ready" | "error";
+type Veterinarian = ReceptionStaffVeterinarian;
+type WorkspaceStaffReadStatus = ReceptionStaffReadStatus;
 type CalendarResourceState = "loading" | "ready" | "empty" | "error";
 type WorkspaceStaffReadResponse =
   | {
@@ -530,6 +551,7 @@ type WorkspaceStaffReadResponse =
 type ReceptionCreateVitalId =
   | "weight"
   | "temperature"
+  | "heartRate"
   | "respiration"
   | "bloodPressure";
 
@@ -538,6 +560,7 @@ type ReceptionCreateVitalDraft = {
   values: {
     weightKg: string;
     temperatureC: string;
+    heartRateBpm: string;
     respiratoryRateRpm: string;
     bloodPressureSystolicMmhg: string;
     bloodPressureDiastolicMmhg: string;
@@ -574,6 +597,28 @@ function getReceptionDemoActorId(role?: string) {
     return "user-admin";
   if (role === "vet") return "user-vet";
   return "user-front-desk";
+}
+
+function getMockReceptionStaffRoles(
+  role: (typeof mockStaffUsers)[number]["role"],
+): string[] {
+  if (role === "veterinarian") return ["vet"];
+  if (role === "technician") return ["technician"];
+  if (role === "desk") return ["front_desk"];
+  if (role === "billing") return ["billing_admin"];
+  if (role === "admin") return ["hospital_admin"];
+  return [];
+}
+
+function getMockReceptionStaffTitle(
+  role: (typeof mockStaffUsers)[number]["role"],
+): string | undefined {
+  if (role === "veterinarian") return "수의사";
+  if (role === "technician") return "테크니션";
+  if (role === "desk") return "데스크";
+  if (role === "billing") return "수납";
+  if (role === "admin") return "관리자";
+  return undefined;
 }
 
 function getVeterinarianFilterLabel(selectedVeterinarians: Veterinarian[]) {
@@ -1469,17 +1514,41 @@ function useReceptionOperatingSchedule({
     () => resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), date),
     [date],
   );
-  const [schedule, setSchedule] = useState<EffectiveOperatingHours>(fallback);
+  const requestKey = `${workspaceId}\u0000${actorId ?? ""}\u0000${date}`;
+  const [resolved, setResolved] = useState<{
+    key: string;
+    schedule: EffectiveOperatingHours;
+    status: "error" | "ready";
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     void loadReceptionCalendar({ actorId, date, workspaceId }).then((result) => {
-      if (!cancelled) setSchedule(result.ok ? result.operatingSchedule : fallback);
+      if (!cancelled) {
+        const authoritativeSchedule =
+          result.ok && result.operatingSchedule?.date === date
+            ? result.operatingSchedule
+            : undefined;
+        setResolved({
+          key: requestKey,
+          schedule: authoritativeSchedule ?? fallback,
+          status:
+            authoritativeSchedule || !shouldUseSupabaseAuth()
+              ? "ready"
+              : "error",
+        });
+      }
     });
     return () => { cancelled = true; };
-  }, [actorId, date, fallback, workspaceId]);
+  }, [actorId, date, fallback, requestKey, workspaceId]);
 
-  return schedule.date === date ? schedule : fallback;
+  return {
+    schedule:
+      resolved?.key === requestKey && resolved.schedule.date === date
+        ? resolved.schedule
+        : fallback,
+    status: resolved?.key === requestKey ? resolved.status : "loading",
+  } as const;
 }
 
 async function loadReceptionPatientGuardianProfiles({
@@ -1513,7 +1582,7 @@ async function loadReceptionPatientGuardianProfiles({
   }
 }
 
-async function loadWorkspaceVeterinarians({
+async function loadWorkspaceStaff({
   actorId,
   operatingDate,
   workspaceId,
@@ -1524,7 +1593,7 @@ async function loadWorkspaceVeterinarians({
 }): Promise<WorkspaceStaffReadResponse> {
   try {
     const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff?role=vet&date=${encodeURIComponent(operatingDate)}`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff?date=${encodeURIComponent(operatingDate)}`,
       {
         cache: "no-store",
         headers: actorId
@@ -1562,6 +1631,35 @@ function mapWorkspaceStaffToVeterinarians(
       role: "veterinarian" as const,
       title: member.title,
     }));
+}
+
+function mapWorkspaceStaffToReceptionStaff(
+  response: WorkspaceStaffReadResponse,
+): ReceptionStaffMember[] {
+  if (!response.ok) return [];
+
+  return response.staff
+    .filter((member) => member.status === "active" && member.roles.length > 0)
+    .map((member) => ({
+      avatarUrl: member.avatarUrl,
+      department: member.department,
+      id: member.id,
+      initial: member.initial,
+      name: member.displayName,
+      operationalStatus: member.operationalStatus,
+      roles: member.roles,
+      title: member.title,
+    }));
+}
+
+function isAppointmentAssignedToStaff(appointment: Appointment, staffUserId: string) {
+  return appointment.assignedStaffUserIds?.includes(staffUserId) ??
+    appointment.assignedVeterinarianId === staffUserId;
+}
+
+function isEncounterAssignedToStaff(encounter: Encounter, staffUserId: string) {
+  return encounter.assignedStaffUserIds?.includes(staffUserId) ??
+    encounter.primaryVeterinarianId === staffUserId;
 }
 
 function getWalkInRouteErrorMessage(
@@ -1837,8 +1935,8 @@ function getReceptionReadFailureMessage(
 ) {
   const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const localFallbackText = preparedEmptyClinic
-    ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지해."
-    : "현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+    ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지합니다."
+    : "현재 화면은 로컬 데모/세션 데이터 기준으로 유지됩니다.";
 
   if (
     result.denialReason === "permission_missing" ||
@@ -1846,18 +1944,18 @@ function getReceptionReadFailureMessage(
     result.denialReason === "workspace_membership_missing" ||
     result.denialReason === "workspace_membership_inactive"
   ) {
-    return `접수 보기 권한 또는 workspace membership을 확인해야 해. ${localFallbackText}`;
+    return `접수 보기 권한 또는 workspace membership을 확인해야 합니다. ${localFallbackText}`;
   }
 
   if (result.denialReason === "unauthenticated") {
-    return `로그인 세션을 확인하지 못했어. ${localFallbackText}`;
+    return `로그인 세션을 확인하지 못했습니다. ${localFallbackText}`;
   }
 
   if (result.error === "supabase_client_missing") {
-    return `live Supabase read 연결이 구성되지 않았어. ${localFallbackText}`;
+    return `live Supabase read 연결이 구성되지 않았습니다. ${localFallbackText}`;
   }
 
-  return `서버 read 결과를 반영하지 못했어. ${localFallbackText}`;
+  return `서버 read 결과를 반영하지 못했습니다. ${localFallbackText}`;
 }
 
 function getReceptionEmptyStateCopy({
@@ -1900,13 +1998,61 @@ const parseWeightKgInput = (value: string) => {
     : undefined;
 };
 
+const receptionIdByWorkspaceVitalKey: Record<WorkspaceVitalKey, ReceptionCreateVitalId> = {
+  weight: "weight",
+  temperature: "temperature",
+  heart_rate: "heartRate",
+  respiratory_rate: "respiration",
+  blood_pressure: "bloodPressure",
+};
+
+const workspaceVitalKeyByReceptionId: Record<ReceptionCreateVitalId, WorkspaceVitalKey> = {
+  weight: "weight",
+  temperature: "temperature",
+  heartRate: "heart_rate",
+  respiration: "respiratory_rate",
+  bloodPressure: "blood_pressure",
+};
+
+const workspaceVitalKeyToReceptionId = (key: WorkspaceVitalKey) =>
+  receptionIdByWorkspaceVitalKey[key];
+
+const getReceptionVitalUnit = (
+  settings: WorkspaceVitalSettingsSnapshot | undefined,
+  key: WorkspaceVitalKey,
+): WorkspaceVitalUnit =>
+  settings?.items.find((item) => item.key === key)?.displayUnit ??
+  settings?.presets.find((preset) => preset.key === key)?.canonicalUnit ??
+  ({
+    weight: "kg",
+    temperature: "°C",
+    heart_rate: "bpm",
+    respiratory_rate: "rpm",
+    blood_pressure: "mmHg",
+  } satisfies Record<WorkspaceVitalKey, WorkspaceVitalUnit>)[key];
+
+const formatReceptionInitialWeight = (
+  weightKg: number | undefined,
+  settings: WorkspaceVitalSettingsSnapshot | undefined,
+) => {
+  if (weightKg === undefined) return "";
+  const unit = getReceptionVitalUnit(settings, "weight");
+  return unit === "kg"
+    ? formatPatientWeightKgInput(weightKg)
+    : String(fromCanonicalVitalValue("weight", weightKg, unit));
+};
+
 const createReceptionVitalDraft = (
   weightKg?: number,
+  settings?: WorkspaceVitalSettingsSnapshot,
 ): ReceptionCreateVitalDraft => ({
-  selectedIds: ["weight"],
+  selectedIds: settings
+    ? getEnabledWorkspaceVitalSettings(settings).map((item) => workspaceVitalKeyToReceptionId(item.key))
+    : ["weight", "temperature", "heartRate", "respiration"],
   values: {
-    weightKg: formatPatientWeightKgInput(weightKg),
+    weightKg: formatReceptionInitialWeight(weightKg, settings),
     temperatureC: "",
+    heartRateBpm: "",
     respiratoryRateRpm: "",
     bloodPressureSystolicMmhg: "",
     bloodPressureDiastolicMmhg: "",
@@ -1915,6 +2061,7 @@ const createReceptionVitalDraft = (
 
 const buildReceptionVitalInput = (
   draft: ReceptionCreateVitalDraft,
+  settings?: WorkspaceVitalSettingsSnapshot,
 ): {
   fieldErrors: ReceptionCreateVitalFieldErrors;
   input?: ReceptionVitalMeasurementInput;
@@ -1944,11 +2091,19 @@ const buildReceptionVitalInput = (
 
   if (selected.has("weight")) {
     const value = readPositiveNumber("weightKg", "체중");
-    if (value !== undefined) input.weightKg = Math.round(value * 100) / 100;
+    if (value !== undefined) {
+      input.weightKg = toCanonicalVitalValue("weight", value, getReceptionVitalUnit(settings, "weight"));
+    }
   }
   if (selected.has("temperature")) {
     const value = readPositiveNumber("temperatureC", "체온");
-    if (value !== undefined) input.temperatureC = Math.round(value * 10) / 10;
+    if (value !== undefined) {
+      input.temperatureC = toCanonicalVitalValue("temperature", value, getReceptionVitalUnit(settings, "temperature"));
+    }
+  }
+  if (selected.has("heartRate")) {
+    const value = readPositiveNumber("heartRateBpm", "심박수", true);
+    if (value !== undefined) input.heartRateBpm = value;
   }
   if (selected.has("respiration")) {
     const value = readPositiveNumber("respiratoryRateRpm", "호흡", true);
@@ -1957,25 +2112,21 @@ const buildReceptionVitalInput = (
   if (selected.has("bloodPressure")) {
     const systolicRaw = draft.values.bloodPressureSystolicMmhg.trim();
     const diastolicRaw = draft.values.bloodPressureDiastolicMmhg.trim();
-    if (Boolean(systolicRaw) !== Boolean(diastolicRaw)) {
-      const message = "수축기와 이완기 혈압을 모두 입력해 주세요.";
-      if (!systolicRaw) fieldErrors.bloodPressureSystolicMmhg = message;
-      if (!diastolicRaw) fieldErrors.bloodPressureDiastolicMmhg = message;
-    } else if (systolicRaw && diastolicRaw) {
+    if (!systolicRaw && diastolicRaw) {
+      fieldErrors.bloodPressureSystolicMmhg = "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
+    } else if (systolicRaw) {
       const systolic = readPositiveNumber(
         "bloodPressureSystolicMmhg",
         "수축기 혈압",
         true,
       );
-      const diastolic = readPositiveNumber(
-        "bloodPressureDiastolicMmhg",
-        "이완기 혈압",
-        true,
-      );
-      if (systolic !== undefined && diastolic !== undefined) {
+      const diastolic = diastolicRaw
+        ? readPositiveNumber("bloodPressureDiastolicMmhg", "이완기 혈압", true)
+        : undefined;
+      if (systolic !== undefined && (!diastolicRaw || diastolic !== undefined)) {
         input.bloodPressure = {
           systolicMmhg: systolic,
-          diastolicMmhg: diastolic,
+          ...(diastolic === undefined ? {} : { diastolicMmhg: diastolic }),
         };
       }
     }
@@ -1995,7 +2146,13 @@ const getReservationTimeOptions = (
   currentOperatingMinutes: number,
   operatingSchedule: EffectiveOperatingHours,
 ) => {
-  const options: Array<{ disabled: boolean; label: string; minutes: number; reason?: string }> = [];
+  const options: Array<{
+    breakWarning: boolean;
+    disabled: boolean;
+    label: string;
+    minutes: number;
+    reason?: string;
+  }> = [];
 
   for (const minutes of getSelectableOperatingStartMinutes(operatingSchedule, durationMinutes)) {
     const startAt = getReceptionIsoAtMinutes(date, minutes);
@@ -2016,8 +2173,15 @@ const getReservationTimeOptions = (
     });
     const elapsed = date === currentDate && minutes < currentOperatingMinutes;
     const reason = elapsed ? "지난 시간" : conflict ? "예약됨" : undefined;
+    const breakWarning =
+      getOperatingTimeClassification(
+        operatingSchedule,
+        minutes,
+        durationMinutes,
+      ) === "break-warning";
 
     options.push({
+      breakWarning,
       disabled: elapsed || conflict,
       label: getScheduleTimeLabelFromMinutes(minutes),
       minutes,
@@ -2047,8 +2211,14 @@ const getWalkInTimeBlockMessage = (
     return "오늘 접수 가능 시간이 지났습니다. 다음 영업일 예약으로 등록해 주세요.";
   }
 
-  if (!getSelectableOperatingStartMinutes(operatingSchedule, durationMinutes, 1).includes(currentOperatingMinutes)) {
-    return "예상시간이 휴게시간과 겹치거나 영업 종료 시간을 넘습니다. 더 이른 시간이나 짧은 예상시간을 선택해 주세요.";
+  if (
+    getOperatingTimeClassification(
+      operatingSchedule,
+      currentOperatingMinutes,
+      durationMinutes,
+    ) === "blocked"
+  ) {
+    return "예상시간이 영업 종료 시간을 넘습니다. 더 이른 시간이나 짧은 예상시간을 선택해 주세요.";
   }
 
   return undefined;
@@ -2345,25 +2515,25 @@ const getReceptionCalendarSelectionMessage = (
   block?: ReceptionCalendarScheduleBlock,
 ) => {
   if (reason === "outside-business-hours") {
-    return "설정된 영업시간 안에서만 접수/예약을 만들 수 있어.";
+    return "설정된 영업시간 안에서만 접수/예약을 만들 수 있습니다.";
   }
   if (reason === "past-time") {
-    return "이미 지난 시간에는 접수/예약을 만들 수 없어. 현재 이후 시간을 선택해 줘.";
+    return "이미 지난 시간에는 접수/예약을 만들 수 없습니다. 현재 이후 시간을 선택해 주세요.";
   }
   if (reason === "unavailable-time") {
-    return `${block?.label ?? "접수/예약 불가 시간"}에는 접수/예약을 만들 수 없어.`;
+    return `${block?.label ?? "접수/예약 불가 시간"}에는 접수/예약을 만들 수 없습니다.`;
   }
   if (reason === "overlap") {
-    return `${block?.label ?? "기존 일정"}과 겹치는 시간에는 접수/예약을 만들 수 없어.`;
+    return `${block?.label ?? "기존 일정"}과 겹치는 시간에는 접수/예약을 만들 수 없습니다.`;
   }
   if (reason === "too-long") {
-    return `접수 task는 최대 ${maxReceptionCalendarDraftDurationMinutes}분까지 만들 수 있어.`;
+    return `접수 task는 최대 ${maxReceptionCalendarDraftDurationMinutes}분까지 만들 수 있습니다.`;
   }
   if (reason === "too-short") {
-    return "접수 task는 최소 15분 이상이어야 해.";
+    return "접수 task는 최소 15분 이상이어야 합니다.";
   }
 
-  return "선택한 캘린더 위치에서는 접수/예약을 만들 수 없어.";
+  return "선택한 캘린더 위치에서는 접수/예약을 만들 수 없습니다.";
 };
 
 const validateReceptionCalendarSelection = ({
@@ -2774,6 +2944,71 @@ function ReceptionVeterinarianSelectItems({
   );
 }
 
+function ReceptionStaffAssignmentSelect({
+  compact = false,
+  onChange,
+  selectedIds,
+  staffMembers,
+}: {
+  compact?: boolean;
+  onChange: (staffUserIds: string[]) => void;
+  selectedIds: string[];
+  staffMembers: ReceptionStaffMember[];
+}) {
+  const selectedStaff = staffMembers.filter((staffMember) =>
+    selectedIds.includes(staffMember.id),
+  );
+  const label = selectedStaff.length
+    ? selectedStaff.map((staffMember) => staffMember.name).join(", ")
+    : "업무 담당자를 선택해주세요";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="업무 담당자"
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size={compact ? "default" : "lg"}
+            className={cn(
+              "w-full justify-between bg-card font-medium",
+              compact && "bg-[var(--emr-reception-create-field-bg)]",
+            )}
+          />
+        }
+      >
+        <span className="truncate text-left">{label}</span>
+        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-72 w-[280px] overflow-y-auto">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>업무 담당자</DropdownMenuLabel>
+          {staffMembers.map((staffMember) => {
+            const checked = selectedIds.includes(staffMember.id);
+            return (
+              <DropdownMenuCheckboxItem
+                key={staffMember.id}
+                checked={checked}
+                onCheckedChange={() =>
+                  onChange(
+                    checked
+                      ? selectedIds.filter((id) => id !== staffMember.id)
+                      : [...selectedIds, staffMember.id],
+                  )
+                }
+              >
+                {staffMember.name}
+                {staffMember.title ? ` · ${staffMember.title}` : ""}
+              </DropdownMenuCheckboxItem>
+            );
+          })}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 const getReceptionEncounterStatusLabel = (status: Encounter["status"]) =>
   status === "waiting" ? "진료대기" : getStatusLabel("encounter", status);
 
@@ -3136,9 +3371,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     Record<ReceptionQueueSideDisplayGroup, boolean>
   >({ appointment: false, cancelled: false, reception: false });
   const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null);
-  const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
-    Veterinarian[]
-  >([]);
   const searchQuery = useReceptionStore((state) => state.searchQuery);
   const selectAppointment = useReceptionStore(
     (state) => state.selectAppointment,
@@ -3191,6 +3423,15 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     : undefined;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const staffResourceKey = getReceptionStaffResourceKey({
+    operatingDate,
+    workspaceId,
+  });
+  const workspaceVeterinarians = useReceptionStaffResourceStore(
+    (state) =>
+      state.resourcesByKey[staffResourceKey]?.veterinarians ??
+      emptyReceptionStaffVeterinarians,
+  );
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
@@ -3346,7 +3587,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       if (item.statusGroup !== "cancelled" || pendingRestoreId) return;
       if (isReceptionQueueSideItemPast(item, operatingDate, currentOperatingMinutes)) {
         const confirmed = window.confirm(
-          "원래 시간이 이미 지났어. 그래도 이 접수/예약을 원래 시간대에 복구할까?",
+          "원래 시간이 이미 지났습니다. 그래도 이 접수/예약을 원래 시간대에 복구하시겠습니까?",
         );
         if (!confirmed) return;
       }
@@ -3385,32 +3626,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     ],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadStaff() {
-      if (!liveStaffSourceEnabled) {
-        setWorkspaceVeterinarians([]);
-        return;
-      }
-
-      const result = await loadWorkspaceVeterinarians({
-        actorId: authSession?.id,
-        operatingDate,
-        workspaceId,
-      });
-      if (cancelled) return;
-
-      setWorkspaceVeterinarians(mapWorkspaceStaffToVeterinarians(result));
-    }
-
-    void loadStaff();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
-
   return (
     <EmrSubpanel>
       <EmrSubpanelTitle
@@ -3432,7 +3647,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         <EmrInlineAlert
           className="mx-3 my-2"
           severity="warning"
-          title="서버 대기열을 불러오지 못했어"
+          title="서버 대기열을 불러오지 못했습니다"
           action={
             <Button
               size="sm"
@@ -3446,8 +3661,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         >
           {queueReadError ??
             (isPreparedEmptyClinicWorkspace(workspaceId)
-              ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지해."
-              : "현재 목록은 로컬 데모/세션 데이터 기준으로 유지돼.")}
+              ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지합니다."
+              : "현재 목록은 로컬 데모/세션 데이터 기준으로 유지됩니다.")}
         </EmrInlineAlert>
       ) : null}
       {cardActionFeedback ? (
@@ -3527,8 +3742,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
               onOpenChart={(item) => {
                 if (!item.encounter) {
                   setCardActionFeedback({
-                    title: "먼저 접수를 생성해야 해",
-                    body: `${item.patient.name}은 아직 진행 중인 encounter가 없어서 차트로 넘길 live 접수 id가 없어.`,
+                    title: "먼저 접수를 생성해야 합니다",
+                    body: `${item.patient.name}은 아직 진행 중인 encounter가 없어서 차트로 넘길 live 접수 id가 없습니다.`,
                   });
                   return;
                 }
@@ -3958,6 +4173,20 @@ function isReceptionDraftCalendarActive(draft: ReceptionDraftCheckIn) {
     draft.queueEntry.status !== "cancelled" &&
     draft.queueEntry.status !== "done"
   );
+}
+
+function toStaffCalendarAppointmentStatus(
+  status: Appointment["status"],
+): StaffCalendarAppointmentWork["status"] {
+  if (
+    status === "requested" ||
+    status === "confirmed" ||
+    status === "changed" ||
+    status === "checked_in"
+  ) {
+    return status;
+  }
+  return "confirmed";
 }
 
 function getReceptionQueuePrimaryGuardian({
@@ -4438,10 +4667,12 @@ function ScheduleToolbar({
   operatingSchedule,
   onCreateReservation,
   onCreateWalkIn,
+  onOpenStaffProfile,
   onUnifiedPatientReady,
   onToggleVeterinarian,
   selectedVeterinarianIds,
   staffReadStatus = "ready",
+  staffMembers,
   todayDate,
   veterinarians,
   view,
@@ -4452,10 +4683,15 @@ function ScheduleToolbar({
   operatingSchedule: EffectiveOperatingHours;
   onCreateReservation: () => void;
   onCreateWalkIn: () => void;
+  onOpenStaffProfile: (
+    staffMember: ReceptionStaffMember,
+    opener: HTMLElement | null,
+  ) => void;
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
   selectedVeterinarianIds: string[];
   staffReadStatus?: WorkspaceStaffReadStatus;
+  staffMembers: ReceptionStaffMember[];
   todayDate: string;
   veterinarians: Veterinarian[];
   view: ReceptionCalendarView;
@@ -4623,6 +4859,24 @@ function ScheduleToolbar({
               <ExcelFileIcon className="size-4" />
               Excel 업로드
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>직원 운영 프로필</DropdownMenuLabel>
+              <div className="max-h-56 overflow-y-auto">
+                {staffMembers.map((staffMember) => (
+                  <DropdownMenuItem
+                    key={staffMember.id}
+                    className="h-8 cursor-pointer"
+                    onClick={(event) =>
+                      onOpenStaffProfile(staffMember, event.currentTarget)
+                    }
+                  >
+                    {staffMember.name}
+                    {staffMember.title ? ` · ${staffMember.title}` : ""}
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
         {!rightPanelOpen ? (
@@ -5186,6 +5440,17 @@ function DayScheduleBoard({
   const timeScale = createCalendarTimeScale(operatingSchedule);
   const dayScheduleHeight = timeScale.totalHeight;
   const currentTimeOffset = timeScale.minutesToY(currentOperatingMinutes);
+  const breakStartMinutes = operatingSchedule.breakStart
+    ? toOperatingMinutes(operatingSchedule.breakStart)
+    : null;
+  const breakEndMinutes = operatingSchedule.breakEnd
+    ? toOperatingMinutes(operatingSchedule.breakEnd)
+    : null;
+  const hasBreakTimeBand =
+    operatingSchedule.isOpen &&
+    breakStartMinutes !== null &&
+    breakEndMinutes !== null &&
+    breakStartMinutes < breakEndMinutes;
   const scheduleGridTemplateColumns = `56px repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`;
   const scheduleBoardMinWidth = `max(100%, calc(56px + ${selectedVeterinarians.length} * 180px))`;
   const assignmentVeterinarianIds = new Set(
@@ -5332,6 +5597,38 @@ function DayScheduleBoard({
           })}
         </div>
         <div className="relative z-10 col-span-full col-start-2 min-w-0">
+          {hasBreakTimeBand ? (
+            <div
+              aria-label={`휴게시간 ${operatingSchedule.breakStart}-${operatingSchedule.breakEnd}`}
+              className="pointer-events-none absolute inset-x-0 z-[10] isolate overflow-hidden"
+              data-testid="reception-break-time-band"
+              role="note"
+              style={{
+                height: timeScale.rangeHeight(
+                  breakStartMinutes,
+                  breakEndMinutes,
+                ),
+                top: timeScale.minutesToY(breakStartMinutes),
+              }}
+            >
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 z-0 border-y border-[var(--emr-border-subtle)]"
+                data-testid="reception-break-time-hatch"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(120deg, transparent 0, transparent 9px, var(--emr-border-subtle) 9px, var(--emr-border-subtle) 10px)",
+                }}
+              />
+              <span
+                className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-[var(--emr-surface-panel)] px-2 py-1 emr-text-micro font-medium text-[var(--emr-text-secondary)]"
+                data-testid="reception-break-time-label"
+              >
+                휴게시간 {operatingSchedule.breakStart}-
+                {operatingSchedule.breakEnd}
+              </span>
+            </div>
+          ) : null}
           <CalendarCurrentTimeIndicator
             currentOperatingMinutes={currentOperatingMinutes}
             labelTestId="day-current-time-label"
@@ -6144,11 +6441,6 @@ export function ReceptionContent() {
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
     allVeterinarians.map((veterinarian) => veterinarian.id),
   );
-  const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
-    Veterinarian[]
-  >([]);
-  const [workspaceStaffReadStatus, setWorkspaceStaffReadStatus] =
-    useState<WorkspaceStaffReadStatus>("idle");
   const selectedAppointmentId = useReceptionStore(
     (state) => state.selectedAppointmentId,
   );
@@ -6232,6 +6524,10 @@ export function ReceptionContent() {
     key: string;
     promise: Promise<ReceptionRefreshResult>;
   } | null>(null);
+  const staffReadInFlightRef = useRef<{
+    key: string;
+    promise: Promise<void>;
+  } | null>(null);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const calendarView = calendarViewByWorkspace[workspaceId] ?? "day";
   const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
@@ -6254,9 +6550,32 @@ export function ReceptionContent() {
     : resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), operatingDate);
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const staffResourceKey = getReceptionStaffResourceKey({
+    operatingDate,
+    workspaceId,
+  });
+  const staffResource = useReceptionStaffResourceStore(
+    (state) => state.resourcesByKey[staffResourceKey],
+  );
+  const setStaffResourceLoading = useReceptionStaffResourceStore(
+    (state) => state.setResourceLoading,
+  );
+  const setStaffResourceResult = useReceptionStaffResourceStore(
+    (state) => state.setResourceResult,
+  );
+  const workspaceVeterinarians =
+    staffResource?.veterinarians ?? emptyReceptionStaffVeterinarians;
+  const workspaceStaffMembers =
+    staffResource?.staff ?? emptyReceptionStaffMembers;
+  const workspaceStaffReadStatus: WorkspaceStaffReadStatus = liveStaffSourceEnabled
+    ? (staffResource?.status ?? "idle")
+    : "ready";
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
+  const staffMembers = liveStaffSourceEnabled
+    ? workspaceStaffMembers
+    : allReceptionStaff;
   const veterinarianIds = useMemo(
     () => veterinarians.map((veterinarian) => veterinarian.id),
     [veterinarians],
@@ -6347,14 +6666,14 @@ export function ReceptionContent() {
     });
   };
   const openStaffOperationalProfile = useCallback(
-    (veterinarian: Veterinarian, opener: HTMLButtonElement | null) => {
+    (staffMember: ReceptionStaffMember | Veterinarian, opener: HTMLElement | null) => {
       const returnFocusId =
-        opener?.id || `staff-operational-profile-trigger-${veterinarian.id}`;
+        opener?.id || `staff-operational-profile-trigger-${staffMember.id}`;
       if (opener && !opener.id) opener.id = returnFocusId;
 
       setActiveDrawer({
         type: "staff-operational-profile",
-        id: veterinarian.id,
+        id: staffMember.id,
         rightPanelPresentation: {
           gap: 10,
           mobileFullWidth: true,
@@ -6512,41 +6831,81 @@ export function ReceptionContent() {
     setCalendarDraftSelection,
   ]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshWorkspaceStaff = useCallback(
+    ({
+      showLoading = false,
+      skipIfFreshMs = 0,
+    }: {
+      showLoading?: boolean;
+      skipIfFreshMs?: number;
+    } = {}) => {
+      if (!liveStaffSourceEnabled) return Promise.resolve();
 
-    async function loadStaff(showLoading: boolean) {
-      if (!liveStaffSourceEnabled) {
-        setWorkspaceVeterinarians([]);
-        setWorkspaceStaffReadStatus("ready");
-        return;
+      const currentResource =
+        useReceptionStaffResourceStore.getState().resourcesByKey[staffResourceKey];
+      if (
+        skipIfFreshMs > 0 &&
+        currentResource?.updatedAt &&
+        Date.now() - currentResource.updatedAt < skipIfFreshMs
+      ) {
+        return Promise.resolve();
       }
 
-      if (showLoading) setWorkspaceStaffReadStatus("loading");
-      const result = await loadWorkspaceVeterinarians({
+      const inFlight = staffReadInFlightRef.current;
+      if (inFlight?.key === staffResourceKey) return inFlight.promise;
+
+      if (showLoading) setStaffResourceLoading(staffResourceKey);
+      const requestPromise = loadWorkspaceStaff({
         actorId: authSession?.id,
         operatingDate,
         workspaceId,
+      }).then((result) => {
+        setStaffResourceResult(staffResourceKey, {
+          status: result.ok ? "ready" : "error",
+          staff: mapWorkspaceStaffToReceptionStaff(result),
+          veterinarians: mapWorkspaceStaffToVeterinarians(result),
+        });
       });
-      if (cancelled) return;
 
-      const nextVeterinarians = mapWorkspaceStaffToVeterinarians(result);
-      setWorkspaceVeterinarians(nextVeterinarians);
-      setWorkspaceStaffReadStatus(result.ok ? "ready" : "error");
-    }
+      staffReadInFlightRef.current = {
+        key: staffResourceKey,
+        promise: requestPromise,
+      };
+      void requestPromise.finally(() => {
+        if (staffReadInFlightRef.current?.promise === requestPromise) {
+          staffReadInFlightRef.current = null;
+        }
+      });
 
-    const refreshStaff = () => void loadStaff(false);
+      return requestPromise;
+    },
+    [
+      authSession?.id,
+      liveStaffSourceEnabled,
+      operatingDate,
+      setStaffResourceLoading,
+      setStaffResourceResult,
+      staffResourceKey,
+      workspaceId,
+    ],
+  );
 
-    void loadStaff(true);
+  useEffect(() => {
+    if (!liveStaffSourceEnabled) return;
+
+    const refreshStaff = () => void refreshWorkspaceStaff();
+    const refreshStaffOnFocus = () =>
+      void refreshWorkspaceStaff({ skipIfFreshMs: 30_000 });
+
+    void refreshWorkspaceStaff({ showLoading: true, skipIfFreshMs: 30_000 });
     const refreshInterval = window.setInterval(refreshStaff, 60_000);
-    window.addEventListener("focus", refreshStaff);
+    window.addEventListener("focus", refreshStaffOnFocus);
 
     return () => {
-      cancelled = true;
       window.clearInterval(refreshInterval);
-      window.removeEventListener("focus", refreshStaff);
+      window.removeEventListener("focus", refreshStaffOnFocus);
     };
-  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
+  }, [liveStaffSourceEnabled, refreshWorkspaceStaff]);
 
   useEffect(() => {
     if (queryPatientId && queryPatientId !== selectedPatientId) {
@@ -6657,7 +7016,9 @@ export function ReceptionContent() {
           );
         } else {
           applyPersistedReceptionCalendar(calendarResult.records);
-          setOperatingSchedule(calendarResult.operatingSchedule);
+          if (calendarResult.operatingSchedule) {
+            setOperatingSchedule(calendarResult.operatingSchedule);
+          }
         }
 
         if (!queueResult.ok) {
@@ -6781,11 +7142,13 @@ export function ReceptionContent() {
         onViewChange={handleCalendarViewChange}
         selectedVeterinarianIds={effectiveSelectedVeterinarianIds}
         staffReadStatus={workspaceStaffReadStatus}
+        staffMembers={staffMembers}
         todayDate={defaultOperatingDate}
         veterinarians={veterinarians}
         onToggleVeterinarian={toggleVeterinarian}
         onCreateReservation={openReservationDialog}
         onCreateWalkIn={openWalkInDialog}
+        onOpenStaffProfile={openStaffOperationalProfile}
         onUnifiedPatientReady={(patientId) => {
           selectPatient(patientId);
           setCalendarDraftSelection(undefined);
@@ -6807,7 +7170,7 @@ export function ReceptionContent() {
         <EmrInlineAlert
           className="border-x-0 border-t-0 rounded-none px-4"
           severity="warning"
-          title="서버 캘린더를 불러오지 못했어"
+          title="서버 캘린더를 불러오지 못했습니다"
           action={
             <Button
               size="sm"
@@ -6821,8 +7184,8 @@ export function ReceptionContent() {
         >
           {calendarReadError ??
             (isPreparedEmptyClinicWorkspace(workspaceId)
-              ? "기존 데모 예약은 표시하지 않고 준비된 빈 병원 캘린더를 유지해."
-              : "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지돼.")}
+              ? "기존 데모 예약은 표시하지 않고 준비된 빈 병원 캘린더를 유지합니다."
+              : "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지됩니다.")}
         </EmrInlineAlert>
       ) : null}
       <ReceptionScheduleBoard
@@ -6882,6 +7245,42 @@ function ReceptionFormField({
   );
 }
 
+function ReceptionBreakTimeConfirmDialog({
+  mode,
+  onConfirm,
+  onOpenChange,
+  open,
+  submitting,
+}: {
+  mode: "appointment" | "walk-in";
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  submitting: boolean;
+}) {
+  const isWalkIn = mode === "walk-in";
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!submitting) onOpenChange(nextOpen);
+      }}
+    >
+      <EmrConfirmDialogContent
+        cancelLabel="취소"
+        closeAriaLabel="휴게시간 경고 닫기"
+        confirmDisabled={submitting}
+        confirmLabel={isWalkIn ? "접수 진행" : "예약 진행"}
+        description={`선택한 시간에 휴게시간이 포함되어 있습니다. ${isWalkIn ? "접수를" : "예약을"} 진행하시겠습니까?`}
+        title="휴게시간이 포함되어 있습니다"
+        onCancel={() => onOpenChange(false)}
+        onConfirm={onConfirm}
+      />
+    </Dialog>
+  );
+}
+
 function ReceptionWalkInFormDrawer({
   currentOperatingMinutes,
   initialDurationMinutes,
@@ -6891,6 +7290,7 @@ function ReceptionWalkInFormDrawer({
   operatingDate,
   patientSummaries,
   presentation = "drawer",
+  staffMembers,
   veterinarians,
   workspaceId,
 }: {
@@ -6906,11 +7306,24 @@ function ReceptionWalkInFormDrawer({
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
   presentation?: ReceptionDrawerPresentation;
+  staffMembers: ReceptionStaffMember[];
   veterinarians: Veterinarian[];
   workspaceId: string;
 }) {
   const authSession = useMockAuthStore((state) => state.session);
-  const operatingSchedule = useReceptionOperatingSchedule({
+  const authSessionId = authSession?.id;
+  const vitalActorHeaders = useMemo(
+    () => authSessionId ? { "x-clair-demo-session-user-id": authSessionId } : undefined,
+    [authSessionId],
+  );
+  const { snapshot: vitalSettings, status: vitalSettingsStatus } = useWorkspaceVitalSettings({
+    actorHeaders: vitalActorHeaders,
+    workspaceId,
+  });
+  const {
+    schedule: operatingSchedule,
+    status: operatingScheduleStatus,
+  } = useReceptionOperatingSchedule({
     actorId: authSession?.id,
     date: operatingDate,
     workspaceId,
@@ -6925,6 +7338,7 @@ function ReceptionWalkInFormDrawer({
   const [veterinarianId, setVeterinarianId] = useState(
     initialVeterinarianId ?? "",
   );
+  const [assignedStaffUserIds, setAssignedStaffUserIds] = useState<string[]>([]);
   const [patientLookupOpen, setPatientLookupOpen] = useState(false);
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<
@@ -6937,11 +7351,14 @@ function ReceptionWalkInFormDrawer({
   );
   const lookupRequestSeqRef = useRef(0);
   const lastSuccessfulLookupKeyRef = useRef("");
+  const submitLockRef = useRef(false);
+  const [breakConfirmOpen, setBreakConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [visitPurpose, setVisitPurpose] = useState("");
   const [vitalDraft, setVitalDraft] = useState<ReceptionCreateVitalDraft>(() =>
-    createReceptionVitalDraft(),
+    createReceptionVitalDraft(undefined, vitalSettings),
   );
+  const vitalSettingsAppliedRef = useRef(false);
   const [sendKakaoMessage, setSendKakaoMessage] = useState(true);
   const plannedStartAt = getReceptionIsoAtMinutes(
     operatingDate,
@@ -6982,8 +7399,8 @@ function ReceptionWalkInFormDrawer({
   const shouldShowPatientLookup = patientLookupOpen && lookupActive;
   const trimmedVisitPurpose = visitPurpose.trim();
   const vitalBuild = useMemo(
-    () => buildReceptionVitalInput(vitalDraft),
-    [vitalDraft],
+    () => buildReceptionVitalInput(vitalDraft, vitalSettings),
+    [vitalDraft, vitalSettings],
   );
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
@@ -7000,11 +7417,31 @@ function ReceptionWalkInFormDrawer({
     durationMinutes,
     operatingSchedule,
   );
+  const createBlockMessage =
+    timeBlockMessage ??
+    (operatingScheduleStatus === "loading"
+      ? "운영시간을 확인하는 중입니다."
+      : operatingScheduleStatus === "error"
+        ? "운영시간을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
+        : undefined);
+  const breakTimeWarning =
+    getOperatingTimeClassification(
+      operatingSchedule,
+      currentOperatingMinutes,
+      durationMinutes,
+    ) === "break-warning";
   const canCreate = Boolean(
+    operatingScheduleStatus === "ready" &&
     patient &&
       trimmedVisitPurpose &&
       Object.keys(vitalBuild.fieldErrors).length === 0,
   );
+
+  useEffect(() => {
+    if (vitalSettingsStatus !== "ready" || vitalSettingsAppliedRef.current) return;
+    vitalSettingsAppliedRef.current = true;
+    setVitalDraft(createReceptionVitalDraft(patient?.weightKg, vitalSettings));
+  }, [patient?.weightKg, vitalSettings, vitalSettingsStatus]);
 
   useEffect(() => {
     const initialSummary = patientSummaryOptions.find(
@@ -7016,8 +7453,8 @@ function ReceptionWalkInFormDrawer({
     setPatientId(initialSummary.patient.id);
     setSelectedLookupSummary(initialSummary);
     setLookupQuery(getReceptionPatientOptionLabel(initialSummary));
-    setVitalDraft(createReceptionVitalDraft(initialSummary.patient.weightKg));
-  }, [initialPatientId, patientSummaryOptions]);
+    setVitalDraft(createReceptionVitalDraft(initialSummary.patient.weightKg, vitalSettings));
+  }, [initialPatientId, patientSummaryOptions, vitalSettings]);
 
   useEffect(() => {
     const query = lookupQuery.trim();
@@ -7104,32 +7541,41 @@ function ReceptionWalkInFormDrawer({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setVitalDraft(createReceptionVitalDraft(patient?.weightKg));
-  }, [patient?.id, patient?.weightKg]);
+    setVitalDraft(createReceptionVitalDraft(patient?.weightKg, vitalSettings));
+  }, [patient?.id, patient?.weightKg, vitalSettings]);
 
   const selectPatientSummary = (summary: ReceptionPatientSummary) => {
     setPatientId(summary.patient.id);
     setSelectedLookupSummary(summary);
     setLookupQuery(getReceptionPatientOptionLabel(summary));
-    setVitalDraft(createReceptionVitalDraft(summary.patient.weightKg));
+    setVitalDraft(createReceptionVitalDraft(summary.patient.weightKg, vitalSettings));
     setPatientLookupOpen(false);
   };
   const close = () => {
-    if (!submitting) setActiveDrawer(null);
+    if (!submitting && !submitLockRef.current) setActiveDrawer(null);
   };
-  const create = async () => {
-    if (!patient || !selectedSummary || submitting || !canCreate) return;
+  const submitCreate = async () => {
+    if (
+      !patient ||
+      !selectedSummary ||
+      submitting ||
+      submitLockRef.current ||
+      !canCreate
+    ) {
+      return;
+    }
 
     const selectedVeterinarianId =
       effectiveVeterinarianId === unassignedVeterinarianValue
         ? undefined
         : effectiveVeterinarianId;
-    if (timeBlockMessage) {
-      toast.error(timeBlockMessage);
+    if (createBlockMessage) {
+      toast.error(createBlockMessage);
       return;
     }
 
     const input: WalkInReceptionInput = {
+      assignedStaffUserIds,
       department: department || defaultWalkInDepartment,
       durationMinutes,
       guardianId: guardian?.id,
@@ -7144,38 +7590,63 @@ function ReceptionWalkInFormDrawer({
       vitals: vitalBuild.input,
     };
 
+    submitLockRef.current = true;
     setSubmitting(true);
-    const result = await submitWalkInEncounter({
-      actorRole: authSession?.role,
-      input,
-      workspaceId,
-    });
-    setSubmitting(false);
+    try {
+      const result = await submitWalkInEncounter({
+        actorRole: authSession?.role,
+        input,
+        workspaceId,
+      });
 
-    if (!result.ok) {
-      toast.error(getWalkInRouteErrorMessage(result));
+      if (!result.ok) {
+        toast.error(getWalkInRouteErrorMessage(result));
+        return;
+      }
+
+      onCreate(input, result.walkIn, selectedSummary);
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+    }
+  };
+  const requestCreate = () => {
+    if (
+      !patient ||
+      !selectedSummary ||
+      submitting ||
+      submitLockRef.current ||
+      !canCreate
+    ) {
       return;
     }
-
-    onCreate(input, result.walkIn, selectedSummary);
+    if (createBlockMessage) {
+      toast.error(createBlockMessage);
+      return;
+    }
+    if (breakTimeWarning) {
+      setBreakConfirmOpen(true);
+      return;
+    }
+    void submitCreate();
   };
 
   if (presentation === "side-panel") {
     return (
-      <div
-        className={getReceptionDrawerSurfaceClassName(presentation)}
+      <>
+        <EmrRightPanelBody
         data-testid="walk-in-reception-dialog"
-      >
-        <ScrollArea className="min-h-0 flex-1">
+        >
+          <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-[var(--clair-spacing-16)] p-[var(--clair-spacing-16)]">
-            {timeBlockMessage ? (
+            {createBlockMessage ? (
               <div>
                 <EmrInlineAlert
                   severity="warning"
                   title="접수 가능 시간이 아닙니다"
                   testId="walk-in-time-block-alert"
                 >
-                  {timeBlockMessage}
+                  {createBlockMessage}
                 </EmrInlineAlert>
               </div>
             ) : null}
@@ -7222,7 +7693,7 @@ function ReceptionWalkInFormDrawer({
                       setLookupQuery("");
                       setPatientId("");
                       setSelectedLookupSummary(null);
-                      setVitalDraft(createReceptionVitalDraft());
+                      setVitalDraft(createReceptionVitalDraft(undefined, vitalSettings));
                       setPatientLookupOpen(true);
                     }}
                   />
@@ -7307,6 +7778,7 @@ function ReceptionWalkInFormDrawer({
                     fieldErrors={vitalBuild.fieldErrors}
                     presentation={presentation}
                     setDraft={setVitalDraft}
+                    vitalSettings={vitalSettings}
                   />
                 </ReceptionSidePanelSection>
               </>
@@ -7376,6 +7848,22 @@ function ReceptionWalkInFormDrawer({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
+
+            <ReceptionSidePanelSection title="업무 담당" variant="create">
+              <ReceptionSidePanelField
+                icon={<CdsPeopleUserIcon className="size-3.5" />}
+                label="담당자"
+                variant="create"
+              >
+                <ReceptionStaffAssignmentSelect
+                  compact
+                  selectedIds={assignedStaffUserIds}
+                  staffMembers={staffMembers}
+                  onChange={setAssignedStaffUserIds}
+                />
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
             <ReceptionSidePanelDivider />
@@ -7464,8 +7952,12 @@ function ReceptionWalkInFormDrawer({
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
           </div>
-        </ScrollArea>
-        <div className="mt-auto flex shrink-0 items-center justify-end gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]">
+          </ScrollArea>
+        </EmrRightPanelBody>
+        <EmrRightPanelFooter
+          size="single"
+          className="flex items-center justify-end gap-[var(--clair-spacing-8)] p-[var(--clair-spacing-16)]"
+        >
           <div className="flex shrink-0 items-center gap-[var(--clair-spacing-8)]">
             <Button
               type="button"
@@ -7480,31 +7972,42 @@ function ReceptionWalkInFormDrawer({
             <Button
               type="button"
               size="default"
-              onClick={create}
-              disabled={!canCreate || Boolean(timeBlockMessage) || submitting}
+              onClick={requestCreate}
+              disabled={!canCreate || Boolean(createBlockMessage) || submitting}
             >
               {submitting ? "생성 중" : "생성"}
             </Button>
           </div>
-        </div>
-      </div>
+        </EmrRightPanelFooter>
+        <ReceptionBreakTimeConfirmDialog
+          mode="walk-in"
+          open={breakConfirmOpen}
+          submitting={submitting}
+          onOpenChange={setBreakConfirmOpen}
+          onConfirm={() => {
+            setBreakConfirmOpen(false);
+            void submitCreate();
+          }}
+        />
+      </>
     );
   }
 
   return (
+    <>
     <div
       className={getReceptionDrawerSurfaceClassName(presentation)}
       data-testid="walk-in-reception-dialog"
     >
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
-          {timeBlockMessage ? (
+          {createBlockMessage ? (
             <EmrInlineAlert
               severity="warning"
               title="접수 가능 시간이 아닙니다"
               testId="walk-in-time-block-alert"
             >
-              {timeBlockMessage}
+              {createBlockMessage}
             </EmrInlineAlert>
           ) : null}
           <RegistrationFormSection separated={false} title="환자 정보">
@@ -7546,7 +8049,7 @@ function ReceptionWalkInFormDrawer({
                       setLookupQuery("");
                       setPatientId("");
                       setSelectedLookupSummary(null);
-                      setVitalDraft(createReceptionVitalDraft());
+                      setVitalDraft(createReceptionVitalDraft(undefined, vitalSettings));
                       setPatientLookupOpen(true);
                     }}
                   />
@@ -7623,6 +8126,7 @@ function ReceptionWalkInFormDrawer({
                 fieldErrors={vitalBuild.fieldErrors}
                 presentation={presentation}
                 setDraft={setVitalDraft}
+                vitalSettings={vitalSettings}
               />
             </RegistrationFormSection>
           ) : null}
@@ -7669,6 +8173,14 @@ function ReceptionWalkInFormDrawer({
                 </Select>
               </RegistrationFormField>
             </section>
+
+            <RegistrationFormField label="업무 담당자">
+              <ReceptionStaffAssignmentSelect
+                selectedIds={assignedStaffUserIds}
+                staffMembers={staffMembers}
+                onChange={setAssignedStaffUserIds}
+              />
+            </RegistrationFormField>
 
             <section className="grid grid-cols-3 gap-3">
               <RegistrationFormField label="접수일">
@@ -7751,12 +8263,23 @@ function ReceptionWalkInFormDrawer({
           <Button size="default" variant="ghost" onClick={close} disabled={submitting}>
             취소
           </Button>
-          <Button size="default" onClick={create} disabled={!canCreate || Boolean(timeBlockMessage) || submitting}>
+          <Button size="default" onClick={requestCreate} disabled={!canCreate || Boolean(createBlockMessage) || submitting}>
             {submitting ? "생성 중" : "생성"}
           </Button>
         </div>
       </div>
     </div>
+    <ReceptionBreakTimeConfirmDialog
+      mode="walk-in"
+      open={breakConfirmOpen}
+      submitting={submitting}
+      onOpenChange={setBreakConfirmOpen}
+      onConfirm={() => {
+        setBreakConfirmOpen(false);
+        void submitCreate();
+      }}
+    />
+    </>
   );
 }
 
@@ -7771,6 +8294,7 @@ function ReceptionReservationFormDrawer({
   operatingDate,
   patientSummaries,
   presentation = "drawer",
+  staffMembers,
   todayDate,
   veterinarians,
   workspaceId,
@@ -7785,6 +8309,7 @@ function ReceptionReservationFormDrawer({
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
   presentation?: ReceptionDrawerPresentation;
+  staffMembers: ReceptionStaffMember[];
   todayDate: string;
   veterinarians: Veterinarian[];
   workspaceId: string;
@@ -7804,6 +8329,8 @@ function ReceptionReservationFormDrawer({
     initialDurationMinutes ? `${initialDurationMinutes}분` : defaultWalkInDuration,
   );
   const [memo, setMemo] = useState("");
+  const submitLockRef = useRef(false);
+  const [breakConfirmOpen, setBreakConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [timeMinutes, setTimeMinutes] = useState(
     initialTimeMinutes ?? 0,
@@ -7816,12 +8343,16 @@ function ReceptionReservationFormDrawer({
   const [veterinarianId, setVeterinarianId] = useState(
     initialKnownVeterinarianId ?? "",
   );
+  const [assignedStaffUserIds, setAssignedStaffUserIds] = useState<string[]>([]);
   const patientLookup = useReceptionPatientLookup({
     authSessionId: authSession?.id,
     patientSummaries,
     workspaceId,
   });
-  const operatingSchedule = useReceptionOperatingSchedule({
+  const {
+    schedule: operatingSchedule,
+    status: operatingScheduleStatus,
+  } = useReceptionOperatingSchedule({
     actorId: authSession?.id,
     date,
     workspaceId,
@@ -7848,22 +8379,29 @@ function ReceptionReservationFormDrawer({
   const selectedPatient = selectedSummary?.patient;
   const selectedGuardian = selectedSummary?.primaryGuardian;
   const selectedTimeOption = timeOptions.find((option) => option.minutes === timeMinutes);
+  const breakTimeWarning = Boolean(selectedTimeOption?.breakWarning);
   const closedDay = !operatingSchedule.isOpen;
   const hasElapsedOptions = timeOptions.some((option) => option.reason === "지난 시간");
   const hasAvailableTimeOption = timeOptions.some((option) => !option.disabled);
-  const reservationTimeHelper = closedDay
-    ? "휴진일입니다."
-    : !hasAvailableTimeOption
-      ? "예약 가능한 시간이 없습니다. 날짜나 예상시간을 변경해 주세요."
-      : date === todayDate && hasElapsedOptions
-        ? "오늘 예약은 현재 시각 이후만 선택할 수 있어요."
-        : undefined;
+  const reservationTimeHelper =
+    operatingScheduleStatus === "loading"
+      ? "운영시간을 확인하는 중입니다."
+      : operatingScheduleStatus === "error"
+        ? "운영시간을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
+        : closedDay
+          ? "휴진일입니다."
+          : !hasAvailableTimeOption
+            ? "예약 가능한 시간이 없습니다. 날짜나 예상시간을 변경해 주세요."
+            : date === todayDate && hasElapsedOptions
+              ? "오늘 예약은 현재 시각 이후만 선택할 수 있어요."
+              : undefined;
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
     veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
       ? veterinarianId
       : undefined;
   const canCreate =
+    operatingScheduleStatus === "ready" &&
     Boolean(selectedPatient) &&
     Boolean(selectedTimeOption) &&
     !selectedTimeOption?.disabled &&
@@ -7872,7 +8410,7 @@ function ReceptionReservationFormDrawer({
   const shouldShowPatientLookup =
     patientLookupOpen && patientLookup.lookupActive;
   const close = () => {
-    if (submitting) return;
+    if (submitting || submitLockRef.current) return;
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
   };
@@ -7932,10 +8470,18 @@ function ReceptionReservationFormDrawer({
     }
   }, [durationMinutes, operatingSchedule, timeMinutes, timeOptions]);
 
-  const create = async () => {
-    if (!selectedPatient || submitting || !canCreate) return;
+  const submitCreate = async () => {
+    if (
+      !selectedPatient ||
+      submitting ||
+      submitLockRef.current ||
+      !canCreate
+    ) {
+      return;
+    }
 
     const input: ReceptionAppointmentCreateInput = {
+      assignedStaffUserIds,
       assignedVeterinarianId: effectiveVeterinarianId,
       durationMinutes,
       guardianId: selectedGuardian?.id,
@@ -7944,31 +8490,51 @@ function ReceptionReservationFormDrawer({
       scheduledStartAt: getReceptionIsoAtMinutes(date, timeMinutes),
     };
 
+    submitLockRef.current = true;
     setSubmitting(true);
-    const result = await submitAppointmentCreate({
-      actorRole: authSession?.role,
-      input,
-      workspaceId,
-    });
-    setSubmitting(false);
+    try {
+      const result = await submitAppointmentCreate({
+        actorRole: authSession?.role,
+        input,
+        workspaceId,
+      });
 
-    if (!result.ok) {
-      toast.error(getAppointmentCreateRouteErrorMessage(result));
+      if (!result.ok) {
+        toast.error(getAppointmentCreateRouteErrorMessage(result));
+        return;
+      }
+
+      onCreate(result.appointment);
+      setCalendarDraftSelection(undefined);
+      toast.success("예약이 완료되었습니다");
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+    }
+  };
+  const requestCreate = () => {
+    if (
+      !selectedPatient ||
+      submitting ||
+      submitLockRef.current ||
+      !canCreate
+    ) {
       return;
     }
-
-    onCreate(result.appointment);
-    setCalendarDraftSelection(undefined);
-    toast.success("예약이 완료되었습니다");
+    if (breakTimeWarning) {
+      setBreakConfirmOpen(true);
+      return;
+    }
+    void submitCreate();
   };
 
   if (presentation === "side-panel") {
     return (
-      <div
-        className={getReceptionDrawerSurfaceClassName(presentation)}
+      <>
+        <EmrRightPanelBody
         data-testid="reservation-create-drawer"
-      >
-        <ScrollArea className="min-h-0 flex-1">
+        >
+          <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-[var(--clair-spacing-16)] p-[var(--clair-spacing-16)]">
             <ReceptionSidePanelSection title="환자/보호자" variant="create">
               <ReceptionSidePanelField
@@ -8113,6 +8679,22 @@ function ReceptionReservationFormDrawer({
             </ReceptionSidePanelSection>
             <ReceptionSidePanelDivider />
 
+            <ReceptionSidePanelSection title="업무 담당" variant="create">
+              <ReceptionSidePanelField
+                icon={<CdsPeopleUserIcon className="size-3.5" />}
+                label="담당자"
+                variant="create"
+              >
+                <ReceptionStaffAssignmentSelect
+                  compact
+                  selectedIds={assignedStaffUserIds}
+                  staffMembers={staffMembers}
+                  onChange={setAssignedStaffUserIds}
+                />
+              </ReceptionSidePanelField>
+            </ReceptionSidePanelSection>
+            <ReceptionSidePanelDivider />
+
             <ReceptionSidePanelSection title="예약 정보" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsFilesCalendarIcon className="size-3.5" />}
@@ -8144,6 +8726,7 @@ function ReceptionReservationFormDrawer({
                       <span className="flex min-w-0 flex-1 truncate text-left">
                         {selectedTimeOption?.label ??
                           getScheduleTimeLabelFromMinutes(timeMinutes)}
+                        {selectedTimeOption?.breakWarning ? " · 휴게시간" : ""}
                       </span>
                     </SelectTrigger>
                     <SelectContent
@@ -8158,7 +8741,11 @@ function ReceptionReservationFormDrawer({
                             disabled={option.disabled}
                           >
                             {option.label}
-                            {option.reason ? ` · ${option.reason}` : ""}
+                            {option.reason
+                              ? ` · ${option.reason}`
+                              : option.breakWarning
+                                ? " · 휴게시간"
+                                : ""}
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -8222,8 +8809,12 @@ function ReceptionReservationFormDrawer({
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
           </div>
-        </ScrollArea>
-        <div className="mt-auto flex shrink-0 items-center justify-end gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]">
+          </ScrollArea>
+        </EmrRightPanelBody>
+        <EmrRightPanelFooter
+          size="single"
+          className="flex items-center justify-end gap-[var(--clair-spacing-8)] p-[var(--clair-spacing-16)]"
+        >
           <div className="flex shrink-0 items-center gap-[var(--clair-spacing-8)]">
             <Button
               type="button"
@@ -8238,18 +8829,29 @@ function ReceptionReservationFormDrawer({
             <Button
               type="button"
               size="default"
-              onClick={create}
+              onClick={requestCreate}
               disabled={!canCreate || submitting}
             >
               {submitting ? "생성 중" : "생성"}
             </Button>
           </div>
-        </div>
-      </div>
+        </EmrRightPanelFooter>
+        <ReceptionBreakTimeConfirmDialog
+          mode="appointment"
+          open={breakConfirmOpen}
+          submitting={submitting}
+          onOpenChange={setBreakConfirmOpen}
+          onConfirm={() => {
+            setBreakConfirmOpen(false);
+            void submitCreate();
+          }}
+        />
+      </>
     );
   }
 
   return (
+    <>
     <div
       className={getReceptionDrawerSurfaceClassName(presentation)}
       data-testid="reservation-create-drawer"
@@ -8372,6 +8974,14 @@ function ReceptionReservationFormDrawer({
               </RegistrationFormField>
             </section>
 
+            <RegistrationFormField label="업무 담당자">
+              <ReceptionStaffAssignmentSelect
+                selectedIds={assignedStaffUserIds}
+                staffMembers={staffMembers}
+                onChange={setAssignedStaffUserIds}
+              />
+            </RegistrationFormField>
+
             <section className="grid grid-cols-2 gap-3">
               <RegistrationFormField
                 label="예약시간"
@@ -8390,6 +9000,7 @@ function ReceptionReservationFormDrawer({
                   >
                     <span className="flex flex-1 text-left">
                       {selectedTimeOption?.label ?? getScheduleTimeLabelFromMinutes(timeMinutes)}
+                      {selectedTimeOption?.breakWarning ? " · 휴게시간" : ""}
                     </span>
                   </SelectTrigger>
                   <SelectContent>
@@ -8401,7 +9012,11 @@ function ReceptionReservationFormDrawer({
                           disabled={option.disabled}
                         >
                           {option.label}
-                          {option.reason ? ` · ${option.reason}` : ""}
+                          {option.reason
+                            ? ` · ${option.reason}`
+                            : option.breakWarning
+                              ? " · 휴게시간"
+                              : ""}
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -8449,11 +9064,22 @@ function ReceptionReservationFormDrawer({
         <Button size="default" variant="ghost" onClick={close} disabled={submitting}>
           취소
         </Button>
-        <Button size="default" onClick={create} disabled={!canCreate || submitting}>
+        <Button size="default" onClick={requestCreate} disabled={!canCreate || submitting}>
           {submitting ? "생성 중" : "생성"}
         </Button>
       </div>
     </div>
+    <ReceptionBreakTimeConfirmDialog
+      mode="appointment"
+      open={breakConfirmOpen}
+      submitting={submitting}
+      onOpenChange={setBreakConfirmOpen}
+      onConfirm={() => {
+        setBreakConfirmOpen(false);
+        void submitCreate();
+      }}
+    />
+    </>
   );
 }
 
@@ -8503,7 +9129,10 @@ function ReceptionAppointmentCheckInFormDrawer({
     formatPatientWeightKgInput(patient.weightKg),
   );
   const durationMinutes = getDurationMinutesFromLabel(duration) ?? 30;
-  const operatingSchedule = useReceptionOperatingSchedule({
+  const {
+    schedule: operatingSchedule,
+    status: operatingScheduleStatus,
+  } = useReceptionOperatingSchedule({
     actorId: authSession?.id,
     date: appointmentDate,
     workspaceId,
@@ -8523,7 +9152,11 @@ function ReceptionAppointmentCheckInFormDrawer({
       }));
     return options;
   }, [currentOperatingMinutes, durationMinutes, operatingSchedule]);
-  const canCreate = Boolean(visitPurpose.trim()) && timeOptions.length > 0 && !submitting;
+  const canCreate =
+    operatingScheduleStatus === "ready" &&
+    Boolean(visitPurpose.trim()) &&
+    timeOptions.length > 0 &&
+    !submitting;
 
   useEffect(() => {
     if (!timeOptions.some((option) => option.minutes === timeMinutes)) {
@@ -8563,12 +9196,8 @@ function ReceptionAppointmentCheckInFormDrawer({
     toast.success("예약 건 접수가 완료되었습니다");
   };
 
-  return (
-    <div
-      className={getReceptionDrawerSurfaceClassName(presentation)}
-      data-testid="appointment-check-in-form-drawer"
-    >
-      <ScrollArea className="min-h-0 flex-1">
+  const formContent = (
+    <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
           <section className="rounded-lg border bg-[var(--emr-status-info-bg)] p-3">
             <div className="emr-text-body font-semibold">접수 생성</div>
@@ -8716,14 +9345,49 @@ function ReceptionAppointmentCheckInFormDrawer({
             />
           </ReceptionFormField>
         </div>
-      </ScrollArea>
+    </ScrollArea>
+  );
+
+  const formActions = (
+    <>
+      <Button
+        size="default"
+        variant="ghost"
+        onClick={() => setActiveDrawer(null)}
+        disabled={submitting}
+      >
+        취소
+      </Button>
+      <Button size="default" onClick={create} disabled={!canCreate}>
+        {submitting ? "저장 중" : "생성"}
+      </Button>
+    </>
+  );
+
+  if (presentation === "side-panel") {
+    return (
+      <>
+        <EmrRightPanelBody data-testid="appointment-check-in-form-drawer">
+          {formContent}
+        </EmrRightPanelBody>
+        <EmrRightPanelFooter
+          size="single"
+          className="flex items-center justify-end gap-2 p-4"
+        >
+          {formActions}
+        </EmrRightPanelFooter>
+      </>
+    );
+  }
+
+  return (
+    <div
+      className={getReceptionDrawerSurfaceClassName(presentation)}
+      data-testid="appointment-check-in-form-drawer"
+    >
+      {formContent}
       <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t bg-card p-4">
-        <Button size="default" variant="ghost" onClick={() => setActiveDrawer(null)} disabled={submitting}>
-          취소
-        </Button>
-        <Button size="default" onClick={create} disabled={!canCreate}>
-          {submitting ? "저장 중" : "생성"}
-        </Button>
+        {formActions}
       </div>
     </div>
   );
@@ -8736,6 +9400,15 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
   );
+  const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
+  const persistedCalendarAppointments = useReceptionStore(
+    (state) => state.persistedCalendarAppointments,
+  );
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
+  );
+  const patients = usePatientProfileStore((state) => state.patients);
   const [isEditing, setIsEditing] = useState(false);
   const title = getReceptionRightPanelTitle(activeDrawer);
   const searchParams = useSearchParams();
@@ -8749,7 +9422,95 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
     typeof routeOperatingDate === "string" && isIsoOperatingDate(routeOperatingDate)
       ? routeOperatingDate
       : (operatingDateOverride ?? defaultOperatingDate);
-  const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
+  const profileDataset = useMemo(
+    () => ({ guardians, patientGuardians, patients }),
+    [guardians, patientGuardians, patients],
+  );
+  const calendarAppointmentWork = useMemo<StaffCalendarAppointmentWork[]>(() => {
+    if (activeDrawer?.type !== "staff-operational-profile") return [];
+
+    const appointmentWork = getTodayAppointments(
+      draftCheckIns.filter(isReceptionDraftCalendarActive),
+      persistedCalendarAppointments,
+      { operatingDate, workspaceId },
+    )
+      .filter(
+        (appointment) =>
+          isAppointmentAssignedToStaff(appointment, activeDrawer.id) &&
+          appointment.status !== "cancelled" &&
+          appointment.status !== "no_show",
+      )
+      .map((appointment) => {
+        const patient = getAppointmentPatient(appointment, profileDataset);
+        const guardian = getAppointmentGuardian(appointment, profileDataset);
+        return {
+          href: `/w/${encodeURIComponent(workspaceId)}/reception?appointmentId=${encodeURIComponent(appointment.id)}&modulePanel=open`,
+          id: appointment.id,
+          operatingDate,
+          ...(appointment.scheduledEndAt
+            ? { scheduledEndAt: appointment.scheduledEndAt }
+            : {}),
+          scheduledStartAt: appointment.scheduledStartAt,
+          status: toStaffCalendarAppointmentStatus(appointment.status),
+          title: [patient?.name, guardian?.name]
+            .filter((value): value is string => Boolean(value?.trim()))
+            .join(" · ") || "예약 진료",
+          workKind: "appointment" as const,
+          workLabel: "예약 진료" as const,
+        };
+      });
+
+    const encounterWork = getEffectiveEncounters(draftCheckIns, {
+      operatingDate,
+      workspaceId,
+    })
+      .filter((encounter) => {
+        return (
+          !encounter.appointmentId &&
+          getOperatingDateFromIso(encounter.checkedInAt ?? encounter.createdAt) === operatingDate &&
+          encounter.status !== "cancelled" &&
+          isEncounterAssignedToStaff(encounter, activeDrawer.id)
+        );
+      })
+      .map((encounter): StaffCalendarAppointmentWork => {
+        const scheduledStartAt = encounter.checkedInAt ?? encounter.createdAt;
+        const durationMinutes = encounter.durationMinutes ?? 30;
+        const scheduledEndAt = new Date(
+          new Date(scheduledStartAt).getTime() + durationMinutes * 60_000,
+        ).toISOString();
+        const patient = profileDataset.patients.find(
+          (item) => item.id === encounter.patientId && item.workspaceId === workspaceId,
+        );
+        const guardian = profileDataset.guardians.find(
+          (item) => item.id === encounter.guardianId && item.workspaceId === workspaceId,
+        );
+
+        return {
+          href: `/w/${encodeURIComponent(workspaceId)}/reception?encounterId=${encodeURIComponent(encounter.id)}&modulePanel=open`,
+          id: encounter.id,
+          operatingDate,
+          scheduledEndAt,
+          scheduledStartAt,
+          status: "checked_in",
+          title: [patient?.name, guardian?.name]
+            .filter((value): value is string => Boolean(value?.trim()))
+            .join(" · ") || "현장 접수",
+          workKind: "encounter",
+          workLabel: "현장 접수",
+        };
+      });
+
+    return [...appointmentWork, ...encounterWork].sort((left, right) =>
+      left.scheduledStartAt.localeCompare(right.scheduledStartAt),
+    );
+  }, [
+    activeDrawer,
+    draftCheckIns,
+    operatingDate,
+    persistedCalendarAppointments,
+    profileDataset,
+    workspaceId,
+  ]);
 
   const closeStaffProfile = useCallback(() => {
     const returnFocusId = activeDrawer?.rightPanelPresentation?.returnFocusId;
@@ -8769,8 +9530,8 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
             ? authSession?.id
             : getReceptionDemoActorId(authSession?.role)
         }
-        currentMinutes={currentOperatingMinutes}
-        date={operatingDate}
+        calendarAppointments={calendarAppointmentWork}
+        date={defaultOperatingDate}
         onClose={closeStaffProfile}
         todayDate={defaultOperatingDate}
         userId={activeDrawer.id}
@@ -8780,12 +9541,12 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   }
 
   return (
-    <div
-      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-rightpanel)]"
+    <EmrRightPanel
       aria-label={`${moduleLabel} 우측 사이드 패널`}
+      className="bg-[var(--emr-surface-rightpanel)]"
       data-testid="reception-right-panel"
-    >
-      <EmrRightPanelHeader className="justify-between border-b border-[var(--emr-line-default)]">
+      header={
+        <EmrRightPanelHeader className="justify-between border-b border-[var(--emr-line-default)]">
         <div className="flex min-w-0 items-center gap-2">
           <div className="truncate emr-text-panel-title font-semibold text-foreground">
             {title}
@@ -8814,7 +9575,9 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
             <CdsNavigationSidebarIcon />
           )}
         </EmrRightPanelHeaderIconButton>
-      </EmrRightPanelHeader>
+        </EmrRightPanelHeader>
+      }
+    >
       {isReceptionRightPanelDrawer(activeDrawer) ? (
         <ReceptionDrawer
           presentation="side-panel"
@@ -8823,7 +9586,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
       ) : (
         <ReceptionRightPanelEmptyState />
       )}
-    </div>
+    </EmrRightPanel>
   );
 }
 
@@ -8843,7 +9606,7 @@ function getReceptionRightPanelTitle(drawer: DrawerState) {
 
 function ReceptionRightPanelEmptyState() {
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center px-6">
+    <EmrRightPanelBody className="items-center justify-center px-6">
       <EmrEmptyState
         kind="no-data"
         reserveActionSpace={false}
@@ -8852,7 +9615,7 @@ function ReceptionRightPanelEmptyState() {
         testId="reception-right-panel-empty-state"
         title="선택된 접수/예약 건이 없습니다"
       />
-    </div>
+    </EmrRightPanelBody>
   );
 }
 
@@ -9044,13 +9807,14 @@ function getReceptionSidePanelWeightInputValue(weightKg?: number) {
 const receptionCreateVitalOptions = [
   { id: "weight", label: "체중", unit: "kg", inputMode: "decimal" },
   { id: "temperature", label: "체온", unit: "°C", inputMode: "decimal" },
+  { id: "heartRate", label: "심박수", unit: "bpm", inputMode: "numeric" },
   { id: "respiration", label: "호흡", unit: "rpm", inputMode: "numeric" },
   { id: "bloodPressure", label: "혈압", unit: "mmHg", inputMode: "numeric" },
 ] as const;
 
 const getReceptionCreateVitalIcon = (id: ReceptionCreateVitalId) => {
   if (id === "temperature") return <CdsMedicalThermometerIcon className="size-3.5" />;
-  if (id === "respiration") return <CdsMedicalHeartPulseIcon className="size-3.5" />;
+  if (id === "respiration" || id === "heartRate") return <CdsMedicalHeartPulseIcon className="size-3.5" />;
   return <CdsMedicalActivityIcon className="size-3.5" />;
 };
 
@@ -9059,6 +9823,7 @@ function ReceptionCreateVitalFields({
   fieldErrors,
   presentation,
   setDraft,
+  vitalSettings,
 }: {
   draft: ReceptionCreateVitalDraft;
   fieldErrors: ReceptionCreateVitalFieldErrors;
@@ -9066,16 +9831,22 @@ function ReceptionCreateVitalFields({
   setDraft: (
     updater: (current: ReceptionCreateVitalDraft) => ReceptionCreateVitalDraft,
   ) => void;
+  vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
   const [announcement, setAnnouncement] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const addTriggerRef = useRef<HTMLButtonElement | null>(null);
   const firstMenuItemRef = useRef<HTMLButtonElement | null>(null);
   const inputRefs = useRef<Partial<Record<ReceptionCreateVitalId, HTMLElement | null>>>({});
-  const availableOptions = receptionCreateVitalOptions.filter(
-    (option) => !draft.selectedIds.includes(option.id),
+  const enabledIds = getEnabledWorkspaceVitalSettings(vitalSettings).map((item) =>
+    workspaceVitalKeyToReceptionId(item.key),
   );
-  const removable = draft.selectedIds.length > 1;
+  const configuredOptions = enabledIds.flatMap((id) => {
+    const option = receptionCreateVitalOptions.find((candidate) => candidate.id === id);
+    return option ? [{ ...option, unit: getReceptionVitalUnit(vitalSettings, workspaceVitalKeyByReceptionId[id]) }] : [];
+  });
+  const availableOptions: typeof configuredOptions = [];
+  const removable = false;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -9098,7 +9869,7 @@ function ReceptionCreateVitalFields({
   };
 
   const addVital = (id: ReceptionCreateVitalId) => {
-    const option = receptionCreateVitalOptions.find((item) => item.id === id);
+    const option = configuredOptions.find((item) => item.id === id);
     setDraft((current) => ({
       ...current,
       selectedIds: current.selectedIds.includes(id)
@@ -9112,7 +9883,7 @@ function ReceptionCreateVitalFields({
 
   const removeVital = (id: ReceptionCreateVitalId) => {
     if (!removable) return;
-    const option = receptionCreateVitalOptions.find((item) => item.id === id);
+    const option = configuredOptions.find((item) => item.id === id);
     setDraft((current) => ({
       ...current,
       selectedIds:
@@ -9149,7 +9920,9 @@ function ReceptionCreateVitalFields({
         ? "weightKg"
         : id === "temperature"
           ? "temperatureC"
-          : "respiratoryRateRpm";
+          : id === "heartRate"
+            ? "heartRateBpm"
+            : "respiratoryRateRpm";
     const error = fieldErrors[key];
     const input =
       presentation === "side-panel" ? (
@@ -9252,7 +10025,7 @@ function ReceptionCreateVitalFields({
     <>
       <div data-testid="walk-in-vital-rows" className="grid gap-[10px]">
         {draft.selectedIds.map((id) => {
-          const option = receptionCreateVitalOptions.find((item) => item.id === id);
+          const option = configuredOptions.find((item) => item.id === id);
           if (!option) return null;
           const content =
             id === "bloodPressure"
@@ -9595,7 +10368,8 @@ function ReceptionSidePanelDetail({
       : "-";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <>
+      <EmrRightPanelBody>
       <ScrollArea className="min-h-0 flex-1">
         <div
           className={
@@ -9644,46 +10418,57 @@ function ReceptionSidePanelDetail({
           {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
 
           <ReceptionSidePanelSection title="바이탈" variant={detailVariant}>
-            {selectedVitalOptions.map((option) => (
-              <ReceptionVitalField
-                key={option.id}
-                editDraft={editDraft}
-                editMode={editMode}
-                errorMessage={option.id === "weight" ? editFieldErrors.weightKg : undefined}
-                option={option}
-                removable={canRemoveVital}
-                setEditDraft={setEditDraft}
-                variant={detailVariant}
-                value={
-                  option.id === "weight"
-                    ? patientWeightLabel.replace(/\s*kg$/i, "")
-                    : (extraVitalValues[option.id] ?? option.defaultValue)
-                }
-                onRemove={() =>
-                  setSelectedVitalIds((current) =>
-                    current.length > 1
-                      ? current.filter((id) => id !== option.id)
-                      : current,
-                  )
-                }
-                onUpdateExtraVital={(id, nextValue) =>
-                  setExtraVitalValues((current) => ({
-                    ...current,
-                    [id]: nextValue,
-                  }))
-                }
+            {!editMode &&
+            selectedEncounter &&
+            isPreparedEmptyClinicWorkspace(patient.workspaceId) ? (
+              <ReceptionPersistedEncounterVitals
+                encounterId={selectedEncounter.id}
+                workspaceId={patient.workspaceId}
               />
-            ))}
-            {editMode ? (
-              <ReceptionAddVitalMenu
-                options={availableVitalOptions}
-                onAdd={(id) =>
-                  setSelectedVitalIds((current) =>
-                    current.includes(id) ? current : [...current, id],
-                  )
-                }
-              />
-            ) : null}
+            ) : (
+              <>
+                {selectedVitalOptions.map((option) => (
+                  <ReceptionVitalField
+                    key={option.id}
+                    editDraft={editDraft}
+                    editMode={editMode}
+                    errorMessage={option.id === "weight" ? editFieldErrors.weightKg : undefined}
+                    option={option}
+                    removable={canRemoveVital}
+                    setEditDraft={setEditDraft}
+                    variant={detailVariant}
+                    value={
+                      option.id === "weight"
+                        ? patientWeightLabel.replace(/\s*kg$/i, "")
+                        : (extraVitalValues[option.id] ?? option.defaultValue)
+                    }
+                    onRemove={() =>
+                      setSelectedVitalIds((current) =>
+                        current.length > 1
+                          ? current.filter((id) => id !== option.id)
+                          : current,
+                      )
+                    }
+                    onUpdateExtraVital={(id, nextValue) =>
+                      setExtraVitalValues((current) => ({
+                        ...current,
+                        [id]: nextValue,
+                      }))
+                    }
+                  />
+                ))}
+                {editMode ? (
+                  <ReceptionAddVitalMenu
+                    options={availableVitalOptions}
+                    onAdd={(id) =>
+                      setSelectedVitalIds((current) =>
+                        current.includes(id) ? current : [...current, id],
+                      )
+                    }
+                  />
+                ) : null}
+              </>
+            )}
           </ReceptionSidePanelSection>
           {usesCreateDetailLayout ? <ReceptionSidePanelDivider /> : null}
 
@@ -9980,9 +10765,11 @@ function ReceptionSidePanelDetail({
           ) : null}
         </div>
       ) : null}
-      <footer
+      </EmrRightPanelBody>
+      <EmrRightPanelFooter
+        size="single"
         className={cn(
-          "mt-auto flex shrink-0 items-center gap-[var(--clair-spacing-8)] border-t border-[var(--emr-line-default)] bg-card p-[var(--clair-spacing-16)]",
+          "flex items-center gap-[var(--clair-spacing-8)] p-[var(--clair-spacing-16)]",
           canCancelSelectedEncounter ? "justify-between" : "justify-end",
         )}
       >
@@ -10044,9 +10831,107 @@ function ReceptionSidePanelDetail({
             </Button>
           ) : null}
         </div>
-      </footer>
+      </EmrRightPanelFooter>
+    </>
+  );
+}
+
+function ReceptionPersistedEncounterVitals({
+  encounterId,
+  workspaceId,
+}: {
+  encounterId: string;
+  workspaceId: string;
+}) {
+  const vital = useReceptionEncounterVital({ encounterId, workspaceId });
+  const settings = useWorkspaceVitalSettings({ workspaceId });
+
+  if (vital.status === "loading" || settings.status === "loading") {
+    return (
+      <div className="grid gap-2" aria-label="바이탈 불러오는 중">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
+
+  if (
+    vital.status === "denied" ||
+    settings.status === "denied" ||
+    vital.status === "error" ||
+    settings.status === "error"
+  ) {
+    return (
+      <div
+        role="alert"
+        className="flex items-center justify-between gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-2"
+      >
+        <p className="emr-text-dense text-[var(--emr-status-danger-text)]">
+          바이탈 정보를 불러오지 못했습니다.
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            void Promise.all([vital.reload(), settings.reload()]);
+          }}
+        >
+          다시 시도
+        </Button>
+      </div>
+    );
+  }
+
+  const items =
+    vital.vital?.encounterId === encounterId
+      ? formatEnteredPatientVitalDisplayItemsForSettings(
+          vital.vital,
+          settings.snapshot,
+        )
+      : [];
+
+  if (items.length === 0) {
+    return (
+      <p className="emr-text-dense text-[var(--emr-text-secondary)]">
+        이 접수에 입력된 바이탈 정보가 없습니다.
+      </p>
+    );
+  }
+
+  return (
+    <div data-testid="reception-encounter-vitals" className="grid gap-[10px]">
+      {items.map((item) => (
+        <ReceptionSidePanelField
+          key={item.label}
+          icon={getReceptionEncounterVitalIcon(
+            getReceptionEncounterVitalLabel(item.label),
+          )}
+          label={getReceptionEncounterVitalLabel(item.label)}
+          variant="create"
+        >
+          <ReceptionSidePanelInput
+            aria-label={getReceptionEncounterVitalLabel(item.label)}
+            readOnly
+            value={item.value}
+            variant="create"
+          />
+        </ReceptionSidePanelField>
+      ))}
     </div>
   );
+}
+
+function getReceptionEncounterVitalLabel(label: string) {
+  return label === "호흡" ? "호흡수" : label;
+}
+
+function getReceptionEncounterVitalIcon(label: string) {
+  if (label === "체온") return <CdsMedicalThermometerIcon className="size-3.5" />;
+  if (label === "심박수" || label === "혈압") {
+    return <CdsMedicalHeartPulseIcon className="size-3.5" />;
+  }
+  return <CdsMedicalActivityIcon className="size-3.5" />;
 }
 
 export function ReceptionDrawer({
@@ -10121,10 +11006,6 @@ export function ReceptionDrawer({
   const [appointmentCheckInSubmitting, setAppointmentCheckInSubmitting] =
     useState(false);
   const [editDraft, setEditDraft] = useState<ReceptionEncounterUpdateInput>({});
-  const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
-    Veterinarian[]
-  >([]);
-
   useEffect(() => {
     onEditingChange?.(editMode);
 
@@ -10141,9 +11022,25 @@ export function ReceptionDrawer({
   const operatingDate =
     operatingDateOverride ?? getWorkspaceOperatingDate(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const staffResourceKey = getReceptionStaffResourceKey({
+    operatingDate,
+    workspaceId,
+  });
+  const workspaceVeterinarians = useReceptionStaffResourceStore(
+    (state) =>
+      state.resourcesByKey[staffResourceKey]?.veterinarians ??
+      emptyReceptionStaffVeterinarians,
+  );
+  const workspaceStaffMembers = useReceptionStaffResourceStore(
+    (state) =>
+      state.resourcesByKey[staffResourceKey]?.staff ?? emptyReceptionStaffMembers,
+  );
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
+  const staffMembers = liveStaffSourceEnabled
+    ? workspaceStaffMembers
+    : allReceptionStaff;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const veterinarianStaffMembers = useMemo(
     () =>
@@ -10188,38 +11085,6 @@ export function ReceptionDrawer({
       }),
     [draftCheckIns, operatingDate, persistedCalendarAppointments, workspaceId],
   );
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadStaff() {
-      if (!liveStaffSourceEnabled) {
-        setWorkspaceVeterinarians([]);
-        return;
-      }
-
-      const result = await loadWorkspaceVeterinarians({
-        actorId: authSession?.id,
-        operatingDate,
-        workspaceId,
-      });
-      if (cancelled) return;
-
-      setWorkspaceVeterinarians(mapWorkspaceStaffToVeterinarians(result));
-    }
-
-    const refreshStaff = () => void loadStaff();
-
-    void loadStaff();
-    const refreshInterval = window.setInterval(refreshStaff, 60_000);
-    window.addEventListener("focus", refreshStaff);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(refreshInterval);
-      window.removeEventListener("focus", refreshStaff);
-    };
-  }, [authSession?.id, liveStaffSourceEnabled, operatingDate, workspaceId]);
-
   if (activeDrawer?.type === "reception-patient") {
     return <PatientProfileDrawer patientId={activeDrawer.id} />;
   }
@@ -10259,6 +11124,7 @@ export function ReceptionDrawer({
         operatingDate={calendarDraftDate ?? operatingDate}
         patientSummaries={patientSummaries}
         presentation={presentation}
+        staffMembers={staffMembers}
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCreate={(input, walkIn, selectedSummary) => {
@@ -10324,6 +11190,7 @@ export function ReceptionDrawer({
         patientSummaries={patientSummaries}
         presentation={presentation}
         todayDate={getWorkspaceOperatingDate(workspaceId)}
+        staffMembers={staffMembers}
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCreate={(appointment) => {

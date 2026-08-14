@@ -1,22 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
+
 import {
   CdsActionsCheckIcon,
   CdsActionsCopyIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
-import { EmrRequiredIndicator } from "@/components/emr/required-indicator";
+import { CdsContentEditIcon } from "@/components/cds-icons/content-and-editor";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -25,321 +19,450 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  createInitialHospitalBasicSettingsDraft,
-  hasHospitalBasicSettingsChanges,
-  hasOperatingHoursChanges,
-  validateHospitalBasicSettingsDraft,
-  type HospitalBasicSettingsDraft,
-  type HospitalSettingsValidationIssue,
-} from "@/features/hospital-admin/settings/hospital-basic-settings-model";
-import { HospitalOperatingHoursEditor } from "@/features/hospital-admin/settings/hospital-operating-hours-editor";
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+  FieldLegend,
+} from "@/components/ui/field";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { HospitalProfileReadState } from "@/features/hospital-admin/settings/hospital-profile-read-state";
+import { HospitalLogoEditor } from "@/features/hospital-admin/settings/hospital-logo-editor";
 import { useHospitalBasicSettingsStore } from "@/features/hospital-admin/settings/hospital-basic-settings-store";
+import { HospitalSettingsPage } from "@/features/hospital-admin/settings/hospital-settings-page";
+import { useHospitalProfile } from "@/features/hospital-admin/settings/use-hospital-profile";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
-import { useMockAuthStore } from "@/features/auth/session-store";
+import { getBrowserSupabaseClient } from "@/lib/supabase/client";
+import { notifyWorkspaceIdentityChanged } from "@/features/auth/workspace-display";
 
-type ContactField = keyof HospitalBasicSettingsDraft["contact"];
+const changeRequestFields = [
+  { id: "hospital_name", label: "병원명" },
+  { id: "representative_name", label: "대표자/원장명" },
+  { id: "address", label: "주소" },
+] as const;
 
-const hospitalIdentity = {
-  address: "서울 강남구 도산대로 000",
-  director: "김청담",
-  name: "VIP동물의료센터 청담점",
-};
+type ChangeRequestField = (typeof changeRequestFields)[number]["id"];
 
-export function HospitalBasicSettingsScreen({ workspaceId }: { workspaceId: string }) {
-  const authSession = useMockAuthStore((state) => state.session);
-  const demoActorId = authSession?.role === "hospital_admin" ? "user-admin" : authSession?.id;
-  const initialDraft = useMemo(() => createInitialHospitalBasicSettingsDraft(), []);
-  const record = useHospitalBasicSettingsStore((state) => state.records[workspaceId]);
-  const ensureWorkspace = useHospitalBasicSettingsStore((state) => state.ensureWorkspace);
-  const save = useHospitalBasicSettingsStore((state) => state.save);
-  const hydrateOperatingHours = useHospitalBasicSettingsStore((state) => state.hydrateOperatingHours);
-  const revert = useHospitalBasicSettingsStore((state) => state.revert);
-  const setDraft = useHospitalBasicSettingsStore((state) => state.setDraft);
+export function HospitalBasicSettingsScreen({
+  workspaceId,
+}: {
+  workspaceId: string;
+}) {
   const setSettingsDirty = useHospitalAdminStore((state) => state.setSettingsDirty);
-  const [validationIssues, setValidationIssues] = useState<HospitalSettingsValidationIssue[]>([]);
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [requestReason, setRequestReason] = useState("");
-  const [requestError, setRequestError] = useState("");
-  const [requestStatus, setRequestStatus] = useState("");
-  const [revertDialogOpen, setRevertDialogOpen] = useState(false);
-  const [copySucceeded, setCopySucceeded] = useState(false);
-  const [copyStatus, setCopyStatus] = useState("");
-  const [isLoadingHours, setIsLoadingHours] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const copyResetTimer = useRef<number | null>(null);
-
-  useEffect(() => {
-    ensureWorkspace(workspaceId);
-  }, [ensureWorkspace, workspaceId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/basic-settings/operating-hours`, {
-      cache: "no-store",
-      headers: demoActorId ? { "x-clair-demo-session-user-id": demoActorId } : undefined,
-    })
-      .then(async (response) => ({ response, body: await response.json() }))
-      .then(({ response, body }) => {
-        if (cancelled || !response.ok || !body.ok) return;
-        hydrateOperatingHours(workspaceId, body.settings);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("운영시간을 불러오지 못했습니다.");
-      })
-      .finally(() => { if (!cancelled) setIsLoadingHours(false); });
-    return () => { cancelled = true; };
-  }, [demoActorId, hydrateOperatingHours, workspaceId]);
-
-  useEffect(
-    () => () => {
-      if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
-    },
-    []
+  const setPendingChangeRequest = useHospitalBasicSettingsStore(
+    (state) => state.setPendingChangeRequest
   );
+  const setProfileLogoResult = useHospitalBasicSettingsStore(
+    (state) => state.setProfileLogoResult
+  );
+  const {
+    demoActorId,
+    profile,
+    reload,
+    status: profileStatus,
+  } = useHospitalProfile(workspaceId);
+  const [logoDraftOverride, setLogoDraftOverride] = useState<
+    string | null | undefined
+  >(undefined);
+  const [logoDraftFile, setLogoDraftFile] = useState<File | null>(null);
+  const [copySucceeded, setCopySucceeded] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestFields, setRequestFields] = useState<ChangeRequestField[]>([]);
+  const [requestDetail, setRequestDetail] = useState("");
+  const [requestError, setRequestError] = useState("");
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [isLogoSaving, setIsLogoSaving] = useState(false);
+  const savedLogo = profile?.logo.url ?? null;
+  const logoDraft =
+    logoDraftOverride === undefined ? savedLogo : logoDraftOverride;
+  const isDirty =
+    logoDraftOverride !== undefined && logoDraft !== savedLogo;
 
-  const draft = record?.draft ?? initialDraft;
-  const savedDraft = record?.savedDraft ?? initialDraft;
-  const isDirty = hasHospitalBasicSettingsChanges(draft, savedDraft);
-
-  useEffect(() => {
-    setSettingsDirty(isDirty);
-    return () => setSettingsDirty(false);
-  }, [isDirty, setSettingsDirty]);
-
-  useEffect(() => {
-    const preventUnload = (event: BeforeUnloadEvent) => {
-      if (!isDirty) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-
-    window.addEventListener("beforeunload", preventUnload);
-    return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [isDirty]);
-
-  const updateDraft = (next: HospitalBasicSettingsDraft) => {
-    setValidationIssues([]);
-    setDraft(workspaceId, next);
+  const syncDirty = (dirty: boolean) => {
+    setSettingsDirty(dirty);
   };
 
-  const updateContact = (field: ContactField, value: string) => {
-    updateDraft({
-      ...draft,
-      contact: { ...draft.contact, [field]: value },
-    });
+  const handleLogoChange = (nextValue: string | null, file: File | null) => {
+    setLogoDraftOverride(nextValue);
+    setLogoDraftFile(file);
+    syncDirty(nextValue !== savedLogo);
   };
 
-  const handleSave = async () => {
-    const issues = validateHospitalBasicSettingsDraft(draft);
-    if (issues.length > 0) {
-      setValidationIssues(issues);
-      window.requestAnimationFrame(() => document.getElementById(issues[0].fieldId)?.focus());
-      return;
-    }
+  const logoRequestHeaders = {
+    "content-type": "application/json",
+    ...(demoActorId
+      ? { "x-clair-demo-session-user-id": demoActorId }
+      : {}),
+  };
 
-    const scheduleChanged = hasOperatingHoursChanges(draft, savedDraft);
-    if (scheduleChanged) {
-      setIsSaving(true);
-      try {
-        const response = await fetch(
-          `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/basic-settings/operating-hours`,
-          {
-            method: "PUT",
-            headers: {
-              "content-type": "application/json",
-              ...(demoActorId ? { "x-clair-demo-session-user-id": demoActorId } : {}),
-            },
-            body: JSON.stringify({
-              timezone: draft.timezone,
-              weeklyHours: draft.weeklyHours,
-              holidayPolicy: draft.holidayPolicy,
-              exceptions: draft.exceptions,
-            }),
-          },
-        );
-        const body = await response.json();
-        if (!response.ok || !body.ok) {
-          toast.error(body.error === "future_appointment_conflict"
-            ? "변경 후 운영시간과 겹치지 않는 미래 예약이 있어 저장할 수 없습니다."
-            : "운영시간을 저장하지 못했습니다.");
-          return;
-        }
-        hydrateOperatingHours(workspaceId, body.settings);
-      } catch {
-        toast.error("운영시간을 저장하지 못했습니다.");
-        return;
-      } finally {
-        setIsSaving(false);
+  const discardLogoUpload = async (uploadId: string) => {
+    await fetch(
+      `/api/workspaces/${encodeURIComponent(
+        workspaceId
+      )}/hospital-admin/settings/logo`,
+      {
+        method: "POST",
+        headers: logoRequestHeaders,
+        body: JSON.stringify({ action: "discard", uploadId }),
       }
+    ).catch(() => undefined);
+  };
+
+  const saveLogo = async () => {
+    if (!profile || logoDraftOverride === undefined) return;
+    setIsLogoSaving(true);
+    let uploadId: string | null = null;
+    try {
+      const logoUrl = `/api/workspaces/${encodeURIComponent(
+        workspaceId
+      )}/hospital-admin/settings/logo`;
+
+      if (logoDraftOverride === null) {
+        const response = await fetch(logoUrl, {
+          method: "DELETE",
+          headers: logoRequestHeaders,
+          body: JSON.stringify({ revision: profile.revision }),
+        });
+        const body = await response.json();
+        if (!response.ok || !body.ok || !Number.isSafeInteger(body.revision)) {
+          throw new Error(
+            response.status === 409
+              ? "hospital_logo_state_conflict"
+              : "hospital_logo_remove_failed"
+          );
+        }
+        setProfileLogoResult(workspaceId, {
+          url: null,
+          revision: body.revision,
+        });
+        setLogoDraftOverride(undefined);
+        setLogoDraftFile(null);
+        syncDirty(false);
+        notifyWorkspaceIdentityChanged(workspaceId);
+        toast.success("병원 로고가 기본 이미지로 변경되었습니다.");
+        return;
+      }
+
+      if (!logoDraftFile) throw new Error("hospital_logo_file_missing");
+      const prepareResponse = await fetch(logoUrl, {
+        method: "POST",
+        headers: logoRequestHeaders,
+        body: JSON.stringify({
+          action: "prepare",
+          revision: profile.revision,
+        }),
+      });
+      const prepared = await prepareResponse.json();
+      if (
+        !prepareResponse.ok ||
+        !prepared.ok ||
+        typeof prepared.objectPath !== "string" ||
+        typeof prepared.uploadId !== "string" ||
+        typeof prepared.uploadToken !== "string"
+      ) {
+        throw new Error(
+          prepareResponse.status === 503
+            ? "configured_data_source_required"
+            : "hospital_logo_prepare_failed"
+        );
+      }
+      uploadId = prepared.uploadId;
+
+      const client = getBrowserSupabaseClient();
+      if (!client) throw new Error("configured_data_source_required");
+      const { error: uploadError } = await client.storage
+        .from("hospital-logos")
+        .uploadToSignedUrl(
+          prepared.objectPath,
+          prepared.uploadToken,
+          logoDraftFile,
+          {
+            cacheControl: "0",
+            contentType: logoDraftFile.type,
+            upsert: false,
+          }
+        );
+      if (uploadError) throw new Error("hospital_logo_upload_failed");
+
+      const finalizeResponse = await fetch(logoUrl, {
+        method: "POST",
+        headers: logoRequestHeaders,
+        body: JSON.stringify({
+          action: "finalize",
+          uploadId,
+          declaredMime: logoDraftFile.type,
+          revision: profile.revision,
+        }),
+      });
+      const finalized = await finalizeResponse.json();
+      if (
+        !finalizeResponse.ok ||
+        !finalized.ok ||
+        typeof finalized.logoUrl !== "string" ||
+        !Number.isSafeInteger(finalized.revision)
+      ) {
+        throw new Error(
+          finalizeResponse.status === 409
+            ? "hospital_logo_state_conflict"
+            : "hospital_logo_finalize_failed"
+        );
+      }
+      uploadId = null;
+      setProfileLogoResult(workspaceId, {
+        url: finalized.logoUrl,
+        revision: finalized.revision,
+      });
+      setLogoDraftOverride(undefined);
+      setLogoDraftFile(null);
+      syncDirty(false);
+      notifyWorkspaceIdentityChanged(workspaceId);
+      toast.success(
+        finalized.cleanupPending
+          ? "병원 로고가 저장되었습니다. 이전 파일은 정리 중입니다."
+          : "병원 로고가 저장되었습니다."
+      );
+    } catch (error) {
+      if (uploadId) await discardLogoUpload(uploadId);
+      const code = error instanceof Error ? error.message : "";
+      toast.error(
+        code === "configured_data_source_required"
+          ? "병원 로고 저장은 실제 데이터가 연결된 환경에서 사용할 수 있습니다."
+          : code === "hospital_logo_state_conflict"
+            ? "다른 관리자가 로고를 변경했습니다. 최신 정보를 확인한 후 다시 시도해 주세요."
+            : "병원 로고를 저장하지 못했습니다."
+      );
+    } finally {
+      setIsLogoSaving(false);
     }
-    save(workspaceId);
-    setValidationIssues([]);
-    toast.success(scheduleChanged ? "운영시간이 변경되었습니다." : "병원 기본 설정이 저장되었습니다.");
   };
 
   const handleCopyAddress = async () => {
+    if (!profile?.address) {
+      toast.error("복사할 주소가 없습니다.");
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(hospitalIdentity.address);
+      await navigator.clipboard.writeText(profile.address);
       setCopySucceeded(true);
-      setCopyStatus("주소가 복사되었습니다.");
-      if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
-      copyResetTimer.current = window.setTimeout(() => {
-        setCopySucceeded(false);
-        setCopyStatus("");
-      }, 1800);
+      toast.success("주소가 복사되었습니다.");
+      window.setTimeout(() => setCopySucceeded(false), 1800);
     } catch {
-      setCopySucceeded(false);
-      setCopyStatus("주소를 복사하지 못했습니다.");
       toast.error("주소를 복사하지 못했습니다.");
     }
   };
 
-  const submitIdentityRequest = () => {
-    if (!requestReason.trim()) {
-      setRequestError("변경 사유를 입력해 주세요.");
+  const submitChangeRequest = async () => {
+    if (requestFields.length === 0) {
+      setRequestError("변경이 필요한 항목을 한 개 이상 선택해 주세요.");
+      toast.error("변경 요청 항목을 확인해 주세요.");
+      return;
+    }
+    if (!requestDetail.trim()) {
+      setRequestError("변경할 내용과 사유를 입력해 주세요.");
+      toast.error("변경 요청 내용을 입력해 주세요.");
       return;
     }
 
-    setRequestDialogOpen(false);
-    setRequestError("");
-    setRequestReason("");
-    setRequestStatus("변경 요청 내용을 확인했습니다.");
+    setIsRequesting(true);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${encodeURIComponent(
+          workspaceId
+        )}/hospital-admin/settings/profile-change-requests`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            ...(demoActorId
+              ? { "x-clair-demo-session-user-id": demoActorId }
+              : {}),
+          },
+          body: JSON.stringify({
+            fields: requestFields,
+            detail: requestDetail,
+          }),
+        }
+      );
+      const body = await response.json();
+      if (!response.ok || !body.ok || !body.request) {
+        toast.error("변경 요청을 접수하지 못했습니다.");
+        return;
+      }
+      setPendingChangeRequest(workspaceId, body.request);
+      setRequestDialogOpen(false);
+      setRequestFields([]);
+      setRequestDetail("");
+      setRequestError("");
+      toast.success("변경 요청이 접수되었습니다.");
+    } catch {
+      toast.error("변경 요청을 접수하지 못했습니다.");
+    } finally {
+      setIsRequesting(false);
+    }
   };
 
   return (
-    <div
-      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
-      data-testid="hospital-admin-settings-screen"
+    <HospitalSettingsPage
+      testId="hospital-admin-settings-screen"
+      title="병원 기본 설정"
+      description="병원에 표시되는 기본 정보와 지역 기준을 확인합니다."
+      dirty={isDirty}
+      isSaving={isLogoSaving}
+      layout="summary"
+      onRevert={() => {
+        setLogoDraftOverride(undefined);
+        setLogoDraftFile(null);
+        syncDirty(false);
+        toast.success("로고 변경사항을 되돌렸습니다.");
+      }}
+      onSave={saveLogo}
     >
-      <ScrollArea className="min-h-0 flex-1">
-        <main className="mx-auto grid w-full max-w-[920px] gap-8 px-5 py-8 pb-32 md:px-8">
-          <header>
-            <h1 className="text-[24px] font-semibold leading-8">병원 기본 설정</h1>
-            <p className="mt-1 emr-text-dense text-muted-foreground">
-              병원 정보와 운영시간을 관리합니다.
-            </p>
-          </header>
-
-          <Card size="sm">
-            <CardHeader>
-              <CardTitle>병원 정보</CardTitle>
-              <CardDescription>병원 개설 시 등록된 정보입니다. 변경이 필요한 경우 요청해 주세요.</CardDescription>
-              <CardAction>
-                <Button type="button" size="sm" variant="outline" onClick={() => setRequestDialogOpen(true)}>
-                  병원 정보 변경 요청
-                </Button>
-              </CardAction>
-            </CardHeader>
-            <CardContent>
-              <FieldGroup className="grid gap-4 lg:grid-cols-2" data-testid="hospital-settings-identity-fields">
-                <ReadOnlyField id="hospital-settings-name" label="병원명" value={hospitalIdentity.name} />
-                <ReadOnlyField
-                  id="hospital-settings-director"
-                  label="대표자/원장명"
-                  value={hospitalIdentity.director}
-                />
-                <Field className="lg:col-span-2">
-                  <FieldLabel htmlFor="hospital-settings-address">주소</FieldLabel>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Input
-                      id="hospital-settings-address"
-                      aria-label="주소"
-                      className="bg-muted/40"
-                      readOnly
-                      value={hospitalIdentity.address}
+      {profileStatus !== "ready" || !profile ? (
+        <HospitalProfileReadState
+          status={profileStatus === "ready" ? "error" : profileStatus}
+          onRetry={() => void reload()}
+        />
+      ) : (
+        <>
+          <section
+            className="flex w-full flex-col pb-2"
+            aria-labelledby="hospital-profile-title"
+          >
+            <SectionTitle id="hospital-profile-title">병원 정보</SectionTitle>
+            <Card
+              className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]"
+              data-testid="hospital-profile-card"
+            >
+              <CardContent className="p-0">
+                <SettingRow
+                  testId="hospital-settings-row-logo"
+                  label="병원 로고"
+                  description="PNG 또는 JPG, 최대 5MB. 256 × 256px 이상을 권장합니다."
+                  action={
+                    <HospitalLogoEditor
+                      value={logoDraft}
+                      onChange={handleLogoChange}
                     />
-                    <Button type="button" variant="outline" onClick={() => void handleCopyAddress()}>
-                      {copySucceeded ? (
-                        <CdsActionsCheckIcon data-icon="inline-start" />
-                      ) : (
-                        <CdsActionsCopyIcon data-icon="inline-start" />
-                      )}
-                      {copySucceeded ? "복사됨" : "주소 복사"}
-                    </Button>
-                  </div>
-                  <span className="sr-only" role="status" aria-live="polite">
-                    {copyStatus}
-                  </span>
-                </Field>
-              </FieldGroup>
-              {requestStatus ? <p className="mt-3 emr-text-dense text-muted-foreground">{requestStatus}</p> : null}
-            </CardContent>
-          </Card>
+                  }
+                />
+                <SettingRow
+                  testId="hospital-settings-row-name"
+                  label="병원명"
+                  description="예약과 고객 안내에 표시되는 공식 병원명입니다."
+                  action={<SettingValue label="병원명" value={profile.name} />}
+                />
+                <SettingRow
+                  testId="hospital-settings-row-representative"
+                  label="대표자/원장명"
+                  description="등록된 대표자 또는 원장 정보입니다."
+                  action={
+                    <SettingValue
+                      label="대표자/원장명"
+                      value={profile.representativeName}
+                      emptyLabel="등록된 대표자/원장 정보가 없습니다."
+                    />
+                  }
+                />
+                <SettingRow
+                  testId="hospital-settings-row-address"
+                  label="주소"
+                  description="고객 안내와 문서에 사용하는 등록 주소입니다."
+                  action={
+                    <div className="flex min-w-0 max-w-full items-center gap-2.5">
+                      <SettingValue
+                        label="주소"
+                        value={profile.address}
+                        emptyLabel="등록된 주소가 없습니다."
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="size-7"
+                        aria-label="주소 복사"
+                        data-copy-state={copySucceeded ? "succeeded" : "idle"}
+                        disabled={!profile.address}
+                        onClick={() => void handleCopyAddress()}
+                      >
+                        {copySucceeded ? (
+                          <CdsActionsCheckIcon aria-hidden="true" />
+                        ) : (
+                          <CdsActionsCopyIcon aria-hidden="true" />
+                        )}
+                      </Button>
+                    </div>
+                  }
+                />
+                <SettingRow
+                  testId="hospital-settings-row-change-request"
+                  label="등록 정보 변경"
+                  description="병원명, 대표자 및 주소 변경은 운영팀 확인이 필요합니다."
+                  action={
+                    profile.pendingChangeRequest ? (
+                      <span className="text-sm leading-5 font-medium tracking-[0.014em] text-muted-foreground">
+                        운영팀 확인 대기 중
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        aria-label="병원 정보 변경 요청"
+                        onClick={() => setRequestDialogOpen(true)}
+                      >
+                        <CdsContentEditIcon
+                          data-icon="inline-start"
+                          aria-hidden="true"
+                        />
+                        변경 요청
+                      </Button>
+                    )
+                  }
+                />
+              </CardContent>
+            </Card>
+          </section>
 
-          <Card size="sm">
-            <CardHeader>
-              <CardTitle>연락처</CardTitle>
-              <CardDescription>대표 전화는 필수이며, 나머지 연락처는 필요한 경우 추가할 수 있습니다.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FieldGroup className="grid gap-4 lg:grid-cols-2" data-testid="hospital-settings-contact-fields">
-                <ContactField
-                  error={findIssue(validationIssues, "hospital-settings-phone")}
-                  id="hospital-settings-phone"
-                  label="대표 전화"
-                  required
-                  value={draft.contact.phone}
-                  onChange={(value) => updateContact("phone", value)}
+          <section
+            className="flex w-full flex-col pb-2"
+            aria-labelledby="hospital-region-title"
+          >
+            <SectionTitle id="hospital-region-title">지역 및 시간대</SectionTitle>
+            <Card
+              className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]"
+              data-testid="hospital-region-card"
+            >
+              <CardContent className="p-0">
+                <SettingRow
+                  testId="hospital-settings-row-timezone"
+                  label="시간대"
+                  description="예약 및 운영시간 계산에 사용됩니다."
+                  action={
+                    <SettingValue
+                      label="시간대"
+                      value={formatTimezone(profile.timezone)}
+                    />
+                  }
                 />
-                <ContactField
-                  id="hospital-settings-fax"
-                  label="팩스"
-                  value={draft.contact.fax}
-                  onChange={(value) => updateContact("fax", value)}
+                <SettingRow
+                  testId="hospital-settings-row-region"
+                  label="지역"
+                  description="워크스페이스 생성 후에는 변경할 수 없습니다."
+                  action={
+                    <SettingValue
+                      label="지역"
+                      value={formatCountry(profile.countryCode)}
+                    />
+                  }
                 />
-                <ContactField
-                  error={findIssue(validationIssues, "hospital-settings-homepage")}
-                  id="hospital-settings-homepage"
-                  label="홈페이지"
-                  placeholder="https://"
-                  value={draft.contact.homepage}
-                  onChange={(value) => updateContact("homepage", value)}
-                />
-                <ContactField
-                  id="hospital-settings-instagram"
-                  label="인스타그램"
-                  placeholder="@account"
-                  value={draft.contact.instagram}
-                  onChange={(value) => updateContact("instagram", value)}
-                />
-              </FieldGroup>
-            </CardContent>
-          </Card>
-
-          <HospitalOperatingHoursEditor
-            validationIssues={validationIssues}
-            value={draft}
-            onChange={updateDraft}
-          />
-        </main>
-      </ScrollArea>
-
-      {isDirty ? (
-        <div
-          className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[808px] -translate-x-1/2 flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-lg sm:flex-row sm:items-center sm:justify-between"
-          data-testid="hospital-settings-change-bar"
-          role="status"
-          aria-live="polite"
-        >
-          <div>
-            <p className="text-sm font-medium">저장하지 않은 변경사항이 있습니다.</p>
-            <p className="emr-text-dense text-muted-foreground">변경사항을 저장하거나 저장된 값으로 되돌릴 수 있습니다.</p>
-          </div>
-          <div className="flex shrink-0 justify-end gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => setRevertDialogOpen(true)}>
-              변경 전으로 되돌리기
-            </Button>
-            <Button type="button" size="sm" disabled={isSaving || isLoadingHours} onClick={() => void handleSave()}>
-              {isSaving ? "저장 중..." : "변경사항 저장"}
-            </Button>
-          </div>
-        </div>
-      ) : null}
+              </CardContent>
+            </Card>
+          </section>
+        </>
+      )}
 
       <Dialog
         open={requestDialogOpen}
@@ -348,95 +471,164 @@ export function HospitalBasicSettingsScreen({ workspaceId }: { workspaceId: stri
           if (!open) setRequestError("");
         }}
       >
-        <DialogContent showCloseButton={false}>
+        <DialogContent showCloseButton={false} className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>병원 정보 변경 요청</DialogTitle>
-            <DialogDescription>변경이 필요한 이유를 작성해 주세요.</DialogDescription>
+            <DialogTitle>병원 등록 정보 변경 요청</DialogTitle>
+            <DialogDescription>
+              변경이 필요한 항목과 운영팀이 확인할 내용을 입력해 주세요.
+            </DialogDescription>
           </DialogHeader>
-          <Field data-invalid={Boolean(requestError)}>
-            <FieldLabel htmlFor="hospital-settings-request-reason">변경 사유</FieldLabel>
-            <Textarea
-              id="hospital-settings-request-reason"
-              aria-invalid={Boolean(requestError)}
-              value={requestReason}
-              onChange={(event) => setRequestReason(event.target.value)}
-            />
-            <FieldError>{requestError}</FieldError>
-          </Field>
+          <FieldGroup>
+            <FieldSet>
+              <FieldLegend variant="label">변경 항목</FieldLegend>
+              <div className="flex flex-col gap-2">
+                {changeRequestFields.map((field) => (
+                  <label key={field.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={requestFields.includes(field.id)}
+                      onCheckedChange={(checked) => {
+                        setRequestFields((current) =>
+                          checked
+                            ? [...new Set([...current, field.id])]
+                            : current.filter((item) => item !== field.id)
+                        );
+                        setRequestError("");
+                      }}
+                    />
+                    {field.label}
+                  </label>
+                ))}
+              </div>
+            </FieldSet>
+            <Field data-invalid={Boolean(requestError)}>
+              <FieldLabel htmlFor="hospital-settings-request-detail">변경 내용 및 사유</FieldLabel>
+              <Textarea
+                id="hospital-settings-request-detail"
+                aria-invalid={Boolean(requestError)}
+                rows={5}
+                maxLength={2000}
+                value={requestDetail}
+                onChange={(event) => {
+                  setRequestDetail(event.target.value);
+                  setRequestError("");
+                }}
+              />
+              <FieldDescription>{requestDetail.length}/2,000자</FieldDescription>
+              <FieldError>{requestError}</FieldError>
+            </Field>
+          </FieldGroup>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
               취소
             </Button>
-            <Button type="button" onClick={submitIdentityRequest}>
-              내용 확인
+            <Button
+              type="button"
+              disabled={isRequesting}
+              onClick={() => void submitChangeRequest()}
+            >
+              {isRequesting ? "요청 중..." : "변경 요청 제출"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </HospitalSettingsPage>
+  );
+}
 
-      <Dialog open={revertDialogOpen} onOpenChange={setRevertDialogOpen}>
-        <EmrConfirmDialogContent
-          title="저장하지 않은 변경사항을 되돌릴까요?"
-          description="현재 편집한 내용은 사라지고 마지막으로 저장한 값으로 돌아갑니다."
-          cancelLabel="계속 편집"
-          confirmLabel="모두 되돌리기"
-          onCancel={() => setRevertDialogOpen(false)}
-          onConfirm={() => {
-            revert(workspaceId);
-            setValidationIssues([]);
-            setRevertDialogOpen(false);
-          }}
-        />
-      </Dialog>
+function SettingRow({
+  action,
+  description,
+  label,
+  testId,
+}: {
+  action: React.ReactNode;
+  description?: string;
+  label: string;
+  testId: string;
+}) {
+  return (
+    <div
+      className="px-4 pt-4 last:[&>[data-slot=separator]]:hidden md:h-[85px] md:px-6 md:pt-5"
+      data-testid={testId}
+    >
+      <div className="flex min-h-11 flex-col gap-3 md:h-11 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="text-sm leading-5 font-medium tracking-[0.014em] text-foreground">
+            {label}
+          </p>
+          {description ? (
+            <p className="text-sm leading-5 font-medium tracking-[0.014em] text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex min-w-0 shrink-0 justify-start md:justify-end">
+          {action}
+        </div>
+      </div>
+      <Separator className="mt-4 md:mt-5" />
     </div>
   );
 }
 
-function ReadOnlyField({ id, label, value }: { id: string; label: string; value: string }) {
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input id={id} aria-label={label} className="bg-muted/40" readOnly value={value} />
-    </Field>
-  );
-}
-
-function ContactField({
-  error,
+function SectionTitle({
+  children,
   id,
-  label,
-  onChange,
-  placeholder,
-  required,
-  value,
 }: {
-  error?: HospitalSettingsValidationIssue;
+  children: React.ReactNode;
   id: string;
-  label: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  value: string;
 }) {
   return (
-    <Field data-invalid={Boolean(error)}>
-      <FieldLabel htmlFor={id}>
-        {label}
-        {required ? <EmrRequiredIndicator className="ml-1" /> : null}
-      </FieldLabel>
-      <Input
-        id={id}
-        aria-invalid={Boolean(error)}
-        placeholder={placeholder}
-        required={required}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      <FieldError>{error?.message}</FieldError>
-    </Field>
+    <h2
+      id={id}
+      className="flex h-[52px] shrink-0 items-center px-4 text-base leading-6 font-semibold text-foreground"
+    >
+      {children}
+    </h2>
   );
 }
 
-function findIssue(issues: HospitalSettingsValidationIssue[], fieldId: string) {
-  return issues.find((issue) => issue.fieldId === fieldId);
+function SettingValue({
+  emptyLabel = "등록된 정보가 없습니다.",
+  label,
+  value,
+}: {
+  emptyLabel?: string;
+  label: string;
+  value: string | null | undefined;
+}) {
+  const displayValue = value?.trim() || emptyLabel;
+
+  return (
+    <span
+      aria-label={label}
+      className={
+        value?.trim()
+          ? "min-w-0 max-w-[520px] break-words text-left text-sm leading-5 font-medium tracking-[0.014em] text-foreground md:text-right"
+          : "min-w-0 max-w-[520px] break-words text-left text-sm leading-5 font-medium tracking-[0.014em] text-muted-foreground md:text-right"
+      }
+    >
+      {displayValue}
+    </span>
+  );
+}
+
+function formatCountry(countryCode: string) {
+  return countryCode === "KR" ? "대한민국" : countryCode;
+}
+
+function formatTimezone(timezone: string) {
+  try {
+    const offset =
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        timeZoneName: "longOffset",
+      })
+        .formatToParts(new Date())
+        .find((part) => part.type === "timeZoneName")
+        ?.value.replace("GMT", "UTC") ?? "";
+    return offset ? `${timezone} (${offset})` : timezone;
+  } catch {
+    return timezone;
+  }
 }

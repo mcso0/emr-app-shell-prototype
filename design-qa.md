@@ -48,3 +48,41 @@
 - P3: replace terse synthetic seed copy such as numeric visit purposes when the staging dataset is next curated; the UI correctly reflects the current stored values.
 
 final result: passed
+
+---
+
+## 2026-08-02 고급 필터 구현
+
+**Comparison Target**
+
+- Source visual truth: Figma `27896:62420` 필터 버튼 component set, `27898:58705` 고급 필터 state board, 그리고 이번 작업에서 승인된 UX 결정.
+- Rendered implementation: `http://localhost:3112/w/clair-demo/customer?modulePanel=open` 및 `http://localhost:3112/w/clair-demo/orders?modulePanel=open`.
+- Viewports: 1280px desktop와 390×844 narrow viewport.
+- States compared: 선택 없음/있음 trigger, 1개 rule, 같은 group의 복수 rule, 복수 group, AND/OR, info tooltip, 좁은 화면 stack.
+
+**Findings**
+
+- P0/P1/P2 불일치 없음.
+- Desktop에서는 첫 번째 group도 왼쪽 combinator 자리만큼 들여써 두 번째 group의 회색 surface와 `x=285`, `width=571`로 정확히 정렬된다.
+- 필드 Select menu는 popover 내부에 잘리지 않고 overlay로 표시된다.
+- 390px에서는 field/operator/value가 전체 폭 세로 stack으로 전환되며 문서 가로 overflow가 없다.
+- Figma 전용 reset 색은 추가하지 않고 기존 CLAiR/EMR danger token을 사용했다. 이는 사용자 승인에 따른 의도적 차이다.
+
+**Primary Interactions Tested**
+
+- 완료 rule만 count에 포함: `0 → 1 → 2`.
+- 불완전 편집 중에는 last-valid 적용 결과와 count 유지.
+- 그룹 간 AND 결과 2행에서 OR 변경 후 5행으로 증가해 실제 평가 동작 확인.
+- 내부 rule 및 외부 group AND/OR 선택, rule/group 추가, 초기화 확인.
+- info 버튼 keyboard focus에서 tooltip과 `aria-describedby` 확인.
+- 고객관리와 병원관리 Order 양쪽에서 같은 공유 popover가 열림.
+- 새 인앱 브라우저 탭에서 console error 0건.
+
+**Verification**
+
+- Targeted ESLint: passed.
+- TypeScript `--noEmit`: passed.
+- Storybook production build: passed.
+- Unified standalone implementation report contract/build tests: passed (74 records, 9 checks).
+
+final result: passed

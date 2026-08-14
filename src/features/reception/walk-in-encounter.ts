@@ -3,14 +3,16 @@ import type { Encounter, WaitingQueueEntry } from "@/types/emr-domain";
 export type ReceptionVitalMeasurementInput = {
   weightKg?: number;
   temperatureC?: number;
+  heartRateBpm?: number;
   respiratoryRateRpm?: number;
   bloodPressure?: {
     systolicMmhg: number;
-    diastolicMmhg: number;
+    diastolicMmhg?: number;
   };
 };
 
 export type ReceptionWalkInEncounterInput = {
+  assignedStaffUserIds?: string[];
   department?: string;
   durationMinutes?: number;
   guardianId?: string;
@@ -49,6 +51,7 @@ export type ReceptionWalkInEncounterResponse =
             | "guardian_unavailable"
             | "patient_guardian_link_missing"
             | "primary_veterinarian_unavailable"
+            | "assigned_staff_unavailable"
             | "walk_in_outside_business_hours";
       fieldErrors?: Record<string, string>;
     };

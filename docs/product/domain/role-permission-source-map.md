@@ -68,7 +68,7 @@ Known legacy or compatibility names:
 * Membership, permission-role, job-position, and invitation lifecycle follows [Membership, Permission Role, and Job Position Lifecycle](membership-role-job-lifecycle.md).
 * Personal profile is never the authorization source.
 * Permission role and job position / 직무 are separate concepts.
-* Job position / 직무 is display/filter metadata and is never the authorization source.
+* Job position / 직무 is display/filter metadata and is not a general authorization source. `vital:write` is the approved guarded exception: the server requires that permission plus either active `hospital_admin` membership or a veterinarian/technician job position, with legacy clinical role-string fallback during migration.
 * MVP permission roles are allow-only. Do not add deny rules without a product decision.
 * Every active workspace must retain at least one active `소유자`.
 * Custom roles cannot grant owner-only authority, wildcard authority, or cross-workspace authority.

@@ -1,4 +1,5 @@
 import type { EffectiveOperatingHours } from "@/features/hospital-admin/settings/hospital-basic-settings-model";
+import { getOperatingTimeClassification } from "@/features/reception/effective-operating-hours";
 
 const MINUTES_PER_DAY = 24 * 60;
 export const BUSINESS_QUARTER_HEIGHT = 36;
@@ -17,8 +18,6 @@ export type CalendarTimeScale = {
 export function createCalendarTimeScale(schedule: EffectiveOperatingHours): CalendarTimeScale {
   const businessStart = schedule.isOpen ? toMinutes(schedule.treatmentStart) : null;
   const businessEnd = schedule.isOpen ? toMinutes(schedule.treatmentEnd) : null;
-  const breakStart = toMinutes(schedule.breakStart);
-  const breakEnd = toMinutes(schedule.breakEnd);
 
   const minutesToY = (minutes: number) => {
     const value = clamp(minutes, 0, MINUTES_PER_DAY);
@@ -49,10 +48,8 @@ export function createCalendarTimeScale(schedule: EffectiveOperatingHours): Cale
       return (low + high) / 2;
     },
     isSelectable(start, duration) {
-      const end = start + duration;
       if (businessStart === null || businessEnd === null) return false;
-      if (start < businessStart || end > businessEnd) return false;
-      return !(breakStart !== null && breakEnd !== null && start < breakEnd && end > breakStart);
+      return getOperatingTimeClassification(schedule, start, duration) !== "blocked";
     },
   };
 }

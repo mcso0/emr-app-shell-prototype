@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CheckIcon,
@@ -20,14 +26,16 @@ import {
   EmrContentAsidePanel,
 } from "@/components/emr/content-aside-panel";
 import { EmrEmptyState } from "@/components/emr/empty-state";
-import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
+import {
+  EmrContentHistoryGroup,
+  EmrContentHistoryItem,
+} from "@/components/emr/content-history-list";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
-import {
-  EmrListHeaderIconButton,
-} from "@/components/emr/subpanel";
+import { EmrListHeaderIconButton } from "@/components/emr/subpanel";
 import {
   EmrInstructionHeaderStack,
   EmrInstructionHistoryToggle,
@@ -58,7 +66,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { EmrDataTable } from "@/components/emr/emr-data-table";
+import { OrderWorkTable } from "@/features/dispensing/components/order-work-table";
 import {
   isLegacySalesDemoWorkspace,
   resolveWorkspacePathname,
@@ -71,6 +79,7 @@ import {
   getSelectedOrderQueueItem,
 } from "@/features/order-queue/data";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
+import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import {
@@ -129,12 +138,7 @@ type FulfillmentWorkItemReadSummary = {
   workspaceId: string;
 };
 type DispensingFulfillmentQueueStatus =
-  | "idle"
-  | "loading"
-  | "ready"
-  | "empty"
-  | "error"
-  | "permission_denied";
+  "idle" | "loading" | "ready" | "empty" | "error" | "permission_denied";
 type DispensingFulfillmentQueueSnapshot = {
   sourceTotalCount?: number;
   status: DispensingFulfillmentQueueStatus;
@@ -177,7 +181,11 @@ function splitHistoryItem(item: string) {
 function getQueueStatusLabel(moduleId: string, item: OrderQueueItem | null) {
   if (!item) return "대기중";
 
-  return getOrderQueueStatuses(moduleId).find((status) => status.id === item.statusId)?.label ?? item.statusId;
+  return (
+    getOrderQueueStatuses(moduleId).find(
+      (status) => status.id === item.statusId,
+    )?.label ?? item.statusId
+  );
 }
 
 function getQueuePatientSummary(item: OrderQueueItem | null) {
@@ -196,7 +204,10 @@ function isLiveAuthRuntime() {
   return getAuthRuntimeMode().authProvider === "supabase";
 }
 
-const fulfillmentQueueCache = new Map<string, DispensingFulfillmentQueueSnapshot>();
+const fulfillmentQueueCache = new Map<
+  string,
+  DispensingFulfillmentQueueSnapshot
+>();
 const fulfillmentQueueListeners = new Map<
   string,
   Set<(snapshot: DispensingFulfillmentQueueSnapshot) => void>
@@ -207,7 +218,10 @@ const emptyFulfillmentQueueSnapshot: DispensingFulfillmentQueueSnapshot = {
   workItems: [],
 };
 
-function getFulfillmentQueueCacheKey(workspaceId: string, selectedDate: string) {
+function getFulfillmentQueueCacheKey(
+  workspaceId: string,
+  selectedDate: string,
+) {
   return `${workspaceId}:${selectedDate}:dispensing-treatment`;
 }
 
@@ -216,7 +230,9 @@ function setCachedDispensingFulfillmentQueue(
   snapshot: DispensingFulfillmentQueueSnapshot,
 ) {
   fulfillmentQueueCache.set(cacheKey, snapshot);
-  fulfillmentQueueListeners.get(cacheKey)?.forEach((listener) => listener(snapshot));
+  fulfillmentQueueListeners
+    .get(cacheKey)
+    ?.forEach((listener) => listener(snapshot));
 }
 
 function getFulfillmentReadFailureStatus(result: {
@@ -236,7 +252,8 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
   const cacheKey = getFulfillmentQueueCacheKey(workspaceId, effectiveDate);
   const [queueState, setQueueState] =
     useState<DispensingFulfillmentQueueSnapshot>(
-      () => fulfillmentQueueCache.get(cacheKey) ?? emptyFulfillmentQueueSnapshot,
+      () =>
+        fulfillmentQueueCache.get(cacheKey) ?? emptyFulfillmentQueueSnapshot,
     );
   const snapshot = fulfillmentQueueCache.get(cacheKey) ?? queueState;
 
@@ -248,21 +265,27 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
         workItems: fulfillmentQueueCache.get(cacheKey)?.workItems ?? [],
       });
       const [dispensingResponse, treatmentResponse] = await Promise.all([
-        fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`, {
-          headers: { "x-clair-demo-session-user-id": "user-tech" },
-        }),
-        fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=treatment${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`, {
-          headers: { "x-clair-demo-session-user-id": "user-tech" },
-        }),
+        fetch(
+          `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
+          {
+            headers: { "x-clair-demo-session-user-id": "user-tech" },
+          },
+        ),
+        fetch(
+          `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=treatment${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
+          {
+            headers: { "x-clair-demo-session-user-id": "user-tech" },
+          },
+        ),
       ]);
-      const dispensingBody = await dispensingResponse.json() as {
+      const dispensingBody = (await dispensingResponse.json()) as {
         denialReason?: string;
         ok?: boolean;
         status?: number;
         summary?: FulfillmentWorkItemReadSummary;
         workItems?: FulfillmentWorkItem[];
       };
-      const treatmentBody = await treatmentResponse.json() as {
+      const treatmentBody = (await treatmentResponse.json()) as {
         denialReason?: string;
         ok?: boolean;
         status?: number;
@@ -296,14 +319,22 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
         return;
       }
       const nextItems = [
-        ...(Array.isArray(dispensingBody.workItems) ? dispensingBody.workItems : []),
-        ...(Array.isArray(treatmentBody.workItems) ? treatmentBody.workItems : []),
+        ...(Array.isArray(dispensingBody.workItems)
+          ? dispensingBody.workItems
+          : []),
+        ...(Array.isArray(treatmentBody.workItems)
+          ? treatmentBody.workItems
+          : []),
       ];
       const sourceTotalCount =
         (dispensingBody.summary?.totalCount ??
-          (Array.isArray(dispensingBody.workItems) ? dispensingBody.workItems.length : 0)) +
+          (Array.isArray(dispensingBody.workItems)
+            ? dispensingBody.workItems.length
+            : 0)) +
         (treatmentBody.summary?.totalCount ??
-          (Array.isArray(treatmentBody.workItems) ? treatmentBody.workItems.length : 0));
+          (Array.isArray(treatmentBody.workItems)
+            ? treatmentBody.workItems.length
+            : 0));
       setCachedDispensingFulfillmentQueue(cacheKey, {
         sourceTotalCount,
         status: nextItems.length ? "ready" : "empty",
@@ -339,26 +370,32 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
     };
   }, [cacheKey]);
 
-  const updateStatus = useCallback(async (workItemId: string, statuses: FulfillmentWorkItemStatus[]) => {
-    let allTransitionsSucceeded = true;
+  const updateStatus = useCallback(
+    async (workItemId: string, statuses: FulfillmentWorkItemStatus[]) => {
+      let allTransitionsSucceeded = true;
 
-    for (const status of statuses) {
-      const response = await fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`, {
-        method: "PATCH",
-        headers: {
-          "content-type": "application/json",
-          "x-clair-demo-session-user-id": "user-tech",
-        },
-        body: JSON.stringify({ status, assignedToUserId: "user-tech" }),
-      });
-      if (!response.ok) {
-        allTransitionsSucceeded = false;
-        break;
+      for (const status of statuses) {
+        const response = await fetch(
+          `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
+          {
+            method: "PATCH",
+            headers: {
+              "content-type": "application/json",
+              "x-clair-demo-session-user-id": "user-tech",
+            },
+            body: JSON.stringify({ status, assignedToUserId: "user-tech" }),
+          },
+        );
+        if (!response.ok) {
+          allTransitionsSucceeded = false;
+          break;
+        }
       }
-    }
-    await refresh();
-    return allTransitionsSucceeded;
-  }, [refresh, workspaceId]);
+      await refresh();
+      return allTransitionsSucceeded;
+    },
+    [refresh, workspaceId],
+  );
 
   return {
     refresh,
@@ -371,27 +408,36 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
 
 function findFulfillmentForQueueItem(
   item: OrderQueueItem | null,
-  workItems: FulfillmentWorkItem[]
+  workItems: FulfillmentWorkItem[],
 ) {
   if (!workItems.length) return undefined;
-  const queueType = item?.orderTypeCategory === "treatment" ? "treatment" : "dispensing";
-  const queueItems = workItems.filter((workItem) => workItem.queueType === queueType);
+  const queueType =
+    item?.orderTypeCategory === "treatment" ? "treatment" : "dispensing";
+  const queueItems = workItems.filter(
+    (workItem) => workItem.queueType === queueType,
+  );
   if (!queueItems.length) return undefined;
   if (!item) return queueItems[0];
 
-  return queueItems.find((workItem) => {
-    if (item.id === `live-fulfillment-${workItem.id}`) return true;
-    const displayName = workItem.sourceSnapshot?.orderDisplayName;
-    return displayName && item.orderName.includes(displayName);
-  }) ?? queueItems.find((workItem) => {
-    const snapshot = workItem.sourceSnapshot;
-    return snapshot?.patientName === item.patientName && snapshot?.guardianName === item.guardianName;
-  });
+  return (
+    queueItems.find((workItem) => {
+      if (item.id === `live-fulfillment-${workItem.id}`) return true;
+      const displayName = workItem.sourceSnapshot?.orderDisplayName;
+      return displayName && item.orderName.includes(displayName);
+    }) ??
+    queueItems.find((workItem) => {
+      const snapshot = workItem.sourceSnapshot;
+      return (
+        snapshot?.patientName === item.patientName &&
+        snapshot?.guardianName === item.guardianName
+      );
+    })
+  );
 }
 
 function getQueueItemEncounterId(
   item: OrderQueueItem | null,
-  workItems: FulfillmentWorkItem[]
+  workItems: FulfillmentWorkItem[],
 ) {
   if (!item) return undefined;
 
@@ -405,12 +451,14 @@ function findQueueItemByEncounterId(
 ) {
   if (!encounterId) return undefined;
 
-  return items.find((item) => getQueueItemEncounterId(item, workItems) === encounterId);
+  return items.find(
+    (item) => getQueueItemEncounterId(item, workItems) === encounterId,
+  );
 }
 
 function applyFulfillmentToQueueItems(
   items: OrderQueueItem[],
-  workItems: FulfillmentWorkItem[]
+  workItems: FulfillmentWorkItem[],
 ) {
   const usedWorkItemIds = new Set<string>();
 
@@ -428,14 +476,21 @@ function applyFulfillmentToQueueItems(
     return {
       ...item,
       assigneeName: getFulfillmentAssigneeName(workItem) ?? item.assigneeName,
-      startedAt: workItem.status === "in_progress" ? item.startedAt ?? item.time : item.startedAt,
+      startedAt:
+        workItem.status === "in_progress"
+          ? (item.startedAt ?? item.time)
+          : item.startedAt,
       statusId: mapFulfillmentToQueueStatusId(workItem.status, item.statusId),
     };
   });
 
   const liveOnlyItems = workItems
     .filter((workItem) => !usedWorkItemIds.has(workItem.id))
-    .filter((workItem) => workItem.queueType === "dispensing" || workItem.queueType === "treatment")
+    .filter(
+      (workItem) =>
+        workItem.queueType === "dispensing" ||
+        workItem.queueType === "treatment",
+    )
     .map(createLiveQueueItem);
 
   return [...mappedItems, ...liveOnlyItems];
@@ -443,7 +498,8 @@ function applyFulfillmentToQueueItems(
 
 function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const isTreatment = workItem.queueType === "treatment";
-  const timestamp = workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
+  const timestamp =
+    workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
   const time = timestamp.slice(11, 16) || "00:00";
 
   return {
@@ -460,7 +516,10 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
     orderName: workItem.sourceSnapshot?.orderDisplayName ?? "Live order",
     requesterName: getFulfillmentRequesterName(workItem),
     assigneeName: getFulfillmentAssigneeName(workItem),
-    startedAt: workItem.status === "in_progress" || workItem.status === "completed" ? time : undefined,
+    startedAt:
+      workItem.status === "in_progress" || workItem.status === "completed"
+        ? time
+        : undefined,
     statusId: mapFulfillmentToQueueStatusId(workItem.status, "waiting"),
     time,
     waitMinutes: workItem.status === "requested" ? 0 : undefined,
@@ -474,11 +533,18 @@ function getQueueItemsForRuntime(
   const allowFixtureItems = options.allowFixtureItems ?? true;
   if (isLiveAuthRuntime() || !allowFixtureItems) {
     return workItems
-      .filter((workItem) => workItem.queueType === "dispensing" || workItem.queueType === "treatment")
+      .filter(
+        (workItem) =>
+          workItem.queueType === "dispensing" ||
+          workItem.queueType === "treatment",
+      )
       .map(createLiveQueueItem);
   }
 
-  return applyFulfillmentToQueueItems(getOrderQueueItems("dispensing"), workItems);
+  return applyFulfillmentToQueueItems(
+    getOrderQueueItems("dispensing"),
+    workItems,
+  );
 }
 
 function getQueueItemsForWorkspace(
@@ -492,19 +558,27 @@ function getQueueItemsForWorkspace(
 
 function getFulfillmentAssigneeName(workItem: FulfillmentWorkItem) {
   if (!workItem.assignedToUserId) return undefined;
-  if (workItem.assignedToUserId === "user-tech" || workItem.assignedToUserId === "user-tech-hayun") return "송하윤";
+  if (
+    workItem.assignedToUserId === "user-tech" ||
+    workItem.assignedToUserId === "user-tech-hayun"
+  )
+    return "송하윤";
   return undefined;
 }
 
 function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
   return (
     workItem.sourceSnapshot?.requestingVetName ??
-    mockStaffUsers.find((user) => user.id === workItem.requestedByUserId)?.name ??
+    mockStaffUsers.find((user) => user.id === workItem.requestedByUserId)
+      ?.name ??
     "요청자 미지정"
   );
 }
 
-function mapFulfillmentToQueueStatusId(status: FulfillmentWorkItemStatus, fallback: string) {
+function mapFulfillmentToQueueStatusId(
+  status: FulfillmentWorkItemStatus,
+  fallback: string,
+) {
   if (status === "completed") return "completed";
   if (status === "cancelled") return "canceled";
   if (status === "returned") return "reRequested";
@@ -513,7 +587,9 @@ function mapFulfillmentToQueueStatusId(status: FulfillmentWorkItemStatus, fallba
   return fallback;
 }
 
-function mapFulfillmentToOrderGroupWorkStatus(status: FulfillmentWorkItemStatus) {
+function mapFulfillmentToOrderGroupWorkStatus(
+  status: FulfillmentWorkItemStatus,
+) {
   if (status === "completed") return "완료";
   if (status === "accepted" || status === "in_progress") return "진행중";
   return "요청";
@@ -537,16 +613,19 @@ function getFulfillmentTransitionPath(
   }
 
   if (target === "completed") {
-    if (current === "requested") return ["accepted", "in_progress", "completed"];
+    if (current === "requested")
+      return ["accepted", "in_progress", "completed"];
     if (current === "accepted") return ["in_progress", "completed"];
     if (current === "in_progress") return ["completed"];
-    if (current === "returned") return ["requested", "accepted", "in_progress", "completed"];
+    if (current === "returned")
+      return ["requested", "accepted", "in_progress", "completed"];
     if (current === "completed") return [];
     return null;
   }
 
   if (current === "requested") return [];
-  if (current === "accepted" || current === "in_progress") return ["returned", "requested"];
+  if (current === "accepted" || current === "in_progress")
+    return ["returned", "requested"];
   if (current === "returned") return ["requested"];
   return null;
 }
@@ -558,7 +637,8 @@ function createLiveOrderTableGroups(
   if (!selectedQueueItem || !workItem) return [];
 
   const instructionType = getDispensingInstructionType(selectedQueueItem);
-  const groupId = workItem.queueType === "treatment" ? "live-treatment" : "live-dispensing";
+  const groupId =
+    workItem.queueType === "treatment" ? "live-treatment" : "live-dispensing";
   const groupWorkStatus = mapFulfillmentToOrderGroupWorkStatus(workItem.status);
   const rowWorkStatus = mapFulfillmentToOrderRowWorkStatus(workItem.status);
 
@@ -575,7 +655,8 @@ function createLiveOrderTableGroups(
           category: instructionType,
           name: selectedQueueItem.orderName,
           route: workItem.queueType === "dispensing" ? "PO" : "-",
-          dose: workItem.sourceSnapshot?.instruction ?? selectedQueueItem.orderName,
+          dose:
+            workItem.sourceSnapshot?.instruction ?? selectedQueueItem.orderName,
           frequency: "-",
           status: workItem.status === "cancelled" ? "취소" : "요청",
           requestedAt: `2026.04.14 ${selectedQueueItem.time}`,
@@ -588,7 +669,8 @@ function createLiveOrderTableGroups(
           quantity: "1",
           dosageForm: "-",
           storage: "지시 확인",
-          medicationGuide: workItem.sourceSnapshot?.instruction ?? "오더 지시 확인",
+          medicationGuide:
+            workItem.sourceSnapshot?.instruction ?? "오더 지시 확인",
           assignee: selectedQueueItem.assigneeName ?? "미지정",
           assigneeId: workItem.assignedToUserId ?? undefined,
           assigneeInitial: selectedQueueItem.assigneeName?.slice(0, 1) ?? "-",
@@ -629,7 +711,8 @@ export function DispensingSidePanel({
 }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const queryEncounterId = searchParams.get("encounterId");
-  const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
+  const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } =
+    useLayoutStore();
   const { selectDate, selectedDate, todayDate } =
     useSelectedOperatingDate(workspaceId);
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
@@ -640,11 +723,15 @@ export function DispensingSidePanel({
   });
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
-    [fulfillmentQueue.workItems, workspaceId]
+    [fulfillmentQueue.workItems, workspaceId],
   );
   const statuses = getOrderQueueStatuses("dispensing");
   useEffect(() => {
-    const queryQueueItem = findQueueItemByEncounterId(items, fulfillmentQueue.workItems, queryEncounterId);
+    const queryQueueItem = findQueueItemByEncounterId(
+      items,
+      fulfillmentQueue.workItems,
+      queryEncounterId,
+    );
 
     if (queryQueueItem) {
       setSelectedQueueItem("dispensing", queryQueueItem.id);
@@ -656,7 +743,8 @@ export function DispensingSidePanel({
       return;
     }
     if (!selectedQueueItemIds.dispensing) return;
-    if (items.some((item) => item.id === selectedQueueItemIds.dispensing)) return;
+    if (items.some((item) => item.id === selectedQueueItemIds.dispensing))
+      return;
     setSelectedQueueItem("dispensing", "");
   }, [
     fulfillmentQueue.workItems,
@@ -668,7 +756,10 @@ export function DispensingSidePanel({
 
   function handleSelectQueueItem(itemId: string) {
     const item = items.find((candidate) => candidate.id === itemId) ?? null;
-    const encounterId = getQueueItemEncounterId(item, fulfillmentQueue.workItems);
+    const encounterId = getQueueItemEncounterId(
+      item,
+      fulfillmentQueue.workItems,
+    );
 
     if (encounterId && onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(
@@ -712,11 +803,11 @@ export function DispensingSidePanel({
   );
 }
 
-export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps) {
-  const {
-    selectedQueueItemIds,
-  } =
-    useLayoutStore();
+export function DispensingHeader({
+  moduleId,
+  workspaceId,
+}: ShellComponentProps) {
+  const { selectedQueueItemIds } = useLayoutStore();
   const { selectedDate } = useSelectedOperatingDate(workspaceId);
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
@@ -726,51 +817,100 @@ export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps)
   );
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
-    (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
+    (allowLegacyFixtureFallback
+      ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
+      : null);
+  const selectedEncounterId = getQueueItemEncounterId(
+    selectedQueueItem,
+    fulfillmentQueue.workItems,
+  );
+  const latestVitals = usePatientLatestVitalItems({
+    encounterId: selectedEncounterId,
+    fallbackItems: allowLegacyFixtureFallback
+      ? [
+          {
+            label: "체중",
+            value: selectedQueueItem?.patientWeight ?? patient.weight,
+          },
+          {
+            label: "체온",
+            value: selectedQueueItem?.patientTemperature ?? patient.temperature,
+          },
+          {
+            label: "호흡",
+            value: selectedQueueItem?.patientRespiration ?? patient.respiration,
+          },
+          {
+            label: "혈압",
+            value:
+              selectedQueueItem?.patientBloodPressure ?? patient.bloodPressure,
+          },
+        ]
+      : undefined,
+    workspaceId,
+  });
 
-  if (!selectedQueueItem) return null;
+  if (!selectedQueueItem) {
+    return <EmrMainContentHeader aria-hidden="true" heightMode="fixed" />;
+  }
 
   return (
-    <EmrPatientContextBar
-      patientItems={[
-        { label: "환자", value: selectedQueueItem?.patientName ?? patient.name },
-        { label: "보호자", value: selectedQueueItem?.guardianName ?? patient.guardian },
-        { label: "품종", value: selectedQueueItem?.patientBreed ?? patient.breed },
-        { label: "나이", value: selectedQueueItem?.patientAge ?? patient.age },
-        { label: "성별", value: selectedQueueItem?.patientSex ?? patient.sex },
-      ]}
-      vitalItems={[
-        { label: "체중", value: selectedQueueItem?.patientWeight ?? patient.weight },
-        { label: "체온", value: selectedQueueItem?.patientTemperature ?? patient.temperature },
-        { label: "호흡", value: selectedQueueItem?.patientRespiration ?? patient.respiration },
-        { label: "혈압", value: selectedQueueItem?.patientBloodPressure ?? patient.bloodPressure },
-      ]}
-      memoActions={[
-        {
-          label: "방문목적",
-          summary: selectedQueueItem?.receptionType ?? "방문 목적 기록 없음",
-        },
-        {
-          label: "보호자 메모",
-          locked: true,
-          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
-        },
-        {
-          label: "환자 메모",
-          disabled: true,
-          unavailableReason: "환자 상세 메모는 현재 조제/처치 큐 스냅샷에서 제공하지 않습니다.",
-        },
-        {
-          label: "수납 메모",
-          disabled: true,
-          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
-        },
-      ]}
-    />
+    <EmrMainContentHeader heightMode="fixed">
+      <EmrPatientContextBar
+        patientItems={[
+          {
+            label: "환자",
+            value: selectedQueueItem?.patientName ?? patient.name,
+          },
+          {
+            label: "보호자",
+            value: selectedQueueItem?.guardianName ?? patient.guardian,
+          },
+          {
+            label: "품종",
+            value: selectedQueueItem?.patientBreed ?? patient.breed,
+          },
+          {
+            label: "나이",
+            value: selectedQueueItem?.patientAge ?? patient.age,
+          },
+          {
+            label: "성별",
+            value: selectedQueueItem?.patientSex ?? patient.sex,
+          },
+        ]}
+        vitalItems={latestVitals.items}
+        memoActions={[
+          {
+            label: "방문목적",
+            summary: selectedQueueItem?.receptionType ?? "방문 목적 기록 없음",
+          },
+          {
+            label: "보호자 메모",
+            locked: true,
+            unavailableReason:
+              "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+          },
+          {
+            label: "환자 메모",
+            disabled: true,
+            unavailableReason:
+              "환자 상세 메모는 현재 조제/처치 큐 스냅샷에서 제공하지 않습니다.",
+          },
+          {
+            label: "수납 메모",
+            disabled: true,
+            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+          },
+        ]}
+      />
+    </EmrMainContentHeader>
   );
 }
 
-function getDispensingInstructionType(selectedQueueItem: OrderQueueItem | null) {
+function getDispensingInstructionType(
+  selectedQueueItem: OrderQueueItem | null,
+) {
   return selectedQueueItem?.orderTypeCategory === "treatment" ? "처치" : "조제";
 }
 
@@ -782,10 +922,19 @@ function renderInstructionInfoCardValue(value: ReactNode) {
   return value;
 }
 
-export function DispensingContentAside({ moduleId, workspaceId }: ShellComponentProps) {
-  const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
-  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
-  const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
+export function DispensingContentAside({
+  moduleId,
+  workspaceId,
+}: ShellComponentProps) {
+  const selectedQueueItemIds = useLayoutStore(
+    (state) => state.selectedQueueItemIds,
+  );
+  const setContentAsideOpen = useLayoutStore(
+    (state) => state.setContentAsideOpen,
+  );
+  const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<
+    Set<string>
+  >(() => new Set());
   const { selectedDate } = useSelectedOperatingDate(workspaceId);
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
@@ -795,13 +944,18 @@ export function DispensingContentAside({ moduleId, workspaceId }: ShellComponent
   );
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
-    (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
+    (allowLegacyFixtureFallback
+      ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
+      : null);
 
   if (!selectedQueueItem) return null;
 
   const historyLabel = `${getDispensingInstructionType(selectedQueueItem)} 이력`;
   const visibleHistoryGroups = allowLegacyFixtureFallback ? historyGroups : [];
-  const totalHistoryCount = visibleHistoryGroups.reduce((total, group) => total + group.count, 0);
+  const totalHistoryCount = visibleHistoryGroups.reduce(
+    (total, group) => total + group.count,
+    0,
+  );
   const toggleHistoryGroup = (date: string) => {
     setCollapsedHistoryGroups((current) => {
       const next = new Set(current);
@@ -908,11 +1062,16 @@ function cloneOrderTableGroups(queueItemId?: string): OrderTableGroup[] {
 }
 
 function isEditableOrder(row: Order) {
-  return row.status !== "완료" && row.status !== "취소" && row.workStatus !== "완료";
+  return (
+    row.status !== "완료" && row.status !== "취소" && row.workStatus !== "완료"
+  );
 }
 
 function findTechnician(technicianId: string) {
-  return technicianUsers.find((technician) => technician.id === technicianId) ?? currentTechnician;
+  return (
+    technicianUsers.find((technician) => technician.id === technicianId) ??
+    currentTechnician
+  );
 }
 
 function assignOrder(row: Order, technician: TechnicianUser): Order {
@@ -939,14 +1098,20 @@ function getRequestedStatus(row: Order) {
 
 function getGroupAssigneeIds(rows: Order[]) {
   return Array.from(
-    new Set(rows.map((row) => row.assigneeId).filter((assigneeId): assigneeId is string => Boolean(assigneeId)))
+    new Set(
+      rows
+        .map((row) => row.assigneeId)
+        .filter((assigneeId): assigneeId is string => Boolean(assigneeId)),
+    ),
   );
 }
 
 function getAssigneeSummary(assigneeIds: string[]) {
   if (!assigneeIds.length) return "미지정";
 
-  return assigneeIds.map((assigneeId) => findTechnician(assigneeId).name).join(" · ");
+  return assigneeIds
+    .map((assigneeId) => findTechnician(assigneeId).name)
+    .join(" · ");
 }
 
 function completeOrders(rows: Order[], rowIds: string[]) {
@@ -961,7 +1126,7 @@ function completeOrders(rows: Order[], rowIds: string[]) {
           warningMessage: undefined,
           diffs: undefined,
         }
-      : row
+      : row,
   );
 }
 
@@ -969,7 +1134,9 @@ function startOrderGroup(group: OrderTableGroup) {
   const rows = group.rows.map((row) => {
     if (!isEditableOrder(row)) return row;
 
-    const assignedRow = row.assigneeId ? row : assignOrder(row, currentTechnician);
+    const assignedRow = row.assigneeId
+      ? row
+      : assignOrder(row, currentTechnician);
 
     return {
       ...assignedRow,
@@ -1015,7 +1182,7 @@ function completeOrderGroup(group: OrderTableGroup) {
           workStatus: "완료" as const,
           warningMessage: undefined,
           diffs: undefined,
-        }
+        },
   );
 
   return {
@@ -1043,10 +1210,16 @@ function completeInstructionGroup(group: OrderTableGroup) {
   };
 }
 
-function assignOrderInGroup(group: OrderTableGroup, rowId: string, technicianId: string) {
+function assignOrderInGroup(
+  group: OrderTableGroup,
+  rowId: string,
+  technicianId: string,
+) {
   const technician = findTechnician(technicianId);
   const rows = group.rows.map((row) =>
-    row.id === rowId && isEditableOrder(row) ? assignOrder(row, technician) : row
+    row.id === rowId && isEditableOrder(row)
+      ? assignOrder(row, technician)
+      : row,
   );
 
   return {
@@ -1198,7 +1371,8 @@ function DispensingFulfillmentQueueNotice({
         }
         testId="dispensing-fulfillment-state"
       >
-        기존 지시서 fallback은 유지하지만, 실제 업무 큐 상태는 다시 확인해야 합니다.
+        기존 지시서 fallback은 유지하지만, 실제 업무 큐 상태는 다시 확인해야
+        합니다.
       </EmrInlineAlert>
     );
   }
@@ -1233,7 +1407,8 @@ function DispensingFulfillmentQueueNotice({
       title="조제/처치 업무 큐를 불러오는 중입니다."
       testId="dispensing-fulfillment-state"
     >
-      order_fulfillment_work_items readback으로 현재 업무 상태를 확인하고 있습니다.
+      order_fulfillment_work_items readback으로 현재 업무 상태를 확인하고
+      있습니다.
     </EmrInlineAlert>
   );
 }
@@ -1243,18 +1418,31 @@ export function DispensingContent({
   moduleId,
   workspaceId,
 }: ShellComponentProps) {
-  const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
+  const selectedQueueItemIds = useLayoutStore(
+    (state) => state.selectedQueueItemIds,
+  );
   const { selectedDate } = useSelectedOperatingDate(workspaceId);
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const currentWorkspaceQueueItems = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
-    [fulfillmentQueue.workItems, workspaceId]
+    [fulfillmentQueue.workItems, workspaceId],
   );
   const selectedQueueItem = useMemo(() => {
-    return currentWorkspaceQueueItems.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
-      (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
-  }, [allowLegacyFixtureFallback, currentWorkspaceQueueItems, moduleId, selectedQueueItemIds]);
+    return (
+      currentWorkspaceQueueItems.find(
+        (item) => item.id === selectedQueueItemIds[moduleId],
+      ) ??
+      (allowLegacyFixtureFallback
+        ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
+        : null)
+    );
+  }, [
+    allowLegacyFixtureFallback,
+    currentWorkspaceQueueItems,
+    moduleId,
+    selectedQueueItemIds,
+  ]);
 
   return (
     <DispensingContentBody
@@ -1287,23 +1475,43 @@ function DispensingContentBody({
   } = useLayoutStore();
   const selectedQueueItemId = selectedQueueItem?.id;
   const selectedFulfillmentWorkItem = useMemo(
-    () => findFulfillmentForQueueItem(selectedQueueItem, fulfillmentQueue.workItems),
-    [fulfillmentQueue.workItems, selectedQueueItem]
+    () =>
+      findFulfillmentForQueueItem(
+        selectedQueueItem,
+        fulfillmentQueue.workItems,
+      ),
+    [fulfillmentQueue.workItems, selectedQueueItem],
   );
   const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
     allowLegacyFixtureFallback
       ? cloneOrderTableGroups(selectedQueueItemId)
-      : createLiveOrderTableGroups(selectedQueueItem, selectedFulfillmentWorkItem)
+      : createLiveOrderTableGroups(
+          selectedQueueItem,
+          selectedFulfillmentWorkItem,
+        ),
   );
-  const selectedQueueStatusLabel = getQueueStatusLabel(moduleId, selectedQueueItem);
-  const [orderGroupFilter, setOrderGroupFilter] = useState<OrderGroupFilter>("all");
-  const [collapsedOrderGroupIds, setCollapsedOrderGroupIds] = useState<Set<string>>(() => new Set());
+  const selectedQueueStatusLabel = getQueueStatusLabel(
+    moduleId,
+    selectedQueueItem,
+  );
+  const [orderGroupFilter, setOrderGroupFilter] =
+    useState<OrderGroupFilter>("all");
+  const [collapsedOrderGroupIds, setCollapsedOrderGroupIds] = useState<
+    Set<string>
+  >(() => new Set());
   const [tableDensity, setTableDensity] = useState<EmrTableDensity>("compact");
-  const [mutationState, setMutationState] = useState<"idle" | "saving" | "error">("idle");
+  const [mutationState, setMutationState] = useState<
+    "idle" | "saving" | "error"
+  >("idle");
   const primaryGroup = tableGroups[0];
-  const totalOrderCount = tableGroups.reduce((total, group) => total + group.rows.length, 0);
-  const regularOrderCount = tableGroups.find((group) => group.id === "oral")?.rows.length ?? 0;
-  const otherOrderCount = tableGroups.find((group) => group.id === "other")?.rows.length ?? 0;
+  const totalOrderCount = tableGroups.reduce(
+    (total, group) => total + group.rows.length,
+    0,
+  );
+  const regularOrderCount =
+    tableGroups.find((group) => group.id === "oral")?.rows.length ?? 0;
+  const otherOrderCount =
+    tableGroups.find((group) => group.id === "other")?.rows.length ?? 0;
   const visibleTableGroups =
     orderGroupFilter === "all"
       ? tableGroups
@@ -1333,7 +1541,9 @@ function DispensingContentBody({
   const statusLabel = instructionType === "처치" ? "처치중" : "조제중";
   const completeLabel = instructionType === "처치" ? "처치완료" : "조제완료";
   const historyLabel = `${instructionType} 이력`;
-  const primaryAssigneeSummary = primaryGroup ? getAssigneeSummary(primaryGroup.assigneeIds) : "미지정";
+  const primaryAssigneeSummary = primaryGroup
+    ? getAssigneeSummary(primaryGroup.assigneeIds)
+    : "미지정";
   const primaryStartStatus =
     primaryGroup?.workStatus === "진행중"
       ? statusLabel
@@ -1346,8 +1556,11 @@ function DispensingContentBody({
   const instructionPatientSummary = getQueuePatientSummary(selectedQueueItem);
   const instructionId = selectedQueueItem?.instructionId ?? "RX-260414-0008";
   const instructionRequester = selectedQueueItem?.requesterName ?? "이수지";
-  const instructionAssignee = selectedQueueItem?.assigneeName ?? primaryAssigneeSummary;
-  const instructionStartStatus = selectedQueueItem ? selectedQueueStatusLabel : primaryStartStatus;
+  const instructionAssignee =
+    selectedQueueItem?.assigneeName ?? primaryAssigneeSummary;
+  const instructionStartStatus = selectedQueueItem
+    ? selectedQueueStatusLabel
+    : primaryStartStatus;
   const instructionStartedAt = selectedQueueItem?.startedAt ?? "미시작";
   const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
     {
@@ -1370,15 +1583,16 @@ function DispensingContentBody({
   ];
   const updateGroup = (
     groupId: string,
-    updater: (group: OrderTableGroup) => OrderTableGroup
+    updater: (group: OrderTableGroup) => OrderTableGroup,
   ) => {
     setTableGroups((current) =>
-      current.map((group) => (group.id === groupId ? updater(group) : group))
+      current.map((group) => (group.id === groupId ? updater(group) : group)),
     );
   };
 
   if (!selectedQueueItem) {
-    const sourceQueueItemCount = fulfillmentQueue.sourceTotalCount ?? queueItemCount;
+    const sourceQueueItemCount =
+      fulfillmentQueue.sourceTotalCount ?? queueItemCount;
     const hasQueueItems = sourceQueueItemCount > 0;
 
     return (
@@ -1386,6 +1600,7 @@ function DispensingContentBody({
         <EmrEmptyState
           kind={hasQueueItems ? "no-scope-result" : "upstream-pending"}
           priority="supporting"
+          size="xl"
           surface="content"
           description={
             hasQueueItems
@@ -1395,13 +1610,17 @@ function DispensingContentBody({
           primaryAction={
             hasQueueItems ? undefined : (
               <Button
-                size="sm"
+                size="default"
                 variant="outline"
-                className="bg-card"
+                roundness="round"
+                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >
-                <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
+                <CdsActionsRefreshCcwIcon
+                  data-icon="inline-start"
+                  aria-hidden="true"
+                />
                 새로고침
               </Button>
             )
@@ -1423,7 +1642,9 @@ function DispensingContentBody({
 
         const rows = completeOrders(group.rows, rowIds);
         const activeRows = rows.filter((row) => row.status !== "취소");
-        const allActiveRowsCompleted = activeRows.every((row) => row.workStatus === "완료");
+        const allActiveRowsCompleted = activeRows.every(
+          (row) => row.workStatus === "완료",
+        );
 
         return {
           ...group,
@@ -1431,11 +1652,17 @@ function DispensingContentBody({
           assigneeIds: getGroupAssigneeIds(rows),
           rows,
         };
-      })
+      }),
     );
   };
-  const assignGroupOrder = (groupId: string, rowId: string, technicianId: string) => {
-    updateGroup(groupId, (group) => assignOrderInGroup(group, rowId, technicianId));
+  const assignGroupOrder = (
+    groupId: string,
+    rowId: string,
+    technicianId: string,
+  ) => {
+    updateGroup(groupId, (group) =>
+      assignOrderInGroup(group, rowId, technicianId),
+    );
   };
   const updateSelectedFulfillmentStatus = async (
     target: "in_progress" | "completed" | "requested",
@@ -1519,42 +1746,49 @@ function DispensingContentBody({
               />
             }
             badge={
-              <Badge variant="secondary" className="emr-text-metadata h-[22px] rounded-[var(--emr-context-bar-chip-radius)] bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-label)]">
+              <Badge
+                variant="secondary"
+                className="emr-text-metadata h-[22px] rounded-[var(--emr-context-bar-chip-radius)] bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-label)]"
+              >
                 {instructionId}
               </Badge>
             }
             actions={
               <>
-              {hasRightPanel && instructionType === "처치" ? (
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="bg-card"
-                  aria-label={rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
-                  onClick={() => setRightPanelOpen(!rightPanelOpen)}
-                >
-                  {rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
+                {hasRightPanel && instructionType === "처치" ? (
+                  <Button
+                    variant="outline"
+                    size="default"
+                    className="bg-card"
+                    aria-label={
+                      rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"
+                    }
+                    onClick={() => setRightPanelOpen(!rightPanelOpen)}
+                  >
+                    {rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
+                  </Button>
+                ) : null}
+                <Button variant="outline" size="default" className="bg-card">
+                  <DownloadIcon data-icon="inline-start" />
+                  PDF 다운로드
                 </Button>
-              ) : null}
-              <Button variant="outline" size="default" className="bg-card">
-                <DownloadIcon data-icon="inline-start" />
-                PDF 다운로드
-              </Button>
-              <Button variant="outline" size="default" className="bg-card">
-                <PrinterIcon data-icon="inline-start" />
-                출력하기
-              </Button>
-              {primaryGroup ? (
-                <GroupStatusAction
-                  group={primaryGroup}
-                  statusLabel={statusLabel}
-                  completeLabel={completeLabel}
-                  size="sm"
-                  onStart={() => startGroup(primaryGroup.id)}
-                  onComplete={completeInstruction}
-                  onCancelAssignment={() => cancelGroupAssignment(primaryGroup.id)}
-                />
-              ) : null}
+                <Button variant="outline" size="default" className="bg-card">
+                  <PrinterIcon data-icon="inline-start" />
+                  출력하기
+                </Button>
+                {primaryGroup ? (
+                  <GroupStatusAction
+                    group={primaryGroup}
+                    statusLabel={statusLabel}
+                    completeLabel={completeLabel}
+                    size="sm"
+                    onStart={() => startGroup(primaryGroup.id)}
+                    onComplete={completeInstruction}
+                    onCancelAssignment={() =>
+                      cancelGroupAssignment(primaryGroup.id)
+                    }
+                  />
+                ) : null}
               </>
             }
           />
@@ -1566,8 +1800,13 @@ function DispensingContentBody({
               className="grid min-h-[72px] grid-cols-5 rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]"
             >
               {instructionInfoItems.map(({ label, value }) => (
-                <div key={label} className="min-w-0 border-r border-[var(--emr-document-info-divider)] px-[var(--clair-spacing-12)] first:pl-0 last:border-r-0 last:pr-0">
-                  <div className="truncate emr-text-metadata font-medium text-[var(--emr-context-bar-chip-label)]">{label}</div>
+                <div
+                  key={label}
+                  className="min-w-0 border-r border-[var(--emr-document-info-divider)] px-[var(--clair-spacing-12)] first:pl-0 last:border-r-0 last:pr-0"
+                >
+                  <div className="truncate emr-text-metadata font-medium text-[var(--emr-context-bar-chip-label)]">
+                    {label}
+                  </div>
                   <div
                     data-slot="instruction-info-card-value"
                     className="mt-[var(--clair-spacing-4)] flex min-h-6 min-w-0 items-center overflow-hidden whitespace-nowrap emr-text-dense font-medium text-[var(--emr-context-bar-chip-value)]"
@@ -1583,10 +1822,15 @@ function DispensingContentBody({
                 className="flex flex-wrap items-center gap-2 rounded-md border bg-[var(--emr-surface-panel)] px-3 py-2 emr-text-metadata text-muted-foreground"
               >
                 <Badge variant="secondary">
-                  {getFulfillmentQueueTypeLabel(selectedFulfillmentWorkItem.queueType)}
+                  {getFulfillmentQueueTypeLabel(
+                    selectedFulfillmentWorkItem.queueType,
+                  )}
                 </Badge>
                 <Badge variant="outline">
-                  서버 상태 {getFulfillmentStatusLabel(selectedFulfillmentWorkItem.status)}
+                  서버 상태{" "}
+                  {getFulfillmentStatusLabel(
+                    selectedFulfillmentWorkItem.status,
+                  )}
                 </Badge>
                 <span>담당 {instructionAssignee}</span>
                 <span>오더 {selectedFulfillmentWorkItem.orderId}</span>
@@ -1640,10 +1884,18 @@ function DispensingContentBody({
         ) : null}
       </div>
 
-      <ScrollArea data-slot="instruction-result-scroll-area" className="min-h-0 flex-1">
-        <div data-slot="instruction-result-scroll-content" className="flex flex-col gap-4 pb-10 pt-4">
+      <ScrollArea
+        data-slot="instruction-result-scroll-area"
+        className="min-h-0 flex-1"
+      >
+        <div
+          data-slot="instruction-result-scroll-content"
+          className="flex flex-col gap-4 pb-10 pt-4"
+        >
           {visibleTableGroups.map((group, section) => {
-            const completedCount = group.rows.filter((row) => row.workStatus === "완료").length;
+            const completedCount = group.rows.filter(
+              (row) => row.workStatus === "완료",
+            ).length;
             const collapsed = collapsedOrderGroupIds.has(group.id);
 
             return (
@@ -1668,9 +1920,18 @@ function DispensingContentBody({
                     <Button variant="outline" size="xs" className="bg-card">
                       필터 1
                     </Button>
-                    <EmrTableDensitySelector value={tableDensity} onValueChange={setTableDensity} />
-                    <Button variant="outline" size="xs" className="max-w-24 bg-card">
-                      <span className="truncate">{getAssigneeSummary(group.assigneeIds)}</span>
+                    <EmrTableDensitySelector
+                      value={tableDensity}
+                      onValueChange={setTableDensity}
+                    />
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="max-w-24 bg-card"
+                    >
+                      <span className="truncate">
+                        {getAssigneeSummary(group.assigneeIds)}
+                      </span>
                     </Button>
                     <GroupStatusAction
                       group={group}
@@ -1684,14 +1945,16 @@ function DispensingContentBody({
                 }
                 onToggle={() => toggleOrderGroup(group.id)}
               >
-                <EmrDataTable
+                <OrderWorkTable
                   density={tableDensity}
                   onDensityChange={setTableDensity}
                   rows={group.rows}
                   sectionId={`section-${section}`}
                   showDensitySelector={false}
                   technicians={technicianUsers}
-                  onCompleteRows={(rowIds) => completeGroupRows(group.id, rowIds)}
+                  onCompleteRows={(rowIds) =>
+                    completeGroupRows(group.id, rowIds)
+                  }
                   onAssignOrder={(rowId, technicianId) =>
                     assignGroupOrder(group.id, rowId, technicianId)
                   }
@@ -1734,7 +1997,8 @@ function DispensingDrawerField({
 
 export function DispensingDrawer() {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
-  const order = allOrderRows.find((row) => row.id === activeDrawer?.id) ?? allOrderRows[0];
+  const order =
+    allOrderRows.find((row) => row.id === activeDrawer?.id) ?? allOrderRows[0];
   const drawerFields = [
     ["구분", order.category],
     ["상태", order.status],
@@ -1777,20 +2041,16 @@ export function DispensingDrawer() {
         />
       </DispensingDrawerField>
       <div className="mt-auto flex justify-end gap-2 border-t pt-4">
-        <Button variant="outline" size="default">변경 이력</Button>
+        <Button variant="outline" size="default">
+          변경 이력
+        </Button>
         <Button size="default">수정 저장</Button>
       </div>
     </div>
   );
 }
 
-function DoseInput({
-  id,
-  initialDose,
-}: {
-  id: string;
-  initialDose: string;
-}) {
+function DoseInput({ id, initialDose }: { id: string; initialDose: string }) {
   const [doseValue, setDoseValue] = useState(initialDose);
 
   return (

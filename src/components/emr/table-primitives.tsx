@@ -2,12 +2,8 @@
 
 import * as React from "react";
 
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  FilterIcon,
-  MenuIcon,
-} from "@/components/icons";
+import tableSortArrow from "@/assets/figma/table-sort-arrow.svg";
+import { FilterIcon, MenuIcon } from "@/components/icons";
 import { TableCell, TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type {
@@ -23,6 +19,7 @@ type EmrTableHeaderCellProps = Omit<
   align?: "left" | "center" | "right";
   children: React.ReactNode;
   filterActive?: boolean;
+  identity?: boolean;
   interaction?: EmrTableHeaderInteraction;
   isResizing?: boolean;
   menuActive?: boolean;
@@ -35,6 +32,7 @@ type EmrTableHeaderCellProps = Omit<
   resizeLabel?: string;
   sortDirection?: "asc" | "desc";
   sortLabel?: string;
+  label?: string;
 };
 
 type EmrTableCellTextProps = {
@@ -46,6 +44,23 @@ type EmrTableCellTextProps = {
   title?: string;
 };
 
+type EmrPinnedTableWorkspaceProps = React.ComponentProps<"div"> & {
+  identityTextInset: number | string;
+  selectionColumnWidth?: number | string;
+};
+
+type EmrPinnedTableViewportProps = React.ComponentProps<"div"> & {
+  leftPinnedColumnWidth?: number | string;
+  pinnedColumnWidth?: number | string;
+  rightPinnedColumnWidth?: number | string;
+};
+
+type EmrTableIdentityCellContentProps = React.ComponentProps<"div"> & {
+  leading?: React.ReactNode;
+  leadingGap?: number | string;
+  leadingWidth?: number | string;
+};
+
 type EmrTableSelectionHeaderCellProps = Omit<
   React.ComponentProps<typeof EmrTableHeaderCell>,
   "children" | "interaction" | "resize"
@@ -55,6 +70,12 @@ type EmrTableSelectionHeaderCellProps = Omit<
 
 type EmrTableSelectionCellProps = React.ComponentProps<typeof TableCell>;
 
+type EmrTableContextualSelectionCellProps = EmrTableSelectionCellProps & {
+  controlVisibility?: "always" | "contextual";
+};
+
+type EmrTableFeedbackSurfaceProps = React.ComponentProps<"div">;
+
 function getAriaSort(sortDirection: EmrTableHeaderCellProps["sortDirection"]) {
   if (sortDirection === "asc") return "ascending";
   if (sortDirection === "desc") return "descending";
@@ -62,14 +83,32 @@ function getAriaSort(sortDirection: EmrTableHeaderCellProps["sortDirection"]) {
   return undefined;
 }
 
-function getStringLabel(children: React.ReactNode) {
-  return typeof children === "string" ? children : "컬럼";
+function getStringLabel(children: React.ReactNode, label?: string) {
+  return label ?? (typeof children === "string" ? children : "컬럼");
 }
 
-function SortIcon({ direction }: { direction?: "asc" | "desc" }) {
-  const Icon = direction === "desc" ? ChevronDownIcon : ChevronUpIcon;
+function toCssLength(value: number | string) {
+  return typeof value === "number" ? `${value}px` : value;
+}
 
-  return <Icon aria-hidden="true" className="size-3" />;
+const tableSortArrowSrc =
+  typeof tableSortArrow === "string"
+    ? tableSortArrow
+    : (tableSortArrow.src ?? "");
+
+function SortIcon({ direction }: { direction?: "asc" | "desc" }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      alt=""
+      aria-hidden="true"
+      className={cn(
+        "h-[7.75px] w-[6.74993px]",
+        direction === "asc" && "rotate-180",
+      )}
+      src={tableSortArrowSrc}
+    />
+  );
 }
 
 export function EmrTableHeaderCell({
@@ -77,6 +116,7 @@ export function EmrTableHeaderCell({
   children,
   className,
   filterActive = false,
+  identity = false,
   interaction = "static",
   isResizing = false,
   menuActive = false,
@@ -89,10 +129,16 @@ export function EmrTableHeaderCell({
   resizeLabel,
   sortDirection,
   sortLabel,
+  label: labelProp,
   style,
   ...props
 }: EmrTableHeaderCellProps) {
-  const label = getStringLabel(children);
+  const label = getStringLabel(children, labelProp);
+  const displayedChildren =
+    labelProp &&
+    (typeof children === "string" || React.Children.count(children) === 0)
+      ? labelProp
+      : children;
   const resizable =
     resize === "data-column" &&
     Boolean(onResizeMouseDown || onResizeTouchStart);
@@ -105,8 +151,10 @@ export function EmrTableHeaderCell({
       aria-sort={getAriaSort(sortDirection)}
       data-emr-column-resize={resize}
       data-emr-header-interaction={interaction}
+      data-emr-table-identity-cell={identity ? "true" : undefined}
       className={cn(
-        "emr-table-header-cell emr-text-body relative select-none bg-[var(--emr-surface-muted)] font-medium text-muted-foreground",
+        "emr-table-header-cell relative select-none bg-[var(--emr-table-header-surface,var(--emr-surface-muted))] font-medium text-muted-foreground",
+        identity && "!p-0",
         align === "right" && "text-right",
         align === "center" && "text-center",
         className,
@@ -120,8 +168,8 @@ export function EmrTableHeaderCell({
           align === "right" && "justify-end",
           align === "center" && "justify-center",
         )}
+        data-emr-table-content="true"
       >
-        <span className="min-w-0 truncate">{children}</span>
         {sortable ? (
           <button
             data-row-interactive="true"
@@ -129,17 +177,33 @@ export function EmrTableHeaderCell({
             aria-label={sortLabel ?? `${label} 정렬`}
             title={sortLabel ?? `${label} 정렬`}
             className={cn(
-              "inline-flex size-5 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
-              sortDirection && "text-[var(--emr-text-secondary)]",
+              "inline-flex min-h-6 max-w-full min-w-0 items-center justify-center gap-1 rounded-lg bg-transparent px-2.5 py-1 text-left text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-500)] outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+              identity && "px-0",
+              sortDirection && "text-[var(--clair-color-atomic-neutral-700)]",
             )}
             onClick={(event) => {
               event.stopPropagation();
               onSort?.();
             }}
           >
-            <SortIcon direction={sortDirection} />
+            <span
+              className="min-w-0 truncate"
+              data-emr-table-identity-text={identity ? "true" : undefined}
+            >
+              {displayedChildren}
+            </span>
+            <span className="grid size-3 shrink-0 place-items-center">
+              <SortIcon direction={sortDirection} />
+            </span>
           </button>
-        ) : null}
+        ) : (
+          <span
+            className="min-w-0 truncate"
+            data-emr-table-identity-text={identity ? "true" : undefined}
+          >
+            {displayedChildren}
+          </span>
+        )}
         {filterable ? (
           <button
             data-row-interactive="true"
@@ -193,6 +257,135 @@ export function EmrTableHeaderCell({
   );
 }
 
+export function EmrPinnedTableWorkspace({
+  children,
+  identityTextInset,
+  selectionColumnWidth = 0,
+  style,
+  ...props
+}: EmrPinnedTableWorkspaceProps) {
+  return (
+    <div
+      data-emr-pinned-table-workspace="true"
+      style={
+        {
+          ...style,
+          "--emr-table-identity-text-inset": toCssLength(identityTextInset),
+          "--emr-table-selection-column-width":
+            toCssLength(selectionColumnWidth),
+        } as React.CSSProperties
+      }
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function EmrPinnedTableViewport({
+  children,
+  className,
+  leftPinnedColumnWidth,
+  pinnedColumnWidth = 0,
+  rightPinnedColumnWidth = 0,
+  style,
+  ...props
+}: EmrPinnedTableViewportProps) {
+  const leftWidth = leftPinnedColumnWidth ?? pinnedColumnWidth;
+
+  return (
+    <div
+      data-emr-pinned-table-viewport="true"
+      className={cn(
+        "relative isolate min-h-0 min-w-0 overflow-hidden",
+        className,
+      )}
+      style={
+        {
+          ...style,
+          "--emr-table-left-pinned-column-width": toCssLength(leftWidth),
+          "--emr-table-pinned-column-width": toCssLength(leftWidth),
+          "--emr-table-right-pinned-column-width": toCssLength(
+            rightPinnedColumnWidth,
+          ),
+        } as React.CSSProperties
+      }
+      {...props}
+    >
+      {children}
+      {leftWidth ? (
+        <>
+          <div
+            aria-hidden="true"
+            data-emr-pinned-side="left"
+            data-emr-pinned-table-dimmer="true"
+          />
+          <div
+            aria-hidden="true"
+            data-emr-pinned-side="left"
+            data-emr-pinned-table-divider="true"
+          />
+        </>
+      ) : null}
+      {rightPinnedColumnWidth ? (
+        <>
+          <div
+            aria-hidden="true"
+            data-emr-pinned-side="right"
+            data-emr-pinned-table-dimmer="true"
+          />
+          <div
+            aria-hidden="true"
+            data-emr-pinned-side="right"
+            data-emr-pinned-table-divider="true"
+          />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export function EmrTableIdentityCellContent({
+  children,
+  className,
+  leading,
+  leadingGap = 0,
+  leadingWidth = 0,
+  style,
+  ...props
+}: EmrTableIdentityCellContentProps) {
+  return (
+    <div
+      data-emr-table-identity-content="true"
+      className={cn("relative flex min-w-0 items-center", className)}
+      style={
+        {
+          ...style,
+          "--emr-table-identity-leading-gap": toCssLength(leadingGap),
+          "--emr-table-identity-leading-width": toCssLength(leadingWidth),
+        } as React.CSSProperties
+      }
+      {...props}
+    >
+      {leading ? (
+        <span
+          aria-hidden="true"
+          className="absolute inline-flex shrink-0 items-center justify-center"
+          data-emr-table-identity-leading="true"
+        >
+          {leading}
+        </span>
+      ) : null}
+      <span
+        className="flex min-w-0 flex-1 items-center"
+        data-emr-table-identity-text="true"
+      >
+        {children}
+      </span>
+    </div>
+  );
+}
+
 export function EmrTableSelectionHeaderCell({
   children,
   className,
@@ -202,7 +395,7 @@ export function EmrTableSelectionHeaderCell({
     <EmrTableHeaderCell
       {...props}
       className={cn(
-        "w-10 [&_.emr-table-cell-content]:justify-center [&_.emr-table-cell-content>*]:shrink-0",
+        "w-10 min-w-10 max-w-10 [&_.emr-table-cell-content]:justify-center [&_.emr-table-cell-content>*]:shrink-0",
         className,
       )}
       interaction="static"
@@ -216,14 +409,38 @@ export function EmrTableSelectionHeaderCell({
 export function EmrTableSelectionCell({
   children,
   className,
+  controlVisibility = "always",
   ...props
-}: EmrTableSelectionCellProps) {
+}: EmrTableContextualSelectionCellProps) {
   return (
-    <TableCell className={cn("w-10", className)} {...props}>
+    <TableCell
+      className={cn("w-10 min-w-10 max-w-10", className)}
+      data-emr-table-selection-visibility={controlVisibility}
+      {...props}
+    >
       <span className="emr-table-cell-content flex min-w-0 items-center justify-center gap-1 [&>*]:shrink-0">
         {children}
       </span>
     </TableCell>
+  );
+}
+
+export function EmrTableFeedbackSurface({
+  children,
+  className,
+  ...props
+}: EmrTableFeedbackSurfaceProps) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 min-w-0 flex-1 items-center justify-center bg-[var(--emr-surface-panel)] px-4 py-6",
+        className,
+      )}
+      data-emr-table-feedback-surface="true"
+      {...props}
+    >
+      {children}
+    </div>
   );
 }
 

@@ -932,11 +932,6 @@ export function createMockFulfillmentWorkItemGateway(
 }
 
 export type SupabaseFulfillmentWorkItemRpcClient = {
-  from?(tableName: "order_fulfillment_work_items"): {
-    update(values: {
-      source_snapshot: FulfillmentSourceSnapshot;
-    }): SupabaseFulfillmentWorkItemUpdateBuilder;
-  };
   rpc(
     functionName: "clair_list_fulfillment_work_items",
     args: {
@@ -945,6 +940,17 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
       p_encounter_id?: string;
       p_order_id?: string;
       p_status?: FulfillmentWorkItemStatus;
+    },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_enrich_fulfillment_work_item_snapshots",
+    args: {
+      p_workspace_id: string;
+      p_actor_user_id: string;
+      p_snapshots: Array<{
+        orderId: string;
+        sourceSnapshot: FulfillmentSourceSnapshot;
+      }>;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
@@ -967,13 +973,6 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
       p_reason?: string | null;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
-};
-
-type SupabaseFulfillmentWorkItemUpdateBuilder = PromiseLike<{
-  data?: unknown;
-  error: { message?: string } | null;
-}> & {
-  eq(column: string, value: string): SupabaseFulfillmentWorkItemUpdateBuilder;
 };
 
 export function createSupabaseFulfillmentWorkItemGateway(
@@ -1027,6 +1026,7 @@ export function createSupabaseFulfillmentWorkItemGateway(
       if (error) return mapGatewayError(error.message, "db_write_failed");
       const workItems = mapWorkItemRows(data);
       const enriched = await persistSupabaseSnapshotEnrichment({
+        actorUserId,
         client,
         orderSnapshots,
         workItems,
@@ -1061,17 +1061,19 @@ export function createSupabaseFulfillmentWorkItemGateway(
 }
 
 async function persistSupabaseSnapshotEnrichment({
+  actorUserId,
   client,
   orderSnapshots,
   workItems,
   workspaceId,
 }: {
+  actorUserId: string;
   client: SupabaseFulfillmentWorkItemRpcClient;
   orderSnapshots?: FulfillmentOrderSnapshotInput[];
   workItems: FulfillmentWorkItem[];
   workspaceId: string;
 }): Promise<{ ok: true; workItems: FulfillmentWorkItem[] }> {
-  if (!client.from || !orderSnapshots?.length || !workItems.length) {
+  if (!orderSnapshots?.length || !workItems.length) {
     return { ok: true, workItems };
   }
 
@@ -1079,6 +1081,10 @@ async function persistSupabaseSnapshotEnrichment({
     orderSnapshots.map((snapshot) => [snapshot.orderId, snapshot]),
   );
   const enrichedWorkItems: FulfillmentWorkItem[] = [];
+  const snapshots: Array<{
+    orderId: string;
+    sourceSnapshot: FulfillmentSourceSnapshot;
+  }> = [];
 
   for (const workItem of workItems) {
     const snapshot = snapshotByOrderId.get(workItem.orderId);
@@ -1092,19 +1098,31 @@ async function persistSupabaseSnapshotEnrichment({
       snapshot,
     );
     const nextWorkItem = { ...workItem, sourceSnapshot };
-    await client
-      .from("order_fulfillment_work_items")
-      .update({ source_snapshot: sourceSnapshot })
-      .eq("workspace_id", workspaceId)
-      .eq(
-        "order_id",
-        normalizeUuidForRpc(workItem.orderId) ?? workItem.orderId,
-      );
-
+    snapshots.push({
+      orderId: normalizeUuidForRpc(workItem.orderId) ?? workItem.orderId,
+      sourceSnapshot,
+    });
     enrichedWorkItems.push(nextWorkItem);
   }
 
-  return { ok: true, workItems: enrichedWorkItems };
+  if (!snapshots.length) return { ok: true, workItems: enrichedWorkItems };
+
+  const { data, error } = await client.rpc(
+    "clair_enrich_fulfillment_work_item_snapshots",
+    {
+      p_workspace_id: workspaceId,
+      p_actor_user_id: actorUserId,
+      p_snapshots: snapshots,
+    },
+  );
+
+  if (error) return { ok: true, workItems: enrichedWorkItems };
+
+  const persistedWorkItems = mapWorkItemRows(data);
+  return {
+    ok: true,
+    workItems: persistedWorkItems.length ? persistedWorkItems : enrichedWorkItems,
+  };
 }
 
 function mergeOrderSnapshotIntoSourceSnapshot(

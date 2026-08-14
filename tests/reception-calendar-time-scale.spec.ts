@@ -53,8 +53,9 @@ test("operating schedule helpers honor custom hours and breaks", () => {
   expect(getOperatingScheduleLabel(schedule)).toBe("08:00-20:00");
   expect(starts).toContain(8 * 60);
   expect(starts).toContain(19 * 60 + 30);
-  expect(starts).not.toContain(12 * 60);
-  expect(starts).not.toContain(12 * 60 + 30);
+  expect(starts).toContain(12 * 60);
+  expect(starts).toContain(12 * 60 + 30);
+  expect(createCalendarTimeScale(schedule).isSelectable(12 * 60, 30)).toBe(true);
 });
 test("closed schedules have no selectable start time", () => {
   const schedule = {

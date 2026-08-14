@@ -186,3 +186,26 @@ test("archive mutation denies cross-workspace records", async () => {
 
   expect(result).toMatchObject({ ok: false, status: 404, denialReason: "customer_record_not_found" });
 });
+
+test("prepared Cheongdam demo workspace keeps archive read permission scoped to known members", async () => {
+  const allowed = await listCustomerArchiveRecords({
+    actorUserId: "playwright-default-session",
+    workspaceId: "workspace-clair-cheongdam",
+  });
+  const denied = await listCustomerArchiveRecords({
+    actorUserId: "unknown-user",
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(allowed).toMatchObject({
+    ok: true,
+    status: 200,
+    records: [],
+    enforcedBy: "customer-archive-list",
+  });
+  expect(denied).toMatchObject({
+    ok: false,
+    status: 403,
+    denialReason: "workspace_membership_missing",
+  });
+});

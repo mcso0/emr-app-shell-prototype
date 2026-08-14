@@ -56,3 +56,31 @@ Unify the customer-management and hospital-admin module side panels as shared ch
 - Aligned the expanded child rail in `EmrModuleListSidePanel` to the parent section icon center using EMR token aliases.
 - Kept leaf row height at 32px, preserved the panel-level 16px right inset, and kept non-action placeholder leaves absent.
 - Added browser DOM measurement coverage to the hospital-admin side-panel regression for icon/rail alignment, child content offset, leaf height, and right inset.
+
+## 2026-07-24 CDS.V2 Spacing Follow-Up
+
+- Adopted Figma node `27794:28010` as the current module-list geometry source,
+  superseding the earlier 30px child offset and 16px leaf right inset.
+- Kept menu content, icons, open/selected/disabled states, counts, and click
+  behavior unchanged.
+- Aligned the shared panel to 296px width, 280px rows, 8px horizontal group
+  inset, 16px between top-level groups, 2px within groups, 36px top-level rows,
+  32px leaf rows, 26px child-list offset, and 8px leaf right inset.
+- Aligned top-level group and item typography to Pretendard Medium 13/18px and
+  nested metadata/badges to 12/16px.
+- Added browser geometry, typography, color, selected-state, badge, rail, and
+  disabled-state coverage for hospital admin and customer management.
+
+## 2026-07-25 Fill-Width Follow-Up
+
+- Removed the component-owned 296px width from the shared panel and scroll body.
+- The hospital-admin and customer-management menus now fill the 288px width
+  allocated by the shell, keeping the selected row aligned to the same 8px
+  left and right list inset.
+- Kept menu content, hierarchy, state, and interactions unchanged, and extended
+  both focused browser geometry checks to assert that the menu body fills the
+  rendered panel width.
+- Passed: `npm run security:secrets`, `npm run docs:check`, `git diff --check`,
+  `npm run lint`, `npx tsc --noEmit`, and `npm run build`.
+- Passed: `npx playwright test tests/customer.spec.ts
+  tests/hospital-admin.spec.ts --project=chromium` (`42 passed`).

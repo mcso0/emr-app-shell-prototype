@@ -14,7 +14,7 @@ import {
 } from "@/features/notifications/mock-notifications";
 import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 
-export type LiveNotificationFilter = "all" | "unread" | "important" | "archived";
+export type LiveNotificationFilter = "all" | "unread" | "important" | "archived" | "snapshot";
 
 export type LiveNotificationDto = {
   id: string;
@@ -368,7 +368,7 @@ export async function readLiveNotifications({
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const counts = summarizeLiveNotifications(visibleNotifications);
   const filteredNotifications = applyFilter(visibleNotifications, normalizedFilter);
-  const safeLimit = normalizeLimit(limit);
+  const safeLimit = normalizeLimit(limit, normalizedFilter === "snapshot" ? 100 : 50);
 
   return {
     ok: true,
@@ -878,6 +878,10 @@ function summarizeLiveNotifications(notifications: LiveNotificationDto[]): LiveN
 }
 
 function applyFilter(notifications: LiveNotificationDto[], filter: LiveNotificationFilter) {
+  if (filter === "snapshot") {
+    return notifications;
+  }
+
   if (filter === "archived") {
     return notifications.filter((notification) => Boolean(notification.archivedAt));
   }
@@ -895,13 +899,18 @@ function applyFilter(notifications: LiveNotificationDto[], filter: LiveNotificat
 
 function normalizeFilter(filter: string | null | undefined): LiveNotificationFilter | null {
   if (!filter || filter === "all") return "all";
-  if (filter === "unread" || filter === "important" || filter === "archived") return filter;
+  if (
+    filter === "unread"
+    || filter === "important"
+    || filter === "archived"
+    || filter === "snapshot"
+  ) return filter;
   return null;
 }
 
-function normalizeLimit(limit: number | null | undefined) {
+function normalizeLimit(limit: number | null | undefined, maximum = 50) {
   if (!limit || !Number.isFinite(limit)) return 20;
-  return Math.max(1, Math.min(50, Math.floor(limit)));
+  return Math.max(1, Math.min(maximum, Math.floor(limit)));
 }
 
 function buildError({

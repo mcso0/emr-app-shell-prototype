@@ -32,7 +32,7 @@ export type WorkspaceStaffMember = {
   id: string;
   initial?: string;
   operationalStatus?: WorkspaceStaffOperationalStatus;
-  roles: WorkspaceRoleId[];
+  roles: string[];
   status: "active" | "inactive" | "suspended" | "invited";
   title?: string;
 };
@@ -301,7 +301,7 @@ export function createMockWorkspaceStaffReadGateway(): WorkspaceStaffReadGateway
     async listWorkspaceStaff({ role }) {
       const staff = mockStaffUsers
         .map((user): WorkspaceStaffMember | null => {
-          const roles = user.role === "veterinarian" ? ["vet" as const] : [];
+          const roles = getMockWorkspaceRoles(user.role);
           if (roles.length === 0) return null;
 
           return {
@@ -311,7 +311,7 @@ export function createMockWorkspaceStaffReadGateway(): WorkspaceStaffReadGateway
             avatarUrl: user.avatarUrl ?? undefined,
             roles,
             status: "active",
-            title: "수의사",
+            title: getMockWorkspaceStaffTitle(user.role),
           };
         })
         .filter((member): member is WorkspaceStaffMember => Boolean(member))
@@ -320,6 +320,28 @@ export function createMockWorkspaceStaffReadGateway(): WorkspaceStaffReadGateway
       return { ok: true, staff };
     },
   };
+}
+
+function getMockWorkspaceRoles(
+  role: (typeof mockStaffUsers)[number]["role"],
+): string[] {
+  if (role === "veterinarian") return ["vet"];
+  if (role === "technician") return ["technician"];
+  if (role === "desk") return ["front_desk"];
+  if (role === "billing") return ["billing_admin"];
+  if (role === "admin") return ["hospital_admin"];
+  return [];
+}
+
+function getMockWorkspaceStaffTitle(
+  role: (typeof mockStaffUsers)[number]["role"],
+): string | undefined {
+  if (role === "veterinarian") return "수의사";
+  if (role === "technician") return "테크니션";
+  if (role === "desk") return "데스크";
+  if (role === "billing") return "수납";
+  if (role === "admin") return "관리자";
+  return undefined;
 }
 
 async function resolveStaffAvatarUrl(
@@ -397,9 +419,14 @@ function normalizeWorkspaceRole(role: string): WorkspaceRoleId | undefined {
   return undefined;
 }
 
-function normalizeRoles(roles: string[] | null): WorkspaceRoleId[] {
-  return (roles ?? []).filter((role): role is WorkspaceRoleId =>
-    Boolean(normalizeWorkspaceRole(role)),
+function normalizeRoles(roles: string[] | null): string[] {
+  return Array.from(
+    new Set(
+      (roles ?? []).flatMap((role) => {
+        const normalized = role.trim();
+        return normalized ? [normalized] : [];
+      }),
+    ),
   );
 }
 

@@ -24,7 +24,7 @@ DEN-435 is a design-system contract issue. It does not implement app code, repla
 - Use segmented controls or filter buttons for data narrowing; do not present filters as tabs unless the choices are a small, stable mode set.
 - Keep table density as a presentation preference. It must not change row identity, data scope, sort/filter results, permissions, or persistence boundaries.
 - Keep the existing three table density options: `compact`, `standard`, and `comfortable`.
-- Use the shared selected-value density dropdown as the default control. It exposes the active option with a row-spacing icon and downward chevron.
+- Use the shared selected-value density dropdown as the default control. It exposes the active option with Korean interval copy and a downward chevron.
 
 ## Tab Type Decision Table
 
@@ -80,9 +80,9 @@ Use the existing density modes from `table-density-and-grid-ergonomics.md`:
 
 | Mode | Korean Copy | Intended Use | Row Target | Header Target |
 | --- | --- | --- | ---: | ---: |
-| `compact` | 좁게 | Clinical/order/admin tables where visible row count matters | 36px | 36px |
-| `standard` | 기본 | Default operational tables | 44px | 40px |
-| `comfortable` | 넓게 | Review-heavy rows, multi-line summaries, low row count | 52px | 44px |
+| `compact` | 좁은 간격 | Clinical/order/admin tables where visible row count matters | 36px | 36px |
+| `standard` | 기본 간격 | Default operational tables | 44px | 40px |
+| `comfortable` | 넓은 간격 | Review-heavy rows, multi-line summaries, low row count | 52px | 44px |
 
 Density changes:
 
@@ -98,9 +98,9 @@ Use the shared density dropdown for every current table-density selector.
 
 Dropdown contract:
 
-- The compact trigger renders the active row-spacing icon, the selected Korean option copy, and a downward chevron.
-- The trigger must expose the current density through an accessible name, for example `테이블 보기 밀도: 기본`.
-- The menu contains exactly `좁게`, `기본`, and `넓게` as radio items.
+- The compact trigger renders the selected Korean option copy and a downward chevron without a leading density icon.
+- The trigger must expose the current density through an accessible name, for example `테이블 보기 밀도: 기본 간격`.
+- The menu contains exactly `좁은 간격`, `기본 간격`, and `넓은 간격` as radio items.
 - The selected option remains visible through a check indicator and `aria-checked` state.
 - Do not render a separate visible `밀도` label in dense toolbars.
 - The dropdown must not include saved views, URL state, localStorage persistence, or server-backed preferences unless separately scoped.

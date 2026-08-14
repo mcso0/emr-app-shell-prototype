@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHART-PR-022 날짜·대기열 선택 동기화 결과</title>
+    <style>
+      :root { color-scheme: light; --ink:#172033; --muted:#667085; --line:#d8dee9; --surface:#fff; --canvas:#f4f6f8; --accent:#155eef; --soft:#eff4ff; --ok:#067647; --ok-soft:#ecfdf3; --warn:#9a6700; --warn-soft:#fff7d6; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--canvas); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.55; }
+      main { max-width:960px; margin:0 auto; padding:44px 24px 72px; }
+      h1 { margin:0; font-size:clamp(28px,5vw,42px); letter-spacing:-.035em; }
+      h2 { margin:0 0 14px; font-size:20px; }
+      h3 { margin:0 0 7px; font-size:15px; }
+      p { margin:0; }
+      code { border-radius:5px; background:#eef1f5; padding:2px 5px; }
+      .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+      .lede { max-width:760px; margin-top:12px; color:var(--muted); font-size:17px; }
+      .meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+      .pill { border:1px solid var(--line); border-radius:999px; background:var(--surface); padding:5px 10px; color:var(--muted); font-size:12px; }
+      .pill.ok { border-color:#a6f4c5; background:var(--ok-soft); color:var(--ok); font-weight:700; }
+      section { margin-top:18px; border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:22px; box-shadow:0 1px 2px rgb(16 24 40 / 4%); }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+      .card { border:1px solid var(--line); border-radius:9px; padding:14px; }
+      .card p, li { color:var(--muted); font-size:13px; }
+      ul { margin:8px 0 0; padding-left:20px; }
+      .flow { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+      .step { border-radius:9px; background:var(--soft); padding:12px; color:#1849a9; font-size:13px; font-weight:700; }
+      .evidence { width:100%; border-collapse:collapse; font-size:13px; }
+      .evidence th,.evidence td { border-bottom:1px solid var(--line); padding:10px 8px; text-align:left; }
+      .evidence th { color:var(--muted); font-size:12px; }
+      .done { color:var(--ok); font-weight:750; }
+      .caution { margin-top:12px; border:1px solid #fedf89; border-radius:8px; background:var(--warn-soft); padding:12px; color:var(--warn); font-size:13px; }
+      @media (max-width:720px) { main{padding:28px 14px 48px}.grid,.flow{grid-template-columns:1fr}section{padding:17px} }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">CHART-PR-022 · Implementation Result</p>
+        <h1>날짜와 차트가 어긋나지 않게 동기화했다</h1>
+        <p class="lede">선택 날짜를 진료 대기열, URL, 환자 헤더, 차트 본문의 단일 기준으로 만들었다. 업무가 있으면 첫 차트를 바로 열고, 업무가 없으면 이전 날짜 차트를 남기지 않는다.</p>
+        <div class="meta">
+          <span class="pill ok">집중 회귀 7/7 통과</span>
+          <span class="pill ok">전체 차트 exit 0</span>
+          <span class="pill">2026-08-14</span>
+          <span class="pill">API·DB·권한 변경 없음</span>
+        </div>
+      </header>
+
+      <section>
+        <h2>무엇이 달라졌나</h2>
+        <div class="grid">
+          <div class="card"><h3>업무가 있는 날짜</h3><p>유효한 직접 링크가 있으면 유지하고, 없으면 서버 정렬의 첫 업무를 자동 선택한다. 최초 진입에서 엠티 상태가 잠깐 보이지 않는다.</p></div>
+          <div class="card"><h3>업무가 없는 날짜</h3><p>이전 encounter와 URL 파라미터를 즉시 지우고, 선택 날짜가 포함된 빈 상태만 보여준다. 차트 헤더와 실행 버튼도 함께 숨긴다.</p></div>
+          <div class="card"><h3>로딩·실패·권한</h3><p>로딩은 접근 가능한 Skeleton 상태로, 읽기 실패와 권한 거부는 별도 복구 상태로 표현한다. 세 상태를 빈 대기열로 오인하지 않는다.</p></div>
+          <div class="card"><h3>패널이 접힌 경우</h3><p>항상 마운트되는 coordinator가 조회와 선택을 담당해 좌측 패널이 닫혀 있어도 직접 링크와 자동 선택이 작동한다.</p></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>선택 순서</h2>
+        <div class="flow" aria-label="차트 업무 선택 우선순위">
+          <div class="step">1. 선택 날짜의 유효한 URL encounter</div>
+          <div class="step">2. 같은 날짜의 유효한 현재 선택</div>
+          <div class="step">3. 서버 정렬 첫 업무</div>
+          <div class="step">4. 업무가 없으면 선택 없음</div>
+        </div>
+      </section>
+
+      <section>
+        <h2>변경 범위</h2>
+        <ul>
+          <li><code>src/features/chart/store.ts</code>: workspace별 날짜와 queue scope 상태</li>
+          <li><code>src/features/chart/module.tsx</code>: coordinator, URL 정규화, 로딩·날짜별 빈 상태</li>
+          <li><code>tests/chart.spec.ts</code>: 초기 선택, 직접·stale 링크, 날짜 전환, race, 오류·권한 회귀</li>
+          <li>CHART-PR-022 작업 문서, 화면 상태 spec, current status와 work index</li>
+        </ul>
+        <p class="caution">SOAP·진단·Order 저장, 진료 완료, API 응답, DB, Supabase, RLS, 권한은 변경하지 않았다. 작성 중 보호도 기존 차트 이동 규칙을 유지한다.</p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <table class="evidence">
+          <thead><tr><th>검증</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>Focused ESLint</td><td class="done">통과</td></tr>
+            <tr><td>TypeScript <code>npx tsc --noEmit</code></td><td class="done">통과</td></tr>
+            <tr><td>날짜·선택 focused Playwright, fresh server</td><td class="done">7 / 7 통과</td></tr>
+            <tr><td>최신 main·빈 상태 대기열 진입 통합 회귀</td><td class="done">11 / 11 통과</td></tr>
+            <tr><td>전체 <code>tests/chart.spec.ts</code>, fresh server</td><td class="done">45건 첫 통과 + SOAP 3건 재시도 통과</td></tr>
+            <tr><td>live queue server contract</td><td class="done">7 / 7 통과</td></tr>
+            <tr><td>전체 lint·Production build</td><td class="done">통과</td></tr>
+            <tr><td>문서 링크·한국어 UX copy·secret·diff 검사</td><td class="done">통과</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>현재 상태와 다음 단계</h2>
+        <p>로컬 구현과 전체 검증은 완료됐다. ready PR, Release Check와 Preview smoke를 통과한 정확한 head SHA를 기준으로 Production 병합 승인을 별도 요청한다. <code>origin/staging</code>과 고정 staging alias는 이번 예외 경로에서 변경하지 않는다.</p>
+      </section>
+    </main>
+  </body>
+</html>

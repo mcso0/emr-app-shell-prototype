@@ -35,6 +35,7 @@ export type HospitalBasicSettingsDraft = {
     fax: string;
     homepage: string;
     instagram: string;
+    customerGuideMemo: string;
   };
   weeklyHours: Record<Weekday, WeekdaySchedule>;
   holidayPolicy: "closed" | "weekday" | "custom";
@@ -45,6 +46,7 @@ export type HospitalSettingsValidationIssue = {
   code:
     | "required_phone"
     | "invalid_homepage"
+    | "customer_guide_memo_too_long"
     | "treatment_range"
     | "break_range"
     | "break_outside_treatment"
@@ -78,6 +80,7 @@ export function createInitialHospitalBasicSettingsDraft(): HospitalBasicSettings
       fax: "02-6203-7583",
       homepage: "",
       instagram: "",
+      customerGuideMemo: "주차는 건물 뒤편 발렛을 이용해 주세요.",
     },
     weeklyHours: {
       monday: cloneWeekdaySchedule(defaultWeekdaySchedule),
@@ -134,6 +137,27 @@ export function hasOperatingHoursChanges(
       timezone: savedDraft.timezone,
       weeklyHours: savedDraft.weeklyHours,
     });
+}
+
+export function hasContactSettingsChanges(
+  draft: HospitalBasicSettingsDraft,
+  savedDraft: HospitalBasicSettingsDraft
+): boolean {
+  return JSON.stringify(draft.contact) !== JSON.stringify(savedDraft.contact);
+}
+
+export function setOpenWeekdays(
+  draft: HospitalBasicSettingsDraft,
+  openDays: readonly Weekday[]
+): HospitalBasicSettingsDraft {
+  const next = cloneHospitalBasicSettingsDraft(draft);
+  const openDaySet = new Set(openDays);
+
+  for (const day of weekdays) {
+    next.weeklyHours[day].isOpen = openDaySet.has(day);
+  }
+
+  return next;
 }
 
 export type EffectiveOperatingHours = {
@@ -219,6 +243,15 @@ export function applyScheduleRangeToOpenDays(
 export function validateHospitalBasicSettingsDraft(
   draft: HospitalBasicSettingsDraft
 ): HospitalSettingsValidationIssue[] {
+  return [
+    ...validateContactSettingsDraft(draft),
+    ...validateOperatingHoursDraft(draft),
+  ];
+}
+
+export function validateContactSettingsDraft(
+  draft: HospitalBasicSettingsDraft
+): HospitalSettingsValidationIssue[] {
   const issues: HospitalSettingsValidationIssue[] = [];
 
   if (!draft.contact.phone.trim()) {
@@ -236,6 +269,22 @@ export function validateHospitalBasicSettingsDraft(
       message: "홈페이지 주소를 http:// 또는 https:// 형식으로 입력해 주세요.",
     });
   }
+
+  if (draft.contact.customerGuideMemo.length > 300) {
+    issues.push({
+      code: "customer_guide_memo_too_long",
+      fieldId: "hospital-settings-customer-guide-memo",
+      message: "고객 안내 메모는 300자 이하로 입력해 주세요.",
+    });
+  }
+
+  return issues;
+}
+
+export function validateOperatingHoursDraft(
+  draft: HospitalBasicSettingsDraft
+): HospitalSettingsValidationIssue[] {
+  const issues: HospitalSettingsValidationIssue[] = [];
 
   for (const day of weekdays) {
     const schedule = draft.weeklyHours[day];

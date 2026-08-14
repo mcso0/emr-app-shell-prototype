@@ -1,6 +1,5 @@
 "use client";
 
-import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,10 +19,15 @@ export function ProfileAvailabilitySummary({
 }) {
   if (state === "loading") {
     return (
-      <section aria-label="근무 가능 일정 불러오는 중" className="rounded-xl border p-3">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="mt-3 h-5 w-40" />
-        <Skeleton className="mt-2 h-4 w-32" />
+      <section
+        aria-label="다가오는 일정 불러오는 중"
+        className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] px-4"
+      >
+        <Skeleton className="size-[42px] shrink-0 rounded-md" />
+        <div className="grid min-w-0 gap-1">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-4 w-40" />
+        </div>
       </section>
     );
   }
@@ -46,28 +50,57 @@ export function ProfileAvailabilitySummary({
     );
   }
 
+  if (state === "empty") {
+    return (
+      <section className="flex h-[70px] items-center justify-center rounded-xl border border-[var(--emr-border-default)] px-4">
+        <p className="text-sm font-medium tracking-[0.014em] text-[var(--emr-text-placeholder)]">
+          예정된 일정이 없습니다
+        </p>
+      </section>
+    );
+  }
+
   return (
-    <section className="rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-3">
-      <div className="flex items-center gap-2 text-sm font-medium text-[var(--emr-text-secondary)]">
-        <CdsFilesCalendarIcon aria-hidden="true" className="size-4 text-[var(--emr-text-tertiary)]" />
-        예정된 휴무와 복귀
+    <section className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] px-4 py-[14px]">
+      <CalendarDateTile label={eventLabel} />
+      <div className="min-w-0">
+        <p className="truncate text-base leading-6 font-semibold tracking-[0.006em] text-[var(--emr-text-primary)]">
+          {getAvailabilityTitle(eventLabel)}
+        </p>
+        <p className="truncate text-sm leading-[18px] font-medium tracking-[0.014em] text-[var(--emr-text-secondary)]">
+          {returnLabel ?? getAvailabilityDateLabel(eventLabel)}
+        </p>
       </div>
-      {state === "empty" ? (
-        <p className="mt-3 text-sm text-[var(--emr-text-placeholder)]">예정된 휴무가 없어요</p>
-      ) : (
-        <dl className="mt-3 grid gap-2 text-sm">
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-[var(--emr-text-tertiary)]">다음 휴무</dt>
-            <dd className="text-right font-medium text-[var(--emr-text-primary)]">{eventLabel}</dd>
-          </div>
-          {returnLabel ? (
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-[var(--emr-text-tertiary)]">다음 근무</dt>
-              <dd className="text-right font-medium text-[var(--emr-text-primary)]">{returnLabel}</dd>
-            </div>
-          ) : null}
-        </dl>
-      )}
     </section>
   );
+}
+
+function CalendarDateTile({ label }: { label?: string }) {
+  const day = getAvailabilityDay(label);
+  return (
+    <div
+      aria-hidden="true"
+      className="grid size-[42px] shrink-0 overflow-hidden rounded-md border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
+    >
+      <span className="h-3 bg-[var(--emr-surface-muted)]" />
+      <span className="flex items-center justify-center pb-0.5 text-base leading-4 font-semibold tabular-nums text-[var(--clair-color-atomic-sky-500)]">
+        {day}
+      </span>
+    </div>
+  );
+}
+
+function getAvailabilityDay(label: string | undefined) {
+  const match = label?.match(/(\d{1,2})일/);
+  return match?.[1] ?? "-";
+}
+
+function getAvailabilityDateLabel(label: string | undefined) {
+  return label?.replace(/\s+(휴가|휴무)$/, "") ?? "일정 정보 확인 중";
+}
+
+function getAvailabilityTitle(label: string | undefined) {
+  if (label?.endsWith("휴가")) return "휴가";
+  if (label?.endsWith("휴무")) return "휴무";
+  return "다가오는 일정";
 }

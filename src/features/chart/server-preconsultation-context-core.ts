@@ -8,6 +8,7 @@ import type {
   ChartPreconsultationHistoryEntry,
   ChartPreconsultationVitalMeasurement,
 } from "@/features/chart/preconsultation-context";
+import { canWritePatientVitals } from "@/features/patient-vitals/server-patient-vital-core";
 
 export type ChartPreconsultationContextGateway = {
   readContext(input: {
@@ -24,6 +25,7 @@ export type ChartPreconsultationContextReadResult =
       ok: true;
       status: 200;
       context: ChartPreconsultationContext;
+      canWriteVitals: boolean;
       enforcedBy: "chart-preconsultation-context-read";
     }
   | {
@@ -85,6 +87,11 @@ export async function readChartPreconsultationContext({
     ok: true,
     status: 200,
     context: result.context,
+    canWriteVitals: canWritePatientVitals({
+      actorUserId,
+      permissionAdapter,
+      workspaceId,
+    }).allowed,
     enforcedBy: "chart-preconsultation-context-read",
   };
 }
@@ -270,6 +277,7 @@ function parseVital(value: unknown): ChartPreconsultationVitalMeasurement | null
   const vital: ChartPreconsultationVitalMeasurement = { id, encounterId, measuredAt };
   assignOptionalNumber(vital, "weightKg", value.weightKg);
   assignOptionalNumber(vital, "temperatureC", value.temperatureC);
+  assignOptionalNumber(vital, "heartRateBpm", value.heartRateBpm);
   assignOptionalNumber(vital, "respiratoryRateRpm", value.respiratoryRateRpm);
   assignOptionalNumber(
     vital,

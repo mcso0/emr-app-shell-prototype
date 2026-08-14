@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>전 직원 현재 근무 정보 연결 결과</title>
+    <style>
+      :root{--bg:#f7f7f8;--panel:#fff;--text:#18181b;--muted:#71717a;--line:#e4e4e7;--ok:#087a45}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}.wrap{width:min(900px,calc(100% - 32px));margin:48px auto}.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}h1{margin:8px 0 10px;font-size:clamp(30px,5vw,48px);line-height:1.15;letter-spacing:-.04em}.lead{max-width:760px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:28px 0}.card,section{padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.card strong{display:block;font-size:25px}.card span{font-size:13px;color:var(--muted)}section{margin-top:14px}h2{margin:0 0 12px;font-size:19px}ul{margin:0;padding-left:20px}.ok{color:var(--ok)}@media(max-width:720px){.grid{grid-template-columns:1fr}.wrap{margin:28px auto}}
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <p class="eyebrow">RECEPTION-PR-018 · 2026-07-20</p>
+      <h1>전 직원의 현재 근무 정보를 실제 근무 데이터에 연결</h1>
+      <p class="lead">예약이 있다는 이유로 근무 중처럼 보이던 잘못된 연결을 제거했다. 이제 모든 활성 직원은 역할과 관계없이 게시 근무표, 퇴근, 진료 상태, 연차·휴무에 맞는 카드가 보이고, 접수·예약은 업무현황에만 남는다.</p>
+      <div class="grid">
+        <div class="card"><strong class="ok">모든 역할</strong><span>수의사·테크니션·데스크·기타 멤버</span></div>
+        <div class="card"><strong>15명 확인</strong><span>청담 활성 직원 원격 읽기 검증</span></div>
+        <div class="card"><strong class="ok">DB 적용</strong><span>원격 마이그레이션 및 응답 확인</span></div>
+      </div>
+      <section>
+        <h2>바뀐 내용</h2>
+        <ul>
+          <li>오늘 근무 정보는 게시 근무표·출퇴근·휴무·연차·진료실 데이터만 사용한다.</li>
+          <li>진료중과 진료실은 실제 진료중 encounter와 호출 시 선택한 진료실이 있을 때만 표시한다.</li>
+          <li>예약과 현장 접수는 환자 업무이므로 업무현황에서만 표시한다.</li>
+          <li>활성 멤버가 추가되거나 역할이 바뀌면 근무 프로필이 자동으로 동기화된다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>원격 적용 전 전체 SQL 롤백 검증을 통과했다.</li>
+          <li>청담의 수의사·테크니션·데스크·기타 활성 멤버 15명 모두 09:00-19:00 근무와 현재 업무 종료 상태를 반환했다.</li>
+          <li>TypeScript와 집중 서버·브라우저 테스트로 근무/퇴근/업무 종료/연차/당일 연차/휴무일/병원 휴무일 UI를 확인했다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>범위</h2>
+        <ul>
+          <li>일정 탭의 연차·휴무 목록 화면은 이번 구현에 포함하지 않았다.</li>
+          <li>현재 근무 응답에는 환자명, 보호자명, 근무 메모, 연차 사유를 포함하지 않는다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

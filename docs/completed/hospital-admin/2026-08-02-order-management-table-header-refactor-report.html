@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Order 관리 데이터테이블 헤더 개편 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #171717;
+        background: #f5f6f8;
+      }
+      body { margin: 0; padding: 40px; }
+      main { max-width: 920px; margin: 0 auto; padding: 36px; border: 1px solid #e5e5e5; border-radius: 12px; background: #fff; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 28px 0 10px; font-size: 18px; }
+      p, li { font-size: 15px; line-height: 1.7; }
+      .summary { margin: 20px 0; padding: 16px 18px; border-left: 4px solid #171717; background: #f7f7f7; }
+      code { padding: 2px 5px; border-radius: 4px; background: #f1f1f1; }
+      .pass { color: #137333; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Order 관리 데이터테이블 헤더 개편</h1>
+      <p>2026-08-02 · Hospital Admin UI</p>
+
+      <div class="summary">
+        고객관리 데이터테이블 헤더를 공용 컴포넌트로 승격하고, Order 관리의 데이터테이블 15개 leaf 화면에 같은 구조를 적용했다. 제목 아래 설명과 카테고리 탭을 제거해 검색·조건·필터·등록 작업의 위계를 단순화했다.
+      </div>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li><code>EmrTableWorkspaceHeader</code>가 제목, 결과 건수, 검색, 테이블 제어, 주요 액션을 공통 소유한다.</li>
+        <li>고객관리는 기존 <code>CustomerListHeader</code> API와 test id를 호환 래퍼로 유지한다.</li>
+        <li>Order 관리 15개 leaf에서 설명·상태 문구의 시각 노출과 내부 타입 탭을 제거했다.</li>
+        <li>임상병리 검사에만 <code>검사 카테고리</code> 고급 필터를 제공한다.</li>
+        <li>검색, 빠른 조건, 고급 필터는 기존처럼 AND로 결합하고 정렬·선택·복제·Drawer 동작은 유지한다.</li>
+      </ul>
+
+      <h2>작업 범위</h2>
+      <p>기본 진료비, 기타 진료비, 예방, 영상검사, 임상병리 검사, 계통 검사, 의뢰 검사, 처치, 마취, 수술, 입원, 치료, 처방, 조제, 의료물품의 15개 화면이다.</p>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li class="pass">TypeScript 및 변경 파일 ESLint 통과</li>
+        <li class="pass">Storybook 전체 story/a11y 테스트 통과</li>
+        <li class="pass">Customer + Hospital Admin 전체 58개 Playwright 테스트 통과</li>
+        <li class="pass">15개 Order leaf, 탭 부재, 임상병리 전용 카테고리 필터 집중 테스트 통과</li>
+        <li class="pass">390px 필터 접근성과 1920×1080 실제 화면 확인</li>
+      </ul>
+
+      <h2>범위 밖</h2>
+      <p>좌측 Order 카탈로그 메뉴, 권한·RLS, 서버 검색, 페이지네이션, 다른 14개 leaf의 분류 체계와 원격 배포는 변경하지 않았다.</p>
+
+      <h2>주의 사항</h2>
+      <p>임상병리 카테고리는 현재 workspace catalog의 명시적 <code>categoryLabel</code>을 화면용 category id로 매핑한다. 별도 영속 id가 서버 계약에 추가되면 이 매핑을 해당 필드로 교체하는 것이 다음 단계다.</p>
+    </main>
+  </body>
+</html>

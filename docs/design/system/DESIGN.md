@@ -2,15 +2,15 @@
 id: DESIGN-SYSTEM-CLAIR-EMR
 type: Design System
 title: "CLAiR EMR Design"
-description: "Defines the CLAiR EMR visual, interaction, density, token, and component design standards."
+description: "Defines the CLAiR EMR visual, interaction, writing, density, token, and component design standards."
 version: "alpha"
 name: "CLAiR EMR"
 status: "active"
 area: design
 doc_type: design-system
-tags: [design-system, ui, tokens, components, density]
-updated: "2026-07-14"
-last_updated: "2026-07-14"
+tags: [design-system, ui, ux-writing, tokens, components, density]
+updated: "2026-07-24"
+last_updated: "2026-07-24"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -34,6 +34,25 @@ Keep the screen useful before it is expressive:
 - keep status and medical semantic colors stable
 - prefer product data, tables, queues, and forms over explanation text
 - make the selected item obvious without making every card visually loud
+
+## Korean UX Writing Baseline
+
+User-facing Korean product copy uses 존댓말. Conversation settings for agents,
+internal developer notes, and synthetic user-authored clinical content do not
+determine the product voice.
+
+Until a broader UX writing guide is approved:
+
+- use `합니다체` for system facts, status, explanations, restrictions, and errors
+- use `~해 주세요` when the user needs to take an action
+- use `~하시겠습니까?` for confirmation questions
+- keep action labels concise, such as `저장`, `취소`, and `다시 시도`
+- preserve the meaning, permission boundary, recovery path, and mock/live
+  disclosure when correcting tone
+- do not rewrite existing polite `해요체` solely for register normalization in
+  the honorific-correction pass
+- do not rewrite user-authored notes, clinical records, fixture content that
+  represents authored records, machine error codes, or developer-only guidance
 
 ## Foundation
 
@@ -127,6 +146,21 @@ CLAiR screens favor operational density:
 - patient context bars near clinical work
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
+- every top-level module exposes exactly one effective main-content header at
+  its existing shell or feature ownership boundary
+- home, treatment, lab, imaging, dispensing, billing, and inpatient use the
+  fixed 56px shared-header mode; clinical features keep their selected patient
+  context inside this frame and preserve an empty frame before selection
+- reception uses its feature-owned 56px `ScheduleToolbar` as the effective
+  main-content header and does not register an additional shared header
+- hospital-admin and customer use the adaptive mode: 44px only when the
+  browser viewport matches `(min-width: 1024px) and (max-height: 1279px)`,
+  otherwise 56px
+- the shared frame centralizes height only. It does not move feature state,
+  patient content, back actions, routes, menus, or side-panel ownership into
+  the shell
+- table workspaces use `#FCFCFC` for the content frame and keep the table
+  header directly adjacent to the first row with no added gap
 
 The first viewport should show real product state. Avoid landing-page composition inside application routes.
 
@@ -137,6 +171,12 @@ Shared primitives should carry the visual system:
 - `EmrSubpanel`: module panels and compact side surfaces
 - `EmrListItem`: selected history and queue rows
 - `EmrSidePanelCard`: order and work queue cards
+- `EmrModuleListSidePanel`: CDS.V2 grouped module navigation. The current
+  geometry source is Figma node `27794:28010`. The component fills the shell's
+  allocated module-panel width instead of owning a fixed width; rows keep an
+  8px horizontal inset, 16px between top-level groups, 2px within groups, 36px
+  top-level height, 32px leaf height, 26px child-list offset, and 13/18px item
+  typography. Nested group labels and count badges use 12/16px.
 - `EmrDataTable` and `Table`: dense operational tables
 - `SegmentedControl`: compact filters and mode switching
 - `StatusBadge`: stable semantic state labels
@@ -150,7 +190,7 @@ Tabs and density controls have a stricter UX contract:
 - section tabs switch peer panels in one screen context
 - segmented controls and filter buttons narrow or mode-switch data without pretending to be navigation
 - table density is presentation-only and uses `compact`, `standard`, and `comfortable`
-- table density uses one compact selected-value dropdown button with a row-spacing icon and downward chevron; the menu exposes `좁게`, `기본`, and `넓게`
+- table density uses one compact outline selected-value dropdown button with Korean interval copy and a downward chevron; the menu exposes `좁은 간격`, `기본 간격`, and `넓은 간격`
 
 The CDS.V2 medium segmented control maps to `SegmentedControl` with `variant="tabs"` and `size="md"`: a 32px neutral-alpha group with 2px inset, 12px outer radius, contiguous 28px items with 8px horizontal padding and 10px radius, `body/2/normal` typography, and `shadow-sm` on the selected white item. Compact `xs` and `sm` modes keep their existing denser contracts.
 

@@ -561,12 +561,12 @@ export function GlobalCommandPalette({
             ) : null}
             {searchState.status === "error" ? (
               <div className="mx-2 mb-1 rounded-[8px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] font-medium text-destructive">
-                검색 결과를 불러오지 못했어.
+                검색 결과를 불러오지 못했습니다.
               </div>
             ) : null}
             {hasPartialIssue && searchState.status === "ready" ? (
               <div className="mx-2 mb-1 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800">
-                일부 결과를 불러오지 못했어.
+                일부 결과를 불러오지 못했습니다.
               </div>
             ) : null}
             {sections.length ? (

@@ -205,15 +205,16 @@ test("Cheongdam live chart selection recovers live encounters without legacy fix
   const moduleSource = readFileSync("src/features/chart/module.tsx", "utf8");
 
   expect(storeSource).toContain('selectedEncounterId: ""');
+  expect(storeSource).toContain("selectedOperatingDateByWorkspace");
+  expect(storeSource).toContain("liveQueueScope");
   expect(moduleSource).toContain("chooseRecoverableLiveEncounterId");
   expect(moduleSource).toContain(
-    "saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId)",
+    'setSelectedQueueItem("treatment", nextSelectedEncounterId)',
   );
+  expect(moduleSource).toContain("replaceLiveChartSelection");
+  expect(moduleSource).not.toContain("chart-selected-encounter");
   expect(moduleSource).toContain(
     "if (options.allowMockFallback === false) return null;",
-  );
-  expect(moduleSource).toContain(
-    "selectedEncounterId === demoScenarioEncounterId",
   );
   const allowMockFallbackBlocks = [
     ...moduleSource.matchAll(/const allowMockFallback =[\s\S]*?;/g),

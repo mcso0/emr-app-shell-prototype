@@ -54,7 +54,9 @@ test("billing no-work empty state hides history aside", async ({ page }) => {
   await expect(page.locator("#billing-content-aside")).toHaveCount(0);
   await expect(page.locator('section[data-surface="content"]')).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "오늘 수납 대기 건이 없습니다" }),
+    page
+      .getByTestId("workspace-main-content")
+      .getByRole("heading", { name: "수납 업무가 없습니다" }),
   ).toBeVisible();
 });
 
@@ -580,7 +582,7 @@ test("billing financial confirmation failure shows persistent recovery action", 
   await issueDialog.getByRole("button", { name: "수납 진행 저장" }).click();
 
   await expect(page.getByTestId("billing-financial-error-alert")).toContainText(
-    "수납 진행이 저장되지 않았어",
+    "수납 진행이 저장되지 않았습니다",
   );
   await expect(
     page.getByRole("button", { name: "수납 진행 다시 시도" }),

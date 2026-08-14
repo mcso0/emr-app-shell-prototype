@@ -17,11 +17,15 @@
     "owner-os:packet:check": "node scripts/validate-owner-os-packets.mjs",
     "release:staging-alias:dry-run": "node scripts/update-fixed-staging-alias.mjs --dry-run",
     "security:secrets": "node scripts/scan-secrets.mjs",
+    "ux-copy:check": "node scripts/check-korean-ux-copy-honorifics.mjs",
     "storybook": "storybook dev -p 6006 --disable-telemetry",
     "build-storybook": "storybook build --disable-telemetry"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
     "@tanstack/react-table": "^8.21.3",

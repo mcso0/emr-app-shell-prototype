@@ -4,6 +4,8 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { EmrTableFilterBuilder } from "./table-filter-builder";
 import {
   createInitialEmrTableFilterBuilderModel,
+  updateEmrTableFilterBuilderRuleField,
+  updateEmrTableFilterBuilderRuleValue,
   type EmrTableFilterBuilderField,
   type EmrTableFilterBuilderModel,
 } from "./table-filter-builder-model";
@@ -40,21 +42,25 @@ const sampleFields: Array<EmrTableFilterBuilderField<SampleRow>> = [
 ];
 
 function getInitialModel(initialCompleteRule: boolean): EmrTableFilterBuilderModel {
-  if (!initialCompleteRule) return createInitialEmrTableFilterBuilderModel("sample-filter");
+  let model = createInitialEmrTableFilterBuilderModel("sample-filter");
+  if (!initialCompleteRule) return model;
 
-  return {
-    combinator: "and",
-    id: "sample-filter",
-    rules: [
-      {
-        combinator: "and",
-        fieldId: "status",
-        id: "sample-filter-rule-1",
-        operatorId: "is",
-        value: "active",
-      },
-    ],
-  };
+  const group = model.groups[0];
+  const rule = group.rules[0];
+  model = updateEmrTableFilterBuilderRuleField(
+    model,
+    group.id,
+    rule.id,
+    "status",
+    sampleFields
+  );
+  return updateEmrTableFilterBuilderRuleValue(
+    model,
+    group.id,
+    rule.id,
+    "active",
+    sampleFields
+  );
 }
 
 function TableFilterBuilderExample({
@@ -65,7 +71,7 @@ function TableFilterBuilderExample({
   const [model, setModel] = useState(() => getInitialModel(initialCompleteRule));
 
   return (
-    <div className="max-w-3xl rounded-lg border border-border bg-popover p-4">
+    <div className="max-w-[720px] rounded-xl border border-border bg-popover shadow-md">
       <EmrTableFilterBuilder
         fields={sampleFields}
         model={model}
@@ -74,7 +80,7 @@ function TableFilterBuilderExample({
         title={title}
         addFilterLabel="필터 추가"
         clearAllLabel="전체 초기화"
-        description="합성 table filter builder 예시입니다. 완성된 조건만 active filter로 계산합니다."
+        description="완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다."
       />
     </div>
   );
@@ -109,7 +115,7 @@ const meta = {
   args: {
     closeVisible: true,
     initialCompleteRule: true,
-    title: "샘플 필터",
+    title: "필터",
   },
   render: (args) => <TableFilterBuilderExample {...args} />,
 } satisfies Meta<TableFilterBuilderArgs>;

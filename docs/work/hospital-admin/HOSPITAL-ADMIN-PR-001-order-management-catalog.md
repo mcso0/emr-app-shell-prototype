@@ -59,3 +59,5 @@ The URL remains `/orders`, but the user-facing module is 병원관리. Order 세
 2026-05-06 follow-up: The main page header now reflects the selected leaf (`임상병리 검사`, `처방`, `영상검사`, etc.). Header tabs are reserved for the next level inside that leaf, such as `임상병리 검사`'s internal order types.
 
 2026-05-06 follow-up: 병원관리 side panel header now uses the shared `EmrSubpanelTitle` header rule from 조제/처치 without the order-type tab group.
+
+2026-08-02 follow-up: Order 관리의 데이터테이블 15개 leaf 화면은 고객관리와 같은 공용 `EmrTableWorkspaceHeader`를 사용한다. 제목 아래 설명과 leaf 내부 타입 탭은 제거했으며, 기존 임상병리 검사 분류는 `검사 카테고리` 고급 필터로 이동했다. 이 필터 필드는 임상병리 검사에서만 노출하고 다른 14개 leaf에는 적용하지 않는다.

@@ -45,6 +45,15 @@ export type SupabaseNotificationPersistenceRpcClient = {
       p_workspace_id: string;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_mark_notification_user_states_read",
+    args: {
+      p_actor_user_id: string;
+      p_notification_ids: string[];
+      p_state_scope_id: string;
+      p_workspace_id: string;
+    },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
 type NotificationPersistenceError = {
@@ -84,6 +93,7 @@ export type NotificationUserStatePersistenceResult =
   | {
       ok: true;
       status: 200;
+      updatedCount?: number;
       enforcedBy: "notification-user-state-persistence-gateway";
     }
   | NotificationPersistenceError;
@@ -206,6 +216,31 @@ export function createSupabaseNotificationPersistenceGateway(
       if (error) return mapSupabaseNotificationPersistenceError(error.message, "write");
       return normalizeUserStateResponse(data);
     },
+
+    async markNotificationUserStatesRead({
+      actorUserId,
+      notificationIds,
+      stateScopeId,
+      workspaceId,
+    }: {
+      actorUserId: string;
+      notificationIds: string[];
+      stateScopeId: string;
+      workspaceId: string;
+    }): Promise<NotificationUserStatePersistenceResult> {
+      const { data, error } = await client.rpc(
+        "clair_mark_notification_user_states_read",
+        {
+          p_workspace_id: workspaceId,
+          p_actor_user_id: actorUserId,
+          p_state_scope_id: stateScopeId,
+          p_notification_ids: notificationIds,
+        },
+      );
+
+      if (error) return mapSupabaseNotificationPersistenceError(error.message, "write");
+      return normalizeUserStateResponse(data);
+    },
   };
 }
 
@@ -319,21 +354,20 @@ export async function markAllPersistedLiveNotificationsRead(
   });
   if (!current.ok) return current;
 
-  const now = new Date().toISOString();
   const unreadNotifications = current.notifications.filter(
     (notification) => !notification.archivedAt && !notification.readAt,
   );
 
-  for (const notification of unreadNotifications) {
-    const persisted = await input.gateway.upsertNotificationUserState({
+  let updatedCount = 0;
+  if (unreadNotifications.length > 0) {
+    const persisted = await input.gateway.markNotificationUserStatesRead({
       actorUserId: input.actorUserId,
-      archivedAt: notification.archivedAt,
-      notificationId: notification.id,
-      readAt: now,
+      notificationIds: unreadNotifications.map((notification) => notification.id),
       stateScopeId: getPersistedStateScopeId(input),
       workspaceId: input.workspaceId,
     });
     if (!persisted.ok) return persisted;
+    updatedCount = persisted.updatedCount ?? unreadNotifications.length;
   }
 
   const afterMutation = await readPersistedLiveNotifications({
@@ -348,7 +382,7 @@ export async function markAllPersistedLiveNotificationsRead(
     status: 200,
     workspaceId: input.workspaceId,
     counts: afterMutation.counts,
-    updatedCount: unreadNotifications.length,
+    updatedCount,
     enforcedBy: "live-notification-writer",
   };
 }
@@ -630,6 +664,9 @@ function normalizeUserStateResponse(
   return {
     ok: true,
     status: readStatus(data.status),
+    ...(typeof data.updatedCount === "number"
+      ? { updatedCount: data.updatedCount }
+      : {}),
     enforcedBy: "notification-user-state-persistence-gateway",
   };
 }

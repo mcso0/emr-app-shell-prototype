@@ -497,14 +497,17 @@ function mapEncounter(value: unknown): Encounter | null {
     return null;
   }
 
+  const primaryVeterinarianId =
+    getString(row.primaryVeterinarianId) ?? getString(row.primary_veterinarian_id);
+
   return {
     id,
     workspaceId,
     patientId,
     guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
     appointmentId: getString(row.appointmentId) ?? getString(row.appointment_id),
-    primaryVeterinarianId:
-      getString(row.primaryVeterinarianId) ?? getString(row.primary_veterinarian_id),
+    primaryVeterinarianId,
+    assignedStaffUserIds: getAssignedStaffUserIds(row, primaryVeterinarianId),
     encounterNo,
     receptionType:
       row.receptionType === "walk_in" || row.receptionType === "appointment"
@@ -569,13 +572,15 @@ function mapAppointment(value: unknown): Appointment | undefined {
     return undefined;
   }
 
+  const assignedVeterinarianId =
+    getString(row.assignedVeterinarianId) ?? getString(row.assigned_veterinarian_id);
   return {
     id,
     workspaceId,
     patientId,
     guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
-    assignedVeterinarianId:
-      getString(row.assignedVeterinarianId) ?? getString(row.assigned_veterinarian_id),
+    assignedVeterinarianId,
+    assignedStaffUserIds: getAssignedStaffUserIds(row, assignedVeterinarianId),
     scheduledStartAt,
     scheduledEndAt: getString(row.scheduledEndAt) ?? getString(row.scheduled_end_at),
     visitPurpose: getString(row.visitPurpose) ?? getString(row.visit_purpose),
@@ -585,6 +590,17 @@ function mapAppointment(value: unknown): Appointment | undefined {
     createdAt,
     updatedAt,
   };
+}
+
+function getAssignedStaffUserIds(
+  row: Record<string, unknown>,
+  assignedVeterinarianId?: string,
+): string[] | undefined {
+  const raw = row.assignedStaffUserIds ?? row.assigned_staff_user_ids;
+  if (Array.isArray(raw)) {
+    return raw.filter((value): value is string => typeof value === "string");
+  }
+  return assignedVeterinarianId ? [assignedVeterinarianId] : undefined;
 }
 
 function mapPatient(value: unknown): Patient | undefined {
