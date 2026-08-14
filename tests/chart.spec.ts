@@ -3320,6 +3320,26 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
   await expect(patientContext.getByText("콩이")).toBeVisible();
   await expect(patientContext.getByText("김하늘")).toBeVisible();
   await expect(patientContext.getByText("주치의")).toBeVisible();
+  const patientSection = page.locator("[data-slot='patient-context-patient']");
+  const patientHoverAction = patientSection.locator(
+    "[data-slot='patient-context-hover-action']",
+  );
+  await expect(patientHoverAction).toHaveCSS("opacity", "0");
+  await patientSection.hover();
+  const patientHoverBackground = await page.evaluate(() => {
+    const probe = document.createElement("span");
+    probe.style.backgroundColor = "var(--emr-context-bar-hover-bg)";
+    document.body.appendChild(probe);
+    const backgroundColor = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+
+    return backgroundColor;
+  });
+  await expect(patientSection).toHaveCSS(
+    "background-color",
+    patientHoverBackground,
+  );
+  await expect(patientHoverAction).toHaveCSS("opacity", "1");
   await expect(
     page.getByText(
       "보호자 진술상 전날 밤부터 구토 3회, 아침 식욕 없음. 물 섭취 후 재구토.",

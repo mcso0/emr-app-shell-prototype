@@ -279,7 +279,10 @@ test("patient context bars are display-only latest-vital consumers", () => {
   );
 
   expect(contextBar).not.toContain("PatientVitalPopover");
-  expect(contextBar).not.toContain("CdsActionsPlusIcon");
+  expect(contextBar).toContain("CdsActionsPlusIcon");
+  expect(contextBar).toContain('data-slot="patient-context-hover-action"');
+  expect(contextBar).toContain("pointer-events-none");
+  expect(contextBar).not.toMatch(/on(?:Add|Create|Edit|Write)Vital/);
   expect(chart).toContain("usePatientLatestVitalItems");
   expect(dispensing).toContain("usePatientLatestVitalItems");
   expect(labImaging).toContain("usePatientLatestVitalItems");

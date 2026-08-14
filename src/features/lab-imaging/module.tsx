@@ -2684,12 +2684,14 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
   return (
     <EmrMainContentHeader heightMode="fixed">
       <EmrPatientContextBar
-        patientItems={[
-          { label: "환자", value: detail.patient.name },
+        guardianItems={[
           {
             label: "보호자",
             value: detail.primaryGuardian?.name ?? "보호자 미지정",
           },
+        ]}
+        patientItems={[
+          { label: "환자", value: detail.patient.name },
           {
             label: "품종",
             value: detail.patient.breed ?? getSpeciesLabel(detail.patient),
@@ -2707,14 +2709,14 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
               "방문 목적 기록 없음",
           },
           {
-            label: "보호자 메모",
+            label: "보호자메모",
             locked: true,
             summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
             unavailableReason:
               "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
           },
           {
-            label: "환자 메모",
+            label: "환자메모",
             summary:
               [
                 detail.patient.allergyNote,
@@ -2725,7 +2727,7 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
                 .join(" · ") || "환자 특이 메모 없음",
           },
           {
-            label: "수납 메모",
+            label: "수납메모",
             disabled: true,
             unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
           },
@@ -3569,12 +3571,14 @@ export function ImagingHeader({
   return (
     <EmrMainContentHeader heightMode="fixed">
       <EmrPatientContextBar
-        patientItems={[
-          { label: "환자", value: detail.patient.name },
+        guardianItems={[
           {
             label: "보호자",
             value: detail.primaryGuardian?.name ?? "보호자 미지정",
           },
+        ]}
+        patientItems={[
+          { label: "환자", value: detail.patient.name },
           {
             label: "품종",
             value: detail.patient.breed ?? getSpeciesLabel(detail.patient),
@@ -3592,14 +3596,14 @@ export function ImagingHeader({
               "방문 목적 기록 없음",
           },
           {
-            label: "보호자 메모",
+            label: "보호자메모",
             locked: true,
             summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
             unavailableReason:
               "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
           },
           {
-            label: "환자 메모",
+            label: "환자메모",
             summary:
               [
                 detail.patient.allergyNote,
@@ -3610,7 +3614,7 @@ export function ImagingHeader({
                 .join(" · ") || "환자 특이 메모 없음",
           },
           {
-            label: "수납 메모",
+            label: "수납메모",
             disabled: true,
             unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
           },

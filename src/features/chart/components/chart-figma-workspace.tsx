@@ -1,36 +1,17 @@
 "use client";
 
-import Image from "next/image";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { type ReactNode } from "react";
 
-import animalDogIcon from "../../../../icons/Illustration/animal-dog.svg";
-import vitalHeartPulseIcon from "../../../../icons/Illustration/vital-heart-pulse.svg";
-import { CdsFilesFileTextIcon } from "@/components/cds-icons/files-and-layout";
-import {
-  CdsNavigationChevronLeftIcon,
-  CdsNavigationChevronRightIcon,
-  CdsNavigationMaximize2Icon,
-} from "@/components/cds-icons/navigation";
+import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsNavigationMaximize2Icon } from "@/components/cds-icons/navigation";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import {
   CdsMedicalBedIcon,
-  CdsMedicalHeartPulseIcon,
   CdsMedicalMessagesSquareIcon,
 } from "@/components/cds-icons/medical-and-domain";
-import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
+import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -62,24 +43,6 @@ type ChartPatientContextBarProps = {
   vitalItems: ChartPatientVitalItem[];
 };
 
-type ScrollState = {
-  canScrollLeft: boolean;
-  canScrollRight: boolean;
-};
-
-const getAssetSrc = (asset: string | { src?: string }) =>
-  typeof asset === "string" ? asset : (asset.src ?? "");
-
-function getScrollState(element: HTMLDivElement | null): ScrollState {
-  if (!element) return { canScrollLeft: false, canScrollRight: false };
-
-  const maxScrollLeft = element.scrollWidth - element.clientWidth;
-  return {
-    canScrollLeft: element.scrollLeft > 2,
-    canScrollRight: element.scrollLeft < maxScrollLeft - 2,
-  };
-}
-
 export function ChartPatientContextBar({
   doctorName,
   guardianName,
@@ -89,306 +52,26 @@ export function ChartPatientContextBar({
   patientName,
   vitalItems,
 }: ChartPatientContextBarProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollState, setScrollState] = useState<ScrollState>({
-    canScrollLeft: false,
-    canScrollRight: false,
-  });
-  const updateScrollState = useCallback(() => {
-    setScrollState(getScrollState(scrollRef.current));
-  }, []);
-
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (!element) return;
-
-    updateScrollState();
-    element.addEventListener("scroll", updateScrollState, { passive: true });
-    const observer = new ResizeObserver(updateScrollState);
-    observer.observe(element);
-
-    return () => {
-      element.removeEventListener("scroll", updateScrollState);
-      observer.disconnect();
-    };
-  }, [updateScrollState]);
-
-  const scrollByViewport = (direction: -1 | 1) => {
-    const element = scrollRef.current;
-    if (!element) return;
-    element.scrollBy({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      left: direction * Math.max(240, element.clientWidth * 0.42),
-    });
-  };
-
   return (
     <div
       data-slot="chart-patient-context-bar"
-      className="flex h-14 min-h-14 w-full items-center border-b border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] px-2 py-2"
+      className="h-full min-h-[var(--emr-context-bar-min-height)]"
     >
-      <div className="relative min-w-0 flex-1">
-        <div
-          ref={scrollRef}
-          aria-label="환자 컨텍스트 정보"
-          className="flex min-w-0 items-center overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          <ContextSection className="min-w-[235px]">
-            <ContextIllustration src={getAssetSrc(animalDogIcon)} />
-            <ContextText primary={patientName} secondary={patientMeta} inline />
-          </ContextSection>
-          <ContextDivider />
-          <ContextSection className="min-w-[210px]">
-            <ContextIcon>
-              <CdsPeopleUserIcon />
-            </ContextIcon>
-            <ContextText
-              primary={guardianName}
-              secondary={guardianPhone}
-              inline
-            />
-          </ContextSection>
-          <ContextDivider />
-          <ContextSection className="min-w-[365px]">
-            <ContextIllustration src={getAssetSrc(vitalHeartPulseIcon)} />
-            <div className="flex items-center gap-1.5">
-              {vitalItems.map((item) => (
-                <span
-                  key={`${item.label}-${item.value}`}
-                  className="inline-flex h-[22px] shrink-0 items-center gap-1 rounded-md bg-[var(--clair-color-atomic-black-alpha-4)] px-2 text-xs font-medium leading-4 text-[var(--emr-text-primary)]"
-                >
-                  <span className="text-[var(--emr-text-tertiary)]">
-                    {item.label}
-                  </span>
-                  <span>{item.value}</span>
-                </span>
-              ))}
-            </div>
-          </ContextSection>
-          <ContextDivider />
-          <ContextSection className="min-w-[170px]">
-            <ContextIcon>
-              <CdsMedicalHeartPulseIcon />
-            </ContextIcon>
-            <ContextText primary="주치의" secondary={doctorName} inline />
-          </ContextSection>
-          <ContextDivider />
-          <ContextSection className="min-w-[350px] gap-1 pr-2">
-            {memoItems.map((item, index) => (
-              <PatientMemoButton key={`${item.label}-${index}`} item={item} />
-            ))}
-          </ContextSection>
-        </div>
-        <div
-          aria-hidden="true"
-          className={cn(
-            "pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[var(--emr-surface-workspace)] to-transparent transition-opacity",
-            scrollState.canScrollLeft ? "opacity-100" : "opacity-0",
-          )}
-        />
-        <div
-          aria-hidden="true"
-          className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--emr-surface-workspace)] to-transparent transition-opacity",
-            scrollState.canScrollRight ? "opacity-100" : "opacity-0",
-          )}
-        />
-      </div>
-      <div className="ml-2 flex shrink-0 items-center gap-2">
-        <ContextScrollButton
-          label="환자 정보 이전 항목으로 이동"
-          disabled={!scrollState.canScrollLeft}
-          onClick={() => scrollByViewport(-1)}
-        >
-          <CdsNavigationChevronLeftIcon />
-        </ContextScrollButton>
-        <ContextScrollButton
-          label="환자 정보 다음 항목으로 이동"
-          disabled={!scrollState.canScrollRight}
-          onClick={() => scrollByViewport(1)}
-        >
-          <CdsNavigationChevronRightIcon />
-        </ContextScrollButton>
-      </div>
-    </div>
-  );
-}
-
-function ContextSection({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex h-9 shrink-0 items-center gap-2 px-3 first:pl-2",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
-function ContextDivider() {
-  return <div className="h-5 w-px shrink-0 bg-[var(--emr-border-default)]" />;
-}
-
-function ContextIllustration({ src }: { src: string }) {
-  return (
-    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-[var(--clair-color-atomic-blue-50)]">
-      <Image
-        src={src}
-        alt=""
-        aria-hidden="true"
-        width={18}
-        height={18}
-        unoptimized
-        className="size-[18px] object-contain"
-        draggable={false}
+      <EmrPatientContextBar
+        className="border-b-0"
+        guardianItems={[
+          { label: "보호자", value: guardianName },
+          { label: "연락처", value: guardianPhone },
+        ]}
+        patientItems={[
+          { label: "환자", value: patientName },
+          { label: "환자 정보", value: patientMeta },
+        ]}
+        vitalItems={vitalItems}
+        memoActions={memoItems}
+        trailingItems={[{ label: "주치의", value: doctorName }]}
       />
-    </span>
-  );
-}
-
-function ContextIcon({ children }: { children: ReactNode }) {
-  return (
-    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-600)] [&_svg]:size-4">
-      {children}
-    </span>
-  );
-}
-
-function ContextText({
-  inline = false,
-  primary,
-  secondary,
-}: {
-  inline?: boolean;
-  primary: string;
-  secondary: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "min-w-0 text-[13px] font-medium leading-[18px]",
-        inline ? "flex items-center gap-2" : "grid",
-      )}
-    >
-      <span className="truncate text-[var(--emr-text-primary)]">{primary}</span>
-      <span className="truncate text-[var(--emr-text-secondary)]">
-        {secondary}
-      </span>
-    </span>
-  );
-}
-
-function PatientMemoButton({ item }: { item: ChartPatientMemoItem }) {
-  const icon =
-    item.label === "보호자메모" ? (
-      <CdsPeopleUserIcon />
-    ) : item.label === "환자메모" ? (
-      <Image
-        src={getAssetSrc(animalDogIcon)}
-        alt=""
-        aria-hidden="true"
-        width={14}
-        height={14}
-        unoptimized
-        className="size-3.5"
-      />
-    ) : (
-      <CdsFilesFileTextIcon />
-    );
-
-  if (item.disabled) {
-    return (
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <span
-              className="inline-flex cursor-not-allowed"
-              tabIndex={0}
-              aria-label={`${item.label} 준비 중`}
-            />
-          }
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs opacity-50"
-            tabIndex={-1}
-            disabled
-          >
-            <span data-icon="inline-start" className="[&_svg]:size-3.5">
-              {icon}
-            </span>
-            {item.label}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">준비 중 · {item.summary}</TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs"
-          />
-        }
-      >
-        <span data-icon="inline-start" className="[&_svg]:size-3.5">
-          {icon}
-        </span>
-        {item.label}
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-3">
-        <div className="text-sm font-semibold text-foreground">
-          {item.label}
-        </div>
-        <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
-          {item.summary}
-        </p>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function ContextScrollButton({
-  children,
-  disabled,
-  label,
-  onClick,
-}: {
-  children: ReactNode;
-  disabled: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon-xs"
-      className="size-6 rounded-md bg-card [&_svg]:size-3.5"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {children}
-    </Button>
+    </div>
   );
 }
 
