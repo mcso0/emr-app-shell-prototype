@@ -175,6 +175,60 @@ async function grantCheongdamWorkspaceAccess(page: Page) {
   );
 }
 
+function makePreparedChartQueueRecord() {
+  const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+  const encounterId = "encounter-empty-state-queue-entry";
+  const updatedAt = "2026-08-14T11:00:00+09:00";
+
+  return {
+    encounter: {
+      id: encounterId,
+      workspaceId,
+      patientId: "patient-empty-state-queue-entry",
+      guardianId: "guardian-empty-state-queue-entry",
+      primaryVeterinarianId: "user-vet",
+      encounterNo: "E-260814-QUEUE",
+      visitPurpose: "건강검진",
+      chiefComplaint: "정기 건강검진",
+      status: "waiting",
+      checkedInAt: updatedAt,
+      createdAt: updatedAt,
+      updatedAt,
+    },
+    patient: {
+      id: "patient-empty-state-queue-entry",
+      workspaceId,
+      patientNo: "P-QUEUE-ENTRY",
+      name: "초코",
+      species: "dog",
+      breed: "Pomeranian",
+      estimatedAgeText: "9세",
+      sex: "male",
+      status: "active",
+      createdAt: updatedAt,
+      updatedAt,
+    },
+    primaryGuardian: {
+      id: "guardian-empty-state-queue-entry",
+      workspaceId,
+      name: "최도현",
+      createdAt: updatedAt,
+      updatedAt,
+    },
+    queueEntry: {
+      id: "queue-empty-state-queue-entry",
+      workspaceId,
+      encounterId,
+      queueType: "consultation",
+      status: "waiting",
+      priority: "normal",
+      sortOrder: 1,
+      enteredAt: updatedAt,
+    },
+    veterinarianName: "이수지",
+  };
+}
+
 async function routePreconsultationContext(
   page: Page,
   resolveContext: (encounterId: string) => Record<string, unknown>,
@@ -1143,6 +1197,169 @@ test("Cheongdam chart side panel shows the centered empty queue state", async ({
   ).toBeVisible();
 });
 
+test("chart empty state opens the treatment queue from a closed panel", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-live-queue-read",
+          queue: [makePreparedChartQueueRecord()],
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=closed&aside=closed`,
+  );
+
+  const emptyState = page.getByTestId("chart-content-empty-state");
+  await expect(
+    emptyState.getByRole("heading", { name: "환자를 선택해 주세요" }),
+  ).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-action-count", "1");
+  await expect(
+    emptyState.getByRole("button", { name: "새로고침" }),
+  ).toHaveCount(0);
+
+  const openQueueButton = emptyState.getByRole("button", {
+    name: "진료 대기열 열기",
+  });
+  await expect(openQueueButton).toBeVisible();
+  await openQueueButton.focus();
+  await expect(openQueueButton).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL(/modulePanel=open/);
+  await expect(
+    page
+      .getByTestId("module-panel-area")
+      .getByText("진료 대기열", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    emptyState.getByRole("button", { name: "진료 대기열 열기" }),
+  ).toHaveCount(0);
+  await expect(
+    emptyState.getByRole("heading", { name: "환자를 선택해 주세요" }),
+  ).toBeVisible();
+  await expect(page).not.toHaveURL(/encounterId=/);
+});
+
+test("chart no-work empty state keeps refresh and opens the closed queue panel", async ({
+  page,
+}) => {
+  let releaseLiveQueue!: () => void;
+  const liveQueuePending = new Promise<void>((resolve) => {
+    releaseLiveQueue = resolve;
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      await liveQueuePending;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-live-queue-read",
+          queue: [],
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=closed&aside=closed`,
+  );
+
+  const emptyState = page.getByTestId("chart-content-empty-state");
+  await expect(
+    emptyState.getByRole("heading", { name: "환자를 선택해 주세요" }),
+  ).toBeVisible();
+  await expect(
+    emptyState.getByRole("button", { name: "진료 대기열 열기" }),
+  ).toHaveCount(0);
+
+  releaseLiveQueue();
+  await expect(
+    emptyState.getByRole("heading", { name: "진료 업무가 없습니다" }),
+  ).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-action-count", "2");
+  await expect(
+    emptyState.getByRole("button", { name: "새로고침" }),
+  ).toBeVisible();
+  const openQueueButton = emptyState.getByRole("button", {
+    name: "진료 대기열 열기",
+  });
+  await expect(openQueueButton).toBeVisible();
+  await openQueueButton.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL(/modulePanel=open/);
+  await expect(
+    page
+      .getByTestId("module-panel-area")
+      .getByRole("heading", { name: "진료 업무가 없습니다" }),
+  ).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-action-count", "1");
+  await expect(
+    emptyState.getByRole("button", { name: "진료 대기열 열기" }),
+  ).toHaveCount(0);
+  await expect(
+    emptyState.getByRole("button", { name: "새로고침" }),
+  ).toBeVisible();
+});
+
+test("chart empty-state queue entry stays hidden below the module-panel breakpoint", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-live-queue-read",
+          queue: [makePreparedChartQueueRecord()],
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=closed&aside=closed`,
+  );
+
+  const emptyState = page.getByTestId("chart-content-empty-state");
+  await expect(
+    emptyState.getByRole("heading", { name: "환자를 선택해 주세요" }),
+  ).toBeVisible();
+  await expect(
+    emptyState.getByText("진료 대기열 열기", { exact: true }),
+  ).toBeHidden();
+  await expect(
+    emptyState.getByRole("button", { name: "진료 대기열 열기" }),
+  ).toHaveCount(0);
+});
+
 test("chart content shows a permission empty state when the live queue is denied", async ({
   page,
 }) => {
@@ -1176,6 +1393,48 @@ test("chart content shows a permission empty state when the live queue is denied
   await expect(
     emptyState.getByRole("button", { name: "다시 시도" }),
   ).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-action-count", "1");
+  await expect(
+    emptyState.getByRole("button", { name: "진료 대기열 열기" }),
+  ).toHaveCount(0);
+});
+
+test("chart content keeps the queue entry hidden when the live queue fails", async ({
+  page,
+}) => {
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 503,
+          error: "queue_unavailable",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=closed&aside=closed`,
+  );
+
+  const emptyState = page.getByTestId("chart-content-empty-state");
+  await expect(
+    emptyState.getByRole("heading", {
+      name: "진료 업무를 불러오지 못했습니다",
+    }),
+  ).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-action-count", "1");
+  await expect(
+    emptyState.getByRole("button", { name: "다시 시도" }),
+  ).toBeVisible();
+  await expect(
+    emptyState.getByRole("button", { name: "진료 대기열 열기" }),
+  ).toHaveCount(0);
 });
 
 test("chart detail loading uses shared shadcn Skeleton and resolves to real empty states", async ({

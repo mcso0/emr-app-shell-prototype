@@ -5710,12 +5710,14 @@ function writeCallRoomPreference({
 }
 
 function EmptyChartState({
+  onOpenQueue,
   onRefresh,
   permissionDenied = false,
   queueEmpty = false,
   readError = false,
   refreshing = false,
 }: {
+  onOpenQueue?: () => void;
   onRefresh?: () => void | Promise<void>;
   permissionDenied?: boolean;
   queueEmpty?: boolean;
@@ -5743,6 +5745,44 @@ function EmptyChartState({
       : queueEmpty
         ? "오늘 표시할 진료 업무가 없습니다."
         : "대기열에서 환자를 선택하면 차트가 표시됩니다.";
+  const canRefresh =
+    (queueEmpty || readError || permissionDenied) && Boolean(onRefresh);
+  const canOpenQueue =
+    Boolean(onOpenQueue) && !readError && !permissionDenied;
+  const hasTwoActions = canRefresh && canOpenQueue;
+  const refreshAction = canRefresh ? (
+    <Button
+      size="default"
+      variant="outline"
+      roundness="round"
+      className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]"
+      disabled={refreshing}
+      onClick={() => void onRefresh?.()}
+    >
+      <CdsActionsRefreshCcwIcon
+        data-icon="inline-start"
+        aria-hidden="true"
+      />
+      {readError || permissionDenied ? "다시 시도" : "새로고침"}
+    </Button>
+  ) : undefined;
+  const openQueueAction = canOpenQueue ? (
+    <Button
+      type="button"
+      size="default"
+      variant={hasTwoActions ? "default" : "outline"}
+      roundness="round"
+      className={cn(
+        "hidden md:inline-flex",
+        hasTwoActions
+          ? "bg-[var(--clair-color-atomic-neutral-900)] text-[var(--clair-color-atomic-common-100)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-neutral-900)] hover:text-[var(--clair-color-atomic-common-100)]"
+          : "border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]",
+      )}
+      onClick={onOpenQueue}
+    >
+      진료 대기열 열기
+    </Button>
+  ) : undefined;
 
   return (
     <div className="flex h-full items-center justify-center px-6 py-10">
@@ -5752,23 +5792,9 @@ function EmptyChartState({
         surface="content"
         title={title}
         description={description}
-        primaryAction={
-          (queueEmpty || readError || permissionDenied) && onRefresh ? (
-            <Button
-              size="default"
-              variant="outline"
-              roundness="round"
-              className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
-              disabled={refreshing}
-              onClick={() => void onRefresh()}
-            >
-              <CdsActionsRefreshCcwIcon
-                data-icon="inline-start"
-                aria-hidden="true"
-              />
-              {readError || permissionDenied ? "다시 시도" : "새로고침"}
-            </Button>
-          ) : undefined
+        primaryAction={hasTwoActions ? openQueueAction : undefined}
+        secondaryAction={
+          hasTwoActions ? refreshAction : openQueueAction ?? refreshAction
         }
         size="xl"
         testId="chart-content-empty-state"
@@ -5874,9 +5900,11 @@ export function ChartContent({
     (allowStoreMockFallback || selectedEncounterId === demoScenarioEncounterId);
   const {
     contentAsideOpen,
+    modulePanelOpen,
     moduleRefreshActions,
     setActiveDrawer,
     setContentAsideOpen,
+    setModulePanelOpen,
     setSelectedQueueItem,
   } = useLayoutStore();
   const [collapsedClinicalPanels, setCollapsedClinicalPanels] = useState<
@@ -6638,6 +6666,11 @@ export function ChartContent({
 
     return (
       <EmptyChartState
+        onOpenQueue={
+          liveQueueStatus === "ready" && !modulePanelOpen
+            ? () => setModulePanelOpen(true)
+            : undefined
+        }
         permissionDenied={
           liveQueueStatus === "error" && liveQueueError === "permission_missing"
         }
