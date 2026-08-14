@@ -1254,6 +1254,44 @@ test("chart empty state opens the treatment queue from a closed panel", async ({
   await expect(page).not.toHaveURL(/encounterId=/);
 });
 
+test("chart empty state loads the queue after entering with the panel already closed", async ({
+  page,
+}) => {
+  let liveQueueRequestCount = 0;
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      liveQueueRequestCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-live-queue-read",
+          queue: [makePreparedChartQueueRecord()],
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/home?modulePanel=closed&aside=closed`,
+  );
+  await expect(page).toHaveURL(/modulePanel=closed/);
+  await page.getByRole("link", { name: "진료\/차트" }).click();
+  await expect(page).toHaveURL(/\/treatment\?modulePanel=closed/);
+
+  const emptyState = page.getByTestId("chart-content-empty-state");
+  await expect(
+    emptyState.getByRole("button", { name: "진료 대기열 열기" }),
+  ).toBeVisible();
+  await expect.poll(() => liveQueueRequestCount).toBe(1);
+});
+
 test("chart no-work empty state keeps refresh and opens the closed queue panel", async ({
   page,
 }) => {
