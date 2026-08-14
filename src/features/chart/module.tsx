@@ -23,7 +23,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   CdsActionsCheckIcon,
@@ -167,6 +167,7 @@ import { usePatientProfileStore } from "@/features/reception/patient-profile-sto
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { isLegacySalesDemoWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import {
+  formatCompactKoreanOperatingDateLabel,
   formatOperatingShortTime,
   formatShortOperatingDate,
   getOperatingDateFromIso,
@@ -403,8 +404,6 @@ const CHART_RESIZER_HEIGHT_PX = 8;
 const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
 const chartDetailPendingDelayMs = 200;
-const chartSelectedEncounterStoragePrefix =
-  "clair-emr:chart-selected-encounter:v1";
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
 
 const emptyChartQueueItems: OrderQueueItem[] = [];
@@ -809,24 +808,360 @@ function useSelectedChartBundle(workspaceId: string) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
-  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus !== "ready",
-  );
-  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
-  const allowMockFallback =
-    isLegacySalesDemoWorkspace(workspaceId) &&
-    (allowStoreMockFallback || selectedEncounterId === demoScenarioEncounterId);
+  const { queueScopeMatches, records } =
+    useScopedChartLiveQueue(workspaceId);
+  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
 
-  return getSelectedBundle(selectedEncounterId, liveQueueRecords, {
+  if (!allowMockFallback && !queueScopeMatches) return null;
+
+  return getSelectedBundle(selectedEncounterId, records, {
     allowMockFallback,
   });
+}
+
+function useChartOperatingDate(workspaceId: string) {
+  const { todayDate } = useSelectedOperatingDate(workspaceId);
+  const storedSelectedDate = useChartStore(
+    (state) => state.selectedOperatingDateByWorkspace[workspaceId],
+  );
+  const selectOperatingDate = useChartStore(
+    (state) => state.selectOperatingDate,
+  );
+
+  return {
+    selectDate: (date: string) => selectOperatingDate(workspaceId, date),
+    selectedDate: storedSelectedDate ?? todayDate,
+    todayDate,
+  };
+}
+
+function useScopedChartLiveQueue(workspaceId: string) {
+  const liveQueueError = useChartStore((state) => state.liveQueueError);
+  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
+  const liveQueueScope = useChartStore((state) => state.liveQueueScope);
+  const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
+  const { selectedDate } = useChartOperatingDate(workspaceId);
+  const queueScopeMatches =
+    liveQueueScope?.workspaceId === workspaceId &&
+    liveQueueScope.date === selectedDate;
+
+  return {
+    error: queueScopeMatches ? liveQueueError : undefined,
+    queueScopeMatches,
+    records: queueScopeMatches ? liveQueueRecords : [],
+    selectedDate,
+    status: queueScopeMatches ? liveQueueStatus : ("loading" as const),
+  };
+}
+
+function replaceLiveChartSelection({
+  encounterId,
+  router,
+  workspaceId,
+}: {
+  encounterId: string;
+  router: ReturnType<typeof useRouter>;
+  workspaceId: string;
+}) {
+  const currentSearch =
+    typeof window === "undefined" ? "" : window.location.search;
+  const href = buildWorkspaceSurfaceRoute({
+    moduleId: "treatment",
+    params: { encounterId },
+    removeParams: ["patientId", "scenario"],
+    search: currentSearch,
+    workspaceId,
+  });
+  const currentHref =
+    typeof window === "undefined"
+      ? ""
+      : `${window.location.pathname}${window.location.search}`;
+
+  if (currentHref !== href) router.replace(href, { scroll: false });
+}
+
+function chooseRecoverableLiveEncounterId({
+  currentEncounterId,
+  explicitEncounterId,
+  records,
+}: {
+  currentEncounterId: string;
+  explicitEncounterId: string | null;
+  records: ChartLiveQueueRecord[];
+}) {
+  const liveEncounterIds = new Set(
+    records.map((record) => record.encounter.id),
+  );
+  if (explicitEncounterId && liveEncounterIds.has(explicitEncounterId)) {
+    return explicitEncounterId;
+  }
+  if (currentEncounterId && liveEncounterIds.has(currentEncounterId)) {
+    return currentEncounterId;
+  }
+
+  return records[0]?.encounter.id ?? "";
+}
+
+function useChartLiveQueueCoordinator(workspaceId: string) {
+  const router = useRouter();
+  const explicitEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
+  const selectedEncounterId = useChartStore(
+    (state) => state.selectedEncounterId,
+  );
+  const liveQueueScope = useChartStore((state) => state.liveQueueScope);
+  const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
+  const selectEncounter = useChartStore((state) => state.selectEncounter);
+  const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
+  const {
+    clearModuleRefreshAction,
+    setModuleRefreshAction,
+    setSelectedQueueItem,
+  } = useLayoutStore();
+  const {
+    hydrated: authHydrated,
+    session: authSession,
+    hydrate: hydrateAuthSession,
+  } = useAuthClient();
+  const actorHeaders = useMemo(
+    () => getDemoActorHeader(authSession),
+    [authSession],
+  );
+  const { selectedDate } = useChartOperatingDate(workspaceId);
+  const automaticRefreshKeyRef = useRef("");
+  const requestSeqRef = useRef(0);
+  const selectedEncounterIdRef = useRef(selectedEncounterId);
+  const explicitEncounterIdRef = useRef(explicitEncounterId);
+  const demoScenarioEncounterIdRef = useRef(demoScenarioEncounterId);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const scopeMatches =
+    liveQueueScope?.workspaceId === workspaceId &&
+    liveQueueScope.date === selectedDate;
+
+  useEffect(() => {
+    hydrateAuthSession();
+  }, [hydrateAuthSession]);
+
+  useEffect(() => {
+    selectedEncounterIdRef.current = selectedEncounterId;
+  }, [selectedEncounterId]);
+
+  useEffect(() => {
+    explicitEncounterIdRef.current = explicitEncounterId;
+  }, [explicitEncounterId]);
+
+  useEffect(() => {
+    demoScenarioEncounterIdRef.current = demoScenarioEncounterId;
+  }, [demoScenarioEncounterId]);
+
+  useEffect(() => {
+    if (scopeMatches) return;
+
+    setLiveQueueState({
+      records: [],
+      scope: { date: selectedDate, workspaceId },
+      status: "idle",
+    });
+    if (legacySalesDemo) return;
+
+    setSelectedQueueItem("treatment", "");
+    selectedEncounterIdRef.current = "";
+    selectEncounter("");
+  }, [
+    scopeMatches,
+    legacySalesDemo,
+    selectEncounter,
+    selectedDate,
+    setLiveQueueState,
+    setSelectedQueueItem,
+    workspaceId,
+  ]);
+
+  const refreshLiveQueue = useCallback(async () => {
+    const requestSeq = requestSeqRef.current + 1;
+    const requestedScope = { date: selectedDate, workspaceId };
+    const currentScope = useChartStore.getState().liveQueueScope;
+    const isDateTransition =
+      currentScope?.workspaceId !== workspaceId ||
+      currentScope.date !== selectedDate ||
+      currentScope.ignoreExplicitEncounter === true;
+
+    requestSeqRef.current = requestSeq;
+    setLiveQueueState({
+      records: isDateTransition ? [] : undefined,
+      scope: {
+        ...requestedScope,
+        ignoreExplicitEncounter: isDateTransition,
+      },
+      status: "loading",
+    });
+
+    const result = await loadChartLiveQueue({
+      actorHeaders,
+      date: selectedDate,
+      workspaceId,
+    });
+    const latestScope = useChartStore.getState().liveQueueScope;
+
+    if (
+      requestSeqRef.current !== requestSeq ||
+      latestScope?.workspaceId !== requestedScope.workspaceId ||
+      latestScope.date !== requestedScope.date
+    ) {
+      return;
+    }
+
+    if (!result.ok) {
+      if (legacySalesDemo) {
+        setLiveQueueState({
+          error: result.denialReason ?? result.error ?? "db_read_failed",
+          records: [],
+          scope: requestedScope,
+          status: "error",
+        });
+        return;
+      }
+
+      setSelectedQueueItem("treatment", "");
+      selectedEncounterIdRef.current = "";
+      selectEncounter("");
+      setLiveQueueState({
+        error: result.denialReason ?? result.error ?? "db_read_failed",
+        records: [],
+        scope: requestedScope,
+        status: "error",
+      });
+      replaceLiveChartSelection({ encounterId: "", router, workspaceId });
+      return;
+    }
+
+    result.queue.forEach((record) => {
+      saveChartLiveEncounterHandoff({
+        encounter: record.encounter,
+        patient: record.patient,
+        primaryGuardian: record.primaryGuardian,
+        veterinarianName: record.veterinarianName,
+      });
+    });
+
+    const queryEncounterId = isDateTransition
+      ? null
+      : new URLSearchParams(
+          typeof window === "undefined" ? "" : window.location.search,
+        ).get("encounterId");
+    const recoveredLiveEncounterId = chooseRecoverableLiveEncounterId({
+      currentEncounterId: isDateTransition
+        ? ""
+        : selectedEncounterIdRef.current,
+      explicitEncounterId: queryEncounterId,
+      records: result.queue,
+    });
+    const legacyExplicitEncounterId = explicitEncounterIdRef.current;
+    const legacyCurrentEncounterId = selectedEncounterIdRef.current;
+    const liveEncounterIds = new Set(
+      result.queue.map((record) => record.encounter.id),
+    );
+    const validLegacyExplicitEncounterId =
+      legacyExplicitEncounterId &&
+      (demoScenarioEncounterIdRef.current === legacyExplicitEncounterId ||
+        liveEncounterIds.has(legacyExplicitEncounterId))
+        ? legacyExplicitEncounterId
+        : "";
+    const validLegacyCurrentEncounterId =
+      legacyCurrentEncounterId &&
+      (getChartEncounter(legacyCurrentEncounterId) ||
+        liveEncounterIds.has(legacyCurrentEncounterId))
+        ? legacyCurrentEncounterId
+        : "";
+    const nextSelectedEncounterId = legacySalesDemo
+      ? (validLegacyExplicitEncounterId ||
+        validLegacyCurrentEncounterId ||
+        (legacyExplicitEncounterId ? recoveredLiveEncounterId : "") ||
+        legacySalesDemoDefaultEncounterId)
+      : recoveredLiveEncounterId;
+
+    setLiveQueueState({
+      records: result.queue,
+      scope: requestedScope,
+      status: "ready",
+    });
+    setSelectedQueueItem("treatment", nextSelectedEncounterId);
+    selectedEncounterIdRef.current = nextSelectedEncounterId;
+    selectEncounter(nextSelectedEncounterId);
+    if (
+      !legacySalesDemo ||
+      (legacyExplicitEncounterId && !validLegacyExplicitEncounterId)
+    ) {
+      replaceLiveChartSelection({
+        encounterId: nextSelectedEncounterId,
+        router,
+        workspaceId,
+      });
+    }
+  }, [
+    actorHeaders,
+    legacySalesDemo,
+    router,
+    selectEncounter,
+    selectedDate,
+    setLiveQueueState,
+    setSelectedQueueItem,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    if (!authHydrated) return;
+    const automaticRefreshKey = `${workspaceId}:${selectedDate}:${authSession?.id ?? "anonymous"}`;
+    const queueState = useChartStore.getState();
+    const hasStartedCurrentScope =
+      queueState.liveQueueScope?.workspaceId === workspaceId &&
+      queueState.liveQueueScope.date === selectedDate &&
+      queueState.liveQueueStatus !== "idle";
+    if (
+      automaticRefreshKeyRef.current === automaticRefreshKey ||
+      hasStartedCurrentScope
+    ) {
+      return;
+    }
+
+    automaticRefreshKeyRef.current = automaticRefreshKey;
+    void refreshLiveQueue();
+  }, [
+    authHydrated,
+    authSession?.id,
+    refreshLiveQueue,
+    selectedDate,
+    workspaceId,
+  ]);
+
+  useQueueRealtimeRefresh({
+    enabled: authHydrated,
+    onQueueChange: refreshLiveQueue,
+    scopeKey: `chart:${selectedDate}`,
+    workspaceId,
+  });
+
+  useEffect(() => {
+    setModuleRefreshAction("treatment", {
+      isRefreshing: liveQueueStatus === "loading",
+      label: "진료 대기열 새로고침",
+      onRefresh: refreshLiveQueue,
+    });
+
+    return () => clearModuleRefreshAction("treatment");
+  }, [
+    clearModuleRefreshAction,
+    liveQueueStatus,
+    refreshLiveQueue,
+    setModuleRefreshAction,
+  ]);
 }
 
 export function ChartSlotAvailabilityProvider({
   children,
   workspaceId,
 }: WorkspaceSlotAvailabilityProviderProps) {
+  useChartLiveQueueCoordinator(workspaceId);
   const bundle = useSelectedChartBundle(workspaceId);
 
   return children({
@@ -854,66 +1189,6 @@ function getChartHistoryVeterinarianName(
   }
 
   return getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정";
-}
-
-function getSelectedEncounterStorageKey(workspaceId: string) {
-  return `${chartSelectedEncounterStoragePrefix}:${workspaceId}`;
-}
-
-function readStoredSelectedChartEncounterId(workspaceId: string) {
-  if (typeof window === "undefined") return null;
-
-  const value = window.sessionStorage.getItem(
-    getSelectedEncounterStorageKey(workspaceId),
-  );
-  return value && value.trim() ? value : null;
-}
-
-function saveSelectedChartEncounterId(
-  workspaceId: string,
-  encounterId: string,
-) {
-  if (typeof window === "undefined" || !encounterId) return;
-
-  window.sessionStorage.setItem(
-    getSelectedEncounterStorageKey(workspaceId),
-    encounterId,
-  );
-}
-
-function clearStoredSelectedChartEncounterId(workspaceId: string) {
-  if (typeof window === "undefined") return;
-
-  window.sessionStorage.removeItem(getSelectedEncounterStorageKey(workspaceId));
-}
-
-function chooseRecoverableLiveEncounterId({
-  currentEncounterId,
-  explicitEncounterId,
-  records,
-  workspaceId,
-}: {
-  currentEncounterId: string;
-  explicitEncounterId: string | null;
-  records: ChartLiveQueueRecord[];
-  workspaceId: string;
-}) {
-  const liveEncounterIds = new Set(
-    records.map((record) => record.encounter.id),
-  );
-  if (explicitEncounterId && liveEncounterIds.has(explicitEncounterId)) {
-    return explicitEncounterId;
-  }
-  if (currentEncounterId && liveEncounterIds.has(currentEncounterId)) {
-    return currentEncounterId;
-  }
-
-  const storedEncounterId = readStoredSelectedChartEncounterId(workspaceId);
-  if (storedEncounterId && liveEncounterIds.has(storedEncounterId)) {
-    return storedEncounterId;
-  }
-
-  return null;
 }
 
 function getChartHistoryRowsForBundle(bundle: ChartBundle): ChartHistoryRow[] {
@@ -987,18 +1262,17 @@ function getChartVitals(bundle: ChartBundle) {
   ];
 }
 
-function useScenarioEncounterSync() {
+function useScenarioEncounterSync(workspaceId: string) {
   const searchParams = useSearchParams();
   const lastAppliedQueryEncounterId = useRef<string | null>(null);
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
-  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
+  const { records: liveQueueRecords, status: liveQueueStatus } =
+    useScopedChartLiveQueue(workspaceId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const scenario = getDemoScenarioFromParams(searchParams);
-  const queryEncounterId =
-    searchParams.get("encounterId") ?? scenario?.encounterId ?? null;
+  const queryEncounterId = scenario?.encounterId ?? null;
   const queryEncounterBundle = queryEncounterId
     ? (getChartEncounter(queryEncounterId) ??
       getLiveQueueBundle(queryEncounterId, liveQueueRecords) ??
@@ -1008,6 +1282,7 @@ function useScenarioEncounterSync() {
     queryEncounterId !== null && queryEncounterBundle !== null;
 
   useEffect(() => {
+    if (!isLegacySalesDemoWorkspace(workspaceId)) return;
     if (liveQueueStatus === "ready" && liveQueueRecords.length === 0) return;
     if (!queryEncounterId || !hasValidQueryEncounter) return;
     if (lastAppliedQueryEncounterId.current === queryEncounterId) return;
@@ -1023,6 +1298,7 @@ function useScenarioEncounterSync() {
     queryEncounterId,
     selectEncounter,
     selectedEncounterId,
+    workspaceId,
   ]);
 }
 
@@ -1044,6 +1320,7 @@ export function ChartSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
@@ -1055,24 +1332,10 @@ export function ChartSidePanel({
   );
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
-  const {
-    clearModuleRefreshAction,
-    setModulePanelOpen,
-    setModuleRefreshAction,
-    setSelectedQueueItem,
-  } = useLayoutStore();
-  const {
-    hydrated: authHydrated,
-    session: authSession,
-    hydrate: hydrateAuthSession,
-  } = useAuthClient();
-  const actorHeaders = useMemo(
-    () => getDemoActorHeader(authSession),
-    [authSession],
-  );
+  const { setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const { selectDate, selectedDate, todayDate } =
-    useSelectedOperatingDate(workspaceId);
+    useChartOperatingDate(workspaceId);
   const mockItems = useMemo(
     () => (legacySalesDemo ? getChartQueueItems() : emptyChartQueueItems),
     [legacySalesDemo],
@@ -1087,9 +1350,6 @@ export function ChartSidePanel({
     [liveItems, liveMode, mockItems],
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
-  const selectedEncounterIdRef = useRef(selectedEncounterId);
-  const explicitQueryEncounterIdRef = useRef(explicitQueryEncounterId);
-  const liveQueueRequestSeqRef = useRef(0);
   const selectWorkspaceEncounter = (itemId: string) => {
     const href = buildWorkspaceSurfaceRoute({
       moduleId: "treatment",
@@ -1098,7 +1358,6 @@ export function ChartSidePanel({
       workspaceId,
     });
 
-    if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
     selectEncounter(itemId);
     setSelectedQueueItem("treatment", itemId);
 
@@ -1107,139 +1366,6 @@ export function ChartSidePanel({
       return;
     }
   };
-
-  useEffect(() => {
-    hydrateAuthSession();
-  }, [hydrateAuthSession]);
-
-  useEffect(() => {
-    selectedEncounterIdRef.current = selectedEncounterId;
-  }, [selectedEncounterId]);
-
-  useEffect(() => {
-    explicitQueryEncounterIdRef.current = explicitQueryEncounterId;
-  }, [explicitQueryEncounterId]);
-
-  const refreshLiveQueue = useCallback(async () => {
-    const requestSeq = liveQueueRequestSeqRef.current + 1;
-
-    liveQueueRequestSeqRef.current = requestSeq;
-    setLiveQueueState({ status: "loading" });
-
-    const result = await loadChartLiveQueue({
-      actorHeaders,
-      date: selectedDate,
-      workspaceId,
-    });
-
-    if (liveQueueRequestSeqRef.current !== requestSeq) return;
-
-    if (!result.ok) {
-      setLiveQueueState({
-        error: result.denialReason ?? result.error ?? "db_read_failed",
-        status: "error",
-      });
-      return;
-    }
-
-    result.queue.forEach((record) => {
-      saveChartLiveEncounterHandoff({
-        encounter: record.encounter,
-        patient: record.patient,
-        primaryGuardian: record.primaryGuardian,
-        veterinarianName: record.veterinarianName,
-      });
-    });
-    setLiveQueueState({ records: result.queue, status: "ready" });
-
-    const currentExplicitQueryEncounterId = explicitQueryEncounterIdRef.current;
-    const currentSelectedEncounterId = selectedEncounterIdRef.current;
-
-    const nextSelectedEncounterId = chooseRecoverableLiveEncounterId({
-      currentEncounterId: currentSelectedEncounterId,
-      explicitEncounterId: currentExplicitQueryEncounterId,
-      records: result.queue,
-      workspaceId,
-    });
-
-    if (nextSelectedEncounterId) {
-      saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId);
-      if (currentSelectedEncounterId !== nextSelectedEncounterId) {
-        selectEncounter(nextSelectedEncounterId);
-      }
-      return;
-    }
-
-    clearStoredSelectedChartEncounterId(workspaceId);
-    setSelectedQueueItem("treatment", "");
-    if (currentSelectedEncounterId) {
-      selectEncounter("");
-    }
-  }, [
-    actorHeaders,
-    selectedDate,
-    selectEncounter,
-    setLiveQueueState,
-    setSelectedQueueItem,
-    workspaceId,
-  ]);
-
-  useEffect(() => {
-    if (!authHydrated) return;
-    void refreshLiveQueue();
-  }, [authHydrated, refreshLiveQueue]);
-
-  useQueueRealtimeRefresh({
-    enabled: authHydrated,
-    onQueueChange: refreshLiveQueue,
-    scopeKey: `chart:${selectedDate}`,
-    workspaceId,
-  });
-
-  useEffect(() => {
-    setModuleRefreshAction("treatment", {
-      isRefreshing: liveQueueStatus === "loading",
-      label: "진료 대기열 새로고침",
-      onRefresh: refreshLiveQueue,
-    });
-
-    return () => clearModuleRefreshAction("treatment");
-  }, [
-    clearModuleRefreshAction,
-    liveQueueStatus,
-    refreshLiveQueue,
-    setModuleRefreshAction,
-  ]);
-
-  useEffect(() => {
-    if (!explicitQueryEncounterId) return;
-    if (selectedEncounterId === explicitQueryEncounterId) return;
-    saveSelectedChartEncounterId(workspaceId, explicitQueryEncounterId);
-    selectEncounter(explicitQueryEncounterId);
-  }, [
-    explicitQueryEncounterId,
-    selectEncounter,
-    selectedEncounterId,
-    workspaceId,
-  ]);
-
-  useEffect(() => {
-    if (liveQueueStatus !== "ready") return;
-    if (!selectedEncounterId) return;
-    if (liveItems.some((item) => item.id === selectedEncounterId)) return;
-    if (explicitQueryEncounterId === selectedEncounterId) return;
-    clearStoredSelectedChartEncounterId(workspaceId);
-    setSelectedQueueItem("treatment", "");
-    selectEncounter("");
-  }, [
-    explicitQueryEncounterId,
-    liveItems,
-    liveQueueStatus,
-    selectEncounter,
-    selectedEncounterId,
-    setSelectedQueueItem,
-    workspaceId,
-  ]);
 
   useEffect(() => {
     if (liveMode || items.length === 0) return;
@@ -1281,9 +1407,20 @@ export function ChartSidePanel({
       onCollapse={() => setModulePanelOpen(false)}
       onDateChange={(date) => {
         selectDate(date);
-        clearStoredSelectedChartEncounterId(workspaceId);
+        setLiveQueueState({
+          records: [],
+          scope: {
+            date,
+            ignoreExplicitEncounter: true,
+            workspaceId,
+          },
+          status: "idle",
+        });
         setSelectedQueueItem("treatment", "");
-        if (selectedEncounterId) selectEncounter("");
+        selectEncounter("");
+        if (!legacySalesDemo) {
+          replaceLiveChartSelection({ encounterId: "", router, workspaceId });
+        }
       }}
       onSelectItem={selectWorkspaceEncounter}
     />
@@ -1294,17 +1431,14 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
-  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus !== "ready",
+  const { queueScopeMatches, records: liveQueueRecords } =
+    useScopedChartLiveQueue(workspaceId);
+  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const bundle = getSelectedBundle(
+    queueScopeMatches || allowMockFallback ? selectedEncounterId : "",
+    liveQueueRecords,
+    { allowMockFallback },
   );
-  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
-  const allowMockFallback =
-    isLegacySalesDemoWorkspace(workspaceId) &&
-    (allowStoreMockFallback || selectedEncounterId === demoScenarioEncounterId);
-  const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
-    allowMockFallback,
-  });
 
   const selectedLiveQueueRecord = liveQueueRecords.find(
     (record) => record.encounter.id === selectedEncounterId,
@@ -5716,6 +5850,7 @@ function EmptyChartState({
   queueEmpty = false,
   readError = false,
   refreshing = false,
+  selectedDate,
 }: {
   onOpenQueue?: () => void;
   onRefresh?: () => void | Promise<void>;
@@ -5723,6 +5858,7 @@ function EmptyChartState({
   queueEmpty?: boolean;
   readError?: boolean;
   refreshing?: boolean;
+  selectedDate: string;
 }) {
   const kind = permissionDenied
     ? "no-permission"
@@ -5743,7 +5879,7 @@ function EmptyChartState({
     : readError
       ? "연결 상태를 확인한 뒤 다시 시도해 주세요."
       : queueEmpty
-        ? "오늘 표시할 진료 업무가 없습니다."
+        ? `${formatCompactKoreanOperatingDateLabel(selectedDate)}에 표시할 진료 업무가 없습니다.`
         : "대기열에서 환자를 선택하면 차트가 표시됩니다.";
   const canRefresh =
     (queueEmpty || readError || permissionDenied) && Boolean(onRefresh);
@@ -5799,6 +5935,33 @@ function EmptyChartState({
         size="xl"
         testId="chart-content-empty-state"
       />
+    </div>
+  );
+}
+
+function ChartContentLoadingState() {
+  return (
+    <div
+      aria-live="polite"
+      className="flex h-full items-center justify-center px-6 py-10"
+      data-testid="chart-content-loading-state"
+      role="status"
+    >
+      <div className="flex w-full max-w-sm flex-col items-center gap-4">
+        <span className="sr-only">진료 업무를 불러오는 중입니다</span>
+        <Skeleton
+          aria-hidden="true"
+          className="h-10 w-10 rounded-xl motion-reduce:animate-none"
+        />
+        <Skeleton
+          aria-hidden="true"
+          className="h-4 w-44 motion-reduce:animate-none"
+        />
+        <Skeleton
+          aria-hidden="true"
+          className="h-3 w-64 motion-reduce:animate-none"
+        />
+      </div>
     </div>
   );
 }
@@ -5871,7 +6034,7 @@ export function ChartContent({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
-  useScenarioEncounterSync();
+  useScenarioEncounterSync(workspaceId);
 
   const searchParams = useSearchParams();
   const selectedEncounterId = useChartStore(
@@ -5884,20 +6047,17 @@ export function ChartContent({
   const clearPendingConsultationCall = useChartStore(
     (state) => state.clearPendingConsultationCall,
   );
-  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const liveQueueError = useChartStore((state) => state.liveQueueError);
-  const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
-  const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
+  const {
+    error: liveQueueError,
+    queueScopeMatches,
+    records: liveQueueRecords,
+    selectedDate,
+    status: liveQueueStatus,
+  } = useScopedChartLiveQueue(workspaceId);
   const updateLiveQueueRecord = useChartStore(
     (state) => state.updateLiveQueueRecord,
   );
-  const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
-  );
-  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
-  const allowMockFallback =
-    isLegacySalesDemoWorkspace(workspaceId) &&
-    (allowStoreMockFallback || selectedEncounterId === demoScenarioEncounterId);
+  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
   const {
     contentAsideOpen,
     modulePanelOpen,
@@ -5940,9 +6100,11 @@ export function ChartContent({
   } = useAuthClient();
   const chartWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const resizingPointerIdRef = useRef<number | null>(null);
-  const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
-    allowMockFallback,
-  });
+  const bundle = getSelectedBundle(
+    queueScopeMatches || allowMockFallback ? selectedEncounterId : "",
+    liveQueueRecords,
+    { allowMockFallback },
+  );
   const selectedLiveQueueRecord = liveQueueRecords.find(
     (record) => record.encounter.id === selectedEncounterId,
   );
@@ -5953,7 +6115,6 @@ export function ChartContent({
     () => getDemoActorHeader(authSession),
     [authSession],
   );
-  const { selectedDate } = useSelectedOperatingDate(workspaceId);
   const [persistedSoapState, setPersistedSoapState] = useState<{
     encounterId?: string;
     soapNote?: SoapNote | null;
@@ -6386,55 +6547,7 @@ export function ChartContent({
       status: "saved",
     });
   };
-  const refreshLiveQueueFromContent = useCallback(async () => {
-    setLiveQueueState({ status: "loading" });
-
-    const result = await loadChartLiveQueue({
-      actorHeaders,
-      date: selectedDate,
-      workspaceId,
-    });
-
-    if (!result.ok) {
-      setLiveQueueState({
-        error: result.denialReason ?? result.error ?? "db_read_failed",
-        status: "error",
-      });
-      return;
-    }
-
-    result.queue.forEach((record) => {
-      saveChartLiveEncounterHandoff({
-        encounter: record.encounter,
-        patient: record.patient,
-        primaryGuardian: record.primaryGuardian,
-        veterinarianName: record.veterinarianName,
-      });
-    });
-    setLiveQueueState({ records: result.queue, status: "ready" });
-
-    if (
-      selectedEncounterId &&
-      result.queue.some((record) => record.encounter.id === selectedEncounterId)
-    ) {
-      return;
-    }
-
-    clearStoredSelectedChartEncounterId(workspaceId);
-    setSelectedQueueItem("treatment", "");
-    if (selectedEncounterId) selectEncounter("");
-  }, [
-    actorHeaders,
-    selectedDate,
-    selectEncounter,
-    selectedEncounterId,
-    setLiveQueueState,
-    setSelectedQueueItem,
-    workspaceId,
-  ]);
-
   const handleReturnToQueue = useCallback(() => {
-    clearStoredSelectedChartEncounterId(workspaceId);
     setSelectedQueueItem("treatment", "");
     selectEncounter("");
 
@@ -6457,18 +6570,6 @@ export function ChartContent({
   useEffect(() => {
     hydrateAuthSession();
   }, [hydrateAuthSession]);
-
-  useEffect(() => {
-    if (!authHydrated || modulePanelOpen || liveQueueStatus !== "idle") return;
-    // React may replay the effect after the first call synchronously marks the shared queue as loading.
-    if (useChartStore.getState().liveQueueStatus !== "idle") return;
-    void refreshLiveQueueFromContent();
-  }, [
-    authHydrated,
-    liveQueueStatus,
-    modulePanelOpen,
-    refreshLiveQueueFromContent,
-  ]);
 
   const handleOpenCallDialog = () => {
     const roomIds = new Set(getConsultationCallRooms().map((room) => room.id));
@@ -6676,6 +6777,10 @@ export function ChartContent({
     const queueEmpty =
       liveQueueStatus === "ready" && liveQueueRecords.length === 0;
 
+    if (liveQueueStatus === "idle" || liveQueueStatus === "loading") {
+      return <ChartContentLoadingState />;
+    }
+
     return (
       <EmptyChartState
         onOpenQueue={
@@ -6688,10 +6793,9 @@ export function ChartContent({
         }
         queueEmpty={queueEmpty}
         readError={liveQueueStatus === "error"}
-        refreshing={
-          refreshAction?.isRefreshing ?? liveQueueStatus === "loading"
-        }
-        onRefresh={refreshAction?.onRefresh ?? refreshLiveQueueFromContent}
+        refreshing={refreshAction?.isRefreshing ?? false}
+        selectedDate={selectedDate}
+        onRefresh={refreshAction?.onRefresh}
       />
     );
   }
