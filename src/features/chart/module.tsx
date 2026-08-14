@@ -6458,6 +6458,18 @@ export function ChartContent({
     hydrateAuthSession();
   }, [hydrateAuthSession]);
 
+  useEffect(() => {
+    if (!authHydrated || modulePanelOpen || liveQueueStatus !== "idle") return;
+    // React may replay the effect after the first call synchronously marks the shared queue as loading.
+    if (useChartStore.getState().liveQueueStatus !== "idle") return;
+    void refreshLiveQueueFromContent();
+  }, [
+    authHydrated,
+    liveQueueStatus,
+    modulePanelOpen,
+    refreshLiveQueueFromContent,
+  ]);
+
   const handleOpenCallDialog = () => {
     const roomIds = new Set(getConsultationCallRooms().map((room) => room.id));
     const storedRoomId = readCallRoomPreference({
