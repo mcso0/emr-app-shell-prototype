@@ -446,11 +446,11 @@
       (var(--emr-calendar-current-time-dot-size) * 0.5)
   );
   --emr-context-bar-min-height: 56px;
-  --emr-context-bar-padding-x: var(--clair-spacing-16);
-  --emr-context-bar-padding-y: var(--clair-spacing-12);
-  --emr-context-bar-section-gap: var(--clair-spacing-12);
-  --emr-context-bar-item-gap: var(--clair-spacing-6);
-  --emr-context-bar-divider-height: 18px;
+  --emr-context-bar-padding-x: var(--clair-spacing-12);
+  --emr-context-bar-padding-y: var(--clair-spacing-10);
+  --emr-context-bar-section-gap: var(--clair-spacing-8);
+  --emr-context-bar-item-gap: var(--clair-spacing-8);
+  --emr-context-bar-divider-height: 16px;
   --emr-context-bar-divider: var(--emr-border-default);
   --emr-context-bar-chip-height: 22px;
   --emr-context-bar-chip-bg: var(--clair-color-atomic-black-alpha-4);
@@ -461,8 +461,11 @@
   --emr-context-bar-control-size: var(--clair-control-height-xs);
   --emr-context-bar-control-radius: var(--clair-radius-atomic-4);
   --emr-context-bar-button-radius: var(--clair-radius-atomic-8);
-  --emr-context-bar-icon-size: var(--clair-spacing-20);
+  --emr-context-bar-icon-size: var(--clair-spacing-24);
   --emr-context-bar-inline-icon-size: var(--clair-spacing-12);
+  --emr-context-bar-hover-bg: var(--clair-color-atomic-neutral-100);
+  --emr-context-bar-hover-icon-bg: var(--clair-color-atomic-white-alpha-80);
+  --emr-context-bar-hover-action-icon-size: var(--clair-spacing-14);
   --emr-page-title-height: var(--clair-control-height-md);
   --emr-page-title-section-gap: var(--clair-spacing-24);
   --emr-page-title-left-gap: var(--clair-spacing-10);

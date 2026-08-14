@@ -1495,8 +1495,13 @@ test("dispensing queue selection updates existing patient and instruction contex
       .locator("[data-slot='emr-main-content-header']"),
   ).toHaveCSS("height", "56px");
   const patientContextBar = page.locator("[data-slot='patient-context-bar'] > div").first();
-  await expect(patientContextBar).toHaveCSS("padding-left", "16px");
-  await expect(patientContextBar).toHaveCSS("column-gap", "12px");
+  await expect(patientContextBar).toHaveCSS("padding-left", "12px");
+  await expect(patientContextBar).toHaveCSS("padding-right", "20px");
+  const patientInfoSection = page.locator("[data-slot='patient-context-patient']");
+  await expect(patientInfoSection).toHaveCSS("height", "36px");
+  await expect(patientInfoSection).toHaveCSS("column-gap", "8px");
+  await expect(patientInfoSection).toHaveCSS("padding-left", "6px");
+  await expect(patientInfoSection.locator("span").first()).toHaveCSS("width", "24px");
   await expect(page.locator("[data-slot='emr-page-header']")).toHaveCSS("min-height", "32px");
   const instructionInfoCard = page.locator("[data-slot='instruction-info-card']");
   await expect(instructionInfoCard).toHaveCSS("min-height", "72px");
@@ -1544,10 +1549,15 @@ test("dispensing queue selection updates existing patient and instruction contex
   const titleBar = page.locator("[data-slot='instruction-header-title-bar']");
   await expect(titleBar).toContainText("RX-260414-0007");
 
-  const patientContext = page.getByLabel("환자 컨텍스트 정보");
-  await expect(patientContext).toContainText(/환자\s*나비/);
-  await expect(patientContext).toContainText(/보호자\s*오세아/);
-  await expect(patientContext).toContainText(/품종\s*러시안블루/);
+  await expect(
+    page.locator("[data-slot='patient-context-patient']"),
+  ).toContainText("나비");
+  await expect(
+    page.locator("[data-slot='patient-context-guardian']"),
+  ).toContainText("오세아");
+  await expect(
+    page.locator("[data-slot='patient-context-patient']"),
+  ).toContainText("러시안블루");
 
   const orderInfo = page.locator("[data-slot='instruction-header-order-info']");
   await expect(orderInfo).toContainText("2026.04.14 10:42");
