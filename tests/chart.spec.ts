@@ -88,7 +88,16 @@ async function tabForwardTo(page: Page, target: Locator, maxSteps: number) {
 
 async function getChartOrderAction(page: Page, name: string | RegExp) {
   await page.getByRole("button", { name: "Plan/Order 작업" }).click();
-  return page.getByRole("menuitem", { name });
+  const action = page.getByRole("menuitem", { name });
+  await expect(action).toBeVisible();
+  return action;
+}
+
+async function dismissChartOrderActionMenu(page: Page) {
+  const menu = page.getByRole("menu", { name: "Plan/Order 작업" });
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
 }
 
 async function addChartSoapSystem(page: Page, systemLabel: string) {
@@ -297,9 +306,9 @@ async function restoreKongOrderDraftDefaults(page: Page) {
     await expect(
       await getChartOrderAction(page, /Order 업데이트/),
     ).toBeDisabled();
-    await page.keyboard.press("Escape");
+    await dismissChartOrderActionMenu(page);
   } else {
-    await page.keyboard.press("Escape");
+    await dismissChartOrderActionMenu(page);
   }
 
   await expect(quantity).toHaveValue("1");
@@ -3297,9 +3306,9 @@ test("chart safety context and confirmation dialogs identify the active patient"
   );
 
   await expect(await getChartOrderAction(page, "Order 청구")).toBeDisabled();
-  await page.keyboard.press("Escape");
+  await dismissChartOrderActionMenu(page);
   await expect(await getChartOrderAction(page, "Order 확정")).toBeDisabled();
-  await page.keyboard.press("Escape");
+  await dismissChartOrderActionMenu(page);
 
   await page.getByRole("button", { name: "진료 완료" }).click();
   const chartCompleteDialog = page.getByRole("dialog", {
@@ -3313,7 +3322,7 @@ test("chart safety context and confirmation dialogs identify the active patient"
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   await expect(await getChartOrderAction(page, "Order 청구")).toBeEnabled();
-  await page.keyboard.press("Escape");
+  await dismissChartOrderActionMenu(page);
   await expect(await getChartOrderAction(page, "Order 확정")).toBeEnabled();
 
   await page.getByRole("menuitem", { name: "Order 확정" }).click();
