@@ -804,6 +804,18 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "aria-label",
     "기본 SOAP 작업",
   );
+  const subjectCollapseButton = subjectActionButtons.nth(0);
+  await subjectCollapseButton.focus();
+  await page.mouse.move(1, 1);
+  await expect(subjectCollapseButton).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await subjectCollapseButton.hover();
+  await expect(subjectCollapseButton).not.toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   for (const button of await subjectActionButtons.all()) {
     await expect(button).toHaveCSS("width", "28px");
     await expect(button).toHaveCSS("height", "28px");
