@@ -11,10 +11,11 @@ related_work:
   - CHART-PR-014
   - CHART-PR-015
   - CHART-PR-016
+  - CHART-PR-023
   - HOSPITAL-ADMIN-LIVE-PR-018
   - HOSPITAL-ADMIN-LIVE-PR-019
   - RECEPTION-LIVE-PR-017
-last_updated: 2026-07-24
+last_updated: 2026-08-15
 tags: [data-model, patient, vital, chart, permissions]
 ---
 
@@ -22,7 +23,7 @@ tags: [data-model, patient, vital, chart, permissions]
 
 ## Purpose
 
-`patient_vital_measurements` keeps measured patient values separate from the compatibility snapshot `patients.weight_kg`. It is the source for the waiting-chart comparison and the display-only latest-vital summary used by patient context bars.
+`patient_vital_measurements` keeps measured patient values separate from the compatibility snapshot `patients.weight_kg`. It is the source for the waiting-chart comparison and the shared latest-vital summary used by patient context bars.
 
 ## Stored Values
 
@@ -38,16 +39,19 @@ Values must be positive. Weight accepts up to two decimal places, temperature up
 
 ## Write Boundary
 
-`public.clair_upsert_waiting_encounter_vitals` is the only approved writer for this flow.
+Two narrowly scoped RPCs own chart vital writes:
+
+- `public.clair_upsert_waiting_encounter_vitals` remains the compatibility writer for preconsultation and accepts only encounter `waiting` plus consultation queue `waiting`.
+- `public.clair_upsert_chart_encounter_vitals` accepts that same waiting pair and the active-chart pair encounter `in_consultation` plus consultation queue `in_progress`.
 
 It rechecks all of the following in the database transaction:
 
 1. `auth.uid()` matches the supplied actor and the actor has active workspace membership.
 2. The actor has effective `vital:write` and is either an active hospital administrator or clinically eligible through a veterinarian or technician job position. The legacy `vet` and `technician` membership strings remain a migration compatibility fallback only.
-3. The encounter belongs to the requested workspace and both the encounter and `consultation` queue row are `waiting`.
+3. The encounter belongs to the requested workspace and its encounter/consultation state pair is allowed by the selected RPC.
 4. The write updates only the selected encounter's latest existing vital record; it inserts one record only when that encounter has no vital yet.
 
-The direct table remains RLS-protected with direct authenticated table privileges revoked. The RPC is authenticated-only and uses a fixed `search_path`.
+The direct table remains RLS-protected with direct authenticated table privileges revoked. Both RPCs are authenticated-only and use a fixed empty `search_path` with schema-qualified relations. The chart RPC does not broaden or replace the waiting-only RPC.
 
 ## Read Models
 
@@ -55,7 +59,7 @@ The direct table remains RLS-protected with direct authenticated table privilege
 - `clair_get_patient_latest_vital_for_encounter` uses the selected encounter only to identify the patient, then returns that patient's latest measurement row. A cleared row is still latest and therefore returns null values rather than older measurements.
 - `clair_get_reception_encounter_vital` returns only the latest measurement row linked to the selected reception encounter. It requires active workspace membership plus `reception:view`; it never substitutes another encounter's patient-latest row. The reception detail renders only non-null values that remain enabled by workspace settings.
 
-The context bar has no vital write UI. It requests the shared latest read model on a later screen selection/load, not through real-time push.
+The chart context bar can opt into a vital write action for its selected waiting or active consultation. Dispensing, lab, imaging, and treatment consumers remain display-only because they omit the shared component's opt-in action. A successful chart save replaces the current latest-vital result immediately; later screen selection/load still uses the shared server read model rather than real-time push.
 
 Workspace display and entry visibility comes from `vital_presets` plus `workspace_vital_settings`. The measurement table keeps canonical `kg` and `°C` values; changing a workspace display unit, disabling an optional preset, or removing an optional preset from the workspace list never rewrites or deletes historical rows. Re-adding the preset makes the same stored values visible again. `required_in_workspace` means the preset must remain configured and enabled; it does not make a patient measurement mandatory.
 
@@ -78,3 +82,19 @@ with weight, temperature, and heart rate while the same patient's earlier
 measurements remain grouped by their own visit dates. Forward hardening version
 `20260724023220_reception_encounter_vital_patient_link_hardening` also requires
 the measurement patient to match the selected encounter patient.
+
+The active-chart writer is introduced by canonical additive version
+`20260815100223_chart_active_encounter_vitals`. The exact SQL was applied to the
+linked synthetic/demo project as remote version
+`20260815102642_chart_active_encounter_vitals`; a comment-only history alias
+preserves that version. Catalog shape, authenticated-only execution, denied
+anonymous/direct writes, the two allowed state pairs, denied mismatches, and the
+unchanged waiting-only RPC are release verification gates.
+
+Remote rollback probes found that the legacy DB permission resolver and the
+newer workspace permission-role model had drifted: veterinarians and technicians
+had `vital:write` only in the latter. Canonical forward migration
+`20260815102956_chart_vital_permission_policy_compatibility` (remote version
+`20260815103052`) adds that permission to the matching legacy clinical role
+policies. It does not add the permission to front desk and does not change either
+RPC's encounter-state rules.

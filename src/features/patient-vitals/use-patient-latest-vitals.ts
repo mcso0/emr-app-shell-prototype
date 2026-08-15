@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   formatPatientVitalDisplayItemsForSettings,
   type PatientVitalDisplayItem,
@@ -14,60 +14,137 @@ import {
 } from "@/features/patient-vitals/workspace-vital-settings";
 
 type PatientLatestVitalResponse =
-  | { ok: true; status: 200; vital: PatientVitalMeasurement | null }
+  | {
+      ok: true;
+      status: 200;
+      canWriteVitals: boolean;
+      vital: PatientVitalMeasurement | null;
+    }
   | { ok: false; status: number; denialReason?: string; error?: string };
 
 export function usePatientLatestVitalItems({
+  actorHeaders,
   encounterId,
   fallbackItems,
   workspaceId,
 }: {
+  actorHeaders?: Record<string, string>;
   encounterId?: string | null;
   fallbackItems?: PatientVitalDisplayItem[];
   workspaceId: string;
 }) {
   const { snapshot: vitalSettings } = useWorkspaceVitalSettings({ workspaceId });
+  const requestIdRef = useRef(0);
   const [result, setResult] = useState<
     | { encounterId?: string; status: "loading" }
-    | { encounterId: string; status: "ready"; vital: PatientVitalMeasurement | null }
+    | {
+        canWriteVitals: boolean;
+        encounterId: string;
+        status: "ready";
+        vital: PatientVitalMeasurement | null;
+      }
     | { encounterId?: string; status: "error" }
   >({ status: "loading" });
 
-  useEffect(() => {
-    let cancelled = false;
-    if (!encounterId) return;
-    void fetch(
+  const requestLatestVital = useCallback(async () => {
+    if (!encounterId) throw new Error("patient_latest_vital_unavailable");
+    const response = await fetch(
       `/api/workspaces/${encodeURIComponent(workspaceId)}/patient-vitals/latest?encounterId=${encodeURIComponent(encounterId)}`,
-      { cache: "no-store" },
-    )
-      .then(async (response) => {
-        const body = (await response.json()) as PatientLatestVitalResponse;
-        if (!response.ok || !body.ok) throw new Error("patient_latest_vital_unavailable");
-        return body.vital;
-      })
-      .then((vital) => {
-        if (!cancelled) setResult({ encounterId, status: "ready", vital });
+      { cache: "no-store", headers: actorHeaders },
+    );
+    const body = (await response.json()) as PatientLatestVitalResponse;
+    if (!response.ok || !body.ok) {
+      throw new Error("patient_latest_vital_unavailable");
+    }
+    return body;
+  }, [actorHeaders, encounterId, workspaceId]);
+
+  useEffect(() => {
+    if (!encounterId) return;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
+    void requestLatestVital()
+      .then((body) => {
+        if (requestIdRef.current !== requestId) return;
+        setResult({
+          canWriteVitals: body.canWriteVitals,
+          encounterId,
+          status: "ready",
+          vital: body.vital,
+        });
       })
       .catch(() => {
-        if (!cancelled) setResult({ encounterId, status: "error" });
+        if (requestIdRef.current !== requestId) return;
+        setResult({ encounterId, status: "error" });
       });
+  }, [encounterId, requestLatestVital]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [encounterId, workspaceId]);
+  const refresh = useCallback(async () => {
+    if (!encounterId) return;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    setResult({ encounterId, status: "loading" });
+    try {
+      const body = await requestLatestVital();
+      if (requestIdRef.current !== requestId) return;
+      setResult({
+        canWriteVitals: body.canWriteVitals,
+        encounterId,
+        status: "ready",
+        vital: body.vital,
+      });
+    } catch {
+      if (requestIdRef.current !== requestId) return;
+      setResult({ encounterId, status: "error" });
+    }
+  }, [encounterId, requestLatestVital]);
+
+  const replaceVital = useCallback(
+    (vital: PatientVitalMeasurement) => {
+      if (!encounterId) return;
+      setResult((current) => ({
+        canWriteVitals:
+          current.status === "ready" && current.encounterId === encounterId
+            ? current.canWriteVitals
+            : false,
+        encounterId,
+        status: "ready",
+        vital,
+      }));
+    },
+    [encounterId],
+  );
 
   return useMemo(
     () => ({
+      canWriteVitals:
+        result.status === "ready" && result.encounterId === encounterId
+          ? result.canWriteVitals
+          : false,
       items:
         result.status === "ready" && result.encounterId === encounterId
           ? formatPatientVitalDisplayItemsForSettings(result.vital, vitalSettings)
           : fallbackItems
             ? orderFallbackVitalItems(fallbackItems, vitalSettings)
             : formatPatientVitalDisplayItemsForSettings(undefined, vitalSettings),
+      refresh,
+      replaceVital,
       status: result.encounterId === encounterId ? result.status : "loading",
+      vital:
+        result.status === "ready" && result.encounterId === encounterId
+          ? result.vital
+          : null,
+      vitalSettings,
     }),
-    [encounterId, fallbackItems, result, vitalSettings],
+    [
+      encounterId,
+      fallbackItems,
+      refresh,
+      replaceVital,
+      result,
+      vitalSettings,
+    ],
   );
 }
 

@@ -20,19 +20,53 @@ export type SupabasePatientVitalClient = {
       p_workspace_id: string;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_upsert_chart_encounter_vitals",
+    args: {
+      p_actor_user_id: string;
+      p_encounter_id: string;
+      p_vitals: PatientVitalWriteInput;
+      p_workspace_id: string;
+    },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
 export function createSupabasePatientVitalWriteGateway(
   client: SupabasePatientVitalClient,
 ): PatientVitalWriteGateway {
+  return createSupabasePatientVitalWriteGatewayForRpc(
+    client,
+    "clair_upsert_waiting_encounter_vitals",
+  );
+}
+
+export function createSupabaseChartPatientVitalWriteGateway(
+  client: SupabasePatientVitalClient,
+): PatientVitalWriteGateway {
+  return createSupabasePatientVitalWriteGatewayForRpc(
+    client,
+    "clair_upsert_chart_encounter_vitals",
+  );
+}
+
+function createSupabasePatientVitalWriteGatewayForRpc(
+  client: SupabasePatientVitalClient,
+  functionName:
+    | "clair_upsert_waiting_encounter_vitals"
+    | "clair_upsert_chart_encounter_vitals",
+): PatientVitalWriteGateway {
   return {
     async writeVital({ actorUserId, encounterId, values, workspaceId }) {
-      const { data, error } = await client.rpc("clair_upsert_waiting_encounter_vitals", {
+      const args = {
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
         p_vitals: values,
         p_workspace_id: workspaceId,
-      });
+      };
+      const { data, error } =
+        functionName === "clair_upsert_waiting_encounter_vitals"
+          ? await client.rpc("clair_upsert_waiting_encounter_vitals", args)
+          : await client.rpc("clair_upsert_chart_encounter_vitals", args);
       if (error) {
         if (error.message?.includes("stale_status")) {
           return { ok: false, status: 409 as const, denialReason: "stale_status" as const };
