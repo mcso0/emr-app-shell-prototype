@@ -73,19 +73,6 @@ async function tabBackwardTo(page: Page, target: Locator, maxSteps: number) {
   throw new Error("키보드 역방향 탭 순서에서 목표 요소를 찾지 못했습니다.");
 }
 
-async function tabForwardTo(page: Page, target: Locator, maxSteps: number) {
-  for (let step = 0; step < maxSteps; step += 1) {
-    await page.keyboard.press("Tab");
-    if (
-      await target.evaluate((element) => element === document.activeElement)
-    ) {
-      return;
-    }
-  }
-
-  throw new Error("키보드 정방향 탭 순서에서 목표 요소를 찾지 못했습니다.");
-}
-
 async function getChartOrderAction(page: Page, name: string | RegExp) {
   await page.getByRole("button", { name: "Plan/Order 작업" }).click();
   const action = page.getByRole("menuitem", { name });
@@ -805,10 +792,56 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(subjectPanel).not.toHaveCSS("box-shadow", "none");
   const subjectActionButtons = subjectActions.locator("button");
   await expect(subjectActionButtons).toHaveCount(4);
+  await expect(subjectActionButtons.nth(0)).toHaveAttribute(
+    "aria-label",
+    "S/O 패널 접기",
+  );
+  await expect(subjectActionButtons.nth(2)).toHaveAttribute(
+    "aria-label",
+    "SOAP 추가",
+  );
+  await expect(subjectActionButtons.nth(3)).toHaveAttribute(
+    "aria-label",
+    "기본 SOAP 작업",
+  );
   for (const button of await subjectActionButtons.all()) {
     await expect(button).toHaveCSS("width", "28px");
     await expect(button).toHaveCSS("height", "28px");
   }
+
+  const assessmentPanel = panels.filter({
+    has: page.getByRole("heading", { name: "Assessment" }),
+  });
+  await expect(
+    assessmentPanel.locator("[data-slot='chart-panel-actions'] button").nth(0),
+  ).toHaveAttribute("aria-label", "Assessment 패널 접기");
+
+  const historyPanel = panels.filter({
+    has: page.getByRole("heading", { name: "History" }),
+  });
+  await expect(
+    historyPanel.locator("[data-slot='chart-panel-actions'] button").nth(0),
+  ).toHaveAttribute("aria-label", "History 패널 접기");
+
+  const orderPanel = panels.filter({
+    has: page.getByRole("heading", { name: "Plan/Order" }),
+  });
+  const orderActionButtons = orderPanel.locator(
+    "[data-slot='chart-panel-actions'] button",
+  );
+  await expect(orderActionButtons).toHaveCount(4);
+  await expect(orderActionButtons.nth(0)).toHaveAttribute(
+    "aria-label",
+    "Plan/Order 패널 접기",
+  );
+  await expect(orderActionButtons.nth(2)).toHaveAttribute(
+    "aria-label",
+    "Order 추가",
+  );
+  await expect(orderActionButtons.nth(3)).toHaveAttribute(
+    "aria-label",
+    "Plan/Order 작업",
+  );
 
   await expect(page.locator("[data-slot='chart-soap-toolbar']")).toHaveCSS(
     "height",
@@ -1096,7 +1129,7 @@ test("chart clinical panels collapse independently without unmounting their cont
   await expect(soapCollapseButton).toHaveCSS("opacity", "1");
   await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "SOAP 추가" }).focus();
-  await tabForwardTo(page, soapCollapseButton, 4);
+  await tabBackwardTo(page, soapCollapseButton, 2);
   await expect(soapCollapseButton).toBeFocused();
   await expect(soapCollapseButton).toHaveCSS("opacity", "1");
   await page.keyboard.press("Enter");
@@ -1188,6 +1221,56 @@ test("chart clinical panels collapse independently without unmounting their cont
       hasInternalOverflow: true,
       panelWidths: [360, 360, 360],
     });
+});
+
+test("chart Plan/Order header adds Order and collapse actions without changing button chrome", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(kongScenarioUrl);
+
+  const orderPanel = page
+    .locator("[data-slot='chart-workspace-panel']")
+    .filter({ has: page.getByRole("heading", { name: "Plan/Order" }) });
+  const orderActions = orderPanel.locator("[data-slot='chart-panel-actions']");
+  const orderActionButtons = orderActions.locator("button");
+  const orderContent = page.locator("#chart-order-panel-content");
+  const divider = page.locator(
+    '[role="separator"][aria-label="진료 기록과 처방/오더 영역 높이 조절"]',
+  );
+
+  await orderPanel.hover();
+  await expect(orderActions).toHaveCSS("opacity", "1");
+  await expect(orderActionButtons).toHaveCount(4);
+  for (const button of await orderActionButtons.all()) {
+    await expect(button).toHaveCSS("width", "28px");
+    await expect(button).toHaveCSS("height", "28px");
+  }
+
+  await page.getByRole("button", { name: "Order 추가" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Workspace catalog에서 Order 추가" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "닫기" }).click();
+
+  const collapseButton = page.getByRole("button", {
+    name: "Plan/Order 패널 접기",
+  });
+  await collapseButton.click();
+  await expect(orderPanel).toHaveAttribute("data-collapsed", "true");
+  await expect(orderPanel).toHaveCSS("height", "38px");
+  await expect(orderContent).toHaveAttribute("aria-hidden", "true");
+  await expect(divider).toHaveAttribute("aria-hidden", "true");
+
+  const expandButton = page.getByRole("button", {
+    name: "Plan/Order 패널 펼치기",
+  });
+  await expect(expandButton).toBeFocused();
+  await expandButton.click();
+  await expect(orderPanel).toHaveAttribute("data-collapsed", "false");
+  await expect(orderContent).not.toHaveAttribute("aria-hidden");
+  await expect(divider).not.toHaveAttribute("aria-hidden");
+  await expect(collapseButton).toBeFocused();
 });
 
 test("Cheongdam chart side panel shows the centered empty queue state", async ({
