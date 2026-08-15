@@ -186,7 +186,10 @@ The generated structure must stay:
 
 Acceptance rules:
 
-- `data-slot="table-container"` is the only horizontal overflow owner.
+- Non-pinned tables keep `data-slot="table-container"` as the only horizontal
+  overflow owner. Pinned `EmrDataTable` surfaces instead use the single shared
+  `data-emr-pinned-table-scroll-owner="true"` Base UI viewport so its custom
+  scrollbar can exclude fixed columns without adding a second scroll owner.
 - `minWidth` is set on the table element, not separately on header/body rows.
 - Do not wrap `TableHeader`, `TableBody`, row warning banners, or empty states in separate overflow containers.
 - Adopt sticky columns only through the shared pinned-column contract below and with focused keyboard/focus verification.
@@ -233,6 +236,9 @@ DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYS
 - Keep patient scalar values and status badges on one line; the table owns a minimum width of 1480px.
 - Sticky header and body cells must share the same hover, selected, loading, and error surface tokens as their row.
 - Horizontal scrolling must not hide sort controls, checkbox focus rings, row actions, or the single table overflow owner.
+- The pinned viewport's horizontal scrollbar track starts after the total left
+  pinned width and ends before the total right pinned width. Wheel, keyboard,
+  track, and programmatic scrolling all operate on that same viewport.
 - The deleted guardian/patient screen must read the existing archive endpoint and restore through the target-specific existing mutation endpoint; permission denial and retryable read/mutation failure states stay visible.
 
 ### Hospital Admin Order Identity Pinning
@@ -243,7 +249,9 @@ DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYS
   domain identity column.
 - The Order title and pinned header/row identity text use a 48px local
   workspace axis.
-- The Order table container owns both vertical and horizontal table scrolling; do not wrap it in a second `ScrollArea`.
+- The shared pinned-table Base UI viewport owns both vertical and horizontal
+  scrolling for Order tables; do not add a feature-local outer `ScrollArea` or
+  another overflow container.
 - Preserve sorting, filtering, selection, row actions, drawers, and workspace catalog read/mutation behavior when changing the presentation.
 - Let one non-pinned data column absorb remaining table width so the fixed
   selection and identity widths do not scale.

@@ -1,10 +1,16 @@
 "use client";
 
 import * as React from "react";
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 
 import tableSortArrow from "@/assets/figma/table-sort-arrow.svg";
 import { FilterIcon, MenuIcon } from "@/components/icons";
-import { TableCell, TableHead } from "@/components/ui/table";
+import {
+  TableCell,
+  TableHead,
+  type TableOverscrollAxes,
+} from "@/components/ui/table";
+import { ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type {
   EmrColumnResize,
@@ -51,6 +57,7 @@ type EmrPinnedTableWorkspaceProps = React.ComponentProps<"div"> & {
 
 type EmrPinnedTableViewportProps = React.ComponentProps<"div"> & {
   leftPinnedColumnWidth?: number | string;
+  overscrollAxes?: TableOverscrollAxes;
   pinnedColumnWidth?: number | string;
   rightPinnedColumnWidth?: number | string;
 };
@@ -286,6 +293,7 @@ export function EmrPinnedTableViewport({
   children,
   className,
   leftPinnedColumnWidth,
+  overscrollAxes = "horizontal",
   pinnedColumnWidth = 0,
   rightPinnedColumnWidth = 0,
   style,
@@ -294,7 +302,7 @@ export function EmrPinnedTableViewport({
   const leftWidth = leftPinnedColumnWidth ?? pinnedColumnWidth;
 
   return (
-    <div
+    <ScrollAreaPrimitive.Root
       data-emr-pinned-table-viewport="true"
       className={cn(
         "relative isolate min-h-0 min-w-0 overflow-hidden",
@@ -312,7 +320,34 @@ export function EmrPinnedTableViewport({
       }
       {...props}
     >
-      {children}
+      <ScrollAreaPrimitive.Viewport
+        data-emr-pinned-table-scroll-owner="true"
+        data-slot="scroll-area-viewport"
+        className={cn(
+          "size-full rounded-[inherit] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1",
+          (overscrollAxes === "horizontal" || overscrollAxes === "both") &&
+            "overscroll-x-none",
+          (overscrollAxes === "vertical" || overscrollAxes === "both") &&
+            "overscroll-y-none",
+        )}
+      >
+        {children}
+      </ScrollAreaPrimitive.Viewport>
+      <ScrollBar
+        data-emr-pinned-table-scrollbar="horizontal"
+        orientation="horizontal"
+        className="z-20"
+        style={{
+          insetInlineStart: "var(--emr-table-left-pinned-column-width)",
+          insetInlineEnd: "var(--emr-table-right-pinned-column-width)",
+        }}
+      />
+      <ScrollBar
+        data-emr-pinned-table-scrollbar="vertical"
+        orientation="vertical"
+        className="z-20"
+      />
+      <ScrollAreaPrimitive.Corner />
       {leftWidth ? (
         <>
           <div
@@ -341,7 +376,7 @@ export function EmrPinnedTableViewport({
           />
         </>
       ) : null}
-    </div>
+    </ScrollAreaPrimitive.Root>
   );
 }
 

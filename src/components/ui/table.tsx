@@ -22,6 +22,7 @@ export type TablePinnedCellOptions = {
 
 type TableProps = React.ComponentProps<"table"> & {
   containerClassName?: string
+  containerStyle?: React.CSSProperties
   density?: EmrTableDensity
   layout?: EmrTableLayout
   minWidth?: number | string
@@ -58,6 +59,7 @@ function getPinnedCellStyle(
 function Table({
   className,
   containerClassName,
+  containerStyle,
   density = defaultEmrTableDensity,
   layout = defaultEmrTableLayout,
   minWidth,
@@ -88,6 +90,7 @@ function Table({
         overscrollClassName,
         containerClassName
       )}
+      style={containerStyle}
     >
       <table
         data-slot="table"

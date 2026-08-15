@@ -653,15 +653,20 @@ test("customer patient table keeps animal identity pinned while data columns scr
   const patientTable = page.getByRole("table", {
     name: "동물 고객관리 테이블",
   });
-  const scrollContainer = patientTable.locator("xpath=..");
   const pinnedViewport = patientSection.locator(
     '[data-emr-pinned-table-viewport="true"]',
+  );
+  const scrollContainer = pinnedViewport.locator(
+    '[data-emr-pinned-table-scroll-owner="true"]',
   );
   const pinnedDimmer = pinnedViewport.locator(
     '[data-emr-pinned-table-dimmer="true"]',
   );
   const pinnedDivider = pinnedViewport.locator(
     '[data-emr-pinned-table-divider="true"]',
+  );
+  const horizontalScrollbar = pinnedViewport.locator(
+    '[data-emr-pinned-table-scrollbar="horizontal"]',
   );
   const animalHeader = patientTable.locator(
     'th[data-column-id="name"]',
@@ -1055,6 +1060,24 @@ test("customer patient table keeps animal identity pinned while data columns scr
     expect(documentOverflow).toBe(0);
   }
 
+  await expect(horizontalScrollbar).toBeVisible();
+  const [viewportBox, scrollbarBox] = await Promise.all([
+    pinnedViewport.boundingBox(),
+    horizontalScrollbar.boundingBox(),
+  ]);
+  expect(viewportBox).not.toBeNull();
+  expect(scrollbarBox).not.toBeNull();
+  expect(Math.abs(scrollbarBox!.x - viewportBox!.x - 228)).toBeLessThanOrEqual(
+    1,
+  );
+  expect(
+    Math.abs(
+      scrollbarBox!.x +
+        scrollbarBox!.width -
+        (viewportBox!.x + viewportBox!.width),
+    ),
+  ).toBeLessThanOrEqual(1);
+
   const horizontalOverflowOwners = await patientSection.evaluate((root) =>
     Array.from(root.querySelectorAll<HTMLElement>("*"))
       .filter((element) => {
@@ -1063,7 +1086,7 @@ test("customer patient table keeps animal identity pinned while data columns scr
       })
       .map((element) => element.getAttribute("data-slot")),
   );
-  expect(horizontalOverflowOwners).toEqual(["table-container"]);
+  expect(horizontalOverflowOwners).toEqual(["scroll-area-viewport"]);
 
   await expect(scrollContainer).toHaveCSS("overscroll-behavior-x", "none");
   await expect(scrollContainer).toHaveCSS("overscroll-behavior-y", "none");
@@ -2081,7 +2104,9 @@ test("customer archive table pins identity and restores through the existing tar
   expect(Math.abs(rowBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(footerBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
 
-  const archiveScrollContainer = table.locator("xpath=..");
+  const archiveScrollContainer = pinnedViewport.locator(
+    '[data-emr-pinned-table-scroll-owner="true"]',
+  );
   await expect(archiveScrollContainer).toHaveCSS(
     "overscroll-behavior-x",
     "none",

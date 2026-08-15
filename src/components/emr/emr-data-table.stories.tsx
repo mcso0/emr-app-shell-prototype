@@ -316,6 +316,65 @@ export const AllColumnsScroll: Story = {};
 
 export const LeftAndRightPinned: Story = {
   args: { pinned: true },
+  play: async ({ canvasElement }) => {
+    const storyFrame = canvasElement.firstElementChild as HTMLElement | null;
+    if (!storyFrame) {
+      throw new Error("Pinned EmrDataTable story frame is missing.");
+    }
+    storyFrame.style.width = "720px";
+    const viewport = canvasElement.querySelector(
+      '[data-emr-pinned-table-viewport="true"]',
+    ) as HTMLElement | null;
+    const scrollOwner = viewport?.querySelector(
+      '[data-emr-pinned-table-scroll-owner="true"]',
+    ) as HTMLElement | null;
+    let horizontalScrollbar: HTMLElement | null = null;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      horizontalScrollbar = viewport?.querySelector(
+        '[data-emr-pinned-table-scrollbar="horizontal"]',
+      ) as HTMLElement | null;
+      if (horizontalScrollbar) break;
+      await new Promise((resolve) => window.setTimeout(resolve, 25));
+    }
+    const tableContainer = viewport?.querySelector(
+      '[data-slot="table-container"]',
+    ) as HTMLElement | null;
+
+    if (!viewport || !scrollOwner || !horizontalScrollbar || !tableContainer) {
+      throw new Error("Pinned EmrDataTable scroll targets are missing.");
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const scrollbarRect = horizontalScrollbar.getBoundingClientRect();
+    const viewportStyles = getComputedStyle(viewport);
+    const leftPinnedWidth = Number.parseFloat(
+      viewportStyles.getPropertyValue(
+        "--emr-table-left-pinned-column-width",
+      ),
+    );
+    const rightPinnedWidth = Number.parseFloat(
+      viewportStyles.getPropertyValue(
+        "--emr-table-right-pinned-column-width",
+      ),
+    );
+
+    if (
+      getComputedStyle(scrollOwner).overflowX !== "scroll" ||
+      getComputedStyle(tableContainer).overflowX !== "visible" ||
+      Math.abs(scrollbarRect.left - viewportRect.left - leftPinnedWidth) > 1 ||
+      Math.abs(viewportRect.right - scrollbarRect.right - rightPinnedWidth) > 1
+    ) {
+      throw new Error(
+        "Pinned EmrDataTable must keep one viewport owner and center the horizontal scrollbar between fixed columns.",
+      );
+    }
+
+    scrollOwner.scrollLeft = scrollOwner.scrollWidth;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (scrollOwner.scrollLeft <= 0) {
+      throw new Error("Pinned EmrDataTable viewport did not scroll.");
+    }
+  },
 };
 
 export const Loading: Story = {
