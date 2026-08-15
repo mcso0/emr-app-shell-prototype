@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type ComponentProps,
@@ -36,7 +37,11 @@ import {
 } from "@/components/emr/popover-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -58,6 +63,19 @@ type PatientContextMemoAction = {
   unavailableReason?: ReactNode;
 };
 
+export type ContextBarProfileInteraction = {
+  ariaLabel: string;
+  preview: ReactNode;
+  onActivate: () => void;
+};
+
+export type ContextBarVitalAction = {
+  ariaLabel: string;
+  onActivate: () => void;
+  disabled?: boolean;
+  disabledReason?: ReactNode;
+};
+
 type PatientContextBarProps = {
   className?: string;
   historyButton?: {
@@ -68,7 +86,10 @@ type PatientContextBarProps = {
   };
   memoActions?: PatientContextMemoAction[];
   onToggleRightPanel?: () => void;
+  guardianIndicatorVisible?: boolean;
+  guardianInteraction?: ContextBarProfileInteraction;
   guardianItems?: PatientContextDatum[];
+  patientInteraction?: ContextBarProfileInteraction;
   patientItems: PatientContextDatum[];
   rightPanelBadgeCount?: number;
   rightPanelDisabled?: boolean;
@@ -77,6 +98,7 @@ type PatientContextBarProps = {
   rightPanelToggleTooltipLabel?: ReactNode;
   rightPanelOpen?: boolean;
   trailingItems?: PatientContextDatum[];
+  vitalAction?: ContextBarVitalAction;
   vitalItems?: PatientContextDatum[];
 };
 
@@ -110,7 +132,10 @@ export function EmrPatientContextBar({
   historyButton,
   memoActions = [],
   onToggleRightPanel,
+  guardianIndicatorVisible = true,
+  guardianInteraction,
   guardianItems = [],
+  patientInteraction,
   patientItems,
   rightPanelBadgeCount,
   rightPanelDisabled = false,
@@ -119,6 +144,7 @@ export function EmrPatientContextBar({
   rightPanelToggleTooltipLabel,
   rightPanelOpen = false,
   trailingItems = [],
+  vitalAction,
   vitalItems = [],
 }: PatientContextBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -197,6 +223,7 @@ export function EmrPatientContextBar({
               dataSlot="patient-context-patient"
               hoverAction={<CdsNavigationChevronRightIcon />}
               iconSrc={getAssetSrc(animalDogIcon)}
+              interaction={patientInteraction}
             >
               <PatientContextInlineSummary items={patientItems} />
             </PatientContextInfoSection>
@@ -206,8 +233,13 @@ export function EmrPatientContextBar({
                 <PatientContextDivider />
                 <PatientContextInfoSection
                   dataSlot="patient-context-guardian"
-                  hoverAction={<CdsNavigationChevronRightIcon />}
+                  hoverAction={
+                    guardianIndicatorVisible ? (
+                      <CdsNavigationChevronRightIcon />
+                    ) : undefined
+                  }
                   iconSrc={getAssetSrc(companionIcon)}
+                  interaction={guardianInteraction}
                 >
                   <PatientContextInlineSummary items={guardianItems} />
                 </PatientContextInfoSection>
@@ -221,6 +253,7 @@ export function EmrPatientContextBar({
                   dataSlot="patient-context-vitals"
                   hoverAction={<CdsActionsPlusIcon />}
                   iconSrc={getAssetSrc(vitalHeartPulseIcon)}
+                  vitalAction={vitalAction}
                 >
                   <PatientContextDatumGroup items={vitalItems} />
                 </PatientContextInfoSection>
@@ -397,27 +430,143 @@ function PatientContextInfoSection({
   dataSlot,
   hoverAction,
   iconSrc,
+  interaction,
+  vitalAction,
 }: {
   children: ReactNode;
   dataSlot: string;
   hoverAction?: ReactNode;
   iconSrc: string;
+  interaction?: ContextBarProfileInteraction;
+  vitalAction?: ContextBarVitalAction;
 }) {
-  return (
-    <div
-      data-slot={dataSlot}
-      className="group relative flex h-9 shrink-0 items-center gap-[var(--emr-context-bar-item-gap)] overflow-hidden rounded-[var(--emr-context-bar-button-radius)] p-[var(--clair-spacing-6)] hover:bg-[var(--emr-context-bar-hover-bg)]"
-    >
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const className =
+    "group relative flex h-9 shrink-0 items-center gap-[var(--emr-context-bar-item-gap)] overflow-hidden rounded-[var(--emr-context-bar-button-radius)] p-[var(--clair-spacing-6)] text-left hover:bg-[var(--emr-context-bar-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 focus-within:bg-[var(--emr-context-bar-hover-bg)]";
+  const content = (
+    <>
       <IllustrationIcon
         src={iconSrc}
         alt=""
-        className="group-hover:bg-[var(--emr-context-bar-hover-icon-bg)]"
+        className="group-hover:bg-[var(--emr-context-bar-hover-icon-bg)] group-focus-within:bg-[var(--emr-context-bar-hover-icon-bg)]"
       />
       {children}
-      {hoverAction ? (
+      {vitalAction ? (
+        <PatientContextVitalActionButton action={vitalAction}>
+          {hoverAction}
+        </PatientContextVitalActionButton>
+      ) : hoverAction ? (
         <PatientContextHoverAction>{hoverAction}</PatientContextHoverAction>
       ) : null}
+    </>
+  );
+
+  if (interaction) {
+    return (
+      <Popover
+        open={previewOpen}
+        onOpenChange={(open, eventDetails) => {
+          if (eventDetails.reason === "trigger-press") {
+            setPreviewOpen(false);
+            interaction.onActivate();
+            return;
+          }
+          setPreviewOpen(open);
+        }}
+      >
+        <PopoverTrigger
+          openOnHover
+          delay={250}
+          closeDelay={150}
+          render={
+            <button
+              type="button"
+              data-slot={dataSlot}
+              className={className}
+              aria-label={interaction.ariaLabel}
+            />
+          }
+        >
+          {content}
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={8}
+          className="w-[320px] gap-0 rounded-lg border-[var(--emr-border-default)] bg-popover p-3 shadow-[var(--clair-shadow-md)] ring-1 ring-foreground/10"
+        >
+          {interaction.preview}
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <div
+      data-slot={dataSlot}
+      className={className}
+    >
+      {content}
     </div>
+  );
+}
+
+function PatientContextVitalActionButton({
+  action,
+  children,
+}: {
+  action: ContextBarVitalAction;
+  children?: ReactNode;
+}) {
+  const disabledReasonId = useId();
+  const positionClassName =
+    "absolute right-0 top-1/2 flex h-[var(--emr-context-bar-control-size)] -translate-y-1/2 items-center opacity-0 outline-none group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100";
+  const buttonClassName =
+    "flex h-[var(--emr-context-bar-control-size)] items-center bg-[linear-gradient(to_right,transparent,var(--emr-context-bar-hover-bg)_var(--clair-spacing-8))] pl-[var(--clair-spacing-16)] pr-[var(--clair-spacing-6)] text-[var(--emr-text-secondary)] outline-none disabled:cursor-not-allowed [&_svg]:size-[var(--emr-context-bar-hover-action-icon-size)]";
+  const buttonContent = (
+    <span className="flex size-[var(--emr-context-bar-control-size)] items-center justify-center rounded-[var(--emr-context-bar-control-radius)] hover:bg-[var(--emr-context-bar-hover-icon-bg)] focus-visible:ring-2 focus-visible:ring-ring/40">
+      {children}
+    </span>
+  );
+  const button = (
+    <button
+      type="button"
+      data-slot="patient-context-vital-action"
+      className={cn(positionClassName, buttonClassName)}
+      aria-disabled={action.disabled}
+      aria-describedby={action.disabledReason ? disabledReasonId : undefined}
+      aria-label={action.ariaLabel}
+      onClick={() => {
+        if (!action.disabled) action.onActivate();
+      }}
+    >
+      {buttonContent}
+    </button>
+  );
+
+  if (!action.disabled || !action.disabledReason) return button;
+
+  return (
+    <>
+      <button
+        type="button"
+        data-slot="patient-context-vital-action"
+        className={cn(positionClassName, buttonClassName)}
+        aria-disabled="true"
+        aria-describedby={disabledReasonId}
+        aria-label={action.ariaLabel}
+        title={
+          typeof action.disabledReason === "string"
+            ? action.disabledReason
+            : undefined
+        }
+      >
+        {buttonContent}
+      </button>
+      <span id={disabledReasonId} className="sr-only">
+        {action.disabledReason}
+      </span>
+    </>
   );
 }
 
@@ -443,7 +592,7 @@ function PatientContextInlineSummary({
           ) : null}
           <span className="emr-text-dense text-[var(--emr-text-primary)]">
             <span className="sr-only">{item.label}: </span>
-            {item.value}
+            <span>{item.value}</span>
           </span>
         </span>
       ))}

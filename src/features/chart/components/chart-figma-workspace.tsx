@@ -9,7 +9,11 @@ import {
   CdsMedicalBedIcon,
   CdsMedicalMessagesSquareIcon,
 } from "@/components/cds-icons/medical-and-domain";
-import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
+import {
+  EmrPatientContextBar,
+  type ContextBarProfileInteraction,
+  type ContextBarVitalAction,
+} from "@/components/emr/patient-context-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,21 +39,27 @@ type ChartPatientMemoItem = {
 
 type ChartPatientContextBarProps = {
   doctorName: string;
+  guardianInteraction?: ContextBarProfileInteraction;
   guardianName: string;
   guardianPhone: string;
   memoItems: ChartPatientMemoItem[];
+  patientInteraction?: ContextBarProfileInteraction;
   patientMeta: string;
   patientName: string;
+  vitalAction?: ContextBarVitalAction;
   vitalItems: ChartPatientVitalItem[];
 };
 
 export function ChartPatientContextBar({
   doctorName,
+  guardianInteraction,
   guardianName,
   guardianPhone,
   memoItems,
+  patientInteraction,
   patientMeta,
   patientName,
+  vitalAction,
   vitalItems,
 }: ChartPatientContextBarProps) {
   return (
@@ -59,14 +69,18 @@ export function ChartPatientContextBar({
     >
       <EmrPatientContextBar
         className="border-b-0"
+        guardianIndicatorVisible={Boolean(guardianInteraction)}
+        guardianInteraction={guardianInteraction}
         guardianItems={[
           { label: "보호자", value: guardianName },
           { label: "연락처", value: guardianPhone },
         ]}
+        patientInteraction={patientInteraction}
         patientItems={[
           { label: "환자", value: patientName },
           { label: "환자 정보", value: patientMeta },
         ]}
+        vitalAction={vitalAction}
         vitalItems={vitalItems}
         memoActions={memoItems}
         trailingItems={[{ label: "주치의", value: doctorName }]}

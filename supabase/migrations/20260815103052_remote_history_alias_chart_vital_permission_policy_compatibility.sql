@@ -1,0 +1,8 @@
+-- Remote history alias for the CHART-PR-023 vital permission compatibility fix.
+--
+-- The data change is owned by the canonical fresh-replay migration:
+--   20260815102956_chart_vital_permission_policy_compatibility.sql
+--
+-- Supabase MCP applied that exact SQL to the linked synthetic/demo project as
+-- remote version 20260815103052. Keep this alias comment-only so a fresh local
+-- replay does not append the permission twice.

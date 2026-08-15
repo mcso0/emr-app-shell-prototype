@@ -1,0 +1,8 @@
+-- Remote history alias for the CHART-PR-023 active chart vital writer.
+--
+-- The schema change is owned by the canonical fresh-replay migration:
+--   20260815100223_chart_active_encounter_vitals.sql
+--
+-- Supabase MCP applied that exact SQL to the linked synthetic/demo project as
+-- remote version 20260815102642. Keep this alias comment-only so a fresh local
+-- replay does not execute the writer definition twice.

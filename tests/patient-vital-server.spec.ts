@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
+  createSupabaseChartPatientVitalWriteGateway,
   createSupabasePatientLatestVitalGateway,
   createSupabasePatientVitalWriteGateway,
   readPatientLatestVital,
@@ -185,6 +186,7 @@ test("latest vital read uses the selected encounter only to resolve its patient"
   expect(result).toMatchObject({
     ok: true,
     status: 200,
+    canWriteVitals: false,
     enforcedBy: "patient-latest-vital-read",
     vital: { patientId, encounterId },
   });
@@ -196,7 +198,10 @@ test("Supabase vital gateways call only the approved RPCs and preserve cleared n
   const client = {
     async rpc(functionName: string, args: unknown) {
       calls.push([functionName, args]);
-      if (functionName === "clair_upsert_waiting_encounter_vitals") {
+      if (
+        functionName === "clair_upsert_waiting_encounter_vitals" ||
+        functionName === "clair_upsert_chart_encounter_vitals"
+      ) {
         return { data: { ...createVital(), temperatureC: null }, error: null };
       }
       return { data: { patientId, vital: { ...createVital(), weightKg: null } }, error: null };
@@ -213,10 +218,19 @@ test("Supabase vital gateways call only the approved RPCs and preserve cleared n
     encounterId,
     workspaceId,
   });
+  const chartWrite = await createSupabaseChartPatientVitalWriteGateway(
+    client,
+  ).writeVital({
+    actorUserId,
+    encounterId,
+    values: validVitals,
+    workspaceId,
+  });
 
   expect(write.ok).toBe(true);
   if (write.ok) expect(write.vital).not.toHaveProperty("temperatureC");
   expect(read.ok).toBe(true);
+  expect(chartWrite.ok).toBe(true);
   if (read.ok && read.vital) expect(read.vital).not.toHaveProperty("weightKg");
   expect(calls).toEqual([
     [
@@ -232,12 +246,29 @@ test("Supabase vital gateways call only the approved RPCs and preserve cleared n
       "clair_get_patient_latest_vital_for_encounter",
       { p_encounter_id: encounterId, p_workspace_id: workspaceId },
     ],
+    [
+      "clair_upsert_chart_encounter_vitals",
+      {
+        p_actor_user_id: actorUserId,
+        p_encounter_id: encounterId,
+        p_vitals: validVitals,
+        p_workspace_id: workspaceId,
+      },
+    ],
   ]);
 });
 
 test("vital API routes and migration keep writes server-owned and auditable", () => {
   const writerRoute = readFileSync(
     "src/app/api/workspaces/[workspaceId]/chart/preconsultation-vitals/route.ts",
+    "utf8",
+  );
+  const chartWriterRoute = readFileSync(
+    "src/app/api/workspaces/[workspaceId]/chart/encounter-vitals/route.ts",
+    "utf8",
+  );
+  const sharedWriterRoute = readFileSync(
+    "src/features/patient-vitals/server-patient-vital-route.ts",
     "utf8",
   );
   const readerRoute = readFileSync(
@@ -250,9 +281,11 @@ test("vital API routes and migration keep writes server-owned and auditable", ()
     .map((fileName) => readFileSync(`supabase/migrations/${fileName}`, "utf8"))
     .join("\n");
 
-  expect(writerRoute).toContain("readServerSession");
-  expect(writerRoute).toContain("loadWorkspacePermissionAdapterFromDb");
-  expect(writerRoute).toContain("writePatientVital");
+  expect(writerRoute).toContain('mode: "waiting"');
+  expect(chartWriterRoute).toContain('mode: "chart"');
+  expect(sharedWriterRoute).toContain("readServerSession");
+  expect(sharedWriterRoute).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(sharedWriterRoute).toContain("writePatientVital");
   expect(readerRoute).toContain("readPatientLatestVital");
   expect(migration).toContain("clair_upsert_waiting_encounter_vitals");
   expect(migration).toContain("clair_get_patient_latest_vital_for_encounter");
@@ -263,12 +296,14 @@ test("vital API routes and migration keep writes server-owned and auditable", ()
   expect(migration).toContain("cleared_by_user_id");
   expect(migration).toContain("v_encounter.status <> 'waiting'");
   expect(migration).toContain("v_queue.status <> 'waiting'");
-  expect(`${writerRoute}\n${readerRoute}\n${migration}`).not.toMatch(
+  expect(
+    `${writerRoute}\n${chartWriterRoute}\n${sharedWriterRoute}\n${readerRoute}\n${migration}`,
+  ).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET/i,
   );
 });
 
-test("patient context bars are display-only latest-vital consumers", () => {
+test("patient context bars keep display-only defaults and expose opt-in chart actions", () => {
   const contextBar = readFileSync("src/components/emr/patient-context-bar.tsx", "utf8");
   const chart = readFileSync("src/features/chart/module.tsx", "utf8");
   const dispensing = readFileSync("src/features/dispensing/module.tsx", "utf8");
@@ -281,13 +316,53 @@ test("patient context bars are display-only latest-vital consumers", () => {
   expect(contextBar).not.toContain("PatientVitalPopover");
   expect(contextBar).toContain("CdsActionsPlusIcon");
   expect(contextBar).toContain('data-slot="patient-context-hover-action"');
-  expect(contextBar).toContain("pointer-events-none");
-  expect(contextBar).not.toMatch(/on(?:Add|Create|Edit|Write)Vital/);
+  expect(contextBar).toContain("ContextBarProfileInteraction");
+  expect(contextBar).toContain("ContextBarVitalAction");
+  expect(contextBar).toContain('data-slot="patient-context-vital-action"');
   expect(chart).toContain("usePatientLatestVitalItems");
+  expect(chart).toContain("patientInteraction");
+  expect(chart).toContain("vitalAction");
   expect(dispensing).toContain("usePatientLatestVitalItems");
+  expect(dispensing).not.toContain("vitalAction=");
   expect(labImaging).toContain("usePatientLatestVitalItems");
+  expect(labImaging).not.toContain("vitalAction=");
   expect(latestVitalHook).toContain("useWorkspaceVitalSettings");
   expect(latestVitalHook).toContain("formatPatientVitalDisplayItemsForSettings");
+});
+
+test("active chart vital migration preserves waiting-only compatibility and restricts the new RPC", () => {
+  const migration = readFileSync(
+    "supabase/migrations/20260815100223_chart_active_encounter_vitals.sql",
+    "utf8",
+  );
+  const existingWaitingWriter = readFileSync(
+    "supabase/migrations/20260722143000_workspace_vital_settings.sql",
+    "utf8",
+  );
+  const permissionCompatibility = readFileSync(
+    "supabase/migrations/20260815102956_chart_vital_permission_policy_compatibility.sql",
+    "utf8",
+  );
+
+  expect(migration).toContain("clair_upsert_chart_encounter_vitals");
+  expect(migration).toContain("set search_path = ''");
+  expect(migration).toContain("v_encounter.status = 'waiting'");
+  expect(migration).toContain("v_queue.status = 'waiting'");
+  expect(migration).toContain("v_encounter.status = 'in_consultation'");
+  expect(migration).toContain("v_queue.status = 'in_progress'");
+  expect(migration).toContain("from public.user_memberships");
+  expect(migration).toContain("'vital:write'");
+  expect(migration).toContain("from public, anon");
+  expect(migration).toContain("to authenticated");
+  expect(existingWaitingWriter).toContain(
+    "v_encounter.status <> 'waiting' or v_queue.status <> 'waiting'",
+  );
+  expect(permissionCompatibility).toContain("public.permission_policies");
+  expect(permissionCompatibility).toContain(
+    "target_role in ('hospital_admin', 'vet', 'technician')",
+  );
+  expect(permissionCompatibility).toContain("'[\"vital:write\"]'::jsonb");
+  expect(permissionCompatibility).not.toContain("target_role in ('front_desk'");
 });
 
 function createVital() {
