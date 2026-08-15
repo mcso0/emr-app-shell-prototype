@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHART-PR-023 컨텍스트 프로필·바이탈 액션 결과</title>
+    <style>
+      :root { color-scheme:light; --ink:#172033; --muted:#667085; --line:#d8dee9; --surface:#fff; --canvas:#f4f6f8; --accent:#155eef; --soft:#eff4ff; --ok:#067647; --ok-soft:#ecfdf3; --warn:#9a6700; --warn-soft:#fff7d6; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--canvas); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.55; }
+      main { max-width:960px; margin:0 auto; padding:44px 24px 72px; }
+      h1 { margin:0; font-size:clamp(28px,5vw,42px); letter-spacing:-.035em; }
+      h2 { margin:0 0 14px; font-size:20px; }
+      h3 { margin:0 0 7px; font-size:15px; }
+      p { margin:0; }
+      code { border-radius:5px; background:#eef1f5; padding:2px 5px; }
+      .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+      .lede { max-width:760px; margin-top:12px; color:var(--muted); font-size:17px; }
+      .meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+      .pill { border:1px solid var(--line); border-radius:999px; background:var(--surface); padding:5px 10px; color:var(--muted); font-size:12px; }
+      .pill.ok { border-color:#a6f4c5; background:var(--ok-soft); color:var(--ok); font-weight:700; }
+      section { margin-top:18px; border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:22px; box-shadow:0 1px 2px rgb(16 24 40 / 4%); }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+      .card { border:1px solid var(--line); border-radius:9px; padding:14px; }
+      .card p, li { color:var(--muted); font-size:13px; }
+      ul { margin:8px 0 0; padding-left:20px; }
+      .evidence { width:100%; border-collapse:collapse; font-size:13px; }
+      .evidence th,.evidence td { border-bottom:1px solid var(--line); padding:10px 8px; text-align:left; }
+      .evidence th { color:var(--muted); font-size:12px; }
+      .done { color:var(--ok); font-weight:750; }
+      .caution { margin-top:12px; border:1px solid #fedf89; border-radius:8px; background:var(--warn-soft); padding:12px; color:var(--warn); font-size:13px; }
+      @media (max-width:720px) { main{padding:28px 14px 48px}.grid{grid-template-columns:1fr}section{padding:17px} }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">CHART-PR-023 · Implementation Result</p>
+        <h1>선택 환자의 맥락을 바로 확인하고 이어서 작업한다</h1>
+        <p class="lede">환자와 보호자는 가벼운 미리보기 뒤 기존 상세 패널로 연결하고, 바이탈은 대기와 진료 중 화면에서 같은 입력 창과 권한 규칙을 사용하도록 통합했다.</p>
+        <div class="meta">
+          <span class="pill ok">핵심 서버 계약 11/11 통과</span>
+          <span class="pill">2026-08-15</span>
+          <span class="pill">Additive migration</span>
+        </div>
+      </header>
+
+      <section>
+        <h2>무엇이 달라졌나</h2>
+        <div class="grid">
+          <div class="card"><h3>실제 프로필 미리보기</h3><p>선택 encounter에 이미 포함된 환자·보호자 데이터만 사용한다. 주소, 생년월일, 식별정보, 동의 토큰은 노출하지 않는다.</p></div>
+          <div class="card"><h3>기존 상세 패널 연결</h3><p>클릭, Enter, Space, 터치로 기존 URL 기반 환자·보호자 패널을 연다. 보호자가 없으면 실행 요소 자체를 만들지 않는다.</p></div>
+          <div class="card"><h3>공용 바이탈 입력 창</h3><p>대기 화면의 입력 로직을 <code>ChartVitalDialog</code>로 분리해 진료 중 헤더에서도 같은 필드, 검증, 저장·비움 규칙을 쓴다.</p></div>
+          <div class="card"><h3>이중 권한 검증</h3><p>클라이언트는 상태와 서버 계산 권한을 함께 보고, API와 새 RPC가 workspace, actor, permission, 직군, encounter/queue 상태를 다시 확인한다.</p></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>공용 컴포넌트 경계</h2>
+        <ul>
+          <li><code>EmrPatientContextBar</code>는 선택적 interaction 계약과 접근 가능한 표시만 소유한다.</li>
+          <li>데이터 조회, 프로필 store hydrate, URL drawer, 저장 권한과 API 호출은 chart 기능에 남긴다.</li>
+          <li>조제·검사·영상·처치는 interaction을 전달하지 않으므로 기존 표시 전용 동작을 유지한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>데이터·보안 경계</h2>
+        <ul>
+          <li>새 writer: <code>clair_upsert_chart_encounter_vitals</code></li>
+          <li>허용 상태: <code>waiting + waiting</code>, <code>in_consultation + in_progress</code></li>
+          <li>기존 <code>clair_upsert_waiting_encounter_vitals</code>는 waiting 전용으로 유지</li>
+          <li>고정 empty <code>search_path</code>, schema-qualified relation, authenticated-only 실행</li>
+        </ul>
+        <p class="caution">원격 migration은 연결 대상이 synthetic/demo임을 확인한 뒤 적용한다. production smoke에서는 바이탈 값을 저장하지 않는다.</p>
+      </section>
+
+      <section>
+        <h2>검증 상태</h2>
+        <table class="evidence">
+          <thead><tr><th>검증</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>서버·RPC 정적/행동 계약</td><td class="done">11 / 11 통과</td></tr>
+            <tr><td>전체 차트 브라우저 회귀</td><td class="done">50 / 50 통과</td></tr>
+            <tr><td>프로필 hover/focus/Escape·drawer·active vital·보호자 없음·권한 없음</td><td class="done">통과</td></tr>
+            <tr><td>전체 lint·typecheck·build·docs·copy·secret·diff</td><td class="done">통과</td></tr>
+            <tr><td>원격 synthetic migration 적용</td><td class="done"><code>20260815102642</code>, <code>20260815103052</code> 적용</td></tr>
+            <tr><td>원격 catalog·grant</td><td class="done">고정 empty search path, authenticated-only RPC, 직접 table write 차단</td></tr>
+            <tr><td>원격 rollback-only probe</td><td class="done">대기·진료중 허용, 접수·타 workspace·완료 상태 차단, probe 0건</td></tr>
+            <tr><td>Supabase advisor</td><td class="done">의도한 authenticated SECURITY DEFINER 경고와 기존 RLS/index 알림만 확인</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>릴리스 경계</h2>
+        <p>기능 PR과 고정 staging smoke가 통과하면 정확한 candidate SHA, migration version, rollback 지점을 포함한 production 승인 패킷을 만든다. 그 SHA에 대한 한 줄 승인을 받은 뒤에만 <code>staging → main</code>을 병합한다.</p>
+      </section>
+    </main>
+  </body>
+</html>

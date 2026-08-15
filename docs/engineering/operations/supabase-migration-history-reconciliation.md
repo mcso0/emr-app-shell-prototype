@@ -6,7 +6,7 @@ tags:
   - supabase
   - migrations
   - release
-last_updated: 2026-08-08
+last_updated: 2026-08-15
 ---
 
 # Supabase Migration History Reconciliation
@@ -52,6 +52,8 @@ Do not delete or rename the compatibility aliases below. Their SQL was applied r
 | `20260715172425_remote_history_alias_private_profile_avatars.sql` | `20260716020000_private_profile_avatars.sql` |
 | `20260722112553_remote_history_alias_workspace_vital_settings.sql` | `20260722143000_workspace_vital_settings.sql` |
 | `20260722130209_remote_history_alias_required_workspace_vitals.sql` | `20260722190000_required_workspace_vitals.sql` |
+| `20260815102642_remote_history_alias_chart_active_encounter_vitals.sql` | `20260815100223_chart_active_encounter_vitals.sql` |
+| `20260815103052_remote_history_alias_chart_vital_permission_policy_compatibility.sql` | `20260815102956_chart_vital_permission_policy_compatibility.sql` |
 
 The following remote-only SQL is preserved verbatim so a fresh local reset includes the actual remote behavior:
 
@@ -99,6 +101,15 @@ no longer pending behavior. Their exact SQL was applied and verified on
 2026-07-22 under remote versions `20260722112553` and `20260722130209`;
 comment-only aliases preserve those history versions while canonical migrations
 remain the deterministic fresh-replay source.
+
+The CHART-PR-023 active encounter-vital writer was applied and verified on
+2026-08-15 under remote version `20260815102642`; its exact SQL is kept in
+canonical version `20260815100223`, and the comment-only alias preserves remote
+history without duplicating the function definition during fresh replay.
+The accompanying permission-policy compatibility fix was applied as remote
+version `20260815103052`; canonical version `20260815102956` keeps the legacy DB
+permission resolver aligned with the workspace permission-role model for
+hospital administrators, veterinarians, and technicians only.
 
 Do not use `migration repair --status applied` for these entries merely to make `db push` look clean. Supabase repair changes only the history table; it does not execute the migration SQL.
 

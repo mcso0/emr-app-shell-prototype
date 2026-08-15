@@ -10,7 +10,7 @@ source_docs:
   - "docs/design/system/DESIGN.md"
   - "docs/work/design-system/DESIGN-SYSTEM-PR-038-cds-v2-app-shell-scope.md"
   - "docs/work/design-system/DESIGN-SYSTEM-PR-048-patient-info-bar-memo-action-ux.md"
-updated: "2026-08-14"
+updated: "2026-08-15"
 ---
 
 # CDS.V2 Patient Context Bar
@@ -60,4 +60,8 @@ Align the existing shared patient context bar with Figma node `27383:24831` with
 
 ## Result
 
-The shared patient bar now follows the approved CDS.V2 composition while preserving current domain ownership and avoiding screen-specific forks. The hover variants from Figma node `27936:111406` are also represented: every section uses the specified hover surface and icon-tile treatment, while patient/guardian chevrons, the vital plus, and the memo ellipsis appear in a right-edge gradient overlay. These indicators remain visual-only because the Figma variants define no prototype destination; vital writing stays outside this display-only component.
+The shared patient bar now follows the approved CDS.V2 composition while preserving current domain ownership and avoiding screen-specific forks. The hover variants from Figma node `27936:111406` are also represented: every section uses the specified hover surface and icon-tile treatment, while patient/guardian chevrons, the vital plus, and the memo ellipsis appear in a right-edge gradient overlay. The base contract remains display-only unless a feature explicitly supplies an interaction.
+
+## CHART-PR-023 Follow-up
+
+The shared component now exposes optional patient/guardian preview activation and vital-action contracts. It still owns no data fetching, profile state, permissions, or persistence. The chart opts into those contracts with feature-owned preview, drawer, and vital-dialog components; dispensing, lab, imaging, and treatment omit them and therefore keep the original display-only rendering and layout.

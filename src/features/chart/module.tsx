@@ -153,8 +153,11 @@ import {
   ChartWorkspacePanel,
   chartWorkspacePanelClassName,
 } from "@/features/chart/components/chart-figma-workspace";
+import { ChartProfilePreviewCard } from "@/features/chart/components/chart-profile-preview-card";
+import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { useChartStore } from "@/features/chart/store";
+import { useChartPatientGuardianProfileActions } from "@/features/chart/use-chart-patient-guardian-profile-actions";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
@@ -163,7 +166,6 @@ import {
   getPatientSexLabel,
   getSpeciesLabel,
 } from "@/features/reception/data";
-import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { isLegacySalesDemoWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import {
@@ -1431,6 +1433,14 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
+  const { session: authSession } = useAuthClient();
+  const actorHeaders = useMemo(
+    () => getDemoActorHeader(authSession),
+    [authSession],
+  );
+  const [vitalDialogEncounterId, setVitalDialogEncounterId] = useState<
+    string | null
+  >(null);
   const { queueScopeMatches, records: liveQueueRecords } =
     useScopedChartLiveQueue(workspaceId);
   const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
@@ -1443,10 +1453,16 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const selectedLiveQueueRecord = liveQueueRecords.find(
     (record) => record.encounter.id === selectedEncounterId,
   );
+  const { openGuardianProfile, openPatientProfile } =
+    useChartPatientGuardianProfileActions({
+      patient: bundle?.patient,
+      primaryGuardian: bundle?.primaryGuardian,
+    });
   const chartStartLocked =
     bundle?.encounter.status === "waiting" &&
     selectedLiveQueueRecord?.queueEntry.status === "waiting";
   const latestVitals = usePatientLatestVitalItems({
+    actorHeaders,
     encounterId: bundle?.encounter.id,
     fallbackItems:
       bundle && allowMockFallback ? getChartVitals(bundle) : undefined,
@@ -1460,56 +1476,152 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   if (chartStartLocked) return null;
 
   const veterinarianName = getChartBundleVeterinarianName(bundle);
+  const queueStatus = selectedLiveQueueRecord?.queueEntry.status;
+  const vitalWriteStateAllowed =
+    bundle.encounter.status === "in_consultation" &&
+    queueStatus === "in_progress";
+  const vitalActionDisabled =
+    !vitalWriteStateAllowed || !latestVitals.canWriteVitals;
+  const vitalActionDisabledReason = !vitalWriteStateAllowed
+    ? "진료 중인 접수에서만 바이탈을 입력할 수 있어요."
+    : latestVitals.status === "loading"
+      ? "바이탈 입력 권한을 확인하고 있어요."
+      : latestVitals.status === "error"
+        ? "바이탈 입력 권한을 확인하지 못했어요."
+        : "바이탈을 입력할 권한이 없어요.";
+  const currentEncounterVital =
+    latestVitals.vital?.encounterId === bundle.encounter.id
+      ? latestVitals.vital
+      : undefined;
+  const patientNotes = [
+    bundle.patient.allergyNote,
+    bundle.patient.handlingCautionNote,
+    bundle.patient.specialNote,
+  ].filter((note): note is string => Boolean(note));
 
   return (
-    <EmrMainContentHeader heightMode="fixed">
-      <ChartPatientContextBar
-        patientName={bundle.patient.name}
-        patientMeta={[
-          bundle.patient.breed ?? getSpeciesLabel(bundle.patient),
-          getPatientSexLabel(bundle.patient),
-          getPatientDisplayAge(bundle.patient),
-        ].join(" · ")}
-        guardianName={`${bundle.primaryGuardian?.name ?? "보호자 미지정"}${bundle.primaryGuardian ? "(주보호자)" : ""}`}
-        guardianPhone={
-          bundle.primaryGuardian?.mobilePhone ??
-          bundle.primaryGuardian?.phone ??
-          "연락처 미입력"
+    <>
+      <EmrMainContentHeader heightMode="fixed">
+        <ChartPatientContextBar
+          patientName={bundle.patient.name}
+          patientMeta={[
+            bundle.patient.breed ?? getSpeciesLabel(bundle.patient),
+            getPatientSexLabel(bundle.patient),
+            getPatientDisplayAge(bundle.patient),
+          ].join(" · ")}
+          patientInteraction={{
+            ariaLabel: `${bundle.patient.name} 환자 프로필 열기`,
+            onActivate: openPatientProfile,
+            preview: (
+              <ChartProfilePreviewCard
+                badge={getPatientStatusLabel(bundle.patient.status)}
+                kind="patient"
+                title={bundle.patient.name}
+                items={[
+                  { label: "환자번호", value: bundle.patient.patientNo },
+                  {
+                    label: "축종·품종",
+                    value: `${getSpeciesLabel(bundle.patient)} · ${bundle.patient.breed ?? "품종 미입력"}`,
+                  },
+                  { label: "나이", value: getPatientDisplayAge(bundle.patient) },
+                  { label: "성별", value: getPatientSexLabel(bundle.patient) },
+                ]}
+                notes={patientNotes}
+              />
+            ),
+          }}
+          guardianName={`${bundle.primaryGuardian?.name ?? "보호자 미지정"}${bundle.primaryGuardian ? "(주보호자)" : ""}`}
+          guardianPhone={
+            bundle.primaryGuardian?.mobilePhone ??
+            bundle.primaryGuardian?.phone ??
+            "연락처 미입력"
+          }
+          guardianInteraction={
+            bundle.primaryGuardian
+              ? {
+                  ariaLabel: `${bundle.primaryGuardian.name} 보호자 프로필 열기`,
+                  onActivate: openGuardianProfile,
+                  preview: (
+                    <ChartProfilePreviewCard
+                      badge="주보호자"
+                      kind="guardian"
+                      title={bundle.primaryGuardian.name}
+                      items={[
+                        {
+                          label: "대표 연락처",
+                          value:
+                            bundle.primaryGuardian.mobilePhone ??
+                            bundle.primaryGuardian.phone,
+                        },
+                        { label: "이메일", value: bundle.primaryGuardian.email },
+                        {
+                          label: "환자 관계",
+                          value: `${bundle.patient.name}의 주보호자`,
+                        },
+                      ]}
+                    />
+                  ),
+                }
+              : undefined
+          }
+          vitalItems={latestVitals.items}
+          vitalAction={{
+            ariaLabel: currentEncounterVital
+              ? "오늘 바이탈 수정"
+              : "오늘 바이탈 입력",
+            disabled: vitalActionDisabled,
+            disabledReason: vitalActionDisabledReason,
+            onActivate: () => setVitalDialogEncounterId(bundle.encounter.id),
+          }}
+          doctorName={veterinarianName}
+          memoItems={[
+            {
+              label: "방문목적",
+              summary:
+                bundle.encounter.visitPurpose ??
+                bundle.encounter.chiefComplaint ??
+                "방문 목적 기록 없음",
+            },
+            {
+              label: "보호자메모",
+              summary: bundle.primaryGuardian?.memo ?? "보호자 메모 없음",
+            },
+            {
+              label: "환자메모",
+              summary: patientNotes.join(" · ") || "환자 특이 메모 없음",
+            },
+            {
+              label: "수납메모",
+              disabled: true,
+              summary: "수납 화면 연동 후 사용할 수 있습니다.",
+            },
+          ]}
+        />
+      </EmrMainContentHeader>
+      <ChartVitalDialog
+        actorHeaders={actorHeaders}
+        encounterId={bundle.encounter.id}
+        measurement={currentEncounterVital}
+        mode="in_consultation"
+        open={vitalDialogEncounterId === bundle.encounter.id}
+        onOpenChange={(open) =>
+          setVitalDialogEncounterId(open ? bundle.encounter.id : null)
         }
-        vitalItems={latestVitals.items}
-        doctorName={veterinarianName}
-        memoItems={[
-          {
-            label: "방문목적",
-            summary:
-              bundle.encounter.visitPurpose ??
-              bundle.encounter.chiefComplaint ??
-              "방문 목적 기록 없음",
-          },
-          {
-            label: "보호자메모",
-            summary: bundle.primaryGuardian?.memo ?? "보호자 메모 없음",
-          },
-          {
-            label: "환자메모",
-            summary:
-              [
-                bundle.patient.allergyNote,
-                bundle.patient.specialNote,
-                bundle.patient.handlingCautionNote,
-              ]
-                .filter(Boolean)
-                .join(" · ") || "환자 특이 메모 없음",
-          },
-          {
-            label: "수납메모",
-            disabled: true,
-            summary: "수납 화면 연동 후 사용할 수 있습니다.",
-          },
-        ]}
+        onSaved={(vital) => {
+          latestVitals.replaceVital(vital);
+          toast.success("오늘 바이탈을 저장했어요.");
+        }}
+        vitalSettings={latestVitals.vitalSettings}
+        workspaceId={workspaceId}
       />
-    </EmrMainContentHeader>
+    </>
   );
+}
+
+function getPatientStatusLabel(status: "active" | "inactive" | "deceased") {
+  if (status === "active") return "진료 가능";
+  if (status === "deceased") return "사망";
+  return "비활성";
 }
 
 export function ChartContentAside({ workspaceId }: ShellComponentProps) {
@@ -6062,7 +6174,6 @@ export function ChartContent({
     contentAsideOpen,
     modulePanelOpen,
     moduleRefreshActions,
-    setActiveDrawer,
     setContentAsideOpen,
     setModulePanelOpen,
     setSelectedQueueItem,
@@ -6090,9 +6201,6 @@ export function ChartContent({
     },
     [],
   );
-  const applyPatientGuardianLookupItem = usePatientProfileStore(
-    (state) => state.applyPatientGuardianLookupItem,
-  );
   const {
     hydrated: authHydrated,
     session: authSession,
@@ -6105,6 +6213,11 @@ export function ChartContent({
     liveQueueRecords,
     { allowMockFallback },
   );
+  const { openGuardianProfile, openPatientProfile } =
+    useChartPatientGuardianProfileActions({
+      patient: bundle?.patient,
+      primaryGuardian: bundle?.primaryGuardian,
+    });
   const selectedLiveQueueRecord = liveQueueRecords.find(
     (record) => record.encounter.id === selectedEncounterId,
   );
@@ -6836,23 +6949,6 @@ export function ChartContent({
   const chartStartLocked =
     currentBundle.encounter.status === "waiting" &&
     effectiveQueueEntry?.status === "waiting";
-  const openPatientProfile = () => {
-    applyPatientGuardianLookupItem({
-      patient: currentBundle.patient,
-      primaryGuardian: currentBundle.primaryGuardian,
-    });
-    setActiveDrawer({ type: "patient", id: currentBundle.patient.id });
-  };
-  const openGuardianProfile = () => {
-    const guardian = currentBundle.primaryGuardian;
-    if (!guardian) return;
-
-    applyPatientGuardianLookupItem({
-      patient: currentBundle.patient,
-      primaryGuardian: guardian,
-    });
-    setActiveDrawer({ type: "guardian", id: guardian.id });
-  };
   const callDialogTitle = `${currentBundle.patient.name}/${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}을 호출하시겠습니까?`;
   const diagnosisSaveStatusText = diagnosisLoading
     ? "불러오는 중"

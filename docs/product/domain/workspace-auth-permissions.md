@@ -102,7 +102,7 @@ Product rule:
 
 ### Clinical Vital Write Exception
 
-`vital:write` permits entering or revising the selected waiting encounter's today vital values. It requires active effective `vital:write` plus either active `hospital_admin` membership or clinical eligibility as `수의사`/`테크니션`. `데스크` remains excluded even if its permission role contains `vital:write`; an owner permission-role label without `hospital_admin` membership is not sufficient by itself. The server enforces the conjunction and accepts the legacy `vet`/`technician` membership strings only while the job-position migration remains in compatibility mode.
+`vital:write` permits entering or revising today's vital values for the selected encounter only while it is waiting (`waiting` + consultation queue `waiting`) or actively being consulted (`in_consultation` + consultation queue `in_progress`). It requires active effective `vital:write` plus either active `hospital_admin` membership or clinical eligibility as `수의사`/`테크니션`. `데스크` remains excluded even if its permission role contains `vital:write`; an owner permission-role label without `hospital_admin` membership is not sufficient by itself. The server and database both enforce the conjunction and exact state pairs, and accept the legacy `vet`/`technician` membership strings only while the job-position migration remains in compatibility mode.
 
 ## Permission Role Policy
 
@@ -143,7 +143,7 @@ Legend:
 | Customer / 보호자 관리                       | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View                          | Configured                                          |
 | Patient / 환자 관리                         | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View                          | Configured                                          |
 | Chart / 진료 차트                           | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit            | Configured                                          |
-| Waiting-chart today vital entry             | `vital:write` + `hospital_admin` or veterinarian/technician eligibility | `vital:write` + `hospital_admin` or veterinarian/technician eligibility | `vital:write` + veterinarian/technician eligibility | Same guarded eligibility required                 |
+| Waiting/active-chart today vital entry      | `vital:write` + `hospital_admin` or veterinarian/technician eligibility | `vital:write` + `hospital_admin` or veterinarian/technician eligibility | `vital:write` + veterinarian/technician eligibility | Same guarded eligibility required                 |
 | SOAP / diagnosis                        | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit            | Configured                                          |
 | Order request/status                    | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit / Complete | Configured                                          |
 | Lab / 임상병리 검사                           | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit / Complete | Configured                                          |

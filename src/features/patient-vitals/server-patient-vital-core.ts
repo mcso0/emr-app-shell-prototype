@@ -71,6 +71,7 @@ export type PatientLatestVitalReadResult =
   | {
       ok: true;
       status: 200;
+      canWriteVitals: boolean;
       enforcedBy: "patient-latest-vital-read";
       vital: PatientVitalMeasurement | null;
     }
@@ -249,6 +250,11 @@ export async function readPatientLatestVital({
   return {
     ok: true,
     status: 200,
+    canWriteVitals: canWritePatientVitals({
+      actorUserId,
+      permissionAdapter,
+      workspaceId,
+    }).allowed,
     enforcedBy: "patient-latest-vital-read",
     vital: result.vital,
   };
