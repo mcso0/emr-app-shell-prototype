@@ -39,10 +39,11 @@ type ChartCollapsiblePanelProps = {
 };
 
 export type ChartPanelCollapseButtonProps = {
+  collapsed?: boolean;
   contentId: string;
   label: string;
   onCollapse: () => void;
-  panelId: ChartCollapsiblePanelId;
+  panelId: ChartCollapsiblePanelId | "order";
 };
 
 const COLLAPSED_TRACK_PX = 46;
@@ -157,11 +158,14 @@ export function ChartCollapsiblePanel({
 }
 
 export function ChartPanelCollapseButton({
+  collapsed = false,
   contentId,
   label,
   onCollapse,
   panelId,
 }: ChartPanelCollapseButtonProps) {
+  const actionLabel = `${label} 패널 ${collapsed ? "펼치기" : "접기"}`;
+
   return (
     <Tooltip>
       <TooltipTrigger
@@ -171,9 +175,10 @@ export function ChartPanelCollapseButton({
             variant="ghost"
             size="icon-sm"
             aria-controls={contentId}
-            aria-expanded={true}
-            aria-label={`${label} 패널 접기`}
-            data-chart-panel-collapse={panelId}
+            aria-expanded={!collapsed}
+            aria-label={actionLabel}
+            data-chart-panel-collapse={collapsed ? undefined : panelId}
+            data-chart-panel-expand={collapsed ? panelId : undefined}
             className="pointer-events-none size-7 rounded-lg text-[var(--emr-text-secondary)] opacity-0 transition-opacity duration-[var(--clair-motion-duration-fast)] ease-[var(--clair-motion-easing-standard)] group-hover/chart-collapsible-panel:pointer-events-auto group-hover/chart-collapsible-panel:opacity-100 group-focus-within/chart-collapsible-panel:pointer-events-auto group-focus-within/chart-collapsible-panel:opacity-100 motion-reduce:transition-none [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100 [&_svg]:size-3.5"
             onClick={onCollapse}
           />
@@ -181,7 +186,7 @@ export function ChartPanelCollapseButton({
       >
         <CdsNavigationChevronLeftIcon aria-hidden="true" />
       </TooltipTrigger>
-      <TooltipContent side="bottom">{label} 패널 접기</TooltipContent>
+      <TooltipContent side="bottom">{actionLabel}</TooltipContent>
     </Tooltip>
   );
 }

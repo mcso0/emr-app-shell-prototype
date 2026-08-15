@@ -1796,13 +1796,13 @@ function ChartInlineHistoryPanel({
       title="History"
       actions={
         <>
-          <ChartPanelActions />
           <ChartPanelCollapseButton
             contentId={collapseContentId}
             label="History"
             onCollapse={onCollapse}
             panelId="history"
           />
+          <ChartPanelActions />
         </>
       }
       toolbar={
@@ -3078,6 +3078,12 @@ function SoapPanel({
           Subject/Object
         </h2>
         <ChartPanelActionGroup>
+          <ChartPanelCollapseButton
+            contentId={collapseContentId}
+            label="S/O"
+            onCollapse={onCollapse}
+            panelId="soap"
+          />
           <ChartPanelIconButton label="패널 확대 준비 중" disabled />
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -3179,12 +3185,6 @@ function SoapPanel({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}
-          <ChartPanelCollapseButton
-            contentId={collapseContentId}
-            label="S/O"
-            onCollapse={onCollapse}
-            panelId="soap"
-          />
         </ChartPanelActionGroup>
       </div>
       <div
@@ -3440,13 +3440,13 @@ function AssessmentPanel({
           </span>
         </span>
         <ChartPanelActionGroup>
-          <ChartPanelActions />
           <ChartPanelCollapseButton
             contentId={collapseContentId}
             label="Assessment"
             onCollapse={onCollapse}
             panelId="assessment"
           />
+          <ChartPanelActions />
         </ChartPanelActionGroup>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
@@ -4897,13 +4897,19 @@ function ChartOrderCatalogDialog({
 function OrderArea({
   actorHeaders,
   bundle,
+  collapseContentId,
+  collapsed,
   loading,
+  onCollapsedChange,
   orderGroups,
   writeDisabled,
 }: {
   actorHeaders?: Record<string, string>;
   bundle: ChartBundle;
+  collapseContentId: string;
+  collapsed: boolean;
   loading: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
 }) {
@@ -5500,14 +5506,36 @@ function OrderArea({
   return (
     <section
       data-slot="chart-workspace-panel"
-      className={chartWorkspacePanelClassName}
+      data-collapsed={collapsed ? "true" : "false"}
+      className={cn(
+        chartWorkspacePanelClassName,
+        "group/chart-collapsible-panel",
+      )}
     >
       <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Plan/Order
         </h2>
         <ChartPanelActionGroup>
+          <ChartPanelCollapseButton
+            collapsed={collapsed}
+            contentId={collapseContentId}
+            label="Plan/Order"
+            onCollapse={() => onCollapsedChange(!collapsed)}
+            panelId="order"
+          />
           <ChartPanelIconButton label="패널 확대 준비 중" disabled />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="size-7 rounded-lg text-[var(--emr-text-secondary)]"
+            aria-label="Order 추가"
+            disabled={writeDisabled}
+            onClick={openCatalogDialog}
+          >
+            <CdsActionsPlusIcon className="size-3.5" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -5562,6 +5590,12 @@ function OrderArea({
           </DropdownMenu>
         </ChartPanelActionGroup>
       </div>
+      <div
+        id={collapseContentId}
+        aria-hidden={collapsed || undefined}
+        inert={collapsed ? true : undefined}
+        className={collapsed ? "hidden" : "contents"}
+      >
       <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-line-hairline)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div
           className="flex min-w-max shrink-0 items-center rounded-lg bg-[var(--clair-color-atomic-black-alpha-4)] p-[3px]"
@@ -5847,6 +5881,7 @@ function OrderArea({
           />
         ) : null}
       </Dialog>
+      </div>
     </section>
   );
 }
@@ -6181,6 +6216,7 @@ export function ChartContent({
   const [collapsedClinicalPanels, setCollapsedClinicalPanels] = useState<
     Set<ChartCollapsiblePanelId>
   >(() => new Set());
+  const [orderPanelCollapsed, setOrderPanelCollapsedState] = useState(false);
   const setClinicalPanelCollapsed = useCallback(
     (panelId: ChartCollapsiblePanelId, collapsed: boolean) => {
       setCollapsedClinicalPanels((current) => {
@@ -6201,6 +6237,18 @@ export function ChartContent({
     },
     [],
   );
+  const setOrderPanelCollapsed = useCallback((collapsed: boolean) => {
+    setOrderPanelCollapsedState(collapsed);
+
+    window.requestAnimationFrame(() => {
+      const targetAttribute = collapsed
+        ? "data-chart-panel-expand"
+        : "data-chart-panel-collapse";
+      document
+        .querySelector<HTMLElement>(`[${targetAttribute}="order"]`)
+        ?.focus();
+    });
+  }, []);
   const {
     hydrated: authHydrated,
     session: authSession,
@@ -7472,7 +7520,9 @@ export function ChartContent({
             isChartResizing && "select-none",
           )}
           style={{
-            gridTemplateRows: `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
+            gridTemplateRows: orderPanelCollapsed
+              ? `minmax(${CHART_TOP_MIN_PX}px, 1fr) 0px 38px`
+              : `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
           }}
         >
           <ChartCollapsiblePanelGroup collapsedPanels={collapsedClinicalPanels}>
@@ -7553,8 +7603,11 @@ export function ChartContent({
             className={cn(
               "group relative flex cursor-row-resize items-center justify-center rounded-md opacity-0 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100",
               "focus-visible:ring-3 focus-visible:ring-ring/50",
+              orderPanelCollapsed && "pointer-events-none invisible",
               isChartResizing && "bg-[var(--emr-state-hover)]",
             )}
+            aria-hidden={orderPanelCollapsed || undefined}
+            tabIndex={orderPanelCollapsed ? -1 : 0}
             onKeyDown={handleChartResizeKeyDown}
             onLostPointerCapture={stopChartResize}
             onPointerCancel={stopChartResize}
@@ -7569,7 +7622,10 @@ export function ChartContent({
               key={bundle.encounter.id}
               actorHeaders={actorHeaders}
               bundle={bundle}
+              collapseContentId="chart-order-panel-content"
+              collapsed={orderPanelCollapsed}
               loading={orderLoading}
+              onCollapsedChange={setOrderPanelCollapsed}
               orderGroups={orderGroups}
               writeDisabled={detailHydrationPending}
             />
