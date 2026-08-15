@@ -505,10 +505,11 @@ export function EmrDataTable<TData>({
         "isolate min-h-0 min-w-0 flex-1 overflow-auto bg-[var(--emr-table-data-row-surface)]",
         containerClassName,
       )}
+      containerStyle={hasPinnedColumns ? { overflow: "visible" } : undefined}
       density={density}
       layout="scroll"
       minWidth={table.getTotalSize()}
-      overscrollAxes={overscrollAxes}
+      overscrollAxes={hasPinnedColumns ? "none" : overscrollAxes}
       pinning={hasPinnedColumns ? "columns" : "none"}
     >
       <colgroup>
@@ -558,6 +559,7 @@ export function EmrDataTable<TData>({
         <EmrPinnedTableViewport
           className="min-h-0 min-w-0 flex-1"
           leftPinnedColumnWidth={leftPinnedColumnWidth}
+          overscrollAxes={overscrollAxes}
           rightPinnedColumnWidth={rightPinnedColumnWidth}
         >
           {tableContent}

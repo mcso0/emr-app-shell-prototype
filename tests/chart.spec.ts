@@ -1009,7 +1009,10 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
     "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
   );
   const scrollContainer = pinnedViewport.locator(
-    "> [data-slot='table-container']",
+    "> [data-emr-pinned-table-scroll-owner='true']",
+  );
+  const horizontalScrollbar = pinnedViewport.locator(
+    '> [data-emr-pinned-table-scrollbar="horizontal"]',
   );
 
   await expect(pinnedViewport).toBeVisible();
@@ -1077,6 +1080,38 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
 
   await page.setViewportSize({ height: 650, width: 900 });
   await expect(scrollContainer).toBeVisible();
+  await expect(horizontalScrollbar).toBeVisible();
+  const [viewportBox, scrollbarBox] = await Promise.all([
+    pinnedViewport.boundingBox(),
+    horizontalScrollbar.boundingBox(),
+  ]);
+  expect(viewportBox).not.toBeNull();
+  expect(scrollbarBox).not.toBeNull();
+  expect(Math.abs(scrollbarBox!.x - viewportBox!.x - 394)).toBeLessThanOrEqual(
+    1,
+  );
+  expect(
+    Math.abs(
+      scrollbarBox!.x +
+        scrollbarBox!.width -
+        (viewportBox!.x + viewportBox!.width),
+    ),
+  ).toBeLessThanOrEqual(1);
+  await scrollContainer.evaluate((container) => {
+    container.scrollLeft = 0;
+  });
+  await horizontalScrollbar.click({
+    position: {
+      x: scrollbarBox!.width - 2,
+      y: scrollbarBox!.height / 2,
+    },
+  });
+  await expect
+    .poll(() => scrollContainer.evaluate((container) => container.scrollLeft))
+    .toBeGreaterThan(0);
+  await scrollContainer.evaluate((container) => {
+    container.scrollLeft = 0;
+  });
   const pinnedIdentityHeader = orderTable.locator(
     "[data-slot='table-head'][data-column-id='displayName']",
   );
@@ -4217,11 +4252,13 @@ test("chart unavailable order actions show persistent inline guidance", async ({
   ).toHaveCount(0);
   const alertOverflowsOrderWorkspace = await unavailableAlert.evaluate(
     (element) => {
-      const parent = element.parentElement;
+      const orderWorkspace = element.closest(
+        '[data-slot="chart-workspace-panel"]',
+      );
 
-      return parent
+      return orderWorkspace
         ? element.getBoundingClientRect().right >
-            parent.getBoundingClientRect().right
+            orderWorkspace.getBoundingClientRect().right
         : true;
     },
   );

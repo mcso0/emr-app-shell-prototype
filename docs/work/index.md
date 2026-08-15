@@ -156,6 +156,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | DESIGN-SYSTEM-PR-089        | implemented  | design-system        | P0       | User request / shared main-content header density | `docs/work/design-system/DESIGN-SYSTEM-PR-089-main-content-header-density.md` |
 | DESIGN-SYSTEM-PR-090        | implemented  | design-system        | P1       | User request / workspace entry splash motion | `docs/work/design-system/DESIGN-SYSTEM-PR-090-workspace-entry-splash-motion.md` |
 | DESIGN-SYSTEM-PR-091        | human_review | design-system        | P1       | User request / CDS.V2 patient information bar | `docs/work/design-system/DESIGN-SYSTEM-PR-091-cds-v2-patient-context-bar.md` |
+| DESIGN-SYSTEM-PR-092        | implemented  | design-system        | P0       | Browser comment / pinned-table center-only horizontal scrollbar | `docs/work/design-system/DESIGN-SYSTEM-PR-092-pinned-table-center-scrollbar.md` |
 | HOME-PR-001                 | done         | home                 | P1       | PR 1                 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md`                                           |
 | HOME-PR-002                 | done         | home                 | P1       | PR 2                 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md`                                                     |
 | HOME-PR-003                 | done         | home                 | P1       | PR 3                 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md`                                                  |

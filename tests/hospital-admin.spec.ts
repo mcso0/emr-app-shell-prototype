@@ -1650,7 +1650,12 @@ test("hospital admin order table uses shared header and cell text primitives", a
     const tableContainer = element.querySelector(
       '[data-slot="table-container"]',
     ) as HTMLElement | null;
-    const tableRegion = tableContainer?.parentElement;
+    const tableRegion = tableContainer?.closest(
+      '[data-emr-pinned-table-viewport="true"]',
+    );
+    const scrollOwner = tableRegion?.querySelector(
+      '[data-emr-pinned-table-scroll-owner="true"]',
+    );
     const horizontalOwners = Array.from(
       tableRegion?.querySelectorAll<HTMLElement>("*") ?? [],
     ).filter((candidate) => {
@@ -1658,15 +1663,22 @@ test("hospital admin order table uses shared header and cell text primitives", a
       return overflowX === "auto" || overflowX === "scroll";
     });
 
-    if (!title || !headerText || !rowText || !tableContainer || !tableRegion) {
+    if (
+      !title ||
+      !headerText ||
+      !rowText ||
+      !tableContainer ||
+      !tableRegion ||
+      !scrollOwner
+    ) {
       throw new Error("Order identity alignment targets are missing.");
     }
 
     return {
       headerLeft: headerText.getBoundingClientRect().left,
       ownerCount: horizontalOwners.length,
-      ownerIsTableContainer:
-        horizontalOwners.length === 1 && horizontalOwners[0] === tableContainer,
+      ownerIsScrollViewport:
+        horizontalOwners.length === 1 && horizontalOwners[0] === scrollOwner,
       rowLeft: rowText.getBoundingClientRect().left,
       titleLeft: title.getBoundingClientRect().left,
     };
@@ -1678,15 +1690,17 @@ test("hospital admin order table uses shared header and cell text primitives", a
     Math.abs(alignment.headerLeft - alignment.rowLeft),
   ).toBeLessThanOrEqual(1);
   expect(alignment.ownerCount).toBe(1);
-  expect(alignment.ownerIsTableContainer).toBe(true);
+  expect(alignment.ownerIsScrollViewport).toBe(true);
   await expect(
     workspace.locator('[data-emr-table-workspace-header="true"]'),
   ).toHaveCSS("padding-top", "0px");
 
-  const tableContainer = table.locator("..");
+  const scrollContainer = table.locator(
+    "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']/*[@data-emr-pinned-table-scroll-owner='true']",
+  );
   const initialPinnedLeft = (await identityCell.boundingBox())?.x;
   const initialSelectionLeft = firstOrderCheckboxBox?.x;
-  await tableContainer.evaluate((element) => {
+  await scrollContainer.evaluate((element) => {
     element.scrollLeft = 220;
   });
   await page.waitForTimeout(50);
@@ -1724,7 +1738,12 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
     .getByTestId("hospital-order-table")
     .getByRole("table", { name: "병원관리 Order 관리 테이블" });
   const tableContainer = table.locator("xpath=..");
-  const tableViewport = tableContainer.locator("xpath=..");
+  const tableViewport = tableContainer.locator(
+    "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
+  );
+  const scrollContainer = tableViewport.locator(
+    '[data-emr-pinned-table-scroll-owner="true"]',
+  );
   await expect(tableViewport).toHaveAttribute(
     "data-emr-pinned-table-viewport",
     "true",
@@ -1844,7 +1863,7 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
   );
   expect(metrics.pinnedColumnWidth.trim()).toBe("224px");
 
-  const scrollMetrics = await tableContainer.evaluate((element) => {
+  const scrollMetrics = await scrollContainer.evaluate((element) => {
     const pinnedCell = element.querySelector(
       'tbody [data-emr-column-pinned="left"]',
     );
@@ -1868,8 +1887,8 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
     element.scrollLeft = element.scrollWidth;
 
     return {
-      tableScrollLeft: element.scrollLeft,
-      viewportScrollLeft: viewport.scrollLeft,
+      scrollOwnerScrollLeft: element.scrollLeft,
+      rootScrollLeft: viewport.scrollLeft,
       pinnedLeftBefore,
       pinnedLeftAfter: pinnedCell.getBoundingClientRect().left,
       dimmerLeftBefore,
@@ -1879,8 +1898,8 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
     };
   });
 
-  expect(scrollMetrics.tableScrollLeft).toBeGreaterThan(0);
-  expect(scrollMetrics.viewportScrollLeft).toBe(0);
+  expect(scrollMetrics.scrollOwnerScrollLeft).toBeGreaterThan(0);
+  expect(scrollMetrics.rootScrollLeft).toBe(0);
   expect(
     Math.abs(scrollMetrics.pinnedLeftAfter - scrollMetrics.pinnedLeftBefore),
   ).toBeLessThanOrEqual(0.5);
@@ -1948,12 +1967,14 @@ test("all hospital admin Order leaves use the pinned standard Order identity tab
       .getByTestId("hospital-order-table")
       .getByRole("table", { name: "병원관리 Order 관리 테이블" });
     await expect(orderTable).toHaveAttribute("data-emr-pinning", "columns");
-    const orderTableContainer = orderTable.locator("xpath=..");
-    await expect(orderTableContainer).toHaveCSS(
+    const orderScrollOwner = orderTable.locator(
+      "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']/*[@data-emr-pinned-table-scroll-owner='true']",
+    );
+    await expect(orderScrollOwner).toHaveCSS(
       "overscroll-behavior-x",
       "none",
     );
-    await expect(orderTableContainer).toHaveCSS(
+    await expect(orderScrollOwner).toHaveCSS(
       "overscroll-behavior-y",
       "none",
     );
