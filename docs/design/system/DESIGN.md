@@ -182,7 +182,7 @@ Shared primitives should carry the visual system:
 - `StatusBadge`: stable semantic state labels
 - `EmrRequiredIndicator`: shared required-field marker using the dedicated `--emr-form-required-indicator` token; keep native `required` or `aria-required` semantics on the associated control
 
-Patient context bars keep patient and encounter facts visible near clinical work. Secondary patient-context actions such as memo review should collapse into one labeled action with a popover when multiple memo types compete for space; do not spread several low-priority memo buttons across the bar.
+Patient context bars keep patient and encounter facts visible near clinical work. The shared CDS.V2 patient bar uses patient, guardian, vital, and memo sections in that order. Its standard memo set is shown as four compact inline actions (`방문목적`, `보호자메모`, `환자메모`, `수납메모`) while one shared popover retains summaries, locked states, and unavailable reasons. Do not create screen-local patient-bar or memo-layout variants.
 
 Tabs and density controls have a stricter UX contract:
 
