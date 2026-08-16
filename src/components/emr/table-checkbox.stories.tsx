@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use EmrTableCheckbox as the semantic alias for table row and header selection. It reuses the shared Figma-aligned Checkbox visual contract without table-only color or disabled overrides. 사용할 때: selection is part of a data grid. 쓰지 말아야 할 때: ordinary form acknowledgements or permission enforcement.",
+          "Use EmrTableCheckbox as the semantic alias for table selection and compact table boolean states. It reuses the shared Figma-aligned Checkbox visual contract; neutral remains the default, while brand is reserved for an explicitly branded table state such as 주진단. 사용할 때: selection or a boolean state is part of a data grid. 쓰지 말아야 할 때: ordinary form acknowledgements or permission enforcement.",
       },
     },
   },
@@ -25,6 +25,12 @@ const meta = {
       control: "boolean",
       description: "Disabled visual state. Not a security boundary.",
     },
+    checkedTone: {
+      control: "inline-radio",
+      options: ["neutral", "brand"],
+      description:
+        "Checked-state tone. Neutral is the backwards-compatible default; brand resolves through the project sky/500 token.",
+    },
     "aria-label": {
       control: "text",
       description: "Accessible label for row/header selection.",
@@ -32,6 +38,7 @@ const meta = {
   },
   args: {
     "aria-label": "샘플 행 선택",
+    checkedTone: "neutral",
     disabled: false,
   },
 } satisfies Meta<typeof EmrTableCheckbox>;
@@ -120,6 +127,30 @@ export const Disabled: Story = {
       description: {
         story:
           "사용할 때: 선택 상태는 보이지만 현재 화면에서 변경할 수 없을 때. 쓰지 말아야 할 때: 권한 검증의 대체 수단.",
+      },
+    },
+  },
+};
+
+export const BrandChecked: Story = {
+  args: {
+    checked: true,
+    checkedTone: "brand",
+    "aria-label": "샘플 주진단",
+  },
+  render: (args) => (
+    <Field orientation="horizontal">
+      <EmrTableCheckbox id="sample-table-checkbox-brand" {...args} />
+      <FieldLabel htmlFor="sample-table-checkbox-brand">
+        주진단 선택 예시
+      </FieldLabel>
+    </Field>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "사용할 때: 디자인과 제품 계약이 브랜드 체크 상태를 명시한 진단 표 같은 경우. 일반 행 선택과 확진/종결 상태는 neutral을 유지합니다.",
       },
     },
   },

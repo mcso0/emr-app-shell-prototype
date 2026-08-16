@@ -408,8 +408,14 @@ Actual diagnosis records.
 | `diagnosis_catalog_id` | uuid fk nullable | |
 | `diagnosis_text` | text | |
 | `diagnosis_type` | text | `suspected`, `confirmed`, `differential` |
+| `is_primary` | boolean | At most one primary diagnosis per encounter |
+| `closed_at` | timestamptz nullable | Diagnosis closure time; `null` means open |
+| `closed_by_user_id` | uuid fk nullable | User who closed the diagnosis |
+| `sort_order` | integer | Default input order |
 | `created_by_user_id` | uuid fk | |
+| `updated_by_user_id` | uuid fk nullable | |
 | `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 ### `diagnosis_catalog`
 

@@ -70,6 +70,8 @@ DEN-71 adds local-first diagnosis RPC functions:
 
 These functions check active workspace membership and encounter workspace scope. The app route still performs `chart:view`/`chart:update` permission checks before calling the persistence gateway.
 
+CHART-PR-024 adds nullable `diagnoses.closed_at` and `diagnoses.closed_by_user_id`, keeps at most one primary diagnosis per encounter, and extends the same RPC payload with `isClosed`. The reader requires active membership plus `chart:view`; the writer also requires actor/session equality plus `chart:update`. The writer preserves the first closure timestamp and actor while the diagnosis remains closed, and clears both fields when reopened. No new route or permission is introduced.
+
 DEN-72 adds local-first order draft RPC functions:
 
 - `public.clair_get_chart_order_draft(p_workspace_id, p_encounter_id)`

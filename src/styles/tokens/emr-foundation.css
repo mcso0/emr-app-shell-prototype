@@ -569,6 +569,7 @@
   --emr-state-focus-ring: var(--ring);
   --emr-state-drag: oklch(0.78 0.012 286);
   --emr-state-dirty: oklch(0.97 0.035 85);
+  --emr-table-checkbox-brand-checked: var(--clair-color-atomic-sky-500);
 
   --emr-command-primary-hover-bg: oklch(0.28 0.006 285.885);
 

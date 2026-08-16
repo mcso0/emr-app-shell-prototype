@@ -28,12 +28,24 @@ test("Sky atomic tokens use the approved 500 anchor and coordinated scale", asyn
 
   const skyTokens = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
-    return Object.fromEntries(
+    const brandCheckboxProbe = document.createElement("span");
+    brandCheckboxProbe.style.backgroundColor =
+      "var(--emr-table-checkbox-brand-checked)";
+    document.body.appendChild(brandCheckboxProbe);
+    const tableCheckboxBrandChecked = getComputedStyle(
+      brandCheckboxProbe,
+    ).backgroundColor;
+    brandCheckboxProbe.remove();
+    const atomicScale = Object.fromEntries(
       [50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((step) => [
         step,
         style.getPropertyValue(`--clair-color-atomic-sky-${step}`).trim().toUpperCase(),
       ])
     );
+    return {
+      ...atomicScale,
+      tableCheckboxBrandChecked,
+    };
   });
 
   expect(skyTokens).toEqual({
@@ -47,6 +59,7 @@ test("Sky atomic tokens use the approved 500 anchor and coordinated scale", asyn
     700: "#0055AD",
     800: "#004185",
     900: "#002F61",
+    tableCheckboxBrandChecked: "rgb(16, 133, 255)",
   });
 });
 

@@ -12,6 +12,7 @@ export type ChartDiagnosisRowInput = {
   diagnosisCatalogId?: string;
   diagnosisText?: string;
   diagnosisType?: DiagnosisType;
+  isClosed?: boolean;
   isPrimary?: boolean;
   sortOrder?: number;
 };
@@ -47,7 +48,10 @@ export type ChartDiagnosisGateway = {
 };
 
 type NormalizedDiagnosisRowInput = Required<
-  Pick<ChartDiagnosisRowInput, "diagnosisText" | "diagnosisType" | "isPrimary" | "sortOrder">
+  Pick<
+    ChartDiagnosisRowInput,
+    "diagnosisText" | "diagnosisType" | "isClosed" | "isPrimary" | "sortOrder"
+  >
 > &
   Pick<ChartDiagnosisRowInput, "diagnosisCatalogId" | "id">;
 
@@ -254,6 +258,12 @@ export function createMockChartDiagnosisGateway(
           diagnosisCatalogId: diagnosis.diagnosisCatalogId,
           diagnosisText: diagnosis.diagnosisText,
           diagnosisType: diagnosis.diagnosisType,
+          closedAt: diagnosis.isClosed
+            ? existing?.closedAt ?? timestamp
+            : undefined,
+          closedByUserId: diagnosis.isClosed
+            ? existing?.closedByUserId ?? actorUserId
+            : undefined,
           isPrimary: diagnosis.isPrimary,
           sortOrder: diagnosis.sortOrder,
           createdByUserId: existing?.createdByUserId ?? actorUserId,
@@ -289,6 +299,7 @@ export type SupabaseChartDiagnosisRpcClient = {
         diagnosisText: string;
         diagnosisType: DiagnosisType;
         id?: string;
+        isClosed: boolean;
         isPrimary: boolean;
         sortOrder: number;
       }>;
@@ -325,6 +336,7 @@ export function createSupabaseChartDiagnosisGateway(
           diagnosisCatalogId: normalizeUuidForRpc(diagnosis.diagnosisCatalogId),
           diagnosisText: diagnosis.diagnosisText,
           diagnosisType: diagnosis.diagnosisType,
+          isClosed: diagnosis.isClosed,
           isPrimary: diagnosis.isPrimary,
           sortOrder: diagnosis.sortOrder,
         })),
@@ -446,6 +458,7 @@ function normalizeDiagnosisInput(input: ChartDiagnosisInput) {
           diagnosisType: diagnosisTypes.has(row.diagnosisType ?? "suspected")
             ? row.diagnosisType ?? "suspected"
             : "suspected",
+          isClosed: row.isClosed === true,
           isPrimary: row.isPrimary === true,
           sortOrder: Number.isInteger(row.sortOrder) ? Number(row.sortOrder) : index,
         }))
@@ -463,6 +476,10 @@ function validateDiagnosisInput(input: ReturnType<typeof normalizeDiagnosisInput
     (row) => !row.diagnosisText || row.diagnosisText.length > 500
   );
   if (hasInvalidRow) fieldErrors.diagnoses = "진단명을 확인해 주세요.";
+
+  if (input.diagnoses.filter((row) => row.isPrimary).length > 1) {
+    fieldErrors.diagnoses = "주진단은 하나만 선택할 수 있습니다.";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { valid: false as const, fieldErrors };
@@ -517,6 +534,8 @@ function mapDiagnosisRow(value: unknown): ChartDiagnosisRow | null {
     diagnosisCatalogId: trimToUndefined(row.diagnosisCatalogId),
     diagnosisText: row.diagnosisText,
     diagnosisType: row.diagnosisType as DiagnosisType,
+    closedAt: trimToUndefined(row.closedAt),
+    closedByUserId: trimToUndefined(row.closedByUserId),
     isPrimary: row.isPrimary === true,
     sortOrder: typeof row.sortOrder === "number" ? row.sortOrder : 0,
     createdByUserId: row.createdByUserId,

@@ -23,7 +23,7 @@ The project starts from the encounter created by reception/check-in. It should n
 | Area | Included in Project 04 | Primary dependency |
 | --- | --- | --- |
 | SOAP/chart notes | Save SOAP subjective, objective, assessment, plan fields; preserve autosave metadata; persist chart completion state. | `encounter.id`, `workspaceId`, actor membership |
-| Diagnoses | Save catalog-linked or free-text diagnosis rows, confirmed/focus flags or equivalent MVP markers, and row order. | `encounter.id`, chart mutation permission |
+| Diagnoses | Save catalog-linked or free-text diagnosis rows, confirmation, one primary diagnosis, diagnosis closure audit fields, and row order. | `encounter.id`, chart mutation permission |
 | Order draft | Save order draft rows, billing display name, quantity, deletion/cancel intent, and server-calculated amount basis. | `encounter.id`, service item/price snapshot |
 | Order confirmation/lifecycle | Persist selected order confirmation, actor/timestamp, order lifecycle state, and status transition hooks. | `encounter.id`, order rows |
 | Billing invoice candidates | Generate invoice candidate lines from confirmed orders and service prices without duplicate candidate creation. | confirmed order rows |

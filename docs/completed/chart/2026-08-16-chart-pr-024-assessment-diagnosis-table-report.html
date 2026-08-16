@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHART-PR-024 Assessment 진단명 표 결과</title>
+    <style>
+      :root { color-scheme:light; --ink:#172033; --muted:#667085; --line:#d8dee9; --surface:#fff; --canvas:#f4f6f8; --accent:#0f85ff; --ok:#067647; --ok-soft:#ecfdf3; --warn:#9a6700; --warn-soft:#fff7d6; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--canvas); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.55; }
+      main { max-width:960px; margin:0 auto; padding:44px 24px 72px; }
+      h1 { margin:0; font-size:clamp(28px,5vw,42px); letter-spacing:-.035em; }
+      h2 { margin:0 0 14px; font-size:20px; }
+      h3 { margin:0 0 7px; font-size:15px; }
+      p { margin:0; }
+      code { border-radius:5px; background:#eef1f5; padding:2px 5px; }
+      .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+      .lede { max-width:760px; margin-top:12px; color:var(--muted); font-size:17px; }
+      .meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+      .pill { border:1px solid var(--line); border-radius:999px; background:var(--surface); padding:5px 10px; color:var(--muted); font-size:12px; }
+      .pill.ok { border-color:#a6f4c5; background:var(--ok-soft); color:var(--ok); font-weight:700; }
+      section { margin-top:18px; border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:22px; box-shadow:0 1px 2px rgb(16 24 40 / 4%); }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+      .card { border:1px solid var(--line); border-radius:9px; padding:14px; }
+      .card p, li { color:var(--muted); font-size:13px; }
+      ul { margin:8px 0 0; padding-left:20px; }
+      .evidence { width:100%; border-collapse:collapse; font-size:13px; }
+      .evidence th,.evidence td { border-bottom:1px solid var(--line); padding:10px 8px; text-align:left; }
+      .evidence th { color:var(--muted); font-size:12px; }
+      .done { color:var(--ok); font-weight:750; }
+      .caution { margin-top:12px; border:1px solid #fedf89; border-radius:8px; background:var(--warn-soft); padding:12px; color:var(--warn); font-size:13px; }
+      @media (max-width:720px) { main{padding:28px 14px 48px}.grid{grid-template-columns:1fr}section{padding:17px} }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">CHART-PR-024 · Implementation Result</p>
+        <h1>진단 상태를 더 빠르고 정확하게 관리한다</h1>
+        <p class="lede">Assessment 진단명 표를 Figma 구조에 맞추고, 주진단·확진·종결 상태와 정렬·삭제 접근성을 공용 컴포넌트 및 디자인 토큰 위에서 일관되게 구현했다.</p>
+        <div class="meta">
+          <span class="pill ok">핵심 진단 저장 계약 7/7 통과</span>
+          <span class="pill">2026-08-16</span>
+          <span class="pill">Additive migration</span>
+        </div>
+      </header>
+
+      <section>
+        <h2>무엇이 달라졌나</h2>
+        <div class="grid">
+          <div class="card"><h3>Figma 기반 표 구조</h3><p><code>진단계통</code>, <code>진단명</code>, <code>주진단</code>, <code>확진</code>, <code>종결</code>, <code>수의사</code> 순서와 소스 화면의 간격·타이포·행 높이를 반영했다.</p></div>
+          <div class="card"><h3>공용 체크박스와 토큰</h3><p>기존 <code>EmrTableCheckbox</code>에 호환 가능한 tone을 추가했다. 주진단만 의미 토큰을 통해 <code>sky/500</code>을 사용하고 기존 표의 neutral 기본값은 유지한다.</p></div>
+          <div class="card"><h3>상태와 접근성</h3><p>주진단은 한 건만 선택되고 확진·종결은 독립적이다. 정렬 헤더에는 키보드 동작과 <code>aria-sort</code>를 적용하고 삭제는 hover·focus·터치에서 사용할 수 있다.</p></div>
+          <div class="card"><h3>종결 감사 정보</h3><p>새 <code>closed_at</code>, <code>closed_by_user_id</code> 필드가 최초 종결 시점과 작업자를 보존하고 재개 시 비워지도록 기존 진단 저장 RPC를 확장했다.</p></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>데이터·보안 경계</h2>
+        <ul>
+          <li>읽기는 활성 workspace 멤버와 <code>chart:view</code> 권한을 다시 확인한다.</li>
+          <li>쓰기는 인증 세션과 actor 일치, 활성 멤버십, <code>chart:update</code> 권한을 다시 확인한다.</li>
+          <li>클라이언트와 서버 입력 경계에서 주진단이 두 건 이상 저장되는 것을 차단한다.</li>
+          <li>실제 진단 카탈로그, 임상 추천, 청구 자동화와 기존 SOAP·Order 정책은 변경하지 않는다.</li>
+        </ul>
+        <p class="caution">원격 synthetic/demo Supabase에 migration <code>20260816062243</code>을 적용했다. 현재 Vercel production과 staging이 같은 프로젝트를 사용하므로 별도 production DB 적용 대상은 없다.</p>
+      </section>
+
+      <section>
+        <h2>검증 상태</h2>
+        <table class="evidence">
+          <thead><tr><th>검증</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td>진단 route/core/gateway/migration 계약</td><td class="done">7 / 7 통과</td></tr>
+            <tr><td>Assessment 시각·정렬·상태·삭제 접근성</td><td class="done">통과</td></tr>
+            <tr><td>공용 체크박스 neutral 회귀</td><td class="done">2 / 2 통과</td></tr>
+            <tr><td>TypeScript·ESLint·production build·Storybook</td><td class="done">통과</td></tr>
+            <tr><td>문서·secret scan·diff 검사</td><td class="done">통과</td></tr>
+            <tr><td>원격 synthetic/demo migration</td><td class="done"><code>20260816062243</code> 적용</td></tr>
+            <tr><td>원격 컬럼·RPC 권한·search path</td><td class="done">컬럼 존재, 빈 search path, anon 차단, authenticated 허용</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>알려진 경계</h2>
+        <p>전체 차트 회귀 중 Assessment와 무관한 Order 안내 영역의 <code>display: contents</code> 부모 너비 측정 1건과 기존 전역 토큰 기준선 실패는 이 변경에 포함하지 않았다. Assessment 전용 스냅샷과 새 sky 의미 토큰 검증은 통과했다.</p>
+      </section>
+    </main>
+  </body>
+</html>

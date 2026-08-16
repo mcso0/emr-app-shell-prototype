@@ -13,6 +13,11 @@ const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
 const migrationPath = "supabase/migrations/20260519200000_chart_diagnosis_persistence_rpc.sql";
 const migration = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+const closureMigrationPath =
+  "supabase/migrations/20260815120000_chart_diagnosis_closure.sql";
+const closureMigration = existsSync(closureMigrationPath)
+  ? readFileSync(closureMigrationPath, "utf8")
+  : "";
 
 const validDiagnosisInput = {
   encounterId,
@@ -22,11 +27,13 @@ const validDiagnosisInput = {
       diagnosisCatalogId: "dx-acute-gastroenteritis",
       diagnosisText: "급성 위장관염 의심",
       diagnosisType: "confirmed" as const,
+      isClosed: true,
       isPrimary: true,
     },
     {
       diagnosisText: "보호자 설명용 임시 진단",
       diagnosisType: "suspected" as const,
+      isClosed: false,
       isPrimary: false,
     },
   ],
@@ -66,6 +73,8 @@ test("diagnosis route requires an actor, saves via mock fallback, and reads afte
       diagnosisCatalogId?: string;
       diagnosisText: string;
       diagnosisType: string;
+      closedAt?: string;
+      closedByUserId?: string;
       isPrimary?: boolean;
       sortOrder?: number;
     }>;
@@ -80,6 +89,8 @@ test("diagnosis route requires an actor, saves via mock fallback, and reads afte
       diagnosisCatalogId: "dx-acute-gastroenteritis",
       diagnosisText: "급성 위장관염 의심",
       diagnosisType: "confirmed",
+      closedAt: expect.any(String),
+      closedByUserId: "user-vet",
       isPrimary: true,
       sortOrder: 0,
     },
@@ -179,6 +190,8 @@ test("diagnosis core enforces active workspace membership, chart update permissi
       {
         diagnosisText: "급성 위장관염 의심",
         diagnosisType: "confirmed",
+        closedAt: "2026-05-19T14:00:00.000Z",
+        closedByUserId: "user-vet",
         isPrimary: true,
         sortOrder: 0,
         updatedAt: "2026-05-19T14:00:00.000Z",
@@ -186,6 +199,7 @@ test("diagnosis core enforces active workspace membership, chart update permissi
       {
         diagnosisText: "보호자 설명용 임시 진단",
         diagnosisType: "suspected",
+        closedAt: undefined,
         isPrimary: false,
         sortOrder: 1,
         updatedAt: "2026-05-19T14:00:00.000Z",
@@ -228,6 +242,8 @@ test("diagnosis Supabase gateway keeps workspace, encounter, rows, and actor sco
             diagnosisCatalogId: "dx-acute-gastroenteritis",
             diagnosisText: "급성 위장관염 의심",
             diagnosisType: "confirmed",
+            closedAt: "2026-05-19T14:00:00.000Z",
+            closedByUserId: "00000000-0000-4000-8000-000000000002",
             isPrimary: true,
             sortOrder: 0,
             createdByUserId: "00000000-0000-4000-8000-000000000002",
@@ -250,6 +266,7 @@ test("diagnosis Supabase gateway keeps workspace, encounter, rows, and actor sco
         diagnosisCatalogId: "dx-acute-gastroenteritis",
         diagnosisText: "급성 위장관염 의심",
         diagnosisType: "confirmed",
+        isClosed: true,
         isPrimary: true,
         sortOrder: 0,
       },
@@ -265,6 +282,27 @@ test("diagnosis Supabase gateway keeps workspace, encounter, rows, and actor sco
   });
 });
 
+test("diagnosis core rejects more than one primary diagnosis", async () => {
+  const result = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      ...validDiagnosisInput,
+      diagnoses: validDiagnosisInput.diagnoses.map((diagnosis) => ({
+        ...diagnosis,
+        isPrimary: true,
+      })),
+    },
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: { diagnoses: "주진단은 하나만 선택할 수 있습니다." },
+  });
+});
+
 test("diagnosis persistence migration defines local-first RPC boundary without secrets", () => {
   expect(migration).toContain("create or replace function public.clair_get_chart_diagnoses");
   expect(migration).toContain("create or replace function public.clair_save_chart_diagnoses");
@@ -275,6 +313,23 @@ test("diagnosis persistence migration defines local-first RPC boundary without s
   expect(migration).toContain("sort_order");
   expect(migration).toContain("grant execute on function public.clair_save_chart_diagnoses");
   expect(migration).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET|real patient/i);
+
+  expect(closureMigration).toContain("add column if not exists closed_at");
+  expect(closureMigration).toContain("closed_by_user_id");
+  expect(closureMigration).toContain("multiple_primary_diagnoses");
+  expect(closureMigration).toContain("'isClosed', d.closed_at is not null");
+  expect(closureMigration).toContain("v_existing_closure");
+  expect(closureMigration).toContain("v_actor_user_id is distinct from auth.uid()");
+  expect(closureMigration).toContain("'chart:view'");
+  expect(closureMigration).toContain("'chart:update'");
+  expect(closureMigration.match(/set search_path = ''/g)).toHaveLength(2);
+  expect(closureMigration).toContain("pg_catalog.gen_random_uuid()");
+  expect(closureMigration).toContain(
+    "grant execute on function public.clair_save_chart_diagnoses",
+  );
+  expect(closureMigration).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
 });
 
 test("diagnosis route stays server-owned and secret-free", () => {
