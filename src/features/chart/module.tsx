@@ -5080,6 +5080,7 @@ function OrderArea({
   };
   const openCatalogDialog = () => {
     if (writeDisabled) return;
+    if (collapsed) onCollapsedChange(false);
     setCatalogDialogOpen(true);
     if (catalogSearchStatus === "idle" || catalogSearchStatus === "error") {
       void loadCatalogRows();
@@ -5545,6 +5546,9 @@ function OrderArea({
                   size="icon-xs"
                   className="size-7 rounded-lg text-muted-foreground"
                   aria-label="Plan/Order 작업"
+                  onClick={() => {
+                    if (collapsed) onCollapsedChange(false);
+                  }}
                 >
                   <CdsFilesMoreHorizontalIcon className="size-3.5" />
                 </Button>
@@ -7521,7 +7525,7 @@ export function ChartContent({
           )}
           style={{
             gridTemplateRows: orderPanelCollapsed
-              ? `minmax(${CHART_TOP_MIN_PX}px, 1fr) 0px 38px`
+              ? `minmax(${CHART_TOP_MIN_PX}px, 1fr) 8px 38px`
               : `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
           }}
         >

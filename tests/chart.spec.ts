@@ -1276,12 +1276,13 @@ test("chart Plan/Order header adds Order and collapse actions without changing b
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(kongScenarioUrl);
 
-  const orderPanel = page
-    .locator("[data-slot='chart-workspace-panel']")
-    .filter({ has: page.getByRole("heading", { name: "Plan/Order" }) });
+  const orderPanel = page.locator(
+    "[data-slot='chart-workspace-panel'][data-collapsed]",
+  );
   const orderActions = orderPanel.locator("[data-slot='chart-panel-actions']");
   const orderActionButtons = orderActions.locator("button");
   const orderContent = page.locator("#chart-order-panel-content");
+  const clinicalPanelGroup = page.getByTestId("chart-soap-diagnosis-grid");
   const divider = page.locator(
     '[role="separator"][aria-label="진료 기록과 처방/오더 영역 높이 조절"]',
   );
@@ -1300,15 +1301,59 @@ test("chart Plan/Order header adds Order and collapse actions without changing b
   ).toBeVisible();
   await page.getByRole("button", { name: "닫기" }).click();
 
+  for (const panelId of ["soap", "assessment", "history"] as const) {
+    const clinicalPanel = clinicalPanelGroup.locator(
+      `[data-panel-id='${panelId}']`,
+    );
+    await clinicalPanel.hover();
+    await clinicalPanel
+      .locator(`[data-chart-panel-collapse='${panelId}']`)
+      .click();
+  }
+  await expect(clinicalPanelGroup).toHaveAttribute("data-collapsed-count", "3");
+
   const collapseButton = page.getByRole("button", {
     name: "Plan/Order 패널 접기",
   });
+  await orderPanel.hover();
   await collapseButton.click();
   await expect(orderPanel).toHaveAttribute("data-collapsed", "true");
   await expect(orderPanel).toHaveCSS("height", "38px");
   await expect(orderContent).toHaveAttribute("aria-hidden", "true");
   await expect(divider).toHaveAttribute("aria-hidden", "true");
+  await expect
+    .poll(async () => {
+      const [clinicalBox, orderBox] = await Promise.all([
+        clinicalPanelGroup.evaluate((element) =>
+          element.getBoundingClientRect().toJSON(),
+        ),
+        orderPanel.evaluate((element) =>
+          element.getBoundingClientRect().toJSON(),
+        ),
+      ]);
 
+      return Math.round(orderBox.top - clinicalBox.bottom);
+    })
+    .toBe(8);
+
+  await page.getByRole("button", { name: "Order 추가" }).click();
+  await expect(orderPanel).toHaveAttribute("data-collapsed", "false");
+  await expect(
+    page.getByRole("dialog", { name: "Workspace catalog에서 Order 추가" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "닫기" }).click();
+
+  await orderPanel.hover();
+  await collapseButton.click();
+  await page.getByRole("button", { name: "Plan/Order 작업" }).click();
+  await expect(orderPanel).toHaveAttribute("data-collapsed", "false");
+  await expect(
+    page.getByRole("menu", { name: "Plan/Order 작업" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await orderPanel.hover();
+  await collapseButton.click();
   const expandButton = page.getByRole("button", {
     name: "Plan/Order 패널 펼치기",
   });
