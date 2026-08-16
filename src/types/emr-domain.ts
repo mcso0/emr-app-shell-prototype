@@ -288,6 +288,8 @@ export type Diagnosis = {
   diagnosisCatalogId?: EmrId;
   diagnosisText: string;
   diagnosisType: DiagnosisType;
+  closedAt?: IsoDateTime;
+  closedByUserId?: EmrId;
   isPrimary?: boolean;
   sortOrder?: number;
   createdByUserId: EmrId;

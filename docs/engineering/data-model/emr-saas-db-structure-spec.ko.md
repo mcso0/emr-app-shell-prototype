@@ -475,8 +475,14 @@ SOAP 템플릿.
 | `diagnosis_catalog_id` | uuid fk nullable | |
 | `diagnosis_text` | text | |
 | `diagnosis_type` | text | `suspected`, `confirmed`, `differential` |
+| `is_primary` | boolean | 진료별 최대 1개의 주진단 |
+| `closed_at` | timestamptz nullable | 진단 종결 시각, `null`이면 진행 중 |
+| `closed_by_user_id` | uuid fk nullable | 진단을 종결한 사용자 |
+| `sort_order` | integer | 기본 입력 순서 |
 | `created_by_user_id` | uuid fk | |
+| `updated_by_user_id` | uuid fk nullable | |
 | `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 ### `diagnosis_catalog`
 

@@ -107,9 +107,12 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
@@ -154,6 +157,10 @@ import {
   chartWorkspacePanelClassName,
 } from "@/features/chart/components/chart-figma-workspace";
 import { ChartProfilePreviewCard } from "@/features/chart/components/chart-profile-preview-card";
+import {
+  ChartAssessmentTable,
+  type ChartAssessmentDiagnosis,
+} from "@/features/chart/components/chart-assessment-table";
 import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { useChartStore } from "@/features/chart/store";
@@ -629,11 +636,7 @@ type DiagnosisCatalogItem = {
   hint: string;
 };
 
-type EditableDiagnosis = Diagnosis & {
-  systemLabel: string;
-  catalogMatched: boolean;
-  isPrimary: boolean;
-};
+type EditableDiagnosis = ChartAssessmentDiagnosis;
 
 const diagnosisCatalog: DiagnosisCatalogItem[] = [
   {
@@ -749,7 +752,7 @@ const toEditableDiagnosis = (
   catalogMatched:
     Boolean(diagnosis.diagnosisCatalogId) ||
     diagnosisCatalog.some((item) => item.name === diagnosis.diagnosisText),
-  isPrimary: index === 0,
+  isPrimary: diagnosis.isPrimary ?? index === 0,
   systemLabel: getDiagnosisSystemLabel(diagnosis),
 });
 
@@ -2264,6 +2267,7 @@ async function saveChartDiagnosesRoute({
             diagnosisCatalogId: diagnosis.diagnosisCatalogId,
             diagnosisText: diagnosis.diagnosisText,
             diagnosisType: diagnosis.diagnosisType,
+            isClosed: Boolean(diagnosis.closedAt),
             isPrimary: diagnosis.isPrimary,
             sortOrder: index,
           })),
@@ -3317,9 +3321,31 @@ function AssessmentPanel({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSystem, setSelectedSystem] = useState("all");
+  const diagnosisSystems = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...diagnosisCatalog.map((item) => item.systemLabel),
+          ...diagnosisRows.map((diagnosis) => diagnosis.systemLabel),
+        ]),
+      ),
+    [diagnosisRows],
+  );
   const searchResults = useMemo(
-    () => getDiagnosisSearchResults(searchQuery, soapNote),
-    [searchQuery, soapNote],
+    () =>
+      getDiagnosisSearchResults(searchQuery, soapNote).filter(
+        (item) => selectedSystem === "all" || item.systemLabel === selectedSystem,
+      ),
+    [searchQuery, selectedSystem, soapNote],
+  );
+  const visibleDiagnosisRows = useMemo(
+    () =>
+      diagnosisRows.filter(
+        (diagnosis) =>
+          selectedSystem === "all" || diagnosis.systemLabel === selectedSystem,
+      ),
+    [diagnosisRows, selectedSystem],
   );
   const normalizedSearchQuery = normalizeDiagnosisQuery(searchQuery);
   const canAddFreeText =
@@ -3398,24 +3424,47 @@ function AssessmentPanel({
     setSearchOpen(false);
   };
 
-  const toggleConfirmedDiagnosis = (diagnosisId: string) => {
+  const setConfirmedDiagnosis = (diagnosisId: string, checked: boolean) => {
     commitDiagnosisRows(
       diagnosisRows.map((row) =>
         row.id === diagnosisId
           ? {
               ...row,
-              diagnosisType:
-                row.diagnosisType === "confirmed" ? "suspected" : "confirmed",
+              diagnosisType: checked
+                ? "confirmed"
+                : row.diagnosisType === "confirmed"
+                  ? "suspected"
+                  : row.diagnosisType,
             }
           : row,
       ),
     );
   };
 
-  const togglePrimaryDiagnosis = (diagnosisId: string) => {
+  const setPrimaryDiagnosis = (diagnosisId: string, checked: boolean) => {
     commitDiagnosisRows(
       diagnosisRows.map((row) =>
-        row.id === diagnosisId ? { ...row, isPrimary: !row.isPrimary } : row,
+        row.id === diagnosisId
+          ? { ...row, isPrimary: checked }
+          : checked
+            ? { ...row, isPrimary: false }
+            : row,
+      ),
+    );
+  };
+
+  const setClosedDiagnosis = (diagnosisId: string, checked: boolean) => {
+    commitDiagnosisRows(
+      diagnosisRows.map((row) =>
+        row.id === diagnosisId
+          ? {
+              ...row,
+              closedAt: checked ? row.closedAt ?? new Date().toISOString() : undefined,
+              closedByUserId: checked
+                ? row.closedByUserId ?? row.createdByUserId
+                : undefined,
+            }
+          : row,
       ),
     );
   };
@@ -3453,22 +3502,32 @@ function AssessmentPanel({
         <div className="grid gap-0">
           <div
             data-slot="chart-assessment-toolbar"
-            className="grid h-11 grid-cols-[84px_minmax(0,1fr)_64px] items-center gap-2 border-b border-[var(--emr-line-hairline)] px-3"
+            className="grid h-11 grid-cols-[82px_minmax(0,1fr)_1px_66px] items-center gap-2.5 border-b border-[var(--emr-line-hairline)] px-3 py-2"
           >
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              className="h-7 justify-between rounded-lg bg-card px-2 text-xs"
-              disabled={writeDisabled}
-              onClick={() => {
-                setSearchOpen(true);
-                searchInputRef.current?.focus();
-              }}
+            <Select
+              value={selectedSystem}
+              onValueChange={(value) => value && setSelectedSystem(value)}
             >
-              계통 전체
-              <CdsNavigationChevronDownIcon data-icon="inline-end" />
-            </Button>
+              <SelectTrigger
+                aria-label="진단계통 필터"
+                size="sm"
+                className="w-full rounded-lg bg-card px-2"
+              >
+                <SelectValue>
+                  {selectedSystem === "all" ? "계통 전체" : selectedSystem}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent align="start">
+                <SelectGroup>
+                  <SelectItem value="all">계통 전체</SelectItem>
+                  {diagnosisSystems.map((systemLabel) => (
+                    <SelectItem key={systemLabel} value={systemLabel}>
+                      {systemLabel}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <Popover
               open={searchOpen}
               onOpenChange={(open) => !writeDisabled && setSearchOpen(open)}
@@ -3564,6 +3623,7 @@ function AssessmentPanel({
                 </div>
               </PopoverContent>
             </Popover>
+            <Separator orientation="vertical" className="h-[18px] self-center" />
             <Button
               variant="outline"
               size="xs"
@@ -3588,93 +3648,43 @@ function AssessmentPanel({
               권한과 연결 상태를 확인한 뒤 다시 시도해 주세요.
             </EmrInlineAlert>
           ) : null}
-          <div className="overflow-hidden bg-[var(--emr-surface-panel)]">
-            <div
-              data-slot="chart-assessment-table-header"
-              className="grid h-9 grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center bg-[var(--emr-surface-muted)] px-3 emr-text-metadata font-semibold text-muted-foreground"
-            >
-              <span>계통분류</span>
-              <span>진단명</span>
-              <span>확진</span>
-              <span>중점</span>
-              <span>수의사</span>
-            </div>
-            {loading ? (
-              <div className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3 py-3">
+          <div className="min-w-0 bg-[var(--emr-surface-panel)]">
+            <ChartAssessmentTable
+              diagnoses={visibleDiagnosisRows}
+              loading={loading}
+              writeDisabled={writeDisabled}
+              getVeterinarianName={(userId) =>
+                getChartStaffName(userId) ?? "미정"
+              }
+              onConfirmedChange={setConfirmedDiagnosis}
+              onPrimaryChange={setPrimaryDiagnosis}
+              onClosedChange={setClosedDiagnosis}
+              onRemove={removeDiagnosis}
+              loadingState={
                 <ChartPanelPendingState
                   title="진단명 정보를 불러오는 중"
                   description="진단 목록과 확정 상태를 확인하고 있습니다."
                 />
-              </div>
-            ) : null}
-            {diagnosisRows.map((diagnosis) => (
-              <div
-                key={diagnosis.id}
-                data-slot="chart-assessment-table-row"
-                className="grid min-h-10 grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 emr-text-dense"
-              >
-                <Badge variant="outline">{diagnosis.systemLabel}</Badge>
-                <EmrTableCellText
-                  mode="two-line-if-long"
-                  fullText={diagnosis.diagnosisText}
-                  className="font-medium"
-                >
-                  {diagnosis.diagnosisText}
-                </EmrTableCellText>
-                <button
-                  type="button"
-                  aria-label={`${diagnosis.diagnosisText} 확진 토글`}
-                  aria-pressed={diagnosis.diagnosisType === "confirmed"}
-                  disabled={writeDisabled}
-                  className="w-fit rounded-md px-2 py-1 emr-text-metadata font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
-                  onClick={() => toggleConfirmedDiagnosis(diagnosis.id)}
-                >
-                  {diagnosis.diagnosisType === "confirmed" ? "✓" : "-"}
-                </button>
-                <button
-                  type="button"
-                  aria-label={`${diagnosis.diagnosisText} 중점 진단 표시`}
-                  aria-pressed={diagnosis.isPrimary}
-                  disabled={writeDisabled}
-                  className="w-fit rounded-md px-2 py-1 emr-text-metadata font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
-                  onClick={() => togglePrimaryDiagnosis(diagnosis.id)}
-                >
-                  {diagnosis.isPrimary ? "✓" : "-"}
-                </button>
-                <span className="flex min-w-0 items-center justify-between gap-1">
-                  <EmrTableCellText
-                    mode="one-line"
-                    fullText={
-                      getChartStaffName(diagnosis.createdByUserId) ?? "미정"
-                    }
-                  >
-                    {getChartStaffName(diagnosis.createdByUserId) ?? "미정"}
-                  </EmrTableCellText>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`${diagnosis.diagnosisText} 삭제`}
-                    disabled={writeDisabled}
-                    onClick={() => removeDiagnosis(diagnosis.id)}
-                  >
-                    <CdsActionsXIcon className="size-3" />
-                  </Button>
-                </span>
-              </div>
-            ))}
-            {!loading && !diagnosisRows.length ? (
-              <div className="flex min-h-52 items-center justify-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-6">
+              }
+              emptyState={
                 <EmrEmptyState
                   kind="no-data"
                   priority="supporting"
                   surface="table"
-                  title="진단 입력 전입니다"
-                  description="검색창에서 현재 차트에 필요한 진단명을 추가해 주세요."
+                  title={
+                    diagnosisRows.length
+                      ? "선택한 진단계통에 등록된 진단이 없습니다"
+                      : "진단 입력 전입니다"
+                  }
+                  description={
+                    diagnosisRows.length
+                      ? "다른 진단계통을 선택하거나 진단명을 추가해 주세요."
+                      : "검색창에서 현재 차트에 필요한 진단명을 추가해 주세요."
+                  }
                   testId="chart-assessment-empty-state"
                 />
-              </div>
-            ) : null}
+              }
+            />
           </div>
         </div>
       </div>

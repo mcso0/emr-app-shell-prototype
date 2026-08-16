@@ -1205,7 +1205,7 @@ test("chart clinical panels collapse independently without unmounting their cont
   });
   await diagnosisSearch.fill("위장염");
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "계통 전체" }).focus();
+  await page.getByRole("combobox", { name: "진단계통 필터" }).focus();
   await tabBackwardTo(page, assessmentCollapseButton, 4);
   await expect(assessmentCollapseButton).toBeFocused();
   await page.keyboard.press("Enter");
@@ -3439,18 +3439,39 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
     page.getByRole("tab", { name: "전신", exact: true }),
   ).toBeVisible();
 
-  const pancreatitisConfirmedToggle = diagnosisPanel.getByRole("button", {
-    name: "췌장염 감별 확진 토글",
+  const pancreatitisConfirmedToggle = diagnosisPanel.getByRole("checkbox", {
+    name: "췌장염 감별 확진",
   });
   await pancreatitisConfirmedToggle.click();
   await expect(diagnosisPanel.getByText("사전 연결 · 확진")).toHaveCount(0);
   await expect(pancreatitisConfirmedToggle).toHaveAttribute(
-    "aria-pressed",
+    "aria-checked",
     "true",
   );
   await pancreatitisConfirmedToggle.click();
   await expect(pancreatitisConfirmedToggle).toHaveAttribute(
-    "aria-pressed",
+    "aria-checked",
+    "false",
+  );
+
+  const pancreatitisPrimary = diagnosisPanel.getByRole("checkbox", {
+    name: "췌장염 감별 주진단",
+  });
+  await pancreatitisPrimary.click();
+  await expect(pancreatitisPrimary).toHaveAttribute("aria-checked", "true");
+  await expect(
+    diagnosisPanel.locator(
+      '[data-emr-table-checkbox-tone="brand"][aria-checked="true"]',
+    ),
+  ).toHaveCount(1);
+
+  const pancreatitisClosed = diagnosisPanel.getByRole("checkbox", {
+    name: "췌장염 감별 종결",
+  });
+  await pancreatitisClosed.click();
+  await expect(pancreatitisClosed).toHaveAttribute("aria-checked", "true");
+  await expect(pancreatitisConfirmedToggle).toHaveAttribute(
+    "aria-checked",
     "false",
   );
 
@@ -3470,6 +3491,185 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
   await expect(diagnosisPanel.getByText("보호자 설명용 임시 진단")).toHaveCount(
     0,
   );
+
+  const baselinePrimary = diagnosisPanel.getByRole("checkbox", {
+    name: "급성 위장관염 의심 주진단",
+  });
+  await baselinePrimary.click();
+  await expect(baselinePrimary).toHaveAttribute("aria-checked", "true");
+
+  for (const diagnosisName of ["췌장염 감별", "경도 탈수"]) {
+    const deleteButton = diagnosisPanel.getByRole("button", {
+      name: `${diagnosisName} 삭제`,
+    });
+    await deleteButton.focus();
+    await deleteButton.click();
+    await expect(diagnosisPanel.getByText(diagnosisName)).toHaveCount(0);
+  }
+
+  const restored = await page.request.patch(
+    "/api/workspaces/clair-demo/chart/diagnoses",
+    {
+      data: {
+        encounterId: kongEncounterId,
+        diagnoses: [
+          {
+            id: "diagnosis-kong-gastroenteritis",
+            diagnosisText: "급성 위장관염 의심",
+            diagnosisType: "suspected",
+            isClosed: false,
+            isPrimary: true,
+            sortOrder: 0,
+          },
+        ],
+      },
+      headers: { "x-clair-demo-session-user-id": "user-vet" },
+    },
+  );
+  expect(restored.ok()).toBe(true);
+});
+
+test("Assessment diagnosis table matches the approved Figma geometry and semantics", async ({
+  page,
+}) => {
+  await page.setViewportSize(chartFigmaVisualFixture.viewport);
+  await page.goto(chartFigmaVisualFixture.route);
+
+  const diagnosisPanel = page.getByLabel("진단명 관리");
+  const table = diagnosisPanel.getByRole("table", { name: "진단명 목록" });
+  const headers = table.getByRole("columnheader");
+  await expect(headers).toHaveCount(7);
+  expect(await headers.allTextContents()).toEqual([
+    "진단계통",
+    "진단명",
+    "주진단",
+    "확진",
+    "종결",
+    "수의사",
+    "작업",
+  ]);
+
+  const toolbar = diagnosisPanel.locator(
+    "[data-slot='chart-assessment-toolbar']",
+  );
+  const toolbarGeometry = await toolbar.evaluate((element) => {
+    const controls = [
+      element.querySelector('[data-slot="select-trigger"]'),
+      element.querySelector('[data-slot="popover-trigger"]'),
+      element.querySelector('[data-slot="separator"]'),
+      element.querySelector('[data-slot="button"]'),
+    ].filter((control): control is Element => control instanceof Element);
+    const style = getComputedStyle(element);
+    return {
+      gap: style.columnGap,
+      height: element.getBoundingClientRect().height,
+      widths: controls.map((control) =>
+        Math.round(control.getBoundingClientRect().width),
+      ),
+    };
+  });
+  expect(toolbarGeometry.gap).toBe("10px");
+  expect(toolbarGeometry.height).toBe(44);
+  expect(toolbarGeometry.widths[0]).toBe(82);
+  expect(toolbarGeometry.widths[1]).toBeGreaterThan(0);
+  expect(toolbarGeometry.widths[2]).toBe(1);
+  expect(toolbarGeometry.widths[3]).toBe(66);
+
+  const firstRow = table.locator("tbody tr").first();
+  const rowGeometry = await firstRow.evaluate((row) => ({
+    height: row.getBoundingClientRect().height,
+    widths: Array.from(row.children).map((cell) =>
+      Math.round(cell.getBoundingClientRect().width),
+    ),
+  }));
+  expect(rowGeometry.height).toBe(40);
+  expect(rowGeometry.widths[0]).toBe(100);
+  expect(rowGeometry.widths[1]).toBeGreaterThanOrEqual(188);
+  expect(rowGeometry.widths[1]).toBeLessThanOrEqual(189);
+  expect(rowGeometry.widths.slice(2)).toEqual([52, 48, 48, 72, 56]);
+
+  await expect(headers.first()).toHaveCSS("font-size", "12px");
+  await expect(headers.first()).toHaveCSS("font-weight", "500");
+  await expect(firstRow.getByRole("cell").nth(1)).toHaveCSS(
+    "font-size",
+    "14px",
+  );
+  const typographyGeometry = await Promise.all([
+    headers.first().evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).lineHeight),
+    ),
+    firstRow
+      .getByRole("cell")
+      .nth(1)
+      .evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).lineHeight),
+      ),
+  ]);
+  expect(typographyGeometry[0]).toBeCloseTo(16, 2);
+  expect(typographyGeometry[1]).toBeCloseTo(20, 2);
+
+  const primaryCheckbox = table
+    .locator('[data-emr-table-checkbox-tone="brand"][aria-checked="true"]')
+    .first();
+  await expect(primaryCheckbox).toBeVisible();
+  const primaryColor = await primaryCheckbox.evaluate((element) => {
+    const tokenProbe = document.createElement("span");
+    tokenProbe.style.background = "var(--clair-color-atomic-sky-500)";
+    document.body.appendChild(tokenProbe);
+    const result = {
+      actual: getComputedStyle(element, "::before").backgroundColor,
+      token: getComputedStyle(tokenProbe).backgroundColor,
+    };
+    tokenProbe.remove();
+    return result;
+  });
+  expect(primaryColor.actual).toBe(primaryColor.token);
+
+  await expect(diagnosisPanel).toHaveScreenshot(
+    "chart-assessment-diagnosis-table-567x452.png",
+    {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixelRatio: 0.002,
+    },
+  );
+
+  const systemHeader = table.getByRole("columnheader", { name: /진단계통/ });
+  await systemHeader.getByRole("button", { name: "진단계통 정렬" }).click();
+  await expect(systemHeader).toHaveAttribute("aria-sort", "ascending");
+  await systemHeader.getByRole("button", { name: "진단계통 정렬" }).click();
+  await expect(systemHeader).toHaveAttribute("aria-sort", "descending");
+  await expect(
+    table.getByRole("columnheader", { name: /진단명/ }),
+  ).not.toHaveAttribute("aria-sort");
+
+  await page.mouse.move(1, 1);
+  const deleteButton = firstRow.getByRole("button", { name: /삭제/ });
+  await expect(deleteButton).toHaveCSS("opacity", "0");
+  await deleteButton.focus();
+  await expect(deleteButton).toHaveCSS("opacity", "1");
+});
+
+test("Assessment delete actions remain visible in touch environments", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    viewport: { height: 880, width: 1327 },
+  });
+  const page = await context.newPage();
+
+  try {
+    await page.goto(kongScenarioUrl);
+    const deleteButton = page
+      .getByLabel("진단명 관리")
+      .locator("[data-slot='chart-assessment-table-row']")
+      .first()
+      .getByRole("button", { name: /삭제/ });
+    await expect(deleteButton).toHaveCSS("opacity", "1");
+  } finally {
+    await context.close();
+  }
 });
 
 test("chart safety context and confirmation dialogs identify the active patient", async ({

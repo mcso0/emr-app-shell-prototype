@@ -1,0 +1,121 @@
+.table {
+  --chart-assessment-table-min-width: 564px;
+  --chart-assessment-system-column: 100px;
+  --chart-assessment-primary-column: 52px;
+  --chart-assessment-confirmed-column: 48px;
+  --chart-assessment-closed-column: 48px;
+  --chart-assessment-veterinarian-column: 72px;
+  --chart-assessment-action-column: 56px;
+
+  min-width: var(--chart-assessment-table-min-width);
+  table-layout: fixed;
+}
+
+.systemColumn {
+  width: var(--chart-assessment-system-column);
+}
+
+.diagnosisColumn {
+  width: auto;
+}
+
+.primaryColumn {
+  width: var(--chart-assessment-primary-column);
+}
+
+.confirmedColumn {
+  width: var(--chart-assessment-confirmed-column);
+}
+
+.closedColumn {
+  width: var(--chart-assessment-closed-column);
+}
+
+.veterinarianColumn {
+  width: var(--chart-assessment-veterinarian-column);
+}
+
+.actionColumn {
+  width: var(--chart-assessment-action-column);
+}
+
+.table .headerCell[data-slot="table-head"] {
+  height: var(--emr-table-header-height-standard);
+  padding: 0;
+  background: var(--clair-color-atomic-neutral-50);
+  color: var(--clair-color-atomic-neutral-500);
+  font-size: var(--emr-type-size-metadata);
+  font-weight: 500;
+  line-height: var(--emr-type-leading-metadata);
+  letter-spacing: var(--emr-type-tracking-metadata);
+}
+
+.table .firstHeaderCell[data-slot="table-head"] {
+  padding-inline-start: var(--clair-spacing-12);
+}
+
+.table .lastHeaderCell[data-slot="table-head"] {
+  padding-inline-end: var(--clair-spacing-12);
+}
+
+.table .bodyCell[data-slot="table-cell"] {
+  height: var(--emr-table-row-height-standard);
+  padding: 0;
+  color: var(--clair-color-atomic-neutral-700);
+  font-size: var(--emr-type-size-body);
+  font-weight: 500;
+  line-height: var(--emr-type-leading-body);
+  letter-spacing: var(--emr-type-tracking-body);
+}
+
+.systemCell {
+  padding-inline-start: calc(var(--clair-spacing-12) + var(--clair-spacing-6)) !important;
+}
+
+.diagnosisCell {
+  padding-inline: var(--clair-spacing-6) !important;
+}
+
+.statusCell {
+  text-align: center;
+}
+
+.veterinarianCell {
+  padding-inline: var(--clair-spacing-10) var(--clair-spacing-4) !important;
+}
+
+.actionCell {
+  padding-inline-end: var(--clair-spacing-12) !important;
+}
+
+.systemBadge {
+  min-width: var(--clair-spacing-20);
+  height: 22px;
+  padding: 3px var(--clair-spacing-8);
+  border-color: transparent;
+  border-radius: var(--clair-radius-atomic-6);
+  background: var(--clair-color-atomic-black-alpha-4);
+  color: var(--clair-color-atomic-neutral-900);
+  font-size: var(--emr-type-size-metadata);
+  font-weight: 500;
+  line-height: var(--emr-type-leading-metadata);
+  letter-spacing: var(--emr-type-tracking-metadata);
+}
+
+.deleteButton {
+  border-color: var(--clair-color-atomic-neutral-200);
+  background: var(--clair-color-atomic-common-100);
+  box-shadow: var(--clair-shadow-xs);
+  color: var(--clair-color-atomic-neutral-700);
+}
+
+.feedbackCell {
+  padding: var(--clair-spacing-12) !important;
+  white-space: normal;
+}
+
+.emptyCell {
+  height: 208px !important;
+  padding: var(--clair-spacing-24) var(--clair-spacing-12) !important;
+  white-space: normal;
+}
