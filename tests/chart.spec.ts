@@ -1315,6 +1315,10 @@ test("chart Plan/Order header adds Order and collapse actions without changing b
   const collapseButton = page.getByRole("button", {
     name: "Plan/Order 패널 접기",
   });
+  await expect(collapseButton.locator("svg")).toHaveAttribute(
+    "data-icon",
+    "chevron-down",
+  );
   await orderPanel.hover();
   await collapseButton.click();
   await expect(orderPanel).toHaveAttribute("data-collapsed", "true");
@@ -1357,6 +1361,10 @@ test("chart Plan/Order header adds Order and collapse actions without changing b
   const expandButton = page.getByRole("button", {
     name: "Plan/Order 패널 펼치기",
   });
+  await expect(expandButton.locator("svg")).toHaveAttribute(
+    "data-icon",
+    "chevron-up",
+  );
   await expect(expandButton).toBeFocused();
   await expandButton.click();
   await expect(orderPanel).toHaveAttribute("data-collapsed", "false");

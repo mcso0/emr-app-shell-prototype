@@ -10,8 +10,10 @@ import {
 } from "react";
 
 import {
+  CdsNavigationChevronDownIcon,
   CdsNavigationChevronLeftIcon,
   CdsNavigationChevronRightIcon,
+  CdsNavigationChevronUpIcon,
 } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -184,7 +186,21 @@ export function ChartPanelCollapseButton({
           />
         }
       >
-        <CdsNavigationChevronLeftIcon aria-hidden="true" />
+        {panelId === "order" ? (
+          collapsed ? (
+            <CdsNavigationChevronUpIcon
+              aria-hidden="true"
+              data-icon="chevron-up"
+            />
+          ) : (
+            <CdsNavigationChevronDownIcon
+              aria-hidden="true"
+              data-icon="chevron-down"
+            />
+          )
+        ) : (
+          <CdsNavigationChevronLeftIcon aria-hidden="true" />
+        )}
       </TooltipTrigger>
       <TooltipContent side="bottom">{actionLabel}</TooltipContent>
     </Tooltip>
