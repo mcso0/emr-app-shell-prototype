@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR 임상 마스터 데이터 1단계 DB 상세 명세</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7f8;
+        --surface: #ffffff;
+        --surface-soft: #f8fafb;
+        --text: #172126;
+        --muted: #617078;
+        --line: #dfe6e9;
+        --brand: #087f8c;
+        --brand-soft: #e9f6f7;
+        --ok: #137333;
+        --ok-soft: #edf7ef;
+        --warn: #8a5a00;
+        --warn-soft: #fff7e3;
+        --danger: #a62b2b;
+        --danger-soft: #fff0f0;
+        --code: #f1f4f5;
+        --shadow: 0 12px 30px rgba(24, 42, 50, 0.07);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 80px; }
+      header.hero {
+        padding: 40px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: linear-gradient(145deg, #ffffff 0%, #eef9f9 100%);
+        box-shadow: var(--shadow);
+      }
+      .eyebrow { color: var(--brand); font-weight: 750; font-size: 14px; letter-spacing: 0.03em; }
+      h1 { margin: 8px 0 12px; font-size: clamp(30px, 4vw, 46px); line-height: 1.18; letter-spacing: -0.035em; }
+      h2 { margin: 0 0 18px; font-size: 27px; line-height: 1.3; letter-spacing: -0.02em; }
+      h3 { margin: 26px 0 12px; font-size: 20px; letter-spacing: -0.015em; }
+      h4 { margin: 18px 0 8px; font-size: 16px; }
+      p { margin: 10px 0; }
+      a { color: var(--brand); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: var(--code);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.9em;
+      }
+      pre {
+        overflow-x: auto;
+        padding: 18px;
+        border-radius: 14px;
+        background: #172126;
+        color: #edf6f7;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      nav {
+        position: sticky;
+        top: 12px;
+        z-index: 10;
+        margin: 18px 0;
+        padding: 12px 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 8px 22px rgba(24, 42, 50, 0.05);
+        backdrop-filter: blur(12px);
+      }
+      nav a { display: inline-block; margin: 4px 14px 4px 0; font-size: 14px; text-decoration: none; }
+      section {
+        margin-top: 18px;
+        padding: 30px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+      }
+      .grid { display: grid; gap: 14px; }
+      .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .card { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
+      .card h3, .card h4 { margin-top: 0; }
+      .callout { margin: 16px 0; padding: 16px 18px; border-radius: 12px; border-left: 4px solid var(--brand); background: var(--brand-soft); }
+      .callout.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+      .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+      .callout.danger { border-left-color: var(--danger); background: var(--danger-soft); }
+      .table-wrap { overflow-x: auto; margin: 14px 0 22px; border: 1px solid var(--line); border-radius: 12px; }
+      table { width: 100%; border-collapse: collapse; min-width: 720px; background: var(--surface); }
+      th, td { padding: 11px 13px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 14px; }
+      th { background: #f0f5f6; font-weight: 750; white-space: nowrap; }
+      tr:last-child td { border-bottom: 0; }
+      ul, ol { padding-left: 22px; }
+      li + li { margin-top: 6px; }
+      .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0; }
+      .node { padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); font-weight: 700; }
+      .node.primary { color: #fff; border-color: var(--brand); background: var(--brand); }
+      .arrow { color: var(--muted); font-weight: 800; }
+      .status { display: inline-flex; padding: 3px 9px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-size: 12px; font-weight: 800; }
+      .muted { color: var(--muted); }
+      .footer { margin-top: 20px; padding: 18px 4px; color: var(--muted); font-size: 14px; }
+      @media (max-width: 780px) {
+        main { width: min(100% - 20px, 1180px); padding-top: 10px; }
+        header.hero, section { padding: 22px; border-radius: 15px; }
+        .grid.two, .grid.three { grid-template-columns: 1fr; }
+        nav { position: static; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div class="eyebrow">PHASE 1 · DATABASE SPECIFICATION · 2026-08-18</div>
+        <h1>CLAiR 임상 마스터 데이터<br />1단계 DB 상세 명세</h1>
+        <p>
+          Airtable에서 작성한 임상 마스터를 검증해 PostgreSQL에 배포하고, 병원별 오더 카탈로그로 복사한 뒤,
+          차트의 개별 오더와 Order Set이 업무 전달·수납까지 실제 동작하도록 만드는 최소 DB 구조다.
+        </p>
+        <p class="muted">
+          AI 에이전트용 기준 문서:
+          <a href="./clair-clinical-master-data-phase-1-db-spec.md">Markdown 상세 명세</a>
+        </p>
+      </header>
+
+      <nav aria-label="문서 목차">
+        <a href="#outcome">완료 기준</a>
+        <a href="#scope">범위</a>
+        <a href="#current">현재 출발점</a>
+        <a href="#master">마스터 DB</a>
+        <a href="#classification">A·CG·NT·오더</a>
+        <a href="#lab">검사·패널</a>
+        <a href="#workspace">병원 복사본</a>
+        <a href="#sets">Order Set</a>
+        <a href="#snapshot">차트 스냅샷</a>
+        <a href="#migration">도입 순서</a>
+        <a href="#verification">검증</a>
+      </nav>
+
+      <section id="outcome">
+        <h2>1. 1단계에서 증명할 것</h2>
+        <div class="flow" aria-label="데이터 처리 흐름">
+          <div class="node">Airtable 작성·검토</div><div class="arrow">→</div>
+          <div class="node">서버 배포기</div><div class="arrow">→</div>
+          <div class="node primary">비공개 master DB</div><div class="arrow">→</div>
+          <div class="node">병원 오더 복사본</div><div class="arrow">→</div>
+          <div class="node">차트 적용</div><div class="arrow">→</div>
+          <div class="node">업무·수납</div>
+        </div>
+        <ol>
+          <li>같은 릴리즈를 다시 적용해도 마스터와 병원 복사본이 중복되지 않는다.</li>
+          <li>병원 2개가 같은 릴리즈를 받되 서로의 데이터를 읽거나 수정할 수 없다.</li>
+          <li>미수정 복사본은 자동 업데이트되고, 수정 복사본은 행 전체 업데이트 검토를 받는다.</li>
+          <li>병원 자체 오더는 CLAiR 업데이트와 분리된다.</li>
+          <li>개별 오더가 차트 확정·업무 전달·수납까지 동작한다.</li>
+          <li>Order Set이 차트 선택·펼치기·진료별 수정·확정·업무 전달·수납까지 실제 동작한다.</li>
+          <li>마스터·병원 가격·세트 revision이 바뀌어도 과거 기록은 바뀌지 않는다.</li>
+        </ol>
+        <div class="callout warn">
+          초기 데이터의 임상적 완성도는 1단계 완료 조건이 아니다. 합성 데이터로 시스템은 검증할 수 있지만,
+          검토되지 않은 값을 수의학적으로 검증된 권고처럼 사용자에게 보여주면 안 된다.
+        </div>
+      </section>
+
+      <section id="scope">
+        <h2>2. 범위와 제외 범위</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>이번에 명세하는 것</h3>
+            <ul>
+              <li>마스터 ID·이름·출처·릴리즈·revision·검토 기록</li>
+              <li>X/T/A, CG, NT, 분류 경로와 개별 표준 오더</li>
+              <li>개·고양이와 검증 fixture에 필요한 단위·검체·결과 유형</li>
+              <li>검사항목·검사 패널·오더-검사 연결</li>
+              <li>병원 복사본·자동 업데이트·행 전체 검토</li>
+              <li>Order Set 불변 revision·고정 자식 revision·구간 가격</li>
+              <li>차트 적용 스냅샷·RLS·감사·검증</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>이번에 만들지 않는 것</h3>
+            <ul>
+              <li>VetSCT·LOINC·ATCvet 등 대량 가져오기</li>
+              <li>CLAiR 추천 가격과 실제 투약 권고</li>
+              <li>사용자용 임상 정상범위</li>
+              <li>약품·백신·영상·진단명 전체 상세 마스터</li>
+              <li>수정 행의 필드별 자동 병합</li>
+              <li>3계층 이상 세트와 차트의 프리셋 저장</li>
+              <li><code>service_*</code>와 호환 필드의 즉시 삭제</li>
+              <li>원격 migration·실병원 데이터·운영 배포</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="current">
+        <h2>3. 현재 DB에서 출발하는 지점</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>현재 구조</th><th>현재 상태</th><th>1단계 처리</th></tr></thead>
+            <tbody>
+              <tr><td><code>order_catalog_items</code></td><td>병원 오더, 가격, 경로, 수정 상태가 있음. 가격은 0 기본값·필수값</td><td>유일한 병원 오더 원본으로 유지하고 마스터 계보·분류 경로·revision·미설정 가격을 추가</td></tr>
+              <tr><td><code>order_sets</code></td><td>한 행을 직접 수정하고 문자열 버전을 사용</td><td>안정적인 세트 ID만 맡기고 현재 불변 revision을 가리키게 변경</td></tr>
+              <tr><td><code>order_set_items</code></td><td>개별 오더만 직접 참조</td><td>revision 1로 이관한 뒤 새 작성 원본에서 제외</td></tr>
+              <tr><td><code>orders</code></td><td>개별·세트·세트 자식 행과 JSON 스냅샷 기반이 있음</td><td>그 구조를 재사용하고 조회 가능한 직접 계보 컬럼을 추가</td></tr>
+              <tr><td><code>service_*</code></td><td>기존 진료·수가 카탈로그와 과거 FK가 남아 있음</td><td>호환 전용. 새 이중 작성 금지, 삭제는 나중에 별도 승인</td></tr>
+              <tr><td>차트 검색</td><td>개별 오더와 활성 세트를 검색함</td><td>검증된 현재 세트 revision만 반환</td></tr>
+              <tr><td>차트 확정</td><td>세트는 <code>unsupported_order_type</code>으로 거부</td><td>1단계 1B에서 신뢰할 수 있는 펼치기·확정으로 교체</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout ok">
+          기존 테이블을 한 번에 교체하지 않는다. 새 구조를 옆에 추가하고, 읽기·쓰기 경계를 순서대로 옮긴다.
+        </div>
+      </section>
+
+      <section>
+        <h2>4. 물리 구조 원칙</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>영역</th><th>확정 규칙</th></tr></thead>
+            <tbody>
+              <tr><td>CLAiR 마스터</td><td>비공개 <code>master</code> schema와 UUID PK. 브라우저 직접 권한 없음</td></tr>
+              <tr><td>병원 카탈로그</td><td>현재 <code>public</code> 테이블과 text ID를 유지해 광범위한 ID 이관을 피함</td></tr>
+              <tr><td>마스터 식별</td><td>변경·재사용하지 않는 <code>master_key</code>. 이름으로 생성하지 않음</td></tr>
+              <tr><td>A코드</td><td>UUID와 분리된 서버 자동 생성 <code>A000001</code></td></tr>
+              <tr><td>revision</td><td>서버가 부여하는 양의 정수</td></tr>
+              <tr><td>릴리즈</td><td>UUID + 자동 숫자 <code>release_no</code>. 사람이 semantic version을 입력하지 않음</td></tr>
+              <tr><td>상태</td><td>현재 저장소 방식에 맞춘 <code>text + check</code>. PostgreSQL enum은 추가하지 않음</td></tr>
+              <tr><td>가격</td><td>KRW 정수. <code>NULL</code>은 미설정, <code>0</code>은 의도적 무료</td></tr>
+              <tr><td>이름</td><td>중복 가능. ID·키·코드만 유일하며 유사 이름은 경고·검토</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          1단계에서 초안·검토·반려 작업 상태는 Airtable에 있고, PostgreSQL <code>master</code>에는 검증된 배포·폐기 상태와 불변 검토 증거를 저장한다.
+        </div>
+      </section>
+
+      <section id="master">
+        <h2>5. 비공개 마스터 기반 테이블</h2>
+
+        <h3><code>master.master_releases</code></h3>
+        <p>한 번의 검증된 배포 단위이자 재실행 중복 방지 기준이다.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼</th><th>타입</th><th>필수</th><th>규칙</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>uuid PK</td><td>예</td><td>시스템 생성 릴리즈 ID</td></tr>
+            <tr><td><code>release_no</code></td><td>bigint identity</td><td>예</td><td>유일한 자동 증가 지원용 번호</td></tr>
+            <tr><td><code>source_fingerprint</code></td><td>text</td><td>예</td><td>검증 payload 해시, unique. 같은 입력 재실행 시 기존 릴리즈 사용</td></tr>
+            <tr><td><code>status</code></td><td>text</td><td>예</td><td><code>publishing</code>·<code>published</code>·<code>failed</code></td></tr>
+            <tr><td><code>release_notes</code></td><td>text</td><td>아니오</td><td>운영자 설명</td></tr>
+            <tr><td><code>published_by_user_id</code></td><td>uuid</td><td>아니오</td><td>앱 사용자 ID가 있을 때 기록</td></tr>
+            <tr><td><code>published_by_label</code></td><td>text</td><td>예</td><td>운영자·서비스 표시명</td></tr>
+            <tr><td><code>published_at</code></td><td>timestamptz</td><td>조건부</td><td>배포 완료 상태에서 필수</td></tr>
+            <tr><td><code>created_at</code></td><td>timestamptz</td><td>예</td><td>서버 생성</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3><code>master.master_records</code></h3>
+        <p>모든 canonical 개념이 공유하는 안정적인 ID·상태 registry다.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼</th><th>타입</th><th>필수</th><th>규칙</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>uuid PK</td><td>예</td><td>내부 안정 ID</td></tr>
+            <tr><td><code>master_key</code></td><td>text</td><td>예</td><td>전역 unique, 예: <code>ORDER.CBC_BASIC</code></td></tr>
+            <tr><td><code>record_type</code></td><td>text</td><td>예</td><td>분류·오더·공통어휘·검사 유형</td></tr>
+            <tr><td><code>lifecycle_status</code></td><td>text</td><td>예</td><td><code>published</code>·<code>deprecation_pending</code>·<code>deprecated</code></td></tr>
+            <tr><td><code>safety_status</code></td><td>text</td><td>예</td><td><code>normal</code>·<code>blocked</code></td></tr>
+            <tr><td><code>safety_reason</code></td><td>text</td><td>조건부</td><td>차단 시 필수</td></tr>
+            <tr><td><code>current_revision</code></td><td>integer</td><td>예</td><td>양의 정수, 서버만 변경</td></tr>
+            <tr><td><code>current_release_id</code></td><td>uuid FK</td><td>예</td><td>현재 revision을 배포한 릴리즈</td></tr>
+            <tr><td><code>replacement_record_id</code></td><td>uuid self FK</td><td>아니오</td><td>1단계 단일 대체 항목</td></tr>
+            <tr><td><code>published_at</code></td><td>timestamptz</td><td>예</td><td>배포 시각</td></tr>
+            <tr><td><code>deprecated_at</code></td><td>timestamptz</td><td>조건부</td><td>폐기 상태에서 필수</td></tr>
+            <tr><td><code>created_at</code>, <code>updated_at</code></td><td>timestamptz</td><td>예</td><td>서버 관리</td></tr>
+          </tbody>
+        </table></div>
+        <p class="muted">
+          1단계 유형: <code>order_category</code>, <code>clinical_action</code>, <code>chart_group</code>, <code>task_route</code>,
+          <code>order</code>, <code>species</code>, <code>unit</code>, <code>specimen_type</code>,
+          <code>result_input_type</code>, <code>lab_test</code>, <code>lab_panel</code>.
+        </p>
+
+        <h3>이름·출처·버전·검토</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>테이블</th><th>핵심 컬럼</th><th>중요 규칙</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>master.master_record_names</code></td>
+              <td><code>master_record_id</code>, <code>language_code</code>, <code>name_kind</code>, <code>name</code>, <code>normalized_name</code>, <code>searchable</code>, <code>sort_order</code></td>
+              <td>국문 선호명 1개 필수, 영문 선호명 최대 1개. 이름은 전역 unique 아님</td>
+            </tr>
+            <tr>
+              <td><code>master.master_sources</code></td>
+              <td><code>source_type</code>, <code>title</code>, <code>reference_uri</code>, <code>source_version</code>, <code>accessed_at</code>, <code>license_notes</code></td>
+              <td><code>synthetic</code>·<code>pdf_reference</code>·<code>official</code>·<code>manual</code>. 합성 출처는 임상 배포 불가</td>
+            </tr>
+            <tr>
+              <td><code>master.master_record_sources</code></td>
+              <td><code>master_record_id</code>, <code>source_id</code>, <code>assertion_scope</code>, <code>notes</code></td>
+              <td>복합 PK로 같은 근거 중복 방지</td>
+            </tr>
+            <tr>
+              <td><code>master.master_record_versions</code></td>
+              <td><code>master_record_id</code>, <code>revision</code>, <code>release_id</code>, <code>snapshot</code>, <code>change_summary</code>, 작성·검토·임상검토자 표시명</td>
+              <td>삽입 전용, 레코드+revision unique. JSON은 감사·diff이며 구조화 테이블 대체 아님</td>
+            </tr>
+            <tr>
+              <td><code>master.master_review_events</code></td>
+              <td><code>master_record_id</code>, <code>revision</code>, <code>event_type</code>, <code>actor_label</code>, <code>source_surface</code>, <code>reason</code>, <code>created_at</code></td>
+              <td>append-only. 1인 구조·합성 검증은 가능하지만 임상 검토 완료를 의미하지 않음</td>
+            </tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="classification">
+        <h2>6. X·T·A·CG·NT와 개별 오더</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>테이블</th><th>컬럼</th><th>무결성 규칙</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>master.order_categories</code></td>
+              <td><code>master_record_id</code>, <code>category_code</code>, <code>category_level</code>, <code>parent_category_id</code>, <code>sort_order</code></td>
+              <td>X는 부모 없음, T는 X 부모 1개. 코드 unique</td>
+            </tr>
+            <tr>
+              <td><code>master.clinical_actions</code></td>
+              <td><code>master_record_id</code>, <code>action_code</code>, <code>t_category_id</code>, <code>item_type</code>, <code>is_other_unclassified</code></td>
+              <td><code>A000001</code> 정규식·unique. A마다 T 1개와 유형 1개</td>
+            </tr>
+            <tr>
+              <td><code>master.chart_groups</code></td>
+              <td><code>master_record_id</code>, <code>group_code</code>, <code>sort_order</code></td>
+              <td>확정된 CG 8종. 전체·수납은 행이 아니라 화면 view</td>
+            </tr>
+            <tr>
+              <td><code>master.task_routes</code></td>
+              <td><code>master_record_id</code>, <code>route_code</code>, <code>destination_module</code>, <code>task_required</code>, <code>runtime_status</code></td>
+              <td>NT 7종. <code>NT_INPATIENT</code>는 런타임 전까지 held</td>
+            </tr>
+            <tr>
+              <td><code>master.classification_paths</code></td>
+              <td><code>id</code>, <code>path_key</code>, A·CG·NT FK, 시작·종료 릴리즈</td>
+              <td>동일 A·CG·NT 중복 금지, 1단계 A당 활성 경로 1개</td>
+            </tr>
+            <tr>
+              <td><code>master.orders</code></td>
+              <td><code>master_record_id</code>, <code>classification_path_id</code>, <code>default_sales_unit_id</code>, 기본 수납 반영, 기본 수량</td>
+              <td>정확한 개별 오더. 가격과 Order Set은 저장하지 않음</td>
+            </tr>
+          </tbody>
+        </table></div>
+
+        <h3>작은 공통 어휘</h3>
+        <div class="grid two">
+          <article class="card"><h4><code>master.species</code></h4><p>개·고양이 코드만 시작한다.</p></article>
+          <article class="card"><h4><code>master.units</code></h4><p>fixture에 필요한 단위 코드·기호·소수 자릿수만 둔다.</p></article>
+          <article class="card"><h4><code>master.specimen_types</code></h4><p>두 검사 패널에 필요한 검체만 둔다.</p></article>
+          <article class="card"><h4><code>master.result_input_types</code></h4><p>숫자·문자·코드형 중 fixture가 사용하는 형태만 둔다.</p></article>
+        </div>
+        <p><code>master.order_species_links</code>는 오더와 종의 복합 PK 관계로 대상 동물을 연결한다.</p>
+      </section>
+
+      <section id="lab">
+        <h2>7. 검사 항목과 검사 패널</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>테이블</th><th>핵심 컬럼</th><th>역할</th></tr></thead>
+          <tbody>
+            <tr><td><code>master.lab_tests</code></td><td>마스터 ID, <code>test_code</code>, 결과 유형, 표준 단위, 소수 자릿수</td><td>하나의 결과 항목</td></tr>
+            <tr><td><code>master.lab_panels</code></td><td>마스터 ID, <code>panel_code</code></td><td>CBC·혈액화학처럼 여러 결과 항목을 묶는 정의</td></tr>
+            <tr><td><code>master.lab_panel_items</code></td><td>패널·검사항목 FK, 순서, 필수 여부, 표시 그룹</td><td>패널 결과 항목 구성. 패널+검사, 패널+순서 unique</td></tr>
+            <tr><td><code>master.lab_order_profiles</code></td><td>오더 PK, 검사 또는 패널 FK, 검체 FK</td><td>개별 검사 오더 하나를 검사 하나 또는 패널 하나에 연결</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout ok">
+          검사 패널 구성 항목은 결과 입력칸이다. 차트의 별도 오더나 별도 청구 행이 아니다.
+          서로 독립적으로 실행·청구하는 오더 묶음만 Order Set으로 만든다.
+        </div>
+        <div class="callout warn">
+          정상범위 테이블은 1단계 오더 파이프라인 검증에 필요하지 않다. 출처·검토자·문맥·배포 규칙을 확정하기 전에는
+          사용자용 <code>master.lab_reference_ranges</code>를 만들거나 seed하지 않는다.
+        </div>
+      </section>
+
+      <section id="workspace">
+        <h2>8. 병원별 오더 복사본</h2>
+        <h3><code>public.order_catalog_items</code>에 추가·변경할 필드</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼</th><th>타입</th><th>필수</th><th>규칙</th></tr></thead>
+          <tbody>
+            <tr><td><code>origin_type</code></td><td>text</td><td>예</td><td><code>clair_master</code> 또는 <code>workspace_custom</code></td></tr>
+            <tr><td><code>source_master_record_id</code></td><td>uuid FK</td><td>조건부</td><td>마스터 복사본만 필수</td></tr>
+            <tr><td><code>source_master_revision</code></td><td>integer</td><td>조건부</td><td>현재 반영한 마스터 revision</td></tr>
+            <tr><td><code>initial_imported_revision</code></td><td>integer</td><td>조건부</td><td>최초 복사 revision</td></tr>
+            <tr><td><code>last_auto_merged_revision</code></td><td>integer</td><td>아니오</td><td>마지막 자동 업데이트 revision</td></tr>
+            <tr><td><code>classification_path_id</code></td><td>uuid FK</td><td>backfill 후 예</td><td>마스터·병원 자체 오더 모두 canonical 경로 선택</td></tr>
+            <tr><td><code>catalog_revision</code></td><td>integer</td><td>예</td><td>병원 변경을 수락할 때마다 증가</td></tr>
+            <tr><td><code>availability_status</code></td><td>text</td><td>예</td><td><code>pending_activation</code>·<code>active</code>·<code>paused</code>·<code>inactive</code></td></tr>
+            <tr><td><code>price_krw</code></td><td>integer</td><td>아니오</td><td>기본값·NOT NULL 제거. null=미설정, 0=무료</td></tr>
+            <tr><td><code>preset_merge_status</code></td><td>text</td><td>예</td><td>현재 이름 유지. 최신·업데이트·충돌·원본 폐기·분리</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>기존 호환 필드의 원본</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>현재 필드</th><th>앞으로의 규칙</th></tr></thead>
+          <tbody>
+            <tr><td><code>standard_order_id</code></td><td>마스터 키 또는 안정적인 병원 자체 키에서 생성. 이름 기반 생성 금지</td></tr>
+            <tr><td><code>source_preset_version</code></td><td>정수 마스터 revision의 문자열 호환값. 두 번째 버전 원본 아님</td></tr>
+            <tr><td><code>category_group</code></td><td>A의 <code>item_type</code>에서 자동 생성. PDF CG 아님</td></tr>
+            <tr><td><code>category_label</code></td><td>화면 호환 표시값. 독립 분류 원본 아님</td></tr>
+            <tr><td><code>t_code</code>, <code>t_code_label</code></td><td>A→T 관계에서 함께 생성</td></tr>
+            <tr><td>업무 전달·Task 여부</td><td>NT에서 함께 생성</td></tr>
+            <tr><td><code>standard_order_name</code></td><td>마스터 국문 선호명 복사값</td></tr>
+            <tr><td>병원 표시명·수납명</td><td>병원 수정 가능</td></tr>
+            <tr><td><code>target_species</code></td><td>관계형 대상 종의 현재 런타임 배열 projection</td></tr>
+            <tr><td>약품·백신·가격 JSON</td><td>현재 런타임 호환값. canonical 임상 원본 아님</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>수정 행 병합</h3>
+        <ul>
+          <li><code>unmodified</code>: 마스터 projection 전체를 원자적으로 업데이트한다.</li>
+          <li><code>customized</code>: 행 전체를 보존하고 업데이트 검토를 만든다.</li>
+          <li><code>detached</code>: CLAiR 병합 대상에서 제외한다.</li>
+          <li><code>customized_fields</code>는 차이를 설명하지만 일부 필드 자동 병합 권한이 아니다.</li>
+        </ul>
+        <div class="callout">
+          부분 unique <code>(workspace_id, source_master_record_id)</code>, 활성 청구 오더의 가격 필수,
+          origin과 source 필드의 일치, 양의 catalog revision, 분류 경로와 projection 일치 검증이 필요하다.
+        </div>
+
+        <h3><code>public.workspace_master_updates</code></h3>
+        <p>1단계에는 별도 diff 행 테이블을 만들지 않고 한 행에 비교 스냅샷을 둔다.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td>ID·workspace·release·master record</td><td>어떤 릴리즈가 어느 병원·항목에 만든 검토인지 추적</td></tr>
+            <tr><td><code>order_catalog_item_id</code></td><td>병원 오더 복사본 연결</td></tr>
+            <tr><td><code>update_type</code></td><td>새 항목·변경·폐기·대체·긴급</td></tr>
+            <tr><td><code>status</code></td><td>대기·자동반영·수락·무시·충돌</td></tr>
+            <tr><td>이전/새 revision</td><td>변경 전후 원본 revision</td></tr>
+            <tr><td><code>changed_fields</code></td><td>사용자 설명용 변경 필드 목록</td></tr>
+            <tr><td>원본/병원 snapshot</td><td>JSON object로 행 전체 비교</td></tr>
+            <tr><td>해결자·해결 시각</td><td>수락·무시한 병원 관리자 기록</td></tr>
+          </tbody>
+        </table></div>
+        <p>같은 workspace·release·master record·update type 조합은 한 번만 생성한다.</p>
+      </section>
+
+      <section id="sets">
+        <h2>9. Order Set 불변 revision 구조</h2>
+        <div class="flow">
+          <div class="node"><code>order_sets</code><br />안정 ID</div><div class="arrow">→</div>
+          <div class="node primary"><code>order_set_revisions</code><br />현재 불변 revision</div><div class="arrow">→</div>
+          <div class="node"><code>revision_items</code><br />오더/고정 자식 revision</div>
+        </div>
+
+        <h3><code>public.order_sets</code></h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼</th><th>규칙</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code>, <code>workspace_id</code></td><td>현재 text ID와 병원 경계를 유지</td></tr>
+            <tr><td><code>current_revision_id</code></td><td>현재 활성 revision. 새 비활성 기본정보만 있는 경우 잠시 null 가능</td></tr>
+            <tr><td><code>availability_status</code></td><td>사용·일시 중지·비활성</td></tr>
+            <tr><td><code>needs_composition_review</code></td><td>true이면 차트 적용 차단</td></tr>
+            <tr><td>작성·수정자와 시각</td><td>포인터·사용 상태 변경 감사</td></tr>
+          </tbody>
+        </table></div>
+        <p>기존 이름·가격·종·가이드 컬럼은 현재 revision의 서버 생성 호환 projection으로만 잠시 유지한다.</p>
+
+        <h3><code>public.order_set_revisions</code></h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼군</th><th>상세</th></tr></thead>
+          <tbody>
+            <tr><td>ID·workspace·set·revision</td><td>uuid ID, text 세트 ID, 양의 <code>revision_no</code>; 세트+revision unique</td></tr>
+            <tr><td>검증</td><td><code>valid</code>·<code>invalid</code>, JSON 오류 배열. invalid는 활성 현재 revision이 될 수 없음</td></tr>
+            <tr><td>이름</td><td>세트 분류, 직원용 세트명, 수납명</td></tr>
+            <tr><td>가격</td><td>포함오더 합산·세트 고정금액·구간별 금액, 조건부 세트 금액과 구간 기준</td></tr>
+            <tr><td>과세</td><td><code>taxable</code>·<code>non_taxable</code>·<code>derived</code>. 합산은 derived</td></tr>
+            <tr><td>운영값</td><td>판매 단위, 수납 반영, 대상 종, 케어가이드, 내부 지시</td></tr>
+            <tr><td>감사</td><td>작성 관리자와 생성 시각. 일반 앱 역할은 update/delete 불가</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3><code>public.order_set_revision_items</code></h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼</th><th>규칙</th></tr></thead>
+          <tbody>
+            <tr><td><code>child_kind</code></td><td><code>order</code> 또는 <code>set_revision</code></td></tr>
+            <tr><td>자식 오더 FK</td><td>order일 때만 필수</td></tr>
+            <tr><td>자식 set revision FK</td><td>set_revision일 때만 필수. 안정 ID가 아니라 정확한 revision 고정</td></tr>
+            <tr><td>순서</td><td>revision 안에서 unique</td></tr>
+            <tr><td>초기 선택·수납 기본값</td><td>차트 적용본의 시작값. 가격 방식에 따라 서버가 기본 설정</td></tr>
+            <tr><td>기본 수량·수량 출처</td><td>양수. 중첩 세트 수량은 1</td></tr>
+          </tbody>
+        </table></div>
+        <p>세트 정의에는 자식 가격 snapshot을 원본으로 저장하지 않는다. 차트 적용 시 병원 오더의 현재 가격을 다시 읽고 진료 snapshot에 고정한다.</p>
+
+        <h3><code>public.order_set_revision_price_ranges</code></h3>
+        <p>구간 가격 revision만 사용한다. 하한 포함, 상한 제외, KRW 금액, 표시 순서를 저장한다. 겹침·역전·복수 무한 구간은 서버 검증기가 거부한다.</p>
+
+        <h3><code>public.order_set_revision_update_reviews</code></h3>
+        <p>부모가 오래된 자식 revision을 고정 참조할 때 사용자에게 알리는 durable 검토 기록이다.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼군</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td>부모 세트·부모 revision</td><td>어떤 부모 정의가 영향을 받는지 표시</td></tr>
+            <tr><td>자식 세트·기존/새 revision</td><td>현재 고정값과 반영 가능한 새 값 비교</td></tr>
+            <tr><td>상태</td><td>대기·수락·무시·무효화</td></tr>
+            <tr><td>결과 부모 revision</td><td>수락 트랜잭션에서 생성한 새 부모 revision</td></tr>
+            <tr><td>해결자·시각</td><td>병원 관리자 감사</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>저장 규칙</h3>
+        <ol>
+          <li>병원 관리자가 전체 정의와 예상 현재 revision을 제출한다.</li>
+          <li>서버가 같은 트랜잭션에서 자식 오더와 자식 revision을 다시 읽는다.</li>
+          <li>병원 경계·사용 상태·가격·깊이·순환·중복·최소 선택 오더를 검증한다.</li>
+          <li>새 불변 revision과 구성 행을 insert한다.</li>
+          <li>활성 요청이 유효하면 현재 revision 포인터와 호환 projection을 함께 바꾼다.</li>
+          <li>비었거나 invalid이면 명시적인 사용 중지 확인 후 비활성으로만 저장하고 활성 revision을 대체하지 않는다.</li>
+          <li>자식 변경은 부모를 자동 변경하지 않고 검토를 만든다.</li>
+          <li>수락하면 새 부모 revision을 만드는 트랜잭션으로 처리한다.</li>
+        </ol>
+      </section>
+
+      <section id="snapshot">
+        <h2>10. 차트 적용과 과거 기록</h2>
+        <h3><code>public.orders</code> 추가 계보</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>컬럼</th><th>역할</th></tr></thead>
+          <tbody>
+            <tr><td><code>workspace_catalog_item_id</code></td><td>적용한 병원 개별 오더</td></tr>
+            <tr><td><code>source_master_record_id</code>, <code>source_master_revision</code></td><td>CLAiR 원본과 revision</td></tr>
+            <tr><td><code>workspace_catalog_revision</code></td><td>적용한 병원 오더 revision</td></tr>
+            <tr><td><code>source_set_revision_id</code></td><td>적용한 루트 세트 revision</td></tr>
+            <tr><td><code>source_set_revision_item_id</code></td><td>원본 구성 행</td></tr>
+            <tr><td><code>order_type</code></td><td>세트 부모를 위한 <code>set</code> 추가. 개별 자식은 기존 업무 유형 유지</td></tr>
+          </tbody>
+        </table></div>
+        <p>기존 source ID·버전, 부모 차트 행, 깊이, 적용·가격·계산 JSON은 그대로 활용한다.</p>
+
+        <div class="grid two">
+          <article class="card">
+            <h3>개별 오더</h3>
+            <ul>
+              <li>서버가 활성 병원 오더를 다시 읽음</li>
+              <li>이름·수량·가격·과세·단위·A/X/T/CG/NT·업무 경로를 snapshot</li>
+              <li>마스터와 병원 revision을 직접 기록</li>
+              <li>이후 live catalog join 없이 과거 표시·수납 가능</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Order Set</h3>
+            <ul>
+              <li>부모 행: <code>row_type=set</code>, <code>order_type=set</code>, 업무 없음</li>
+              <li>선택된 개별 오더만 <code>set_child</code> 행 생성</li>
+              <li>중첩 세트 경로는 child snapshot 안에 보존</li>
+              <li>부모 snapshot에 전체 펼치기·사용자 변경·가격 계산을 보존</li>
+            </ul>
+          </article>
+        </div>
+
+        <h3>가격별 청구 원본</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>방식</th><th>부모 세트</th><th>자식 오더</th></tr></thead>
+          <tbody>
+            <tr><td>포함 오더 합산</td><td>청구하지 않음</td><td>선택되고 수납 반영된 자식만 청구</td></tr>
+            <tr><td>세트 고정금액</td><td>세트 금액 청구</td><td>명시적 추가금 자식만 청구</td></tr>
+            <tr><td>구간별 금액</td><td>선택 구간 금액 청구</td><td>명시적 추가금 자식만 청구</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout warn">클라이언트가 보낸 가격·snapshot·세트 펼치기 결과는 신뢰하지 않는다. 서버가 확정 시 다시 계산한다.</div>
+      </section>
+
+      <section>
+        <h2>11. 배포와 병원 동기화</h2>
+        <h3>검증된 마스터 배포</h3>
+        <ol>
+          <li>Airtable 검토 export를 읽는다.</li>
+          <li>이름을 정규화하고 fingerprint를 계산한다.</li>
+          <li>중복 ID·코드, 잘못된 관계, held NT, projection 불일치, 검토 없는 임상 주장을 거부한다.</li>
+          <li>같은 fingerprint의 성공 릴리즈가 있으면 재사용한다.</li>
+          <li>하나의 트랜잭션에서 현재 구조화 행, 증가한 revision, 불변 version, 검토 이벤트를 쓴다.</li>
+          <li>릴리즈를 published로 바꾸고 병원 동기화를 실행한다.</li>
+        </ol>
+        <p>Airtable은 런타임에서 조회하지 않는다.</p>
+
+        <h3>병원 동기화</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>상황</th><th>처리</th></tr></thead>
+          <tbody>
+            <tr><td>새 마스터 오더</td><td><code>pending_activation</code> 복사본과 대기 검토 생성, 병원에 알림</td></tr>
+            <tr><td>미수정 복사본</td><td>전체 projection 자동 교체, revision 전진, catalog revision 증가</td></tr>
+            <tr><td>수정 복사본</td><td>행 전체 보존, 원본·병원 snapshot 비교 검토 생성</td></tr>
+            <tr><td>병원 자체 항목</td><td>무시</td></tr>
+            <tr><td>원본 폐기</td><td>행 유지, 원본 폐기 검토·알림</td></tr>
+            <tr><td>동일 릴리즈 재실행</td><td>새 행·검토를 중복 생성하지 않음</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section>
+        <h2>12. 보안과 RLS</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>비공개 master</h3>
+            <ul>
+              <li>브라우저 Data API 비노출</li>
+              <li><code>authenticated</code> 직접 mutation 권한 없음</li>
+              <li>고정 search path의 검토된 서버/private 함수만 사용</li>
+              <li>임의 테이블명·SQL을 받는 범용 definer 함수 금지</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>병원 데이터</h3>
+            <ul>
+              <li>읽기: 활성 같은 병원 멤버십</li>
+              <li>오더·세트 관리: <code>service_catalog:manage</code>, 1단계 hospital admin</li>
+              <li>차트 적용: 기존 차트 권한 + 신뢰할 수 있는 서버 경계</li>
+              <li>다른 병원 참조: FK·RLS·서버 검증 모두 거부</li>
+            </ul>
+          </article>
+        </div>
+        <p>UPDATE RLS에는 <code>USING</code>과 <code>WITH CHECK</code>를 모두 적용하고, 삭제 권한은 일반 앱 역할에 주지 않는다.</p>
+      </section>
+
+      <section id="migration">
+        <h2>13. 구현 순서</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>단계</th><th>작업</th><th>완료 확인</th></tr></thead>
+          <tbody>
+            <tr><td><span class="status">1A-1</span></td><td>비공개 master 기반·분류·공통어휘·개별 오더·서버 배포기</td><td>fixture 릴리즈를 중복 없이 배포</td></tr>
+            <tr><td><span class="status">1A-2</span></td><td>병원 오더 계보·경로·catalog revision·가격 null·업데이트 검토</td><td>미수정 자동 업데이트와 수정 행 전체 검토</td></tr>
+            <tr><td><span class="status">1A-3</span></td><td><code>order_catalog_items</code>를 새 오더 단일 원본으로 전환</td><td>새 오더는 catalog 계보를 기록하고 <code>service_*</code> 이중 작성 없음</td></tr>
+            <tr><td><span class="status">1B-1</span></td><td>검사항목·패널·오더 프로필과 병원 결과 정의 연결</td><td>패널 결과 여러 개, 차트·청구 오더는 하나</td></tr>
+            <tr><td><span class="status">1B-2</span></td><td>세트 revision·구성·구간·갱신 검토, 기존 세트를 revision 1로 backfill</td><td>관리 수정마다 새 불변 revision</td></tr>
+            <tr><td><span class="status">1B-3</span></td><td>차트의 세트 펼치기·수정·확정·업무·수납</td><td>유효 세트에서 더 이상 <code>unsupported_order_type</code> 없음</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout warn">
+          이 문서만으로 migration이 승인된 것은 아니다. 각 단계는 별도 forward migration과 테스트로 구현하고,
+          원격 적용·호환 테이블 삭제는 별도 승인을 받는다.
+        </div>
+      </section>
+
+      <section>
+        <h2>14. 검증용 초기 데이터</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>항목</th><th>수량</th><th>목적</th></tr></thead>
+          <tbody>
+            <tr><td>개별 오더</td><td>20–40개</td><td>분류·경로·가격·수납·로컬/마스터 복사 검증</td></tr>
+            <tr><td>A</td><td>검증 오더에 필요한 것만</td><td>추측성 taxonomy 방지</td></tr>
+            <tr><td>기타/미분류 A</td><td>사용 유형별 1개</td><td>병원 자체 오더 생성 보장</td></tr>
+            <tr><td>검사 패널</td><td>2개</td><td>결과 묶음과 Order Set 차이 검증</td></tr>
+            <tr><td>Order Set</td><td>3–5개</td><td>합산·고정·구간·중첩 세트 검증</td></tr>
+            <tr><td>병원</td><td>2개</td><td>미수정/수정 복사본과 workspace 격리</td></tr>
+            <tr><td>마스터 릴리즈</td><td>2개</td><td>추가·업데이트·검토·재실행 검증</td></tr>
+            <tr><td>동물</td><td>개·고양이</td><td>불필요한 용어 대량 구축 방지</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="verification">
+        <h2>15. 필수 검증 항목</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>Schema·마스터</h3>
+            <ul>
+              <li>현재 local schema에서 migration 성공</li>
+              <li>잘못된 상태·가격·revision·자식·구간 거부</li>
+              <li>같은 fingerprint 릴리즈 중복 없음</li>
+              <li>중복 코드는 실패, 중복 이름은 경고 가능</li>
+              <li>release 2에서 미수정 자동 업데이트·수정 행 검토</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>보안</h3>
+            <ul>
+              <li>브라우저의 master 직접 접근 거부</li>
+              <li>비로그인·비활성·다른 병원 접근 거부</li>
+              <li>일반 직원의 카탈로그·세트 관리 거부</li>
+              <li>클라이언트 가격·snapshot·펼치기 결과 거부</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>개별·검사 오더</h3>
+            <ul>
+              <li>청구 오더의 가격 null 활성화 거부</li>
+              <li>명시적 0원 무료 허용</li>
+              <li>확정 시 최신 병원 행 재조회·snapshot</li>
+              <li>패널 결과 여러 개지만 오더·청구 행 하나</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Order Set</h3>
+            <ul>
+              <li>부모→자식 세트→개별 오더 성공</li>
+              <li>3계층·순환·다른 병원·중복 원자 오더 실패</li>
+              <li>진료 수정이 프리셋에 역반영되지 않음</li>
+              <li>세 가격 방식 이중 청구 없음</li>
+              <li>자식 revision 2가 부모의 고정 revision 1을 변경하지 않음</li>
+              <li>새 부모 revision 이후에도 과거 snapshot 유지</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>16. 아직 미룬 결정</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>미결사항</th><th>결정 시점</th></tr></thead>
+          <tbody>
+            <tr><td>실제 임상 주장을 검토할 수의사 흐름</td><td>임상값을 검토 완료로 표시·배포하기 전</td></tr>
+            <tr><td>정상범위 물리 schema와 출처</td><td>사용자용 canonical 정상범위 전</td></tr>
+            <tr><td>약품·백신 정규화 테이블</td><td>약품 마스터 구현 전</td></tr>
+            <tr><td>외부 용어·라이선스</td><td>대량 가져오기·재배포 전</td></tr>
+            <tr><td>긴급 권한·대응 시간</td><td>실병원 긴급 차단 전</td></tr>
+            <tr><td>조직·지점 공동 카탈로그</td><td>실제 다지점 요구가 생길 때</td></tr>
+            <tr><td>검색 확장</td><td>작은 fixture와 실제 규모를 측정한 뒤</td></tr>
+            <tr><td>호환 테이블 삭제</td><td>adapter 제거·replay·원격 승인 후</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section>
+        <h2>17. 근거 문서</h2>
+        <ul>
+          <li><a href="./clair-clinical-master-data-target-architecture.md">임상 마스터 데이터 목표 구조</a></li>
+          <li><a href="../../product/domain/workspace-order-catalog-platform.md">Workspace Order Catalog Platform</a></li>
+          <li><a href="./order-catalog-preset-initialization-contract.md">Order Catalog Preset Initialization Contract</a></li>
+          <li><a href="../../product/demo-data/order-sets-and-templates-v1.md">Order Sets and Templates V1</a></li>
+          <li><a href="./order-fulfillment-handoff-contract.md">Order Fulfillment Handoff Contract</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>18. 변경 이력</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>날짜</th><th>변경</th></tr></thead>
+          <tbody>
+            <tr><td>2026-08-18</td><td>비공개 마스터, 병원 복사·업데이트, 검사 패널, 불변 Order Set revision, 차트 스냅샷, RLS, migration, fixture, 검증을 포함한 첫 1단계 상세 DB 명세 작성. migration·런타임 코드는 변경하지 않음.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <footer class="footer">
+        현재 상태: 구현 가능한 상세 설계 초안. DB migration, RLS, API, UI, 원격 Supabase, 실제 임상 데이터는 변경하지 않았다.
+      </footer>
+    </main>
+  </body>
+</html>

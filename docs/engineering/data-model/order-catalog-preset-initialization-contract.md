@@ -12,7 +12,7 @@ related_work:
   - DEN-282
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-25
+last_updated: 2026-08-18
 ---
 
 # Order Catalog Preset Initialization Contract
@@ -50,7 +50,7 @@ System presets should contain every default value needed to create a workspace c
 | Field | Requirement |
 | --- | --- |
 | `presetId` | Stable CLAiR-owned identity. Must not change between versions for the same conceptual order. |
-| `presetVersion` | Version that changes when CLAiR updates default names, category, routing, metadata, or pricing. |
+| `presetVersion` | Server-assigned positive integer revision that changes when CLAiR updates default names, category, routing, or metadata. It is not manually authored in Airtable. |
 | `presetStatus` | `active`, `deprecated`, or `hidden`. Hidden presets are not copied into new workspaces. |
 | `categoryGroup` | One of the supported top-level order categories. |
 | `categoryLabel` | Hospital-admin-facing subcategory label. |
@@ -59,7 +59,7 @@ System presets should contain every default value needed to create a workspace c
 | `defaultBillingName` | Initial invoice-facing name. |
 | `aliases` | Search aliases. |
 | `defaultAvailabilityStatus` | Usually `active`, but can be `inactive` for presets that need setup. |
-| `defaultPriceKrw` | Default future-order price. Synthetic/demo only unless separately validated. |
+| `defaultPriceKrw` | Optional synthetic/demo fixture value only. Phase 1 canonical master does not publish an authoritative suggested price. |
 | `salesUnit` | Billing unit. |
 | `targetSpecies` | Demo filtering field, not medical eligibility guidance. |
 | `defaultDestinationModule` | Destination used after chart confirmation. |
@@ -89,6 +89,8 @@ Workspace catalog rows need source tracking so automatic preset updates do not o
 
 Existing schema already has `standard_order_id`, `source_preset_version`, `availability_status`, pricing fields, destination, task, billing, and metadata. DEN-282 should add only the minimum source-tracking fields needed for the selected local-first implementation.
 
+The target price contract distinguishes unset from intentional zero/free. The workspace owns price, and a billable catalog row cannot activate while price is unset. Existing persisted non-null zero defaults remain compatibility behavior until a separately scoped migration is approved.
+
 ## Initialization Algorithm
 
 For a new workspace:
@@ -112,7 +114,7 @@ When CLAiR ships a new preset version:
 | --- | --- |
 | New preset id | Add a new workspace row automatically when eligible. |
 | Existing workspace row is `unmodified` | Auto-update copied fields to the new preset version. |
-| Existing workspace row is `customized` | Preserve hospital-edited fields. Auto-update only non-customized fields where safe. |
+| Existing workspace row is `customized` | Preserve the entire workspace row and create an update-review state. Phase 1 does not partially auto-merge it. |
 | Existing workspace row is `detached` | Do not auto-update. |
 | Preset was deprecated | Do not hard delete workspace rows. Mark `presetMergeStatus` or future review state. |
 | Conflict cannot be safely resolved | Preserve existing workspace row and mark `presetMergeStatus = conflict` or `update_available`. |
@@ -147,7 +149,7 @@ The minimum tracked fields for phase 1:
 - `pricingRule`
 - type-specific metadata
 
-If field-level tracking is too large for DEN-282, a row-level `customizationState = customized` is acceptable for the first implementation. That means the row is preserved wholesale during auto-merge until a later review UX exists.
+Field-level tracking may explain the update diff, but phase 1 merge is row-conservative. A row with `customizationState = customized` is preserved wholesale until the hospital explicitly reviews the update. Field-by-field automatic merge is a later capability.
 
 ## Chart Snapshot Boundary
 

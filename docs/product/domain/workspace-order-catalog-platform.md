@@ -30,7 +30,7 @@ related_work:
   - DEN-335
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-31
+last_updated: 2026-08-18
 ---
 
 # Workspace Order Catalog Platform
@@ -121,6 +121,8 @@ Rules:
 
 Phase 1 uses immediate price changes for future orders.
 
+CLAiR does not provide an authoritative default or suggested price in phase 1. The hospital workspace owns the current price. The target contract distinguishes an unset price from an intentionally free zero price, and a billable order cannot become active while its price is unset. Existing non-null zero defaults are compatibility behavior until a scoped schema migration changes them.
+
 Past chart and billing records are protected by applied snapshots. If a catalog price changes from 35,000 KRW to 40,000 KRW, already-confirmed encounter orders keep the old amount snapshot.
 
 Effective dates and price history are deferred until real user feedback requires them.
@@ -181,15 +183,13 @@ The dialog must list each unfinished order name with its current status badge. R
 
 ### 9. Order Sets
 
-Order sets are deferred until individual orders are stable.
+Actual Order Set use in the chart is part of phase 1, but it follows the individual-order foundation inside that phase.
 
-Reason:
+**Phase 1A** stabilizes individual-order CRUD, chart search, immutable confirmation snapshots, routing, and billing. **Phase 1B** then reuses those boundaries for immutable set revisions, one pinned child-set layer, chart expansion, encounter-copy editing, confirmation, routing, and billing.
 
-- An order set is a composition of individual orders.
-- Individual order CRUD, snapshot, routing, and billing rules must be reliable first.
-- Set expansion can then reuse the same individual-order snapshot and routing rules.
+Phase 1 is not complete until a valid active set can be selected in the chart, expanded to atomic orders, edited for that encounter, confirmed, snapshotted, routed, and billed without changing the hospital-admin preset.
 
-Project 07's order set foundation can remain available, but user-facing set work should be treated as a later phase.
+The current Project 07 foundation remains useful, but its direct-child membership and chart-confirmation rejection are implementation gaps against this target. A parent set pins the exact child-set revision it reviewed; child changes create update review and never silently propagate into the parent.
 
 ### 10. CSV Template, Not Import
 
@@ -230,7 +230,7 @@ CSV import implementation is a later project. It would include upload UI, parsin
 - DEN-289 security review found that public API input and trusted server-owned snapshot input must remain separate. Public billing candidate routes must not accept client-submitted amount/name snapshots as authority. Supabase chart confirmation routes also need live catalog and live billing gateways before live closeout can claim end-to-end catalog/billing correctness.
 - DEN-288 connected the first billable catalog snapshot sync path. DEN-335 supersedes its timing policy: chart `Order 청구` can create or refresh billing candidates for billable lab, imaging, dispensing, and treatment orders without requiring operational completion first; unfinished work requires explicit user confirmation.
 - DEN-287 connects server-confirmed catalog snapshots to downstream fulfillment work item queues for `lab`, `imaging`, `dispensing`, and `treatment`. Routing uses the persisted applied snapshot destination and task-required flag, preserves idempotent work item creation by order id, and copies only minimal display, billing, instruction, and routing context into the fulfillment source snapshot. `billing_only`, `chart_only`, and `taskRequired: false` catalog rows do not create fulfillment work items.
-- DEN-286 connected chart confirmation for newly selected workspace catalog rows to a server-owned applied snapshot. The confirmation boundary resolves the active catalog row again, ignores client-supplied catalog price/name fields, stores the applied standard name, in-hospital name, billing name, price, sales unit, tax flag, amount basis, target species, care guide, internal instruction, destination, task-required flag, quantity, and line total snapshot, and rejects paused rows or deferred order sets before confirmation.
+- DEN-286 connected chart confirmation for newly selected workspace catalog rows to a server-owned applied snapshot. The confirmation boundary resolves the active catalog row again, ignores client-supplied catalog price/name fields, stores the applied standard name, in-hospital name, billing name, price, sales unit, tax flag, amount basis, target species, care guide, internal instruction, destination, task-required flag, quantity, and line total snapshot, and rejects paused rows or Order Sets before confirmation. Order Set rejection is the confirmed current implementation gap; phase 1B must replace it with validated set expansion and confirmation before phase 1 can be called complete.
 - DEN-285 connected chart `+ Order` selection to the workspace catalog chart-search route. Chart search now reads active workspace catalog rows and active order sets, filters candidates by patient species in the UI, excludes stopped/paused rows through the route boundary, and fills draft display, billing, instruction, and price candidates. Durable confirmation snapshot persistence remains DEN-286.
 - DEN-284 connected hospital-admin drawer create, update, and `사용 중지` actions to the workspace catalog mutation boundary. Phase-1 UX treats the old delete affordance as use-stop: the row remains visible in hospital admin, future chart selection excludes it through `availabilityStatus: paused`, and historical snapshots remain untouched.
 - DEN-291 clarified that the planning-only exclusions do not block implementation issues. For Order Platform implementation issues, the following are approved by 승욱:
