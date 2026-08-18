@@ -7,7 +7,7 @@ status: active
 area: engineering
 doc_type: area-index
 tags: [data-model, schema, persistence, migrations]
-last_updated: 2026-07-23
+last_updated: 2026-08-18
 ---
 
 # Data Model
@@ -18,6 +18,10 @@ Canonical engineering data model documents live here. Use this README as the Git
 
 | Need | Start With |
 | --- | --- |
+| Target architecture for CLAiR clinical master data, workspace copies, governed updates, and applied snapshots | `clair-clinical-master-data-target-architecture.md` |
+| Korean reader view of the same clinical master-data target architecture | `clair-clinical-master-data-target-architecture.ko.html` |
+| Implementable phase-1 tables, columns, constraints, RLS, migration order, fixtures, and verification | `clair-clinical-master-data-phase-1-db-spec.md` |
+| Korean reader view of the phase-1 detailed DB specification | `clair-clinical-master-data-phase-1-db-spec.ko.html` |
 | Current broad DB structure and domain schema draft | `emr-saas-db-structure-spec.ko.md` |
 | English reference for the same DB structure draft | `emr-saas-db-structure-spec.en.md` |
 | Demo seed inventory/readback baseline for local/dev Supabase | `demo-seed-inventory-readback-contract.md` |
@@ -35,6 +39,10 @@ Canonical engineering data model documents live here. Use this README as the Git
 
 | Document | Role |
 | --- | --- |
+| `clair-clinical-master-data-target-architecture.md` | Agent-facing canonical target architecture for the PDF-aligned clinical master scope, CLAiR governance, workspace copies, update behavior, and immutable applied snapshots. |
+| `clair-clinical-master-data-target-architecture.ko.html` | Korean human-readable companion to the clinical master-data target architecture. Keep its scope, decisions, logical families, lifecycle, phases, risks, and unknowns aligned with the Markdown source. |
+| `clair-clinical-master-data-phase-1-db-spec.md` | Agent-facing detailed phase-1 PostgreSQL specification for private master publication, workspace order copies, lab panels, immutable Order Set revisions, snapshots, RLS, adoption, fixtures, and verification. |
+| `clair-clinical-master-data-phase-1-db-spec.ko.html` | Korean human-readable companion to the phase-1 DB specification. Keep table ownership, columns, integrity rules, flows, migration order, and verification aligned with the Markdown source. |
 | `emr-saas-db-structure-spec.ko.md` | Primary Korean data model draft for organization, workspace, auth, patient/guardian, reception, chart, orders, fulfillment, billing, operations, and app-shell state. |
 | `emr-saas-db-structure-spec.en.md` | English companion reference for the DB structure draft. Keep it aligned when material schema guidance changes. |
 | `demo-seed-inventory-readback-contract.md` | Demo DB PR 1 contract for `clair-demo` seed inventory, local/dev readback checks, confirmed coverage, and known seed gaps. |

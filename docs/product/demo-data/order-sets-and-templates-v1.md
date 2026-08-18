@@ -1,7 +1,7 @@
 ---
 title: "Order Sets and Templates V1"
 status: "draft"
-updated: "2026-05-19"
+updated: "2026-08-18"
 owner: "product"
 source_issue: "DEN-99"
 ---
@@ -36,7 +36,7 @@ Product decision: Order sets are managed in a separate hospital-admin Order 세�
 
 ## Order Set Admin Rows
 
-Order sets should appear as `세트` rows in the separate hospital-admin Order 세트 management surface. They are selectable presets in chart-side search, but invoice lines still come from expanded individual orders unless a future package-billing rule explicitly says otherwise.
+Order sets should appear as `세트` rows in the separate hospital-admin Order 세트 management surface. They are selectable presets in chart-side search. Invoice behavior follows the selected `included_order_sum`, `set_fixed_price`, or `range_price` rule, including explicit extra-child billing, rather than assuming that every expanded child becomes an invoice line.
 
 | Set ID | Admin Row Type | Set Category | Set Name | Billing Name | Included Sets | Included Orders | Amount Basis | Set Price KRW | Unit | Availability | Target |
 | --- | --- | --- | --- | --- | ---: | ---: | --- | ---: | --- | --- | --- |
@@ -89,7 +89,7 @@ The Order세트 추가/detail drawer should make the set usable for both chart o
 | `sourceSetVersion` | no | Version used when a set is expanded into chart rows |
 | `appliedSnapshot` | no | Frozen names, prices, tax, amount basis, and included-order order used by a chart-applied set |
 
-Empty order sets are allowed in the admin drawer. They should save set metadata first, then let chart or admin workflows add included orders later.
+Empty order sets are allowed in the admin drawer only as unavailable metadata-only work. Only hospital admin can add or edit preset composition. The chart may edit the encounter-owned applied copy after expansion, but it can never add members back into or otherwise mutate the reusable preset.
 
 ## Included Order Row Contract
 
@@ -115,9 +115,12 @@ For `included_order_sum`, only child rows with billing reflection enabled should
 
 ## Set Expansion Data Rules
 
-- Applying a set creates one parent `chartOrderLine` and child `chartOrderLine` rows for included orders.
+- An Order Set has a stable workspace identity and immutable revisions. Every valid hospital-admin composition or pricing edit creates a new revision for future applications.
+- A parent revision pins the exact child-set revision it contains. A newer child revision does not silently change the parent; it creates update review, and accepting the refresh creates a new parent revision.
+- Normal product behavior does not hard-delete a set or revision. Empty or invalid work remains explicitly unavailable and cannot replace the active revision.
+- Applying a set creates one root parent `chartOrderLine` and child `chartOrderLine` rows only for selected atomic orders.
 - Each expanded child row keeps `sourceSetId`, `parentChartOrderLineId`, `setItemId`, `sortOrder`, and copied pricing fields.
-- Nested sets should preserve both their own parent row and each individual child row so billing, queue routing, and traceability remain explainable.
+- A nested set does not create another transactional parent row. Its exact revision and membership path are frozen in the root/atomic applied snapshots so billing, queue routing, and traceability remain explainable without duplicate set rows.
 - Admin changes to set composition affect future set applications only; existing chart rows keep their applied snapshot.
 
 ## Deferred Screen-Implementation Notes
@@ -145,6 +148,7 @@ Set drawer UX rules from the reference should be finalized during screen impleme
 
 - Chart order add should search individual orders, sets, and templates.
 - Expanding a set creates draft order rows with source set metadata.
+- Chart staff can change the expanded selection and allowed quantities for that encounter, but those edits never change the hospital-admin preset or its revision.
 - Confirmed orders generate destination queue work items and invoice candidates.
 - Templates should not auto-finalize clinical judgment; they only prefill drafts.
 - Hospital admins can duplicate a standard set or template into a workspace custom copy in a future iteration.

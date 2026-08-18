@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR 임상 마스터 데이터 목표 구조</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #182128;
+        --muted: #586874;
+        --line: #d9e1e7;
+        --bg: #f5f8fa;
+        --panel: #ffffff;
+        --soft: #edf5f6;
+        --accent: #0f766e;
+        --accent-strong: #0a5c56;
+        --blue: #245d83;
+        --blue-soft: #edf5fb;
+        --amber: #8a5705;
+        --amber-soft: #fff6df;
+        --red: #9f3a38;
+        --red-soft: #fff0ef;
+        --green-soft: #e9f7f0;
+        --code: #eef2f4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.65;
+      }
+
+      a {
+        color: var(--accent-strong);
+        text-decoration-color: rgba(15, 118, 110, 0.35);
+        text-underline-offset: 0.16em;
+      }
+
+      code {
+        border-radius: 5px;
+        background: var(--code);
+        padding: 0.12rem 0.34rem;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          monospace;
+        font-size: 0.9em;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 34px 0 72px;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background:
+          radial-gradient(circle at right top, rgba(15, 118, 110, 0.11), transparent 38%),
+          linear-gradient(180deg, #fff 0%, #f2f8f8 100%);
+        padding: clamp(26px, 5vw, 52px);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent-strong);
+        font-size: 0.84rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        color: var(--ink);
+        line-height: 1.28;
+      }
+
+      h1 {
+        max-width: 820px;
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3.55rem);
+        letter-spacing: -0.035em;
+      }
+
+      h2 {
+        margin: 52px 0 14px;
+        padding-top: 8px;
+        font-size: clamp(1.45rem, 3vw, 2.05rem);
+        letter-spacing: -0.02em;
+      }
+
+      h3 {
+        margin: 28px 0 10px;
+        font-size: 1.18rem;
+      }
+
+      h4 {
+        margin: 18px 0 8px;
+        font-size: 1rem;
+      }
+
+      p {
+        margin: 10px 0;
+      }
+
+      .lead {
+        max-width: 870px;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 1.08rem;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-top: 24px;
+      }
+
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        padding: 7px 12px;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .toc {
+        margin-top: 20px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 20px;
+      }
+
+      .toc strong {
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      .toc-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px 16px;
+      }
+
+      .toc a {
+        font-size: 0.93rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card,
+      .callout {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      .card h3,
+      .card h4 {
+        margin-top: 0;
+      }
+
+      .card p {
+        color: var(--muted);
+      }
+
+      .callout {
+        margin-top: 18px;
+      }
+
+      .callout.ok {
+        border-color: #addac8;
+        background: var(--green-soft);
+      }
+
+      .callout.warn {
+        border-color: #ead08d;
+        background: var(--amber-soft);
+      }
+
+      .callout.danger {
+        border-color: #e8b6b3;
+        background: var(--red-soft);
+      }
+
+      .callout.info {
+        border-color: #bad7e9;
+        background: var(--blue-soft);
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(80px, 1fr));
+        align-items: stretch;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .flow .node {
+        display: grid;
+        min-height: 94px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        padding: 12px;
+        text-align: center;
+        font-size: 0.92rem;
+        font-weight: 700;
+      }
+
+      .flow .arrow {
+        display: grid;
+        place-items: center;
+        color: var(--accent);
+        font-size: 1.25rem;
+        font-weight: 800;
+      }
+
+      .flow .node.primary {
+        border-color: #9ecfc9;
+        background: var(--soft);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        margin-top: 15px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+
+      table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+      }
+
+      table.wide {
+        min-width: 1480px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--soft);
+        color: #24343e;
+        font-size: 0.9rem;
+      }
+
+      td {
+        font-size: 0.94rem;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      ul,
+      ol {
+        margin: 10px 0;
+        padding-left: 1.35rem;
+      }
+
+      li + li {
+        margin-top: 0.38rem;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: var(--amber-soft);
+        padding: 4px 9px;
+        color: var(--amber);
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: 14px;
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 16px;
+      }
+
+      .step-number {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 800;
+      }
+
+      .step h3 {
+        margin: 2px 0 6px;
+      }
+
+      .section-note {
+        color: var(--muted);
+        font-size: 0.94rem;
+      }
+
+      .footer {
+        margin-top: 54px;
+        border-top: 1px solid var(--line);
+        padding-top: 22px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 900px) {
+        .toc-grid,
+        .grid,
+        .grid.two {
+          grid-template-columns: 1fr;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .step {
+          grid-template-columns: 1fr;
+        }
+
+        .flow .arrow {
+          transform: rotate(90deg);
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .page {
+          width: 100%;
+          padding: 0;
+        }
+
+        .hero,
+        .card,
+        .callout,
+        .table-wrap,
+        .step {
+          break-inside: avoid;
+          box-shadow: none;
+        }
+
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">CLAiR EMR · Clinical Master Data</p>
+        <h1>임상 마스터 데이터 목표 구조</h1>
+        <p class="lead">
+          CLAiR가 제공하는 표준 오더·약품·검사·영상·진단·공통 코드를 병원이 복사해
+          자기 환경에 맞게 사용하고, 실제 진료에는 당시 값을 안전하게 남기기 위한 최종 구조다.
+        </p>
+        <div class="meta">
+          <span class="pill"><span class="status">Draft</span></span>
+          <span class="pill">기준일 2026-08-18</span>
+          <span class="pill">임상 마스터 범위</span>
+          <span class="pill">Supabase/PostgreSQL 목표 구조</span>
+          <span class="pill">구현 완료 주장 아님</span>
+        </div>
+        <div class="callout info">
+          <strong>문서 관계</strong>
+          <p>
+            이 HTML은 승욱 검토용 동반 문서다. AI 에이전트와 향후 구현의 canonical source는
+            <a href="./clair-clinical-master-data-target-architecture.md">영문 Markdown 원본</a>이다.
+            두 문서는 같은 범위·결정·구조·단계·리스크를 유지한다.
+          </p>
+          <p>
+            실제 1단계 컬럼·제약조건·migration 순서는
+            <a href="./clair-clinical-master-data-phase-1-db-spec.ko.html">1단계 DB 상세 명세</a>에서 확인한다.
+          </p>
+        </div>
+      </header>
+
+      <nav class="toc" aria-label="문서 목차">
+        <strong>빠른 이동</strong>
+        <div class="toc-grid">
+          <a href="#summary">핵심 요약</a>
+          <a href="#scope">범위</a>
+          <a href="#decisions">확정된 결정</a>
+          <a href="#layers">3개 데이터 계층</a>
+          <a href="#foundation">공통 기반</a>
+          <a href="#vocab">공통 코드</a>
+          <a href="#order">오더 구조</a>
+          <a href="#medication">약품·백신</a>
+          <a href="#lab">임상병리</a>
+          <a href="#imaging">영상·기타검사</a>
+          <a href="#diagnosis">진단명</a>
+          <a href="#workspace">병원 복사·수정</a>
+          <a href="#lifecycle">배포·업데이트·폐기</a>
+          <a href="#field-map">필드 원본·자동생성</a>
+          <a href="#current">현재 DB와 연결</a>
+          <a href="#phases">구현 단계</a>
+          <a href="#security">보안 원칙</a>
+          <a href="#unknowns">남은 결정</a>
+          <a href="#sources">근거 자료</a>
+        </div>
+      </nav>
+
+      <section id="summary">
+        <h2>1. 핵심 요약</h2>
+        <p>
+          최종 목표는 PDF에 있는 임상 카탈로그 범위를 수용하되, PDF의 Airtable 구조를 그대로
+          복제하지 않고 제품 운영에 맞게 역할을 분리하는 것이다.
+        </p>
+        <div class="flow" aria-label="마스터 데이터 흐름">
+          <div class="node primary">CLAiR<br />공통 마스터</div>
+          <div class="arrow">→</div>
+          <div class="node">병원별<br />복사·수정</div>
+          <div class="arrow">→</div>
+          <div class="node">진료 시점<br />고정 기록</div>
+          <div class="arrow">→</div>
+          <div class="node">검사·영상·조제·<br />처치·수납</div>
+        </div>
+        <div class="grid">
+          <article class="card">
+            <h3>표준은 CLAiR 소유</h3>
+            <p>표준 ID, 분류, 임상 의미, 출처, 버전, 검토·승인 상태를 CLAiR가 관리한다.</p>
+          </article>
+          <article class="card">
+            <h3>운영값은 병원 소유</h3>
+            <p>병원 표시명, 수납명, 가격, 사용 여부, 내부 지시, 장비 매핑은 병원이 관리한다.</p>
+          </article>
+          <article class="card">
+            <h3>과거 기록은 고정</h3>
+            <p>이름·가격·단위가 바뀌어도 과거 차트·검사·수납 기록은 당시 값으로 남는다.</p>
+          </article>
+        </div>
+        <div class="callout ok">
+          <strong>오버엔지니어링 방지 원칙</strong>
+          <p>
+            전체 논리 구조는 지금 설계하지만 모든 테이블을 한 번에 구현하지 않는다.
+            공통 기반과 대표 영역부터 검증한 뒤 유형별로 확장한다.
+          </p>
+        </div>
+      </section>
+
+      <section id="scope">
+        <h2>2. 범위</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>포함</h3>
+            <ul>
+              <li>오더 분류, 행위, 표준 오더</li>
+              <li>약품·백신</li>
+              <li>임상병리검사·검사항목·패널·정상범위·장비 매핑</li>
+              <li>영상검사·기타검사</li>
+              <li>진단명·분류·동의어·케어가이드</li>
+              <li>종·품종·성별·중성화 상태·단위·검체·투여경로</li>
+              <li>외부 코드, 출처, 검토, 버전, 배포, 폐기</li>
+              <li>병원별 복사·수정·업데이트 검토·알림</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>제외</h3>
+            <ul>
+              <li>보호자·환자 개별 기록</li>
+              <li>직원·멤버십·권한 자체</li>
+              <li>예약·접수·차트·실제 오더·결과·수납 거래</li>
+              <li>재고·입출고·구매·공급사</li>
+              <li>실제 HL7·DICOM·PACS·보험·결제 연동</li>
+              <li>자동 진단·자동 처방·임상적 정답 보장</li>
+              <li>라이선스 확인 전 외부 용어 대량 가져오기</li>
+              <li>실제 병원·환자·처방 데이터</li>
+            </ul>
+          </article>
+        </div>
+        <p class="section-note">
+          거래 데이터는 마스터를 참조하거나 당시 값을 복사하지만, 마스터 데이터 자체에는 포함되지 않는다.
+        </p>
+      </section>
+
+      <section id="decisions">
+        <h2>3. 승욱과 확정한 결정</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>주제</th><th>확정 방향</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>범위</td><td>PDF와 같은 임상 카탈로그 범위로 한정한다.</td></tr>
+              <tr><td>데이터 계층</td><td>CLAiR 공통 마스터 → 병원별 복사본 → 진료 시점 고정 기록.</td></tr>
+              <tr><td>병원 자체 항목</td><td>병원이 직접 생성할 수 있으며 CLAiR 업데이트 대상에서 완전히 제외한다.</td></tr>
+              <tr><td>기존 항목 업데이트</td><td>미수정 복사본은 자동 업데이트. 수정된 복사본은 덮어쓰지 않고 비교·선택하게 한다.</td></tr>
+              <tr><td>새 CLAiR 항목</td><td><code>사용 대기</code>로 자동 추가하고 사용자에게 알린 뒤 병원이 활성화한다.</td></tr>
+              <tr><td>폐기</td><td>자동 삭제하지 않고 대체 항목과 함께 알리며 병원이 전환한다.</td></tr>
+              <tr><td>긴급 안전 조치</td><td>예외적으로 신규 사용만 즉시 차단할 수 있으나 이유·승인·감사를 필수로 남긴다.</td></tr>
+              <tr><td>대상 동물</td><td>개·고양이 우선. 기타 반려동물은 컬럼 추가 없이 확장 가능하게 한다.</td></tr>
+              <tr><td>식별자</td><td>CLAiR 내부 ID가 기준. VetSCT·LOINC·ATCvet 등은 선택적 매핑이다.</td></tr>
+              <tr><td>이름</td><td>국문 필수, 영문 선택, 동의어·약어·과거 이름 다중 지원.</td></tr>
+              <tr><td>승인</td><td>초안→검토→배포→폐기 흐름. 임상값은 수의학 전문가 검토가 필요하다.</td></tr>
+              <tr><td>초기 데이터</td><td>기존 Airtable 데이터는 없다. 먼저 비권위 구조·합성 데이터로 시스템을 검증하고, 임상 주장은 검증된 출처와 임상 검토를 갖춘 뒤 추가한다.</td></tr>
+              <tr><td>PDF 코드</td><td>A 행위 구분, X/T 분류, CG 화면 그룹, NT 업무 전달을 분리한다. A는 오더의 필수 의미이지만 오더 ID나 오더 세트를 대체하지 않는다.</td></tr>
+              <tr><td>A 분리·통합</td><td>임상 행위·오더 유형·임상 목적·측정 또는 수행 대상이 같을 때만 같은 A를 사용한다. 이름·가격·포장·제공 구성 차이만으로는 A를 나누지 않는다.</td></tr>
+              <tr><td>A코드 형식</td><td>DB 기본키는 UUID, 업무용 코드는 자동 생성한 <code>A000001</code> 형식으로 분리한다. 코드는 변경·재사용하지 않고 서비스에는 검토된 이름을 우선 표시한다.</td></tr>
+              <tr><td>병원 자체 오더의 A</td><td>1단계에서는 기존 A 또는 유형별 기타/미분류 A를 선택한다. 새 A 배포 후에도 자동 변경하지 않고 병원이 확인해 다시 연결한다.</td></tr>
+              <tr><td>Order Set 구성</td><td>병원 소유로 관리한다. 1단계에서는 부모 세트 → 자식 세트 → 개별 오더의 최대 2개 세트 계층만 허용하고, 개별 오더로 펼친 결과의 순환·중복을 거부한다.</td></tr>
+              <tr><td>Order Set 구성원 상태</td><td>구성원이 없거나 병원에서 사용 중지되면 구성 검토 상태로 바꾸고 신규 적용을 막는다. 일반 CLAiR 폐기는 경고만 하고 활성 병원 복사본을 강제 중지하지 않으며, 긴급 안전 차단은 즉시 신규 적용을 막는다. 과거 기록은 바꾸지 않는다.</td></tr>
+              <tr><td>Order Set 가격</td><td>진료용 선택 묶음이면서 병원 선택에 따라 패키지 가격도 가질 수 있다. 기존의 포함 오더 합산·세트 고정금액·구간별 금액을 유지하고 가격 방식에 따라 하위 청구 기본값을 자동 설정한다. 1단계에는 별도 패키지 테이블을 추가하지 않는다.</td></tr>
+              <tr><td>차트 적용본 수정</td><td>차트에는 해당 진료가 소유하는 적용 복사본을 만든다. 의료진은 확정 전 개별 오더 선택·추가와 허용된 수량을 바꿀 수 있지만 병원관리의 Order Set 프리셋 원본에는 절대 역반영하지 않는다. 1단계에는 필수·잠금 구성원을 만들지 않는다.</td></tr>
+              <tr><td>차트에서 프리셋 만들기</td><td>1단계에서는 차트 적용본을 새 프리셋으로 저장하지 않는다. 재사용 프리셋의 생성·복제·revision은 병원관리에서만 수행하며, 반복 요구가 확인되면 나중에 관리자 검토용 후보 제안을 추가할 수 있다.</td></tr>
+              <tr><td>빈 Order Set</td><td>구성 오더 없이 기본 정보만 저장할 수 있지만 기존 사용 여부를 자동으로 끈다. 별도 초안 관리 기능은 만들지 않으며, 유효한 개별 오더가 하나 이상 있고 구성·가격 검증을 통과한 뒤에만 활성화하고 차트에 노출한다.</td></tr>
+              <tr><td>1단계 Order Set 완료 기준</td><td>차트에서 유효한 세트를 선택·펼치기·진료별 수정·확정하고, 스냅샷·업무 전달·수납까지 실제 동작해야 1단계가 완료된다. 같은 1단계 안에서 개별 오더 기반을 먼저 안정화한다.</td></tr>
+              <tr><td>Order Set revision</td><td>안정적인 세트 ID와 변경 불가능한 revision을 분리한다. 유효한 관리자 수정은 미래 적용용 새 revision을 만들고 과거 적용 기록은 사용한 revision을 그대로 보존한다.</td></tr>
+              <tr><td>중첩 세트 업데이트</td><td>부모는 검토한 자식 세트 revision을 고정 참조한다. 자식 변경은 부모를 자동 변경하지 않고 업데이트 검토를 만들며, 관리자가 반영하면 새 부모 revision을 만든다.</td></tr>
+              <tr><td>Order Set 삭제</td><td>세트와 revision은 일반적으로 삭제하지 않는다. 비어 있거나 잘못된 작업은 명시적으로 사용 중지한 상태로만 저장하고 검증을 통과하기 전에는 활성화하지 않는다.</td></tr>
+              <tr><td>병원 오더 원본</td><td><code>order_catalog_items</code>를 미래의 유일한 병원 오더 원본으로 사용한다. <code>service_*</code>는 호환·이전용이며 별도 작성 원본으로 운영하지 않는다.</td></tr>
+              <tr><td>마스터 DB 물리 구조</td><td>비공개 <code>master</code> schema에 공통 ID·상태 registry인 <code>master.master_records</code>와 유형별 1:1 상세 테이블을 둔다. 병원 복사본은 현재 앱 schema에 둔다.</td></tr>
+              <tr><td>수정 복사본 병합</td><td>수정 필드 목록은 비교에 쓰되, 1단계 자동 병합은 행 단위로 보수적으로 처리한다. 수정된 행은 일부 필드도 자동 반영하지 않고 전체 업데이트를 검토하게 한다.</td></tr>
+              <tr><td>revision·릴리즈</td><td>레코드 revision은 정수, 릴리즈 ID는 시스템 자동 생성값으로 관리한다. Airtable에서 직접 입력하지 않고 검증된 서버 배포기가 부여한다.</td></tr>
+              <tr><td>중복 판단</td><td>ID·키·코드만 강한 유일성을 적용한다. 이름 중복은 허용하며 유사 이름은 경고·검토 대상으로 표시하고 자동 병합하지 않는다.</td></tr>
+              <tr><td>초기 A 목록</td><td>1단계 검증 오더에 실제 필요한 A와 사용 유형별 기타/미분류 A만 만든다.</td></tr>
+              <tr><td>1단계 가격</td><td>CLAiR 권위 가격은 제공하지 않는다. 병원이 가격을 정하고, 미설정과 명시적 0원·무료를 구분한다. 청구 오더는 가격 미설정 상태로 활성화할 수 없다.</td></tr>
+              <tr><td>Lab Panel</td><td>검사 패널은 하나의 개별 검사 오더가 생성할 결과 항목 묶음이다. 패널 구성 검사는 별도 차트·청구 오더가 아니며, 독립 오더 묶음은 Order Set이 담당한다.</td></tr>
+              <tr><td>정상범위</td><td>구조와 검증기는 만들 수 있지만 출처·임상 검토가 없는 정상범위는 사용자에게 배포하지 않는다. 합성값은 숨겨진 시스템 테스트에서만 사용한다.</td></tr>
+              <tr><td>초기 데이터 목적</td><td>먼저 새 마스터 복사·업데이트·오더·세트·스냅샷·업무·수납 동작을 검증한다. 수의학적 정확성은 다음 우선순위이며 미검토값을 임상 검증값처럼 표시하지 않는다.</td></tr>
+              <tr><td>1인 운영</td><td>구조·합성 검증 데이터는 한 명의 CLAiR 운영자가 작성·검토·배포할 수 있지만 행위자·시각·출처·사유를 남긴다. 임상 주장은 실제 수의사 검토 없이는 검토 완료로 표시하지 않는다.</td></tr>
+              <tr><td>유형별 상세</td><td>공통 오더와 약품·검사·영상 상세를 분리하고 중요한 값은 구조화한다.</td></tr>
+              <tr><td>병원 항목 제안</td><td>후보 제출은 가능하지만 자동 승격하지 않는다. 승인 시 새로운 CLAiR ID를 만든다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>4. PDF를 어떻게 해석했나</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>PDF 영역</th><th>목표 구조에서의 역할</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>A·T·X 코드</td><td>A는 오더의 의미와 유형을 식별하는 행위 구분, T와 X는 그 상위 진료·업무 분류</td></tr>
+              <tr><td>CG 코드</td><td>차트 검색 화면의 표시 그룹</td></tr>
+              <tr><td>NT 코드</td><td>오더 확정 후 생성할 업무와 전달 위치</td></tr>
+              <tr><td><code>[order] item</code></td><td>표준 오더</td></tr>
+              <tr><td><code>[order] medicine</code></td><td>약품 오더 상세와 동물별 기본값</td></tr>
+              <tr><td><code>[order] pathology*</code></td><td>검사 오더, 표준 검사항목, 장비 매핑, 정상범위</td></tr>
+              <tr><td><code>[order] other exam</code></td><td>기타검사와 결과 입력 구조</td></tr>
+              <tr><td><code>[order] radiology</code></td><td>영상검사와 modality</td></tr>
+              <tr><td><code>[assessment] *</code></td><td>진단명·분류·동의어·케어가이드</td></tr>
+              <tr><td><code>[breeds] *</code>, <code>[sex] item</code></td><td>공통 동물 분류</td></tr>
+              <tr><td>아카이브 ERD</td><td>과거 구조 참고용이며 현재 목표 구조가 아님</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          PDF는 마이그레이션 명세가 아니다. Airtable 연결 필드, 중복 룩업, 문자열 정상범위,
+          미결 메모는 다시 정의하고 검토해야 한다.
+        </div>
+      </section>
+
+      <section>
+        <h2>5. 설계 원칙</h2>
+        <ol>
+          <li>이름은 바뀔 수 있지만 CLAiR ID는 재사용하거나 의미를 바꾸지 않는다.</li>
+          <li>CLAiR 원본, 병원 복사본, 진료 기록은 서로 다른 소유자와 수명주기를 갖는다.</li>
+          <li>마스터 변경이 과거 기록을 바꾸지 않는다.</li>
+          <li>일반적인 삭제 대신 사용 중지·폐기·대체 관계를 사용한다.</li>
+          <li>임상 분류, 화면 그룹, 업무 전달, 수납 규칙을 하나의 코드에 섞지 않는다.</li>
+          <li>검사 단위·정상범위·투여경로 같은 중요 값은 구조화한다.</li>
+          <li>동물별 규칙은 관계로 표현하고 종마다 컬럼을 추가하지 않는다.</li>
+          <li>외부 표준은 CLAiR ID에 연결하는 버전형 매핑으로 사용한다.</li>
+          <li>임상 의미·용법·정상범위·케어가이드는 전문가 검토 없이 배포하지 않는다.</li>
+          <li>작고 검토 가능한 릴리즈로 확장한다.</li>
+          <li>병원 경계는 UI가 아니라 서버와 DB 권한으로 보호한다.</li>
+          <li>이 문서만으로 기존 테이블을 삭제·이름 변경·원격 적용하지 않는다.</li>
+          <li>같은 의미를 사람이 두 필드에서 각각 수정하지 않는다. 호환 필드는 한 원본에서 자동 생성한다.</li>
+          <li>CLAiR 마스터는 정규화하고, 병원 복사본과 진료 스냅샷만 출처를 남긴 채 의도적으로 중복 저장한다.</li>
+        </ol>
+      </section>
+
+      <section id="layers">
+        <h2>6. 3개 데이터 계층</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>① CLAiR canonical master</h3>
+            <ul>
+              <li>CLAiR 중앙 소유</li>
+              <li>초안·검토 데이터 비공개</li>
+              <li>배포된 버전만 병원 제공</li>
+              <li>안정적인 내부 ID와 버전 이력</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>② Workspace catalog</h3>
+            <ul>
+              <li>한 병원 workspace 소유</li>
+              <li>병원 표시명·가격·사용 여부</li>
+              <li>내부 지시·장비 매핑·병원별 프리셋</li>
+              <li>CLAiR 복사본 또는 병원 자체 항목</li>
+              <li>병원 소유 Order Set과 최대 2개 세트 계층</li>
+              <li>1단계에는 오더별 CG·NT 예외 없음</li>
+              <li>맞는 A가 없으면 유형별 기타/미분류 A 사용</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>③ Applied snapshot</h3>
+            <ul>
+              <li>진료·오더·처방·결과·수납 소유</li>
+              <li>당시 이름·가격·단위·업무 전달 보존</li>
+              <li>마스터 변경 후에도 독립적으로 읽힘</li>
+              <li>원본 ID·버전은 추적용</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>7. Supabase/PostgreSQL 경계</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>구역</th><th>역할</th><th>권한 원칙</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>비공개 <code>master</code> schema</td>
+                <td>CLAiR 원본, 검토, 배포, 버전, 외부 코드</td>
+                <td>Data API 비노출. 서버·운영자만 접근.</td>
+              </tr>
+              <tr>
+                <td>Workspace 테이블</td>
+                <td>병원 복사본, 자체 항목, 업데이트 검토, 장비 설정</td>
+                <td>workspace RLS와 관리자 수정 권한.</td>
+              </tr>
+              <tr>
+                <td>거래 테이블</td>
+                <td>실제 오더·처방·결과·수납·감사</td>
+                <td>기존 업무별 API/RPC/RLS 경계.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Canonical 데이터가 필요하면 브라우저가 비공개 테이블을 직접 읽는 대신, 공개된 배포본만
+          제공하는 좁은 서버 API 또는 검토된 read model을 사용한다.
+        </p>
+        <div class="callout info">
+          모든 canonical 항목은 내부 UUID와 재사용하지 않는 안정적인 master key를 갖는다.
+          A는 별도로 자동 생성한 <code>A000001</code> 형식의 불변 코드를 사용한다. 코드에 분류 의미를 넣지 않고,
+          서비스의 기본 표시명은 검토된 행위 이름으로 한다.
+        </div>
+      </section>
+
+      <section id="foundation">
+        <h2>8. 공통 마스터 기반</h2>
+        <p>
+          모든 표준 오더·약품·검사·진단·공통 코드는 아래 기반을 공유한다. 표의 이름은 목표
+          논리명이며 한 번의 마이그레이션으로 모두 만들라는 뜻은 아니다.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>목표 테이블</th><th>역할</th><th>핵심 정보</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>master.master_records</code></td><td>모든 표준 개념의 안정적인 ID와 상태</td><td>master key, 유형, 상태, 현재 버전</td></tr>
+              <tr><td><code>master.master_record_names</code></td><td>국문·영문·동의어·약어·과거 이름</td><td>언어, 이름 종류, 검색 여부</td></tr>
+              <tr><td><code>master.master_external_codes</code></td><td>VetSCT·LOINC·ATCvet·UCUM 등 연결</td><td>표준명, 버전, 코드, 매핑 상태, 라이선스</td></tr>
+              <tr><td><code>master.master_sources</code></td><td>데이터 출처</td><td>제목, URI, 버전, 확인일, 라이선스 메모</td></tr>
+              <tr><td><code>master.master_record_sources</code></td><td>어떤 주장·값이 어느 출처에 근거하는지 연결</td><td>항목, 출처, 적용 범위</td></tr>
+              <tr><td><code>master.master_releases</code></td><td>검토된 변경을 하나의 배포 단위로 묶음</td><td>릴리즈 버전, 상태, 배포일, 변경 설명</td></tr>
+              <tr><td><code>master.master_record_versions</code></td><td>비교·감사용 불변 버전 스냅샷</td><td>항목, revision, release, snapshot, 검토자</td></tr>
+              <tr><td><code>master.master_review_events</code></td><td>초안·검토·승인·거절·폐기·긴급조치 이력</td><td>행위, 담당자, 사유, 시각</td></tr>
+              <tr><td><code>master.master_replacement_links</code></td><td>대체·동등·상위·하위 관계</td><td>기존 항목, 새 항목, 관계 종류</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout info">
+          버전 스냅샷의 JSON은 비교와 감사용이다. 현재 임상값을 조회·검증하는 유일한 저장소로
+          사용하지 않는다.
+        </div>
+      </section>
+
+      <section id="vocab">
+        <h2>9. 공통 동물·임상 코드</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>목표 테이블</th><th>역할</th><th>중요한 설계</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>master.species</code></td><td>동물 종</td><td>개·고양이 우선, 기타 반려동물 확장</td></tr>
+              <tr><td><code>master.breeds</code></td><td>품종과 종 연결</td><td>믹스는 가짜 품종이 아니라 환자-품종 관계로 표현</td></tr>
+              <tr><td><code>master.biological_sexes</code></td><td>생물학적 성별</td><td>중성화 상태와 분리</td></tr>
+              <tr><td><code>master.reproductive_statuses</code></td><td>중성화·피임 상태</td><td>PDF의 합쳐진 성별 값을 분리</td></tr>
+              <tr><td><code>master.units</code></td><td>단위의 기계 코드와 표시명</td><td>UCUM 선택 매핑, 대소문자 보존</td></tr>
+              <tr><td><code>master.specimen_types</code></td><td>혈액·혈청·혈장·소변·조직·스왑 등</td><td>검사 ID와 정상범위의 필수 문맥</td></tr>
+              <tr><td><code>master.administration_routes</code></td><td>SC·IV·IM·PO·CRI 등</td><td>외부 코드 선택 매핑</td></tr>
+              <tr><td><code>master.frequency_codes</code></td><td>SID·BID·TID·QID 등</td><td>코드 자체를 보편적 처방 권고로 취급하지 않음</td></tr>
+              <tr><td><code>master.result_input_types</code></td><td>숫자·텍스트·이미지·선택·등급 등</td><td>검사와 기타검사에서 공통 사용</td></tr>
+              <tr><td><code>master.imaging_modalities</code></td><td>XR/DX·US·CT·MR 등</td><td>DICOM 선택 매핑</td></tr>
+              <tr><td><code>master.body_sites</code></td><td>신체 부위</td><td>VetSCT/SNOMED 선택 매핑</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="order">
+        <h2>10. 오더 분류·화면·업무 전달</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>목표 테이블</th><th>PDF 개념</th><th>책임</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>master.order_categories</code></td><td>X·T</td><td>명시적인 부모 관계를 가진 상위·하위 업무 분류</td></tr>
+              <tr><td><code>master.clinical_actions</code></td><td>A</td><td>필수 행위 구분. 안정적인 코드·검토된 이름·오더 유형·T 부모를 가지며 여러 정확한 오더가 공유 가능</td></tr>
+              <tr><td><code>master.chart_groups</code></td><td>CG</td><td>차트 검색 화면의 기본 표시 그룹. 현재 <code>categoryGroup</code>과 다른 개념</td></tr>
+              <tr><td><code>master.task_routes</code></td><td>NT</td><td>검사·영상·조제·처치 또는 업무 없음까지 표현하는 전달 규칙</td></tr>
+              <tr><td><code>master.classification_paths</code></td><td>A/CG/NT와 해석된 T/X</td><td>허용된 행위·화면·업무 전달 조합. T와 X는 A의 부모 관계를 따라 해석</td></tr>
+              <tr><td><code>master.orders</code></td><td>order item</td><td>정확한 표준 오더 ID·공통값·선택적 유형별 상세와 1단계에서 정확히 하나의 분류 경로</td></tr>
+              <tr><td><code>master.order_species_links</code></td><td>Canine/Feline/Others</td><td>종별 컬럼 없이 대상 동물 연결</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout info">
+          <strong>PDF에 있는 내용과 없는 내용</strong>
+          <p>
+            PDF는 <code>A ⊂ T ⊂ X</code>, 오더와 A의 연결, 행위 구분으로 오더 유형을 식별하는 규칙,
+            CG의 차트 표시 역할, NT의 다음 업무 역할을 설명한다. 유형별 부가정보 연결은 별도이며 필요하지 않은 오더에는 없을 수 있다.
+            코드 유일성·허용 조합·버전은 정하지 않았으므로 CLAiR 구조에서 추가로 검증한다.
+          </p>
+        </div>
+        <p>
+          Airtable에서는 <code>Code Dictionary</code>로 X/T/A/CG/NT 초안을 관리하고,
+          <code>Classification Paths</code>에서 허용 조합을 만든다. Airtable 룩업은 편집·검토용일 뿐이며,
+          배포기가 참조를 검증해 PostgreSQL의 정규화된 ID로 저장한다. 서비스는 Airtable을 직접 조회하지 않는다.
+        </p>
+
+        <h3>행위 구분 A</h3>
+        <ul>
+          <li>배포된 모든 마스터 오더는 분류 경로를 통해 활성 행위 구분 하나로 연결된다.</li>
+          <li>하나의 행위 구분을 여러 정확한 마스터 오더가 공유할 수 있다. A는 “무슨 행위인가”, 오더 ID는 “정확히 어느 상품·항목인가”를 답한다.</li>
+          <li>오더 세트는 병원이 여러 오더를 묶은 별도 구성이고 A를 부여하지 않는다.</li>
+          <li>A코드는 UUID와 분리된 자동 생성 <code>A000001</code> 형식이며 변경·재사용하지 않는다. 서비스에는 코드보다 검토된 국문명·영문명·별칭을 사용해 표시·검색·필터·분석한다.</li>
+          <li>오더 유형은 A에서 한 번만 정한다. 현재 <code>categoryGroup</code>은 여기에서 자동 생성하며 PDF의 CG와 섞지 않는다.</li>
+          <li>A는 T 하나에, T는 X 하나에 속한다. T·X 이름을 A에 다시 입력하지 않고 관계로 해석한다.</li>
+          <li>임상 행위·오더 유형·임상 목적·측정 또는 수행 대상이 같을 때만 같은 A를 공유한다. 표시명·가격·포장·제공 구성만 다르면 A를 나누지 않고, 분석물·시술·대상·목적이 다르면 별도 A로 나눈다.</li>
+          <li>병원 자체 오더는 기존 A를 선택한다. 맞는 A가 없으면 유형별 기타/미분류 A로 우선 사용하고 신규 A 후보를 제안할 수 있다. 새 A가 배포되면 알림과 수동 재연결 선택을 제공하며 자동 변경하지 않는다.</li>
+          <li>유형별 부가정보는 정확한 오더에 선택적으로 연결한다. 임상병리 유형이어도 세포검사·검체 채취처럼 부가정보가 없을 수 있다.</li>
+          <li>1단계에서는 A마다 활성 분류 경로 하나만 허용하고, 실제 예외가 생길 때까지 오더별 CG·NT 예외를 만들지 않는다.</li>
+        </ul>
+
+        <h3>1단계 CG 8종</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>코드</th><th>의미</th></tr></thead>
+            <tbody>
+              <tr><td><code>CG_CONSULTATION</code></td><td>진료</td></tr>
+              <tr><td><code>CG_PREVENTION</code></td><td>예방</td></tr>
+              <tr><td><code>CG_EXAM</code></td><td>검사</td></tr>
+              <tr><td><code>CG_PROCEDURE</code></td><td>처치</td></tr>
+              <tr><td><code>CG_SURGERY</code></td><td>수술</td></tr>
+              <tr><td><code>CG_INPATIENT</code></td><td>입원</td></tr>
+              <tr><td><code>CG_THERAPY</code></td><td>치료</td></tr>
+              <tr><td><code>CG_MEDICATION_SUPPLY</code></td><td>처방·조제·의료물품</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>전체</code>와 <code>수납</code>은 CG가 아니라 화면 보기다. 경구제·안약·주사제 등은 하위 분류나 검색 조건으로 둔다.</p>
+
+        <h3>1단계 NT 7종과 자동 생성값</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>NT 코드</th><th>전달 위치</th><th>Task 생성</th><th>사용 상태</th></tr></thead>
+            <tbody>
+              <tr><td><code>NT_LAB</code></td><td><code>lab</code></td><td><code>true</code></td><td>사용</td></tr>
+              <tr><td><code>NT_IMAGING</code></td><td><code>imaging</code></td><td><code>true</code></td><td>사용</td></tr>
+              <tr><td><code>NT_DISPENSING</code></td><td><code>dispensing</code></td><td><code>true</code></td><td>사용</td></tr>
+              <tr><td><code>NT_TREATMENT</code></td><td><code>treatment</code></td><td><code>true</code></td><td>사용</td></tr>
+              <tr><td><code>NT_INPATIENT</code></td><td><code>inpatient</code></td><td><code>true</code></td><td>구조에는 포함. 런타임·DB 제약 연동 전까지 사용 보류</td></tr>
+              <tr><td><code>NT_BILLING_ONLY</code></td><td><code>billing_only</code></td><td><code>false</code></td><td>임상 후속 업무가 없을 때만 사용</td></tr>
+              <tr><td><code>NT_CHART_ONLY</code></td><td><code>chart_only</code></td><td><code>false</code></td><td>후속 업무와 기본 수납 후보가 모두 없을 때 사용</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>수납 반영 여부는 NT와 별도 정책이다. NT만 보고 자동 판단하지 않는다.</p>
+        <h3>공통 오더에 들어가는 정보</h3>
+        <ul>
+          <li>표준 ID와 행위 구분·오더 유형을 해석하는 검증된 분류 경로 한 개</li>
+          <li>기본 업무 전달과 Task 생성 여부</li>
+          <li>기본 판매 단위와 수납 반영 여부</li>
+          <li>일반 케어가이드·내부 지시 연결</li>
+          <li>행위 유형에 맞는 선택적 부가정보 연결</li>
+        </ul>
+        <p>
+          1단계에는 CLAiR의 권위 있는 기본·추천 가격을 제공하지 않는다. 병원 가격이 실제 운영의 기준이고,
+          과거 수납은 적용 스냅샷이 기준이다. 목표 구조는 가격 미설정과 명시적 0원·무료를 구분하며,
+          청구 대상 오더는 병원이 가격을 의도적으로 정하기 전에는 활성화할 수 없다.
+        </p>
+        <div class="callout info">
+          A는 오더 ID를 대체하지 않는다. canonical 오더는 분류 경로를 통해 A를 한 번만 참조하고,
+          서비스 읽기값과 병원 복사본은 출처를 남긴 채 코드·이름을 자동 생성할 수 있다.
+        </div>
+
+        <h3>병원 Order Set 구성</h3>
+        <div class="callout info">
+          PDF에는 개별 오더 항목은 있지만 Order Set 테이블, 세트 중첩 관계, 펼치기 규칙은 없다.
+          따라서 Order Set은 CLAiR canonical 마스터가 아니라 병원 workspace가 소유하는 별도 구성으로 둔다.
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>목표 테이블</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td><code>order_sets</code></td><td>안정적인 병원 세트 ID·상태와 현재 활성 revision 연결</td></tr>
+              <tr><td><code>order_set_revisions</code></td><td>관리자가 유효하게 저장할 때마다 만드는 변경 불가능한 기본정보·가격 revision</td></tr>
+              <tr><td><code>order_set_revision_items</code></td><td>개별 병원 오더 또는 고정된 자식 세트 revision을 참조하는 변경 불가능한 구성 행</td></tr>
+              <tr><td><code>order_set_revision_price_ranges</code></td><td>구간 가격 revision에 속하는 구조화된 가격 구간. 별도 패키지 마스터가 아님</td></tr>
+              <tr><td><code>order_set_revision_update_reviews</code></td><td>새 자식 revision을 부모가 검토하는 기록. 수락하면 새 부모 revision 생성</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>세트 구성원은 같은 workspace의 개별 <code>order_catalog_items</code> 또는 자식 Order Set 하나를 참조할 수 있다.</li>
+          <li>1단계는 부모 세트 → 자식 세트 → 개별 오더까지만 허용한다. 세 번째 세트 계층은 허용하지 않는다.</li>
+          <li>적용 전 허용된 구조를 재귀적으로 펼쳐 개별 오더를 만든다.</li>
+          <li>자기 자신 참조, 순환 참조, 다른 workspace 참조, 펼친 결과의 같은 개별 오더 중복을 거부한다. 자동으로 중복 제거하지 않는다.</li>
+          <li>세트는 자체 workspace ID·사용 상태·구성 revision을 갖지만 A 행위 구분이나 A코드를 갖지 않는다.</li>
+          <li>병원관리에서 유효하게 수정할 때마다 미래 적용용 새 revision을 만든다. 안정적인 세트 ID는 최신 활성 revision을 가리키고 과거 revision과 적용 스냅샷은 변경하지 않는다.</li>
+          <li>부모 revision은 검토한 자식 세트 revision을 고정 참조한다. 자식 revision이 바뀌면 부모 업데이트 검토를 알리지만 자동 반영하지 않으며, 관리자가 갱신하면 새 부모 revision을 만든다.</li>
+          <li>세트와 revision은 일반적으로 삭제하지 않는다. 비어 있거나 유효하지 않은 수정은 명시적인 사용 중지 확인 후 비활성 상태로만 저장하며 현재 활성 revision을 대체하거나 차트에 노출할 수 없다.</li>
+          <li>적용 시 원본 세트 ID·revision·부모-자식 계층과 펼쳐진 개별 오더 스냅샷을 보존한다.</li>
+          <li>마스터나 병원 오더가 나중에 바뀌어도 이미 적용한 세트 기록은 바뀌지 않는다.</li>
+          <li>구성원을 찾을 수 없거나 병원에서 사용 중지했다면 세트를 <code>needs_composition_review</code>로 바꾸고, 구성을 고칠 때까지 신규 적용을 막는다.</li>
+          <li>CLAiR 원본의 일반 폐기는 경고를 표시하되 병원 복사본이 활성 상태라면 자동 중지하지 않는다. 병원이 기존 폐기 전환 정책에 따라 전환 시점을 정한다.</li>
+          <li>긴급 안전 차단은 병원 사용 상태보다 우선하며 해당 오더가 포함된 모든 세트의 신규 적용을 즉시 막는다. 모든 경우에 과거 적용 기록은 그대로 읽을 수 있다.</li>
+          <li>세트는 우선 진료용 선택 묶음이지만 병원이 원하면 청구 가능한 패키지로도 사용한다. 1단계는 현재 구조의 <code>included_order_sum</code>, <code>set_fixed_price</code>, <code>range_price</code> 세 방식을 유지한다.</li>
+          <li>포함 오더 합산은 청구 대상으로 표시한 개별 오더만 합산하고 부모 세트 금액을 추가하지 않는다.</li>
+          <li>세트 고정금액은 병원이 정한 세트 금액을 청구한다. 하위 오더 청구는 기본 해제하고 명시적으로 선택한 추가 항목만 더한다.</li>
+          <li>구간별 금액은 적용 시점 문맥에서 병원이 정의한 구간 금액을 선택한다. 하위 오더는 고정금액과 동일하게 명시적 추가 항목만 더한다.</li>
+          <li>고정·구간 가격은 세트 과세를 사용한다. 포함 오더 합산은 각 오더의 과세를 유지하고 서로 섞이면 수정 가능한 세트 과세값 대신 <code>혼합</code>으로 자동 표시한다.</li>
+          <li>적용 시 가격 방식, 세트·구간 금액, 하위 단가·수량·청구 여부·과세, 최종 금액을 모두 스냅샷으로 보존한다.</li>
+          <li>관리 화면은 <code>가격 계산 방식</code>을 사용하고, 청구서 세트명 표시·케어가이드 전달·하위 금액 반영을 서로 다른 의미로 표시한다. 가격 방식에 따른 기본값은 자동 설정해 이중 청구를 막는다.</li>
+          <li>1단계에는 별도 패키지 마스터나 테이블을 만들지 않는다. 환불·금액 배분·회계·정산의 별도 요구가 실제로 생길 때 재검토한다.</li>
+          <li>차트에서 세트를 선택하면 해당 진료가 소유하는 적용 복사본을 만들고, 확정 전 펼쳐진 개별 오더를 보여준다. 차트는 병원관리의 프리셋이나 구성 행을 직접 수정하지 않는다.</li>
+          <li>적용본은 각 구성원의 <code>defaultSelected</code>, <code>defaultQuantity</code>, 수량 출처를 초기값으로 사용한다. 의료진은 개별 오더를 선택·해제·추가하고 해당 오더가 허용하는 수량을 조정할 수 있다.</li>
+          <li>1단계에는 필수·잠금 구성원을 만들지 않는다. 개별 오더를 최소 한 개 선택해야 하며 실제 선택과 수량을 스냅샷에 저장한다.</li>
+          <li>포함 오더 합산은 선택·수량 변경에 따라 다시 계산한다. 고정·구간 가격은 정해진 세트 금액을 유지하고 명시적인 추가 청구 오더만 총액을 바꾼다.</li>
+          <li>차트 적용본의 변경은 프리셋에 자동 저장·학습·역반영하지 않는다. 프리셋을 바꾸려면 병원관리에서 별도로 편집하고 새 구성 revision을 만들어 이후 적용분에만 사용한다.</li>
+          <li>1단계 차트에는 <code>새 프리셋으로 저장</code>을 제공하지 않는다. 재사용 세트의 생성·복제·수정은 병원관리에서만 수행해 관리 권한·검증·변경 이력을 한곳에 둔다.</li>
+          <li>반복되는 요구가 실제로 확인되면 차트에서 관리자 검토용 프리셋 후보를 제안할 수 있지만, 차트가 직접 프리셋을 배포하거나 바꾸지는 않는다.</li>
+          <li>병원관리에서는 구성원을 추가하기 전에도 세트 기본 정보를 저장할 수 있지만 기존 사용 여부를 끈 상태로 저장한다. 1단계에는 별도 초안 상태나 초안 관리 흐름을 추가하지 않는다.</li>
+          <li>새 빈 세트는 기본적으로 사용할 수 없고 차트 검색·적용에 나타나지 않는다. 펼친 결과에 유효하고 선택 가능한 개별 오더가 하나 이상 있으며 구성·가격 검증을 모두 통과해야 활성화할 수 있다.</li>
+          <li>1단계는 차트에서 활성 세트를 실제 선택하고, 진료 소유 적용본으로 펼쳐 수정·확정한 뒤 스냅샷·업무 전달·수납까지 처리할 수 있어야 완료된다. 같은 1단계 안에서 1A 개별 오더 기반을 먼저 만들고 1B에서 세트 런타임을 연결한다.</li>
+          <li>현재 런타임과 DB는 직접 <code>child_order_id</code>만 지원한다. 2계층 세트는 별도 migration과 서비스 도입 작업이 필요하며 이 문서 변경만으로 구현된 것은 아니다.</li>
+        </ul>
+      </section>
+
+      <section id="medication">
+        <h2>11. 약품·백신</h2>
+        <p>약품 자체와 병원에서 선택하는 오더를 분리한다. 하나의 약품이 여러 오더에 사용될 수 있다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>목표 테이블</th><th>역할</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>master.medication_ingredients</code></td><td>성분 ID·이름과 ATCvet 등 외부 매핑</td></tr>
+              <tr><td><code>master.medication_products</code></td><td>제품·제형·함량 표시·베이스 용량·포장</td></tr>
+              <tr><td><code>master.medication_product_ingredients</code></td><td>제품별 성분 함량과 단위</td></tr>
+              <tr><td><code>master.medication_order_profiles</code></td><td>표준 오더와 제품, 조제·반올림 기준 연결</td></tr>
+              <tr><td><code>master.medication_species_defaults</code></td><td>검토된 종별 기본 경로·용량 기준·횟수·기간·안내</td></tr>
+              <tr><td><code>master.vaccine_profiles</code></td><td>백신 대상·분류·차수 정책</td></tr>
+              <tr><td><code>master.vaccine_schedule_steps</code></td><td>검토된 접종 순서와 간격</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          종별 기본값은 검토된 초기값일 뿐 자동 처방의 정답이 아니다. 실제 처방은 수의사가 결정하고
+          적용된 용량·단위·경로·횟수·기간을 별도 기록한다. 마약류는 별도 보안·규제 범위다.
+        </div>
+      </section>
+
+      <section id="lab">
+        <h2>12. 임상병리검사</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>목표 테이블</th><th>역할</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>master.lab_tests</code></td><td>표준 검사항목·결과 유형·표준 단위·LOINC 선택 매핑</td></tr>
+              <tr><td><code>master.lab_panels</code></td><td>CBC·혈액화학 같은 패널</td></tr>
+              <tr><td><code>master.lab_panel_items</code></td><td>패널에 포함되는 항목과 순서</td></tr>
+              <tr><td><code>master.lab_order_profiles</code></td><td>표준 오더와 검사·패널·검체 요구 연결</td></tr>
+              <tr><td><code>master.lab_reference_ranges</code></td><td>출처와 검토가 있는 표준 정상범위</td></tr>
+              <tr><td><code>workspace_lab_devices</code></td><td>병원 소유 검사 장비와 연동 설정</td></tr>
+              <tr><td><code>workspace_lab_device_test_mappings</code></td><td>장비 코드·이름·단위를 표준 검사항목에 연결</td></tr>
+              <tr><td><code>workspace_lab_reference_ranges</code></td><td>병원·장비·방법별 검증된 정상범위 예외</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout info">
+          검사 패널과 Order Set은 다르다. 하나의 개별 검사 오더는 하나의 검사항목 또는 패널에 연결되고,
+          패널 구성 검사는 그 한 오더의 결과 입력칸이므로 별도 차트 오더나 청구 행이 아니다.
+          서로 독립적으로 실행·청구할 수 있는 개별 오더 묶음은 Order Set으로 구성한다.
+        </div>
+        <h3>정상범위는 문자열이 아니라 문맥으로 저장</h3>
+        <div class="grid two">
+          <article class="card">
+            <h4>적용 문맥</h4>
+            <ul>
+              <li>검사항목</li>
+              <li>종·필요 시 품종</li>
+              <li>성별·중성화 상태</li>
+              <li>나이 하한·상한·단위·포함 여부</li>
+              <li>검체·방법·장비</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h4>결과와 근거</h4>
+            <ul>
+              <li>결과 단위</li>
+              <li>숫자 하한·상한 또는 정성값</li>
+              <li>출처·검토자·버전</li>
+              <li>유효 시작·종료일</li>
+            </ul>
+          </article>
+        </div>
+        <p>
+          PDF의 <code>[6;96]</code> 같은 문자열 표현을 현재 구조의 기준으로 사용하지 않는다.
+          1단계는 정상범위 구조와 검증기를 구현할 수 있지만, 검증된 출처와 임상 검토가 없는 값은 사용자용 canonical 데이터로 배포하지 않는다.
+          합성 범위는 숨겨진 테스트 fixture에서만 사용하고 임상 검증값처럼 표시하지 않는다.
+        </p>
+      </section>
+
+      <section id="imaging">
+        <h2>13. 영상·기타검사</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>영상검사</h3>
+            <ul>
+              <li><code>master.imaging_procedures</code>: modality·신체부위·조영·준비·판독 요구</li>
+              <li><code>master.imaging_protocols</code>: 사용 요구가 확인된 뒤 추가할 선택 구조</li>
+              <li><code>workspace_imaging_devices</code>: 병원 장비</li>
+              <li><code>workspace_imaging_destinations</code>: PACS·장비·파일 전달 설정</li>
+            </ul>
+            <p>DICOM modality 매핑은 열어두지만 실제 PACS 연동을 완료했다고 주장하지 않는다.</p>
+          </article>
+          <article class="card">
+            <h3>기타검사</h3>
+            <ul>
+              <li><code>master.other_exam_profiles</code>: 검사별 결과 구조</li>
+              <li><code>master.exam_result_fields</code>: 결과 항목·유형·단위·필수 여부·순서</li>
+              <li><code>master.exam_option_sets</code>: 선택지 그룹</li>
+              <li><code>master.exam_options</code>: 코드형 선택지</li>
+            </ul>
+            <p>숫자·텍스트·이미지·단일/복수 선택·등급·서술형을 구조적으로 지원한다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="diagnosis">
+        <h2>14. 진단명·케어가이드</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>목표 테이블</th><th>역할</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>master.diagnosis_categories</code></td><td>계통·질환 등 계층형 진단 분류</td></tr>
+              <tr><td><code>master.diagnoses</code></td><td>안정적인 진단 ID, 이름, 대상 동물, 상태</td></tr>
+              <tr><td><code>master.diagnosis_category_links</code></td><td>하나의 진단을 여러 분류와 연결</td></tr>
+              <tr><td><code>master.care_guides</code></td><td>검토된 정의·주의·일반 관리·치료 안내</td></tr>
+              <tr><td><code>master.diagnosis_care_guide_links</code></td><td>진단과 케어가이드 버전 연결</td></tr>
+              <tr><td><code>master.diagnosis_order_suggestions</code></td><td>자동 실행이 아닌 선택적 추천 관계. 별도 승인 전 보류</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          실제 차트에서는 자유입력을 계속 허용한다. 카탈로그 선택은 검색과 추적을 돕지만
+          진단의 임상적 정확성을 자동으로 보장하지 않는다.
+        </p>
+      </section>
+
+      <section id="workspace">
+        <h2>15. 병원 복사·수정 모델</h2>
+        <p>
+          현재 <code>public.order_catalog_items</code>는 병원별 오더 카탈로그의 기반으로 유지한다.
+          목표 구조는 즉시 이름을 바꾸는 것이 아니라 출처·수정·업데이트 의미를 보강한다.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>필드</th><th>의미</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>origin_type</code></td><td><code>clair_master</code> 또는 <code>workspace_custom</code></td></tr>
+              <tr><td><code>source_master_record_id</code></td><td>CLAiR 원본. 병원 자체 항목은 없음</td></tr>
+              <tr><td><code>source_master_revision</code></td><td>현재 복사본이 반영한 원본 버전</td></tr>
+              <tr><td><code>initial_imported_revision</code></td><td>처음 복사한 버전</td></tr>
+              <tr><td><code>last_auto_merged_revision</code></td><td>마지막 자동 병합 버전</td></tr>
+              <tr><td><code>customization_state</code></td><td><code>unmodified</code>·<code>customized</code>·<code>detached</code></td></tr>
+              <tr><td><code>customized_fields</code></td><td>병원이 수정한 필드 목록</td></tr>
+              <tr><td><code>merge_status</code></td><td>최신·업데이트 있음·충돌·원본 폐기·분리</td></tr>
+              <tr><td><code>availability_status</code></td><td>사용 대기·사용·일시 중지·비활성</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          1단계 병합은 행 단위로 보수적으로 처리한다. <code>customized_fields</code>는 차이를 설명할 수 있지만,
+          <code>customization_state = customized</code>인 행은 일부 필드도 자동 병합하지 않고 전체를 보존한 채 업데이트 검토를 만든다.
+          필드별 자동 병합은 충돌 동작과 화면을 검증한 뒤 추가한다.
+        </p>
+        <h3>업데이트 검토와 알림</h3>
+        <ul>
+          <li><code>workspace_master_updates</code>: 병원별 새 항목·변경·폐기·대체·긴급조치 상태</li>
+          <li><code>workspace_master_update_diffs</code>: 원본·현재 병원값·새 값 비교</li>
+          <li>기존 <code>notification_events</code>: 사용자가 업데이트 검토 화면으로 들어가는 알림</li>
+        </ul>
+        <p>알림이 필요한 경우는 새 항목, 업데이트 있음, 충돌, 폐기·대체, 긴급 안전 차단이다.</p>
+      </section>
+
+      <section id="lifecycle">
+        <h2>16. 검토·배포·업데이트·폐기</h2>
+        <div class="flow" aria-label="마스터 라이프사이클">
+          <div class="node">초안</div>
+          <div class="arrow">→</div>
+          <div class="node">검토 중</div>
+          <div class="arrow">→</div>
+          <div class="node primary">배포됨</div>
+          <div class="arrow">→</div>
+          <div class="node">폐기 예정<br />→ 폐기</div>
+        </div>
+        <ul>
+          <li>레코드 revision은 서버가 부여하는 양의 정수이고, 릴리즈 ID는 시스템이 자동 생성하는 변경 불가능한 값이다.</li>
+          <li>Airtable은 작성·검토 화면일 뿐이다. 검증된 서버 배포기가 참조·출처·상태·유일성·자동 생성값을 확인한 뒤 revision과 릴리즈 스냅샷을 쓴다.</li>
+          <li>1인 운영 단계에는 한 명이 구조·합성 검증 데이터를 작성·검토·배포할 수 있지만 행위자·시각·출처·사유를 기록한다. 이것만으로 임상값이 임상 검토 완료가 되지는 않는다.</li>
+        </ul>
+        <h3>병원 업데이트 처리</h3>
+        <ol>
+          <li>검토가 끝난 마스터 릴리즈를 배포한다.</li>
+          <li>안정적인 원본 ID로 병원 복사본을 찾는다.</li>
+          <li>새 항목은 <code>사용 대기</code>로 한 번만 복사하고 알린다.</li>
+          <li>병원이 수정하지 않은 복사본은 안전하게 자동 업데이트한다.</li>
+          <li>병원이 수정한 복사본은 행 전체를 보존하고 비교·선택 상태로 둔다. 필드별 자동 병합은 하지 않는다.</li>
+          <li>병원 자체 항목은 무시한다.</li>
+          <li>같은 릴리즈를 다시 실행해도 중복되지 않아야 한다.</li>
+        </ol>
+        <div class="grid two">
+          <article class="card">
+            <h3>일반 폐기</h3>
+            <ul>
+              <li>CLAiR·병원·과거 기록을 삭제하지 않음</li>
+              <li>대체 항목이 있으면 연결</li>
+              <li>병원에 알림</li>
+              <li>병원이 전환 후 사용 중지</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>긴급 안전 차단</h3>
+            <ul>
+              <li>지정된 임상 책임자와 사유 필수</li>
+              <li>신규 선택·활성화 즉시 차단</li>
+              <li>과거 기록 보존</li>
+              <li>높은 우선순위 알림과 감사</li>
+              <li>해결·대체·해제 검토 경로 필수</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>17. 진료 시점 스냅샷</h2>
+        <p>과거 기록을 이해하는 데 필요한 값만 복사한다. 마스터 DB 전체를 복제하지 않는다.</p>
+        <ul>
+          <li>CLAiR 원본 ID와 버전</li>
+          <li>병원 카탈로그 ID와 원본 유형</li>
+          <li>표준명·병원 표시명·수납명</li>
+          <li>당시 분류·채택된 경우의 행위 분류·화면 그룹·업무 전달</li>
+          <li>대상 동물 문맥</li>
+          <li>가격·판매 단위·과세·수납 반영</li>
+          <li>실제로 적용된 케어가이드·내부 지시</li>
+          <li>업무에 필요한 약품·검사·영상·기타검사 상세</li>
+        </ul>
+        <div class="callout ok">
+          나중에 마스터나 병원 카탈로그가 이름 변경·가격 변경·사용 중지·폐기되어도 이 기록은
+          그대로 읽혀야 한다.
+        </div>
+      </section>
+
+      <section id="current">
+        <h2>18. 현재 저장소와 목표 구조 연결</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>현재 구조</th><th>목표에서의 처리</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>public.order_catalog_items</code></td><td>미래의 유일한 병원 오더 원본으로 유지하고 출처·수정·업데이트 의미를 확장</td></tr>
+              <tr><td><code>public.order_sets</code>, <code>public.order_set_items</code></td><td>현재는 <code>child_order_id</code>로 개별 오더만 직접 참조한다. 안정적인 세트 ID, 변경 불가능한 revision·구성 행, 고정 자식 revision 구조로 별도 migration한다.</td></tr>
+              <tr><td><code>public.lab_test_categories</code>, <code>public.lab_test_items</code></td><td>현재 병원 결과지 구조를 유지하며 이후 CLAiR 표준 검사와 연결</td></tr>
+              <tr><td><code>public.order_catalog_lab_test_item_links</code></td><td>병원 오더-결과지 연결로 유지하고 원본 계보 추가</td></tr>
+              <tr><td><code>public.diagnosis_catalog</code></td><td>CLAiR 표준 진단과 병원 자체 진단·별칭 의미를 분리</td></tr>
+              <tr><td><code>public.service_categories</code>, <code>public.service_items</code>, <code>public.service_item_prices</code></td><td>호환·이전 입력으로만 취급하고 새 이중 작성은 금지한다. <code>order_catalog_items</code>로 매핑·backfill한 뒤 별도 검증과 승인으로 폐기한다.</td></tr>
+              <tr><td><code>public.orders</code>와 결과·업무·수납</td><td>마스터 밖의 거래 데이터로 유지하고 스냅샷 추적만 보강</td></tr>
+              <tr><td>환자의 종·품종 문자열</td><td>환자 영역의 별도 마이그레이션에서 공통 코드와 연결</td></tr>
+              <tr><td><code>public.vital_presets</code></td><td>이번 PDF 기반 범위 밖. 구현 패턴만 참고</td></tr>
+              <tr><td><code>server-order-catalog-core.ts</code></td><td>현재 초기화·병합 동작을 재사용하고 이후 canonical gateway 연결</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="field-map">18.1 필드별 원본·자동생성·병원수정·스냅샷</h3>
+        <p>
+          아래 표는 현재 서비스 필드, PDF 코드, 앞으로 만들 마스터 필드, 병원 수정값이
+          서로 같은 값을 따로 관리하지 않도록 기준을 정한 것이다.
+        </p>
+        <div class="table-wrap">
+          <table class="wide">
+            <thead>
+              <tr>
+                <th>의미</th>
+                <th>현재 CLAiR 필드</th>
+                <th>마스터 원본</th>
+                <th>병원 복사 시 자동 생성</th>
+                <th>병원 수정</th>
+                <th>진료 시점 스냅샷</th>
+                <th>상태·무결성 규칙</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>표준 오더 ID</td>
+                <td><code>standardOrderId</code></td>
+                <td><code>master.orders</code>의 안정적인 키·ID</td>
+                <td>출처 필드와 현재 호환 필드에 같은 원본 ID를 복사</td>
+                <td>마스터 복사본은 불가. 병원 자체 항목은 별도 로컬 ID 생성</td>
+                <td>마스터 ID·버전과 병원 카탈로그 ID</td>
+                <td>확정. 한 ID를 다른 의미에 재사용하지 않음</td>
+              </tr>
+              <tr>
+                <td>병원 복사본 ID</td>
+                <td><code>id</code>, <code>workspaceId</code></td>
+                <td>없음</td>
+                <td>복사하거나 병원이 만들 때 한 번 생성</td>
+                <td>불가</td>
+                <td>병원 카탈로그 ID</td>
+                <td>확정. 마스터 복사본은 <code>workspace + source master</code> 조합당 하나</td>
+              </tr>
+              <tr>
+                <td>Order Set ID·구성</td>
+                <td><code>order_sets</code>, <code>order_set_items</code></td>
+                <td>1단계 canonical 원본 없음. 병원 소유</td>
+                <td>canonical 복사 없음. 같은 workspace의 세트·오더 참조와 구성 revision 계산</td>
+                <td>최대 2개 세트 계층 안에서 가능</td>
+                <td>세트 ID·revision·부모-자식 계층·펼쳐진 개별 오더</td>
+                <td>확정 목표. 순환·3번째 세트 계층·다른 workspace·개별 오더 중복을 거부. 구성원 누락·병원 사용 중지는 구성 검토, 긴급 안전 차단은 신규 사용 차단. 현재 저장 구조는 migration 전까지 1단계</td>
+              </tr>
+              <tr>
+                <td>Order Set 가격·청구</td>
+                <td><code>amountBasis</code>, <code>setPriceKrw</code>, 세트·하위 청구/수량/단가 필드</td>
+                <td>없음. 병원 패키지 가격은 CLAiR 마스터 소유가 아님</td>
+                <td>가격 방식별 청구 기본값과 화면 총액·과세 요약 계산</td>
+                <td>가능. 병원이 방식·금액/구간·하위 청구·해당 과세를 결정</td>
+                <td>방식, 세트/구간 금액, 하위 단가·수량·청구·과세, 최종 금액</td>
+                <td>확정. 합산은 선택 하위만, 고정·구간은 세트와 명시적 추가 하위만 청구. 혼합 과세는 자동 계산. 1단계 별도 패키지 테이블 없음</td>
+              </tr>
+              <tr>
+                <td>차트 적용 Order Set 선택</td>
+                <td><code>defaultSelected</code>, <code>defaultQuantity</code>, <code>quantitySource</code>, 차트 적용 행</td>
+                <td>병원 프리셋은 초기값만 제공</td>
+                <td>진료 소유의 작업 복사본으로 펼침</td>
+                <td>해당 진료에서만 선택·개별 오더 추가·허용 수량 변경 가능</td>
+                <td>실제 오더·수량·원본 세트/revision·변경 결과</td>
+                <td>확정. 개별 오더 최소 하나 필요. 1단계 필수·잠금과 차트의 새 프리셋 저장 없음. 적용 변경은 프리셋을 생성·수정하지 않고 프리셋 생성·복제·revision은 병원관리에서만 수행</td>
+              </tr>
+              <tr>
+                <td>오더 유형</td>
+                <td><code>categoryGroup</code>의 <code>ServiceItemType</code></td>
+                <td><code>master.clinical_actions.item_type</code></td>
+                <td>현재 <code>categoryGroup</code>을 자동 생성</td>
+                <td>필드 직접 수정 불가. 병원 자체 항목은 유효한 행위 구분·경로 선택</td>
+                <td>적용된 유형 코드·이름</td>
+                <td>확정된 호환 필드. PDF의 CG가 아니며, 부가정보가 있으면 이 유형과 일치해야 함</td>
+              </tr>
+              <tr>
+                <td>X 분류</td>
+                <td>전용 필드 없음. 현재 <code>categoryLabel</code> 의미는 혼재</td>
+                <td>선택된 A의 T 부모를 통해 해석한 X 부모</td>
+                <td>A → T → X 관계로 코드·이름을 해석하고 필요한 호환 표시값 생성</td>
+                <td>1단계 오더별 예외 없음. 병원 자체 항목은 유효한 경로 선택</td>
+                <td>X 코드·이름</td>
+                <td>확정. 코드와 이름을 따로 수정하지 않음</td>
+              </tr>
+              <tr>
+                <td>T 분류</td>
+                <td><code>tCode</code>, <code>tCodeLabel</code></td>
+                <td>선택된 A의 T 부모</td>
+                <td>A → T 관계에서 두 필드를 함께 생성</td>
+                <td>1단계 오더별 예외 없음</td>
+                <td>T 코드·이름</td>
+                <td>확정. Code Dictionary가 이름의 유일한 원본</td>
+              </tr>
+              <tr>
+                <td>A 행위 구분</td>
+                <td>없음</td>
+                <td>선택된 분류 경로의 필수 <code>master.clinical_actions</code> 참조</td>
+                <td>별도 행위 참조와 읽기용 코드·이름을 단계적으로 추가. <code>categoryGroup</code>·<code>tCode</code> 재사용 금지</td>
+                <td>마스터 복사본 직접 수정 불가. 병원 자체 항목은 기존 A 또는 유형별 기타/미분류 경로 선택</td>
+                <td>적용한 A 코드·검토된 이름</td>
+                <td>확정. 병원은 canonical A를 만들지 않으며 새 A가 배포돼도 병원 확인 없이 자동 재연결하지 않음</td>
+              </tr>
+              <tr>
+                <td>CG 화면 그룹</td>
+                <td>전용 필드 없음</td>
+                <td>선택된 <code>classification_path</code>의 CG</td>
+                <td>차트가 도입할 때 CG 전용 읽기값 생성. <code>categoryGroup</code> 재사용 금지</td>
+                <td>1단계 오더별 예외 없음</td>
+                <td>적용된 CG 코드·이름</td>
+                <td>초기 8종 확정. 전체·수납은 CG가 아님</td>
+              </tr>
+              <tr>
+                <td>NT 업무 전달</td>
+                <td><code>defaultDestinationModule</code>, <code>defaultTaskRequired</code></td>
+                <td>선택된 <code>classification_path</code>의 NT</td>
+                <td>10장의 고정 규칙으로 전달 위치와 Task 여부를 함께 생성</td>
+                <td>직접 수정·오더별 예외 없음</td>
+                <td>NT 코드·이름과 실제 전달·Task 결정</td>
+                <td>7종 확정. <code>NT_INPATIENT</code>는 런타임 연동 전 사용 보류</td>
+              </tr>
+              <tr>
+                <td>수납 반영</td>
+                <td><code>billingReflectionEnabled</code></td>
+                <td>NT와 분리된 선택적 마스터 기본값</td>
+                <td>기본값 복사</td>
+                <td>병원 수납 정책으로 수정 가능</td>
+                <td>실제 수납 반영값</td>
+                <td>확정. NT만 보고 자동 판단하지 않음</td>
+              </tr>
+              <tr>
+                <td>표준명·병원 표시명·수납명</td>
+                <td><code>standardOrderName</code>, <code>inHospitalOrderName</code>, <code>billingName</code></td>
+                <td>CLAiR 국문 표준명·선택 영문명·검토된 기본 이름</td>
+                <td>표준명을 복사하고 표시명·수납명 초기값 생성</td>
+                <td>표시명·수납명 가능, CLAiR 표준명 불가</td>
+                <td>세 이름의 당시 실제값</td>
+                <td>확정. 병원 이름 변경이 CLAiR 이름을 바꾸지 않음</td>
+              </tr>
+              <tr>
+                <td>검색 별칭</td>
+                <td><code>aliases</code></td>
+                <td>CLAiR 동의어·약어·과거 이름</td>
+                <td>CLAiR 별칭과 병원 별칭을 검색 시 합침</td>
+                <td>병원 별칭만 별도 수정</td>
+                <td>보통 저장하지 않음</td>
+                <td>물리 분리 제안. 마스터 업데이트가 병원 별칭을 지우면 안 됨</td>
+              </tr>
+              <tr>
+                <td>사용 상태</td>
+                <td><code>availabilityStatus</code>, preset 상태</td>
+                <td>마스터 작성·사용·긴급 상태</td>
+                <td>새 항목은 <code>pending_activation</code>, 폐기는 검토 상태 생성</td>
+                <td>병원 사용 상태 수정 가능</td>
+                <td>보통 불필요. 출처·버전은 보존</td>
+                <td>확정. 마스터 상태와 병원 상태는 서로 다른 필드</td>
+              </tr>
+              <tr>
+                <td>가격·과세·판매단위·계산규칙</td>
+                <td><code>priceKrw</code>, <code>taxIncluded</code>, <code>salesUnit</code>, <code>pricingRule</code>, <code>roundingRule</code></td>
+                <td>1단계 CLAiR 권위 가격 없음</td>
+                <td>가격을 복사하지 않고 병원이 미설정·0원·유료를 의도적으로 결정</td>
+                <td>가능. 병원값이 운영 기준</td>
+                <td>실제 가격·과세·단위·금액 기준·반올림</td>
+                <td>확정. 미설정과 0원을 구분하고 청구 가격 미설정 행은 활성화 불가. 과거 수납은 스냅샷을 읽음</td>
+              </tr>
+              <tr>
+                <td>대상 동물</td>
+                <td><code>targetSpecies</code></td>
+                <td>관계형 종 적용 범위</td>
+                <td>현재 서비스용 배열로 자동 변환</td>
+                <td>병원 필터는 별도 저장 가능. 임상 적용 범위를 몰래 바꾸면 안 됨</td>
+                <td>환자 종과 당시 적용 제한</td>
+                <td>관계형 목표 확정. 현재 배열은 호환값</td>
+              </tr>
+              <tr>
+                <td>케어가이드·병원 내부 지시</td>
+                <td><code>careGuide</code>, <code>internalInstruction</code>, 전달 플래그</td>
+                <td>버전형 CLAiR 케어가이드. 병원 내부 지시는 CLAiR 소유 아님</td>
+                <td>가이드 참조와 기본 전달 상태 복사</td>
+                <td>전달 켜기·끄기와 내부 지시 추가 가능. 원본 가이드 편집 불가</td>
+                <td>실제 적용된 가이드 버전·내용과 내부 지시</td>
+                <td>원본과 병원값 분리 확정</td>
+              </tr>
+              <tr>
+                <td>약품·검사·영상 상세</td>
+                <td>metadata JSON, 검사 연결 ID와 관련 행</td>
+                <td>유형별 구조화 테이블</td>
+                <td>현재 모듈에 필요한 값과 원본 ID만 투영</td>
+                <td>병원 장비·결과지 매핑과 로컬 처방 프리셋은 별도 관리</td>
+                <td>실제 처방·결과 구조·장비/방법·시술값</td>
+                <td>유형 분리 확정. 검증할 임상 관계를 JSON 하나에 숨기지 않음</td>
+              </tr>
+              <tr>
+                <td>원본 버전·병합 상태</td>
+                <td><code>sourcePresetVersion</code>, 가져온/병합 버전, 수정·병합 상태</td>
+                <td>변경 불가한 마스터 revision과 release</td>
+                <td>배포기가 출처를 쓰고 sync가 병합 상태 계산</td>
+                <td>직접 수정 불가</td>
+                <td>마스터 revision과 병원 카탈로그 ID</td>
+                <td>확정. 같은 릴리즈 재실행은 중복을 만들지 않음</td>
+              </tr>
+              <tr>
+                <td>외부 코드</td>
+                <td>공통 필드 없음</td>
+                <td>VetSCT·LOINC·ATCvet·UCUM·DICOM 버전형 매핑</td>
+                <td>서비스 기능이 필요할 때만 복사</td>
+                <td>직접 수정 불가. 병원 로컬 매핑은 별도 검토 기록</td>
+                <td>사건 해석에 꼭 필요한 매핑만</td>
+                <td>1단계 보류. 외부 코드가 CLAiR ID를 대체하지 않음</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>현재 필드 중 자동으로 만들어야 하는 값</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>유일한 원본</th><th>현재 호환 필드</th><th>규칙</th></tr></thead>
+            <tbody>
+              <tr><td>마스터 오더 키</td><td><code>standardOrderId</code></td><td>이름으로 만들지 않고 안정적인 키를 그대로 복사</td></tr>
+              <tr><td><code>master.clinical_actions.item_type</code></td><td><code>categoryGroup</code></td><td>정해진 유형표로 생성. PDF CG가 아님</td></tr>
+              <tr><td>분류 경로의 표시 규칙</td><td><code>categoryLabel</code></td><td>현재 UI 호환용으로 생성. 별도 분류 원본으로 사용하지 않음</td></tr>
+              <tr><td>A의 T 부모</td><td><code>tCode</code>, <code>tCodeLabel</code></td><td>A → T 관계에서 코드와 검토된 이름을 함께 복사</td></tr>
+              <tr><td>분류 경로의 NT</td><td><code>defaultDestinationModule</code>, <code>defaultTaskRequired</code></td><td>10장의 고정 NT 매핑 사용. 충돌하면 배포 거부</td></tr>
+              <tr><td>분류 경로의 CG</td><td>향후 CG 전용 읽기값</td><td>차트가 도입할 때 새 전용 값 사용. <code>categoryGroup</code> 재사용 금지</td></tr>
+              <tr><td>분류 경로의 A</td><td>향후 A 전용 참조·읽기값</td><td>관리·검색·필터·분석에는 검토된 이름을 표시. 코드는 기본 화면의 주 표시명이 아님</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>정규화·무결성 통과 조건</h3>
+        <ol>
+          <li>X/T/A/CG/NT 코드는 <code>코드 종류 + 코드</code> 조합으로 중복될 수 없고 다른 의미로 재사용하지 않는다.</li>
+          <li>A는 오더 유형 하나와 T 부모 하나를 갖고, T는 X 부모 하나를 갖는다. T·X 이름을 A에 수정 가능한 값으로 복사하지 않는다.</li>
+          <li>분류 경로는 A·CG·NT의 ID를 참조한다. 해석된 X/T/A/CG/NT 조합은 중복될 수 없고, 1단계에서는 A마다 활성 경로 하나만 허용한다.</li>
+          <li>배포된 오더는 유효한 분류 경로 하나만 갖는다. 여러 오더가 같은 A·경로를 공유할 수 있지만 오더 세트에는 A를 부여하지 않는다.</li>
+          <li>없는 코드, 사용 중지·폐기·보류 코드를 참조한 경로는 배포할 수 없다. 입원 NT는 연동 전까지 활성 경로에서 금지한다.</li>
+          <li>오더 유형, 선택적 유형별 상세, NT, 수납 정책의 조합을 배포 전에 검사한다. 유형이 맞더라도 부가정보가 불필요하면 빈 상세 레코드를 만들지 않는다.</li>
+          <li>자동 생성 필드가 원본과 다르면 배포나 병원 복사를 거부한다.</li>
+          <li>마스터 복사본은 <code>workspace + source master</code> 조합당 하나다. 재실행은 새 행을 만들지 않는다.</li>
+          <li>마스터 원본과 병원 수정값을 비교할 수 있게 분리한다. 수정된 병원값을 자동 업데이트로 덮지 않는다.</li>
+          <li>배포된 revision과 진료 스냅샷은 변경하지 않는다.</li>
+          <li>Airtable은 사람이 보기 쉬운 편집·검토 화면이고, 검증된 배포기만 ID·버전·자동생성값·릴리즈를 쓴다.</li>
+          <li>유형별 기타/미분류 A는 정상적인 임시 분류로 사용하되 검토 대상으로 보이고, 새 A가 생겨도 자동 변경하지 않는다.</li>
+          <li>Order Set은 같은 workspace 안에서 최대 2개 세트 계층만 가지며 순환 없이 사용 가능한 개별 오더로 펼쳐져야 한다. 같은 개별 오더가 두 번 나오면 자동 제거하지 않고 거부한다.</li>
+          <li>구성원이 없거나 병원에서 사용 중지되면 구성을 다시 확인할 때까지 세트 적용을 막는다. 일반 원본 폐기는 활성 병원 복사본을 강제 중지하지 않지만 긴급 안전 차단은 포함 세트의 신규 사용을 즉시 막으며 과거 기록은 바꾸지 않는다.</li>
+          <li>Order Set 적용에는 하나의 가격 계산 원본만 존재한다. 합산 방식은 세트 금액을 함께 청구할 수 없고, 고정·구간 방식은 명시적 추가 항목이 아닌 하위 오더를 함께 청구할 수 없다. 과세와 최종 금액은 선택한 방식과 스냅샷 입력값에서 계산한다.</li>
+          <li>차트의 Order Set 수정은 진료 소유 적용본에서만 수행한다. 개별 오더 최소 하나를 포함해 유효성을 확인하고 실제 선택·수량·가격을 스냅샷한 뒤 확정하며, 병원 프리셋이나 구성 revision은 바꿀 수 없다.</li>
+          <li>1단계 차트는 Order Set 프리셋을 생성·복제·배포·수정할 수 없다. 모든 재사용 프리셋 변경은 병원관리 권한과 감사 경계를 통과한다.</li>
+          <li>빈 Order Set은 기존 사용 여부를 끈 상태로만 저장할 수 있다. 유효한 개별 오더가 하나 이상 있고 구성·가격 검증을 통과해야 활성화할 수 있으며, 비활성 세트는 차트에서 검색하거나 적용할 수 없다.</li>
+          <li>유효한 Order Set 수정은 새 변경 불가능한 revision을 만든다. 안정적인 세트 ID는 이후 적용에 사용할 활성 revision을 가리키고 이전 revision과 진료 스냅샷은 변경하지 않는다.</li>
+          <li>부모 revision은 특정 자식 세트 revision을 참조한다. 자식 업데이트는 부모 검토를 만들고 자동 전파하지 않으며, 수락하면 새 부모 revision을 만든다.</li>
+          <li><code>order_catalog_items</code>가 미래의 유일한 병원 오더 작성 원본이다. <code>service_*</code>는 매핑된 호환값 또는 이전 입력일 뿐 별도 카탈로그로 작성할 수 없다.</li>
+          <li>기술 ID·안정 키·코드는 유일하다. 표시명·수납명·국문·영문·별칭·과거 이름은 유일하지 않으며 유사 이름은 경고·검토만 만들고 자동으로 같은 ID로 합치지 않는다.</li>
+          <li>병원 가격은 미설정과 명시적 0원·무료를 구분한다. 가격이 없는 청구 오더는 활성화할 수 없고 0원은 병원이 의도적으로 저장했을 때만 유효하다.</li>
+          <li>검사 패널은 한 개별 검사 오더 안의 결과 항목으로만 펼친다. 별도 차트 오더·청구 행을 만들지 않으며 독립 오더 조합은 Order Set으로 만든다.</li>
+          <li>수정된 병원 행은 1단계 동기화에서 전체를 보존한다. 필드 차이는 보여줄 수 있지만 병원이 검토를 수락하기 전에는 일부 필드도 자동 병합하지 않는다.</li>
+        </ol>
+        <div class="callout warn">
+          이 문서가 생겼다는 이유만으로 현재 테이블을 이름 변경·삭제·소유권 변경하지 않는다.
+          영역별 도입 계획과 검증을 거친다.
+        </div>
+      </section>
+
+      <section id="phases">
+        <h2>19. 단계별 구현 순서</h2>
+        <div class="step">
+          <div class="step-number">0</div>
+          <div>
+            <h3>아키텍처와 데이터 거버넌스</h3>
+            <p>목표 구조 승인, 역할 정의, 출처·중복 규칙, 필드 원본 매핑 유지, 검증 오더에 필요한 A와 유형별 기타/미분류 A만 준비, 작은 검증 데이터셋.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">1A</div>
+          <div>
+            <h3>개별 오더 기반</h3>
+            <p>
+              ID·이름·버전·출처·외부 코드·릴리즈·검토, 종·단위·검체·결과 유형,
+              확정된 A와 오더 역할 분리, 표준 개별 오더, 병원 복사·업데이트·알림,
+              개별 오더 CRUD·차트 검색·확정 스냅샷·업무 전달·수납.
+            </p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">1B</div>
+          <div>
+            <h3>임상병리와 실제 Order Set 런타임</h3>
+            <p>
+              검사 항목·패널, 변경 불가능한 Order Set revision, 고정 자식 revision, 최대 2개 세트 계층,
+              차트 선택·진료별 수정·확정·스냅샷·업무 전달·수납, 두 병원·두 릴리즈 검증.
+              차트가 세트를 검색만 하고 실제 확정·처리하지 못하면 1단계는 완료가 아니다.
+            </p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div>
+            <h3>약품·백신</h3>
+            <p>성분·제품·구성·오더 프로필·검토된 종별 기본값·백신 차수와 처방 스냅샷 연결.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div>
+            <h3>영상·기타검사</h3>
+            <p>modality·신체부위·검사 정의·선택지·병원 장비와 전달 설정. 파일·수동 흐름부터 시작.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div>
+            <h3>진단명·케어가이드·동물 분류 확장</h3>
+            <p>표준 진단·분류·동의어·케어가이드, 자유입력 호환, 품종과 기타 반려동물 확대.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">5</div>
+          <div>
+            <h3>상호운용성과 다지점 운영</h3>
+            <p>
+              승인된 외부 표준, FHIR/LOINC/VetSCT/ATCvet/UCUM/DICOM 운영,
+              실제 요구가 확인된 조직·지점 공유, CSV·품질 보고·충돌 해결.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>20. 초기 데이터 구축 원칙</h2>
+        <p>기존 Airtable 원본은 없다. 따라서 초기 마스터는 이전이 아니라 새로 검토해 만드는 데이터다.</p>
+        <ul>
+          <li>첫 우선순위는 마스터 복사·업데이트·오더·Order Set·스냅샷·업무 전달·수납 구조가 실제 동작하는지 검증하는 것이다. 임상 정확성과 범위 확장은 다음 데이터 구축 우선순위다.</li>
+          <li>개별 오더 20–40개, 해당 오더에 필요한 A와 유형별 기타/미분류 A, 검사 패널 2개, 중첩 세트 1개를 포함한 Order Set 3–5개로 제한한다.</li>
+          <li>병원 2개를 사용한다. 한 병원은 원본을 유지하고 다른 병원은 일부를 수정한다. 마스터 릴리즈 2개로 복사·재실행·자동 업데이트·알림·수정 행 검토를 확인한다.</li>
+          <li>동물은 개·고양이로 제한하고 외부 용어 대량 가져오기, 실제 투약 권고, 임상적으로 맞다고 주장하는 정상범위는 포함하지 않는다.</li>
+          <li>제품 검증에는 합성·데모 안전 데이터를 사용하고 비권위 데이터임을 표시한다. 숨겨진 fixture는 검증기를 시험할 수 있지만 사용자 화면에서 임상 정답처럼 보이면 안 된다.</li>
+          <li>임상 주장에는 출처와 검토자를 기록한다.</li>
+          <li>PDF 예시값은 구조 참고용이며 검증된 사실로 취급하지 않는다.</li>
+          <li>병원 자체 항목은 자동으로 CLAiR 표준이 되지 않는다.</li>
+          <li>병원이 후보를 제출하면 검토 후 새로운 CLAiR ID를 만들 수 있다.</li>
+          <li>승인된 표준이 생겨도 병원은 기존 자체 항목을 언제 전환할지 선택한다.</li>
+        </ul>
+      </section>
+
+      <section id="security">
+        <h2>21. 보안·권한 원칙</h2>
+        <ul>
+          <li>CLAiR 원본과 검토 테이블은 기본적으로 Data API에 노출하지 않는다.</li>
+          <li>service-role·secret 자격증명을 브라우저에 노출하지 않는다.</li>
+          <li>초안·검토·배포·동기화·폐기·긴급조치는 서버가 소유한다.</li>
+          <li>병원 복사본·업데이트 검토·장비 매핑에는 workspace RLS를 적용한다.</li>
+          <li>보호된 읽기는 활성 멤버십, 변경은 승인된 관리 권한을 요구한다.</li>
+          <li>비로그인·멤버십 없음·비활성·다른 병원·일반 직원·관리자·CLAiR 운영자 경로를 검증한다.</li>
+          <li>UPDATE 정책에는 기존 행 조건과 변경 후 행 조건을 모두 적용한다.</li>
+          <li>감사 로그에는 ID·버전·변경 필드·사유·결과만 남기고 개인정보·원문 차트·비밀값을 제외한다.</li>
+          <li>1인 팀의 1단계에는 작성자·검토자·배포자 역할 UI를 따로 만들지 않는다. 한 운영자가 구조·합성 검증 데이터를 처리할 수 있지만 모든 단계의 행위자·시각·출처·사유를 남긴다.</li>
+          <li>투약량·정상범위·케어가이드 등 임상 주장은 실제로 지명된 수의사가 검토했을 때만 임상 검토 완료로 표시한다. 실병원 배포 전까지 긴급 권한·대응 시간 운영은 보류한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>22. 향후 구현 검증 시나리오</h2>
+        <ol>
+          <li>배포된 CLAiR 오더가 병원에 한 번만 <code>사용 대기</code>로 복사되고 알림이 생긴다.</li>
+          <li>초기화나 릴리즈 적용을 재시도해도 중복되지 않는다.</li>
+          <li>미수정 복사본은 안전하게 자동 업데이트된다.</li>
+          <li>수정된 복사본은 덮어쓰지 않고 업데이트 검토가 생긴다.</li>
+          <li>병원 자체 항목에는 CLAiR 자동 병합이 발생하지 않는다.</li>
+          <li>병원 후보는 검토·배포 전까지 표준으로 승격되지 않는다.</li>
+          <li>폐기 후에도 병원과 과거 기록이 남고 대체 항목이 보인다.</li>
+          <li>긴급 차단은 신규 사용만 막고 과거 기록을 보존한다.</li>
+          <li>이름·가격·단위·업무 전달 변경이 과거 진료 기록을 바꾸지 않는다.</li>
+          <li>다른 workspace의 읽기와 변경이 거부된다.</li>
+          <li>새 동물 종을 추가해도 모든 상세 테이블에 컬럼을 추가하지 않는다.</li>
+          <li>외부 코드 버전이 바뀌어도 CLAiR ID는 바뀌지 않는다.</li>
+          <li>정상범위는 문맥·단위·경계·출처·검토자 검증 후 배포된다.</li>
+          <li>국문·영문·동의어·약어·과거 이름과 병원 별칭을 구분해 검색한다.</li>
+          <li>배포된 분류 경로가 원본 T·NT와 다른 <code>tCode</code>·전달 위치·Task 여부를 만들 수 없다.</li>
+          <li>같은 마스터 릴리즈를 두 번 적용해도 병원-원본 행은 하나이고 병원 수정값은 보존된다.</li>
+          <li>여러 정확한 마스터 오더가 오더 ID를 공유하지 않으면서 같은 A를 공유할 수 있고, 각 오더는 A 하나로만 해석된다.</li>
+          <li>임상병리 유형 A라도 부가정보가 필요하지 않은 오더는 빈 상세 레코드 없이 배포할 수 있다.</li>
+          <li>서비스는 내부 코드를 주 표시명으로 노출하지 않고 검토된 행위 이름을 표시·검색·필터·스냅샷할 수 있다.</li>
+          <li>병원 자체 오더는 유형별 기타/미분류 A로도 사용할 수 있고, 새 canonical A가 생기면 알림과 수동 재연결 선택을 제공한다.</li>
+          <li>부모 Order Set은 자식 세트 한 계층을 거쳐 개별 오더로 펼쳐지고, 적용 기록에는 세트 revision과 계층이 보존된다.</li>
+          <li>순환 참조, 세 번째 세트 계층, 다른 workspace 구성원, 펼친 결과의 같은 개별 오더 중복은 적용 전에 거부된다.</li>
+          <li>구성원이 없거나 병원에서 사용 중지되면 구성 검토 상태가 되고 신규 적용이 막힌다. 일반 원본 폐기는 경고만 하며 긴급 안전 차단은 즉시 신규 사용을 막고, 과거 스냅샷은 유지된다.</li>
+          <li>세 가지 Order Set 가격 방식은 이중 청구 없이 설명 가능한 하나의 총액을 만들고, 계산 입력값과 과세 결과를 적용 스냅샷에 보존한다.</li>
+          <li>의료진은 한 진료의 펼쳐진 Order Set 선택과 허용 수량을 바꿀 수 있지만 원본 프리셋은 그대로 유지된다. 병원관리의 이후 프리셋 수정은 새 revision과 미래 적용분에만 영향을 준다.</li>
+          <li>차트에는 새 프리셋 저장 기능이 없고, 재사용 세트 생성·복제·revision은 적절한 관리 권한과 감사 기록을 갖춘 병원관리에서만 수행된다.</li>
+          <li>병원관리는 빈 Order Set의 기본 정보를 잃지 않고 저장할 수 있지만, 유효한 개별 오더와 활성화 검증을 갖추기 전까지 비활성 상태이고 차트 검색에 나타나지 않는다.</li>
+          <li>유효한 Order Set을 차트에서 선택·펼치고 진료 소유 적용본만 수정한 뒤 확정하면 변경 불가능한 오더 스냅샷, 후속 업무, 수납 후보가 생성되며 프리셋은 바뀌지 않는다.</li>
+          <li>자식 세트 새 revision을 배포해도 부모 revision은 바뀌지 않고 업데이트 검토가 생긴다. 관리자가 반영했을 때만 새 부모 revision을 만든다.</li>
+          <li>활성 Order Set 편집은 미래용 새 revision을 만들고 이미 적용한 진료는 정확히 이전 revision과 구성을 계속 읽는다.</li>
+          <li>수정된 병원 오더는 행 전체 업데이트 검토를 받고 명시적 수락 전까지 어떤 원본 필드도 일부 자동 병합되지 않는다.</li>
+          <li>오더 생성·확정은 <code>order_catalog_items</code> 한 원본을 추적하며 <code>service_*</code>가 별도 오더 버전을 만들 수 없다.</li>
+          <li>청구 오더의 가격 미설정은 활성화를 막고, 명시적 0원은 무료 의도로 감사·스냅샷에서 구분된다.</li>
+          <li>패널 연결 검사 오더는 여러 결과 입력칸을 만들지만 차트 오더와 청구 행은 하나다. 독립 오더는 Order Set으로만 묶는다.</li>
+          <li>병원 2개와 마스터 릴리즈 2개로 최초 복사·재실행·미수정 자동 업데이트·수정 행 검토·새 항목 알림·과거 스냅샷 보존을 확인한다.</li>
+          <li>합성 투약·정상범위·기타 임상 fixture는 사용자에게 임상 검토된 canonical 안내로 노출되거나 표시되지 않는다.</li>
+        </ol>
+      </section>
+
+      <section id="unknowns">
+        <h2>23. 아직 남은 결정</h2>
+        <p>목표 구조를 막지는 않지만 해당 구현 단계 전에 결정해야 한다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>미결사항</th><th>결정 시점</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>임상 주장을 검토할 지명 수의사</td><td>투약량·정상범위·케어가이드 등을 임상 검토 완료로 표시하거나 배포하기 전. 구조·합성 시스템 검증은 1인 운영 가능</td></tr>
+              <tr><td>외부 용어 라이선스와 재배포 범위</td><td>대량 가져오기·고객 제공 전</td></tr>
+              <tr><td>조직·지점 공동 카탈로그</td><td>실제 다지점 요구가 검증될 때</td></tr>
+              <tr><td>긴급조치 권한과 대응 시간</td><td>긴급 차단 구현 전</td></tr>
+              <tr><td>실제 정상범위 출처와 재검토 주기</td><td>사용자용 canonical 정상범위 배포 전. 숨겨진 합성 검증 fixture로 대체할 수 없음</td></tr>
+              <tr><td>약품 안전·마약류 범위</td><td>약품 상세 구현 전 별도 제품·보안·규제 결정</td></tr>
+              <tr><td>검색 인덱스와 용어 규모</td><td>초기 데이터와 병원 복사 동작을 측정한 뒤</td></tr>
+              <tr><td>현재 호환 카탈로그 테이블 폐기</td><td>목표 원본은 확정됐지만 mapping·backfill·adapter 제거·local replay·원격 승인을 마친 뒤</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>24. 문서 관리 원칙</h2>
+        <ul>
+          <li>Markdown이 AI 에이전트용 canonical target architecture다.</li>
+          <li>HTML은 같은 범위·결정·테이블군·수명주기·단계·리스크를 유지한다.</li>
+          <li>제품 동작이 바뀌면 관련 product-domain 문서와 이 문서를 함께 검토한다.</li>
+          <li>실제 schema·RLS·API 결정은 별도 work item·engineering contract·ADR로 연결한다.</li>
+          <li>문서만 작성한 상태에서 구현·원격 검증·운영 준비 완료를 주장하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section id="sources">
+        <h2>25. 근거 자료</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>저장소 내부</h3>
+            <ul>
+              <li><a href="../../product/domain/workspace-order-catalog-platform.md">Workspace Order Catalog Platform</a></li>
+              <li><a href="./order-catalog-preset-initialization-contract.md">Order Catalog Preset Initialization Contract</a></li>
+              <li><a href="./emr-saas-db-structure-spec.ko.md">EMR SaaS DB Structure And Spec Draft</a></li>
+              <li><a href="../../product/domain/emr-domain-entity-map.md">EMR Domain Entity Map</a></li>
+              <li><a href="../../product/demo-data/order-catalog-v1.md">Order Catalog V1</a></li>
+              <li><a href="../../product/demo-data/medication-order-details-v1.md">Medication Order Details V1</a></li>
+              <li><a href="../../product/demo-data/diagnosis-catalog-v1.md">Diagnosis Catalog V1</a></li>
+              <li><a href="../auth-security/persistence-data-security-checklist.md">Persistence Data Security Checklist</a></li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>공식 외부 표준</h3>
+            <ul>
+              <li><a href="https://docs.snomed.org/snomed-ct-specifications/snomed-ct-editorial-guide/readme/snomed-ct-introduction/out-of-scope">SNOMED CT Veterinary Extension</a></li>
+              <li><a href="https://vtsl.vetmed.vt.edu/TerminologyMgt/browser/">VetSCT Browser</a></li>
+              <li><a href="https://loinc.org/">LOINC</a> · <a href="https://loinc.org/LP412177-0">Clinical Veterinary Class</a></li>
+              <li><a href="https://atcddd.fhi.no/atcvet/atcvet_index_and_guidelines/atcvet_index/">ATCvet Index</a></li>
+              <li><a href="https://ucum.org/">UCUM</a></li>
+              <li><a href="https://hl7.org/fhir/extensions/5.1.0/StructureDefinition-patient-animal.html">FHIR Patient Animal</a></li>
+              <li><a href="https://hl7.org/fhir/servicerequest.html">FHIR ServiceRequest</a></li>
+              <li><a href="https://hl7.org/fhir/diagnosticreport.html">FHIR DiagnosticReport</a></li>
+              <li><a href="https://www.dicomstandard.org/current">DICOM Standard</a></li>
+            </ul>
+          </article>
+        </div>
+        <div class="callout info">
+          원본 PDF는 7페이지 이미지형 문서이며 내용 기준은 2024-03-12다. 저장소에 포함하지 않고
+          검증되지 않은 구조 참고자료로만 사용했다.
+        </div>
+      </section>
+
+      <section>
+        <h2>26. 변경 이력</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>날짜</th><th>변경</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>2026-08-18</td>
+                <td>구현 가능한 1단계 DB 상세 명세를 연결하고, Order Set 구간·자식 revision 검토 저장 구조와 CLAiR 가격 미제공 원칙을 필드 원본 표에 맞췄다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>남은 1단계 핵심 결정을 닫았다. 차트의 실제 Order Set 사용을 완료 기준으로 삼고, 변경 불가능한 세트 revision·고정 자식 revision·검토 기반 갱신, <code>order_catalog_items</code> 단일 원본, 비공개 마스터 registry, 수정 행 전체 보존, 시스템 revision·릴리즈, 이름 중복 검토, CLAiR 가격 미제공, Lab Panel 분리, 병원 2개·릴리즈 2개의 제한된 검증 데이터, 1인 구조 운영을 확정했다. 초기 데이터는 시스템 동작 검증용이며 임상 검증값으로 표시하지 않는다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>빈 Order Set은 별도 초안 기능을 추가하지 않고 기존 사용 여부를 끈 상태로 기본 정보만 저장할 수 있게 했다. 유효한 개별 오더가 하나 이상 있고 구성·가격 검증을 통과한 뒤에만 활성화하고 차트에 노출한다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>1단계 차트의 새 프리셋 저장 기능을 제외했다. 적용본 변경은 해당 진료에만 남고 재사용 프리셋의 생성·복제·revision은 병원관리에서만 수행하며, 후보 제안 기능은 실제 반복 요구가 생길 때까지 보류한다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>차트의 Order Set 적용본은 개별 오더 선택·추가와 허용 수량을 수정할 수 있지만 원본 병원 프리셋에는 절대 역반영하지 않도록 확정했다. 실제 적용값은 스냅샷하고 프리셋 변경은 병원관리의 별도 revision으로만 수행한다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>Order Set을 진료용 묶음이자 선택적 병원 패키지 가격 구조로 확정했다. 기존 세 가지 가격 방식을 유지하고, 이중 청구 방지·과세·적용 스냅샷 규칙을 정의했으며 별도 패키지 테이블은 1단계에서 만들지 않는다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>Order Set 구성원 상태 규칙을 확정했다. 구성원 누락·병원 사용 중지는 구성 검토와 신규 사용 차단, 일반 마스터 폐기는 경고, 긴급 안전 차단은 즉시 신규 사용 차단으로 처리하며 과거 기록은 유지한다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>Order Set을 병원 소유 구성으로 확정했다. 1단계는 최대 2개 세트 계층, 개별 오더 재귀 펼치기, 적용 구성 추적을 지원하며 순환·다른 workspace·더 깊은 중첩·개별 오더 중복을 거부한다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>A의 DB 기본키는 UUID, 업무용 코드는 자동 생성한 <code>A000001</code> 형식으로 분리했다. 코드는 변경·재사용하거나 분류 의미를 넣지 않고 서비스에는 검토된 이름을 우선 표시한다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>병원 자체 오더는 기존 A 또는 유형별 기타/미분류 A를 선택하고, 새 canonical A가 배포돼도 자동 변경하지 않고 병원이 확인해 재연결하도록 확정했다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>A 분리·통합 기준을 확정했다. 임상 행위·유형·목적·대상이 같으면 같은 A를 사용하고, 이름·가격·포장·제공 구성 차이만으로는 A를 나누지 않는다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>A를 필수이자 서비스에 표시되는 행위 구분으로 확정하고, 오더 유형의 원본을 A로 이동했다. 개별 오더의 유형별 부가정보는 선택적으로 유지하며 A/T/X와 CG/NT의 정규화 규칙을 추가했다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>전체 필드 원본 매핑, 자동 생성 규칙, 정규화·무결성 조건, CG·NT 초기 코드를 추가했다. 당시 A 구현은 보류했으며 이후 위 변경 이력의 확정 결정으로 해제했다.</td>
+              </tr>
+              <tr>
+                <td>2026-08-18</td>
+                <td>PDF, 현재 저장소 계약·schema, 승욱과 확정한 결정, 공식 외부 표준을 바탕으로 첫 목표 구조 초안을 작성했다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>
+          현재 상태: 목표 아키텍처 초안. DB migration, RLS, API, UI, 원격 Supabase, 실제 데이터는
+          변경하지 않았다.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
