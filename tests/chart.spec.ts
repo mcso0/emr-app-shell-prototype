@@ -2098,6 +2098,9 @@ test("chart queue read failures are not presented as an empty operating date", a
 test("chart detail loading uses shared shadcn Skeleton and resolves to real empty states", async ({
   page,
 }) => {
+  await page.setViewportSize(chartFigmaVisualFixture.viewport);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
   const encounterId = "encounter-chart-skeleton";
   const updatedAt = "2026-08-13T09:00:00+09:00";
@@ -2252,7 +2255,13 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   ).toHaveCount(2);
   await expect(chartContent.locator(".animate-spin")).toHaveCount(0);
 
-  await expect(page.getByTestId("chart-assessment-empty-state")).toBeVisible();
+  const assessmentPanel = page.getByLabel("진단명 관리");
+  const assessmentTableViewport = assessmentPanel.locator(
+    "[data-slot='table-container']",
+  );
+  const assessmentEmptyState = page.getByTestId("chart-assessment-empty-state");
+
+  await expect(assessmentEmptyState).toBeVisible();
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
   const pinnedViewport = orderTable.locator(
     "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
@@ -2322,6 +2331,139 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   await expect(
     chartContent.locator("[data-slot='chart-panel-skeleton']"),
   ).toHaveCount(0);
+
+  for (const width of [1624, 1440, 1280, 1024]) {
+    await page.setViewportSize({ height: 1088, width });
+    await expect(assessmentEmptyState).toBeVisible();
+
+    const geometry = await assessmentPanel.evaluate((panel) => {
+      const viewport = panel.querySelector<HTMLElement>(
+        "[data-slot='table-container']",
+      );
+      const emptyState = panel.querySelector<HTMLElement>(
+        "[data-testid='chart-assessment-empty-state']",
+      );
+      const emptyViewport = panel.querySelector<HTMLElement>(
+        "[data-slot='chart-assessment-empty-viewport']",
+      );
+
+      if (!viewport || !emptyState || !emptyViewport) {
+        throw new Error("Assessment empty-state geometry target is missing");
+      }
+
+      const panelRect = panel.getBoundingClientRect();
+      const viewportRect = viewport.getBoundingClientRect();
+      const emptyStateRect = emptyState.getBoundingClientRect();
+      const emptyViewportRect = emptyViewport.getBoundingClientRect();
+
+      return {
+        documentOverflow:
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+        emptyState: {
+          left: emptyStateRect.left,
+          right: emptyStateRect.right,
+          top: emptyStateRect.top,
+          bottom: emptyStateRect.bottom,
+          centerX: emptyStateRect.left + emptyStateRect.width / 2,
+          centerY: emptyStateRect.top + emptyStateRect.height / 2,
+        },
+        emptyViewport: {
+          left: emptyViewportRect.left,
+          right: emptyViewportRect.right,
+          top: emptyViewportRect.top,
+          bottom: emptyViewportRect.bottom,
+          centerY: emptyViewportRect.top + emptyViewportRect.height / 2,
+        },
+        panel: {
+          left: panelRect.left,
+          right: panelRect.right,
+        },
+        viewport: {
+          left: viewportRect.left,
+          right: viewportRect.right,
+          top: viewportRect.top,
+          bottom: viewportRect.bottom,
+          center: viewportRect.left + viewportRect.width / 2,
+          clientWidth: viewport.clientWidth,
+          scrollWidth: viewport.scrollWidth,
+          overflowY: getComputedStyle(viewport).overflowY,
+        },
+      };
+    });
+
+    expect(geometry.documentOverflow).toBe(0);
+    expect(geometry.viewport.overflowY).toBe("hidden");
+    expect(geometry.viewport.left).toBeGreaterThanOrEqual(
+      geometry.panel.left - 1,
+    );
+    expect(geometry.viewport.right).toBeLessThanOrEqual(
+      geometry.panel.right + 1,
+    );
+    expect(geometry.emptyViewport.top).toBeGreaterThanOrEqual(
+      geometry.viewport.top - 1,
+    );
+    expect(geometry.emptyViewport.bottom).toBeLessThanOrEqual(
+      geometry.viewport.bottom + 1,
+    );
+    expect(geometry.emptyState.left).toBeGreaterThanOrEqual(
+      geometry.viewport.left - 1,
+    );
+    expect(geometry.emptyState.right).toBeLessThanOrEqual(
+      geometry.viewport.right + 1,
+    );
+    expect(geometry.emptyState.top).toBeGreaterThanOrEqual(
+      geometry.emptyViewport.top - 1,
+    );
+    expect(geometry.emptyState.bottom).toBeLessThanOrEqual(
+      geometry.emptyViewport.bottom + 1,
+    );
+    expect(
+      Math.abs(geometry.emptyState.centerX - geometry.viewport.center),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(geometry.emptyState.centerY - geometry.emptyViewport.centerY),
+    ).toBeLessThanOrEqual(1);
+
+    if (width === chartFigmaVisualFixture.viewport.width) {
+      expect(geometry.viewport.scrollWidth).toBeLessThanOrEqual(
+        geometry.viewport.clientWidth + 1,
+      );
+    }
+  }
+
+  await page.setViewportSize({ height: 1088, width: 1024 });
+  const getEmptyStateViewportOffset = () =>
+    assessmentPanel.evaluate((panel) => {
+      const viewport = panel.querySelector<HTMLElement>(
+        "[data-slot='table-container']",
+      );
+      const emptyState = panel.querySelector<HTMLElement>(
+        "[data-testid='chart-assessment-empty-state']",
+      );
+
+      if (!viewport || !emptyState) {
+        throw new Error("Assessment empty-state scroll target is missing");
+      }
+
+      return (
+        emptyState.getBoundingClientRect().left -
+        viewport.getBoundingClientRect().left
+      );
+    });
+  const emptyStateOffsetBeforeScroll = await getEmptyStateViewportOffset();
+  const assessmentScrollLeft = await assessmentTableViewport.evaluate(
+    (viewport) => {
+      viewport.scrollLeft = viewport.scrollWidth;
+      return viewport.scrollLeft;
+    },
+  );
+  const emptyStateOffsetAfterScroll = await getEmptyStateViewportOffset();
+
+  expect(assessmentScrollLeft).toBeGreaterThan(0);
+  expect(
+    Math.abs(emptyStateOffsetAfterScroll - emptyStateOffsetBeforeScroll),
+  ).toBeLessThanOrEqual(1);
 });
 
 test("chart preconsultation read error uses the shared recovery empty state", async ({

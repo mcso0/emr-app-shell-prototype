@@ -78,6 +78,7 @@ export function ChartAssessmentTable({
     () => (sort ? [...diagnoses].sort((left, right) => compareDiagnosisRows(left, right, sort)) : diagnoses),
     [diagnoses, sort],
   );
+  const empty = !loading && sortedDiagnoses.length === 0;
 
   const toggleSort = (key: AssessmentSortKey) => {
     setSort((current) => ({
@@ -88,13 +89,13 @@ export function ChartAssessmentTable({
   };
 
   return (
-    <div data-emr-data-table="true">
+    <div className={styles.viewportRoot} data-emr-data-table="true">
       <Table
         aria-label="진단명 목록"
         density="standard"
         layout="scroll"
         className={styles.table}
-        containerClassName="min-w-0 bg-[var(--emr-surface-panel)]"
+        containerClassName={`${styles.tableViewport} min-w-0 bg-[var(--emr-surface-panel)]`}
       >
         <colgroup>
           <col className={styles.systemColumn} />
@@ -249,15 +250,25 @@ export function ChartAssessmentTable({
                 </TableRow>
               ))
             : null}
-          {!loading && !sortedDiagnoses.length ? (
+          {empty ? (
             <TableRow className="hover:bg-[var(--emr-surface-panel)]">
-              <TableCell colSpan={7} className={`${styles.bodyCell} ${styles.emptyCell}`}>
-                {emptyState}
-              </TableCell>
+              <TableCell
+                aria-hidden="true"
+                colSpan={7}
+                className={`${styles.bodyCell} ${styles.emptyCell}`}
+              />
             </TableRow>
           ) : null}
         </TableBody>
       </Table>
+      {empty ? (
+        <div
+          className={styles.emptyViewport}
+          data-slot="chart-assessment-empty-viewport"
+        >
+          {emptyState}
+        </div>
+      ) : null}
     </div>
   );
 }

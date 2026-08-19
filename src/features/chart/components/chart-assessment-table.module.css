@@ -1,3 +1,16 @@
+.viewportRoot {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tableViewport {
+  min-width: 0;
+  max-width: 100%;
+  overflow-y: hidden;
+  scrollbar-gutter: auto;
+}
+
 .table {
   --chart-assessment-table-min-width: 564px;
   --chart-assessment-system-column: 100px;
@@ -116,6 +129,19 @@
 
 .emptyCell {
   height: 208px !important;
-  padding: var(--clair-spacing-24) var(--clair-spacing-12) !important;
+  padding: 0 !important;
   white-space: normal;
+}
+
+.emptyViewport {
+  position: absolute;
+  z-index: 1;
+  inset-inline: 0;
+  top: var(--emr-table-header-height-standard);
+  display: flex;
+  box-sizing: border-box;
+  height: 208px;
+  align-items: center;
+  justify-content: center;
+  padding: var(--clair-spacing-24) var(--clair-spacing-12);
 }
