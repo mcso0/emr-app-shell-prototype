@@ -185,7 +185,10 @@ import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
-import type { EmrTableDensity } from "@/components/emr/table-density";
+import {
+  emrTableDensityOptions,
+  type EmrTableDensity,
+} from "@/components/emr/table-density";
 import type {
   OrderQueueItem,
   ShellComponentProps,
@@ -4131,6 +4134,9 @@ function ChartOrderTable({
   sortState: ChartOrderSortState;
   writeDisabled: boolean;
 }) {
+  const tableHeaderHeight =
+    emrTableDensityOptions.find((option) => option.value === density)
+      ?.headerHeight ?? 36;
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   const sorting = useMemo<SortingState>(
     () =>
@@ -4542,16 +4548,21 @@ function ChartOrderTable({
 
   return (
     <div className="h-full overflow-hidden border-y border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <EmrDataTable
-        aria-label="처방/오더 테이블"
-        className="bg-[var(--emr-surface-panel)] [--emr-table-row-height-compact:40px]"
-        containerClassName="h-full min-h-0 min-w-0 overflow-auto"
-        density={density}
-        initialLoading={loading && rows.length === 0}
-        overscrollAxes="horizontal"
-        renderAfterRows={({ visibleColumnCount }) => (
-          <>
-            {loading && rows.length > 0 ? (
+      <div
+        className={cn(
+          "relative h-full min-h-0 min-w-0",
+          !loading && !rows.length && "flex",
+        )}
+      >
+        <EmrDataTable
+          aria-label="처방/오더 테이블"
+          className="bg-[var(--emr-surface-panel)] [--emr-table-row-height-compact:40px]"
+          containerClassName="h-full min-h-0 min-w-0 overflow-auto"
+          density={density}
+          initialLoading={loading && rows.length === 0}
+          overscrollAxes="horizontal"
+          renderAfterRows={({ visibleColumnCount }) =>
+            loading && rows.length > 0 ? (
               <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] hover:bg-[var(--emr-surface-muted)]">
                 <TableCell colSpan={visibleColumnCount} className="h-16">
                   <ChartPanelPendingState
@@ -4561,63 +4572,62 @@ function ChartOrderTable({
                   />
                 </TableCell>
               </TableRow>
-            ) : null}
-            {!loading && !rows.length ? (
-              <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
-                <TableCell
-                  colSpan={visibleColumnCount}
-                  className="h-44 px-4 py-6"
-                >
-                  <div className="flex justify-center">
-                    <EmrEmptyState
-                      kind={hasAnyRows ? "no-filter-results" : "no-data"}
-                      priority={hasAnyRows ? "local-recovery" : "supporting"}
-                      surface="table"
-                      title={
-                        hasAnyRows
-                          ? "표시할 오더가 없습니다"
-                          : "등록된 오더가 없습니다"
-                      }
-                      description={
-                        hasAnyRows
-                          ? "분류나 필터를 바꾸면 오더가 다시 보입니다."
-                          : "+ Order에서 현재 차트에 필요한 오더를 추가해 주세요."
-                      }
-                      primaryAction={
-                        hasAnyRows ? undefined : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={writeDisabled}
-                            onClick={onAddOrder}
-                          >
-                            + Order
-                          </Button>
-                        )
-                      }
-                      testId="chart-order-empty-state"
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </>
-        )}
-        skeletonRowCount={5}
-        table={table}
-        getRowProps={(row) => ({
-          className: cn(
-            isChartOrderDraftRowDirty(row.original) &&
-              "bg-[var(--emr-accent-subtle)]/40",
-            "text-[var(--emr-text-secondary)]",
-          ),
-          "data-dirty": isChartOrderDraftRowDirty(row.original)
-            ? "true"
-            : undefined,
-          "data-testid": `chart-order-row-${row.original.order.id}`,
-        })}
-      />
+            ) : null
+          }
+          skeletonRowCount={5}
+          table={table}
+          getRowProps={(row) => ({
+            className: cn(
+              isChartOrderDraftRowDirty(row.original) &&
+                "bg-[var(--emr-accent-subtle)]/40",
+              "text-[var(--emr-text-secondary)]",
+            ),
+            "data-dirty": isChartOrderDraftRowDirty(row.original)
+              ? "true"
+              : undefined,
+            "data-testid": `chart-order-row-${row.original.order.id}`,
+          })}
+        />
+        {!loading && !rows.length ? (
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 flex min-h-0 items-center justify-center p-2"
+            data-testid="chart-order-empty-body"
+            style={{ top: tableHeaderHeight }}
+          >
+            <EmrEmptyState
+              description={
+                hasAnyRows
+                  ? "분류나 필터를 바꾸면 오더가 다시 보입니다."
+                  : "+ Order에서 현재 차트에 필요한 오더를 추가해 주세요."
+              }
+              icon={hasAnyRows ? undefined : false}
+              kind={hasAnyRows ? "no-filter-results" : "no-data"}
+              primaryAction={
+                hasAnyRows ? undefined : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="pointer-events-auto"
+                    disabled={writeDisabled}
+                    onClick={onAddOrder}
+                  >
+                    + Order
+                  </Button>
+                )
+              }
+              priority={hasAnyRows ? "local-recovery" : "supporting"}
+              surface="table"
+              testId="chart-order-empty-state"
+              title={
+                hasAnyRows
+                  ? "표시할 오더가 없습니다"
+                  : "등록된 오더가 없습니다"
+              }
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
