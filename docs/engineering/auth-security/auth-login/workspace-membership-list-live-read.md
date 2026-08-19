@@ -39,7 +39,8 @@ Mock fallback:
 
 ## Current Limitations
 
-- Workspace switcher is still display-only. It does not yet open a persisted workspace selection menu.
+- AUTH-PR-045 connects the App Shell switcher to this active-membership list and provides safe route-backed workspace navigation. The switcher keeps only layout state and does not carry tenant-scoped patient, encounter, order, invoice, or drawer identifiers into the target workspace.
+- Public workspace discovery, self-service join requests, and a pending-invitation inbox remain separate invite-only product and security work.
 - DEN-46 through DEN-48 will add invitation and member status persistence.
 - No clinical/domain workspace data is read in this route.
 - Remote Supabase validation remains approval-gated.
