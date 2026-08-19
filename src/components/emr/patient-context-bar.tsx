@@ -189,8 +189,9 @@ export function EmrPatientContextBar({
     <div
       data-slot="patient-context-bar"
       className={cn(
-        "flex h-full min-h-[var(--emr-context-bar-min-height)] flex-col border-b border-[var(--emr-context-bar-divider)] bg-[var(--emr-surface-workspace)]",
+        "flex h-full min-h-[var(--emr-context-bar-min-height)] flex-col bg-[var(--emr-surface-workspace)]",
         className,
+        "border-b border-[var(--emr-context-bar-divider)]",
       )}
     >
       <div className="flex min-h-0 flex-1 items-center pl-[var(--emr-context-bar-padding-x)] pr-[var(--clair-spacing-20)] py-[var(--emr-context-bar-padding-y)]">
