@@ -1,11 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   DEMO_WORKSPACE_DISPLAY_NAME,
   getSessionWorkspaceDisplayName,
+  getSessionWorkspaceRoleLabels,
+  readSessionWorkspacesState,
   SESSION_WORKSPACES_STORAGE_KEY,
+  type SessionWorkspaceRole,
 } from "@/features/auth/workspace-session";
+import { mapActiveWorkspaceListData } from "@/features/auth/server-workspace-list-core";
+
+export type WorkspaceListOption = {
+  id: string;
+  displayName: string;
+  membershipId: string | null;
+  roles: SessionWorkspaceRole[];
+  status: "active";
+};
+
+export type WorkspaceListRequestState = "idle" | "loading" | "ready" | "error";
+
+type UseSessionWorkspaceListOptions = {
+  enabled: boolean;
+  userSessionId: string | null;
+  workspaceId: string;
+};
 
 export const WORKSPACE_IDENTITY_CHANGED_EVENT =
   "clair.workspaceIdentity.changed";
@@ -111,4 +131,177 @@ export function useSessionWorkspaceIdentity(workspaceId: string) {
 
 export function useSessionWorkspaceDisplayName(workspaceId: string) {
   return useSessionWorkspaceIdentity(workspaceId).displayName;
+}
+
+export function useSessionWorkspaceList({
+  enabled,
+  userSessionId,
+  workspaceId,
+}: UseSessionWorkspaceListOptions) {
+  const [reloadKey, setReloadKey] = useState(0);
+  const [requestState, setRequestState] =
+    useState<WorkspaceListRequestState>("idle");
+  const [workspaces, setWorkspaces] = useState<WorkspaceListOption[]>(() => [
+    createCurrentWorkspaceFallback(workspaceId),
+  ]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const browserWorkspaces = readBrowserWorkspaceOptions({
+      userSessionId,
+      workspaceId,
+    });
+    const controller = new AbortController();
+    let ignore = false;
+
+    void Promise.resolve()
+      .then(() => {
+        if (ignore) return null;
+        setWorkspaces(browserWorkspaces);
+        setRequestState("loading");
+        return fetch("/api/workspaces", { signal: controller.signal });
+      })
+      .then(async (response) => {
+        if (!response) return null;
+        if (!response.ok) throw new Error("workspace-list-unavailable");
+
+        const result = (await response.json()) as {
+          ok?: boolean;
+          workspaces?: unknown;
+        };
+
+        if (!result.ok || !Array.isArray(result.workspaces)) {
+          throw new Error("workspace-list-invalid");
+        }
+
+        return mapActiveWorkspaceListData(result.workspaces);
+      })
+      .then((persistedWorkspaces) => {
+        if (ignore || !persistedWorkspaces) return;
+
+        setWorkspaces(
+          mergeWorkspaceOptions({
+            browserWorkspaces,
+            persistedWorkspaces,
+            workspaceId,
+          })
+        );
+        setRequestState("ready");
+      })
+      .catch((error: unknown) => {
+        if (ignore || (error instanceof DOMException && error.name === "AbortError")) return;
+        setRequestState("error");
+      });
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [enabled, reloadKey, userSessionId, workspaceId]);
+
+  const reload = useCallback(() => {
+    setReloadKey((key) => key + 1);
+  }, []);
+
+  return { reload, requestState, workspaces };
+}
+
+export function getWorkspaceListOptionRoleLabel(workspace: WorkspaceListOption) {
+  return workspace.roles.length > 0
+    ? getSessionWorkspaceRoleLabels(workspace.roles)
+    : "활성 워크스페이스";
+}
+
+function readBrowserWorkspaceOptions({
+  userSessionId,
+  workspaceId,
+}: {
+  userSessionId: string | null;
+  workspaceId: string;
+}) {
+  const state = readSessionWorkspacesState(window.sessionStorage, window.localStorage);
+  const options = new Map<string, WorkspaceListOption>();
+
+  if (state && userSessionId) {
+    state.memberships.forEach((membership) => {
+      if (membership.userSessionId !== userSessionId || membership.status !== "active") return;
+
+      const workspace = state.workspaces.find((item) => item.id === membership.workspaceId);
+      if (!workspace) return;
+
+      options.set(workspace.id, {
+        id: workspace.id,
+        displayName: workspace.displayName,
+        membershipId: membership.id,
+        roles: membership.roles,
+        status: "active",
+      });
+    });
+  }
+
+  if (!options.has(workspaceId)) {
+    const currentMembership = state?.memberships.find(
+      (membership) =>
+        membership.workspaceId === workspaceId &&
+        membership.userSessionId === userSessionId &&
+        membership.status === "active"
+    );
+
+    options.set(workspaceId, {
+      ...createCurrentWorkspaceFallback(workspaceId),
+      roles: currentMembership?.roles ?? [],
+      membershipId: currentMembership?.id ?? null,
+    });
+  }
+
+  return sortWorkspaceOptions([...options.values()], workspaceId);
+}
+
+function createCurrentWorkspaceFallback(workspaceId: string): WorkspaceListOption {
+  return {
+    id: workspaceId,
+    displayName:
+      typeof window === "undefined"
+        ? workspaceId || DEMO_WORKSPACE_DISPLAY_NAME
+        : getSessionWorkspaceDisplayName(
+            workspaceId,
+            window.sessionStorage,
+            window.localStorage
+          ),
+    membershipId: null,
+    roles: [],
+    status: "active",
+  };
+}
+
+function mergeWorkspaceOptions({
+  browserWorkspaces,
+  persistedWorkspaces,
+  workspaceId,
+}: {
+  browserWorkspaces: WorkspaceListOption[];
+  persistedWorkspaces: ReturnType<typeof mapActiveWorkspaceListData>;
+  workspaceId: string;
+}) {
+  const merged = new Map<string, WorkspaceListOption>();
+
+  browserWorkspaces.forEach((workspace) => merged.set(workspace.id, workspace));
+  persistedWorkspaces.forEach((workspace) => {
+    merged.set(workspace.id, workspace);
+  });
+
+  if (!merged.has(workspaceId)) {
+    merged.set(workspaceId, createCurrentWorkspaceFallback(workspaceId));
+  }
+
+  return sortWorkspaceOptions([...merged.values()], workspaceId);
+}
+
+function sortWorkspaceOptions(workspaces: WorkspaceListOption[], workspaceId: string) {
+  return workspaces.sort((left, right) => {
+    if (left.id === workspaceId) return -1;
+    if (right.id === workspaceId) return 1;
+    return left.displayName.localeCompare(right.displayName, "ko");
+  });
 }

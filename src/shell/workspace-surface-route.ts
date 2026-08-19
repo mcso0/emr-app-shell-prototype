@@ -10,6 +10,16 @@ type BuildWorkspaceSurfaceRouteInput = {
   workspaceId: string;
 };
 
+type BuildWorkspaceSwitchRouteInput = {
+  contentAsideOpen?: boolean;
+  hasContentAside: boolean;
+  hasRightPanel: boolean;
+  moduleId: string;
+  modulePanelOpen: boolean;
+  rightPanelOpen?: boolean;
+  workspaceId: string;
+};
+
 export function buildWorkspaceHomeRoute(workspaceId: string) {
   return `/w/${workspaceId}/home?modulePanel=open`;
 }
@@ -34,4 +44,28 @@ export function buildWorkspaceSurfaceRoute({
 
   const query = searchParams.toString();
   return `/w/${workspaceId}/${moduleId}${query ? `?${query}` : ""}`;
+}
+
+export function buildWorkspaceSwitchRoute({
+  contentAsideOpen,
+  hasContentAside,
+  hasRightPanel,
+  moduleId,
+  modulePanelOpen,
+  rightPanelOpen,
+  workspaceId,
+}: BuildWorkspaceSwitchRouteInput) {
+  const searchParams = new URLSearchParams({
+    modulePanel: modulePanelOpen ? "open" : "closed",
+  });
+
+  if (hasContentAside) {
+    searchParams.set("aside", contentAsideOpen ? "history" : "closed");
+  }
+
+  if (hasRightPanel) {
+    searchParams.set("right", rightPanelOpen ? "open" : "closed");
+  }
+
+  return `/w/${encodeURIComponent(workspaceId)}/${encodeURIComponent(moduleId)}?${searchParams.toString()}`;
 }

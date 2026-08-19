@@ -1251,6 +1251,46 @@ export function persistSessionWorkspacesState(
   other?.removeItem(SESSION_WORKSPACES_STORAGE_KEY);
 }
 
+export function selectSessionWorkspaceForUser(
+  workspaceId: string,
+  userSessionId: string,
+  sessionStorageLike?: StorageLike,
+  localStorageLike?: StorageLike
+) {
+  const sessionState = parseSessionWorkspacesState(
+    sessionStorageLike?.getItem(SESSION_WORKSPACES_STORAGE_KEY) ?? null
+  );
+  const localState = parseSessionWorkspacesState(
+    localStorageLike?.getItem(SESSION_WORKSPACES_STORAGE_KEY) ?? null
+  );
+  const state = sessionState ?? localState;
+
+  if (!state) return false;
+
+  const hasActiveMembership = state.memberships.some(
+    (membership) =>
+      membership.workspaceId === workspaceId &&
+      membership.userSessionId === userSessionId &&
+      membership.status === "active"
+  );
+  const hasWorkspace = state.workspaces.some((workspace) => workspace.id === workspaceId);
+
+  if (!hasWorkspace || !hasActiveMembership) return false;
+
+  persistSessionWorkspacesState(
+    {
+      ...state,
+      currentWorkspaceId: workspaceId,
+      updatedAt: new Date().toISOString(),
+    },
+    sessionState ? "session" : "local",
+    sessionStorageLike,
+    localStorageLike
+  );
+
+  return true;
+}
+
 export function getSessionWorkspaceDisplayName(
   workspaceId: string,
   sessionStorageLike?: StorageLike,

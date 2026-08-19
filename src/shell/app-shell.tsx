@@ -6,10 +6,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
+import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { useAuthClient } from "@/features/auth/auth-client";
+import type { WorkspaceListOption } from "@/features/auth/workspace-display";
+import {
+  selectSessionWorkspaceForUser,
+  SESSION_WORKSPACES_STORAGE_KEY,
+} from "@/features/auth/workspace-session";
 import { useWorkspaceEntrySplash } from "@/features/auth/workspace-entry-splash-provider";
+import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import { WorkspaceStaffPresenceReporter } from "@/features/staff/workspace-staff-presence";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
 import {
@@ -30,7 +37,10 @@ import {
   type WorkspaceTab,
 } from "@/stores/workspace-tabs-store";
 import { ShellMain } from "@/shell/shell-main";
-import { buildWorkspaceHomeRoute } from "@/shell/workspace-surface-route";
+import {
+  buildWorkspaceHomeRoute,
+  buildWorkspaceSwitchRoute,
+} from "@/shell/workspace-surface-route";
 import { WorkspaceTabsBar } from "@/shell/workspace-tabs-bar";
 
 type AppShellProps = {
@@ -138,6 +148,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const [notificationErrorMessage, setNotificationErrorMessage] = useState<string | null>(null);
   const [notificationReloadKey, setNotificationReloadKey] = useState(0);
   const [duplicateNavigation, setDuplicateNavigation] = useState<PendingDuplicateTabNavigation | null>(null);
+  const [pendingWorkspaceSwitch, setPendingWorkspaceSwitch] =
+    useState<WorkspaceListOption | null>(null);
   const [skipDuplicateWarning, setSkipDuplicateWarning] = useState(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
   const actorHeaders = useMemo(() => getDemoActorHeaders(authSession), [authSession]);
@@ -166,8 +178,11 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     setActiveDrawer,
     setContentAsideOpen,
     setModulePanelOpen,
+    setNotificationNavigationDirty,
     setRightPanelOpen,
   } = useLayoutStore();
+  const settingsDirty = useHospitalAdminStore((state) => state.settingsDirty);
+  const setSettingsDirty = useHospitalAdminStore((state) => state.setSettingsDirty);
   const moduleRefreshAction = moduleRefreshActions[moduleDefinition.id];
 
   useEffect(() => {
@@ -550,6 +565,63 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     pushRoute(href, nextModuleId);
   }
 
+  function performWorkspaceSwitch(workspace: WorkspaceListOption) {
+    const targetModuleId =
+      moduleDefinition.id === "orders" &&
+      !workspace.roles.includes("hospital_admin")
+        ? "home"
+        : moduleDefinition.id;
+    const targetModule = getModule(targetModuleId);
+    const targetRoute = buildWorkspaceSwitchRoute({
+      contentAsideOpen,
+      hasContentAside: Boolean(targetModule.contentAside),
+      hasRightPanel: Boolean(targetModule.rightPanel),
+      moduleId: targetModule.id,
+      modulePanelOpen,
+      rightPanelOpen,
+      workspaceId: workspace.id,
+    });
+
+    if (authSession?.id) {
+      const selected = selectSessionWorkspaceForUser(
+        workspace.id,
+        authSession.id,
+        window.sessionStorage,
+        window.localStorage
+      );
+
+      if (selected) {
+        window.dispatchEvent(new Event(SESSION_WORKSPACES_STORAGE_KEY));
+      }
+    }
+
+    pendingTabRouteRef.current = targetRoute;
+    router.push(targetRoute, { scroll: false });
+  }
+
+  function handleSelectWorkspace(workspace: WorkspaceListOption) {
+    const hasUnsavedWorkspaceWork =
+      notificationNavigationDirty ||
+      (moduleDefinition.id === "orders" && settingsDirty);
+
+    if (hasUnsavedWorkspaceWork) {
+      setPendingWorkspaceSwitch(workspace);
+      return;
+    }
+
+    performWorkspaceSwitch(workspace);
+  }
+
+  function confirmWorkspaceSwitch() {
+    if (!pendingWorkspaceSwitch) return;
+
+    const workspace = pendingWorkspaceSwitch;
+    setPendingWorkspaceSwitch(null);
+    setNotificationNavigationDirty(false);
+    setSettingsDirty(false);
+    performWorkspaceSwitch(workspace);
+  }
+
   function activateDuplicateTab() {
     if (!duplicateNavigation) return;
     if (skipDuplicateWarning) writeDuplicateWarningPreference(workspaceId);
@@ -592,8 +664,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             onRefresh={moduleRefreshAction?.onRefresh}
           />
         }
+        userSessionId={authSession?.id ?? null}
         workspaceId={workspaceId}
         onNavigateModule={handleNavigateModule}
+        onSelectWorkspace={handleSelectWorkspace}
       />
       <GlobalNotificationDrawer
         badgeCount={notificationBadgeCount}
@@ -648,6 +722,23 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
                 </div>
               </div>
             }
+          />
+        ) : null}
+      </Dialog>
+      <Dialog
+        open={Boolean(pendingWorkspaceSwitch)}
+        onOpenChange={(open) => !open && setPendingWorkspaceSwitch(null)}
+      >
+        {pendingWorkspaceSwitch ? (
+          <EmrConfirmDialogContent
+            cancelLabel="계속 작성"
+            closeAriaLabel="워크스페이스 전환 취소"
+            confirmButtonVariant="destructive"
+            confirmLabel="저장하지 않고 전환"
+            description={`작성 중인 내용은 저장되지 않습니다. 대상 워크스페이스: ${pendingWorkspaceSwitch.displayName}`}
+            title="워크스페이스를 전환할까요?"
+            onCancel={() => setPendingWorkspaceSwitch(null)}
+            onConfirm={confirmWorkspaceSwitch}
           />
         ) : null}
       </Dialog>

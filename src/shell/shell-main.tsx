@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition } from "framer-motion";
 import type { CSSProperties, ReactNode } from "react";
 import type { ModuleDefinition } from "@/types/emr";
+import type { WorkspaceListOption } from "@/features/auth/workspace-display";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import { NavRail } from "@/shell/nav-rail";
@@ -15,8 +16,10 @@ type ShellMainProps = {
   moduleDefinition: ModuleDefinition;
   navigationSearch: string;
   topBar: ReactNode;
+  userSessionId: string | null;
   workspaceId: string;
   onNavigateModule: (href: string, moduleId: string) => void;
+  onSelectWorkspace: (workspace: WorkspaceListOption) => void;
 };
 
 const PANEL_ENTER_EASE = [0.16, 0, 0.08, 1] as const;
@@ -26,8 +29,10 @@ export function ShellMain({
   moduleDefinition,
   navigationSearch,
   topBar,
+  userSessionId,
   workspaceId,
   onNavigateModule,
+  onSelectWorkspace,
 }: ShellMainProps) {
   const reduceMotion = useReducedMotion();
   const modulePanelOpen = useLayoutStore((state) => state.modulePanelOpen);
@@ -71,7 +76,9 @@ export function ShellMain({
         <WorkspaceSwitcher
           collapsed={!shouldShowModuleSidePanel}
           className="max-md:w-[var(--emr-navrail-width)] max-md:min-w-[var(--emr-navrail-width)] max-md:max-w-[var(--emr-navrail-width)] max-md:[&>[data-slot=workspace-switcher-label]]:hidden"
+          userSessionId={userSessionId}
           workspaceId={workspaceId}
+          onSelectWorkspace={onSelectWorkspace}
         />
 
         <div

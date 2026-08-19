@@ -826,6 +826,202 @@ test("workspace switcher reads persisted workspace display name from server list
   ).toHaveAttribute("src", "/pwa-icon-192.png");
 });
 
+test("workspace switcher lists active memberships and changes workspace without carrying clinical context", async ({
+  page,
+}) => {
+  const workspaces = buildWorkspaceSwitcherFixture();
+
+  await page.route("**/api/workspaces", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        workspaces,
+        enforcedBy: "workspace-membership-reader",
+      }),
+    });
+  });
+
+  await page.goto(
+    "/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=encounter-kong-260501"
+  );
+  await page.getByTestId("workspace-switcher").click();
+
+  const popover = page.getByTestId("workspace-switcher-popover");
+  await expect(popover).toBeVisible();
+  await expect(popover).toContainText("내가 참여 중인 활성 워크스페이스");
+  await expect(popover.getByText("6개")).toBeVisible();
+  await expect(
+    popover.getByTestId("workspace-switcher-option-clair-demo")
+  ).toHaveAttribute("aria-current", "true");
+
+  const search = popover.getByRole("combobox", { name: "워크스페이스 검색" });
+  await expect(search).toBeVisible();
+  await search.fill("한빛");
+  await popover.getByTestId("workspace-switcher-option-workspace-hanbit").click();
+
+  await expect(page).toHaveURL(/\/w\/workspace-hanbit\/treatment\?/);
+  const targetUrl = new URL(page.url());
+  expect(targetUrl.searchParams.get("modulePanel")).toBe("open");
+  expect(targetUrl.searchParams.get("aside")).toBe("closed");
+  expect(targetUrl.searchParams.has("encounterId")).toBe(false);
+});
+
+test("workspace switcher retries a failed membership list read", async ({ page }) => {
+  let shouldFail = true;
+
+  await page.route("**/api/workspaces", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    if (shouldFail) {
+      await route.fulfill({ status: 500, contentType: "application/json", body: "{}" });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        workspaces: buildWorkspaceSwitcherFixture().slice(0, 2),
+        enforcedBy: "workspace-membership-reader",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await page.getByTestId("workspace-switcher").click();
+
+  const popover = page.getByTestId("workspace-switcher-popover");
+  await expect(popover.getByText("저장된 목록을 표시하고 있어요.")).toBeVisible();
+
+  shouldFail = false;
+  await popover.getByRole("button", { name: "다시 시도" }).click();
+  await expect(
+    popover.getByTestId("workspace-switcher-option-workspace-hanbit")
+  ).toBeVisible();
+  await expect(popover.getByText("저장된 목록을 표시하고 있어요.")).toHaveCount(0);
+});
+
+test("workspace switcher confirms before leaving unsaved work", async ({ page }) => {
+  await page.route("**/api/workspaces", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        workspaces: buildWorkspaceSwitcherFixture().slice(0, 2),
+        enforcedBy: "workspace-membership-reader",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => typeof window.__clairSetNotificationNavigationDirty,
+      ),
+    )
+    .toBe("function");
+  await page.evaluate(() => {
+    window.__clairSetNotificationNavigationDirty?.(true);
+  });
+
+  await page.getByTestId("workspace-switcher").click();
+  await page
+    .getByTestId("workspace-switcher-option-workspace-hanbit")
+    .click();
+
+  const dialog = page.getByRole("dialog", { name: "워크스페이스를 전환할까요?" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "계속 작성" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+
+  await page.getByTestId("workspace-switcher").click();
+  await page
+    .getByTestId("workspace-switcher-option-workspace-hanbit")
+    .click();
+  await dialog.getByRole("button", { name: "저장하지 않고 전환" }).click();
+
+  await expect(page).toHaveURL(/\/w\/workspace-hanbit\/treatment\?/);
+});
+
+test("workspace switcher popover stays inside a narrow viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/api/workspaces", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        workspaces: buildWorkspaceSwitcherFixture().slice(0, 2),
+        enforcedBy: "workspace-membership-reader",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await page.getByTestId("workspace-switcher").click();
+
+  const popover = page.getByTestId("workspace-switcher-popover");
+  await expect(popover).toBeVisible();
+  const box = await popover.boundingBox();
+  expectRect(box);
+  expect(Math.round(box.x)).toBeGreaterThanOrEqual(0);
+  expect(Math.round(box.x + box.width)).toBeLessThanOrEqual(390);
+  expect(Math.round(box.width)).toBeLessThanOrEqual(370);
+});
+
+test("workspace switcher sends a non-admin target membership to workspace home", async ({
+  page,
+}) => {
+  await page.route("**/api/workspaces", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        workspaces: buildWorkspaceSwitcherFixture().slice(0, 2),
+        enforcedBy: "workspace-membership-reader",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open&section=settings");
+  await page.getByTestId("workspace-switcher").click();
+  await page
+    .getByTestId("workspace-switcher-option-workspace-hanbit")
+    .click();
+
+  await expect(page).toHaveURL(/\/w\/workspace-hanbit\/home\?modulePanel=open/);
+  expect(new URL(page.url()).searchParams.has("section")).toBe(false);
+});
+
 test("app shell keeps compact workspace switcher and nav rail visible on narrow viewports", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/w/clair-demo/reception?modulePanel=open");
@@ -864,6 +1060,53 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   expect(Math.round(modulePanelBox.width)).toBe(52);
   expect(workspaceBox.width).toBeGreaterThan(300);
 });
+
+function buildWorkspaceSwitcherFixture() {
+  return [
+    {
+      id: "clair-demo",
+      displayName: "VIP 동물의료센터 청담점",
+      membershipId: "membership-clair-demo",
+      roles: ["hospital_admin"],
+      status: "active",
+    },
+    {
+      id: "workspace-hanbit",
+      displayName: "한빛동물병원",
+      membershipId: "membership-workspace-hanbit",
+      roles: ["vet"],
+      status: "active",
+    },
+    {
+      id: "workspace-pureun",
+      displayName: "푸른동물의료센터",
+      membershipId: "membership-workspace-pureun",
+      roles: ["front_desk"],
+      status: "active",
+    },
+    {
+      id: "workspace-bom",
+      displayName: "봄동물병원",
+      membershipId: "membership-workspace-bom",
+      roles: ["technician"],
+      status: "active",
+    },
+    {
+      id: "workspace-on",
+      displayName: "온동물의료센터",
+      membershipId: "membership-workspace-on",
+      roles: ["vet"],
+      status: "active",
+    },
+    {
+      id: "workspace-dam",
+      displayName: "담동물병원",
+      membershipId: "membership-workspace-dam",
+      roles: ["front_desk"],
+      status: "active",
+    },
+  ];
+}
 
 test("app shell collapses workspace switcher with the navigation column", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=closed");
