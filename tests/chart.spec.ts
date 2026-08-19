@@ -2112,6 +2112,7 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
     });
   };
 
+  await page.setViewportSize({ height: 800, width: 1024 });
   await grantCheongdamWorkspaceAccess(page);
   await page.route(
     `**/api/workspaces/${workspaceId}/chart/live-queue?*`,
@@ -2252,11 +2253,71 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   await expect(chartContent.locator(".animate-spin")).toHaveCount(0);
 
   await expect(page.getByTestId("chart-assessment-empty-state")).toBeVisible();
-  await expect(page.getByTestId("chart-order-empty-state")).toBeVisible();
+  const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
+  const pinnedViewport = orderTable.locator(
+    "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
+  );
+  const emptyBody = page.getByTestId("chart-order-empty-body");
+  const emptyState = page.getByTestId("chart-order-empty-state");
+  await expect(emptyState).toBeVisible();
+  await expect(emptyState.locator("[data-slot='icon-wrapper']")).toHaveCount(0);
+  await expect(emptyState).toContainText("등록된 오더가 없습니다");
+  await expect(emptyState).toContainText(
+    "+ Order에서 현재 차트에 필요한 오더를 추가해 주세요.",
+  );
   await expect(
-    page
-      .getByTestId("chart-order-empty-state")
-      .getByRole("button", { name: "+ Order" }),
+    emptyState.getByRole("button", { name: "+ Order" }),
+  ).toBeVisible();
+
+  const [emptyBodyBox, emptyStateBox, headerBox, orderTableBox, viewportBox] =
+    await Promise.all([
+      emptyBody.boundingBox(),
+      emptyState.boundingBox(),
+      orderTable
+        .locator("[data-emr-data-table-header='true']")
+        .boundingBox(),
+      orderTable.boundingBox(),
+      pinnedViewport.boundingBox(),
+    ]);
+
+  expect(emptyBodyBox).not.toBeNull();
+  expect(emptyStateBox).not.toBeNull();
+  expect(headerBox).not.toBeNull();
+  expect(orderTableBox).not.toBeNull();
+  expect(viewportBox).not.toBeNull();
+  expect(orderTableBox!.width).toBeGreaterThan(viewportBox!.width);
+  expect(Math.abs(emptyBodyBox!.x - viewportBox!.x)).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      emptyBodyBox!.x + emptyBodyBox!.width -
+        (viewportBox!.x + viewportBox!.width),
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(emptyBodyBox!.y - (headerBox!.y + headerBox!.height)),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      emptyBodyBox!.y + emptyBodyBox!.height -
+        (viewportBox!.y + viewportBox!.height),
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      emptyStateBox!.x + emptyStateBox!.width / 2 -
+        (emptyBodyBox!.x + emptyBodyBox!.width / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      emptyStateBox!.y + emptyStateBox!.height / 2 -
+        (emptyBodyBox!.y + emptyBodyBox!.height / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+
+  await emptyState.getByRole("button", { name: "+ Order" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Workspace catalog에서 Order 추가" }),
   ).toBeVisible();
   await expect(
     chartContent.locator("[data-slot='chart-panel-skeleton']"),
