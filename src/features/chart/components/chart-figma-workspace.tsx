@@ -68,7 +68,6 @@ export function ChartPatientContextBar({
       className="h-full min-h-[var(--emr-context-bar-min-height)]"
     >
       <EmrPatientContextBar
-        className="border-b-0"
         guardianIndicatorVisible={Boolean(guardianInteraction)}
         guardianInteraction={guardianInteraction}
         guardianItems={[
