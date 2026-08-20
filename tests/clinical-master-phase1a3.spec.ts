@@ -67,7 +67,7 @@ test("A3 fixture keeps non-billable NULL distinct from explicit billable zero", 
     billingReflectionEnabled: true,
     priceKrw: 0,
   });
-  expect(draftSource).toContain("unitPriceSnapshot?: number | string | null");
+  expect(draftSource).toContain("unitPriceSnapshot: number | null");
   expect(actionSource).toContain("priceKrw: number | null");
   expect(fulfillmentSource).toContain("priceKrw?: number | null");
   expect(migration).toContain("'unitPriceSnapshot', o.unit_price_snapshot");
