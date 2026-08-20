@@ -177,7 +177,7 @@ const defaultLiveNotificationStateStore = createDemoLiveNotificationStateStore()
 const defaultLiveNotificationEventStore = createDemoLiveNotificationEventStore();
 
 const notificationRoleIdsByWorkspaceRole: Record<WorkspaceRoleId, string[]> = {
-  hospital_admin: ["vet", "lab", "desk", "billing", "imaging", "dispensing_treatment", "inpatient"],
+  hospital_admin: ["hospital_admin", "vet", "lab", "desk", "billing", "imaging", "dispensing_treatment", "inpatient"],
   vet: ["vet"],
   technician: ["lab", "imaging", "dispensing_treatment", "inpatient"],
   front_desk: ["desk", "billing"],
@@ -770,6 +770,7 @@ function isNotificationRecipientVisibleToActor(
 function getNotificationSourceRequiredPermission(
   notification: GlobalNotification,
 ): PermissionId | null {
+  if (notification.domain === "hospital_admin") return null;
   if (notification.domain === "billing") return "billing:view";
   if (notification.domain === "reception") return "reception:view";
   if (notification.domain === "lab") return "lab:view";

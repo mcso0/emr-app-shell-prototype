@@ -1,9 +1,15 @@
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import { resolveWorkspacePermission } from "@/features/auth/permission-resolver";
 import { readServerSession } from "@/features/auth/server-session-reader";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
 
 type RouteContext = {
   params: Promise<{
@@ -15,7 +21,10 @@ type LabResultSheetCatalogItem = {
   categoryId: string;
   categoryName: string;
   id: string;
+  rowId?: string;
   resultInputType: "number" | "text" | "select" | "positive_negative" | "grade";
+  resultValueKind?: "numeric" | "text" | "coded";
+  decimalScale?: number;
   resultUnit?: string;
   sortOrder: number;
   testItemName: string;
@@ -66,6 +75,16 @@ type SupabaseQueryResult = {
 
 type SupabaseCatalogClient = {
   from: (tableName: string) => SupabaseQueryBuilder;
+  rpc: (
+    functionName: "clair_get_lab_result_entry",
+    args: {
+      p_actor_user_id: string;
+      p_order_id?: string | null;
+      p_result_id?: string | null;
+      p_work_item_id?: string | null;
+      p_workspace_id: string;
+    },
+  ) => Promise<SupabaseQueryResult>;
 };
 
 const demoCatalogItems: Record<string, LabResultSheetCatalogItem[]> = {
@@ -171,8 +190,11 @@ export async function GET(request: Request, { params }: RouteContext) {
   const url = new URL(request.url);
   const input = {
     catalogItemId: readOptionalParam(url, "catalogItemId"),
+    orderId: readOptionalParam(url, "orderId"),
     orderDisplayName: readOptionalParam(url, "orderDisplayName"),
+    resultId: readOptionalParam(url, "resultId"),
     serviceItemId: readOptionalParam(url, "serviceItemId"),
+    workItemId: readOptionalParam(url, "workItemId"),
   };
 
   if (identity.source === "supabase_session") {
@@ -184,7 +206,22 @@ export async function GET(request: Request, { params }: RouteContext) {
       );
     }
 
+    const requiredPermission =
+      input.resultId || input.workItemId || input.orderId
+        ? "lab:view"
+        : "service_catalog:view";
+    const permission = await resolveResultSheetCatalogPermission({
+      client,
+      requiredPermission,
+      sessionUserId: identity.actorUserId,
+      workspaceId,
+    });
+    if (!permission.ok) {
+      return Response.json(permission.body, { status: permission.status });
+    }
+
     const result = await readSupabaseResultSheetCatalog({
+      actorUserId: identity.actorUserId,
       client: client as unknown as SupabaseCatalogClient,
       input,
       workspaceId,
@@ -231,19 +268,92 @@ function resolveDemoCatalogItemId(input: {
   return undefined;
 }
 
+async function resolveResultSheetCatalogPermission({
+  client,
+  requiredPermission,
+  sessionUserId,
+  workspaceId,
+}: {
+  client: unknown;
+  requiredPermission: "lab:view" | "service_catalog:view";
+  sessionUserId: string;
+  workspaceId: string;
+}) {
+  try {
+    const adapter = await loadWorkspacePermissionAdapterFromDb({
+      gateway: createSupabaseWorkspacePermissionGateway(
+        client as SupabaseWorkspacePermissionClient,
+      ),
+      sessionUserId,
+      workspaceId,
+    });
+    const permission = resolveWorkspacePermission(adapter, {
+      requiredPermission,
+      sessionUserId,
+      workspaceId,
+    });
+    if (permission.allowed) return { ok: true as const };
+    const status = permission.denialReason === "unauthenticated" ? 401 : 403;
+    return {
+      ok: false as const,
+      status,
+      body: {
+        ok: false,
+        status,
+        denialReason: permission.denialReason ?? "permission_missing",
+      },
+    };
+  } catch {
+    return {
+      ok: false as const,
+      status: 500,
+      body: { ok: false, status: 500, error: "permission_read_failed" },
+    };
+  }
+}
+
 async function readSupabaseResultSheetCatalog({
+  actorUserId,
   client,
   input,
   workspaceId,
 }: {
+  actorUserId: string;
   client: SupabaseCatalogClient;
   input: {
     catalogItemId?: string;
+    orderId?: string;
     orderDisplayName?: string;
+    resultId?: string;
     serviceItemId?: string;
+    workItemId?: string;
   };
   workspaceId: string;
 }) {
+  if (input.resultId || input.workItemId || input.orderId) {
+    const result = await client.rpc("clair_get_lab_result_entry", {
+      p_actor_user_id: actorUserId,
+      p_order_id: input.orderId ?? null,
+      p_result_id: input.resultId ?? null,
+      p_work_item_id: input.workItemId ?? null,
+      p_workspace_id: workspaceId,
+    });
+    if (result.error) {
+      if (result.error.message?.includes("permission_missing")) {
+        return { ok: false, status: 403, denialReason: "permission_missing" };
+      }
+      if (result.error.message?.includes("workspace_membership_missing")) {
+        return {
+          ok: false,
+          status: 403,
+          denialReason: "workspace_membership_missing",
+        };
+      }
+      return { ok: false, status: 500, error: "db_read_failed" };
+    }
+    return mapStoredResultSheetSnapshot(result.data);
+  }
+
   const catalogItemsResult = await client
     .from("order_catalog_items")
     .select("id, standard_order_name, in_hospital_order_name, pricing_rule")
@@ -371,6 +481,49 @@ async function readSupabaseResultSheetCatalog({
   };
 }
 
+function mapStoredResultSheetSnapshot(data: unknown) {
+  if (!data || typeof data !== "object") {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+  const response = data as Record<string, unknown>;
+  const savedResult =
+    response.savedResult && typeof response.savedResult === "object"
+      ? (response.savedResult as Record<string, unknown>)
+      : response;
+  const rows = Array.isArray(savedResult.rows) ? savedResult.rows : [];
+  const items = rows.flatMap((value, index) => {
+    if (!value || typeof value !== "object") return [];
+    const row = value as Record<string, unknown>;
+    const itemId = readString(row.labTestItemId);
+    const rowId = readString(row.id) ?? readString(row.rowId);
+    if (!itemId || !rowId) return [];
+    return [
+      {
+        categoryId: "result-snapshot",
+        categoryName: "결과 스냅샷",
+        decimalScale: readNumber(row.decimalScale),
+        id: itemId,
+        resultInputType: readResultInputType(row.resultInputType),
+        resultValueKind: readResultValueKind(row.resultValueKind),
+        resultUnit: readString(row.unit),
+        rowId,
+        sortOrder:
+          readNumber(row.effectiveSortOrder) ??
+          readNumber(row.sourceOrdinal) ??
+          index,
+        testItemName: readString(row.analyteName) ?? itemId,
+      } satisfies LabResultSheetCatalogItem,
+    ];
+  });
+  return {
+    ok: true,
+    status: 200,
+    catalogItemId: undefined,
+    items,
+    enforcedBy: "lab-result-definition-snapshot-read",
+  };
+}
+
 function resolveCatalogItemIdFromRows(
   rows: LabCatalogItemRow[],
   input: { orderDisplayName?: string; serviceItemId?: string },
@@ -419,4 +572,13 @@ function readResultInputType(value: unknown): LabResultSheetCatalogItem["resultI
   }
 
   return "text";
+}
+
+function readResultValueKind(
+  value: unknown,
+): NonNullable<LabResultSheetCatalogItem["resultValueKind"]> | undefined {
+  if (value === "numeric" || value === "text" || value === "coded") {
+    return value;
+  }
+  return undefined;
 }

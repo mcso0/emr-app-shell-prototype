@@ -19,6 +19,10 @@ const batchMigration = readFileSync(
   "supabase/migrations/20260719051725_performance_batch_rpc_followup.sql",
   "utf8",
 );
+const a3Migration = readFileSync(
+  "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
+  "utf8",
+);
 const gatewaySource = readFileSync(
   "src/features/notifications/server-notification-persistence.ts",
   "utf8",
@@ -430,6 +434,26 @@ test("batch migration keeps notification and fulfillment mutations set-based and
   expect(batchMigration).toContain("p_actor_user_id <> auth.uid()");
   expect(batchMigration).toContain("revoke all on function public.clair_mark_notification_user_states_read");
   expect(batchMigration).toContain("revoke all on function public.clair_enrich_fulfillment_work_item_snapshots");
+});
+
+test("A3 removes caller-controlled fulfillment enrichment while preserving notification persistence", () => {
+  expect(a3Migration).toContain(
+    "revoke all on function public.clair_enrich_fulfillment_work_item_snapshots(text,uuid,jsonb)",
+  );
+  expect(a3Migration).toContain(
+    "drop function if exists public.clair_enrich_fulfillment_work_item_snapshots(text,uuid,jsonb)",
+  );
+  expect(a3Migration).not.toContain(
+    "create or replace function public.clair_enrich_fulfillment_work_item_snapshots",
+  );
+  expect(fulfillmentCoreSource).not.toContain(
+    "clair_enrich_fulfillment_work_item_snapshots",
+  );
+  expect(fulfillmentCoreSource).not.toContain(
+    "persistSupabaseSnapshotEnrichment",
+  );
+  expect(resultReviewBillingProducerRoute).toContain("syncVetReviewedBillingCandidates");
+  expect(fulfillmentWorkItemProducerRoute).toContain("updateFulfillmentWorkItem");
 });
 
 test("notification persistence gateway maps Supabase errors without leaking raw details", async () => {

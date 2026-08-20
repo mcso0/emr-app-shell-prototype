@@ -103,6 +103,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseFulfillmentWorkItemRpcClient,
         )
       : undefined,
+    // The fulfillment review core selects the queue-scoped completion wrapper
+    // for every reviewed order before billing sync.
     invoiceCandidateGateway: client
       ? createSupabaseInvoiceCandidateSyncGateway(
           client as unknown as SupabaseInvoiceCandidateSyncRpcClient,

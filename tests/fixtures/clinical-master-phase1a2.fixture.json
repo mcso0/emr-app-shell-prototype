@@ -1,0 +1,95 @@
+{
+  "workspaces": [
+    { "id": "phase1a2.workspace.a", "customized": false },
+    { "id": "phase1a2.workspace.b", "customized": true }
+  ],
+  "releases": [
+    {
+      "releaseKey": "phase-1a-2-fixture-release-1",
+      "orders": [
+        {
+          "masterKey": "phase1a2.order.consultation",
+          "revision": 1,
+          "classificationPathKey": "phase1a2.fallback.path.consultation",
+          "preferredName": "기본 상담",
+          "salesUnitCode": "EA",
+          "species": ["dog", "cat"]
+        }
+      ]
+    },
+    {
+      "releaseKey": "phase-1a-2-fixture-release-2",
+      "orders": [
+        {
+          "masterKey": "phase1a2.order.consultation",
+          "revision": 2,
+          "classificationPathKey": "phase1a2.fallback.path.consultation",
+          "preferredName": "변경 상담",
+          "salesUnitCode": "EA",
+          "species": ["dog", "cat"]
+        },
+        {
+          "masterKey": "phase1a2.order.new",
+          "revision": 1,
+          "classificationPathKey": "phase1a2.fallback.path.consultation",
+          "preferredName": "새 상담",
+          "salesUnitCode": "EA",
+          "species": ["dog", "cat"]
+        }
+      ]
+    }
+  ],
+  "fallbackPaths": [
+    {
+      "itemType": "consultation",
+      "pathKey": "phase1a2.fallback.path.consultation",
+      "isOtherUnclassified": true,
+      "runtimeStatus": "active"
+    },
+    {
+      "itemType": "medication",
+      "pathKey": "phase1a2.fallback.path.medication",
+      "isOtherUnclassified": true,
+      "runtimeStatus": "active"
+    },
+    {
+      "itemType": "treatment",
+      "pathKey": "phase1a2.fallback.path.treatment",
+      "isOtherUnclassified": true,
+      "runtimeStatus": "active"
+    },
+    {
+      "itemType": "lab",
+      "pathKey": "phase1a2.fallback.path.lab",
+      "isOtherUnclassified": true,
+      "runtimeStatus": "active"
+    },
+    {
+      "itemType": "imaging",
+      "pathKey": "phase1a2.fallback.path.imaging",
+      "isOtherUnclassified": true,
+      "runtimeStatus": "active"
+    },
+    {
+      "itemType": "hospitalization",
+      "pathKey": "phase1a2.fallback.path.hospitalization",
+      "isOtherUnclassified": true,
+      "runtimeStatus": "active"
+    },
+    {
+      "itemType": "misc",
+      "pathKey": "phase1a2.fallback.path.misc",
+      "isOtherUnclassified": true,
+      "runtimeStatus": "active"
+    }
+  ],
+  "expected": {
+    "release1NewRows": 2,
+    "release2UnmodifiedAutoApplied": 1,
+    "release2CustomizedReview": 1,
+    "release2NewPendingRows": 2,
+    "customizedPricePreserved": 1234,
+    "notificationDedupePrefix": "clinical-master-update:",
+    "chartSetWriteStatus": "unsupported_order_type"
+  }
+}

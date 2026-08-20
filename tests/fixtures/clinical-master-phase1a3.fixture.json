@@ -1,0 +1,62 @@
+{
+  "categoryMappings": [
+    { "categoryGroup": "consultation", "billingCategory": "consultation", "uiLabel": "진료" },
+    { "categoryGroup": "medication", "billingCategory": "dispensing", "uiLabel": "조제" },
+    { "categoryGroup": "treatment", "billingCategory": "treatment", "uiLabel": "처치" },
+    { "categoryGroup": "lab", "billingCategory": "laboratory", "uiLabel": "검사" },
+    { "categoryGroup": "imaging", "billingCategory": "imaging", "uiLabel": "영상" },
+    { "categoryGroup": "hospitalization", "billingCategory": "other", "uiLabel": "기타" },
+    { "categoryGroup": "misc", "billingCategory": "other", "uiLabel": "기타" }
+  ],
+  "priceCases": {
+    "nonBillableNull": {
+      "categoryGroup": "misc",
+      "billingReflectionEnabled": false,
+      "priceKrw": null
+    },
+    "billableZero": {
+      "categoryGroup": "hospitalization",
+      "billingReflectionEnabled": true,
+      "priceKrw": 0
+    }
+  },
+  "legacyCases": [
+    { "serviceItemId": "svc-lab-cbc", "workspaceCatalogItemId": null, "categoryFallback": "검사" },
+    { "serviceItemId": null, "workspaceCatalogItemId": null, "historicalJsonClaim": "catalog-claim", "categoryFallback": "기타" }
+  ],
+  "preflightBuckets": {
+    "fatal": [
+      "catalog_service_dual",
+      "catalog_missing_or_cross_workspace",
+      "catalog_non_individual",
+      "catalog_revision_invalid",
+      "master_lineage_partial",
+      "master_lineage_missing",
+      "catalog_snapshot_mismatch_confirmed_or_billed",
+      "catalog_snapshot_mismatch_cancelled",
+      "invoice_line_duplicate_order",
+      "invoice_line_order_missing_or_cross_workspace",
+      "order_anchor_mismatch",
+      "invoice_line_anchor_multiple_orders",
+      "order_multiple_same_order_lines",
+      "invoice_order_encounter_mismatch"
+    ],
+    "tolerated": [
+      "legacy_service_item",
+      "legacy_null_service_confirmed_or_billed",
+      "legacy_null_service_cancelled",
+      "legacy_null_service_draft_or_pending",
+      "legacy_json_catalog_claim",
+      "legacy_compatibility_metadata_only",
+      "catalog_snapshot_mismatch_draft_or_pending",
+      "legacy_anchor_adoption_candidate",
+      "legacy_unanchored_no_order_line"
+    ]
+  },
+  "expected": {
+    "newCatalogServiceItemId": null,
+    "snapshotSource": "order_catalog_items",
+    "setConfirmationStatus": "unsupported_order_type",
+    "enrichmentRpc": null
+  }
+}

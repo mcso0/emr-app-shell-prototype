@@ -34,6 +34,10 @@ const batchMigration = readFileSync(
   "supabase/migrations/20260719051725_performance_batch_rpc_followup.sql",
   "utf8",
 );
+const a3Migration = readFileSync(
+  "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
+  "utf8",
+);
 
 test("fulfillment work item routes sync from chart orders, read by queue, and mutate lifecycle", async ({
   request,
@@ -559,6 +563,62 @@ test("fulfillment mock gateway routes catalog snapshots idempotently to downstre
     workspaceId,
   });
   expect(chartOnly).toMatchObject({ ok: true, workItems: [] });
+});
+
+test("B3 fulfillment creates work only for selected atomic children and keeps the frozen snapshot", async () => {
+  const gateway = createMockFulfillmentWorkItemGateway(
+    undefined,
+    () => "2026-08-20T05:10:00.000Z",
+  );
+  const parentId = "b3-fulfillment-parent";
+  const childId = "b3-fulfillment-child";
+  const result = await gateway.syncFromOrders({
+    actorUserId: "user-vet",
+    encounterId,
+    orderIds: [parentId, childId],
+    orderSnapshots: [
+      {
+        orderId: parentId,
+        rowType: "set",
+        billingReflectionEnabled: true,
+        destinationModule: "treatment",
+        taskRequired: true,
+        inHospitalOrderName: "Caller parent must not become work",
+      },
+      {
+        orderId: childId,
+        rowType: "set_child",
+        billingReflectionEnabled: true,
+        destinationModule: "treatment",
+        taskRequired: true,
+        inHospitalOrderName: "Caller child must not replace frozen name",
+        appliedSnapshot: {
+          rowType: "set_child",
+          effectiveDisplayName: "Frozen atomic child",
+          effectiveBillingName: "Frozen atomic child billing",
+          destinationModule: "treatment",
+          billingReflectionEnabled: true,
+          categoryGroup: "treatment",
+          quantity: 1,
+          priceKrw: 3200,
+        },
+      },
+    ],
+    workspaceId,
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    workItems: [
+      {
+        orderId: childId,
+        sourceSnapshot: {
+          orderDisplayName: "Frozen atomic child",
+          detail: { unitPriceSnapshot: 3200 },
+        },
+      },
+    ],
+  });
 });
 
 test("fulfillment core blocks terminal-state transitions", async () => {
@@ -1169,18 +1229,6 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
       calls.push(
         `${functionName}:${args.p_workspace_id}:${args.p_encounter_id ?? args.p_work_item_id}:${args.p_actor_user_id ?? "read"}`,
       );
-      if (functionName === "clair_enrich_fulfillment_work_item_snapshots") {
-        expect(args.p_snapshots).toEqual([
-          expect.objectContaining({
-            orderId: "00000000-0000-4000-8000-000000000301",
-            sourceSnapshot: expect.objectContaining({
-              guardianName: "DEN-327 Guardian",
-              patientName: "DEN-327 Patient",
-              orderDisplayName: "DEN-327 CBC",
-            }),
-          }),
-        ]);
-      }
       return {
         data: [
           {
@@ -1200,18 +1248,12 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
             returnedAt: null,
             reason: null,
             sourceSnapshot: {
-              orderDisplayName:
-                functionName === "clair_enrich_fulfillment_work_item_snapshots"
-                  ? "DEN-327 CBC"
-                  : "CBC 검사",
+              orderDisplayName: "CBC 검사",
               billingReflectionEnabled: true,
               detail: {},
-              ...(functionName === "clair_enrich_fulfillment_work_item_snapshots"
-                ? {
-                    guardianName: "DEN-327 Guardian",
-                    patientName: "DEN-327 Patient",
-                  }
-                : {}),
+              workspaceCatalogItemId: "a3-catalog-cbc",
+              sourceMasterRecordId: "a3-master-cbc",
+              sourceMasterRevision: 2,
             },
             createdAt: "2026-05-23T09:44:00.000Z",
             updatedAt: "2026-05-23T09:44:00.000Z",
@@ -1236,6 +1278,9 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
         orderId: "00000000-0000-4000-8000-000000000301",
         patientName: "DEN-327 Patient",
         sourcePresetId: "std-den-327-cbc",
+        workspaceCatalogItemId: "a3-catalog-cbc",
+        sourceMasterRecordId: "a3-master-cbc",
+        sourceMasterRevision: 2,
       },
     ],
   });
@@ -1249,7 +1294,6 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
 
   expect(calls).toEqual([
     `clair_sync_fulfillment_work_items_from_orders:${workspaceId}:00000000-0000-4000-8000-000000000101:00000000-0000-4000-8000-000000000002`,
-    `clair_enrich_fulfillment_work_item_snapshots:${workspaceId}:undefined:00000000-0000-4000-8000-000000000002`,
     `clair_update_fulfillment_work_item:${workspaceId}:00000000-0000-4000-8000-000000000901:00000000-0000-4000-8000-000000000003`,
   ]);
   expect(synced).toMatchObject({
@@ -1258,9 +1302,10 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
       {
         queueType: "lab",
         sourceSnapshot: {
-          guardianName: "DEN-327 Guardian",
-          patientName: "DEN-327 Patient",
-          orderDisplayName: "DEN-327 CBC",
+          orderDisplayName: "CBC 검사",
+          workspaceCatalogItemId: "a3-catalog-cbc",
+          sourceMasterRecordId: "a3-master-cbc",
+          sourceMasterRevision: 2,
         },
       },
     ],
@@ -1271,15 +1316,9 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
   });
 });
 
-test("fulfillment snapshot enrichment does not block order confirmation when batch RPC is denied", async () => {
+test("fulfillment order sync persists the frozen source snapshot without an enrichment RPC", async () => {
   const gateway = createSupabaseFulfillmentWorkItemGateway({
-    async rpc(functionName) {
-      if (functionName === "clair_enrich_fulfillment_work_item_snapshots") {
-        return {
-          data: null,
-          error: { message: "permission denied for batch snapshot enrichment" },
-        };
-      }
+    async rpc() {
       return {
         data: [
           {
@@ -1334,9 +1373,7 @@ test("fulfillment snapshot enrichment does not block order confirmation when bat
     workItems: [
       {
         sourceSnapshot: {
-          guardianName: "DEN-327 Guardian",
-          patientName: "DEN-327 Patient",
-          orderDisplayName: "DEN-327 CBC",
+          orderDisplayName: "CBC 검사",
         },
       },
     ],
@@ -1372,6 +1409,15 @@ test("fulfillment migration defines local-first schema/RPC boundary without secr
   );
   expect(migration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
+  expect(a3Migration).toContain(
+    "revoke all on function public.clair_enrich_fulfillment_work_item_snapshots(text,uuid,jsonb)",
+  );
+  expect(a3Migration).toContain(
+    "drop function if exists public.clair_enrich_fulfillment_work_item_snapshots(text,uuid,jsonb)",
+  );
+  expect(a3Migration).not.toContain(
+    "create or replace function public.clair_enrich_fulfillment_work_item_snapshots",
   );
   expect(batchMigration).toContain(
     "create or replace function public.clair_enrich_fulfillment_work_item_snapshots",

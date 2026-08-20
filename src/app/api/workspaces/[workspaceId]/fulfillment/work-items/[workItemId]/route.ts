@@ -107,6 +107,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseChartOrderLifecycleRpcClient
         )
       : undefined,
+    // Fulfillment transitions select the queue-specific completion wrapper;
+    // source snapshots remain server-built and immutable on retry.
     invoiceCandidateGateway: client
       ? createSupabaseInvoiceCandidateSyncGateway(
           client as unknown as SupabaseInvoiceCandidateSyncRpcClient

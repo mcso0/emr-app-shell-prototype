@@ -22,30 +22,56 @@ export type InvoiceCandidatePublicSyncInput = {
   orderIds?: string[];
 };
 
-export type InvoiceCandidateTrustedSyncInput = InvoiceCandidatePublicSyncInput & {
-  orderSnapshots?: InvoiceCandidateOrderSnapshotInput[];
+export type InvoiceCandidateSyncInput = InvoiceCandidatePublicSyncInput & {
+  surface?: "direct" | "chart" | "fulfillment";
 };
 
-export type InvoiceCandidateSyncInput = InvoiceCandidatePublicSyncInput;
-
-export type InvoiceCandidateTrustedGatewaySyncInput = {
+export type InvoiceCandidateGatewaySyncInput = {
   actorUserId: string;
   encounterId: string;
   orderIds: string[];
-  orderSnapshots?: InvoiceCandidateOrderSnapshotInput[];
+  surface?: "direct" | "chart" | "fulfillment";
   workspaceId: string;
 };
 
-export type InvoiceCandidateOrderSnapshotInput = {
+type InvoiceCandidateFrozenOrderSnapshot = {
+  amountBasis?:
+    | "included_order_sum"
+    | "set_fixed_price"
+    | "range_price"
+    | string;
+  appliedPriceSnapshot?: Record<string, unknown>;
+  appliedSnapshot?: Record<string, unknown>;
+  billedAs?: "set_parent" | "atomic_child" | "nonbillable_parent";
   billingName?: string;
   billingReflectionEnabled: boolean;
+  billingCategory?: string;
+  categoryGroup?: string;
   destinationModule?: string;
+  explicitExtra?: boolean;
+  frozenOrderSnapshot?: Record<string, unknown>;
   inHospitalOrderName?: string;
-  lineTotalSnapshot?: number;
+  lineTotalSnapshot?: number | null;
   orderId: string;
-  priceKrw?: number;
+  parentOrderId?: string | null;
+  priceKrw?: number | null;
   quantity?: number;
+  rangeBasis?: "patient_weight_kg" | "manual_value" | string | null;
+  rangeId?: string | null;
+  rangeInput?: number | null;
+  roundingResultKrw?: number | null;
+  roundingRule?: "as_is" | "ceil" | "floor" | "round";
+  rowType?: "individual" | "set" | "set_child" | string;
+  sourceOrderSnapshot?: Record<string, unknown>;
+  sourceSetId?: string;
+  sourceSetRevisionId?: string;
+  sourceSetRevisionItemId?: string;
+  sourceSetRevisionNo?: number;
   sourcePresetId?: string;
+  workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
   standardOrderName?: string;
   taskRequired?: boolean;
 };
@@ -59,6 +85,14 @@ export type BillingInvoiceCandidateLine = {
   quantity: number;
   syncedAt: string;
   unitPrice: number;
+  serviceItemId?: string;
+  workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
+  categoryGroup?: string;
+  billingCategory?: string;
+  sourceOrderSnapshot?: Record<string, unknown>;
 };
 
 export type InvoiceCandidateSyncGatewayResult =
@@ -69,7 +103,9 @@ export type InvoiceCandidateSyncGatewayResult =
       denialReason:
         | "encounter_unavailable"
         | "order_unavailable"
-        | "invoice_unavailable";
+        | "invoice_unavailable"
+        | "invoice_anchor_conflict"
+        | "billable_price_required";
     }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
@@ -78,8 +114,8 @@ export type InvoiceCandidateSyncGateway = {
     encounterId: string;
     workspaceId: string;
   }): Promise<InvoiceCandidateSyncGatewayResult>;
-  syncInvoiceCandidates(
-    input: InvoiceCandidateTrustedGatewaySyncInput,
+  syncInvoiceCandidates<T extends InvoiceCandidateGatewaySyncInput>(
+    input: T,
   ): Promise<InvoiceCandidateSyncGatewayResult>;
 };
 
@@ -107,7 +143,9 @@ export type InvoiceCandidateReadResult =
       denialReason:
         | "encounter_unavailable"
         | "order_unavailable"
-        | "invoice_unavailable";
+        | "invoice_unavailable"
+        | "invoice_anchor_conflict"
+        | "billable_price_required";
     }
   | {
       ok: false;
@@ -139,7 +177,9 @@ export type InvoiceCandidateSyncResult =
       denialReason:
         | "encounter_unavailable"
         | "order_unavailable"
-        | "invoice_unavailable";
+        | "invoice_unavailable"
+        | "invoice_anchor_conflict"
+        | "billable_price_required";
     }
   | {
       ok: false;
@@ -232,7 +272,12 @@ export async function syncInvoiceCandidates({
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
-    requiredPermission: "billing:issue",
+    requiredPermission:
+      input.surface === "chart"
+        ? "chart:update"
+        : input.surface === "fulfillment"
+          ? "dispensing:complete"
+          : "billing:issue",
   });
   if (!permission.allowed) {
     return {
@@ -246,6 +291,7 @@ export async function syncInvoiceCandidates({
     actorUserId: actorUserId ?? "",
     encounterId: normalized.encounterId,
     orderIds: normalized.orderIds,
+    surface: input.surface ?? "direct",
     workspaceId,
   });
   if (!result.ok) {
@@ -301,12 +347,11 @@ export function createMockInvoiceCandidateSyncGateway(
         }),
       };
     },
-    async syncInvoiceCandidates({
+  async syncInvoiceCandidates<T extends InvoiceCandidateGatewaySyncInput>({
       encounterId,
       orderIds,
-      orderSnapshots,
       workspaceId,
-    }) {
+    }: T) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter)
         return {
@@ -329,9 +374,6 @@ export function createMockInvoiceCandidateSyncGateway(
         orders,
         workspaceId,
       });
-      const snapshotByOrderId = new Map(
-        (orderSnapshots ?? []).map((snapshot) => [snapshot.orderId, snapshot]),
-      );
       const timestamp = now();
       const nextCandidates = [...candidates];
       const synced: BillingInvoiceCandidateLine[] = [];
@@ -343,7 +385,15 @@ export function createMockInvoiceCandidateSyncGateway(
             item.encounterId === encounterId &&
             item.id === orderId,
         );
-        const snapshot = snapshotByOrderId.get(orderId);
+        const snapshot = getFrozenOrderSnapshot(order);
+
+        // B3 downstreams receive atomic children and the set root only. A
+        // nested container is never an invoice line, even if a stale caller
+        // includes it in the retry tuple.
+        if (isNestedContainer(order, snapshot)) continue;
+        if (isSetParent(order, snapshot) && !shouldBillSetParent(snapshot)) {
+          continue;
+        }
         if (snapshot?.billingReflectionEnabled === false) continue;
         if (!order && !snapshot) {
           return { ok: false, status: 409, denialReason: "order_unavailable" };
@@ -364,18 +414,60 @@ export function createMockInvoiceCandidateSyncGateway(
           (line) => line.orderId === orderId,
         );
         const quantity = snapshot?.quantity ?? sourceLine?.quantity ?? 1;
-        const unitPrice = snapshot?.priceKrw ?? sourceLine?.unitPrice ?? 0;
+        const snapshotOwnsPrice = snapshot !== undefined;
+        if (
+          snapshotOwnsPrice &&
+          snapshot.billingReflectionEnabled === true &&
+          (snapshot.priceKrw === null || snapshot.priceKrw === undefined)
+        ) {
+          return { ok: false, status: 409, denialReason: "billable_price_required" };
+        }
+        const unitPrice = snapshot?.priceKrw ?? sourceLine?.unitPrice;
+        if (unitPrice === undefined) {
+          return { ok: false, status: 409, denialReason: "billable_price_required" };
+        }
+        const categoryGroup =
+          snapshot?.categoryGroup ??
+          readSnapshotString(order?.appliedSnapshot, "categoryGroup") ??
+          order?.categoryGroup;
+        const billingCategory = mapBillingCategory(
+          snapshot?.billingCategory ??
+            readSnapshotString(order?.appliedSnapshot, "billingCategory") ??
+            order?.billingCategory,
+          categoryGroup,
+        );
+        const sourceOrderSnapshot = getSourceOrderSnapshot(
+          order,
+          snapshot,
+          sourceLine,
+        );
         const candidate = {
           billingCandidateId: `billcand-${orderId}`,
           description: getCandidateDescription({ order, snapshot, sourceLine }),
           invoiceId: invoice.id,
-          lineTotal: roundMoney(
-            snapshot?.lineTotalSnapshot ?? quantity * unitPrice,
-          ),
+          lineTotal: getFrozenLineTotal({
+            quantity,
+            snapshot,
+            unitPrice,
+          }),
           orderId,
           quantity,
           syncedAt: timestamp,
           unitPrice,
+          serviceItemId: order?.serviceItemId ?? sourceLine?.serviceItemId,
+          workspaceCatalogItemId:
+            snapshot?.workspaceCatalogItemId ?? order?.workspaceCatalogItemId,
+          sourceMasterRecordId:
+            snapshot?.sourceMasterRecordId ?? order?.sourceMasterRecordId,
+          sourceMasterRevision:
+            snapshot?.sourceMasterRevision ?? order?.sourceMasterRevision,
+          workspaceCatalogRevision:
+            snapshot?.workspaceCatalogRevision ?? order?.workspaceCatalogRevision,
+          ...(categoryGroup ? { categoryGroup } : {}),
+          ...(billingCategory ? { billingCategory } : {}),
+          ...(sourceOrderSnapshot
+            ? { sourceOrderSnapshot: cloneSnapshot(sourceOrderSnapshot) }
+            : {}),
         } satisfies BillingInvoiceCandidateLine;
         nextCandidates.push(candidate);
         synced.push(candidate);
@@ -396,7 +488,10 @@ export type SupabaseInvoiceCandidateSyncRpcClient = {
     args: { p_workspace_id: string; p_encounter_id: string },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_sync_billing_invoice_candidates",
+    functionName:
+      | "clair_sync_billing_invoice_candidates"
+      | "clair_sync_billing_invoice_candidates_from_chart"
+      | "clair_sync_billing_invoice_candidates_from_fulfillment",
     args: {
       p_workspace_id: string;
       p_actor_user_id: string;
@@ -418,14 +513,21 @@ export function createSupabaseInvoiceCandidateSyncGateway(
       if (error) return mapSyncError(error.message, "db_read_failed");
       return { ok: true, candidates: mapCandidateRows(data) };
     },
-    async syncInvoiceCandidates({
+    async syncInvoiceCandidates<T extends InvoiceCandidateGatewaySyncInput>({
       actorUserId,
       encounterId,
       orderIds,
+      surface = "direct",
       workspaceId,
-    }) {
+    }: T) {
+      const functionName =
+        surface === "chart"
+          ? "clair_sync_billing_invoice_candidates_from_chart"
+          : surface === "fulfillment"
+            ? "clair_sync_billing_invoice_candidates_from_fulfillment"
+            : "clair_sync_billing_invoice_candidates";
       const { data, error } = await client.rpc(
-        "clair_sync_billing_invoice_candidates",
+        functionName,
         {
           p_workspace_id: workspaceId,
           p_actor_user_id: actorUserId,
@@ -539,6 +641,30 @@ function getStoredOrSeedCandidates({
       quantity: line.quantity,
       syncedAt: new Date(0).toISOString(),
       unitPrice: line.unitPrice,
+      ...(line.serviceItemId ? { serviceItemId: line.serviceItemId } : {}),
+      ...(line.workspaceCatalogItemId
+        ? { workspaceCatalogItemId: line.workspaceCatalogItemId }
+        : {}),
+      ...(line.sourceMasterRecordId
+        ? { sourceMasterRecordId: line.sourceMasterRecordId }
+        : {}),
+      ...(line.sourceMasterRevision !== undefined
+        ? { sourceMasterRevision: line.sourceMasterRevision }
+        : {}),
+      ...(line.workspaceCatalogRevision !== undefined
+        ? { workspaceCatalogRevision: line.workspaceCatalogRevision }
+        : {}),
+      ...(line.categoryGroup ? { categoryGroup: line.categoryGroup } : {}),
+      ...(line.billingCategory || (line.categoryGroup as string | undefined) === "set"
+        ? {
+            billingCategory:
+              mapBillingCategory(line.billingCategory, line.categoryGroup) ??
+              "other",
+          }
+        : {}),
+      ...(line.sourceOrderSnapshot
+        ? { sourceOrderSnapshot: line.sourceOrderSnapshot }
+        : {}),
     }));
 }
 
@@ -594,13 +720,276 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function getFrozenOrderSnapshot(
+  order: EmrOrder | undefined,
+): InvoiceCandidateFrozenOrderSnapshot | undefined {
+  const appliedSnapshot = asSnapshotRecord(order?.appliedSnapshot);
+  if (!order || !appliedSnapshot) return undefined;
+  const appliedPriceSnapshot = asSnapshotRecord(
+    (order as EmrOrder & { appliedPriceSnapshot?: unknown }).appliedPriceSnapshot,
+  );
+
+  const priceKrw = readSnapshotNumberOrNull(appliedSnapshot, "priceKrw");
+  const lineTotalSnapshot = readSnapshotNumberOrNull(
+    appliedSnapshot,
+    "lineTotalSnapshot",
+  );
+  const billingReflectionEnabled = readSnapshotBoolean(
+    appliedSnapshot,
+    "billingReflectionEnabled",
+  );
+  return {
+    amountBasis: readSnapshotString(appliedSnapshot, "amountBasis"),
+    appliedPriceSnapshot,
+    appliedSnapshot,
+    billedAs: readSnapshotString(appliedSnapshot, "billedAs") as
+      | InvoiceCandidateFrozenOrderSnapshot["billedAs"]
+      | undefined,
+    billingName:
+      readSnapshotString(
+        appliedSnapshot,
+        "effectiveBillingName",
+        "billingName",
+      ) ?? order.displayName,
+    billingReflectionEnabled: billingReflectionEnabled ?? true,
+    billingCategory: readSnapshotString(appliedSnapshot, "billingCategory"),
+    categoryGroup: readSnapshotString(appliedSnapshot, "categoryGroup"),
+    destinationModule: readSnapshotString(
+      appliedSnapshot,
+      "destinationModule",
+    ),
+    explicitExtra: readSnapshotBoolean(appliedSnapshot, "explicitExtra"),
+    frozenOrderSnapshot: appliedSnapshot,
+    inHospitalOrderName: readSnapshotString(
+      appliedSnapshot,
+      "effectiveDisplayName",
+      "displayName",
+    ),
+    lineTotalSnapshot,
+    orderId: order.id,
+    parentOrderId: readSnapshotString(appliedSnapshot, "parentOrderId") ?? null,
+    priceKrw:
+      priceKrw !== undefined
+        ? priceKrw
+        : readSnapshotNumberOrNull(appliedSnapshot, "setPriceKrw") ??
+          order.unitPriceSnapshot ??
+          undefined,
+    quantity: readSnapshotNumber(appliedSnapshot, "quantity"),
+    rangeBasis: readSnapshotString(appliedSnapshot, "rangeBasis"),
+    rangeId: readSnapshotString(appliedSnapshot, "rangeId") ?? null,
+    rangeInput: readSnapshotNumberOrNull(appliedSnapshot, "rangeInput"),
+    roundingResultKrw: readSnapshotNumberOrNull(
+      appliedSnapshot,
+      "roundingResultKrw",
+      "roundingResult",
+    ),
+    roundingRule: readSnapshotString(appliedSnapshot, "roundingRule") as
+      | InvoiceCandidateFrozenOrderSnapshot["roundingRule"]
+      | undefined,
+    rowType: readSnapshotString(appliedSnapshot, "rowType"),
+    sourceOrderSnapshot: appliedSnapshot,
+    sourceSetId: readSnapshotString(appliedSnapshot, "sourceSetId"),
+    sourceSetRevisionId: readSnapshotString(
+      appliedSnapshot,
+      "sourceSetRevisionId",
+    ),
+    sourceSetRevisionItemId: readSnapshotString(
+      appliedSnapshot,
+      "sourceSetRevisionItemId",
+    ),
+    sourceSetRevisionNo: readSnapshotNumber(
+      appliedSnapshot,
+      "sourceSetRevisionNo",
+    ),
+    sourcePresetId:
+      readSnapshotString(appliedSnapshot, "sourcePresetId") ??
+      order.serviceItemId,
+    sourceMasterRecordId: order.sourceMasterRecordId,
+    sourceMasterRevision: order.sourceMasterRevision,
+    workspaceCatalogItemId:
+      readSnapshotString(appliedSnapshot, "workspaceCatalogItemId") ??
+      order.workspaceCatalogItemId,
+    workspaceCatalogRevision: order.workspaceCatalogRevision,
+    standardOrderName: readSnapshotString(
+      appliedSnapshot,
+      "standardOrderName",
+    ),
+    taskRequired: readSnapshotBoolean(appliedSnapshot, "taskRequired"),
+  };
+}
+
+function getSourceOrderSnapshot(
+  order: EmrOrder | undefined,
+  snapshot: InvoiceCandidateFrozenOrderSnapshot | undefined,
+  sourceLine: InvoiceLine | undefined,
+) {
+  return (
+    snapshot?.sourceOrderSnapshot ??
+    snapshot?.frozenOrderSnapshot ??
+    snapshot?.appliedSnapshot ??
+    asSnapshotRecord(order?.appliedSnapshot) ??
+    sourceLine?.sourceOrderSnapshot
+  );
+}
+
+function getFrozenLineTotal({
+  quantity,
+  snapshot,
+  unitPrice,
+}: {
+  quantity: number;
+  snapshot?: InvoiceCandidateFrozenOrderSnapshot;
+  unitPrice: number;
+}) {
+  const explicitLineTotal = snapshot?.lineTotalSnapshot;
+  if (typeof explicitLineTotal === "number" && Number.isFinite(explicitLineTotal)) {
+    return explicitLineTotal;
+  }
+  const roundingResult = snapshot?.roundingResultKrw;
+  if (typeof roundingResult === "number" && Number.isFinite(roundingResult)) {
+    return roundingResult;
+  }
+  const calculationOutputs =
+    asSnapshotRecord(snapshot?.appliedPriceSnapshot) ??
+    asSnapshotRecord(snapshot?.appliedSnapshot?.calculationOutputs);
+  const calculatedLineTotal =
+    readSnapshotNumber(calculationOutputs, "lineTotalKrw", "lineTotalSnapshot") ??
+    readSnapshotNumber(calculationOutputs, "roundingResultKrw");
+  if (calculatedLineTotal !== undefined) return calculatedLineTotal;
+  return roundMoney(quantity * unitPrice);
+}
+
+function isSetParent(
+  order: EmrOrder | undefined,
+  snapshot: InvoiceCandidateFrozenOrderSnapshot | undefined,
+) {
+  return (
+    snapshot?.rowType === "set" ||
+    readSnapshotString(order as (EmrOrder & Record<string, unknown>) | undefined, "rowType") ===
+      "set" ||
+    readSnapshotString(order?.appliedSnapshot, "rowType") === "set" ||
+    readSnapshotString(order?.appliedSnapshot, "orderType") === "set" ||
+    readSnapshotString(
+      order as (EmrOrder & Record<string, unknown>) | undefined,
+      "orderType",
+    ) === "set"
+  );
+}
+
+function isNestedContainer(
+  order: EmrOrder | undefined,
+  snapshot: InvoiceCandidateFrozenOrderSnapshot | undefined,
+) {
+  const rowType =
+    snapshot?.rowType ??
+    readSnapshotString(
+      order as (EmrOrder & Record<string, unknown>) | undefined,
+      "rowType",
+    ) ??
+    readSnapshotString(order?.appliedSnapshot, "rowType");
+  const orderRecord = order as (EmrOrder & Record<string, unknown>) | undefined;
+  const appliedSnapshot = asSnapshotRecord(
+    snapshot?.appliedSnapshot ?? order?.appliedSnapshot,
+  );
+  return (
+    rowType === "set_child_container" ||
+    rowType === "order_set" ||
+    readSnapshotString(orderRecord, "itemKind", "childKind") === "order_set" ||
+    readSnapshotString(appliedSnapshot, "itemKind", "childKind") ===
+      "order_set"
+  );
+}
+
+function shouldBillSetParent(snapshot: InvoiceCandidateFrozenOrderSnapshot | undefined) {
+  if (snapshot?.amountBasis === "included_order_sum") return false;
+  return snapshot?.billingReflectionEnabled !== false;
+}
+
+function mapBillingCategory(value?: string, categoryGroup?: string) {
+  if (
+    value === "consultation" ||
+    value === "laboratory" ||
+    value === "imaging" ||
+    value === "dispensing" ||
+    value === "treatment" ||
+    value === "other"
+  ) {
+    return value;
+  }
+  if (categoryGroup === "set") return "other";
+  return undefined;
+}
+
+function asSnapshotRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function cloneSnapshot(value: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+}
+
+function readSnapshotString(
+  value: unknown,
+  ...keys: string[]
+): string | undefined {
+  const record = asSnapshotRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate;
+  }
+  return undefined;
+}
+
+function readSnapshotNumber(
+  value: unknown,
+  ...keys: string[]
+): number | undefined {
+  const record = asSnapshotRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+function readSnapshotNumberOrNull(
+  value: unknown,
+  ...keys: string[]
+): number | null | undefined {
+  const record = asSnapshotRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (candidate === null) return null;
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+function readSnapshotBoolean(
+  value: unknown,
+  ...keys: string[]
+): boolean | undefined {
+  const record = asSnapshotRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "boolean") return candidate;
+  }
+  return undefined;
+}
+
 function getCandidateDescription({
   order,
   snapshot,
   sourceLine,
 }: {
   order?: EmrOrder;
-  snapshot?: InvoiceCandidateOrderSnapshotInput;
+  snapshot?: InvoiceCandidateFrozenOrderSnapshot;
   sourceLine?: InvoiceLine;
 }) {
   return (
@@ -632,23 +1021,42 @@ function mapSyncError(
     return { ok: false, status: 409, denialReason: "order_unavailable" };
   if (message?.includes("invoice_unavailable"))
     return { ok: false, status: 409, denialReason: "invoice_unavailable" };
+  if (message?.includes("invoice_anchor_conflict"))
+    return { ok: false, status: 409, denialReason: "invoice_anchor_conflict" };
+  if (message?.includes("billable_price_required"))
+    return { ok: false, status: 409, denialReason: "billable_price_required" };
   return { ok: false, status: 500, error: fallback };
 }
 
 function mapCandidateRows(value: unknown): BillingInvoiceCandidateLine[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is BillingInvoiceCandidateLine => {
-    const row = item as Partial<BillingInvoiceCandidateLine>;
-    return Boolean(
-      row &&
-      typeof row.billingCandidateId === "string" &&
-      typeof row.description === "string" &&
-      typeof row.invoiceId === "string" &&
-      typeof row.lineTotal === "number" &&
-      typeof row.orderId === "string" &&
-      typeof row.quantity === "number" &&
-      typeof row.syncedAt === "string" &&
-      typeof row.unitPrice === "number",
+  return value.reduce<BillingInvoiceCandidateLine[]>((rows, item) => {
+    if (!item || typeof item !== "object") return rows;
+    const row = item as Partial<BillingInvoiceCandidateLine> &
+      Record<string, unknown>;
+    if (
+      typeof row.billingCandidateId !== "string" ||
+      typeof row.description !== "string" ||
+      typeof row.invoiceId !== "string" ||
+      typeof row.lineTotal !== "number" ||
+      typeof row.orderId !== "string" ||
+      typeof row.quantity !== "number" ||
+      typeof row.syncedAt !== "string" ||
+      typeof row.unitPrice !== "number"
+    ) {
+      return rows;
+    }
+    const categoryGroup =
+      typeof row.categoryGroup === "string" ? row.categoryGroup : undefined;
+    const billingCategory = mapBillingCategory(
+      typeof row.billingCategory === "string" ? row.billingCategory : undefined,
+      categoryGroup,
     );
-  });
+    rows.push({
+      ...row,
+      ...(categoryGroup ? { categoryGroup } : {}),
+      ...(billingCategory ? { billingCategory } : {}),
+    } as BillingInvoiceCandidateLine);
+    return rows;
+  }, []);
 }

@@ -15,10 +15,8 @@ import {
   type LiveNotificationEventInput,
 } from "@/features/notifications/server-notifications";
 import {
-  createSupabaseNotificationPersistenceGateway,
   emitPersistedLiveNotificationEvent,
   type NotificationPersistenceGateway,
-  type SupabaseNotificationPersistenceRpcClient,
 } from "@/features/notifications/server-notification-persistence";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -40,13 +38,19 @@ type LabResultEntryRow = {
   value?: string;
 };
 
+type LabResultEntryWriteRow = {
+  note: string | null;
+  rowId: string;
+  value: string | null;
+};
+
 type LabResultEntrySnapshot = {
-  actorUserId: string;
+  actorUserId?: string;
   createdAt: string;
   encounterId?: string;
   orderId?: string;
   resultId: string;
-  rows: LabResultEntryRow[];
+  rows: Array<LabResultEntryRow | LabResultEntryWriteRow>;
   updatedAt: string;
   workItemId?: string;
   workspaceId: string;
@@ -54,9 +58,12 @@ type LabResultEntrySnapshot = {
 
 type LabResultEntryBody = {
   encounterId?: string;
+  expectedEntryWriteRevision?: number;
+  invalidPayload?: boolean;
   orderId?: string;
   resultId?: string;
-  rows: LabResultEntryRow[];
+  requestId?: string;
+  rows: Array<LabResultEntryRow | LabResultEntryWriteRow>;
   workItemId?: string;
 };
 
@@ -64,6 +71,7 @@ type SupabaseLabResultEntryRpcClient = {
   rpc(
     functionName: "clair_get_lab_result_entry",
     args: {
+      p_actor_user_id: string;
       p_order_id?: string | null;
       p_result_id?: string | null;
       p_work_item_id?: string | null;
@@ -71,13 +79,15 @@ type SupabaseLabResultEntryRpcClient = {
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_save_lab_result_entry",
+    functionName: "clair_save_lab_result_entry_v2",
     args: {
       p_actor_user_id: string;
       p_encounter_id: string;
+      p_expected_entry_write_revision: number;
       p_order_id: string;
       p_result_id: string;
-      p_rows: LabResultEntryRow[];
+      p_request_id: string;
+      p_rows: LabResultEntryWriteRow[];
       p_work_item_id?: string | null;
       p_workspace_id: string;
     },
@@ -117,6 +127,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     if (!permission.ok) return Response.json(permission.body, { status: permission.status });
 
     const result = await readSupabaseLabResultEntry({
+      actorUserId: identity.actorUserId,
       client: client as unknown as SupabaseLabResultEntryRpcClient,
       input,
       workspaceId,
@@ -150,7 +161,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readEntryBody(request);
-  if (!input.resultId || !input.rows.length) {
+  if (input.invalidPayload || !input.resultId || !input.rows.length) {
     return Response.json(
       {
         ok: false,
@@ -162,7 +173,13 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   if (identity.source === "supabase_session") {
-    if (!input.encounterId || !input.orderId) {
+    if (
+      !input.encounterId ||
+      !input.orderId ||
+      input.expectedEntryWriteRevision === undefined ||
+      !input.requestId ||
+      !isUuid(input.requestId)
+    ) {
       return Response.json(
         {
           ok: false,
@@ -197,25 +214,17 @@ export async function POST(request: Request, { params }: RouteContext) {
         orderId: input.orderId,
         resultId: input.resultId,
         rows: input.rows,
+        expectedEntryWriteRevision: input.expectedEntryWriteRevision,
+        requestId: input.requestId,
         workItemId: input.workItemId,
       },
       workspaceId,
     });
-    const savedSnapshot = readSavedResultSnapshot(result);
-    if (!savedSnapshot) return Response.json(result, { status: result.status });
-
-    const emittedNotifications = await emitClinicalResultCompletedNotification({
-      actorUserId: identity.actorUserId,
-      eventScopeId: getDemoNotificationEventScopeId({ identity, request }),
-      notificationPersistenceGateway: createSupabaseNotificationPersistenceGateway(
-        client as unknown as SupabaseNotificationPersistenceRpcClient,
-      ),
-      snapshot: savedSnapshot,
-    });
-    return Response.json(
-      { ...result, emittedNotifications },
-      { status: result.status },
-    );
+    // Canonical B1 saves mutate only values/notes. They intentionally do not
+    // call createSupabaseNotificationPersistenceGateway or emit a completion
+    // event; that belongs to a later review transition. Demo mode below keeps
+    // the existing in-memory notification behavior.
+    return Response.json(result, { status: result.status });
   }
 
   const snapshot = saveDemoLabResultEntry({
@@ -337,10 +346,12 @@ async function resolveLabResultRoutePermission({
 }
 
 async function readSupabaseLabResultEntry({
+  actorUserId,
   client,
   input,
   workspaceId,
 }: {
+  actorUserId: string;
   client: SupabaseLabResultEntryRpcClient;
   input: {
     orderId?: string;
@@ -350,6 +361,7 @@ async function readSupabaseLabResultEntry({
   workspaceId: string;
 }) {
   const { data, error } = await client.rpc("clair_get_lab_result_entry", {
+    p_actor_user_id: actorUserId,
     p_workspace_id: workspaceId,
     p_result_id: input.resultId ?? null,
     p_work_item_id: input.workItemId ?? null,
@@ -368,18 +380,39 @@ async function saveSupabaseLabResultEntry({
 }: {
   actorUserId: string;
   client: SupabaseLabResultEntryRpcClient;
-  input: Required<Pick<LabResultEntryBody, "encounterId" | "orderId" | "resultId" | "rows">> &
-    Pick<LabResultEntryBody, "workItemId">;
+  input: Required<
+    Pick<LabResultEntryBody, "encounterId" | "orderId" | "resultId" | "rows">
+  > &
+    Pick<
+      LabResultEntryBody,
+      "expectedEntryWriteRevision" | "requestId" | "workItemId"
+    >;
   workspaceId: string;
 }) {
-  const { data, error } = await client.rpc("clair_save_lab_result_entry", {
+  const writeRows = input.rows.filter(isLabResultEntryWriteRow);
+  if (
+    writeRows.length !== input.rows.length ||
+    input.expectedEntryWriteRevision === undefined ||
+    !input.requestId ||
+    !isUuid(input.requestId)
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_lab_result_entry_payload",
+    };
+  }
+
+  const { data, error } = await client.rpc("clair_save_lab_result_entry_v2", {
     p_workspace_id: workspaceId,
     p_actor_user_id: actorUserId,
     p_result_id: input.resultId,
     p_encounter_id: input.encounterId,
     p_order_id: input.orderId,
     p_work_item_id: input.workItemId ?? null,
-    p_rows: input.rows,
+    p_expected_entry_write_revision: input.expectedEntryWriteRevision,
+    p_request_id: input.requestId,
+    p_rows: writeRows,
   });
 
   if (error) return mapSupabaseLabResultError(error.message, "write");
@@ -411,6 +444,12 @@ function mapSupabaseLabResultError(message: string | undefined, operation: "read
   if (message?.includes("workspace_membership_missing")) {
     return { ok: false, status: 403, denialReason: "workspace_membership_missing" };
   }
+  if (message?.includes("permission_missing")) {
+    return { ok: false, status: 403, denialReason: "permission_missing" };
+  }
+  if (message?.includes("actor_mismatch")) {
+    return { ok: false, status: 403, denialReason: "actor_mismatch" };
+  }
   if (message?.includes("invalid_lab_result_entry_payload")) {
     return { ok: false, status: 400, error: "invalid_lab_result_entry_payload" };
   }
@@ -422,6 +461,27 @@ function mapSupabaseLabResultError(message: string | undefined, operation: "read
   }
   if (message?.includes("work_item_unavailable")) {
     return { ok: false, status: 409, denialReason: "work_item_unavailable" };
+  }
+  if (message?.includes("entry_write_revision_conflict")) {
+    return { ok: false, status: 409, denialReason: "entry_write_revision_conflict" };
+  }
+  if (message?.includes("entry_request_id_conflict")) {
+    return { ok: false, status: 409, denialReason: "entry_request_id_conflict" };
+  }
+  if (
+    message?.includes("entry_write_revision_required") ||
+    message?.includes("invalid_request_id")
+  ) {
+    return { ok: false, status: 400, error: "invalid_lab_result_entry_payload" };
+  }
+  if (message?.includes("lab_result_identity_mismatch")) {
+    return { ok: false, status: 409, denialReason: "lab_result_identity_mismatch" };
+  }
+  if (message?.includes("lab_result_status_read_only")) {
+    return { ok: false, status: 409, denialReason: "lab_result_status_read_only" };
+  }
+  if (message?.includes("lab_result_not_frozen")) {
+    return { ok: false, status: 409, denialReason: "lab_result_not_frozen" };
   }
 
   return {
@@ -571,28 +631,6 @@ function buildClinicalResultCompletedNotificationEvent({
   };
 }
 
-function readSavedResultSnapshot(response: {
-  ok: boolean;
-  savedResult?: unknown;
-}): LabResultEntrySnapshot | null {
-  if (!response.ok) return null;
-  return isLabResultEntrySnapshot(response.savedResult) ? response.savedResult : null;
-}
-
-function isLabResultEntrySnapshot(value: unknown): value is LabResultEntrySnapshot {
-  if (!value || typeof value !== "object") return false;
-  const snapshot = value as Record<string, unknown>;
-
-  return (
-    typeof snapshot.actorUserId === "string" &&
-    typeof snapshot.createdAt === "string" &&
-    typeof snapshot.resultId === "string" &&
-    Array.isArray(snapshot.rows) &&
-    typeof snapshot.updatedAt === "string" &&
-    typeof snapshot.workspaceId === "string"
-  );
-}
-
 function getDemoNotificationEventScopeId({
   identity,
   request,
@@ -607,44 +645,140 @@ function getDemoNotificationEventScopeId({
 async function readEntryBody(request: Request): Promise<LabResultEntryBody> {
   try {
     const value = (await request.json()) as unknown;
-    if (!value || typeof value !== "object") return { rows: [] };
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { rows: [], invalidPayload: true };
+    }
     const row = value as Record<string, unknown>;
+    const allowedKeys = new Set([
+      "encounterId",
+      "expectedEntryWriteRevision",
+      "orderId",
+      "resultId",
+      "requestId",
+      "rows",
+      "workItemId",
+    ]);
+    if (Object.keys(row).some((key) => !allowedKeys.has(key))) {
+      return { rows: [], invalidPayload: true };
+    }
+    if ("rows" in row && !Array.isArray(row.rows)) {
+      return { rows: [], invalidPayload: true };
+    }
+    const parsedRows = Array.isArray(row.rows)
+      ? row.rows.map(readStrictResultWriteRow)
+      : [];
+    if (parsedRows.some((parsed) => parsed === null)) {
+      return { rows: [], invalidPayload: true };
+    }
+    const optionalStringKeys = [
+      "encounterId",
+      "orderId",
+      "resultId",
+      "requestId",
+      "workItemId",
+    ] as const;
+    if (
+      optionalStringKeys.some(
+        (key) => key in row && typeof row[key] !== "string",
+      )
+    ) {
+      return { rows: [], invalidPayload: true };
+    }
+    if (
+      "expectedEntryWriteRevision" in row &&
+      !(
+        typeof row.expectedEntryWriteRevision === "number" &&
+        Number.isInteger(row.expectedEntryWriteRevision) &&
+        row.expectedEntryWriteRevision >= 0
+      )
+    ) {
+      return { rows: [], invalidPayload: true };
+    }
 
     return {
       encounterId: readString(row.encounterId),
+      expectedEntryWriteRevision: row.expectedEntryWriteRevision as
+        | number
+        | undefined,
       orderId: readString(row.orderId),
       resultId: readString(row.resultId),
-      rows: Array.isArray(row.rows)
-        ? row.rows.map(readResultRow).filter(isLabResultEntryRow)
-        : [],
+      rows: parsedRows.filter(
+        (parsed): parsed is LabResultEntryRow | LabResultEntryWriteRow =>
+          parsed !== null,
+      ),
+      requestId: readString(row.requestId),
       workItemId: readString(row.workItemId),
     };
   } catch {
-    return { rows: [] };
+    return { rows: [], invalidPayload: true };
   }
 }
 
-function readResultRow(value: unknown): LabResultEntryRow | null {
-  if (!value || typeof value !== "object") return null;
+function readStrictResultWriteRow(
+  value: unknown,
+): LabResultEntryRow | LabResultEntryWriteRow | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
-  const id = readString(row.id);
-  const analyteName = readString(row.analyteName);
-  if (!id || !analyteName) return null;
-
+  if ("rowId" in row) {
+    if (
+      Object.keys(row).some((key) => !["rowId", "value", "note"].includes(key)) ||
+      Object.keys(row).length !== 3 ||
+      typeof row.rowId !== "string" ||
+      !row.rowId.trim() ||
+      !(row.value === null || typeof row.value === "string") ||
+      !(row.note === null || typeof row.note === "string")
+    ) {
+      return null;
+    }
+    return {
+      note: row.note,
+      rowId: row.rowId,
+      value: row.value,
+    };
+  }
+  const allowedLegacyKeys = [
+    "analyteName",
+    "id",
+    "judgment",
+    "labTestItemId",
+    "note",
+    "referenceRange",
+    "unit",
+    "value",
+  ];
+  if (
+    Object.keys(row).some((key) => !allowedLegacyKeys.includes(key)) ||
+    typeof row.id !== "string" ||
+    typeof row.analyteName !== "string" ||
+    Object.entries(row).some(
+      ([key, field]) =>
+        key !== "id" &&
+        key !== "analyteName" &&
+        field !== undefined &&
+        field !== null &&
+        typeof field !== "string",
+    )
+  ) {
+    return null;
+  }
   return {
-    analyteName,
-    id,
-    judgment: readString(row.judgment),
-    labTestItemId: readString(row.labTestItemId),
-    note: readString(row.note),
-    referenceRange: readString(row.referenceRange),
-    unit: readString(row.unit),
-    value: readString(row.value),
+    analyteName: row.analyteName,
+    id: row.id,
+    judgment: typeof row.judgment === "string" ? row.judgment : undefined,
+    labTestItemId:
+      typeof row.labTestItemId === "string" ? row.labTestItemId : undefined,
+    note: typeof row.note === "string" ? row.note : undefined,
+    referenceRange:
+      typeof row.referenceRange === "string" ? row.referenceRange : undefined,
+    unit: typeof row.unit === "string" ? row.unit : undefined,
+    value: typeof row.value === "string" ? row.value : undefined,
   };
 }
 
-function isLabResultEntryRow(row: LabResultEntryRow | null): row is LabResultEntryRow {
-  return row !== null;
+function isLabResultEntryWriteRow(
+  row: LabResultEntryRow | LabResultEntryWriteRow,
+): row is LabResultEntryWriteRow {
+  return "rowId" in row;
 }
 
 function readOptionalParam(url: URL, key: string) {
@@ -654,4 +788,13 @@ function readOptionalParam(url: URL, key: string) {
 
 function readString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function isUuid(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  );
 }

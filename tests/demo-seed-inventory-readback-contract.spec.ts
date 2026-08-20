@@ -73,8 +73,6 @@ test("demo seed inventory readback covers required seed checklist areas", () => 
 test("demo seed inventory requires catalog, set, fulfillment, lab, and checkout seeds", () => {
   for (const requiredSeedInsert of [
     "insert into public.order_catalog_items",
-    "insert into public.order_sets",
-    "insert into public.order_set_items",
     "insert into public.order_fulfillment_work_items",
     "insert into public.lab_test_categories",
     "insert into public.lab_test_items",
@@ -86,11 +84,14 @@ test("demo seed inventory requires catalog, set, fulfillment, lab, and checkout 
     expect(seed).toContain(requiredSeedInsert);
   }
 
+  expect(seed).toContain("clair_seed_order_set_compatibility_projection");
+  expect(seed).not.toContain("insert into public.order_sets");
+  expect(seed).not.toContain("insert into public.order_set_items");
+
   expect(seed).toContain("den194-catalog-cbc");
   expect(seed).toContain("den194-catalog-wellness-vaccine");
   expect(seed).toContain("den194-set-kong-vomit-compact");
   expect(seed).toContain("den194-set-mango-wellness-compact");
-  expect(seed).toContain("den194-setitem-kong-cbc");
   expect(seed).toContain("19431000-0000-4000-8000-000000000001");
   expect(seed).toContain("19431000-0000-4000-8000-000000000011");
   expect(seed).toContain("\"scenarioCode\":\"choco-rehab\"");
@@ -124,7 +125,7 @@ test("demo seed inventory requires catalog, set, fulfillment, lab, and checkout 
 
   expect(readbackSql).toContain("public.order_catalog_items");
   expect(readbackSql).toContain("public.order_sets");
-  expect(readbackSql).toContain("public.order_set_items");
+  expect(readbackSql).toContain("public.order_set_revision_items");
   expect(readbackSql).toContain("public.order_fulfillment_work_items");
   expect(readbackSql).toContain("public.lab_test_categories");
   expect(readbackSql).toContain("public.lab_test_items");

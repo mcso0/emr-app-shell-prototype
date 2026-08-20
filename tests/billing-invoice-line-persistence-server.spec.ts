@@ -17,6 +17,10 @@ const invoiceId = "invoice-kong-260501";
 const invoiceLineId = "invoice-line-kong-fluid";
 const migrationPath = "supabase/migrations/20260520100000_billing_invoice_line_persistence_rpc.sql";
 const migration = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+const a3Migration = readFileSync(
+  "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
+  "utf8",
+);
 
 const validInput = {
   invoiceId,
@@ -232,11 +236,13 @@ test("invoice line Supabase gateway keeps actor, workspace, invoice, and line ed
           },
           lines: [
             {
+              categoryGroup: "set",
               description: "피하 수액 처치",
               id: "00000000-0000-4000-8000-000000000501",
               invoiceId: "00000000-0000-4000-8000-000000000401",
               lineTotal: 36000,
               quantity: 2,
+              sourceOrderSnapshot: { categoryGroup: "set" },
               unitPrice: 18000,
             },
           ],
@@ -271,7 +277,7 @@ test("invoice line Supabase gateway keeps actor, workspace, invoice, and line ed
   expect(result).toMatchObject({
     ok: true,
     invoice: { status: "issued", totalAmount: 174500 },
-    lines: [{ lineTotal: 36000 }],
+    lines: [{ billingCategory: "other", lineTotal: 36000 }],
   });
 });
 
@@ -284,6 +290,18 @@ test("invoice line persistence migration defines local-first RPC boundary withou
   expect(migration).toContain("issued_by_user_id");
   expect(migration).toContain("grant execute on function public.clair_save_billing_invoice_lines");
   expect(migration).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET|real patient/i);
+});
+
+test("A3 invoice line reads return frozen lineage and nullable prices without catalog rejoin", () => {
+  const invoiceLineReadSource = a3Migration.slice(
+    a3Migration.indexOf("create or replace function public.clair_get_billing_invoice_lines"),
+  );
+  expect(a3Migration).toContain("source_order_snapshot, tax_type, created_at, updated_at");
+  expect(a3Migration).toContain("billingNameSnapshot', il.billing_name_snapshot");
+  expect(a3Migration).toContain("sourceOrderSnapshot', il.source_order_snapshot");
+  expect(a3Migration).toContain("workspaceCatalogItemId', il.source_order_snapshot->>'workspaceCatalogItemId'");
+  expect(a3Migration).toContain("billingCategory', il.source_order_snapshot->>'billingCategory'");
+  expect(invoiceLineReadSource).not.toContain("order_catalog_items");
 });
 
 async function expectJson(response: { json(): Promise<unknown> }, expected: Record<string, unknown>) {

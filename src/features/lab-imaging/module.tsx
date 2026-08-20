@@ -409,7 +409,10 @@ type LabResultSheetCatalogItem = {
   categoryId: string;
   categoryName: string;
   id: string;
+  rowId?: string;
   resultInputType: "number" | "text" | "select" | "positive_negative" | "grade";
+  resultValueKind?: "numeric" | "text" | "coded";
+  decimalScale?: number;
   resultUnit?: string;
   sortOrder: number;
   testItemName: string;
@@ -430,6 +433,7 @@ type LabResultSheetCatalogLoadResult =
     };
 type LabResultSaveOutcome =
   | {
+      entryWriteRevision?: number;
       ok: true;
     }
   | {
@@ -788,15 +792,18 @@ function useFulfillmentQueue(
 
 async function loadLabResultSheetCatalog({
   orderDisplayName,
+  resultId,
   serviceItemId,
   workspaceId,
 }: {
   orderDisplayName?: string;
+  resultId?: string;
   serviceItemId?: string;
   workspaceId: string;
 }): Promise<LabResultSheetCatalogLoadResult> {
   const params = new URLSearchParams();
   if (orderDisplayName) params.set("orderDisplayName", orderDisplayName);
+  if (resultId) params.set("resultId", resultId);
   if (serviceItemId) params.set("serviceItemId", serviceItemId);
 
   try {
@@ -870,6 +877,7 @@ function useLabResultSheetCatalogRows({
       setState({ cacheKey, rows: [], status: "loading" });
       const next = await loadLabResultSheetCatalog({
         orderDisplayName,
+        resultId,
         serviceItemId,
         workspaceId,
       });
@@ -877,10 +885,13 @@ function useLabResultSheetCatalogRows({
       setState({
         cacheKey,
         rows: next.items.map((item) => ({
-          id: `${resultId}-${item.id}`,
+          id: item.rowId ?? `${resultId}-${item.id}`,
           labTestItemId: item.id,
           analyteName: item.testItemName,
           judgment: "not_judged",
+          decimalScale: item.decimalScale,
+          resultInputType: item.resultInputType,
+          resultValueKind: item.resultValueKind,
           unit: item.resultUnit,
         })),
         status: next.status,
@@ -913,11 +924,13 @@ function useLabResultSheetCatalogRows({
 
 async function saveLabResultEntry({
   result,
+  requestId,
   rows,
   workItem,
   workspaceId,
 }: {
   result: LabResult;
+  requestId: string;
   rows: LabResultRow[];
   workItem?: FulfillmentWorkItem;
   workspaceId: string;
@@ -930,7 +943,13 @@ async function saveLabResultEntry({
           encounterId: result.encounterId,
           orderId: result.orderId,
           resultId: result.id,
-          rows,
+          expectedEntryWriteRevision: result.entryWriteRevision ?? 0,
+          requestId,
+          rows: rows.map((row) => ({
+            note: row.note ?? null,
+            rowId: row.id,
+            value: row.value ?? null,
+          })),
           workItemId: workItem?.id,
         }),
         cache: "no-store",
@@ -943,10 +962,18 @@ async function saveLabResultEntry({
     );
     const body = (await response.json()) as {
       denialReason?: string;
+      entryWriteRevision?: number;
       error?: string;
       ok?: boolean;
+      savedResult?: { entryWriteRevision?: number };
     };
-    if (response.ok && body.ok === true) return { ok: true };
+    if (response.ok && body.ok === true) {
+      return {
+        entryWriteRevision:
+          body.entryWriteRevision ?? body.savedResult?.entryWriteRevision,
+        ok: true,
+      };
+    }
 
     if (
       response.status === 401 ||
@@ -1663,6 +1690,11 @@ export function LabSidePanel({
       return;
     }
 
+    if (!selectedLabResultId && items[0]) {
+      selectLabResult(items[0].result.id);
+      return;
+    }
+
     if (!selectedLabResultId) return;
     if (items.some((item) => item.result.id === selectedLabResultId)) return;
     selectLabResult("");
@@ -1864,6 +1896,11 @@ export function ImagingSidePanel({
       return;
     }
 
+    if (!selectedImagingStudyId && items[0]) {
+      selectImagingStudy(items[0].study.id);
+      return;
+    }
+
     if (!selectedImagingStudyId) return;
     if (items.some((item) => item.study.id === selectedImagingStudyId)) return;
     selectImagingStudy("");
@@ -2048,11 +2085,15 @@ function LabResultInputSection({
   catalogStatus?: LabResultSheetCatalogStatus;
   emptyRowsKind?: Extract<EmrEmptyStateKind, "no-data" | "upstream-pending">;
   onCatalogRetry?: () => void;
-  onSave?: (rows: LabResultRow[]) => Promise<LabResultSaveOutcome>;
+  onSave?: (
+    rows: LabResultRow[],
+    requestId: string,
+  ) => Promise<LabResultSaveOutcome>;
   result: LabResult;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [density, setDensity] = useState<EmrTableDensity>("standard");
+  const [saveRequestId, setSaveRequestId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<{
     message?: string;
     retryable?: boolean;
@@ -2097,8 +2138,11 @@ function LabResultInputSection({
   );
   const saveResult = async () => {
     if (!onSave) return;
+    const requestId = saveRequestId ?? crypto.randomUUID();
+    setSaveRequestId(requestId);
     setSaveState({ resultId: result.id, value: "saving" });
-    const outcome = await onSave(rows);
+    const outcome = await onSave(rows, requestId);
+    if (outcome.ok) setSaveRequestId(null);
     setSaveState(
       outcome.ok
         ? { resultId: result.id, value: "saved" }
@@ -2226,6 +2270,7 @@ function LabResultInputSection({
           emptyRowsKind={emptyRowsKind}
           initialLoading={catalogStatus === "loading" && rows.length === 0}
           onValueChange={(rowId, value) => {
+            setSaveRequestId(null);
             setRowValueState((current) => {
               const currentValues =
                 current.resultId === result.id
@@ -3191,8 +3236,16 @@ export function LabContent({
       },
     };
   }, [catalogRowsState.rows, detail]);
+  const [savedEntryRevision, setSavedEntryRevision] = useState<{
+    resultId: string;
+    revision: number;
+  } | null>(null);
+  const saveResultRevision =
+    savedEntryRevision?.resultId === effectiveDetail?.result.id
+      ? savedEntryRevision?.revision
+      : effectiveDetail?.result.entryWriteRevision;
   const saveResultRows = useCallback(
-    (rows: LabResultRow[]) => {
+    async (rows: LabResultRow[], requestId: string) => {
       if (!effectiveDetail) {
         return Promise.resolve({
           message: "선택된 검사 결과가 없습니다.",
@@ -3201,14 +3254,30 @@ export function LabContent({
           retryable: false,
         } satisfies LabResultSaveOutcome);
       }
-      return saveLabResultEntry({
-        result: effectiveDetail.result,
+      const outcome = await saveLabResultEntry({
+        result: {
+          ...effectiveDetail.result,
+          entryWriteRevision: saveResultRevision,
+        },
+        requestId,
         rows,
         workItem: fulfillmentWorkItem,
         workspaceId,
       });
+      if (outcome.ok && outcome.entryWriteRevision !== undefined) {
+        setSavedEntryRevision({
+          resultId: effectiveDetail.result.id,
+          revision: outcome.entryWriteRevision,
+        });
+      }
+      return outcome;
     },
-    [effectiveDetail, fulfillmentWorkItem, workspaceId],
+    [
+      effectiveDetail,
+      fulfillmentWorkItem,
+      saveResultRevision,
+      workspaceId,
+    ],
   );
   const [resultTab, setResultTab] = useState<LabResultTab>("all");
   const initialAssignment = {
@@ -3337,7 +3406,13 @@ export function LabContent({
     );
   }
 
-  const displayDetail = effectiveDetail;
+  const displayDetail = {
+    ...effectiveDetail,
+    result: {
+      ...effectiveDetail.result,
+      entryWriteRevision: saveResultRevision,
+    },
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">

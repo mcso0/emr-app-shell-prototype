@@ -652,7 +652,7 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     isTaxable: item.taxIncluded,
     memo: buildCatalogMemo(item),
     orderType: "individual",
-    price: item.priceKrw,
+    price: item.priceKrw ?? 0,
     referenceItems: [
       { label: "Source preset", value: item.standardOrderId },
       { label: "Preset version", value: item.sourcePresetVersion },
@@ -708,6 +708,7 @@ export function buildWorkspaceCatalogMutationFromHospitalOrder({
     return {
       action: "update",
       itemId: source.id,
+      expectedCatalogRevision: source.catalogRevision ?? 1,
       patch: buildWorkspaceCatalogPatchFromHospitalOrder(draft, source),
     };
   }
@@ -718,8 +719,11 @@ export function buildWorkspaceCatalogMutationFromHospitalOrder({
   };
 }
 
-export function buildWorkspaceCatalogPauseMutation(orderId: string): OrderCatalogMutationInput {
-  return { action: "pause", itemId: orderId };
+export function buildWorkspaceCatalogPauseMutation(
+  orderId: string,
+  expectedCatalogRevision: number,
+): OrderCatalogMutationInput {
+  return { action: "pause", itemId: orderId, expectedCatalogRevision };
 }
 
 function buildWorkspaceCatalogPatchFromHospitalOrder(
@@ -741,14 +745,12 @@ function buildWorkspaceCatalogPatchFromHospitalOrder(
     billingName: draft.billingName,
     billingReflectionEnabled: draft.billable,
     careGuide: draft.careGuide,
-    defaultTaskRequired: draft.delivery === "deliver",
     inHospitalOrderName: draft.inHospitalName,
     internalInstruction: draft.hospitalInstruction,
     priceKrw: draft.price,
     pricingRule,
     roundingRule: mapHospitalRoundRuleToCatalogRoundRule(draft.roundRule),
     salesUnit,
-    standardOrderName: draft.standardName,
     targetSpecies: mapHospitalTargetToSpecies(draft.target),
     taxIncluded: draft.isTaxable,
   };
@@ -955,6 +957,8 @@ function buildCatalogMemo(item: OrderCatalogItem) {
   const parts = [
     item.customizationState ? `customization:${item.customizationState}` : null,
     item.presetMergeStatus ? `merge:${item.presetMergeStatus}` : null,
+    item.availabilityStatus === "pending_activation" ? "검토 후 활성화" : null,
+    item.catalogRevision ? `revision:${item.catalogRevision}` : null,
   ];
 
   return parts.filter(Boolean).join(" / ");

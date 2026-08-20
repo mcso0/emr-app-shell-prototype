@@ -18,34 +18,56 @@ import {
   type FulfillmentWorkItem,
   type FulfillmentWorkItemGateway,
 } from "@/features/fulfillment/server-fulfillment-work-item-core";
-import {
-  createMockOrderCatalogGateway,
-  type ChartOrderCatalogSearchRow,
-  type OrderCatalogGateway,
-} from "@/features/hospital-admin/server-order-catalog-core";
 import { mockEncounters, mockOrders } from "@/mocks/emr-domain";
 import type {
+  BillingCategory,
   EmrOrder,
   EmrOrderType,
   Encounter,
   Species,
 } from "@/types/emr-domain";
+import {
+  getMockChartOrderDraftRuntimeRows,
+  type ChartOrderReadbackQuantitySource,
+  type ChartOrderRuntimeRow,
+} from "@/features/chart/server-order-draft-persistence-core";
 
 export type ChartOrderActionKind = "bill" | "confirm";
 
-export type ChartOrderCatalogSelectionInput = {
-  billingDisplayName?: string;
-  guardianName?: string;
-  orderId?: string;
-  patientName?: string;
-  quantity?: number;
-  rowType?: "individual" | "set";
-  sourcePresetId?: string;
-};
+/**
+ * Demo/mock compatibility mirror for the A3 server-owned category mapping.
+ * Live RPCs derive this value from the locked catalog row; chart callers never
+ * send it as input.
+ */
+export function mapCatalogCategoryToBillingCategory(
+  categoryGroup: string,
+): BillingCategory {
+  switch (categoryGroup) {
+    case "consultation":
+      return "consultation";
+    case "medication":
+      return "dispensing";
+    case "treatment":
+      return "treatment";
+    case "lab":
+      return "laboratory";
+    case "imaging":
+      return "imaging";
+    case "hospitalization":
+    case "misc":
+    default:
+      return "other";
+  }
+}
+
+/** @deprecated Client catalog/snapshot authority is rejected by the v2 DTO. */
+export type ChartOrderCatalogSelectionInput = Record<string, unknown>;
 
 export type ChartOrderActionInput = {
   action?: ChartOrderActionKind;
+  /** @deprecated Replaced by persisted draft rows and server-owned snapshots. */
   catalogSelections?: ChartOrderCatalogSelectionInput[];
+  expectedEtag?: string;
   encounterId?: string;
   orderIds?: string[];
 };
@@ -60,22 +82,45 @@ export type ChartOrderAppliedSnapshot = {
   inHospitalOrderName: string;
   internalInstruction?: string;
   lineTotalSnapshot: number;
-  orderType: EmrOrderType;
+  orderType: "set" | EmrOrderType;
   patientName?: string;
-  priceKrw: number;
+  priceKrw: number | null;
   quantity: number;
-  rowType: "individual";
-  salesUnit: string;
-  sourcePresetId: string;
-  sourcePresetVersion: string;
+  rowType: "individual" | "set" | "set_child";
+  salesUnit?: string;
+  sourcePresetId?: string;
+  sourcePresetVersion?: string;
   standardOrderName: string;
   targetSpecies: Species[];
   taskRequired?: boolean;
-  taxIncluded: boolean;
+  taxIncluded: boolean | null;
   workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
+  categoryGroup?: string;
+  billingCategory?: BillingCategory;
 };
 
 export type ChartOrderActionLine = {
+  rowType?: "individual" | "set" | "set_child";
+  orderType?: "set" | EmrOrderType;
+  parentOrderId?: string | null;
+  sourceSetId?: string | null;
+  sourceSetRevisionId?: string | null;
+  sourceSetRevisionNo?: number | null;
+  sourceSetVersion?: string | null;
+  sourceSetRevisionItemId?: string | null;
+  quantity?: number;
+  quantitySource?: ChartOrderReadbackQuantitySource;
+  unitPriceSnapshot?: number | null;
+  lineTotalSnapshot?: number;
+  snapshotSchemaVersion?: 0 | 1;
+  snapshotHash?: string | null;
+  appliedPriceSnapshot?: Record<string, unknown>;
+  calculationInputs?: Record<string, unknown>;
+  calculationOutputs?: Record<string, unknown>;
+  billingReflectionEnabled?: boolean;
   appliedSnapshot?: ChartOrderAppliedSnapshot;
   billingCandidateId?: string | null;
   billingCandidateStatus:
@@ -93,6 +138,11 @@ export type ChartOrderActionLine = {
     | "billed"
     | "cancelled";
   orderId: string;
+  serviceItemId?: string;
+  workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number | null;
   status:
     | "requested"
     | "re_requested"
@@ -104,11 +154,17 @@ export type ChartOrderActionLine = {
 };
 
 export type ChartOrderActionGatewayResult =
-  | { ok: true; orderActions: ChartOrderActionLine[] }
+  | {
+      ok: true;
+      etag: string;
+      rows: ChartOrderRuntimeRow[];
+      orderActions: ChartOrderActionLine[];
+      stored?: boolean;
+    }
   | {
       ok: false;
-      status: 409;
-      denialReason: "encounter_unavailable" | "order_unavailable" | "stale_status";
+      status: 400 | 409 | 422 | 428;
+      error: string;
     }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
@@ -120,8 +176,10 @@ export type ChartOrderActionGateway = {
   saveOrderAction(input: {
     action: ChartOrderActionKind;
     actorUserId: string;
-    catalogSnapshots?: Map<string, ChartOrderAppliedSnapshot>;
+    /** @deprecated Ignored; snapshots come from persisted chart rows. */
+    catalogSnapshots?: unknown;
     encounterId: string;
+    expectedEtag?: string;
     orderIds: string[];
     workspaceId: string;
   }): Promise<ChartOrderActionGatewayResult>;
@@ -131,6 +189,8 @@ export type ChartOrderActionReadResult =
   | {
       ok: true;
       status: 200;
+      etag: string;
+      rows: ChartOrderRuntimeRow[];
       orderActions: ChartOrderActionLine[];
       enforcedBy: "chart-order-action-persistence";
     }
@@ -138,7 +198,7 @@ export type ChartOrderActionReadResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: Partial<Record<"encounterId", string>>;
+      fieldErrors: Partial<Record<"encounterId" | "expectedEtag", string>>;
     }
   | {
       ok: false;
@@ -148,7 +208,7 @@ export type ChartOrderActionReadResult =
   | {
       ok: false;
       status: 409;
-      denialReason: "encounter_unavailable" | "order_unavailable";
+      denialReason: "encounter_unavailable" | "order_unavailable" | "revision_conflict" | "idempotency_conflict" | "invalid_order_selection";
     }
   | {
       ok: false;
@@ -160,6 +220,8 @@ export type ChartOrderActionSaveResult =
   | {
       ok: true;
       status: 200;
+      etag: string;
+      rows: ChartOrderRuntimeRow[];
       billingCandidates?: BillingInvoiceCandidateLine[];
       orderActions: ChartOrderActionLine[];
       fulfillmentWorkItems?: FulfillmentWorkItem[];
@@ -170,7 +232,7 @@ export type ChartOrderActionSaveResult =
       status: 400;
       error: "invalid_input";
       fieldErrors: Partial<
-        Record<"action" | "encounterId" | "orderIds", string>
+        Record<"action" | "encounterId" | "orderIds" | "expectedEtag", string>
       >;
     }
   | {
@@ -185,11 +247,23 @@ export type ChartOrderActionSaveResult =
         | "encounter_unavailable"
         | "invalid_transition"
         | "invoice_unavailable"
+        | "invoice_anchor_conflict"
+        | "billable_price_required"
         | "order_unavailable"
         | "stale_status"
         | "unsupported_order_type"
+        | "catalog_revision_requires_refresh"
+        | "child_revision_requires_refresh"
+        | "revision_conflict"
+        | "idempotency_conflict"
+        | "invalid_order_selection"
+        | "order_set_member_unavailable"
+        | "order_set_price_unset"
+        | "range_coverage_decision_pending"
         | "work_item_unavailable";
     }
+  | { ok: false; status: 422; error: string }
+  | { ok: false; status: 428; error: "if_match_required" }
   | {
       ok: false;
       status: 500;
@@ -242,16 +316,8 @@ export async function readChartOrderActions({
   });
 
   if (!result.ok) {
-    if (
-      result.status === 409 &&
-      (result.denialReason === "encounter_unavailable" ||
-        result.denialReason === "order_unavailable")
-    ) {
-      return {
-        ok: false,
-        status: 409,
-        denialReason: result.denialReason,
-      };
+    if (result.status === 409 && ["encounter_unavailable", "order_unavailable", "revision_conflict", "idempotency_conflict", "invalid_order_selection"].includes(result.error)) {
+      return { ok: false, status: 409, denialReason: result.error as "encounter_unavailable" | "order_unavailable" | "revision_conflict" | "idempotency_conflict" | "invalid_order_selection" };
     }
     return { ok: false, status: 500, error: "db_read_failed" };
   }
@@ -259,6 +325,8 @@ export async function readChartOrderActions({
   return {
     ok: true,
     status: 200,
+    etag: result.etag,
+    rows: result.rows,
     orderActions: result.orderActions,
     enforcedBy: "chart-order-action-persistence",
   };
@@ -269,7 +337,6 @@ export async function saveChartOrderAction({
   auditGateway,
   auditNow,
   auditRequestId,
-  catalogGateway = createMockOrderCatalogGateway(),
   fulfillmentGateway = createMockFulfillmentWorkItemGateway(),
   gateway = createMockChartOrderActionGateway(),
   input,
@@ -281,7 +348,8 @@ export async function saveChartOrderAction({
   auditGateway?: LiveMutationAuditOptions["auditGateway"];
   auditNow?: LiveMutationAuditOptions["auditNow"];
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
-  catalogGateway?: Pick<OrderCatalogGateway, "listChartSearch">;
+  /** @deprecated Ignored; the action RPC owns catalog snapshot resolution. */
+  catalogGateway?: unknown;
   fulfillmentGateway?: Pick<FulfillmentWorkItemGateway, "syncFromOrders">;
   gateway?: Pick<ChartOrderActionGateway, "saveOrderAction">;
   input: ChartOrderActionInput;
@@ -318,24 +386,25 @@ export async function saveChartOrderAction({
     };
   }
 
-  const catalogSnapshots = await resolveCatalogSnapshotsForConfirmation({
-    catalogGateway,
-    input: normalized,
-    workspaceId,
-  });
-  if (!catalogSnapshots.ok) return catalogSnapshots;
-
   const result = await gateway.saveOrderAction({
     action: normalized.action as ChartOrderActionKind,
     actorUserId: actorUserId ?? "",
-    catalogSnapshots: catalogSnapshots.snapshots,
     encounterId: normalized.encounterId,
+    expectedEtag: normalized.expectedEtag,
     orderIds: normalized.orderIds,
     workspaceId,
   });
 
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (result.status === 409) {
+      if (["encounter_unavailable", "order_unavailable", "revision_conflict", "idempotency_conflict", "stale_status", "catalog_revision_requires_refresh", "child_revision_requires_refresh"].includes(result.error)) {
+        return { ok: false, status: 409, denialReason: result.error as "encounter_unavailable" | "order_unavailable" | "revision_conflict" | "idempotency_conflict" | "stale_status" | "catalog_revision_requires_refresh" | "child_revision_requires_refresh" };
+      }
+      if (result.error === "invalid_order_selection") return { ok: false, status: 422, error: result.error };
+      return { ok: false, status: 409, denialReason: "order_unavailable" };
+    }
+    if (result.status === 422) return { ok: false, status: 422, error: result.error };
+    if (result.status === 428) return { ok: false, status: 428, error: "if_match_required" };
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
@@ -348,25 +417,6 @@ export async function saveChartOrderAction({
           actorUserId: actorUserId ?? "",
           encounterId: normalized.encounterId,
           orderIds: fulfillmentOrderIds,
-          orderSnapshots: result.orderActions
-            .filter((row) => row.appliedSnapshot)
-            .map((row) => ({
-              billingName: row.appliedSnapshot?.billingName,
-              billingReflectionEnabled:
-                row.appliedSnapshot?.billingReflectionEnabled ?? true,
-              destinationModule: row.appliedSnapshot?.destinationModule,
-              inHospitalOrderName: row.appliedSnapshot?.inHospitalOrderName,
-              internalInstruction: row.appliedSnapshot?.internalInstruction,
-              lineTotalSnapshot: row.appliedSnapshot?.lineTotalSnapshot,
-              orderId: row.orderId,
-              guardianName: row.appliedSnapshot?.guardianName,
-              patientName: row.appliedSnapshot?.patientName,
-              priceKrw: row.appliedSnapshot?.priceKrw,
-              quantity: row.appliedSnapshot?.quantity,
-              sourcePresetId: row.appliedSnapshot?.sourcePresetId,
-              standardOrderName: row.appliedSnapshot?.standardOrderName,
-              taskRequired: row.appliedSnapshot?.taskRequired,
-            })),
           workspaceId,
         })
       : null;
@@ -390,9 +440,7 @@ export async function saveChartOrderAction({
           actorUserId: actorUserId ?? "",
           encounterId: normalized.encounterId,
           orderIds: billingOrderIds,
-          orderSnapshots: result.orderActions
-            .filter((row) => row.appliedSnapshot)
-            .map(mapAppliedSnapshotToBillingInput),
+          surface: "chart",
           workspaceId,
         })
       : null;
@@ -435,6 +483,8 @@ export async function saveChartOrderAction({
   return {
     ok: true,
     status: 200,
+    etag: result.etag,
+    rows: result.rows,
     billingCandidates: billingResult?.candidates,
     orderActions: result.orderActions,
     fulfillmentWorkItems: fulfillmentResult?.workItems,
@@ -459,58 +509,55 @@ export function createMockChartOrderActionGateway(
     async readOrderActions({ encounterId, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter)
-        return {
-          ok: false,
-          status: 409,
-          denialReason: "encounter_unavailable",
-        };
+      return { ok: false, status: 409, error: "encounter_unavailable" };
 
+      const orderActions = getStoredOrSeedOrderActions({
+        encounterId,
+        orders,
+        workspaceId,
+      });
+      const rows = actionLinesToRuntimeRows(orderActions, workspaceId);
       return {
         ok: true,
-        orderActions: getStoredOrSeedOrderActions({
-          encounterId,
-          orders,
-          workspaceId,
-        }),
+        etag: mockChartActionEtag(rows),
+        rows,
+        orderActions,
       };
     },
     async saveOrderAction({
       action,
       actorUserId,
-      catalogSnapshots,
       encounterId,
+      expectedEtag = "legacy",
       orderIds,
       workspaceId,
     }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter)
-        return {
-          ok: false,
-          status: 409,
-          denialReason: "encounter_unavailable",
-        };
+        return { ok: false, status: 409, error: "encounter_unavailable" };
       if (!canMutateChart(encounter)) {
-        return { ok: false, status: 409, denialReason: "stale_status" };
+        return { ok: false, status: 409, error: "stale_status" };
       }
 
-      const seedRows = mergeCatalogSnapshotRows(
-        getStoredOrSeedOrderActions({ encounterId, orders, workspaceId }),
-        catalogSnapshots,
-        encounterId,
-        now(),
-      );
+      const seedRows = getStoredOrSeedOrderActions({ encounterId, orders, workspaceId });
+      const currentRows = actionLinesToRuntimeRows(seedRows, workspaceId);
+      if (expectedEtag !== "legacy" && expectedEtag !== mockChartActionEtag(currentRows) && mockOrderActionStore.has(buildOrderActionKey(workspaceId, encounterId))) {
+        return { ok: false, status: 409, error: "revision_conflict" };
+      }
       const selected = new Set(orderIds);
       if (
         orderIds.some(
           (orderId) => !seedRows.some((row) => row.orderId === orderId),
         )
       ) {
-        return { ok: false, status: 409, denialReason: "order_unavailable" };
+        return { ok: false, status: 409, error: "order_unavailable" };
       }
 
       const timestamp = now();
       const rows = seedRows.map((row) => {
-        if (!selected.has(row.orderId)) return row;
+        const selectedByParent =
+          typeof row.parentOrderId === "string" && selected.has(row.parentOrderId);
+        if (!selected.has(row.orderId) && !selectedByParent) return row;
 
         if (action === "confirm") {
           return {
@@ -521,6 +568,10 @@ export function createMockChartOrderActionGateway(
             status: "confirmed" as const,
             updatedAt: timestamp,
           };
+        }
+
+        if (!shouldCreateBillingCandidateForOrderAction(action, row)) {
+          return row;
         }
 
         return {
@@ -537,9 +588,16 @@ export function createMockChartOrderActionGateway(
         rows,
       );
 
+      const selectedRows = rows.filter(
+        (row) => selected.has(row.orderId) ||
+          (typeof row.parentOrderId === "string" && selected.has(row.parentOrderId)),
+      );
+      const runtimeRows = actionLinesToRuntimeRows(rows, workspaceId);
       return {
         ok: true,
-        orderActions: rows.filter((row) => selected.has(row.orderId)),
+        etag: mockChartActionEtag(runtimeRows),
+        rows: runtimeRows,
+        orderActions: selectedRows,
       };
     },
   };
@@ -561,6 +619,7 @@ export type SupabaseChartOrderActionRpcClient = {
       p_encounter_id: string;
       p_action: ChartOrderActionKind;
       p_order_ids: string[];
+      p_expected_etag: string;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
@@ -580,22 +639,20 @@ export function createSupabaseChartOrderActionGateway(
 
       if (error) {
         if (error.message?.includes("encounter_unavailable")) {
-          return {
-            ok: false,
-            status: 409,
-            denialReason: "encounter_unavailable",
-          };
+          return { ok: false, status: 409, error: "encounter_unavailable" };
         }
         return { ok: false, status: 500, error: "db_read_failed" };
       }
 
-      return { ok: true, orderActions: mapOrderActionRows(data) };
+      const mapped = mapOrderActionResponse(data);
+      if (!mapped) return { ok: false, status: 500, error: "db_read_failed" };
+      return mapped;
     },
     async saveOrderAction({
       action,
       actorUserId,
-      catalogSnapshots,
       encounterId,
+      expectedEtag = "legacy",
       orderIds,
       workspaceId,
     }) {
@@ -609,34 +666,26 @@ export function createSupabaseChartOrderActionGateway(
           p_order_ids: orderIds
             .map(normalizeUuidForRpc)
             .filter((orderId): orderId is string => Boolean(orderId)),
+          p_expected_etag: expectedEtag,
         },
       );
 
       if (error) {
-        if (error.message?.includes("encounter_unavailable")) {
-          return {
-            ok: false,
-            status: 409,
-            denialReason: "encounter_unavailable",
-          };
-        }
-        if (error.message?.includes("order_unavailable")) {
-          return { ok: false, status: 409, denialReason: "order_unavailable" };
-        }
-        if (error.message?.includes("stale_status")) {
-          return { ok: false, status: 409, denialReason: "stale_status" };
-        }
+        if (error.message?.includes("encounter_unavailable")) return { ok: false, status: 409, error: "encounter_unavailable" };
+        if (error.message?.includes("order_unavailable")) return { ok: false, status: 409, error: "order_unavailable" };
+        if (error.message?.includes("stale_status")) return { ok: false, status: 409, error: "stale_status" };
+        if (error.message?.includes("revision_conflict")) return { ok: false, status: 409, error: "revision_conflict" };
+        if (error.message?.includes("idempotency_conflict")) return { ok: false, status: 409, error: "idempotency_conflict" };
+        if (error.message?.includes("invalid_order_selection")) return { ok: false, status: 422, error: "invalid_order_selection" };
+        if (error.message?.includes("if_match_required")) return { ok: false, status: 428, error: "if_match_required" };
+        if (error.message?.includes("order_set_")) return { ok: false, status: 422, error: mapChartActionRpcError(error.message) };
         return { ok: false, status: 500, error: "db_write_failed" };
       }
 
+      const mapped = mapOrderActionResponse(data);
+      if (!mapped) return { ok: false, status: 500, error: "db_read_failed" };
       return {
-        ok: true,
-        orderActions: mergeCatalogSnapshotRows(
-          mapOrderActionRows(data),
-          catalogSnapshots,
-          encounterId,
-          new Date().toISOString(),
-        ),
+        ...mapped,
       };
     },
   };
@@ -724,59 +773,63 @@ function getStoredOrSeedOrderActions({
   const stored = mockOrderActionStore.get(
     buildOrderActionKey(workspaceId, encounterId),
   );
-  if (stored) return stored;
-
-  return orders
+  const draftRuntimeRows =
+    getMockChartOrderDraftRuntimeRows({ encounterId, workspaceId }) ?? [];
+  const draftActions = draftRuntimeRows.map(runtimeRowToActionLine);
+  const seedActions = orders
     .filter(
       (order) =>
         order.workspaceId === workspaceId && order.encounterId === encounterId,
     )
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map(
-      (order) =>
-        ({
-          billingCandidateId: null,
-          billingCandidateStatus: "not_requested",
-          confirmedAt: null,
-          confirmedByUserId: null,
-          encounterId,
-          orderConfirmationStatus:
-            order.status === "completed" ? "confirmed" : "draft",
-          orderId: order.id,
-          status: order.status,
-          updatedAt: order.updatedAt,
-        }) satisfies ChartOrderActionLine,
-    );
-}
+    .map(orderToActionLine);
+  const nextRows = stored ? [...stored] : [...draftActions];
+  const existingOrderIds = new Set(nextRows.map((row) => row.orderId));
 
-function mergeCatalogSnapshotRows(
-  rows: ChartOrderActionLine[],
-  catalogSnapshots: Map<string, ChartOrderAppliedSnapshot> | undefined,
-  encounterId: string,
-  updatedAt: string,
-) {
-  if (!catalogSnapshots || catalogSnapshots.size === 0) return rows;
-  const rowByOrderId = new Map(rows.map((row) => [row.orderId, row]));
-
-  for (const [orderId, snapshot] of catalogSnapshots) {
-    const existing = rowByOrderId.get(orderId);
-    rowByOrderId.set(orderId, {
-      ...(existing ?? {
-        billingCandidateId: null,
-        billingCandidateStatus: "not_requested" as const,
-        confirmedAt: null,
-        confirmedByUserId: null,
-        encounterId,
-        orderConfirmationStatus: "draft" as const,
-        orderId,
-        status: "requested" as const,
-        updatedAt,
-      }),
-      appliedSnapshot: existing?.appliedSnapshot ?? snapshot,
-    });
+  for (const row of [...draftActions, ...seedActions]) {
+    if (existingOrderIds.has(row.orderId)) continue;
+    existingOrderIds.add(row.orderId);
+    nextRows.push(row);
   }
 
-  return [...rowByOrderId.values()];
+  return nextRows;
+}
+
+function orderToActionLine(order: EmrOrder): ChartOrderActionLine {
+  const appliedSnapshot = order.appliedSnapshot;
+  const rowType =
+    appliedSnapshot && typeof appliedSnapshot.rowType === "string"
+      ? appliedSnapshot.rowType
+      : undefined;
+  const billingReflectionEnabled =
+    appliedSnapshot && typeof appliedSnapshot.billingReflectionEnabled === "boolean"
+      ? appliedSnapshot.billingReflectionEnabled
+      : undefined;
+  const parentOrderId =
+    appliedSnapshot && typeof appliedSnapshot.parentOrderId === "string"
+      ? appliedSnapshot.parentOrderId
+      : undefined;
+  return {
+    appliedSnapshot: isChartOrderAppliedSnapshot(appliedSnapshot)
+      ? appliedSnapshot
+      : undefined,
+    billingCandidateId: null,
+    billingCandidateStatus: "not_requested",
+    confirmedAt: null,
+    confirmedByUserId: null,
+    encounterId: order.encounterId,
+    orderConfirmationStatus:
+      order.status === "completed" ? "confirmed" : "draft",
+    orderId: order.id,
+    parentOrderId,
+    billingReflectionEnabled,
+    rowType:
+      rowType === "individual" || rowType === "set" || rowType === "set_child"
+        ? rowType
+        : undefined,
+    status: order.status,
+    updatedAt: order.updatedAt,
+  };
 }
 
 function buildOrderActionKey(workspaceId: string, encounterId: string) {
@@ -789,60 +842,22 @@ function normalizeOrderActionInput(input: ChartOrderActionInput) {
       input.action === "bill" || input.action === "confirm"
         ? input.action
         : undefined,
-    catalogSelections: normalizeCatalogSelections(input.catalogSelections),
+    expectedEtag: trimToUndefined(input.expectedEtag) ?? "legacy",
     encounterId: trimToUndefined(input.encounterId) ?? "",
     orderIds: Array.isArray(input.orderIds)
-      ? Array.from(
-          new Set(
-            input.orderIds
-              .map(trimToUndefined)
-              .filter((orderId): orderId is string => Boolean(orderId)),
-          ),
-        )
+      ? input.orderIds
+          .map(trimToUndefined)
+          .filter((orderId): orderId is string => Boolean(orderId))
       : [],
+    hasClientSnapshotAuthority: Array.isArray(input.catalogSelections),
   };
-}
-
-function normalizeCatalogSelections(
-  selections?: ChartOrderCatalogSelectionInput[],
-) {
-  if (!Array.isArray(selections)) return [];
-
-  return selections
-    .map((selection) => {
-      const orderId = trimToUndefined(selection.orderId);
-      const sourcePresetId = trimToUndefined(selection.sourcePresetId);
-      return {
-        billingDisplayName: trimToUndefined(selection.billingDisplayName),
-        guardianName: trimToUndefined(selection.guardianName),
-        orderId,
-        patientName: trimToUndefined(selection.patientName),
-        quantity:
-          typeof selection.quantity === "number" &&
-          Number.isFinite(selection.quantity)
-            ? selection.quantity
-            : 1,
-        rowType:
-          selection.rowType === "set"
-            ? ("set" as const)
-            : selection.rowType === "individual"
-              ? ("individual" as const)
-              : undefined,
-        sourcePresetId,
-      };
-    })
-    .filter((selection) =>
-      Boolean(
-        selection.orderId && selection.rowType && selection.sourcePresetId,
-      ),
-    );
 }
 
 function validateOrderActionInput(
   input: ReturnType<typeof normalizeOrderActionInput>,
 ) {
   const fieldErrors: Partial<
-    Record<"action" | "encounterId" | "orderIds", string>
+    Record<"action" | "encounterId" | "orderIds" | "expectedEtag", string>
   > = {};
 
   if (!input.action) fieldErrors.action = "오더 작업을 선택해 주세요.";
@@ -851,138 +866,21 @@ function validateOrderActionInput(
   if (!input.orderIds.length) fieldErrors.orderIds = "오더를 선택해 주세요.";
   if (input.orderIds.length > 100)
     fieldErrors.orderIds = "선택 오더가 너무 많습니다.";
+  if (input.hasClientSnapshotAuthority) {
+    fieldErrors.orderIds = "저장된 오더 초안을 사용해 주세요.";
+  }
+  if (input.expectedEtag !== "legacy" && !/^"[0-9a-f]{64}"$/.test(input.expectedEtag)) {
+    fieldErrors.expectedEtag = "오더 버전을 확인해 주세요.";
+  }
+  if (new Set(input.orderIds).size !== input.orderIds.length) {
+    fieldErrors.orderIds = "중복 오더를 선택할 수 없습니다.";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { valid: false as const, fieldErrors };
   }
 
   return { valid: true as const, fieldErrors: {} };
-}
-
-async function resolveCatalogSnapshotsForConfirmation({
-  catalogGateway,
-  input,
-  workspaceId,
-}: {
-  catalogGateway: Pick<OrderCatalogGateway, "listChartSearch">;
-  input: ReturnType<typeof normalizeOrderActionInput>;
-  workspaceId: string;
-}): Promise<
-  | { ok: true; snapshots: Map<string, ChartOrderAppliedSnapshot> }
-  | {
-      ok: false;
-      status: 409;
-      denialReason: "order_unavailable" | "unsupported_order_type";
-    }
-  | { ok: false; status: 500; error: "db_write_failed" }
-> {
-  if (input.action !== "confirm" || input.catalogSelections.length === 0) {
-    return { ok: true, snapshots: new Map() };
-  }
-
-  const selectedOrderIds = new Set(input.orderIds);
-  const relevantSelections = input.catalogSelections.filter((selection) =>
-    selection.orderId ? selectedOrderIds.has(selection.orderId) : false,
-  );
-  if (relevantSelections.length === 0)
-    return { ok: true, snapshots: new Map() };
-  if (relevantSelections.some((selection) => selection.rowType === "set")) {
-    return { ok: false, status: 409, denialReason: "unsupported_order_type" };
-  }
-
-  try {
-    const result = await catalogGateway.listChartSearch({ workspaceId });
-    const catalogRows = result.rows;
-    const snapshots = new Map<string, ChartOrderAppliedSnapshot>();
-
-    for (const selection of relevantSelections) {
-      if (
-        !selection.orderId ||
-        !selection.sourcePresetId ||
-        selection.rowType !== "individual"
-      ) {
-        return { ok: false, status: 409, denialReason: "order_unavailable" };
-      }
-
-      const catalogRow = catalogRows.find(
-        (row) =>
-          row.rowType === selection.rowType &&
-          row.sourcePresetId === selection.sourcePresetId,
-      );
-      if (!catalogRow)
-        return { ok: false, status: 409, denialReason: "order_unavailable" };
-
-      snapshots.set(
-        selection.orderId,
-        buildConfirmedCatalogSnapshot({
-          catalogRow,
-          guardianName: selection.guardianName,
-          patientName: selection.patientName,
-          quantity: selection.quantity,
-        }),
-      );
-    }
-
-    return { ok: true, snapshots };
-  } catch {
-    return { ok: false, status: 500, error: "db_write_failed" };
-  }
-}
-
-function buildConfirmedCatalogSnapshot({
-  catalogRow,
-  guardianName,
-  patientName,
-  quantity,
-}: {
-  catalogRow: ChartOrderCatalogSearchRow;
-  guardianName?: string;
-  patientName?: string;
-  quantity: number;
-}): ChartOrderAppliedSnapshot {
-  const snapshot = catalogRow.appliedSnapshot;
-  const safeQuantity = Math.max(1, Math.min(999, quantity || 1));
-
-  return {
-    amountBasis: snapshot.appliedAmountBasis,
-    billingName: snapshot.appliedBillingName,
-    billingReflectionEnabled: snapshot.billingReflectionEnabled,
-    careGuide: snapshot.appliedCareGuide,
-    destinationModule: snapshot.appliedDestinationModule,
-    guardianName,
-    inHospitalOrderName: snapshot.appliedDisplayName,
-    internalInstruction: snapshot.appliedInternalInstruction,
-    lineTotalSnapshot: roundMoney(safeQuantity * snapshot.appliedPriceKrw),
-    orderType: mapCatalogCategoryToOrderType(catalogRow.categoryGroup),
-    patientName,
-    priceKrw: snapshot.appliedPriceKrw,
-    quantity: safeQuantity,
-    rowType: "individual",
-    salesUnit: snapshot.appliedSalesUnit,
-    sourcePresetId: snapshot.sourcePresetId,
-    sourcePresetVersion: snapshot.sourcePresetVersion,
-    standardOrderName:
-      snapshot.appliedStandardOrderName ?? snapshot.appliedDisplayName,
-    targetSpecies: [
-      ...(snapshot.appliedTargetSpecies ?? catalogRow.targetSpecies),
-    ],
-    taskRequired: snapshot.appliedTaskRequired,
-    taxIncluded: snapshot.appliedTaxIncluded,
-    workspaceCatalogItemId: snapshot.workspaceCatalogItemId,
-  };
-}
-
-function mapCatalogCategoryToOrderType(
-  category: ChartOrderCatalogSearchRow["categoryGroup"],
-): EmrOrderType {
-  if (category === "lab") return "lab";
-  if (category === "imaging") return "imaging";
-  if (category === "medication") return "dispensing";
-  return "treatment";
-}
-
-function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function shouldCreateFulfillmentWorkItem(snapshot?: ChartOrderAppliedSnapshot) {
@@ -1013,24 +911,11 @@ function shouldCreateBillingCandidateForOrderAction(
   }
 
   if (row.status === "cancelled") return false;
+  if (row.billingReflectionEnabled === false) return false;
+  if (row.rowType === "set_child" && row.billingReflectionEnabled !== true) {
+    return false;
+  }
   return row.appliedSnapshot?.billingReflectionEnabled !== false;
-}
-
-function mapAppliedSnapshotToBillingInput(row: ChartOrderActionLine) {
-  const snapshot = row.appliedSnapshot;
-  return {
-    billingName: snapshot?.billingName,
-    billingReflectionEnabled: snapshot?.billingReflectionEnabled ?? true,
-    destinationModule: snapshot?.destinationModule,
-    inHospitalOrderName: snapshot?.inHospitalOrderName,
-    lineTotalSnapshot: snapshot?.lineTotalSnapshot,
-    orderId: row.orderId,
-    priceKrw: snapshot?.priceKrw,
-    quantity: snapshot?.quantity,
-    sourcePresetId: snapshot?.sourcePresetId,
-    standardOrderName: snapshot?.standardOrderName,
-    taskRequired: snapshot?.taskRequired,
-  };
 }
 
 function trimToUndefined(value?: string | null) {
@@ -1054,6 +939,170 @@ function mapOrderActionRows(value: unknown): ChartOrderActionLine[] {
     if (row) rows.push(row);
     return rows;
   }, []);
+}
+
+function mapOrderActionResponse(value: unknown): ChartOrderActionGatewayResult | null {
+  if (Array.isArray(value)) {
+    const orderActions = mapOrderActionRows(value);
+    const rows = actionLinesToRuntimeRows(orderActions, "");
+    return { ok: true, etag: mockChartActionEtag(rows), rows, orderActions };
+  }
+  if (!value || typeof value !== "object") return null;
+  const body = value as Record<string, unknown>;
+  if (typeof body.etag !== "string" || !Array.isArray(body.rows)) return null;
+  const rows = body.rows
+    .map(mapRuntimeActionRow)
+    .filter((row): row is ChartOrderRuntimeRow => Boolean(row));
+  if (rows.length !== body.rows.length) return null;
+  const orderActions = rows.map(runtimeRowToActionLine);
+  return {
+    ok: true,
+    etag: body.etag,
+    rows,
+    orderActions,
+    stored: body.stored === true,
+  };
+}
+
+function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const rowType = row.rowType;
+  if (typeof row.orderId !== "string" || typeof row.encounterId !== "string" ||
+      (rowType !== "individual" && rowType !== "set" && rowType !== "set_child") ||
+      typeof row.orderType !== "string" || typeof row.quantity !== "number" ||
+      typeof row.lineTotalSnapshot !== "number" || typeof row.updatedAt !== "string") return null;
+  const objectOf = (key: string) => row[key] && typeof row[key] === "object" && !Array.isArray(row[key]) ? row[key] as Record<string, unknown> : {};
+  const quantitySource = String(row.quantitySource);
+  if (!["fixed_one", "preset_quantity", "manual_at_apply", "manual", "days", "total_count", "dispense_quantity", "actual_dispense_quantity"].includes(quantitySource)) return null;
+  return {
+    orderId: row.orderId,
+    workspaceId: typeof row.workspaceId === "string" ? row.workspaceId : undefined,
+    encounterId: row.encounterId,
+    rowType,
+    orderType: row.orderType as ChartOrderRuntimeRow["orderType"],
+    parentOrderId: typeof row.parentOrderId === "string" ? row.parentOrderId : null,
+    sourceSetId: typeof row.sourceSetId === "string" ? row.sourceSetId : null,
+    sourceSetRevisionId: typeof row.sourceSetRevisionId === "string" ? row.sourceSetRevisionId : null,
+    sourceSetRevisionNo: typeof row.sourceSetRevisionNo === "number" ? row.sourceSetRevisionNo : null,
+    sourceSetVersion: typeof row.sourceSetVersion === "string" ? row.sourceSetVersion : null,
+    sourceSetRevisionItemId: typeof row.sourceSetRevisionItemId === "string" ? row.sourceSetRevisionItemId : null,
+    workspaceCatalogItemId: typeof row.workspaceCatalogItemId === "string" ? row.workspaceCatalogItemId : null,
+    workspaceCatalogRevision: typeof row.workspaceCatalogRevision === "number" ? row.workspaceCatalogRevision : null,
+    quantity: row.quantity,
+    quantitySource: quantitySource as ChartOrderRuntimeRow["quantitySource"],
+    unitPriceSnapshot: row.unitPriceSnapshot === null ? null : typeof row.unitPriceSnapshot === "number" ? row.unitPriceSnapshot : null,
+    lineTotalSnapshot: row.lineTotalSnapshot,
+    snapshotSchemaVersion: row.snapshotSchemaVersion === 1 ? 1 : 0,
+    snapshotHash: typeof row.snapshotHash === "string" ? row.snapshotHash : null,
+    appliedSnapshot: objectOf("appliedSnapshot"),
+    appliedPriceSnapshot: objectOf("appliedPriceSnapshot"),
+    calculationInputs: objectOf("calculationInputs"),
+    calculationOutputs: objectOf("calculationOutputs"),
+    billingReflectionEnabled: row.billingReflectionEnabled !== false,
+    orderConfirmationStatus: typeof row.orderConfirmationStatus === "string" ? row.orderConfirmationStatus as ChartOrderRuntimeRow["orderConfirmationStatus"] : undefined,
+    status: typeof row.status === "string" ? row.status : undefined,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function runtimeRowToActionLine(row: ChartOrderRuntimeRow): ChartOrderActionLine {
+  const snapshot = row.appliedSnapshot;
+  return {
+    rowType: row.rowType,
+    orderType: row.orderType,
+    parentOrderId: row.parentOrderId,
+    sourceSetId: row.sourceSetId,
+    sourceSetRevisionId: row.sourceSetRevisionId,
+    sourceSetRevisionNo: row.sourceSetRevisionNo,
+    sourceSetVersion: row.sourceSetVersion,
+    sourceSetRevisionItemId: row.sourceSetRevisionItemId,
+    workspaceCatalogRevision: row.workspaceCatalogRevision,
+    quantity: row.quantity,
+    quantitySource: row.quantitySource,
+    unitPriceSnapshot: row.unitPriceSnapshot,
+    lineTotalSnapshot: row.lineTotalSnapshot,
+    snapshotSchemaVersion: row.snapshotSchemaVersion,
+    snapshotHash: row.snapshotHash,
+    appliedPriceSnapshot: row.appliedPriceSnapshot,
+    calculationInputs: row.calculationInputs,
+    calculationOutputs: row.calculationOutputs,
+    billingReflectionEnabled: row.billingReflectionEnabled,
+    appliedSnapshot: snapshot as ChartOrderAppliedSnapshot,
+    billingCandidateId: null,
+    billingCandidateStatus: "not_requested",
+    confirmedAt: null,
+    confirmedByUserId: null,
+    encounterId: row.encounterId,
+    orderConfirmationStatus: row.orderConfirmationStatus ?? "draft",
+    orderId: row.orderId,
+    workspaceCatalogItemId: row.workspaceCatalogItemId ?? undefined,
+    status: (row.status ?? "requested") as ChartOrderActionLine["status"],
+    updatedAt: row.updatedAt,
+  };
+}
+
+function actionLinesToRuntimeRows(rows: ChartOrderActionLine[], workspaceId: string): ChartOrderRuntimeRow[] {
+  return rows.map((row) => ({
+    orderId: row.orderId,
+    workspaceId,
+    encounterId: row.encounterId,
+    rowType: row.rowType ?? "individual",
+    orderType: row.orderType ?? "treatment",
+    parentOrderId: row.parentOrderId ?? null,
+    sourceSetId: row.sourceSetId ?? null,
+    sourceSetRevisionId: row.sourceSetRevisionId ?? null,
+    sourceSetRevisionNo: row.sourceSetRevisionNo ?? null,
+    sourceSetVersion: row.sourceSetVersion ?? null,
+    sourceSetRevisionItemId: row.sourceSetRevisionItemId ?? null,
+    workspaceCatalogItemId: row.workspaceCatalogItemId ?? null,
+    workspaceCatalogRevision: row.workspaceCatalogRevision ?? null,
+    quantity: row.quantity ?? row.appliedSnapshot?.quantity ?? 1,
+    quantitySource: row.quantitySource ?? "manual",
+    unitPriceSnapshot: row.unitPriceSnapshot ?? row.appliedSnapshot?.priceKrw ?? null,
+    lineTotalSnapshot: row.lineTotalSnapshot ?? row.appliedSnapshot?.lineTotalSnapshot ?? 0,
+    snapshotSchemaVersion: row.snapshotSchemaVersion ?? 0,
+    snapshotHash: row.snapshotHash ?? null,
+    appliedSnapshot: (row.appliedSnapshot ?? {}) as Record<string, unknown>,
+    appliedPriceSnapshot: row.appliedPriceSnapshot ?? {},
+    calculationInputs: row.calculationInputs ?? {},
+    calculationOutputs: row.calculationOutputs ?? {},
+    billingReflectionEnabled: row.billingReflectionEnabled ?? row.appliedSnapshot?.billingReflectionEnabled ?? true,
+    orderConfirmationStatus: row.orderConfirmationStatus,
+    status: row.status,
+    updatedAt: row.updatedAt,
+  }));
+}
+
+function mockChartActionEtag(rows: ChartOrderRuntimeRow[]) {
+  return `"${mockChartActionHash(rows)}"`;
+}
+
+function mockChartActionHash(value: unknown) {
+  const text = JSON.stringify(value);
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0").repeat(8);
+}
+
+function mapChartActionRpcError(message: string) {
+  const known = [
+    "order_set_member_unavailable",
+    "order_set_composition_review_required",
+    "order_set_price_unset",
+    "order_set_empty_selection",
+    "order_set_quantity_invalid",
+    "order_set_duplicate_atomic",
+    "order_set_depth_exceeded",
+    "order_set_cycle_detected",
+    "order_set_range_input_required",
+    "order_set_range_input_invalid",
+    "order_set_range_no_match",
+  ];
+  return known.find((code) => message.includes(code)) ?? "order_set_member_unavailable";
 }
 
 function mapOrderActionRow(value: unknown): ChartOrderActionLine | null {
@@ -1082,6 +1131,15 @@ function mapOrderActionRow(value: unknown): ChartOrderActionLine | null {
     encounterId: row.encounterId,
     orderConfirmationStatus: row.orderConfirmationStatus,
     orderId: row.orderId,
+    serviceItemId: typeof row.serviceItemId === "string" ? row.serviceItemId : undefined,
+    workspaceCatalogItemId:
+      typeof row.workspaceCatalogItemId === "string" ? row.workspaceCatalogItemId : undefined,
+    sourceMasterRecordId:
+      typeof row.sourceMasterRecordId === "string" ? row.sourceMasterRecordId : undefined,
+    sourceMasterRevision:
+      typeof row.sourceMasterRevision === "number" ? row.sourceMasterRevision : undefined,
+    workspaceCatalogRevision:
+      typeof row.workspaceCatalogRevision === "number" ? row.workspaceCatalogRevision : undefined,
     status: row.status,
     updatedAt: row.updatedAt,
   } as ChartOrderActionLine;
@@ -1093,10 +1151,10 @@ function isChartOrderAppliedSnapshot(
   return Boolean(
     value &&
     typeof value === "object" &&
-    typeof (value as Partial<ChartOrderAppliedSnapshot>).sourcePresetId ===
-      "string" &&
-    typeof (value as Partial<ChartOrderAppliedSnapshot>).priceKrw ===
-      "number" &&
+    ((value as Partial<ChartOrderAppliedSnapshot>).sourcePresetId === undefined ||
+      typeof (value as Partial<ChartOrderAppliedSnapshot>).sourcePresetId === "string") &&
+    ((value as Partial<ChartOrderAppliedSnapshot>).priceKrw === null ||
+      typeof (value as Partial<ChartOrderAppliedSnapshot>).priceKrw === "number") &&
     typeof (value as Partial<ChartOrderAppliedSnapshot>).lineTotalSnapshot ===
       "number",
   );

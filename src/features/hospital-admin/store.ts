@@ -18,6 +18,7 @@ export type HospitalAdminSection =
   | "audit"
   | "members"
   | "orders"
+  | "order-sets"
   | "roles"
   | "schedule"
   | "settings"

@@ -1,10 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
-const migration = readFileSync(
+const foundationMigration = readFileSync(
   "supabase/migrations/20260609112000_lab_result_entry_persistence.sql",
   "utf8",
 );
+const b1Migration = readFileSync(
+  "supabase/migrations/20260819172501_clinical_master_phase1b1_laboratory_slice.sql",
+  "utf8",
+);
+const migration =
+  foundationMigration +
+  b1Migration;
 const route = readFileSync(
   "src/app/api/workspaces/[workspaceId]/lab-imaging/result-entries/route.ts",
   "utf8",
@@ -44,11 +51,27 @@ test("lab result save RPC validates encounter, lab order, and lab work item scop
   expect(migration).toContain("saved_result_usage_count = (");
 });
 
+test("B1 result persistence keeps the frozen definition immutable and v2 writes strict", () => {
+  expect(b1Migration).toContain("lab_result_entries_canonical_order_unique");
+  expect(b1Migration).toContain("result_definition_origin = 'canonical'");
+  expect(b1Migration).toContain("lab_result_definition_snapshot_invalid");
+  expect(b1Migration).toContain("p_expected_entry_write_revision");
+  expect(b1Migration).toContain("p_request_id");
+  expect(b1Migration).toContain("v_entry.result_status not in ('received','entered')");
+  expect(b1Migration).toContain("result_definition_snapshot drop default");
+  expect(b1Migration).toContain(
+    "format('lab-result-row:v1:%s:%s:%s',p_order_id::text,v_link.id::text,v_ordinal::text)",
+  );
+  expect(b1Migration).toContain("jsonb_typeof(v_row->'required')");
+});
+
 test("result-entry route uses Supabase RPC path with server permission checks", () => {
   expect(route).toContain('requiredPermission: "lab:view"');
   expect(route).toContain('requiredPermission: "lab:complete"');
   expect(route).toContain('client.rpc("clair_get_lab_result_entry"');
-  expect(route).toContain('client.rpc("clair_save_lab_result_entry"');
+  expect(route).toContain('functionName: "clair_save_lab_result_entry_v2"');
+  expect(route).toContain("p_expected_entry_write_revision");
+  expect(route).toContain("p_request_id");
   expect(route).toContain("createSupabaseWorkspacePermissionGateway");
   expect(route).toContain("resolveWorkspacePermission");
   expect(route).toContain("lab-result-entry-server-boundary");

@@ -4,7 +4,6 @@ import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
-import { demoClientSessionIdHeader } from "@/features/auth/demo-actor";
 import {
   createSupabaseWorkspacePermissionGateway,
   type SupabaseWorkspacePermissionClient,
@@ -32,11 +31,6 @@ import {
   createSupabaseFulfillmentWorkItemGateway,
   type SupabaseFulfillmentWorkItemRpcClient,
 } from "@/features/fulfillment/server-fulfillment-work-item";
-import {
-  createSupabaseOrderCatalogGateway,
-  getDemoOrderCatalogGateway,
-  type SupabaseOrderCatalogRpcClient,
-} from "@/features/hospital-admin/server-order-catalog";
 import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -99,7 +93,9 @@ export async function GET(request: Request, { params }: RouteContext) {
       : undefined,
   });
 
-  return Response.json(result, { status: result.status });
+  const response = Response.json(result, { status: result.status });
+  if (result.ok) response.headers.set("ETag", result.etag);
+  return response;
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
@@ -131,6 +127,21 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readJsonBody(request);
+  const ifMatch = request.headers.get("if-match");
+  if (input.expectedEtag !== undefined || Array.isArray(input.orderIds)) {
+    if (!ifMatch || !input.expectedEtag) {
+      return Response.json(
+        { ok: false, status: 428, error: "if_match_required", message: "오더 버전 확인이 필요합니다." },
+        { status: 428 },
+      );
+    }
+    if (ifMatch !== input.expectedEtag) {
+      return Response.json(
+        { ok: false, status: 400, error: "etag_header_body_mismatch", message: "오더 버전 정보가 일치하지 않습니다." },
+        { status: 400 },
+      );
+    }
+  }
   const client = identity.source === "supabase_session" ? await createClient() : null;
   const resolvedEncounter = await resolveServerChartEncounterId({
     client: client as unknown as SupabaseEncounterIdBridgeClient | null,
@@ -159,11 +170,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseChartOrderActionRpcClient
         )
       : undefined,
-    catalogGateway: client
-      ? createSupabaseOrderCatalogGateway(
-          client as unknown as SupabaseOrderCatalogRpcClient
-        )
-      : getDemoOrderCatalogGateway(getDemoClientSessionId(request)),
     auditGateway: client
       ? createSupabaseLiveAuditAppendGateway(
           client as unknown as SupabaseLiveAuditAppendRpcClient
@@ -174,6 +180,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseFulfillmentWorkItemRpcClient
         )
       : undefined,
+    // The chart core dispatches billing side effects only through the
+    // authenticated chart:update wrapper; the private helper is unreachable.
     invoiceCandidateGateway: client
       ? createSupabaseInvoiceCandidateSyncGateway(
           client as unknown as SupabaseInvoiceCandidateSyncRpcClient
@@ -182,11 +190,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     auditRequestId: getAuditRequestId(request),
   });
 
-  return Response.json(result, { status: result.status });
-}
-
-function getDemoClientSessionId(request: Request) {
-  return request.headers.get(demoClientSessionIdHeader) ?? "shared";
+  const response = Response.json(result, { status: result.status });
+  if (result.ok) response.headers.set("ETag", result.etag);
+  return response;
 }
 
 async function readJsonBody(request: Request): Promise<ChartOrderActionInput> {

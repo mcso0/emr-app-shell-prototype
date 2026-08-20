@@ -12,7 +12,8 @@ export type GlobalNotification = {
     | "waiting_over_30m"
     | "dispensing_treatment_completed"
     | "billing_waiting_ready"
-    | "inpatient_care_delayed";
+    | "inpatient_care_delayed"
+    | "clinical_master_update_available";
   dedupe_key: string;
   domain:
     | "reception"
@@ -21,7 +22,8 @@ export type GlobalNotification = {
     | "imaging"
     | "dispensing_treatment"
     | "billing"
-    | "inpatient";
+    | "inpatient"
+    | "hospital_admin";
   priority: "urgent" | "high" | "normal" | "reference";
   toast_policy: "immediate" | "role_active" | "source_context_only" | "drawer_only" | "inline_first";
   sourceActionLabel: string;

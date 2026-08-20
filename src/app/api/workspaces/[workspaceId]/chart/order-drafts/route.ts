@@ -80,7 +80,9 @@ export async function GET(request: Request, { params }: RouteContext) {
       : undefined,
   });
 
-  return Response.json(result, { status: result.status });
+  const response = Response.json(result, { status: result.status });
+  if (result.ok) response.headers.set("ETag", result.etag);
+  return response;
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
@@ -112,6 +114,41 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readJsonBody(request);
+  const ifMatch = request.headers.get("if-match");
+  const inputKeys = Object.keys(input as Record<string, unknown>);
+  if (
+    inputKeys.some(
+      (key) => key !== "encounterId" && key !== "expectedEtag" && key !== "rows",
+    )
+  ) {
+    return Response.json(
+      {
+        ok: false,
+        status: 400,
+        error: "invalid_input",
+        fieldErrors: { rows: "오더 rows 형식을 확인해 주세요." },
+      },
+      { status: 400 },
+    );
+  }
+  if (!Array.isArray(input.rows) || !input.expectedEtag) {
+    return Response.json(
+      { ok: false, status: 428, error: "if_match_required", message: "오더 버전 확인이 필요합니다." },
+      { status: 428 },
+    );
+  }
+  if (!ifMatch) {
+    return Response.json(
+      { ok: false, status: 428, error: "if_match_required", message: "오더 버전 확인이 필요합니다." },
+      { status: 428 },
+    );
+  }
+  if (ifMatch !== input.expectedEtag) {
+    return Response.json(
+      { ok: false, status: 400, error: "etag_header_body_mismatch", message: "오더 버전 정보가 일치하지 않습니다." },
+      { status: 400 },
+    );
+  }
   const client = identity.source === "supabase_session" ? await createClient() : null;
   const resolvedEncounter = await resolveServerChartEncounterId({
     client: client as unknown as SupabaseEncounterIdBridgeClient | null,
@@ -142,7 +179,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       : undefined,
   });
 
-  return Response.json(result, { status: result.status });
+  const response = Response.json(result, { status: result.status });
+  if (result.ok) response.headers.set("ETag", result.etag);
+  return response;
 }
 
 async function readJsonBody(request: Request): Promise<ChartOrderDraftInput> {

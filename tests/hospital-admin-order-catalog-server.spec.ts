@@ -164,7 +164,7 @@ test("order mutations require service catalog manage permission and pause future
   const denied = await mutateOrderCatalogItem({
     actorUserId: "user-vet",
     workspaceId: "clair-demo",
-    input: { action: "pause", itemId: "ord-lab-cbc-baso" },
+    input: { action: "pause", itemId: "ord-lab-cbc-baso", expectedCatalogRevision: 1 },
     gateway,
     permissionAdapter: permissionAdapter(),
   });
@@ -173,7 +173,7 @@ test("order mutations require service catalog manage permission and pause future
   const paused = await mutateOrderCatalogItem({
     actorUserId: "user-admin",
     workspaceId: "clair-demo",
-    input: { action: "pause", itemId: "ord-lab-cbc-baso" },
+    input: { action: "pause", itemId: "ord-lab-cbc-baso", expectedCatalogRevision: 1 },
     gateway,
     permissionAdapter: permissionAdapter(),
   });
@@ -197,6 +197,30 @@ test("order mutations require service catalog manage permission and pause future
   if (chart.ok) expect(chart.rows.map((row) => row.sourcePresetId)).not.toContain("std-ord-lab-cbc-baso");
 });
 
+test("catalog update and pause reject a missing or non-positive CAS revision", async () => {
+  const gateway = createMockOrderCatalogGateway();
+  const missingRevision = await mutateOrderCatalogItem({
+    actorUserId: "user-admin",
+    workspaceId: "clair-demo",
+    input: {
+      action: "update",
+      itemId: "ord-lab-cbc-baso",
+      patch: { billingName: "CAS 누락" },
+    } as never,
+    gateway,
+    permissionAdapter: permissionAdapter(),
+  });
+  const zeroRevision = await mutateOrderCatalogItem({
+    actorUserId: "user-admin",
+    workspaceId: "clair-demo",
+    input: { action: "pause", itemId: "ord-lab-cbc-baso", expectedCatalogRevision: 0 },
+    gateway,
+    permissionAdapter: permissionAdapter(),
+  });
+  expect(missingRevision).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
+  expect(zeroRevision).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
+});
+
 test("order catalog mutations emit safe audit events with changed field metadata", async () => {
   const gateway = createMockOrderCatalogGateway(
     undefined,
@@ -213,6 +237,7 @@ test("order catalog mutations emit safe audit events with changed field metadata
     input: {
       action: "update",
       itemId: "ord-lab-cbc-baso",
+      expectedCatalogRevision: 1,
       patch: {
         billingName: "CBC 감사 테스트",
         priceKrw: 13000,
@@ -269,6 +294,29 @@ test("Supabase order catalog gateway persists create update and pause mutations"
     },
     async rpc(functionName: string, args: Record<string, unknown>) {
       calls.push(`${functionName}:${args.p_workspace_id}`);
+      if (functionName === "clair_create_order_catalog_item") {
+        const item = args.p_item as Record<string, unknown>;
+        const row = toOrderCatalogDbRow(item, String(args.p_workspace_id));
+        rows.push(row);
+        return { data: row, error: null };
+      }
+
+      if (functionName === "clair_update_order_catalog_item") {
+        const itemId = String(args.p_item_id);
+        const row = rows.find((candidate) => candidate.id === itemId);
+        if (!row) return { data: null, error: { message: "order_catalog_item_not_found" } };
+        const patch = args.p_patch as Record<string, unknown>;
+        if (Object.prototype.hasOwnProperty.call(patch, "sourceMasterRevision")) {
+          return { data: null, error: { message: "catalog_protected_field_rejected:sourceMasterRevision" } };
+        }
+        Object.entries(patch).forEach(([key, value]) => {
+          row[camelToSnake(key)] = value;
+        });
+        row.catalog_revision = Number(row.catalog_revision ?? 1) + 1;
+        row.updated_at = "2026-05-27T03:10:00.000Z";
+        return { data: row, error: null };
+      }
+
       return { data: [], error: null };
     },
   });
@@ -323,12 +371,31 @@ test("Supabase order catalog gateway persists create update and pause mutations"
   });
   const createdId = created.ok ? created.item.id : "";
 
+  const protectedAttempt = await mutateOrderCatalogItem({
+    actorUserId: "user-admin",
+    gateway,
+    input: {
+      action: "update",
+      itemId: createdId,
+      expectedCatalogRevision: 1,
+      patch: { sourceMasterRevision: 99 },
+    },
+    permissionAdapter: permissionAdapter(),
+    workspaceId: "clair-demo",
+  });
+  expect(protectedAttempt).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+  });
+
   const updated = await mutateOrderCatalogItem({
     actorUserId: "user-admin",
     gateway,
     input: {
       action: "update",
       itemId: createdId,
+      expectedCatalogRevision: 1,
       patch: { billingName: "DEN-302 청구명 수정" },
     },
     permissionAdapter: permissionAdapter(),
@@ -342,7 +409,7 @@ test("Supabase order catalog gateway persists create update and pause mutations"
   const paused = await mutateOrderCatalogItem({
     actorUserId: "user-admin",
     gateway,
-    input: { action: "pause", itemId: createdId },
+    input: { action: "pause", itemId: createdId, expectedCatalogRevision: 2 },
     permissionAdapter: permissionAdapter(),
     workspaceId: "clair-demo",
   });
@@ -420,7 +487,7 @@ test("medication vaccine and pricing snapshots remain stable after admin item up
   await mutateOrderCatalogItem({
     actorUserId: "user-admin",
     workspaceId: "clair-demo",
-    input: { action: "update", itemId: "ord-med-maropitant", patch: { priceKrw: 9900, pricingRule: { ...medication!.pricingRule, priceKrw: 9900 } } },
+    input: { action: "update", itemId: "ord-med-maropitant", expectedCatalogRevision: 1, patch: { priceKrw: 9900, pricingRule: { ...medication!.pricingRule, priceKrw: 9900 } } },
     gateway,
     permissionAdapter: permissionAdapter(),
   });
@@ -507,4 +574,49 @@ function createOrderCatalogTableBuilder(rows: Record<string, unknown>[]) {
   }
 
   return builder;
+}
+
+function toOrderCatalogDbRow(item: Record<string, unknown>, workspaceId: string) {
+  const row: Record<string, unknown> = {
+    id: item.id,
+    workspace_id: workspaceId,
+    standard_order_id: item.standardOrderId,
+    source_preset_version: item.sourcePresetVersion,
+    category_group: item.categoryGroup,
+    category_label: item.categoryLabel,
+    t_code: item.tCode,
+    t_code_label: item.tCodeLabel,
+    standard_order_name: item.standardOrderName,
+    in_hospital_order_name: item.inHospitalOrderName,
+    billing_name: item.billingName,
+    aliases: item.aliases,
+    availability_status: item.availabilityStatus,
+    price_krw: item.priceKrw,
+    sales_unit: item.salesUnit,
+    target_species: item.targetSpecies,
+    default_destination_module: item.defaultDestinationModule,
+    default_task_required: item.defaultTaskRequired,
+    billing_reflection_enabled: item.billingReflectionEnabled,
+    care_guide: item.careGuide,
+    care_guide_delivery_enabled: item.careGuideDeliveryEnabled,
+    internal_instruction: item.internalInstruction,
+    internal_instruction_delivery_enabled: item.internalInstructionDeliveryEnabled,
+    tax_included: item.taxIncluded,
+    rounding_rule: item.roundingRule,
+    pricing_rule: item.pricingRule,
+    medication_metadata: item.medicationMetadata,
+    vaccine_metadata: item.vaccineMetadata,
+    customization_state: item.customizationState,
+    customized_fields: ["*"],
+    last_customized_at: "2026-05-27T03:10:00.000Z",
+    last_customized_by_user_id: "user-admin",
+    preset_merge_status: item.presetMergeStatus,
+    catalog_revision: 1,
+    updated_at: "2026-05-27T03:10:00.000Z",
+  };
+  return row;
+}
+
+function camelToSnake(value: string) {
+  return value.replace(/[A-Z]/g, (character) => `_${character.toLowerCase()}`);
 }

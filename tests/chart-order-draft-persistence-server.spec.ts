@@ -6,8 +6,13 @@ import { resolveServerChartEncounterId } from "../src/features/chart/server-enco
 import {
   createMockChartOrderDraftGateway,
   createSupabaseChartOrderDraftGateway,
+  readChartOrderDraft,
   saveChartOrderDraft,
 } from "../src/features/chart/server-order-draft-persistence-core";
+import {
+  createMockOrderCatalogGateway,
+  type OrderSet,
+} from "../src/features/hospital-admin/server-order-catalog-core";
 import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
@@ -41,32 +46,47 @@ const stagingEncounterIdBridgeMigration = existsSync(
 )
   ? readFileSync(stagingEncounterIdBridgeMigrationPath, "utf8")
   : "";
+const a3Migration = readFileSync(
+  "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
+  "utf8",
+);
 
-const validOrderDraftInput = {
-  encounterId,
-  orders: [
-    {
-      orderId: "order-coco-maropitant",
-      billingDisplayName: "Maropitant 16mg T",
-      quantity: 1,
-    },
-    {
-      orderId: "order-coco-cbc",
-      billingDisplayName: "CBC 검사 DEN-72 저장",
-      quantity: 1,
-    },
-    {
-      orderId: "order-coco-fluid",
-      billingDisplayName: "피하 수액 처치",
-      quantity: 1,
-    },
-    {
-      orderId: "order-coco-thorax",
-      billingDisplayName: "흉부 방사선 3cut",
-      quantity: 1,
-    },
-  ],
-};
+const validOrderDraftRows = [
+  {
+    rowType: "individual" as const,
+    orderId: "order-coco-maropitant",
+    workspaceCatalogItemId: "ord-med-maropitant",
+    quantity: 1,
+  },
+  {
+    rowType: "individual" as const,
+    orderId: "order-coco-cbc",
+    workspaceCatalogItemId: "ord-lab-cbc-baso",
+    quantity: 1,
+  },
+  {
+    rowType: "individual" as const,
+    orderId: "order-coco-fluid",
+    workspaceCatalogItemId: "ord-treatment-fluid",
+    quantity: 1,
+  },
+  {
+    rowType: "individual" as const,
+    orderId: "order-coco-thorax",
+    workspaceCatalogItemId: "ord-imaging-thorax",
+    quantity: 1,
+  },
+];
+
+const validEtag = `"${"0".repeat(64)}"`;
+
+function strictDraftInput(expectedEtag = validEtag, targetEncounterId = encounterId) {
+  return {
+    encounterId: targetEncounterId,
+    expectedEtag,
+    rows: validOrderDraftRows,
+  };
+}
 
 const waitingEncounter: Encounter = {
   id: "encounter-order-draft-waiting-lock",
@@ -80,12 +100,28 @@ const waitingEncounter: Encounter = {
   updatedAt: "2026-06-25T14:15:00+09:00",
 };
 
+const setRuntimeEncounter: Encounter = {
+  ...waitingEncounter,
+  id: "encounter-order-set-runtime",
+  patientId: "patient-order-set-runtime",
+  guardianId: "guardian-order-set-runtime",
+  encounterNo: "E-ORDER-SET-RUNTIME",
+  status: "in_consultation",
+};
+
 test("order draft route requires an actor, saves via mock fallback, and reads after save", async ({
   request,
 }) => {
+  const current = await request.get(
+    `/api/workspaces/${workspaceId}/chart/order-drafts?encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-vet" } },
+  );
+  expect(current.status()).toBe(200);
+  const currentBody = (await current.json()) as { etag: string };
+
   const unauthenticated = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-drafts`,
-    { data: validOrderDraftInput },
+    { data: strictDraftInput(currentBody.etag) },
   );
   expect(unauthenticated.status()).toBe(401);
   await expectJson(unauthenticated, {
@@ -93,32 +129,54 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
     denialReason: "unauthenticated",
   });
 
+  const legacyPayload = await request.patch(
+    `/api/workspaces/${workspaceId}/chart/order-drafts`,
+    {
+      data: {
+        ...strictDraftInput(currentBody.etag),
+        orders: [],
+      },
+      headers: {
+        "If-Match": currentBody.etag,
+        "x-clair-demo-session-user-id": "user-vet",
+      },
+    },
+  );
+  expect(legacyPayload.status()).toBe(400);
+  await expectJson(legacyPayload, {
+    ok: false,
+    error: "invalid_input",
+  });
+
   const saved = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-drafts`,
     {
-      data: validOrderDraftInput,
-      headers: { "x-clair-demo-session-user-id": "user-vet" },
+      data: strictDraftInput(currentBody.etag),
+      headers: {
+        "If-Match": currentBody.etag,
+        "x-clair-demo-session-user-id": "user-vet",
+      },
     },
   );
   expect(saved.status()).toBe(200);
   const savedBody = (await saved.json()) as {
     ok: true;
-    orderDrafts: Array<{
-      billingDisplayName: string;
+    rows: Array<{
+      rowType: string;
       encounterId: string;
       lineTotalSnapshot: number;
       orderId: string;
       quantity: number;
-      unitPriceSnapshot: number;
+      unitPriceSnapshot: number | null;
     }>;
     enforcedBy: string;
   };
 
   expect(savedBody.enforcedBy).toBe("chart-order-draft-persistence");
-  expect(savedBody.orderDrafts).toEqual(
+  expect(savedBody.rows).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        billingDisplayName: "CBC 검사 DEN-72 저장",
+        rowType: "individual",
         encounterId,
         lineTotalSnapshot: 35000,
         orderId: "order-coco-cbc",
@@ -126,7 +184,7 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
         unitPriceSnapshot: 35000,
       }),
       expect.objectContaining({
-        billingDisplayName: "피하 수액 처치",
+        rowType: "individual",
         encounterId,
         lineTotalSnapshot: 18000,
         orderId: "order-coco-fluid",
@@ -143,18 +201,15 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
   expect(readBack.status()).toBe(200);
   const readBody = (await readBack.json()) as {
     ok: true;
-    orderDrafts: Array<{ billingDisplayName: string; orderId: string }>;
+    rows: Array<{ rowType: string; orderId: string }>;
   };
-  expect(readBody.orderDrafts.map((row) => row.orderId)).toEqual([
+  expect(readBody.rows.map((row) => row.orderId)).toEqual([
     "order-coco-maropitant",
     "order-coco-cbc",
     "order-coco-fluid",
     "order-coco-thorax",
   ]);
-  expect(
-    readBody.orderDrafts.find((row) => row.orderId === "order-coco-cbc")
-      ?.billingDisplayName,
-  ).toBe("CBC 검사 DEN-72 저장");
+  expect(readBody.rows.every((row) => row.rowType === "individual")).toBe(true);
 });
 
 test("order draft core rejects invalid quantity and enforces permission plus encounter scope", async () => {
@@ -163,21 +218,27 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
     workspaceId,
     input: {
       encounterId,
-      orders: [
-        { orderId: "order-coco-cbc", billingDisplayName: "CBC", quantity: 0 },
+      expectedEtag: validEtag,
+      rows: [
+        {
+          rowType: "individual",
+          orderId: "order-coco-cbc",
+          workspaceCatalogItemId: "ord-lab-cbc-baso",
+          quantity: 0,
+        },
       ],
     },
   });
   expect(invalidQuantity).toMatchObject({
     ok: false,
     status: 400,
-    fieldErrors: { orders: "오더 수량을 확인해 주세요." },
+    fieldErrors: { rows: "오더 선택과 수량을 확인해 주세요." },
   });
 
   const frontDeskDenied = await saveChartOrderDraft({
     actorUserId: "user-front-desk",
     workspaceId,
-    input: validOrderDraftInput,
+    input: strictDraftInput(),
     permissionAdapter: createMockWorkspacePermissionAdapter({
       users: [{ id: "user-front-desk", status: "active" }],
       memberships: [
@@ -200,7 +261,7 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
   const crossWorkspaceDenied = await saveChartOrderDraft({
     actorUserId: "user-vet",
     workspaceId: "other-workspace",
-    input: validOrderDraftInput,
+    input: strictDraftInput(),
     permissionAdapter: createMockWorkspacePermissionAdapter({
       users: [{ id: "user-vet", status: "active" }],
       memberships: [
@@ -220,10 +281,18 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
     denialReason: "encounter_unavailable",
   });
 
+  const allowedGateway = createMockChartOrderDraftGateway(
+    undefined,
+    () => "2026-05-19T15:00:00.000Z",
+  );
+  const allowedCurrent = await allowedGateway.readOrderDraft({
+    workspaceId,
+    encounterId,
+  });
   const allowedVet = await saveChartOrderDraft({
     actorUserId: "user-vet",
     workspaceId,
-    input: validOrderDraftInput,
+    input: strictDraftInput(allowedCurrent.ok ? allowedCurrent.etag : validEtag),
     permissionAdapter: createMockWorkspacePermissionAdapter({
       users: [{ id: "user-vet", status: "active" }],
       memberships: [
@@ -236,25 +305,22 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
         },
       ],
     }),
-    gateway: createMockChartOrderDraftGateway(
-      undefined,
-      () => "2026-05-19T15:00:00.000Z",
-    ),
+    gateway: allowedGateway,
   });
   expect(allowedVet).toMatchObject({
     ok: true,
     status: 200,
   });
-  expect(allowedVet.ok ? allowedVet.orderDrafts : []).toEqual(
+  expect(allowedVet.ok ? allowedVet.rows : []).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        billingDisplayName: "CBC 검사 DEN-72 저장",
+        rowType: "individual",
         lineTotalSnapshot: 35000,
         orderId: "order-coco-cbc",
         updatedAt: "2026-05-19T15:00:00.000Z",
       }),
       expect.objectContaining({
-        billingDisplayName: "피하 수액 처치",
+        rowType: "individual",
         lineTotalSnapshot: 18000,
         orderId: "order-coco-fluid",
         updatedAt: "2026-05-19T15:00:00.000Z",
@@ -268,7 +334,7 @@ test("order draft core blocks chart mutation before consultation starts", async 
     actorUserId: "user-vet",
     workspaceId,
     input: {
-      ...validOrderDraftInput,
+      ...strictDraftInput(),
       encounterId: waitingEncounter.id,
     },
     gateway: createMockChartOrderDraftGateway({
@@ -293,17 +359,21 @@ test("order draft Supabase gateway keeps workspace, encounter, actor, and server
         `${functionName}:${args.p_workspace_id}:${args.p_encounter_id}:${args.p_actor_user_id ?? "read"}`,
       );
       return {
-        data: [
-          {
-            orderId: "00000000-0000-4000-8000-000000000101",
-            encounterId,
-            billingDisplayName: "CBC 검사 DEN-72 저장",
-            quantity: 2,
-            unitPriceSnapshot: 45000,
-            lineTotalSnapshot: 90000,
-            updatedAt: "2026-05-19T15:00:00.000Z",
-          },
-        ],
+        data: {
+          etag: validEtag,
+          rows: [
+            {
+              orderId: "00000000-0000-4000-8000-000000000101",
+              encounterId,
+              rowType: "individual",
+              orderType: "lab",
+              quantity: 2,
+              lineTotalSnapshot: 90000,
+              quantitySource: "manual",
+              updatedAt: "2026-05-19T15:00:00.000Z",
+            },
+          ],
+        },
         error: null,
       };
     },
@@ -313,25 +383,13 @@ test("order draft Supabase gateway keeps workspace, encounter, actor, and server
     actorUserId: "00000000-0000-4000-8000-000000000002",
     workspaceId,
     encounterId,
-    orders: [
+    expectedEtag: validEtag,
+    rows: [
       {
-        orderId: "00000000-0000-4000-8000-000000000101",
-        appliedSnapshot: {
-          appliedBillingName: "CBC 검사 DEN-304",
-          appliedDisplayName: "CBC 검사 DEN-304",
-          appliedPriceKrw: 45000,
-          appliedSalesUnit: "per_order",
-          sourcePresetId: "std-den-304-cbc",
-          sourcePresetVersion: "den-304-v1",
-        },
-        billingDisplayName: "CBC 검사 DEN-72 저장",
-        categoryGroup: "lab",
-        displayName: "CBC 검사 DEN-304",
-        quantity: 2,
         rowType: "individual",
-        sourcePresetId: "std-den-304-cbc",
-        sourcePresetVersion: "den-304-v1",
-        unitPriceSnapshot: 45000,
+        orderId: "00000000-0000-4000-8000-000000000101",
+        workspaceCatalogItemId: "ord-lab-cbc-baso",
+        quantity: 2,
       },
     ],
   });
@@ -341,9 +399,8 @@ test("order draft Supabase gateway keeps workspace, encounter, actor, and server
   ]);
   expect(result).toMatchObject({
     ok: true,
-    orderDrafts: [
+    rows: [
       {
-        lineTotalSnapshot: 90000,
         orderId: "00000000-0000-4000-8000-000000000101",
       },
     ],
@@ -473,6 +530,16 @@ test("order draft persistence migration defines local-first RPC boundary without
   );
 });
 
+test("A3 order drafts use workspace catalog lineage and nullable server snapshots", () => {
+  expect(a3Migration).toContain("workspace_catalog_item_id text");
+  expect(a3Migration).toContain("private.clair_build_catalog_order_snapshot");
+  expect(a3Migration).toContain("service_item_id, workspace_catalog_item_id");
+  expect(a3Migration).toContain("unit_price_snapshot, requested_by_user_id");
+  expect(a3Migration).toContain("applied_snapshot = private.clair_build_catalog_order_snapshot");
+  expect(a3Migration).toContain("unitPriceSnapshot', o.unit_price_snapshot");
+  expect(a3Migration).toContain("serviceItemId', o.service_item_id");
+});
+
 test("order draft route stays server-owned and secret-free", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/chart/order-drafts/route.ts",
@@ -491,6 +558,244 @@ test("order draft route stays server-owned and secret-free", () => {
   expect(`${routeSource}\n${serverSource}`).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET/i,
   );
+});
+
+test("set draft keeps explicit leaf intent and runtime identity across reload and CAS retry", async () => {
+  const catalog = createMockOrderCatalogGateway();
+  const catalogResult = await catalog.listChartSearch({ workspaceId });
+  const setRow = catalogResult.rows.find(
+    (row) => row.rowType === "set" && row.sourceSetId === "set-vomit-basic",
+  );
+  expect(setRow).toBeTruthy();
+
+  const gateway = createMockChartOrderDraftGateway({
+    encounters: [setRuntimeEncounter],
+    orders: [],
+  });
+  const permissionAdapter = createMockWorkspacePermissionAdapter({
+    users: [{ id: "user-vet", status: "active" }],
+    memberships: [
+      {
+        id: "membership-order-set-runtime",
+        workspaceId,
+        userId: "user-vet",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
+  });
+  const parentOrderId = "set-parent-runtime-1";
+  const selectionIntent = {
+    items: [
+      {
+        revisionItemId: "setitem-vomit-baso",
+        selected: false,
+        quantity: 1,
+      },
+      {
+        revisionItemId: "setitem-vomit-maropitant",
+        selected: true,
+        quantity: 5,
+      },
+    ],
+  };
+  const initialSetDraft = await gateway.readOrderDraft({
+    workspaceId,
+    encounterId: setRuntimeEncounter.id,
+  });
+  expect(initialSetDraft.ok).toBe(true);
+
+  const firstSave = await saveChartOrderDraft({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      encounterId: setRuntimeEncounter.id,
+      expectedEtag: initialSetDraft.ok ? initialSetDraft.etag : validEtag,
+      rows: [
+        {
+          rowType: "set",
+          orderId: parentOrderId,
+          sourceSetId: setRow!.sourceSetId!,
+          sourceSetRevisionId: setRow!.sourceSetRevisionId!,
+          sourceSetRevisionNo: setRow!.sourceSetRevisionNo!,
+          selectionIntent,
+        },
+      ],
+    },
+    permissionAdapter,
+    workspaceId,
+  });
+  expect(firstSave.ok).toBe(true);
+  if (!firstSave.ok) return;
+  expect(firstSave.rows).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        orderId: parentOrderId,
+        rowType: "set",
+        sourceSetId: setRow!.sourceSetId,
+        sourceSetRevisionId: setRow!.sourceSetRevisionId,
+        snapshotSchemaVersion: 1,
+      }),
+      expect.objectContaining({
+        parentOrderId,
+        rowType: "set_child",
+        sourceSetRevisionItemId: "setitem-vomit-maropitant",
+        quantity: 5,
+        quantitySource: "manual_at_apply",
+      }),
+    ]),
+  );
+  const firstChild = firstSave.rows.find(
+    (row) => row.rowType === "set_child" && row.parentOrderId === parentOrderId,
+  );
+  const firstParent = firstSave.rows.find((row) => row.orderId === parentOrderId);
+  expect(firstChild?.orderId).toBeTruthy();
+  expect(firstParent?.snapshotHash).toBeNull();
+
+  const reloaded = await readChartOrderDraft({
+    actorUserId: "user-vet",
+    encounterId: setRuntimeEncounter.id,
+    gateway,
+    permissionAdapter,
+    workspaceId,
+  });
+  expect(reloaded.ok).toBe(true);
+  if (!reloaded.ok) return;
+  expect(reloaded.rows.map((row) => row.rowType)).toEqual([
+    "set",
+    "set_child",
+  ]);
+  expect(reloaded.rows[1]).toMatchObject({
+    orderId: firstChild!.orderId,
+    parentOrderId,
+    sourceSetId: setRow!.sourceSetId,
+    sourceSetRevisionId: setRow!.sourceSetRevisionId,
+    sourceSetRevisionItemId: "setitem-vomit-maropitant",
+    quantity: 5,
+  });
+
+  const retry = await saveChartOrderDraft({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      encounterId: setRuntimeEncounter.id,
+      expectedEtag: reloaded.etag,
+      rows: [
+        {
+          rowType: "set",
+          orderId: parentOrderId,
+          sourceSetId: setRow!.sourceSetId!,
+          sourceSetRevisionId: setRow!.sourceSetRevisionId!,
+          sourceSetRevisionNo: setRow!.sourceSetRevisionNo!,
+          selectionIntent: {
+            items: [
+              selectionIntent.items[0],
+              { ...selectionIntent.items[1], quantity: 6 },
+            ],
+          },
+        },
+      ],
+    },
+    permissionAdapter,
+    workspaceId,
+  });
+  expect(retry.ok).toBe(true);
+  if (!retry.ok) return;
+  expect(retry.rows).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        orderId: firstChild!.orderId,
+        parentOrderId,
+        quantity: 6,
+      }),
+    ]),
+  );
+  const retryParent = retry.rows.find((row) => row.orderId === parentOrderId);
+  expect(retryParent?.snapshotHash).toBeNull();
+  expect(retry.etag).not.toBe(firstSave.etag);
+});
+
+test("range-based set preview requires explicit input and rejects no-match values", async () => {
+  const rangeSet = (rangeBasis: "patient_weight_kg" | "manual_value"): OrderSet => ({
+    id: `set-range-${rangeBasis}`,
+    workspaceId,
+    sourceSetVersion: "v1",
+    setCategory: "범위 세트",
+    setName: `${rangeBasis} 세트`,
+    billingName: `${rangeBasis} 세트`,
+    availabilityStatus: "active",
+    amountBasis: "range_price",
+    setPriceKrw: 0,
+    rangeBasis,
+    taxType: "taxable",
+    priceRanges: [
+      { id: "range-0-10", sortOrder: 1, lowerBound: 0, upperBound: 10, priceKrw: 1000 },
+      { id: "range-20-open", sortOrder: 2, lowerBound: 20, upperBound: null, priceKrw: 2000 },
+    ],
+    salesUnit: "per_each",
+    billingReflectionEnabled: true,
+    targetSpecies: ["dog", "cat", "other"],
+    includedOrders: [
+      {
+        id: `range-item-${rangeBasis}`,
+        childOrderId: "ord-med-maropitant",
+        sortOrder: 10,
+        defaultSelected: true,
+        billingReflectionDefault: true,
+        defaultQuantity: 1,
+        quantitySource: "fixed_one",
+        unitPriceSnapshotKrw: 4500,
+      },
+    ],
+  });
+
+  for (const rangeBasis of ["patient_weight_kg", "manual_value"] as const) {
+    const gateway = createMockOrderCatalogGateway({
+      orderSets: [rangeSet(rangeBasis)],
+    });
+    const baseInput = {
+      encounterId,
+      orderSetId: `set-range-${rangeBasis}`,
+      revisionId: "range-revision-1",
+      workspaceId,
+    };
+    const items = [
+      {
+        revisionItemId: `range-item-${rangeBasis}`,
+        selected: true,
+        quantity: 1,
+      },
+    ];
+    const missing = await gateway.previewOrderSet!({
+      ...baseInput,
+      selectionIntent: { items },
+    });
+    expect(missing).toMatchObject({
+      ok: false,
+      status: 422,
+      error: "order_set_range_input_required",
+    });
+    const noMatch = await gateway.previewOrderSet!({
+      ...baseInput,
+      selectionIntent: { items, rangeInput: 15 },
+    });
+    expect(noMatch).toMatchObject({
+      ok: false,
+      status: 422,
+      error: "order_set_range_no_match",
+    });
+    const valid = await gateway.previewOrderSet!({
+      ...baseInput,
+      selectionIntent: { items, rangeInput: 5 },
+    });
+    expect(valid).toMatchObject({
+      ok: true,
+      preview: {
+        set: { rangeBasis },
+        pricing: { rangeInput: 5, selectedRangeId: "range-0-10" },
+      },
+    });
+  }
 });
 
 async function expectJson(
