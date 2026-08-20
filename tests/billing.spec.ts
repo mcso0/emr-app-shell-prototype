@@ -1,7 +1,29 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
+
+const billingModuleSource = readFileSync("src/features/billing/module.tsx", "utf8");
+
+test("billing maps every A3 frozen billing category to its display group", () => {
+  const mappings = [
+    ["consultation", "진료"],
+    ["laboratory", "검사"],
+    ["imaging", "영상"],
+    ["dispensing", "조제"],
+    ["treatment", "처치"],
+    ["other", "기타"],
+  ] as const;
+
+  for (const [category, label] of mappings) {
+    expect(billingModuleSource).toContain(
+      `line.billingCategory === "${category}"`,
+    );
+    expect(billingModuleSource).toContain(`return "${label}"`);
+  }
+  expect(billingModuleSource).toContain('if (line.workspaceCatalogItemId) return "기타"');
+});
 
 async function grantCheongdamWorkspaceAccess(page: Page) {
   await page.addInitScript(

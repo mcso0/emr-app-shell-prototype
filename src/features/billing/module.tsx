@@ -105,6 +105,7 @@ import {
 } from "@/lib/emr-domain/demo-date";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
+import { mockOrders } from "@/mocks/emr-domain";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
@@ -113,6 +114,7 @@ import type {
   WorkspaceSlotAvailabilityProviderProps,
 } from "@/types/emr";
 import type {
+  BillingCategory,
   InvoiceLine,
   InvoiceStatus,
   Invoice,
@@ -120,6 +122,7 @@ import type {
   EmrOrderWorkStatus,
   Payment,
   PaymentMethod,
+  ServiceItemType,
 } from "@/types/emr-domain";
 import animalDogIcon from "../../../icons/Illustration/animal-dog.svg";
 
@@ -205,12 +208,20 @@ type BillingWorkspaceApiState = {
 
 type BillingInvoiceCandidateSnapshot = {
   billingCandidateId: string;
+  billingCategory?: BillingCategory;
+  categoryGroup?: string;
   description: string;
   invoiceId: string;
   lineTotal: number;
   orderId: string;
   quantity: number;
+  serviceItemId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  sourceOrderSnapshot?: Record<string, unknown>;
   unitPrice: number;
+  workspaceCatalogItemId?: string;
+  workspaceCatalogRevision?: number;
 };
 
 type BillingInvoiceCandidateRouteResponse =
@@ -388,6 +399,18 @@ const billingLineCategoryOrder = [
 type BillingLineCategory = (typeof billingLineCategoryOrder)[number];
 
 const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
+  if (line.billingCategory === "consultation") return "진료";
+  if (line.billingCategory === "laboratory") return "검사";
+  if (line.billingCategory === "imaging") return "영상";
+  if (line.billingCategory === "dispensing") return "조제";
+  if (line.billingCategory === "treatment") return "처치";
+  if (line.billingCategory === "other") return "기타";
+
+  // A direct catalog line without a frozen category is invalid data, not a
+  // legacy service-prefix row. Keep the fallback strictly legacy-only.
+  if (line.workspaceCatalogItemId) return "기타";
+
+  // Legacy service-backed rows retain their historical prefix projection.
   if (line.serviceItemId?.startsWith("svc-consult")) return "진료";
   if (line.serviceItemId?.startsWith("svc-lab")) return "검사";
   if (line.serviceItemId?.startsWith("svc-imaging")) return "영상";
@@ -753,7 +776,20 @@ const mergeInvoiceCandidateLines = (
         existingLine?.id ??
         `${billingCandidateInvoiceLineIdPrefix}${candidate.billingCandidateId}`,
       invoiceId,
-      serviceItemId: existingLine?.serviceItemId,
+      serviceItemId: existingLine?.serviceItemId ?? candidate.serviceItemId,
+      workspaceCatalogItemId:
+        existingLine?.workspaceCatalogItemId ?? candidate.workspaceCatalogItemId,
+      sourceMasterRecordId:
+        existingLine?.sourceMasterRecordId ?? candidate.sourceMasterRecordId,
+      sourceMasterRevision:
+        existingLine?.sourceMasterRevision ?? candidate.sourceMasterRevision,
+      workspaceCatalogRevision:
+        existingLine?.workspaceCatalogRevision ?? candidate.workspaceCatalogRevision,
+      categoryGroup:
+        existingLine?.categoryGroup ?? asServiceItemType(candidate.categoryGroup),
+      billingCategory: existingLine?.billingCategory ?? candidate.billingCategory,
+      sourceOrderSnapshot:
+        existingLine?.sourceOrderSnapshot ?? candidate.sourceOrderSnapshot,
       orderId: candidate.orderId,
       description: candidate.description,
       quantity: existingLine?.quantity ?? candidate.quantity,
@@ -776,6 +812,20 @@ const isBillingCandidateInvoiceLine = (line: InvoiceLine) =>
 
 const getPersistedInvoiceLines = (lines: InvoiceLine[]) =>
   lines.filter((line) => !isBillingCandidateInvoiceLine(line));
+
+function asServiceItemType(value?: string): ServiceItemType | undefined {
+  return value && [
+    "consultation",
+    "medication",
+    "treatment",
+    "lab",
+    "imaging",
+    "hospitalization",
+    "misc",
+  ].includes(value)
+    ? (value as ServiceItemType)
+    : undefined;
+}
 
 function createLiveCandidateBillingDetail({
   candidates,
@@ -1147,6 +1197,9 @@ function createCheckoutGroupFromBillingDetail(
     invoice: detail.invoice,
     lines: detail.invoiceLines.map((line) => ({
       line,
+      order: line.orderId
+        ? mockOrders.find((order) => order.id === line.orderId)
+        : undefined,
       source: line.orderId
         ? ("chart_order" as const)
         : ("billing_add_on" as const),
@@ -1180,7 +1233,12 @@ function mergeBillingDetailStoreSnapshot({
     (payment) => payment.invoiceId === invoice.id,
   );
   const effectiveInvoiceLines = persistedLines.length
-    ? persistedLines
+    ? [
+        ...persistedLines,
+        ...detail.invoiceLines.filter(
+          (line) => !persistedLines.some((persistedLine) => persistedLine.id === line.id),
+        ),
+      ]
     : detail.invoiceLines;
   const effectivePayments = persistedPayments.length
     ? persistedPayments
@@ -3007,6 +3065,15 @@ export function BillingContent({
       (group) =>
         group.invoice.workspaceId === effectiveDetail?.invoice.workspaceId,
     );
+
+    if (effectiveDetail) {
+      const detailGroup = createCheckoutGroupFromBillingDetail(effectiveDetail);
+      if (groups.some((group) => group.invoice.id === detailGroup.invoice.id)) {
+        return groups.map((group) =>
+          group.invoice.id === detailGroup.invoice.id ? detailGroup : group,
+        );
+      }
+    }
 
     if (groups.length || !effectiveDetail) return groups;
 

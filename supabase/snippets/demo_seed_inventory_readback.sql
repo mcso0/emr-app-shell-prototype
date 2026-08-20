@@ -28,8 +28,8 @@ with inventory(
     (130, 'service categories', 2, 6, 'baseline_required', 'public.service_categories', 'Service catalog grouping for chart orders and billing.', 'Expected DEN-194 service category rows; broader catalog groups remain a later demo seed expansion.'),
     (140, 'service items', 9, 20, 'baseline_required', 'public.service_items + public.service_item_prices', 'Orderable and billable service items used by chart orders.', 'Expected DEN-194 service item and price rows.'),
     (150, 'order catalog items', 9, 20, 'baseline_required', 'public.order_catalog_items', 'Hospital-admin Order management and chart catalog search.', 'Expected DEMO-DB-PR-002 order catalog rows for lab, imaging, treatment, dispensing, wellness, and rehab.'),
-    (160, 'order sets', 2, 3, 'baseline_required', 'public.order_sets', 'Hospital-admin Order set demo and set-to-chart application.', 'Expected DEMO-DB-PR-002 compact order sets for kong-vomit and mango-wellness.'),
-    (170, 'order_set_items', 5, 8, 'baseline_required', 'public.order_set_items', 'Included-order rows for compact set expansion.', 'Expected DEMO-DB-PR-002 included-order rows linked to seeded catalog items.'),
+    (160, 'order sets', 2, 3, 'baseline_required', 'public.order_sets + public.order_set_revisions', 'Hospital-admin Order set demo and set-to-chart application.', 'Expected DEMO-DB-PR-002 stable sets with native current revision pointers.'),
+    (170, 'order_set_items', 5, 8, 'baseline_required', 'public.order_set_revision_items', 'Included-order rows for compact set expansion.', 'Expected DEMO-DB-PR-002 immutable revision items; legacy order_set_items is compatibility read-only only.'),
     (180, 'order groups', 5, 5, 'baseline_required', 'public.order_groups', 'Encounter-owned grouped chart order confirmation.', 'Expected DEN-194 order group rows.'),
     (190, 'orders', 11, 11, 'baseline_required', 'public.orders', 'Chart orders across lab, imaging, treatment, and dispensing.', 'Expected DEN-194 order rows.'),
     (200, 'order events', 10, 10, 'baseline_required', 'public.order_events', 'Order completion/result evidence.', 'Expected DEN-194 order event rows.'),
@@ -110,14 +110,21 @@ actual_counts(area, actual_count) as (
   from public.order_catalog_items
   where workspace_id = 'clair-demo' and id like 'den194-catalog-%'
   union all
-  select 'order sets', least(
-    (select count(*)::int from public.order_sets where workspace_id = 'clair-demo' and id like 'den194-set-%'),
-    (select count(distinct order_set_id)::int from public.order_set_items where workspace_id = 'clair-demo' and id like 'den194-setitem-%')
-  )
+  select 'order sets', count(*)::int
+  from public.order_sets s
+  join public.order_set_revisions r
+    on r.workspace_id = s.workspace_id
+   and r.order_set_id = s.id
+   and r.id = s.current_revision_id
+  where s.workspace_id = 'clair-demo' and s.id like 'den194-set-%'
   union all
   select 'order_set_items', count(*)::int
-  from public.order_set_items
-  where workspace_id = 'clair-demo' and id like 'den194-setitem-%'
+  from public.order_set_revision_items i
+  join public.order_sets s
+    on s.workspace_id = i.workspace_id
+   and s.id = i.order_set_id
+   and s.current_revision_id = i.revision_id
+  where i.workspace_id = 'clair-demo' and s.id like 'den194-set-%'
   union all
   select 'order groups', count(*)::int
   from public.order_groups

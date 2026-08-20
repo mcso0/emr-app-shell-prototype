@@ -194,7 +194,16 @@ import type {
   ShellComponentProps,
   WorkspaceSlotAvailabilityProviderProps,
 } from "@/types/emr";
-import type { ChartOrderCatalogSearchRow } from "@/features/hospital-admin/server-order-catalog";
+import type {
+  ChartOrderCatalogSearchRow,
+  ChartOrderSetPreview,
+  ChartOrderSetPreviewItem,
+  ChartOrderSetSelectionIntent,
+} from "@/features/hospital-admin/server-order-catalog";
+import type {
+  ChartOrderDraftRowInput,
+  ChartOrderRuntimeRow,
+} from "@/features/chart/server-order-draft-persistence-core";
 import type {
   Diagnosis,
   DiagnosisType,
@@ -294,20 +303,12 @@ type ChartDiagnosisRouteResponse =
       denialReason?: string;
       error?: string;
     };
-type ChartOrderDraftSnapshot = {
-  billingDisplayName: string;
-  encounterId: string;
-  lineTotalSnapshot: number;
-  orderId: string;
-  quantity: number;
-  unitPriceSnapshot: number;
-  updatedAt: string;
-};
 type ChartOrderDraftRouteResponse =
   | {
       ok: true;
       status: number;
-      orderDrafts: ChartOrderDraftSnapshot[];
+      etag?: string;
+      rows?: ChartOrderRuntimeRow[];
     }
   | {
       ok: false;
@@ -316,15 +317,6 @@ type ChartOrderDraftRouteResponse =
       error?: string;
     };
 type ChartOrderActionKind = "bill" | "confirm";
-type ChartOrderCatalogSelectionInput = {
-  billingDisplayName: string;
-  guardianName?: string;
-  orderId: string;
-  patientName?: string;
-  quantity: number;
-  rowType: "individual" | "set";
-  sourcePresetId: string;
-};
 type ChartOrderActionSnapshot = {
   appliedSnapshot?: {
     billingName: string;
@@ -332,10 +324,16 @@ type ChartOrderActionSnapshot = {
     inHospitalOrderName?: string;
     lineTotalSnapshot: number;
     orderType?: EmrOrderType;
-    priceKrw: number;
+    priceKrw: number | null;
     quantity: number;
-    sourcePresetId: string;
+    sourcePresetId?: string;
     standardOrderName: string;
+    workspaceCatalogItemId?: string;
+    sourceMasterRecordId?: string;
+    sourceMasterRevision?: number;
+    workspaceCatalogRevision?: number;
+    categoryGroup?: string;
+    billingCategory?: string;
   };
   billingCandidateId?: string | null;
   billingCandidateStatus: string;
@@ -351,6 +349,8 @@ type ChartOrderActionRouteResponse =
   | {
       ok: true;
       status: number;
+      etag?: string;
+      rows?: ChartOrderRuntimeRow[];
       billingCandidates?: ChartBillingCandidateSnapshot[];
       orderActions: ChartOrderActionSnapshot[];
     }
@@ -359,6 +359,19 @@ type ChartOrderActionRouteResponse =
       status: number;
       denialReason?: string;
       error?: string;
+    };
+type ChartOrderSetPreviewRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      preview: ChartOrderSetPreview;
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+      message?: string;
     };
 type ChartOrderLifecycleSnapshot = {
   cancellationReason?: string | null;
@@ -2314,7 +2327,10 @@ async function loadChartOrderDraft({
       return { ok: false, status: response.status, error: "db_read_failed" };
     }
 
-    return body;
+    return {
+      ...body,
+      etag: body.etag ?? response.headers.get("etag") ?? undefined,
+    };
   } catch {
     return { ok: false, status: 500, error: "db_read_failed" };
   }
@@ -2378,45 +2394,156 @@ async function loadChartOrderCatalog({
   }
 }
 
+async function loadChartOrderSetPreview({
+  actorHeaders,
+  encounterId,
+  orderSetId,
+  revisionId,
+  selectionIntent,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  orderSetId: string;
+  revisionId: string;
+  selectionIntent: ChartOrderSetSelectionIntent;
+  workspaceId: string;
+}): Promise<ChartOrderSetPreviewRouteResponse> {
+  try {
+    const params = new URLSearchParams({
+      encounterId,
+      revisionId,
+      selectionIntent: JSON.stringify(selectionIntent),
+    });
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/order-sets/${encodeURIComponent(orderSetId)}/expand?${params.toString()}`,
+      { cache: "no-store", headers: actorHeaders },
+    );
+    const body = (await response.json()) as ChartOrderSetPreviewRouteResponse;
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "preview_failed" };
+    }
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "preview_failed" };
+  }
+}
+
+function getChartOrderSetSelectionIntentForDraftRow(
+  row: ChartOrderDraftRow,
+): ChartOrderSetSelectionIntent | undefined {
+  if (row.setSelectionIntent) return row.setSelectionIntent;
+
+  const runtime = row.runtimeRow;
+  const runtimeIntent = runtime
+    ? readChartOrderSetSelectionIntent(
+        runtime.appliedSnapshot.selectionIntent ??
+          runtime.calculationInputs.selectionIntent,
+      )
+    : undefined;
+  if (runtimeIntent) return runtimeIntent;
+
+  const preview = row.setPreview;
+  if (!preview) return undefined;
+
+  return {
+    items: preview.items.map((item) => ({
+      revisionItemId: item.revisionItemId,
+      selected: item.selected,
+      quantity: item.quantity,
+    })),
+    ...(preview.pricing.rangeInput === null
+      ? {}
+      : { rangeInput: preview.pricing.rangeInput }),
+  };
+}
+
 async function saveChartOrderDraftRoute({
   actorHeaders,
   encounterId,
+  expectedEtag,
   rows,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   encounterId: string;
+  expectedEtag: string;
   rows: ChartOrderDraftRow[];
   workspaceId: string;
 }): Promise<ChartOrderDraftRouteResponse> {
+  if (!/^"[0-9a-f]{64}"$/.test(expectedEtag)) {
+    return { ok: false, status: 428, error: "if_match_required" };
+  }
   try {
+    const draftRows = rows.flatMap<ChartOrderDraftRowInput>((row) => {
+      // Children are server-expanded rows. Sending them back as individual
+      // draft inputs would lose the set parent/child discriminator on retry.
+      if (row.runtimeRow?.rowType === "set_child") return [];
+
+      const isSet =
+        row.runtimeRow?.rowType === "set" ||
+        row.catalogSearchRow?.rowType === "set" ||
+        Boolean(row.setPreview);
+      if (isSet) {
+        const selectionIntent = getChartOrderSetSelectionIntentForDraftRow(row);
+        const sourceSetId =
+          row.runtimeRow?.sourceSetId ??
+          row.catalogSearchRow?.sourceSetId ??
+          row.catalogSearchRow?.sourcePresetId;
+        const sourceSetRevisionId =
+          row.runtimeRow?.sourceSetRevisionId ??
+          row.catalogSearchRow?.sourceSetRevisionId;
+        const sourceSetRevisionNo =
+          row.runtimeRow?.sourceSetRevisionNo ??
+          row.catalogSearchRow?.sourceSetRevisionNo;
+        if (
+          !selectionIntent ||
+          !sourceSetId ||
+          !sourceSetRevisionId ||
+          typeof sourceSetRevisionNo !== "number"
+        ) {
+          throw new Error("order_set_preview_required");
+        }
+        return [
+          {
+            rowType: "set" as const,
+            orderId: row.order.id,
+            sourceSetId,
+            sourceSetRevisionId,
+            sourceSetRevisionNo,
+            selectionIntent,
+          },
+        ];
+      }
+
+      return [
+        {
+          rowType: "individual" as const,
+          orderId: row.order.id,
+          workspaceCatalogItemId:
+            row.catalogSearchRow?.workspaceCatalogItemId ??
+            row.catalogSearchRow?.appliedSnapshot.workspaceCatalogItemId ??
+            row.order.workspaceCatalogItemId ??
+            row.order.serviceItemId ??
+            row.order.id,
+          quantity: getDraftQuantity(row.quantityInput) ?? 0,
+        },
+      ];
+    });
     const response = await fetch(
       `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-drafts`,
       {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "If-Match": expectedEtag,
           ...(actorHeaders ?? {}),
         },
         body: JSON.stringify({
           encounterId,
-          orders: rows.map((row) => ({
-            orderId: row.order.id,
-            billingDisplayName: row.billingName,
-            quantity: getDraftQuantity(row.quantityInput) ?? 0,
-            ...(row.catalogSearchRow
-              ? {
-                  appliedSnapshot: row.catalogSearchRow.appliedSnapshot,
-                  categoryGroup: row.catalogSearchRow.categoryGroup,
-                  displayName: row.catalogSearchRow.displayName,
-                  rowType: row.catalogSearchRow.rowType,
-                  sourcePresetId: row.catalogSearchRow.sourcePresetId,
-                  sourcePresetVersion: row.catalogSearchRow.sourcePresetVersion,
-                  unitPriceSnapshot:
-                    row.catalogSearchRow.appliedSnapshot.appliedPriceKrw,
-                }
-              : {}),
-          })),
+          expectedEtag,
+          rows: draftRows,
         }),
       },
     );
@@ -2427,9 +2554,12 @@ async function saveChartOrderDraftRoute({
       return { ok: false, status: response.status, error: "db_write_failed" };
     }
 
-    return body;
+    return {
+      ...body,
+      etag: body.etag ?? response.headers.get("etag") ?? undefined,
+    };
   } catch {
-    return { ok: false, status: 500, error: "db_write_failed" };
+    return { ok: false, status: 422, error: "order_set_preview_required" };
   }
 }
 
@@ -2457,7 +2587,10 @@ async function loadChartOrderActions({
       return { ok: false, status: response.status, error: "db_read_failed" };
     }
 
-    return body;
+    return {
+      ...body,
+      etag: body.etag ?? response.headers.get("etag") ?? undefined,
+    };
   } catch {
     return { ok: false, status: 500, error: "db_read_failed" };
   }
@@ -2526,15 +2659,15 @@ async function loadChartBillingCandidates({
 async function saveChartOrderActionRoute({
   action,
   actorHeaders,
-  catalogSelections,
   encounterId,
+  expectedEtag,
   orderIds,
   workspaceId,
 }: {
   action: ChartOrderActionKind;
   actorHeaders?: Record<string, string>;
-  catalogSelections?: ChartOrderCatalogSelectionInput[];
   encounterId: string;
+  expectedEtag?: string;
   orderIds: string[];
   workspaceId: string;
 }): Promise<ChartOrderActionRouteResponse> {
@@ -2545,12 +2678,13 @@ async function saveChartOrderActionRoute({
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "If-Match": expectedEtag ?? "",
           ...(actorHeaders ?? {}),
         },
         body: JSON.stringify({
           action,
-          catalogSelections,
           encounterId,
+          expectedEtag: expectedEtag ?? "",
           orderIds,
         }),
       },
@@ -2562,7 +2696,10 @@ async function saveChartOrderActionRoute({
       return { ok: false, status: response.status, error: "db_write_failed" };
     }
 
-    return body;
+    return {
+      ...body,
+      etag: body.etag ?? response.headers.get("etag") ?? undefined,
+    };
   } catch {
     return { ok: false, status: 500, error: "db_write_failed" };
   }
@@ -3706,8 +3843,11 @@ type ChartOrderDraftRow = ChartOrderTableRow & {
   committedBillingName: string;
   committedQuantityInput: string;
   catalogSearchRow?: ChartOrderCatalogSearchRow;
+  runtimeRow?: ChartOrderRuntimeRow;
+  setSelectionIntent?: ChartOrderSetSelectionIntent;
+  setPreview?: ChartOrderSetPreview;
   quantityInput: string;
-  unitPrice?: number;
+  unitPrice?: number | null;
 };
 
 type ChartOrderSortKey =
@@ -3790,48 +3930,252 @@ const getChartOrderDraftRows = (
 
 const applyPersistedOrderDrafts = (
   rows: ChartOrderDraftRow[],
-  snapshots: ChartOrderDraftSnapshot[],
+  snapshots: ChartOrderRuntimeRow[],
+  workspaceId: string,
   options: { preserveMissingRows?: boolean } = {},
 ): ChartOrderDraftRow[] => {
   const snapshotByOrderId = new Map(
     snapshots.map((snapshot) => [snapshot.orderId, snapshot]),
   );
-
-  return (
-    options.preserveMissingRows
-      ? rows
-      : rows.filter((row) => snapshotByOrderId.has(row.order.id))
-  ).map((row) => {
-    const snapshot = snapshotByOrderId.get(row.order.id);
-    if (!snapshot) return row;
-
-    const quantityInput = String(snapshot.quantity);
-
-    return {
-      ...row,
-      billingName: snapshot.billingDisplayName,
-      committedBillingName: snapshot.billingDisplayName,
-      committedQuantityInput: quantityInput,
-      quantityInput,
-      unitPrice: snapshot.unitPriceSnapshot,
-    };
+  const snapshotRows = snapshots.map((snapshot, index) => {
+    const fallback = rows.find((row) => row.order.id === snapshot.orderId);
+    return buildChartOrderDraftRowFromRuntime(
+      snapshot,
+      workspaceId,
+      fallback,
+      rows.length + index + 1,
+    );
   });
+  const restoredOrderIds = new Set(snapshotRows.map((row) => row.order.id));
+  const preservedRows = options.preserveMissingRows
+    ? rows.filter((row) => !restoredOrderIds.has(row.order.id))
+    : [];
+
+  // Keep the server's discriminated runtime rows as the source of truth. A
+  // set parent and its selected children therefore remain separate rows after
+  // reload, while a legacy/individual row keeps the existing chart shape.
+  return [...preservedRows, ...snapshotRows].filter(
+    (row) => options.preserveMissingRows || snapshotByOrderId.has(row.order.id),
+  );
 };
 
-const getChartCatalogSourceKey = ({
-  sourcePresetId,
-}: Pick<ChartOrderCatalogSearchRow, "sourcePresetId">) => sourcePresetId;
+function buildChartOrderDraftRowFromRuntime(
+  snapshot: ChartOrderRuntimeRow,
+  workspaceId: string,
+  fallback: ChartOrderDraftRow | undefined,
+  sortOrder: number,
+): ChartOrderDraftRow {
+  const applied = snapshot.appliedSnapshot ?? {};
+  const getString = (...keys: string[]) =>
+    keys
+      .map((key) => applied[key])
+      .find((value): value is string => typeof value === "string");
+  const getNumber = (...keys: string[]) =>
+    keys
+      .map((key) => applied[key])
+      .find((value): value is number => typeof value === "number");
+  const rowType = snapshot.rowType;
+  const displayName =
+    getString(
+      "displayName",
+      "appliedDisplayName",
+      "inHospitalOrderName",
+      "standardOrderName",
+      "appliedStandardOrderName",
+    ) ??
+    fallback?.order.displayName ??
+    snapshot.orderId;
+  const billingName =
+    getString("billingName", "appliedBillingName") ??
+    fallback?.billingName ??
+    displayName;
+  const orderType =
+    snapshot.orderType === "set"
+      ? "treatment"
+      : (snapshot.orderType as EmrOrderType);
+  const status = chartOrderStatusOrder.includes(
+    snapshot.status as EmrOrderStatus,
+  )
+    ? (snapshot.status as EmrOrderStatus)
+    : fallback?.order.status ?? "requested";
+  const setPreview =
+    rowType === "set"
+      ? fallback?.setPreview ?? buildChartOrderSetPreviewFromRuntime(snapshot)
+      : undefined;
+  const setSelectionIntent =
+    rowType === "set"
+      ? readChartOrderSetSelectionIntent(
+          applied.selectionIntent ?? snapshot.calculationInputs.selectionIntent,
+        ) ??
+        (setPreview
+          ? {
+              items: setPreview.items.map((item) => ({
+                revisionItemId: item.revisionItemId,
+                selected: item.selected,
+                quantity: item.quantity,
+              })),
+              ...(setPreview.pricing.rangeInput === null
+                ? {}
+                : { rangeInput: setPreview.pricing.rangeInput }),
+            }
+          : undefined)
+      : undefined;
+  const order: EmrOrder = {
+    ...(fallback?.order ?? {}),
+    id: snapshot.orderId,
+    workspaceId,
+    encounterId: snapshot.encounterId,
+    serviceItemId:
+      rowType === "individual"
+        ? fallback?.order.serviceItemId
+        : undefined,
+    workspaceCatalogItemId: snapshot.workspaceCatalogItemId ?? undefined,
+    sourceMasterRecordId:
+      getString("sourceMasterRecordId") ?? fallback?.order.sourceMasterRecordId,
+    sourceMasterRevision:
+      getNumber("sourceMasterRevision") ?? fallback?.order.sourceMasterRevision,
+    workspaceCatalogRevision:
+      snapshot.workspaceCatalogRevision ?? fallback?.order.workspaceCatalogRevision,
+    categoryGroup:
+      (getString("categoryGroup") as EmrOrder["categoryGroup"] | undefined) ??
+      fallback?.order.categoryGroup,
+    billingCategory:
+      (getString("billingCategory") as EmrOrder["billingCategory"] | undefined) ??
+      fallback?.order.billingCategory,
+    unitPriceSnapshot: snapshot.unitPriceSnapshot,
+    appliedSnapshot: applied,
+    orderType,
+    displayName,
+    status,
+    workStatus: status === "completed" ? "completed" : "pending",
+    priority: fallback?.order.priority ?? "normal",
+    requestedByUserId: fallback?.order.requestedByUserId ?? "user-vet",
+    requestedAt: fallback?.order.requestedAt ?? snapshot.updatedAt,
+    instruction:
+      getString("internalInstruction", "appliedInternalInstruction") ??
+      fallback?.order.instruction,
+    sortOrder,
+    createdAt: fallback?.order.createdAt ?? snapshot.updatedAt,
+    updatedAt: snapshot.updatedAt,
+  };
+  const quantityInput = String(snapshot.quantity);
+
+  return {
+    ...(fallback ?? {}),
+    billingCandidateId: fallback?.billingCandidateId,
+    billingName,
+    committedBillingName: billingName,
+    committedQuantityInput: quantityInput,
+    groupTitle:
+      rowType === "set"
+        ? "Order 세트"
+        : rowType === "set_child"
+          ? "Order 세트 구성"
+          : fallback?.groupTitle ?? "개별 오더",
+    order,
+    quantityInput,
+    runtimeRow: snapshot,
+    setPreview,
+    setSelectionIntent,
+    unitPrice: snapshot.unitPriceSnapshot ?? getNumber("priceKrw") ?? null,
+  };
+}
+
+function readChartOrderSetSelectionIntent(
+  value: unknown,
+): ChartOrderSetSelectionIntent | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const input = value as Record<string, unknown>;
+  if (!Array.isArray(input.items)) return undefined;
+  const items = input.items
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+    .map((item) => ({
+      revisionItemId: typeof item.revisionItemId === "string" ? item.revisionItemId : "",
+      selected: item.selected === true,
+      quantity: typeof item.quantity === "number" ? item.quantity : Number(item.quantity),
+    }))
+    .filter((item) => item.revisionItemId && Number.isFinite(item.quantity));
+  if (items.length !== input.items.length) return undefined;
+  return typeof input.rangeInput === "number"
+    ? { items, rangeInput: input.rangeInput }
+    : { items };
+}
+
+function buildChartOrderSetPreviewFromRuntime(
+  snapshot: ChartOrderRuntimeRow,
+): ChartOrderSetPreview | undefined {
+  const applied = snapshot.appliedSnapshot ?? {};
+  if (
+    snapshot.rowType !== "set" ||
+    !snapshot.sourceSetId ||
+    !snapshot.sourceSetRevisionId ||
+    !Array.isArray(applied.items)
+  ) {
+    return undefined;
+  }
+  const items = applied.items as ChartOrderSetPreview["items"];
+  const amountBasis = applied.amountBasis;
+  if (
+    amountBasis !== "included_order_sum" &&
+    amountBasis !== "set_fixed_price" &&
+    amountBasis !== "range_price"
+  ) {
+    return undefined;
+  }
+  const rangeBasis =
+    applied.rangeBasis === "patient_weight_kg" || applied.rangeBasis === "manual_value"
+      ? applied.rangeBasis
+      : null;
+  return {
+    schemaVersion: 1,
+    operation: "draft",
+    set: {
+      sourceSetId: snapshot.sourceSetId,
+      sourceSetRevisionId: snapshot.sourceSetRevisionId,
+      sourceSetRevisionNo: snapshot.sourceSetRevisionNo ?? 1,
+      sourceSetVersion: snapshot.sourceSetVersion ?? `order-set-revision-${snapshot.sourceSetRevisionNo ?? 1}`,
+      amountBasis,
+      setPriceKrw: snapshot.unitPriceSnapshot,
+      rangeBasis,
+      taxType: applied.taxType === "non_taxable" ? "non_taxable" : "taxable",
+      priceRanges: Array.isArray(applied.priceRanges) ? (applied.priceRanges as ChartOrderSetPreview["set"]["priceRanges"]) : [],
+      billingReflectionEnabled: snapshot.billingReflectionEnabled,
+      displayName: typeof applied.displayName === "string" ? applied.displayName : undefined,
+      billingName: typeof applied.billingName === "string" ? applied.billingName : undefined,
+    },
+    items,
+    pricing: {
+      selectedSetInput: typeof applied.rangeInput === "number" ? applied.rangeInput : null,
+      selectedRangeId: typeof applied.selectedRangeId === "string" ? applied.selectedRangeId : null,
+      rangeInput: typeof applied.rangeInput === "number" ? applied.rangeInput : null,
+      childSubtotalKrw: typeof snapshot.calculationOutputs.childSubtotalKrw === "number" ? snapshot.calculationOutputs.childSubtotalKrw : 0,
+      explicitExtraSubtotalKrw: typeof snapshot.calculationOutputs.explicitExtraSubtotalKrw === "number" ? snapshot.calculationOutputs.explicitExtraSubtotalKrw : 0,
+      finalTotalKrw: snapshot.lineTotalSnapshot,
+    },
+    selectionFingerprint:
+      typeof applied.selectionFingerprint === "string"
+        ? applied.selectionFingerprint
+        : "",
+    calculationInputs: snapshot.calculationInputs,
+    calculationOutputs: snapshot.calculationOutputs,
+  };
+}
+
+const getChartCatalogSourceKey = (row: ChartOrderCatalogSearchRow) =>
+  row.workspaceCatalogItemId ?? row.appliedSnapshot.workspaceCatalogItemId ?? row.sourcePresetId;
 
 const getChartDraftRowCatalogSourceKey = (row: ChartOrderDraftRow) => {
   if (row.catalogSearchRow)
     return getChartCatalogSourceKey(row.catalogSearchRow);
+  if (row.runtimeRow?.rowType === "set" && row.runtimeRow.sourceSetId)
+    return row.runtimeRow.sourceSetId;
 
   const legacyCatalogId = row.order.id.match(
     /^catalog-(?:individual|set)-(.+)$/,
   );
   if (legacyCatalogId?.[1]) return legacyCatalogId[1];
 
-  return row.order.serviceItemId;
+  return row.order.workspaceCatalogItemId ?? row.order.serviceItemId;
 };
 
 const hasChartCatalogDraftIdentity = (row: ChartOrderDraftRow) =>
@@ -3883,73 +4227,61 @@ function remapChartOrderIdSet(
 
 const applyPersistedOrderActions = (
   rows: ChartOrderDraftRow[],
-  snapshots: ChartOrderActionSnapshot[],
+  snapshots: ChartOrderRuntimeRow[],
   workspaceId: string,
+  legacySnapshots: ChartOrderActionSnapshot[] = [],
 ): ChartOrderDraftRow[] => {
   const snapshotByOrderId = new Map(
     snapshots.map((snapshot) => [snapshot.orderId, snapshot]),
   );
+  const legacySnapshotByOrderId = new Map(
+    legacySnapshots.map((snapshot) => [snapshot.orderId, snapshot]),
+  );
 
   const nextRows = rows.map((row) => {
-    const snapshot = snapshotByOrderId.get(row.order.id);
-    if (!snapshot) return row;
+    const runtimeSnapshot = snapshotByOrderId.get(row.order.id);
+    const legacySnapshot = legacySnapshotByOrderId.get(row.order.id);
+    if (!runtimeSnapshot && !legacySnapshot) return row;
+
+    if (runtimeSnapshot) {
+      const nextRow = buildChartOrderDraftRowFromRuntime(
+        runtimeSnapshot,
+        workspaceId,
+        row,
+        rows.indexOf(row) + 1,
+      );
+      return {
+        ...nextRow,
+        billingCandidateId:
+          legacySnapshot?.billingCandidateId ?? row.billingCandidateId,
+      };
+    }
 
     return {
       ...row,
       billingCandidateId:
-        snapshot.billingCandidateId === undefined
+        legacySnapshot?.billingCandidateId === undefined
           ? row.billingCandidateId
-          : snapshot.billingCandidateId,
+          : legacySnapshot.billingCandidateId,
       order: {
         ...row.order,
-        status: snapshot.status,
-        updatedAt: snapshot.updatedAt,
+        status: legacySnapshot?.status ?? row.order.status,
+        updatedAt: legacySnapshot?.updatedAt ?? row.order.updatedAt,
       },
     };
   });
 
   const existingOrderIds = new Set(nextRows.map((row) => row.order.id));
   const restoredRows = snapshots
-    .filter(
-      (snapshot) =>
-        snapshot.appliedSnapshot && !existingOrderIds.has(snapshot.orderId),
-    )
-    .map((snapshot, index) => {
-      const applied = snapshot.appliedSnapshot;
-      const now = snapshot.updatedAt;
-      const orderType = applied?.orderType ?? "treatment";
-      const order: EmrOrder = {
-        id: snapshot.orderId,
+    .filter((snapshot) => !existingOrderIds.has(snapshot.orderId))
+    .map((snapshot, index) =>
+      buildChartOrderDraftRowFromRuntime(
+        snapshot,
         workspaceId,
-        encounterId: snapshot.encounterId,
-        serviceItemId: applied?.sourcePresetId,
-        orderType,
-        displayName:
-          applied?.inHospitalOrderName ??
-          applied?.standardOrderName ??
-          applied?.billingName ??
-          "Catalog Order",
-        status: snapshot.status,
-        workStatus: "pending",
-        priority: "normal",
-        requestedByUserId: snapshot.confirmedByUserId ?? "user-vet",
-        requestedAt: snapshot.confirmedAt ?? now,
-        sortOrder: (rows.length + index + 1) * 10,
-        createdAt: snapshot.confirmedAt ?? now,
-        updatedAt: now,
-      };
-      const quantityInput = String(applied?.quantity ?? 1);
-
-      return {
-        billingName: applied?.billingName ?? order.displayName,
-        committedBillingName: applied?.billingName ?? order.displayName,
-        committedQuantityInput: quantityInput,
-        groupTitle: "Workspace catalog",
-        order,
-        quantityInput,
-        unitPrice: applied?.priceKrw,
-      } satisfies ChartOrderDraftRow;
-    });
+        undefined,
+        rows.length + index + 1,
+      ),
+    );
 
   return [...nextRows, ...restoredRows];
 };
@@ -3965,6 +4297,15 @@ const applyPersistedOrderLifecycles = (
   return rows.map((row) => {
     const snapshot = snapshotByOrderId.get(row.order.id);
     if (!snapshot) return row;
+    const currentStatusIndex = chartOrderStatusOrder.indexOf(row.order.status);
+    const nextStatusIndex = chartOrderStatusOrder.indexOf(snapshot.status);
+    if (
+      currentStatusIndex >= 0 &&
+      nextStatusIndex >= 0 &&
+      nextStatusIndex < currentStatusIndex
+    ) {
+      return row;
+    }
 
     return {
       ...row,
@@ -4013,14 +4354,35 @@ const getDraftQuantity = (quantityInput: string) => {
 const getDraftLineTotal = (row: ChartOrderDraftRow) => {
   const quantity = getDraftQuantity(row.quantityInput);
 
-  if (quantity === null || row.unitPrice === undefined) return undefined;
+  if (quantity === null || row.unitPrice === undefined || row.unitPrice === null)
+    return undefined;
 
   return quantity * row.unitPrice;
 };
 
 const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
   row.billingName !== row.committedBillingName ||
-  row.quantityInput !== row.committedQuantityInput;
+  row.quantityInput !== row.committedQuantityInput ||
+  (row.runtimeRow?.rowType === "set" &&
+    JSON.stringify(row.setSelectionIntent) !==
+      JSON.stringify(
+        readChartOrderSetSelectionIntent(
+          row.runtimeRow.appliedSnapshot.selectionIntent ??
+            row.runtimeRow.calculationInputs.selectionIntent,
+        ) ??
+          (row.setPreview
+            ? {
+                items: row.setPreview.items.map((item) => ({
+                  revisionItemId: item.revisionItemId,
+                  selected: item.selected,
+                  quantity: item.quantity,
+                })),
+                ...(row.setPreview.pricing.rangeInput === null
+                  ? {}
+                  : { rangeInput: row.setPreview.pricing.rangeInput }),
+              }
+            : undefined),
+      ));
 
 function getChartOrderNumericValue(
   row: ChartOrderDraftRow,
@@ -4157,6 +4519,12 @@ function ChartOrderTable({
       typeof updater === "function" ? updater(rowSelection) : updater;
 
     rows.forEach(({ order }) => {
+      if (
+        rows.find((candidate) => candidate.order.id === order.id)?.runtimeRow
+          ?.rowType === "set_child"
+      ) {
+        return;
+      }
       const nextChecked = Boolean(nextSelection[order.id]);
       if (selectedOrderIds.has(order.id) === nextChecked) return;
 
@@ -4199,7 +4567,11 @@ function ChartOrderTable({
           <EmrTableCheckbox
             aria-label={`${row.original.order.displayName} 선택`}
             checked={row.getIsSelected()}
-            disabled={writeDisabled || !row.getCanSelect()}
+            disabled={
+              writeDisabled ||
+              !row.getCanSelect() ||
+              row.original.runtimeRow?.rowType === "set_child"
+            }
             onCheckedChange={(checked) => row.toggleSelected(Boolean(checked))}
           />
         ),
@@ -4234,11 +4606,20 @@ function ChartOrderTable({
         header: chartOrderSortLabels.orderType,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "orderType"),
-        cell: ({ row }) => (
-          <Badge variant="outline" className="max-w-full truncate">
-            {orderTypeMeta[row.original.order.orderType].label}
-          </Badge>
-        ),
+        cell: ({ row }) => {
+          const label =
+            row.original.runtimeRow?.rowType === "set"
+              ? "Order 세트"
+              : row.original.runtimeRow?.rowType === "set_child"
+                ? "세트 구성"
+                : orderTypeMeta[row.original.order.orderType].label;
+
+          return (
+            <Badge variant="outline" className="max-w-full truncate">
+              {label}
+            </Badge>
+          );
+        },
         meta: {
           label: chartOrderSortLabels.orderType,
           headerInteraction: "sortable",
@@ -4330,18 +4711,36 @@ function ChartOrderTable({
         header: chartOrderSortLabels.billingName,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "billingName"),
-        cell: ({ row }) => (
-          <Input
-            aria-label={`${row.original.order.displayName} 청구서명 수정`}
-            data-row-interactive="true"
-            disabled={writeDisabled}
-            value={row.original.billingName}
-            className="h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata"
-            onChange={(event) =>
-              onUpdateBillingName(row.original.order.id, event.target.value)
-            }
-          />
-        ),
+        cell: ({ row }) => {
+          const isSetRow =
+            row.original.runtimeRow?.rowType === "set" ||
+            row.original.runtimeRow?.rowType === "set_child" ||
+            row.original.catalogSearchRow?.rowType === "set" ||
+            Boolean(row.original.setPreview);
+          if (isSetRow) {
+            return (
+              <EmrTableCellText
+                mode="one-line"
+                fullText={row.original.billingName}
+              >
+                {row.original.billingName}
+              </EmrTableCellText>
+            );
+          }
+
+          return (
+            <Input
+              aria-label={`${row.original.order.displayName} 청구서명 수정`}
+              data-row-interactive="true"
+              disabled={writeDisabled}
+              value={row.original.billingName}
+              className="h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata"
+              onChange={(event) =>
+                onUpdateBillingName(row.original.order.id, event.target.value)
+              }
+            />
+          );
+        },
         meta: {
           label: chartOrderSortLabels.billingName,
           headerInteraction: "sortable",
@@ -4358,6 +4757,19 @@ function ChartOrderTable({
           compareChartOrderValues(rowA.original, rowB.original, "quantity"),
         cell: ({ row }) => {
           const invalidQuantity = invalidOrderIds.has(row.original.order.id);
+          const quantityEditable =
+            row.original.runtimeRow?.rowType !== "set" &&
+            row.original.runtimeRow?.quantitySource !== "fixed_one" &&
+            row.original.catalogSearchRow?.rowType !== "set" &&
+            !row.original.setPreview;
+
+          if (!quantityEditable) {
+            return (
+              <EmrTableCellText mode="one-line" className="text-right tabular-nums">
+                {row.original.quantityInput}
+              </EmrTableCellText>
+            );
+          }
 
           return (
             <Input
@@ -4397,7 +4809,7 @@ function ChartOrderTable({
           compareChartOrderValues(rowA.original, rowB.original, "unitPrice"),
         cell: ({ row }) => (
           <EmrTableCellText mode="one-line">
-            {row.original.unitPrice !== undefined
+            {row.original.unitPrice !== undefined && row.original.unitPrice !== null
               ? row.original.unitPrice.toLocaleString()
               : "-"}
           </EmrTableCellText>
@@ -4701,10 +5113,59 @@ function mapCatalogCategoryToOrderType(
 
 function getCatalogCandidateInstruction(row: ChartOrderCatalogSearchRow) {
   if (row.rowType === "set")
-    return "Order set 후보. 확정 snapshot 단계에서 개별 오더 확장 정책을 적용합니다.";
+    return "Order 세트 구성은 서버 preview에서 확인합니다.";
 
   return orderTypeMeta[mapCatalogCategoryToOrderType(row.categoryGroup)]
     .handoff;
+}
+
+function getCatalogCandidatePriceLabel(row: ChartOrderCatalogSearchRow) {
+  if (row.rowType === "set") {
+    if (row.sourceSetAmountBasis === "included_order_sum") {
+      return "구성 항목 합계";
+    }
+    if (row.sourceSetAmountBasis === "range_price") {
+      return "가격 범위";
+    }
+    if (row.sourceSetPriceKrw === 0) return "무료";
+    if (typeof row.sourceSetPriceKrw === "number") {
+      return `${row.sourceSetPriceKrw.toLocaleString()}원`;
+    }
+    return "가격 미설정";
+  }
+
+  return row.appliedSnapshot.appliedPriceKrw === null
+    ? "가격 미설정"
+    : `${row.appliedSnapshot.appliedPriceKrw.toLocaleString()}원`;
+}
+
+function getChartOrderPersistenceErrorMessage(error?: string) {
+  switch (error) {
+    case "etag_header_body_mismatch":
+    case "revision_conflict":
+      return "다른 사용자가 오더를 변경했어요. 다시 불러온 뒤 저장해 주세요.";
+    case "stale_status":
+      return "차트 상태가 변경되어 오더를 저장할 수 없어요.";
+    case "order_set_empty_selection":
+      return "하나 이상의 구성 항목을 선택해 주세요.";
+    case "order_set_quantity_invalid":
+      return "수량을 확인해 주세요.";
+    case "order_set_range_input_required":
+    case "order_set_range_input_invalid":
+    case "order_set_range_no_match":
+      return "가격 범위를 확인해 주세요.";
+    case "order_set_price_unset":
+      return "가격이 설정되지 않은 오더는 저장할 수 없어요.";
+    case "order_set_member_unavailable":
+    case "order_set_composition_review_required":
+    case "catalog_revision_requires_refresh":
+    case "child_revision_requires_refresh":
+      return "Order 세트 구성이 변경되어 다시 확인해 주세요.";
+    case "if_match_required":
+      return "오더 버전 확인이 필요합니다. 다시 불러온 뒤 저장해 주세요.";
+    default:
+      return "오더 작업 상태를 저장하지 못했어요.";
+  }
 }
 
 function isCatalogCandidateTargetingPatient(
@@ -4722,10 +5183,14 @@ function isCatalogCandidateTargetingPatient(
 function buildChartOrderDraftRowFromCatalog({
   bundle,
   row,
+  setSelectionIntent,
+  setPreview,
   sortOrder,
 }: {
   bundle: ChartBundle;
   row: ChartOrderCatalogSearchRow;
+  setSelectionIntent?: ChartOrderSetSelectionIntent;
+  setPreview?: ChartOrderSetPreview;
   sortOrder: number;
 }): ChartOrderDraftRow {
   const orderType = mapCatalogCategoryToOrderType(row.categoryGroup);
@@ -4734,7 +5199,17 @@ function buildChartOrderDraftRowFromCatalog({
     id: createChartOrderDraftId(),
     workspaceId: bundle.encounter.workspaceId,
     encounterId: bundle.encounter.id,
-    serviceItemId: row.sourcePresetId,
+    serviceItemId: row.rowType === "individual" ? undefined : row.sourcePresetId,
+    workspaceCatalogItemId:
+      row.rowType === "individual"
+        ? row.workspaceCatalogItemId ?? row.appliedSnapshot.workspaceCatalogItemId
+        : undefined,
+    sourceMasterRecordId: row.sourceMasterRecordId,
+    sourceMasterRevision: row.sourceMasterRevision,
+    workspaceCatalogRevision: row.workspaceCatalogRevision,
+    categoryGroup:
+      row.categoryGroup === "set" ? undefined : row.categoryGroup,
+    appliedSnapshot: row.appliedSnapshot as Record<string, unknown>,
     orderType,
     displayName: row.displayName,
     status: "requested",
@@ -4757,7 +5232,12 @@ function buildChartOrderDraftRowFromCatalog({
     groupTitle: row.rowType === "set" ? "Order 세트" : "Workspace catalog",
     order,
     quantityInput,
-    unitPrice: row.appliedSnapshot.appliedPriceKrw,
+    setSelectionIntent,
+    setPreview,
+    unitPrice:
+      row.rowType === "set"
+        ? setPreview?.pricing.finalTotalKrw ?? row.appliedSnapshot.appliedPriceKrw
+        : row.appliedSnapshot.appliedPriceKrw,
   };
 }
 
@@ -4871,8 +5351,7 @@ function ChartOrderCatalogDialog({
                         </Badge>
                         <span className="font-semibold">{row.displayName}</span>
                         <span className="emr-text-metadata text-muted-foreground">
-                          {row.appliedSnapshot.appliedPriceKrw.toLocaleString()}
-                          원
+                          {getCatalogCandidatePriceLabel(row)}
                         </span>
                       </div>
                       <div className="mt-1 emr-text-metadata text-muted-foreground">
@@ -4913,6 +5392,219 @@ function ChartOrderCatalogDialog({
     </Dialog>
   );
 }
+
+function ChartOrderSetConfigurationDialog({
+  candidate,
+  error,
+  loading,
+  open,
+  preview,
+  rangeInput,
+  onApply,
+  onOpenChange,
+  onPreview,
+  onRangeInputChange,
+}: {
+  candidate: ChartOrderCatalogSearchRow | null;
+  error?: string;
+  loading: boolean;
+  open: boolean;
+  preview: ChartOrderSetPreview | null;
+  rangeInput: string;
+  onApply: (intent: ChartOrderSetSelectionIntent) => void;
+  onOpenChange: (open: boolean) => void;
+  onPreview: (rangeInput?: number) => void;
+  onRangeInputChange: (value: string) => void;
+}) {
+  const [items, setItems] = useState<ChartOrderSetPreviewItemState[]>(() =>
+    preview?.items.map((item) => ({
+      revisionItemId: item.revisionItemId,
+      selected: item.selected,
+      quantity: String(item.quantity),
+      quantitySource: item.quantitySource,
+      displayName:
+        typeof item.appliedSnapshot?.appliedDisplayName === "string"
+          ? item.appliedSnapshot.appliedDisplayName
+          : typeof item.appliedSnapshot?.inHospitalOrderName === "string"
+            ? item.appliedSnapshot.inHospitalOrderName
+            : typeof item.appliedSnapshot?.standardOrderName === "string"
+              ? item.appliedSnapshot.standardOrderName
+              : typeof item.appliedSnapshot?.displayName === "string"
+                ? item.appliedSnapshot.displayName
+          : item.workspaceCatalogItemId,
+    })) ?? [],
+  );
+
+  const isRangePrice =
+    (preview?.set.rangeBasis ?? candidate?.sourceSetRangeBasis) !== null &&
+    (preview?.set.amountBasis ?? candidate?.sourceSetAmountBasis) ===
+      "range_price";
+  const hasRangeInput =
+    isRangePrice &&
+    rangeInput.trim() !== "" &&
+    Number.isFinite(Number(rangeInput));
+  const hasSelectedItem = items.some((item) => item.selected);
+  const hasInvalidQuantity = items.some(
+    (item) => !Number.isFinite(Number(item.quantity)) || Number(item.quantity) <= 0,
+  );
+  const title =
+    preview?.set.displayName ?? candidate?.displayName ?? "Order 세트";
+  const disabled = loading || !hasSelectedItem || hasInvalidQuantity || (isRangePrice && !hasRangeInput);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl gap-0 p-0">
+        <DialogHeader className="border-b px-5 py-4">
+          <DialogTitle>{title} 구성 선택</DialogTitle>
+          <DialogDescription>
+            구성 항목을 선택하고 적용 수량을 입력해 주세요. 고정 1회 수량은
+            변경할 수 없습니다.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 p-5">
+          {isRangePrice ? (
+            <label className="grid gap-1 emr-text-metadata">
+              <span className="font-medium">가격 범위 입력</span>
+              <Input
+                aria-label="Order 세트 가격 범위 입력"
+                inputMode="decimal"
+                min="0"
+                step="0.001"
+                value={rangeInput}
+                onChange={(event) => onRangeInputChange(event.target.value)}
+                placeholder={
+                  preview?.set.rangeBasis === "patient_weight_kg"
+                    ? "환자 체중(kg)"
+                    : "범위 값"
+                }
+              />
+              <span className="text-muted-foreground">
+                {preview?.set.rangeBasis === "patient_weight_kg"
+                  ? "환자 체중(kg)을 입력해 주세요."
+                  : "적용할 수치 범위를 입력해 주세요."}
+              </span>
+            </label>
+          ) : null}
+
+          {preview ? (
+            <div className="grid max-h-[360px] gap-2 overflow-y-auto rounded-[var(--emr-radius-control)] border p-2">
+              {preview.items.map((previewItem) => {
+                const item = items.find(
+                  (candidateItem) =>
+                    candidateItem.revisionItemId === previewItem.revisionItemId,
+                );
+                if (!item) return null;
+                const quantityDisabled = item.quantitySource === "fixed_one";
+
+                return (
+                  <div
+                    key={previewItem.revisionItemId}
+                    className="grid grid-cols-[auto_minmax(0,1fr)_7rem] items-center gap-2 rounded-md border bg-card px-3 py-2"
+                  >
+                    <EmrTableCheckbox
+                      aria-label={`${item.displayName} 구성 선택`}
+                      checked={item.selected}
+                      disabled={loading}
+                      onCheckedChange={(checked) =>
+                        setItems((current) =>
+                          current.map((currentItem) =>
+                            currentItem.revisionItemId === item.revisionItemId
+                              ? { ...currentItem, selected: Boolean(checked) }
+                              : currentItem,
+                          ),
+                        )
+                      }
+                    />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">
+                        {item.displayName}
+                      </div>
+                      <div className="emr-text-metadata text-muted-foreground">
+                        {quantityDisabled ? "고정 1회" : "적용 수량 입력 가능"}
+                      </div>
+                    </div>
+                    <Input
+                      aria-label={`${item.displayName} 구성 수량`}
+                      data-row-interactive="true"
+                      disabled={loading || quantityDisabled}
+                      inputMode="decimal"
+                      min="0.001"
+                      step="0.001"
+                      value={item.quantity}
+                      onChange={(event) =>
+                        setItems((current) =>
+                          current.map((currentItem) =>
+                            currentItem.revisionItemId === item.revisionItemId
+                              ? { ...currentItem, quantity: event.target.value }
+                              : currentItem,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-md border bg-muted/20 p-3 emr-text-metadata text-muted-foreground">
+              {isRangePrice
+                ? "범위 값을 입력한 뒤 미리보기를 불러와 주세요."
+                : "구성 미리보기를 불러오는 중입니다."}
+            </div>
+          )}
+
+          {error ? (
+            <EmrInlineAlert severity="error" title="Order 세트를 적용할 수 없습니다">
+              {error}
+            </EmrInlineAlert>
+          ) : null}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              취소
+            </Button>
+            {!preview ? (
+              <Button
+                disabled={loading || (isRangePrice && !hasRangeInput)}
+                onClick={() =>
+                  onPreview(
+                    isRangePrice && hasRangeInput
+                      ? Number(rangeInput)
+                      : undefined,
+                  )
+                }
+              >
+                {loading ? "불러오는 중" : "구성 미리보기"}
+              </Button>
+            ) : (
+              <Button disabled={disabled} onClick={() => {
+                const selectionIntent = {
+                  items: items.map((item) => ({
+                    revisionItemId: item.revisionItemId,
+                    selected: item.selected,
+                    quantity: Number(item.quantity),
+                  })),
+                  ...(isRangePrice ? { rangeInput: Number(rangeInput) } : {}),
+                } satisfies ChartOrderSetSelectionIntent;
+                onApply(selectionIntent);
+              }}>
+                구성 적용
+              </Button>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type ChartOrderSetPreviewItemState = {
+  displayName: string;
+  quantity: string;
+  quantitySource: ChartOrderSetPreviewItem["quantitySource"];
+  revisionItemId: string;
+  selected: boolean;
+};
 
 function OrderArea({
   actorHeaders,
@@ -4956,6 +5648,14 @@ function OrderArea({
   const [catalogSearchStatus, setCatalogSearchStatus] = useState<
     "idle" | "loading" | "ready" | "denied" | "error"
   >("idle");
+  const [setCandidate, setSetCandidate] =
+    useState<ChartOrderCatalogSearchRow | null>(null);
+  const [setPreview, setSetPreview] = useState<ChartOrderSetPreview | null>(
+    null,
+  );
+  const [setRangeInput, setSetRangeInput] = useState("");
+  const [setPreviewError, setSetPreviewError] = useState<string | undefined>();
+  const [setPreviewLoading, setSetPreviewLoading] = useState(false);
   const [unavailableAction, setUnavailableAction] = useState<{
     action: ChartUnavailableAction;
     targetName?: string;
@@ -4965,6 +5665,8 @@ function OrderArea({
   const [orderDraftSaveState, setOrderDraftSaveState] = useState<
     "idle" | "loading" | "saving" | "saved" | "error"
   >("idle");
+  const [orderDraftEtag, setOrderDraftEtag] = useState<string | undefined>();
+  const [orderActionEtag, setOrderActionEtag] = useState<string | undefined>();
   const draftTouchedRef = useRef(false);
   const orderLoading = loading || orderDraftSaveState === "loading";
   const allOrders = useMemo(
@@ -5037,10 +5739,7 @@ function OrderArea({
         ({ order }) => order.id === row.order.id,
       );
 
-      return committedRow
-        ? row.billingName !== committedRow.billingName ||
-            row.quantityInput !== committedRow.quantityInput
-        : true;
+      return committedRow ? isChartOrderDraftRowDirty(row) : true;
     }).length + deletedDraftOrderCount;
   const invalidOrderIds = new Set(
     draftRows
@@ -5070,16 +5769,45 @@ function OrderArea({
   ) => {
     if (writeDisabled) return;
     draftTouchedRef.current = true;
-    setDraftRows((currentRows) =>
-      currentRows.map((row) =>
+    setDraftRows((currentRows) => {
+      const target = currentRows.find((row) => row.order.id === orderId);
+      const nextRows = currentRows.map((row) =>
         row.order.id === orderId
           ? {
               ...row,
               ...nextFields,
             }
           : row,
-      ),
-    );
+      );
+      if (
+        target?.runtimeRow?.rowType !== "set_child" ||
+        nextFields.quantityInput === undefined
+      ) {
+        return nextRows;
+      }
+
+      const quantity = getDraftQuantity(nextFields.quantityInput);
+      if (quantity === null || !target.runtimeRow.parentOrderId) {
+        return nextRows;
+      }
+      return nextRows.map((row) => {
+        if (row.order.id !== target.runtimeRow?.parentOrderId) return row;
+        const currentIntent =
+          row.setSelectionIntent ?? getChartOrderSetSelectionIntentForDraftRow(row);
+        if (!currentIntent) return row;
+        return {
+          ...row,
+          setSelectionIntent: {
+            ...currentIntent,
+            items: currentIntent.items.map((item) =>
+              item.revisionItemId === target.runtimeRow?.sourceSetRevisionItemId
+                ? { ...item, quantity }
+                : item,
+            ),
+          },
+        };
+      });
+    });
   };
   const loadCatalogRows = async () => {
     setCatalogSearchStatus("loading");
@@ -5106,6 +5834,48 @@ function OrderArea({
       void loadCatalogRows();
     }
   };
+  const closeSetConfiguration = () => {
+    setSetCandidate(null);
+    setSetPreview(null);
+    setSetRangeInput("");
+    setSetPreviewError(undefined);
+    setSetPreviewLoading(false);
+  };
+  const requestSetPreview = async (
+    row: ChartOrderCatalogSearchRow,
+    selectionIntent: ChartOrderSetSelectionIntent,
+  ) => {
+    setSetPreviewLoading(true);
+    setSetPreviewError(undefined);
+    const result = await loadChartOrderSetPreview({
+      actorHeaders,
+      encounterId: bundle.encounter.id,
+      orderSetId: row.sourceSetId ?? row.sourcePresetId,
+      revisionId: row.sourceSetRevisionId ?? "",
+      selectionIntent,
+      workspaceId: bundle.encounter.workspaceId,
+    });
+    setSetPreviewLoading(false);
+    if (!result.ok) {
+      setSetPreviewError(
+        result.denialReason === "permission_missing" ||
+          result.denialReason === "workspace_membership_missing"
+          ? "오더 수정 권한이 없어 Order 세트를 확인하지 못했어요."
+          : result.denialReason === "unauthenticated"
+            ? "로그인 후 Order 세트를 확인해 주세요."
+            : result.error === "order_set_range_input_required"
+              ? "가격 범위 값을 입력해 주세요."
+              : result.error === "order_set_range_no_match"
+                ? "입력한 범위에 맞는 가격 구간이 없습니다."
+                : result.error === "order_set_empty_selection"
+                  ? "Order 세트에 선택된 구성 항목이 없어요."
+                  : getChartOrderPersistenceErrorMessage(result.error),
+      );
+      return undefined;
+    }
+    setSetPreview(result.preview);
+    return result.preview;
+  };
   const addCatalogOrderToDraft = (row: ChartOrderCatalogSearchRow) => {
     if (writeDisabled) return;
     const sourceKey = getChartCatalogSourceKey(row);
@@ -5114,6 +5884,19 @@ function OrderArea({
         (draftRow) => getChartDraftRowCatalogSourceKey(draftRow) === sourceKey,
       )
     ) {
+      return;
+    }
+
+    if (row.rowType === "set") {
+      setSetCandidate(row);
+      setSetPreview(null);
+      setSetPreviewError(undefined);
+      setSetRangeInput("");
+      setCatalogDialogOpen(false);
+      if (collapsed) onCollapsedChange(false);
+      if (row.sourceSetAmountBasis !== "range_price") {
+        void requestSetPreview(row, { items: [] });
+      }
       return;
     }
 
@@ -5127,6 +5910,27 @@ function OrderArea({
       }),
     ]);
     toast.success(`${row.displayName} Order를 추가했어요.`);
+  };
+  const applySetConfiguration = async (
+    selectionIntent: ChartOrderSetSelectionIntent,
+  ) => {
+    if (writeDisabled || !setCandidate) return;
+    const preview = await requestSetPreview(setCandidate, selectionIntent);
+    if (!preview) return;
+
+    draftTouchedRef.current = true;
+    setDraftRows((currentRows) => [
+      ...currentRows,
+      buildChartOrderDraftRowFromCatalog({
+        bundle,
+        row: setCandidate,
+        setPreview: preview,
+        setSelectionIntent: selectionIntent,
+        sortOrder: (currentRows.length + 1) * 10,
+      }),
+    ]);
+    toast.success(`${setCandidate.displayName} Order 세트를 추가했어요.`);
+    closeSetConfiguration();
   };
   const resetDraftRows = () => {
     if (writeDisabled) return;
@@ -5163,9 +5967,11 @@ function OrderArea({
       if (cancelled) return;
 
       if (result.ok) {
+        setOrderDraftEtag(result.etag);
         let nextRows = applyPersistedOrderDrafts(
           initialDraftRows,
-          result.orderDrafts,
+          result.rows ?? [],
+          bundle.encounter.workspaceId,
         );
         const actionResult = await loadChartOrderActions({
           actorHeaders,
@@ -5174,10 +5980,15 @@ function OrderArea({
         });
 
         if (actionResult.ok) {
+          setOrderActionEtag(actionResult.etag);
+          if (!result.etag && actionResult.etag) {
+            setOrderDraftEtag(actionResult.etag);
+          }
           nextRows = applyPersistedOrderActions(
             nextRows,
-            actionResult.orderActions,
+            actionResult.rows ?? [],
             bundle.encounter.workspaceId,
+            actionResult.orderActions,
           );
         }
         const lifecycleResult = await loadChartOrderLifecycles({
@@ -5239,10 +6050,17 @@ function OrderArea({
       );
     }
 
+    if (!orderDraftEtag) {
+      setOrderDraftSaveState("error");
+      toast.error("오더 버전을 먼저 불러와 주세요.");
+      return;
+    }
+
     setOrderDraftSaveState("saving");
     const result = await saveChartOrderDraftRoute({
       actorHeaders,
       encounterId: bundle.encounter.id,
+      expectedEtag: orderDraftEtag,
       rows: preparedDraft.rows,
       workspaceId: bundle.encounter.workspaceId,
     });
@@ -5252,19 +6070,26 @@ function OrderArea({
       toast.error(
         result.denialReason === "permission_missing"
           ? "오더 수정 권한이 없어 저장하지 못했어요."
-          : "오더 변경을 저장하지 못했어요.",
+          : getChartOrderPersistenceErrorMessage(
+              result.denialReason ?? result.error,
+            ),
       );
       return;
     }
 
     const nextCommittedRows = applyPersistedOrderDrafts(
       preparedDraft.rows,
-      result.orderDrafts,
+      result.rows ?? [],
+      bundle.encounter.workspaceId,
       { preserveMissingRows: true },
     );
     draftTouchedRef.current = false;
     setCommittedRows(nextCommittedRows);
     setDraftRows(nextCommittedRows);
+    if (result.etag) {
+      setOrderDraftEtag(result.etag);
+      setOrderActionEtag(result.etag);
+    }
     setOrderDraftSaveState("saved");
     toast.success("Order 업데이트를 저장했어요.");
   };
@@ -5314,8 +6139,8 @@ function OrderArea({
       const result = await saveChartOrderActionRoute({
         action,
         actorHeaders,
-        catalogSelections: [],
         encounterId: bundle.encounter.id,
+        expectedEtag: orderActionEtag ?? orderDraftEtag,
         orderIds: actionOrderIds,
         workspaceId: bundle.encounter.workspaceId,
       });
@@ -5325,7 +6150,9 @@ function OrderArea({
         toast.error(
           result.denialReason === "permission_missing"
             ? "오더 작업 권한이 없어 저장하지 못했어요."
-            : "오더 작업 상태를 저장하지 못했어요.",
+            : getChartOrderPersistenceErrorMessage(
+                result.denialReason ?? result.error,
+              ),
         );
         return;
       }
@@ -5334,8 +6161,9 @@ function OrderArea({
         applyBillingCandidatesToOrderRows(
           applyPersistedOrderActions(
             currentRows,
-            result.orderActions,
+            result.rows ?? [],
             bundle.encounter.workspaceId,
+            result.orderActions,
           ),
           result.billingCandidates ?? [],
         ),
@@ -5344,12 +6172,17 @@ function OrderArea({
         applyBillingCandidatesToOrderRows(
           applyPersistedOrderActions(
             currentRows,
-            result.orderActions,
+            result.rows ?? [],
             bundle.encounter.workspaceId,
+            result.orderActions,
           ),
           result.billingCandidates ?? [],
         ),
       );
+      if (result.etag) {
+        setOrderActionEtag(result.etag);
+        setOrderDraftEtag(result.etag);
+      }
       setOrderActionDialog(null);
       setOrderDraftSaveState("saved");
       toast.success("Order 청구 후보를 저장했어요.");
@@ -5367,10 +6200,17 @@ function OrderArea({
     }
     const orderIds = Array.from(nextSelectedOrderIds);
 
+    if (!orderDraftEtag) {
+      setOrderDraftSaveState("error");
+      toast.error("오더 버전을 먼저 불러와 주세요.");
+      return;
+    }
+
     setOrderDraftSaveState("saving");
     const draftResult = await saveChartOrderDraftRoute({
       actorHeaders,
       encounterId: bundle.encounter.id,
+      expectedEtag: orderDraftEtag,
       rows: preparedDraft.rows,
       workspaceId: bundle.encounter.workspaceId,
     });
@@ -5380,18 +6220,23 @@ function OrderArea({
       toast.error(
         draftResult.denialReason === "permission_missing"
           ? "오더 수정 권한이 없어 저장하지 못했어요."
-          : "오더 확정 전 draft를 저장하지 못했어요.",
+          : getChartOrderPersistenceErrorMessage(
+              draftResult.denialReason ?? draftResult.error,
+            ),
       );
       return;
     }
 
     const savedDraftRows = applyPersistedOrderDrafts(
       preparedDraft.rows,
-      draftResult.orderDrafts,
+      draftResult.rows ?? [],
+      bundle.encounter.workspaceId,
       { preserveMissingRows: true },
     );
     const persistedOrderIds = new Set(
-      draftResult.orderDrafts.map((row) => row.orderId),
+      (draftResult.rows ?? [])
+        .filter((row) => row.rowType !== "set_child")
+        .map((row) => row.orderId),
     );
     const actionOrderIds = orderIds.filter((orderId) =>
       persistedOrderIds.has(orderId),
@@ -5409,31 +6254,26 @@ function OrderArea({
     draftTouchedRef.current = false;
     setCommittedRows(savedDraftRows);
     setDraftRows(savedDraftRows);
+    if (draftResult.etag) {
+      setOrderDraftEtag(draftResult.etag);
+    }
     setOrderDraftSaveState("saved");
-
-    const catalogSelections = savedDraftRows
-      .filter(
-        (row) =>
-          actionOrderIds.includes(row.order.id) &&
-          row.catalogSearchRow !== undefined,
-      )
-      .map((row) => ({
-        billingDisplayName: row.billingName,
-        guardianName: bundle.primaryGuardian?.name,
-        orderId: row.order.id,
-        patientName: bundle.patient.name,
-        quantity: getDraftQuantity(row.quantityInput) ?? 1,
-        rowType: row.catalogSearchRow?.rowType ?? "individual",
-        sourcePresetId:
-          row.catalogSearchRow?.sourcePresetId ??
-          row.order.serviceItemId ??
-          row.order.id,
-      }));
+    const actionReadback = await loadChartOrderActions({
+      actorHeaders,
+      encounterId: bundle.encounter.id,
+      workspaceId: bundle.encounter.workspaceId,
+    });
+    const actionExpectedEtag = actionReadback.ok
+      ? actionReadback.etag
+      : draftResult.etag ?? orderActionEtag ?? orderDraftEtag;
+    if (actionReadback.ok && actionReadback.etag) {
+      setOrderActionEtag(actionReadback.etag);
+    }
     const result = await saveChartOrderActionRoute({
       action,
       actorHeaders,
-      catalogSelections,
       encounterId: bundle.encounter.id,
+      expectedEtag: actionExpectedEtag,
       orderIds: actionOrderIds,
       workspaceId: bundle.encounter.workspaceId,
     });
@@ -5442,7 +6282,9 @@ function OrderArea({
       toast.error(
         result.denialReason === "permission_missing"
           ? "오더 작업 권한이 없어 저장하지 못했어요."
-          : "오더 작업 상태를 저장하지 못했어요.",
+          : getChartOrderPersistenceErrorMessage(
+              result.denialReason ?? result.error,
+            ),
       );
       return;
     }
@@ -5450,17 +6292,23 @@ function OrderArea({
     setCommittedRows((currentRows) =>
       applyPersistedOrderActions(
         currentRows,
-        result.orderActions,
+        result.rows ?? [],
         bundle.encounter.workspaceId,
+        result.orderActions,
       ),
     );
     setDraftRows((currentRows) =>
       applyPersistedOrderActions(
         currentRows,
-        result.orderActions,
+        result.rows ?? [],
         bundle.encounter.workspaceId,
+        result.orderActions,
       ),
     );
+    if (result.etag) {
+      setOrderActionEtag(result.etag);
+      setOrderDraftEtag(result.etag);
+    }
     setOrderActionDialog(null);
     toast.success(
       action === "confirm"
@@ -5486,6 +6334,12 @@ function OrderArea({
     setDeleteOrderId(null);
   };
   const toggleOrder = (orderId: string, checked: boolean) => {
+    if (
+      draftRows.find((row) => row.order.id === orderId)?.runtimeRow?.rowType ===
+      "set_child"
+    ) {
+      return;
+    }
     setSelectedOrderIds((current) => {
       const next = new Set(current);
 
@@ -5776,6 +6630,28 @@ function OrderArea({
         onOpenChange={setCatalogDialogOpen}
         onQueryChange={setCatalogQuery}
         onRetry={() => void loadCatalogRows()}
+      />
+      <ChartOrderSetConfigurationDialog
+        key={`${setCandidate?.sourceSetId ?? setCandidate?.sourcePresetId ?? "none"}-${setPreview?.selectionFingerprint ?? "empty"}`}
+        candidate={setCandidate}
+        error={setPreviewError}
+        loading={setPreviewLoading}
+        open={setCandidate !== null}
+        preview={setPreview}
+        rangeInput={setRangeInput}
+        onApply={(selectionIntent) => void applySetConfiguration(selectionIntent)}
+        onOpenChange={(open) => {
+          if (!open) closeSetConfiguration();
+        }}
+        onPreview={(rangeInput) => {
+          if (!setCandidate) return;
+          const selectionIntent =
+            rangeInput === undefined
+              ? { items: [] }
+              : { items: [], rangeInput };
+          void requestSetPreview(setCandidate, selectionIntent);
+        }}
+        onRangeInputChange={setSetRangeInput}
       />
       <div
         data-testid="chart-order-footer"

@@ -56,6 +56,13 @@ export type ServiceItemType =
   | "imaging"
   | "hospitalization"
   | "misc";
+export type BillingCategory =
+  | "consultation"
+  | "laboratory"
+  | "imaging"
+  | "dispensing"
+  | "treatment"
+  | "other";
 export type StaffRoleId =
   | "front_desk"
   | "vet"
@@ -393,6 +400,14 @@ export type EmrOrder = {
   workspaceId: EmrId;
   encounterId: EmrId;
   serviceItemId?: EmrId;
+  workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: EmrId;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
+  categoryGroup?: ServiceItemType;
+  billingCategory?: BillingCategory;
+  unitPriceSnapshot?: number | null;
+  appliedSnapshot?: Record<string, unknown>;
   orderType: EmrOrderType;
   displayName: string;
   status: EmrOrderStatus;
@@ -453,6 +468,14 @@ export type InvoiceLine = {
   id: EmrId;
   invoiceId: EmrId;
   serviceItemId?: EmrId;
+  workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: EmrId;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
+  categoryGroup?: ServiceItemType;
+  billingCategory?: BillingCategory;
+  sourceOrderSnapshot?: Record<string, unknown>;
+  billingNameSnapshot?: string;
   orderId?: EmrId;
   description: string;
   quantity: number;
@@ -511,6 +534,11 @@ export type LabResultRow = {
   referenceRange?: string;
   judgment: LabResultJudgment;
   note?: string;
+  resultInputType?: "number" | "text" | "select" | "positive_negative" | "grade";
+  resultValueKind?: "numeric" | "text" | "coded";
+  decimalScale?: number;
+  rowDefinitionOrigin?: "clair_master" | "workspace_custom" | "legacy" | "quarantined";
+  workspaceResultRevision?: number;
 };
 
 export type LabResult = {
@@ -522,6 +550,9 @@ export type LabResult = {
   resultName: string;
   status: LabResultStatus;
   rows: LabResultRow[];
+  entryWriteRevision?: number;
+  resultDefinitionOrigin?: "canonical" | "legacy" | "quarantined";
+  resultDefinitionSnapshotSha256?: string;
   collectedAt?: IsoDateTime;
   receivedAt?: IsoDateTime;
   enteredAt?: IsoDateTime;

@@ -65,22 +65,58 @@ export type FulfillmentSourceSnapshot = {
   orderDisplayName: string;
   patientName?: string;
   requestingVetName?: string;
+  rowType?: "individual" | "set_child";
   serviceItemId?: string;
+  sourceOrderSnapshot?: Record<string, unknown>;
+  workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
+  categoryGroup?: string;
+  billingCategory?: string;
 };
 
 export type FulfillmentOrderSnapshotInput = {
+  amountBasis?:
+    | "included_order_sum"
+    | "set_fixed_price"
+    | "range_price"
+    | string;
+  appliedPriceSnapshot?: Record<string, unknown>;
+  appliedSnapshot?: Record<string, unknown>;
+  billedAs?: "set_parent" | "atomic_child" | "nonbillable_parent";
   billingName?: string;
   billingReflectionEnabled: boolean;
+  billingCategory?: string;
+  categoryGroup?: string;
   destinationModule?: string;
+  explicitExtra?: boolean;
+  frozenOrderSnapshot?: Record<string, unknown>;
   guardianName?: string;
   inHospitalOrderName?: string;
   internalInstruction?: string;
-  lineTotalSnapshot?: number;
+  lineTotalSnapshot?: number | null;
   orderId: string;
   patientName?: string;
-  priceKrw?: number;
+  priceKrw?: number | null;
   quantity?: number;
+  parentOrderId?: string | null;
+  rangeBasis?: "patient_weight_kg" | "manual_value" | string | null;
+  rangeId?: string | null;
+  rangeInput?: number | null;
+  roundingResultKrw?: number | null;
+  roundingRule?: "as_is" | "ceil" | "floor" | "round";
+  rowType?: "individual" | "set" | "set_child" | string;
+  sourceOrderSnapshot?: Record<string, unknown>;
+  sourceSetId?: string;
+  sourceSetRevisionId?: string;
+  sourceSetRevisionItemId?: string;
+  sourceSetRevisionNo?: number;
   sourcePresetId?: string;
+  workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
   standardOrderName?: string;
   taskRequired?: boolean;
 };
@@ -147,7 +183,9 @@ export type FulfillmentDownstreamSyncSummary = {
   billingReadyNotificationCount?: number;
   billingSkippedReason?:
     | "billing_reflection_disabled"
+    | "billable_price_required"
     | "encounter_unavailable"
+    | "invoice_anchor_conflict"
     | "not_completed_status"
     | "invoice_unavailable"
     | "order_unavailable"
@@ -290,7 +328,9 @@ export type FulfillmentVetReviewBillingResult =
       denialReason:
         | "encounter_unavailable"
         | "invalid_review_gate"
+        | "invoice_anchor_conflict"
         | "invoice_unavailable"
+        | "billable_price_required"
         | "order_unavailable";
     }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
@@ -610,13 +650,6 @@ export async function syncVetReviewedBillingCandidates({
     };
   }
 
-  const permission = resolveWorkspacePermission(permissionAdapter, {
-    sessionUserId: actorUserId,
-    workspaceId,
-    requiredPermission: "chart:update",
-  });
-  if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
-
   const completedReviewItems: FulfillmentWorkItem[] = [];
   for (const queueType of ["lab", "imaging"] as const) {
     const result = await gateway.listWorkItems({
@@ -662,6 +695,15 @@ export async function syncVetReviewedBillingCandidates({
     return { ok: false, status: 409, denialReason: "invalid_review_gate" };
   }
 
+  for (const queueType of new Set(completedReviewItems.map((item) => item.queueType))) {
+    const permission = resolveWorkspacePermission(permissionAdapter, {
+      sessionUserId: actorUserId,
+      workspaceId,
+      requiredPermission: permissionForQueue(queueType, "mutate"),
+    });
+    if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+  }
+
   const billingResult = await invoiceCandidateGateway.syncInvoiceCandidates({
     actorUserId: actorUserId ?? "",
     encounterId: normalized.encounterId,
@@ -669,6 +711,7 @@ export async function syncVetReviewedBillingCandidates({
     orderSnapshots: normalized.orderIds.map((orderId) =>
       mapWorkItemToBillingSnapshot(reviewItemByOrderId.get(orderId)!),
     ),
+    surface: "fulfillment",
     workspaceId,
   });
   if (!billingResult.ok) {
@@ -789,7 +832,8 @@ export function createMockFulfillmentWorkItemGateway(
         (order) =>
           order.workspaceId === workspaceId &&
           order.encounterId === encounterId &&
-          orderIds.includes(order.id),
+          orderIds.includes(order.id) &&
+          isAtomicFulfillmentOrder(order),
       );
       const snapshotByOrderId = new Map(
         (orderSnapshots ?? []).map((snapshot) => [snapshot.orderId, snapshot]),
@@ -834,19 +878,30 @@ export function createMockFulfillmentWorkItemGateway(
             } => Boolean(entry),
           ),
       ];
+      const expectedAtomicOrderIds = orderIds.filter((orderId) => {
+        const order = orders.find(
+          (item) =>
+            item.workspaceId === workspaceId &&
+            item.encounterId === encounterId &&
+            item.id === orderId,
+        );
+        if (order) return isAtomicFulfillmentOrder(order);
+        const snapshot = snapshotByOrderId.get(orderId);
+        return Boolean(snapshot && isSnapshotFulfillmentRequired(snapshot));
+      });
       if (
         selectedOrders.length !==
-        orderIds.filter((orderId) => {
-          const snapshot = snapshotByOrderId.get(orderId);
-          return !snapshot || isSnapshotFulfillmentRequired(snapshot);
-        }).length
+        expectedAtomicOrderIds.length
       ) {
         return { ok: false, status: 409, denialReason: "order_unavailable" };
       }
 
       const timestamp = now();
       const workItems = selectedOrders.map(({ order, snapshot }) => {
-        if (!isSupportedOrderType(order.orderType)) {
+        if (
+          !isSupportedOrderType(order.orderType) ||
+          !isAtomicFulfillmentOrder(order)
+        ) {
           return null;
         }
 
@@ -943,17 +998,6 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_enrich_fulfillment_work_item_snapshots",
-    args: {
-      p_workspace_id: string;
-      p_actor_user_id: string;
-      p_snapshots: Array<{
-        orderId: string;
-        sourceSnapshot: FulfillmentSourceSnapshot;
-      }>;
-    },
-  ): Promise<{ data: unknown; error: { message?: string } | null }>;
-  rpc(
     functionName: "clair_sync_fulfillment_work_items_from_orders",
     args: {
       p_workspace_id: string;
@@ -1009,7 +1053,6 @@ export function createSupabaseFulfillmentWorkItemGateway(
       actorUserId,
       encounterId,
       orderIds,
-      orderSnapshots,
       workspaceId,
     }) {
       const { data, error } = await client.rpc(
@@ -1024,15 +1067,7 @@ export function createSupabaseFulfillmentWorkItemGateway(
         },
       );
       if (error) return mapGatewayError(error.message, "db_write_failed");
-      const workItems = mapWorkItemRows(data);
-      const enriched = await persistSupabaseSnapshotEnrichment({
-        actorUserId,
-        client,
-        orderSnapshots,
-        workItems,
-        workspaceId,
-      });
-      return { ok: true, workItems: enriched.workItems };
+      return { ok: true, workItems: mapWorkItemRows(data) };
     },
     async updateWorkItem({
       actorUserId,
@@ -1057,99 +1092,6 @@ export function createSupabaseFulfillmentWorkItemGateway(
       if (error) return mapGatewayError(error.message, "db_write_failed");
       return { ok: true, workItems: mapWorkItemRows(data) };
     },
-  };
-}
-
-async function persistSupabaseSnapshotEnrichment({
-  actorUserId,
-  client,
-  orderSnapshots,
-  workItems,
-  workspaceId,
-}: {
-  actorUserId: string;
-  client: SupabaseFulfillmentWorkItemRpcClient;
-  orderSnapshots?: FulfillmentOrderSnapshotInput[];
-  workItems: FulfillmentWorkItem[];
-  workspaceId: string;
-}): Promise<{ ok: true; workItems: FulfillmentWorkItem[] }> {
-  if (!orderSnapshots?.length || !workItems.length) {
-    return { ok: true, workItems };
-  }
-
-  const snapshotByOrderId = new Map(
-    orderSnapshots.map((snapshot) => [snapshot.orderId, snapshot]),
-  );
-  const enrichedWorkItems: FulfillmentWorkItem[] = [];
-  const snapshots: Array<{
-    orderId: string;
-    sourceSnapshot: FulfillmentSourceSnapshot;
-  }> = [];
-
-  for (const workItem of workItems) {
-    const snapshot = snapshotByOrderId.get(workItem.orderId);
-    if (!snapshot) {
-      enrichedWorkItems.push(workItem);
-      continue;
-    }
-
-    const sourceSnapshot = mergeOrderSnapshotIntoSourceSnapshot(
-      workItem.sourceSnapshot,
-      snapshot,
-    );
-    const nextWorkItem = { ...workItem, sourceSnapshot };
-    snapshots.push({
-      orderId: normalizeUuidForRpc(workItem.orderId) ?? workItem.orderId,
-      sourceSnapshot,
-    });
-    enrichedWorkItems.push(nextWorkItem);
-  }
-
-  if (!snapshots.length) return { ok: true, workItems: enrichedWorkItems };
-
-  const { data, error } = await client.rpc(
-    "clair_enrich_fulfillment_work_item_snapshots",
-    {
-      p_workspace_id: workspaceId,
-      p_actor_user_id: actorUserId,
-      p_snapshots: snapshots,
-    },
-  );
-
-  if (error) return { ok: true, workItems: enrichedWorkItems };
-
-  const persistedWorkItems = mapWorkItemRows(data);
-  return {
-    ok: true,
-    workItems: persistedWorkItems.length ? persistedWorkItems : enrichedWorkItems,
-  };
-}
-
-function mergeOrderSnapshotIntoSourceSnapshot(
-  sourceSnapshot: FulfillmentSourceSnapshot,
-  orderSnapshot: FulfillmentOrderSnapshotInput,
-): FulfillmentSourceSnapshot {
-  return {
-    ...sourceSnapshot,
-    billingReflectionEnabled:
-      orderSnapshot.billingReflectionEnabled ??
-      sourceSnapshot.billingReflectionEnabled,
-    detail: {
-      ...sourceSnapshot.detail,
-      billingName: orderSnapshot.billingName,
-      destinationModule: orderSnapshot.destinationModule,
-      lineTotalSnapshot: orderSnapshot.lineTotalSnapshot,
-      quantity: orderSnapshot.quantity,
-      standardOrderName: orderSnapshot.standardOrderName,
-      unitPriceSnapshot: orderSnapshot.priceKrw,
-    },
-    guardianName: orderSnapshot.guardianName ?? sourceSnapshot.guardianName,
-    instruction:
-      orderSnapshot.internalInstruction ?? sourceSnapshot.instruction,
-    orderDisplayName:
-      orderSnapshot.inHospitalOrderName ?? sourceSnapshot.orderDisplayName,
-    patientName: orderSnapshot.patientName ?? sourceSnapshot.patientName,
-    serviceItemId: orderSnapshot.sourcePresetId ?? sourceSnapshot.serviceItemId,
   };
 }
 
@@ -1201,6 +1143,82 @@ export function createDemoFulfillmentPermissionAdapter() {
         userId: "user-tech",
         roles: ["technician"],
         status: "active",
+      },
+    ],
+    // Vet review is a queue-scoped billing transition. Keep the ordinary vet
+    // chart/read permissions and grant only the three completion permissions
+    // required by the fulfillment wrapper call graph.
+    permissionPolicies: [
+      {
+        workspaceId: "clair-demo",
+        role: "vet",
+        permissionIds: [
+          "reception:view",
+          "patient:view",
+          "patient:create",
+          "patient:update",
+          "encounter:view",
+          "chart:view",
+          "chart:update",
+          "vital:write",
+          "order:view",
+          "order:request",
+          "order:update",
+          "dispensing:view",
+          "dispensing:complete",
+          "lab:view",
+          "lab:complete",
+          "imaging:view",
+          "imaging:complete",
+          "billing:view",
+          "service_catalog:view",
+          "hospital_settings:view",
+        ],
+      },
+      {
+        workspaceId: "clair-demo",
+        role: "technician",
+        permissionIds: [
+          "reception:view",
+          "patient:view",
+          "patient:create",
+          "patient:update",
+          "encounter:view",
+          "chart:view",
+          "vital:write",
+          "order:view",
+          "dispensing:view",
+          "dispensing:complete",
+          "lab:view",
+          "lab:complete",
+          "imaging:view",
+          "imaging:complete",
+          "billing:view",
+          "billing:issue",
+          "service_catalog:view",
+          "hospital_settings:view",
+        ],
+      },
+      {
+        workspaceId: "clair-demo",
+        role: "front_desk",
+        permissionIds: [
+          "reception:view",
+          "reception:create",
+          "reception:update",
+          "patient:view",
+          "patient:create",
+          "patient:update",
+          "encounter:view",
+          "encounter:create",
+          "encounter:update",
+          "chart:view",
+          "order:view",
+          "billing:view",
+          "billing:issue",
+          "service_catalog:view",
+          "hospital_settings:view",
+        ],
       },
     ],
   });
@@ -1261,7 +1279,12 @@ function seedWorkItems({
         workspaceId,
         order.encounterId,
       );
-      if (!encounter || !isSupportedOrderType(order.orderType)) return null;
+      if (
+        !encounter ||
+        !isSupportedOrderType(order.orderType) ||
+        !isAtomicFulfillmentOrder(order)
+      )
+        return null;
       return (
         fulfillmentMockStore.get(buildWorkItemKey(workspaceId, order.id)) ??
         buildWorkItemFromOrder({
@@ -1298,6 +1321,27 @@ function buildWorkItemFromOrder({
 }): FulfillmentWorkItem {
   const patient = patients.find((item) => item.id === encounter.patientId);
   const guardian = guardians.find((item) => item.id === encounter.guardianId);
+  const frozenSnapshot = getFrozenOrderSnapshot(order);
+  const categoryGroup =
+    readSnapshotString(frozenSnapshot, "categoryGroup") ??
+    orderSnapshot?.categoryGroup ??
+    order.categoryGroup;
+  const billingCategory =
+    mapFulfillmentBillingCategory(
+      readSnapshotString(frozenSnapshot, "billingCategory") ??
+        orderSnapshot?.billingCategory ??
+        order.billingCategory,
+      categoryGroup,
+    ) ?? undefined;
+  const billingReflectionEnabled =
+    readSnapshotBoolean(frozenSnapshot, "billingReflectionEnabled") ??
+    orderSnapshot?.billingReflectionEnabled ??
+    true;
+  const sourceOrderSnapshot =
+    frozenSnapshot ??
+    orderSnapshot?.sourceOrderSnapshot ??
+    orderSnapshot?.frozenOrderSnapshot ??
+    orderSnapshot?.appliedSnapshot;
 
   return {
     assignedToUserId: order.currentAssigneeUserId ?? null,
@@ -1318,13 +1362,63 @@ function buildWorkItemFromOrder({
     requestedByUserId: actorUserId || order.requestedByUserId,
     returnedAt: null,
     sourceSnapshot: {
-      billingReflectionEnabled: orderSnapshot?.billingReflectionEnabled ?? true,
-      detail: buildSnapshotDetail(order, orderSnapshot),
-      guardianName: orderSnapshot?.guardianName ?? guardian?.name,
-      instruction: orderSnapshot?.internalInstruction ?? order.instruction,
-      orderDisplayName: orderSnapshot?.inHospitalOrderName ?? order.displayName,
-      patientName: orderSnapshot?.patientName ?? patient?.name,
-      serviceItemId: orderSnapshot?.sourcePresetId ?? order.serviceItemId,
+      billingReflectionEnabled,
+      detail: buildSnapshotDetail(order, orderSnapshot, frozenSnapshot),
+      guardianName:
+        readSnapshotString(frozenSnapshot, "guardianName") ??
+        orderSnapshot?.guardianName ??
+        guardian?.name,
+      instruction:
+        readSnapshotString(frozenSnapshot, "internalInstruction", "instruction") ??
+        orderSnapshot?.internalInstruction ??
+        order.instruction,
+      orderDisplayName:
+        readSnapshotString(
+          frozenSnapshot,
+          "effectiveDisplayName",
+          "displayName",
+          "inHospitalOrderName",
+        ) ??
+        orderSnapshot?.inHospitalOrderName ??
+        order.displayName,
+      patientName:
+        readSnapshotString(frozenSnapshot, "patientName") ??
+        orderSnapshot?.patientName ??
+        patient?.name,
+      ...(readSnapshotString(frozenSnapshot, "rowType") === "set_child"
+        ? { rowType: "set_child" as const }
+        : {}),
+      serviceItemId:
+        (readSnapshotString(frozenSnapshot, "workspaceCatalogItemId") ??
+          orderSnapshot?.workspaceCatalogItemId ??
+          order.workspaceCatalogItemId)
+          ? undefined
+          : readSnapshotString(frozenSnapshot, "sourcePresetId") ??
+            orderSnapshot?.sourcePresetId ??
+            order.serviceItemId,
+      ...(sourceOrderSnapshot ? { sourceOrderSnapshot } : {}),
+      workspaceCatalogItemId:
+        readSnapshotString(frozenSnapshot, "workspaceCatalogItemId") ??
+        orderSnapshot?.workspaceCatalogItemId ??
+        order.workspaceCatalogItemId,
+      sourceMasterRecordId:
+        readSnapshotString(frozenSnapshot, "sourceMasterRecordId") ??
+        orderSnapshot?.sourceMasterRecordId ??
+        order.sourceMasterRecordId,
+      sourceMasterRevision:
+        readSnapshotNumber(frozenSnapshot, "sourceMasterRevision") ??
+        orderSnapshot?.sourceMasterRevision ??
+        order.sourceMasterRevision,
+      workspaceCatalogRevision:
+        readSnapshotNumber(
+          frozenSnapshot,
+          "workspaceCatalogRevision",
+          "appliedCatalogRevision",
+        ) ??
+        orderSnapshot?.workspaceCatalogRevision ??
+        order.workspaceCatalogRevision,
+      ...(categoryGroup ? { categoryGroup } : {}),
+      ...(billingCategory ? { billingCategory } : {}),
     },
     status: mapOrderStatusToWorkItemStatus(order.status, order.workStatus),
     updatedAt: now,
@@ -1416,6 +1510,7 @@ async function syncDownstreamFromFulfillmentUpdate({
           encounterId: updatedWorkItem.encounterId,
           orderIds: [updatedWorkItem.orderId],
           orderSnapshots: [mapWorkItemToBillingSnapshot(updatedWorkItem)],
+          surface: "fulfillment",
           workspaceId,
         },
       );
@@ -1822,7 +1917,23 @@ function requiresVetReviewBeforeBilling(queueType: FulfillmentQueueType) {
 
 function mapWorkItemToBillingSnapshot(workItem: FulfillmentWorkItem) {
   const detail = workItem.sourceSnapshot.detail;
+  const sourceOrderSnapshot =
+    workItem.sourceSnapshot.sourceOrderSnapshot ??
+    asSnapshotRecord(detail.frozenOrderSnapshot) ??
+    asSnapshotRecord(detail.appliedSnapshot);
+  const frozenPriceSnapshot = asSnapshotRecord(detail.frozenPriceSnapshot);
   return {
+    amountBasis: readSnapshotString(
+      sourceOrderSnapshot,
+      "amountBasis",
+    ),
+    appliedPriceSnapshot: frozenPriceSnapshot,
+    appliedSnapshot: sourceOrderSnapshot,
+    billedAs: readSnapshotString(detail, "billedAs") as
+      | "set_parent"
+      | "atomic_child"
+      | "nonbillable_parent"
+      | undefined,
     billingName:
       typeof detail.billingName === "string" ? detail.billingName : undefined,
     billingReflectionEnabled: workItem.sourceSnapshot.billingReflectionEnabled,
@@ -1830,18 +1941,70 @@ function mapWorkItemToBillingSnapshot(workItem: FulfillmentWorkItem) {
       typeof detail.destinationModule === "string"
         ? detail.destinationModule
         : workItem.queueType,
+    explicitExtra: readSnapshotBoolean(sourceOrderSnapshot, "explicitExtra"),
+    frozenOrderSnapshot: sourceOrderSnapshot,
     inHospitalOrderName: workItem.sourceSnapshot.orderDisplayName,
     lineTotalSnapshot:
-      typeof detail.lineTotalSnapshot === "number"
+      (typeof detail.lineTotalSnapshot === "number" ||
+        detail.lineTotalSnapshot === null)
         ? detail.lineTotalSnapshot
         : undefined,
     orderId: workItem.orderId,
     priceKrw:
-      typeof detail.unitPriceSnapshot === "number"
-        ? detail.unitPriceSnapshot
-        : undefined,
+      detail.unitPriceSnapshot === null
+        ? null
+        : typeof detail.unitPriceSnapshot === "number"
+          ? detail.unitPriceSnapshot
+          : undefined,
     quantity: typeof detail.quantity === "number" ? detail.quantity : undefined,
+    parentOrderId: readSnapshotString(sourceOrderSnapshot, "parentOrderId") ?? null,
+    rangeBasis: readSnapshotString(sourceOrderSnapshot, "rangeBasis"),
+    rangeId: readSnapshotString(sourceOrderSnapshot, "rangeId") ?? null,
+    rangeInput: readSnapshotNumberOrNull(sourceOrderSnapshot, "rangeInput"),
+    roundingResultKrw: readSnapshotNumberOrNull(
+      frozenPriceSnapshot ?? sourceOrderSnapshot,
+      "roundingResultKrw",
+      "roundingResult",
+    ),
+    roundingRule: readSnapshotString(
+      frozenPriceSnapshot ?? sourceOrderSnapshot,
+      "roundingRule",
+    ) as
+      | "as_is"
+      | "ceil"
+      | "floor"
+      | "round"
+      | undefined,
+    rowType: readSnapshotString(sourceOrderSnapshot, "rowType") as
+      | "individual"
+      | "set"
+      | "set_child"
+      | undefined,
+    sourceOrderSnapshot,
+    sourceSetId: readSnapshotString(sourceOrderSnapshot, "sourceSetId"),
+    sourceSetRevisionId: readSnapshotString(
+      sourceOrderSnapshot,
+      "sourceSetRevisionId",
+    ),
+    sourceSetRevisionItemId: readSnapshotString(
+      sourceOrderSnapshot,
+      "sourceSetRevisionItemId",
+    ),
+    sourceSetRevisionNo: readSnapshotNumber(
+      sourceOrderSnapshot,
+      "sourceSetRevisionNo",
+    ),
     sourcePresetId: workItem.sourceSnapshot.serviceItemId,
+    workspaceCatalogItemId: workItem.sourceSnapshot.workspaceCatalogItemId,
+    sourceMasterRecordId: workItem.sourceSnapshot.sourceMasterRecordId,
+    sourceMasterRevision: workItem.sourceSnapshot.sourceMasterRevision,
+    workspaceCatalogRevision: workItem.sourceSnapshot.workspaceCatalogRevision,
+    categoryGroup:
+      workItem.sourceSnapshot.categoryGroup ??
+      readSnapshotString(sourceOrderSnapshot, "categoryGroup"),
+    billingCategory:
+      workItem.sourceSnapshot.billingCategory ??
+      readSnapshotString(sourceOrderSnapshot, "billingCategory"),
     standardOrderName:
       typeof detail.standardOrderName === "string"
         ? detail.standardOrderName
@@ -1853,16 +2016,37 @@ function mapWorkItemToBillingSnapshot(workItem: FulfillmentWorkItem) {
 function buildSnapshotDetail(
   order: EmrOrder,
   orderSnapshot?: FulfillmentOrderSnapshotInput,
+  frozenSnapshot?: Record<string, unknown>,
 ) {
+  const frozenPrice = readSnapshotNumberOrNull(
+    frozenSnapshot,
+    "priceKrw",
+    "unitPriceSnapshot",
+  );
+  const frozenLineTotal = readSnapshotNumberOrNull(
+    frozenSnapshot,
+    "lineTotalSnapshot",
+  );
   return {
-    billingName: orderSnapshot?.billingName,
-    destinationModule: orderSnapshot?.destinationModule,
-    lineTotalSnapshot: orderSnapshot?.lineTotalSnapshot,
+    billingName:
+      readSnapshotString(frozenSnapshot, "effectiveBillingName", "billingName") ??
+      orderSnapshot?.billingName,
+    destinationModule:
+      readSnapshotString(frozenSnapshot, "destinationModule") ??
+      orderSnapshot?.destinationModule,
+    lineTotalSnapshot:
+      frozenLineTotal !== undefined
+        ? frozenLineTotal
+        : orderSnapshot?.lineTotalSnapshot,
     orderType: order.orderType,
     priority: order.priority,
-    quantity: orderSnapshot?.quantity,
-    standardOrderName: orderSnapshot?.standardOrderName,
-    unitPriceSnapshot: orderSnapshot?.priceKrw,
+    quantity:
+      readSnapshotNumber(frozenSnapshot, "quantity") ?? orderSnapshot?.quantity,
+    standardOrderName:
+      readSnapshotString(frozenSnapshot, "standardOrderName") ??
+      orderSnapshot?.standardOrderName,
+    unitPriceSnapshot:
+      frozenPrice !== undefined ? frozenPrice : orderSnapshot?.priceKrw,
     warningMessage: order.warningMessage,
   };
 }
@@ -1870,6 +2054,7 @@ function buildSnapshotDetail(
 function isSnapshotFulfillmentRequired(
   snapshot: FulfillmentOrderSnapshotInput,
 ) {
+  if (isContainerSnapshot(snapshot)) return false;
   if (snapshot.taskRequired === false) return false;
   return Boolean(mapSnapshotDestinationToQueue(snapshot.destinationModule));
 }
@@ -1909,7 +2094,18 @@ function createVirtualOrderFromSnapshot({
     id: orderId,
     workspaceId,
     encounterId,
-    serviceItemId: snapshot.sourcePresetId,
+    serviceItemId: snapshot.workspaceCatalogItemId ? undefined : snapshot.sourcePresetId,
+    workspaceCatalogItemId: snapshot.workspaceCatalogItemId,
+    sourceMasterRecordId: snapshot.sourceMasterRecordId,
+    sourceMasterRevision: snapshot.sourceMasterRevision,
+    workspaceCatalogRevision: snapshot.workspaceCatalogRevision,
+    categoryGroup: snapshot.categoryGroup as EmrOrder["categoryGroup"],
+    billingCategory: snapshot.billingCategory as EmrOrder["billingCategory"],
+    unitPriceSnapshot: snapshot.priceKrw,
+    appliedSnapshot:
+      snapshot.appliedSnapshot ??
+      snapshot.frozenOrderSnapshot ??
+      snapshot.sourceOrderSnapshot,
     orderType,
     displayName:
       snapshot.inHospitalOrderName ??
@@ -2119,6 +2315,120 @@ function isSupportedOrderType(value: unknown): value is FulfillmentQueueType {
   );
 }
 
+function isAtomicFulfillmentOrder(order: EmrOrder) {
+  if (!isSupportedOrderType(order.orderType)) return false;
+  const snapshot = asSnapshotRecord(order.appliedSnapshot);
+  const rowType =
+    readSnapshotString(order as EmrOrder & Record<string, unknown>, "rowType") ??
+    readSnapshotString(snapshot, "rowType");
+  return (
+    rowType !== "set" &&
+    rowType !== "set_child_container" &&
+    rowType !== "order_set" &&
+    readSnapshotString(snapshot, "orderType") !== "set" &&
+    readSnapshotString(order as EmrOrder & Record<string, unknown>, "orderType") !==
+      "set"
+  );
+}
+
+function getFrozenOrderSnapshot(order: EmrOrder) {
+  return asSnapshotRecord(order.appliedSnapshot);
+}
+
+function isContainerSnapshot(snapshot: FulfillmentOrderSnapshotInput) {
+  const rowType = snapshot.rowType;
+  const appliedSnapshot = asSnapshotRecord(
+    snapshot.appliedSnapshot ??
+      snapshot.frozenOrderSnapshot ??
+      snapshot.sourceOrderSnapshot,
+  );
+  return (
+    rowType === "set" ||
+    rowType === "set_child_container" ||
+    rowType === "order_set" ||
+    readSnapshotString(appliedSnapshot, "rowType") === "set" ||
+    readSnapshotString(appliedSnapshot, "itemKind", "childKind") ===
+      "order_set"
+  );
+}
+
+function mapFulfillmentBillingCategory(
+  value?: string,
+  categoryGroup?: string,
+) {
+  if (
+    value === "consultation" ||
+    value === "laboratory" ||
+    value === "imaging" ||
+    value === "dispensing" ||
+    value === "treatment" ||
+    value === "other"
+  ) {
+    return value;
+  }
+  if (categoryGroup === "set") return "other";
+  return undefined;
+}
+
+function asSnapshotRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function readSnapshotString(
+  value: unknown,
+  ...keys: string[]
+): string | undefined {
+  const record = asSnapshotRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate;
+  }
+  return undefined;
+}
+
+function readSnapshotNumber(
+  value: unknown,
+  ...keys: string[]
+): number | undefined {
+  const record = asSnapshotRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+function readSnapshotNumberOrNull(
+  value: unknown,
+  ...keys: string[]
+): number | null | undefined {
+  const record = asSnapshotRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (candidate === null) return null;
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+function readSnapshotBoolean(
+  value: unknown,
+  ...keys: string[]
+): boolean | undefined {
+  const record = asSnapshotRecord(value);
+  if (!record) return undefined;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "boolean") return candidate;
+  }
+  return undefined;
+}
+
 function isFulfillmentStatus(
   value: unknown,
 ): value is FulfillmentWorkItemStatus {
@@ -2168,6 +2478,31 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
     typeof row.updatedAt !== "string" ||
     !row.sourceSnapshot ||
     typeof row.sourceSnapshot !== "object"
+  ) {
+    return null;
+  }
+  const frozenSnapshot =
+    asSnapshotRecord(
+      (
+        row.sourceSnapshot as FulfillmentSourceSnapshot & {
+          frozenOrderSnapshot?: unknown;
+        }
+      ).frozenOrderSnapshot,
+    ) ??
+    asSnapshotRecord(
+      (
+        row.sourceSnapshot as FulfillmentSourceSnapshot & {
+          appliedSnapshot?: unknown;
+        }
+      ).appliedSnapshot,
+    );
+  if (
+    readSnapshotString(row.sourceSnapshot, "rowType") === "set" ||
+    readSnapshotString(frozenSnapshot, "rowType") === "set" ||
+    readSnapshotString(row.sourceSnapshot, "itemKind", "childKind") ===
+      "order_set" ||
+    readSnapshotString(frozenSnapshot, "itemKind", "childKind") ===
+      "order_set"
   ) {
     return null;
   }

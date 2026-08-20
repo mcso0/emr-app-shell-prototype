@@ -2,20 +2,16 @@ import { expect, test } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
-import { createMockInvoiceCandidateSyncGateway } from "../src/features/billing/server-invoice-candidate-sync-core";
 import { resolveServerChartEncounterId } from "../src/features/chart/server-encounter-id-bridge-core";
 import {
   createMockChartOrderActionGateway,
   createSupabaseChartOrderActionGateway,
-  readChartOrderActions,
   saveChartOrderAction,
-  type ChartOrderAppliedSnapshot,
 } from "../src/features/chart/server-order-action-persistence-core";
 import {
-  createMockOrderCatalogGateway,
   createSupabaseOrderCatalogGateway,
-  type OrderCatalogGateway,
 } from "../src/features/hospital-admin/server-order-catalog-core";
+import { mockEncounters, mockOrders } from "../src/mocks/emr-domain";
 import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
@@ -44,6 +40,10 @@ const stagingEncounterIdBridgeMigrationPath =
 const stagingEncounterIdBridgeMigration = existsSync(stagingEncounterIdBridgeMigrationPath)
   ? readFileSync(stagingEncounterIdBridgeMigrationPath, "utf8")
   : "";
+const a3Migration = readFileSync(
+  "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
+  "utf8",
+);
 
 const validConfirmInput = {
   action: "confirm" as const,
@@ -76,11 +76,21 @@ test("order action route confirms selected orders via mock fallback and reads af
     denialReason: "unauthenticated",
   });
 
+  const current = await request.get(
+    `/api/workspaces/${workspaceId}/chart/order-actions?encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-vet" } },
+  );
+  expect(current.status()).toBe(200);
+  const currentBody = (await current.json()) as { ok: true; etag: string };
+
   const saved = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-actions`,
     {
-      data: validConfirmInput,
-      headers: { "x-clair-demo-session-user-id": "user-vet" },
+      data: { ...validConfirmInput, expectedEtag: currentBody.etag },
+      headers: {
+        "If-Match": currentBody.etag,
+        "x-clair-demo-session-user-id": "user-vet",
+      },
     },
   );
   expect(saved.status()).toBe(200);
@@ -198,6 +208,88 @@ test("order action core submits billing candidates separately from confirmation"
   expect(result.ok ? result.fulfillmentWorkItems : undefined).toBeUndefined();
 });
 
+test("mock order action keeps nonbillable set children out of candidate lifecycle", async () => {
+  const template = mockOrders.find((order) => order.id === orderId);
+  if (!template) throw new Error("missing chart order template");
+  const nonBillableSetChildId = "b3-nonbillable-set-child-action";
+  const nonBillableSetChild = {
+    ...template,
+    id: nonBillableSetChildId,
+    appliedSnapshot: {
+      ...(template.appliedSnapshot ?? {}),
+      billingReflectionEnabled: false,
+      lineTotalSnapshot: 0,
+      orderId: nonBillableSetChildId,
+      priceKrw: 0,
+      rowType: "set_child",
+    },
+  };
+  let billingCallCount = 0;
+  const result = await saveChartOrderAction({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      action: "bill",
+      encounterId,
+      orderIds: [nonBillableSetChildId],
+    },
+    gateway: createMockChartOrderActionGateway({
+      encounters: mockEncounters,
+      orders: [...mockOrders, nonBillableSetChild],
+    }),
+    invoiceCandidateGateway: {
+      async syncInvoiceCandidates() {
+        billingCallCount += 1;
+        return { ok: true, candidates: [] };
+      },
+    },
+  });
+  expect(result).toMatchObject({ ok: true, status: 200 });
+  expect(result.ok ? result.orderActions : []).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        billingCandidateStatus: "not_requested",
+        orderId: nonBillableSetChildId,
+      }),
+    ]),
+  );
+  expect(billingCallCount).toBe(0);
+});
+
+test("order action downstream billing receives persisted order IDs", async () => {
+  const gateway = createMockChartOrderActionGateway(
+    undefined,
+    () => "2026-05-19T16:00:00.000Z",
+  );
+  const billingInputs: Array<Record<string, unknown>> = [];
+  const result = await saveChartOrderAction({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      action: "bill",
+      encounterId,
+      orderIds: [orderId],
+    },
+    gateway,
+    invoiceCandidateGateway: {
+      async syncInvoiceCandidates(input) {
+        billingInputs.push(input as unknown as Record<string, unknown>);
+        return { ok: true, candidates: [] };
+      },
+    },
+  });
+
+  expect(result).toMatchObject({ ok: true, status: 200 });
+  expect(billingInputs).toEqual([
+    expect.objectContaining({
+      encounterId,
+      orderIds: [orderId],
+      surface: "chart",
+      workspaceId,
+    }),
+  ]);
+});
+
 test("order action core blocks chart mutation before consultation starts", async () => {
   const blocked = await saveChartOrderAction({
     actorUserId: "user-vet",
@@ -220,91 +312,31 @@ test("order action core blocks chart mutation before consultation starts", async
   });
 });
 
-test("order action core creates billing candidates immediately for billing-only catalog snapshots", async () => {
-  const actionGateway = createMockChartOrderActionGateway(
-    undefined,
-    () => "2026-05-26T14:30:00.000Z",
-  );
-  const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(
-    undefined,
-    () => "2026-05-26T14:31:00.000Z",
-  );
-  const catalogOrderId = "catalog-billing-only-den-288";
-  const catalogGateway: Pick<OrderCatalogGateway, "listChartSearch"> = {
-    async listChartSearch() {
-      return {
-        ok: true as const,
-        rows: [
-          {
-            rowType: "individual" as const,
-            sourcePresetId: "std-ord-consult-den-288",
-            sourcePresetVersion: "2026.05",
-            displayName: "진료 상담",
-            billingName: "진료 상담료",
-            categoryGroup: "treatment" as const,
-            targetSpecies: ["dog"] as const,
-            appliedSnapshot: {
-              sourcePresetId: "std-ord-consult-den-288",
-              sourcePresetVersion: "2026.05",
-              workspaceCatalogItemId: "ord-consult-den-288",
-              appliedStandardOrderName: "일반 진료 상담",
-              appliedDisplayName: "진료 상담",
-              appliedBillingName: "진료 상담료",
-              appliedPriceKrw: 22000,
-              appliedSalesUnit: "per_order" as const,
-              appliedTaxIncluded: true,
-              appliedAmountBasis: "fixed_order_price" as const,
-              appliedTargetSpecies: ["dog"] as const,
-              appliedDestinationModule: "billing_only" as const,
-              appliedTaskRequired: false,
-              billingReflectionEnabled: true,
-            },
-          },
-        ],
-      };
-    },
-  };
-
-  const confirmed = await saveChartOrderAction({
+test("order action core rejects client catalog snapshot authority", async () => {
+  const result = await saveChartOrderAction({
     actorUserId: "user-vet",
-    catalogGateway,
-    gateway: actionGateway,
+    workspaceId,
     input: {
       action: "confirm",
       catalogSelections: [
         {
           billingDisplayName: "client tampered billing",
-          orderId: catalogOrderId,
+          orderId: "catalog-billing-only-den-288",
           quantity: 2,
           rowType: "individual",
           sourcePresetId: "std-ord-consult-den-288",
         },
       ],
       encounterId,
-      orderIds: [catalogOrderId],
+      orderIds: ["catalog-billing-only-den-288"],
     },
-    invoiceCandidateGateway,
-    workspaceId,
   });
 
-  expect(confirmed).toMatchObject({
-    ok: true,
-    status: 200,
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    fieldErrors: { orderIds: "저장된 오더 초안을 사용해 주세요." },
   });
-  expect(
-    confirmed.ok ? confirmed.fulfillmentWorkItems : undefined,
-  ).toBeUndefined();
-  expect(confirmed.ok ? confirmed.billingCandidates : undefined).toEqual([
-    expect.objectContaining({
-      billingCandidateId: `billcand-${catalogOrderId}`,
-      description: "진료 상담료",
-      lineTotal: 44000,
-      orderId: catalogOrderId,
-      quantity: 2,
-      syncedAt: "2026-05-26T14:31:00.000Z",
-      unitPrice: 22000,
-    }),
-  ]);
 });
 
 test("order action route bridge resolves demo encounter IDs before confirmation", async () => {
@@ -336,28 +368,17 @@ test("order action route bridge resolves demo encounter IDs before confirmation"
   );
 });
 
-test("order action core freezes active catalog snapshots at confirmation and ignores client price fields", async () => {
-  const catalogGateway = createMockOrderCatalogGateway(
-    undefined,
-    "2026-05-26T05:30:00.000Z",
-  );
-  const actionGateway = createMockChartOrderActionGateway(
-    undefined,
-    () => "2026-05-26T05:31:00.000Z",
-  );
-  const catalogOrderId = "catalog-individual-std-ord-lab-cbc-baso-den-286";
-
-  const confirmed = await saveChartOrderAction({
+test("order action confirmation does not accept mutable catalog snapshot input", async () => {
+  const result = await saveChartOrderAction({
     actorUserId: "user-vet",
-    catalogGateway,
-    gateway: actionGateway,
+    workspaceId,
     input: {
       action: "confirm",
       catalogSelections: [
         {
           billingDisplayName: "client tampered billing name",
           guardianName: "DEN-327 보호자",
-          orderId: catalogOrderId,
+          orderId: "catalog-individual-std-ord-lab-cbc-baso-den-286",
           patientName: "DEN-327 차트환자",
           quantity: 2,
           rowType: "individual",
@@ -365,123 +386,27 @@ test("order action core freezes active catalog snapshots at confirmation and ign
         },
       ],
       encounterId,
-      orderIds: [catalogOrderId],
+      orderIds: ["catalog-individual-std-ord-lab-cbc-baso-den-286"],
     },
-    workspaceId,
   });
 
-  expect(confirmed).toMatchObject({
-    ok: true,
-    status: 200,
-  });
-  expect(confirmed.ok ? confirmed.fulfillmentWorkItems : undefined).toEqual([
-    expect.objectContaining({
-      id: `fulfill-${catalogOrderId}`,
-      orderId: catalogOrderId,
-      queueType: "lab",
-      sourceSnapshot: expect.objectContaining({
-        billingReflectionEnabled: true,
-        guardianName: "DEN-327 보호자",
-        orderDisplayName: "[CBC 검사] #BASO",
-        patientName: "DEN-327 차트환자",
-        serviceItemId: "std-ord-lab-cbc-baso",
-        detail: expect.objectContaining({
-          billingName: "CBC 검사 BASO",
-          destinationModule: "lab",
-          lineTotalSnapshot: 24000,
-          quantity: 2,
-          standardOrderName: "[CBC 검사] #BASO",
-          unitPriceSnapshot: 12000,
-        }),
-      }),
-      status: "requested",
-    }),
-  ]);
-  expect(confirmed.ok ? confirmed.orderActions : []).toEqual([
-    expect.objectContaining({
-      appliedSnapshot: expect.objectContaining({
-        billingName: "CBC 검사 BASO",
-        destinationModule: "lab",
-        lineTotalSnapshot: 24000,
-        guardianName: "DEN-327 보호자",
-        patientName: "DEN-327 차트환자",
-        priceKrw: 12000,
-        quantity: 2,
-        sourcePresetId: "std-ord-lab-cbc-baso",
-        standardOrderName: "[CBC 검사] #BASO",
-        workspaceCatalogItemId: "ord-lab-cbc-baso",
-      }),
-      confirmedByUserId: "user-vet",
-      orderConfirmationStatus: "confirmed",
-      orderId: catalogOrderId,
-      status: "confirmed",
-    }),
-  ]);
-
-  await catalogGateway.mutateOrder({
-    actorUserId: "user-admin",
-    mutation: {
-      action: "update",
-      itemId: "ord-lab-cbc-baso",
-      patch: {
-        billingName: "변경 후 청구명",
-        inHospitalOrderName: "변경 후 원내명",
-        priceKrw: 99000,
-        pricingRule: {
-          billingReflectionEnabled: true,
-          priceBasis: "unit_price",
-          priceKrw: 99000,
-          roundingRule: "as_is",
-          salesUnit: "per_each",
-          taxIncluded: true,
-        },
-      },
-    },
-    workspaceId,
-  });
-
-  const readBack = await readChartOrderActions({
-    actorUserId: "user-vet",
-    encounterId,
-    gateway: actionGateway,
-    workspaceId,
-  });
-
-  expect(readBack).toMatchObject({ ok: true, status: 200 });
-  expect(
-    readBack.ok
-      ? readBack.orderActions.find((row) => row.orderId === catalogOrderId)
-      : undefined,
-  ).toMatchObject({
-    appliedSnapshot: expect.objectContaining({
-      billingName: "CBC 검사 BASO",
-      inHospitalOrderName: "[CBC 검사] #BASO",
-      lineTotalSnapshot: 24000,
-      priceKrw: 12000,
-    }),
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    fieldErrors: { orderIds: "저장된 오더 초안을 사용해 주세요." },
   });
 });
 
-test("confirmed catalog order exposes stable order id, state, and snapshot for fulfillment handoff", async () => {
-  const actionGateway = createMockChartOrderActionGateway(
-    undefined,
-    () => "2026-06-14T10:00:00.000Z",
-  );
-  const catalogOrderId = "catalog-individual-std-ord-lab-cbc-baso-den-494";
-
-  const confirmed = await saveChartOrderAction({
+test("confirmed order handoff requires a persisted server-owned row", async () => {
+  const result = await saveChartOrderAction({
     actorUserId: "user-vet",
-    catalogGateway: createMockOrderCatalogGateway(
-      undefined,
-      "2026-06-14T09:59:00.000Z",
-    ),
-    gateway: actionGateway,
+    workspaceId,
     input: {
       action: "confirm",
       catalogSelections: [
         {
           billingDisplayName: "tampered client billing name",
-          orderId: catalogOrderId,
+          orderId: "catalog-individual-std-ord-lab-cbc-baso-den-494",
           patientName: "DEN-494 Synthetic Patient",
           quantity: 3,
           rowType: "individual",
@@ -489,70 +414,22 @@ test("confirmed catalog order exposes stable order id, state, and snapshot for f
         },
       ],
       encounterId,
-      orderIds: [catalogOrderId],
+      orderIds: ["catalog-individual-std-ord-lab-cbc-baso-den-494"],
     },
-    workspaceId,
   });
 
-  expect(confirmed).toMatchObject({ ok: true, status: 200 });
-  expect(confirmed.ok ? confirmed.orderActions : []).toEqual([
-    expect.objectContaining({
-      appliedSnapshot: expect.objectContaining({
-        billingName: "CBC 검사 BASO",
-        destinationModule: "lab",
-        lineTotalSnapshot: 36000,
-        orderType: "lab",
-        patientName: "DEN-494 Synthetic Patient",
-        priceKrw: 12000,
-        quantity: 3,
-        sourcePresetId: "std-ord-lab-cbc-baso",
-        standardOrderName: "[CBC 검사] #BASO",
-        taskRequired: true,
-      }),
-      billingCandidateStatus: "not_requested",
-      confirmedAt: "2026-06-14T10:00:00.000Z",
-      confirmedByUserId: "user-vet",
-      encounterId,
-      orderConfirmationStatus: "confirmed",
-      orderId: catalogOrderId,
-      status: "confirmed",
-      updatedAt: "2026-06-14T10:00:00.000Z",
-    }),
-  ]);
-  expect(confirmed.ok ? confirmed.fulfillmentWorkItems : undefined).toEqual([
-    expect.objectContaining({
-      encounterId,
-      orderId: catalogOrderId,
-      queueType: "lab",
-      sourceSnapshot: expect.objectContaining({
-        detail: expect.objectContaining({
-          billingName: "CBC 검사 BASO",
-          lineTotalSnapshot: 36000,
-          quantity: 3,
-          unitPriceSnapshot: 12000,
-        }),
-        orderDisplayName: "[CBC 검사] #BASO",
-        patientName: "DEN-494 Synthetic Patient",
-        serviceItemId: "std-ord-lab-cbc-baso",
-      }),
-      status: "requested",
-    }),
-  ]);
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    fieldErrors: { orderIds: "저장된 오더 초안을 사용해 주세요." },
+  });
 });
 
-test("order action core rejects paused and set catalog selections before confirmation snapshot", async () => {
+test("order action core rejects unavailable IDs and legacy set selections", async () => {
   const paused = await saveChartOrderAction({
     actorUserId: "user-vet",
     input: {
       action: "confirm",
-      catalogSelections: [
-        {
-          orderId: "catalog-individual-std-ord-paused-example-den-286",
-          quantity: 1,
-          rowType: "individual",
-          sourcePresetId: "std-ord-paused-example",
-        },
-      ],
       encounterId,
       orderIds: ["catalog-individual-std-ord-paused-example-den-286"],
     },
@@ -568,14 +445,7 @@ test("order action core rejects paused and set catalog selections before confirm
     actorUserId: "user-vet",
     input: {
       action: "confirm",
-      catalogSelections: [
-        {
-          orderId: "catalog-set-set-vomit-basic-den-286",
-          quantity: 1,
-          rowType: "set",
-          sourcePresetId: "set-vomit-basic",
-        },
-      ],
+      catalogSelections: [{ rowType: "set" }],
       encounterId,
       orderIds: ["catalog-set-set-vomit-basic-den-286"],
     },
@@ -583,8 +453,8 @@ test("order action core rejects paused and set catalog selections before confirm
   });
   expect(setOrder).toMatchObject({
     ok: false,
-    status: 409,
-    denialReason: "unsupported_order_type",
+    status: 400,
+    fieldErrors: { orderIds: "저장된 오더 초안을 사용해 주세요." },
   });
 });
 
@@ -655,19 +525,51 @@ test("order action Supabase gateway keeps action, actor, workspace, encounter, a
         `${functionName}:${args.p_action ?? "read"}:${args.p_workspace_id}:${args.p_encounter_id}:${args.p_actor_user_id ?? "read"}`,
       );
       return {
-        data: [
-          {
-            billingCandidateId: "billcand-00000000-0000-4000-8000-000000000301",
-            billingCandidateStatus: "candidate_created",
-            confirmedAt: null,
-            confirmedByUserId: null,
-            encounterId,
-            orderConfirmationStatus: "draft",
-            orderId: "00000000-0000-4000-8000-000000000301",
-            status: "requested",
-            updatedAt: "2026-05-19T16:00:00.000Z",
-          },
-        ],
+        data: {
+          action: "bill",
+          etag: `"${"a".repeat(64)}"`,
+          rows: [
+            {
+              appliedPriceSnapshot: {
+                amountBasis: "fixed_order_price",
+                billedAs: "atomic_child",
+                priceKrw: 33000,
+              },
+              appliedSnapshot: {
+                billingName: "DEN-304 상담료",
+                lineTotalSnapshot: 33000,
+                sourcePresetId: "std-den-304-billing",
+                priceKrw: 33000,
+                quantity: 1,
+                rowType: "individual",
+                billingReflectionEnabled: true,
+              },
+              billingReflectionEnabled: true,
+              calculationInputs: {},
+              calculationOutputs: {},
+              encounterId,
+              lineTotalSnapshot: 33000,
+              orderId: "00000000-0000-4000-8000-000000000301",
+              orderConfirmationStatus: "draft",
+              orderType: "treatment",
+              parentOrderId: null,
+              quantity: 1,
+              quantitySource: "manual",
+              rowType: "individual",
+              snapshotHash: "b".repeat(64),
+              snapshotSchemaVersion: 1,
+              sourceSetId: null,
+              sourceSetRevisionId: null,
+              sourceSetRevisionItemId: null,
+              sourceSetRevisionNo: null,
+              sourceSetVersion: null,
+              status: "requested",
+              unitPriceSnapshot: 33000,
+              updatedAt: "2026-05-19T16:00:00.000Z",
+            },
+          ],
+          stored: false,
+        },
         error: null,
       };
     },
@@ -678,28 +580,7 @@ test("order action Supabase gateway keeps action, actor, workspace, encounter, a
     actorUserId: "00000000-0000-4000-8000-000000000002",
     workspaceId,
     encounterId,
-    catalogSnapshots: new Map<string, ChartOrderAppliedSnapshot>([
-      [
-        "00000000-0000-4000-8000-000000000301",
-        {
-          amountBasis: "fixed_order_price",
-          billingName: "DEN-304 상담료",
-          billingReflectionEnabled: true,
-          inHospitalOrderName: "DEN-304 상담료",
-          lineTotalSnapshot: 33000,
-          orderType: "treatment",
-          priceKrw: 33000,
-          quantity: 1,
-          rowType: "individual",
-          salesUnit: "per_order",
-          sourcePresetId: "std-den-304-billing",
-          sourcePresetVersion: "den-304-v1",
-          standardOrderName: "DEN-304 상담료",
-          targetSpecies: ["dog"],
-          taxIncluded: true,
-        },
-      ],
-    ]),
+    expectedEtag: `"${"c".repeat(64)}"`,
     orderIds: ["00000000-0000-4000-8000-000000000301"],
   });
 
@@ -715,17 +596,20 @@ test("order action Supabase gateway keeps action, actor, workspace, encounter, a
           lineTotalSnapshot: 33000,
           sourcePresetId: "std-den-304-billing",
         },
-        billingCandidateStatus: "candidate_created",
+        billingCandidateStatus: "not_requested",
       },
     ],
   });
 });
 
-test("order action route wires live catalog and billing gateways for Supabase sessions", () => {
-  expect(routeSource).toContain("createSupabaseOrderCatalogGateway");
-  expect(routeSource).toContain("catalogGateway: client");
+test("order action route wires only server-owned action, billing, and fulfillment gateways", () => {
+  expect(routeSource).toContain("createSupabaseChartOrderActionGateway");
+  expect(routeSource).not.toContain("createSupabaseOrderCatalogGateway");
+  expect(routeSource).not.toContain("catalogGateway: client");
   expect(routeSource).toContain("createSupabaseInvoiceCandidateSyncGateway");
   expect(routeSource).toContain("invoiceCandidateGateway: client");
+  expect(routeSource).toContain("createSupabaseFulfillmentWorkItemGateway");
+  expect(routeSource).toContain("fulfillmentGateway: client");
 });
 
 test("order catalog Supabase gateway reads workspace chart-search rows from RPC", async () => {
@@ -769,7 +653,7 @@ test("order catalog Supabase gateway reads workspace chart-search rows from RPC"
   const result = await gateway.listChartSearch({ workspaceId });
 
   expect(calls).toEqual([
-    `clair_list_order_catalog_chart_search:${workspaceId}`,
+    `clair_list_order_catalog_chart_search_v2:${workspaceId}`,
   ]);
   expect(result.rows).toEqual([
     expect.objectContaining({
@@ -805,6 +689,15 @@ test("order action persistence migration defines local-first RPC boundary withou
   expect(migration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
   );
+});
+
+test("A3 order confirmation freezes catalog snapshots and preserves direct lineage on retry", () => {
+  expect(a3Migration).toContain("create or replace function public.clair_save_chart_order_action");
+  expect(a3Migration).toContain("private.clair_build_catalog_order_snapshot");
+  expect(a3Migration).toContain("if v_order.workspace_catalog_item_id is not null then");
+  expect(a3Migration).toContain("order_confirmation_status = 'confirmed'");
+  expect(a3Migration).toContain("applied_snapshot = v_snapshot");
+  expect(a3Migration).toContain("service_item_id = null");
 });
 
 test("order catalog chart search migration defines workspace-scoped live gateway RPC", () => {

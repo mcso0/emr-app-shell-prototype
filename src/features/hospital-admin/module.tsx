@@ -136,6 +136,7 @@ import { HospitalScheduleScreen } from "@/features/hospital-admin/schedule/hospi
 import { WorkspaceVitalSettingsScreen } from "@/features/hospital-admin/vital-settings/workspace-vital-settings-screen";
 import { WorkspaceSpaceManagementScreen } from "@/features/hospital-admin/space-management/screen";
 import { RolePermissionManagementScreen } from "@/features/hospital-admin/role-permission-management/screen";
+import { OrderSetsPanel } from "@/features/hospital-admin/order-sets-panel";
 import {
   useHospitalAdminStore,
   type HospitalAdminSection,
@@ -155,6 +156,7 @@ const hospitalAdminSections = new Set<HospitalAdminSection>([
   "audit",
   "members",
   "orders",
+  "order-sets",
   "roles",
   "schedule",
   "settings",
@@ -539,7 +541,7 @@ function validateHospitalOrderDraft(
   if (!draft.delivery) return "일감전달여부를 선택해 주세요.";
   if (!draft.target) return "대상을 선택해 주세요.";
   if (!draft.saleUnit) return "판매 단위를 선택해 주세요.";
-  if (options.creating && (!Number.isFinite(draft.price) || draft.price <= 0)) {
+  if (options.creating && (!Number.isFinite(draft.price) || draft.price < 0)) {
     return "판매금액을 입력해 주세요.";
   }
   if (!Number.isFinite(draft.price) || draft.price < 0)
@@ -566,6 +568,9 @@ function getOrderCatalogMutationFailureMessage(
   }
   if (result.error === "invalid_input") {
     return "필수값이나 금액 형식이 올바르지 않습니다.";
+  }
+  if (result.error === "catalog_revision_conflict") {
+    return "다른 관리자가 먼저 변경했습니다. 목록을 새로고침한 뒤 다시 시도해 주세요.";
   }
 
   return "Order 변경을 저장하지 못했습니다.";
@@ -1262,12 +1267,13 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       id: "order-set",
       count: (
         <EmrModuleListSidePanelBadge variant="outline">
-          후속
+          B2
         </EmrModuleListSidePanelBadge>
       ),
-      disabled: true,
+      active: activeSection === "order-sets",
       icon: <FolderIcon className="size-4 shrink-0" />,
       label: "Order 세트",
+      onClick: () => navigateToSection("order-sets"),
       testId: orderSetPlaceholderId,
     },
     {
@@ -1903,6 +1909,10 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
 
   if (activeSection === "audit") {
     return <HospitalAdminAuditReview workspaceId={workspaceId} />;
+  }
+
+  if (activeSection === "order-sets") {
+    return <OrderSetsPanel session={session} workspaceId={workspaceId} />;
   }
 
   if (activeSection === "settings") {
@@ -2618,17 +2628,20 @@ function DrawerField({
 
 function DrawerSelect({
   ariaLabel,
+  disabled = false,
   items,
   onValueChange,
   value,
 }: {
   ariaLabel: string;
+  disabled?: boolean;
   items: Array<{ label: string; value: string }>;
   onValueChange: (value: string) => void;
   value: string;
 }) {
   return (
     <Select
+      disabled={disabled}
       value={value}
       onValueChange={(nextValue) => {
         if (nextValue) onValueChange(nextValue);
@@ -2839,7 +2852,10 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
     }
 
     const result = await mutateHospitalAdminOrderCatalog({
-      input: buildWorkspaceCatalogPauseMutation(order.sourceCatalogItem.id),
+      input: buildWorkspaceCatalogPauseMutation(
+        order.sourceCatalogItem.id,
+        order.sourceCatalogItem.catalogRevision ?? 1,
+      ),
       method: "PATCH",
       session,
       workspaceId,
@@ -2927,6 +2943,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
           </DrawerField>
           <DrawerField label="표준 Order명">
             <Input
+              readOnly={!creatingNewOrder}
               placeholder="표준 Order명을 입력해 주세요"
               value={draft.standardName}
               onChange={(event) =>
@@ -2977,6 +2994,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
           >
             <DrawerSelect
               ariaLabel="일감전달여부"
+              disabled={!creatingNewOrder}
               value={draft.delivery}
               items={[
                 { label: deliveryLabels.deliver, value: "deliver" },

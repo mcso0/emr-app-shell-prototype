@@ -18,9 +18,11 @@ import {
   listOrderCatalogForAdmin,
   getDemoOrderCatalogGateway,
   mutateOrderCatalogItem,
+  mutateWorkspaceLabTestItem,
   searchOrderCatalogForChart,
   createSupabaseOrderCatalogGateway,
   type OrderCatalogMutationInput,
+  type WorkspaceLabTestItemMutationInput,
   type SupabaseOrderCatalogRpcClient,
 } from "@/features/hospital-admin/server-order-catalog";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
@@ -106,27 +108,38 @@ async function mutate(request: Request, workspaceId: string) {
       })
     : undefined;
 
-  const result = await mutateOrderCatalogItem({
-    actorUserId: identity.actorUserId,
-    workspaceId,
-    input: await readJsonBody(request),
-    gateway:
-      identity.source === "demo_header_mock_mode"
-        ? getDemoOrderCatalogGateway(getDemoClientSessionId(request))
-        : client
-          ? createSupabaseOrderCatalogGateway(
-              client as unknown as SupabaseOrderCatalogRpcClient
-            )
-          : undefined,
-    permissionAdapter,
-    auditGateway:
-      client
-        ? createSupabaseLiveAuditAppendGateway(
-            client as unknown as SupabaseLiveAuditAppendRpcClient
+  const gateway =
+    identity.source === "demo_header_mock_mode"
+      ? getDemoOrderCatalogGateway(getDemoClientSessionId(request))
+      : client
+        ? createSupabaseOrderCatalogGateway(
+            client as unknown as SupabaseOrderCatalogRpcClient,
           )
-        : undefined,
-    auditRequestId: getAuditRequestId(request),
-  });
+        : undefined;
+  const input = await readJsonBody(request);
+  const result =
+    input.action === "updateLabTestItem"
+      ? await mutateWorkspaceLabTestItem({
+          actorUserId: identity.actorUserId,
+          workspaceId,
+          input: input.mutation,
+          gateway,
+          permissionAdapter,
+        })
+      : await mutateOrderCatalogItem({
+          actorUserId: identity.actorUserId,
+          workspaceId,
+          input,
+          gateway,
+          permissionAdapter,
+          auditGateway:
+            client
+              ? createSupabaseLiveAuditAppendGateway(
+                  client as unknown as SupabaseLiveAuditAppendRpcClient,
+                )
+              : undefined,
+          auditRequestId: getAuditRequestId(request),
+        });
 
   return Response.json(result, { status: result.status });
 }
@@ -160,14 +173,51 @@ async function resolveIdentity(request: Request) {
   };
 }
 
-async function readJsonBody(request: Request): Promise<OrderCatalogMutationInput> {
+async function readJsonBody(
+  request: Request,
+): Promise<
+  | OrderCatalogMutationInput
+  | { action: "updateLabTestItem"; mutation: WorkspaceLabTestItemMutationInput }
+> {
   try {
     const value = (await request.json()) as unknown;
-    return value && typeof value === "object"
-      ? (value as OrderCatalogMutationInput)
-      : { action: "pause", itemId: "" };
+    if (!value || typeof value !== "object") {
+      return { action: "pause", itemId: "", expectedCatalogRevision: 0 };
+    }
+    const input = value as Record<string, unknown>;
+    if (input.action === "updateLabTestItem" || input.action === "update_lab_test_item") {
+      const nested =
+        input.mutation && typeof input.mutation === "object"
+          ? (input.mutation as Record<string, unknown>)
+          : input;
+      return {
+        action: "updateLabTestItem",
+        mutation: {
+          action: (nested.action === "local_settings" ? "local_settings" : "customize") as WorkspaceLabTestItemMutationInput["action"],
+          expectedLocalSettingsRevision:
+            typeof nested.expectedLocalSettingsRevision === "number"
+              ? nested.expectedLocalSettingsRevision
+              : undefined,
+          expectedWorkspaceResultRevision:
+            typeof nested.expectedWorkspaceResultRevision === "number"
+              ? nested.expectedWorkspaceResultRevision
+              : undefined,
+          itemId: typeof nested.itemId === "string" ? nested.itemId : "",
+          patch:
+            nested.patch && typeof nested.patch === "object"
+              ? (nested.patch as Record<string, unknown>)
+              : {},
+          targetLinkIds: Array.isArray(nested.targetLinkIds)
+            ? nested.targetLinkIds.filter(
+                (id): id is string => typeof id === "string",
+              )
+            : undefined,
+        },
+      };
+    }
+    return input as unknown as OrderCatalogMutationInput;
   } catch {
-    return { action: "pause", itemId: "" };
+    return { action: "pause", itemId: "", expectedCatalogRevision: 0 };
   }
 }
 

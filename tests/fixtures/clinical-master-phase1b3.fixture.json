@@ -1,0 +1,51 @@
+{
+  "releaseKey": "phase1b3-chart-set-runtime-v1",
+  "workspaceId": "clair-demo",
+  "encounterId": "19426000-0000-4000-8000-000000000001",
+  "actorUserId": "00000000-0000-4000-8000-000000000001",
+  "sets": [
+    {
+      "id": "b2-replay-sum",
+      "amountBasis": "included_order_sum",
+      "selection": { "rangeInput": null, "quantity": 0.001 },
+      "billing": { "parent": false, "child": true }
+    },
+    {
+      "id": "b2-replay-fixed",
+      "amountBasis": "set_fixed_price",
+      "selection": { "rangeInput": null, "quantity": 1 },
+      "billing": { "parent": true, "child": false }
+    },
+    {
+      "id": "b2-replay-range",
+      "amountBasis": "range_price",
+      "rangeBasis": "patient_weight_kg",
+      "rangeInput": 5,
+      "expectedBracket": {
+        "lowerBound": 5,
+        "upperBound": null,
+        "priceKrw": 1500
+      },
+      "billing": { "parent": true, "child": false }
+    }
+  ],
+  "quantityCases": [0.001, 1, 1.0, 1.0],
+  "snapshotSchemaVersion": 1,
+  "hash": "sha256-canonical-four-object-envelope",
+  "regressionCases": {
+    "fourObjectIntegrity": true,
+    "crossFieldTamperRejected": true,
+    "reconciliationHashUpdates": true,
+    "explicitExtraInvoicePrecedence": true,
+    "nonbillableBilledAs": "nonbillable_parent",
+    "fixedOneOverrideRejected": true,
+    "maxTransactionalRows": 100,
+    "roundingAuthority": "a3_catalog",
+    "billSkipsNonbillable": true,
+    "taxSnapshotParity": true,
+    "schemaZeroIndividualRefresh": true,
+    "nestedConfirmationGuards": ["unavailable", "review", "revision"],
+    "semanticPreflight": true
+  },
+  "notes": "Synthetic only. B2 owns set/revision creation; B3 consumes exact immutable pins."
+}

@@ -47,8 +47,8 @@ UI PR 1 starts that adoption work by making reception hydrate patient/guardian p
 | Service categories | DEN-194 service category rows exist, but not the full desired catalog breadth. | `supabase/seed.sql` `service_categories` rows | Category grouping for seeded orders. | Partial |
 | Service items / prices | DEN-194 service item and price rows exist for lab, imaging, treatment, and dispensing. | `supabase/seed.sql` `service_items`, `service_item_prices` rows | Orderable/billable items for seeded chart orders. | Covered baseline, partial desired breadth |
 | Order catalog items | DEMO-DB-PR-002 seeds nine `den194-catalog-%` rows mapped to DEN-194 service item/order meanings. | `supabase/seed.sql` `insert into public.order_catalog_items`; migration `20260520152000_hospital_admin_order_catalog_persistence.sql`; RPC `clair_list_order_catalog_chart_search` | Hospital-admin Order management and chart catalog search seed proof. | Catalog/set seed covered |
-| Order sets | DEMO-DB-PR-002 seeds Kong vomiting and Mango wellness compact sets. | `supabase/seed.sql` `insert into public.order_sets`; `insert into public.order_set_items` | Order set management and set application demo. | Catalog/set seed covered |
-| Order set items | DEMO-DB-PR-002 seeds five included-order rows linked to the seeded catalog rows. | `supabase/seed.sql` `den194-setitem-%` rows | Compact set expansion order and child price snapshot proof. | Catalog/set seed covered |
+| Order sets | DEMO-DB-PR-002 seeds Kong vomiting and Mango wellness compact sets through the trusted native revision adapter. | `supabase/seed.sql` `private.clair_seed_order_set_compatibility_projection`; `public.order_sets` current pointers and `public.order_set_revisions` | Order set management and set application demo. | Catalog/set seed covered |
+| Order set items | DEMO-DB-PR-002 seeds five immutable revision items linked to the seeded catalog rows. | `supabase/seed.sql` native adapter; current `public.order_set_revision_items` rows | Compact set revision/item readback; legacy `public.order_set_items` remains compatibility SELECT-only. | Catalog/set seed covered |
 | Order groups | DEN-194 order groups exist. | `supabase/seed.sql` `order_groups` rows | Encounter-owned chart order grouping. | Covered |
 | Orders | DEN-194 orders exist across lab, imaging, treatment, and dispensing. | `supabase/seed.sql` `orders` rows | Chart order confirmation and billing reflection. | Covered |
 | Order events | DEN-194 result/completion events exist. | `supabase/seed.sql` `order_events` rows | Result/completion evidence. | Covered |
@@ -91,7 +91,7 @@ Pass criteria:
 Expected current gaps:
 
 - `knownGapCount` is expected to be `0` after Demo DB PR 5.
-- `coverage` rows for `order catalog items`, `order sets`, and `order_set_items` are expected to return `status = "pass"`.
+- `coverage` rows for `order catalog items`, `order sets`, and `order_set_items` (native `order_set_revision_items`) are expected to return `status = "pass"`.
 - `coverage` row for `order_fulfillment_work_items` is expected to return `status = "pass"` with eleven deterministic seed rows.
 - `coverage` rows for `lab_test_categories`, `lab_test_items`, and `order_catalog_lab_test_item_links` are expected to return `status = "pass"`.
 - `coverage` row for `billing checkout session family` is expected to return `status = "pass"` with two deterministic paid checkout sessions.
@@ -122,7 +122,7 @@ Current `supabase/seed.sql` contains seed inserts for:
 - `auth.users`, `auth.identities`, `public.users`, `public.workspaces`, `public.user_memberships`, `public.permission_policies`
 - `public.guardians`, `public.patients`, `public.patient_guardians`, `public.appointments`, `public.encounters`, `public.waiting_queue_entries`
 - `public.service_categories`, `public.service_items`, `public.service_item_prices`, `public.soap_notes`, `public.diagnoses`
-- `public.order_catalog_items`, `public.order_sets`, `public.order_set_items`
+- `public.order_catalog_items`, `public.order_sets`, `public.order_set_revisions`, `public.order_set_revision_items` (legacy `public.order_set_items` is read-only compatibility)
 - `public.lab_test_categories`, `public.lab_test_items`, `public.order_catalog_lab_test_item_links`
 - `public.order_groups`, `public.orders`, `public.order_events`, `public.order_fulfillment_work_items`
 - `public.invoices`, `public.invoice_lines`, `public.payments`, `public.billing_checkout_sessions`, `public.billing_checkout_session_invoices`, `public.payment_allocations`, `public.audit_events`
@@ -145,7 +145,7 @@ Remaining work is implementation adoption:
 - Add end-to-end demo flow tests that exercise login, reception, chart, fulfillment, lab result-sheet lookup, billing checkout, and audit readback.
 - Keep payment provider, receipt, refund, settlement, production accounting, and remote Supabase replay approval-gated and out of the seed contract.
 
-The readback SQL tracks `order_catalog_items`, `order_sets`, `order_set_items`, `order_fulfillment_work_items`, `lab_test_categories`, `lab_test_items`, `order_catalog_lab_test_item_links`, and billing checkout session family rows as baseline-required after Demo DB PR 5.
+The readback SQL tracks `order_catalog_items`, `order_sets`, `order_set_revisions`, `order_set_revision_items`, `order_fulfillment_work_items`, `lab_test_categories`, `lab_test_items`, `order_catalog_lab_test_item_links`, and billing checkout session family rows as baseline-required after Phase 1B-2. The legacy `order_set_items` table is retained only for SELECT compatibility and is not a seed authority.
 
 ## UI Adoption Status
 

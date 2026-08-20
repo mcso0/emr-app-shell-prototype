@@ -5,7 +5,13 @@ import {
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
 import { mockInvoiceLines, mockInvoices } from "@/mocks/emr-domain";
-import type { Invoice, InvoiceLine, InvoiceStatus } from "@/types/emr-domain";
+import type {
+  BillingCategory,
+  Invoice,
+  InvoiceLine,
+  InvoiceStatus,
+  ServiceItemType,
+} from "@/types/emr-domain";
 
 export type InvoiceLineEditInput = {
   confirmBilling?: boolean;
@@ -407,7 +413,9 @@ function mapPersistencePayload(
   if (!payload || !isPersistedInvoice(payload.invoice) || !Array.isArray(payload.lines)) {
     return { ok: false, status: 500, error: fallback };
   }
-  const lines = payload.lines.filter(isInvoiceLineSnapshot);
+  const lines = payload.lines
+    .map(mapInvoiceLineSnapshot)
+    .filter((line): line is InvoiceLine => line !== null);
   return { ok: true, invoice: payload.invoice, lines };
 }
 
@@ -427,15 +435,131 @@ function isPersistedInvoice(value: unknown): value is BillingPersistedInvoice {
   );
 }
 
-function isInvoiceLineSnapshot(value: unknown): value is BillingInvoiceLineSnapshot {
-  const line = value as Partial<BillingInvoiceLineSnapshot> | null;
-  return Boolean(
-    line &&
-    typeof line.id === "string" &&
-    typeof line.invoiceId === "string" &&
-    typeof line.description === "string" &&
-    typeof line.quantity === "number" &&
-    typeof line.unitPrice === "number" &&
-    typeof line.lineTotal === "number"
+function mapInvoiceLineSnapshot(value: unknown): BillingInvoiceLineSnapshot | null {
+  const line = value as Partial<BillingInvoiceLineSnapshot> & Record<string, unknown> | null;
+  if (!line) return null;
+
+  const id = readString(line, "id");
+  const invoiceId = readString(line, "invoiceId", "invoice_id");
+  const description = readString(line, "description");
+  const quantity = readNumber(line, "quantity");
+  const unitPrice = readNumber(line, "unitPrice", "unit_price");
+  const lineTotal = readNumber(line, "lineTotal", "line_total");
+  if (!id || !invoiceId || !description || quantity === undefined || unitPrice === undefined || lineTotal === undefined) {
+    return null;
+  }
+
+  const sourceOrderSnapshot = readRecord(line, "sourceOrderSnapshot", "source_order_snapshot");
+  const billingNameSnapshot =
+    readString(line, "billingNameSnapshot", "billing_name_snapshot") ??
+    readString(sourceOrderSnapshot, "billingNameSnapshot", "billing_name_snapshot");
+  const workspaceCatalogItemId =
+    readString(line, "workspaceCatalogItemId", "workspace_catalog_item_id") ??
+    readString(sourceOrderSnapshot, "workspaceCatalogItemId", "workspace_catalog_item_id");
+  const sourceMasterRecordId =
+    readString(line, "sourceMasterRecordId", "source_master_record_id") ??
+    readString(sourceOrderSnapshot, "sourceMasterRecordId", "source_master_record_id");
+  const sourceMasterRevision =
+    readNumber(line, "sourceMasterRevision", "source_master_revision") ??
+    readNumber(sourceOrderSnapshot, "sourceMasterRevision", "source_master_revision");
+  const workspaceCatalogRevision =
+    readNumber(line, "workspaceCatalogRevision", "workspace_catalog_revision") ??
+    readNumber(sourceOrderSnapshot, "workspaceCatalogRevision", "workspace_catalog_revision");
+  const rawCategoryGroup =
+    readString(line, "categoryGroup", "category_group") ??
+    readString(sourceOrderSnapshot, "categoryGroup", "category_group");
+  const categoryGroup = asCategoryGroup(rawCategoryGroup);
+  const billingCategory = asBillingCategory(
+    readString(line, "billingCategory", "billing_category") ??
+      readString(sourceOrderSnapshot, "billingCategory", "billing_category"),
+    rawCategoryGroup,
   );
+
+  return {
+    id,
+    invoiceId,
+    serviceItemId: readString(line, "serviceItemId", "service_item_id"),
+    ...(workspaceCatalogItemId ? { workspaceCatalogItemId } : {}),
+    ...(sourceMasterRecordId ? { sourceMasterRecordId } : {}),
+    ...(sourceMasterRevision !== undefined ? { sourceMasterRevision } : {}),
+    ...(workspaceCatalogRevision !== undefined ? { workspaceCatalogRevision } : {}),
+    ...(categoryGroup ? { categoryGroup } : {}),
+    ...(billingCategory ? { billingCategory } : {}),
+    ...(sourceOrderSnapshot ? { sourceOrderSnapshot } : {}),
+    ...(billingNameSnapshot ? { billingNameSnapshot } : {}),
+    orderId: readString(line, "orderId", "order_id"),
+    description,
+    quantity,
+    unitPrice,
+    lineTotal,
+  };
+}
+
+function readString(
+  value: Record<string, unknown> | undefined,
+  ...keys: string[]
+): string | undefined {
+  if (!value) return undefined;
+  for (const key of keys) {
+    const candidate = value[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate;
+  }
+  return undefined;
+}
+
+function readNumber(
+  value: Record<string, unknown> | undefined,
+  ...keys: string[]
+): number | undefined {
+  if (!value) return undefined;
+  for (const key of keys) {
+    const candidate = value[key];
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+function readRecord(
+  value: Record<string, unknown> | undefined,
+  ...keys: string[]
+): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  for (const key of keys) {
+    const candidate = value[key];
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+      return candidate as Record<string, unknown>;
+    }
+  }
+  return undefined;
+}
+
+function asCategoryGroup(value: string | undefined): ServiceItemType | undefined {
+  return value && [
+    "consultation",
+    "medication",
+    "treatment",
+    "lab",
+    "imaging",
+    "hospitalization",
+    "misc",
+  ].includes(value)
+    ? (value as ServiceItemType)
+    : undefined;
+}
+
+function asBillingCategory(
+  value: string | undefined,
+  categoryGroup?: string,
+): BillingCategory | undefined {
+  if (categoryGroup === "set") return "other";
+  return value && [
+    "consultation",
+    "laboratory",
+    "imaging",
+    "dispensing",
+    "treatment",
+    "other",
+  ].includes(value)
+    ? (value as BillingCategory)
+    : undefined;
 }

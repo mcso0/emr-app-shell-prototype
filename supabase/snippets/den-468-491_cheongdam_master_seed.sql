@@ -630,6 +630,9 @@ values
 on conflict (id) do update
 set service_item_id = excluded.service_item_id, price = excluded.price, currency = excluded.currency, effective_from = excluded.effective_from, effective_to = excluded.effective_to;
 
+-- Phase 1A-2 reviewed fallback mapping for synthetic catalog rows only.
+select private.clinical_master_seed_fallback_paths();
+
 insert into public.order_catalog_items (
   id,
   workspace_id,
@@ -689,74 +692,27 @@ set
   pricing_rule = excluded.pricing_rule,
   updated_at = now();
 
-insert into public.order_sets (
-  id,
-  workspace_id,
-  source_set_version,
-  set_category,
-  set_name,
-  billing_name,
-  availability_status,
-  amount_basis,
-  set_price_krw,
-  sales_unit,
-  billing_reflection_enabled,
-  target_species,
-  care_guide,
-  internal_instruction
-)
-values
-  ('cd-set-basic-checkup-dog', 'workspace-clair-cheongdam', 'cheongdam-v1', 'preventive', '강아지 기본 검진 세트', '강아지 기본 검진 세트', 'active', 'included_order_sum', 0, 'per_order', true, array['dog'], '검진 결과 설명 포함', '진찰 + CBC + 혈액화학 10종'),
-  ('cd-set-basic-checkup-cat', 'workspace-clair-cheongdam', 'cheongdam-v1', 'preventive', '고양이 기본 검진 세트', '고양이 기본 검진 세트', 'active', 'included_order_sum', 0, 'per_order', true, array['cat'], '고양이 스트레스 최소화', '진찰 + CBC + 혈액화학 10종'),
-  ('cd-set-vomit-initial', 'workspace-clair-cheongdam', 'cheongdam-v1', 'symptom', '구토/식욕부진 초기 평가 세트', '구토/식욕부진 초기 평가 세트', 'active', 'included_order_sum', 0, 'per_order', true, array['dog','cat'], '검사 필요성 보호자 설명', '진찰 + CBC + 복부 초음파')
-on conflict (id) do update
-set
-  source_set_version = excluded.source_set_version,
-  set_category = excluded.set_category,
-  set_name = excluded.set_name,
-  billing_name = excluded.billing_name,
-  availability_status = excluded.availability_status,
-  amount_basis = excluded.amount_basis,
-  set_price_krw = excluded.set_price_krw,
-  sales_unit = excluded.sales_unit,
-  billing_reflection_enabled = excluded.billing_reflection_enabled,
-  target_species = excluded.target_species,
-  care_guide = excluded.care_guide,
-  internal_instruction = excluded.internal_instruction,
-  updated_at = now();
-
-insert into public.order_set_items (
-  id,
-  workspace_id,
-  order_set_id,
-  child_order_id,
-  sort_order,
-  default_selected,
-  billing_reflection_default,
-  default_quantity,
-  quantity_source,
-  unit_price_snapshot_krw
-)
-values
-  ('cd-set-item-dog-001', 'workspace-clair-cheongdam', 'cd-set-basic-checkup-dog', 'cd-consult-first', 1, true, true, 1, 'fixed_one', 30000),
-  ('cd-set-item-dog-002', 'workspace-clair-cheongdam', 'cd-set-basic-checkup-dog', 'cd-lab-cbc', 2, true, true, 1, 'fixed_one', 35000),
-  ('cd-set-item-dog-003', 'workspace-clair-cheongdam', 'cd-set-basic-checkup-dog', 'cd-lab-chem10', 3, true, true, 1, 'fixed_one', 55000),
-  ('cd-set-item-cat-001', 'workspace-clair-cheongdam', 'cd-set-basic-checkup-cat', 'cd-consult-first', 1, true, true, 1, 'fixed_one', 30000),
-  ('cd-set-item-cat-002', 'workspace-clair-cheongdam', 'cd-set-basic-checkup-cat', 'cd-lab-cbc', 2, true, true, 1, 'fixed_one', 35000),
-  ('cd-set-item-cat-003', 'workspace-clair-cheongdam', 'cd-set-basic-checkup-cat', 'cd-lab-chem10', 3, true, true, 1, 'fixed_one', 55000),
-  ('cd-set-item-vomit-001', 'workspace-clair-cheongdam', 'cd-set-vomit-initial', 'cd-consult-first', 1, true, true, 1, 'fixed_one', 30000),
-  ('cd-set-item-vomit-002', 'workspace-clair-cheongdam', 'cd-set-vomit-initial', 'cd-lab-cbc', 2, true, true, 1, 'fixed_one', 35000),
-  ('cd-set-item-vomit-003', 'workspace-clair-cheongdam', 'cd-set-vomit-initial', 'cd-imaging-us-abdomen', 3, true, true, 1, 'fixed_one', 80000)
-on conflict (id) do update
-set
-  order_set_id = excluded.order_set_id,
-  child_order_id = excluded.child_order_id,
-  sort_order = excluded.sort_order,
-  default_selected = excluded.default_selected,
-  billing_reflection_default = excluded.billing_reflection_default,
-  default_quantity = excluded.default_quantity,
-  quantity_source = excluded.quantity_source,
-  unit_price_snapshot_krw = excluded.unit_price_snapshot_krw;
+select private.clair_seed_order_set_compatibility_projection(
+  'workspace-clair-cheongdam','cd-set-basic-checkup-dog',
+  jsonb_build_object('setCategory','preventive','setName','강아지 기본 검진 세트','billingName','강아지 기본 검진 세트','amountBasis','included_order_sum','setPriceKrw',null,'rangeBasis',null,'salesUnit','per_order','billingReflectionEnabled',false,'taxType','derived','targetSpecies',jsonb_build_array('dog'),'careGuide','검진 결과 설명 포함','internalInstruction','진찰 + CBC + 혈액화학 10종','items',jsonb_build_array(
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-consult-first','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',1,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-lab-cbc','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',2,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-lab-chem10','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',3,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one')
+  ),'priceRanges',jsonb_build_array()),'active','49110000-0000-4000-8000-000000000001'::uuid,private.clair_b2_deterministic_uuid('seed',array['workspace-clair-cheongdam','cd-set-basic-checkup-dog','2026-08-19']::text[]));
+select private.clair_seed_order_set_compatibility_projection(
+  'workspace-clair-cheongdam','cd-set-basic-checkup-cat',
+  jsonb_build_object('setCategory','preventive','setName','고양이 기본 검진 세트','billingName','고양이 기본 검진 세트','amountBasis','included_order_sum','setPriceKrw',null,'rangeBasis',null,'salesUnit','per_order','billingReflectionEnabled',false,'taxType','derived','targetSpecies',jsonb_build_array('cat'),'careGuide','고양이 스트레스 최소화','internalInstruction','진찰 + CBC + 혈액화학 10종','items',jsonb_build_array(
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-consult-first','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',1,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-lab-cbc','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',2,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-lab-chem10','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',3,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one')
+  ),'priceRanges',jsonb_build_array()),'active','49110000-0000-4000-8000-000000000001'::uuid,private.clair_b2_deterministic_uuid('seed',array['workspace-clair-cheongdam','cd-set-basic-checkup-cat','2026-08-19']::text[]));
+select private.clair_seed_order_set_compatibility_projection(
+  'workspace-clair-cheongdam','cd-set-vomit-initial',
+  jsonb_build_object('setCategory','symptom','setName','구토/식욕부진 초기 평가 세트','billingName','구토/식욕부진 초기 평가 세트','amountBasis','included_order_sum','setPriceKrw',null,'rangeBasis',null,'salesUnit','per_order','billingReflectionEnabled',false,'taxType','derived','targetSpecies',jsonb_build_array('dog','cat'),'careGuide','검사 필요성 보호자 설명','internalInstruction','진찰 + CBC + 복부 초음파','items',jsonb_build_array(
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-consult-first','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',1,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-lab-cbc','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',2,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+    jsonb_build_object('childKind','atomic','childOrderCatalogItemId','cd-imaging-us-abdomen','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',3,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one')
+  ),'priceRanges',jsonb_build_array()),'active','49110000-0000-4000-8000-000000000001'::uuid,private.clair_b2_deterministic_uuid('seed',array['workspace-clair-cheongdam','cd-set-vomit-initial','2026-08-19']::text[]));
 
 insert into public.consents (
   id,

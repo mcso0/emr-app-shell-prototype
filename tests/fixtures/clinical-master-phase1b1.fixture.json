@@ -1,0 +1,128 @@
+{
+  "releaseKey": "phase1b1-lab-fixture-v1",
+  "releaseNotes": "Synthetic Phase 1B-1 laboratory fixture.",
+  "publishedByLabel": "Phase 1B-1 synthetic fixture",
+  "records": [
+    {
+      "masterKey": "phase1b1.specimen.serum",
+      "recordType": "specimen_type",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "혈청" },
+        { "languageCode": "en", "nameKind": "preferred", "name": "Serum" }
+      ],
+      "source": { "sourceType": "synthetic", "title": "Phase 1B-1 fixture" },
+      "detail": { "specimenCode": "serum" }
+    },
+    {
+      "masterKey": "phase1b1.input.numeric",
+      "recordType": "result_input_type",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "숫자" },
+        { "languageCode": "en", "nameKind": "preferred", "name": "Numeric" }
+      ],
+      "source": { "sourceType": "synthetic", "title": "Phase 1B-1 fixture" },
+      "detail": { "inputCode": "numeric", "valueKind": "numeric", "supportsUnit": true }
+    },
+    {
+      "masterKey": "phase1b1.input.text",
+      "recordType": "result_input_type",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "텍스트" },
+        { "languageCode": "en", "nameKind": "preferred", "name": "Text" }
+      ],
+      "source": { "sourceType": "synthetic", "title": "Phase 1B-1 fixture" },
+      "detail": { "inputCode": "text", "valueKind": "text", "supportsUnit": false }
+    },
+    {
+      "masterKey": "phase1b1.unit.mgdl",
+      "recordType": "unit",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "밀리그램/데시리터" },
+        { "languageCode": "en", "nameKind": "preferred", "name": "mg/dL" }
+      ],
+      "source": { "sourceType": "synthetic", "title": "Phase 1B-1 fixture" },
+      "detail": { "unitCode": "mg/dL", "symbol": "mg/dL", "decimalScale": 1 }
+    },
+    {
+      "masterKey": "phase1b1.test.glucose",
+      "recordType": "lab_test",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "혈당" },
+        { "languageCode": "en", "nameKind": "preferred", "name": "Glucose" }
+      ],
+      "source": { "sourceType": "synthetic", "title": "Phase 1B-1 fixture" },
+      "detail": {
+        "testCode": "GLU",
+        "resultInputTypeKey": "phase1b1.input.numeric",
+        "canonicalUnitKey": "phase1b1.unit.mgdl",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "phase1b1.test.protein",
+      "recordType": "lab_test",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "단백질 메모" },
+        { "languageCode": "en", "nameKind": "preferred", "name": "Protein note" }
+      ],
+      "source": { "sourceType": "synthetic", "title": "Phase 1B-1 fixture" },
+      "detail": {
+        "testCode": "PROT_NOTE",
+        "resultInputTypeKey": "phase1b1.input.text",
+        "canonicalUnitKey": null,
+        "decimalScale": null
+      }
+    },
+    {
+      "masterKey": "phase1b1.panel.metabolic",
+      "recordType": "lab_panel",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "기초 혈액검사" },
+        { "languageCode": "en", "nameKind": "preferred", "name": "Basic Metabolic" }
+      ],
+      "source": { "sourceType": "synthetic", "title": "Phase 1B-1 fixture" },
+      "detail": { "panelCode": "BMP" }
+    },
+    {
+      "masterKey": "phase1b1.order.metabolic",
+      "recordType": "order",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "기초 혈액검사" },
+        { "languageCode": "en", "nameKind": "preferred", "name": "Basic Metabolic Panel" }
+      ],
+      "source": { "sourceType": "synthetic", "title": "Phase 1B-1 fixture" },
+      "detail": {
+        "classificationPathKey": "phase1a2.fallback.path.lab",
+        "defaultSalesUnitCode": "EA",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": ["dog"]
+      }
+    }
+  ],
+  "classificationPaths": [],
+  "labPanelItems": [
+    {
+      "panelMasterKey": "phase1b1.panel.metabolic",
+      "testMasterKey": "phase1b1.test.glucose",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "chemistry"
+    },
+    {
+      "panelMasterKey": "phase1b1.panel.metabolic",
+      "testMasterKey": "phase1b1.test.protein",
+      "sortOrder": 1,
+      "required": false,
+      "displayGroup": "chemistry"
+    }
+  ],
+  "labOrderProfiles": [
+    {
+      "orderMasterKey": "phase1b1.order.metabolic",
+      "labPanelMasterKey": "phase1b1.panel.metabolic",
+      "labTestMasterKey": null,
+      "specimenMasterKey": "phase1b1.specimen.serum"
+    }
+  ]
+}

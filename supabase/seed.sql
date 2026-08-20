@@ -948,6 +948,124 @@ set
 -- prices so chart search and hospital-admin catalog reads can prove DB-backed
 -- catalog/set presence without UI rewiring.
 
+-- Phase 1A-2 synthetic reviewed fallback paths. This explicit
+-- category-to-reviewed-path mapping is for these seed rows only.
+select private.clinical_master_seed_fallback_paths();
+
+-- B2 reset/replay ownership: keep the second-workspace fixture native to this
+-- seed file. Supabase batch seeding executes SQL rather than psql meta-commands,
+-- so this deliberately calls the same trusted adapter as the standalone
+-- Cheongdam snippet without importing that snippet or creating a second writer.
+insert into public.order_catalog_items (
+  id,
+  workspace_id,
+  standard_order_id,
+  source_preset_version,
+  category_group,
+  category_label,
+  standard_order_name,
+  in_hospital_order_name,
+  billing_name,
+  aliases,
+  availability_status,
+  price_krw,
+  sales_unit,
+  target_species,
+  default_destination_module,
+  default_task_required,
+  billing_reflection_enabled,
+  care_guide,
+  internal_instruction,
+  tax_included,
+  pricing_rule
+)
+values (
+  'cd-consult-first',
+  'workspace-clair-cheongdam',
+  'std-consult-first',
+  'cheongdam-v1',
+  'consultation',
+  '진찰',
+  '초진 진찰',
+  '초진 진찰',
+  '초진 진찰료',
+  array['초진', '진찰'],
+  'active',
+  30000,
+  'per_order',
+  array['dog', 'cat'],
+  'chart_only',
+  false,
+  true,
+  null,
+  '초진 문진 항목 확인',
+  true,
+  '{"priceBasis":"fixed"}'::jsonb
+)
+on conflict (id) do update
+set
+  workspace_id = excluded.workspace_id,
+  standard_order_id = excluded.standard_order_id,
+  source_preset_version = excluded.source_preset_version,
+  category_group = excluded.category_group,
+  category_label = excluded.category_label,
+  standard_order_name = excluded.standard_order_name,
+  in_hospital_order_name = excluded.in_hospital_order_name,
+  billing_name = excluded.billing_name,
+  aliases = excluded.aliases,
+  availability_status = excluded.availability_status,
+  price_krw = excluded.price_krw,
+  sales_unit = excluded.sales_unit,
+  target_species = excluded.target_species,
+  default_destination_module = excluded.default_destination_module,
+  default_task_required = excluded.default_task_required,
+  billing_reflection_enabled = excluded.billing_reflection_enabled,
+  care_guide = excluded.care_guide,
+  internal_instruction = excluded.internal_instruction,
+  tax_included = excluded.tax_included,
+  pricing_rule = excluded.pricing_rule,
+  updated_at = now();
+
+select private.clair_seed_order_set_compatibility_projection(
+  'workspace-clair-cheongdam',
+  'b2-seed-cheongdam',
+  jsonb_build_object(
+    'setCategory', 'B2 reset fixture',
+    'setName', 'B2 reset Cheongdam consultation',
+    'billingName', 'B2 reset Cheongdam consultation billing',
+    'amountBasis', 'included_order_sum',
+    'setPriceKrw', null,
+    'rangeBasis', null,
+    'salesUnit', 'per_order',
+    'billingReflectionEnabled', false,
+    'taxType', 'derived',
+    'targetSpecies', jsonb_build_array('dog', 'cat'),
+    'careGuide', null,
+    'internalInstruction', null,
+    'items', jsonb_build_array(
+      jsonb_build_object(
+        'childKind', 'atomic',
+        'childOrderCatalogItemId', 'cd-consult-first',
+        'childOrderCatalogRevision', 1,
+        'childOrderSetId', null,
+        'childSetRevisionId', null,
+        'sortOrder', 1,
+        'defaultSelected', true,
+        'billingReflectionDefault', true,
+        'defaultQuantity', 1,
+        'quantitySource', 'fixed_one'
+      )
+    ),
+    'priceRanges', jsonb_build_array()
+  ),
+  'active',
+  '49110000-0000-4000-8000-000000000001'::uuid,
+  private.clair_b2_deterministic_uuid(
+    'seed',
+    array['workspace-clair-cheongdam', 'b2-seed-cheongdam', '2026-08-20']::text[]
+  )
+);
+
 insert into public.order_catalog_items (
   id,
   workspace_id,
@@ -1102,69 +1220,40 @@ set
   sort_order = excluded.sort_order,
   snapshot_metadata = excluded.snapshot_metadata;
 
-insert into public.order_sets (
-  id,
-  workspace_id,
-  source_set_version,
-  set_category,
-  set_name,
-  billing_name,
-  availability_status,
-  amount_basis,
-  set_price_krw,
-  sales_unit,
-  billing_reflection_enabled,
-  target_species,
-  care_guide,
-  internal_instruction
-)
-values
-  ('den194-set-kong-vomit-compact', 'clair-demo', 'demo-db-pr-002', 'DEN-194 outpatient compact set', 'DEN-194 Kong vomiting compact set', 'DEN-194 Kong vomiting compact set billing', 'active', 'included_order_sum', 0, 'per_each', true, array['dog', 'cat', 'other'], 'Synthetic compact set for Kong vomiting outpatient demo.', 'Expands CBC, ultrasound, fluid therapy, and dispensing catalog rows.'),
-  ('den194-set-mango-wellness-compact', 'clair-demo', 'demo-db-pr-002', 'DEN-194 wellness compact set', 'DEN-194 Mango wellness compact set', 'DEN-194 Mango wellness compact set billing', 'active', 'included_order_sum', 0, 'per_each', true, array['dog'], 'Synthetic compact set for Mango wellness/preventive demo.', 'Expands the synthetic wellness vaccine catalog row.')
-on conflict (id) do update
-set
-  source_set_version = excluded.source_set_version,
-  set_category = excluded.set_category,
-  set_name = excluded.set_name,
-  billing_name = excluded.billing_name,
-  availability_status = excluded.availability_status,
-  amount_basis = excluded.amount_basis,
-  set_price_krw = excluded.set_price_krw,
-  sales_unit = excluded.sales_unit,
-  billing_reflection_enabled = excluded.billing_reflection_enabled,
-  target_species = excluded.target_species,
-  care_guide = excluded.care_guide,
-  internal_instruction = excluded.internal_instruction,
-  updated_at = now();
-
-insert into public.order_set_items (
-  id,
-  workspace_id,
-  order_set_id,
-  child_order_id,
-  sort_order,
-  default_selected,
-  billing_reflection_default,
-  default_quantity,
-  quantity_source,
-  unit_price_snapshot_krw
-)
-values
-  ('den194-setitem-kong-cbc', 'clair-demo', 'den194-set-kong-vomit-compact', 'den194-catalog-cbc', 10, true, true, 1, 'fixed_one', 35000),
-  ('den194-setitem-kong-ultrasound', 'clair-demo', 'den194-set-kong-vomit-compact', 'den194-catalog-abdomen-ultrasound', 20, true, true, 1, 'fixed_one', 65000),
-  ('den194-setitem-kong-fluid', 'clair-demo', 'den194-set-kong-vomit-compact', 'den194-catalog-fluid-therapy', 30, true, true, 1, 'fixed_one', 28000),
-  ('den194-setitem-kong-maropitant', 'clair-demo', 'den194-set-kong-vomit-compact', 'den194-catalog-maropitant', 40, true, true, 1, 'fixed_one', 28500),
-  ('den194-setitem-mango-vaccine', 'clair-demo', 'den194-set-mango-wellness-compact', 'den194-catalog-wellness-vaccine', 10, true, true, 1, 'fixed_one', 45000)
-on conflict (id) do update
-set
-  order_set_id = excluded.order_set_id,
-  child_order_id = excluded.child_order_id,
-  sort_order = excluded.sort_order,
-  default_selected = excluded.default_selected,
-  billing_reflection_default = excluded.billing_reflection_default,
-  default_quantity = excluded.default_quantity,
-  quantity_source = excluded.quantity_source,
-  unit_price_snapshot_krw = excluded.unit_price_snapshot_krw;
+select private.clair_seed_order_set_compatibility_projection(
+  'clair-demo',
+  'den194-set-kong-vomit-compact',
+  jsonb_build_object(
+    'setCategory','DEN-194 outpatient compact set',
+    'setName','DEN-194 Kong vomiting compact set',
+    'billingName','DEN-194 Kong vomiting compact set billing',
+    'amountBasis','included_order_sum','setPriceKrw',null,'rangeBasis',null,
+    'salesUnit','per_each','billingReflectionEnabled',false,'taxType','derived',
+    'targetSpecies',jsonb_build_array('dog','cat','other'),'careGuide','Synthetic compact set for Kong vomiting outpatient demo.',
+    'internalInstruction','Expands CBC, ultrasound, fluid therapy, and dispensing catalog rows.',
+    'items',jsonb_build_array(
+      jsonb_build_object('childKind','atomic','childOrderCatalogItemId','den194-catalog-cbc','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',10,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+      jsonb_build_object('childKind','atomic','childOrderCatalogItemId','den194-catalog-abdomen-ultrasound','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',20,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+      jsonb_build_object('childKind','atomic','childOrderCatalogItemId','den194-catalog-fluid-therapy','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',30,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one'),
+      jsonb_build_object('childKind','atomic','childOrderCatalogItemId','den194-catalog-maropitant','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',40,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one')
+    ),'priceRanges',jsonb_build_array()
+  ),
+  'active','00000000-0000-4000-8000-000000000001'::uuid,
+  private.clair_b2_deterministic_uuid('seed',array['clair-demo','den194-set-kong-vomit-compact','2026-08-19']::text[])
+);
+select private.clair_seed_order_set_compatibility_projection(
+  'clair-demo',
+  'den194-set-mango-wellness-compact',
+  jsonb_build_object(
+    'setCategory','DEN-194 wellness compact set','setName','DEN-194 Mango wellness compact set','billingName','DEN-194 Mango wellness compact set billing',
+    'amountBasis','included_order_sum','setPriceKrw',null,'rangeBasis',null,'salesUnit','per_each','billingReflectionEnabled',false,'taxType','derived',
+    'targetSpecies',jsonb_build_array('dog'),'careGuide','Synthetic compact set for Mango wellness/preventive demo.','internalInstruction','Expands the synthetic wellness vaccine catalog row.',
+    'items',jsonb_build_array(jsonb_build_object('childKind','atomic','childOrderCatalogItemId','den194-catalog-wellness-vaccine','childOrderCatalogRevision',1,'childOrderSetId',null,'childSetRevisionId',null,'sortOrder',10,'defaultSelected',true,'billingReflectionDefault',true,'defaultQuantity',1,'quantitySource','fixed_one')),
+    'priceRanges',jsonb_build_array()
+  ),
+  'active','00000000-0000-4000-8000-000000000001'::uuid,
+  private.clair_b2_deterministic_uuid('seed',array['clair-demo','den194-set-mango-wellness-compact','2026-08-19']::text[])
+);
 
 insert into public.soap_notes (
   id,

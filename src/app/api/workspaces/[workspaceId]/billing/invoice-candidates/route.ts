@@ -117,7 +117,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const result = await syncInvoiceCandidates({
     actorUserId: identity.actorUserId,
     workspaceId,
-    input: { ...input, encounterId: resolvedEncounter.encounterId },
+    input: {
+      ...input,
+      encounterId: resolvedEncounter.encounterId,
+      surface: "direct",
+    },
     permissionAdapter,
     gateway: client
       ? createSupabaseInvoiceCandidateSyncGateway(

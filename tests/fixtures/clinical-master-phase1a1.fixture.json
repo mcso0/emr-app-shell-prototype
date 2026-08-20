@@ -1,0 +1,196 @@
+{
+  "releaseKey": "phase-1a-1-synthetic-v1",
+  "releaseNotes": "Phase 1A-1 local synthetic fixture; non-authoritative.",
+  "publishedByLabel": "Luna Max local fixture",
+  "records": [
+    {
+      "masterKey": "fixture.category.x.clinical",
+      "recordType": "order_category",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "진료" }, { "languageCode": "en", "nameKind": "preferred", "name": "Clinical Care" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "categoryCode": "X_CLINICAL", "categoryLevel": "X", "sortOrder": 10 }
+    },
+    {
+      "masterKey": "fixture.category.t.general",
+      "recordType": "order_category",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "일반 진료" }, { "languageCode": "en", "nameKind": "preferred", "name": "General Care" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "categoryCode": "T_GENERAL", "categoryLevel": "T", "parentMasterKey": "fixture.category.x.clinical", "sortOrder": 10 }
+    },
+    {
+      "masterKey": "fixture.action.consultation",
+      "recordType": "clinical_action",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "진료 상담" }, { "languageCode": "en", "nameKind": "preferred", "name": "Consultation" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "tCategoryKey": "fixture.category.t.general", "itemType": "consultation", "isOtherUnclassified": false }
+    },
+    {
+      "masterKey": "fixture.action.consultation.other",
+      "recordType": "clinical_action",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "진료 상담 기타" }, { "languageCode": "en", "nameKind": "preferred", "name": "Other Consultation" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "tCategoryKey": "fixture.category.t.general", "itemType": "consultation", "isOtherUnclassified": true }
+    },
+    {
+      "masterKey": "fixture.chart-group.consultation",
+      "recordType": "chart_group",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "상담" }, { "languageCode": "en", "nameKind": "preferred", "name": "Consultation" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "groupCode": "CG_CONSULTATION", "sortOrder": 10 }
+    },
+    {
+      "masterKey": "fixture.chart-group.prevention",
+      "recordType": "chart_group",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "예방" }, { "languageCode": "en", "nameKind": "preferred", "name": "Prevention" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "groupCode": "CG_PREVENTION", "sortOrder": 20 }
+    },
+    {
+      "masterKey": "fixture.chart-group.exam",
+      "recordType": "chart_group",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "검사" }, { "languageCode": "en", "nameKind": "preferred", "name": "Exam" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "groupCode": "CG_EXAM", "sortOrder": 30 }
+    },
+    {
+      "masterKey": "fixture.chart-group.procedure",
+      "recordType": "chart_group",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "처치" }, { "languageCode": "en", "nameKind": "preferred", "name": "Procedure" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "groupCode": "CG_PROCEDURE", "sortOrder": 40 }
+    },
+    {
+      "masterKey": "fixture.chart-group.surgery",
+      "recordType": "chart_group",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "수술" }, { "languageCode": "en", "nameKind": "preferred", "name": "Surgery" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "groupCode": "CG_SURGERY", "sortOrder": 50 }
+    },
+    {
+      "masterKey": "fixture.chart-group.inpatient",
+      "recordType": "chart_group",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "입원" }, { "languageCode": "en", "nameKind": "preferred", "name": "Inpatient" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "groupCode": "CG_INPATIENT", "sortOrder": 60 }
+    },
+    {
+      "masterKey": "fixture.chart-group.therapy",
+      "recordType": "chart_group",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "치료" }, { "languageCode": "en", "nameKind": "preferred", "name": "Therapy" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "groupCode": "CG_THERAPY", "sortOrder": 70 }
+    },
+    {
+      "masterKey": "fixture.chart-group.medication-supply",
+      "recordType": "chart_group",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "약품 및 소모품" }, { "languageCode": "en", "nameKind": "preferred", "name": "Medication Supply" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "groupCode": "CG_MEDICATION_SUPPLY", "sortOrder": 80 }
+    },
+    {
+      "masterKey": "fixture.task-route.lab",
+      "recordType": "task_route",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "검사실" }, { "languageCode": "en", "nameKind": "preferred", "name": "Laboratory" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "routeCode": "NT_LAB", "destinationModule": "lab", "taskRequired": true, "runtimeStatus": "active" }
+    },
+    {
+      "masterKey": "fixture.task-route.imaging",
+      "recordType": "task_route",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "영상실" }, { "languageCode": "en", "nameKind": "preferred", "name": "Imaging" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "routeCode": "NT_IMAGING", "destinationModule": "imaging", "taskRequired": true, "runtimeStatus": "active" }
+    },
+    {
+      "masterKey": "fixture.task-route.dispensing",
+      "recordType": "task_route",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "조제실" }, { "languageCode": "en", "nameKind": "preferred", "name": "Dispensing" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "routeCode": "NT_DISPENSING", "destinationModule": "dispensing", "taskRequired": true, "runtimeStatus": "active" }
+    },
+    {
+      "masterKey": "fixture.task-route.treatment",
+      "recordType": "task_route",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "처치실" }, { "languageCode": "en", "nameKind": "preferred", "name": "Treatment" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "routeCode": "NT_TREATMENT", "destinationModule": "treatment", "taskRequired": true, "runtimeStatus": "active" }
+    },
+    {
+      "masterKey": "fixture.task-route.inpatient",
+      "recordType": "task_route",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "입원실" }, { "languageCode": "en", "nameKind": "preferred", "name": "Inpatient" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "routeCode": "NT_INPATIENT", "destinationModule": "inpatient", "taskRequired": true, "runtimeStatus": "held" }
+    },
+    {
+      "masterKey": "fixture.task-route.billing-only",
+      "recordType": "task_route",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "수납 전용" }, { "languageCode": "en", "nameKind": "preferred", "name": "Billing Only" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "routeCode": "NT_BILLING_ONLY", "destinationModule": "billing_only", "taskRequired": false, "runtimeStatus": "active" }
+    },
+    {
+      "masterKey": "fixture.task-route.chart-only",
+      "recordType": "task_route",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "차팅 전용" }, { "languageCode": "en", "nameKind": "preferred", "name": "Chart Only" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "routeCode": "NT_CHART_ONLY", "destinationModule": "chart_only", "taskRequired": false, "runtimeStatus": "active" }
+    },
+    {
+      "masterKey": "fixture.species.dog",
+      "recordType": "species",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "개" }, { "languageCode": "en", "nameKind": "preferred", "name": "Dog" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "speciesCode": "dog" }
+    },
+    {
+      "masterKey": "fixture.species.cat",
+      "recordType": "species",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "고양이" }, { "languageCode": "en", "nameKind": "preferred", "name": "Cat" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "speciesCode": "cat" }
+    },
+    {
+      "masterKey": "fixture.unit.each",
+      "recordType": "unit",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "개" }, { "languageCode": "en", "nameKind": "preferred", "name": "Each" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "unitCode": "EA", "symbol": "ea", "decimalScale": 0 }
+    },
+    {
+      "masterKey": "fixture.specimen.blood",
+      "recordType": "specimen_type",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "혈액" }, { "languageCode": "en", "nameKind": "preferred", "name": "Blood" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "specimenCode": "BLOOD" }
+    },
+    {
+      "masterKey": "fixture.result-input.numeric",
+      "recordType": "result_input_type",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "수치" }, { "languageCode": "en", "nameKind": "preferred", "name": "Numeric" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "inputCode": "NUMERIC", "valueKind": "numeric", "supportsUnit": true }
+    },
+    {
+      "masterKey": "fixture.order.consultation",
+      "recordType": "order",
+      "names": [{ "languageCode": "ko", "nameKind": "preferred", "name": "초진 상담" }, { "languageCode": "en", "nameKind": "preferred", "name": "Initial Consultation" }],
+      "source": { "sourceType": "synthetic", "title": "Phase 1A-1 local synthetic fixture", "sourceVersion": "fixture-v1" },
+      "detail": { "classificationPathKey": "fixture.path.consultation", "defaultSalesUnitCode": "EA", "defaultBillingReflectionEnabled": true, "defaultQuantity": 1, "species": ["dog", "cat"] }
+    }
+  ],
+  "classificationPaths": [
+    {
+      "pathKey": "fixture.path.consultation",
+      "clinicalActionKey": "fixture.action.consultation",
+      "chartGroupKey": "fixture.chart-group.exam",
+      "taskRouteKey": "fixture.task-route.lab"
+    },
+    {
+      "pathKey": "fixture.path.consultation.other",
+      "clinicalActionKey": "fixture.action.consultation.other",
+      "chartGroupKey": "fixture.chart-group.consultation",
+      "taskRouteKey": "fixture.task-route.chart-only"
+    }
+  ]
+}

@@ -3,6 +3,13 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
+  mockEncounters,
+  mockInvoiceLines,
+  mockInvoices,
+  mockOrders,
+} from "../src/mocks/emr-domain";
+import type { EmrOrder } from "../src/types/emr-domain";
+import {
   createMockInvoiceCandidateSyncGateway,
   createSupabaseInvoiceCandidateSyncGateway,
   syncInvoiceCandidates,
@@ -24,11 +31,54 @@ const den329Migration = existsSync(den329MigrationPath)
 const routePath =
   "src/app/api/workspaces/[workspaceId]/billing/invoice-candidates/route.ts";
 const routeSource = existsSync(routePath) ? readFileSync(routePath, "utf8") : "";
+const a3Migration = readFileSync(
+  "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
+  "utf8",
+);
 
 const validSyncInput = {
   encounterId,
   orderIds: [orderId],
 };
+
+function buildPersistedOrder(
+  id: string,
+  appliedSnapshot: Record<string, unknown>,
+  overrides: Partial<EmrOrder> = {},
+): EmrOrder {
+  const template = mockOrders.find((order) => order.id === orderId);
+  if (!template) throw new Error("missing persisted-order template");
+  const snapshotPrice = appliedSnapshot.priceKrw;
+  return {
+    ...template,
+    ...overrides,
+    id,
+    displayName:
+      typeof appliedSnapshot.displayName === "string"
+        ? appliedSnapshot.displayName
+        : overrides.displayName ?? template.displayName,
+    appliedSnapshot: { ...appliedSnapshot, orderId: id },
+    unitPriceSnapshot:
+      snapshotPrice === null || typeof snapshotPrice === "number"
+        ? snapshotPrice
+        : template.unitPriceSnapshot,
+  };
+}
+
+function createPersistedBillingGateway(
+  orders: EmrOrder[],
+  now: () => string,
+) {
+  return createMockInvoiceCandidateSyncGateway(
+    {
+      encounters: mockEncounters,
+      invoiceLines: mockInvoiceLines,
+      invoices: mockInvoices,
+      orders,
+    },
+    now,
+  );
+}
 
 test("invoice candidate route requires an actor, syncs selected orders, and guards duplicates", async ({
   request,
@@ -107,7 +157,7 @@ test("invoice candidate route requires an actor, syncs selected orders, and guar
   ).toBe(true);
 });
 
-test("invoice candidate public route ignores client-submitted billing snapshots", async ({
+test("invoice candidate public route rejects an unavailable order", async ({
   request,
 }) => {
   const attackerOrderId = "client-only-order-snapshot-den-298";
@@ -118,16 +168,6 @@ test("invoice candidate public route ignores client-submitted billing snapshots"
       data: {
         encounterId,
         orderIds: [attackerOrderId],
-        orderSnapshots: [
-          {
-            billingName: "클라이언트 조작 청구명",
-            billingReflectionEnabled: true,
-            lineTotalSnapshot: 999999,
-            orderId: attackerOrderId,
-            priceKrw: 999999,
-            quantity: 1,
-          },
-        ],
       },
       headers: { "x-clair-demo-session-user-id": "user-tech" },
     },
@@ -231,10 +271,6 @@ test("invoice candidate core uses server-side amount snapshots and rejects unava
 });
 
 test("invoice candidate core uses catalog applied snapshots, guards duplicates, and skips non-billable rows", async () => {
-  const gateway = createMockInvoiceCandidateSyncGateway(
-    undefined,
-    () => "2026-05-26T14:20:00.000Z",
-  );
   const catalogOrderId = "catalog-billing-only-den-288";
   const snapshot = {
     billingName: "진료 상담료",
@@ -249,21 +285,36 @@ test("invoice candidate core uses catalog applied snapshots, guards duplicates, 
     standardOrderName: "일반 진료 상담",
     taskRequired: false,
   };
+  const persistedSnapshot = {
+    ...snapshot,
+    billingCategory: "consultation",
+    categoryGroup: "consultation",
+    rowType: "individual",
+    workspaceCatalogItemId: "persisted-catalog-consultation",
+  };
+  const gateway = createPersistedBillingGateway(
+    [
+      buildPersistedOrder(catalogOrderId, persistedSnapshot, {
+        workspaceCatalogItemId: "persisted-catalog-consultation",
+      }),
+      buildPersistedOrder("catalog-non-billable-den-288", {
+        ...persistedSnapshot,
+        billingReflectionEnabled: false,
+      }),
+    ],
+    () => "2026-05-26T14:20:00.000Z",
+  );
 
   const first = await gateway.syncInvoiceCandidates({
     actorUserId: "user-tech",
     encounterId,
     orderIds: [catalogOrderId],
-    orderSnapshots: [snapshot],
     workspaceId,
   });
   const second = await gateway.syncInvoiceCandidates({
     actorUserId: "user-tech",
     encounterId,
     orderIds: [catalogOrderId],
-    orderSnapshots: [
-      { ...snapshot, priceKrw: 99000, lineTotalSnapshot: 99000 },
-    ],
     workspaceId,
   });
   const readBack = await gateway.listInvoiceCandidates({
@@ -308,16 +359,175 @@ test("invoice candidate core uses catalog applied snapshots, guards duplicates, 
     actorUserId: "user-tech",
     encounterId,
     orderIds: ["catalog-non-billable-den-288"],
-    orderSnapshots: [
-      {
-        ...snapshot,
-        billingReflectionEnabled: false,
-        orderId: "catalog-non-billable-den-288",
-      },
-    ],
     workspaceId,
   });
   expect(nonBillable).toMatchObject({ ok: true, candidates: [] });
+});
+
+test("invoice candidate mock rejects an unavailable order without a persisted row", async () => {
+  const gateway = createMockInvoiceCandidateSyncGateway(
+    undefined,
+    () => "2026-08-20T05:00:00.000Z",
+  );
+  const result = await gateway.syncInvoiceCandidates({
+    actorUserId: "user-vet",
+    encounterId,
+    orderIds: ["caller-only-billing-order"],
+    workspaceId,
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "order_unavailable",
+  });
+});
+
+test("B3 billing keeps fixed/range parent-once and sum child-only parity from frozen snapshots", async () => {
+  const fixedParentId = "b3-fixed-parent";
+  const fixedExtraId = "b3-fixed-extra";
+  const sumParentId = "b3-sum-parent";
+  const sumChildId = "b3-sum-child";
+  const rangeParentId = "b3-range-parent";
+  const rangeExtraId = "b3-range-extra";
+  const persistedOrders = [
+    buildPersistedOrder(fixedParentId, {
+      amountBasis: "set_fixed_price",
+      billingCategory: "other",
+      billingName: "Frozen fixed parent",
+      billingReflectionEnabled: true,
+      categoryGroup: "set",
+      displayName: "Frozen fixed parent",
+      lineTotalSnapshot: 0,
+      priceKrw: 0,
+      quantity: 1,
+      rowType: "set",
+    }),
+    buildPersistedOrder(fixedExtraId, {
+      amountBasis: "set_fixed_price",
+      billingName: "Frozen fixed extra",
+      billingReflectionEnabled: true,
+      categoryGroup: "treatment",
+      displayName: "Frozen fixed extra",
+      lineTotalSnapshot: 1200,
+      priceKrw: 1200,
+      quantity: 1,
+      rowType: "set_child",
+    }),
+    buildPersistedOrder(sumParentId, {
+      amountBasis: "included_order_sum",
+      billingName: "Frozen sum parent",
+      billingReflectionEnabled: false,
+      categoryGroup: "set",
+      displayName: "Frozen sum parent",
+      lineTotalSnapshot: null,
+      priceKrw: null,
+      quantity: 1,
+      rowType: "set",
+    }),
+    buildPersistedOrder(sumChildId, {
+      amountBasis: "included_order_sum",
+      billingName: "Frozen sum child",
+      billingReflectionEnabled: true,
+      categoryGroup: "treatment",
+      displayName: "Frozen sum child",
+      lineTotalSnapshot: 2400,
+      priceKrw: 2400,
+      quantity: 1,
+      rowType: "set_child",
+    }),
+    buildPersistedOrder(rangeParentId, {
+      amountBasis: "range_price",
+      billingCategory: "other",
+      billingName: "Frozen range parent",
+      billingReflectionEnabled: true,
+      categoryGroup: "set",
+      displayName: "Frozen range parent",
+      lineTotalSnapshot: 5000,
+      priceKrw: 5000,
+      quantity: 1,
+      rangeBasis: "patient_weight_kg",
+      rangeInput: 5,
+      roundingResultKrw: 5000,
+      rowType: "set",
+    }),
+    buildPersistedOrder(rangeExtraId, {
+      amountBasis: "range_price",
+      billingName: "Frozen range extra",
+      billingReflectionEnabled: true,
+      categoryGroup: "treatment",
+      displayName: "Frozen range extra",
+      lineTotalSnapshot: 700,
+      priceKrw: 700,
+      quantity: 1,
+      rowType: "set_child",
+      roundingResultKrw: 700,
+    }),
+  ];
+  const gateway = createPersistedBillingGateway(
+    persistedOrders,
+    () => "2026-08-20T05:00:00.000Z",
+  );
+  const fixed = await gateway.syncInvoiceCandidates({
+    actorUserId: "user-vet",
+    encounterId,
+    orderIds: [fixedParentId, fixedExtraId],
+    surface: "chart",
+    workspaceId,
+  });
+  expect(fixed).toMatchObject({
+    ok: true,
+    candidates: [
+      expect.objectContaining({
+        orderId: fixedParentId,
+        billingCategory: "other",
+        lineTotal: 0,
+      }),
+      expect.objectContaining({ orderId: fixedExtraId, lineTotal: 1200 }),
+    ],
+  });
+
+  const retry = await gateway.syncInvoiceCandidates({
+    actorUserId: "user-vet",
+    encounterId,
+    orderIds: [fixedParentId, fixedExtraId],
+    surface: "chart",
+    workspaceId,
+  });
+  expect(retry).toMatchObject({
+    ok: true,
+    candidates: [
+      expect.objectContaining({ orderId: fixedParentId, lineTotal: 0 }),
+      expect.objectContaining({ orderId: fixedExtraId, lineTotal: 1200 }),
+    ],
+  });
+
+  const sum = await gateway.syncInvoiceCandidates({
+    actorUserId: "user-vet",
+    encounterId,
+    orderIds: [sumParentId, sumChildId],
+    surface: "chart",
+    workspaceId,
+  });
+  expect(sum).toMatchObject({
+    ok: true,
+    candidates: [expect.objectContaining({ orderId: "b3-sum-child", lineTotal: 2400 })],
+  });
+
+  const range = await gateway.syncInvoiceCandidates({
+    actorUserId: "user-vet",
+    encounterId,
+    orderIds: [rangeParentId, rangeExtraId],
+    surface: "chart",
+    workspaceId,
+  });
+  expect(range).toMatchObject({
+    ok: true,
+    candidates: [
+      expect.objectContaining({ orderId: "b3-range-parent", lineTotal: 5000 }),
+      expect.objectContaining({ orderId: "b3-range-extra", lineTotal: 700 }),
+    ],
+  });
 });
 
 test("invoice candidate core allows re-requested orders to advance without completing task status", async () => {
@@ -392,9 +602,7 @@ test("invoice candidate route resolves staging demo encounter aliases before Sup
   expect(routeSource).toContain(
     "encounterId: resolvedEncounter.encounterId",
   );
-  expect(routeSource).toContain(
-    "input: { ...input, encounterId: resolvedEncounter.encounterId }",
-  );
+  expect(routeSource).toContain('surface: "direct"');
 });
 
 test("invoice candidate sync migration defines local-first RPC boundary without secrets", () => {
@@ -417,6 +625,23 @@ test("invoice candidate sync migration defines local-first RPC boundary without 
   expect(migration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
   );
+});
+
+test("A3 billing wrappers keep surface permissions, frozen anchors, and category snapshots private", () => {
+  expect(a3Migration).toContain("private.clair_assert_billing_surface_permission");
+  expect(a3Migration).toContain("private.clair_sync_billing_invoice_candidates_internal");
+  expect(a3Migration).toContain("clair_sync_billing_invoice_candidates_from_chart");
+  expect(a3Migration).toContain("clair_sync_billing_invoice_candidates_from_fulfillment");
+  expect(a3Migration).toContain("billing:issue");
+  expect(a3Migration).toContain("lab:complete");
+  expect(a3Migration).toContain("imaging:complete");
+  expect(a3Migration).toContain("dispensing:complete");
+  expect(a3Migration).toContain("billingCategory', il.source_order_snapshot->>'billingCategory'");
+  expect(a3Migration).toContain("invoice_anchor_conflict");
+  expect(a3Migration).toContain("pg_advisory_xact_lock");
+  expect(a3Migration).toContain("for update");
+  expect(a3Migration).toContain("status in ('issued','paid')");
+  expect(a3Migration).toContain("on conflict (workspace_id, order_id)");
 });
 
 test("DEN-329 billing candidate sync migration lazily creates invoice anchor after order validation", () => {

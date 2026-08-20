@@ -652,7 +652,13 @@ Only used by a `range_price` revision.
 | `upper_bound` | numeric(12,3) | yes | Exclusive; null means no upper bound. |
 | `price_krw` | integer | no | Non-negative; zero is intentional free. |
 
-The validator rejects overlaps, gaps when complete coverage is required, reversed bounds, and more than one open-ended range.
+For both `patient_weight_kg` and `manual_value`, Phase 1 uses the approved
+continuous Option A contract: ranges are lower-inclusive/upper-exclusive,
+start at `0`, are contiguous with no gaps or overlaps, and contain exactly one
+final open-ended row (`upper_bound IS NULL`). Every nonnegative input therefore
+matches exactly one bracket; B3 has no range no-match runtime state. The
+validator rejects reversed bounds, gaps, overlaps, and more than one
+open-ended range.
 
 ### 10.5 Set Revision Save And Update Rules
 
@@ -972,3 +978,4 @@ The eventual phase-1 implementation is done only when:
 | Date | Change |
 | --- | --- |
 | 2026-08-18 | First detailed phase-1 DB specification. Defines the minimum private master, workspace copy/update, lab panel, immutable Order Set revision, applied snapshot, RLS, migration, fixture, and verification contracts without implementing migrations or runtime changes. |
+| 2026-08-20 | Domain owner approved Option A for both Order Set range bases: continuous `[0,+infinity)` lower-inclusive/upper-exclusive coverage with contiguous rows and exactly one final open-ended bracket; B3 has no no-match runtime state. |

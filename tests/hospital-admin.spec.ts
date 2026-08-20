@@ -25,9 +25,15 @@ test("hospital admin order management opens with category and subcategory naviga
       .getByTestId("hospital-admin-side-panel")
       .getByRole("button", { name: /^전체/ }),
   ).toHaveCount(0);
-  await expect(page.getByTestId("order-set-placeholder")).toContainText(
-    "미구현",
-  );
+  const orderSetMenuItem = page.getByTestId("order-set-placeholder");
+  await expect(orderSetMenuItem).toContainText("Order 세트");
+  await expect(orderSetMenuItem).toContainText("B2");
+  await orderSetMenuItem.click();
+  await expect(page.getByRole("heading", { name: "Order 세트" })).toBeVisible();
+  await page.goto("/w/clair-demo/orders?modulePanel=open&aside=history");
+  await expect(
+    page.getByRole("heading", { name: "임상병리 검사" }),
+  ).toBeVisible();
   const expectedTopLevelMenuOrder = [
     "병원 기본 설정",
     "연락처 및 채널",
@@ -2079,8 +2085,7 @@ test("hospital admin order drawer edits and saves a selected order", async ({
   await expect(drawer).toContainText("Maropitant 16mg T");
 
   await drawer
-    .locator('input[value="Maropitant 16mg T"]')
-    .first()
+    .getByPlaceholder("원내에서 사용할 Order명을 입력해 주세요")
     .fill("Maropitant 변경");
   await drawer.locator('[data-slot="switch"]').click();
   await drawer.getByRole("button", { name: "저장" }).click();
@@ -2089,9 +2094,13 @@ test("hospital admin order drawer edits and saves a selected order", async ({
   await expect(
     page.getByTestId("hospital-order-mutation-status"),
   ).toContainText("저장했습니다");
-  await expect(drawer).toContainText("Maropitant 변경");
+  await expect(
+    drawer.getByPlaceholder("원내에서 사용할 Order명을 입력해 주세요"),
+  ).toHaveValue("Maropitant 변경");
   await drawer.getByRole("button", { name: "상세 닫기" }).click();
-  await expect(page.getByText("Maropitant 변경").first()).toBeVisible();
+  await expect(
+    page.getByTestId("hospital-order-row-ord-med-maropitant"),
+  ).toContainText("Maropitant 변경");
   await expect(
     page.getByTestId("hospital-order-row-ord-med-maropitant"),
   ).toContainText("중지");

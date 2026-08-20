@@ -1,7 +1,12 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-kong-260501";
+const a3Migration = readFileSync(
+  "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
+  "utf8",
+);
 
 const replayOrders = [
   { orderId: "order-kong-cbc", queueType: "lab", expectedLineTotal: 35000 },
@@ -10,12 +15,30 @@ const replayOrders = [
   { orderId: "order-kong-fluid", queueType: "treatment", expectedLineTotal: 18000 },
 ] as const;
 
+test("A3 fulfillment handoff freezes source snapshots and omits the enrichment writer", () => {
+  expect(a3Migration).toContain("frozenOrderSnapshot");
+  expect(a3Migration).toContain("on conflict (workspace_id, order_id)");
+  expect(a3Migration).toContain("assigned_to_user_id = excluded.assigned_to_user_id");
+  expect(a3Migration).not.toContain(
+    "create or replace function public.clair_enrich_fulfillment_work_item_snapshots",
+  );
+});
+
 test("fulfillment handoff replays chart confirmation through queues, lifecycle, and billing", async ({
   request,
 }) => {
+  const currentEtag = await readChartActionEtag(request);
   const confirmed = await request.patch(`/api/workspaces/${workspaceId}/chart/order-actions`, {
-    data: { action: "confirm", encounterId, orderIds: replayOrders.map((order) => order.orderId) },
-    headers: { "x-clair-demo-session-user-id": "user-vet" },
+    data: {
+      action: "confirm",
+      encounterId,
+      expectedEtag: currentEtag,
+      orderIds: replayOrders.map((order) => order.orderId),
+    },
+    headers: {
+      "If-Match": currentEtag,
+      "x-clair-demo-session-user-id": "user-vet",
+    },
   });
   expect(confirmed.status()).toBe(200);
   const confirmedBody = await confirmed.json() as {
@@ -29,9 +52,18 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
     }))
   ));
 
+  const retryEtag = await readChartActionEtag(request);
   const confirmedAgain = await request.patch(`/api/workspaces/${workspaceId}/chart/order-actions`, {
-    data: { action: "confirm", encounterId, orderIds: replayOrders.map((order) => order.orderId) },
-    headers: { "x-clair-demo-session-user-id": "user-vet" },
+    data: {
+      action: "confirm",
+      encounterId,
+      expectedEtag: retryEtag,
+      orderIds: replayOrders.map((order) => order.orderId),
+    },
+    headers: {
+      "If-Match": retryEtag,
+      "x-clair-demo-session-user-id": "user-vet",
+    },
   });
   expect(confirmedAgain.status()).toBe(200);
 
@@ -131,20 +163,48 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
 });
 
 test("fulfillment handoff replay keeps tenant and role boundaries closed", async ({ request }) => {
+  const currentEtag = await readChartActionEtag(request);
   const frontDeskDenied = await request.patch(`/api/workspaces/${workspaceId}/chart/order-actions`, {
-    data: { action: "confirm", encounterId, orderIds: ["order-kong-fluid"] },
-    headers: { "x-clair-demo-session-user-id": "user-front-desk" },
+    data: {
+      action: "confirm",
+      encounterId,
+      expectedEtag: currentEtag,
+      orderIds: ["order-kong-fluid"],
+    },
+    headers: {
+      "If-Match": currentEtag,
+      "x-clair-demo-session-user-id": "user-front-desk",
+    },
   });
   expect(frontDeskDenied.status()).toBe(403);
   await expectJson(frontDeskDenied, { ok: false, denialReason: "permission_missing" });
 
   const otherWorkspaceDenied = await request.patch(`/api/workspaces/other-workspace/chart/order-actions`, {
-    data: { action: "confirm", encounterId, orderIds: ["order-kong-fluid"] },
-    headers: { "x-clair-demo-session-user-id": "user-vet" },
+    data: {
+      action: "confirm",
+      encounterId,
+      expectedEtag: currentEtag,
+      orderIds: ["order-kong-fluid"],
+    },
+    headers: {
+      "If-Match": currentEtag,
+      "x-clair-demo-session-user-id": "user-vet",
+    },
   });
   expect(otherWorkspaceDenied.status()).toBe(403);
   await expectJson(otherWorkspaceDenied, { ok: false, denialReason: "workspace_membership_missing" });
 });
+
+async function readChartActionEtag(request: APIRequestContext) {
+  const response = await request.get(
+    `/api/workspaces/${workspaceId}/chart/order-actions?encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-vet" } },
+  );
+  expect(response.status()).toBe(200);
+  const body = (await response.json()) as { ok: true; etag: string };
+  expect(body.etag).toMatch(/^"[0-9a-f]{64}"$/);
+  return body.etag;
+}
 
 async function readWorkItem(
   request: APIRequestContext,

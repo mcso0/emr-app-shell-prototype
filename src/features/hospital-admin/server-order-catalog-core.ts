@@ -14,7 +14,11 @@ import type {
   Species,
 } from "@/types/emr-domain";
 
-export type OrderCatalogAvailability = "active" | "paused" | "inactive";
+export type OrderCatalogAvailability =
+  | "pending_activation"
+  | "active"
+  | "paused"
+  | "inactive";
 export type OrderCatalogDestination =
   | "lab"
   | "imaging"
@@ -44,6 +48,7 @@ export type OrderCatalogPresetMergeStatus =
   | "current"
   | "update_available"
   | "conflict"
+  | "deprecated_source"
   | "detached";
 
 export type OrderCatalogItem = {
@@ -67,7 +72,7 @@ export type OrderCatalogItem = {
   billingName: string;
   aliases: string[];
   availabilityStatus: OrderCatalogAvailability;
-  priceKrw: number;
+  priceKrw: number | null;
   salesUnit: OrderCatalogSalesUnit;
   targetSpecies: Species[];
   defaultDestinationModule: OrderCatalogDestination;
@@ -84,6 +89,14 @@ export type OrderCatalogItem = {
   medicationMetadata?: MedicationOrderMetadata;
   vaccineMetadata?: VaccineOrderMetadata;
   pricingRule: OrderPricingRule;
+  originType?: "clair_master" | "workspace_custom";
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  initialImportedRevision?: number;
+  lastAutoMergedRevision?: number;
+  classificationPathId?: string;
+  catalogRevision?: number;
+  sourceProjectionFingerprint?: string;
   updatedAt: string;
 };
 
@@ -140,6 +153,9 @@ export type OrderSet = {
     "set_fixed_price" | "included_order_sum" | "range_price"
   >;
   setPriceKrw: number;
+  rangeBasis?: OrderSetRangeBasis | null;
+  taxType?: Exclude<OrderSetTaxType, "derived">;
+  priceRanges?: OrderSetRevisionPriceRange[];
   salesUnit: OrderCatalogSalesUnit;
   billingReflectionEnabled: boolean;
   targetSpecies: Species[];
@@ -159,6 +175,184 @@ export type OrderSetItem = {
   unitPriceSnapshotKrw: number;
 };
 
+export type OrderSetAmountBasis =
+  | "set_fixed_price"
+  | "included_order_sum"
+  | "range_price";
+export type OrderSetRangeBasis = "patient_weight_kg" | "manual_value";
+export type OrderSetTaxType = "taxable" | "non_taxable" | "derived";
+export type OrderSetRevisionStatus = "valid" | "invalid";
+export type OrderSetReviewStatus =
+  | "pending"
+  | "accepted"
+  | "dismissed"
+  | "superseded";
+
+export type OrderSetDefinitionItem = {
+  childKind: "atomic" | "order_set";
+  childOrderCatalogItemId: string | null;
+  childOrderCatalogRevision: number | null;
+  childOrderSetId: string | null;
+  childSetRevisionId: string | null;
+  sortOrder: number;
+  defaultSelected: boolean;
+  billingReflectionDefault: boolean;
+  defaultQuantity: number;
+  quantitySource: "fixed_one" | "preset_quantity" | "manual_at_apply";
+};
+
+export type OrderSetRevisionPriceRange = {
+  id: string;
+  sortOrder: number;
+  lowerBound: number;
+  upperBound: number | null;
+  priceKrw: number;
+};
+
+export type OrderSetDefinition = {
+  setCategory: string | null;
+  setName: string;
+  billingName: string;
+  amountBasis: OrderSetAmountBasis;
+  setPriceKrw: number | null;
+  rangeBasis: OrderSetRangeBasis | null;
+  salesUnit: OrderCatalogSalesUnit;
+  billingReflectionEnabled: boolean;
+  taxType: OrderSetTaxType;
+  targetSpecies: Species[];
+  careGuide: string | null;
+  internalInstruction: string | null;
+  items: OrderSetDefinitionItem[];
+  priceRanges: Array<{
+    sortOrder: number;
+    lowerBound: number;
+    upperBound: number | null;
+    priceKrw: number;
+  }>;
+};
+
+export type OrderSetRevisionItem = OrderSetDefinitionItem & {
+  id: string;
+};
+
+export type OrderSetRevision = {
+  id: string;
+  workspaceId: string;
+  orderSetId: string;
+  revisionNo: number;
+  validationStatus: OrderSetRevisionStatus;
+  validationErrors: unknown[];
+  setCategory: string | null;
+  setName: string;
+  billingName: string;
+  amountBasis: OrderSetAmountBasis;
+  setPriceKrw: number | null;
+  rangeBasis: OrderSetRangeBasis | null;
+  salesUnit: OrderCatalogSalesUnit;
+  billingReflectionEnabled: boolean;
+  taxType: OrderSetTaxType;
+  targetSpecies: Species[];
+  careGuide: string | null;
+  internalInstruction: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  items: OrderSetRevisionItem[];
+  priceRanges: OrderSetRevisionPriceRange[];
+  currentEtag: string;
+};
+
+export type OrderSetSummary = {
+  orderSetId: string;
+  currentRevisionId: string | null;
+  currentRevisionNo: number | null;
+  availabilityStatus: Exclude<OrderCatalogAvailability, "pending_activation">;
+  currentEtag: string | null;
+  needsCompositionReview: boolean;
+  setName: string;
+  billingName: string;
+  salesUnit: OrderCatalogSalesUnit;
+  targetSpecies: Species[];
+  amountBasis: OrderSetAmountBasis;
+  setPriceKrw: number | null;
+  rangeBasis: OrderSetRangeBasis | null;
+  taxType: OrderSetTaxType;
+  rangePriceRanges: OrderSetRevisionPriceRange[];
+  pendingReviewCount: number;
+};
+
+export type OrderSetDetail = OrderSetSummary & {
+  workspaceId: string;
+  sourceSetVersion: string;
+  currentRevision: OrderSetRevision | null;
+};
+
+export type OrderSetUpdateReview = {
+  id: string;
+  workspaceId: string;
+  parentOrderSetId: string;
+  parentRevisionId: string;
+  childOrderSetId: string;
+  pinnedChildRevisionId: string;
+  availableChildRevisionId: string;
+  status: OrderSetReviewStatus;
+  resultParentRevisionId: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolvedByUserId: string | null;
+};
+
+export type OrderSetSuccessOutcome = "created" | "applied" | "accepted" | "dismissed";
+export type OrderSetFailureOutcome = "rejected" | "conflict" | "obsolete" | "superseded";
+export type OrderSetErrorCode =
+  | "authentication_required"
+  | "workspace_membership_missing"
+  | "permission_missing"
+  | "order_set_not_found"
+  | "order_set_review_not_found"
+  | "revision_conflict"
+  | "idempotency_conflict"
+  | "invalid_order_set_definition"
+  | "order_set_member_unavailable"
+  | "child_revision_requires_refresh"
+  | "order_set_review_obsolete"
+  | "if_none_match_required"
+  | "if_match_required";
+export type OrderSetMutationResult = {
+  orderSet: OrderSetDetail | null;
+  revision: OrderSetRevision | null;
+  review: OrderSetUpdateReview | null;
+  current: { revisionId: string; etag: string } | null;
+};
+export type OrderSetMutationResponse =
+  | {
+      ok: true;
+      outcome: OrderSetSuccessOutcome;
+      requestId: string;
+      error: null;
+      result: OrderSetMutationResult;
+    }
+  | {
+      ok: false;
+      outcome: OrderSetFailureOutcome;
+      requestId: string;
+      error: { code: OrderSetErrorCode; field: string | null; message: string };
+      result: null;
+    };
+
+function mockOrderSetMutationError(requestId: string): OrderSetMutationResponse {
+  return {
+    ok: false,
+    outcome: "rejected",
+    requestId,
+    error: {
+      code: "invalid_order_set_definition",
+      field: null,
+      message: "Demo Order Set mutation requires the local B2 RPC path.",
+    },
+    result: null,
+  };
+}
+
 export type LabTestCategory = {
   id: string;
   workspaceId: string;
@@ -172,10 +366,38 @@ export type LabTestItem = {
   categoryId: string;
   name: string;
   resultInputType: "number" | "text" | "select" | "positive_negative" | "grade";
+  resultValueKind?: "numeric" | "text" | "coded";
+  decimalScale?: number;
   resultUnit?: string;
   sortOrder: number;
   availabilityStatus: OrderCatalogAvailability;
   savedResultUsageCount: number;
+  definitionOrigin?: "clair_master" | "workspace_custom" | "legacy" | "quarantined";
+  workspaceResultRevision?: number;
+  localSettingsRevision?: number;
+};
+
+export type WorkspaceLabTestItemMutationInput = {
+  action: "local_settings" | "customize";
+  itemId: string;
+  expectedWorkspaceResultRevision?: number;
+  expectedLocalSettingsRevision?: number;
+  patch: Record<string, unknown>;
+  targetLinkIds?: string[];
+};
+
+export type LabDefinitionLinkMutationInput = {
+  labTestItemId: string;
+  expectedLinkRevision?: number;
+  expectedWorkspaceResultRevision?: number;
+  effectiveSortOrder: number;
+  required: boolean;
+  displayGroup?: string | null;
+};
+
+export type LabDefinitionMutationInput = {
+  availabilityStatus: Extract<OrderCatalogAvailability, "active" | "paused" | "inactive">;
+  links: LabDefinitionLinkMutationInput[];
 };
 
 export type MedicationOrderMetadata = {
@@ -226,11 +448,91 @@ export type VaccineOrderMetadata = {
 
 export type OrderPricingRule = {
   priceBasis: OrderCatalogPriceBasis;
-  priceKrw: number;
+  priceKrw: number | null;
   salesUnit: OrderCatalogSalesUnit;
   taxIncluded: boolean;
   roundingRule: string;
   billingReflectionEnabled: boolean;
+};
+
+export type OrderSetPriceRange = {
+  id: string;
+  sortOrder: number;
+  lowerBound: number;
+  upperBound: number | null;
+  priceKrw: number;
+};
+
+export type ChartOrderSetSearchSnapshot = {
+  sourceSetId: string;
+  sourceSetRevisionId: string;
+  sourceSetRevisionNo: number;
+  sourceSetVersion: string;
+  amountBasis: OrderSetAmountBasis;
+  setPriceKrw: number | null;
+  rangeBasis: OrderSetRangeBasis | null;
+  taxType: OrderSetTaxType;
+  priceRanges: OrderSetPriceRange[];
+  billingReflectionEnabled: boolean;
+};
+
+export type ChartOrderSetLeafIntent = {
+  revisionItemId: string;
+  selected: boolean;
+  quantity: number;
+};
+
+export type ChartOrderSetSelectionIntent =
+  | {
+      items: ChartOrderSetLeafIntent[];
+      rangeInput?: never;
+    }
+  | {
+      items: ChartOrderSetLeafIntent[];
+      rangeInput: number;
+    };
+
+export type ChartOrderSetPreviewItem = {
+  revisionItemId: string;
+  itemKind: "atomic";
+  path: Array<{ setId: string; revisionId: string; revisionItemId: string }>;
+  rootRevisionItemId?: string;
+  directRevisionItemId?: string;
+  nestedRevisionItemId?: string | null;
+  leafRevisionItemId?: string;
+  workspaceCatalogItemId: string;
+  pinnedCompositionCatalogRevision: number;
+  appliedCatalogRevision: number;
+  defaultSelected: boolean;
+  selected: boolean;
+  defaultQuantity: number;
+  quantity: number;
+  quantitySource: "fixed_one" | "preset_quantity" | "manual_at_apply";
+  billingReflectionEnabled: boolean;
+  priceKrw: number | null;
+  taxType: "taxable" | "non_taxable";
+  appliedSnapshot?: Record<string, unknown>;
+};
+
+export type ChartOrderSetPreview = {
+  schemaVersion: 1;
+  operation: "preview" | "draft" | "confirm";
+  set: ChartOrderSetSearchSnapshot & {
+    displayName?: string;
+    billingName?: string;
+  };
+  items: ChartOrderSetPreviewItem[];
+  pricing: {
+    selectedSetInput: number | null;
+    selectedRangeId: string | null;
+    rangeInput: number | null;
+    childSubtotalKrw: number;
+    explicitExtraSubtotalKrw: number;
+    finalTotalKrw: number;
+  };
+  selectionFingerprint: string;
+  calculationInputs?: Record<string, unknown>;
+  calculationOutputs?: Record<string, unknown>;
 };
 
 export type ChartOrderCatalogSearchRow = {
@@ -242,6 +544,22 @@ export type ChartOrderCatalogSearchRow = {
   categoryGroup: ServiceItemType | "set";
   targetSpecies: Species[];
   appliedSnapshot: AppliedOrderSnapshot;
+  workspaceCatalogItemId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
+  sourceSetId?: string | null;
+  sourceSetRevisionId?: string | null;
+  sourceSetRevisionNo?: number | null;
+  sourceSetAmountBasis?: OrderSetAmountBasis | null;
+  sourceSetPriceKrw?: number | null;
+  sourceSetRangeBasis?: OrderSetRangeBasis | null;
+  sourceSetTaxType?: OrderSetTaxType | null;
+  sourceSetAvailabilityStatus?: "active" | null;
+  sourceSetNeedsCompositionReview?: false | null;
+  sourceSetValidationStatus?: "valid" | null;
+  sourceSetPriceRanges?: OrderSetPriceRange[] | null;
+  sourceSetPendingReviewCount?: number | null;
 };
 
 export type AppliedOrderSnapshot = {
@@ -251,7 +569,7 @@ export type AppliedOrderSnapshot = {
   appliedStandardOrderName?: string;
   appliedDisplayName: string;
   appliedBillingName: string;
-  appliedPriceKrw: number;
+  appliedPriceKrw: number | null;
   appliedSalesUnit: OrderCatalogSalesUnit;
   appliedTaxIncluded: boolean;
   appliedAmountBasis: OrderCatalogPriceBasis;
@@ -273,6 +591,14 @@ export type ExpandedOrderSetRow = {
   appliedSnapshot: AppliedOrderSnapshot;
 };
 
+export type ChartOrderSetPreviewGatewayResult =
+  | { ok: true; preview: ChartOrderSetPreview }
+  | {
+      ok: false;
+      status: 400 | 401 | 403 | 404 | 409 | 422 | 500;
+      error: string;
+    };
+
 export type LabTestItemDeleteLock = {
   deleteLocked: boolean;
   linkedOrderCount: number;
@@ -285,8 +611,15 @@ export type OrderCatalogMutationInput =
       action: "create";
       item: Omit<OrderCatalogItem, "id" | "updatedAt"> & { id?: string };
     }
-  | { action: "update"; itemId: string; patch: Partial<OrderCatalogItem> }
-  | { action: "pause"; itemId: string };
+  | {
+      action: "update";
+      itemId: string;
+      expectedCatalogRevision: number;
+      patch: Partial<OrderCatalogItem> & {
+        labDefinition?: LabDefinitionMutationInput;
+      };
+    }
+  | { action: "pause"; itemId: string; expectedCatalogRevision: number };
 
 export type OrderCatalogGateway = {
   listAdminCatalog(input: {
@@ -302,8 +635,21 @@ export type OrderCatalogGateway = {
   }): Promise<
     | { ok: true; item: OrderCatalogItem }
     | { ok: false; status: 400; error: "invalid_input" }
+    | { ok: false; status: 409; error: "catalog_revision_conflict" }
     | { ok: false; status: 500; error: "db_write_failed" }
     | { ok: false; status: 404; denialReason: "order_not_found" }
+  >;
+  mutateLabTestItem(input: {
+    actorUserId: string;
+    input: WorkspaceLabTestItemMutationInput;
+    workspaceId: string;
+  }): Promise<
+    | { ok: true; item: LabTestItem; affectedCatalogItemIds: string[] }
+    | { ok: false; status: 400; error: "invalid_input" }
+    | { ok: false; status: 403; denialReason: "permission_missing" | "actor_mismatch" }
+    | { ok: false; status: 404; denialReason: "lab_test_item_not_found" }
+    | { ok: false; status: 409; error: "lab_item_revision_conflict" | "lab_item_local_settings_revision_conflict" }
+    | { ok: false; status: 500; error: "db_write_failed" }
   >;
   expandOrderSet(input: { orderSetId: string; workspaceId: string }): Promise<
     | {
@@ -313,6 +659,42 @@ export type OrderCatalogGateway = {
       }
     | { ok: false; status: 404; denialReason: "order_set_not_found" }
   >;
+  previewOrderSet?(input: {
+    encounterId: string;
+    orderSetId: string;
+    revisionId: string;
+    selectionIntent: ChartOrderSetSelectionIntent;
+    workspaceId: string;
+  }): Promise<ChartOrderSetPreviewGatewayResult>;
+  listOrderSets(input: { workspaceId: string; query?: string }): Promise<
+    | { ok: true; summaries: OrderSetSummary[] }
+    | { ok: false; status: number; error: OrderSetErrorCode }
+  >;
+  getOrderSet(input: { orderSetId: string; workspaceId: string }): Promise<
+    | { ok: true; detail: OrderSetDetail; history: OrderSetRevision[]; reviews: OrderSetUpdateReview[] }
+    | { ok: false; status: number; error: OrderSetErrorCode }
+  >;
+  createOrderSet(input: {
+    availabilityStatus: Exclude<OrderCatalogAvailability, "pending_activation">;
+    definition: OrderSetDefinition;
+    requestId: string;
+    workspaceId: string;
+  }): Promise<OrderSetMutationResponse>;
+  saveOrderSetRevision(input: {
+    availabilityStatus: Exclude<OrderCatalogAvailability, "pending_activation">;
+    definition: OrderSetDefinition;
+    expectedCurrentRevisionId: string;
+    orderSetId: string;
+    requestId: string;
+    workspaceId: string;
+  }): Promise<OrderSetMutationResponse>;
+  resolveOrderSetUpdateReview(input: {
+    action: "accept" | "dismiss";
+    expectedParentRevisionId: string;
+    requestId: string;
+    reviewId: string;
+    workspaceId: string;
+  }): Promise<OrderSetMutationResponse>;
   getLabTestItemDeleteLock(input: {
     testItemId: string;
     workspaceId: string;
@@ -324,8 +706,67 @@ export type OrderCatalogGateway = {
 
 export type SupabaseOrderCatalogRpcClient = {
   rpc(
-    functionName: "clair_list_order_catalog_chart_search",
-    args: { p_workspace_id: string },
+    functionName:
+      | "clair_list_order_catalog_chart_search"
+      | "clair_list_order_catalog_chart_search_v2"
+      | "clair_preview_chart_order_set"
+      | "clair_update_order_catalog_item"
+      | "clair_create_order_catalog_item"
+      | "clair_update_workspace_lab_test_item"
+      | "clair_list_order_sets"
+      | "clair_get_order_set"
+      | "clair_create_order_set"
+      | "clair_save_order_set_revision"
+      | "clair_resolve_order_set_update_review",
+    args:
+      | { p_workspace_id: string }
+      | {
+          workspace_id: string;
+          encounter_id: string;
+          set_id: string;
+          revision_id: string;
+          selection_intent: ChartOrderSetSelectionIntent;
+        }
+      | {
+          p_expected_catalog_revision: number;
+          p_item_id: string;
+          p_patch: Record<string, unknown>;
+          p_workspace_id: string;
+        }
+      | {
+          p_action: string;
+          p_actor_user_id: string;
+          p_expected_local_settings_revision: number | null;
+          p_expected_workspace_result_revision: number | null;
+          p_item_id: string;
+          p_patch: Record<string, unknown>;
+          p_target_link_ids: string[];
+          p_workspace_id: string;
+        }
+      | { p_item: Record<string, unknown>; p_workspace_id: string }
+      | { p_query: string | null; p_workspace_id: string }
+      | { p_order_set_id: string; p_workspace_id: string }
+      | {
+          p_availability_status: string;
+          p_definition: Record<string, unknown>;
+          p_request_id: string;
+          p_workspace_id: string;
+        }
+      | {
+          p_availability_status: string;
+          p_definition: Record<string, unknown>;
+          p_expected_current_revision_id: string;
+          p_order_set_id: string;
+          p_request_id: string;
+          p_workspace_id: string;
+        }
+      | {
+          p_action: string;
+          p_expected_parent_revision_id: string;
+          p_request_id: string;
+          p_review_id: string;
+          p_workspace_id: string;
+        },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   from?: (table: "order_catalog_items") => SupabaseOrderCatalogItemsQueryBuilder;
 };
@@ -338,6 +779,9 @@ export type OrderCatalogResult<T> =
       denialReason: WorkspacePermissionDenialReason;
     }
   | { ok: false; status: 400; error: "invalid_input" }
+  | { ok: false; status: 409; error: "catalog_revision_conflict" }
+  | { ok: false; status: 409; error: string }
+  | { ok: false; status: 422; error: string }
   | { ok: false; status: 500; error: "db_write_failed" }
   | {
       ok: false;
@@ -422,6 +866,9 @@ export async function mutateOrderCatalogItem({
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<OrderCatalogResult<{ item: OrderCatalogItem }>> {
+  if (!isValidOrderCatalogMutationInput(input)) {
+    return { ok: false, status: 400, error: "invalid_input" };
+  }
   const permission = requirePermission(
     permissionAdapter,
     actorUserId,
@@ -468,31 +915,195 @@ export async function mutateOrderCatalogItem({
   };
 }
 
-export async function expandOrderSetForChart({
+export type WorkspaceLabTestItemMutationResult =
+  | {
+      ok: true;
+      status: 200;
+      item: LabTestItem;
+      affectedCatalogItemIds: string[];
+      enforcedBy: "workspace-lab-test-item-mutation";
+    }
+  | { ok: false; status: 400; error: "invalid_input" }
+  | {
+      ok: false;
+      status: 401 | 403;
+      denialReason: WorkspacePermissionDenialReason;
+    }
+  | { ok: false; status: 403; denialReason: "actor_mismatch" }
+  | { ok: false; status: 404; denialReason: "lab_test_item_not_found" }
+  | {
+      ok: false;
+      status: 409;
+      error: "lab_item_revision_conflict" | "lab_item_local_settings_revision_conflict";
+    }
+  | { ok: false; status: 500; error: "db_write_failed" };
+
+export async function mutateWorkspaceLabTestItem({
   actorUserId,
   gateway = createMockOrderCatalogGateway(),
-  orderSetId,
+  input,
   permissionAdapter = createDemoOrderCatalogPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
   gateway?: OrderCatalogGateway;
+  input: WorkspaceLabTestItemMutationInput;
+  permissionAdapter?: WorkspacePermissionAdapter;
+  workspaceId: string;
+}): Promise<WorkspaceLabTestItemMutationResult> {
+  if (!isValidWorkspaceLabTestItemMutationInput(input)) {
+    return { ok: false, status: 400, error: "invalid_input" };
+  }
+  const permission = requirePermission(
+    permissionAdapter,
+    actorUserId,
+    workspaceId,
+    "service_catalog:manage",
+  );
+  if (!permission.allowed) return permission.denied;
+  const result = await gateway.mutateLabTestItem({
+    actorUserId: actorUserId ?? "",
+    input,
+    workspaceId,
+  });
+  if (!result.ok) {
+    if (result.status === 403) {
+      return {
+        ok: false,
+        status: 403,
+        denialReason: result.denialReason,
+      };
+    }
+    if (result.status === 404) {
+      return { ok: false, status: 404, denialReason: result.denialReason };
+    }
+    if (result.status === 409) {
+      return { ok: false, status: 409, error: result.error };
+    }
+    if (result.status === 400) {
+      return { ok: false, status: 400, error: "invalid_input" };
+    }
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+  return {
+    ok: true,
+    status: 200,
+    item: result.item,
+    affectedCatalogItemIds: result.affectedCatalogItemIds,
+    enforcedBy: "workspace-lab-test-item-mutation",
+  };
+}
+
+function isValidOrderCatalogMutationInput(
+  input: OrderCatalogMutationInput,
+): input is OrderCatalogMutationInput {
+  if (!isRecord(input)) return false;
+  const validRevision = (value: unknown) =>
+    typeof value === "number" && Number.isInteger(value) && value > 0;
+  if (input.action === "create") return isRecord(input.item);
+  if (input.action === "update") {
+    return typeof input.itemId === "string" && input.itemId.trim().length > 0
+      && validRevision(input.expectedCatalogRevision)
+      && isRecord(input.patch);
+  }
+  return input.action === "pause"
+    && typeof input.itemId === "string"
+    && input.itemId.trim().length > 0
+    && validRevision(input.expectedCatalogRevision);
+}
+
+function isValidWorkspaceLabTestItemMutationInput(
+  input: WorkspaceLabTestItemMutationInput,
+): input is WorkspaceLabTestItemMutationInput {
+  if (!isRecord(input) || (input.action !== "local_settings" && input.action !== "customize")) {
+    return false;
+  }
+  if (typeof input.itemId !== "string" || !input.itemId.trim() || !isRecord(input.patch)) {
+    return false;
+  }
+  const revision = (value: unknown) =>
+    value === undefined || (typeof value === "number" && Number.isInteger(value) && value >= 0);
+  if (!revision(input.expectedWorkspaceResultRevision) || !revision(input.expectedLocalSettingsRevision)) {
+    return false;
+  }
+  return input.targetLinkIds === undefined ||
+    (Array.isArray(input.targetLinkIds) && input.targetLinkIds.every((id) => typeof id === "string" && id.trim()));
+}
+
+export async function expandOrderSetForChart({
+  actorUserId,
+  gateway = createMockOrderCatalogGateway(),
+  encounterId,
+  orderSetId,
+  permissionAdapter = createDemoOrderCatalogPermissionAdapter(),
+  revisionId,
+  selectionIntent,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  gateway?: OrderCatalogGateway;
+  encounterId?: string;
   orderSetId: string;
   permissionAdapter?: WorkspacePermissionAdapter;
+  revisionId?: string;
+  selectionIntent?: ChartOrderSetSelectionIntent;
   workspaceId: string;
 }): Promise<
   OrderCatalogResult<{
     parentSnapshot: AppliedOrderSnapshot;
     rows: ExpandedOrderSetRow[];
+    preview?: ChartOrderSetPreview;
   }>
 > {
   const permission = requirePermission(
     permissionAdapter,
     actorUserId,
     workspaceId,
-    "service_catalog:view",
+    encounterId && revisionId ? "chart:update" : "service_catalog:view",
   );
   if (!permission.allowed) return permission.denied;
+  if (encounterId && revisionId && selectionIntent && gateway.previewOrderSet) {
+    const preview = await gateway.previewOrderSet({
+      encounterId,
+      orderSetId,
+      revisionId,
+      selectionIntent,
+      workspaceId,
+    });
+    if (!preview.ok) {
+      if (preview.status === 401) {
+        return { ok: false, status: 401, denialReason: "unauthenticated" };
+      }
+      if (preview.status === 403) {
+        return {
+          ok: false,
+          status: 403,
+          denialReason: preview.error === "workspace_membership_missing"
+            ? "workspace_membership_missing"
+            : "permission_missing",
+        };
+      }
+      return {
+        ok: false,
+        status: preview.status,
+        error: preview.error,
+      } as OrderCatalogResult<{
+        parentSnapshot: AppliedOrderSnapshot;
+        rows: ExpandedOrderSetRow[];
+        preview?: ChartOrderSetPreview;
+      }>;
+    }
+    return {
+      ok: true,
+      status: 200,
+      preview: preview.preview,
+      parentSnapshot: previewToParentSnapshot(preview.preview),
+      rows: preview.preview.items.map((item, index) =>
+        previewItemToExpandedRow(preview.preview, item, index),
+      ),
+      enforcedBy: "order-set-expansion-preview",
+    };
+  }
   const result = await gateway.expandOrderSet({ orderSetId, workspaceId });
   if (!result.ok) return result;
   return {
@@ -501,6 +1112,48 @@ export async function expandOrderSetForChart({
     parentSnapshot: result.parentSnapshot,
     rows: result.rows,
     enforcedBy: "order-set-expansion",
+  };
+}
+
+function previewToParentSnapshot(preview: ChartOrderSetPreview): AppliedOrderSnapshot {
+  return {
+    sourcePresetId: preview.set.sourceSetId,
+    sourcePresetVersion: preview.set.sourceSetVersion,
+    appliedDisplayName: preview.set.displayName ?? preview.set.sourceSetId,
+    appliedBillingName: preview.set.billingName ?? preview.set.sourceSetId,
+    appliedPriceKrw: preview.set.setPriceKrw,
+    appliedSalesUnit: "per_each",
+    appliedTaxIncluded: preview.set.taxType === "taxable",
+    appliedAmountBasis: preview.set.amountBasis,
+    billingReflectionEnabled: preview.set.billingReflectionEnabled,
+  };
+}
+
+function previewItemToExpandedRow(
+  preview: ChartOrderSetPreview,
+  item: ChartOrderSetPreviewItem,
+  sortOrder: number,
+): ExpandedOrderSetRow {
+  const snapshot = item.appliedSnapshot ?? {
+    sourcePresetId: item.workspaceCatalogItemId,
+    sourcePresetVersion: preview.set.sourceSetVersion,
+    workspaceCatalogItemId: item.workspaceCatalogItemId,
+    appliedDisplayName: item.workspaceCatalogItemId,
+    appliedBillingName: item.workspaceCatalogItemId,
+    appliedPriceKrw: item.priceKrw,
+    appliedSalesUnit: "per_each",
+    appliedTaxIncluded: item.taxType === "taxable",
+    appliedAmountBasis: "unit_price",
+    billingReflectionEnabled: item.billingReflectionEnabled,
+  } as AppliedOrderSnapshot;
+  return {
+    parentSetId: preview.set.sourceSetId,
+    setItemId: item.revisionItemId,
+    childOrderId: item.workspaceCatalogItemId,
+    sortOrder: sortOrder + 1,
+    quantity: item.quantity,
+    billingReflectionEnabled: item.billingReflectionEnabled,
+    appliedSnapshot: snapshot as AppliedOrderSnapshot,
   };
 }
 
@@ -540,6 +1193,10 @@ export async function readLabTestItemDeleteLock({
 export function createOrderPricingSnapshot(
   item: OrderCatalogItem,
 ): AppliedOrderSnapshot {
+  if (item.billingReflectionEnabled && item.pricingRule.priceKrw === null) {
+    throw new Error("active_billable_order_requires_price");
+  }
+  const appliedPriceKrw = item.pricingRule.priceKrw ?? item.priceKrw ?? null;
   return {
     sourcePresetId: item.standardOrderId,
     sourcePresetVersion: item.sourcePresetVersion,
@@ -547,7 +1204,7 @@ export function createOrderPricingSnapshot(
     appliedStandardOrderName: item.standardOrderName,
     appliedDisplayName: item.inHospitalOrderName,
     appliedBillingName: item.billingName,
-    appliedPriceKrw: item.pricingRule.priceKrw,
+    appliedPriceKrw,
     appliedSalesUnit: item.pricingRule.salesUnit,
     appliedTaxIncluded: item.pricingRule.taxIncluded,
     appliedAmountBasis: item.pricingRule.priceBasis,
@@ -733,6 +1390,22 @@ export function createMockOrderCatalogGateway(
             categoryGroup: item.categoryGroup,
             targetSpecies: item.targetSpecies,
             appliedSnapshot: createOrderPricingSnapshot(item),
+            workspaceCatalogItemId: item.id,
+            sourceMasterRecordId: item.sourceMasterRecordId,
+            sourceMasterRevision: item.sourceMasterRevision,
+            workspaceCatalogRevision: item.catalogRevision,
+            sourceSetId: null,
+            sourceSetRevisionId: null,
+            sourceSetRevisionNo: null,
+            sourceSetAmountBasis: null,
+            sourceSetPriceKrw: null,
+            sourceSetRangeBasis: null,
+            sourceSetTaxType: null,
+            sourceSetAvailabilityStatus: null,
+            sourceSetNeedsCompositionReview: null,
+            sourceSetValidationStatus: null,
+            sourceSetPriceRanges: null,
+            sourceSetPendingReviewCount: null,
           }),
         );
       const activeSets = orderSets
@@ -745,12 +1418,31 @@ export function createMockOrderCatalogGateway(
           (set): ChartOrderCatalogSearchRow => ({
             rowType: "set",
             sourcePresetId: set.id,
-            sourcePresetVersion: set.sourceSetVersion,
+            sourcePresetVersion: `order-set-revision-1`,
             displayName: set.setName,
             billingName: set.billingName,
             categoryGroup: "set",
             targetSpecies: set.targetSpecies,
             appliedSnapshot: createSetSnapshot(set),
+            sourceSetId: set.id,
+            sourceSetRevisionId: mockOrderSetRevisionId(set.id),
+            sourceSetRevisionNo: 1,
+            sourceSetAmountBasis: set.amountBasis,
+            sourceSetPriceKrw:
+              set.amountBasis === "set_fixed_price" ? set.setPriceKrw : null,
+            sourceSetRangeBasis:
+              set.amountBasis === "range_price"
+                ? set.rangeBasis ?? "patient_weight_kg"
+                : null,
+            sourceSetTaxType:
+              set.amountBasis === "included_order_sum"
+                ? "derived"
+                : set.taxType ?? "taxable",
+            sourceSetAvailabilityStatus: "active",
+            sourceSetNeedsCompositionReview: false,
+            sourceSetValidationStatus: "valid",
+            sourceSetPriceRanges: set.priceRanges ?? [],
+            sourceSetPendingReviewCount: 0,
           }),
         );
       return { ok: true, rows: [...activeItems, ...activeSets] };
@@ -765,6 +1457,7 @@ export function createMockOrderCatalogGateway(
           {
             ...mutation.item,
             id,
+            catalogRevision: mutation.item.catalogRevision ?? 1,
             customizationState: mutation.item.customizationState ?? "detached",
             customizedFields: mutation.item.customizedFields ?? ["*"],
             presetMergeStatus: mutation.item.presetMergeStatus ?? "detached",
@@ -782,6 +1475,11 @@ export function createMockOrderCatalogGateway(
       if (!current || current.workspaceId !== workspaceId) {
         return { ok: false, status: 404, denialReason: "order_not_found" };
       }
+      if (
+        mutation.expectedCatalogRevision !== (current.catalogRevision ?? 1)
+      ) {
+        return { ok: false, status: 409, error: "catalog_revision_conflict" };
+      }
 
       const next =
         mutation.action === "pause"
@@ -789,6 +1487,7 @@ export function createMockOrderCatalogGateway(
               {
                 ...current,
                 availabilityStatus: "paused" as const,
+                catalogRevision: (current.catalogRevision ?? 1) + 1,
                 updatedAt: now,
               },
               ["availabilityStatus"],
@@ -796,7 +1495,12 @@ export function createMockOrderCatalogGateway(
               actorUserId,
             )
           : markCatalogItemCustomized(
-              { ...current, ...mutation.patch, updatedAt: now },
+              {
+                ...current,
+                ...mutation.patch,
+                catalogRevision: (current.catalogRevision ?? 1) + 1,
+                updatedAt: now,
+              },
               Object.keys(mutation.patch),
               now,
               actorUserId,
@@ -805,6 +1509,67 @@ export function createMockOrderCatalogGateway(
         return { ok: false, status: 400, error: "invalid_input" };
       items.set(next.id, next);
       return { ok: true, item: cloneItem(next) };
+    },
+    async mutateLabTestItem({ input, workspaceId }) {
+      const item = labItems.find(
+        (candidate) => candidate.id === input.itemId && candidate.workspaceId === workspaceId,
+      );
+      if (!item) {
+        return { ok: false, status: 404, denialReason: "lab_test_item_not_found" };
+      }
+      const patch = input.patch;
+      if (input.action === "local_settings") {
+        if (
+          input.expectedLocalSettingsRevision !== (item.localSettingsRevision ?? 1) ||
+          input.expectedWorkspaceResultRevision !== undefined ||
+          (input.targetLinkIds?.length ?? 0) > 0 ||
+          Object.keys(patch).sort().join(",") !== "categoryId,isActive,localSortOrder"
+        ) {
+          return { ok: false, status: 409, error: "lab_item_local_settings_revision_conflict" };
+        }
+        if (
+          typeof patch.categoryId !== "string" ||
+          typeof patch.localSortOrder !== "number" ||
+          !Number.isInteger(patch.localSortOrder) ||
+          patch.localSortOrder < 0 ||
+          typeof patch.isActive !== "boolean"
+        ) {
+          return { ok: false, status: 400, error: "invalid_input" };
+        }
+        item.categoryId = patch.categoryId;
+        item.sortOrder = patch.localSortOrder;
+        item.availabilityStatus = patch.isActive ? "active" : "inactive";
+        item.localSettingsRevision = (item.localSettingsRevision ?? 1) + 1;
+      } else {
+        if (
+          input.expectedWorkspaceResultRevision !== (item.workspaceResultRevision ?? 1) ||
+          input.expectedLocalSettingsRevision !== undefined ||
+          Object.keys(patch).sort().join(",") !== "decimalScale,displayName,inputType,resultValueKind,unit"
+        ) {
+          return { ok: false, status: 409, error: "lab_item_revision_conflict" };
+        }
+        if (
+          typeof patch.displayName !== "string" ||
+          typeof patch.inputType !== "string" ||
+          typeof patch.resultValueKind !== "string" ||
+          (patch.unit !== null && typeof patch.unit !== "string") ||
+          (patch.decimalScale !== null &&
+            (typeof patch.decimalScale !== "number" || !Number.isInteger(patch.decimalScale) || patch.decimalScale < 0))
+        ) {
+          return { ok: false, status: 400, error: "invalid_input" };
+        }
+        item.name = patch.displayName;
+        item.resultInputType = patch.inputType as LabTestItem["resultInputType"];
+        item.resultValueKind = patch.resultValueKind as LabTestItem["resultValueKind"];
+        item.resultUnit = patch.unit ?? undefined;
+        item.decimalScale = patch.decimalScale ?? undefined;
+        item.workspaceResultRevision = (item.workspaceResultRevision ?? 1) + 1;
+      }
+      return {
+        ok: true,
+        item: { ...item },
+        affectedCatalogItemIds: [],
+      };
     },
     async expandOrderSet({ orderSetId, workspaceId }) {
       const orderSet = orderSets.find(
@@ -831,6 +1596,214 @@ export function createMockOrderCatalogGateway(
         })
         .filter((row): row is ExpandedOrderSetRow => Boolean(row));
       return { ok: true, parentSnapshot: createSetSnapshot(orderSet), rows };
+    },
+    async previewOrderSet({
+      encounterId,
+      orderSetId,
+      revisionId,
+      selectionIntent,
+      workspaceId,
+    }) {
+      const orderSet = orderSets.find(
+        (set) => set.id === orderSetId && set.workspaceId === workspaceId,
+      );
+      if (!orderSet || orderSet.availabilityStatus !== "active") {
+        return { ok: false, status: 404, error: "order_set_not_found" };
+      }
+      if (!encounterId.trim() || !revisionId.trim()) {
+        return { ok: false, status: 400, error: "invalid_order_set_selection" };
+      }
+      const rangeInput = selectionIntent.rangeInput;
+      if (orderSet.amountBasis === "range_price") {
+        if (rangeInput === undefined) {
+          return { ok: false, status: 422, error: "order_set_range_input_required" };
+        }
+        if (!Number.isFinite(rangeInput) || rangeInput < 0 || rangeInput > 999999999.999 || rangeInput !== Math.round(rangeInput * 1000) / 1000) {
+          return { ok: false, status: 422, error: "order_set_range_input_invalid" };
+        }
+      } else if (rangeInput !== undefined) {
+        return { ok: false, status: 400, error: "invalid_order_set_selection" };
+      }
+      const explicit = new Map(
+        selectionIntent.items.map((item) => [item.revisionItemId, item]),
+      );
+      if (explicit.size !== selectionIntent.items.length || selectionIntent.items.some((item) => !orderSet.includedOrders.some((candidate) => candidate.id === item.revisionItemId))) {
+        return { ok: false, status: 422, error: "order_set_member_unavailable" };
+      }
+      const ranges = (orderSet.priceRanges ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder);
+      const matchedRange = orderSet.amountBasis === "range_price"
+        ? ranges.find((range) => range.lowerBound <= (rangeInput as number) && (range.upperBound === null || (rangeInput as number) < range.upperBound))
+        : undefined;
+      if (orderSet.amountBasis === "range_price" && !matchedRange) {
+        return { ok: false, status: 422, error: "order_set_range_no_match" };
+      }
+      if (
+        orderSet.includedOrders.some((setItem) => {
+          const intent = explicit.get(setItem.id);
+          return (
+            setItem.quantitySource === "fixed_one" &&
+            intent !== undefined &&
+            intent.quantity !== 1
+          );
+        })
+      ) {
+        return { ok: false, status: 422, error: "order_set_quantity_invalid" };
+      }
+      const previewItems = orderSet.includedOrders
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((setItem) => {
+          const child = items.get(setItem.childOrderId);
+          if (!child) return null;
+          const intent = explicit.get(setItem.id);
+          const selected = intent?.selected ?? setItem.defaultSelected;
+          const quantity = intent?.quantity ?? setItem.defaultQuantity;
+          if (setItem.quantitySource === "fixed_one" && quantity !== 1) {
+            return null;
+          }
+          if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 999999999.999 || quantity !== Math.round(quantity * 1000) / 1000) {
+            return null;
+          }
+          const quantitySource =
+            setItem.quantitySource === "fixed_one"
+              ? "fixed_one"
+              : intent
+                ? "manual_at_apply"
+                : setItem.quantitySource;
+          const taxType = child.taxIncluded ? "taxable" : "non_taxable";
+          const billing = orderSet.amountBasis === "included_order_sum"
+            ? setItem.billingReflectionDefault
+            : false;
+          return {
+            revisionItemId: setItem.id,
+            itemKind: "atomic" as const,
+            path: [{ setId: orderSet.id, revisionId, revisionItemId: setItem.id }],
+            rootRevisionItemId: setItem.id,
+            directRevisionItemId: setItem.id,
+            nestedRevisionItemId: null,
+            leafRevisionItemId: setItem.id,
+            workspaceCatalogItemId: child.id,
+            pinnedCompositionCatalogRevision: child.catalogRevision ?? 1,
+            appliedCatalogRevision: child.catalogRevision ?? 1,
+            defaultSelected: setItem.defaultSelected,
+            selected,
+            defaultQuantity: setItem.defaultQuantity,
+            quantity,
+            quantitySource,
+            billingReflectionEnabled: billing,
+            priceKrw: child.pricingRule.priceKrw ?? child.priceKrw,
+            taxType,
+            appliedSnapshot: createOrderPricingSnapshot(child) as unknown as Record<string, unknown>,
+          } satisfies ChartOrderSetPreviewItem;
+        })
+        .filter((item) => item !== null) as ChartOrderSetPreviewItem[];
+      if (!previewItems.some((item) => item.selected)) {
+        return { ok: false, status: 422, error: "order_set_empty_selection" };
+      }
+      const childSubtotalKrw = previewItems.reduce(
+        (sum, item) => sum + (item.selected && item.billingReflectionEnabled ? (item.priceKrw ?? 0) * item.quantity : 0),
+        0,
+      );
+      const setPriceKrw = orderSet.amountBasis === "set_fixed_price" ? orderSet.setPriceKrw : null;
+      const effectiveSetPriceKrw =
+        orderSet.amountBasis === "range_price" ? matchedRange?.priceKrw ?? null : setPriceKrw;
+      const fingerprint = mockChartOrderFingerprint({ orderSetId, revisionId, items: previewItems });
+      return {
+        ok: true,
+        preview: {
+          schemaVersion: 1,
+          operation: "preview",
+          set: {
+            sourceSetId: orderSet.id,
+            sourceSetRevisionId: revisionId,
+            sourceSetRevisionNo: 1,
+            sourceSetVersion: `order-set-revision-1`,
+            amountBasis: orderSet.amountBasis,
+            setPriceKrw: effectiveSetPriceKrw,
+            rangeBasis: orderSet.amountBasis === "range_price" ? orderSet.rangeBasis ?? "patient_weight_kg" : null,
+            taxType: orderSet.amountBasis === "included_order_sum" ? "derived" : orderSet.taxType ?? "taxable",
+            priceRanges: ranges,
+            billingReflectionEnabled: orderSet.billingReflectionEnabled,
+            displayName: orderSet.setName,
+            billingName: orderSet.billingName,
+          },
+          items: previewItems,
+          pricing: {
+            selectedSetInput: orderSet.amountBasis === "range_price" ? rangeInput ?? null : null,
+            selectedRangeId: matchedRange?.id ?? null,
+            rangeInput: orderSet.amountBasis === "range_price" ? rangeInput ?? null : null,
+            childSubtotalKrw: childSubtotalKrw,
+            explicitExtraSubtotalKrw: 0,
+            finalTotalKrw: (effectiveSetPriceKrw ?? 0) + childSubtotalKrw,
+          },
+          selectionFingerprint: fingerprint,
+        },
+      };
+    },
+    async listOrderSets({ workspaceId, query }) {
+      const normalizedQuery = query?.trim().toLowerCase();
+      const summaries = orderSets
+        .filter(
+          (set) =>
+            set.workspaceId === workspaceId &&
+            (!normalizedQuery ||
+              set.setName.toLowerCase().includes(normalizedQuery) ||
+              set.billingName.toLowerCase().includes(normalizedQuery)),
+        )
+        .map((set): OrderSetSummary => ({
+          orderSetId: set.id,
+          currentRevisionId: null,
+          currentRevisionNo: null,
+          availabilityStatus:
+            set.availabilityStatus === "pending_activation"
+              ? "inactive"
+              : set.availabilityStatus,
+          currentEtag: null,
+          needsCompositionReview: false,
+          setName: set.setName,
+          billingName: set.billingName,
+          salesUnit: set.salesUnit,
+          targetSpecies: set.targetSpecies,
+          amountBasis: set.amountBasis,
+          setPriceKrw:
+            set.amountBasis === "set_fixed_price" ? set.setPriceKrw : null,
+          rangeBasis: null,
+          taxType: "derived",
+          rangePriceRanges: [],
+          pendingReviewCount: 0,
+        }));
+      return { ok: true, summaries };
+    },
+    async getOrderSet({ orderSetId, workspaceId }) {
+      const set = orderSets.find(
+        (candidate) => candidate.id === orderSetId && candidate.workspaceId === workspaceId,
+      );
+      if (!set) return { ok: false, status: 404, error: "order_set_not_found" };
+      const listResult = await this.listOrderSets({ workspaceId, query: set.setName });
+      if (!listResult.ok || !listResult.summaries[0]) {
+        return { ok: false, status: 404, error: "order_set_not_found" };
+      }
+      return {
+        ok: true,
+        detail: {
+          ...listResult.summaries[0],
+          workspaceId,
+          sourceSetVersion: set.sourceSetVersion,
+          currentRevision: null,
+        },
+        history: [],
+        reviews: [],
+      };
+    },
+    async createOrderSet({ requestId }) {
+      return mockOrderSetMutationError(requestId);
+    },
+    async saveOrderSetRevision({ requestId }) {
+      return mockOrderSetMutationError(requestId);
+    },
+    async resolveOrderSetUpdateReview({ requestId, action }) {
+      void action;
+      return mockOrderSetMutationError(requestId);
     },
     async getLabTestItemDeleteLock({ testItemId, workspaceId }) {
       const item = labItems.find(
@@ -924,6 +1897,15 @@ type OrderCatalogItemDbRow = {
   last_customized_at?: string | null;
   last_customized_by_user_id?: string | null;
   preset_merge_status?: string | null;
+  origin_type?: string | null;
+  source_master_record_id?: string | null;
+  source_master_revision?: number | null;
+  initial_imported_revision?: number | null;
+  last_auto_merged_revision?: number | null;
+  classification_path_id?: string | null;
+  catalog_revision?: number | null;
+  source_projection_snapshot?: Record<string, unknown> | null;
+  source_projection_fingerprint?: string | null;
   category_group: string;
   category_label: string;
   t_code?: string | null;
@@ -933,7 +1915,7 @@ type OrderCatalogItemDbRow = {
   billing_name: string;
   aliases?: string[] | null;
   availability_status: string;
-  price_krw: number;
+  price_krw: number | null;
   sales_unit: string;
   target_species?: string[] | null;
   default_destination_module: string;
@@ -964,6 +1946,15 @@ const orderCatalogItemSelectColumns = [
   "last_customized_at",
   "last_customized_by_user_id",
   "preset_merge_status",
+  "origin_type",
+  "source_master_record_id",
+  "source_master_revision",
+  "initial_imported_revision",
+  "last_auto_merged_revision",
+  "classification_path_id",
+  "catalog_revision",
+  "source_projection_snapshot",
+  "source_projection_fingerprint",
   "category_group",
   "category_label",
   "t_code",
@@ -1012,16 +2003,13 @@ export function createSupabaseOrderCatalogGateway(
     },
     async listChartSearch({ workspaceId }) {
       const { data, error } = await client.rpc(
-        "clair_list_order_catalog_chart_search",
+        "clair_list_order_catalog_chart_search_v2",
         { p_workspace_id: workspaceId },
       );
       if (error) return { ok: true, rows: [] };
       return { ok: true, rows: mapChartSearchRows(data) };
     },
     async mutateOrder({ actorUserId, mutation, workspaceId }) {
-      const table = getSupabaseOrderCatalogTable(client);
-      if (!table) return { ok: false, status: 500, error: "db_write_failed" };
-
       if (mutation.action === "create") {
         const validation = validateOrderItem(mutation.item);
         if (!validation.valid)
@@ -1041,65 +2029,140 @@ export function createSupabaseOrderCatalogGateway(
           now,
           actorUserId,
         );
-        const { data, error } = await table
-          .insert(orderCatalogItemToDbRow(next))
-          .select(orderCatalogItemSelectColumns)
-          .single();
-        if (error) return { ok: false, status: 500, error: "db_write_failed" };
-        const item = mapOrderCatalogDbRow(data);
-        return item
-          ? { ok: true, item }
-          : { ok: false, status: 500, error: "db_write_failed" };
+        const { data, error } = await client.rpc(
+          "clair_create_order_catalog_item",
+          { p_workspace_id: workspaceId, p_item: orderCatalogItemToRpcInput(next) },
+        );
+        if (error) return mapCatalogRpcError(error.message);
+        return normalizeCatalogRpcItem(data);
       }
 
-      const current = await readSupabaseOrderCatalogItem({
-        client,
-        itemId: mutation.itemId,
-        workspaceId,
+      const patch = mutation.action === "pause"
+        ? { availabilityStatus: "paused" as const }
+        : mutation.patch;
+      const { data, error } = await client.rpc(
+        "clair_update_order_catalog_item",
+        {
+          p_workspace_id: workspaceId,
+          p_item_id: mutation.itemId,
+          p_expected_catalog_revision: mutation.expectedCatalogRevision,
+          p_patch: orderCatalogPatchToRpcInput(patch),
+        },
+      );
+      if (error) return mapCatalogRpcError(error.message);
+      return normalizeCatalogRpcItem(data);
+    },
+    async mutateLabTestItem({ actorUserId, input, workspaceId }) {
+      const { data, error } = await client.rpc(
+        "clair_update_workspace_lab_test_item",
+        {
+          p_workspace_id: workspaceId,
+          p_item_id: input.itemId,
+          p_actor_user_id: actorUserId,
+          p_expected_workspace_result_revision:
+            input.expectedWorkspaceResultRevision ?? null,
+          p_expected_local_settings_revision:
+            input.expectedLocalSettingsRevision ?? null,
+          p_action: input.action,
+          p_patch: input.patch,
+          p_target_link_ids: input.targetLinkIds ?? [],
+        },
+      );
+      if (error) return mapLabTestItemRpcError(error.message);
+      return normalizeLabTestItemRpcResult(data);
+    },
+    async listOrderSets({ workspaceId, query }) {
+      const { data, error } = await client.rpc("clair_list_order_sets", {
+        p_workspace_id: workspaceId,
+        p_query: query?.trim() || null,
       });
-      if (!current) {
-        return { ok: false, status: 404, denialReason: "order_not_found" };
-      }
-
-      const now = new Date().toISOString();
-      const changedFields =
-        mutation.action === "pause"
-          ? ["availabilityStatus"]
-          : Object.keys(mutation.patch);
-      const next =
-        mutation.action === "pause"
-          ? markCatalogItemCustomized(
-              {
-                ...current,
-                availabilityStatus: "paused",
-                updatedAt: now,
-              },
-              changedFields,
-              now,
-              actorUserId,
-            )
-          : markCatalogItemCustomized(
-              { ...current, ...mutation.patch, updatedAt: now },
-              changedFields,
-              now,
-              actorUserId,
-            );
-      if (!validateOrderItem(next).valid)
-        return { ok: false, status: 400, error: "invalid_input" };
-      const { data, error } = await table
-        .update(orderCatalogItemToDbRow(next))
-        .eq("workspace_id", workspaceId)
-        .eq("id", next.id)
-        .select(orderCatalogItemSelectColumns)
-        .single();
-      if (error) return { ok: false, status: 500, error: "db_write_failed" };
-      const item = mapOrderCatalogDbRow(data);
-      return item
-        ? { ok: true, item }
-        : { ok: false, status: 500, error: "db_write_failed" };
+      if (error) return mapOrderSetListRpcError(error.message);
+      return { ok: true, summaries: mapOrderSetSummaries(data) };
+    },
+    async getOrderSet({ orderSetId, workspaceId }) {
+      const { data, error } = await client.rpc("clair_get_order_set", {
+        p_workspace_id: workspaceId,
+        p_order_set_id: orderSetId,
+      });
+      if (error) return mapOrderSetReadRpcError(error.message);
+      const response = isRecord(data) ? data : {};
+      const detail = mapOrderSetDetail(response.orderSet);
+      if (!detail) return { ok: false, status: 500, error: "invalid_order_set_definition" };
+      return {
+        ok: true,
+        detail,
+        history: mapOrderSetRevisions(response.history),
+        reviews: mapOrderSetReviews(response.reviews),
+      };
+    },
+    async createOrderSet({ availabilityStatus, definition, requestId, workspaceId }) {
+      const { data, error } = await client.rpc("clair_create_order_set", {
+        p_workspace_id: workspaceId,
+        p_definition: definition as unknown as Record<string, unknown>,
+        p_availability_status: availabilityStatus,
+        p_request_id: requestId,
+      });
+      return mapOrderSetMutationRpcResult(data, error, requestId);
+    },
+    async saveOrderSetRevision({
+      availabilityStatus,
+      definition,
+      expectedCurrentRevisionId,
+      orderSetId,
+      requestId,
+      workspaceId,
+    }) {
+      const { data, error } = await client.rpc("clair_save_order_set_revision", {
+        p_workspace_id: workspaceId,
+        p_order_set_id: orderSetId,
+        p_expected_current_revision_id: expectedCurrentRevisionId,
+        p_definition: definition as unknown as Record<string, unknown>,
+        p_availability_status: availabilityStatus,
+        p_request_id: requestId,
+      });
+      return mapOrderSetMutationRpcResult(data, error, requestId);
+    },
+    async resolveOrderSetUpdateReview({
+      action,
+      expectedParentRevisionId,
+      requestId,
+      reviewId,
+      workspaceId,
+    }) {
+      const { data, error } = await client.rpc("clair_resolve_order_set_update_review", {
+        p_workspace_id: workspaceId,
+        p_review_id: reviewId,
+        p_expected_parent_revision_id: expectedParentRevisionId,
+        p_action: action,
+        p_request_id: requestId,
+      });
+      return mapOrderSetMutationRpcResult(data, error, requestId);
     },
     async expandOrderSet() {
       return { ok: false, status: 404, denialReason: "order_set_not_found" };
+    },
+    async previewOrderSet({
+      encounterId,
+      orderSetId,
+      revisionId,
+      selectionIntent,
+      workspaceId,
+    }) {
+      const { data, error } = await client.rpc(
+        "clair_preview_chart_order_set",
+        {
+          workspace_id: workspaceId,
+          encounter_id: encounterId,
+          set_id: orderSetId,
+          revision_id: revisionId,
+          selection_intent: selectionIntent,
+        },
+      );
+      if (error) return mapChartOrderSetPreviewRpcError(error.message);
+      const preview = mapChartOrderSetPreview(data);
+      return preview
+        ? { ok: true, preview }
+        : { ok: false, status: 500, error: "invalid_preview_response" };
     },
     async getLabTestItemDeleteLock() {
       return {
@@ -1115,24 +2178,510 @@ function getSupabaseOrderCatalogTable(client: SupabaseOrderCatalogRpcClient) {
   return client.from?.("order_catalog_items");
 }
 
-async function readSupabaseOrderCatalogItem({
-  client,
-  itemId,
-  workspaceId,
-}: {
-  client: SupabaseOrderCatalogRpcClient;
-  itemId: string;
-  workspaceId: string;
-}) {
-  const table = getSupabaseOrderCatalogTable(client);
-  if (!table) return null;
-  const { data, error } = await table
-    .select(orderCatalogItemSelectColumns)
-    .eq("workspace_id", workspaceId)
-    .eq("id", itemId)
-    .single();
-  if (error) return null;
-  return mapOrderCatalogDbRow(data);
+function mapOrderSetListRpcError(
+  message?: string,
+): { ok: false; status: number; error: OrderSetErrorCode } {
+  return { ok: false, ...mapOrderSetRpcError(message) };
+}
+
+function mapOrderSetReadRpcError(
+  message?: string,
+): { ok: false; status: number; error: OrderSetErrorCode } {
+  return { ok: false, ...mapOrderSetRpcError(message) };
+}
+
+function mapOrderSetRpcError(
+  message?: string,
+): { status: number; error: OrderSetErrorCode } {
+  const text = message ?? "";
+  if (text.includes("authentication_required")) {
+    return { status: 401, error: "authentication_required" };
+  }
+  if (text.includes("permission_missing") || text.includes("membership")) {
+    return { status: 403, error: text.includes("membership") ? "workspace_membership_missing" : "permission_missing" };
+  }
+  if (text.includes("order_set_not_found")) {
+    return { status: 404, error: "order_set_not_found" };
+  }
+  if (text.includes("review_not_found")) {
+    return { status: 404, error: "order_set_review_not_found" };
+  }
+  if (
+    text.includes("revision_conflict") ||
+    text.includes("idempotency_conflict") ||
+    text.includes("obsolete") ||
+    text.includes("requires_refresh")
+  ) {
+    return {
+      status: 409,
+      error: text.includes("idempotency_conflict")
+        ? "idempotency_conflict"
+        : text.includes("requires_refresh")
+          ? "child_revision_requires_refresh"
+          : text.includes("obsolete")
+            ? "order_set_review_obsolete"
+            : "revision_conflict",
+    };
+  }
+  if (text.includes("member_unavailable") || text.includes("invalid_order_set")) {
+    return {
+      status: 422,
+      error: text.includes("member_unavailable")
+        ? "order_set_member_unavailable"
+        : "invalid_order_set_definition",
+    };
+  }
+  return { status: 500, error: "invalid_order_set_definition" };
+}
+
+function mapOrderSetSummaries(value: unknown): OrderSetSummary[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(mapOrderSetSummary)
+    .filter((summary): summary is OrderSetSummary => Boolean(summary));
+}
+
+function mapOrderSetSummary(value: unknown): OrderSetSummary | null {
+  if (!isRecord(value)) return null;
+  const orderSetId = b2ReadString(value, "order_set_id", "orderSetId");
+  const availabilityStatus = b2ReadString(value, "availability_status", "availabilityStatus");
+  const setName = b2ReadString(value, "set_name", "setName");
+  const billingName = b2ReadString(value, "billing_name", "billingName");
+  const salesUnit = b2ReadString(value, "sales_unit", "salesUnit");
+  const amountBasis = b2ReadString(value, "amount_basis", "amountBasis");
+  if (!orderSetId || !availabilityStatus || !setName || !billingName || !salesUnit || !amountBasis) return null;
+  return {
+    orderSetId,
+    currentRevisionId: b2ReadString(value, "current_revision_id", "currentRevisionId"),
+    currentRevisionNo: b2ReadNumber(value, "current_revision_no", "currentRevisionNo"),
+    availabilityStatus: availabilityStatus as OrderSetSummary["availabilityStatus"],
+    currentEtag: b2ReadString(value, "current_etag", "currentEtag"),
+    needsCompositionReview: b2ReadBoolean(value, "needs_composition_review", "needsCompositionReview"),
+    setName,
+    billingName,
+    salesUnit: salesUnit as OrderCatalogSalesUnit,
+    targetSpecies: readSpeciesList(value.target_species ?? value.targetSpecies),
+    amountBasis: amountBasis as OrderSetAmountBasis,
+    setPriceKrw: b2ReadNullableNumber(value, "set_price_krw", "setPriceKrw"),
+    rangeBasis: (b2ReadString(value, "range_basis", "rangeBasis") as OrderSetRangeBasis | null),
+    taxType: (b2ReadString(value, "tax_type", "taxType") ?? "derived") as OrderSetTaxType,
+    rangePriceRanges: mapOrderSetRanges(value.range_price_ranges ?? value.rangePriceRanges),
+    pendingReviewCount: b2ReadNumber(value, "pending_review_count", "pendingReviewCount") ?? 0,
+  };
+}
+
+function mapOrderSetDetail(value: unknown): OrderSetDetail | null {
+  if (!isRecord(value)) return null;
+  const summary = mapOrderSetSummary(value);
+  const workspaceId = b2ReadString(value, "workspace_id", "workspaceId");
+  const sourceSetVersion = b2ReadString(value, "source_set_version", "sourceSetVersion");
+  if (!summary || !workspaceId || !sourceSetVersion) return null;
+  return {
+    ...summary,
+    workspaceId,
+    sourceSetVersion,
+    currentRevision: mapOrderSetRevision(value.currentRevision ?? value.current_revision),
+  };
+}
+
+function mapOrderSetRevisions(value: unknown): OrderSetRevision[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(mapOrderSetRevision)
+    .filter((revision): revision is OrderSetRevision => Boolean(revision));
+}
+
+function mapOrderSetRevision(value: unknown): OrderSetRevision | null {
+  if (!isRecord(value)) return null;
+  const workspaceId = b2ReadString(value, "workspace_id", "workspaceId");
+  const orderSetId = b2ReadString(value, "order_set_id", "orderSetId");
+  const id = b2ReadString(value, "id");
+  const setName = b2ReadString(value, "set_name", "setName");
+  const billingName = b2ReadString(value, "billing_name", "billingName");
+  const amountBasis = b2ReadString(value, "amount_basis", "amountBasis");
+  const salesUnit = b2ReadString(value, "sales_unit", "salesUnit");
+  const taxType = b2ReadString(value, "tax_type", "taxType");
+  if (!workspaceId || !orderSetId || !id || !setName || !billingName || !amountBasis || !salesUnit || !taxType) return null;
+  return {
+    id,
+    workspaceId,
+    orderSetId,
+    revisionNo: b2ReadNumber(value, "revision_no", "revisionNo") ?? 0,
+    validationStatus: (b2ReadString(value, "validation_status", "validationStatus") ?? "valid") as OrderSetRevisionStatus,
+    validationErrors: Array.isArray(value.validation_errors ?? value.validationErrors)
+      ? (value.validation_errors ?? value.validationErrors) as unknown[]
+      : [],
+    setCategory: b2ReadNullableString(value, "set_category", "setCategory"),
+    setName,
+    billingName,
+    amountBasis: amountBasis as OrderSetAmountBasis,
+    setPriceKrw: b2ReadNullableNumber(value, "set_price_krw", "setPriceKrw"),
+    rangeBasis: b2ReadNullableString(value, "range_basis", "rangeBasis") as OrderSetRangeBasis | null,
+    salesUnit: salesUnit as OrderCatalogSalesUnit,
+    billingReflectionEnabled: b2ReadBoolean(value, "billing_reflection_enabled", "billingReflectionEnabled"),
+    taxType: taxType as OrderSetTaxType,
+    targetSpecies: readSpeciesList(value.target_species ?? value.targetSpecies),
+    careGuide: b2ReadNullableString(value, "care_guide", "careGuide"),
+    internalInstruction: b2ReadNullableString(value, "internal_instruction", "internalInstruction"),
+    createdByUserId: b2ReadNullableString(value, "created_by_user_id", "createdByUserId"),
+    createdAt: b2ReadString(value, "created_at", "createdAt") ?? "",
+    items: mapOrderSetRevisionItems(value.items),
+    priceRanges: mapOrderSetRanges(value.priceRanges),
+    currentEtag: b2ReadString(value, "currentEtag", "current_etag") ?? `order-set-revision-${id}`,
+  };
+}
+
+function mapOrderSetRevisionItems(value: unknown): OrderSetRevisionItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .map((row) => ({
+      id: b2ReadString(row, "id") ?? "",
+      childKind: (b2ReadString(row, "child_kind", "childKind") ?? "atomic") as OrderSetDefinitionItem["childKind"],
+      childOrderCatalogItemId: b2ReadNullableString(row, "child_order_catalog_item_id", "childOrderCatalogItemId"),
+      childOrderCatalogRevision: b2ReadNullableNumber(row, "child_order_catalog_revision", "childOrderCatalogRevision"),
+      childOrderSetId: b2ReadNullableString(row, "child_order_set_id", "childOrderSetId"),
+      childSetRevisionId: b2ReadNullableString(row, "child_set_revision_id", "childSetRevisionId"),
+      sortOrder: b2ReadNumber(row, "sort_order", "sortOrder") ?? 0,
+      defaultSelected: b2ReadBoolean(row, "default_selected", "defaultSelected"),
+      billingReflectionDefault: b2ReadBoolean(row, "billing_reflection_default", "billingReflectionDefault"),
+      defaultQuantity: b2ReadNumber(row, "default_quantity", "defaultQuantity") ?? 1,
+      quantitySource: (b2ReadString(row, "quantity_source", "quantitySource") ?? "fixed_one") as OrderSetDefinitionItem["quantitySource"],
+    }))
+    .filter((item) => item.id.length > 0);
+}
+
+function mapOrderSetRanges(value: unknown): OrderSetRevisionPriceRange[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .map((row) => ({
+      id: b2ReadString(row, "id") ?? "",
+      sortOrder: b2ReadNumber(row, "sort_order", "sortOrder") ?? 0,
+      lowerBound: b2ReadNumber(row, "lower_bound", "lowerBound") ?? 0,
+      upperBound: b2ReadNullableNumber(row, "upper_bound", "upperBound"),
+      priceKrw: b2ReadNumber(row, "price_krw", "priceKrw") ?? 0,
+    }))
+    .filter((range) => range.id.length > 0);
+}
+
+function mapOrderSetReviews(value: unknown): OrderSetUpdateReview[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .map((row) => ({
+      id: b2ReadString(row, "id") ?? "",
+      workspaceId: b2ReadString(row, "workspace_id", "workspaceId") ?? "",
+      parentOrderSetId: b2ReadString(row, "parent_order_set_id", "parentOrderSetId") ?? "",
+      parentRevisionId: b2ReadString(row, "parent_revision_id", "parentRevisionId") ?? "",
+      childOrderSetId: b2ReadString(row, "child_order_set_id", "childOrderSetId") ?? "",
+      pinnedChildRevisionId: b2ReadString(row, "pinned_child_revision_id", "pinnedChildRevisionId") ?? "",
+      availableChildRevisionId: b2ReadString(row, "available_child_revision_id", "availableChildRevisionId") ?? "",
+      status: (b2ReadString(row, "status") ?? "pending") as OrderSetReviewStatus,
+      resultParentRevisionId: b2ReadNullableString(row, "result_parent_revision_id", "resultParentRevisionId"),
+      createdAt: b2ReadString(row, "created_at", "createdAt") ?? "",
+      resolvedAt: b2ReadNullableString(row, "resolved_at", "resolvedAt"),
+      resolvedByUserId: b2ReadNullableString(row, "resolved_by_user_id", "resolvedByUserId"),
+    }))
+    .filter((review) => review.id.length > 0 && review.workspaceId.length > 0);
+}
+
+function mapOrderSetMutationRpcResult(
+  value: unknown,
+  error: { message?: string } | null,
+  requestId: string,
+): OrderSetMutationResponse {
+  if (error) {
+    const mapped = mapOrderSetRpcError(error.message);
+    const failureOutcome: OrderSetFailureOutcome =
+      mapped.error === "revision_conflict" || mapped.error === "idempotency_conflict"
+        ? "conflict"
+        : mapped.error === "order_set_review_obsolete"
+          ? "obsolete"
+          : "rejected";
+    return {
+      ok: false,
+      outcome: failureOutcome,
+      requestId,
+      error: { code: mapped.error, field: null, message: error.message ?? mapped.error },
+      result: null,
+    };
+  }
+  if (!isRecord(value) || typeof value.ok !== "boolean") {
+    return {
+      ok: false,
+      outcome: "rejected",
+      requestId,
+      error: { code: "invalid_order_set_definition", field: null, message: "invalid RPC response" },
+      result: null,
+    };
+  }
+  const rpcRequestId = typeof value.requestId === "string" ? value.requestId : requestId;
+  if (!value.ok) {
+    const errorValue = isRecord(value.error) ? value.error : {};
+    const code = typeof errorValue.code === "string" && isOrderSetErrorCode(errorValue.code)
+      ? errorValue.code
+      : "invalid_order_set_definition";
+    const outcome = isOrderSetFailureOutcome(value.outcome) ? value.outcome : "rejected";
+    return {
+      ok: false,
+      outcome,
+      requestId: rpcRequestId,
+      error: {
+        code,
+        field: typeof errorValue.field === "string" ? errorValue.field : null,
+        message: typeof errorValue.message === "string" ? errorValue.message : code,
+      },
+      result: null,
+    };
+  }
+  const resultValue = isRecord(value.result) ? value.result : {};
+  const successOutcome = isOrderSetSuccessOutcome(value.outcome) ? value.outcome : null;
+  if (!successOutcome) {
+    return {
+      ok: false,
+      outcome: "rejected",
+      requestId: rpcRequestId,
+      error: { code: "invalid_order_set_definition", field: null, message: "invalid RPC outcome" },
+      result: null,
+    };
+  }
+  return {
+    ok: true,
+    outcome: successOutcome,
+    requestId: rpcRequestId,
+    error: null,
+    result: {
+      orderSet: mapOrderSetDetail(resultValue.orderSet),
+      revision: mapOrderSetRevision(resultValue.revision),
+      review: mapOrderSetReviews([resultValue.review])[0] ?? null,
+      current: isRecord(resultValue.current) && typeof resultValue.current.revisionId === "string" && typeof resultValue.current.etag === "string"
+        ? { revisionId: resultValue.current.revisionId, etag: resultValue.current.etag }
+        : null,
+    },
+  };
+}
+
+function isOrderSetErrorCode(value: string): value is OrderSetErrorCode {
+  return [
+    "authentication_required", "workspace_membership_missing", "permission_missing",
+    "order_set_not_found", "order_set_review_not_found", "revision_conflict",
+    "idempotency_conflict", "invalid_order_set_definition", "order_set_member_unavailable",
+    "child_revision_requires_refresh", "order_set_review_obsolete", "if_none_match_required",
+    "if_match_required",
+  ].includes(value);
+}
+
+function isOrderSetSuccessOutcome(value: unknown): value is OrderSetSuccessOutcome {
+  return value === "created" || value === "applied" || value === "accepted" || value === "dismissed";
+}
+
+function isOrderSetFailureOutcome(value: unknown): value is OrderSetFailureOutcome {
+  return value === "rejected" || value === "conflict" || value === "obsolete" || value === "superseded";
+}
+
+function b2ReadString(row: Record<string, unknown>, snake: string, camel = snake): string | null {
+  const value = row[snake] ?? row[camel];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function b2ReadNullableString(row: Record<string, unknown>, snake: string, camel = snake): string | null {
+  const value = row[snake] ?? row[camel];
+  return value === null || value === undefined ? null : typeof value === "string" ? value : null;
+}
+
+function b2ReadNumber(row: Record<string, unknown>, snake: string, camel = snake): number | null {
+  const value = row[snake] ?? row[camel];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
+  return null;
+}
+
+function b2ReadNullableNumber(row: Record<string, unknown>, snake: string, camel = snake): number | null {
+  const value = row[snake] ?? row[camel];
+  return value === null || value === undefined ? null : b2ReadNumber({ value }, "value");
+}
+
+function b2ReadBoolean(row: Record<string, unknown>, snake: string, camel = snake): boolean {
+  const value = row[snake] ?? row[camel];
+  return value === true || value === "true";
+}
+
+function normalizeCatalogRpcItem(value: unknown):
+  | { ok: true; item: OrderCatalogItem }
+  | { ok: false; status: 400; error: "invalid_input" }
+  | { ok: false; status: 500; error: "db_write_failed" } {
+  const itemValue =
+    isRecord(value) && isRecord(value.item) ? value.item : value;
+  const item = mapOrderCatalogDbRow(itemValue);
+  return item
+    ? { ok: true, item }
+    : { ok: false, status: 500, error: "db_write_failed" };
+}
+
+function mapCatalogRpcError(
+  message?: string,
+):
+  | { ok: false; status: 400; error: "invalid_input" }
+  | { ok: false; status: 404; denialReason: "order_not_found" }
+  | { ok: false; status: 409; error: "catalog_revision_conflict" }
+  | { ok: false; status: 500; error: "db_write_failed" } {
+  if (message?.includes("catalog_revision_conflict")) {
+    return { ok: false, status: 409, error: "catalog_revision_conflict" };
+  }
+  if (message?.includes("order_catalog_item_not_found")) {
+    return { ok: false, status: 404, denialReason: "order_not_found" };
+  }
+  if (
+    message?.includes("catalog_") ||
+    message?.includes("pending_activation") ||
+    message?.includes("active_billable") ||
+    message?.includes("workspace_admin_required")
+  ) {
+    return { ok: false, status: 400, error: "invalid_input" };
+  }
+  return { ok: false, status: 500, error: "db_write_failed" };
+}
+
+function mapLabTestItemRpcError(
+  message?: string,
+):
+  | { ok: false; status: 400; error: "invalid_input" }
+  | { ok: false; status: 403; denialReason: "permission_missing" | "actor_mismatch" }
+  | { ok: false; status: 404; denialReason: "lab_test_item_not_found" }
+  | { ok: false; status: 409; error: "lab_item_revision_conflict" | "lab_item_local_settings_revision_conflict" }
+  | { ok: false; status: 500; error: "db_write_failed" } {
+  if (message?.includes("permission_missing")) {
+    return { ok: false, status: 403, denialReason: "permission_missing" };
+  }
+  if (message?.includes("actor_mismatch")) {
+    return { ok: false, status: 403, denialReason: "actor_mismatch" };
+  }
+  if (message?.includes("lab_test_item_not_found")) {
+    return { ok: false, status: 404, denialReason: "lab_test_item_not_found" };
+  }
+  if (message?.includes("lab_item_local_settings_revision_conflict")) {
+    return {
+      ok: false,
+      status: 409,
+      error: "lab_item_local_settings_revision_conflict",
+    };
+  }
+  if (message?.includes("lab_item_revision_conflict")) {
+    return { ok: false, status: 409, error: "lab_item_revision_conflict" };
+  }
+  if (message?.includes("lab_") || message?.includes("revision")) {
+    return { ok: false, status: 400, error: "invalid_input" };
+  }
+  return { ok: false, status: 500, error: "db_write_failed" };
+}
+
+function normalizeLabTestItemRpcResult(value: unknown):
+  | { ok: true; item: LabTestItem; affectedCatalogItemIds: string[] }
+  | { ok: false; status: 500; error: "db_write_failed" } {
+  if (!value || typeof value !== "object") {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+  const response = value as Record<string, unknown>;
+  const item = mapLabTestItemDbRow(response.item);
+  if (!item) return { ok: false, status: 500, error: "db_write_failed" };
+  const affectedCatalogItemIds = Array.isArray(response.affectedCatalogItemIds)
+    ? response.affectedCatalogItemIds.filter(
+        (id): id is string => typeof id === "string",
+      )
+    : [];
+  return { ok: true, item, affectedCatalogItemIds };
+}
+
+function mapLabTestItemDbRow(value: unknown): LabTestItem | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  if (
+    typeof row.id !== "string" ||
+    typeof row.workspace_id !== "string" ||
+    typeof row.category_id !== "string" ||
+    typeof row.test_item_name !== "string" ||
+    typeof row.result_input_type !== "string" ||
+    typeof row.availability_status !== "string"
+  ) {
+    return null;
+  }
+  const usage = row.saved_result_usage_count;
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    categoryId: row.category_id,
+    name: row.test_item_name,
+    resultInputType: row.result_input_type as LabTestItem["resultInputType"],
+    resultValueKind:
+      row.result_value_kind === "numeric" ||
+      row.result_value_kind === "text" ||
+      row.result_value_kind === "coded"
+        ? row.result_value_kind
+        : undefined,
+    decimalScale:
+      typeof row.decimal_scale === "number" ? row.decimal_scale : undefined,
+    resultUnit: typeof row.result_unit === "string" ? row.result_unit : undefined,
+    sortOrder: typeof row.sort_order === "number" ? row.sort_order : 0,
+    availabilityStatus: row.availability_status as OrderCatalogAvailability,
+    savedResultUsageCount: typeof usage === "number" ? usage : 0,
+    definitionOrigin:
+      row.definition_origin === "clair_master" ||
+      row.definition_origin === "workspace_custom" ||
+      row.definition_origin === "legacy" ||
+      row.definition_origin === "quarantined"
+        ? row.definition_origin
+        : undefined,
+    workspaceResultRevision:
+      typeof row.workspace_result_revision === "number"
+        ? row.workspace_result_revision
+        : undefined,
+    localSettingsRevision:
+      typeof row.local_settings_revision === "number"
+        ? row.local_settings_revision
+        : undefined,
+  };
+}
+
+function orderCatalogItemToRpcInput(item: OrderCatalogItem) {
+  return {
+    id: item.id,
+    standardOrderId: item.standardOrderId,
+    sourcePresetVersion: item.sourcePresetVersion,
+    classificationPathId: item.classificationPathId ?? null,
+    categoryGroup: item.categoryGroup,
+    categoryLabel: item.categoryLabel,
+    tCode: item.tCode ?? null,
+    tCodeLabel: item.tCodeLabel ?? null,
+    standardOrderName: item.standardOrderName,
+    inHospitalOrderName: item.inHospitalOrderName,
+    billingName: item.billingName,
+    aliases: item.aliases,
+    availabilityStatus: item.availabilityStatus,
+    priceKrw: item.priceKrw,
+    salesUnit: item.salesUnit,
+    targetSpecies: item.targetSpecies,
+    defaultDestinationModule: item.defaultDestinationModule,
+    defaultTaskRequired: item.defaultTaskRequired,
+    billingReflectionEnabled: item.billingReflectionEnabled,
+    careGuide: item.careGuide ?? null,
+    careGuideDeliveryEnabled: item.careGuideDeliveryEnabled ?? false,
+    internalInstruction: item.internalInstruction ?? null,
+    internalInstructionDeliveryEnabled:
+      item.internalInstructionDeliveryEnabled ?? false,
+    taxIncluded: item.taxIncluded,
+    roundingRule: item.roundingRule,
+    pricingRule: item.pricingRule,
+    medicationMetadata: item.medicationMetadata ?? {},
+    vaccineMetadata: item.vaccineMetadata ?? {},
+  };
+}
+
+function orderCatalogPatchToRpcInput(patch: Partial<OrderCatalogItem>) {
+  // Preserve every client-supplied key so the fixed-search-path RPC can
+  // reject protected lineage/revision fields instead of silently dropping
+  // an attempted write at this adapter boundary.
+  return Object.fromEntries(Object.entries(patch));
 }
 
 function mapOrderCatalogDbRows(value: unknown): OrderCatalogItem[] {
@@ -1156,7 +2705,7 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     !row.in_hospital_order_name ||
     !row.billing_name ||
     !row.availability_status ||
-    typeof row.price_krw !== "number" ||
+    (row.price_krw !== null && typeof row.price_krw !== "number") ||
     !row.sales_unit ||
     !row.default_destination_module ||
     typeof row.default_task_required !== "boolean" ||
@@ -1187,6 +2736,17 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     presetMergeStatus: isPresetMergeStatus(row.preset_merge_status)
       ? row.preset_merge_status
       : "detached",
+    originType:
+      row.origin_type === "clair_master" || row.origin_type === "workspace_custom"
+        ? row.origin_type
+        : "workspace_custom",
+    sourceMasterRecordId: row.source_master_record_id ?? undefined,
+    sourceMasterRevision: row.source_master_revision ?? undefined,
+    initialImportedRevision: row.initial_imported_revision ?? undefined,
+    lastAutoMergedRevision: row.last_auto_merged_revision ?? undefined,
+    classificationPathId: row.classification_path_id ?? undefined,
+    catalogRevision: row.catalog_revision ?? 1,
+    sourceProjectionFingerprint: row.source_projection_fingerprint ?? undefined,
     categoryGroup: row.category_group as ServiceItemType,
     categoryLabel: row.category_label,
     tCode: row.t_code ?? undefined,
@@ -1223,50 +2783,6 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
   };
 }
 
-function orderCatalogItemToDbRow(item: OrderCatalogItem) {
-  return {
-    id: item.id,
-    workspace_id: item.workspaceId,
-    standard_order_id: item.standardOrderId,
-    source_preset_version: item.sourcePresetVersion,
-    initial_imported_preset_version:
-      item.initialImportedPresetVersion ?? null,
-    last_auto_merged_preset_version:
-      item.lastAutoMergedPresetVersion ?? null,
-    customization_state: item.customizationState ?? "detached",
-    customized_fields: item.customizedFields ?? [],
-    last_customized_at: item.lastCustomizedAt ?? null,
-    last_customized_by_user_id: item.lastCustomizedByUserId ?? null,
-    preset_merge_status: item.presetMergeStatus ?? "detached",
-    category_group: item.categoryGroup,
-    category_label: item.categoryLabel,
-    t_code: item.tCode ?? null,
-    t_code_label: item.tCodeLabel ?? null,
-    standard_order_name: item.standardOrderName,
-    in_hospital_order_name: item.inHospitalOrderName,
-    billing_name: item.billingName,
-    aliases: item.aliases,
-    availability_status: item.availabilityStatus,
-    price_krw: item.priceKrw,
-    sales_unit: item.salesUnit,
-    target_species: item.targetSpecies,
-    default_destination_module: item.defaultDestinationModule,
-    default_task_required: item.defaultTaskRequired,
-    billing_reflection_enabled: item.billingReflectionEnabled,
-    care_guide: item.careGuide ?? null,
-    care_guide_delivery_enabled: item.careGuideDeliveryEnabled ?? false,
-    internal_instruction: item.internalInstruction ?? null,
-    internal_instruction_delivery_enabled:
-      item.internalInstructionDeliveryEnabled ?? false,
-    tax_included: item.taxIncluded,
-    rounding_rule: item.roundingRule,
-    pricing_rule: item.pricingRule,
-    medication_metadata: item.medicationMetadata ?? {},
-    vaccine_metadata: item.vaccineMetadata ?? {},
-    updated_at: item.updatedAt,
-  };
-}
-
 function mapOrderPricingRule(row: Partial<OrderCatalogItemDbRow>) {
   const raw =
     row.pricing_rule && typeof row.pricing_rule === "object"
@@ -1277,7 +2793,8 @@ function mapOrderPricingRule(row: Partial<OrderCatalogItemDbRow>) {
       readString(raw.priceBasis ?? raw.price_basis) ??
       ("fixed_order_price" as const),
     priceKrw:
-      readNumber(raw.priceKrw ?? raw.price_krw) ?? row.price_krw ?? 0,
+      readNumber(raw.priceKrw ?? raw.price_krw) ??
+      (row.price_krw === null ? null : row.price_krw ?? 0),
     salesUnit:
       readString(raw.salesUnit ?? raw.sales_unit) ??
       row.sales_unit ??
@@ -1324,6 +2841,7 @@ function isPresetMergeStatus(
     value === "current" ||
     value === "update_available" ||
     value === "conflict" ||
+    value === "deprecated_source" ||
     value === "detached"
   );
 }
@@ -1443,10 +2961,13 @@ function validateOrderItem(item: Partial<OrderCatalogItem>) {
     Boolean(item.standardOrderName?.trim()) &&
     Boolean(item.inHospitalOrderName?.trim()) &&
     Boolean(item.billingName?.trim()) &&
-    typeof item.priceKrw === "number" &&
-    item.priceKrw >= 0 &&
+    (typeof item.priceKrw === "number"
+      ? item.priceKrw >= 0
+      : item.priceKrw === null && item.availabilityStatus === "pending_activation") &&
     item.pricingRule !== undefined &&
-    item.pricingRule.priceKrw >= 0;
+    (typeof item.pricingRule.priceKrw === "number"
+      ? item.pricingRule.priceKrw >= 0
+      : item.pricingRule.priceKrw === null && item.availabilityStatus === "pending_activation");
   return { valid };
 }
 
@@ -1585,9 +3106,12 @@ function createSetSnapshot(set: OrderSet): AppliedOrderSnapshot {
     appliedStandardOrderName: set.setName,
     appliedDisplayName: set.setName,
     appliedBillingName: set.billingName,
-    appliedPriceKrw: set.setPriceKrw,
+    appliedPriceKrw:
+      set.amountBasis === "set_fixed_price" ? set.setPriceKrw : null,
     appliedSalesUnit: set.salesUnit,
-    appliedTaxIncluded: true,
+    appliedTaxIncluded: set.amountBasis === "included_order_sum"
+      ? true
+      : (set.taxType ?? "taxable") === "taxable",
     appliedAmountBasis: set.amountBasis,
     appliedTargetSpecies: [...set.targetSpecies],
     appliedCareGuide: set.careGuide,
@@ -1596,6 +3120,24 @@ function createSetSnapshot(set: OrderSet): AppliedOrderSnapshot {
     appliedTaskRequired: false,
     billingReflectionEnabled: set.billingReflectionEnabled,
   };
+}
+
+function mockOrderSetRevisionId(orderSetId: string) {
+  const hex = Array.from(orderSetId).reduce(
+    (hash, character) => ((hash * 31 + character.charCodeAt(0)) >>> 0),
+    0,
+  ).toString(16).padStart(8, "0");
+  return `00000000-0000-4000-8000-${hex}${hex.slice(0, 4)}`;
+}
+
+function mockChartOrderFingerprint(value: unknown) {
+  const text = JSON.stringify(value);
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0").repeat(8);
 }
 
 function mapChartSearchRows(value: unknown): ChartOrderCatalogSearchRow[] {
@@ -1608,7 +3150,6 @@ function mapChartSearchRows(value: unknown): ChartOrderCatalogSearchRow[] {
 function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Record<string, unknown>;
-  const appliedSnapshot = mapAppliedSnapshot(row.appliedSnapshot ?? row.applied_snapshot);
   const rowType = readString(row.rowType ?? row.row_type);
   const sourcePresetId = readString(row.sourcePresetId ?? row.source_preset_id);
   const sourcePresetVersion = readString(
@@ -1618,17 +3159,13 @@ function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
   const billingName = readString(row.billingName ?? row.billing_name);
   const categoryGroup = readString(row.categoryGroup ?? row.category_group);
   if (
-    !appliedSnapshot ||
     (rowType !== "individual" && rowType !== "set") ||
-    !sourcePresetId ||
-    !sourcePresetVersion ||
-    !displayName ||
-    !billingName ||
-    !categoryGroup
+    !sourcePresetId || !sourcePresetVersion || !displayName ||
+    !billingName || !categoryGroup
   ) {
     return null;
   }
-  return {
+  const common = {
     rowType,
     sourcePresetId,
     sourcePresetVersion,
@@ -1636,8 +3173,272 @@ function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
     billingName,
     categoryGroup: categoryGroup as ServiceItemType | "set",
     targetSpecies: readSpeciesList(row.targetSpecies ?? row.target_species),
+  } as const;
+  if (rowType === "set") {
+    const sourceSetId = readString(row.sourceSetId ?? row.source_set_id);
+    const sourceSetRevisionId = readString(
+      row.sourceSetRevisionId ?? row.source_set_revision_id,
+    );
+    const sourceSetRevisionNo = readNumber(
+      row.sourceSetRevisionNo ?? row.source_set_revision_no,
+    );
+    const amountBasis = readString(
+      row.sourceSetAmountBasis ?? row.source_set_amount_basis,
+    );
+    const taxType = readString(row.sourceSetTaxType ?? row.source_set_tax_type);
+    const ranges = mapOrderSetRanges(
+      row.sourceSetPriceRanges ?? row.source_set_price_ranges,
+    );
+    const rangeBasis = readString(
+      row.sourceSetRangeBasis ?? row.source_set_range_basis,
+    );
+    const sourceSetAvailabilityStatus = readString(
+      row.sourceSetAvailabilityStatus ?? row.source_set_availability_status,
+    );
+    const sourceSetValidationStatus = readString(
+      row.sourceSetValidationStatus ?? row.source_set_validation_status,
+    );
+    const sourceSetNeedsCompositionReview =
+      row.sourceSetNeedsCompositionReview ?? row.source_set_needs_composition_review;
+    const sourceSetPriceKrw = readNullableNumber(
+      row.sourceSetPriceKrw ?? row.source_set_price_krw,
+    );
+    const rawPriceRanges = row.sourceSetPriceRanges ?? row.source_set_price_ranges;
+    const pendingReviewCount = readNumber(
+      row.sourceSetPendingReviewCount ?? row.source_set_pending_review_count,
+    ) ?? 0;
+    if (
+      !sourceSetId || !sourceSetRevisionId || !Number.isInteger(sourceSetRevisionNo) ||
+      !isOrderSetAmountBasis(amountBasis) || !isOrderSetTaxType(taxType) ||
+      !isOrderSetRangeBasisOrNull(rangeBasis) ||
+      sourceSetId !== sourcePresetId ||
+      sourceSetAvailabilityStatus !== "active" ||
+      sourceSetValidationStatus !== "valid" ||
+      sourceSetNeedsCompositionReview !== false ||
+      !Array.isArray(rawPriceRanges) ||
+      ranges.length !== rawPriceRanges.length ||
+      !Number.isInteger(pendingReviewCount) || pendingReviewCount < 0 ||
+      (amountBasis === "set_fixed_price" && sourceSetPriceKrw === null) ||
+      (amountBasis === "included_order_sum" && sourceSetPriceKrw !== null) ||
+      (amountBasis === "included_order_sum" && (taxType !== "derived" || rangeBasis !== null || ranges.length !== 0)) ||
+      (amountBasis === "set_fixed_price" && (taxType === "derived" || rangeBasis !== null || ranges.length !== 0)) ||
+      (amountBasis === "range_price" && (!isOrderSetRangeBasis(rangeBasis) || taxType === "derived" || sourceSetPriceKrw !== null || ranges.length === 0))
+    ) return null;
+    const appliedSnapshot: AppliedOrderSnapshot = {
+      sourcePresetId,
+      sourcePresetVersion,
+      appliedDisplayName: displayName,
+      appliedBillingName: billingName,
+      appliedPriceKrw: sourceSetPriceKrw,
+      appliedSalesUnit: "per_each",
+      appliedTaxIncluded: taxType === "taxable",
+      appliedAmountBasis: amountBasis,
+      billingReflectionEnabled: Boolean(
+        readBoolean(
+          isRecord(row.appliedSnapshot)
+            ? row.appliedSnapshot.billingReflectionEnabled
+            : isRecord(row.applied_snapshot)
+              ? row.applied_snapshot.billingReflectionEnabled
+              : undefined,
+        ),
+      ),
+    };
+    return {
+      ...common,
+      appliedSnapshot,
+      sourceSetId,
+      sourceSetRevisionId,
+      sourceSetRevisionNo,
+      sourceSetAmountBasis: amountBasis,
+      sourceSetPriceKrw,
+      sourceSetRangeBasis: rangeBasis,
+      sourceSetTaxType: taxType,
+      sourceSetAvailabilityStatus,
+      sourceSetNeedsCompositionReview: false,
+      sourceSetValidationStatus: "valid",
+      sourceSetPriceRanges: ranges,
+      sourceSetPendingReviewCount: pendingReviewCount,
+    };
+  }
+  const appliedSnapshot = mapAppliedSnapshot(row.appliedSnapshot ?? row.applied_snapshot);
+  if (!appliedSnapshot) return null;
+  return {
+    ...common,
     appliedSnapshot,
+    workspaceCatalogItemId: readString(
+      row.workspaceCatalogItemId ?? row.workspace_catalog_item_id,
+    ) ?? appliedSnapshot.workspaceCatalogItemId,
+    sourceMasterRecordId: readString(
+      row.sourceMasterRecordId ?? row.source_master_record_id,
+    ),
+    sourceMasterRevision: readNumber(
+      row.sourceMasterRevision ?? row.source_master_revision,
+    ),
+    workspaceCatalogRevision: readNumber(
+      row.workspaceCatalogRevision ?? row.workspace_catalog_revision,
+    ),
+    sourceSetId: null,
+    sourceSetRevisionId: null,
+    sourceSetRevisionNo: null,
+    sourceSetAmountBasis: null,
+    sourceSetPriceKrw: null,
+    sourceSetRangeBasis: null,
+    sourceSetTaxType: null,
+    sourceSetAvailabilityStatus: null,
+    sourceSetNeedsCompositionReview: null,
+    sourceSetValidationStatus: null,
+    sourceSetPriceRanges: null,
+    sourceSetPendingReviewCount: null,
   };
+}
+
+function mapChartOrderSetPreviewRpcError(
+  message?: string,
+): ChartOrderSetPreviewGatewayResult {
+  const error = message ?? "preview_failed";
+  if (error.includes("authentication_required")) {
+    return { ok: false, status: 401, error: "unauthenticated" };
+  }
+  if (error.includes("not_found")) return { ok: false, status: 404, error: "order_set_not_found" };
+  if (error.includes("encounter_unavailable")) {
+    return { ok: false, status: 409, error: "encounter_unavailable" };
+  }
+  if (error.includes("revision_conflict") || error.includes("requires_refresh")) {
+    return { ok: false, status: 409, error: error.includes("requires_refresh") ? "catalog_revision_requires_refresh" : "revision_conflict" };
+  }
+  const setErrors = [
+    "order_set_composition_review_required",
+    "order_set_member_unavailable",
+    "order_set_price_unset",
+    "order_set_empty_selection",
+    "order_set_quantity_invalid",
+    "order_set_duplicate_atomic",
+    "order_set_depth_exceeded",
+    "order_set_cycle_detected",
+    "order_set_range_input_required",
+    "order_set_range_input_invalid",
+    "order_set_range_no_match",
+  ];
+  const setError = setErrors.find((code) => error.includes(code));
+  if (setError) {
+    return { ok: false, status: 422, error: setError };
+  }
+  if (error.includes("permission") || error.includes("membership")) {
+    return { ok: false, status: 403, error: error.includes("membership") ? "workspace_membership_missing" : "permission_missing" };
+  }
+  return { ok: false, status: 500, error: "preview_failed" };
+}
+
+function mapChartOrderSetPreview(value: unknown): ChartOrderSetPreview | null {
+  if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.selectionFingerprint !== "string") return null;
+  const set = isRecord(value.set) ? value.set : null;
+  const pricing = isRecord(value.pricing) ? value.pricing : null;
+  if (!set || !pricing || !Array.isArray(value.items)) return null;
+  const sourceSetId = readString(set.sourceSetId);
+  const sourceSetRevisionId = readString(set.sourceSetRevisionId);
+  const sourceSetVersion = readString(set.sourceSetVersion);
+  const sourceSetRevisionNo = readNumber(set.sourceSetRevisionNo);
+  const amountBasis = readString(set.amountBasis);
+  const taxType = readString(set.taxType);
+  if (!sourceSetId || !sourceSetRevisionId || !sourceSetVersion ||
+      sourceSetRevisionNo === undefined || !isOrderSetAmountBasis(amountBasis) ||
+      !isOrderSetTaxType(taxType) || !Array.isArray(set.priceRanges)) return null;
+  const items = value.items.map(mapChartOrderSetPreviewItem).filter(
+    (item): item is ChartOrderSetPreviewItem => Boolean(item),
+  );
+  if (items.length !== value.items.length) return null;
+  return {
+    schemaVersion: 1,
+    operation: value.operation === "draft" || value.operation === "confirm" ? value.operation : "preview",
+    set: {
+      sourceSetId,
+      sourceSetRevisionId,
+      sourceSetRevisionNo,
+      sourceSetVersion,
+      amountBasis,
+      setPriceKrw: readNullableNumber(set.setPriceKrw),
+      rangeBasis: isOrderSetRangeBasis(set.rangeBasis) ? set.rangeBasis : null,
+      taxType,
+      priceRanges: mapOrderSetRanges(set.priceRanges),
+      billingReflectionEnabled: readBoolean(set.billingReflectionEnabled) ?? false,
+      displayName: readString(set.displayName),
+      billingName: readString(set.billingName),
+    },
+    items,
+    pricing: {
+      selectedSetInput: readNullableNumber(pricing.selectedSetInput),
+      selectedRangeId: readString(pricing.selectedRangeId) ?? null,
+      rangeInput: readNullableNumber(pricing.rangeInput),
+      childSubtotalKrw: readNumber(pricing.childSubtotalKrw) ?? 0,
+      explicitExtraSubtotalKrw: readNumber(pricing.explicitExtraSubtotalKrw) ?? 0,
+      finalTotalKrw: readNumber(pricing.finalTotalKrw) ?? 0,
+    },
+    selectionFingerprint: value.selectionFingerprint,
+    calculationInputs: isRecord(value.calculationInputs) ? value.calculationInputs : undefined,
+    calculationOutputs: isRecord(value.calculationOutputs) ? value.calculationOutputs : undefined,
+  };
+}
+
+function mapChartOrderSetPreviewItem(value: unknown): ChartOrderSetPreviewItem | null {
+  if (!isRecord(value)) return null;
+  const path = Array.isArray(value.path) ? value.path.filter(isRecord).map((entry) => ({
+    setId: readString(entry.setId) ?? "",
+    revisionId: readString(entry.revisionId) ?? "",
+    revisionItemId: readString(entry.revisionItemId) ?? "",
+  })) : [];
+  const revisionItemId = readString(value.revisionItemId);
+  const workspaceCatalogItemId = readString(value.workspaceCatalogItemId);
+  const quantitySource = readString(value.quantitySource);
+  const taxType = readString(value.taxType);
+  if (!revisionItemId || !workspaceCatalogItemId || path.some((entry) => !entry.setId || !entry.revisionId || !entry.revisionItemId) ||
+      (value.itemKind !== undefined && value.itemKind !== "atomic") ||
+      !isOrderSetQuantitySource(quantitySource) || (taxType !== "taxable" && taxType !== "non_taxable")) return null;
+  const quantity = readNumber(value.quantity);
+  const defaultQuantity = readNumber(value.defaultQuantity);
+  const pinned = readNumber(value.pinnedCompositionCatalogRevision);
+  const applied = readNumber(value.appliedCatalogRevision);
+  if (quantity === undefined || defaultQuantity === undefined || pinned === undefined || applied === undefined) return null;
+  return {
+    revisionItemId,
+    itemKind: "atomic",
+    path,
+    rootRevisionItemId: readString(value.rootRevisionItemId),
+    directRevisionItemId: readString(value.directRevisionItemId),
+    nestedRevisionItemId: value.nestedRevisionItemId === null ? null : readString(value.nestedRevisionItemId),
+    leafRevisionItemId: readString(value.leafRevisionItemId),
+    workspaceCatalogItemId,
+    pinnedCompositionCatalogRevision: pinned,
+    appliedCatalogRevision: applied,
+    defaultSelected: readBoolean(value.defaultSelected) ?? false,
+    selected: readBoolean(value.selected) ?? false,
+    defaultQuantity,
+    quantity,
+    quantitySource,
+    billingReflectionEnabled: readBoolean(value.billingReflectionEnabled) ?? false,
+    priceKrw: readNullableNumber(value.priceKrw),
+    taxType,
+    appliedSnapshot: isRecord(value.appliedSnapshot) ? value.appliedSnapshot : undefined,
+  };
+}
+
+function isOrderSetAmountBasis(value: unknown): value is OrderSetAmountBasis {
+  return value === "included_order_sum" || value === "set_fixed_price" || value === "range_price";
+}
+
+function isOrderSetRangeBasis(value: unknown): value is OrderSetRangeBasis {
+  return value === "patient_weight_kg" || value === "manual_value";
+}
+
+function isOrderSetRangeBasisOrNull(value: unknown): value is OrderSetRangeBasis | null {
+  return value === null || value === undefined || isOrderSetRangeBasis(value);
+}
+
+function isOrderSetTaxType(value: unknown): value is OrderSetTaxType {
+  return value === "taxable" || value === "non_taxable" || value === "derived";
+}
+
+function isOrderSetQuantitySource(value: unknown): value is ChartOrderSetPreviewItem["quantitySource"] {
+  return value === "fixed_one" || value === "preset_quantity" || value === "manual_at_apply";
 }
 
 function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
@@ -1656,6 +3457,10 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
   const appliedPriceKrw = readNumber(
     row.appliedPriceKrw ?? row.applied_price_krw,
   );
+  const nullableAppliedPriceKrw =
+    row.appliedPriceKrw === null || row.applied_price_krw === null
+      ? null
+      : appliedPriceKrw;
   const appliedSalesUnit = readString(
     row.appliedSalesUnit ?? row.applied_sales_unit,
   );
@@ -1673,7 +3478,7 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
     !sourcePresetVersion ||
     !appliedDisplayName ||
     !appliedBillingName ||
-    typeof appliedPriceKrw !== "number" ||
+    nullableAppliedPriceKrw === undefined ||
     !appliedSalesUnit ||
     typeof appliedTaxIncluded !== "boolean" ||
     !appliedAmountBasis ||
@@ -1692,7 +3497,7 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
     ),
     appliedDisplayName,
     appliedBillingName,
-    appliedPriceKrw,
+    appliedPriceKrw: nullableAppliedPriceKrw,
     appliedSalesUnit: appliedSalesUnit as OrderCatalogSalesUnit,
     appliedTaxIncluded,
     appliedAmountBasis: appliedAmountBasis as OrderCatalogPriceBasis,
@@ -1717,10 +3522,19 @@ function readString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function readNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : undefined;
+}
+
+function readNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  return readNumber(value) ?? null;
 }
 
 function readBoolean(value: unknown) {
@@ -1751,7 +3565,7 @@ function orderCatalogItemToSystemPreset(
     defaultBillingName: item.billingName,
     aliases: [...item.aliases],
     defaultAvailabilityStatus: item.availabilityStatus,
-    defaultPriceKrw: item.priceKrw,
+    defaultPriceKrw: item.priceKrw ?? 0,
     salesUnit: item.salesUnit,
     targetSpecies: [...item.targetSpecies],
     defaultDestinationModule: item.defaultDestinationModule,
