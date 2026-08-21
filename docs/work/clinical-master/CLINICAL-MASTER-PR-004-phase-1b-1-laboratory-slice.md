@@ -1,10 +1,10 @@
 ---
 id: "CLINICAL-MASTER-PR-004"
-status: "human_review"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
-target_pr: "A1/A2/A3/B1 focused local synthetic/runtime/security gates PASS; Sol APPROVE/MUST-FIX 0; optional full 38-case matrix unclaimed; local-only human review"
-updated: "2026-08-20"
+target_pr: "Phase 1 closeout: B1 focused gate, PR #572/#573/#574 lineage, C2/E and authenticated browser evidence; broader 38-case matrix unclaimed"
+updated: "2026-08-21"
 ---
 
 # Clinical Master Phase 1B-1: Laboratory Slice
@@ -17,7 +17,9 @@ is verified against the synthetic Supabase/PostgreSQL runtime: pinned
 reset/reapply, ON_ERROR_STOP replay with rollback cleanup, typed
 projection/review CAS, confirmation-time snapshot freeze, entered-only save,
 one-order/work-item/billing proof, and RLS/grant/direct-DML evidence all pass.
-Human acceptance remains pending.
+This work item is completed within the scoped Phase 1 closeout. The final
+production and authenticated synthetic evidence is recorded in the closeout
+section below.
 The full 38-case matrix (including two workspaces/catalogs, a second panel,
 standalone/coded/workspace-custom branches, and NULL/zero/positive price
 variants) is not claimed by this closeout.
@@ -29,10 +31,10 @@ variants) is not claimed by this closeout.
 3. `CLINICAL-MASTER-PR-003` has complete sole-order, immutable fulfillment,
    billing-anchor, permission, and retry evidence.
 
-The predecessor evidence is recorded in the A1/A2/A3 work items. The B1
-closeout is local-only: it uses the local Docker/Supabase runtime and
-synthetic rows only; no remote database, real data, production, deployment,
-commit, push, PR, or external write was performed.
+The predecessor evidence is recorded in the A1/A2/A3 work items. The B1 local
+gate is local-only: it uses the local Docker/Supabase runtime and synthetic
+rows only. Separately supplied production evidence is recorded in the Phase 1
+closeout section below.
 
 ## Intent and approved boundary
 
@@ -3379,4 +3381,25 @@ The broader matrix and those UI/demo failures are retained as source-level
 evidence only; they do not establish the unverified full B1 matrix.
 `supabase/seed.sql`
 and the A1/A2/A3 migrations remain untouched by B1. This is not a
-remote/deployment/commit/PR claim, and no B2/B3 behavior is included.
+clinical-content validation claim, and no B2/B3 implementation boundary is
+expanded by this work item.
+
+## Phase 1 closeout (2026-08-21)
+
+This B1 laboratory item is completed within the scoped Phase 1 A1–B3 boundary.
+The focused B1 evidence and Sol `APPROVE` / `MUST-FIX 0` remain the basis for
+completion; the optional broader 38-case matrix is still unclaimed. PR #572,
+PR #573, and permission-source PR #574 are merged at
+`00410c25098d53e20acaa94ad91835c17215339c`,
+`5a077058fbd5aa1ee9a75d3df217cb6e39e9985d`, and
+`719f8e225357eedf552e4c304aaabd3347049302` respectively. Production deployment
+`dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp` is READY on the production alias.
+
+Fresh E hash
+`6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5` passed;
+the remote readback recorded zero lab-result write requests, an inactive lab
+fixture, catalog paused at revision 5, and audit count `457`. The authenticated
+synthetic browser showed the clinical lab catalog normally with the synthetic
+item marked `중지`. No clinical-content validation or Phase 2–5 completion is
+claimed; permission ledger drift remains `39` local-only / `11` remote-only.
+See the [Phase 1 closeout report](../../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).

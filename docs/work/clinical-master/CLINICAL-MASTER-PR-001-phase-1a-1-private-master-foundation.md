@@ -1,10 +1,10 @@
 ---
 id: "CLINICAL-MASTER-PR-001"
-status: "human_review"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
-target_pr: "A1 local synthetic reset/replay/ACL/RLS/two-session gates PASS; Sol APPROVE/MUST-FIX 0; local-only human review"
-updated: "2026-08-20"
+target_pr: "Phase 1 closeout: A1 gate, PR #572/#573/#574 lineage, C2/E and authenticated browser evidence recorded"
+updated: "2026-08-21"
 ---
 
 # Clinical Master Phase 1A-1: Private Master Foundation
@@ -13,9 +13,9 @@ updated: "2026-08-20"
 
 The A1 local synthetic reset/replay, rollback, role/privilege, RLS/ACL, and
 two-session concurrency gates PASS. Independent Sol review is `APPROVE` with
-`MUST-FIX 0`. This work item remains `human_review` pending human acceptance;
-the evidence is local synthetic only, with no remote Supabase, real data,
-production, deployment, commit, push, PR, or external write.
+`MUST-FIX 0`. This work item is completed within the scoped Phase 1 closeout;
+the final production and authenticated synthetic evidence is recorded in the
+closeout section below.
 
 ## Intent
 
@@ -98,5 +98,27 @@ commit, push, or PR action was performed.
 ## Handoff
 
 This work is intentionally bounded to Phase 1A-1. The local gate and
-independent Sol review are complete; human review/acceptance remains before
-calling the phase complete.
+independent Sol review are complete.
+
+## Phase 1 closeout (2026-08-21)
+
+This A1 foundation is completed within the scoped Phase 1 A1–B3 boundary. The
+release lineage is PR #572 merged at `00410c25098d53e20acaa94ad91835c17215339c`,
+PR #573 merged at `5a077058fbd5aa1ee9a75d3df217cb6e39e9985d`, and permission
+source correction PR #574 merged at
+`719f8e225357eedf552e4c304aaabd3347049302`. Production deployment
+`dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp` is recorded as READY on the production alias.
+
+The approved C2 evidence hash is
+`5181e7c6e2aa9a898dc5d7a0864d1d9eafc3608be7a5174959f619296d4ec0c7`; linked
+project `qmerxgzrwaaahpkhjqlc` `execute_sql` passed with an unconditional
+`ROLLBACK`. Fresh-connection E evidence hash
+`6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5` passed,
+with master readback `releases=2`, `records=29`, `versions=29`, `names=58`,
+`sources=29`, `links=29`, `reviews=58`, and audit count `457`.
+
+The permission migration remote alias `20260821071846` maps to canonical local
+migration `20260821063113`. This evidence proves the approved synthetic/runtime
+boundary only: it does not validate clinical content or Phase 2–5. The legacy
+migration ledger drift (`39` local-only / `11` remote-only) remains a separate
+reconciliation risk. See the [Phase 1 closeout report](../../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).

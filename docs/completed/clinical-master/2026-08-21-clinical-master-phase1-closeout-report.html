@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR Clinical Master Phase 1 Closeout</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1120px; margin: 0 auto; padding: 44px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; overflow-wrap: anywhere; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      .warn { background: #fff8e6; color: #6d4b00; }
+      .ok { background: #eaf7ee; color: #176b35; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">CLAiR Clinical Master / Phase 1 A1–B3 / 2026-08-21</p>
+      <h1>Clinical Master Phase 1 closeout</h1>
+      <p>
+        Phase 1 A1–B3 구현과 승인된 synthetic/runtime/permission 운영 경계를 닫았다.
+        이 보고서는 PR, migration, C2/E, 인증 브라우저 evidence를 한 곳에 묶는다.
+        실제 임상 콘텐츠의 의학적 검증이나 Phase 2–5 완료를 의미하지 않는다.
+      </p>
+      <span class="badge ok">Status: Phase 1 scoped closeout complete</span>
+      <span class="badge warn">Clinical content validation and Phase 2–5 excluded</span>
+
+      <section>
+        <h2>범위와 판정</h2>
+        <ul>
+          <li>A1 private master foundation, A2 workspace adoption, A3 sole order authority, B1 laboratory slice, B2 Order Set revisions, B3 chart runtime을 승인된 경계 안에서 완료했다.</li>
+          <li>Sol 최종 production verdict는 <code>APPROVE</code> / <code>MUST-FIX 0</code>이다.</li>
+          <li>인증 synthetic 계정의 범위 있는 browser/readback과 DB permission/runtime evidence는 통과했지만, 전체 제품 smoke 또는 임상 콘텐츠 correctness를 주장하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Release lineage</h2>
+        <table>
+          <tr><th>Artifact</th><th>Evidence</th></tr>
+          <tr><td>PR #572</td><td>merged at <code>00410c25098d53e20acaa94ad91835c17215339c</code></td></tr>
+          <tr><td>PR #573</td><td>merged at <code>5a077058fbd5aa1ee9a75d3df217cb6e39e9985d</code></td></tr>
+          <tr><td>PR #574</td><td>candidate <code>62ae082b5eb67edc8c46d3f457e3e9b3d8e3681b</code>, merged at <code>719f8e225357eedf552e4c304aaabd3347049302</code></td></tr>
+          <tr><td>Release Check</td><td>run <code>32457431506</code> passed secrets/docs/UX/lint/typecheck/build checks</td></tr>
+          <tr><td>Production deployment</td><td><code>dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp</code> READY on the production alias</td></tr>
+          <tr><td>Permission migration</td><td>remote alias <code>20260821071846</code> → canonical local migration <code>20260821063113</code></td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증 evidence</h2>
+        <table>
+          <tr><th>Gate</th><th>Result and bounded claim</th></tr>
+          <tr><td>Original C</td><td>Corrected evidence hash <code>bcb4617ba8094c7baa6b6a6011557a0f232bc8228013d67fc57644005441e553</code>.</td></tr>
+          <tr><td>C2</td><td>Approved hash <code>5181e7c6e2aa9a898dc5d7a0864d1d9eafc3608be7a5174959f619296d4ec0c7</code>; linked project <code>qmerxgzrwaaahpkhjqlc</code> <code>execute_sql</code> PASS with unconditional <code>ROLLBACK</code>.</td></tr>
+          <tr><td>Fresh E</td><td>Hash <code>6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5</code> PASS. Remote readback: master releases/records/versions/names/sources/links/reviews <code>2/29/29/58/29/29/58</code>; audit <code>457</code>; runtime rows <code>false/0</code>; lab-result write requests <code>0</code>; catalog paused revision <code>5</code>; lab inactive; current set inactive revision <code>2</code> with <code>needs_composition_review=true</code>; durable set revisions/items <code>2/4</code>; creation/save request histories <code>1/1</code>.</td></tr>
+          <tr><td>Authenticated browser</td><td><code>vet-cheongdam@clair.local</code> saw the Order Set page without a read error and four rows, including synthetic inactive revision 2 marked <code>구성 검토 필요</code>. The clinical lab catalog rendered normally and the synthetic item was visible as <code>중지</code>.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>문서와 source of truth</h2>
+        <ul>
+          <li><a href="../../work/index.md">A1–B3 work items</a> are marked <code>completed</code> with their local gates and closeout boundary.</li>
+          <li><a href="../../engineering/data-model/clair-clinical-master-data-phase-1-db-spec.md">Phase 1 DB specification</a> records implementation state, hashes, readback counts, and non-goals.</li>
+          <li><a href="../../engineering/current-status.md">Current status</a> records the same release and evidence boundary for new sessions.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>잔여 리스크와 rollback note</h2>
+        <ul>
+          <li>Legacy migration ledger drift is <code>39</code> local-only / <code>11</code> remote-only. This remains a separate reconciliation task and was not silently normalized by the closeout.</li>
+          <li>PR-004의 optional broader 38-case matrix는 검증 완료로 주장하지 않는다.</li>
+          <li>실제 임상 콘텐츠 correctness, full product/browser matrix, Phase 2–5, legal/compliance, and launch readiness remain outside this report.</li>
+          <li>Permission migration is forward-only. Any durable rollback requires a separately reviewed forward migration; C2 itself used unconditional transaction rollback.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

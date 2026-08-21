@@ -3,14 +3,14 @@ id: ENGINEERING-DATA-MODEL-CLAIR-CLINICAL-MASTER-DATA-PHASE-1-DB-SPEC
 type: Data Contract
 title: "CLAiR Clinical Master Data Phase 1 DB Specification"
 description: "Defines the implementable phase-1 PostgreSQL structure for the CLAiR clinical master, workspace order catalog, lab panels, Order Set revisions, and applied order snapshots."
-status: draft
+status: completed
 area: engineering
 doc_type: data-contract
 tags: [clinical-master-data, order-catalog, order-set, lab-panel, postgres, supabase]
 related_work: []
 supersedes: []
 superseded_by: []
-last_updated: 2026-08-18
+last_updated: 2026-08-21
 ---
 
 # CLAiR Clinical Master Data Phase 1 DB Specification
@@ -19,7 +19,11 @@ This document is the implementable phase-1 database specification derived from [
 
 Korean reader companion: [CLAiR 임상 마스터 데이터 1단계 DB 상세 명세](./clair-clinical-master-data-phase-1-db-spec.ko.html).
 
-It defines target tables, columns, ownership, constraints, indexes, server mutation boundaries, migration order, and verification. It does not claim that these tables or behaviors are already implemented.
+It defines target tables, columns, ownership, constraints, indexes, server
+mutation boundaries, migration order, and verification. The scoped Phase 1
+implementation and closeout evidence are summarized in §17.1. Completion here
+does not claim clinical-content validation, full launch readiness, or Phase 2–5
+delivery.
 
 ## 1. Phase-1 Outcome
 
@@ -949,6 +953,48 @@ The eventual phase-1 implementation is done only when:
 - affected product, data-model, security, and current-status docs are synchronized;
 - no claim is made that synthetic clinical content is medically validated.
 
+## 17.1 Phase-1 Implementation And Closeout State
+
+The six Phase 1 work items (A1–A3 and B1–B3) are implemented and completed
+within the approved synthetic/runtime/permission boundary. PR #572 merged at
+`00410c25098d53e20acaa94ad91835c17215339c`, PR #573 at
+`5a077058fbd5aa1ee9a75d3df217cb6e39e9985d`, and the permission-source
+precedence correction PR #574 candidate
+`62ae082b5eb67edc8c46d3f457e3e9b3d8e3681b` merged at
+`719f8e225357eedf552e4c304aaabd3347049302`. Release Check `32457431506`
+passed the required secrets/docs/UX/lint/typecheck/build checks. Production deployment
+`dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp` is recorded as READY on the production
+alias.
+
+The corrected original C evidence hash was
+`bcb4617ba8094c7baa6b6a6011557a0f232bc8228013d67fc57644005441e553`; the
+approved C2 hash was
+`5181e7c6e2aa9a898dc5d7a0864d1d9eafc3608be7a5174959f619296d4ec0c7`. C2
+`execute_sql` on linked project `qmerxgzrwaaahpkhjqlc` passed with an
+unconditional `ROLLBACK`. Sol's pre-execution verdict was `APPROVE` with
+`MUST-FIX 0`.
+
+Fresh-connection E evidence hash
+`6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5` passed.
+The bounded remote readback recorded master releases/records/versions/names/
+sources/links/reviews `2/29/29/58/29/29/58`, audit `457`, runtime rows
+`false/0`, lab-result write requests `0`, catalog paused at revision `5`, lab
+inactive, current Order Set inactive at revision `2` with
+`needs_composition_review=true`,
+durable Order Set revisions/items `2/4`, and creation/save request histories
+`1/1`. Permission remote alias `20260821071846` maps to canonical local
+migration `20260821063113`.
+
+Authenticated synthetic browser evidence for `vet-cheongdam@clair.local` showed
+the Order Set page without a read error and four rows, including synthetic
+inactive revision 2 marked `구성 검토 필요`; the clinical lab catalog rendered
+normally and the synthetic item was visible as `중지`. These checks establish
+the scoped release/runtime/permission boundary only. They do not establish
+clinical-content correctness, a full product smoke matrix, or Phase 2–5
+completion. The optional broader 38-case B1 matrix remains unclaimed, and
+legacy migration ledger drift (`39` local-only / `11` remote-only) remains a
+separate reconciliation risk.
+
 ## 18. Deferred Decisions
 
 | Decision | Trigger |
@@ -979,3 +1025,4 @@ The eventual phase-1 implementation is done only when:
 | --- | --- |
 | 2026-08-18 | First detailed phase-1 DB specification. Defines the minimum private master, workspace copy/update, lab panel, immutable Order Set revision, applied snapshot, RLS, migration, fixture, and verification contracts without implementing migrations or runtime changes. |
 | 2026-08-20 | Domain owner approved Option A for both Order Set range bases: continuous `[0,+infinity)` lower-inclusive/upper-exclusive coverage with contiguous rows and exactly one final open-ended bracket; B3 has no no-match runtime state. |
+| 2026-08-21 | Recorded scoped Phase 1 A1–B3 implementation completion, PR #572/#573/#574 merge lineage, C2/E hashes and bounded authenticated browser evidence. Clinical-content validation, Phase 2–5, the optional broader 38-case matrix, and migration-ledger reconciliation remain unclaimed or deferred. |

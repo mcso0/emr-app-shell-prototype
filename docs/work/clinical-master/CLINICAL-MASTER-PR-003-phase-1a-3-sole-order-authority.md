@@ -1,10 +1,10 @@
 ---
 id: "CLINICAL-MASTER-PR-003"
-status: "human_review"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
-target_pr: "A1/A2/A3 local synthetic reset/reapply/replay/security/two-session gates PASS; Sol APPROVE/MUST-FIX 0; local-only human review"
-updated: "2026-08-20"
+target_pr: "Phase 1 closeout: A3 gate, PR #572/#573/#574 lineage, C2/E and authenticated browser evidence recorded"
+updated: "2026-08-21"
 ---
 
 # Clinical Master Phase 1A-3: Sole Order Authority
@@ -16,11 +16,12 @@ The A1/A2/A3 local synthetic runtime/security gates are PASS. Pinned
 direct lineage/snapshot readback, RLS/grant and direct-DML denials, wrapper
 permission boundaries, immutable retry behavior, and the two-session billing
 anchor and fulfillment row-lock races all passed. Independent Sol review is
-`APPROVE` with `MUST-FIX 0`; human acceptance remains pending. The approved
-set/lab boundary is preserved.
+`APPROVE` with `MUST-FIX 0`. This work item is completed within the scoped
+Phase 1 closeout. The approved set/lab boundary is preserved.
 
-This closeout is local-only. No remote Supabase, real data, production,
-deployment, commit, push, PR, or other external state change was performed.
+The implementation evidence in this section is local-first; final production
+and authenticated synthetic evidence is recorded in the closeout section
+below.
 
 ## Intent and approved boundary
 
@@ -967,8 +968,9 @@ docker exec -i supabase_db_emr-app-shell-prototype psql -X -v ON_ERROR_STOP=1 \
 
 The local DB verification must inspect catalog/order composite FKs, grants,
 RLS, direct-DML denial, service/catalog discriminator constraints, snapshot
-readback, and two-session lock/idempotency behavior. No remote DB or Docker
-claim is valid for this work item.
+readback, and two-session lock/idempotency behavior. These requirements apply
+only to the local reset/replay verification subsection above; separately
+recorded production/Supabase closeout evidence is documented below.
 
 ## Entry, exit, rollback, and stop criteria
 
@@ -1035,5 +1037,24 @@ legacy paid-line adoption/idempotency, and two-session billing anchor
 serialization.
 
 `supabase/seed.sql` and the A1/A2 migrations remain untouched by the A3 slice.
-The result is not a remote/deployment/commit/PR claim; production release and
-authenticated production smoke remain out of scope for this local closeout.
+The local implementation evidence above does not by itself claim clinical
+validation. The scoped production release and authenticated synthetic smoke are
+recorded below.
+
+## Phase 1 closeout (2026-08-21)
+
+This A3 sole-order-authority item is completed within the scoped Phase 1 A1–B3
+boundary. PR #572 merged at
+`00410c25098d53e20acaa94ad91835c17215339c`, PR #573 at
+`5a077058fbd5aa1ee9a75d3df217cb6e39e9985d`, and permission-source correction
+PR #574 at `719f8e225357eedf552e4c304aaabd3347049302`. Production deployment
+`dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp` is READY on the production alias.
+
+C2 hash `5181e7c6e2aa9a898dc5d7a0864d1d9eafc3608be7a5174959f619296d4ec0c7`
+passed on `qmerxgzrwaaahpkhjqlc` with unconditional `ROLLBACK`; fresh E hash
+`6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5` passed.
+The permission alias `20260821071846` maps to canonical local migration
+`20260821063113`, and the authenticated synthetic `vet-cheongdam@clair.local`
+browser read showed no Order Set read error. This does not claim Phase 2–5 or
+clinical-content validation; ledger drift remains `39` local-only / `11`
+remote-only. See the [Phase 1 closeout report](../../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).

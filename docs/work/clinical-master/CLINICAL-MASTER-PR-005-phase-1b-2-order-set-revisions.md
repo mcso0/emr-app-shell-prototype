@@ -1,10 +1,10 @@
 ---
 id: "CLINICAL-MASTER-PR-005"
-status: "human_review"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
-target_pr: "A1/A2/A3/B1/B2 local synthetic gates PASS, including two-stage legacy prepare→migration twice→verify and 2-item valid_sum replay; Sol APPROVE/MUST-FIX 0; local-only human review"
-updated: "2026-08-20"
+target_pr: "Phase 1 closeout: B2 gate, PR #572/#573/#574 lineage, C2/E and authenticated browser evidence recorded"
+updated: "2026-08-21"
 ---
 
 # Clinical Master Phase 1B-2: Order Set Revisions
@@ -12,12 +12,12 @@ updated: "2026-08-20"
 ## Status and gate
 
 This work item records the approved implementation contract for Phase 1B-2 and
-remains in `human_review` pending human acceptance. The A1/A2/A3/B1/B2 local
+is completed within the scoped Phase 1 closeout. The A1/A2/A3/B1/B2 local
 synthetic runtime/security gates PASS. B2's actual two-stage legacy
 prepare→migration-twice→verify path and main replay passed, including the
 2-item `valid_sum` case. Independent Sol review is `APPROVE` with `MUST-FIX 0`.
-The evidence is local-only: no remote database, real data, production,
-deployment, commit, push, PR, or external write was performed.
+The final production and authenticated synthetic evidence is recorded in the
+closeout section below.
 
 The predecessor evidence is recorded in the A1/A2/A3/B1 work items:
 
@@ -3152,21 +3152,21 @@ upper-exclusive contiguous rows, first lower bound `0`, and exactly one final
 open-ended row. Every nonnegative input matches exactly one bracket, so B3 has
 no no-match runtime state. This is recorded in the authoritative DB spec at
 `docs/engineering/data-model/clair-clinical-master-data-phase-1-db-spec.md:641-655`
-and is implemented by the B2 validator/replay. The plan remains
-in `human_review` pending human acceptance; the local B2 runtime/security gate
-and independent Sol review (`APPROVE`, `MUST-FIX 0`) are complete. The atomic
+and is implemented by the B2 validator/replay. The local B2 runtime/security
+gate and independent Sol review (`APPROVE`, `MUST-FIX 0`) are complete. The atomic
 pin boundary remains `(catalog item id, catalog_revision)`, with current
 price/tax resolved only by future B3 application and frozen in the B3 snapshot.
 
 ## Exact file boundary
 
-The implementation allow-list is the named B2 migration/replay, native seed and
-readback adapter/test, server gateway, Order Set routes, existing hospital-admin
-section/store/UI wiring, and B2 static tests listed in the Server/API/UI and
-Synthetic fixture sections above, plus this work item, its single index row,
-and the authoritative DB spec for Option A. It must not edit PR-001/002/003/004
-or their migrations/work items, current-status/product docs, or any other index
-row. Forbidden scope is any chart expansion/confirmation change,
+The implementation allow-list for the B2 slice was the named migration/replay,
+native seed and readback adapter/test, server gateway, Order Set routes,
+existing hospital-admin section/store/UI wiring, and B2 static tests listed in
+the Server/API/UI and Synthetic fixture sections above, plus this work item, its
+single index row, and the authoritative DB spec for Option A. It did not edit
+PR-001/002/003/004 or their migrations/work items. The separate Phase 1
+closeout synchronization is recorded below. Forbidden scope for the B2
+implementation was any chart expansion/confirmation change,
 `unsupported_order_type` removal, encounter-local selection,
 fulfillment/billing execution, `service_*` dual write, catalog historical-
 version invention, direct table DML, old-revision mutation, legacy
@@ -3185,7 +3185,26 @@ replay sets, five current pointers, and one isolated second-workspace row.
 TypeScript, scoped ESLint, diff check, and docs link check PASS. Focused browser
 specs remain subject to the local web-server bind boundary, and
 RLS/direct-DML/CAS/range/readback SQL evidence is only claimed when its
-explicit SQL output is recorded. The plan remains `human_review` pending human
-acceptance; independent Sol review is `APPROVE` with `MUST-FIX 0`. Chart
+explicit SQL output is recorded. The completed work item retains independent
+Sol review `APPROVE` with `MUST-FIX 0`. Chart
 expansion/confirmation, fulfillment, billing, and service dual-write remain
 explicitly out of scope.
+
+## Phase 1 closeout (2026-08-21)
+
+This B2 Order Set revision item is completed within the scoped Phase 1 A1–B3
+boundary. PR #572 merged at
+`00410c25098d53e20acaa94ad91835c17215339c`, PR #573 at
+`5a077058fbd5aa1ee9a75d3df217cb6e39e9985d`, and permission-source PR #574 at
+`719f8e225357eedf552e4c304aaabd3347049302`; production deployment
+`dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp` is READY on the production alias.
+
+C2 hash `5181e7c6e2aa9a898dc5d7a0864d1d9eafc3608be7a5174959f619296d4ec0c7`
+passed with unconditional `ROLLBACK`; fresh E hash
+`6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5` passed.
+Remote readback recorded durable Order Set revisions/items `2/4`, creation/save
+request histories `1/1`, and an inactive current revision `2` requiring review.
+The authenticated synthetic Order Set page rendered four rows, including the
+inactive revision, without a read error. No Phase 2–5 or clinical-content
+validation is claimed; ledger drift remains `39` local-only / `11` remote-only.
+See the [Phase 1 closeout report](../../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).
