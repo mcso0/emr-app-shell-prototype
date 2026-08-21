@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-07-23
+Updated: 2026-08-21
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -99,6 +99,40 @@ cross-workspace denial, private Presence subscribe/track/cleanup, private avatar
 pointer/object cleanup, and zero fixed synthetic probe rows. The immutable
 production deployment ID and exact final merge SHA are recorded at the
 post-merge release gate rather than guessed in pre-merge docs.
+
+## Clinical Master Phase 1 Closeout
+
+Clinical Master Phase 1 A1–B3 is completed within its approved synthetic,
+runtime, and permission boundary. PR #572 merged at
+`00410c25098d53e20acaa94ad91835c17215339c`, PR #573 at
+`5a077058fbd5aa1ee9a75d3df217cb6e39e9985d`, and permission-source precedence
+PR #574 candidate `62ae082b5eb67edc8c46d3f457e3e9b3d8e3681b` merged at
+`719f8e225357eedf552e4c304aaabd3347049302`. Release Check `32457431506`
+passed the required secrets/docs/UX/lint/typecheck/build checks. Production deployment
+`dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp` is recorded as READY on the production alias.
+The six work items and the Phase 1 DB specification now carry the completed
+state; Sol's final production verdict is `APPROVE` / `MUST-FIX 0`.
+
+The corrected original C hash is
+`bcb4617ba8094c7baa6b6a6011557a0f232bc8228013d67fc57644005441e553`; approved
+C2 hash `5181e7c6e2aa9a898dc5d7a0864d1d9eafc3608be7a5174959f619296d4ec0c7`
+passed on linked project `qmerxgzrwaaahpkhjqlc` with unconditional
+`ROLLBACK`. Fresh-connection E hash
+`6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5` passed;
+readback recorded runtime rows `false/0`, lab-result write requests `0`, audit
+`457`, catalog paused at revision `5`, lab inactive, current set inactive at
+revision `2` with `needs_composition_review=true`, durable set revisions/items `2/4`, and
+creation/save request histories `1/1`. The permission remote alias
+`20260821071846` maps to canonical local migration `20260821063113`.
+
+Authenticated synthetic browser evidence for `vet-cheongdam@clair.local` showed
+the Order Set page without a read error and four rows, including synthetic
+inactive revision 2 marked `구성 검토 필요`; the clinical lab catalog rendered
+normally with the synthetic item visible as `중지`. This is scoped evidence, not
+clinical-content validation, a full browser/test matrix, or Phase 2–5 delivery.
+The optional broader 38-case matrix remains unclaimed. Legacy migration ledger
+drift (`39` local-only / `11` remote-only) remains a separate reconciliation
+risk. See the [Phase 1 closeout report](../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).
 
 ## Not Complete Yet
 

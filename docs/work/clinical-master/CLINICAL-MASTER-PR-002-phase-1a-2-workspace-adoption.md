@@ -1,21 +1,21 @@
 ---
 id: "CLINICAL-MASTER-PR-002"
-status: "human_review"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
-target_pr: "A1/A2 local synthetic reset/replay/reapply/RLS/CAS/notification gates PASS; Sol APPROVE/MUST-FIX 0; local-only human review"
-updated: "2026-08-20"
+target_pr: "Phase 1 closeout: A2 gate, PR #572/#573/#574 lineage, C2/E and authenticated browser evidence recorded"
+updated: "2026-08-21"
 ---
 
 # Clinical Master Phase 1A-2: Workspace Catalog Adoption
 
 ## Status and gate
 
-This work item remains `human_review`. The A1/A2 local synthetic
+This work item is completed within the scoped Phase 1 closeout. The A1/A2 local synthetic
 reset/replay/reapply, rollback, ACL/RLS, CAS/retry, notification, and focused
 runtime/security gates PASS, and independent Sol review is `APPROVE` with
-`MUST-FIX 0`. Human acceptance remains pending. No remote Supabase, real data,
-production, commit, push, PR, or deploy action was performed.
+`MUST-FIX 0`. The final production and authenticated synthetic evidence is
+recorded in the closeout section below.
 
 No new user or domain decision is required. The only prerequisite is technical:
 the approved fallback-path rule must be executable for every existing local
@@ -435,7 +435,7 @@ state, client-derived-field rejection, activation review gating, historical
 snapshot preservation, notification privacy, and retry dedupe.
 
 This is implementation-worker evidence only; independent representative review
-remains pending.
+was completed as part of the Phase 1 closeout.
 
 ## Current implementation state
 
@@ -443,5 +443,24 @@ Phase 1A-2 implementation is complete within the approved ownership boundary in
 the active local worktree. The scoped migration, replay, catalog server
 boundary, notification extension, seed fallback contracts, and focused
 fixtures/tests pass the local runtime, security, concurrency, TypeScript,
-lint, and documentation gates above. The work item is in `human_review`; no
-remote or Git action was performed.
+lint, and documentation gates above. The work item is `completed`; no
+remote or Git action was performed during the local implementation gate.
+
+## Phase 1 closeout (2026-08-21)
+
+This A2 workspace-adoption item is completed within the scoped Phase 1 A1–B3
+boundary. It is included in PR #572 (`00410c25098d53e20acaa94ad91835c17215339c`),
+PR #573 (`5a077058fbd5aa1ee9a75d3df217cb6e39e9985d`), and the permission-source
+correction PR #574 merged at
+`719f8e225357eedf552e4c304aaabd3347049302`; production deployment
+`dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp` is READY on the production alias.
+
+Approved C2 hash
+`5181e7c6e2aa9a898dc5d7a0864d1d9eafc3608be7a5174959f619296d4ec0c7` passed on
+`qmerxgzrwaaahpkhjqlc` with unconditional `ROLLBACK`. Fresh E hash
+`6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5` passed;
+the permission alias `20260821071846` maps to canonical local migration
+`20260821063113`. The scoped evidence includes active same-workspace access and
+inactive/cross-workspace denial; no Phase 2–5 or clinical-content validation is
+claimed. Ledger drift remains `39` local-only / `11` remote-only. See the
+[Phase 1 closeout report](../../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).

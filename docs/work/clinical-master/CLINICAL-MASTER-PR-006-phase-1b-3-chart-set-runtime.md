@@ -1,10 +1,10 @@
 ---
 id: "CLINICAL-MASTER-PR-006"
-status: "human_review"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
-target_pr: "A1/A2/A3/B1/B2/B3 local synthetic gates PASS; migration reapply, parents=10 children=11, range=2, rollback cleanup, focused 13/13; Sol APPROVE/MUST-FIX 0; local-only human review"
-updated: "2026-08-20"
+target_pr: "Phase 1 closeout: B3 gate, PR #572/#573/#574 lineage, C2/E and authenticated browser evidence recorded"
+updated: "2026-08-21"
 ---
 
 # Clinical Master Phase 1B-3: Chart Order Set Runtime
@@ -12,12 +12,12 @@ updated: "2026-08-20"
 ## Status
 
 This is the approved implementation contract for the bounded local B3 slice
-and remains in `human_review` pending human acceptance. A1/A2/A3/B1/B2/B3
+and is completed within the scoped Phase 1 closeout. A1/A2/A3/B1/B2/B3
 local synthetic runtime/security gates PASS: migration direct reapply and
 replay produced `parents=10`, `children=11`, `range=2`, and rollback cleanup;
 focused B3 verification passed `13/13`. Independent Sol review is `APPROVE`
-with `MUST-FIX 0`. No remote Supabase, real data, production, deployment,
-commit, push, PR, or external write was performed.
+with `MUST-FIX 0`. The final production and authenticated synthetic evidence is
+recorded in the closeout section below.
 
 The boundary is runtime consumption of immutable Phase 1B-2 Order Set
 revisions: trusted chart expansion into encounter-owned draft and selected
@@ -28,7 +28,7 @@ billing, fulfillment, checkout, or the existing individual flow.
 ## Entry gates and boundary
 
 The following entry gates are recorded as PASS and remain the baseline for
-this human-review closeout:
+this completed scoped Phase 1 closeout:
 
 1. PR-001 PostgreSQL reset/replay, rollback, role/grant, and two-session gates.
 2. PR-002 workspace adoption, nullable/zero, catalog_revision, composite-key,
@@ -1444,10 +1444,30 @@ reset/replay, permission, and two-session runtime gates.
 ## Sol xhigh review handoff
 
 The six predecessor gates, clean existing-row preflight, and actual A3
-signatures/ACLs are recorded as confirmed; human delivery review remains.
+signatures/ACLs are recorded as confirmed; the final delivery review is recorded
+in the Phase 1 closeout section below.
 
 Independent review should challenge: v2 NULL/zero and closed union; every
 client snapshot writer; private helper/lock order/exact pin and rollback;
 fixed/sum billing/tax/fulfillment/invoice reuse; legacy quarantine without
- reinterpretation; and the Option-A lower-inclusive/upper-exclusive range
- boundary.
+reinterpretation; and the Option-A lower-inclusive/upper-exclusive range
+boundary.
+
+## Phase 1 closeout (2026-08-21)
+
+This B3 chart Order Set runtime item is completed within the scoped Phase 1
+A1–B3 boundary. PR #572 merged at
+`00410c25098d53e20acaa94ad91835c17215339c`, PR #573 at
+`5a077058fbd5aa1ee9a75d3df217cb6e39e9985d`, and permission-source PR #574 at
+`719f8e225357eedf552e4c304aaabd3347049302`; production deployment
+`dpl_A3UCjuuAUiPp6J3r2HmewHdDC4zp` is READY on the production alias.
+
+Approved C2 hash
+`5181e7c6e2aa9a898dc5d7a0864d1d9eafc3608be7a5174959f619296d4ec0c7` passed on
+`qmerxgzrwaaahpkhjqlc` with unconditional `ROLLBACK`; fresh E hash
+`6868babe3f5f9e0de22010d7a277604a0677818e0b3a0e7981608d514d3e11a5` passed.
+The authenticated synthetic `vet-cheongdam@clair.local` browser rendered the
+Order Set page with four rows, including synthetic inactive revision 2 marked
+`구성 검토 필요`, without a read error. This does not claim clinical-content
+validation or Phase 2–5. Ledger drift remains `39` local-only / `11`
+remote-only. See the [Phase 1 closeout report](../../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).
