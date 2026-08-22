@@ -868,7 +868,7 @@ function HospitalAdminConceptFieldControl({
 }) {
   if (field.kind === "switch") {
     return (
-      <div className="flex h-9 items-center rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3">
+      <div className="flex h-9 items-center rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-card px-3">
         <Switch
           defaultChecked={field.value === "true"}
           aria-label={field.label}
@@ -922,8 +922,8 @@ function HospitalAdminConceptTable({
   table: HospitalAdminConceptTable;
 }) {
   return (
-    <section className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
-      <div className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+    <section className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-card">
+      <div className="border-b border-[var(--emr-border-default)] px-4 py-3">
         <h2 className="emr-text-panel-title font-semibold">{table.title}</h2>
       </div>
       <Table aria-label={table.title} density="compact">
@@ -1011,7 +1011,7 @@ export function HospitalAdminConceptScreen({
             {config.highlights.map((item) => (
               <div
                 key={item.label}
-                className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card px-4 py-3"
+                className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-card px-4 py-3"
               >
                 <div className="emr-text-metadata text-muted-foreground">
                   {item.label}
@@ -1025,8 +1025,8 @@ export function HospitalAdminConceptScreen({
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="grid min-w-0 gap-4">
-              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
-                <div className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-card">
+                <div className="border-b border-[var(--emr-border-default)] px-4 py-3">
                   <h2 className="emr-text-panel-title font-semibold">기본값</h2>
                 </div>
                 <div className="grid gap-4 p-4 md:grid-cols-2">
@@ -1050,8 +1050,8 @@ export function HospitalAdminConceptScreen({
             </div>
 
             <aside className="grid content-start gap-4">
-              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
-                <div className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-card">
+                <div className="border-b border-[var(--emr-border-default)] px-4 py-3">
                   <h2 className="emr-text-panel-title font-semibold">
                     영향 범위
                   </h2>
@@ -1068,8 +1068,8 @@ export function HospitalAdminConceptScreen({
                 </div>
               </section>
 
-              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
-                <div className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+              <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-card">
+                <div className="border-b border-[var(--emr-border-default)] px-4 py-3">
                   <h2 className="emr-text-panel-title font-semibold">
                     향후 데이터
                   </h2>

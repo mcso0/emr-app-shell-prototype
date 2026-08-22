@@ -1,7 +1,7 @@
 ---
 status: "approved"
 area: "design-system"
-updated: "2026-05-13"
+updated: "2026-08-22"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/engineering/current-status.md"
@@ -40,8 +40,9 @@ The public alias set for the first pass is:
 - `--emr-surface-panel`
 - `--emr-surface-muted`
 - `--emr-surface-selected`
-- `--emr-line-hairline`
-- `--emr-line-strong`
+- `--emr-border-subtle`
+- `--emr-border-default`
+- `--emr-border-strong`
 - `--emr-accent`
 - `--emr-accent-subtle`
 - `--emr-radius-control`
@@ -59,7 +60,7 @@ The first implementation pass applies the aliases only to common EMR primitives:
 - list cards and selected list rows
 - side-panel queue cards
 - dense table header, row, hover, and selected surfaces
-- common `.emr-panel`, `.emr-hairline`, and `.emr-selected-surface` utilities
+- the common `.emr-selected-surface` state utility
 
 Buttons, status badges, semantic status colors, and screen-specific layouts should stay visually compatible unless a future work item explicitly scopes them.
 

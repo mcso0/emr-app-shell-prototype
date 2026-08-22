@@ -159,7 +159,7 @@
 }
 
 .deleteButton {
-  border-color: var(--clair-color-atomic-neutral-200);
+  border-color: var(--emr-border-default);
   background: var(--clair-color-atomic-common-100);
   box-shadow: var(--clair-shadow-xs);
   color: var(--clair-color-atomic-neutral-700);

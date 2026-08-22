@@ -423,7 +423,7 @@ export function HomeKanbanWorkspace({
                 </div>
               </div>
 
-              <div className="grid min-w-0 gap-2 border-b border-[var(--emr-line-hairline)] bg-card py-3">
+              <div className="grid min-w-0 gap-2 border-b border-[var(--emr-border-default)] bg-card py-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <SegmentedControl
                     value={activeOperationMode}
@@ -476,7 +476,7 @@ export function HomeKanbanWorkspace({
                         clearSelection();
                       }}
                     />
-                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
+                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
                       <Checkbox
                         aria-label="완료 포함"
                         checked={includeCompleted}
@@ -488,7 +488,7 @@ export function HomeKanbanWorkspace({
                       />
                       완료 포함
                     </label>
-                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
+                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
                       <Checkbox
                         aria-label="취소 포함"
                         checked={includeCancelled}
@@ -500,7 +500,7 @@ export function HomeKanbanWorkspace({
                       />
                       취소 포함
                     </label>
-                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
+                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
                       <Checkbox
                         aria-label="오래 머문 업무만 보기"
                         checked={attentionOnly}
@@ -557,7 +557,7 @@ export function HomeKanbanWorkspace({
                     size="default"
                     variant="outline"
                     roundness="round"
-                    className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                    className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                     disabled={loading}
                     onClick={onRefresh ?? (() => router.refresh())}
                   >
@@ -596,7 +596,7 @@ function HomeBoardMetric({
   return (
     <div
       className={cn(
-        "grid min-w-[92px] gap-0.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2.5 py-1.5",
+        "grid min-w-[92px] gap-0.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-2.5 py-1.5",
         tone === "danger" && "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]",
         tone === "warning" && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]"
       )}
@@ -641,7 +641,7 @@ function HomeOperationsState({
               size="default"
               variant="outline"
               roundness="round"
-              className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+              className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
               onClick={onRefresh}
             >
               <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
@@ -837,7 +837,7 @@ function TaskDetailPanel({
       data-testid="home-work-status-detail"
       aria-label="선택한 업무 상세"
     >
-      <header className="flex min-h-[58px] items-start justify-between gap-3 border-b border-[var(--emr-line-hairline)] px-4 py-3">
+      <header className="flex min-h-[58px] items-start justify-between gap-3 border-b border-[var(--emr-border-default)] px-4 py-3">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
             <h2 className="text-[15px] font-semibold leading-6">선택한 업무</h2>
@@ -882,7 +882,7 @@ function TaskDetailPanel({
               {[getDecisionReason(task), task.sourceLabel, task.roleQueueLabel ?? task.encounterLabel ?? "관련 맥락 확인"].map((item, index) => (
                 <span
                   key={`${item}-${index}`}
-                  className="rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card px-2.5 py-2 text-[12px] font-medium leading-4 text-muted-foreground"
+                  className="rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-subtle)] bg-card px-2.5 py-2 text-[12px] font-medium leading-4 text-muted-foreground"
                 >
                   {item}
                 </span>
@@ -892,7 +892,7 @@ function TaskDetailPanel({
         </div>
       </div>
 
-      <footer className="mt-auto grid shrink-0 gap-2 border-t border-[var(--emr-line-hairline)] bg-card p-4">
+      <footer className="mt-auto grid shrink-0 gap-2 border-t border-[var(--emr-border-default)] bg-card p-4">
         <Button
           size="default"
           className="w-full justify-center rounded-[var(--clair-radius-atomic-8)] bg-foreground text-background hover:bg-foreground/90"

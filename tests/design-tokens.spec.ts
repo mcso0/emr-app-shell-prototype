@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import fs from "node:fs";
+import path from "node:path";
 
 const treatmentUrl = "/w/clair-demo/treatment?modulePanel=open&aside=closed";
 const directLocalColorPattern =
@@ -21,6 +22,18 @@ const extractSourceToEnd = (source: string, startMarker: string) => {
   expect(start, `Missing start marker: ${startMarker}`).toBeGreaterThanOrEqual(0);
 
   return source.slice(start);
+};
+
+const collectSourceFiles = async (directory: string): Promise<string[]> => {
+  const entries = await fs.promises.readdir(directory, { withFileTypes: true });
+  const nestedPaths = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(directory, entry.name);
+      return entry.isDirectory() ? collectSourceFiles(entryPath) : [entryPath];
+    }),
+  );
+
+  return nestedPaths.flat();
 };
 
 test("Sky atomic tokens use the approved 500 anchor and coordinated scale", async ({ page }) => {
@@ -130,6 +143,8 @@ test("EMR border semantic scale maps to neutral 100, 200, and 300", async ({ pag
       subtle: resolveBorderColor("--emr-border-subtle"),
       default: resolveBorderColor("--emr-border-default"),
       strong: resolveBorderColor("--emr-border-strong"),
+      globalBorder: resolveBorderColor("--border"),
+      globalInput: resolveBorderColor("--input"),
     };
 
     probe.remove();
@@ -140,50 +155,50 @@ test("EMR border semantic scale maps to neutral 100, 200, and 300", async ({ pag
     subtle: "rgb(245, 245, 245)",
     default: "rgb(229, 229, 229)",
     strong: "rgb(212, 212, 212)",
+    globalBorder: "rgb(229, 229, 229)",
+    globalInput: "rgb(229, 229, 229)",
   });
 
-  const [shellSource, workspaceFrameSource] = await Promise.all([
-    fs.promises.readFile("src/shell/shell-main.tsx", "utf8"),
-    fs.promises.readFile("src/shell/workspace-frame.tsx", "utf8"),
-  ]);
+  const [foundationSource, globalSource, shellSource, workspaceFrameSource] =
+    await Promise.all([
+      fs.promises.readFile("src/styles/tokens/emr-foundation.css", "utf8"),
+      fs.promises.readFile("src/app/globals.css", "utf8"),
+      fs.promises.readFile("src/shell/shell-main.tsx", "utf8"),
+      fs.promises.readFile("src/shell/workspace-frame.tsx", "utf8"),
+    ]);
 
+  expect(foundationSource).toContain("--border: var(--emr-border-default)");
+  expect(foundationSource).toContain("--input: var(--emr-border-default)");
+  expect(globalSource).toContain("--border: var(--emr-border-default)");
+  expect(globalSource).toContain("--input: var(--emr-border-default)");
   expect(shellSource).toContain("var(--emr-border-strong)");
   expect(workspaceFrameSource).toContain("var(--emr-border-strong)");
 });
 
-test("shared border migration batch uses the EMR semantic border hierarchy", async () => {
-  const migrationFiles = [
-    "src/shell/workspace-frame.tsx",
-    "src/components/emr/registration-dialog.tsx",
-    "src/components/emr/side-panel-card.tsx",
-    "src/components/emr/subpanel.tsx",
-    "src/components/emr/emr-data-table.tsx",
-    "src/components/emr/dialog-shell.tsx",
-    "src/components/emr/order-queue-summary.tsx",
-    "src/components/emr/popover-shell.tsx",
-    "src/components/emr/instruction-filter-tabs.tsx",
-    "src/components/emr/instruction-header-stack.tsx",
-    "src/components/emr/order-group-section.tsx",
-    "src/components/emr/table-checkbox.tsx",
-    "src/components/ui/segmented-control.tsx",
-    "src/features/auth/personal-profile-settings.tsx",
-  ];
-  const sources = await Promise.all(
-    migrationFiles.map(async (path) => ({
-      path,
-      source: await fs.promises.readFile(path, "utf8"),
-    }))
+test("runtime source uses only the EMR semantic structural border hierarchy", async () => {
+  const runtimeSourcePaths = (await collectSourceFiles("src")).filter(
+    (sourcePath) => /\.(?:css|ts|tsx)$/.test(sourcePath),
   );
-  const legacyUsages = sources.flatMap(({ path, source }) =>
+  const runtimeSources = await Promise.all(
+    runtimeSourcePaths.map(async (sourcePath) => ({
+      path: sourcePath,
+      source: await fs.promises.readFile(sourcePath, "utf8"),
+    })),
+  );
+  const allLegacyUsages = runtimeSources.flatMap(({ path: sourcePath, source }) =>
     [...source.matchAll(/--emr-line-(?:subtle|hairline|default|strong)/g)].map(
-      (match) => `${path}:${match[0]}`
-    )
+      (match) => `${sourcePath}:${match[0]}`,
+    ),
   );
 
-  expect(legacyUsages).toEqual([]);
+  expect(allLegacyUsages).toEqual([]);
 
-  const workspaceFrameSource = sources.find(({ path }) => path === "src/shell/workspace-frame.tsx")?.source;
-  const registrationDialogSource = sources.find(({ path }) => path === "src/components/emr/registration-dialog.tsx")?.source;
+  const workspaceFrameSource = runtimeSources.find(
+    ({ path: sourcePath }) => sourcePath === "src/shell/workspace-frame.tsx",
+  )?.source;
+  const registrationDialogSource = runtimeSources.find(
+    ({ path: sourcePath }) => sourcePath === "src/components/emr/registration-dialog.tsx",
+  )?.source;
   const homeWorkspaceSource = await fs.promises.readFile(
     "src/features/home/components/home-kanban-workspace.tsx",
     "utf8"

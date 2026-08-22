@@ -34,7 +34,11 @@ Do not use shadow as generic decoration or as the main way to make every card fe
 
 Default border thickness is `1px`. Use thicker lines only for a scoped drag handle or explicit status indicator. Do not use a side rail or inset stripe as the default selected or active state.
 
-Legacy `--emr-line-subtle`, `--emr-line-hairline`, `--emr-line-default`, and `--emr-line-strong` usages remain as migration compatibility only. Do not introduce new structural uses of those tokens. Selected, focus, drag, and state-specific line tokens remain valid because they describe interaction state rather than neutral structural hierarchy.
+The former structural `--emr-line-subtle`, `--emr-line-hairline`,
+`--emr-line-default`, and `--emr-line-strong` aliases were removed after the
+runtime migration. Do not reintroduce them. Selected, focus, drag, and
+state-specific line tokens remain valid because they describe interaction state
+rather than neutral structural hierarchy.
 
 ## Radius Roles
 

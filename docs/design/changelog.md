@@ -2,6 +2,15 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-08-22
+
+- `changed`: Structural borders now use only the neutral
+  `--emr-border-subtle/default/strong` hierarchy; the four legacy structural
+  `--emr-line-*` aliases and unused compatibility utilities were removed.
+- `changed`: The hand-authored EMR theme now maps global shadcn `--border` and
+  `--input` to `--emr-border-default`, while selected, focus, drag, status, and
+  accent borders keep their dedicated semantic tokens.
+
 ## 2026-08-01
 
 - `fixed`: Reception keeps its feature-owned 56px calendar toolbar at the top

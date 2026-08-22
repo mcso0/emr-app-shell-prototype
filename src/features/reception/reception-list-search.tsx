@@ -67,7 +67,7 @@ export function ReceptionPanelStateMessage({
       className={cn(
         "border-b px-4 py-2 emr-text-metadata font-medium",
         tone === "danger" && "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
-        tone === "muted" && "border-[var(--emr-line-subtle)] bg-muted/50 text-muted-foreground",
+        tone === "muted" && "border-[var(--emr-status-neutral-border)] bg-muted/50 text-muted-foreground",
         tone === "warning" && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]"
       )}
     >

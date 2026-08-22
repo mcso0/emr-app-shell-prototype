@@ -192,7 +192,7 @@ export function EmrSidePanelMiniCalendar({
                       "bg-[var(--clair-color-atomic-red-500)] font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.12)] group-hover/date:bg-[var(--clair-color-atomic-red-500)]",
                     selected &&
                       !today &&
-                      "bg-[var(--emr-state-hover)] shadow-[inset_0_0_0_1px_var(--emr-line-default)] group-hover/date:bg-[var(--emr-state-hover)]",
+                      "bg-[var(--emr-state-hover)] shadow-[inset_0_0_0_1px_var(--emr-state-selected-border)] group-hover/date:bg-[var(--emr-state-hover)]",
                   )}
                 >
                   {cell.day}

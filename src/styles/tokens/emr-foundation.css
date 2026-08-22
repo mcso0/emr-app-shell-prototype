@@ -23,8 +23,8 @@
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
+  --border: var(--emr-border-default);
+  --input: var(--emr-border-default);
   --ring: oklch(0.705 0.015 286.067);
 
   --brand: var(--clair-color-atomic-sky-500);
@@ -85,7 +85,7 @@
   --emr-schedule-grid-row-min-height: 7rem;
   --emr-schedule-grid-cell-padding: var(--clair-spacing-8);
   --emr-schedule-grid-header-bg: var(--emr-surface-muted);
-  --emr-schedule-grid-divider: var(--emr-line-hairline);
+  --emr-schedule-grid-divider: var(--emr-border-default);
   --emr-schedule-shift-clinical-bg: var(--emr-status-info-bg);
   --emr-schedule-shift-clinical-border: var(--emr-status-info-border);
   --emr-schedule-shift-clinical-text: var(--emr-status-info-text);
@@ -515,10 +515,6 @@
   --emr-border-subtle: var(--clair-color-atomic-neutral-100);
   --emr-border-default: var(--clair-color-atomic-neutral-200);
   --emr-border-strong: var(--clair-color-atomic-neutral-300);
-  --emr-line-subtle: var(--clair-color-atomic-gray-100);
-  --emr-line-hairline: var(--clair-color-atomic-gray-200);
-  --emr-line-default: var(--clair-color-atomic-gray-200);
-  --emr-line-strong: var(--clair-color-atomic-gray-300);
   --emr-line-selected: var(--clair-color-atomic-sky-400);
   --emr-line-focus: var(--ring);
 

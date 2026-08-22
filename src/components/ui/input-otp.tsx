@@ -54,7 +54,7 @@ function InputOTPSlot({
       data-slot="input-otp-slot"
       data-active={isActive}
       className={cn(
-        "emr-control-text relative flex aspect-square w-full min-w-0 items-center justify-center border-y border-r border-[var(--clair-color-line-normal)] bg-background text-center font-semibold text-foreground transition-all outline-none first:rounded-l-[var(--emr-radius-control)] first:border-l last:rounded-r-[var(--emr-radius-control)] aria-invalid:border-[var(--emr-status-danger-border)] data-[active=true]:z-10 data-[active=true]:border-[var(--emr-state-selected-border)] data-[active=true]:ring-3 data-[active=true]:ring-[var(--emr-state-selected-border)]/20 data-[active=true]:aria-invalid:border-[var(--emr-status-danger-border)] data-[active=true]:aria-invalid:ring-[var(--emr-status-danger-border)]/20",
+        "emr-control-text relative flex aspect-square w-full min-w-0 items-center justify-center border-y border-r border-[var(--emr-border-default)] bg-background text-center font-semibold text-foreground transition-all outline-none first:rounded-l-[var(--emr-radius-control)] first:border-l last:rounded-r-[var(--emr-radius-control)] aria-invalid:border-[var(--emr-status-danger-border)] data-[active=true]:z-10 data-[active=true]:border-[var(--emr-state-selected-border)] data-[active=true]:ring-3 data-[active=true]:ring-[var(--emr-state-selected-border)]/20 data-[active=true]:aria-invalid:border-[var(--emr-status-danger-border)] data-[active=true]:aria-invalid:ring-[var(--emr-status-danger-border)]/20",
         className
       )}
       {...props}

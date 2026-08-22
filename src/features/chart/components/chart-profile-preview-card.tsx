@@ -61,7 +61,7 @@ export function ChartProfilePreviewCard({
           ))}
         </div>
       ) : null}
-      <p className="border-t border-[var(--emr-line-subtle)] pt-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]">
+      <p className="border-t border-[var(--emr-border-subtle)] pt-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]">
         클릭하면 전체 프로필을 열어요.
       </p>
     </div>

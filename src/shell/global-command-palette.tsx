@@ -69,7 +69,7 @@ type CommandSearchClientState =
 const MAX_ITEMS_PER_SECTION = 6;
 const COMMAND_SEARCH_DEBOUNCE_MS = 180;
 const COMMAND_DIALOG_CLASS_NAME =
-  "h-[min(680px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-line-subtle)] bg-card p-0 shadow-[var(--clair-shadow-xl)] sm:max-w-[720px]";
+  "h-[min(680px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-border-strong)] bg-card p-0 shadow-[var(--clair-shadow-xl)] sm:max-w-[720px]";
 const COMMAND_RESULT_ROW_CLASS_NAME =
   "grid w-full grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 rounded-[8px] px-2.5 py-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50";
 const COMMAND_RESULT_ICON_CLASS_NAME =
@@ -465,8 +465,8 @@ export function GlobalCommandPalette({
         size={triggerVariant === "wide" ? "default" : "icon"}
         className={cn(
           triggerVariant === "icon"
-            ? "justify-center rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card px-0 text-muted-foreground shadow-[var(--clair-shadow-xs)] hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground hover:shadow-[var(--clair-shadow-sm)] active:shadow-none focus-visible:ring-ring/40"
-            : "mx-auto h-8 w-[min(560px,45vw)] min-w-8 rounded-lg border-border bg-card px-3 text-left shadow-sm hover:border-[var(--emr-line-strong)] hover:bg-card focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2",
+            ? "justify-center rounded-[var(--emr-radius-control)] border-[var(--emr-border-default)] bg-card px-0 text-muted-foreground shadow-[var(--clair-shadow-xs)] hover:bg-[var(--emr-state-hover)] hover:text-foreground hover:shadow-[var(--clair-shadow-sm)] active:shadow-none focus-visible:ring-ring/40"
+            : "mx-auto h-8 w-[min(560px,45vw)] min-w-8 rounded-lg border-border bg-card px-3 text-left shadow-sm hover:bg-card focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2",
           triggerVariant === "rail" &&
             "mx-0 size-[var(--emr-navrail-item-size)] min-w-0 justify-center rounded-[var(--emr-navrail-item-radius)] border-0 bg-transparent p-[var(--emr-navrail-item-padding)] text-[var(--emr-navrail-icon)] shadow-none hover:bg-[var(--emr-navrail-item-hover)] hover:text-[var(--emr-navrail-icon-hover)] hover:shadow-none active:bg-[var(--emr-navrail-item-selected)] active:text-[var(--emr-navrail-icon-selected)] focus-visible:ring-3 focus-visible:ring-ring/50",
         )}
@@ -555,7 +555,7 @@ export function GlobalCommandPalette({
           </div>
           <div className="min-h-0 overflow-y-auto px-2 py-2" role="listbox" aria-label="통합 검색 결과">
             {searchState.status === "loading" ? (
-              <div className="mx-2 mb-1 rounded-[8px] border border-[var(--emr-line-hairline)] bg-muted/50 px-3 py-2 text-[12px] text-muted-foreground">
+              <div className="mx-2 mb-1 rounded-[8px] border border-[var(--emr-border-subtle)] bg-muted/50 px-3 py-2 text-[12px] text-muted-foreground">
                 검색 중
               </div>
             ) : null}

@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const chartWorkspacePanelClassName =
-  "group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-common-100)] shadow-xs";
+  "group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--emr-border-strong)] bg-[var(--clair-color-atomic-common-100)] shadow-xs";
 
 type ChartPatientVitalItem = {
   label: string;
@@ -113,7 +113,7 @@ export function ChartWorkspacePanel({
         <ChartPanelActionGroup>{actions}</ChartPanelActionGroup>
       </div>
       {toolbar ? (
-        <div className="flex h-11 min-h-11 shrink-0 items-center overflow-x-auto border-b border-[var(--emr-line-hairline)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex h-11 min-h-11 shrink-0 items-center overflow-x-auto border-b border-[var(--emr-border-default)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {toolbar}
         </div>
       ) : null}
@@ -173,7 +173,7 @@ export function ChartActionBar({
           <CdsPeopleUserIcon className="size-3.5" aria-hidden="true" />
           {doctorName}
         </span>
-        <div className="mx-1 h-5 w-px bg-[var(--emr-line-hairline)]" />
+        <div className="mx-1 h-5 w-px bg-[var(--emr-border-subtle)]" />
         <UnavailableActionButton
           icon={<CdsMedicalBedIcon />}
           label="입원 수속"

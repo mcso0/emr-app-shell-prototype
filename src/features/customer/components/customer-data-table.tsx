@@ -123,7 +123,7 @@ function CustomerRowActionMenu({
     <EmrRowActionMenu
       ariaLabel={`${label} 행 작업`}
       contentClassName="w-56"
-      triggerClassName="size-6 shrink-0 rounded-md border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-0 text-[var(--clair-color-atomic-neutral-700)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-black-alpha-4)] [&_svg]:size-3.5"
+      triggerClassName="size-6 shrink-0 rounded-md border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] p-0 text-[var(--clair-color-atomic-neutral-700)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-black-alpha-4)] [&_svg]:size-3.5"
       items={[
         {
           key: "open",

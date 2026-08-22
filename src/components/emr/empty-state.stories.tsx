@@ -68,7 +68,7 @@ function EmptyStateSecondaryButton({
       variant="outline"
       size={buttonSize === "xl" ? "default" : buttonSize === "lg" ? "sm" : "xs"}
       roundness="round"
-      className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]"
+      className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]"
     >
       {children}
     </Button>
@@ -77,7 +77,7 @@ function EmptyStateSecondaryButton({
 
 function EmptyStatePreviewShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-[260px] w-full max-w-[420px] items-center justify-center rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-8">
+    <div className="flex min-h-[260px] w-full max-w-[420px] items-center justify-center rounded-lg border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-8">
       {children}
     </div>
   );
@@ -661,13 +661,13 @@ export const TableFilterRecovery: Story = {
     title: "조건에 맞는 오더가 없습니다",
   },
   render: (args) => (
-    <div className="overflow-hidden rounded-lg border border-[var(--emr-line-hairline)]">
+    <div className="overflow-hidden rounded-lg border border-[var(--emr-border-default)]">
       <div className="grid grid-cols-[1fr_120px_120px] bg-[var(--emr-surface-muted)] px-3 py-2 emr-text-metadata font-semibold text-muted-foreground">
         <span>오더명</span>
         <span>상태</span>
         <span>담당</span>
       </div>
-      <div className="flex min-h-[160px] items-center justify-center border-t border-[var(--emr-line-hairline)] p-4">
+      <div className="flex min-h-[160px] items-center justify-center border-t border-[var(--emr-border-default)] p-4">
         <EmptyStateStoryExample {...args} />
       </div>
     </div>
@@ -693,7 +693,7 @@ export const WidgetSupporting: Story = {
     title: "알림이 없습니다",
   },
   render: (args) => (
-    <div className="w-[360px] rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
+    <div className="w-[360px] rounded-lg border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-3">
       <div className="mb-2 emr-text-section font-semibold">오늘의 업무 알림</div>
       <EmptyStateStoryExample {...args} />
     </div>
@@ -876,7 +876,7 @@ export const StateKindSet: Story = {
       {stateExamples.map((example) => (
         <div
           key={example.kind}
-          className="flex min-h-[236px] items-center justify-center rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-6"
+          className="flex min-h-[236px] items-center justify-center rounded-lg border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-6"
         >
           <EmrEmptyState
             description={example.description}

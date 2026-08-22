@@ -648,7 +648,7 @@ function getVeterinarianAccentClassName(
   veterinarianId?: string,
   veterinarians: Veterinarian[] = allVeterinarians,
 ) {
-  if (!veterinarianId) return "bg-[var(--emr-line-strong)]";
+  if (!veterinarianId) return "bg-[var(--clair-color-atomic-neutral-300)]";
 
   const veterinarian = veterinarians.find(
     (item) => item.id === veterinarianId,
@@ -3087,7 +3087,7 @@ function CalendarQuarterHourLines({ hour, scale }: { hour?: number; scale?: Cale
       {Array.from({ length: scheduleSlotCountPerHour - 1 }, (_, index) => (
         <span
           key={`quarter-line-${index}`}
-          className="absolute left-0 right-0 h-px bg-[var(--emr-line-subtle)]/70"
+          className="absolute left-0 right-0 h-px bg-[var(--emr-border-subtle)]/70"
           style={scale && hour !== undefined
             ? { top: scale.rangeHeight(hour * 60, hour * 60 + (index + 1) * scheduleSlotMinutes) }
             : { top: `${((index + 1) / scheduleSlotCountPerHour) * 100}%` }}
@@ -3642,7 +3642,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         onDateSelect={handleSidePanelDateSelect}
         onReturnToPreviousDate={handleReturnToPreviousOperatingDate}
       />
-      <div aria-hidden="true" className="shrink-0 border-t border-[var(--emr-line-default)]" />
+      <div aria-hidden="true" className="shrink-0 border-t border-[var(--emr-border-default)]" />
       {queueReadStatus === "error" ? (
         <EmrInlineAlert
           className="mx-3 my-2"
@@ -4743,7 +4743,7 @@ function ScheduleToolbar({
               variant: "outline",
               size: "default",
               className:
-                "min-w-[148px] justify-start border !border-[var(--emr-line-hairline)] bg-card text-foreground",
+                "min-w-[148px] justify-start border !border-[var(--emr-border-default)] bg-card text-foreground",
             })}
           >
             <CdsActionsSearchIcon data-icon="inline-start" />
@@ -4798,7 +4798,7 @@ function ScheduleToolbar({
         />
         <div
           aria-hidden="true"
-          className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]"
+          className="h-4 w-px shrink-0 bg-[var(--emr-border-subtle)]"
         />
         <NewUnifiedRegistrationButton
           label="환자/보호자 등록"
@@ -4838,7 +4838,7 @@ function ScheduleToolbar({
         </DropdownMenu>
         <div
           aria-hidden="true"
-          className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]"
+          className="h-4 w-px shrink-0 bg-[var(--emr-border-subtle)]"
         />
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -6043,7 +6043,7 @@ function CalendarResourceLoadingState() {
             key={`calendar-loading-lane-${lane}`}
             className="h-[var(--emr-calendar-lane-header-cell-height)] border-r p-[var(--emr-calendar-lane-header-cell-padding)] last:border-r-0"
           >
-            <div className="flex h-full items-center gap-2 rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-[var(--emr-calendar-lane-header-padding-x)] py-[var(--emr-calendar-lane-header-padding-y)]">
+            <div className="flex h-full items-center gap-2 rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-[var(--emr-calendar-lane-header-padding-x)] py-[var(--emr-calendar-lane-header-padding-y)]">
               <Skeleton className="size-[var(--emr-calendar-lane-avatar-size)] shrink-0 rounded-[var(--emr-calendar-lane-avatar-radius)]" />
               <div className="min-w-0 flex-1 space-y-2">
                 <Skeleton className="h-3 w-24" />
@@ -9546,7 +9546,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
       className="bg-[var(--emr-surface-rightpanel)]"
       data-testid="reception-right-panel"
       header={
-        <EmrRightPanelHeader className="justify-between border-b border-[var(--emr-line-default)]">
+        <EmrRightPanelHeader className="justify-between border-b border-[var(--emr-border-default)]">
         <div className="flex min-w-0 items-center gap-2">
           <div className="truncate emr-text-panel-title font-semibold text-foreground">
             {title}
@@ -10061,7 +10061,7 @@ function ReceptionCreateVitalFields({
                 className={cn(
                   "w-full border-dashed shadow-none hover:shadow-none active:shadow-none",
                   presentation === "side-panel"
-                    ? "h-[var(--clair-control-height-md)] border-[var(--emr-line-default)] bg-[var(--emr-reception-create-add-vital-bg)] emr-control-text font-medium text-[var(--clair-color-atomic-neutral-500)]"
+                    ? "h-[var(--clair-control-height-md)] border-[var(--emr-border-default)] bg-[var(--emr-reception-create-add-vital-bg)] emr-control-text font-medium text-[var(--clair-color-atomic-neutral-500)]"
                     : "h-9 bg-card emr-text-dense-label font-semibold text-[var(--emr-text-secondary)]",
                 )}
               />
@@ -10251,7 +10251,7 @@ function ReceptionAppointmentBeforeCheckInNotice({
     <section
       role="status"
       data-testid="reservation-before-check-in-notice"
-      className="flex min-h-[var(--clair-spacing-64)] items-center justify-between gap-[var(--clair-spacing-12)] rounded-[var(--emr-radius-control)] border border-[var(--emr-line-default)] bg-[var(--clair-color-static-white)] px-[var(--clair-spacing-12)] py-[var(--clair-spacing-8)]"
+      className="flex min-h-[var(--clair-spacing-64)] items-center justify-between gap-[var(--clair-spacing-12)] rounded-[var(--emr-radius-control)] border border-[var(--emr-status-neutral-border)] bg-[var(--clair-color-static-white)] px-[var(--clair-spacing-12)] py-[var(--clair-spacing-8)]"
     >
       <div className="min-w-0">
         <p className="emr-text-body font-semibold text-[var(--emr-text-primary)]">
