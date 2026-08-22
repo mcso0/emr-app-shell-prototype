@@ -790,6 +790,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(panels).toHaveCount(4);
   for (const panel of await panels.all()) {
     await expect(panel).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await expect(panel).toHaveCSS("border-color", "rgb(212, 212, 212)");
   }
 
   const subjectPanel = panels.filter({
@@ -873,9 +874,16 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "height",
     "44px",
   );
+  await expect(page.locator("[data-slot='chart-soap-toolbar']")).toHaveCSS(
+    "border-bottom-color",
+    "rgb(229, 229, 229)",
+  );
   await expect(
     page.locator("[data-slot='chart-assessment-toolbar']"),
   ).toHaveCSS("height", "44px");
+  await expect(
+    page.locator("[data-slot='chart-assessment-toolbar']"),
+  ).toHaveCSS("border-bottom-color", "rgb(229, 229, 229)");
   await expect(
     page.locator("[data-slot='chart-assessment-table-header']"),
   ).toHaveCSS("height", "36px");

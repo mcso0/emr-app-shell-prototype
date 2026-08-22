@@ -51,8 +51,8 @@ export function OrderSetsPanel({
     <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]">
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <div className="min-h-0 flex-1 overflow-auto p-4">
-        <section className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card">
-          <div className="flex items-center justify-between border-b border-[var(--emr-line-hairline)] px-4 py-3">
+        <section className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-card">
+          <div className="flex items-center justify-between border-b border-[var(--emr-border-default)] px-4 py-3">
             <div>
               <h1 className="emr-text-panel-title font-semibold">Order 세트</h1>
               <p className="emr-text-dense text-muted-foreground">현재 revision 기준으로만 관리됩니다.</p>

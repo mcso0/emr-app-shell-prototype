@@ -403,7 +403,7 @@ function MembershipProfilePanel({
         </TabPanel>
       </TabGroup>
 
-      <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3">
+      <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-3">
         {!canManageMembers ? (
           <p className="text-[12px] leading-5 text-muted-foreground">
             일반 계정은 조회만 가능합니다.
@@ -1749,7 +1749,7 @@ export function WorkspaceMembershipManagement({
             <ScrollArea className="h-full min-h-0 bg-[var(--emr-surface-workspace)]">
               <div className="p-4">
                 {statusReadState === "loading" ? (
-                  <p className="mb-3 rounded-[var(--clair-radius-md)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[12px] text-muted-foreground">
+                  <p className="mb-3 rounded-[var(--clair-radius-md)] border border-[var(--emr-border-subtle)] bg-card px-3 py-2 text-[12px] text-muted-foreground">
                     서버 상태를 불러오는 중입니다.
                   </p>
                 ) : statusReadState === "error" ? (
@@ -2023,7 +2023,7 @@ export function WorkspaceMembershipManagement({
         }}
       >
         <DialogContent className="max-h-[min(760px,calc(100dvh-2rem))] gap-0 overflow-hidden p-0 sm:max-w-[640px]">
-          <DialogHeader className="border-b border-[var(--emr-line-hairline)] px-5 py-4 pr-12">
+          <DialogHeader className="border-b border-[var(--emr-border-default)] px-5 py-4 pr-12">
             <DialogTitle className="text-[16px] leading-6">
               {editingInvitation ? "초대 정보 수정" : "직원 초대"}
             </DialogTitle>
@@ -2108,7 +2108,7 @@ export function WorkspaceMembershipManagement({
                     {activePermissionRoles.map((role) => (
                       <label
                         key={role.roleKey}
-                        className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
+                        className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
                       >
                         <Radio
                           aria-label={role.label}
@@ -2172,7 +2172,7 @@ export function WorkspaceMembershipManagement({
                     {activeJobPositions.map((position) => (
                       <label
                         key={position.positionKey}
-                        className="flex items-center gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
+                        className="flex items-center gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
                       >
                         <Radio
                           aria-label={position.label}
@@ -2217,7 +2217,7 @@ export function WorkspaceMembershipManagement({
                 </Field>
               </FieldGroup>
             </ScrollArea>
-            <DialogFooter className="mx-0 mb-0 rounded-none border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-5 py-3 sm:flex-row sm:justify-end">
+            <DialogFooter className="mx-0 mb-0 rounded-none border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-5 py-3 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
@@ -2274,7 +2274,7 @@ export function WorkspaceMembershipManagement({
               {activePermissionRoles.map((role) => (
                 <label
                   key={role.roleKey}
-                  className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
+                  className="flex items-start gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-card px-3 py-2 text-[13px] text-[var(--emr-text-primary)]"
                 >
                   <Radio aria-label={role.label} value={role.roleKey} />
                   <span className="grid gap-0.5">

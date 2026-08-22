@@ -979,7 +979,7 @@ export function DispensingContentAside({
         label={historyLabel}
         onCollapse={() => setContentAsideOpen(false)}
       />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
           {visibleHistoryGroups.map((group) => (
@@ -1615,7 +1615,7 @@ function DispensingContentBody({
                 size="default"
                 variant="outline"
                 roundness="round"
-                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >
@@ -1918,7 +1918,7 @@ function DispensingContentBody({
                       수정이력조회
                       <MenuIcon data-icon="inline-end" />
                     </Button>
-                    <div className="h-[18px] w-px bg-[var(--emr-line-default)]" />
+                    <div className="h-[18px] w-px bg-[var(--emr-border-subtle)]" />
                     <Button variant="outline" size="xs" className="bg-card">
                       필터 1
                     </Button>
@@ -1965,7 +1965,7 @@ function DispensingContentBody({
             );
           })}
           {!visibleTableGroups.length ? (
-            <div className="rounded-lg border border-[var(--emr-line-hairline)] bg-card p-8 text-center emr-text-dense font-medium text-muted-foreground">
+            <div className="rounded-lg border border-[var(--emr-border-subtle)] bg-card p-8 text-center emr-text-dense font-medium text-muted-foreground">
               표시할 오더 그룹이 없습니다.
             </div>
           ) : null}

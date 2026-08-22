@@ -64,7 +64,7 @@ export function NotificationToastCard({
       role="status"
       data-testid={`global-notification-toast-${notification.id}`}
       data-toast-variant={variant}
-      className="grid w-[min(360px,calc(100vw-32px))] grid-cols-[28px_minmax(0,1fr)] gap-3 rounded-[var(--emr-radius-card)] border border-[var(--emr-line-default)] bg-[var(--emr-surface-app)] p-3 text-[var(--emr-text-primary)] shadow-[var(--emr-shadow-panel)]"
+      className="grid w-[min(360px,calc(100vw-32px))] grid-cols-[28px_minmax(0,1fr)] gap-3 rounded-[var(--emr-radius-card)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-app)] p-3 text-[var(--emr-text-primary)] shadow-[var(--emr-shadow-panel)]"
     >
       <span
         className={cn(

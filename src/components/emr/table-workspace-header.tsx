@@ -79,7 +79,7 @@ export function EmrTableWorkspaceHeader({
               placeholder={searchPlaceholder}
               value={searchValue}
               className={cn(
-                "h-8 rounded-lg border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none",
+                "h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none",
                 searchValue ? "pr-8" : "pr-9",
               )}
               onValueChange={onSearchChange}

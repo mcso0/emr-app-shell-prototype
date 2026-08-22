@@ -2829,7 +2829,7 @@ export function LabContentAside({ workspaceId }: ShellComponentProps) {
         onCollapse={() => setContentAsideOpen(false)}
         actions={<QueueActions />}
       />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
           {groups.map((group) => (
@@ -3095,7 +3095,7 @@ function LabReceiptCard({
             <span className="truncate emr-text-section font-semibold text-foreground">
               {receipt.equipmentName}
             </span>
-            <span className="shrink-0 rounded border border-[var(--emr-line-subtle)] px-1.5 py-0.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
+            <span className="shrink-0 rounded border border-[var(--emr-border-subtle)] px-1.5 py-0.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
               {receivedTime} 수신
             </span>
           </div>
@@ -3138,7 +3138,7 @@ function LabReceiptCard({
             }}
           >
             <div className="px-4 pb-3 pt-2">
-              <div className="mb-2 h-px w-full bg-[var(--emr-line-subtle)]" />
+              <div className="mb-2 h-px w-full bg-[var(--emr-border-subtle)]" />
               <div className="flex h-8 items-center justify-between gap-2">
                 <h3 className="emr-text-dense font-semibold text-[var(--emr-text-secondary)]">
                   검사 결과
@@ -3384,7 +3384,7 @@ export function LabContent({
                 size="default"
                 variant="outline"
                 roundness="round"
-                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >
@@ -3800,7 +3800,7 @@ export function ImagingContentAside({ workspaceId }: ShellComponentProps) {
         onCollapse={() => setContentAsideOpen(false)}
         actions={<QueueActions />}
       />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
           {groups.map((group) => (
@@ -4179,7 +4179,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
                 size="default"
                 variant="outline"
                 roundness="round"
-                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >

@@ -398,7 +398,7 @@ function PatientIdentity({
         alt={`${context.patient.name} 동물 환자 프로필`}
         className={
           size === "large"
-            ? "sm:!size-[72px] sm:!border-[var(--clair-color-atomic-neutral-300)] sm:[&_svg]:!size-9"
+            ? "sm:!size-[72px] sm:!border-[var(--emr-border-strong)] sm:[&_svg]:!size-9"
             : undefined
         }
         size="md"
@@ -461,7 +461,7 @@ function VisitPurpose({ context }: { context: ChartPreconsultationContext }) {
       <SectionTitle id="preconsultation-visit-purpose" icon={<CdsMedicalClipboardCheckIcon />}>
         방문 목적
       </SectionTitle>
-      <div className="flex min-h-[52px] min-w-0 items-center rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-3 sm:px-6 sm:py-4">
+      <div className="flex min-h-[52px] min-w-0 items-center rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-subtle)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-3 sm:px-6 sm:py-4">
         <p className="min-w-0 text-sm font-medium leading-5 tracking-[0.014em]">
           {purpose ?? "방문 목적 미입력"}
         </p>
@@ -489,7 +489,7 @@ function ReceptionSummary({ context }: { context: ChartPreconsultationContext })
         접수 정보
       </SectionTitle>
       <dl
-        className="grid min-w-0 grid-cols-2 overflow-hidden rounded-[var(--clair-radius-atomic-12)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] sm:grid-cols-5"
+        className="grid min-w-0 grid-cols-2 overflow-hidden rounded-[var(--clair-radius-atomic-12)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] sm:grid-cols-5"
         data-testid="preconsultation-reception-summary-grid"
       >
         {items.map((item, index) => (
@@ -511,7 +511,7 @@ function ReceptionSummary({ context }: { context: ChartPreconsultationContext })
                   "min-w-0 truncate",
                   item.badge && "inline-flex min-h-[22px] items-center rounded-[var(--clair-radius-atomic-6)] border px-2 py-0.5 text-xs leading-4",
                   item.badge === "primary" && "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
-                  item.badge === "neutral" && "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)]",
+                  item.badge === "neutral" && "border-[var(--emr-status-neutral-border)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)]",
                 )}
               >
                 {item.value}
@@ -521,7 +521,7 @@ function ReceptionSummary({ context }: { context: ChartPreconsultationContext })
               <span
                 aria-hidden="true"
                 className={cn(
-                  "pointer-events-none absolute top-1/2 right-0 h-[40px] w-px -translate-y-1/2 bg-[var(--emr-line-hairline)]",
+                  "pointer-events-none absolute top-1/2 right-0 h-[40px] w-px -translate-y-1/2 bg-[var(--emr-border-default)]",
                   index % 2 === 0 ? "block" : "hidden sm:block",
                 )}
                 data-testid="preconsultation-reception-divider"
@@ -574,7 +574,7 @@ function MemoCard({
   return (
     <div
       className={cn(
-        "flex min-h-[54px] min-w-0 items-start gap-2.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3.5 sm:items-center sm:px-5 sm:py-4",
+        "flex min-h-[54px] min-w-0 items-start gap-2.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-3.5 sm:items-center sm:px-5 sm:py-4",
         caution &&
           "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]",
       )}
@@ -629,7 +629,7 @@ function VitalSection({
       {current ? (
         <VitalComparison current={current} previous={previous} vitalSettings={vitalSettings} />
       ) : (
-        <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
+        <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-border-subtle)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
           <CdsMedicalActivityIcon className="size-6 shrink-0 text-[var(--emr-text-placeholder)]" aria-hidden="true" />
           <div>
             <strong className="block text-[var(--emr-text-secondary)]">오늘 기록된 바이탈이 없어요</strong>
@@ -749,7 +749,7 @@ function VitalComparison({
   const vitalDefinitions = getVitalDefinitions(vitalSettings);
   return (
     <div
-      className="max-w-full overflow-x-auto rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
+      className="max-w-full overflow-x-auto rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
       tabIndex={0}
       aria-label="환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다"
     >
@@ -793,7 +793,7 @@ function VitalComparison({
 function VitalHeaderCell({ children, first = false, icon }: { children: ReactNode; first?: boolean; icon: ReactNode }) {
   return (
     <th className={cn(
-      "h-11 border-r border-b border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-2.5 text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0",
+      "h-11 border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-2.5 text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0",
       first && "px-6",
     )}>
       <span className="inline-flex items-center gap-1.5 [&_svg]:size-3.5">{icon}{children}</span>
@@ -821,7 +821,7 @@ function VitalRow({
     <tr>
       <th
         className={cn(
-          "h-[52px] border-r border-b border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] px-6 py-0 text-left text-sm font-medium leading-5 tracking-[0.014em] text-[var(--clair-color-atomic-neutral-800)]",
+          "h-[52px] border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-6 py-0 text-left text-sm font-medium leading-5 tracking-[0.014em] text-[var(--clair-color-atomic-neutral-800)]",
           isLast && "border-b-0",
         )}
       >
@@ -836,7 +836,7 @@ function VitalRow({
           <td
             key={vital.key}
             className={cn(
-              "h-[52px] border-r border-b border-[var(--clair-color-atomic-neutral-200)] px-4 py-0 text-sm font-medium leading-5 tracking-[0.014em] last:border-r-0",
+              "h-[52px] border-r border-b border-[var(--emr-border-default)] px-4 py-0 text-sm font-medium leading-5 tracking-[0.014em] last:border-r-0",
               isLast && "border-b-0",
             )}
           >
@@ -937,7 +937,7 @@ function HistorySection({
           ) : null}
         </>
       ) : (
-        <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
+        <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-border-subtle)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
           <CdsUtilitiesHistoryIcon className="size-6 shrink-0 text-[var(--emr-text-placeholder)]" aria-hidden="true" />
           <div>
             <strong className="block text-[var(--emr-text-secondary)]">이전 진료이력이 없어요</strong>
@@ -982,7 +982,7 @@ function HistoryTimeline({
                 return (
                   <li
                     key={entry.encounterId}
-                    className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4"
+                    className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-4"
                   >
                     <Badge
                       className="h-[22px] w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-[rgba(0,0,0,0.08)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
@@ -1025,7 +1025,7 @@ function SectionTitle({
 }
 
 function SectionDivider() {
-  return <Separator className="bg-[var(--emr-line-subtle)]" />;
+  return <Separator className="bg-[var(--emr-border-subtle)]" />;
 }
 
 function VeterinarianAvatar({ name }: { name: string }) {

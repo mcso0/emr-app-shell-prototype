@@ -1848,7 +1848,7 @@ function BillingGuardianContextBar({ detail }: { detail: BillingDetail }) {
     (summary.unpaid.count > 0 ? "미납 주의" : "메모 없음");
 
   return (
-    <div className="flex h-full items-center gap-3 border-b border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] px-4">
+    <div className="flex h-full items-center gap-3 border-b border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] px-4">
       <div className="relative min-w-0 flex-1">
         <div
           className="flex min-w-0 items-center gap-3 overflow-x-auto overflow-y-hidden pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -2038,12 +2038,12 @@ function BillingInstructionInfo({ detail }: { detail: BillingDetail }) {
   return (
     <div
       data-testid="billing-instruction-info"
-      className="grid gap-0 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 md:grid-cols-4"
+      className="grid gap-0 rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 py-3 md:grid-cols-4"
     >
       {infoItems.map(({ label, value }) => (
         <div
           key={label}
-          className="border-b border-[var(--emr-line-hairline)] px-0 py-3 last:border-b-0 md:border-b-0 md:border-r md:px-3 md:py-0 md:last:border-r-0"
+          className="border-b border-[var(--emr-border-default)] px-0 py-3 last:border-b-0 md:border-b-0 md:border-r md:px-3 md:py-0 md:last:border-r-0"
         >
           <div className="emr-text-metadata font-medium text-muted-foreground">
             {label}
@@ -2527,7 +2527,7 @@ function GuardianBillingLedgerRow({
   return (
     <label
       className={cn(
-        "flex cursor-pointer gap-3 border-b border-[var(--emr-line-subtle)] px-2 py-2.5 transition-colors hover:bg-[var(--emr-state-hover)]",
+        "flex cursor-pointer gap-3 border-b border-[var(--emr-border-subtle)] px-2 py-2.5 transition-colors hover:bg-[var(--emr-state-hover)]",
         selected && "bg-[var(--emr-state-selected)]",
       )}
       data-testid={`billing-ledger-row-${row.invoice.id}`}
@@ -2723,7 +2723,7 @@ export function BillingContentAside() {
           </>
         }
       />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-line-hairline)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
       <div className="flex flex-wrap gap-1.5">
         {billingLedgerDateRangeItems.map((item) => (
           <Button
@@ -2794,7 +2794,7 @@ export function BillingContentAside() {
           )}
         </div>
       </ScrollArea>
-      <div className="shrink-0 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] py-3 emr-text-metadata text-muted-foreground">
+      <div className="shrink-0 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] py-3 emr-text-metadata text-muted-foreground">
         선택 {selectedInvoiceIds.length}건 · 중앙 checkout에 반영
       </div>
     </EmrContentAsidePanel>
@@ -3174,7 +3174,7 @@ export function BillingContent({
                 size="default"
                 variant="outline"
                 roundness="round"
-                className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
                 onClick={apiState.retrySnapshots}
               >
                 <CdsActionsRefreshCcwIcon
@@ -3301,7 +3301,7 @@ function SummaryLine({
   muted?: boolean;
 }) {
   return (
-    <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[var(--emr-line-subtle)] emr-text-dense">
+    <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[var(--emr-border-subtle)] emr-text-dense">
       <span
         className={
           muted ? "text-muted-foreground" : "text-[var(--emr-text-secondary)]"

@@ -174,7 +174,7 @@ export function SoapRichTextEditor({
           }
           role="toolbar"
           aria-label={`${label} 선택 서식 도구`}
-          className="z-50 flex items-center gap-1 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-2 py-1.5 shadow-lg"
+          className="z-50 flex items-center gap-1 rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-2 py-1.5 shadow-lg"
         >
           <EditorToolbarButton
             active={activeEditor?.isActive("bold") ?? false}

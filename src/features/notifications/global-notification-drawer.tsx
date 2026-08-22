@@ -99,7 +99,7 @@ function NotificationRow({
       data-notification-state={notification.unread ? "unread" : "read"}
       data-notification-archived={notification.archived ? "true" : "false"}
       className={cn(
-        "grid grid-cols-[18px_minmax(0,1fr)] gap-3 border-b border-[var(--emr-line-hairline)] px-4 py-3",
+        "grid grid-cols-[18px_minmax(0,1fr)] gap-3 border-b border-[var(--emr-border-default)] px-4 py-3",
         notification.unread
           ? "bg-[var(--emr-surface-app)]"
           : "bg-transparent text-[var(--emr-text-secondary)]"
@@ -113,7 +113,7 @@ function NotificationRow({
             ? "bg-[var(--emr-status-danger-text)]"
             : notification.unread
               ? "bg-[var(--emr-status-neutral-text)]"
-              : "border-[var(--emr-line-strong)] bg-transparent"
+              : "border-[var(--emr-status-neutral-border)] bg-transparent"
         )}
       />
       <div className="min-w-0 space-y-2">
@@ -213,7 +213,7 @@ function NotificationFallbackDetail({
   return (
     <section
       data-testid="global-notification-fallback-detail"
-      className="border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-raised)] px-4 py-3"
+      className="border-b border-[var(--emr-border-default)] bg-[var(--emr-surface-raised)] px-4 py-3"
     >
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
@@ -273,9 +273,9 @@ export function GlobalNotificationDrawer({
         id="global-notification-drawer"
         side="right"
         showCloseButton={false}
-        className="w-[min(100vw,420px)] max-w-[100vw] gap-0 border-[var(--emr-line-default)] bg-[var(--emr-surface-app)] p-0 sm:max-w-[420px]"
+        className="w-[min(100vw,420px)] max-w-[100vw] gap-0 border-[var(--emr-border-strong)] bg-[var(--emr-surface-app)] p-0 sm:max-w-[420px]"
       >
-        <SheetHeader className="border-b border-[var(--emr-line-hairline)] px-4 py-3">
+        <SheetHeader className="border-b border-[var(--emr-border-default)] px-4 py-3">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <SheetTitle className="text-[16px] leading-6">알림</SheetTitle>
@@ -296,7 +296,7 @@ export function GlobalNotificationDrawer({
           </div>
         </SheetHeader>
 
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--emr-line-hairline)] px-4 py-2.5">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--emr-border-default)] px-4 py-2.5">
           <SegmentedControl
             aria-label="알림 필터"
             value={filter}
@@ -318,14 +318,14 @@ export function GlobalNotificationDrawer({
         </div>
         <p
           data-testid="global-notification-state-notice"
-          className="border-b border-[var(--emr-line-hairline)] px-4 py-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]"
+          className="border-b border-[var(--emr-border-default)] px-4 py-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]"
         >
           {stateNotice}
         </p>
         {errorMessage ? (
           <div
             data-testid="global-notification-error-state"
-            className="flex min-w-0 items-start justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-status-warning-bg)] px-4 py-3 text-[12px] leading-5"
+            className="flex min-w-0 items-start justify-between gap-3 border-b border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-4 py-3 text-[12px] leading-5"
           >
             <p className="min-w-0 text-[var(--emr-status-warning-text)]">{errorMessage}</p>
             {onRetry ? (

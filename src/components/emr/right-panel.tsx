@@ -53,7 +53,7 @@ export function EmrRightPanelFooter({
       data-size={size}
       data-slot="emr-right-panel-footer"
       className={cn(
-        "shrink-0 border-t border-[var(--emr-line-default)] bg-card",
+        "shrink-0 border-t border-[var(--emr-border-default)] bg-card",
         size === "compact" && "h-[var(--emr-rightpanel-footer-compact-height)]",
         size === "single" && "h-[var(--emr-rightpanel-footer-single-height)]",
         size === "stacked" && "h-[var(--emr-rightpanel-footer-stacked-height)]",

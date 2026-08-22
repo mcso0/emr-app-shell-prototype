@@ -1717,7 +1717,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
           </>
         }
       />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-line-hairline)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1 pb-3">
           {historyGroups.map((group) => (
@@ -1742,7 +1742,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
           ))}
         </div>
       </ScrollArea>
-      <div className="flex shrink-0 gap-2 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] py-3">
+      <div className="flex shrink-0 gap-2 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] py-3">
         <Button variant="outline" size="default" className="bg-card">
           수술 차트
         </Button>
@@ -3333,7 +3333,7 @@ function SoapPanel({
       </div>
       <div
         data-slot="chart-soap-toolbar"
-        className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-line-hairline)] px-3"
+        className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-border-default)] px-3"
       >
         {soapTabs}
       </div>
@@ -3373,7 +3373,7 @@ function SoapPanel({
         </EmrInlineAlert>
       ) : null}
       {loading ? (
-        <div className="border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-2">
+        <div className="border-b border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] px-4 py-2">
           <ChartPanelPendingState
             title="SOAP 정보를 불러오는 중"
             description="기록 영역은 유지하면서 최신 SOAP 내용을 확인하고 있습니다."
@@ -3642,7 +3642,7 @@ function AssessmentPanel({
         <div className="flex min-h-0 flex-1 flex-col">
           <div
             data-slot="chart-assessment-toolbar"
-            className="grid h-11 shrink-0 grid-cols-[82px_minmax(0,1fr)_1px_66px] items-center gap-2.5 border-b border-[var(--emr-line-hairline)] px-3 py-2"
+            className="grid h-11 shrink-0 grid-cols-[82px_minmax(0,1fr)_1px_66px] items-center gap-2.5 border-b border-[var(--emr-border-default)] px-3 py-2"
           >
             <Select
               value={selectedSystem}
@@ -3743,7 +3743,7 @@ function AssessmentPanel({
                       role="option"
                       aria-selected="false"
                       disabled={writeDisabled}
-                      className="rounded-md border border-dashed border-[var(--emr-line-hairline)] px-2.5 py-2 text-left emr-text-dense transition-colors hover:bg-[var(--emr-state-hover)]"
+                      className="rounded-md border border-dashed border-[var(--emr-border-default)] px-2.5 py-2 text-left emr-text-dense transition-colors hover:bg-[var(--emr-state-hover)]"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={addFreeTextDiagnosis}
                     >
@@ -4959,7 +4959,7 @@ function ChartOrderTable({
   });
 
   return (
-    <div className="h-full overflow-hidden border-y border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+    <div className="h-full overflow-hidden border-y border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]">
       <div
         className={cn(
           "relative h-full min-h-0 min-w-0",
@@ -4975,7 +4975,7 @@ function ChartOrderTable({
           overscrollAxes="horizontal"
           renderAfterRows={({ visibleColumnCount }) =>
             loading && rows.length > 0 ? (
-              <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] hover:bg-[var(--emr-surface-muted)]">
+              <TableRow className="border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] hover:bg-[var(--emr-surface-muted)]">
                 <TableCell colSpan={visibleColumnCount} className="h-16">
                   <ChartPanelPendingState
                     title="오더 정보를 불러오는 중"
@@ -6474,7 +6474,7 @@ function OrderArea({
         inert={collapsed ? true : undefined}
         className={collapsed ? "hidden" : "contents"}
       >
-      <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-line-hairline)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-border-default)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div
           className="flex min-w-max shrink-0 items-center rounded-lg bg-[var(--clair-color-atomic-black-alpha-4)] p-[3px]"
           role="tablist"
@@ -6560,7 +6560,7 @@ function OrderArea({
           >
             PACS
           </Button>
-          <div className="h-5 w-px bg-[var(--emr-line-hairline)]" />
+          <div className="h-5 w-px bg-[var(--emr-border-subtle)]" />
           <Button
             type="button"
             variant="outline"
@@ -6655,7 +6655,7 @@ function OrderArea({
       />
       <div
         data-testid="chart-order-footer"
-        className="flex h-[52px] min-h-[52px] shrink-0 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 text-[13px] leading-[18px] text-muted-foreground"
+        className="flex h-[52px] min-h-[52px] shrink-0 items-center justify-between border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 text-[13px] leading-[18px] text-muted-foreground"
       >
         <div className="min-w-0">
           <span>총 {visibleOrderRows.length}건</span>
@@ -6725,7 +6725,7 @@ function OrderArea({
                   ))}
                 </span>
               ) : null}
-              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
                 <span>
                   환자: {bundle.patient.name} · 보호자 {guardianName}
                 </span>
@@ -6765,7 +6765,7 @@ function OrderArea({
                   {deleteTargetOrder.displayName} 오더를 현재 차트의 draft에서
                   제외합니다. 저장 시 서버 draft에도 반영됩니다.
                 </span>
-                <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+                <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
                   삭제 후 `Order 업데이트`를 눌러 현재 세션 변경으로 확정할 수
                   있습니다.
                 </span>
@@ -6938,7 +6938,7 @@ function EmptyChartState({
       size="default"
       variant="outline"
       roundness="round"
-      className="border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]"
+      className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]"
       disabled={refreshing}
       onClick={() => void onRefresh?.()}
     >
@@ -6959,7 +6959,7 @@ function EmptyChartState({
         "hidden md:inline-flex",
         hasTwoActions
           ? "bg-[var(--clair-color-atomic-neutral-900)] text-[var(--clair-color-atomic-common-100)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-neutral-900)] hover:text-[var(--clair-color-atomic-common-100)]"
-          : "border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]",
+          : "border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-white-alpha-8)] hover:text-[var(--clair-color-atomic-neutral-900)]",
       )}
       onClick={onOpenQueue}
     >
@@ -7035,7 +7035,7 @@ function ChartDetailPendingIndicator() {
     <span
       aria-label="진료 차트 상세 정보를 불러오는 중입니다"
       aria-live="polite"
-      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]"
+      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[var(--emr-radius-control)] border border-[var(--emr-status-neutral-border)] bg-[var(--emr-surface-muted)] px-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]"
       data-testid="chart-detail-pending-indicator"
       role="status"
     >
@@ -8205,7 +8205,7 @@ export function ChartContent({
             </Button>
           }
         >
-          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
             <ChartPreflightLine
               label="환자 / 보호자"
               value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
@@ -8351,7 +8351,7 @@ export function ChartContent({
             </Button>
           }
         >
-          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
             <ChartPreflightLine
               label="환자 / 보호자"
               value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
@@ -8515,7 +8515,7 @@ export function ChartContent({
             onPointerMove={handleChartResizePointerMove}
             onPointerUp={stopChartResize}
           >
-            <span className="relative h-1 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
+            <span className="relative h-1 w-10 rounded-full bg-[var(--clair-color-atomic-neutral-300)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
           </button>
           <div className="min-h-0 min-w-0">
             <OrderArea

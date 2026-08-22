@@ -151,7 +151,7 @@ function AuthGateShellSkeleton() {
       data-testid="auth-gate-shell-skeleton"
     >
       <span className="sr-only">세션과 워크스페이스 접근 권한을 확인하는 중입니다.</span>
-      <div className="grid min-h-[calc(100svh-24px)] grid-rows-[56px_minmax(0,1fr)] overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] shadow-xs">
+      <div className="grid min-h-[calc(100svh-24px)] grid-rows-[56px_minmax(0,1fr)] overflow-hidden rounded-lg border border-[var(--emr-border-strong)] bg-[var(--emr-surface-workspace)] shadow-xs">
         <header className="flex items-center justify-between border-b bg-card px-4">
           <div className="flex items-center gap-3">
             <Skeleton className="size-8 rounded-[var(--clair-radius-md)]" />

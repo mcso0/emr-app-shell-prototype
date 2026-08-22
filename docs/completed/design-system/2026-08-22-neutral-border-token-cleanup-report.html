@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Neutral 구조 보더 토큰 정리 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #171717;
+        background: #f5f5f5;
+      }
+      body { margin: 0; }
+      main { width: min(920px, calc(100% - 32px)); margin: 32px auto; }
+      article {
+        padding: 36px;
+        border: 1px solid #e5e5e5;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 16px 40px rgb(23 23 23 / 8%);
+      }
+      h1 { margin: 12px 0 8px; font-size: 30px; line-height: 1.3; }
+      h2 { margin: 28px 0 10px; font-size: 18px; }
+      p, li, td, th { font-size: 15px; line-height: 1.7; }
+      ul { padding-left: 22px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border: 1px solid #e5e5e5; text-align: left; }
+      th { background: #fafafa; }
+      code { padding: 2px 5px; border-radius: 5px; background: #f5f5f5; }
+      .eyebrow, .status {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .eyebrow { color: #525252; background: #f5f5f5; }
+      .status { color: #166534; background: #dcfce7; }
+      .lead { color: #525252; font-size: 17px; }
+      .note {
+        padding: 14px 16px;
+        border-left: 4px solid #a3a3a3;
+        border-radius: 8px;
+        background: #fafafa;
+      }
+      @media (max-width: 640px) {
+        main { margin: 12px auto; }
+        article { padding: 24px 20px; border-radius: 14px; }
+        table { display: block; overflow-x: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <span class="eyebrow">DESIGN-SYSTEM-PR-093</span>
+        <h1>Neutral 구조 보더 토큰 정리 보고서</h1>
+        <p class="lead">
+          구조용 보더를 neutral 100/200/300 역할 체계로 통일하고, 기존
+          gray 기반 <code>--emr-line-*</code> 구조 토큰을 런타임에서 제거했다.
+        </p>
+        <span class="status">구현 및 로컬 검증 완료</span>
+
+        <h2>최종 역할 체계</h2>
+        <table>
+          <thead>
+            <tr><th>역할</th><th>토큰</th><th>값</th><th>용도</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Subtle</td><td><code>--emr-border-subtle</code></td><td>#F5F5F5</td><td>작고 조용한 내부 구분선</td></tr>
+            <tr><td>Default</td><td><code>--emr-border-default</code></td><td>#E5E5E5</td><td>일반 컨트롤, 카드, 행, 패널 내부 경계</td></tr>
+            <tr><td>Strong</td><td><code>--emr-border-strong</code></td><td>#D4D4D4</td><td>큰 패널, 드로어, 워크스페이스 외곽</td></tr>
+          </tbody>
+        </table>
+
+        <h2>변경 결과</h2>
+        <ul>
+          <li>최신 기준선에서 확인한 116개 사용처를 역할에 따라 전환했다.</li>
+          <li>레거시 구조 토큰 정의 4개와 미사용 호환 유틸리티 2개를 삭제했다.</li>
+          <li>전역 <code>--border</code>와 <code>--input</code>은 neutral/200으로 연결했다.</li>
+          <li>차트 4개 패널 외곽은 neutral/300, 내부 툴바는 neutral/200, 작은 액션 구분선은 neutral/100을 사용한다.</li>
+          <li>선택·포커스·상태·브랜드 보더는 구조 보더와 합치지 않고 기존 의미 토큰을 유지했다.</li>
+        </ul>
+
+        <h2>검증</h2>
+        <ul>
+          <li>재귀 소스 검사에서 제거 대상 구조 토큰 참조 0건</li>
+          <li>토큰 및 차트 Playwright 집중 검사 4개 통과</li>
+          <li>대표 Storybook interaction 9개 파일, 33개 검사 통과</li>
+          <li>변경 TypeScript ESLint 및 TypeScript no-emit 통과</li>
+          <li>전체 저장소 린트, 문서 링크, 비밀정보 검사, diff 검사 통과</li>
+          <li>Next 프로덕션 빌드와 Storybook 빌드 통과</li>
+        </ul>
+
+        <h2>기준선 확인</h2>
+        <div class="note">
+          확장 Storybook 실행에서 pinned-table interaction 1건이 실패했지만,
+          동일한 실패를 깨끗한 <code>origin/main</code>에서도 재현했다. 이번 보더
+          변경으로 생긴 회귀가 아니다. 생성된 Clair/shadcn 토큰 파일, 데이터,
+          권한, 저장 동작, 레이아웃은 변경하지 않았다.
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

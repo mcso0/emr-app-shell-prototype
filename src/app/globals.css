@@ -75,8 +75,8 @@
   --accent: var(--clair-color-background-subtle);
   --accent-foreground: var(--clair-color-label-strong);
   --destructive: var(--clair-color-status-negative-foreground);
-  --border: var(--clair-color-line-normal);
-  --input: var(--clair-color-line-normal);
+  --border: var(--emr-border-default);
+  --input: var(--emr-border-default);
   --ring: var(--clair-color-atomic-gray-500);
 }
 
@@ -190,15 +190,6 @@
 
   .scroll-fade-8 {
     --scroll-fade-size: calc(var(--spacing) * 8);
-  }
-
-  .emr-panel {
-    border-color: var(--emr-line-hairline);
-    background-color: var(--emr-surface-panel);
-  }
-
-  .emr-hairline {
-    border-color: var(--emr-line-hairline);
   }
 
   .emr-selected-surface {
@@ -416,7 +407,7 @@
     --emr-table-header-surface: #fafafa;
     --emr-table-data-row-surface: var(--clair-color-atomic-common-100);
     --emr-table-data-text: var(--clair-color-atomic-neutral-700);
-    --emr-table-data-border: var(--clair-color-atomic-neutral-200);
+    --emr-table-data-border: var(--emr-border-default);
   }
 
   [data-emr-data-table="true"] .emr-table-surface {

@@ -89,7 +89,7 @@ type LoginDialogFormProps = {
 
 function LoginDialogForm({ children, onSubmit }: LoginDialogFormProps) {
   return (
-    <div className="mx-auto w-full max-w-[440px] rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--clair-color-background-normal)] p-[var(--clair-spacing-32)] shadow-[var(--clair-shadow-md)] sm:min-w-[440px]">
+    <div className="mx-auto w-full max-w-[440px] rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-[var(--clair-color-background-normal)] p-[var(--clair-spacing-32)] shadow-[var(--clair-shadow-md)] sm:min-w-[440px]">
       <form onSubmit={onSubmit} noValidate className={loginFormClassName}>
         {children}
       </form>
@@ -817,9 +817,9 @@ export function LoginForm() {
                 {isDefaultPasswordLogin ? (
                   <>
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-[var(--clair-spacing-16)] text-center emr-text-metadata text-muted-foreground">
-                      <span className="h-px bg-[var(--emr-line-hairline)]" aria-hidden="true" />
+                      <span className="h-px bg-[var(--emr-border-subtle)]" aria-hidden="true" />
                       <span>또는</span>
-                      <span className="h-px bg-[var(--emr-line-hairline)]" aria-hidden="true" />
+                      <span className="h-px bg-[var(--emr-border-subtle)]" aria-hidden="true" />
                     </div>
 
                     <Button

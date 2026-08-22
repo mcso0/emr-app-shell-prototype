@@ -105,7 +105,7 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
       <Button
         variant="outline"
         size="sm"
-        className="h-8 w-[209px] justify-center gap-1 rounded-[var(--clair-radius-md)] border-border bg-card px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-foreground shadow-none hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] max-sm:w-11 max-sm:px-2"
+        className="h-8 w-[209px] justify-center gap-1 rounded-[var(--clair-radius-md)] border-border bg-card px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-foreground shadow-none hover:bg-[var(--emr-state-hover)] max-sm:w-11 max-sm:px-2"
         aria-label={`${workspaceId} 워크스페이스 선택`}
       >
         <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[var(--clair-radius-atomic-6)] bg-primary text-primary-foreground">

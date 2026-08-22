@@ -67,6 +67,9 @@ CLAiR keeps the generated Clair token output as the base layer and adds a small 
 - `--emr-border-subtle`: neutral/100 for small elements and low-emphasis internal separators
 - `--emr-border-default`: neutral/200 for ordinary cards, rows, controls, and panel-internal boundaries
 - `--emr-border-strong`: neutral/300 for layout-level boundaries and large component outer edges
+- Structural borders must use this three-token hierarchy. The removed
+  `--emr-line-subtle`, `--emr-line-hairline`, `--emr-line-default`, and
+  `--emr-line-strong` aliases must not be reintroduced.
 - `--emr-accent`: sparse information, link, and limited brand identity accent
 - `--emr-accent-subtle`: subtle information or brand accent fill, not default selected state
 - `--emr-radius-control`: compact controls
