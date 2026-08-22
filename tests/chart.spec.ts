@@ -2293,6 +2293,12 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   const pinnedViewport = orderTable.locator(
     "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
   );
+  const pinnedHeader = orderTable
+    .locator('thead th[data-emr-column-pinned="left"]')
+    .first();
+  const scrollHeader = orderTable
+    .locator("thead th:not([data-emr-column-pinned])")
+    .first();
   const emptyBody = page.getByTestId("chart-order-empty-body");
   const emptyState = page.getByTestId("chart-order-empty-state");
   await expect(emptyState).toBeVisible();
@@ -2304,6 +2310,30 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   await expect(
     emptyState.getByRole("button", { name: "+ Order" }),
   ).toBeVisible();
+  await expect(pinnedHeader).toHaveCSS(
+    "background-color",
+    "rgb(250, 250, 250)",
+  );
+  await expect(scrollHeader).toHaveCSS(
+    "background-color",
+    "rgb(250, 250, 250)",
+  );
+  await expect(emptyBody).toHaveCSS("background-color", "rgb(255, 255, 255)");
+
+  const emptyBodyOwnsVisibleSurface = await emptyBody.evaluate((surface) => {
+    const rect = surface.getBoundingClientRect();
+    const testPoints = [
+      { x: rect.left + 8, y: rect.top + 8 },
+      { x: rect.right - 8, y: rect.bottom - 2 },
+    ];
+
+    return testPoints.every(({ x, y }) => {
+      const topElement = document.elementFromPoint(x, y);
+      return topElement === surface || surface.contains(topElement);
+    });
+  });
+
+  expect(emptyBodyOwnsVisibleSurface).toBe(true);
 
   const [emptyBodyBox, emptyStateBox, headerBox, orderTableBox, viewportBox] =
     await Promise.all([
