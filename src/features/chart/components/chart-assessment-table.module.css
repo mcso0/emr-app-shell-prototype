@@ -1,26 +1,31 @@
 .viewportRoot {
   position: relative;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   max-width: 100%;
+  background: var(--emr-surface-panel);
 }
 
 .tableViewport {
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   max-width: 100%;
-  overflow-y: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-gutter: auto;
 }
 
 .table {
-  --chart-assessment-table-min-width: 564px;
-  --chart-assessment-system-column: 100px;
-  --chart-assessment-primary-column: 52px;
-  --chart-assessment-confirmed-column: 48px;
-  --chart-assessment-closed-column: 48px;
+  --chart-assessment-system-column: 96px;
+  --chart-assessment-primary-column: 44px;
+  --chart-assessment-confirmed-column: 40px;
+  --chart-assessment-closed-column: 40px;
   --chart-assessment-veterinarian-column: 72px;
-  --chart-assessment-action-column: 56px;
 
-  min-width: var(--chart-assessment-table-min-width);
+  width: 100%;
+  min-width: 0 !important;
   table-layout: fixed;
 }
 
@@ -48,10 +53,6 @@
   width: var(--chart-assessment-veterinarian-column);
 }
 
-.actionColumn {
-  width: var(--chart-assessment-action-column);
-}
-
 .table .headerCell[data-slot="table-head"] {
   height: var(--emr-table-header-height-standard);
   padding: 0;
@@ -64,11 +65,14 @@
 }
 
 .table .firstHeaderCell[data-slot="table-head"] {
-  padding-inline-start: var(--clair-spacing-12);
+  padding-inline-start: var(--clair-spacing-8);
 }
 
-.table .lastHeaderCell[data-slot="table-head"] {
-  padding-inline-end: var(--clair-spacing-12);
+.table
+  .headerCell[data-slot="table-head"][data-emr-header-interaction="sortable"]
+  > :global(.emr-table-cell-content)
+  > button {
+  padding-inline: var(--clair-spacing-4);
 }
 
 .table .bodyCell[data-slot="table-cell"] {
@@ -82,7 +86,7 @@
 }
 
 .systemCell {
-  padding-inline-start: calc(var(--clair-spacing-12) + var(--clair-spacing-6)) !important;
+  padding-inline-start: var(--clair-spacing-8) !important;
 }
 
 .diagnosisCell {
@@ -94,14 +98,13 @@
 }
 
 .veterinarianCell {
-  padding-inline: var(--clair-spacing-10) var(--clair-spacing-4) !important;
-}
-
-.actionCell {
-  padding-inline-end: var(--clair-spacing-12) !important;
+  position: relative;
+  overflow: hidden;
+  padding-inline: var(--clair-spacing-8) !important;
 }
 
 .systemBadge {
+  max-width: calc(100% - var(--clair-spacing-8));
   min-width: var(--clair-spacing-20);
   height: 22px;
   padding: 3px var(--clair-spacing-8);
@@ -113,6 +116,46 @@
   font-weight: 500;
   line-height: var(--emr-type-leading-metadata);
   letter-spacing: var(--emr-type-tracking-metadata);
+}
+
+.systemBadgeText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veterinarianContent {
+  display: block;
+  min-width: 0;
+}
+
+.deleteOverlay {
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: flex;
+  width: var(--chart-assessment-veterinarian-column);
+  align-items: center;
+  justify-content: flex-end;
+  padding-inline-end: var(--clair-spacing-8);
+  background: linear-gradient(
+    to right,
+    transparent 0,
+    var(--emr-surface-panel) 42%,
+    var(--emr-surface-panel) 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--clair-motion-duration-fast)
+    var(--clair-motion-easing-standard);
+}
+
+.tableRow:hover .deleteOverlay,
+.tableRow:focus-within .deleteOverlay {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .deleteButton {
@@ -140,8 +183,21 @@
   top: var(--emr-table-header-height-standard);
   display: flex;
   box-sizing: border-box;
-  height: 208px;
+  bottom: 0;
   align-items: center;
   justify-content: center;
   padding: var(--clair-spacing-24) var(--clair-spacing-12);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .deleteOverlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deleteOverlay {
+    transition: none;
+  }
 }

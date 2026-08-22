@@ -3638,11 +3638,11 @@ function AssessmentPanel({
           <ChartPanelActions />
         </ChartPanelActionGroup>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
-        <div className="grid gap-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--emr-surface-panel)]">
+        <div className="flex min-h-0 flex-1 flex-col">
           <div
             data-slot="chart-assessment-toolbar"
-            className="grid h-11 grid-cols-[82px_minmax(0,1fr)_1px_66px] items-center gap-2.5 border-b border-[var(--emr-line-hairline)] px-3 py-2"
+            className="grid h-11 shrink-0 grid-cols-[82px_minmax(0,1fr)_1px_66px] items-center gap-2.5 border-b border-[var(--emr-line-hairline)] px-3 py-2"
           >
             <Select
               value={selectedSystem}
@@ -3781,14 +3781,14 @@ function AssessmentPanel({
             <EmrInlineAlert
               severity="error"
               title="진단명을 저장하지 못했습니다"
-              className="mx-3 mt-2 w-auto emr-text-metadata"
+              className="mx-3 mt-2 w-auto shrink-0 emr-text-metadata"
               testId="chart-diagnosis-save-error"
             >
               변경 내용은 화면에 남아 있지만 서버에는 반영되지 않았습니다.
               권한과 연결 상태를 확인한 뒤 다시 시도해 주세요.
             </EmrInlineAlert>
           ) : null}
-          <div className="min-w-0 bg-[var(--emr-surface-panel)]">
+          <div className="min-h-0 min-w-0 flex-1 bg-[var(--emr-surface-panel)]">
             <ChartAssessmentTable
               diagnoses={visibleDiagnosisRows}
               loading={loading}

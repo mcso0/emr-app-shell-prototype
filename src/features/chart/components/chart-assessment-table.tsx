@@ -93,7 +93,7 @@ export function ChartAssessmentTable({
       <Table
         aria-label="진단명 목록"
         density="standard"
-        layout="scroll"
+        layout="fill"
         className={styles.table}
         containerClassName={`${styles.tableViewport} min-w-0 bg-[var(--emr-surface-panel)]`}
       >
@@ -104,7 +104,6 @@ export function ChartAssessmentTable({
           <col className={styles.confirmedColumn} />
           <col className={styles.closedColumn} />
           <col className={styles.veterinarianColumn} />
-          <col className={styles.actionColumn} />
         </colgroup>
         <TableHeader data-slot="chart-assessment-table-header">
           <TableRow className="hover:bg-[var(--clair-color-atomic-neutral-50)]">
@@ -150,20 +149,12 @@ export function ChartAssessmentTable({
             <EmrTableHeaderCell interaction="static" className={styles.headerCell}>
               수의사
             </EmrTableHeaderCell>
-            <EmrTableHeaderCell
-              align="center"
-              interaction="static"
-              label="작업"
-              className={`${styles.headerCell} ${styles.lastHeaderCell}`}
-            >
-              <span className="sr-only">작업</span>
-            </EmrTableHeaderCell>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow className="hover:bg-[var(--emr-surface-muted)]">
-              <TableCell colSpan={7} className={`${styles.bodyCell} ${styles.feedbackCell}`}>
+              <TableCell colSpan={6} className={`${styles.bodyCell} ${styles.feedbackCell}`}>
                 {loadingState}
               </TableCell>
             </TableRow>
@@ -173,15 +164,18 @@ export function ChartAssessmentTable({
                 <TableRow
                   key={diagnosis.id}
                   data-slot="chart-assessment-table-row"
-                  className="group/assessment-row"
+                  className={`${styles.tableRow} group/assessment-row`}
                 >
                   <TableCell className={`${styles.bodyCell} ${styles.systemCell}`}>
                     <Badge
                       variant="secondary"
                       size="md"
                       className={styles.systemBadge}
+                      title={diagnosis.systemLabel}
                     >
-                      {diagnosis.systemLabel}
+                      <span className={styles.systemBadgeText}>
+                        {diagnosis.systemLabel}
+                      </span>
                     </Badge>
                   </TableCell>
                   <TableCell className={`${styles.bodyCell} ${styles.diagnosisCell}`}>
@@ -224,18 +218,18 @@ export function ChartAssessmentTable({
                     />
                   </TableCell>
                   <TableCell className={`${styles.bodyCell} ${styles.veterinarianCell}`}>
-                    <EmrTableCellText
-                      mode="one-line"
-                      fullText={getVeterinarianName(diagnosis.createdByUserId)}
+                    <span className={styles.veterinarianContent}>
+                      <EmrTableCellText
+                        mode="one-line"
+                        fullText={getVeterinarianName(diagnosis.createdByUserId)}
+                      >
+                        {getVeterinarianName(diagnosis.createdByUserId)}
+                      </EmrTableCellText>
+                    </span>
+                    <span
+                      className={styles.deleteOverlay}
+                      data-slot="chart-assessment-delete-overlay"
                     >
-                      {getVeterinarianName(diagnosis.createdByUserId)}
-                    </EmrTableCellText>
-                  </TableCell>
-                  <TableCell
-                    className={`${styles.bodyCell} ${styles.actionCell}`}
-                    data-emr-table-selection-visibility="contextual"
-                  >
-                    <span className="emr-table-cell-content flex min-w-0 items-center justify-center p-0">
                       <EmrIconButton
                         aria-label={`${diagnosis.diagnosisText} 삭제`}
                         className={styles.deleteButton}
@@ -254,7 +248,7 @@ export function ChartAssessmentTable({
             <TableRow className="hover:bg-[var(--emr-surface-panel)]">
               <TableCell
                 aria-hidden="true"
-                colSpan={7}
+                colSpan={6}
                 className={`${styles.bodyCell} ${styles.emptyCell}`}
               />
             </TableRow>

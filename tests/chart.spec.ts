@@ -2351,7 +2351,7 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
     chartContent.locator("[data-slot='chart-panel-skeleton']"),
   ).toHaveCount(0);
 
-  for (const width of [1624, 1440, 1280, 1024]) {
+  for (const width of [1624, 1440, 1327, 1280, 1024]) {
     await page.setViewportSize({ height: 1088, width });
     await expect(assessmentEmptyState).toBeVisible();
 
@@ -2395,6 +2395,7 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
           centerY: emptyViewportRect.top + emptyViewportRect.height / 2,
         },
         panel: {
+          bottom: panelRect.bottom,
           left: panelRect.left,
           right: panelRect.right,
         },
@@ -2412,13 +2413,16 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
     });
 
     expect(geometry.documentOverflow).toBe(0);
-    expect(geometry.viewport.overflowY).toBe("hidden");
+    expect(geometry.viewport.overflowY).toBe("auto");
     expect(geometry.viewport.left).toBeGreaterThanOrEqual(
       geometry.panel.left - 1,
     );
     expect(geometry.viewport.right).toBeLessThanOrEqual(
       geometry.panel.right + 1,
     );
+    expect(
+      Math.abs(geometry.viewport.bottom - geometry.panel.bottom),
+    ).toBeLessThanOrEqual(1);
     expect(geometry.emptyViewport.top).toBeGreaterThanOrEqual(
       geometry.viewport.top - 1,
     );
@@ -2444,11 +2448,9 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
       Math.abs(geometry.emptyState.centerY - geometry.emptyViewport.centerY),
     ).toBeLessThanOrEqual(1);
 
-    if (width === chartFigmaVisualFixture.viewport.width) {
-      expect(geometry.viewport.scrollWidth).toBeLessThanOrEqual(
-        geometry.viewport.clientWidth + 1,
-      );
-    }
+    expect(geometry.viewport.scrollWidth).toBeLessThanOrEqual(
+      geometry.viewport.clientWidth + 1,
+    );
   }
 
   await page.setViewportSize({ height: 1088, width: 1024 });
@@ -2479,7 +2481,7 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   );
   const emptyStateOffsetAfterScroll = await getEmptyStateViewportOffset();
 
-  expect(assessmentScrollLeft).toBeGreaterThan(0);
+  expect(assessmentScrollLeft).toBe(0);
   expect(
     Math.abs(emptyStateOffsetAfterScroll - emptyStateOffsetBeforeScroll),
   ).toBeLessThanOrEqual(1);
@@ -3760,7 +3762,7 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   const diagnosisPanel = page.getByLabel("진단명 관리");
   const table = diagnosisPanel.getByRole("table", { name: "진단명 목록" });
   const headers = table.getByRole("columnheader");
-  await expect(headers).toHaveCount(7);
+  await expect(headers).toHaveCount(6);
   expect(await headers.allTextContents()).toEqual([
     "진단계통",
     "진단명",
@@ -3768,7 +3770,6 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
     "확진",
     "종결",
     "수의사",
-    "작업",
   ]);
 
   const toolbar = diagnosisPanel.locator(
@@ -3798,17 +3799,47 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   expect(toolbarGeometry.widths[3]).toBe(66);
 
   const firstRow = table.locator("tbody tr").first();
-  const rowGeometry = await firstRow.evaluate((row) => ({
-    height: row.getBoundingClientRect().height,
-    widths: Array.from(row.children).map((cell) =>
-      Math.round(cell.getBoundingClientRect().width),
-    ),
-  }));
+  const tableViewport = diagnosisPanel.locator("[data-slot='table-container']");
+  const rowGeometry = await firstRow.evaluate((row) => {
+    const table = row.closest("table");
+    const viewport = table?.parentElement;
+    const panel = row.closest("section");
+
+    if (!table || !viewport || !panel) {
+      throw new Error("Assessment table geometry target is missing");
+    }
+
+    const panelRect = panel.getBoundingClientRect();
+    const tableRect = table.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+
+    return {
+      height: row.getBoundingClientRect().height,
+      panelBottom: panelRect.bottom,
+      tableHeight: tableRect.height,
+      viewportBottom: viewportRect.bottom,
+      viewportHeight: viewportRect.height,
+      widths: Array.from(row.children).map((cell) =>
+        Math.round(cell.getBoundingClientRect().width),
+      ),
+    };
+  });
   expect(rowGeometry.height).toBe(40);
-  expect(rowGeometry.widths[0]).toBe(100);
-  expect(rowGeometry.widths[1]).toBeGreaterThanOrEqual(188);
-  expect(rowGeometry.widths[1]).toBeLessThanOrEqual(189);
-  expect(rowGeometry.widths.slice(2)).toEqual([52, 48, 48, 72, 56]);
+  expect(rowGeometry.widths).toHaveLength(6);
+  expect(rowGeometry.widths[0]).toBe(96);
+  expect(rowGeometry.widths[1]).toBeGreaterThan(0);
+  expect(rowGeometry.widths.slice(2)).toEqual([44, 40, 40, 72]);
+  expect(
+    Math.abs(rowGeometry.viewportBottom - rowGeometry.panelBottom),
+  ).toBeLessThanOrEqual(1);
+  expect(rowGeometry.tableHeight).toBeLessThan(rowGeometry.viewportHeight);
+  await expect
+    .poll(() =>
+      tableViewport.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    )
+    .toBe(true);
 
   await expect(headers.first()).toHaveCSS("font-size", "12px");
   await expect(headers.first()).toHaveCSS("font-weight", "500");
@@ -3856,6 +3887,40 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
     },
   );
 
+  for (const width of [1624, 1440, 1327, 1280, 1024]) {
+    await page.setViewportSize({ height: 1088, width });
+    const horizontalGeometry = await tableViewport.evaluate((viewport) => {
+      const table = viewport.querySelector("table");
+      const lastHeader = table?.querySelector("th:last-child");
+
+      if (!table || !lastHeader) {
+        throw new Error("Assessment horizontal geometry target is missing");
+      }
+
+      const viewportRect = viewport.getBoundingClientRect();
+      const tableRect = table.getBoundingClientRect();
+      const lastHeaderRect = lastHeader.getBoundingClientRect();
+
+      return {
+        clientWidth: viewport.clientWidth,
+        lastHeaderRight: lastHeaderRect.right,
+        scrollWidth: viewport.scrollWidth,
+        tableRight: tableRect.right,
+        viewportRight: viewportRect.right,
+      };
+    });
+
+    expect(horizontalGeometry.scrollWidth).toBeLessThanOrEqual(
+      horizontalGeometry.clientWidth + 1,
+    );
+    expect(horizontalGeometry.tableRight).toBeLessThanOrEqual(
+      horizontalGeometry.viewportRight + 1,
+    );
+    expect(horizontalGeometry.lastHeaderRight).toBeLessThanOrEqual(
+      horizontalGeometry.viewportRight + 1,
+    );
+  }
+
   const systemHeader = table.getByRole("columnheader", { name: /진단계통/ });
   await systemHeader.getByRole("button", { name: "진단계통 정렬" }).click();
   await expect(systemHeader).toHaveAttribute("aria-sort", "ascending");
@@ -3867,9 +3932,15 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
 
   await page.mouse.move(1, 1);
   const deleteButton = firstRow.getByRole("button", { name: /삭제/ });
-  await expect(deleteButton).toHaveCSS("opacity", "0");
+  const deleteOverlay = firstRow.locator(
+    "[data-slot='chart-assessment-delete-overlay']",
+  );
+  await expect(deleteOverlay).toHaveCSS("opacity", "0");
+  await firstRow.hover();
+  await expect(deleteOverlay).toHaveCSS("opacity", "1");
+  await page.mouse.move(1, 1);
   await deleteButton.focus();
-  await expect(deleteButton).toHaveCSS("opacity", "1");
+  await expect(deleteOverlay).toHaveCSS("opacity", "1");
 });
 
 test("Assessment delete actions remain visible in touch environments", async ({
@@ -3888,7 +3959,13 @@ test("Assessment delete actions remain visible in touch environments", async ({
       .locator("[data-slot='chart-assessment-table-row']")
       .first()
       .getByRole("button", { name: /삭제/ });
-    await expect(deleteButton).toHaveCSS("opacity", "1");
+    const deleteOverlay = page
+      .getByLabel("진단명 관리")
+      .locator("[data-slot='chart-assessment-table-row']")
+      .first()
+      .locator("[data-slot='chart-assessment-delete-overlay']");
+    await expect(deleteOverlay).toHaveCSS("opacity", "1");
+    await expect(deleteButton).toBeVisible();
   } finally {
     await context.close();
   }
