@@ -62,7 +62,10 @@ import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel"
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
-import { EmrTableCellText } from "@/components/emr/table-primitives";
+import {
+  EmrTableCellText,
+  EmrTableFeedbackSurface,
+} from "@/components/emr/table-primitives";
 import {
   getTaskQueueEventKindFromStatus,
   type EmrTaskQueueCardItem,
@@ -5001,8 +5004,8 @@ function ChartOrderTable({
           })}
         />
         {!loading && !rows.length ? (
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 flex min-h-0 items-center justify-center p-2"
+          <EmrTableFeedbackSurface
+            className="absolute inset-x-0 bottom-0 z-20 overflow-auto"
             data-testid="chart-order-empty-body"
             style={{ top: tableHeaderHeight }}
           >
@@ -5020,7 +5023,6 @@ function ChartOrderTable({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="pointer-events-auto"
                     disabled={writeDisabled}
                     onClick={onAddOrder}
                   >
@@ -5037,7 +5039,7 @@ function ChartOrderTable({
                   : "등록된 오더가 없습니다"
               }
             />
-          </div>
+          </EmrTableFeedbackSurface>
         ) : null}
       </div>
     </div>

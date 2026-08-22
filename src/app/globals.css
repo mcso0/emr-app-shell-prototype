@@ -582,7 +582,7 @@
     thead
     [data-emr-column-pinned] {
     z-index: 12;
-    background-color: var(--emr-surface-muted);
+    background-color: var(--emr-table-header-surface, var(--emr-surface-muted));
   }
 
   .emr-table-surface[data-emr-pinning="columns"]
