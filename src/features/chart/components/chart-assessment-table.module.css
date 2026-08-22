@@ -18,6 +18,7 @@
 }
 
 .table {
+  --chart-assessment-content-inset: var(--clair-spacing-12);
   --chart-assessment-system-column: 96px;
   --chart-assessment-primary-column: 44px;
   --chart-assessment-confirmed-column: 40px;
@@ -68,6 +69,14 @@
   padding-inline-start: var(--clair-spacing-8);
 }
 
+.table .statusHeaderCell[data-slot="table-head"] {
+  padding-inline: 0;
+}
+
+.table .veterinarianHeaderCell[data-slot="table-head"] {
+  padding-inline: var(--chart-assessment-content-inset);
+}
+
 .table
   .headerCell[data-slot="table-head"][data-emr-header-interaction="sortable"]
   > :global(.emr-table-cell-content)
@@ -86,21 +95,25 @@
 }
 
 .systemCell {
-  padding-inline-start: var(--clair-spacing-8) !important;
+  padding-inline-start: var(--chart-assessment-content-inset) !important;
 }
 
 .diagnosisCell {
-  padding-inline: var(--clair-spacing-6) !important;
+  padding-inline: var(--clair-spacing-4) !important;
 }
 
 .statusCell {
   text-align: center;
 }
 
+.statusCheckbox {
+  margin-inline: auto;
+}
+
 .veterinarianCell {
   position: relative;
   overflow: hidden;
-  padding-inline: var(--clair-spacing-8) !important;
+  padding-inline: var(--chart-assessment-content-inset) !important;
 }
 
 .systemBadge {
@@ -139,17 +152,27 @@
   width: var(--chart-assessment-veterinarian-column);
   align-items: center;
   justify-content: flex-end;
-  padding-inline-end: var(--clair-spacing-8);
+  padding-inline-end: var(--chart-assessment-content-inset);
   background: linear-gradient(
     to right,
     transparent 0,
-    var(--emr-surface-panel) 42%,
-    var(--emr-surface-panel) 100%
+    var(--chart-assessment-row-surface, var(--emr-surface-panel)) 42%,
+    var(--chart-assessment-row-surface, var(--emr-surface-panel)) 100%
   );
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--clair-motion-duration-fast)
     var(--clair-motion-easing-standard);
+}
+
+.tableRow {
+  --chart-assessment-row-surface: var(--emr-surface-panel);
+}
+
+.tableRow:hover,
+.tableRow:focus-within {
+  --chart-assessment-row-surface: var(--emr-state-hover);
+  background: var(--chart-assessment-row-surface);
 }
 
 .tableRow:hover .deleteOverlay,

@@ -3849,6 +3849,108 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
     )
     .toBe(true);
 
+  const alignmentGeometry = await diagnosisPanel.evaluate((panel) => {
+    const title = panel.querySelector("h2");
+    const toolbar = panel.querySelector(
+      "[data-slot='chart-assessment-toolbar']",
+    );
+    const filter = toolbar?.querySelector("[data-slot='select-trigger']");
+    const searchButton = toolbar?.querySelector(
+      ":scope > [data-slot='button']",
+    );
+    const table = panel.querySelector('table[aria-label="진단명 목록"]');
+    const headerCells = Array.from(table?.querySelectorAll("thead th") ?? []);
+    const rowCells = Array.from(
+      table?.querySelectorAll("tbody tr:first-child td") ?? [],
+    );
+
+    if (
+      !title ||
+      !filter ||
+      !searchButton ||
+      headerCells.length !== 6 ||
+      rowCells.length !== 6
+    ) {
+      throw new Error("Assessment alignment target is missing");
+    }
+
+    const rect = (element: Element | null) => {
+      if (!element) throw new Error("Assessment alignment element is missing");
+      const bounds = element.getBoundingClientRect();
+      return {
+        center: bounds.left + bounds.width / 2,
+        left: bounds.left,
+        right: bounds.right,
+      };
+    };
+
+    return {
+      columnBoundaries: headerCells.map((header, index) => ({
+        body: rect(rowCells[index]),
+        header: rect(header),
+      })),
+      contentEnd: {
+        deleteButton: rect(rowCells[5].querySelector("button")).right,
+        searchButton: rect(searchButton).right,
+      },
+      contentStart: {
+        filter: rect(filter).left,
+        systemBadge: rect(rowCells[0].querySelector("[data-slot='badge']"))
+          .left,
+        systemHeader: rect(
+          headerCells[0].querySelector("button > span:first-child"),
+        ).left,
+        title: rect(title).left,
+      },
+      diagnosisTextStart: {
+        body: rect(
+          rowCells[1].querySelector("[data-emr-cell-text-mode]"),
+        ).left,
+        header: rect(
+          headerCells[1].querySelector("button > span:first-child"),
+        ).left,
+      },
+      statusCenters: headerCells.slice(2, 5).map((header, index) => ({
+        body: rect(rowCells[index + 2].querySelector("[data-slot='checkbox']"))
+          .center,
+        header: rect(header).center,
+      })),
+      veterinarianTextStart: {
+        body: rect(
+          rowCells[5].querySelector("[data-emr-cell-text-mode]"),
+        ).left,
+        header: rect(
+          headerCells[5].querySelector(
+            "[data-emr-table-content='true'] > span",
+          ),
+        ).left,
+      },
+    };
+  });
+
+  for (const boundary of alignmentGeometry.columnBoundaries) {
+    expect(boundary.body.left).toBeCloseTo(boundary.header.left, 2);
+    expect(boundary.body.right).toBeCloseTo(boundary.header.right, 2);
+  }
+  for (const center of alignmentGeometry.statusCenters) {
+    expect(center.body).toBeCloseTo(center.header, 2);
+  }
+  expect(alignmentGeometry.veterinarianTextStart.body).toBeCloseTo(
+    alignmentGeometry.veterinarianTextStart.header,
+    2,
+  );
+  expect(alignmentGeometry.diagnosisTextStart.body).toBeCloseTo(
+    alignmentGeometry.diagnosisTextStart.header,
+    2,
+  );
+  for (const start of Object.values(alignmentGeometry.contentStart)) {
+    expect(start).toBeCloseTo(alignmentGeometry.contentStart.title, 2);
+  }
+  expect(alignmentGeometry.contentEnd.deleteButton).toBeCloseTo(
+    alignmentGeometry.contentEnd.searchButton,
+    2,
+  );
+
   await expect(headers.first()).toHaveCSS("font-size", "12px");
   await expect(headers.first()).toHaveCSS("font-weight", "500");
   await expect(firstRow.getByRole("cell").nth(1)).toHaveCSS(
@@ -3946,6 +4048,19 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   await expect(deleteOverlay).toHaveCSS("opacity", "0");
   await firstRow.hover();
   await expect(deleteOverlay).toHaveCSS("opacity", "1");
+  const hoverSurface = await firstRow.evaluate((row) => {
+    const overlay = row.querySelector(
+      "[data-slot='chart-assessment-delete-overlay']",
+    );
+    if (!overlay) throw new Error("Assessment delete overlay is missing");
+    return {
+      overlayBackground: getComputedStyle(overlay).backgroundImage,
+      rowBackground: getComputedStyle(row).backgroundColor,
+    };
+  });
+  expect(hoverSurface.overlayBackground).toContain(
+    hoverSurface.rowBackground,
+  );
   await page.mouse.move(1, 1);
   await deleteButton.focus();
   await expect(deleteOverlay).toHaveCSS("opacity", "1");

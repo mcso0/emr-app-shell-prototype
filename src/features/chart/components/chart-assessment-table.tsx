@@ -128,25 +128,28 @@ export function ChartAssessmentTable({
             <EmrTableHeaderCell
               align="center"
               interaction="static"
-              className={styles.headerCell}
+              className={`${styles.headerCell} ${styles.statusHeaderCell}`}
             >
               주진단
             </EmrTableHeaderCell>
             <EmrTableHeaderCell
               align="center"
               interaction="static"
-              className={styles.headerCell}
+              className={`${styles.headerCell} ${styles.statusHeaderCell}`}
             >
               확진
             </EmrTableHeaderCell>
             <EmrTableHeaderCell
               align="center"
               interaction="static"
-              className={styles.headerCell}
+              className={`${styles.headerCell} ${styles.statusHeaderCell}`}
             >
               종결
             </EmrTableHeaderCell>
-            <EmrTableHeaderCell interaction="static" className={styles.headerCell}>
+            <EmrTableHeaderCell
+              interaction="static"
+              className={`${styles.headerCell} ${styles.veterinarianHeaderCell}`}
+            >
               수의사
             </EmrTableHeaderCell>
           </TableRow>
@@ -189,6 +192,7 @@ export function ChartAssessmentTable({
                   <TableCell className={`${styles.bodyCell} ${styles.statusCell}`}>
                     <EmrTableCheckbox
                       aria-label={`${diagnosis.diagnosisText} 주진단`}
+                      className={styles.statusCheckbox}
                       checked={diagnosis.isPrimary}
                       checkedTone="brand"
                       disabled={writeDisabled}
@@ -200,6 +204,7 @@ export function ChartAssessmentTable({
                   <TableCell className={`${styles.bodyCell} ${styles.statusCell}`}>
                     <EmrTableCheckbox
                       aria-label={`${diagnosis.diagnosisText} 확진`}
+                      className={styles.statusCheckbox}
                       checked={diagnosis.diagnosisType === "confirmed"}
                       disabled={writeDisabled}
                       onCheckedChange={(checked) =>
@@ -210,6 +215,7 @@ export function ChartAssessmentTable({
                   <TableCell className={`${styles.bodyCell} ${styles.statusCell}`}>
                     <EmrTableCheckbox
                       aria-label={`${diagnosis.diagnosisText} 종결`}
+                      className={styles.statusCheckbox}
                       checked={Boolean(diagnosis.closedAt)}
                       disabled={writeDisabled}
                       onCheckedChange={(checked) =>
