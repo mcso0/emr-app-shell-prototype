@@ -1,0 +1,327 @@
+{
+  "schemaVersion": "clinical-master-airtable-authoring/v1",
+  "release": {
+    "releaseKey": "  cm.airtable.synthetic.release.v1  ",
+    "status": "approved",
+    "releaseNotes": "  구조 검증용 합성 authoring snapshot  ",
+    "publishedByLabel": " CLAiR publisher fixture ",
+    "authoredByLabel": " CLAiR author fixture ",
+    "reviewedByLabel": " CLAiR reviewer fixture ",
+    "clinicalReviewerLabel": " CLAiR clinical reviewer fixture ",
+    "reviewReason": "  계약·관계 검증용  "
+  },
+  "sources": [
+    {
+      "sourceKey": "  source.synthetic.contract.v1  ",
+      "sourceType": "synthetic",
+      "title": "  CLAiR contract fixture  ",
+      "referenceUri": "  https://example.invalid/clair-contract  ",
+      "sourceVersion": "  fixture-v1  ",
+      "accessedAt": "  2026-08-23  ",
+      "licenseNotes": "  synthetic only  "
+    }
+  ],
+  "records": [
+    {
+      "masterKey": "cm.order-category.x-lab",
+      "recordType": "order_category",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "safetyReason": "  synthetic  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "검사", "sortOrder": 0 },
+        { "languageCode": "en", "nameKind": "preferred", "name": "Laboratory", "sortOrder": 0 }
+      ],
+      "detail": {
+        "categoryCode": "X-LAB",
+        "categoryLevel": "X",
+        "parentMasterKey": null
+      }
+    },
+    {
+      "masterKey": "cm.order-category.t-lab",
+      "recordType": "order_category",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "혈액검사" }
+      ],
+      "detail": {
+        "categoryCode": "T-LAB",
+        "categoryLevel": "T",
+        "parentMasterKey": "cm.order-category.x-lab",
+        "sortOrder": 0
+      }
+    },
+    {
+      "masterKey": "cm.action.metabolic",
+      "recordType": "clinical_action",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "대사 평가" }
+      ],
+      "detail": {
+        "tCategoryKey": "cm.order-category.t-lab",
+        "itemType": "lab"
+      }
+    },
+    {
+      "masterKey": "cm.chart.lab",
+      "recordType": "chart_group",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "검사" }
+      ],
+      "detail": { "groupCode": "CG-LAB" }
+    },
+    {
+      "masterKey": "cm.route.lab",
+      "recordType": "task_route",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "검사실" }
+      ],
+      "detail": { "routeCode": "NT_LAB" }
+    },
+    {
+      "masterKey": "cm.order.metabolic",
+      "recordType": "order",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "대사 패널" }
+      ],
+      "detail": {
+        "classificationPathKey": "cm.path.metabolic",
+        "defaultSalesUnitCode": "mL",
+        "species": ["cat", "dog"]
+      }
+    },
+    {
+      "masterKey": "cm.species.dog",
+      "recordType": "species",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "개" }
+      ],
+      "detail": { "speciesCode": "dog" }
+    },
+    {
+      "masterKey": "cm.species.cat",
+      "recordType": "species",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "고양이" }
+      ],
+      "detail": { "speciesCode": "cat" }
+    },
+    {
+      "masterKey": "cm.unit.ml",
+      "recordType": "unit",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "밀리리터" }
+      ],
+      "detail": { "unitCode": "mL", "symbol": "mL" }
+    },
+    {
+      "masterKey": "cm.specimen.serum",
+      "recordType": "specimen_type",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "혈청" }
+      ],
+      "detail": { "specimenCode": "serum" }
+    },
+    {
+      "masterKey": "cm.input.numeric",
+      "recordType": "result_input_type",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "숫자" }
+      ],
+      "detail": { "inputCode": "numeric", "valueKind": "numeric", "supportsUnit": true }
+    },
+    {
+      "masterKey": "cm.test.glucose",
+      "recordType": "lab_test",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "포도당" }
+      ],
+      "detail": {
+        "testCode": "GLU",
+        "resultInputTypeKey": "cm.input.numeric",
+        "canonicalUnitKey": "cm.unit.ml",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.panel.metabolic",
+      "recordType": "lab_panel",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "대사 패널" }
+      ],
+      "detail": { "panelCode": "METABOLIC" }
+    },
+    {
+      "masterKey": "cm.diagnosis-category.system",
+      "recordType": "diagnosis_category",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "진단 체계" }
+      ],
+      "detail": {
+        "categoryKind": "system"
+      }
+    },
+    {
+      "masterKey": "cm.diagnosis-category.metabolic",
+      "recordType": "diagnosis_category",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "대사 질환" }
+      ],
+      "detail": {
+        "categoryKind": "disease_group",
+        "parentMasterKey": "cm.diagnosis-category.system"
+      }
+    },
+    {
+      "masterKey": "cm.diagnosis.synthetic",
+      "recordType": "diagnosis",
+      "authoringStatus": "approved",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "changeSummary": "  synthetic contract fixture row  ",
+      "sourceAssertionScope": "  structural synthetic contract only  ",
+      "sourceNotes": "  no external clinical source  ",
+      "sourceKey": "source.synthetic.contract.v1",
+      "names": [
+        { "languageCode": "ko", "nameKind": "preferred", "name": "합성 진단" }
+      ],
+      "detail": {}
+    }
+  ],
+  "classificationPaths": [
+    {
+      "pathKey": "cm.path.metabolic",
+      "clinicalActionKey": "cm.action.metabolic",
+      "chartGroupKey": "cm.chart.lab",
+      "taskRouteKey": "cm.route.lab"
+    }
+  ],
+  "labPanelItems": [
+    {
+      "panelMasterKey": "cm.panel.metabolic",
+      "testMasterKey": "cm.test.glucose",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "  chemistry  "
+    }
+  ],
+  "labOrderProfiles": [
+    {
+      "orderMasterKey": "cm.order.metabolic",
+      "labPanelMasterKey": "cm.panel.metabolic",
+      "labTestMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    }
+  ],
+  "diagnosisCategoryLinks": [
+    {
+      "diagnosisMasterKey": "cm.diagnosis.synthetic",
+      "categoryMasterKey": "cm.diagnosis-category.metabolic",
+      "isPrimary": true,
+      "sortOrder": 0
+    }
+  ]
+}

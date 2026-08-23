@@ -47,9 +47,13 @@ and `diagnosis` record types.
 
 ## Next gate
 
-A separately approved publisher slice must define diagnosis payload contracts,
-release/version/review snapshots, and any workspace/chart adoption before these
-reserved tables can receive canonical rows.
+PR-008 is now the implemented, local-only authoring/export contract for the
+reviewed synthetic diagnosis snapshot; it does not publish diagnosis rows or
+change the current SQL publisher. A later, separately approved diagnosis
+publisher slice must define publishable diagnosis payloads,
+release/version/review snapshots, and any workspace/chart adoption before
+these reserved tables can receive canonical rows. See the [PR-008 work
+item](CLINICAL-MASTER-PR-008-airtable-authoring-export-contract.md).
 
 ## Result report
 
