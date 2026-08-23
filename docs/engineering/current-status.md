@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-08-21
+Updated: 2026-08-23
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -124,6 +124,21 @@ readback recorded runtime rows `false/0`, lab-result write requests `0`, audit
 revision `2` with `needs_composition_review=true`, durable set revisions/items `2/4`, and
 creation/save request histories `1/1`. The permission remote alias
 `20260821071846` maps to canonical local migration `20260821063113`.
+
+CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
+foundation reservation: the additive migration adds the category, diagnosis,
+and diagnosis-to-disease-group link tables with typed guards, RLS/no-policy
+boundaries, explicit revokes, and deferred one-primary completeness. No
+diagnosis rows, publisher replacement, release/version/review writes,
+workspace/chart/public diagnosis adoption, or remote database application or
+replay are claimed; an isolated temporary local Supabase project (separate
+from the user's existing local database) freshly applied all 158 migrations,
+including PR-007, and its rollback-only replay passed the `BEGIN`, `SET
+CONSTRAINTS`, `DO`, `ROLLBACK`, and
+`clinical_master_diagnosis_foundation_replay_cleanup_ok` checks. A direct
+PR-007 migration reapply and replay rerun passed the same rollback/cleanup
+checks. The existing B1 publisher still rejects diagnosis record types, and
+publisher/Airtable/workspace/chart/UI adoption remains out of scope.
 
 Authenticated synthetic browser evidence for `vet-cheongdam@clair.local` showed
 the Order Set page without a read error and four rows, including synthetic
