@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR Clinical Master PR-008 결과 보고서</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 900px; margin: 0 auto; padding: 36px 22px 52px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 18px 20px; }
+      h1 { margin: 0 0 8px; font-size: 27px; }
+      h2 { margin: 0 0 9px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.65; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 5px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; overflow-wrap: anywhere; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 10px; margin-right: 6px; border-radius: 999px; background: #eaf7ee; color: #176b35; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      .warn { background: #fff8e6; color: #6d4b00; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">CLAiR Clinical Master / PR-008 / 2026-08-23</p>
+      <h1>Airtable 작성·검토용 내보내기 계약</h1>
+      <p>
+        이번 작업은 임상 마스터 데이터를 나중에 안전하게 검토·내보내기 위한
+        형식과 점검 규칙을 코드로 고정한 작업이다. 실제 임상 콘텐츠를 출시한
+        작업은 아니다.
+      </p>
+      <span class="badge">상태: 로컬 구현 완료</span>
+      <span class="badge warn">실제 Airtable·DB·배포 없음</span>
+
+      <section>
+        <h2>무엇이 정해졌나</h2>
+        <table>
+          <tr><th>구분</th><th>내용</th></tr>
+          <tr><td>작성용 표</td><td><code>Release Drafts</code>, <code>Sources</code>, <code>Master Records</code>, <code>Names</code>, <code>Classification Paths</code>, <code>Lab Panel Items</code>, <code>Lab Order Profiles</code>, <code>Diagnosis Category Links</code>의 정확히 8개 물리 표를 계약으로 정의했다.</td></tr>
+          <tr><td>보기 화면</td><td><code>Code Dictionary</code>, <code>Orders</code>, <code>Vocabularies</code>, <code>Diagnosis Systems</code>, <code>Disease Groups</code>, <code>Diagnoses</code>, <code>Ready for Export</code>는 보기 전용이며 원본 권한이 아니다.</td></tr>
+          <tr><td>검토 게이트</td><td>승인된 release, published/normal record, synthetic source, 의미 있는 stable key, 정확한 이름·참조·타입만 통과시킨다.</td></tr>
+          <tr><td>범위</td><td>분류·주문·단위·검체·검사·패널과 진단 계통/질병 그룹/진단을 포함한 13개 authoring record type을 지원한다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>안전하게 막는 항목</h2>
+        <ul>
+          <li>중복·불안정 key, 잘못된 lifecycle/review/source, 잘못된 record type과 관계를 거부한다.</li>
+          <li>진단 링크는 질병 그룹만 가리키며 진단마다 primary 링크를 정확히 하나 요구한다. 진단 authoring 데이터는 현재 publisher가 사용할 수 없다.</li>
+          <li>Airtable ID, formula, lookup, 생성된 revision·timestamp·hash 같은 값을 export 권한으로 인정하지 않는다.</li>
+          <li>가격 필드는 <code>canonical_price_forbidden</code>, set/range/weight-tier 가격 필드는 <code>workspace_order_set_pricing_forbidden</code>으로 거부한다. 이 가격 권한은 <code>public.order_set_revision_price_ranges</code>에 남는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>이번에 하지 않은 것</h2>
+        <ul>
+          <li>실제 Airtable Base를 만들지 않았고, 실제 Airtable 데이터나 외부 임상 데이터를 생성·가져오지 않았다.</li>
+          <li>export를 publish하지 않았고, release/version/review 데이터를 원격에 쓰지 않았다.</li>
+          <li>DB schema, migration, RLS, seed, runtime UI/routes, chart 동작, current SQL publisher를 변경하지 않았다.</li>
+          <li>Supabase 등 원격 상태를 읽거나 변경하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <table>
+          <tr><th>검증</th><th>결과</th></tr>
+          <tr><td>집중 Playwright 계약 테스트</td><td>11개 통과. 정상 입력, 섞인 입력의 결정성, 정규화, 13개 타입, 참조/타입, lab·diagnosis 실패, 권한·가격 필드, 현재 publisher와의 경계까지 확인했다.</td></tr>
+          <tr><td>기존 회귀 suite</td><td>A1/B1/PR-007을 합쳐 20개 통과. 기존 private master, laboratory, diagnosis foundation과 current publisher 경계를 다시 확인했다.</td></tr>
+          <tr><td>정적 검사</td><td>TypeScript와 lint 통과.</td></tr>
+          <tr><td>보안·문서·diff 검사</td><td>secret scan(3,619 tracked files), <code>npm run docs:check</code>, <code>git diff --check</code> 통과.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          다음 단계는 별도 승인된 publisher slice에서 진단 payload, release/version/review
+          저장, workspace·chart 도입 여부를 정의하는 것이다. 그 전까지 이번 결과는
+          로컬 authoring 계약과 synthetic fixture의 검증 결과로만 취급한다.
+        </p>
+        <p class="meta">
+          상세 계약은
+          <a href="../../engineering/data-model/clair-clinical-master-airtable-authoring-export-contract.md">데이터 모델 계약 문서</a>,
+          작업 범위는
+          <a href="../../work/clinical-master/CLINICAL-MASTER-PR-008-airtable-authoring-export-contract.md">PR-008 work item</a>에서 확인할 수 있다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

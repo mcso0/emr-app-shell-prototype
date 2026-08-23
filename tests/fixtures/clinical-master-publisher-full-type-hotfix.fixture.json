@@ -1,0 +1,2786 @@
+{
+  "releaseKey": "cm.release.airtable.operational-pilot.v1",
+  "releaseNotes": "Dog/cat synthetic operational flow pilot; not for clinical use.",
+  "publishedByLabel": "CLAiR synthetic pilot publisher",
+  "records": [
+    {
+      "masterKey": "cm.action.consultation",
+      "recordType": "clinical_action",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "진찰·상담",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "tCategoryKey": "cm.order-category.t.consultation",
+        "itemType": "consultation",
+        "isOtherUnclassified": false
+      }
+    },
+    {
+      "masterKey": "cm.action.dispensing",
+      "recordType": "clinical_action",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "조제",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "tCategoryKey": "cm.order-category.t.medication",
+        "itemType": "medication",
+        "isOtherUnclassified": false
+      }
+    },
+    {
+      "masterKey": "cm.action.imaging",
+      "recordType": "clinical_action",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "영상검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "tCategoryKey": "cm.order-category.t.imaging",
+        "itemType": "imaging",
+        "isOtherUnclassified": false
+      }
+    },
+    {
+      "masterKey": "cm.action.laboratory",
+      "recordType": "clinical_action",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "tCategoryKey": "cm.order-category.t.laboratory",
+        "itemType": "lab",
+        "isOtherUnclassified": false
+      }
+    },
+    {
+      "masterKey": "cm.action.treatment",
+      "recordType": "clinical_action",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "처치",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "tCategoryKey": "cm.order-category.t.treatment",
+        "itemType": "treatment",
+        "isOtherUnclassified": false
+      }
+    },
+    {
+      "masterKey": "cm.chart.treatment",
+      "recordType": "chart_group",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "처치",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "groupCode": "CG_THERAPY",
+        "sortOrder": 905
+      }
+    },
+    {
+      "masterKey": "cm.lab-panel.cbc-basic",
+      "recordType": "lab_panel",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "전혈구 기본 패널",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "panelCode": "CBC_BASIC"
+      }
+    },
+    {
+      "masterKey": "cm.lab-panel.chemistry-basic",
+      "recordType": "lab_panel",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "기본 혈청화학 패널",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "panelCode": "CHEM_BASIC"
+      }
+    },
+    {
+      "masterKey": "cm.lab-panel.fecal",
+      "recordType": "lab_panel",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "분변 검사 패널",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "panelCode": "FECAL"
+      }
+    },
+    {
+      "masterKey": "cm.lab-panel.urinalysis",
+      "recordType": "lab_panel",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "요검사 패널",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "panelCode": "URINALYSIS"
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.cbc-hct",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "헤마토크릿 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "HCT",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.percent",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.cbc-plt",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "혈소판 수 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "PLT",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.k-per-ul",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.cbc-wbc",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "백혈구 수 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "WBC",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.k-per-ul",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.chem-alp",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "ALP 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "ALP",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.u-l",
+        "decimalScale": 0
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.chem-alt",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "ALT 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "ALT",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.u-l",
+        "decimalScale": 0
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.chem-bun",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "BUN 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "BUN",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.mg-dl",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.chem-creatinine",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "크레아티닌 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "CREA",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.mg-dl",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.chem-glucose",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "혈당 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "GLU",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.mg-dl",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.chem-total-protein",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "총단백 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "TP",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.g-dl",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.fecal-microscopy",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "분변 현미경 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "FECAL_MICRO",
+        "resultInputTypeKey": "cm.result-input.text",
+        "canonicalUnitKey": null
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.giardia-antigen",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "지아르디아 항원 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "GIARDIA_AG",
+        "resultInputTypeKey": "cm.result-input.coded",
+        "canonicalUnitKey": null
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.ua-sediment",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "요침사 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "UA_SED",
+        "resultInputTypeKey": "cm.result-input.text",
+        "canonicalUnitKey": null
+      }
+    },
+    {
+      "masterKey": "cm.lab-test.ua-strip",
+      "recordType": "lab_test",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "요시험지 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "testCode": "UA_STRIP",
+        "resultInputTypeKey": "cm.result-input.coded",
+        "canonicalUnitKey": null
+      }
+    },
+    {
+      "masterKey": "cm.order-category.t.consultation",
+      "recordType": "order_category",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "진찰·상담",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "categoryCode": "T-CONSULT",
+        "categoryLevel": "T",
+        "parentMasterKey": "cm.order-category.x.clinical",
+        "sortOrder": 0
+      }
+    },
+    {
+      "masterKey": "cm.order-category.t.imaging",
+      "recordType": "order_category",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "영상검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "categoryCode": "T-IMAGING",
+        "categoryLevel": "T",
+        "parentMasterKey": "cm.order-category.x.clinical",
+        "sortOrder": 2
+      }
+    },
+    {
+      "masterKey": "cm.order-category.t.laboratory",
+      "recordType": "order_category",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "categoryCode": "T-LAB",
+        "categoryLevel": "T",
+        "parentMasterKey": "cm.order-category.x.clinical",
+        "sortOrder": 1
+      }
+    },
+    {
+      "masterKey": "cm.order-category.t.medication",
+      "recordType": "order_category",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "조제",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "categoryCode": "T-MED",
+        "categoryLevel": "T",
+        "parentMasterKey": "cm.order-category.x.clinical",
+        "sortOrder": 4
+      }
+    },
+    {
+      "masterKey": "cm.order-category.t.treatment",
+      "recordType": "order_category",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "처치",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "categoryCode": "T-TREAT",
+        "categoryLevel": "T",
+        "parentMasterKey": "cm.order-category.x.clinical",
+        "sortOrder": 3
+      }
+    },
+    {
+      "masterKey": "cm.order-category.x.clinical",
+      "recordType": "order_category",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "진료 항목",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "categoryCode": "X-CLINICAL",
+        "categoryLevel": "X",
+        "parentMasterKey": null,
+        "sortOrder": 0
+      }
+    },
+    {
+      "masterKey": "cm.order.consult.followup",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "재진",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.consultation",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.consult.initial",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "초진",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.consultation",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.consult.preventive-cat",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "고양이 예방상담",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.consultation",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.consult.preventive-dog",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "개 예방상담",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.consultation",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.dispensing.oral",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "경구제 조제",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.dispensing.topical",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "외용제 조제",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.imaging.abdominal-radiography",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "복부 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.imaging.abdominal-ultrasound",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "복부 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.imaging.chest-radiography",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "흉부 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.imaging.echocardiography",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "심장 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.panel.cbc-basic",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "전혈구 기본 패널",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.panel.chemistry-basic",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "기본 혈청화학 패널",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.panel.fecal",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "분변 검사 패널",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.panel.urinalysis",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "요검사 패널",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.cbc-hct",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "헤마토크릿 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.cbc-plt",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "혈소판 수 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.cbc-wbc",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "백혈구 수 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.chem-alp",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "ALP 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.chem-alt",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "ALT 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.chem-bun",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "BUN 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.chem-creatinine",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "크레아티닌 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.chem-glucose",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "혈당 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.chem-total-protein",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "총단백 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.fecal-microscopy",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "분변 현미경 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.giardia-antigen",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "지아르디아 항원 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.ua-sediment",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "요침사 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.lab.test.ua-strip",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "요시험지 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.laboratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.treatment.ear-cleaning",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "귀 세정",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.treatment",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.treatment.nail-trimming",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "발톱 관리",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.treatment",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.treatment.wound-cleaning",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "상처 세척",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.treatment",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.result-input.coded",
+      "recordType": "result_input_type",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "코드형",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "inputCode": "coded",
+        "valueKind": "coded",
+        "supportsUnit": false
+      }
+    },
+    {
+      "masterKey": "cm.result-input.numeric",
+      "recordType": "result_input_type",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "숫자",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "inputCode": "numeric",
+        "valueKind": "numeric",
+        "supportsUnit": true
+      }
+    },
+    {
+      "masterKey": "cm.result-input.text",
+      "recordType": "result_input_type",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "서술형",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "inputCode": "text",
+        "valueKind": "text",
+        "supportsUnit": false
+      }
+    },
+    {
+      "masterKey": "cm.specimen.edta-whole-blood",
+      "recordType": "specimen_type",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "EDTA 전혈",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "specimenCode": "edta_whole_blood"
+      }
+    },
+    {
+      "masterKey": "cm.specimen.feces",
+      "recordType": "specimen_type",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "분변",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "specimenCode": "feces"
+      }
+    },
+    {
+      "masterKey": "cm.specimen.serum",
+      "recordType": "specimen_type",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "혈청",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "specimenCode": "serum"
+      }
+    },
+    {
+      "masterKey": "cm.specimen.urine",
+      "recordType": "specimen_type",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "소변",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "specimenCode": "urine"
+      }
+    },
+    {
+      "masterKey": "cm.unit.case",
+      "recordType": "unit",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "건",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "unitCode": "case",
+        "symbol": "건",
+        "decimalScale": 0
+      }
+    },
+    {
+      "masterKey": "cm.unit.g-dl",
+      "recordType": "unit",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "그램/데시리터",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "unitCode": "g_dl",
+        "symbol": "g/dL",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.unit.k-per-ul",
+      "recordType": "unit",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "천/마이크로리터",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "unitCode": "k_per_ul",
+        "symbol": "10^3/µL",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.unit.mg-dl",
+      "recordType": "unit",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "밀리그램/데시리터",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "unitCode": "mg_dl",
+        "symbol": "mg/dL",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.unit.percent",
+      "recordType": "unit",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "퍼센트",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "unitCode": "percent",
+        "symbol": "%",
+        "decimalScale": 1
+      }
+    },
+    {
+      "masterKey": "cm.unit.u-l",
+      "recordType": "unit",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "단위/리터",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "unitCode": "u_l",
+        "symbol": "U/L",
+        "decimalScale": 0
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.chart.CG_CONSULTATION",
+      "recordType": "chart_group",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "진찰·상담",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "groupCode": "CG_CONSULTATION",
+        "sortOrder": 901
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.chart.CG_EXAM",
+      "recordType": "chart_group",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "groupCode": "CG_EXAM",
+        "sortOrder": 904
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.chart.CG_MEDICATION_SUPPLY",
+      "recordType": "chart_group",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "조제",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "groupCode": "CG_MEDICATION_SUPPLY",
+        "sortOrder": 902
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.chart.CG_PROCEDURE",
+      "recordType": "chart_group",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "영상검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "groupCode": "CG_PROCEDURE",
+        "sortOrder": 903
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.route.NT_CHART_ONLY",
+      "recordType": "task_route",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "차트 기록",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "routeCode": "NT_CHART_ONLY",
+        "destinationModule": "chart_only",
+        "taskRequired": false,
+        "runtimeStatus": "active"
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.route.NT_DISPENSING",
+      "recordType": "task_route",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "조제실",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "routeCode": "NT_DISPENSING",
+        "destinationModule": "dispensing",
+        "taskRequired": true,
+        "runtimeStatus": "active"
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.route.NT_IMAGING",
+      "recordType": "task_route",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "영상검사실",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "routeCode": "NT_IMAGING",
+        "destinationModule": "imaging",
+        "taskRequired": true,
+        "runtimeStatus": "active"
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.route.NT_LAB",
+      "recordType": "task_route",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "검사실",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "routeCode": "NT_LAB",
+        "destinationModule": "lab",
+        "taskRequired": true,
+        "runtimeStatus": "active"
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.route.NT_TREATMENT",
+      "recordType": "task_route",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "처치실",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "routeCode": "NT_TREATMENT",
+        "destinationModule": "treatment",
+        "taskRequired": true,
+        "runtimeStatus": "active"
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.species.cat",
+      "recordType": "species",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "고양이",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "speciesCode": "cat"
+      }
+    },
+    {
+      "masterKey": "phase1a2.fallback.species.dog",
+      "recordType": "species",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "개",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "speciesCode": "dog"
+      }
+    }
+  ],
+  "classificationPaths": [
+    {
+      "pathKey": "cm.path.consultation",
+      "clinicalActionKey": "cm.action.consultation",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_CONSULTATION",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.dispensing",
+      "clinicalActionKey": "cm.action.dispensing",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_MEDICATION_SUPPLY",
+      "taskRouteKey": "phase1a2.fallback.route.NT_DISPENSING"
+    },
+    {
+      "pathKey": "cm.path.imaging",
+      "clinicalActionKey": "cm.action.imaging",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_PROCEDURE",
+      "taskRouteKey": "phase1a2.fallback.route.NT_IMAGING"
+    },
+    {
+      "pathKey": "cm.path.laboratory",
+      "clinicalActionKey": "cm.action.laboratory",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_LAB"
+    },
+    {
+      "pathKey": "cm.path.treatment",
+      "clinicalActionKey": "cm.action.treatment",
+      "chartGroupKey": "cm.chart.treatment",
+      "taskRouteKey": "phase1a2.fallback.route.NT_TREATMENT"
+    }
+  ],
+  "labPanelItems": [
+    {
+      "panelMasterKey": "cm.lab-panel.cbc-basic",
+      "testMasterKey": "cm.lab-test.cbc-wbc",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "hematology"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.cbc-basic",
+      "testMasterKey": "cm.lab-test.cbc-hct",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "hematology"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.cbc-basic",
+      "testMasterKey": "cm.lab-test.cbc-plt",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "hematology"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.chemistry-basic",
+      "testMasterKey": "cm.lab-test.chem-glucose",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.chemistry-basic",
+      "testMasterKey": "cm.lab-test.chem-alt",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.chemistry-basic",
+      "testMasterKey": "cm.lab-test.chem-alp",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.chemistry-basic",
+      "testMasterKey": "cm.lab-test.chem-bun",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.chemistry-basic",
+      "testMasterKey": "cm.lab-test.chem-creatinine",
+      "sortOrder": 4,
+      "required": true,
+      "displayGroup": "chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.chemistry-basic",
+      "testMasterKey": "cm.lab-test.chem-total-protein",
+      "sortOrder": 5,
+      "required": true,
+      "displayGroup": "chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.fecal",
+      "testMasterKey": "cm.lab-test.fecal-microscopy",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "fecal"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.fecal",
+      "testMasterKey": "cm.lab-test.giardia-antigen",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "fecal"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.urinalysis",
+      "testMasterKey": "cm.lab-test.ua-strip",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.urinalysis",
+      "testMasterKey": "cm.lab-test.ua-sediment",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "urinalysis"
+    }
+  ],
+  "labOrderProfiles": [
+    {
+      "orderMasterKey": "cm.order.lab.panel.cbc-basic",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.cbc-basic",
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.panel.chemistry-basic",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.chemistry-basic",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.panel.fecal",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.fecal",
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.panel.urinalysis",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.urinalysis",
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-hct",
+      "labTestMasterKey": "cm.lab-test.cbc-hct",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-plt",
+      "labTestMasterKey": "cm.lab-test.cbc-plt",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-wbc",
+      "labTestMasterKey": "cm.lab-test.cbc-wbc",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-alp",
+      "labTestMasterKey": "cm.lab-test.chem-alp",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-alt",
+      "labTestMasterKey": "cm.lab-test.chem-alt",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-bun",
+      "labTestMasterKey": "cm.lab-test.chem-bun",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-creatinine",
+      "labTestMasterKey": "cm.lab-test.chem-creatinine",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-glucose",
+      "labTestMasterKey": "cm.lab-test.chem-glucose",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-total-protein",
+      "labTestMasterKey": "cm.lab-test.chem-total-protein",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.fecal-microscopy",
+      "labTestMasterKey": "cm.lab-test.fecal-microscopy",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.giardia-antigen",
+      "labTestMasterKey": "cm.lab-test.giardia-antigen",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.ua-sediment",
+      "labTestMasterKey": "cm.lab-test.ua-sediment",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.ua-strip",
+      "labTestMasterKey": "cm.lab-test.ua-strip",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    }
+  ]
+}
