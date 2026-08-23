@@ -3821,7 +3821,16 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
       element.querySelector('[data-slot="button"]'),
     ].filter((control): control is Element => control instanceof Element);
     const style = getComputedStyle(element);
+    const toolbarRect = element.getBoundingClientRect();
+    const dividerRect = controls[2]?.getBoundingClientRect();
     return {
+      dividerCenterOffset: dividerRect
+        ? Math.abs(
+            dividerRect.top +
+              dividerRect.height / 2 -
+              (toolbarRect.top + toolbarRect.height / 2),
+          )
+        : null,
       gap: style.columnGap,
       height: element.getBoundingClientRect().height,
       widths: controls.map((control) =>
@@ -3835,6 +3844,8 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   expect(toolbarGeometry.widths[1]).toBeGreaterThan(0);
   expect(toolbarGeometry.widths[2]).toBe(1);
   expect(toolbarGeometry.widths[3]).toBe(66);
+  expect(toolbarGeometry.dividerCenterOffset).not.toBeNull();
+  expect(toolbarGeometry.dividerCenterOffset!).toBeLessThanOrEqual(0.5);
 
   const firstRow = table.locator("tbody tr").first();
   const tableViewport = diagnosisPanel.locator("[data-slot='table-container']");

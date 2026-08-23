@@ -3766,7 +3766,11 @@ function AssessmentPanel({
                 </div>
               </PopoverContent>
             </Popover>
-            <Separator orientation="vertical" className="h-[18px] self-center" />
+            <Separator
+              orientation="vertical"
+              className="h-[18px] self-center"
+              style={{ alignSelf: "center" }}
+            />
             <Button
               variant="outline"
               size="xs"
