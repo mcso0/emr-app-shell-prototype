@@ -14,10 +14,17 @@ updated: "2026-08-23"
 
 PR-011's local migration/replay evidence is complete. Sol's initial review
 returned `REJECT/MUST-FIX 3`; all three findings were corrected, and the final
-re-review returned `APPROVE/MUST-FIX 0`. No remote migration, production
-publish, workspace adoption, or authenticated smoke is claimed yet. The only
-eventual remote migration permitted by this work item
-is the exact file and SHA recorded below; it is not permission to improvise a
+re-review returned `APPROVE/MUST-FIX 0`. PR #584 was merged and the exact
+publisher hotfix migration was applied remotely with its migration-history,
+constraint, function ACL/search-path, and six-row stage fingerprint gates
+passing. The run stopped before workspace creation when readback proved the
+legacy creator RPC would change the existing synthetic admin's `initial` from
+`SM` to `송`.
+
+The additive creator-profile preservation migration below is the only approved
+follow-up. Its local replay passed and Sol returned `APPROVE/MUST-FIX 0`. No
+production publish, workspace adoption, or authenticated operational smoke is
+claimed yet. These exact files and hashes are not permission to improvise a
 different migration or to bypass the authenticated publisher/adopter boundary.
 The eventual operation permits a production/demo smoke against synthetic data
 only. It does not authorize real patient, guardian, hospital, payment, or
@@ -46,6 +53,8 @@ authenticated server boundaries.
 | Exact publisher `.payload` SHA-256 | `0ff241fd3281a0e7170773dc49f978eea35e8968a79ad8800070955ed16f484e` |
 | Exact remote migration | `supabase/migrations/20260823124500_clinical_master_publisher_full_type_hotfix.sql` |
 | Remote migration SHA-256 | `1d8d12e71aa23c2b5c4867e9601ab925bbda622b1d6940720fa2b7da929e1015` |
+| Creator-profile preservation migration | `supabase/migrations/20260823140000_workspace_creation_creator_profile_preservation.sql` |
+| Creator-profile preservation migration SHA-256 | `24270b80b6ebcc814670067ed6eb27e15d0e7abb041fc781d28af88cedc2c920` |
 | Release key | `cm.release.airtable.operational-pilot.v1` |
 | Synthetic target workspace | `workspace-clinical-master-pilot-v1` |
 | Synthetic admin identity | `00000000-0000-4000-8000-000000000001` |
@@ -88,16 +97,17 @@ the named target workspace remained zero, while the six pre-existing
 unrelated stage rows and the protected workspace checksums were unchanged. No
 remote retry was made after that failure.
 
-## Exact remote migration handoff (Sol-approved; pending Git delivery)
+## Exact remote migration handoff
 
-Sol accepted all three MUST-FIX corrections on final re-review. After the
-reviewed migration is delivered through Git, the remote operator must execute
-these steps in order against Supabase project `qmerxgzrwaaahpkhjqlc`:
+The publisher hotfix migration is remotely applied. After the reviewed
+creator-profile preservation migration is delivered through Git, the remote
+operator must execute these remaining steps in order against Supabase project
+`qmerxgzrwaaahpkhjqlc`:
 
-1. Read the linked migration list and verify that
-   `20260823124500_clinical_master_publisher_full_type_hotfix.sql` is not
-   already applied with a different file. Verify the exact SHA above before
-   applying anything.
+1. Read the linked migration list and verify that the publisher hotfix is
+   applied and `20260823140000_workspace_creation_creator_profile_preservation.sql`
+   is not already applied with a different file. Verify both exact SHAs above
+   before applying anything.
 2. Read and fingerprint all six pre-existing rows in
    `private.clinical_master_lab_publish_stage` using the complete semantic row
    fields, ordered by `(release_id, master_record_id)`. This fingerprint is a
@@ -106,8 +116,9 @@ these steps in order against Supabase project `qmerxgzrwaaahpkhjqlc`:
    read-only remote preflight recorded six rows with exact semantic SHA-256
    `a278136e25d4fa5e0b3e72a9a6df6c4283d39edaab346ff3bcb376ba5e9483d1`; every
    before/after readback must equal this value.
-3. Apply only the exact migration file above through the approved Supabase
-   migration path. Do not use direct table updates or an alternative SQL file.
+3. Apply only the exact creator-profile preservation migration through the
+   approved Supabase migration path. Do not use direct table updates or an
+   alternative SQL file.
 4. Read back the exact named constraint
    `clinical_master_lab_publish_stage_record_type_check` with
    `pg_get_constraintdef`, and verify the 11 allowed record types.
@@ -130,9 +141,10 @@ these steps in order against Supabase project `qmerxgzrwaaahpkhjqlc`:
    hashes. Run the authenticated browser smoke only as read-only visibility
    proof; do not perform direct inserts or claim browser/API write E2E.
 
-This is an ordered handoff, not evidence that the remote migration or smoke
-has already run. The corrected migration/replay/spec/docs evidence passed Sol
-re-review; Git delivery must complete before the exact remote sequence begins.
+This is an ordered handoff. It records the completed publisher-hotfix migration
+gate but is not evidence that the creator-profile migration, publish/adoption,
+or smoke has run. The creator-profile migration/replay/spec evidence passed Sol
+re-review; its Git delivery must complete before the remaining remote sequence.
 
 ## Sol review disposition
 
@@ -145,8 +157,10 @@ Sol's initial review was `REJECT/MUST-FIX 3` for this slice:
   constraint failure evidence explicit in this work item.
 
 All three findings were corrected and the final re-review returned
-`APPROVE/MUST-FIX 0`. The exact Git delivery and remote execution remain
-separate, unperformed steps; this approval does not claim either has run.
+`APPROVE/MUST-FIX 0`. The later workspace-creator blocker received
+`REJECT/MUST-FIX 1`; the additive preservation migration resolved it and Sol's
+re-review returned `APPROVE/MUST-FIX 0`. The follow-up Git delivery and its
+remaining remote execution are still separate, unperformed steps.
 
 ## Allowed operation
 
