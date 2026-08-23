@@ -28,6 +28,7 @@ function TablePrimitivesExample({
       <TableHeader>
         <TableRow>
           <EmrTableHeaderCell
+            data-testid="sortable-header"
             interaction="sortable-filterable"
             sortDirection={sortDirection}
             filterActive={filterActive}
@@ -42,6 +43,13 @@ function TablePrimitivesExample({
             onMenu={() => undefined}
           >
             메뉴 컬럼
+          </EmrTableHeaderCell>
+          <EmrTableHeaderCell
+            data-testid="plain-resizable-header"
+            resize="data-column"
+            onResizeMouseDown={() => undefined}
+          >
+            기본 텍스트 컬럼
           </EmrTableHeaderCell>
         </TableRow>
       </TableHeader>
@@ -107,11 +115,57 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const HeaderAndCellText: Story = {
+  play: async ({ canvasElement }) => {
+    const sortableLabel = canvasElement.querySelector(
+      '[data-testid="sortable-header"] [data-emr-table-content="true"] > button',
+    ) as HTMLButtonElement | null;
+    const plainLabel = canvasElement.querySelector(
+      '[data-testid="plain-resizable-header"] [data-emr-table-content="true"] > span',
+    ) as HTMLSpanElement | null;
+    const resizeHandle = canvasElement.querySelector(
+      '[data-testid="plain-resizable-header"] button[aria-label$="컬럼 너비 조절"]',
+    ) as HTMLButtonElement | null;
+
+    if (!sortableLabel || !plainLabel || !resizeHandle) {
+      throw new Error(
+        "Table primitive story did not render the required header labels and resize handle.",
+      );
+    }
+
+    const sortableStyles = getComputedStyle(sortableLabel);
+    const plainStyles = getComputedStyle(plainLabel);
+    const sharedLabelProperties = [
+      "minHeight",
+      "paddingTop",
+      "paddingRight",
+      "paddingBottom",
+      "paddingLeft",
+      "fontSize",
+      "lineHeight",
+      "letterSpacing",
+    ] as const;
+
+    for (const property of sharedLabelProperties) {
+      if (plainStyles[property] !== sortableStyles[property]) {
+        throw new Error(
+          `Plain header ${property} must match the sortable header label geometry.`,
+        );
+      }
+    }
+
+    const resizeStyles = getComputedStyle(resizeHandle);
+    const resizeIndicatorStyles = getComputedStyle(resizeHandle, "::before");
+    if (resizeStyles.width !== "8px" || resizeIndicatorStyles.width !== "1px") {
+      throw new Error(
+        "Plain header spacing must preserve the shared column resize handle.",
+      );
+    }
+  },
   parameters: {
     docs: {
       description: {
         story:
-          "사용할 때: table header action과 cell text policy를 함께 확인할 때. 쓰지 말아야 할 때: feature-specific action이나 route logic을 primitive에 넣을 때.",
+          "사용할 때: 정렬 버튼과 기본 텍스트 header가 같은 label spacing을 사용하고 resize handle을 유지하는지 cell text policy와 함께 확인할 때. 쓰지 말아야 할 때: feature-specific action이나 route logic을 primitive에 넣을 때.",
       },
     },
   },
