@@ -9,6 +9,11 @@ import {
 } from "../src/features/auth/permissions";
 import { resolveDemoMockAuthRoleFromEmail } from "../src/features/auth/mock-session";
 import {
+  hasActiveWorkspaceServerAccess,
+  isWorkspaceAccessAllowedFor,
+  shouldVerifyWorkspaceAccessOnServer,
+} from "../src/features/auth/workspace-access-contract";
+import {
   PERSONAL_PROFILE_STORAGE_KEY,
   upsertSessionPersonalProfile,
   validatePersonalProfileInput,
@@ -592,6 +597,64 @@ test("server session mode regression keeps client guard and route identity bound
     sessionStatus: "unauthenticated",
     sessionReason: "no_session",
   });
+});
+
+test("Supabase workspace access revalidates stale missing or inactive browser state", () => {
+  const workspaceId = "workspace-clinical-master-pilot-v1";
+  const activeResponse = {
+    ok: true,
+    workspaces: [{ id: workspaceId, status: "active" }],
+  };
+
+  expect(shouldVerifyWorkspaceAccessOnServer("supabase", "missing")).toBe(true);
+  expect(shouldVerifyWorkspaceAccessOnServer("supabase", "inactive")).toBe(true);
+  expect(hasActiveWorkspaceServerAccess(true, activeResponse, workspaceId)).toBe(true);
+});
+
+test("Supabase workspace access fails closed for stale active state and bad server responses", () => {
+  const workspaceId = "workspace-clinical-master-pilot-v1";
+
+  expect(shouldVerifyWorkspaceAccessOnServer("supabase", "active")).toBe(true);
+  expect(
+    hasActiveWorkspaceServerAccess(true, { ok: true, workspaces: [] }, workspaceId)
+  ).toBe(false);
+  expect(
+    hasActiveWorkspaceServerAccess(
+      false,
+      { ok: true, workspaces: [{ id: workspaceId, status: "active" }] },
+      workspaceId
+    )
+  ).toBe(false);
+  expect(hasActiveWorkspaceServerAccess(true, null, workspaceId)).toBe(false);
+  expect(hasActiveWorkspaceServerAccess(true, { ok: true, workspaces: null }, workspaceId)).toBe(
+    false
+  );
+  expect(
+    hasActiveWorkspaceServerAccess(
+      true,
+      { ok: true, workspaces: [{ id: workspaceId, status: "active" }, null] },
+      workspaceId
+    )
+  ).toBe(false);
+  expect(
+    hasActiveWorkspaceServerAccess(
+      true,
+      { ok: "true", workspaces: [{ id: workspaceId, status: "active" }] },
+      workspaceId
+    )
+  ).toBe(false);
+});
+
+test("mock local active workspace access remains client-authorized", () => {
+  expect(shouldVerifyWorkspaceAccessOnServer("mock", "active")).toBe(false);
+  expect(shouldVerifyWorkspaceAccessOnServer("mock", "missing")).toBe(false);
+});
+
+test("workspace access state is scoped to the workspace being rendered", () => {
+  const allowedWorkspaceA = { workspaceId: "workspace-a", status: "allowed" as const };
+
+  expect(isWorkspaceAccessAllowedFor(allowedWorkspaceA, "workspace-a")).toBe(true);
+  expect(isWorkspaceAccessAllowedFor(allowedWorkspaceA, "workspace-b")).toBe(false);
 });
 
 test("login exposes pending and provider error states without creating a session", async ({
