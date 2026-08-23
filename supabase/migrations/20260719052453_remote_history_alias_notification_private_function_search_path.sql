@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260719052433_notification_private_function_search_path.sql under remote version 20260719052453.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

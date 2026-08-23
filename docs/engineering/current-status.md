@@ -145,9 +145,22 @@ the Order Set page without a read error and four rows, including synthetic
 inactive revision 2 marked `구성 검토 필요`; the clinical lab catalog rendered
 normally with the synthetic item visible as `중지`. This is scoped evidence, not
 clinical-content validation, a full browser/test matrix, or Phase 2–5 delivery.
-The optional broader 38-case matrix remains unclaimed. Legacy migration ledger
-drift (`39` local-only / `11` remote-only) remains a separate reconciliation
-risk. See the [Phase 1 closeout report](../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).
+The optional broader 38-case matrix remains unclaimed. The local migration-history
+reconciliation now records the verified pre-change snapshot of 158 local / 130
+remote / 118 common / 12 remote-only / 40 local-only, adds twelve comment-only
+aliases, and preserves four remote-only SQL files with proof hashes. The final
+verified repository/remote snapshot is 170 local / 156 remote / 156 common /
+0 remote-only / 14 local-only. An exact-project history-only repair marked 26
+canonical history rows applied; it executed no migration SQL and made no
+schema/data mutation. Read-only verification recorded schema fingerprint
+`5b6046943b4317bf828110285007a24f82e8aaf74ae1e2bfa0b20695952170b4` and
+`master.master_records` 29 rows with fingerprint
+`8d51fb069dc582fc2bbaf7a96565c10f5a6d3e177711fab90e842c0bf5859901`.
+Fourteen genuine local migrations remain pending; the linked dry-run correctly
+exited 1 with `LegacyDbPushMissingRemoteError` and listed exactly those 14.
+`--include-all` is not an allowed bypass. See
+[`supabase-migration-history-reconciliation.md`](operations/supabase-migration-history-reconciliation.md)
+and the [Phase 1 closeout report](../completed/clinical-master/2026-08-21-clinical-master-phase1-closeout-report.html).
 
 ## Not Complete Yet
 

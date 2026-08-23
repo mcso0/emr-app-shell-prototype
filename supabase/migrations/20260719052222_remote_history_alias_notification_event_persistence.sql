@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260705133000_notification_event_persistence.sql under remote version 20260719052222.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

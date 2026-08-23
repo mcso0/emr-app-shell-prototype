@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260815120000_chart_diagnosis_closure.sql under remote version 20260816062243.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

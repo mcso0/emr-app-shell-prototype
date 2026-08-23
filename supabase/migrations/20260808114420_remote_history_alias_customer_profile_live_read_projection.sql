@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260808055307_customer_profile_live_read_projection.sql under remote version 20260808114420.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260723220927_workspace_space_management.sql under remote version 20260723140134.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

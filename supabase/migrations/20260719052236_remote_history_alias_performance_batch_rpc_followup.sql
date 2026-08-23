@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260719051725_performance_batch_rpc_followup.sql under remote version 20260719052236.
+-- Keep this file comment-only so fresh local replay executes the behavior once.
