@@ -28,6 +28,7 @@ type EmrTableHeaderCellProps = Omit<
   identity?: boolean;
   interaction?: EmrTableHeaderInteraction;
   isResizing?: boolean;
+  insetPlainTextLabel?: boolean;
   menuActive?: boolean;
   onFilter?: () => void;
   onMenu?: () => void;
@@ -102,6 +103,8 @@ const tableSortArrowSrc =
   typeof tableSortArrow === "string"
     ? tableSortArrow
     : (tableSortArrow.src ?? "");
+const tableHeaderLabelLayoutClassName =
+  "inline-flex min-h-6 max-w-full min-w-0 items-center justify-center gap-1 px-2.5 py-1 text-left text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-500)]";
 
 function SortIcon({ direction }: { direction?: "asc" | "desc" }) {
   return (
@@ -126,6 +129,7 @@ export function EmrTableHeaderCell({
   identity = false,
   interaction = "static",
   isResizing = false,
+  insetPlainTextLabel = true,
   menuActive = false,
   onFilter,
   onMenu,
@@ -152,6 +156,9 @@ export function EmrTableHeaderCell({
   const sortable = Boolean(onSort);
   const filterable = Boolean(onFilter);
   const menuable = Boolean(onMenu);
+  const plainTextLabel =
+    typeof displayedChildren === "string" ||
+    typeof displayedChildren === "number";
 
   return (
     <TableHead
@@ -184,7 +191,8 @@ export function EmrTableHeaderCell({
             aria-label={sortLabel ?? `${label} 정렬`}
             title={sortLabel ?? `${label} 정렬`}
             className={cn(
-              "inline-flex min-h-6 max-w-full min-w-0 items-center justify-center gap-1 rounded-lg bg-transparent px-2.5 py-1 text-left text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-500)] outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+              tableHeaderLabelLayoutClassName,
+              "rounded-lg bg-transparent outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
               identity && "px-0",
               sortDirection && "text-[var(--clair-color-atomic-neutral-700)]",
             )}
@@ -205,7 +213,13 @@ export function EmrTableHeaderCell({
           </button>
         ) : (
           <span
-            className="min-w-0 truncate"
+            className={cn(
+              "min-w-0 truncate",
+              plainTextLabel &&
+                insetPlainTextLabel &&
+                !identity &&
+                tableHeaderLabelLayoutClassName,
+            )}
             data-emr-table-identity-text={identity ? "true" : undefined}
           >
             {displayedChildren}

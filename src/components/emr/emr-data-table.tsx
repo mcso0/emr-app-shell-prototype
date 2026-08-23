@@ -372,6 +372,7 @@ function EmrDataTableHeader<TData>({ group }: { group: HeaderGroup<TData> }) {
             )}
             data-column-id={column.id}
             identity={meta?.identity}
+            insetPlainTextLabel={!isActions}
             interaction={interaction}
             isResizing={column.getIsResizing()}
             label={label}
