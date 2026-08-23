@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR Clinical Master PR-007 진단 기반 closeout</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 960px; margin: 0 auto; padding: 40px 24px 56px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 20px 22px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.65; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; overflow-wrap: anywhere; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 12px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      .warn { background: #fff8e6; color: #6d4b00; }
+      .ok { background: #eaf7ee; color: #176b35; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">CLAiR Clinical Master / PR-007 / 2026-08-23</p>
+      <h1>진단 마스터 기반 closeout</h1>
+      <p>
+        진단 계통, 질병 그룹, 진단명을 UI와 Airtable에 연결하기 전에 필요한
+        비공개 master DB 기반을 예약했다. 이 보고서는 해당 기반의 범위와 검증
+        결과를 요약하며, 실제 진단 콘텐츠 출시를 의미하지 않는다.
+      </p>
+      <span class="badge ok">상태: schema-only foundation implemented</span>
+      <span class="badge warn">배포·콘텐츠·검색 도입은 별도 단계</span>
+
+      <section>
+        <h2>이번에 생긴 것</h2>
+        <table>
+          <tr><th>기반</th><th>범위</th></tr>
+          <tr><td>진단 계통과 질병 그룹</td><td>비공개 <code>master.diagnosis_categories</code>에 <code>system</code> 루트와 <code>disease_group</code> 자식 관계를 둔다.</td></tr>
+          <tr><td>진단명 identity</td><td>비공개 <code>master.diagnoses</code>가 진단 identity를 예약한다.</td></tr>
+          <tr><td>분류 연결</td><td><code>master.diagnosis_category_links</code>가 질병 그룹 연결만 허용하고, 진단마다 primary 연결을 정확히 하나 요구한다.</td></tr>
+          <tr><td>보호와 무결성</td><td>세 테이블은 private RLS/no-policy와 명시적 role/helper revoke를 사용하며, 타입·identity·계층·링크 무결성을 DB에서 검사한다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>아직 없는 것</h2>
+        <ul>
+          <li>진단 콘텐츠 row는 0개이며 backfill도 없다.</li>
+          <li>현재 publisher는 <code>diagnosis_category</code>와 <code>diagnosis</code> 타입을 계속 거부한다. 따라서 release/version/review 기록도 만들지 않는다.</li>
+          <li>Airtable ingest, workspace adoption, 검색/UI/chart 연결은 아직 없다.</li>
+          <li>원격 DB 적용이나 배포는 수행하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 evidence</h2>
+        <table>
+          <tr><th>검증</th><th>결과</th></tr>
+          <tr><td>격리된 local DB</td><td>사용자의 기존 local DB와 분리된 임시 local Supabase에서 158개 migration 전체를 fresh start로 적용했고 PR-007도 성공했다.</td></tr>
+          <tr><td>정정 replay</td><td><code>BEGIN</code>, <code>SET CONSTRAINTS</code>, <code>DO</code>, <code>ROLLBACK</code>과 cleanup marker를 포함한 replay가 통과했다. PR-007 직접 reapply 후 replay 재실행도 같은 rollback/marker 결과로 통과했다.</td></tr>
+          <tr><td>회귀와 정적 gate</td><td>PR-007 + A1 + B1 <strong>20/20</strong> 통과. <code>docs:check</code>, TypeScript, lint, <code>git diff --check</code>도 통과했다.</td></tr>
+          <tr><td>Sol review</td><td>extra-high review verdict: <code>APPROVE</code> / <code>MUST-FIX 0</code>.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <ol>
+          <li>별도 release 승인 후 이번 schema migration을 release한다.</li>
+          <li>그 다음 별도 slice로 publisher, Airtable/seed, workspace adoption, 검색 UI를 구현하고 각각 검증한다.</li>
+        </ol>
+        <p class="meta">
+          상세 범위와 work item 기록은
+          <a href="../../work/clinical-master/CLINICAL-MASTER-PR-007-diagnosis-foundation.md">PR-007 work item</a>에서 확인할 수 있다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

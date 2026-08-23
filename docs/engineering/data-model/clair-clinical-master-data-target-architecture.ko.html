@@ -415,7 +415,7 @@
         </p>
         <div class="meta">
           <span class="pill"><span class="status">Draft</span></span>
-          <span class="pill">기준일 2026-08-18</span>
+          <span class="pill">기준일 2026-08-23</span>
           <span class="pill">임상 마스터 범위</span>
           <span class="pill">Supabase/PostgreSQL 목표 구조</span>
           <span class="pill">구현 완료 주장 아님</span>
@@ -1030,6 +1030,15 @@
               <tr><td><code>master.diagnosis_order_suggestions</code></td><td>자동 실행이 아닌 선택적 추천 관계. 별도 승인 전 보류</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="callout info">
+          <strong>CLINICAL-MASTER-PR-007 구현 메모 (2026-08-23)</strong>
+          <p>
+            비공개 <code>master.diagnosis_categories</code>, <code>master.diagnoses</code>,
+            <code>master.diagnosis_category_links</code> 기반을 예약했으며 현재 진단 row는 0개다.
+            publisher와 workspace 도입은 별도 승인 단계로 미뤘다. 이 메모는 격리된 로컬 검증 범위만
+            기록하며 원격 DB 적용이나 런타임 진단 검색을 주장하지 않는다.
+          </p>
         </div>
         <p>
           실제 차트에서는 자유입력을 계속 허용한다. 카탈로그 선택은 검색과 추적을 돕지만

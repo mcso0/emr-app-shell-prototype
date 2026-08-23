@@ -412,6 +412,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CLINICAL-MASTER-PR-004      | completed   | clinical-master      | P0       | B1 focused gate PASS; Sol APPROVE/MUST-FIX 0; optional broader 38-case matrix remains unclaimed; scoped lab closeout recorded | `docs/work/clinical-master/CLINICAL-MASTER-PR-004-phase-1b-1-laboratory-slice.md` |
 | CLINICAL-MASTER-PR-005      | completed   | clinical-master      | P0       | B2 legacy/reapply/valid_sum gate PASS; Sol APPROVE/MUST-FIX 0; durable Order Set/browser closeout recorded | `docs/work/clinical-master/CLINICAL-MASTER-PR-005-phase-1b-2-order-set-revisions.md` |
 | CLINICAL-MASTER-PR-006      | completed   | clinical-master      | P0       | B3 reapply/parent-child/range/rollback and focused 13/13 PASS; Sol APPROVE/MUST-FIX 0; scoped browser closeout recorded | `docs/work/clinical-master/CLINICAL-MASTER-PR-006-phase-1b-3-chart-set-runtime.md` |
+| CLINICAL-MASTER-PR-007      | implemented | clinical-master      | P0       | Schema-only private diagnosis categories/identities/links reservation; publisher and adoption remain out of scope | `docs/work/clinical-master/CLINICAL-MASTER-PR-007-diagnosis-foundation.md` |
 
 ## Current Next Work
 
