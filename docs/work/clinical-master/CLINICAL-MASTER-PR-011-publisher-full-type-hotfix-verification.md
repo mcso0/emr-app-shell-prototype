@@ -1,23 +1,30 @@
 ---
 id: "CLINICAL-MASTER-PR-011"
-status: "implemented"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
 target_pr: "Full-type clinical-master publisher hotfix verification"
-execution_boundary: "local-only"
+execution_boundary: "local-verification-and-delivered-migration"
 predecessor: "CLINICAL-MASTER-PR-010"
 updated: "2026-08-23"
+delivery_pr: "#584"
+delivery_merge_sha: "886f37738397f70bce36866e04b3aee5d777546d"
+remote_migration: "20260823124500"
+completion_report: "docs/completed/clinical-master/2026-08-23-clinical-master-airtable-pilot-operational-closeout-report.html"
 ---
 
 # Clinical Master PR-011: Full-Type Publisher Hotfix Verification
 
 ## Status and boundary
 
-This work item is the local verification gate for the additive full-type
-publisher hotfix. The gate passed with Sol `APPROVE/MUST-FIX 0`; PR-010 now
-waits on scoped Git delivery. No production publish, workspace adoption,
-authenticated smoke, or remote migration is claimed here. The replay is
-rollback-only and uses synthetic fixture data.
+This work item is the completed local verification and delivery gate for the
+additive full-type publisher hotfix. The gate passed with Sol
+`APPROVE/MUST-FIX 0`; PR #584 merged at
+`886f37738397f70bce36866e04b3aee5d777546d`, and remote migration
+`20260823124500` was applied with its migration-history, constraint,
+function-ACL/search-path, and six-row stage-fingerprint gates passing. The
+publisher/adopter and operational smoke evidence is recorded in PR-010; this
+work item does not claim browser login/workspace/catalog visibility.
 
 Included in this slice:
 
@@ -42,9 +49,11 @@ Included in this slice:
   checks for the exact 11-type guard, A1 pass order, actionCode call sites,
   private ACL/search path, replay assertions, and direct reapply marker.
 
-Out of scope: Airtable API access, remote Supabase writes, production or
-authenticated browser smoke, direct table inserts, and any change to the
-PR-008/PR-009 authoring or adapter implementation.
+Out of scope: Airtable API access, remote publisher/adopter writes, production
+or authenticated browser smoke, direct table inserts, and any change to the
+PR-008/PR-009 authoring or adapter implementation. The exact migration
+application is the delivered exception recorded above; no broader remote
+database operation is implied.
 
 ## Approval and user chain
 
@@ -55,8 +64,8 @@ The predecessor PR-010 request chain records:
 - latest continuation: `고고해보자`
 
 Those approvals authorize only PR-010's exact synthetic production smoke
-boundary. PR-011 uses no remote authority; its local replay is limited to a
-transaction that is explicitly rolled back.
+boundary. PR-011's local replay is limited to a transaction that is explicitly
+rolled back; the one approved remote migration delivery is recorded above.
 
 ## Immutable input locks
 
@@ -82,8 +91,9 @@ revision on first publish. The replay therefore expects 72 fresh
 new classification-path rows. The same payload is idempotent, and the
 classification-path relations continue to target the existing Airtable
 record-linked identities rather than creating duplicate fallback rows.
-The temporary `.tmp-airtable-operational-pilot-authoring.json` is retained for
-hash verification only and is explicitly excluded from commits.
+The temporary `.tmp-airtable-operational-pilot-authoring.json` was used for hash
+verification only, removed before candidate staging, and is explicitly
+excluded from commits.
 
 ## Prior rollback evidence
 
@@ -113,7 +123,8 @@ git diff --check
 
 Local Supabase replay may be run only against an isolated/local database with
 no reset of shared state. The available local Docker database was used with a
-single rollback-only transaction; no remote runtime result is implied.
+single rollback-only transaction; no remote publisher/adopter or browser
+runtime result is implied by this local replay.
 
 Current verification status: the static gate and local runtime replay passed.
 The direct migration reapply emitted
@@ -122,21 +133,24 @@ replay emitted `clinical_master_publisher_full_type_hotfix_replay_ok`, and
 the transaction ended with `ROLLBACK`. Post-rollback readback showed zero
 target release rows, zero `cm.*` supported master rows, and all 11 pre-existing
 fallback identities remained at revision 1. No shared-state reset or remote
-write was performed. The natural-code probe notice
+runtime publish/adopt write was performed by this local replay; the separately
+delivered migration application is recorded above. The natural-code probe notice
 `clinical_master_publisher_full_type_hotfix_natural_collision_probes_ok` also
 passed for the exact chart-group, task-route, and species unique constraints;
 the local baseline had zero pre-existing lab-stage rows, while the replay
 fingerprint is written to preserve any pre-existing rows when present.
 
-The locally verified migration is handed to PR-010 as the exact remote
-candidate `supabase/migrations/20260823124500_clinical_master_publisher_full_type_hotfix.sql`
-(the remote application/readback sequence and migration SHA are owned by
-PR-010). This PR-011 work item remains local-only and does not claim that the
-remote migration, publisher, adopter, or smoke has run.
+The locally verified migration was delivered through PR #584 as the exact
+remote candidate
+`supabase/migrations/20260823124500_clinical_master_publisher_full_type_hotfix.sql`.
+PR-010 records the subsequent publisher/adopter, operational rollback smoke,
+and persistent synthetic-state readback; browser read-only login/workspace/
+catalog visibility remains pending and is not claimed.
 
 Sol's initial review disposition was `REJECT/MUST-FIX 3`. The three findings
-were corrected, and the final re-review returned `APPROVE/MUST-FIX 0`. Remote
-operation and Git delivery remain separate, unperformed steps owned by PR-010.
+were corrected, and the final re-review returned `APPROVE/MUST-FIX 0`. Git
+delivery and the exact remote migration gate are complete; publisher,
+adopter, and browser-read-only boundaries remain separately recorded in PR-010.
 
 ## Closeout fields
 
@@ -148,5 +162,7 @@ ESLint: PASS (focused Airtable/publisher adapter and PR-011 files)
 Docs check: PASS (917 docs/agent markdown files)
 Diff check: PASS (`git diff --check`)
 Safe local replay: PASS (direct reapply + publish/idempotency/v2 checks + rollback)
-Final status: implemented; Sol APPROVE/MUST-FIX 0; ready for scoped Git delivery
+Delivery PR: #584 (`886f37738397f70bce36866e04b3aee5d777546d`)
+Remote migration: `20260823124500` applied with required readback gates PASS
+Final status: completed/delivered; Sol APPROVE/MUST-FIX 0
 ```

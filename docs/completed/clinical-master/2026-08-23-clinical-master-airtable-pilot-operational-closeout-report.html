@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR Clinical Master Airtable pilot closeout</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 980px; margin: 0 auto; padding: 40px 24px 60px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 20px 22px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 5px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; overflow-wrap: anywhere; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 12px; margin-right: 6px; border-radius: 999px; background: #eaf7ee; color: #176b35; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      .warn { background: #fff8e6; color: #6d4b00; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">CLAiR Clinical Master / Airtable pilot / 2026-08-23</p>
+      <h1>임상 마스터 Airtable pilot 운영 closeout</h1>
+      <p>
+        승인된 synthetic 데이터로 Airtable 작성·export·publisher·workspace adoption과
+        rollback-only 운영 smoke를 닫았다. 지속 상태와 되돌린 운영 검증을 분리해
+        기록했으며, 실제 임상 콘텐츠의 의학적 검증이나 전체 제품 출시를 의미하지 않는다.
+      </p>
+      <span class="badge">상태: synthetic operational closeout complete</span>
+      <span class="badge warn">인증 browser read-only smoke는 pending</span>
+
+      <section>
+        <h2>핵심 결과</h2>
+        <table>
+          <tr><th>구분</th><th>확인된 내용</th></tr>
+          <tr><td>Airtable Base</td><td><code>1/1/107/107/5/13/17/12</code> rows: Release Drafts, Sources, Master Records, Names, Classification Paths, Lab Panel Items, Lab Order Profiles, Diagnosis Category Links.</td></tr>
+          <tr><td>Export / publisher</td><td>지원 record 83개, pilot order 30개. diagnosis 24개와 diagnosis-category link 12개는 publisher payload에서 제외.</td></tr>
+          <tr><td>지속 master/workspace 상태</td><td>Published master/release state와 <code>workspace-clinical-master-pilot-v1</code>를 지속 상태로 보존했다; catalog 31개, pending review 31개, lab item 14개, lab link 27개.</td></tr>
+          <tr><td>Release</td><td>v1 <code>847616e3…</code> / no. 5, v2 <code>98383567…</code> / no. 6. Publisher/adopter 상태는 지속 상태로 보존.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>전달 및 원격 검증</h2>
+        <ul>
+          <li>PR #584 merge <code>886f37738397f70bce36866e04b3aee5d777546d</code>와 migration <code>20260823124500</code>의 migration-history, 11-type constraint, function ACL/search path, six-row stage fingerprint gate가 통과했다.</li>
+          <li>PR-007은 당시 local verification 이후 PR #582 merge <code>a57553310581aa9d37c83dcba4d6ce2e2306351c</code>의 schema-only migration <code>20260823035126</code>과 PR #583 merge <code>3faa0bc342e07a4fb182732d7fd16d1551ba666b</code>의 history reconciliation을 거쳤다. Canonical migration과 comment-only alias <code>20260823063449</code>가 모두 적용됐고 category/diagnosis/link counts는 <code>0/0/0</code>이다.</li>
+          <li>PR #585 (<code>4994d561…</code>)의 creator-profile preservation migration <code>20260823140000</code>은 기존 synthetic admin profile을 보존했다.</li>
+          <li>PR #586 (<code>65c7227e…</code>)의 migration <code>20260823142511</code>, Release Check <code>32646206229</code>, Vercel deployment <code>dpl_BYmnrGkff9Uqwiq9DKTcMmxHo25v</code> READY/alias를 확인했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Rollback-only operational smoke</h2>
+        <ul>
+          <li>한 PostgreSQL transaction에서 <code>SET LOCAL ROLE authenticated</code>, 승인된 synthetic admin JWT claims, 기존 public authenticated RPC만 사용했다.</li>
+          <li>CBC order는 quantity 1, per-order, 55000; lab result 3개; fulfillment <code>completed</code>; billing은 55000 한 건이며 retry가 중복을 만들지 않았다.</li>
+          <li>Order Set count는 0이라 blocked로 기록했고 direct insert는 하지 않았다.</li>
+          <li>명시적 <code>ROLLBACK</code> 후 fresh connection residual rows는 모두 0이었다. CBC catalog는 pending/null price/revision 1/review 1로 유지됐고 protected/stage fingerprint도 변하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 경계</h2>
+        <ul>
+          <li>Credentialed browser login, target workspace visibility, catalog visibility, critical browser error 관찰은 아직 검증하지 않았다.</li>
+          <li>Browser/API write E2E, async, Realtime, notification effect는 주장하지 않는다.</li>
+          <li>Security Advisor는 실행했지만 기존 INFO/WARN이 남아 있어 clean 결과로 보고하지 않는다.</li>
+          <li>PR-007은 diagnosis schema-only foundation으로 유지되며 diagnosis rows나 diagnosis publisher/adoption은 포함하지 않는다. Pilot exclusion은 변하지 않는다.</li>
+          <li>실제 임상 콘텐츠 correctness, 법무/컴플라이언스, 전체 launch readiness는 별도 검증 범위다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>관련 문서</h2>
+        <ul>
+          <li><a href="../../work/clinical-master/CLINICAL-MASTER-PR-010-airtable-publish-adopt-production-smoke.md">PR-010 work item</a></li>
+          <li><a href="../../work/clinical-master/CLINICAL-MASTER-PR-011-publisher-full-type-hotfix-verification.md">PR-011 work item</a></li>
+          <li><a href="../../engineering/current-status.md">MVP current status</a></li>
+          <li><a href="../../engineering/data-model/clair-clinical-master-data-phase-1-db-spec.md">Clinical Master Phase 1 DB specification</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

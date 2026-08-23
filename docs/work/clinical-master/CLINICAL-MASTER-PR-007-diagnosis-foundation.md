@@ -23,9 +23,9 @@ persisted diagnosis.
 
 This slice creates no diagnosis rows, backfill, publisher replacement, release/
 version/review writes, workspace adoption, public diagnosis/API changes, chart
-or UI changes, Airtable/seed/care-guide changes, or remote database work. The
-existing Phase 1B-1 publisher remains unchanged and rejects `diagnosis_category`
-and `diagnosis` record types.
+or UI changes, or Airtable/seed/care-guide changes. Its remote delivery is
+schema-only; the existing Phase 1B-1 publisher remains unchanged and rejects
+`diagnosis_category` and `diagnosis` record types.
 
 ## Verification
 
@@ -41,13 +41,19 @@ and `diagnosis` record types.
   PR-007 migration reapply also succeeded, and the replay rerun passed with the
   same rollback and cleanup marker.
 - Existing Phase 1 A1/B1 publisher specs: 16/16 passed.
-- No remote database application or replay was performed; the replay rolled
-  back without retaining diagnosis rows, and publisher/Airtable/workspace/
-  chart/UI adoption remains out of scope.
+- At the time of this local verification, no remote database application or
+  replay was included; the replay rolled back without retaining diagnosis rows.
+- Subsequent schema-only delivery merged as PR #582 at
+  `a57553310581aa9d37c83dcba4d6ce2e2306351c` with migration `20260823035126`.
+  PR #583 then merged at `3faa0bc342e07a4fb182732d7fd16d1551ba666b` and
+  reconciled linked history: canonical `20260823035126` and comment-only alias
+  `20260823063449` are both applied. Remote category/diagnosis/link table
+  counts are `0/0/0`; publisher, workspace adoption, and pilot exclusion
+  remain unchanged.
 
 ## Next gate
 
-PR-008 is now the implemented, local-only authoring/export contract for the
+PR-008 is now the completed authoring/export contract for the
 reviewed synthetic diagnosis snapshot; it does not publish diagnosis rows or
 change the current SQL publisher. A later, separately approved diagnosis
 publisher slice must define publishable diagnosis payloads,

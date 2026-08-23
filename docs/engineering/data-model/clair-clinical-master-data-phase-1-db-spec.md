@@ -10,7 +10,7 @@ tags: [clinical-master-data, order-catalog, order-set, lab-panel, postgres, supa
 related_work: []
 supersedes: []
 superseded_by: []
-last_updated: 2026-08-21
+last_updated: 2026-08-23
 ---
 
 # CLAiR Clinical Master Data Phase 1 DB Specification
@@ -991,9 +991,53 @@ inactive revision 2 marked `구성 검토 필요`; the clinical lab catalog rend
 normally and the synthetic item was visible as `중지`. These checks establish
 the scoped release/runtime/permission boundary only. They do not establish
 clinical-content correctness, a full product smoke matrix, or Phase 2–5
-completion. The optional broader 38-case B1 matrix remains unclaimed, and
-legacy migration ledger drift (`39` local-only / `11` remote-only) remains a
-separate reconciliation risk.
+completion. The optional broader 38-case B1 matrix remains unclaimed. The
+`39` local-only / `11` remote-only ledger was the 2026-08-21 pre-change
+snapshot; it is superseded by the 2026-08-23 reconciliation at
+`170` local / `156` remote / `156` common / `0` remote-only / `14` pending
+local-only migrations.
+
+### 17.1.1 Airtable pilot and PR-007–PR-011 closeout (2026-08-23)
+
+PR-007 remains a schema-only private diagnosis foundation. Its original local
+verification had no remote operation; subsequent schema-only delivery merged as
+PR #582 at `a57553310581aa9d37c83dcba4d6ce2e2306351c` with migration
+`20260823035126`, followed by PR #583 at
+`3faa0bc342e07a4fb182732d7fd16d1551ba666b`, which reconciled linked history so
+canonical `20260823035126` and comment-only alias `20260823063449` are both
+applied. Remote category/diagnosis/link table counts are `0/0/0`; no diagnosis
+rows, diagnosis publisher, or workspace/chart adoption were added. The approved
+pilot payload keeps 24 diagnosis records and 12 diagnosis-category links
+excluded.
+
+PR-008 and PR-009 are completed within their exact authoring/export and adapter
+contracts. The approved synthetic Airtable Base readback is
+`1/1/107/107/5/13/17/12` for Release Drafts/Sources/Master Records/Names/
+Classification Paths/Lab Panel Items/Lab Order Profiles/Diagnosis Category
+Links. The locked payload contains 83 supported records and 30 orders.
+
+PR-011 was delivered through PR #584 merge
+`886f37738397f70bce36866e04b3aee5d777546d`; remote migration
+`20260823124500` passed migration-history, 11-type constraint, publisher
+function ACL/search-path, and six-row stage-fingerprint gates. PR-010's
+synthetic publisher/adopter closeout retains persistent master/release/workspace
+`workspace-clinical-master-pilot-v1`, releases v1 `847616e3…` / no. 5 and v2
+`98383567…` / no. 6, 31 catalog rows, 31 pending reviews, 14 lab items, and
+27 lab links. PR #585 (`4994d561…`) delivered creator-profile preservation
+migration `20260823140000`; PR #586 (`65c7227e…`) delivered migration
+`20260823142511`, Release Check `32646206229`, and Vercel deployment
+`dpl_BYmnrGkff9Uqwiq9DKTcMmxHo25v` READY on the production alias.
+
+The operational smoke was rollback-only and used one authenticated PostgreSQL
+transaction. CBC quantity 1/per-order/55000, three lab result rows, completed
+fulfillment, exactly one 55000 billing charge with stable retry, and
+master/workspace lineage passed. Order Set count was 0 and remained blocked
+without a direct insert. Fresh-connection residual rows were all 0; the CBC
+catalog row remained pending with null price/revision 1/review 1; protected
+fingerprints and the six-row stage hash were unchanged. Security Advisor ran,
+but pre-existing INFO/WARN findings remain and a clean result is not claimed.
+Credentialed browser login/workspace/catalog visibility remains pending; no
+browser/API write E2E, async, Realtime, or notification effects are claimed.
 
 ## 18. Deferred Decisions
 
@@ -1026,3 +1070,4 @@ separate reconciliation risk.
 | 2026-08-18 | First detailed phase-1 DB specification. Defines the minimum private master, workspace copy/update, lab panel, immutable Order Set revision, applied snapshot, RLS, migration, fixture, and verification contracts without implementing migrations or runtime changes. |
 | 2026-08-20 | Domain owner approved Option A for both Order Set range bases: continuous `[0,+infinity)` lower-inclusive/upper-exclusive coverage with contiguous rows and exactly one final open-ended bracket; B3 has no no-match runtime state. |
 | 2026-08-21 | Recorded scoped Phase 1 A1–B3 implementation completion, PR #572/#573/#574 merge lineage, C2/E hashes and bounded authenticated browser evidence. Clinical-content validation, Phase 2–5, the optional broader 38-case matrix, and migration-ledger reconciliation remain unclaimed or deferred. |
+| 2026-08-23 | Recorded the synthetic Airtable pilot Base/export, PR-007 bounded diagnosis state, PR-008/009 completion, PR-011 delivery, PR-010 publisher/adopter persistence, rollback-only operational smoke, deployment evidence, and the pending browser read-only boundary. |

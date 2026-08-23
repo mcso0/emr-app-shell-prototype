@@ -1,11 +1,12 @@
 ---
 id: "CLINICAL-MASTER-PR-008"
-status: "implemented"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
 target_pr: "Deterministic Airtable authoring/export contract"
 execution_boundary: "local-only"
-completion_report: "docs/completed/clinical-master/2026-08-23-clinical-master-pr-008-airtable-authoring-export-contract-report.html"
+completion_report: "docs/completed/clinical-master/2026-08-23-clinical-master-airtable-pilot-operational-closeout-report.html"
+implementation_report: "docs/completed/clinical-master/2026-08-23-clinical-master-pr-008-airtable-authoring-export-contract-report.html"
 source_docs:
   - "docs/engineering/data-model/clair-clinical-master-airtable-authoring-export-contract.md"
   - "docs/engineering/data-model/clair-clinical-master-data-phase-1-db-spec.md"
@@ -16,10 +17,11 @@ updated: "2026-08-23"
 
 ## Status
 
-Implemented and verified locally. This work item defines and tests the
-`clinical-master-airtable-authoring/v1` validator/normalizer. It is an
-authoring contract only; no actual Airtable Base or Airtable data was created,
-no export was published, and no remote state was changed.
+Implemented and completed within the approved synthetic boundary. This work
+item defines and tests the `clinical-master-airtable-authoring/v1`
+validator/normalizer. The approved Airtable pilot then supplied the reviewed
+Base/export evidence consumed by PR-009 and PR-010; it contains synthetic
+structural data only and is not clinical-content validation.
 
 ## Exact scope
 
@@ -62,7 +64,8 @@ export contract](../../engineering/data-model/clair-clinical-master-airtable-aut
 ## Out of scope
 
 - Creating or configuring an Airtable Base, tables, views, formulas, lookups,
-  records, credentials, or real clinical source data.
+  records, credentials, or real clinical source data as part of this code
+  slice. The approved synthetic pilot Base/readback is recorded in PR-010.
 - Publishing an export, inserting master rows, release/version/review rows,
   or changing any database schema, migration, RLS policy, seed, or remote DB.
 - Replacing or extending the current SQL publisher. In particular,
@@ -103,15 +106,19 @@ export contract](../../engineering/data-model/clair-clinical-master-airtable-aut
 - `npm run security:secrets` — passed; 3,619 tracked files scanned.
 - `npm run docs:check` — passed for this documentation slice.
 - `git diff --check` — passed.
+- Approved synthetic Airtable pilot readback — exactly `1/1/107/107/5/13/17/12`
+  rows for Release Drafts/Sources/Master Records/Names/Classification Paths/
+  Lab Panel Items/Lab Order Profiles/Diagnosis Category Links.
+- Locked export handoff — 83 supported records and 30 orders; 24 diagnosis
+  records and 12 diagnosis-category links remain excluded from the publisher.
 
-The focused fixture is synthetic and structural. These checks prove the local
-validator/normalizer contract only; they do not prove Airtable connectivity,
-an Airtable Base, a published release, database persistence, or runtime
-adoption.
+The focused fixture and pilot Base are synthetic and structural. These checks
+prove the authoring/export contract and its reviewed handoff only; they do not
+prove clinical-content correctness, a clinical review, or launch readiness.
 
 ## Implementation result
 
 The server-only core has no Airtable SDK, database, migration, route, UI, or
 publisher dependency. Diagnosis authoring data remains intentionally separated
-from the later diagnosis publisher gate. The current SQL publisher was not
-edited.
+from the diagnosis publisher gate and remains excluded from the current
+publisher payload. The current SQL publisher was not edited by PR-008.
