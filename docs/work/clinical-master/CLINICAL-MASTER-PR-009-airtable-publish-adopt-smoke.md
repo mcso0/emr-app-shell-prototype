@@ -1,6 +1,6 @@
 ---
 id: "CLINICAL-MASTER-PR-009"
-status: "implemented"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
 target_pr: "Airtable authoring snapshot to current publisher adapter"
@@ -12,8 +12,10 @@ updated: "2026-08-23"
 
 ## Status
 
-Implemented as a local-only adapter and CLI. This slice does not read Airtable,
-write Supabase, change a migration, or alter the existing SQL publisher.
+Implemented and completed as a local-only adapter and CLI. The adapter did not
+read Airtable or write Supabase itself, but its locked pilot result was consumed
+by the approved publisher/adopter run recorded in PR-010. The existing SQL
+publisher implementation remained unchanged by this slice.
 
 ## What changed
 
@@ -53,18 +55,28 @@ serialized result.
 - `npx tsc --noEmit --pretty false` — passed.
 - Targeted ESLint for the adapter, CLI, and focused spec — passed.
 - `node --experimental-strip-types scripts/clinical-master-airtable-publish-adapter.ts tests/fixtures/clinical-master-airtable-authoring-export.fixture.json /tmp/clinical-master-adapter-output.json` — passed; fixture output was 13 supported records, 3 excluded diagnosis records, and 1 excluded link.
-- Existing PR-008 and Phase 1 tests remain the next regression gate before human review.
+- Approved pilot handoff — the Airtable Base readback was
+  `1/1/107/107/5/13/17/12`; the locked adapter/publisher payload contained 83
+  supported records and 30 orders, excluding 24 diagnosis records and 12
+  diagnosis-category links.
+- PR-010 consumed the locked result for persistent publisher/adopter state and
+  bounded synthetic operational smoke; browser read-only login/workspace/
+  catalog visibility remains pending and is not claimed here.
+- Existing PR-008 and Phase 1 tests remain the regression evidence for this
+  completed adapter slice.
 
 ## Out of scope and caveats
 
 - No Airtable connector/reader, credentials, remote export, migration, DB
   publish, workspace adoption, runtime UI, diagnosis publisher, Order Set
-  publisher, or pricing/weight-tier authority was added.
+  publisher, or pricing/weight-tier authority was added to this adapter slice;
+  the separate approved publish/adopt evidence is owned by PR-010.
 - The CLI requires Node 23+ `--experimental-strip-types`; it is intentionally
   a local operator utility rather than a package runtime dependency.
-- The adapter proves payload shape and exclusion reporting only. A separate
-  approved slice must connect Airtable extraction to this adapter, invoke the
-  current publisher, and run authenticated synthetic adoption/smoke checks.
+- The adapter proves deterministic payload shape and exclusion reporting. The
+  PR-010 closeout records the separate authenticated synthetic publisher,
+  adopter, and rollback-only operational smoke evidence; it does not turn the
+  adapter into an Airtable integration.
 
 ## Files
 

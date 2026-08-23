@@ -130,15 +130,58 @@ foundation reservation: the additive migration adds the category, diagnosis,
 and diagnosis-to-disease-group link tables with typed guards, RLS/no-policy
 boundaries, explicit revokes, and deferred one-primary completeness. No
 diagnosis rows, publisher replacement, release/version/review writes,
-workspace/chart/public diagnosis adoption, or remote database application or
-replay are claimed; an isolated temporary local Supabase project (separate
-from the user's existing local database) freshly applied all 158 migrations,
-including PR-007, and its rollback-only replay passed the `BEGIN`, `SET
-CONSTRAINTS`, `DO`, `ROLLBACK`, and
-`clinical_master_diagnosis_foundation_replay_cleanup_ok` checks. A direct
+workspace/chart/public diagnosis adoption remain unclaimed; an isolated
+temporary local Supabase project (separate from the user's existing local
+database) freshly applied all 158 migrations, including PR-007, and its
+rollback-only replay passed the `BEGIN`, `SET CONSTRAINTS`, `DO`, `ROLLBACK`,
+and `clinical_master_diagnosis_foundation_replay_cleanup_ok` checks. A direct
 PR-007 migration reapply and replay rerun passed the same rollback/cleanup
-checks. The existing B1 publisher still rejects diagnosis record types, and
-publisher/Airtable/workspace/chart/UI adoption remains out of scope.
+checks. At the time of that local verification, no remote work was included.
+Subsequently, PR #582 merged at
+`a57553310581aa9d37c83dcba4d6ce2e2306351c` and delivered the schema-only
+migration `20260823035126`; PR #583 merged at
+`3faa0bc342e07a4fb182732d7fd16d1551ba666b` and reconciled linked history so
+canonical `20260823035126` and comment-only alias `20260823063449` are both
+applied. Remote category/diagnosis/link table counts are `0/0/0`. The existing
+B1 publisher still rejects diagnosis record types, and publisher/adoption/
+pilot exclusion remains unchanged.
+
+### Airtable pilot closeout (2026-08-23)
+
+PR-008 and PR-009 are completed within their authoring/export and deterministic
+adapter boundaries. The approved synthetic Airtable Base readback is exactly
+`1/1/107/107/5/13/17/12` for Release Drafts/Sources/Master Records/Names/
+Classification Paths/Lab Panel Items/Lab Order Profiles/Diagnosis Category
+Links. The locked pilot payload contains 83 supported records and 30 orders;
+24 diagnosis records and 12 diagnosis-category links remain excluded. PR-007
+stays schema-only with no diagnosis rows; its remote schema-only delivery and
+`0/0/0` category/diagnosis/link readback do not change publisher/adoption or the
+pilot exclusion.
+
+PR-011 is completed/delivered through PR #584 merge
+`886f37738397f70bce36866e04b3aee5d777546d`; remote migration
+`20260823124500` passed migration-history, constraint, function ACL/search-path,
+and six-row stage-fingerprint gates. PR-010's synthetic publisher/adopter
+closeout is completed: persistent workspace
+`workspace-clinical-master-pilot-v1`, releases v1 `847616e3…` / no. 5 and v2
+`98383567…` / no. 6, 31 catalog rows, 31 pending reviews, 14 lab items, and
+27 lab links. Persistent master/release state is retained alongside the
+workspace/catalog state. PR #585 (`4994d561…`) delivered creator-profile preservation
+migration `20260823140000`; PR #586 (`65c7227e…`) delivered migration
+`20260823142511`, Release Check `32646206229`, and Vercel deployment
+`dpl_BYmnrGkff9Uqwiq9DKTcMmxHo25v` READY on the production alias.
+
+The rollback-only operational smoke used one authenticated PostgreSQL
+transaction and passed: CBC quantity 1/per-order/55000, three lab result rows,
+completed fulfillment, exactly one 55000 billing charge with stable retry,
+master/workspace lineage, and Order Set count 0 explicitly blocked without a
+direct insert. Fresh-connection residual rows were all 0; the CBC catalog row
+remained pending with null price/revision 1/review 1; protected fingerprints
+and the six-row stage hash were unchanged. Security Advisor ran, but
+pre-existing INFO/WARN findings remain, so a clean security result is not
+claimed. Credentialed browser login, target-workspace visibility, and catalog
+visibility remain pending; no browser/API write E2E, async, Realtime, or
+notification effects are claimed.
 
 Authenticated synthetic browser evidence for `vet-cheongdam@clair.local` showed
 the Order Set page without a read error and four rows, including synthetic
@@ -166,7 +209,7 @@ and the [Phase 1 closeout report](../completed/clinical-master/2026-08-21-clinic
 
 Do not claim these as done without a scoped work item and verification evidence:
 
-* remote Supabase validation
+* broad remote Supabase validation outside the scoped synthetic Airtable pilot
 * production-demo deploy and production monitoring
 * real hospital/customer data import or storage
 * final clinical/business domain RLS replay for every live table
