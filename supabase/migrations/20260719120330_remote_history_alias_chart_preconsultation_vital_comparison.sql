@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260719000000_chart_preconsultation_vital_comparison.sql under remote version 20260719120330.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

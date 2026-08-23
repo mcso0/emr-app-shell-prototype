@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260723223000_hospital_settings_audit_event_types.sql under remote version 20260723203008.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

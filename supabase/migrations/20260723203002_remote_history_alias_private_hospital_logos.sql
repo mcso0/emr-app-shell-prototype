@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260723120000_private_hospital_logos.sql under remote version 20260723203002.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260821063113_clinical_master_phase1_permission_source_assignment_precedence.sql under remote version 20260821071846.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260823035126_clinical_master_diagnosis_foundation.sql under remote version 20260823063449.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

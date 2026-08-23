@@ -1,0 +1,3 @@
+-- Remote-history compatibility alias.
+-- The linked project recorded canonical 20260723110000_workspace_hospital_profiles.sql under remote version 20260723202954.
+-- Keep this file comment-only so fresh local replay executes the behavior once.
