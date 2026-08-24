@@ -10,7 +10,7 @@ import {
   handleWorkspaceRoleCatalogGet,
   handleWorkspaceRoleCatalogMutation,
   type WorkspaceRoleCatalogRouteDependencies,
-} from "@/app/api/workspaces/[workspaceId]/role-permission-management/route";
+} from "@/app/api/workspaces/[workspaceId]/role-permission-management/route-core";
 import type { ServerSessionReaderResult } from "@/features/auth/server-session-contract";
 
 const migrationsDirectory = join(process.cwd(), "supabase/migrations");

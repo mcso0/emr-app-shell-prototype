@@ -12,7 +12,7 @@ import type {
   SessionWorkspaceInvitation,
   SessionWorkspaceMembership,
 } from "../src/features/auth/workspace-session";
-import type { MembershipRouteDependencies } from "../src/app/api/workspaces/[workspaceId]/memberships/route";
+import type { MembershipRouteDependencies } from "../src/app/api/workspaces/[workspaceId]/memberships/route-core";
 
 type PermissionMode = "authorized" | "denied" | "fail";
 

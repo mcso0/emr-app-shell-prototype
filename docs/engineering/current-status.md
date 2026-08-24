@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-08-23
+Updated: 2026-08-24
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -124,6 +124,19 @@ readback recorded runtime rows `false/0`, lab-result write requests `0`, audit
 revision `2` with `needs_composition_review=true`, durable set revisions/items `2/4`, and
 creation/save request histories `1/1`. The permission remote alias
 `20260821071846` maps to canonical local migration `20260821063113`.
+
+Operational Master V3 is now applied on synthetic/demo Supabase project
+`qmerxgzrwaaahpkhjqlc`. The release-scoped adoption migration and atomic
+publish/adopt/pricing transaction completed as published release `9`
+(`230` manifest owners / `120` orders, scope `payload`, fingerprint
+`0225bc6714210cfe663bded97fe6b3cbf76fedf99dce1540a302c0fd46235893`).
+Pilot, Cheongdam, and clair-demo each have exactly `120` V3 catalog rows with
+positive pricing and zero pending reviews; Cheongdam preserves 11 active custom
+rows and pauses the 11 reviewed colliding V3 masters, while the foreign control
+remains empty and unchanged. Authenticated production browser readback verified
+the Cheongdam custom/master CBC collision state. This records DB/data readback
+on the existing production app only; no new application deployment is claimed,
+and Clinical Master Phases 2–5 remain out of scope.
 
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,
