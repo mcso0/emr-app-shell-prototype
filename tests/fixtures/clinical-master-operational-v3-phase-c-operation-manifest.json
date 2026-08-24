@@ -1,0 +1,1348 @@
+{
+  "schemaVersion": "clinical-master-phase-c-operation-v1",
+  "status": "commit_candidate_pending_human_review",
+  "writeAllowed": false,
+  "mutationsPerformed": 0,
+  "remoteWritesPerformed": false,
+  "authorityBoundary": "synthetic-only; read-only remote preflight; local Docker rollback rehearsal only",
+  "inputs": {
+    "projectRef": "qmerxgzrwaaahpkhjqlc",
+    "adapterFixture": "tests/fixtures/clinical-master-operational-v3-adapter-output.json",
+    "adapterFixtureSha256": "ee7c8d0f379c71ac675ad90d9e92abfd17da798785b4e0ebd566c6e8394e8697",
+    "adapterAdoptionScope": "payload",
+    "pricingFixture": "tests/fixtures/clinical-master-operational-v3-pricing-adoption.json",
+    "pricingFixtureSha256": "7b0e273f9809e9febc2d74a9cc332f1a6fe4866bc112182da58cfba6a9e0ab2b",
+    "airtableWriteManifest": "tests/fixtures/clinical-master-operational-v3-airtable-write-manifest.json",
+    "airtableWriteManifestSha256": "19951ef0fcf0831c0aa542def2be7618b99d8a8991a7e72373426c630d553f94",
+    "airtableReadbackFixture": "tests/fixtures/clinical-master-airtable-operational-v3-current-readback.json",
+    "airtableReadbackFixtureSha256": "752297746c2a9ff147fe40caaece8d194b0e61c4cc82cc00c6faee73229daf89",
+    "airtableFinalReadbackFixture": "tests/fixtures/clinical-master-airtable-operational-v3-final-readback.json",
+    "airtableFinalReadbackFixtureSha256": "53b8f07d84bd906925dc3cb5ec891470ee5dd23d88c30a7de046607c7518cc50",
+    "airtableDeltaManifest": "tests/fixtures/clinical-master-operational-v3-airtable-delta-manifest.json",
+    "airtableDeltaManifestSha256": "b56bea202a0cc37d7a0a0b47a5b8042bac524b4ce24313b9d23c1f1d4a946433",
+    "remotePreflightQuery": "supabase/snippets/clinical_master_operational_v3_phase_c_preflight.sql",
+    "remotePreflightQuerySha256": "6faf29e765a129c75e7a767331228262ca4ace969ccbba6307612d4a888e57ca",
+    "rollbackSqlTemplate": "supabase/snippets/clinical_master_operational_v3_phase_c_rollback.sql",
+    "rollbackSqlTemplateSha256": "f5d940984248f38ce0c8cb1b0a112b2019e06fd3eeb8c8c340d448183bbbaa95",
+    "releaseScopedAdoptionMigration": "supabase/migrations/20260824091724_clinical_master_release_scoped_workspace_adoption.sql",
+    "releaseScopedAdoptionMigrationSha256": "4699bbd82b0e5af6a40066750f6876110cf128b1e7d546f187aa10a1ed6c9cd2",
+    "releaseScopedAdoptionSpec": "tests/clinical-master-release-scoped-workspace-adoption.spec.ts",
+    "releaseScopedAdoptionSpecSha256": "2795964826d9193b9f3edcf95c54aa6109b00843326f3eac133afc9145b4a300",
+    "releaseScopedAdoptionReplay": "supabase/snippets/clinical_master_release_scoped_workspace_adoption_replay.sql",
+    "releaseScopedAdoptionReplaySha256": "30abf999b861b11d2dff7947105fcaa0da592233b57e93cd2434959220e259be",
+    "airtableCasBaselineSha256": "f3ba11edfc20ed0244ca4cb9c5bf0590313a173e2c07478edd35d05fcb059a4f",
+    "payloadRecordCount": 230,
+    "orderCount": 120,
+    "categoryCounts": {
+      "consultation": 12,
+      "preventive": 12,
+      "lab": 30,
+      "imaging": 12,
+      "treatment": 18,
+      "dispensing": 16,
+      "surgery/anesthesia": 8,
+      "inpatient": 6,
+      "emergency": 3,
+      "dental": 2,
+      "certificate/misc": 1
+    },
+    "publisherSourceFingerprint": "0225bc6714210cfe663bded97fe6b3cbf76fedf99dce1540a302c0fd46235893",
+    "publisherSourceFingerprintDerivation": {
+      "canonicalizer": "private.clinical_master_canonicalize_payload(jsonb)",
+      "serialization": "PostgreSQL jsonb ::text UTF-8",
+      "digest": "sha256",
+      "replayEvidence": "supabase/snippets/clinical_master_release_scoped_workspace_adoption_replay.sql",
+      "scopeEffect": "explicit adoptionScope=payload is included; omitted scope preserves historical canonical bytes"
+    },
+    "pricingKeyPriceSha256": "35fa6f6ec16f23c43a774b0f8abe03fa43fa8bfd6962278e0a76469580e05abf"
+  },
+  "preflight": {
+    "remoteReadOnlyBaseline": {
+      "projectRef": "qmerxgzrwaaahpkhjqlc",
+      "releases": {
+        "count": 4,
+        "maxReleaseNo": 6,
+        "latestSourceFingerprint": "85cb291602f3d177ae11a075b4203bdf9e7cb9a3ac68c5a8245a5a90f739b7c7",
+        "releaseNoSequence": {
+          "name": "master.master_releases_release_no_seq",
+          "lastValue": 8,
+          "isCalled": true,
+          "nextReleaseNo": 9,
+          "exactAtExecution": true
+        },
+        "fullFingerprintRequiredAtExecution": true,
+        "note": "Exact read-only value captured after rollback rehearsals; sequence state is nontransactional, so the operator must rerun preflight and repin it immediately before any future candidate."
+      },
+      "masterRecordTypeCounts": {
+        "chart_group": 6,
+        "clinical_action": 12,
+        "lab_panel": 5,
+        "lab_test": 14,
+        "order": 31,
+        "order_category": 8,
+        "result_input_type": 4,
+        "species": 2,
+        "specimen_type": 5,
+        "task_route": 6,
+        "unit": 8
+      },
+      "labPublishStageCount": 172,
+      "labPublishStageFingerprint": "eac749d40ab0f0e88f9dabed2a5123b85933367d3fae4a3828ad37893e1a45c4",
+      "catalogFingerprints": {
+        "workspace-clinical-master-pilot-v1": {
+          "rowCount": 31,
+          "fingerprint": "5fe7ba9e93a045076157a77e5c852a5712660f99a0d2afbb3064a143c7586de0",
+          "fullFingerprintRequiredAtExecution": true
+        },
+        "workspace-clair-cheongdam": {
+          "rowCount": 13,
+          "fingerprint": "82b9b2a3e9722093a65709a5a9dbdff19f709a8c00616a8203ec0b55f7d1d3c4",
+          "fullFingerprintRequiredAtExecution": true
+        },
+        "clair-demo": {
+          "rowCount": 19,
+          "fingerprint": "c195d802a07ef3f820aed21809bc7d7bf84fa5013ed4e98e4951e64f5242bcf1",
+          "fullFingerprintRequiredAtExecution": true
+        },
+        "clair-foreign-demo": {
+          "rowCount": 0,
+          "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "fullFingerprintRequiredAtExecution": true
+        }
+      }
+    },
+    "failClosedOnAnyMismatch": true,
+    "requiredChecks": [
+      "project ref and approved release/source payload locks",
+      "release count/max/fingerprint, release-number sequence name/last_value/is_called, and supported master type counts",
+      "stage count plus per-existing-release stage fingerprint",
+      "supported master identity and pre-v3 version/review history fingerprints",
+      "pre-v3 workspace order/lab update history fingerprints",
+      "workspace catalog row counts/fingerprints and foreign negative-control fingerprint",
+      "foreign catalog, lab, update-ledger, notification, and audit fingerprints",
+      "read-only query output for the full latest-release plus four workspace catalog fingerprints",
+      "publisher/adopter/catalog/review function signatures, owner, security definer, fixed search_path, and ACL",
+      "required named constraints and source-lineage indexes",
+      "active hospital_admin membership selected deterministically per target without printing user IDs",
+      "selected actor has service_catalog:manage and lab resolver has fixed search_path with anon/service_role denied"
+    ]
+  },
+  "rpcContracts": {
+    "publisher": {
+      "signature": "private.publish_clinical_master_release(jsonb,uuid)",
+      "securityBoundary": "private; effective EXECUTE denied for anon, authenticated, and service_role"
+    },
+    "adopter": {
+      "signature": "private.clair_adopt_master_release_to_workspace(text,uuid)",
+      "securityBoundary": "private; effective EXECUTE denied for anon, authenticated, and service_role"
+    },
+    "catalogWriter": {
+      "signature": "public.clair_update_order_catalog_item(text,text,integer,jsonb)",
+      "securityBoundary": "authenticated only; CAS revision"
+    },
+    "orderReviewResolver": {
+      "signature": "public.clair_resolve_workspace_master_update(text,uuid,integer,text)",
+      "securityBoundary": "authenticated only; accept_source/dismiss"
+    },
+    "labReviewResolver": {
+      "signature": "public.clair_resolve_workspace_lab_definition_update(text,uuid,uuid,integer,text)",
+      "securityBoundary": "authenticated only; accept/reject"
+    }
+  },
+  "authenticatedExecution": {
+    "actorSelection": "active hospital_admin with owner/admin role precedence, then created_at/user_id; user IDs are never printed",
+    "claimKeys": [
+      "request.jwt.claim.sub",
+      "request.jwt.claims"
+    ],
+    "claimShape": "{sub: selected actor UUID, role: authenticated}",
+    "roleBoundary": "set local role authenticated only for each public RPC; restore postgres role and caller claims after every call and before rollback"
+  },
+  "publishPlan": {
+    "releaseKey": "cm.release.airtable.operational-master.v3",
+    "adoptionScope": "payload",
+    "recordCount": 230,
+    "sourceFingerprint": "0225bc6714210cfe663bded97fe6b3cbf76fedf99dce1540a302c0fd46235893",
+    "sourceFingerprintPolicy": "runtime publisher result and database canonicalizer digest must equal this exact replay-verified PostgreSQL jsonb fingerprint",
+    "calls": [
+      "publish once",
+      "retry exact identical payload once; require same releaseId/releaseNo/sourceFingerprint/recordCount and idempotent=true"
+    ],
+    "releaseNo": "derive as preflight releaseNoSequence.lastValue + 1; require it to be greater than maxReleaseNo and unique; fail if sequence or release baseline changes",
+    "preserve": [
+      "all existing master_records, versions, review events, releases, and pre-existing stage rows"
+    ]
+  },
+  "adoptionPlan": {
+    "allowlist": [
+      "workspace-clinical-master-pilot-v1",
+      "workspace-clair-cheongdam",
+      "clair-demo"
+    ],
+    "excluded": [
+      {
+        "workspaceId": "clair-foreign-demo",
+        "policy": "read_only_pre_post_fingerprint_no_write"
+      }
+    ],
+    "transactionBoundary": "persistent candidate uses one top-level atomic transaction with three ordered workspace logical stop-on-error blocks; any failure aborts all central and workspace writes, so cross-workspace partial commit is impossible",
+    "sequence": [
+      "private payload-scoped adoption using the persisted release owner scope",
+      "price all 120 payload orders through the public authenticated CAS RPC",
+      "resolve the exact payload-linked pending/new review row at the current item/master revision through the public authenticated resolver with a fresh CAS/readback",
+      "require version-backed accepted/new coverage for every payload order, including legacy v2-held rows, and reject any linked pending row outside the exact current-source join",
+      "activate all 120 payload master orders through the public authenticated CAS RPC",
+      "pause only the 11 reviewed Cheongdam collision master rows",
+      "assert custom and lineage/lab/audit invariants"
+    ],
+    "orderReviewBoundary": "one strict review pass per workspace: pending/new rows are eligible only when item/source/master identity, source revision, previous/workspace snapshot nullability, independently published update and held-version releases, held releaseNo <= update releaseNo <= v3 releaseNo, exact source projection/fingerprint, and positive price all match; update release identity is never required to equal the held version release; legacy v2-held payload rows remain eligible, while the nonpayload legacy initial and metabolic rows are excluded from payload adoption and left pending",
+    "preActivationReviewCoverage": "every payload catalog must resolve to the exact current source revision and fingerprint; an accepted actor/time-bearing update_type=new row must be version-backed at the current item/master revision with separate published update/version releases ordered held <= update <= v3, the exact immutable version snapshot, resolvedAt and resolved actor evidence, at most one eligible pending row may exist, and no linked pending update may remain; missingAccepted and pendingLinked diagnostics remain explicit; legacy nonpayload rows are fingerprinted before/after and must remain untouched",
+    "finalCounts": "derive from live preflight rows, lineage, collision map, and RPC results; never assume 120 total catalog rows"
+  },
+  "collisionPolicy": {
+    "matching": [
+      "exact normalized display-name match",
+      "reviewed semantic equivalence map below"
+    ],
+    "customWins": true,
+    "deleteCustomRows": false,
+    "existingMasterLineage": "update in place by source_master_record_id; never create a second active choice for the same master key",
+    "reviewedRules": [
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-consult-first",
+        "masterKey": "cm.order.consult.first-visit",
+        "expectedCustomName": "초진 진찰",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-consult-revisit",
+        "masterKey": "cm.order.consult.followup",
+        "expectedCustomName": "재진 진찰",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-dispensing-oral-basic",
+        "masterKey": "cm.order.dispensing.oral",
+        "expectedCustomName": "경구약 조제",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-imaging-us-abdomen",
+        "masterKey": "cm.order.imaging.abdominal-ultrasound",
+        "expectedCustomName": "복부 초음파",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-lab-cbc",
+        "masterKey": "cm.order.lab.panel.cbc-basic",
+        "expectedCustomName": "CBC 혈구검사",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-lab-chem10",
+        "masterKey": "cm.order.lab.panel.chemistry-basic",
+        "expectedCustomName": "혈액화학 10종",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-lab-ua",
+        "masterKey": "cm.order.lab.panel.urinalysis",
+        "expectedCustomName": "요검사",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-treatment-ear-clean",
+        "masterKey": "cm.order.treatment.ear-cleaning",
+        "expectedCustomName": "귀 세정",
+        "match": "exact_normalized_name"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-treatment-fluid-sc",
+        "masterKey": "cm.order.synthetic.treatment-02",
+        "expectedCustomName": "피하수액",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-vaccine-core",
+        "masterKey": "cm.order.synthetic.preventive-01",
+        "expectedCustomName": "종합백신",
+        "match": "reviewed_semantic_equivalence"
+      },
+      {
+        "workspaceId": "workspace-clair-cheongdam",
+        "customRowId": "cd-hospitalization-day",
+        "masterKey": "cm.order.synthetic.inpatient-01",
+        "expectedCustomName": "입원 1일",
+        "match": "reviewed_semantic_equivalence"
+      }
+    ],
+    "pauseOnly": "newly adopted v3 master rows that map to a preserved workspace_custom row"
+  },
+  "legacyNonPayloadGuard": {
+    "masterKey": "cm.order.consult.initial",
+    "policy": "capture exact item/version/name/source/type/species and all linked update rows before adoption; require identical post fingerprint and leave any pending legacy update unresolved",
+    "workspaceScope": "all allowlisted workspaces where the legacy row exists"
+  },
+  "freshKeyPreflightAbsence": {
+    "masterKey": "cm.order.consult.first-visit",
+    "requireAbsentBeforePublish": true,
+    "surfaces": [
+      "Airtable Master Records",
+      "central master.master_records",
+      "allowlisted order_catalog_items",
+      "allowlisted workspace_master_updates",
+      "workspace pricing",
+      "collision map",
+      "Order Set references"
+    ],
+    "postPublish": "exactly one canonical order master row at revision 1 with a published v3 version snapshot; all 120 v3 order catalogs resolve to the fresh/current payload key set"
+  },
+  "pricingPlan": {
+    "orderCount": 120,
+    "totalSyntheticWorkspacePriceKrw": 5529073,
+    "amountPolicy": "positive integer KRW; category base + category serial; workspace fixture only",
+    "priceRows": [
+      {
+        "masterKey": "cm.order.consult.followup",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 28001
+      },
+      {
+        "masterKey": "cm.order.consult.first-visit",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 28002
+      },
+      {
+        "masterKey": "cm.order.consult.preventive-cat",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 32001
+      },
+      {
+        "masterKey": "cm.order.consult.preventive-dog",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 32002
+      },
+      {
+        "masterKey": "cm.order.dispensing.oral",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 52001
+      },
+      {
+        "masterKey": "cm.order.dispensing.topical",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 52002
+      },
+      {
+        "masterKey": "cm.order.imaging.abdominal-radiography",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 42001
+      },
+      {
+        "masterKey": "cm.order.imaging.abdominal-ultrasound",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 42002
+      },
+      {
+        "masterKey": "cm.order.imaging.chest-radiography",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 42003
+      },
+      {
+        "masterKey": "cm.order.imaging.echocardiography",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 4,
+        "syntheticWorkspacePriceKrw": 42004
+      },
+      {
+        "masterKey": "cm.order.lab.panel.cbc-basic",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 36001
+      },
+      {
+        "masterKey": "cm.order.lab.panel.chemistry-basic",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 36002
+      },
+      {
+        "masterKey": "cm.order.lab.panel.fecal",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 36003
+      },
+      {
+        "masterKey": "cm.order.lab.panel.urinalysis",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 4,
+        "syntheticWorkspacePriceKrw": 36004
+      },
+      {
+        "masterKey": "cm.order.lab.test.cbc-hct",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 5,
+        "syntheticWorkspacePriceKrw": 36005
+      },
+      {
+        "masterKey": "cm.order.lab.test.cbc-plt",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 6,
+        "syntheticWorkspacePriceKrw": 36006
+      },
+      {
+        "masterKey": "cm.order.lab.test.cbc-wbc",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 7,
+        "syntheticWorkspacePriceKrw": 36007
+      },
+      {
+        "masterKey": "cm.order.lab.test.chem-alp",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 8,
+        "syntheticWorkspacePriceKrw": 36008
+      },
+      {
+        "masterKey": "cm.order.lab.test.chem-alt",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 9,
+        "syntheticWorkspacePriceKrw": 36009
+      },
+      {
+        "masterKey": "cm.order.lab.test.chem-bun",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 10,
+        "syntheticWorkspacePriceKrw": 36010
+      },
+      {
+        "masterKey": "cm.order.lab.test.chem-creatinine",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 11,
+        "syntheticWorkspacePriceKrw": 36011
+      },
+      {
+        "masterKey": "cm.order.lab.test.chem-glucose",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 12,
+        "syntheticWorkspacePriceKrw": 36012
+      },
+      {
+        "masterKey": "cm.order.lab.test.chem-total-protein",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 13,
+        "syntheticWorkspacePriceKrw": 36013
+      },
+      {
+        "masterKey": "cm.order.lab.test.fecal-microscopy",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 14,
+        "syntheticWorkspacePriceKrw": 36014
+      },
+      {
+        "masterKey": "cm.order.lab.test.giardia-antigen",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 15,
+        "syntheticWorkspacePriceKrw": 36015
+      },
+      {
+        "masterKey": "cm.order.lab.test.ua-sediment",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 16,
+        "syntheticWorkspacePriceKrw": 36016
+      },
+      {
+        "masterKey": "cm.order.lab.test.ua-strip",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 17,
+        "syntheticWorkspacePriceKrw": 36017
+      },
+      {
+        "masterKey": "cm.order.treatment.ear-cleaning",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 48001
+      },
+      {
+        "masterKey": "cm.order.treatment.nail-trimming",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 48002
+      },
+      {
+        "masterKey": "cm.order.treatment.wound-cleaning",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 48003
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-01",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 28003
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-02",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 4,
+        "syntheticWorkspacePriceKrw": 28004
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-03",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 5,
+        "syntheticWorkspacePriceKrw": 28005
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-04",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 6,
+        "syntheticWorkspacePriceKrw": 28006
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-05",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 7,
+        "syntheticWorkspacePriceKrw": 28007
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-06",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 8,
+        "syntheticWorkspacePriceKrw": 28008
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-07",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 9,
+        "syntheticWorkspacePriceKrw": 28009
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-08",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 10,
+        "syntheticWorkspacePriceKrw": 28010
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-09",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 11,
+        "syntheticWorkspacePriceKrw": 28011
+      },
+      {
+        "masterKey": "cm.order.synthetic.consultation-10",
+        "researchCategory": "consultation",
+        "categoryPriceBase": 28000,
+        "categoryPriceSerial": 12,
+        "syntheticWorkspacePriceKrw": 28012
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-01",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 32003
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-02",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 4,
+        "syntheticWorkspacePriceKrw": 32004
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-03",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 5,
+        "syntheticWorkspacePriceKrw": 32005
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-04",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 6,
+        "syntheticWorkspacePriceKrw": 32006
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-05",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 7,
+        "syntheticWorkspacePriceKrw": 32007
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-06",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 8,
+        "syntheticWorkspacePriceKrw": 32008
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-07",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 9,
+        "syntheticWorkspacePriceKrw": 32009
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-08",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 10,
+        "syntheticWorkspacePriceKrw": 32010
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-09",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 11,
+        "syntheticWorkspacePriceKrw": 32011
+      },
+      {
+        "masterKey": "cm.order.synthetic.preventive-10",
+        "researchCategory": "preventive",
+        "categoryPriceBase": 32000,
+        "categoryPriceSerial": 12,
+        "syntheticWorkspacePriceKrw": 32012
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-01",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 18,
+        "syntheticWorkspacePriceKrw": 36018
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-02",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 19,
+        "syntheticWorkspacePriceKrw": 36019
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-03",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 20,
+        "syntheticWorkspacePriceKrw": 36020
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-04",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 21,
+        "syntheticWorkspacePriceKrw": 36021
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-05",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 22,
+        "syntheticWorkspacePriceKrw": 36022
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-06",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 23,
+        "syntheticWorkspacePriceKrw": 36023
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-07",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 24,
+        "syntheticWorkspacePriceKrw": 36024
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-08",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 25,
+        "syntheticWorkspacePriceKrw": 36025
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-09",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 26,
+        "syntheticWorkspacePriceKrw": 36026
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-10",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 27,
+        "syntheticWorkspacePriceKrw": 36027
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-11",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 28,
+        "syntheticWorkspacePriceKrw": 36028
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-12",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 29,
+        "syntheticWorkspacePriceKrw": 36029
+      },
+      {
+        "masterKey": "cm.order.synthetic.lab-13",
+        "researchCategory": "lab",
+        "categoryPriceBase": 36000,
+        "categoryPriceSerial": 30,
+        "syntheticWorkspacePriceKrw": 36030
+      },
+      {
+        "masterKey": "cm.order.synthetic.imaging-01",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 5,
+        "syntheticWorkspacePriceKrw": 42005
+      },
+      {
+        "masterKey": "cm.order.synthetic.imaging-02",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 6,
+        "syntheticWorkspacePriceKrw": 42006
+      },
+      {
+        "masterKey": "cm.order.synthetic.imaging-03",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 7,
+        "syntheticWorkspacePriceKrw": 42007
+      },
+      {
+        "masterKey": "cm.order.synthetic.imaging-04",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 8,
+        "syntheticWorkspacePriceKrw": 42008
+      },
+      {
+        "masterKey": "cm.order.synthetic.imaging-05",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 9,
+        "syntheticWorkspacePriceKrw": 42009
+      },
+      {
+        "masterKey": "cm.order.synthetic.imaging-06",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 10,
+        "syntheticWorkspacePriceKrw": 42010
+      },
+      {
+        "masterKey": "cm.order.synthetic.imaging-07",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 11,
+        "syntheticWorkspacePriceKrw": 42011
+      },
+      {
+        "masterKey": "cm.order.synthetic.imaging-08",
+        "researchCategory": "imaging",
+        "categoryPriceBase": 42000,
+        "categoryPriceSerial": 12,
+        "syntheticWorkspacePriceKrw": 42012
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-01",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 4,
+        "syntheticWorkspacePriceKrw": 48004
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-02",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 5,
+        "syntheticWorkspacePriceKrw": 48005
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-03",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 6,
+        "syntheticWorkspacePriceKrw": 48006
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-04",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 7,
+        "syntheticWorkspacePriceKrw": 48007
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-05",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 8,
+        "syntheticWorkspacePriceKrw": 48008
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-06",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 9,
+        "syntheticWorkspacePriceKrw": 48009
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-07",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 10,
+        "syntheticWorkspacePriceKrw": 48010
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-08",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 11,
+        "syntheticWorkspacePriceKrw": 48011
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-09",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 12,
+        "syntheticWorkspacePriceKrw": 48012
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-10",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 13,
+        "syntheticWorkspacePriceKrw": 48013
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-11",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 14,
+        "syntheticWorkspacePriceKrw": 48014
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-12",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 15,
+        "syntheticWorkspacePriceKrw": 48015
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-13",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 16,
+        "syntheticWorkspacePriceKrw": 48016
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-14",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 17,
+        "syntheticWorkspacePriceKrw": 48017
+      },
+      {
+        "masterKey": "cm.order.synthetic.treatment-15",
+        "researchCategory": "treatment",
+        "categoryPriceBase": 48000,
+        "categoryPriceSerial": 18,
+        "syntheticWorkspacePriceKrw": 48018
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-01",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 52003
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-02",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 4,
+        "syntheticWorkspacePriceKrw": 52004
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-03",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 5,
+        "syntheticWorkspacePriceKrw": 52005
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-04",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 6,
+        "syntheticWorkspacePriceKrw": 52006
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-05",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 7,
+        "syntheticWorkspacePriceKrw": 52007
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-06",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 8,
+        "syntheticWorkspacePriceKrw": 52008
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-07",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 9,
+        "syntheticWorkspacePriceKrw": 52009
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-08",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 10,
+        "syntheticWorkspacePriceKrw": 52010
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-09",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 11,
+        "syntheticWorkspacePriceKrw": 52011
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-10",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 12,
+        "syntheticWorkspacePriceKrw": 52012
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-11",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 13,
+        "syntheticWorkspacePriceKrw": 52013
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-12",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 14,
+        "syntheticWorkspacePriceKrw": 52014
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-13",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 15,
+        "syntheticWorkspacePriceKrw": 52015
+      },
+      {
+        "masterKey": "cm.order.synthetic.dispensing-14",
+        "researchCategory": "dispensing",
+        "categoryPriceBase": 52000,
+        "categoryPriceSerial": 16,
+        "syntheticWorkspacePriceKrw": 52016
+      },
+      {
+        "masterKey": "cm.order.synthetic.surgery-anesthesia-01",
+        "researchCategory": "surgery/anesthesia",
+        "categoryPriceBase": 68000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 68001
+      },
+      {
+        "masterKey": "cm.order.synthetic.surgery-anesthesia-02",
+        "researchCategory": "surgery/anesthesia",
+        "categoryPriceBase": 68000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 68002
+      },
+      {
+        "masterKey": "cm.order.synthetic.surgery-anesthesia-03",
+        "researchCategory": "surgery/anesthesia",
+        "categoryPriceBase": 68000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 68003
+      },
+      {
+        "masterKey": "cm.order.synthetic.surgery-anesthesia-04",
+        "researchCategory": "surgery/anesthesia",
+        "categoryPriceBase": 68000,
+        "categoryPriceSerial": 4,
+        "syntheticWorkspacePriceKrw": 68004
+      },
+      {
+        "masterKey": "cm.order.synthetic.surgery-anesthesia-05",
+        "researchCategory": "surgery/anesthesia",
+        "categoryPriceBase": 68000,
+        "categoryPriceSerial": 5,
+        "syntheticWorkspacePriceKrw": 68005
+      },
+      {
+        "masterKey": "cm.order.synthetic.surgery-anesthesia-06",
+        "researchCategory": "surgery/anesthesia",
+        "categoryPriceBase": 68000,
+        "categoryPriceSerial": 6,
+        "syntheticWorkspacePriceKrw": 68006
+      },
+      {
+        "masterKey": "cm.order.synthetic.surgery-anesthesia-07",
+        "researchCategory": "surgery/anesthesia",
+        "categoryPriceBase": 68000,
+        "categoryPriceSerial": 7,
+        "syntheticWorkspacePriceKrw": 68007
+      },
+      {
+        "masterKey": "cm.order.synthetic.surgery-anesthesia-08",
+        "researchCategory": "surgery/anesthesia",
+        "categoryPriceBase": 68000,
+        "categoryPriceSerial": 8,
+        "syntheticWorkspacePriceKrw": 68008
+      },
+      {
+        "masterKey": "cm.order.synthetic.inpatient-01",
+        "researchCategory": "inpatient",
+        "categoryPriceBase": 76000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 76001
+      },
+      {
+        "masterKey": "cm.order.synthetic.inpatient-02",
+        "researchCategory": "inpatient",
+        "categoryPriceBase": 76000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 76002
+      },
+      {
+        "masterKey": "cm.order.synthetic.inpatient-03",
+        "researchCategory": "inpatient",
+        "categoryPriceBase": 76000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 76003
+      },
+      {
+        "masterKey": "cm.order.synthetic.inpatient-04",
+        "researchCategory": "inpatient",
+        "categoryPriceBase": 76000,
+        "categoryPriceSerial": 4,
+        "syntheticWorkspacePriceKrw": 76004
+      },
+      {
+        "masterKey": "cm.order.synthetic.inpatient-05",
+        "researchCategory": "inpatient",
+        "categoryPriceBase": 76000,
+        "categoryPriceSerial": 5,
+        "syntheticWorkspacePriceKrw": 76005
+      },
+      {
+        "masterKey": "cm.order.synthetic.inpatient-06",
+        "researchCategory": "inpatient",
+        "categoryPriceBase": 76000,
+        "categoryPriceSerial": 6,
+        "syntheticWorkspacePriceKrw": 76006
+      },
+      {
+        "masterKey": "cm.order.synthetic.emergency-01",
+        "researchCategory": "emergency",
+        "categoryPriceBase": 84000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 84001
+      },
+      {
+        "masterKey": "cm.order.synthetic.emergency-02",
+        "researchCategory": "emergency",
+        "categoryPriceBase": 84000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 84002
+      },
+      {
+        "masterKey": "cm.order.synthetic.emergency-03",
+        "researchCategory": "emergency",
+        "categoryPriceBase": 84000,
+        "categoryPriceSerial": 3,
+        "syntheticWorkspacePriceKrw": 84003
+      },
+      {
+        "masterKey": "cm.order.synthetic.dental-01",
+        "researchCategory": "dental",
+        "categoryPriceBase": 90000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 90001
+      },
+      {
+        "masterKey": "cm.order.synthetic.dental-02",
+        "researchCategory": "dental",
+        "categoryPriceBase": 90000,
+        "categoryPriceSerial": 2,
+        "syntheticWorkspacePriceKrw": 90002
+      },
+      {
+        "masterKey": "cm.order.synthetic.certificate-misc-01",
+        "researchCategory": "certificate/misc",
+        "categoryPriceBase": 96000,
+        "categoryPriceSerial": 1,
+        "syntheticWorkspacePriceKrw": 96001
+      }
+    ],
+    "forbiddenPublisherKeys": [
+      "priceKrw",
+      "price_krw",
+      "weightTier",
+      "orderSet",
+      "orderSetId"
+    ],
+    "keyPriceSha256": "35fa6f6ec16f23c43a774b0f8abe03fa43fa8bfd6962278e0a76469580e05abf"
+  },
+  "labPlan": {
+    "sourceLabRecords": {
+      "tests": 36,
+      "referencedTests": 30,
+      "panels": 10,
+      "panelItems": 60,
+      "profiles": 30
+    },
+    "expectedAdoptionProjection": {
+      "catalogCount": {
+        "v3Final": 30,
+        "rpcSemantics": "exact payload-manifest lab order owners only; existing nonpayload catalogs are excluded"
+      },
+      "createdItemCount": {
+        "semantics": "new lab-test versions only; baseline plus delta must equal the exact 30-test payload target-ID set",
+        "strictV3ReferencedTests": 30
+      },
+      "createdLinkCount": {
+        "semantics": "projection attempts from exact payload-manifest catalog profiles only; not a creation delta",
+        "v3Final": 80
+      },
+      "workspaceLinkAttemptContract": {
+        "profiles": 30,
+        "directProfiles": 20,
+        "panelProfiles": 10,
+        "panelItems": 60,
+        "expandedLinks": 80,
+        "formula": "20 direct-test profiles + 60 panel items = 80 links"
+      },
+      "finalUniqueProjection": {
+        "catalogs": 30,
+        "tests": 30,
+        "links": 80
+      },
+      "idempotentRetry": {
+        "catalogCount": "same exact payload total",
+        "createdItemCount": 0,
+        "createdLinkCount": "same exact payload attempt total",
+        "finalUniqueProjection": {
+          "catalogs": 30,
+          "tests": 30,
+          "links": 80
+        }
+      }
+    },
+    "frozenEligibleTargetSet": {
+      "semantics": "before each workspace adopter call, freeze the exact set of lab-test master IDs from v3 payload-manifest order profiles and pinned panel expansions; payload-scoped adoption excludes both missing and existing nonpayload initial/metabolic orders",
+      "identityPolicy": [
+        "reject null target IDs or revisions",
+        "reject duplicate targets within one pinned profile",
+        "reject duplicate or ambiguous master-key/record-ID identities",
+        "use the frozen target-ID set for every version count and semantic fingerprint"
+      ],
+      "retryPolicy": "after-before version-row count equals returned createdItemCount; retry createdItemCount is 0 with unchanged frozen-set count and fingerprint"
+    },
+    "projectionAssertions": [
+      "central payload defines 36 lab tests; only 30 referenced test keys are projected",
+      "one source lab item per (workspace,source master test)",
+      "one link per (workspace,catalog item,lab_test item,link origin)",
+      "all links and profiles pin source master record and revision",
+      "20 direct-test profiles plus 60 panel items expand to exactly 80 payload-linked workspace lab links",
+      "payload mode does not create missing nonpayload initial/metabolic rows and leaves an existing pinned metabolic catalog, projection, versions, links, updates, and notifications byte-identical",
+      "createdItemCount is baseline-plus-delta over the exact payload target-ID set; createdLinkCount is the exact payload projection-attempt total",
+      "before/after/retry lab_test_item_versions counts and ordered semantic SHA use the exact payload target-ID set",
+      "second adopter returns createdItemCount 0 and leaves the exact payload projection unchanged"
+    ],
+    "reviewBoundary": "resolve B1 item/catalog review targets only through public.clair_resolve_workspace_lab_definition_update"
+  },
+  "rollbackRehearsal": {
+    "sql": "supabase/snippets/clinical_master_operational_v3_phase_c_rollback.sql",
+    "renderedSql": "supabase/snippets/clinical_master_operational_v3_phase_c_rollback_rendered.sql",
+    "remoteRenderedSql": "supabase/snippets/clinical_master_operational_v3_phase_c_rollback_remote_rendered.sql",
+    "defaultScope": "full",
+    "localScope": "publisher_only with baseline_mode=local when the local seed lacks the three approved target workspaces",
+    "order": [
+      "capture baseline and protected fingerprints",
+      "publish v3",
+      "retry identical v3",
+      "adopt target workspaces independently",
+      "price/review/activate/pause through authenticated RPCs",
+      "assert foreign unchanged and lineage/review/audit invariants",
+      "ROLLBACK",
+      "fresh-connection residual proof"
+    ],
+    "noDirectDml": true,
+    "noRemoteExecution": true,
+    "renderedSqlPolicy": "pure SQL generated from this fixture and SQL template; executable by supabase db query --linked; always ROLLBACK",
+    "renderedSqlSha256": "35d558e800fd4955a7e1fd2dff9cde264e02621c5ee3d38465740025eb2ef93a",
+    "remoteRenderedSqlMode": {
+      "rehearsalScope": "full",
+      "baselineMode": "remote",
+      "execution": "human-approved remote read-only-gated candidate; never executed in this handoff"
+    },
+    "remoteRenderedSqlSha256": "9270e3e6da78c213bf25fadd931093dbdbd8cd0874c9f9b83d543432ecafcbc5"
+  },
+  "persistentCommitCandidate": {
+    "sql": "supabase/snippets/clinical_master_operational_v3_phase_c_commit_candidate.sql",
+    "sha256": "f984d4430ba5813d4fa4fd889a60bb2e61fe566ff4d8d228d53f57aa0caa6371",
+    "transactionBoundary": "one top-level atomic transaction; three ordered workspace logical stop-on-error blocks; any failure aborts every central and workspace write",
+    "workspaceOrder": [
+      "workspace-clinical-master-pilot-v1",
+      "workspace-clair-cheongdam",
+      "clair-demo"
+    ],
+    "retryPolicy": "first-run exact baseline only; publisher is exercised idempotently inside the transaction; after failure rerun read-only preflight and regenerate because sequence gaps are never rewound; after success the old baseline fails closed",
+    "sequencePolicy": "never call setval in persistent execution; committed release 9 leaves the sequence at 9; failed attempts may consume gaps",
+    "derivation": "exact full/remote rollback candidate with only sequence-rewind removal and terminal ROLLBACK-to-COMMIT/result-label transformation",
+    "noPsqlMetaCommands": true,
+    "noRemoteExecution": true
+  },
+  "protectedFingerprints": {
+    "supportedMasterIdentityHistorySha256": "8bbbcdbcfab3bf15aa69bcee87be4caab7aefaf9c3a73998640a8332dbb0b6b1",
+    "preV3HistoryFingerprints": {
+      "releases": "8b1632cb9f5bf28bea2d8dadc33ca5d30a1afa2b65c1fe4c5bae548fc0653ed8",
+      "masterRecordVersions": "0c0c30f610bc41cac7b84c171d14e3361ae337e9b59895d309c9462b83593c07",
+      "masterReviewEvents": "35c04f8d47dca5085f9b59df8e57dec7a0ce78e3deafb5e71b3bb7839f4ca635"
+    },
+    "stageFingerprints": {
+      "clinicalMasterLabPublishStage": "eac749d40ab0f0e88f9dabed2a5123b85933367d3fae4a3828ad37893e1a45c4",
+      "clinicalMasterLabTestPublishStage": "14b1c866a3e05897599c7eaec649a42988291f5a7acee5472472136e07925d9d",
+      "clinicalMasterLabPanelPublishStage": "8018ba5b345e8c6c79380645380a5a0b665cec056228299e324697e025a01369",
+      "clinicalMasterLabOrderPublishStage": "482d17f250f17fa607115df64e9dc7c31c661b54a2948c10500986b5dec5aea4"
+    },
+    "foreignSurfaceFingerprints": {
+      "order_catalog_items": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "lab_test_items": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "lab_test_item_versions": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "order_catalog_lab_test_item_links": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "workspace_master_updates": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "workspace_lab_item_updates": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "workspace_lab_catalog_updates": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "notification_events": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "notification_user_states": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "audit_events": {
+        "rowCount": 0,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "sixExactRemoteConstants": {
+      "release": "85cb291602f3d177ae11a075b4203bdf9e7cb9a3ac68c5a8245a5a90f739b7c7",
+      "stage": "eac749d40ab0f0e88f9dabed2a5123b85933367d3fae4a3828ad37893e1a45c4",
+      "pilot": "5fe7ba9e93a045076157a77e5c852a5712660f99a0d2afbb3064a143c7586de0",
+      "cheongdam": "82b9b2a3e9722093a65709a5a9dbdff19f709a8c00616a8203ec0b55f7d1d3c4",
+      "demo": "c195d802a07ef3f820aed21809bc7d7bf84fa5013ed4e98e4951e64f5242bcf1",
+      "foreign": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  },
+  "staticSafety": {
+    "noOrderSets": true,
+    "noClinicalClaimsDosingRanges": true,
+    "noRealHospitalPatientData": true,
+    "noAirtableWrites": true,
+    "noSupabaseRemoteWrites": true,
+    "noDirectCatalogReviewAuditDml": true,
+    "noPrintedUserIds": true
+  }
+}

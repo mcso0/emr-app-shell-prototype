@@ -310,6 +310,7 @@ export function adaptNormalizedClinicalMasterAirtableAuthoringExport(
   const payload = omitNullableLabTestDecimalScale({
     releaseKey: snapshot.release.releaseKey,
     releaseNotes: snapshot.release.releaseNotes,
+    adoptionScope: "payload",
     publishedByLabel: snapshot.release.publishedByLabel,
     records: supportedRecords.map(toPublisherRecord),
     classificationPaths: snapshot.classificationPaths,

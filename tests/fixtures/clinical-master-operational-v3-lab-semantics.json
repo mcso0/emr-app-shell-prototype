@@ -1,0 +1,374 @@
+{
+  "schemaVersion": "clinical-master-operational-lab-semantics/v1",
+  "releaseKey": "cm.release.airtable.operational-master.v3",
+  "syntheticOnly": true,
+  "authorityBoundary": "Explicit authoring-side lab semantic table; specimen is carried by the profile contract because publisher lab_test detail has no specimen field.",
+  "tests": [
+    {
+      "masterKey": "cm.lab-test.synthetic-01",
+      "name": "CBC 적혈구 수 검사",
+      "testCode": "RBC",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.million-per-ul",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-02",
+      "name": "CBC 혈색소 검사",
+      "testCode": "HGB",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.g-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-03",
+      "name": "혈청화학 AST 검사",
+      "testCode": "AST",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.u-l",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-04",
+      "name": "혈청화학 총빌리루빈 검사",
+      "testCode": "TBIL",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-05",
+      "name": "혈청화학 알부민 검사",
+      "testCode": "ALB",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.g-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-06",
+      "name": "혈청화학 칼슘 검사",
+      "testCode": "CA",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-07",
+      "name": "혈청화학 인 검사",
+      "testCode": "PHOS",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-08",
+      "name": "전해질 나트륨 검사",
+      "testCode": "NA",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mmol-l",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-09",
+      "name": "전해질 칼륨 검사",
+      "testCode": "K",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mmol-l",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-10",
+      "name": "전해질 염소 검사",
+      "testCode": "CL",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mmol-l",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-11",
+      "name": "응고 프로트롬빈시간 검사",
+      "testCode": "PT",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.seconds",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.citrate-plasma"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-12",
+      "name": "응고 활성화부분트롬보플라스틴시간 검사",
+      "testCode": "APTT",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.seconds",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.citrate-plasma"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-13",
+      "name": "망상적혈구 검사",
+      "testCode": "RETIC",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.percent",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-14",
+      "name": "혈액도말 형태 검사",
+      "testCode": "SMEAR",
+      "resultInputTypeKey": "cm.result-input.text",
+      "canonicalUnitKey": null,
+      "decimalScale": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-15",
+      "name": "요화학 비중 검사",
+      "testCode": "UA_SG",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "decimalScale": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-16",
+      "name": "요화학 단백 검사",
+      "testCode": "UA_PROTEIN",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-17",
+      "name": "전해질 중탄산염 검사",
+      "testCode": "HCO3",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mmol-l",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-18",
+      "name": "피부 세포 검사",
+      "testCode": "SKIN_CYTOLOGY",
+      "resultInputTypeKey": "cm.result-input.text",
+      "canonicalUnitKey": null,
+      "decimalScale": null,
+      "specimenMasterKey": "cm.specimen.cytology-slide"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-19",
+      "name": "귀 분비물 세포 검사",
+      "testCode": "EAR_CYTOLOGY",
+      "resultInputTypeKey": "cm.result-input.text",
+      "canonicalUnitKey": null,
+      "decimalScale": null,
+      "specimenMasterKey": "cm.specimen.swab"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-20",
+      "name": "종괴 세포 검사",
+      "testCode": "MASS_CYTOLOGY",
+      "resultInputTypeKey": "cm.result-input.text",
+      "canonicalUnitKey": null,
+      "decimalScale": null,
+      "specimenMasterKey": "cm.specimen.cytology-slide"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-21",
+      "name": "관절액 세포 검사",
+      "testCode": "JOINT_FLUID_CYTOLOGY",
+      "resultInputTypeKey": "cm.result-input.text",
+      "canonicalUnitKey": null,
+      "decimalScale": null,
+      "specimenMasterKey": "cm.specimen.joint-fluid"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-22",
+      "name": "전해질 마그네슘 검사",
+      "testCode": "MG",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mmol-l",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.synthetic-23",
+      "name": "혈액형 검사",
+      "testCode": "BLOOD_TYPE",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "decimalScale": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    }
+  ],
+  "panelLinks": [
+    {
+      "panelMasterKey": "cm.lab-panel.synthetic-01",
+      "testMasterKeys": [
+        "cm.lab-test.synthetic-08",
+        "cm.lab-test.synthetic-09",
+        "cm.lab-test.synthetic-10",
+        "cm.lab-test.synthetic-06",
+        "cm.lab-test.synthetic-07",
+        "cm.lab-test.chem-glucose",
+        "cm.lab-test.chem-creatinine"
+      ]
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.synthetic-02",
+      "testMasterKeys": [
+        "cm.lab-test.synthetic-11",
+        "cm.lab-test.synthetic-12"
+      ]
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.synthetic-03",
+      "testMasterKeys": [
+        "cm.lab-test.chem-glucose",
+        "cm.lab-test.chem-creatinine",
+        "cm.lab-test.chem-bun",
+        "cm.lab-test.chem-alt",
+        "cm.lab-test.chem-alp",
+        "cm.lab-test.chem-total-protein",
+        "cm.lab-test.synthetic-05",
+        "cm.lab-test.synthetic-06"
+      ]
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.synthetic-04",
+      "testMasterKeys": [
+        "cm.lab-test.chem-alt",
+        "cm.lab-test.chem-alp",
+        "cm.lab-test.chem-total-protein",
+        "cm.lab-test.synthetic-03",
+        "cm.lab-test.synthetic-04",
+        "cm.lab-test.synthetic-05",
+        "cm.lab-test.synthetic-06",
+        "cm.lab-test.chem-glucose"
+      ]
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.synthetic-05",
+      "testMasterKeys": [
+        "cm.lab-test.chem-bun",
+        "cm.lab-test.chem-creatinine",
+        "cm.lab-test.synthetic-07",
+        "cm.lab-test.synthetic-08",
+        "cm.lab-test.synthetic-09",
+        "cm.lab-test.synthetic-10",
+        "cm.lab-test.synthetic-06",
+        "cm.lab-test.chem-glucose"
+      ]
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.synthetic-06",
+      "testMasterKeys": [
+        "cm.lab-test.chem-glucose",
+        "cm.lab-test.chem-total-protein",
+        "cm.lab-test.chem-alt",
+        "cm.lab-test.chem-alp",
+        "cm.lab-test.chem-bun",
+        "cm.lab-test.chem-creatinine",
+        "cm.lab-test.synthetic-03",
+        "cm.lab-test.synthetic-04",
+        "cm.lab-test.synthetic-05",
+        "cm.lab-test.synthetic-06",
+        "cm.lab-test.synthetic-07",
+        "cm.lab-test.synthetic-08",
+        "cm.lab-test.synthetic-09",
+        "cm.lab-test.synthetic-10"
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-01",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.synthetic-01",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-02",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.synthetic-02",
+      "specimenMasterKey": "cm.specimen.citrate-plasma"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-03",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.synthetic-03",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-04",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.synthetic-04",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-05",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.synthetic-05",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-06",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.synthetic-06",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-07",
+      "labTestMasterKey": "cm.lab-test.synthetic-23",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-08",
+      "labTestMasterKey": "cm.lab-test.synthetic-13",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-09",
+      "labTestMasterKey": "cm.lab-test.synthetic-14",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-10",
+      "labTestMasterKey": "cm.lab-test.synthetic-18",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.cytology-slide"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-11",
+      "labTestMasterKey": "cm.lab-test.synthetic-19",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.swab"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-12",
+      "labTestMasterKey": "cm.lab-test.synthetic-20",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.cytology-slide"
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-13",
+      "labTestMasterKey": "cm.lab-test.synthetic-21",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.joint-fluid"
+    }
+  ]
+}

@@ -18,6 +18,7 @@ export const clinicalMasterRecordTypes = [
 export type ClinicalMasterRecordType = (typeof clinicalMasterRecordTypes)[number];
 export type ClinicalMasterLanguage = "ko" | "en";
 export type ClinicalMasterNameKind = "preferred" | "alias" | "abbreviation" | "legacy";
+export type ClinicalMasterAdoptionScope = "cumulative" | "payload";
 
 export type ClinicalMasterNameInput = {
   languageCode: ClinicalMasterLanguage;
@@ -72,6 +73,8 @@ export type ClinicalMasterClassificationPathInput = {
 export type ClinicalMasterPublishPayload = {
   releaseKey?: string | null;
   releaseNotes?: string | null;
+  /** Existing callers default to cumulative; V3 payloads opt into exact owner adoption. */
+  adoptionScope?: ClinicalMasterAdoptionScope;
   publishedByLabel: string;
   records: ClinicalMasterRecordInput[];
   classificationPaths?: ClinicalMasterClassificationPathInput[];
@@ -101,6 +104,7 @@ export type ClinicalMasterPublishResult = {
   sourceFingerprint: string;
   idempotent: boolean;
   recordCount: number;
+  adoptionScope?: ClinicalMasterAdoptionScope;
 };
 
 export type ClinicalMasterPublisherExecutor = {
@@ -151,7 +155,7 @@ const detailAllowedKeys: Record<ClinicalMasterRecordType, ReadonlySet<string>> =
 };
 
 const contractAllowedKeys: Record<string, ReadonlySet<string>> = {
-  payload: new Set(["releaseKey", "releaseNotes", "publishedByLabel", "records", "classificationPaths", "labPanelItems", "labOrderProfiles"]),
+  payload: new Set(["releaseKey", "releaseNotes", "adoptionScope", "publishedByLabel", "records", "classificationPaths", "labPanelItems", "labOrderProfiles"]),
   record: new Set(["masterKey", "recordType", "lifecycleStatus", "safetyStatus", "safetyReason", "names", "source", "detail"]),
   name: new Set(["languageCode", "nameKind", "name", "searchable", "sortOrder"]),
   source: new Set(["sourceType", "title", "referenceUri", "sourceVersion", "accessedAt", "licenseNotes"]),
@@ -512,9 +516,10 @@ function normalizeDetail(recordType: ClinicalMasterRecordType, detail: Record<st
 }
 
 export function normalizeClinicalMasterPublishPayload(payload: ClinicalMasterPublishPayload): ClinicalMasterPublishPayload {
-  return {
+  const normalized: ClinicalMasterPublishPayload = {
     releaseKey: trimNullable(payload.releaseKey),
     releaseNotes: trimNullable(payload.releaseNotes),
+    ...(payload.adoptionScope === undefined ? {} : { adoptionScope: payload.adoptionScope }),
     publishedByLabel: payload.publishedByLabel.trim(),
     records: [...payload.records]
       .map((record) => ({
@@ -562,6 +567,7 @@ export function normalizeClinicalMasterPublishPayload(payload: ClinicalMasterPub
       }))
       .sort((left, right) => left.orderMasterKey.localeCompare(right.orderMasterKey)),
   };
+  return normalized;
 }
 
 function stableJson(value: unknown): string {
@@ -595,6 +601,9 @@ export function validateClinicalMasterPublishPayload(
   validateContractKeys("payload", payload, "$", issues);
   validateOptionalString(payload.releaseKey, "releaseKey", issues);
   validateOptionalString(payload.releaseNotes, "releaseNotes", issues);
+  if (payload.adoptionScope !== undefined && (typeof payload.adoptionScope !== "string" || !["cumulative", "payload"].includes(payload.adoptionScope))) {
+    addIssue(issues, "adoptionScope", "adoption_scope_invalid", "Adoption scope must be cumulative or payload.");
+  }
 
   requireNonEmptyString(payload.publishedByLabel, "publishedByLabel", issues);
   const rawRecords: unknown = payload.records;

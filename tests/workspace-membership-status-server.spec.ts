@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import type { APIRequestContext, APIResponse } from "@playwright/test";
-import * as membershipRoute from "../src/app/api/workspaces/[workspaceId]/memberships/route";
+import * as membershipRoute from "../src/app/api/workspaces/[workspaceId]/memberships/route-core";
 import {
   handleMembershipStatusGet,
-} from "../src/app/api/workspaces/[workspaceId]/memberships/route";
+} from "../src/app/api/workspaces/[workspaceId]/memberships/route-core";
 import * as workspaceSession from "../src/features/auth/workspace-session";
 import {
   createMembershipStatusRouteHarness,
@@ -149,7 +149,7 @@ test("workspace membership UI can render persisted status rows from server", asy
   await page.getByPlaceholder("이메일을 입력해주세요").fill("admin@clair.local");
   await page.getByPlaceholder("비밀번호를 입력해주세요").fill("local-pass-1");
   await page.getByRole("button", { name: "로그인", exact: true }).click();
-  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+  await page.getByRole("button", { name: "병원 구성원", exact: true }).click();
 
   await expect(page.getByRole("button", { name: /전체 4/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /초대 대기 1/ })).toBeVisible();

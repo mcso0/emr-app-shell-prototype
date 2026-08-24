@@ -1,0 +1,538 @@
+{
+  "schemaVersion": "clinical-master-airtable-final-delta-manifest/v1",
+  "baseId": "applMtgWwOxwPigB8",
+  "releaseKey": "cm.release.airtable.operational-master.v3",
+  "sourceKey": "source.synthetic.operational-pilot.v1",
+  "writeAllowed": false,
+  "mutationsPerformed": 0,
+  "executable": false,
+  "operationMode": "final_state_delta_identity_fork_only",
+  "strategy": "Use the current final 254/254/13/60/30/12 readback as the CAS baseline. The only planned mutation is the audited Master Records identity fork for recZW92s9i06wpNp0; the linked Names lookup must recalculate to the fresh key, with no separate Names write and no other table mutation.",
+  "executionEligibility": {
+    "eligible": false,
+    "status": "deferred_until_exact_before_after_gates",
+    "enableOnlyAfter": [
+      "Read all eight scoped tables and require the exact baselineSha256 plus expectedBeforeSha256 map and table counts.",
+      "Require recZW92s9i06wpNp0 to have the legacy key and rec0Pw4CymPIed8ta to have exactly the legacy linked lookup.",
+      "Update only Master Records recZW92s9i06wpNp0 by record ID; never write Names, Sources, Release Drafts, or relation tables.",
+      "Re-read all eight tables and require expectedPostSha256, expectedPostFullReadbackSha256, exact counts, fresh key exactly once, and linked Name ID/name exact."
+    ],
+    "blockedReason": "No Airtable write is authorized in this handoff; writeAllowed remains false until a separately approved execution re-runs every gate."
+  },
+  "expectedBeforeSha256": {
+    "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+    "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+    "Master Records": "4b6c4eeb3badac6dc44680c0ac156e6e6efd5e9cdf2eee26823378e877d2657e",
+    "Names": "bc9c011cc857450424a3200726a4ac731f0201e05fca4766215df26e742f0ca3",
+    "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+    "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+    "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+    "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+  },
+  "expectedPostSha256": {
+    "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+    "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+    "Master Records": "740165c295b3d04e89df1b03886d51b35393d16a1abdbf7ac7c7cedffc48087d",
+    "Names": "94bfc9f5645104eee78526b825f13f3ba74c9aa0308a97c6c878a4d1eb7a7022",
+    "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+    "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+    "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+    "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+  },
+  "expectedPostFullReadbackSha256": "34554f2c7f7d6cb2720e298a5baed778b493b988eba945855071bdf22f55eb12",
+  "semanticDelta": {
+    "changedCells": [
+      {
+        "tableName": "Master Records",
+        "recordId": "recZW92s9i06wpNp0",
+        "field": "masterKey",
+        "before": "cm.order.consult.initial",
+        "after": "cm.order.consult.first-visit"
+      },
+      {
+        "tableName": "Names",
+        "recordId": "rec0Pw4CymPIed8ta",
+        "field": "masterKey.lookup.name",
+        "before": "cm.order.consult.initial",
+        "after": "cm.order.consult.first-visit",
+        "source": "linked lookup recalculation",
+        "writable": false
+      }
+    ],
+    "unchangedTableNames": [
+      "Release Drafts",
+      "Sources",
+      "Classification Paths",
+      "Lab Panel Items",
+      "Lab Order Profiles",
+      "Diagnosis Category Links"
+    ],
+    "unchangedRecordPolicy": "Every other record and field must remain byte/semantic identical to the final readback; expectedPostSha256 and expectedPostFullReadbackSha256 are the gate."
+  },
+  "rollbackGate": {
+    "restoreRecordId": "recZW92s9i06wpNp0",
+    "restoreMasterKey": "cm.order.consult.initial",
+    "expectedRestoredTableSha256": {
+      "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+      "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+      "Master Records": "4b6c4eeb3badac6dc44680c0ac156e6e6efd5e9cdf2eee26823378e877d2657e",
+      "Names": "bc9c011cc857450424a3200726a4ac731f0201e05fca4766215df26e742f0ca3",
+      "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+      "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+      "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+      "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+    },
+    "expectedRestoredFullReadbackSha256": "e2f931eef25871131de7b78a948b3dfe1892efa9bb2d89ae6a85b30e290cb44a",
+    "requireExactEightTableCounts": {
+      "Release Drafts": 1,
+      "Sources": 1,
+      "Master Records": 254,
+      "Names": 254,
+      "Classification Paths": 13,
+      "Lab Panel Items": 60,
+      "Lab Order Profiles": 30,
+      "Diagnosis Category Links": 12
+    }
+  },
+  "sourceOfTruth": {
+    "liveReadbackFixture": "tests/fixtures/clinical-master-airtable-operational-v3-final-readback.json",
+    "baselineSha256": "e2f931eef25871131de7b78a948b3dfe1892efa9bb2d89ae6a85b30e290cb44a",
+    "readAt": "2026-08-24",
+    "mutationScope": "read-only-final-verified",
+    "readOnlyAirtableCalls": 8,
+    "supabaseWrites": 0,
+    "airtableWrites": 0,
+    "expectedTableCounts": {
+      "Release Drafts": 1,
+      "Sources": 1,
+      "Master Records": 254,
+      "Names": 254,
+      "Classification Paths": 13,
+      "Lab Panel Items": 60,
+      "Lab Order Profiles": 30,
+      "Diagnosis Category Links": 12
+    }
+  },
+  "casBaselineGate": {
+    "baselineSha256": "e2f931eef25871131de7b78a948b3dfe1892efa9bb2d89ae6a85b30e290cb44a",
+    "expectedTableCounts": {
+      "Release Drafts": 1,
+      "Sources": 1,
+      "Master Records": 254,
+      "Names": 254,
+      "Classification Paths": 13,
+      "Lab Panel Items": 60,
+      "Lab Order Profiles": 30,
+      "Diagnosis Category Links": 12
+    },
+    "failClosedOnHashOrCountMismatch": true,
+    "identity": {
+      "recordId": "recZW92s9i06wpNp0",
+      "currentMasterKey": "cm.order.consult.initial",
+      "linkedNameRecordId": "rec0Pw4CymPIed8ta"
+    },
+    "expectedBeforeSha256": {
+      "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+      "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+      "Master Records": "4b6c4eeb3badac6dc44680c0ac156e6e6efd5e9cdf2eee26823378e877d2657e",
+      "Names": "bc9c011cc857450424a3200726a4ac731f0201e05fca4766215df26e742f0ca3",
+      "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+      "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+      "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+      "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+    },
+    "expectedPostSha256": {
+      "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+      "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+      "Master Records": "740165c295b3d04e89df1b03886d51b35393d16a1abdbf7ac7c7cedffc48087d",
+      "Names": "94bfc9f5645104eee78526b825f13f3ba74c9aa0308a97c6c878a4d1eb7a7022",
+      "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+      "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+      "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+      "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+    },
+    "expectedPostFullReadbackSha256": "34554f2c7f7d6cb2720e298a5baed778b493b988eba945855071bdf22f55eb12",
+    "linkedNameBefore": [
+      {
+        "id": "recZW92s9i06wpNp0",
+        "name": "cm.order.consult.initial"
+      }
+    ],
+    "linkedNameAfter": [
+      {
+        "id": "recZW92s9i06wpNp0",
+        "name": "cm.order.consult.first-visit"
+      }
+    ],
+    "verification": "Re-read all eight scoped tables, compare the full canonical final-readback hash, per-table expectedBeforeSha256, and exact counts, then compare recZW92s9i06wpNp0 plus its linked Name before the single update call; after the call require per-table expectedPostSha256 and full post hash."
+  },
+  "identityPolicy": {
+    "stableKeys": [
+      "masterKey",
+      "sourceKey",
+      "name",
+      "pathKey",
+      "panelMasterKey+testMasterKey",
+      "orderMasterKey",
+      "diagnosisMasterKey+categoryMasterKey"
+    ],
+    "preserveExistingAirtableRecordIds": true,
+    "sourceRecord": {
+      "action": "no_update",
+      "sourceKey": "source.synthetic.operational-pilot.v1",
+      "recordId": "recMiLy9KGJECHbvL"
+    },
+    "releaseDraftRecord": {
+      "action": "no_update",
+      "recordId": "rect3dj4tCIGcp06e",
+      "releaseKey": "cm.release.airtable.operational-master.v3",
+      "status": "approved"
+    },
+    "auditedIdentityFork": {
+      "operation": "update_existing_by_record_id_identity_fork",
+      "tableName": "Master Records",
+      "recordId": "recZW92s9i06wpNp0",
+      "currentMasterKey": "cm.order.consult.initial",
+      "newMasterKey": "cm.order.consult.first-visit",
+      "fields": {
+        "masterKey": "cm.order.consult.first-visit"
+      },
+      "fieldsByFieldId": {
+        "fldkOXzgDrlQ1wjux": "cm.order.consult.first-visit"
+      },
+      "preserveLinkedNameRecordId": "rec0Pw4CymPIed8ta",
+      "linkedNameLookup": {
+        "tableName": "Names",
+        "recordId": "rec0Pw4CymPIed8ta",
+        "fieldId": "flderNfbFt04qXwdr",
+        "before": [
+          {
+            "id": "recZW92s9i06wpNp0",
+            "name": "cm.order.consult.initial"
+          }
+        ],
+        "after": [
+          {
+            "id": "recZW92s9i06wpNp0",
+            "name": "cm.order.consult.first-visit"
+          }
+        ],
+        "operation": "formula/lookup must recalculate from the Master Records identity fork; no separate Names write"
+      },
+      "cas": {
+        "before": {
+          "recordId": "recZW92s9i06wpNp0",
+          "masterKey": "cm.order.consult.initial"
+        },
+        "requireExactFinalReadbackHashAndIdentity": true,
+        "expectedBeforeSha256": {
+          "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+          "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+          "Master Records": "4b6c4eeb3badac6dc44680c0ac156e6e6efd5e9cdf2eee26823378e877d2657e",
+          "Names": "bc9c011cc857450424a3200726a4ac731f0201e05fca4766215df26e742f0ca3",
+          "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+          "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+          "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+          "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+        },
+        "expectedPostSha256": {
+          "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+          "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+          "Master Records": "740165c295b3d04e89df1b03886d51b35393d16a1abdbf7ac7c7cedffc48087d",
+          "Names": "94bfc9f5645104eee78526b825f13f3ba74c9aa0308a97c6c878a4d1eb7a7022",
+          "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+          "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+          "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+          "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+        },
+        "expectedPostFullReadbackSha256": "34554f2c7f7d6cb2720e298a5baed778b493b988eba945855071bdf22f55eb12",
+        "after": {
+          "recordId": "recZW92s9i06wpNp0",
+          "masterKey": "cm.order.consult.first-visit"
+        }
+      },
+      "rollbackRestore": {
+        "recordId": "recZW92s9i06wpNp0",
+        "fields": {
+          "masterKey": "cm.order.consult.initial"
+        },
+        "order": "restore this identity fork before any later rollback step"
+      }
+    }
+  },
+  "tables": {
+    "Release Drafts": {
+      "tableId": "tblh4FTuETH7WBFSf",
+      "fieldIdsByName": {
+        "releaseKey": "fldhsviV97o8vqzQu",
+        "status": "fldJcj7yCpIDbcz5N",
+        "releaseNotes": "fld1eLsRrSSi8LD4M",
+        "reviewReason": "fldia2hOboX5LKRkS",
+        "publishedByLabel": "fldE0iY1EMmzi80Mm",
+        "authoredByLabel": "fldvRwLVgw9aYzKRS",
+        "reviewedByLabel": "fldwAovYX7bA3Qjsb",
+        "clinicalReviewerLabel": "fldYcrr89cTFPJk0w"
+      },
+      "operation": "verify_existing_final_readback",
+      "expectedBefore": 1,
+      "expectedAfter": 1,
+      "updateExisting": 0,
+      "create": 0,
+      "preserveRecordIdsForExistingStableKeys": true,
+      "createPayloads": [],
+      "updatePayloads": []
+    },
+    "Sources": {
+      "tableId": "tblYBzAYihNPzlDyl",
+      "fieldIdsByName": {
+        "sourceKey": "fldFfuTKJm4NYqlYB",
+        "sourceType": "fldKuW1FOUo2XNKYI",
+        "title": "fldTuecW0dUusLanu",
+        "sourceVersion": "fldFAZmU6WKpJIfZx",
+        "accessedAt": "fld1vg0ozhkOh5Qst",
+        "referenceUri": "fldT5X7gJgPKB0hU6",
+        "licenseNotes": "fldelslsWgu617zw0",
+        "Master Records (display-only; exclude-from-export)": "fldg6E69cz8d79H5G"
+      },
+      "operation": "verify_existing_final_readback",
+      "expectedBefore": 1,
+      "expectedAfter": 1,
+      "updateExisting": 0,
+      "create": 0,
+      "preserveRecordIdsForExistingStableKeys": true,
+      "createPayloads": [],
+      "updatePayloads": []
+    },
+    "Master Records": {
+      "tableId": "tblbeiDoVTC3a69Tb",
+      "fieldIdsByName": {
+        "masterKey": "fldkOXzgDrlQ1wjux",
+        "recordType": "flduyMJUdr6E1YY6P",
+        "authoringStatus": "fldkuWJdqJivI1EX2",
+        "lifecycleStatus": "fld1tfw85iYHswjhW",
+        "safetyStatus": "fldNEQsSWFnAAkj1r",
+        "safetyReason": "fldftTKq3nAU7Wqm4",
+        "changeSummary": "fldBGprmv5SQ97HJ0",
+        "sourceAssertionScope": "fldHWcAfmKWJuzI0O",
+        "sourceNotes": "fld6XjeLu8Kdfwnjt",
+        "detail": "flddC3qZs87IxhCML",
+        "sourceKey": "fld3iSGlvR46V8Q7a",
+        "names": "fldjkXurvtHcf5SjW",
+        "Classification Paths (clinicalActionKey) (display-only; exclude-from-export)": "fldFs43ik2WqGL333",
+        "Classification Paths (chartGroupKey) (display-only; exclude-from-export)": "fldrokb4AkLhI0fty",
+        "Classification Paths (taskRouteKey) (display-only; exclude-from-export)": "fld2285GNSxqzJl9u",
+        "Lab Panel Items (panelMasterKey) (display-only; exclude-from-export)": "fldvWTYxjlNjNdO0v",
+        "Lab Panel Items (testMasterKey) (display-only; exclude-from-export)": "flde6aO5YnnqJV2ge",
+        "Lab Order Profiles (orderMasterKey) (display-only; exclude-from-export)": "fldowJh4NGW0tqYbm",
+        "Lab Order Profiles (labTestMasterKey) (display-only; exclude-from-export)": "fldN8zmxgchheePKD",
+        "Lab Order Profiles (labPanelMasterKey) (display-only; exclude-from-export)": "fldsjzU8lu8o2Zh82",
+        "Lab Order Profiles (specimenMasterKey) (display-only; exclude-from-export)": "fldIWrXkJVxA2Fi9I",
+        "Diagnosis Category Links (diagnosisMasterKey) (display-only; exclude-from-export)": "fld0TXL3wGG4h0ako",
+        "Diagnosis Category Links (categoryMasterKey) (display-only; exclude-from-export)": "fldNqhGiEQqV7UtbY"
+      },
+      "operation": "update_existing_by_record_id_identity_fork_only",
+      "expectedBefore": 254,
+      "expectedAfter": 254,
+      "updateExisting": 1,
+      "create": 0,
+      "preserveRecordIdsForExistingStableKeys": true,
+      "createPayloads": [],
+      "updatePayloads": [
+        {
+          "operation": "update_existing_by_record_id_identity_fork",
+          "tableName": "Master Records",
+          "recordId": "recZW92s9i06wpNp0",
+          "currentMasterKey": "cm.order.consult.initial",
+          "newMasterKey": "cm.order.consult.first-visit",
+          "fields": {
+            "masterKey": "cm.order.consult.first-visit"
+          },
+          "fieldsByFieldId": {
+            "fldkOXzgDrlQ1wjux": "cm.order.consult.first-visit"
+          },
+          "preserveLinkedNameRecordId": "rec0Pw4CymPIed8ta",
+          "linkedNameLookup": {
+            "tableName": "Names",
+            "recordId": "rec0Pw4CymPIed8ta",
+            "fieldId": "flderNfbFt04qXwdr",
+            "before": [
+              {
+                "id": "recZW92s9i06wpNp0",
+                "name": "cm.order.consult.initial"
+              }
+            ],
+            "after": [
+              {
+                "id": "recZW92s9i06wpNp0",
+                "name": "cm.order.consult.first-visit"
+              }
+            ],
+            "operation": "formula/lookup must recalculate from the Master Records identity fork; no separate Names write"
+          },
+          "cas": {
+            "before": {
+              "recordId": "recZW92s9i06wpNp0",
+              "masterKey": "cm.order.consult.initial"
+            },
+            "requireExactFinalReadbackHashAndIdentity": true,
+            "expectedBeforeSha256": {
+              "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+              "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+              "Master Records": "4b6c4eeb3badac6dc44680c0ac156e6e6efd5e9cdf2eee26823378e877d2657e",
+              "Names": "bc9c011cc857450424a3200726a4ac731f0201e05fca4766215df26e742f0ca3",
+              "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+              "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+              "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+              "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+            },
+            "expectedPostSha256": {
+              "Release Drafts": "cb789921ac2f6ffadf65d78dcf9d8cc5a2200dd416564e54aad821ccc94d2b08",
+              "Sources": "8beeaa37cf94a117dbd1afba57c27ae37d182d58b4d729286b2e0c128bc6b653",
+              "Master Records": "740165c295b3d04e89df1b03886d51b35393d16a1abdbf7ac7c7cedffc48087d",
+              "Names": "94bfc9f5645104eee78526b825f13f3ba74c9aa0308a97c6c878a4d1eb7a7022",
+              "Classification Paths": "1ca177954f73ad351a513c351a1b31b9a44d2d57f093c03dd3e49c801a249969",
+              "Lab Panel Items": "b6a4a11934cbe57626965bb54d068aa1bfd7c89587e4a46c6fcbd3874d4a892c",
+              "Lab Order Profiles": "650ffd7171e94858164b042d5615789b07a884498eaa36cf60538a9399ce3cf8",
+              "Diagnosis Category Links": "2d0d020707296e3d8a6a2792ea82a0ef189b6de57c4d58c27ff28775d0db1ce6"
+            },
+            "expectedPostFullReadbackSha256": "34554f2c7f7d6cb2720e298a5baed778b493b988eba945855071bdf22f55eb12",
+            "after": {
+              "recordId": "recZW92s9i06wpNp0",
+              "masterKey": "cm.order.consult.first-visit"
+            }
+          },
+          "rollbackRestore": {
+            "recordId": "recZW92s9i06wpNp0",
+            "fields": {
+              "masterKey": "cm.order.consult.initial"
+            },
+            "order": "restore this identity fork before any later rollback step"
+          }
+        }
+      ]
+    },
+    "Names": {
+      "tableId": "tbl4K2krR2megPCi4",
+      "fieldIdsByName": {
+        "name": "fld40XEQCA4MUZ24D",
+        "languageCode": "fldv8e60B4z1zDpik",
+        "nameKind": "fld8zpNc9A6MpO1hW",
+        "searchable": "fldA2nafusvS1Jveq",
+        "sortOrder": "fldVHB90saA0OeOXT",
+        "masterKey": "flderNfbFt04qXwdr"
+      },
+      "operation": "verify_existing_final_readback",
+      "expectedBefore": 254,
+      "expectedAfter": 254,
+      "updateExisting": 0,
+      "create": 0,
+      "preserveRecordIdsForExistingStableKeys": true,
+      "createPayloads": [],
+      "updatePayloads": []
+    },
+    "Classification Paths": {
+      "tableId": "tbltpRjnWTknLbX4E",
+      "fieldIdsByName": {
+        "pathKey": "fldvpW2Vy2tjLJtnf",
+        "clinicalActionKey": "fldwdIAWSF75gkiYo",
+        "chartGroupKey": "fldrdazhq8x1Ua2Vv",
+        "taskRouteKey": "fldWcCI976wrAWrkq"
+      },
+      "operation": "verify_existing_final_readback",
+      "expectedBefore": 13,
+      "expectedAfter": 13,
+      "updateExisting": 0,
+      "create": 0,
+      "preserveRecordIdsForExistingStableKeys": true,
+      "createPayloads": [],
+      "updatePayloads": []
+    },
+    "Lab Panel Items": {
+      "tableId": "tblDzxAKXYuZVDc06",
+      "fieldIdsByName": {
+        "rowLabel": "fld8GNoJTzlAYtGnF",
+        "sortOrder": "fldwhFdb8umZfC9WB",
+        "required": "fldYcBuzY6i15CCwy",
+        "displayGroup": "fldJqDRd37lx6ltfF",
+        "panelMasterKey": "fldGXn2FiYCiTy7fx",
+        "testMasterKey": "fldsF08xMad02he8A"
+      },
+      "operation": "verify_existing_final_readback",
+      "expectedBefore": 60,
+      "expectedAfter": 60,
+      "updateExisting": 0,
+      "create": 0,
+      "preserveRecordIdsForExistingStableKeys": true,
+      "createPayloads": [],
+      "updatePayloads": []
+    },
+    "Lab Order Profiles": {
+      "tableId": "tblyUIP9L8HFoL4Z5",
+      "fieldIdsByName": {
+        "rowLabel": "fld1KwiL9b4ipNtyX",
+        "orderMasterKey": "fldiD2g9A43jaXms0",
+        "labTestMasterKey": "fldgJtRIhr8AUmk9S",
+        "labPanelMasterKey": "fldMoPcpdzM4Idh3z",
+        "specimenMasterKey": "fldIqBNSHAwkYFNje"
+      },
+      "operation": "verify_existing_final_readback",
+      "expectedBefore": 30,
+      "expectedAfter": 30,
+      "updateExisting": 0,
+      "create": 0,
+      "preserveRecordIdsForExistingStableKeys": true,
+      "createPayloads": [],
+      "updatePayloads": []
+    },
+    "Diagnosis Category Links": {
+      "tableId": "tbl1MNRz0u58kDWOV",
+      "fieldIdsByName": {
+        "rowLabel": "fldn1D59BNeRCspvT",
+        "isPrimary": "fldChuobEo81yNDif",
+        "sortOrder": "fldT1fKB6iWNcYPbv",
+        "diagnosisMasterKey": "fldeV312O4mcotV0k",
+        "categoryMasterKey": "fld30qCf25h8P3Ue6"
+      },
+      "operation": "verify_existing_final_readback",
+      "expectedBefore": 12,
+      "expectedAfter": 12,
+      "updateExisting": 0,
+      "create": 0,
+      "preserveRecordIdsForExistingStableKeys": true,
+      "createPayloads": [],
+      "updatePayloads": []
+    }
+  },
+  "dependencyOrder": [
+    "CAS final-readback hash/count gate",
+    "CAS identity check for recZW92s9i06wpNp0 and linked Name rec0Pw4CymPIed8ta",
+    "Update only Master Records.masterKey by record ID",
+    "Re-read all eight tables and require exact final counts plus fresh key exactly once"
+  ],
+  "rollbackOrder": [
+    "Restore Master Records recZW92s9i06wpNp0.masterKey to cm.order.consult.initial by record ID"
+  ],
+  "rollbackJournalTemplate": {
+    "mode": "record_id_only",
+    "entries": [
+      {
+        "tableName": "Master Records",
+        "recordId": "recZW92s9i06wpNp0",
+        "priorMasterKey": "cm.order.consult.initial",
+        "createdRecordId": null,
+        "rollbackStatus": "not_started"
+      }
+    ]
+  },
+  "historicalEvidence": {
+    "additiveManifest": "tests/fixtures/clinical-master-operational-v3-airtable-write-manifest.json",
+    "note": "The earlier 107-to-254 additive create plan remains historical evidence only and is not executable from this final-state delta manifest."
+  },
+  "safetyChecks": {
+    "noCreatePayloads": true,
+    "noUnknownGeneratedRecordIds": true,
+    "noSourcePrimaryKeyRemap": true,
+    "noReleaseDraftMutation": true,
+    "noAirtableWritesPerformed": true
+  }
+}

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CLAiR Clinical Master operational v3 package report</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f5f7fb; }
+    main { max-width: 920px; margin: 40px auto; padding: 0 24px 56px; }
+    article { background: #fff; border: 1px solid #dce2ec; border-radius: 16px; padding: 32px; box-shadow: 0 8px 24px rgba(27, 42, 70, .06); }
+    .meta { color: #5b6680; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border-bottom: 1px solid #e5e9f0; padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: #46516b; font-size: 13px; }
+    code { background: #f0f3f8; border-radius: 4px; padding: 2px 4px; overflow-wrap: anywhere; }
+    .ok { color: #087443; font-weight: 700; }
+    .warn { color: #8a5b00; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <p class="meta">CLAiR Clinical Master / Phase A / 2026-08-24</p>
+      <h1>Operational Master v3 authoring/package report</h1>
+      <p class="ok">상태: Operational V3 Supabase 반영 및 인증 브라우저 readback 완료 · 새 앱 배포는 미실행</p>
+
+      <h2>결과</h2>
+      <table>
+        <thead><tr><th>범위</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td>Authoring / publisher</td><td>Master Records 254개 = publisher-supported 230개 + diagnosis authoring-only 24개. Publisher payload에서는 diagnosis 24개와 links 12개를 제외.</td></tr>
+          <tr><td>Atomic orders</td><td>120개. consultation 12, preventive 12, lab 30, imaging 12, treatment 18, dispensing 16, surgery/anesthesia 8, inpatient 6, emergency 3, dental 2, certificate/misc 1.</td></tr>
+          <tr><td>Laboratory</td><td>Definitions 36 tests, referenced/projected tests 30, panels 10, panel items 60, lab order profiles 30.</td></tr>
+          <tr><td>Workspace pricing</td><td>120 positive integer KRW amounts with unique order keys and unique amounts; category base + serial total is 5,529,073 KRW. This sidecar is not publisher authority.</td></tr>
+          <tr><td>Airtable eventual totals</td><td>Release Drafts 1, Sources 1, Master Records 254, Names 254, Classification Paths 13, Lab Panel Items 60, Lab Order Profiles 30, Diagnosis Category Links 12.</td></tr>
+          <tr><td>Names</td><td>모든 master row에 선호 한국어 이름 1개씩만 생성해 physical Names target 254를 보존. generic counter label static guard 통과.</td></tr>
+          <tr><td>Remote release</td><td><code>qmerxgzrwaaahpkhjqlc</code> release 9, ID <code>ad453c8e-85be-44c9-8ad1-912f197e6c32</code>, published, payload scope, 230 records / 120 orders, fingerprint <code>0225bc6714210cfe663bded97fe6b3cbf76fedf99dce1540a302c0fd46235893</code>.</td></tr>
+          <tr><td>Workspace adoption</td><td>pilot 122 total / V3 120 active, Cheongdam 133 total / V3 109 active + 11 paused, clair-demo 139 total / V3 120 active. 세 workspace 모두 positive price 120, pending 0, price fingerprint <code>35fa6f6ec16f23c43a774b0f8abe03fa43fa8bfd6962278e0a76469580e05abf</code>.</td></tr>
+          <tr><td>Negative control</td><td><code>clair-foreign-demo</code> catalog 0, fingerprint <code>4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945</code> unchanged.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>신뢰 경계</h2>
+      <p>Release <code>cm.release.airtable.operational-master.v3</code>는 approved synthetic/non-authoritative 구조 테스트용이다. Sources의 기존 key <code>source.synthetic.operational-pilot.v1</code>와 Airtable row ID <code>recMiLy9KGJECHbvL</code>를 보존한다. 현재 Airtable baseline은 <code>1/1/107/107/5/13/17/12</code>이고 canonical hash는 <code>f3ba11edfc20ed0244ca4cb9c5bf0590313a173e2c07478edd35d05fcb059a4f</code>다. 기존 106개 row는 unchanged이며, consultation legacy row 1개는 <code>recZW92s9i06wpNp0</code>에서만 <code>cm.order.consult.initial</code> → <code>cm.order.consult.first-visit</code>로 CAS fork한다. 연결 Name <code>rec0Pw4CymPIed8ta</code>와 source identity는 보존하고, central legacy identity는 silent remap하지 않는다. 신규 147개 row만 v3 additive synthetic summary를 사용한다.</p>
+      <p>Chart group은 DB 허용 8개만 사용한다. 예방/수술은 새 <code>CG_PREVENTION</code>/<code>CG_SURGERY</code>를 쓰고, 입원은 기존 central runtime key <code>phase1a2.fallback.chart.CG_INPATIENT</code>를 재사용한다. 응급/치과/증명서·기타/조제 수납은 기존 <code>CG_EXAM</code>/<code>CG_PROCEDURE</code>/<code>CG_CONSULTATION</code>/<code>CG_MEDICATION_SUPPLY</code>를 재사용한다. 입원·응급·증명서·조제 수납은 <code>phase1a2.fallback.route.NT_BILLING_ONLY</code>를 참조하며 새 <code>cm.route.billing-only</code>는 만들지 않는다. Lab semantics sidecar는 23개 test의 명시 input/unit/specimen, 6개 named panel의 47 links, 13개 profile을 고정한다. 패널 분할은 electrolyte 7 / coagulation 2(citrate plasma) / pre-op 8 / liver 8 / kidney 8 / metabolic 14이며, fecal·요검사·도말·망상적혈구·혈액형 filler는 chemistry panel에 없다. <code>당대사 패널</code>은 metabolic membership만 갖는다.</p>
+      <p>Write manifest는 <code>writeAllowed: false</code> / <code>mutationsPerformed: 0</code>다. 정확한 create field payloads와 field-ID map, CAS baseline gate, stable-key relation resolver, created-ID-only rollback journal을 포함한다. 기존 106개 Master/Name는 unchanged이고, <code>recZW92s9i06wpNp0</code> identity fork 1건만 별도 update payload로 기록한다. 기존 relation/path rows의 actionable semantic diff는 0건이며, null cell omission 11건은 update하지 않는다. 계획된 생성은 Master 147, Names 147, Paths 8, Panel Items 47, Profiles 13뿐이다. Panel Items/Profile writable payload에서는 computed <code>rowLabel</code> formula field IDs(<code>fld8GNoJTzlAYtGnF</code>, <code>fld1KwiL9b4ipNtyX</code>)와 모든 null 값(safetyReason 및 상호배타적 lab link)을 제외한다. 실패 시 기존 Release Draft writable fields를 <code>status: approved</code>로 복원하고 identity fork를 old key로 되돌린 뒤 Profiles→Panel Items→Paths→Names→Masters 순서로 created ID만 되돌린다.</p>
+      <p>생성물 SHA-256: authoring <code>eafac370977baa9850fc322bcbe27587b853ccec58fd0a86358e7769dbf04bc6</code>, adapter <code>ee7c8d0f379c71ac675ad90d9e92abfd17da798785b4e0ebd566c6e8394e8697</code>, pricing/adoption <code>7b0e273f9809e9febc2d74a9cc332f1a6fe4866bc112182da58cfba6a9e0ab2b</code>, lab-semantics <code>d3ce711c9f0cc5741e5d6e291c8d29bbaa883b0563828b109e5c8464eb28aab8</code>, current write-manifest candidate <code>19951ef0fcf0831c0aa542def2be7618b99d8a8991a7e72373426c630d553f94</code>. Historical Airtable write evidence used manifest <code>0c65e0a1f18a3769e11061c02a60beb7e8b08814ae9b2f2ffb68336dbdd832bd</code>; it is not being replayed.</p>
+      <p>Inpatient의 published master route는 <code>NT_BILLING_ONLY</code>이며 held source route <code>NT_INPATIENT</code>는 sidecar metadata로만 보존하고 workspace <code>billing_only</code>로 매핑한다. Cheongdam custom row는 supplied ID와 이름을 보존하고 <code>preserve_no_delete</code> 정책을 사용한다. 검토된 semantic collision 11건은 custom row active / V3 master paused로 반영됐고, pilot/Cheongdam/clair-demo만 adoption target이다. <code>clair-foreign-demo</code>는 <code>read_only_pre_post_fingerprint_no_write</code> unchanged negative control이다.</p>
+
+      <h2>검증 및 남은 게이트</h2>
+      <p><strong>최신 Phase C lifecycle:</strong> PR-014 실행은 price-all → payload-linked current-source pending/new review pass → 각 row fresh-CAS/readback → version-backed coverage와 linked pending 차단 → active-all → Cheongdam collision pause 순서로 완료됐다. resolver 진입 전 selected/pending/catalog/positive-price/canonical/version-release 여섯 shape count를 각각 120으로 fail-closed 검증했고, legacy initial/metabolic nonpayload rows는 untouched로 보존했다. 최종 operation manifest SHA는 <code>c2178c6c22c0faaa2bb16fc505068128f5c5567951fe7a9a52dc2a3972ecbea8</code>, full/remote rollback SHA는 <code>9270e3e6da78c213bf25fadd931093dbdbd8cd0874c9f9b83d543432ecafcbc5</code>, persistent commit SHA는 <code>f984d4430ba5813d4fa4fd889a60bb2e61fe566ff4d8d228d53f57aa0caa6371</code>다.</p>
+      <p><span class="ok">통과:</span> remote migration apply, exact rollback rehearsal, persistent atomic commit, post-commit release/workspace/foreign readback, deterministic generators <code>--check</code>, focused Playwright 18/18, focused ESLint, docs:check, exact category/count gates, adapter generation, publisher forbidden-key scan, <code>git diff --check</code>.</p>
+      <p>파일 기반 Playwright 검사는 static fixture/contract 경계를 검증했다. 별도의 인증 production browser smoke는 <code>/w/workspace-clair-cheongdam/orders?modulePanel=open&amp;section=orders</code>에서 VIP workspace와 lab category 34를 로드하고, custom <code>CBC</code> active 35,000원 및 V3 master <code>전혈구 기본 패널</code> paused 36,001원을 확인했다. 이는 기존 production app의 DB readback이며 새 앱 deployment 완료 주장은 아니다.</p>
+      <p><strong>Authoritative completion evidence:</strong> 현재 Phase C operation manifest는 <code>c2178c6c22c0faaa2bb16fc505068128f5c5567951fe7a9a52dc2a3972ecbea8</code>, remote rollback rehearsal은 <code>9270e3e6da78c213bf25fadd931093dbdbd8cd0874c9f9b83d543432ecafcbc5</code>, persistent commit은 <code>f984d4430ba5813d4fa4fd889a60bb2e61fe566ff4d8d228d53f57aa0caa6371</code>다. 이전 handoff SHA들은 모두 superseded historical values다. Persistent candidate는 한 top-level transaction 안에서 publish → allowlisted workspace adoption/pricing/review → collision pause를 실행했고 release sequence를 9로 유지했다.</p>
+      <p><strong>Airtable final-state delta:</strong> 최종 readback baseline <code>e2f931eef25871131de7b78a948b3dfe1892efa9bb2d89ae6a85b30e290cb44a</code>를 별도 CAS 기준으로 고정했다. delta manifest SHA는 <code>b56bea202a0cc37d7a0a0b47a5b8042bac524b4ce24313b9d23c1f1d4a946433</code>이며, eight-table post hash와 full post hash <code>34554f2c7f7d6cb2720e298a5baed778b493b988eba945855071bdf22f55eb12</code>를 요구한다. recZW92s9i06wpNp0의 Master Key만 새 key로 fork하고, linked Name rec0Pw4CymPIed8ta lookup은 같은 ID로 새 key를 가리켜야 하며 Names 별도 write는 금지한다. 모든 before/post hash·count·linked-ID/name·rollback baseline gate 통과 전에는 execution eligibility가 deferred이고 원격 Airtable write는 0건이다.</p>
+      <p><span class="ok">Publisher replay:</span> Historical no-scope 230-row local replay는 source fingerprint <code>3213a3f84595ae11007970448b670063c49ea167f01e1825258a655b6843c137</code>로 publish/retry/rollback을 통과했다. Release-scoped canonical payload는 local DB replay와 remote exact rollback rehearsal에서 fingerprint <code>0225bc6714210cfe663bded97fe6b3cbf76fedf99dce1540a302c0fd46235893</code>를 확인했고, persistent commit에도 같은 fingerprint가 저장됐다.</p>
+      <p><strong>Phase C completion:</strong> Remote project <code>qmerxgzrwaaahpkhjqlc</code>에 migration <code>clinical_master_release_scoped_workspace_adoption</code>을 적용한 뒤, exact persistent candidate <code>f984d4430ba5813d4fa4fd889a60bb2e61fe566ff4d8d228d53f57aa0caa6371</code>를 한 top-level transaction으로 commit했다. 공개 RPC 인증·권한 경계, allowlist-only workspace mutation, custom-preserving collision pause, foreign negative control을 그대로 유지했다. 결과는 release 9, payload-scoped 230 records와 120 order manifest이며, Airtable·Order Set 변경과 새 앱 deployment는 포함하지 않는다. Phase 2–5도 이 완료 범위 밖이다.</p>
+      <p>검토 대상 파일은 <code>tests/clinical-master-operational-v3.spec.ts</code>, 생성기와 authoring/adapter/pricing/lab-semantics full fixture, read-only Airtable readback, executable-ready additive write manifest, 그리고 <code>docs/work/clinical-master/CLINICAL-MASTER-PR-013-airtable-operational-master-v3.md</code>다. Order Set authoring, canonical pricing, clinical claims/dosing/ranges, real hospital/patient data는 이 slice에 포함하지 않는다.</p>
+    </article>
+  </main>
+</body>
+</html>
