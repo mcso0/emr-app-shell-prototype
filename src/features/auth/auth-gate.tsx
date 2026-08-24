@@ -9,13 +9,18 @@ import {
   readSessionWorkspacesState,
   resolveSessionWorkspaceAccess,
 } from "@/features/auth/workspace-session";
+import {
+  hasActiveWorkspaceServerAccess,
+  isWorkspaceAccessAllowedFor,
+  shouldVerifyWorkspaceAccessOnServer,
+  type WorkspaceAccessSnapshot,
+  type WorkspaceAuthProvider,
+} from "@/features/auth/workspace-access-contract";
 
 type AuthGateProps = {
   children: React.ReactNode;
   workspaceId?: string;
 };
-
-type WorkspaceAccessState = "checking" | "allowed" | "denied";
 
 function buildLoginHref(
   pathname: string,
@@ -28,15 +33,6 @@ function buildLoginHref(
   return `/login?${params.toString()}`;
 }
 
-function isActivePersistedWorkspace(
-  workspaces: Array<{ id?: unknown; status?: unknown }>,
-  workspaceId: string
-) {
-  return workspaces.some(
-    (workspace) => workspace.id === workspaceId && workspace.status === "active"
-  );
-}
-
 export function AuthGate({ children, workspaceId }: AuthGateProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -45,7 +41,11 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
   const { hydrated, session, hydrate } = useAuthClient();
   const { completeWorkspaceEntrySplash } = useWorkspaceEntrySplash();
   const [workspaceAccess, setWorkspaceAccess] =
-    useState<WorkspaceAccessState>("checking");
+    useState<WorkspaceAccessSnapshot>({
+      workspaceId: workspaceId ?? null,
+      status: "checking",
+    });
+  const currentWorkspaceId = workspaceId ?? null;
 
   useEffect(() => {
     hydrate();
@@ -63,27 +63,30 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
 
     async function verifyWorkspaceAccess() {
       if (!hydrated || !session) {
-        setWorkspaceAccess("checking");
         return;
       }
 
       if (!workspaceId) {
-        setWorkspaceAccess("allowed");
+        setWorkspaceAccess({ workspaceId: currentWorkspaceId, status: "allowed" });
         return;
       }
 
       const sessionState = readSessionWorkspacesState(window.sessionStorage, window.localStorage);
       const sessionAccess = resolveSessionWorkspaceAccess(sessionState, workspaceId, session.id);
+      const authProvider: WorkspaceAuthProvider =
+        "provider" in session && session.provider === "supabase" ? "supabase" : "mock";
 
-      if (sessionAccess === "active") {
-        setWorkspaceAccess("allowed");
-        return;
-      }
+      if (!shouldVerifyWorkspaceAccessOnServer(authProvider, sessionAccess)) {
+        if (!ignore && sessionAccess === "active") {
+          setWorkspaceAccess({ workspaceId: currentWorkspaceId, status: "allowed" });
+          return;
+        }
 
-      if (sessionAccess !== "unknown") {
-        setWorkspaceAccess("denied");
-        completeWorkspaceEntrySplash();
-        router.replace(buildLoginHref(pathname, search, "unauthorized"));
+        if (!ignore) {
+          setWorkspaceAccess({ workspaceId: currentWorkspaceId, status: "denied" });
+          completeWorkspaceEntrySplash();
+          router.replace(buildLoginHref(pathname, search, "unauthorized"));
+        }
         return;
       }
 
@@ -98,16 +101,12 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
           ok?: boolean;
           workspaces?: Array<{ id?: unknown; status?: unknown }>;
         };
-        const allowed = Boolean(
-          result.ok &&
-            Array.isArray(result.workspaces) &&
-            isActivePersistedWorkspace(result.workspaces, workspaceId)
-        );
+        const allowed = hasActiveWorkspaceServerAccess(response.ok, result, workspaceId);
 
         if (ignore) return;
 
         if (allowed) {
-          setWorkspaceAccess("allowed");
+          setWorkspaceAccess({ workspaceId: currentWorkspaceId, status: "allowed" });
           return;
         }
       } catch {
@@ -115,7 +114,7 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
       }
 
       if (!ignore) {
-        setWorkspaceAccess("denied");
+        setWorkspaceAccess({ workspaceId: currentWorkspaceId, status: "denied" });
         completeWorkspaceEntrySplash();
         router.replace(buildLoginHref(pathname, search, "unauthorized"));
       }
@@ -133,10 +132,15 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
     router,
     search,
     session,
+    currentWorkspaceId,
     workspaceId,
   ]);
 
-  if (!hydrated || !session || workspaceAccess !== "allowed") {
+  if (
+    !hydrated ||
+    !session ||
+    !isWorkspaceAccessAllowedFor(workspaceAccess, currentWorkspaceId)
+  ) {
     return <AuthGateShellSkeleton />;
   }
 

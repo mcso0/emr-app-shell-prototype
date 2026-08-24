@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>파일럿 병원 워크스페이스 로그인 복구 보고서</title>
+    <style>
+      body { max-width: 880px; margin: 40px auto; padding: 0 20px; color: #18181b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      h1 { font-size: 28px; line-height: 1.25; }
+      h2 { margin-top: 28px; padding-top: 20px; border-top: 1px solid #e4e4e7; font-size: 18px; }
+      code { padding: 1px 5px; border-radius: 4px; background: #f4f4f5; }
+      .summary { padding: 16px 18px; border: 1px solid #bae6fd; border-radius: 10px; background: #f0f9ff; }
+      ul { padding-left: 22px; }
+    </style>
+  </head>
+  <body>
+    <h1>파일럿 병원 워크스페이스 로그인 복구 보고서</h1>
+
+    <section class="summary">
+      <strong>한 줄 요약</strong>
+      <p>
+        계정 권한은 정상이었지만 브라우저에 남은 예전 병원 목록이 서버보다 먼저 접근을 막고 있었다.
+        이제 운영 로그인에서는 서버의 최신 활성 멤버십을 최종 기준으로 확인한다.
+      </p>
+    </section>
+
+    <h2>무엇이 문제였나</h2>
+    <ul>
+      <li><code>admin@clair.local</code>은 파일럿 병원의 활성 병원관리자로 운영 DB에 정상 등록돼 있었다.</li>
+      <li>워크스페이스 전환 목록에도 <code>CLAiR Clinical Master Pilot</code>가 표시됐다.</li>
+      <li>하지만 접근 게이트가 브라우저의 오래된 목록만 보고 <code>권한 없음</code>으로 잘못 판단했다.</li>
+    </ul>
+
+    <h2>어떻게 수정했나</h2>
+    <ul>
+      <li>Supabase 운영 로그인은 서버가 반환하는 최신 활성 워크스페이스 목록을 최종 권한 근거로 사용한다.</li>
+      <li>서버가 워크스페이스를 반환하지 않거나 응답이 실패·손상되면 기존처럼 안전하게 접근을 차단한다.</li>
+      <li>다른 병원으로 전환하는 동안 이전 병원의 허용 상태가 잠깐 재사용되지 않도록 병원별로 검증 상태를 분리했다.</li>
+      <li>로컬 데모 로그인 방식과 DB·RLS·멤버십 데이터는 변경하지 않았다.</li>
+    </ul>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/features/auth/auth-gate.tsx</code></li>
+      <li><code>src/features/auth/workspace-access-contract.ts</code></li>
+      <li><code>tests/auth.spec.ts</code></li>
+      <li><code>docs/completed/auth/2026-08-24-pilot-workspace-auth-refresh-report.html</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li>신규 집중 회귀 테스트 4개 통과</li>
+      <li>TypeScript 검사 통과</li>
+      <li>전체 ESLint 및 프로덕션 빌드 통과</li>
+      <li>보안 비밀정보 검사와 문서 검사 통과</li>
+      <li><code>git diff --check</code> 통과</li>
+      <li>Sol-extra-high 인증 경계 검수: <code>APPROVE / MUST-FIX 0</code></li>
+    </ul>
+
+    <h2>검사 참고 사항</h2>
+    <p>
+      전체 <code>tests/auth.spec.ts</code> 실행은 이번 수정과 무관한 기존 데모 기본 워크스페이스·fixture 기대값
+      불일치로 일부 실패해 중단했다. 이번 접근 판정에 추가한 4개 회귀 테스트와 TypeScript, 전체 ESLint,
+      프로덕션 빌드는 모두 통과했다.
+    </p>
+
+    <h2>운영 확인 범위</h2>
+    <p>
+      배포 후 파일럿 병원의 Order 관리에서 중앙 마스터 기반 31개 항목을 확인하고,
+      청담 병원의 기존 13개 항목이 그대로 조회되는지도 함께 확인한다.
+      파일럿의 새 31개 항목을 청담에 자동 복사하는 작업은 이번 로그인 수정 범위에 포함하지 않는다.
+    </p>
+  </body>
+</html>
