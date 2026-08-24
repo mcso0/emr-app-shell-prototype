@@ -134,9 +134,16 @@ Pilot, Cheongdam, and clair-demo each have exactly `120` V3 catalog rows with
 positive pricing and zero pending reviews; Cheongdam preserves 11 active custom
 rows and pauses the 11 reviewed colliding V3 masters, while the foreign control
 remains empty and unchanged. Authenticated production browser readback verified
-the Cheongdam custom/master CBC collision state. This records DB/data readback
-on the existing production app only; no new application deployment is claimed,
-and Clinical Master Phases 2–5 remain out of scope.
+the Cheongdam custom/master CBC collision state after delivery through PR #589:
+candidate `6c6583bed1eb2aa0fda05865ee16f83d20e46ecf`, merge
+`aa37d87af86244e05ce8c006804678e916e14061`, Release Check `32718907503`
+PASS, and production deployment `dpl_9v6TwuDpUHcQmUBxLzEkusdCEJ9V` Ready on
+`https://emr-app-shell-prototype.vercel.app`. Root HTTP `307` is the expected
+redirect and the Cheongdam order route returned `200`; the authenticated smoke
+loaded VIP workspace, Order management, lab `34`, custom CBC active at
+`35,000` KRW, and the master panel paused at `36,001` KRW with zero console
+errors. The previous rollback production baseline is `origin/main`
+`7ca63194`. Clinical Master Phases 2–5 remain out of scope.
 
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,

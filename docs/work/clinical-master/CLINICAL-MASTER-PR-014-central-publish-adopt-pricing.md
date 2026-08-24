@@ -4,7 +4,7 @@ status: "completed"
 area: "clinical-master"
 priority: "P0"
 target_pr: "Central v3 publish, allowlisted workspace adoption, and workspace pricing"
-execution_boundary: "remote migration and atomic persistent candidate applied to qmerxgzrwaaahpkhjqlc; authenticated production browser readback verified"
+execution_boundary: "remote migration and atomic persistent candidate applied; PR #589 merged and Ready production deployment plus authenticated browser smoke verified"
 predecessor: "CLINICAL-MASTER-PR-013"
 updated: "2026-08-24"
 remote_writes: 2
@@ -59,11 +59,11 @@ The excluded `clair-foreign-demo` catalog remains empty with fingerprint
 
 Authenticated production browser smoke at
 `/w/workspace-clair-cheongdam/orders?modulePanel=open&section=orders` loaded the
-VIP workspace and category counts, including lab `34`. It showed the preserved
-custom `CBC` row active at `35,000` KRW and the V3 master `전혈구 기본 패널`
-paused at `36,001` KRW, matching the reviewed collision policy. This is a
-readback smoke of the existing production application; no new application
-deployment is claimed by PR-014.
+VIP workspace, Order management, and category counts including lab `34`. It
+showed the preserved custom `CBC` row active at `35,000` KRW and the V3 master
+`전혈구 기본 패널` paused at `36,001` KRW, matching the reviewed collision
+policy, with zero browser console errors. This smoke was repeated after the
+Ready production deployment recorded in the release closeout below.
 
 The supported-master identity/history fingerprint is
 `8bbbcdbcfab3bf15aa69bcee87be4caab7aefaf9c3a73998640a8332dbb0b6b1`.
@@ -320,3 +320,17 @@ by the Phase C static spec against the current files. Any generator, spec,
 manifest, preflight, template, or rendered-SQL change invalidates the approval
 candidate until this work item and the generated artifact set are regenerated
 and reviewed together.
+
+## Release closeout
+
+PR #589 delivered candidate `6c6583bed1eb2aa0fda05865ee16f83d20e46ecf`
+and merged as `aa37d87af86244e05ce8c006804678e916e14061`. Release Check
+run `32718907503` passed. Production deployment
+`dpl_9v6TwuDpUHcQmUBxLzEkusdCEJ9V` reached Ready on
+`https://emr-app-shell-prototype.vercel.app`; root HTTP `307` is the expected
+redirect and the Cheongdam order route returned HTTP `200`. The authenticated
+post-deploy smoke verified the exact VIP/Order management/lab `34`/custom CBC
+active `35,000` KRW/master panel paused `36,001` KRW state with zero console
+errors. The previous rollback production baseline is `origin/main`
+`7ca63194`. This closes delivery for PR-014 only; Clinical Master Phases 2–5
+remain out of scope.
