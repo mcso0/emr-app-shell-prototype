@@ -1,0 +1,3 @@
+-- Remote history alias only.
+-- Exact canonical SQL: 20260825245000_chart_order_execution_fk_indexes.sql
+-- SHA-256: d0d95181e58b575419e018d31d46eef37ff6013174feebd572afa36f4672db76

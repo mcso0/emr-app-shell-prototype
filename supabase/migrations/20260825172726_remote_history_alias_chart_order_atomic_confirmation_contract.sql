@@ -1,0 +1,3 @@
+-- Remote history alias only.
+-- Exact canonical SQL: 20260825241000_chart_order_atomic_confirmation_contract.sql
+-- SHA-256: c9013eaace5a99b31fdd572977c5693feb8f60248d6e13a3bdaa7080d69984e7

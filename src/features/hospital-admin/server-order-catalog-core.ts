@@ -9,10 +9,18 @@ import {
   type LiveMutationAuditOptions,
 } from "@/features/audit/server-mutation-audit-core";
 import type {
+  ClinicalOrderDestinationModule,
+  ClinicalOrderExecutionMode,
+  ClinicalOrderType,
   PermissionId,
   ServiceItemType,
   Species,
 } from "@/types/emr-domain";
+import {
+  isClinicalOrderType,
+  resolveClinicalOrderMasterContract,
+  type ClinicalOrderFieldSchema,
+} from "@/features/chart/order-execution-domain";
 
 export type OrderCatalogAvailability =
   | "pending_activation"
@@ -97,6 +105,13 @@ export type OrderCatalogItem = {
   classificationPathId?: string;
   catalogRevision?: number;
   sourceProjectionFingerprint?: string;
+  clinicalOrderType?: ClinicalOrderType;
+  isExternalLab?: boolean;
+  destinationModule?: ClinicalOrderDestinationModule | null;
+  executionMode?: Exclude<ClinicalOrderExecutionMode, "aggregate">;
+  detailSchemaVersion?: number;
+  detailFieldSchema?: ClinicalOrderFieldSchema;
+  billingEligible?: boolean;
   updatedAt: string;
 };
 
@@ -544,6 +559,11 @@ export type ChartOrderCatalogSearchRow = {
   categoryGroup: ServiceItemType | "set";
   targetSpecies: Species[];
   appliedSnapshot: AppliedOrderSnapshot;
+  clinicalOrderType?: ClinicalOrderType;
+  destinationModule?: ClinicalOrderDestinationModule | null;
+  executionMode?: Exclude<ClinicalOrderExecutionMode, "aggregate">;
+  detailSchemaVersion?: number;
+  billingEligible?: boolean;
   workspaceCatalogItemId?: string;
   sourceMasterRecordId?: string;
   sourceMasterRevision?: number;
@@ -579,6 +599,11 @@ export type AppliedOrderSnapshot = {
   appliedDestinationModule?: OrderCatalogDestination;
   appliedTaskRequired?: boolean;
   billingReflectionEnabled: boolean;
+  clinicalOrderType?: ClinicalOrderType;
+  destinationModule?: ClinicalOrderDestinationModule | null;
+  executionMode?: Exclude<ClinicalOrderExecutionMode, "aggregate">;
+  detailSchemaVersion?: number;
+  billingEligible?: boolean;
 };
 
 export type ExpandedOrderSetRow = {
@@ -1197,6 +1222,19 @@ export function createOrderPricingSnapshot(
     throw new Error("active_billable_order_requires_price");
   }
   const appliedPriceKrw = item.pricingRule.priceKrw ?? item.priceKrw ?? null;
+  const executionContract = resolveClinicalOrderMasterContract({
+    billingEligible: item.billingEligible,
+    billingReflectionEnabled: item.billingReflectionEnabled,
+    categoryGroup: item.categoryGroup,
+    clinicalOrderType: item.clinicalOrderType,
+    defaultDestinationModule: item.defaultDestinationModule,
+    defaultTaskRequired: item.defaultTaskRequired,
+    destinationModule: item.destinationModule,
+    detailFieldSchema: item.detailFieldSchema,
+    detailSchemaVersion: item.detailSchemaVersion,
+    executionMode: item.executionMode,
+    isExternalLab: item.isExternalLab,
+  });
   return {
     sourcePresetId: item.standardOrderId,
     sourcePresetVersion: item.sourcePresetVersion,
@@ -1214,6 +1252,11 @@ export function createOrderPricingSnapshot(
     appliedDestinationModule: item.defaultDestinationModule,
     appliedTaskRequired: item.defaultTaskRequired,
     billingReflectionEnabled: item.pricingRule.billingReflectionEnabled,
+    clinicalOrderType: executionContract.clinicalOrderType,
+    destinationModule: executionContract.destinationModule,
+    executionMode: executionContract.executionMode,
+    detailSchemaVersion: executionContract.detailSchemaVersion,
+    billingEligible: executionContract.billingEligible,
   };
 }
 
@@ -1380,8 +1423,9 @@ export function createMockOrderCatalogGateway(
             item.workspaceId === workspaceId &&
             item.availabilityStatus === "active",
         )
-        .map(
-          (item): ChartOrderCatalogSearchRow => ({
+        .map((item): ChartOrderCatalogSearchRow => {
+          const appliedSnapshot = createOrderPricingSnapshot(item);
+          return {
             rowType: "individual",
             sourcePresetId: item.standardOrderId,
             sourcePresetVersion: item.sourcePresetVersion,
@@ -1389,7 +1433,12 @@ export function createMockOrderCatalogGateway(
             billingName: item.billingName,
             categoryGroup: item.categoryGroup,
             targetSpecies: item.targetSpecies,
-            appliedSnapshot: createOrderPricingSnapshot(item),
+            appliedSnapshot,
+            clinicalOrderType: appliedSnapshot.clinicalOrderType,
+            destinationModule: appliedSnapshot.destinationModule,
+            executionMode: appliedSnapshot.executionMode,
+            detailSchemaVersion: appliedSnapshot.detailSchemaVersion,
+            billingEligible: appliedSnapshot.billingEligible,
             workspaceCatalogItemId: item.id,
             sourceMasterRecordId: item.sourceMasterRecordId,
             sourceMasterRevision: item.sourceMasterRevision,
@@ -1406,8 +1455,8 @@ export function createMockOrderCatalogGateway(
             sourceSetValidationStatus: null,
             sourceSetPriceRanges: null,
             sourceSetPendingReviewCount: null,
-          }),
-        );
+          };
+        });
       const activeSets = orderSets
         .filter(
           (set) =>
@@ -1906,6 +1955,13 @@ type OrderCatalogItemDbRow = {
   catalog_revision?: number | null;
   source_projection_snapshot?: Record<string, unknown> | null;
   source_projection_fingerprint?: string | null;
+  clinical_order_type?: string | null;
+  is_external_lab?: boolean | null;
+  destination_module?: string | null;
+  execution_mode?: string | null;
+  detail_schema_version?: number | null;
+  detail_field_schema?: Record<string, unknown> | null;
+  billing_eligible?: boolean | null;
   category_group: string;
   category_label: string;
   t_code?: string | null;
@@ -2720,6 +2776,19 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
   }
 
   const pricingRule = mapOrderPricingRule(row);
+  const executionContract = resolveClinicalOrderMasterContract({
+    categoryGroup: row.category_group as ServiceItemType,
+    clinicalOrderType: row.clinical_order_type,
+    isExternalLab: row.is_external_lab,
+    destinationModule: row.destination_module,
+    defaultDestinationModule: row.default_destination_module,
+    executionMode: row.execution_mode,
+    defaultTaskRequired: row.default_task_required,
+    detailSchemaVersion: row.detail_schema_version,
+    detailFieldSchema: row.detail_field_schema,
+    billingEligible: row.billing_eligible,
+    billingReflectionEnabled: row.billing_reflection_enabled,
+  });
   return {
     id: row.id,
     workspaceId: row.workspace_id,
@@ -2749,6 +2818,13 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     classificationPathId: row.classification_path_id ?? undefined,
     catalogRevision: row.catalog_revision ?? 1,
     sourceProjectionFingerprint: row.source_projection_fingerprint ?? undefined,
+    clinicalOrderType: executionContract.clinicalOrderType,
+    isExternalLab: executionContract.isExternalLab,
+    destinationModule: executionContract.destinationModule,
+    executionMode: executionContract.executionMode,
+    detailSchemaVersion: executionContract.detailSchemaVersion,
+    detailFieldSchema: executionContract.detailFieldSchema,
+    billingEligible: executionContract.billingEligible,
     categoryGroup: row.category_group as ServiceItemType,
     categoryLabel: row.category_label,
     tCode: row.t_code ?? undefined,
@@ -3279,6 +3355,11 @@ function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
     workspaceCatalogRevision: readNumber(
       row.workspaceCatalogRevision ?? row.workspace_catalog_revision,
     ),
+    clinicalOrderType: appliedSnapshot.clinicalOrderType,
+    destinationModule: appliedSnapshot.destinationModule,
+    executionMode: appliedSnapshot.executionMode,
+    detailSchemaVersion: appliedSnapshot.detailSchemaVersion,
+    billingEligible: appliedSnapshot.billingEligible,
     sourceSetId: null,
     sourceSetRevisionId: null,
     sourceSetRevisionNo: null,
@@ -3517,6 +3598,29 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
       row.appliedTaskRequired ?? row.applied_task_required,
     ),
     billingReflectionEnabled,
+    clinicalOrderType: isClinicalOrderType(
+      row.clinicalOrderType ?? row.clinical_order_type,
+    )
+      ? (row.clinicalOrderType ?? row.clinical_order_type) as ClinicalOrderType
+      : undefined,
+    destinationModule:
+      row.destinationModule === null || row.destination_module === null
+        ? null
+        : readString(row.destinationModule ?? row.destination_module) as
+            ClinicalOrderDestinationModule | undefined,
+    executionMode:
+      row.executionMode === "routed" || row.execution_mode === "routed"
+        ? "routed"
+        : row.executionMode === "immediate_complete" ||
+            row.execution_mode === "immediate_complete"
+          ? "immediate_complete"
+          : undefined,
+    detailSchemaVersion: readNumber(
+      row.detailSchemaVersion ?? row.detail_schema_version,
+    ),
+    billingEligible: readBoolean(
+      row.billingEligible ?? row.billing_eligible,
+    ),
   };
 }
 

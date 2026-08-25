@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-08-25
+Updated: 2026-08-26
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -42,6 +42,16 @@ The app currently has usable prototype screens for:
 | Hospital admin            | Order catalog persistence foundation, server-backed membership/invitation directory, archived membership lifecycle, permission-role and job-position definition lifecycle, audit-atomic mutation RPCs, grouped settings-hub UI, and a Flex-inspired session-only `근무표`. HOSPITAL-ADMIN-LIVE-PR-012 persists operating hours, date exceptions, timezone, and holiday policy behind member-read/admin-write API/RLS/RPC boundaries; settings updates emit central audit events and block future appointment conflicts. HOSPITAL-ADMIN-LIVE-PR-018 adds workspace-wide curated vital presets, admin-managed order/visibility/units, canonical measurement conversion, and shared reception/chart/current-summary consumption. PR #479 released the feature to production, and remote migration `20260722112553` passed catalog, permission, authenticated rollback-only writer/readback, and persisted-default checks. HOSPITAL-ADMIN-LIVE-PR-019 makes weight/temperature catalog-required while keeping measurements optional, adds reversible optional-preset removal, and preserves historical measurements. Its remote migration `20260722130209` passed catalog, required-writer rejection, optional removal/re-add, front-desk denial, rollback, and unchanged-measurement checks; PR #483 carries the application release. HOSPITAL-ADMIN-LIVE-PR-020 locally implements workspace category/space CRUD with archive-safe Supabase schema, permission-checked command RPCs, audit events, and the approved two-level `공간 관리` UI; remote migration and release are not claimed. HOSPITAL-ADMIN-PR-007 splits hospital identity, contact/channel, and operating-time management into independent URL-backed screens while preserving live space/vital screens. HOSPITAL-ADMIN-LIVE-PR-021/022 locally implement workspace-scoped profile/contact/change requests and private hospital-logo Storage with API/RPC/RLS/audit boundaries; remote migration, Storage provisioning, and production readback remain release-gated. HOSPITAL-ADMIN-LIVE-PR-023 links that stored private-logo pointer to the workspace-list read model and app-shell switcher, preserves one shared fallback mark, and refreshes shell identity after upload or removal; no schema or remote logo asset change is included. |
 | Audit                     | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Auth/workspace            | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, active-membership App Shell switching with tenant-context-safe navigation, and local DB/RLS foundations                                                                                                                                                                                                                                                                                                                                                                                           |
+
+CLINICAL-FULFILLMENT-PR-009 is at the post-migration verification gate. The
+production-bound Supabase project now has the additive eight-type Order master,
+shared Draft/ETag, universal Task, routed Queue projection, Billing candidate,
+immutable revision/attempt, and downstream read-model contracts. Deterministic
+backfill reconciled confirmed atomic Orders `38` to Task `38`, existing Queue
+`31`, and Billing candidate `38`; every missing/duplicate/orphan/workspace and
+Draft-artifact counter is `0`. The application implementation is not deployed,
+the production alias is unchanged, and `origin/main` merge remains the
+unholdable Vercel Production boundary; delivery must stop at a merge-ready PR.
 
 RECEPTION-LIVE-PR-016 is implemented: effective break time is now a
 warning-confirmed creation state for walk-ins and reservations, the day calendar
@@ -223,9 +233,14 @@ clinical-content validation, a full browser/test matrix, or Phase 2–5 delivery
 The optional broader 38-case matrix remains unclaimed. The local migration-history
 reconciliation now records the verified pre-change snapshot of 158 local / 130
 remote / 118 common / 12 remote-only / 40 local-only, adds twelve comment-only
-aliases, and preserves four remote-only SQL files with proof hashes. The final
-verified repository/remote snapshot is 170 local / 156 remote / 156 common /
-0 remote-only / 14 local-only. An exact-project history-only repair marked 26
+aliases, and preserves four remote-only SQL files with proof hashes. The
+2026-08-23 verified repository/remote snapshot was 170 local / 156 remote / 156
+common / 0 remote-only / 14 local-only. Four later exact-common migrations and
+two remote timestamp aliases were verified by exact stored-statement SHA-256 on
+2026-08-25, making the current snapshot 178 local / 162 remote / 162 common / 0
+remote-only / 16 local-only. The latter 16 are the same 14 genuinely pending
+versions plus two exact behavior-applied canonical versions awaiting an
+exact-project history-only repair. An exact-project history-only repair marked 26
 canonical history rows applied; it executed no migration SQL and made no
 schema/data mutation. Read-only verification recorded schema fingerprint
 `5b6046943b4317bf828110285007a24f82e8aaf74ae1e2bfa0b20695952170b4` and

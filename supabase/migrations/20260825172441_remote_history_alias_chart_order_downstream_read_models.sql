@@ -1,0 +1,3 @@
+-- Remote history alias only.
+-- Exact canonical SQL: 20260825243000_chart_order_downstream_read_models.sql
+-- SHA-256: 97462643d2ab612b609894cc25bbe44c1685fa009020ca4d30b95b8dd393aee3

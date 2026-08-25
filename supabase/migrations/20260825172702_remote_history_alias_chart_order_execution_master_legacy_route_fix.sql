@@ -1,0 +1,3 @@
+-- Remote history alias only.
+-- Exact canonical SQL: 20260825234500_chart_order_execution_master_legacy_route_fix.sql
+-- SHA-256: e07c0076814831e24ea5c7d61a8aa31ca76af124816cd2783a019600e990f2f2

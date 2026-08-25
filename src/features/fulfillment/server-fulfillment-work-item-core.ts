@@ -39,6 +39,8 @@ import {
   isIsoOperatingDate,
 } from "@/lib/emr-domain/demo-date";
 import type {
+  ClinicalOrderDestinationModule,
+  ClinicalOrderType,
   EmrOrder,
   EmrOrderType,
   Encounter,
@@ -124,9 +126,11 @@ export type FulfillmentOrderSnapshotInput = {
 export type FulfillmentWorkItem = {
   assignedToUserId?: string | null;
   cancelledAt?: string | null;
+  clinicalOrderType?: ClinicalOrderType | null;
   completedAt?: string | null;
   createdAt: string;
   dueAt?: string | null;
+  destinationModule?: ClinicalOrderDestinationModule | null;
   encounterId: string;
   id: string;
   orderId: string;
@@ -138,11 +142,14 @@ export type FulfillmentWorkItem = {
   returnedAt?: string | null;
   sourceSnapshot: FulfillmentSourceSnapshot;
   status: FulfillmentWorkItemStatus;
+  taskAttemptNo?: number | null;
+  taskId?: string | null;
   updatedAt: string;
   workspaceId: string;
 };
 
 export type FulfillmentWorkItemReadSummary = {
+  activeCount: number;
   date?: string;
   encounterId?: string;
   orderId?: string;
@@ -430,6 +437,8 @@ export function getFulfillmentWorkItemReadSummary({
   });
 
   return {
+    activeCount:
+      workItems.length - statusCounts.completed - statusCounts.cancelled,
     ...(filters.date ? { date: filters.date } : {}),
     ...(filters.encounterId ? { encounterId: filters.encounterId } : {}),
     ...(filters.orderId ? { orderId: filters.orderId } : {}),
@@ -2481,6 +2490,22 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
   ) {
     return null;
   }
+  if (
+    (row.taskId !== undefined && row.taskId !== null && typeof row.taskId !== "string") ||
+    (row.taskAttemptNo !== undefined &&
+      row.taskAttemptNo !== null &&
+      (!Number.isInteger(row.taskAttemptNo) || row.taskAttemptNo <= 0)) ||
+    (row.clinicalOrderType !== undefined &&
+      row.clinicalOrderType !== null &&
+      !isClinicalOrderType(row.clinicalOrderType)) ||
+    (row.destinationModule !== undefined &&
+      row.destinationModule !== null &&
+      !isClinicalOrderDestinationModule(row.destinationModule)) ||
+    ((row.taskId === null || row.taskId === undefined) !==
+      (row.taskAttemptNo === null || row.taskAttemptNo === undefined))
+  ) {
+    return null;
+  }
   const frozenSnapshot =
     asSnapshotRecord(
       (
@@ -2508,4 +2533,32 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
   }
 
   return row as FulfillmentWorkItem;
+}
+
+function isClinicalOrderType(value: unknown): value is ClinicalOrderType {
+  return [
+    "consultation",
+    "clinical_lab",
+    "imaging",
+    "external_lab",
+    "dispensing",
+    "treatment",
+    "hospitalization",
+    "other",
+  ].includes(String(value));
+}
+
+function isClinicalOrderDestinationModule(
+  value: unknown,
+): value is ClinicalOrderDestinationModule {
+  return [
+    "consultation",
+    "lab",
+    "imaging",
+    "external_lab",
+    "dispensing",
+    "treatment",
+    "hospitalization",
+    "other",
+  ].includes(String(value));
 }
