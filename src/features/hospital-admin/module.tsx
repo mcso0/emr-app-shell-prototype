@@ -2203,7 +2203,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         </EmrTableFeedbackSurface>
       ) : (
         <div
-          className="min-h-0 min-w-0 flex-1"
+          className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
           data-testid="hospital-order-table"
         >
           <EmrDataTable

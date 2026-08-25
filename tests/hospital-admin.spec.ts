@@ -1734,6 +1734,72 @@ test("hospital admin order table uses shared header and cell text primitives", a
   );
 });
 
+test("hospital admin Order table keeps long leaf rows vertically scrollable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog",
+    async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        items: Array<Record<string, unknown>>;
+        ok: true;
+      };
+      const labSeed = body.items.find(
+        (item) => item.id === "ord-lab-cbc-baso",
+      );
+
+      if (!labSeed) {
+        throw new Error("Order table scroll fixture seed is missing.");
+      }
+
+      const items = Array.from({ length: 30 }, (_, index) => ({
+        ...labSeed,
+        billingName: `스크롤 검사 ${index + 1}`,
+        id: `ord-lab-scroll-${index + 1}`,
+        inHospitalOrderName: `스크롤 검사 ${index + 1}`,
+        standardOrderId: `std-ord-lab-scroll-${index + 1}`,
+        standardOrderName: `스크롤 검사 ${index + 1}`,
+      }));
+
+      await route.fulfill({
+        response,
+        json: { ...body, items },
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const table = page.getByTestId("hospital-order-table");
+  const scrollOwner = table.locator(
+    '[data-emr-pinned-table-scroll-owner="true"]',
+  );
+  await expect(table.locator('[data-testid^="hospital-order-row-"]')).toHaveCount(
+    30,
+  );
+
+  const initialMetrics = await scrollOwner.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    scrollTop: element.scrollTop,
+  }));
+  expect(initialMetrics.scrollHeight).toBeGreaterThan(initialMetrics.clientHeight);
+  expect(initialMetrics.scrollTop).toBe(0);
+
+  await scrollOwner.hover();
+  await page.mouse.wheel(0, 480);
+  await expect
+    .poll(() => scrollOwner.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+});
+
 test("hospital admin Order table keeps the shared pinned boundary fixed over the viewport", async ({
   page,
 }) => {
