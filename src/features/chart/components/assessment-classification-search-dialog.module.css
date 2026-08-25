@@ -246,7 +246,7 @@
   position: relative;
   display: grid;
   min-height: 44px;
-  grid-template-columns: 24px minmax(0, 1fr) auto 60px;
+  grid-template-columns: 24px minmax(0, 1fr) auto 60px 28px;
   align-items: center;
   gap: 8px;
   overflow: hidden;
@@ -254,30 +254,6 @@
   border: 1px solid var(--emr-border-default);
   border-radius: 8px;
   background: var(--emr-surface-panel);
-}
-
-.selectedRow::after {
-  position: absolute;
-  z-index: 1;
-  top: 0;
-  right: 0;
-  width: 96px;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0),
-    rgba(255, 255, 255, 0.92) 38%,
-    var(--emr-surface-panel) 62%
-  );
-  content: "";
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
-}
-
-.selectedRow:hover::after,
-.selectedRow:focus-within::after {
-  opacity: 1;
 }
 
 .dragging {
@@ -346,15 +322,11 @@
 }
 
 .deleteButton {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  right: 12px;
   width: 28px;
   height: 28px;
+  justify-self: end;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-50%);
   transition: opacity 120ms ease;
 }
 
@@ -369,10 +341,19 @@
   font-size: 11px;
 }
 
+.clearButton:hover:not(:disabled) {
+  color: var(--emr-text-primary);
+}
+
 .emptyState,
 .feedback {
   min-height: 0;
   height: 100%;
+}
+
+.emptyState {
+  justify-content: center;
+  margin-inline: auto;
 }
 
 .feedback {
@@ -425,6 +406,13 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation: none;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .deleteButton {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
