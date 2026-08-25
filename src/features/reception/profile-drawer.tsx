@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -108,6 +109,12 @@ import type {
 } from "@/features/customer/server-patient-profile";
 import type { KakaoPostcodeSelectedAddress } from "@/lib/kakao-postcode";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import {
+  addMonthsToIsoDate,
+  getWorkspaceOperatingDate,
+  isIsoOperatingDate,
+  parseIsoDateParts,
+} from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
 import {
   getMockGuardianBundle,
@@ -304,21 +311,12 @@ const getGuardianSearchDisplay = (
     `${guardian.mobilePhone ?? "연락처 미입력"} · ${getGuardianPatientSummary(guardian.id, patients, links)}`,
   ].join(" ");
 
-const REGISTRATION_BASE_DATE = new Date("2026-05-02T00:00:00+09:00");
-
 const getMixBreedSuggestion = (species: Species) => {
   if (species === "dog") return "믹스견";
   if (species === "cat") return "믹스묘";
 
   return "";
 };
-
-const formatRegistrationDate = (date: Date) =>
-  [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
 
 const formatKoreanPhoneNumber = (value: string) => {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -355,18 +353,22 @@ const formatKoreanAddress = ({
     .filter(Boolean)
     .join(" ");
 
-const getBirthDateFromAge = ({ months, years }: { months: string; years: string }) => {
+const getBirthDateFromAge = ({
+  months,
+  referenceDate,
+  years,
+}: {
+  months: string;
+  referenceDate: string;
+  years: string;
+}) => {
   const yearCount = Number(years || 0);
   const monthCount = Number(months || 0);
 
   if (!yearCount && !monthCount) return "";
   if (Number.isNaN(yearCount) || Number.isNaN(monthCount)) return "";
 
-  const birthDate = new Date(REGISTRATION_BASE_DATE);
-  birthDate.setFullYear(birthDate.getFullYear() - yearCount);
-  birthDate.setMonth(birthDate.getMonth() - monthCount);
-
-  return formatRegistrationDate(birthDate);
+  return addMonthsToIsoDate(referenceDate, -(yearCount * 12 + monthCount));
 };
 
 const formatBirthDateInput = (value: string) => {
@@ -380,15 +382,21 @@ const formatBirthDateInput = (value: string) => {
 const formatAgeNumberInput = (value: string) => value.replace(/\D/g, "").slice(0, 3);
 
 function AgePartInput({
+  ariaDescribedBy,
+  ariaInvalid,
   ariaLabel,
   className,
+  id,
   inputClassName,
   onValueChange,
   unit,
   value,
 }: {
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
   ariaLabel: string;
   className?: string;
+  id?: string;
   inputClassName?: string;
   onValueChange: (value: string) => void;
   unit: "년" | "개월";
@@ -397,6 +405,9 @@ function AgePartInput({
   return (
     <div className={cn("relative min-w-0", className)}>
       <Input
+        id={id}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid || undefined}
         aria-label={ariaLabel}
         className={cn("h-10 bg-card pr-10 text-right", inputClassName)}
         inputMode="numeric"
@@ -411,31 +422,27 @@ function AgePartInput({
   );
 }
 
-const getAgeTextFromBirthDate = (birthDateValue: string) => {
-  const birthDate = new Date(`${birthDateValue}T00:00:00+09:00`);
+const getAgeTextFromBirthDate = (birthDateValue: string, referenceDate: string) => {
+  if (!isIsoOperatingDate(birthDateValue) || birthDateValue > referenceDate) return "";
 
-  if (Number.isNaN(birthDate.getTime()) || birthDate > REGISTRATION_BASE_DATE) return "";
+  const birthDate = parseIsoDateParts(birthDateValue);
+  const currentDate = parseIsoDateParts(referenceDate);
+  let totalMonths =
+    (currentDate.year - birthDate.year) * 12 + currentDate.month - birthDate.month;
 
-  let years = REGISTRATION_BASE_DATE.getFullYear() - birthDate.getFullYear();
-  let months = REGISTRATION_BASE_DATE.getMonth() - birthDate.getMonth();
+  if (currentDate.day < birthDate.day) totalMonths -= 1;
+  if (totalMonths < 0) return "";
 
-  if (REGISTRATION_BASE_DATE.getDate() < birthDate.getDate()) months -= 1;
-  if (months < 0) {
-    years -= 1;
-    months += 12;
-  }
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
 
-  return [years ? `${years}년` : "", months ? `${months}개월` : ""].filter(Boolean).join(" ") || "0개월";
+  return [years ? `${years}년` : "", months ? `${months}개월` : ""]
+    .filter(Boolean)
+    .join(" ") || "0개월";
 };
 
-const isValidRegistrationBirthDate = (value: string) => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-
-  const date = new Date(`${value}T00:00:00+09:00`);
-  if (Number.isNaN(date.getTime()) || date > REGISTRATION_BASE_DATE) return false;
-
-  return formatRegistrationDate(date) === value;
-};
+const isValidRegistrationBirthDate = (value: string, referenceDate: string) =>
+  isIsoOperatingDate(value) && value <= referenceDate;
 
 type NewPatientDraft = {
   additionalBreed: string;
@@ -1371,16 +1378,22 @@ function KoreanAddressFields({
 
 
 function BreedAutocomplete({
+  ariaDescribedBy,
+  ariaInvalid,
   ariaLabel = "품종",
   className,
+  id,
   placeholder,
   readOnly,
   species,
   value,
   onValueChange,
 }: {
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
   ariaLabel?: string;
   className?: string;
+  id?: string;
   placeholder: string;
   readOnly?: boolean;
   species: Species;
@@ -1400,6 +1413,9 @@ function BreedAutocomplete({
   if (readOnly) {
     return (
       <Input
+        id={id}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid || undefined}
         aria-label={ariaLabel}
         value={value}
         readOnly
@@ -1419,6 +1435,9 @@ function BreedAutocomplete({
           className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
         />
         <Input
+          id={id}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid || undefined}
           aria-label={ariaLabel}
           autoComplete="off"
           className={cn(className, "pl-9")}
@@ -2185,6 +2204,9 @@ export function NewPatientDialog({
   openPatientDrawerOnCreated?: boolean;
   open: boolean;
 }) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
+  const registrationReferenceDate = getWorkspaceOperatingDate(workspaceId);
   const addPatient = usePatientProfileStore((state) => state.addPatient);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const hasDuplicatePatientNameForGuardian = usePatientProfileStore(
@@ -2241,7 +2263,7 @@ export function NewPatientDialog({
     const estimatedAgeText = ageParts.length
       ? `${ageParts.join(" ")}${draft.estimatedAge ? " 추정" : ""}`
       : draft.birthDate
-        ? getAgeTextFromBirthDate(draft.birthDate)
+        ? getAgeTextFromBirthDate(draft.birthDate, registrationReferenceDate)
         : undefined;
     const breed = draft.isMixed
       ? [draft.breed.trim() || getMixBreedSuggestion(draft.species), ...splitBreedList(draft.additionalBreed)]
@@ -2509,7 +2531,11 @@ export function NewPatientDialog({
                         setDraft((current) => ({
                           ...current,
                           ageYears,
-                          birthDate: getBirthDateFromAge({ months: current.ageMonths, years: ageYears }),
+                          birthDate: getBirthDateFromAge({
+                            months: current.ageMonths,
+                            referenceDate: registrationReferenceDate,
+                            years: ageYears,
+                          }),
                         }))
                       }
                     />
@@ -2521,7 +2547,11 @@ export function NewPatientDialog({
                         setDraft((current) => ({
                           ...current,
                           ageMonths,
-                          birthDate: getBirthDateFromAge({ months: ageMonths, years: current.ageYears }),
+                          birthDate: getBirthDateFromAge({
+                            months: ageMonths,
+                            referenceDate: registrationReferenceDate,
+                            years: current.ageYears,
+                          }),
                         }))
                       }
                     />
@@ -2549,7 +2579,7 @@ export function NewPatientDialog({
                   />
                   {draft.birthDate ? (
                     <div className="mt-1 emr-text-metadata font-medium text-muted-foreground">
-                      현재 나이 {getAgeTextFromBirthDate(draft.birthDate) || "계산 불가"}
+                      현재 나이 {getAgeTextFromBirthDate(draft.birthDate, registrationReferenceDate) || "계산 불가"}
                     </div>
                   ) : null}
                 </RegistrationFormField>
@@ -2958,6 +2988,7 @@ function NewGuardianDialog({
 
 type RegistrationMode = "existing_guardian_patient" | "new_guardian_patient";
 type RegistrationStep = "confirm" | "guardian" | "mode" | "patient";
+type RegistrationEntryPoint = "global-command" | "toolbar-direct";
 
 type GuardianRegistrationDraft = {
   addressDetail: string;
@@ -3343,6 +3374,17 @@ function PatientGuardianRegistrationButton({
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
+  const registrationReferenceDate = getWorkspaceOperatingDate(workspaceId);
+  const registrationId = useId();
+  const guardianNameId = `${registrationId}-guardian-name`;
+  const guardianBirthDateId = `${registrationId}-guardian-birth-date`;
+  const guardianMobilePhoneId = `${registrationId}-guardian-mobile-phone`;
+  const privacyConsentId = `${registrationId}-privacy-consent`;
+  const selectedGuardianControlId = `${registrationId}-selected-guardian`;
+  const patientNameId = `${registrationId}-patient-name`;
+  const patientBreedId = `${registrationId}-patient-breed`;
+  const patientAgeYearsId = `${registrationId}-patient-age-years`;
+  const patientBirthDateId = `${registrationId}-patient-birth-date`;
   const [open, setOpen] = useState(false);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [errors, setErrors] = useState<RegistrationErrors>({});
@@ -3356,9 +3398,10 @@ function PatientGuardianRegistrationButton({
   >("idle");
   const [mode, setMode] = useState<RegistrationMode>("new_guardian_patient");
   const [patientDraft, setPatientDraft] = useState(() => createNewPatientDraft());
-  const [selectedGuardianId, setSelectedGuardianId] = useState("");
+  const [selectedGuardianRecordId, setSelectedGuardianRecordId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<RegistrationStep>("mode");
+  const [entryPoint, setEntryPoint] = useState<RegistrationEntryPoint>("global-command");
   const previousOpenRequestKeyRef = useRef(openRequestKey);
   const handleGuardianAddressSelect = useCallback(
     (address: KakaoPostcodeSelectedAddress) => {
@@ -3368,7 +3411,7 @@ function PatientGuardianRegistrationButton({
         addressRoad: address.baseAddress,
       }));
     },
-    []
+    [setGuardianDraft]
   );
   const guardianAddressSearch = useKakaoAddressSearch({
     enabled: open && mode === "new_guardian_patient" && step === "guardian",
@@ -3407,7 +3450,7 @@ function PatientGuardianRegistrationButton({
     [lookupItems]
   );
   const selectedGuardian = lookupGuardians.find(
-    (guardian) => guardian.id === selectedGuardianId
+    (guardian) => guardian.id === selectedGuardianRecordId
   );
   const guardianMatches = useMemo(() => {
     const query = guardianQuery.trim();
@@ -3450,20 +3493,10 @@ function PatientGuardianRegistrationButton({
   const selectedGuardianSearchDisplay = selectedGuardian
     ? getGuardianSearchDisplay(selectedGuardian, lookupPatients, lookupPatientGuardians)
     : "";
-  const hasRequiredPatientInfo = Boolean(
-    patientDraft.name.trim() &&
-      patientDraft.breed.trim() &&
-      (patientDraft.birthDate || patientDraft.ageYears || patientDraft.ageMonths)
-  );
-  const canGoNext =
-    step !== "patient" ||
-    mode !== "existing_guardian_patient" ||
-    Boolean(selectedGuardian && hasRequiredPatientInfo);
   const dirty =
-    step !== "mode" ||
     isGuardianDraftDirty(guardianDraft) ||
     isPatientDraftDirty(patientDraft) ||
-    Boolean(guardianQuery || selectedGuardianId);
+    Boolean(guardianQuery || selectedGuardianRecordId);
 
   useEffect(() => {
     if (openRequestKey === undefined) return;
@@ -3478,7 +3511,7 @@ function PatientGuardianRegistrationButton({
       !open ||
       mode !== "existing_guardian_patient" ||
       step !== "patient" ||
-      selectedGuardianId
+      selectedGuardianRecordId
     ) {
       return;
     }
@@ -3515,7 +3548,7 @@ function PatientGuardianRegistrationButton({
     lookupRetryKey,
     mode,
     open,
-    selectedGuardianId,
+    selectedGuardianRecordId,
     step,
     workspaceId,
   ]);
@@ -3529,9 +3562,10 @@ function PatientGuardianRegistrationButton({
     setLookupStatus("idle");
     setMode("new_guardian_patient");
     setPatientDraft(createNewPatientDraft());
-    setSelectedGuardianId("");
+    setSelectedGuardianRecordId("");
     setSubmitting(false);
     setStep("mode");
+    setEntryPoint("global-command");
   };
   const requestClose = () => {
     if (dirty) {
@@ -3557,9 +3591,13 @@ function PatientGuardianRegistrationButton({
   };
   const startRegistration = (nextMode: RegistrationMode) => {
     reset();
+    setEntryPoint("toolbar-direct");
     setMode(nextMode);
     setStep(nextMode === "new_guardian_patient" ? "guardian" : "patient");
     setOpen(true);
+  };
+  const focusRegistrationControl = (controlId: string) => {
+    window.requestAnimationFrame(() => document.getElementById(controlId)?.focus());
   };
   const validateGuardianStep = () => {
     const nextErrors: RegistrationErrors = {};
@@ -3573,7 +3611,7 @@ function PatientGuardianRegistrationButton({
     }
     if (!guardianDraft.birthDate.trim()) {
       nextErrors.guardianBirthDate = "생년월일은 필수입니다.";
-    } else if (!isValidRegistrationBirthDate(guardianDraft.birthDate)) {
+    } else if (!isValidRegistrationBirthDate(guardianDraft.birthDate, registrationReferenceDate)) {
       nextErrors.guardianBirthDate = "생년월일은 YYYY-MM-DD 형식의 실제 날짜로 입력해 주세요.";
     }
     if (guardianDraft.signatureStatus !== "completed") {
@@ -3581,6 +3619,16 @@ function PatientGuardianRegistrationButton({
     }
 
     setErrors(nextErrors);
+    const firstInvalidControlId = nextErrors.guardianName
+      ? guardianNameId
+      : nextErrors.guardianBirthDate
+        ? guardianBirthDateId
+        : nextErrors.guardianMobilePhone
+          ? guardianMobilePhoneId
+          : nextErrors.privacyConsent
+            ? privacyConsentId
+            : undefined;
+    if (firstInvalidControlId) focusRegistrationControl(firstInvalidControlId);
     return Object.keys(nextErrors).length === 0;
   };
   const validatePatientStep = () => {
@@ -3594,8 +3642,25 @@ function PatientGuardianRegistrationButton({
     if (!patientDraft.birthDate && !patientDraft.ageYears && !patientDraft.ageMonths) {
       nextErrors.age = "나이 또는 생년월일은 필수입니다.";
       nextErrors.birthDate = "나이 또는 생년월일은 필수입니다.";
+    } else if (
+      patientDraft.birthDate &&
+      !isValidRegistrationBirthDate(patientDraft.birthDate, registrationReferenceDate)
+    ) {
+      nextErrors.birthDate = "생년월일은 YYYY-MM-DD 형식의 실제 날짜로 입력해 주세요.";
     }
     setErrors(nextErrors);
+    const firstInvalidControlId = nextErrors.selectedGuardianId
+      ? selectedGuardianControlId
+      : nextErrors.patientName
+        ? patientNameId
+        : nextErrors.breed
+          ? patientBreedId
+          : nextErrors.age
+            ? patientAgeYearsId
+            : nextErrors.birthDate
+              ? patientBirthDateId
+              : undefined;
+    if (firstInvalidControlId) focusRegistrationControl(firstInvalidControlId);
     return Object.keys(nextErrors).length === 0;
   };
   const getPatientPayload = (guardianId: EmrId) => {
@@ -3620,7 +3685,7 @@ function PatientGuardianRegistrationButton({
       estimatedAgeText: ageParts.length
         ? `${ageParts.join(" ")}${patientDraft.estimatedAge ? " 추정" : ""}`
         : patientDraft.birthDate
-          ? getAgeTextFromBirthDate(patientDraft.birthDate)
+          ? getAgeTextFromBirthDate(patientDraft.birthDate, registrationReferenceDate)
           : undefined,
       existingGuardianId: guardianId,
       guardianMobilePhone:
@@ -3742,6 +3807,12 @@ function PatientGuardianRegistrationButton({
     ? getGuardianPatientCount(selectedGuardian.id, lookupPatientGuardians)
     : 0;
   const stepBadge = getRegistrationStepBadge({ mode, step });
+  const showPrevious =
+    step === "confirm" ||
+    (step === "patient" && mode === "new_guardian_patient") ||
+    (entryPoint === "global-command" &&
+      (step === "guardian" ||
+        (step === "patient" && mode === "existing_guardian_patient")));
   const dialogTitle =
     step === "mode"
       ? "신규 등록"
@@ -3754,6 +3825,7 @@ function PatientGuardianRegistrationButton({
           : "등록 정보 확인";
   const dialogKind = step === "guardian" || step === "patient" ? "form" : "confirm";
   const goPreviousStep = () => {
+    if (!showPrevious) return;
     setErrors({});
     if (step === "guardian") setStep("mode");
     if (step === "patient") {
@@ -3768,7 +3840,7 @@ function PatientGuardianRegistrationButton({
     if (step === "confirm") commitRegistration();
   };
   const patientAgeSummary = patientDraft.birthDate
-    ? getAgeTextFromBirthDate(patientDraft.birthDate)
+    ? getAgeTextFromBirthDate(patientDraft.birthDate, registrationReferenceDate)
     : [
         patientDraft.ageYears && `${patientDraft.ageYears}년`,
         patientDraft.ageMonths && `${patientDraft.ageMonths}개월`,
@@ -3816,9 +3888,9 @@ function PatientGuardianRegistrationButton({
           closeAriaLabel="환자/보호자 창 닫기"
           footer={
             <EmrRegistrationFooter
-              nextDisabled={!canGoNext || submitting}
+              nextDisabled={submitting}
               nextLabel={step === "confirm" ? (submitting ? "등록 중" : "등록") : "다음"}
-              showPrevious={step !== "mode"}
+              showPrevious={showPrevious}
               onCancel={requestClose}
               onNext={continueRegistration}
               onPrevious={goPreviousStep}
@@ -3854,8 +3926,17 @@ function PatientGuardianRegistrationButton({
               {step === "guardian" ? (
                 <>
                   <EmrRegistrationSection separated={false} title="보호자 정보">
-                    <EmrRegistrationFieldRow error={errors.guardianName} label="보호자명" required>
+                    <EmrRegistrationFieldRow
+                      controlId={guardianNameId}
+                      error={errors.guardianName}
+                      errorId={`${guardianNameId}-error`}
+                      label="보호자명"
+                      required
+                    >
                       <Input
+                        id={guardianNameId}
+                        aria-describedby={errors.guardianName ? `${guardianNameId}-error` : undefined}
+                        aria-invalid={Boolean(errors.guardianName) || undefined}
                         aria-label="보호자명"
                         className={emrRegistrationControlClassName}
                         placeholder="이름을 입력해주세요"
@@ -3865,8 +3946,17 @@ function PatientGuardianRegistrationButton({
                         }
                       />
                     </EmrRegistrationFieldRow>
-                    <EmrRegistrationFieldRow error={errors.guardianBirthDate} label="생년월일" required>
+                    <EmrRegistrationFieldRow
+                      controlId={guardianBirthDateId}
+                      error={errors.guardianBirthDate}
+                      errorId={`${guardianBirthDateId}-error`}
+                      label="생년월일"
+                      required
+                    >
                       <Input
+                        id={guardianBirthDateId}
+                        aria-describedby={errors.guardianBirthDate ? `${guardianBirthDateId}-error` : undefined}
+                        aria-invalid={Boolean(errors.guardianBirthDate) || undefined}
                         aria-label="보호자 생년월일"
                         className={emrRegistrationControlClassName}
                         placeholder="yyyy-MM-dd"
@@ -3881,8 +3971,17 @@ function PatientGuardianRegistrationButton({
                     </EmrRegistrationFieldRow>
                   </EmrRegistrationSection>
                   <EmrRegistrationSection title="연락처 및 주소">
-                    <EmrRegistrationFieldRow error={errors.guardianMobilePhone} label="전화번호" required>
+                    <EmrRegistrationFieldRow
+                      controlId={guardianMobilePhoneId}
+                      error={errors.guardianMobilePhone}
+                      errorId={`${guardianMobilePhoneId}-error`}
+                      label="전화번호"
+                      required
+                    >
                       <Input
+                        id={guardianMobilePhoneId}
+                        aria-describedby={errors.guardianMobilePhone ? `${guardianMobilePhoneId}-error` : undefined}
+                        aria-invalid={Boolean(errors.guardianMobilePhone) || undefined}
                         aria-label="보호자 휴대전화"
                         className={emrRegistrationControlClassName}
                         inputMode="numeric"
@@ -3898,6 +3997,7 @@ function PatientGuardianRegistrationButton({
                     </EmrRegistrationFieldRow>
                     <EmrRegistrationFieldRow label="이메일">
                       <Input
+                        aria-label="이메일"
                         className={emrRegistrationControlClassName}
                         placeholder="example@email.com"
                         value={guardianDraft.email}
@@ -3954,6 +4054,7 @@ function PatientGuardianRegistrationButton({
                   <EmrRegistrationSection title="메모 및 개인정보 동의">
                     <EmrRegistrationFieldRow label="보호자 메모">
                       <Textarea
+                        aria-label="보호자 메모"
                         className={emrRegistrationTextareaClassName}
                         placeholder="특이사항 및 요청사항 입력"
                         value={guardianDraft.memo}
@@ -3966,7 +4067,9 @@ function PatientGuardianRegistrationButton({
                       />
                     </EmrRegistrationFieldRow>
                     <EmrRegistrationSignatureConsentCard
+                      controlId={privacyConsentId}
                       error={errors.privacyConsent}
+                      errorId={`${privacyConsentId}-error`}
                       signatureStatus={guardianDraft.signatureStatus}
                       onCompleteSignature={() =>
                         setGuardianDraft((current) => ({
@@ -3991,7 +4094,9 @@ function PatientGuardianRegistrationButton({
                   {mode === "existing_guardian_patient" ? (
                     <EmrRegistrationSection separated={false} title="보호자 선택">
                       <EmrRegistrationFieldRow
+                        controlId={selectedGuardianControlId}
                         error={errors.selectedGuardianId}
+                        errorId={`${selectedGuardianControlId}-error`}
                         label="보호자 검색"
                         required
                       >
@@ -4005,6 +4110,9 @@ function PatientGuardianRegistrationButton({
                               className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
                             />
                             <Input
+                              id={selectedGuardianControlId}
+                              aria-describedby={errors.selectedGuardianId ? `${selectedGuardianControlId}-error` : undefined}
+                              aria-invalid={Boolean(errors.selectedGuardianId) || undefined}
                               aria-label="기존 보호자 검색"
                               className={cn(emrRegistrationControlClassName, "pl-9")}
                               placeholder="보호자명 또는 휴대전화 검색"
@@ -4014,7 +4122,7 @@ function PatientGuardianRegistrationButton({
                                 setGuardianQuery(query);
                                 setGuardianPopoverOpen(true);
                                 if (selectedGuardian && query !== selectedGuardianSearchDisplay) {
-                                  setSelectedGuardianId("");
+                                  setSelectedGuardianRecordId("");
                                   setPatientDraft((current) => ({
                                     ...current,
                                     existingGuardianId: "",
@@ -4060,16 +4168,16 @@ function PatientGuardianRegistrationButton({
                                       key={guardian.id}
                                       type="button"
                                       role="option"
-                                      aria-selected={selectedGuardianId === guardian.id}
+                                      aria-selected={selectedGuardianRecordId === guardian.id}
                                       className={cn(
                                         "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)]",
-                                        selectedGuardianId === guardian.id &&
+                                        selectedGuardianRecordId === guardian.id &&
                                           "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
                                       )}
                                       onMouseDown={(event) => event.preventDefault()}
                                       onClick={() => {
                                         setGuardianQuery(guardianDisplay);
-                                        setSelectedGuardianId(guardian.id);
+                                        setSelectedGuardianRecordId(guardian.id);
                                         setPatientDraft((current) => ({
                                           ...current,
                                           existingGuardianId: guardian.id,
@@ -4096,8 +4204,8 @@ function PatientGuardianRegistrationButton({
                                           )}
                                         </span>
                                       </span>
-                                      <Badge variant={selectedGuardianId === guardian.id ? "default" : "outline"}>
-                                        {selectedGuardianId === guardian.id ? "선택됨" : "기존 보호자"}
+                                      <Badge variant={selectedGuardianRecordId === guardian.id ? "default" : "outline"}>
+                                        {selectedGuardianRecordId === guardian.id ? "선택됨" : "기존 보호자"}
                                       </Badge>
                                     </button>
                                   );
@@ -4158,8 +4266,17 @@ function PatientGuardianRegistrationButton({
                     separated={mode === "existing_guardian_patient"}
                     title="환자 정보"
                   >
-                    <EmrRegistrationFieldRow error={errors.patientName} label="환자명" required>
+                    <EmrRegistrationFieldRow
+                      controlId={patientNameId}
+                      error={errors.patientName}
+                      errorId={`${patientNameId}-error`}
+                      label="환자명"
+                      required
+                    >
                       <Input
+                        id={patientNameId}
+                        aria-describedby={errors.patientName ? `${patientNameId}-error` : undefined}
+                        aria-invalid={Boolean(errors.patientName) || undefined}
                         aria-label="환자명"
                         className={emrRegistrationControlClassName}
                         placeholder="환자명을 입력해주세요"
@@ -4200,7 +4317,13 @@ function PatientGuardianRegistrationButton({
                         </SelectContent>
                       </Select>
                     </EmrRegistrationFieldRow>
-                    <EmrRegistrationFieldRow error={errors.breed} label="품종" required>
+                    <EmrRegistrationFieldRow
+                      controlId={patientBreedId}
+                      error={errors.breed}
+                      errorId={`${patientBreedId}-error`}
+                      label="품종"
+                      required
+                    >
                       <EmrRegistrationInlineControl
                         className="grid grid-cols-[minmax(0,206px)_50px]"
                         control={
@@ -4225,6 +4348,9 @@ function PatientGuardianRegistrationButton({
                         }
                       >
                         <BreedAutocomplete
+                          id={patientBreedId}
+                          ariaDescribedBy={errors.breed ? `${patientBreedId}-error` : undefined}
+                          ariaInvalid={Boolean(errors.breed)}
                           ariaLabel="품종"
                           className={emrRegistrationControlClassName}
                           placeholder="주 품종을 선택해주세요"
@@ -4275,11 +4401,28 @@ function PatientGuardianRegistrationButton({
                       </EmrRegistrationFieldRow>
                     ) : null}
                   </EmrRegistrationSection>
-                  <EmrRegistrationSection title="추가 정보">
-                    <EmrRegistrationFieldRow error={errors.age} label="나이" required>
+                  <EmrRegistrationSection
+                    title={
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span>추가 정보</span>
+                        <span className="truncate font-normal text-[var(--emr-text-tertiary)]">
+                          · 나이 또는 생년월일 중 하나 필수
+                        </span>
+                      </span>
+                    }
+                  >
+                    <EmrRegistrationFieldRow
+                      controlId={patientAgeYearsId}
+                      error={errors.age}
+                      errorId={`${patientAgeYearsId}-error`}
+                      label="나이"
+                    >
                       <EmrRegistrationAgeControls
                         years={
                           <AgePartInput
+                            id={patientAgeYearsId}
+                            ariaDescribedBy={errors.age ? `${patientAgeYearsId}-error` : undefined}
+                            ariaInvalid={Boolean(errors.age)}
                             ariaLabel="나이 년"
                             inputClassName="h-[var(--clair-control-height-md)]"
                             unit="년"
@@ -4290,6 +4433,7 @@ function PatientGuardianRegistrationButton({
                                 ageYears,
                                 birthDate: getBirthDateFromAge({
                                   months: current.ageMonths,
+                                  referenceDate: registrationReferenceDate,
                                   years: ageYears,
                                 }),
                               }))
@@ -4298,6 +4442,8 @@ function PatientGuardianRegistrationButton({
                         }
                         months={
                           <AgePartInput
+                            ariaDescribedBy={errors.age ? `${patientAgeYearsId}-error` : undefined}
+                            ariaInvalid={Boolean(errors.age)}
                             ariaLabel="나이 개월"
                             inputClassName="h-[var(--clair-control-height-md)]"
                             unit="개월"
@@ -4308,6 +4454,7 @@ function PatientGuardianRegistrationButton({
                                 ageMonths,
                                 birthDate: getBirthDateFromAge({
                                   months: ageMonths,
+                                  referenceDate: registrationReferenceDate,
                                   years: current.ageYears,
                                 }),
                               }))
@@ -4333,8 +4480,16 @@ function PatientGuardianRegistrationButton({
                         }
                       />
                     </EmrRegistrationFieldRow>
-                    <EmrRegistrationFieldRow error={errors.birthDate} label="생년월일" required>
+                    <EmrRegistrationFieldRow
+                      controlId={patientBirthDateId}
+                      error={errors.birthDate}
+                      errorId={`${patientBirthDateId}-error`}
+                      label="생년월일"
+                    >
                       <Input
+                        id={patientBirthDateId}
+                        aria-describedby={errors.birthDate ? `${patientBirthDateId}-error` : undefined}
+                        aria-invalid={Boolean(errors.birthDate) || undefined}
                         aria-label="생년월일"
                         className={emrRegistrationControlClassName}
                         placeholder="YYYY-MM-DD"
@@ -4379,6 +4534,7 @@ function PatientGuardianRegistrationButton({
                   <EmrRegistrationSection title="메모">
                     <EmrRegistrationFieldRow label="환자 메모">
                       <Textarea
+                        aria-label="환자 메모"
                         className={emrRegistrationTextareaClassName}
                         placeholder="특이사항 및 요청사항 입력"
                         value={patientDraft.specialNote}
@@ -4400,8 +4556,17 @@ function PatientGuardianRegistrationButton({
               ) : null}
 
               {step === "confirm" ? (
-                <EmrRegistrationSection separated={false} title="신규 보호자/환자">
+                <EmrRegistrationSection
+                  separated={false}
+                  title={
+                    mode === "new_guardian_patient"
+                      ? "신규 보호자/환자"
+                      : "기존 보호자/신규 환자"
+                  }
+                >
                   <EmrRegistrationSummaryItem
+                    badgeLabel={mode === "new_guardian_patient" ? "신규" : "기존"}
+                    badgeTone={mode === "new_guardian_patient" ? "primary" : "neutral"}
                     details={[
                       mode === "new_guardian_patient"
                         ? guardianDraft.birthDate || "생년월일 미입력"

@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The production-bound project recorded canonical 20260825040149_diagnosis_runtime_catalog_adoption.sql under remote version 20260825050710.
+-- The remote stored statement and canonical local file have identical SHA-256 194300c38ae866abb376a378da5d64e5110c76f4f30e0b313f61c066a9cfe914.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

@@ -19,6 +19,8 @@ import {
   EmrTableSelectionHeaderCell,
   EmrPinnedTableViewport,
 } from "@/components/emr/table-primitives";
+import { EmrIconButton } from "@/components/emr/icon-button";
+import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { getEmrPinnedColumnProps } from "@/components/emr/table-pinning";
 import type {
   EmrColumnResize,
@@ -32,6 +34,7 @@ import {
   TableBody,
   TableCell,
   TableFooter,
+  TableHead,
   TableHeader,
   TableRow,
   type TableOverscrollAxes,
@@ -41,6 +44,13 @@ import { cn } from "@/lib/utils";
 export type EmrDataTableColumnRole = "data" | "selection" | "actions";
 
 export type EmrDataTableActionVisibility = "always" | "contextual";
+
+export type EmrDataTableRowState =
+  | "normal"
+  | "draft"
+  | "confirmed"
+  | "error"
+  | "disabled";
 
 export type EmrDataTableColumnMeta = {
   actionVisibility?: EmrDataTableActionVisibility;
@@ -77,6 +87,18 @@ export type EmrDataTableProps<TData> = {
   getRowProps?: (
     row: Row<TData>,
   ) => Omit<React.ComponentProps<typeof TableRow>, "children">;
+  getRowState?: (row: Row<TData>) => EmrDataTableRowState;
+  renderRowOverlay?: (context: {
+    row: Row<TData>;
+    table: TanStackTable<TData>;
+  }) => React.ReactNode;
+  getRowOverlayAriaLabel?: (row: Row<TData>) => string;
+  rowOverlayWidth?: number | string;
+  renderSelectionActionBar?: (context: {
+    selectedRows: Row<TData>[];
+    table: TanStackTable<TData>;
+  }) => React.ReactNode;
+  selectionActionBarAriaLabel?: string;
   renderAfterRow?: (row: Row<TData>) => React.ReactNode;
   renderAfterRows?: (context: {
     table: TanStackTable<TData>;
@@ -197,6 +219,7 @@ function getRowClassName<TData>(row: Row<TData>, className?: string) {
 
 function getSafeRowProps<TData>(
   row: Row<TData>,
+  rowState: EmrDataTableRowState,
   getRowProps?: EmrDataTableProps<TData>["getRowProps"],
 ) {
   const customProps = getRowProps?.(row) ?? {};
@@ -209,8 +232,12 @@ function getSafeRowProps<TData>(
     ...customProps,
     className: getRowClassName(row, customProps.className),
     "data-emr-data-table-row": "true",
+    "data-emr-data-table-row-state": rowState,
     "data-state":
       customDataState ?? (row.getIsSelected() ? "selected" : undefined),
+    "aria-disabled": customProps["aria-disabled"] ?? (
+      rowState === "disabled" ? "true" : undefined
+    ),
     onClick: customOnClick
       ? (event: React.MouseEvent<HTMLTableRowElement>) => {
           if (
@@ -227,10 +254,161 @@ function getSafeRowProps<TData>(
   };
 }
 
+function toCssLength(value: number | string) {
+  return typeof value === "number" ? `${value}px` : value;
+}
+
+function EmrDataTableOverlayHeader() {
+  return (
+    <TableHead
+      aria-hidden="true"
+      className="sticky right-0 z-[16] !h-0 !w-0 !min-w-0 !max-w-0 !border-0 !p-0"
+      data-emr-data-table-overlay-anchor="header"
+    />
+  );
+}
+
+function EmrDataTableRowOverlay({
+  ariaLabel,
+  children,
+  onTouchOpenChange,
+  touchOpen,
+  width,
+}: {
+  ariaLabel: string;
+  children: React.ReactNode;
+  onTouchOpenChange: (open: boolean) => void;
+  touchOpen: boolean;
+  width: number | string;
+}) {
+  return (
+    <TableCell
+      className="sticky right-0 z-[15] !w-0 !min-w-0 !max-w-0 overflow-visible !border-0 !p-0"
+      data-emr-data-table-overlay-anchor="row"
+    >
+      <div
+        aria-label={ariaLabel}
+        className="emr-data-table-row-overlay"
+        data-emr-data-table-row-overlay="true"
+        data-touch-open={touchOpen ? "true" : undefined}
+        role="group"
+        style={
+          {
+            "--emr-table-row-overlay-width": toCssLength(width),
+          } as React.CSSProperties
+        }
+      >
+        <div
+          className="emr-data-table-row-overlay-actions"
+          data-emr-data-table-row-overlay-actions="true"
+          data-row-interactive="true"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+            if (event.key === "Escape") onTouchOpenChange(false);
+          }}
+        >
+          {children}
+        </div>
+        <EmrIconButton
+          aria-expanded={touchOpen}
+          aria-label={touchOpen ? `${ariaLabel} 접기` : `${ariaLabel} 펼치기`}
+          className="emr-data-table-row-overlay-touch-trigger size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]"
+          data-emr-data-table-row-overlay-touch-trigger="true"
+          data-row-interactive="true"
+          onClick={(event) => {
+            event.stopPropagation();
+            onTouchOpenChange(!touchOpen);
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+            if (event.key === "Escape") onTouchOpenChange(false);
+          }}
+          type="button"
+        >
+          <CdsFilesMoreHorizontalIcon aria-hidden="true" />
+        </EmrIconButton>
+      </div>
+    </TableCell>
+  );
+}
+
+function EmrDataTableSelectionActionBar({
+  ariaLabel,
+  children,
+  tableRootRef,
+}: {
+  ariaLabel: string;
+  children: React.ReactNode;
+  tableRootRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [position, setPosition] = React.useState<{
+    bottom: number;
+    left: number;
+    maxWidth: number;
+  } | null>(null);
+
+  React.useLayoutEffect(() => {
+    let frame = 0;
+    const update = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const root = tableRootRef.current;
+        if (!root) return setPosition(null);
+        const rect = root.getBoundingClientRect();
+        const visibleTop = Math.max(0, rect.top);
+        const visibleBottom = Math.min(window.innerHeight, rect.bottom);
+        const visibleLeft = Math.max(0, rect.left);
+        const visibleRight = Math.min(window.innerWidth, rect.right);
+        if (visibleBottom - visibleTop < 80 || visibleRight - visibleLeft < 120) {
+          return setPosition(null);
+        }
+        setPosition({
+          bottom: Math.max(16, window.innerHeight - visibleBottom + 14),
+          left: (visibleLeft + visibleRight) / 2,
+          maxWidth: Math.max(96, visibleRight - visibleLeft - 24),
+        });
+      });
+    };
+    const observer = new ResizeObserver(update);
+    if (tableRootRef.current) observer.observe(tableRootRef.current);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [tableRootRef]);
+
+  if (!position) return null;
+
+  return (
+    <div
+      aria-label={ariaLabel}
+      className="emr-data-table-selection-action-bar"
+      data-emr-data-table-selection-action-bar="true"
+      data-row-interactive="true"
+      role="toolbar"
+      style={{
+        bottom: position.bottom,
+        left: position.left,
+        maxWidth: position.maxWidth,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function EmrDataTableSkeletonRows<TData>({
+  hasRowOverlay,
   rowCount,
   table,
 }: {
+  hasRowOverlay: boolean;
   rowCount: number;
   table: TanStackTable<TData>;
 }) {
@@ -294,11 +472,24 @@ function EmrDataTableSkeletonRows<TData>({
           </TableCell>
         );
       })}
+      {hasRowOverlay ? (
+        <TableCell
+          aria-hidden="true"
+          className="!w-0 !min-w-0 !max-w-0 !border-0 !p-0"
+          data-emr-data-table-overlay-anchor="skeleton"
+        />
+      ) : null}
     </TableRow>
   ));
 }
 
-function EmrDataTableHeader<TData>({ group }: { group: HeaderGroup<TData> }) {
+function EmrDataTableHeader<TData>({
+  group,
+  hasRowOverlay,
+}: {
+  group: HeaderGroup<TData>;
+  hasRowOverlay: boolean;
+}) {
   return (
     <TableRow
       key={group.id}
@@ -392,26 +583,41 @@ function EmrDataTableHeader<TData>({ group }: { group: HeaderGroup<TData> }) {
           </EmrTableHeaderCell>
         );
       })}
+      {hasRowOverlay ? <EmrDataTableOverlayHeader /> : null}
     </TableRow>
   );
 }
 
 function EmrDataTableBodyRow<TData>({
   getRowProps,
+  getRowState,
+  getRowOverlayAriaLabel,
+  onTouchOverlayOpenChange,
   row,
+  rowOverlayWidth,
+  renderRowOverlay,
   renderAfterRow,
   table,
+  touchOverlayOpen,
 }: {
   getRowProps?: EmrDataTableProps<TData>["getRowProps"];
+  getRowState?: EmrDataTableProps<TData>["getRowState"];
+  getRowOverlayAriaLabel?: EmrDataTableProps<TData>["getRowOverlayAriaLabel"];
+  onTouchOverlayOpenChange: (open: boolean) => void;
   row: Row<TData>;
+  rowOverlayWidth: number | string;
+  renderRowOverlay?: EmrDataTableProps<TData>["renderRowOverlay"];
   renderAfterRow?: EmrDataTableProps<TData>["renderAfterRow"];
   table: TanStackTable<TData>;
+  touchOverlayOpen: boolean;
 }) {
   const cells = getVisibleCells(table, row);
+  const rowState = getRowState?.(row) ?? "normal";
+  const rowOverlay = renderRowOverlay?.({ row, table });
 
   return (
     <React.Fragment key={row.id}>
-      <TableRow {...getSafeRowProps(row, getRowProps)}>
+      <TableRow {...getSafeRowProps(row, rowState, getRowProps)}>
         {cells.map((cell) => {
           const meta = getColumnMeta(cell.column);
           const role = meta?.role ?? "data";
@@ -475,6 +681,16 @@ function EmrDataTableBodyRow<TData>({
             </TableCell>
           );
         })}
+        {renderRowOverlay ? (
+          <EmrDataTableRowOverlay
+            ariaLabel={getRowOverlayAriaLabel?.(row) ?? `${row.id} 행 작업`}
+            onTouchOpenChange={onTouchOverlayOpenChange}
+            touchOpen={touchOverlayOpen}
+            width={rowOverlayWidth}
+          >
+            {rowOverlay}
+          </EmrDataTableRowOverlay>
+        ) : null}
       </TableRow>
       {renderAfterRow?.(row)}
     </React.Fragment>
@@ -488,21 +704,41 @@ export function EmrDataTable<TData>({
   containerClassName,
   density = "standard",
   footerRows,
+  getRowOverlayAriaLabel,
   getRowProps,
+  getRowState,
   initialLoading = false,
   overscrollAxes = "horizontal",
+  renderRowOverlay,
+  renderSelectionActionBar,
   renderAfterRow,
   renderAfterRows,
+  rowOverlayWidth = 166,
+  selectionActionBarAriaLabel = "선택 행 작업",
   skeletonRowCount = 6,
 }: EmrDataTableProps<TData>) {
+  const tableRootRef = React.useRef<HTMLDivElement>(null);
+  const [touchOverlayRowId, setTouchOverlayRowId] = React.useState<string | null>(
+    null,
+  );
   const columns = getOrderedVisibleColumns(table);
   const rows = table.getRowModel().rows;
+  const selectedRows = table.getSelectedRowModel().rows;
   const hasPinnedColumns = table.getIsSomeColumnsPinned();
-  const visibleColumnCount = columns.length;
+  const hasRowOverlay = Boolean(renderRowOverlay);
+  const visibleColumnCount = columns.length + (hasRowOverlay ? 1 : 0);
   const leftPinnedColumnWidth = table.getLeftTotalSize();
   const rightPinnedColumnWidth = table.getRightTotalSize();
   const growColumnId = getGrowColumnId(columns);
   const headerGroups = getOrderedHeaderGroups(table);
+  const activeTouchOverlayRowId = rows.some(
+    (row) => row.id === touchOverlayRowId,
+  )
+    ? touchOverlayRowId
+    : null;
+  const selectionActionBar = selectedRows.length > 0
+    ? renderSelectionActionBar?.({ selectedRows, table })
+    : null;
 
   const tableContent = (
     <Table
@@ -530,23 +766,40 @@ export function EmrDataTable<TData>({
             }
           />
         ))}
+        {hasRowOverlay ? <col style={{ width: 0 }} /> : null}
       </colgroup>
       <TableHeader className="sticky top-0 z-10">
         {headerGroups.map((group) => (
-          <EmrDataTableHeader key={group.id} group={group} />
+          <EmrDataTableHeader
+            key={group.id}
+            group={group}
+            hasRowOverlay={hasRowOverlay}
+          />
         ))}
       </TableHeader>
       <TableBody>
         {initialLoading ? (
-          <EmrDataTableSkeletonRows rowCount={skeletonRowCount} table={table} />
+          <EmrDataTableSkeletonRows
+            hasRowOverlay={hasRowOverlay}
+            rowCount={skeletonRowCount}
+            table={table}
+          />
         ) : (
           rows.map((row) => (
             <EmrDataTableBodyRow
               key={row.id}
+              getRowOverlayAriaLabel={getRowOverlayAriaLabel}
               getRowProps={getRowProps}
+              getRowState={getRowState}
+              onTouchOverlayOpenChange={(open) => {
+                setTouchOverlayRowId(open ? row.id : null);
+              }}
+              renderRowOverlay={renderRowOverlay}
               renderAfterRow={renderAfterRow}
               row={row}
+              rowOverlayWidth={rowOverlayWidth}
               table={table}
+              touchOverlayOpen={activeTouchOverlayRowId === row.id}
             />
           ))
         )}
@@ -558,9 +811,16 @@ export function EmrDataTable<TData>({
 
   return (
     <div
+      ref={tableRootRef}
       className="flex min-h-0 min-w-0 flex-1 flex-col"
       data-emr-data-table="true"
+      data-emr-data-table-has-row-overlay={hasRowOverlay ? "true" : "false"}
       data-emr-data-table-pinning={hasPinnedColumns ? "columns" : "none"}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && activeTouchOverlayRowId) {
+          setTouchOverlayRowId(null);
+        }
+      }}
     >
       {hasPinnedColumns ? (
         <EmrPinnedTableViewport
@@ -574,6 +834,14 @@ export function EmrDataTable<TData>({
       ) : (
         tableContent
       )}
+      {selectionActionBar ? (
+        <EmrDataTableSelectionActionBar
+          ariaLabel={selectionActionBarAriaLabel}
+          tableRootRef={tableRootRef}
+        >
+          {selectionActionBar}
+        </EmrDataTableSelectionActionBar>
+      ) : null}
     </div>
   );
 }

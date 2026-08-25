@@ -41,9 +41,6 @@ export type HospitalOrderTarget = "all" | "dog-cat" | "dog" | "cat" | "other";
 export type HospitalOrderSaleUnit = "each" | "day" | "session" | "pack";
 export type HospitalOrderRoundRule = "none" | "round-10" | "round-100";
 export type HospitalOrderType = "individual";
-export type HospitalOrderStatusFilter = "all" | "active" | "inactive";
-export type HospitalOrderBillingFilter = "all" | "billable" | "not-billable";
-export type HospitalOrderWorkTypeFilter = "all" | ServiceItemType;
 export type ClinicalPathologyCategoryId =
   | "in-house-blood"
   | "microbiology"

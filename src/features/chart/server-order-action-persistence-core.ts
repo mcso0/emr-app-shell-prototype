@@ -21,12 +21,21 @@ import {
 import { mockEncounters, mockOrders } from "@/mocks/emr-domain";
 import type {
   BillingCategory,
+  ClinicalOrderDestinationModule,
+  ClinicalOrderExecutionMode,
+  ClinicalOrderPriority,
+  ClinicalOrderType,
   EmrOrder,
   EmrOrderType,
   Encounter,
   Species,
 } from "@/types/emr-domain";
 import {
+  CLINICAL_ORDER_DESTINATION_MODULES,
+  isClinicalOrderType,
+} from "@/features/chart/order-execution-domain";
+import {
+  getMockChartOrderDraftEtag,
   getMockChartOrderDraftRuntimeRows,
   type ChartOrderReadbackQuantitySource,
   type ChartOrderRuntimeRow,
@@ -69,6 +78,7 @@ export type ChartOrderActionInput = {
   catalogSelections?: ChartOrderCatalogSelectionInput[];
   expectedEtag?: string;
   encounterId?: string;
+  idempotencyKey?: string;
   orderIds?: string[];
 };
 
@@ -77,7 +87,7 @@ export type ChartOrderAppliedSnapshot = {
   billingName: string;
   billingReflectionEnabled: boolean;
   careGuide?: string;
-  destinationModule?: string;
+  destinationModule?: ClinicalOrderDestinationModule | null;
   guardianName?: string;
   inHospitalOrderName: string;
   internalInstruction?: string;
@@ -100,6 +110,13 @@ export type ChartOrderAppliedSnapshot = {
   workspaceCatalogRevision?: number;
   categoryGroup?: string;
   billingCategory?: BillingCategory;
+  clinicalOrderType?: ClinicalOrderType;
+  executionMode?: ClinicalOrderExecutionMode;
+  detailInputs?: Record<string, unknown>;
+  detailSchemaVersion?: number;
+  priority?: ClinicalOrderPriority;
+  billingEligible?: boolean;
+  revisionNo?: number;
 };
 
 export type ChartOrderActionLine = {
@@ -159,6 +176,11 @@ export type ChartOrderActionGatewayResult =
       etag: string;
       rows: ChartOrderRuntimeRow[];
       orderActions: ChartOrderActionLine[];
+      billingCandidates?: BillingInvoiceCandidateLine[];
+      confirmationCommandId?: string;
+      queueProjectionIds?: string[];
+      serverAtomic?: boolean;
+      tasks?: Array<Record<string, unknown>>;
       stored?: boolean;
     }
   | {
@@ -180,6 +202,7 @@ export type ChartOrderActionGateway = {
     catalogSnapshots?: unknown;
     encounterId: string;
     expectedEtag?: string;
+    idempotencyKey?: string;
     orderIds: string[];
     workspaceId: string;
   }): Promise<ChartOrderActionGatewayResult>;
@@ -223,8 +246,11 @@ export type ChartOrderActionSaveResult =
       etag: string;
       rows: ChartOrderRuntimeRow[];
       billingCandidates?: BillingInvoiceCandidateLine[];
+      confirmationCommandId?: string;
       orderActions: ChartOrderActionLine[];
       fulfillmentWorkItems?: FulfillmentWorkItem[];
+      queueProjectionIds?: string[];
+      tasks?: Array<Record<string, unknown>>;
       enforcedBy: "chart-order-action-persistence";
     }
   | {
@@ -232,7 +258,10 @@ export type ChartOrderActionSaveResult =
       status: 400;
       error: "invalid_input";
       fieldErrors: Partial<
-        Record<"action" | "encounterId" | "orderIds" | "expectedEtag", string>
+        Record<
+          "action" | "encounterId" | "orderIds" | "expectedEtag" | "idempotencyKey",
+          string
+        >
       >;
     }
   | {
@@ -256,6 +285,9 @@ export type ChartOrderActionSaveResult =
         | "child_revision_requires_refresh"
         | "revision_conflict"
         | "idempotency_conflict"
+        | "confirmation_in_progress"
+        | "master_revision_requires_refresh"
+        | "confirmation_detail_inputs_incomplete"
         | "invalid_order_selection"
         | "order_set_member_unavailable"
         | "order_set_price_unset"
@@ -391,14 +423,15 @@ export async function saveChartOrderAction({
     actorUserId: actorUserId ?? "",
     encounterId: normalized.encounterId,
     expectedEtag: normalized.expectedEtag,
+    idempotencyKey: normalized.idempotencyKey,
     orderIds: normalized.orderIds,
     workspaceId,
   });
 
   if (!result.ok) {
     if (result.status === 409) {
-      if (["encounter_unavailable", "order_unavailable", "revision_conflict", "idempotency_conflict", "stale_status", "catalog_revision_requires_refresh", "child_revision_requires_refresh"].includes(result.error)) {
-        return { ok: false, status: 409, denialReason: result.error as "encounter_unavailable" | "order_unavailable" | "revision_conflict" | "idempotency_conflict" | "stale_status" | "catalog_revision_requires_refresh" | "child_revision_requires_refresh" };
+      if (["encounter_unavailable", "order_unavailable", "revision_conflict", "idempotency_conflict", "confirmation_in_progress", "stale_status", "catalog_revision_requires_refresh", "child_revision_requires_refresh", "master_revision_requires_refresh", "confirmation_detail_inputs_incomplete"].includes(result.error)) {
+        return { ok: false, status: 409, denialReason: result.error as "encounter_unavailable" | "order_unavailable" | "revision_conflict" | "idempotency_conflict" | "confirmation_in_progress" | "stale_status" | "catalog_revision_requires_refresh" | "child_revision_requires_refresh" | "master_revision_requires_refresh" | "confirmation_detail_inputs_incomplete" };
       }
       if (result.error === "invalid_order_selection") return { ok: false, status: 422, error: result.error };
       return { ok: false, status: 409, denialReason: "order_unavailable" };
@@ -408,23 +441,28 @@ export async function saveChartOrderAction({
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
-  const fulfillmentOrderIds = result.orderActions
-    .filter((row) => shouldCreateFulfillmentWorkItem(row.appliedSnapshot))
-    .map((row) => row.orderId);
-  const fulfillmentResult =
-    normalized.action === "confirm" && fulfillmentOrderIds.length > 0
-      ? await fulfillmentGateway.syncFromOrders({
-          actorUserId: actorUserId ?? "",
-          encounterId: normalized.encounterId,
-          orderIds: fulfillmentOrderIds,
-          workspaceId,
-        })
-      : null;
-
-  if (fulfillmentResult && !fulfillmentResult.ok) {
-    if (fulfillmentResult.status === 409) return fulfillmentResult;
-    return { ok: false, status: 500, error: "db_write_failed" };
+  if (normalized.action === "confirm") {
+    if (!result.serverAtomic) {
+      return { ok: false, status: 500, error: "db_write_failed" };
+    }
+    return {
+      ok: true,
+      status: 200,
+      etag: result.etag,
+      rows: result.rows,
+      billingCandidates: result.billingCandidates,
+      confirmationCommandId: result.confirmationCommandId,
+      orderActions: result.orderActions,
+      queueProjectionIds: result.queueProjectionIds,
+      tasks: result.tasks,
+      enforcedBy: "chart-order-action-persistence",
+    };
   }
+
+  // Confirmation returns above only after the database RPC has atomically
+  // created Tasks, Queue projections, Billing candidates, and audit/outbox
+  // records. The legacy `bill` path deliberately retains only invoice sync.
+  void fulfillmentGateway;
 
   const billingOrderIds = result.orderActions
     .filter((row) =>
@@ -457,10 +495,7 @@ export async function saveChartOrderAction({
       input: {
         workspaceId,
         actorUserId,
-        eventType:
-          normalized.action === "confirm"
-            ? "order.confirmed"
-            : "order.billing_candidate_requested",
+        eventType: "order.billing_candidate_requested",
         targetType: "order",
         targetId: row.orderId,
         encounterId: normalized.encounterId,
@@ -487,7 +522,6 @@ export async function saveChartOrderAction({
     rows: result.rows,
     billingCandidates: billingResult?.candidates,
     orderActions: result.orderActions,
-    fulfillmentWorkItems: fulfillmentResult?.workItems,
     enforcedBy: "chart-order-action-persistence",
   };
 }
@@ -529,6 +563,7 @@ export function createMockChartOrderActionGateway(
       actorUserId,
       encounterId,
       expectedEtag = "legacy",
+      idempotencyKey,
       orderIds,
       workspaceId,
     }) {
@@ -541,7 +576,16 @@ export function createMockChartOrderActionGateway(
 
       const seedRows = getStoredOrSeedOrderActions({ encounterId, orders, workspaceId });
       const currentRows = actionLinesToRuntimeRows(seedRows, workspaceId);
-      if (expectedEtag !== "legacy" && expectedEtag !== mockChartActionEtag(currentRows) && mockOrderActionStore.has(buildOrderActionKey(workspaceId, encounterId))) {
+      const acceptedEtags = new Set([
+        mockChartActionEtag(currentRows),
+        getMockChartOrderDraftEtag({ encounterId, workspaceId }),
+      ]);
+      if (
+        expectedEtag !== "legacy" &&
+        !acceptedEtags.has(expectedEtag) &&
+        (mockOrderActionStore.has(buildOrderActionKey(workspaceId, encounterId)) ||
+          getMockChartOrderDraftRuntimeRows({ encounterId, workspaceId }) !== undefined)
+      ) {
         return { ok: false, status: 409, error: "revision_conflict" };
       }
       const selected = new Set(orderIds);
@@ -593,11 +637,38 @@ export function createMockChartOrderActionGateway(
           (typeof row.parentOrderId === "string" && selected.has(row.parentOrderId)),
       );
       const runtimeRows = actionLinesToRuntimeRows(rows, workspaceId);
+      const atomicBillingCandidates =
+        action === "confirm"
+          ? selectedRows
+              .filter(
+                (row) =>
+                  row.rowType !== "set" &&
+                  row.billingReflectionEnabled !== false &&
+                  (row.lineTotalSnapshot ?? 0) > 0,
+              )
+              .map((row) => ({
+                billingCandidateId: `billcand-${row.orderId}`,
+                description:
+                  row.appliedSnapshot?.billingName ?? `Order ${row.orderId}`,
+                invoiceId: "",
+                lineTotal: row.lineTotalSnapshot ?? 0,
+                orderId: row.orderId,
+                quantity: row.quantity ?? 1,
+                syncedAt: timestamp,
+                unitPrice: row.unitPriceSnapshot ?? 0,
+              }))
+          : undefined;
       return {
         ok: true,
         etag: mockChartActionEtag(runtimeRows),
         rows: runtimeRows,
         orderActions: selectedRows,
+        billingCandidates: atomicBillingCandidates,
+        confirmationCommandId:
+          action === "confirm" ? idempotencyKey : undefined,
+        queueProjectionIds: action === "confirm" ? [] : undefined,
+        serverAtomic: action === "confirm",
+        tasks: action === "confirm" ? [] : undefined,
       };
     },
   };
@@ -620,6 +691,17 @@ export type SupabaseChartOrderActionRpcClient = {
       p_action: ChartOrderActionKind;
       p_order_ids: string[];
       p_expected_etag: string;
+    },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_confirm_chart_order_candidates",
+    args: {
+      p_workspace_id: string;
+      p_actor_user_id: string;
+      p_encounter_id: string;
+      p_selected_root_order_ids: string[];
+      p_expected_draft_etag: string;
+      p_idempotency_key: string;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
@@ -653,9 +735,28 @@ export function createSupabaseChartOrderActionGateway(
       actorUserId,
       encounterId,
       expectedEtag = "legacy",
+      idempotencyKey,
       orderIds,
       workspaceId,
     }) {
+      if (action === "confirm") {
+        const { data, error } = await client.rpc(
+          "clair_confirm_chart_order_candidates",
+          {
+            p_workspace_id: workspaceId,
+            p_actor_user_id: actorUserId,
+            p_encounter_id: encounterId,
+            p_selected_root_order_ids: orderIds
+              .map(normalizeUuidForRpc)
+              .filter((orderId): orderId is string => Boolean(orderId)),
+            p_expected_draft_etag: expectedEtag,
+            p_idempotency_key: idempotencyKey ?? "",
+          },
+        );
+        if (error) return mapAtomicConfirmationRpcError(error.message ?? "");
+        return mapAtomicConfirmationResponse(data);
+      }
+
       const { data, error } = await client.rpc(
         "clair_save_chart_order_action",
         {
@@ -844,6 +945,7 @@ function normalizeOrderActionInput(input: ChartOrderActionInput) {
         : undefined,
     expectedEtag: trimToUndefined(input.expectedEtag) ?? "legacy",
     encounterId: trimToUndefined(input.encounterId) ?? "",
+    idempotencyKey: trimToUndefined(input.idempotencyKey),
     orderIds: Array.isArray(input.orderIds)
       ? input.orderIds
           .map(trimToUndefined)
@@ -857,7 +959,10 @@ function validateOrderActionInput(
   input: ReturnType<typeof normalizeOrderActionInput>,
 ) {
   const fieldErrors: Partial<
-    Record<"action" | "encounterId" | "orderIds" | "expectedEtag", string>
+    Record<
+      "action" | "encounterId" | "orderIds" | "expectedEtag" | "idempotencyKey",
+      string
+    >
   > = {};
 
   if (!input.action) fieldErrors.action = "오더 작업을 선택해 주세요.";
@@ -872,6 +977,18 @@ function validateOrderActionInput(
   if (input.expectedEtag !== "legacy" && !/^"[0-9a-f]{64}"$/.test(input.expectedEtag)) {
     fieldErrors.expectedEtag = "오더 버전을 확인해 주세요.";
   }
+  if (input.action === "confirm") {
+    if (input.expectedEtag === "legacy") {
+      fieldErrors.expectedEtag = "확정할 오더 버전을 확인해 주세요.";
+    }
+    if (
+      !input.idempotencyKey ||
+      input.idempotencyKey.length < 8 ||
+      input.idempotencyKey.length > 160
+    ) {
+      fieldErrors.idempotencyKey = "확정 요청 식별자를 확인해 주세요.";
+    }
+  }
   if (new Set(input.orderIds).size !== input.orderIds.length) {
     fieldErrors.orderIds = "중복 오더를 선택할 수 없습니다.";
   }
@@ -883,22 +1000,14 @@ function validateOrderActionInput(
   return { valid: true as const, fieldErrors: {} };
 }
 
-function shouldCreateFulfillmentWorkItem(snapshot?: ChartOrderAppliedSnapshot) {
-  if (!snapshot) return true;
-  if (snapshot.taskRequired === false) return false;
-  return (
-    snapshot.destinationModule === "lab" ||
-    snapshot.destinationModule === "imaging" ||
-    snapshot.destinationModule === "dispensing" ||
-    snapshot.destinationModule === "treatment"
-  );
-}
-
 function shouldCreateBillingCandidateOnChartConfirmation(
   snapshot?: ChartOrderAppliedSnapshot,
 ) {
   if (!snapshot || snapshot.billingReflectionEnabled === false) return false;
-  if (snapshot.destinationModule !== "billing_only") return false;
+  const legacyDestinationModule = (
+    snapshot as unknown as { destinationModule?: string }
+  ).destinationModule;
+  if (legacyDestinationModule !== "billing_only") return false;
   return snapshot.taskRequired !== true;
 }
 
@@ -964,6 +1073,116 @@ function mapOrderActionResponse(value: unknown): ChartOrderActionGatewayResult |
   };
 }
 
+function mapAtomicConfirmationResponse(
+  value: unknown,
+): ChartOrderActionGatewayResult {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+  const body = value as Record<string, unknown>;
+  if (
+    typeof body.commandId !== "string" ||
+    typeof body.etag !== "string" ||
+    !Array.isArray(body.confirmedRows) ||
+    !Array.isArray(body.billingCandidates) ||
+    !Array.isArray(body.queueProjectionIds) ||
+    !Array.isArray(body.tasks)
+  ) {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+  const rows = body.confirmedRows
+    .map(mapRuntimeActionRow)
+    .filter((row): row is ChartOrderRuntimeRow => Boolean(row));
+  if (rows.length !== body.confirmedRows.length) {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+  const candidates = body.billingCandidates.map((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const candidate = value as Record<string, unknown>;
+    if (
+      typeof candidate.billingCandidateId !== "string" ||
+      typeof candidate.orderId !== "string" ||
+      typeof candidate.amount !== "number"
+    ) return null;
+    return {
+      billingCandidateId: candidate.billingCandidateId,
+      description:
+        typeof candidate.billingName === "string"
+          ? candidate.billingName
+          : `Order ${candidate.orderId}`,
+      invoiceId: "",
+      lineTotal: candidate.amount,
+      orderId: candidate.orderId,
+      quantity:
+        typeof candidate.quantity === "number" ? candidate.quantity : 1,
+      syncedAt:
+        typeof candidate.createdAt === "string"
+          ? candidate.createdAt
+          : "",
+      unitPrice:
+        typeof candidate.unitPrice === "number"
+          ? candidate.unitPrice
+          : candidate.amount,
+    } satisfies BillingInvoiceCandidateLine;
+  });
+  if (candidates.some((candidate) => candidate === null)) {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+  if (!body.queueProjectionIds.every((id) => typeof id === "string")) {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+  const tasks = body.tasks.filter(
+    (task): task is Record<string, unknown> =>
+      Boolean(task) && typeof task === "object" && !Array.isArray(task),
+  );
+  if (tasks.length !== body.tasks.length) {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+  return {
+    ok: true,
+    etag: body.etag,
+    rows,
+    orderActions: rows.map(runtimeRowToActionLine),
+    billingCandidates: candidates as BillingInvoiceCandidateLine[],
+    confirmationCommandId: body.commandId,
+    queueProjectionIds: body.queueProjectionIds as string[],
+    serverAtomic: true,
+    tasks,
+  };
+}
+
+function mapAtomicConfirmationRpcError(
+  message: string,
+): ChartOrderActionGatewayResult {
+  for (const error of [
+    "encounter_unavailable",
+    "order_unavailable",
+    "revision_conflict",
+    "idempotency_conflict",
+    "confirmation_in_progress",
+    "master_revision_requires_refresh",
+    "confirmation_detail_inputs_incomplete",
+  ] as const) {
+    if (message.includes(error)) return { ok: false, status: 409, error };
+  }
+  if (
+    message.includes("invalid_confirmation_input") ||
+    message.includes("invalid_order_selection") ||
+    message.includes("order_set_")
+  ) {
+    return {
+      ok: false,
+      status: 422,
+      error: message.includes("order_set_")
+        ? mapChartActionRpcError(message)
+        : message.includes("invalid_order_selection")
+          ? "invalid_order_selection"
+          : "invalid_confirmation_input",
+    };
+  }
+  return { ok: false, status: 500, error: "db_write_failed" };
+}
+
 function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
@@ -975,12 +1194,50 @@ function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
   const objectOf = (key: string) => row[key] && typeof row[key] === "object" && !Array.isArray(row[key]) ? row[key] as Record<string, unknown> : {};
   const quantitySource = String(row.quantitySource);
   if (!["fixed_one", "preset_quantity", "manual_at_apply", "manual", "days", "total_count", "dispense_quantity", "actual_dispense_quantity"].includes(quantitySource)) return null;
+  const appliedSnapshot = objectOf("appliedSnapshot");
+  const canonical = resolveActionRuntimeCanonicalContract({
+    categoryGroup:
+      typeof appliedSnapshot.categoryGroup === "string"
+        ? appliedSnapshot.categoryGroup
+        : undefined,
+    orderType: row.orderType,
+  });
+  const destinationModule =
+    row.destinationModule === null ||
+    (typeof row.destinationModule === "string" &&
+      (CLINICAL_ORDER_DESTINATION_MODULES as readonly string[]).includes(
+        row.destinationModule,
+      ))
+      ? (row.destinationModule as ClinicalOrderDestinationModule | null)
+      : canonical.destinationModule;
   return {
     orderId: row.orderId,
     workspaceId: typeof row.workspaceId === "string" ? row.workspaceId : undefined,
     encounterId: row.encounterId,
     rowType,
     orderType: row.orderType as ChartOrderRuntimeRow["orderType"],
+    clinicalOrderType: isClinicalOrderType(row.clinicalOrderType)
+      ? row.clinicalOrderType
+      : canonical.clinicalOrderType,
+    destinationModule,
+    executionMode:
+      row.executionMode === "routed" ||
+      row.executionMode === "immediate_complete" ||
+      row.executionMode === "aggregate"
+        ? row.executionMode
+        : canonical.executionMode,
+    detailInputs: objectOf("detailInputs"),
+    detailSchemaVersion:
+      typeof row.detailSchemaVersion === "number" &&
+      Number.isInteger(row.detailSchemaVersion)
+        ? row.detailSchemaVersion
+        : 1,
+    priority: row.priority === "urgent" ? "urgent" : "normal",
+    billingEligible: row.billingEligible !== false,
+    revisionNo:
+      typeof row.revisionNo === "number" && Number.isInteger(row.revisionNo)
+        ? row.revisionNo
+        : 0,
     parentOrderId: typeof row.parentOrderId === "string" ? row.parentOrderId : null,
     sourceSetId: typeof row.sourceSetId === "string" ? row.sourceSetId : null,
     sourceSetRevisionId: typeof row.sourceSetRevisionId === "string" ? row.sourceSetRevisionId : null,
@@ -1043,12 +1300,33 @@ function runtimeRowToActionLine(row: ChartOrderRuntimeRow): ChartOrderActionLine
 }
 
 function actionLinesToRuntimeRows(rows: ChartOrderActionLine[], workspaceId: string): ChartOrderRuntimeRow[] {
-  return rows.map((row) => ({
+  return rows.map((row) => {
+    const canonical = resolveActionRuntimeCanonicalContract({
+      categoryGroup: row.appliedSnapshot?.categoryGroup,
+      orderType: row.orderType,
+    });
+    return {
     orderId: row.orderId,
     workspaceId,
     encounterId: row.encounterId,
     rowType: row.rowType ?? "individual",
     orderType: row.orderType ?? "treatment",
+    clinicalOrderType:
+      row.appliedSnapshot?.clinicalOrderType ?? canonical.clinicalOrderType,
+    destinationModule:
+      row.appliedSnapshot?.destinationModule !== undefined
+        ? row.appliedSnapshot.destinationModule
+        : canonical.destinationModule,
+    executionMode:
+      row.appliedSnapshot?.executionMode ?? canonical.executionMode,
+    detailInputs: row.appliedSnapshot?.detailInputs ?? {},
+    detailSchemaVersion: row.appliedSnapshot?.detailSchemaVersion ?? 1,
+    priority: row.appliedSnapshot?.priority ?? "normal",
+    billingEligible:
+      row.appliedSnapshot?.billingEligible ??
+      row.billingReflectionEnabled ??
+      true,
+    revisionNo: row.appliedSnapshot?.revisionNo ?? 0,
     parentOrderId: row.parentOrderId ?? null,
     sourceSetId: row.sourceSetId ?? null,
     sourceSetRevisionId: row.sourceSetRevisionId ?? null,
@@ -1071,7 +1349,74 @@ function actionLinesToRuntimeRows(rows: ChartOrderActionLine[], workspaceId: str
     orderConfirmationStatus: row.orderConfirmationStatus,
     status: row.status,
     updatedAt: row.updatedAt,
-  }));
+  };
+  });
+}
+
+function resolveActionRuntimeCanonicalContract({
+  categoryGroup,
+  orderType,
+}: {
+  categoryGroup?: string;
+  orderType?: unknown;
+}): {
+  clinicalOrderType: ClinicalOrderType;
+  destinationModule: ClinicalOrderDestinationModule | null;
+  executionMode: ClinicalOrderExecutionMode;
+} {
+  if (orderType === "set") {
+    return {
+      clinicalOrderType: "other",
+      destinationModule: null,
+      executionMode: "aggregate",
+    };
+  }
+
+  switch (categoryGroup ?? orderType) {
+    case "consultation":
+      return {
+        clinicalOrderType: "consultation",
+        destinationModule: null,
+        executionMode: "immediate_complete",
+      };
+    case "lab":
+      return {
+        clinicalOrderType: "clinical_lab",
+        destinationModule: "lab",
+        executionMode: "routed",
+      };
+    case "imaging":
+      return {
+        clinicalOrderType: "imaging",
+        destinationModule: "imaging",
+        executionMode: "routed",
+      };
+    case "medication":
+    case "dispensing":
+      return {
+        clinicalOrderType: "dispensing",
+        destinationModule: "dispensing",
+        executionMode: "routed",
+      };
+    case "hospitalization":
+      return {
+        clinicalOrderType: "hospitalization",
+        destinationModule: "hospitalization",
+        executionMode: "routed",
+      };
+    case "treatment":
+      return {
+        clinicalOrderType: "treatment",
+        destinationModule: "treatment",
+        executionMode: "routed",
+      };
+    default:
+      return {
+        clinicalOrderType: "other",
+        destinationModule: null,
+        executionMode: "immediate_complete",
+      };
+  }
 }
 
 function mockChartActionEtag(rows: ChartOrderRuntimeRow[]) {

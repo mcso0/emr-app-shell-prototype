@@ -10,6 +10,10 @@ import type {
 } from "@/features/reception/patient-guardian-registration";
 import { getReceptionMutationPermissionContract } from "@/features/reception/reception-mutation-permissions";
 import {
+  getWorkspaceOperatingDate,
+  isIsoOperatingDate,
+} from "@/lib/emr-domain/demo-date";
+import {
   mockConsents,
   mockGuardians,
   mockPatientGuardians,
@@ -27,8 +31,11 @@ import type {
 export type ReceptionPatientGuardianRegistrationFieldErrors = Partial<
   Record<
     | "existingGuardianId"
+    | "guardianBirthDate"
     | "guardianMobilePhone"
     | "guardianName"
+    | "patientAge"
+    | "patientBirthDate"
     | "patientBreed"
     | "patientName"
     | "patientSpecies"
@@ -121,7 +128,10 @@ export async function registerReceptionPatientGuardian({
   workspaceId: string;
 }): Promise<ReceptionPatientGuardianRegistrationResult> {
   const normalized = normalizeRegistrationInput(input);
-  const validation = validateRegistrationInput(normalized);
+  const validation = validateRegistrationInput(
+    normalized,
+    getWorkspaceOperatingDate(workspaceId)
+  );
 
   if (!validation.valid) {
     return {
@@ -396,13 +406,24 @@ function normalizeRegistrationInput(
   };
 }
 
-function validateRegistrationInput(input: ReceptionPatientGuardianRegistrationInput) {
+function validateRegistrationInput(
+  input: ReceptionPatientGuardianRegistrationInput,
+  operatingDate: string
+) {
   const fieldErrors: ReceptionPatientGuardianRegistrationFieldErrors = {};
 
   if (input.mode === "new_guardian_patient") {
     if (!input.guardian?.name) fieldErrors.guardianName = "보호자명은 필수입니다.";
     if (!input.guardian?.mobilePhone || normalizePhone(input.guardian.mobilePhone).length < 10) {
       fieldErrors.guardianMobilePhone = "보호자 휴대전화는 필수입니다.";
+    }
+    if (!input.guardian?.birthDate) {
+      fieldErrors.guardianBirthDate = "보호자 생년월일은 필수입니다.";
+    } else if (
+      !isIsoOperatingDate(input.guardian.birthDate) ||
+      input.guardian.birthDate > operatingDate
+    ) {
+      fieldErrors.guardianBirthDate = "보호자 생년월일을 올바르게 입력해 주세요.";
     }
     if (!input.guardian?.privacyConsent) {
       fieldErrors.privacyConsent = "개인정보 수집 동의가 필요합니다.";
@@ -414,6 +435,14 @@ function validateRegistrationInput(input: ReceptionPatientGuardianRegistrationIn
   if (!input.patient.name) fieldErrors.patientName = "환자명은 필수입니다.";
   if (!input.patient.species) fieldErrors.patientSpecies = "동물 종류는 필수입니다.";
   if (!input.patient.breed) fieldErrors.patientBreed = "품종은 필수입니다.";
+  if (!input.patient.birthDate && !input.patient.estimatedAgeText) {
+    fieldErrors.patientAge = "환자 나이 또는 생년월일은 필수입니다.";
+  } else if (
+    input.patient.birthDate &&
+    (!isIsoOperatingDate(input.patient.birthDate) || input.patient.birthDate > operatingDate)
+  ) {
+    fieldErrors.patientBirthDate = "환자 생년월일을 올바르게 입력해 주세요.";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { valid: false as const, fieldErrors };

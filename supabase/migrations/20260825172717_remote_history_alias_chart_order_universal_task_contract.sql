@@ -1,0 +1,3 @@
+-- Remote history alias only.
+-- Exact canonical SQL: 20260825235000_chart_order_universal_task_contract.sql
+-- SHA-256: f9122d253087e871a726f7fa1a33f52f445991f301be55311a1ee8d44520e406

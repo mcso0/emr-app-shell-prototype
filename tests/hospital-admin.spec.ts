@@ -1912,6 +1912,25 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
   );
   await expect(pinnedDimmer).toHaveCount(1);
   await expect(pinnedDivider).toHaveCount(1);
+  const firstOrderRow = table
+    .locator('tbody tr[data-emr-data-table-row="true"]')
+    .first();
+  const firstPinnedOrderCell = firstOrderRow.locator(
+    'td[data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
+  );
+  const firstScrollingOrderCell = firstOrderRow.locator(
+    'td[data-emr-column-pinned="left"][data-emr-pinned-edge="true"] + td',
+  );
+  await expect(firstPinnedOrderCell).toHaveCSS("border-bottom-width", "1px");
+  await expect(firstPinnedOrderCell).toHaveCSS(
+    "border-bottom-color",
+    "rgb(229, 229, 229)",
+  );
+  await expect(firstScrollingOrderCell).toHaveCSS("border-bottom-width", "1px");
+  await expect(firstScrollingOrderCell).toHaveCSS(
+    "border-bottom-color",
+    "rgb(229, 229, 229)",
+  );
   const metrics = await tableViewport.evaluate((element) => {
     const tableContainerElement = element.querySelector(
       '[data-slot="table-container"]',
@@ -2098,13 +2117,29 @@ test("all hospital admin Order leaves use the pinned standard Order identity tab
     await expect(
       page.getByTestId("hospital-admin-order-content"),
     ).toHaveAttribute("data-emr-pinned-table-workspace", "true");
+    const orderHeader = page.getByTestId("hospital-order-page-header");
+    await expect(orderHeader).toHaveAttribute(
+      "data-emr-table-workspace-header",
+      "true",
+    );
     await expect(
-      page.getByTestId("hospital-order-page-header"),
-    ).toHaveAttribute("data-emr-table-workspace-header", "true");
+      orderHeader.getByRole("textbox", { name: "오더 검색" }),
+    ).toBeVisible();
     await expect(
-      page.getByTestId("hospital-order-page-header").getByRole("textbox", {
-        name: "오더 검색",
+      orderHeader.getByRole("button", { name: "오더 필터 설정" }),
+    ).toBeVisible();
+    await expect(
+      orderHeader.getByRole("button", {
+        name: "테이블 보기 밀도: 기본 간격",
       }),
+    ).toBeVisible();
+    await expect(
+      orderHeader.getByRole("button", {
+        name: `${label} 컬럼 표시 설정`,
+      }),
+    ).toBeVisible();
+    await expect(
+      orderHeader.getByRole("button", { name: "+ Order" }),
     ).toBeVisible();
     await expect(
       page.getByRole("group", { name: `${label} 하위 타입` }),
@@ -2596,6 +2631,68 @@ test("hospital admin order search filters the visible table", async ({
   await expect(
     page.getByTestId("hospital-order-row-ord-paused-example"),
   ).toHaveCount(0);
+});
+
+test("hospital admin Order toolbar uses customer-style controls and working column visibility", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const header = page.getByTestId("hospital-order-page-header");
+  const filterControl = header.getByRole("button", {
+    name: "오더 필터 설정",
+  });
+  const densityControl = header.getByRole("button", {
+    name: "테이블 보기 밀도: 기본 간격",
+  });
+  const columnControl = header.getByRole("button", {
+    name: "임상병리 검사 컬럼 표시 설정",
+  });
+  const addControl = header.getByRole("button", { name: "+ Order" });
+
+  await expect(
+    header.getByRole("combobox", { name: "사용여부 필터" }),
+  ).toHaveCount(0);
+  await expect(header.getByRole("combobox", { name: "청구 필터" })).toHaveCount(
+    0,
+  );
+  await expect(
+    header.getByRole("combobox", { name: "업무유형 필터" }),
+  ).toHaveCount(0);
+  await expect(header.getByRole("button", { name: "복제" })).toHaveCount(0);
+
+  const controlBoxes = await Promise.all(
+    [filterControl, densityControl, columnControl, addControl].map((control) =>
+      control.boundingBox(),
+    ),
+  );
+  expect(controlBoxes.every((box) => box?.height === 32)).toBe(true);
+  expect(controlBoxes.map((box) => box?.x)).toEqual(
+    [...controlBoxes]
+      .map((box) => box?.x)
+      .sort((left, right) => Number(left) - Number(right)),
+  );
+
+  await columnControl.click();
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "표준 Order명" }),
+  ).toBeDisabled();
+  const targetColumnOption = page.getByRole("menuitemcheckbox", {
+    name: "대상",
+  });
+  await expect(targetColumnOption).toBeChecked();
+  await targetColumnOption.click();
+
+  const table = page.getByTestId("hospital-order-table");
+  await expect(table.locator('[data-column-id="target"]')).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await filterControl.click();
+  const filterBuilder = page.locator('[data-emr-table-filter-builder="true"]');
+  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await expect(page.getByRole("option", { name: "사용여부" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "청구" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "업무유형" })).toHaveCount(0);
 });
 
 test("hospital admin order table keeps the mg empty state contract for no matches", async ({

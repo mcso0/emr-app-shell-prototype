@@ -57,7 +57,7 @@ export const emrDialogShellLayouts = {
     headerClassName: "px-4 pb-0 pt-4",
     bodyClassName: "min-h-0 overflow-y-auto px-4 pb-0 pt-3",
     footerClassName:
-      "-mx-0 -mb-0 min-h-16 items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-4 py-4 sm:justify-between",
+      "-mx-0 -mb-0 min-h-16 flex-row flex-nowrap items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-4 py-4 sm:justify-between",
   },
   "registration-confirm": {
     contentClassName:
@@ -65,7 +65,7 @@ export const emrDialogShellLayouts = {
     headerClassName: "px-4 pb-0 pt-4",
     bodyClassName: "min-h-0 overflow-y-auto px-4 pb-0 pt-3",
     footerClassName:
-      "-mx-0 -mb-0 min-h-16 items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-4 py-4 sm:justify-between",
+      "-mx-0 -mb-0 min-h-16 flex-row flex-nowrap items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-4 py-4 sm:justify-between",
   },
 } as const satisfies Record<EmrDialogShellVariant, EmrDialogShellLayout>;
 

@@ -351,6 +351,142 @@ test("order draft core blocks chart mutation before consultation starts", async 
   });
 });
 
+test("shared draft persists editable details across devices and rejects a stale ETag without overwriting", async () => {
+  const sharedEncounter: Encounter = {
+    ...setRuntimeEncounter,
+    id: "encounter-shared-draft-etag",
+    patientId: "patient-shared-draft-etag",
+    guardianId: "guardian-shared-draft-etag",
+    encounterNo: "E-SHARED-DRAFT-ETAG",
+  };
+  const deviceA = createMockChartOrderDraftGateway({
+    encounters: [sharedEncounter],
+    invoiceLines: [],
+    orders: [],
+  });
+  const deviceB = createMockChartOrderDraftGateway({
+    encounters: [sharedEncounter],
+    invoiceLines: [],
+    orders: [],
+  });
+  const initial = await deviceA.readOrderDraft({
+    encounterId: sharedEncounter.id,
+    workspaceId,
+  });
+  expect(initial.ok).toBe(true);
+  if (!initial.ok) return;
+
+  const first = await deviceA.saveOrderDraft({
+    actorUserId: "user-vet",
+    encounterId: sharedEncounter.id,
+    expectedEtag: initial.etag,
+    rows: [
+      {
+        rowType: "individual",
+        orderId: "order-shared-draft-lab",
+        workspaceCatalogItemId: "ord-lab-cbc-baso",
+        quantity: 1,
+        detailInputs: {
+          specimenType: "serum",
+          collectionCondition: "fasted",
+        },
+        detailSchemaVersion: 1,
+        priority: "urgent",
+      },
+    ],
+    workspaceId,
+  });
+  expect(first.ok).toBe(true);
+  if (!first.ok) return;
+
+  const deviceBRead = await deviceB.readOrderDraft({
+    encounterId: sharedEncounter.id,
+    workspaceId,
+  });
+  expect(deviceBRead).toMatchObject({
+    ok: true,
+    rows: [
+      expect.objectContaining({
+        clinicalOrderType: "clinical_lab",
+        destinationModule: "lab",
+        detailInputs: {
+          specimenType: "serum",
+          collectionCondition: "fasted",
+        },
+        detailSchemaVersion: 1,
+        executionMode: "routed",
+        priority: "urgent",
+      }),
+    ],
+  });
+  if (!deviceBRead.ok) return;
+
+  const second = await deviceB.saveOrderDraft({
+    actorUserId: "user-vet",
+    encounterId: sharedEncounter.id,
+    expectedEtag: deviceBRead.etag,
+    rows: [
+      {
+        rowType: "individual",
+        orderId: "order-shared-draft-lab",
+        workspaceCatalogItemId: "ord-lab-cbc-baso",
+        quantity: 2,
+        detailInputs: {
+          specimenType: "blood",
+          collectionCondition: "room temperature",
+        },
+        detailSchemaVersion: 1,
+        priority: "normal",
+      },
+    ],
+    workspaceId,
+  });
+  expect(second.ok).toBe(true);
+  if (!second.ok) return;
+
+  const staleWrite = await deviceA.saveOrderDraft({
+    actorUserId: "user-vet",
+    encounterId: sharedEncounter.id,
+    expectedEtag: first.etag,
+    rows: [
+      {
+        rowType: "individual",
+        orderId: "order-shared-draft-lab",
+        workspaceCatalogItemId: "ord-lab-cbc-baso",
+        quantity: 99,
+        detailInputs: { specimenType: "urine" },
+        detailSchemaVersion: 1,
+        priority: "urgent",
+      },
+    ],
+    workspaceId,
+  });
+  expect(staleWrite).toMatchObject({
+    ok: false,
+    status: 409,
+    error: "revision_conflict",
+  });
+
+  const finalRead = await deviceA.readOrderDraft({
+    encounterId: sharedEncounter.id,
+    workspaceId,
+  });
+  expect(finalRead).toMatchObject({
+    ok: true,
+    etag: second.etag,
+    rows: [
+      expect.objectContaining({
+        quantity: 2,
+        detailInputs: {
+          specimenType: "blood",
+          collectionCondition: "room temperature",
+        },
+        priority: "normal",
+      }),
+    ],
+  });
+});
+
 test("order draft Supabase gateway keeps workspace, encounter, actor, and server amount fields in RPC calls", async () => {
   const calls: string[] = [];
   const gateway = createSupabaseChartOrderDraftGateway({
