@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR Clinical Master diagnosis runtime closeout</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 980px; margin: 0 auto; padding: 40px 24px 60px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 20px 22px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 5px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; overflow-wrap: anywhere; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 12px; margin-right: 6px; border-radius: 999px; background: #eaf7ee; color: #176b35; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      .warn { background: #fff8e6; color: #6d4b00; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">CLAiR Clinical Master / Diagnosis runtime / 2026-08-25</p>
+      <h1>진단 분류 검색 운영 데모 closeout</h1>
+      <p>
+        승인된 synthetic 진단 분류를 마스터 release로 발행하고 세 demo workspace에
+        채택한 뒤, Assessment의 <strong>분류 검색</strong>을 운영 API와 연결했다.
+        기존 자유 입력 진단을 바꾸지 않으면서 새 catalog 진단부터 revision과 분류
+        snapshot을 저장할 수 있는 경계를 마련했다.
+      </p>
+      <span class="badge">상태: 운영 데모 배포 완료</span>
+      <span class="badge">원격 데이터 검증 통과</span>
+      <span class="badge warn">실제 임상 표준 아님</span>
+
+      <section>
+        <h2>핵심 결과</h2>
+        <table>
+          <tr><th>구분</th><th>확인된 내용</th></tr>
+          <tr><td>Master release</td><td>Release no. 10 <code>593e40c2…</code>, 계통 6 / 질환 구분 6 / 진단 12 / 주 연결 12. 동일 payload 재발행은 기존 release를 반환했다.</td></tr>
+          <tr><td>Workspace adoption</td><td>Pilot, Cheongdam, <code>clair-demo</code>에 각각 active catalog 12개와 주 분류 12개가 존재한다.</td></tr>
+          <tr><td>보호 대상</td><td><code>clair-foreign-demo</code>는 0개로 유지됐고, 기존 차트 진단 14개는 catalog ID/revision/snapshot이 없는 자유 입력 이력으로 남았다.</td></tr>
+          <tr><td>권한 경계</td><td>브라우저 역할의 catalog/private master 직접 SELECT는 계속 차단된다. 검색 RPC는 active membership과 <code>chart:view</code>를 서버에서 다시 검증한다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>애플리케이션 전달</h2>
+        <ul>
+          <li>PR #596 candidate <code>253c6aab…dec0</code>가 수동 Release Check <code>32811832266</code>을 통과했다.</li>
+          <li>Merge SHA는 <code>a5151e23d17f76a8413c1660087359fdba576507</code>이며 <code>origin/main</code>에서 확인했다.</li>
+          <li>Production deployment <code>dpl_DKeCt146nTx8Z4SRZWvFNWA7PXbq</code>는 Ready이고 production alias를 소유한다.</li>
+          <li>이전 Ready rollback deployment는 <code>dpl_DkM3AAEHg8dHmbu8UbuGzLcGe7jY</code>다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>운영 스모크</h2>
+        <ul>
+          <li>비인증 catalog API는 <code>401 unauthenticated</code>를 반환했다.</li>
+          <li>인증된 Cheongdam 차트에서 분류 검색 다이얼로그가 계통 6개, 질환 구분 6개, 진단 12개를 표시했다.</li>
+          <li>소화기계 선택은 진단 2개로 좁혀졌고 <code>변비</code> 검색은 1개를 반환했다.</li>
+          <li>관찰된 console error는 0개였다.</li>
+          <li>운영 차트 변경을 피하기 위해 진단 선택과 저장은 수행하지 않고 다이얼로그를 닫았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 경계</h2>
+        <ul>
+          <li>이번 데이터는 내부 운영 데모용 synthetic fixture이며 임상 표준이나 의학적 정확성을 주장하지 않는다.</li>
+          <li>실제 환자·보호자·병원 데이터, 외부 사용자 rollout, 법무·컴플라이언스 readiness는 범위 밖이다.</li>
+          <li>Security Advisor에는 private/no-direct-read 테이블의 RLS no-policy INFO와 의도된 authenticated <code>SECURITY DEFINER</code> 검색 RPC WARN이 남아 있어 clean 결과로 보고하지 않는다.</li>
+          <li>Advisor의 신규 index usage 정보는 실제 운영 트래픽이 축적된 뒤 별도 성능 검토 대상으로 남긴다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>관련 문서</h2>
+        <ul>
+          <li><a href="../../work/clinical-master/CLINICAL-MASTER-PR-015-diagnosis-runtime-adoption.md">PR-015 work item</a></li>
+          <li><a href="../../engineering/current-status.md">MVP current status</a></li>
+          <li><a href="../../engineering/data-model/clair-clinical-master-data-target-architecture.md">Clinical Master target architecture</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

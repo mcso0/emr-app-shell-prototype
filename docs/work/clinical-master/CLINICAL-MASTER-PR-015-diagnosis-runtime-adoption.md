@@ -3,7 +3,7 @@ id: "CLINICAL-MASTER-PR-015"
 type: "Work Item"
 title: "Diagnosis publisher, workspace catalog adoption, and chart classification search"
 description: "Publishes the reviewed synthetic diagnosis hierarchy, adopts it into three demo workspaces, and connects the Assessment classification dialog to durable chart diagnosis snapshots."
-status: "in_progress"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
 tags: ["diagnosis", "clinical-master", "chart", "supabase", "production-demo"]
@@ -137,11 +137,34 @@ Verified against a fresh local Supabase reset on 2026-08-25:
   privileged-adoption audit contracts and more specific route error rendering
   for a permission race
 
-Remote state is still pending. No migration, diagnosis release, workspace
-adoption, pull request merge, Vercel deployment, or authenticated production
-smoke is claimed here. Before any shared-project write, refresh the exact remote
-before-state and use the release order: additive migration, synthetic publish,
-three-workspace adoption, application deployment.
+Remote operational-demo delivery completed on 2026-08-25 in the approved order:
+
+- additive migration `20260825050710` applied and schema/ACL readback passed
+- release no. 10 `593e40c2-7d6f-4b7d-9cb6-ccd80e686afc` published exact
+  `6 / 6 / 12 / 12` with fingerprint
+  `c6309d0ed739acc0ea4bd095b621c3c5db4cb6509542d78bd886d67c0ea304a0`;
+  identical replay returned `idempotent = true`
+- `workspace-clinical-master-pilot-v1`, `workspace-clair-cheongdam`, and
+  `clair-demo` each read back 12 active catalog rows, 12 complete lineage rows,
+  and 12 primary classification rows; `clair-foreign-demo` stayed at zero
+- all 14 existing chart diagnoses remained free text with null catalog ID,
+  revision, and snapshot
+- anonymous/authenticated direct catalog and private-master table reads remained
+  denied; authenticated search RPC execution remained intentionally available
+  behind its active-membership and `chart:view` checks
+- PR #596 candidate `253c6aabbe92bfacff92c99bcd551a705a58dec0`
+  passed Release Check `32811832266` and merged as
+  `a5151e23d17f76a8413c1660087359fdba576507`
+- Vercel production deployment `dpl_DKeCt146nTx8Z4SRZWvFNWA7PXbq` reached
+  Ready and owns `https://emr-app-shell-prototype.vercel.app`; previous Ready
+  rollback deployment is `dpl_DkM3AAEHg8dHmbu8UbuGzLcGe7jY`
+- authenticated Cheongdam browser smoke loaded 6 systems, 6 disease groups, and
+  12 diagnoses; the digestive-system filter returned 2 diagnoses and the
+  `변비` search returned 1, with zero observed console errors
+- production smoke was read-only: no diagnosis was selected or saved
+
+The completion record is
+[Diagnosis runtime closeout](../../completed/clinical-master/2026-08-25-clinical-master-diagnosis-runtime-closeout-report.html).
 
 ## Handoff Notes
 

@@ -166,17 +166,22 @@ applied. Remote category/diagnosis/link table counts are `0/0/0`. The existing
 B1 publisher still rejects diagnosis record types, and publisher/adoption/
 pilot exclusion remains unchanged.
 
-CLINICAL-MASTER-PR-015 is the active diagnosis-runtime release candidate. Its
-local candidate adds an isolated diagnosis publisher, release-scoped adoption
-into `public.diagnosis_catalog`, active-membership plus `chart:view` catalog
-search, immutable chart diagnosis snapshots, and the approved responsive
-`분류 검색` dialog. A fresh local reset, exact `6 / 6 / 12 / 12` publish and
-idempotent retry, invalid-hierarchy rejection, rollback-only replay, three
-allowlisted workspace adoptions at 12 diagnoses each, unchanged foreign control,
-permission/direct-read denial probes, and catalog/free-text mixed persistence
-have passed locally. The shared remote Supabase migration, synthetic publish,
-three-workspace adoption, pull request merge, Vercel deployment, and authenticated
-post-deploy smoke have not yet occurred and must not be claimed as complete.
+CLINICAL-MASTER-PR-015 is completed as the diagnosis runtime operational-demo
+slice. Remote migration `20260825050710` added the isolated diagnosis publisher,
+release-scoped workspace catalog adoption, active-membership plus `chart:view`
+search, and immutable chart diagnosis snapshots. Published release no. 10
+`593e40c2…` has the reviewed synthetic `6 / 6 / 12 / 12` hierarchy and canonical
+fingerprint `c6309d0e…04a0`; an identical publish replay was idempotent. The pilot,
+Cheongdam, and `clair-demo` workspaces each have 12 active catalog rows and 12
+primary classification rows, while `clair-foreign-demo` remains at zero. The 14
+pre-existing encounter diagnoses remain unchanged free-text rows with no catalog
+snapshot. PR #596 candidate `253c6aab…dec0` passed Release Check `32811832266`,
+merged at `a5151e23d17f76a8413c1660087359fdba576507`, and deployed Ready as
+`dpl_DKeCt146nTx8Z4SRZWvFNWA7PXbq` on the production alias. Authenticated
+Cheongdam browser smoke loaded the approved `분류 검색` dialog with 6 systems,
+6 disease groups, and 12 diagnoses; system filtering and exact diagnosis search
+passed with zero observed console errors. No chart diagnosis was selected or
+saved during production smoke.
 
 ### Airtable pilot closeout (2026-08-23)
 
