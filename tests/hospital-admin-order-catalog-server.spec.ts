@@ -284,6 +284,72 @@ test("order catalog route wires Supabase audit gateway for live mutations", () =
   expect(routeSource).toContain("getAuditRequestId");
 });
 
+test("Supabase Order Set detail accepts the current projection id field", async () => {
+  const gateway = createSupabaseOrderCatalogGateway({
+    async rpc(functionName: string) {
+      expect(functionName).toBe("clair_get_order_set");
+      return {
+        data: {
+          orderSet: {
+            id: "set-1",
+            workspace_id: "clair-demo",
+            source_set_version: "order-set-revision-1",
+            current_revision_id: "11111111-1111-4111-8111-111111111111",
+            availability_status: "active",
+            set_name: "개 중성화 수술",
+            billing_name: "개 중성화 수술",
+            sales_unit: "per_order",
+            target_species: ["dog"],
+            amount_basis: "included_order_sum",
+            set_price_krw: null,
+            range_basis: null,
+            tax_type: "derived",
+            range_price_ranges: [],
+            currentRevision: {
+              id: "11111111-1111-4111-8111-111111111111",
+              workspace_id: "clair-demo",
+              order_set_id: "set-1",
+              revision_no: 1,
+              validation_status: "valid",
+              validation_errors: [],
+              set_name: "개 중성화 수술",
+              billing_name: "개 중성화 수술",
+              amount_basis: "included_order_sum",
+              set_price_krw: null,
+              range_basis: null,
+              sales_unit: "per_order",
+              billing_reflection_enabled: false,
+              tax_type: "derived",
+              target_species: ["dog"],
+              items: [],
+              priceRanges: [],
+              currentEtag:
+                "order-set-revision-11111111-1111-4111-8111-111111111111",
+            },
+          },
+          history: [],
+          reviews: [],
+        },
+        error: null,
+      };
+    },
+  });
+
+  await expect(
+    gateway.getOrderSet({ orderSetId: "set-1", workspaceId: "clair-demo" }),
+  ).resolves.toMatchObject({
+    ok: true,
+    detail: {
+      orderSetId: "set-1",
+      setName: "개 중성화 수술",
+      currentRevision: {
+        id: "11111111-1111-4111-8111-111111111111",
+        orderSetId: "set-1",
+      },
+    },
+  });
+});
+
 test("Supabase order catalog gateway persists create update and pause mutations", async () => {
   const rows: Record<string, unknown>[] = [];
   const calls: string[] = [];
