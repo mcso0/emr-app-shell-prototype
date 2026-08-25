@@ -3,7 +3,7 @@ id: "CLINICAL-FULFILLMENT-PR-009"
 status: "in_progress"
 area: "clinical-fulfillment"
 priority: "P0"
-target_pr: "Owner-approved Goal 2026-08-25 / PR TBD"
+target_pr: "https://github.com/mcso0/emr-app-shell-prototype/pull/617"
 source_docs:
   - "docs/product/domain/order-fulfillment-handoff.md"
   - "docs/engineering/data-model/order-fulfillment-handoff-contract.md"
@@ -452,6 +452,20 @@ application deployment.
   selection and a strict command-palette text locator). No unrelated product
   or test contract was changed. The exact chart/order release surface was then
   rerun from a clean mock server with the green results above.
+
+## Phase 11 Evidence
+
+- Committed the scoped implementation in three reviewable commits, pushed
+  branch `codex/chart-order-execution-system-20260825`, and opened PR
+  `https://github.com/mcso0/emr-app-shell-prototype/pull/617` against `main`.
+- The PR records the approved product contract, production migration/backfill,
+  RLS boundary, validation results, application-deployment boundary, and the
+  rollback/forward-fix path. The exact candidate and check state remain pending
+  until the documentation link commit is pushed and GitHub checks settle.
+- No production application deployment, production alias transition,
+  user-facing feature activation, post-deploy smoke, or cleanup migration has
+  been performed. Because `main` is the unholdable Vercel Production trigger,
+  the intended terminal state is an exact, fully checked, merge-ready PR.
 
 ## Work Classification
 
