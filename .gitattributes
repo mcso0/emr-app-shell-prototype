@@ -1,0 +1,3 @@
+# Preserve the exact bytes of reviewed and executed generated SQL artifacts.
+supabase/snippets/clinical_master_operational_v4_phase_c_commit_candidate.sql whitespace=-blank-at-eol
+supabase/snippets/clinical_master_operational_v4_phase_c_rollback.sql whitespace=-blank-at-eol
