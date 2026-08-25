@@ -180,7 +180,7 @@ export function ChartPreconsultationContextPanel({
   );
   return (
     <div
-      className="scroll-fade-y scroll-fade-8 min-h-0 flex-1 overflow-y-auto"
+      className="scroll-fade-y scroll-fade-8 min-h-0 flex-1 overflow-y-auto px-4"
       data-testid="chart-start-locked-state"
     >
       <div className="mx-auto w-full max-w-[1024px] bg-[var(--emr-surface-panel)]">
@@ -263,7 +263,7 @@ async function loadChartPreconsultationContext({
 function PreconsultationLoadingState() {
   return (
     <div
-      className="scroll-fade-y scroll-fade-8 min-h-0 flex-1 overflow-y-auto"
+      className="scroll-fade-y scroll-fade-8 min-h-0 flex-1 overflow-y-auto px-4"
       aria-busy="true"
       aria-label="환자 정보 불러오는 중"
       data-testid="preconsultation-loading-state"
