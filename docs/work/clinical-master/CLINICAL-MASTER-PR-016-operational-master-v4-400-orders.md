@@ -2,8 +2,8 @@
 id: "CLINICAL-MASTER-PR-016"
 type: "Work Item"
 title: "Operational master v4 400-order catalog and demo Order Set manifests"
-description: "Extends the synthetic operational catalog to exactly 400 atomic orders, expands laboratory relations, and prepares local-only adoption, pricing, and 20-set manifests."
-status: "human_review"
+description: "Extends the synthetic operational catalog to exactly 400 atomic orders, expands laboratory relations, and records the guarded Airtable and Supabase V4 rollout."
+status: "completed"
 area: "clinical-master"
 priority: "P0"
 tags: ["clinical-master", "orders", "laboratory", "order-sets", "synthetic-demo"]
@@ -20,17 +20,16 @@ dependencies:
   - "CLINICAL-MASTER-PR-013"
   - "CLINICAL-MASTER-PR-014"
 updated: "2026-08-25"
-remote_writes: 0
+remote_writes: 2
 ---
 
 # Clinical Master PR-016: Operational master v4 400-order package
 
 ## Goal
 
-Build a deterministic, synthetic sales-demo catalog with exactly 400 atomic
-orders and prepare the local artifacts required to review a future Airtable
-upsert, central publish, three-workspace adoption, workspace pricing, and 20
-Order Sets per target workspace.
+Build and publish a deterministic, synthetic sales-demo catalog with exactly
+400 atomic orders, adopt it into three allowlisted workspaces with workspace
+pricing, and create 20 active Order Sets per target workspace.
 
 ## Scope
 
@@ -40,7 +39,7 @@ Order Sets per target workspace.
   operational areas.
 - Expand lab tests from 36 to 72, panels from 10 to 18, panel links from 60 to
   120, and order profiles from 30 to 85.
-- Emit deterministic V4 authoring, publisher-adapter, lab-semantics,
+- Emit and execute deterministic V4 authoring, publisher-adapter, lab-semantics,
   workspace-pricing/adoption, Airtable delta, and Order Set manifests.
 - Define 20 non-empty Order Sets for each of the three allowlisted demo
   workspaces, including the agreed fixed/range pricing distribution and three
@@ -51,7 +50,7 @@ Order Sets per target workspace.
 
 ## Out Of Scope
 
-- Airtable, remote Supabase, or production deployment writes.
+- Production application deployment before the exact release candidate gate.
 - Real customer, hospital, patient, guardian, staff, or price data.
 - Clinical recommendations, medication doses or frequencies, reference ranges,
   controlled-drug content, or claims of veterinary review.
@@ -87,42 +86,65 @@ Order Sets per target workspace.
 
 ## Implementation And Verification Status
 
-The deterministic local V4 package is complete and ready for Human Review.
+The deterministic V4 package and the approved Airtable/Supabase rollout are
+complete.
 It preserves every V3 authoring row and produces the exact requested totals:
 578 Master Records/Names, 554 publisher-supported records, 400 atomic orders,
 72 lab tests, 18 panels, 120 panel links, 85 order profiles, 20 Order Set
 templates, and 60 workspace operation templates.
 
-The Airtable candidate is based on the checked-in V3 final readback hash
-`e2f931eef25871131de7b78a948b3dfe1892efa9bb2d89ae6a85b30e290cb44a`.
-It plans 324 additive Master creates, 324 Name creates, 60 panel links, and 55
-profiles. It also retains the already-audited single legacy initial-consultation
-identity fork by record ID. The manifest remains `writeAllowed: false` and
-`mutationsPerformed: 0`; its rollback journal contains only null placeholders
-for future created record IDs.
+The Airtable additive upsert and exact readback completed with 578 Master
+Records, 578 Names, 13 Classification Paths, 120 Lab Panel Items, 85 Lab Order
+Profiles, and 12 Diagnosis Category Links. The existing release draft is now
+`cm.release.airtable.operational-master.v4`; no existing row was deleted.
 
 The Order Set package defines the agreed four fixed-price, fourteen
 included-order-sum, and two range-price templates. The dog/cat neuter sets pin
 the anesthesia-evaluation set, and intensive inpatient monitoring pins the
 basic inpatient set. Fixed/range children default to no billing reflection.
-Every runtime catalog item ID, catalog revision, child set ID, and child set
-revision stays unresolved until a separately approved post-adoption run.
+Runtime catalog and nested-set identities were resolved only after adoption.
+For Cheongdam sets, a paused collision master is replaced by its reviewed,
+active workspace-custom equivalent; the paused master and custom row remain
+unchanged.
+
+Supabase committed immutable release `61ddac7c-b06e-4ea9-81df-c4fe4c2feb21`
+as release number `12`, `recordCount: 554`, `adoptionScope: payload`, source
+fingerprint `3bba1b06cd5334d77852b85b0ef0bd2654c0f308e034ea3e191198a12da36e6b`.
+The first remote attempt failed inside the transaction on an unavailable
+Cheongdam set member and left no V4 release or workspace rows; because release
+numbers use a nontransactional sequence it consumed number 11. The corrected
+candidate SHA-256 was
+`d4635a11fa60739ba34bb97768b10db026dc205d6b3260923ec42e415e7e8bd5`.
+
+| Workspace | Total catalog | V4 payload | Active | Paused | Active V4 sets | Total sets |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `workspace-clinical-master-pilot-v1` | 402 | 400 | 400 | 0 | 20 | 20 |
+| `workspace-clair-cheongdam` | 413 | 400 | 389 | 11 | 20 | 24 |
+| `clair-demo` | 419 | 400 | 400 | 0 | 20 | 20 |
+
+Every workspace has zero pending V4 payload reviews. Each new set distribution
+is fixed 4, included-order-sum 14, range 2, with three one-level nested items.
+`clair-foreign-demo` remains zero across catalog, lab item/version/link,
+workspace update, notification, audit, and Order Set surfaces.
 
 Passed on 2026-08-25:
 
 - generator write and `--check` drift gate
-- focused Playwright static contract tests: 5/5
+- focused V4 and Phase C Playwright contract tests: 6/6
+- local full publish/adopt/price/set rehearsal followed by rollback and four
+  zero-residue checks
 - TypeScript `--noEmit`
 - focused ESLint with zero warnings
 - `npm run docs:check` (921 Markdown files)
 - `git diff --check`
 
-No Airtable, Supabase, API, browser, deployment, or other remote mutation was
-performed. A Korean Human Review report is available at
+The wider hospital-admin run exposed only pre-existing shared content-top
+expectation drift (`56px` expected versus `44px` current); the Order Set-focused
+scenarios passed. A Korean completion report is available at
 `docs/completed/clinical-master/2026-08-25-clinical-master-v4-400-orders-report.html`.
 
 ## Current Boundary
 
-Only local generation and verification are approved. Any Airtable write,
-remote database publish/adoption, production deployment, or browser mutation
-requires a fresh read-only preflight and separate explicit approval.
+Airtable and Supabase V4 data work is complete. Application code delivery still
+requires PR checks, fixed staging verification, and the repository's exact-SHA
+production approval packet before merge/deployment.

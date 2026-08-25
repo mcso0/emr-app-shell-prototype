@@ -7,7 +7,19 @@
   "mutationsPerformed": 0,
   "authorityBoundary": "Local candidate only. A fresh exact Airtable readback and separate approval are required before execution.",
   "casGate": {
-    "requiredBaselineSha256": "34554f2c7f7d6cb2720e298a5baed778b493b988eba945855071bdf22f55eb12",
+    "requiredAuthorityAggregateSha256": "7d2cae88a325f5ed7a5b391b675f95bac97781fc826a533cd63fcbab249d4b37",
+    "requiredAuthorityTableSha256": {
+      "Release Drafts": "11c8af8282bb6a2aea5f66b3191401b32dc89926db8768969d4246cf0bd99c2c",
+      "Sources": "d9a233abf983fb4a8f54aca47ddb4183dde73f6689119e2f660289e0be999327",
+      "Master Records": "015bd81834344c1b97df0fdf81c618728a5c114fa37dc504b1b40d293d0be49d",
+      "Names": "0503d30b9a7ddfecc39352ae6a4d1b44844a918721f5adb9f02cd109f3b701ff",
+      "Classification Paths": "5abc739a38151414970499d9305c83184552c0411b558606147332fb36cfb315",
+      "Lab Panel Items": "a19f119c1d90f71fb2eeebdbd87ca9191efab5ae98eb3781e2da52bceddc17d8",
+      "Lab Order Profiles": "f4b7febc51b11363b02f357aa0c2274050e56da27a2405ff77ad009774ca55a6",
+      "Diagnosis Category Links": "ca91f74bc38da6f321e0b656542f02b31275158aba0630cac30427ddde644c27"
+    },
+    "legacyFullReadbackReferenceSha256": "34554f2c7f7d6cb2720e298a5baed778b493b988eba945855071bdf22f55eb12",
+    "excludedComputedFields": "display-only reciprocal backlinks and formula labels are excluded from the mutation CAS",
     "requiredTableCounts": {
       "Release Drafts": 1,
       "Sources": 1,
@@ -27,7 +39,7 @@
     "failureMode": "abort_before_first_write"
   },
   "dependencyOrder": [
-    "CAS all eight V3 final-readback table counts and canonical hash",
+    "CAS all eight V3 authority projections, stable record identities, and exact table counts",
     "Verify the preserved source identity",
     "Verify the already-applied audited initial-consultation identity fork by preserved record ID",
     "Create 324 Master Records",

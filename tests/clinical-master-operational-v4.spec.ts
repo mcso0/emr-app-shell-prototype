@@ -205,7 +205,7 @@ test("the 72/18/120/85 laboratory graph is fully resolvable and non-authoritativ
 test("the Airtable delta is exact, additive, write-disabled, and rollback-addressable", () => {
   expect(airtable).toMatchObject({ writeAllowed: false, mutationsPerformed: 0 });
   expect(airtable.casGate).toMatchObject({
-    requiredBaselineSha256: "34554f2c7f7d6cb2720e298a5baed778b493b988eba945855071bdf22f55eb12",
+    requiredAuthorityAggregateSha256: "7d2cae88a325f5ed7a5b391b675f95bac97781fc826a533cd63fcbab249d4b37",
     failureMode: "abort_before_first_write",
   });
   expect(airtable.tables["Master Records"]).toMatchObject({ expectedBefore: 254, expectedAfter: 578, create: 324, updateExisting: 0 });
@@ -248,10 +248,21 @@ test("twenty Order Sets materialize to sixty guarded workspace operations", () =
   for (const template of orderSets.templates) {
     expect(template.availabilityStatus).toBe("active");
     expect(template.definitionTemplate.items.length).toBeGreaterThan(0);
+    expect(template.definitionTemplate.salesUnit).toBe("per_order");
+    expect(template.definitionTemplate.billingReflectionEnabled).toBe(template.definitionTemplate.amountBasis !== "included_order_sum");
+    expect(template.definitionTemplate.items.map((item) => item.sortOrder)).toEqual(
+      Array.from({ length: template.definitionTemplate.items.length }, (_, index) => index + 1),
+    );
+    expect(template.definitionTemplate.items.filter((item) => item.childKind === "order_set").every((item) => item.billingReflectionDefault === false)).toBe(true);
     if (template.definitionTemplate.amountBasis !== "included_order_sum") {
       expect(template.definitionTemplate.items.every((item) => item.billingReflectionDefault === false)).toBe(true);
     }
-    if (template.definitionTemplate.amountBasis === "range_price") expect(template.definitionTemplate.priceRanges).toHaveLength(3);
+    if (template.definitionTemplate.amountBasis === "range_price") {
+      expect(template.definitionTemplate.priceRanges).toHaveLength(3);
+      expect(template.definitionTemplate.priceRanges.map((range) => range.sortOrder)).toEqual([1, 2, 3]);
+      expect(template.definitionTemplate.priceRanges[0]?.lowerBound).toBe(0);
+      expect(template.definitionTemplate.priceRanges.at(-1)?.upperBound).toBeNull();
+    }
   }
 
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;

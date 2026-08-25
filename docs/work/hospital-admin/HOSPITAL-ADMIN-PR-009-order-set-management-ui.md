@@ -1,6 +1,6 @@
 ---
 id: "HOSPITAL-ADMIN-PR-009"
-status: "human_review"
+status: "implemented"
 area: "hospital-admin"
 priority: "P0"
 target_pr: "User-approved Order Set first-pass implementation"
@@ -72,6 +72,9 @@ workspace and revision-aware editing flow used by individual Order management.
   failures are existing shared-header expectation drift (`56px` expected versus
   the current `44px`) in space, vital, and table geometry checks and are not
   caused by this Order Set slice.
+- V4 live data now provides 20 active sets in each target workspace; Cheongdam
+  preserves its four legacy inactive sets, so its all-status view contains 24.
+- Production application deployment remains gated on the exact release SHA.
 - Representative review screenshots:
   `order-set-management-v1-actions-corrected-hover.png` and
   `order-set-pinned-surface-opaque.png` and

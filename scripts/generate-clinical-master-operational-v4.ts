@@ -718,6 +718,26 @@ function makeAirtableManifest(fixture: AuthoringFixture, adapterOutput: JsonObje
   auditedInitialRow.fields.masterKey = OPERATIONAL_INITIAL_MASTER_KEY;
   auditedInitialNameRow.fields.masterKey = [{ id: auditedInitialRow.airtableRecordId, name: OPERATIONAL_INITIAL_MASTER_KEY }];
   readback.baselineSha256 = readbackBaselineSha256(readback);
+  const authorityFieldsByTable: Record<string, string[]> = {
+    "Release Drafts": ["releaseKey", "status", "releaseNotes", "reviewReason", "publishedByLabel", "authoredByLabel", "reviewedByLabel", "clinicalReviewerLabel"],
+    Sources: ["sourceKey", "sourceType", "title", "sourceVersion", "accessedAt", "referenceUri", "licenseNotes"],
+    "Master Records": ["masterKey", "recordType", "authoringStatus", "lifecycleStatus", "safetyStatus", "safetyReason", "changeSummary", "sourceAssertionScope", "sourceNotes", "detail", "sourceKey"],
+    Names: ["name", "languageCode", "nameKind", "searchable", "sortOrder", "masterKey"],
+    "Classification Paths": ["pathKey", "clinicalActionKey", "chartGroupKey", "taskRouteKey"],
+    "Lab Panel Items": ["sortOrder", "required", "displayGroup", "panelMasterKey", "testMasterKey"],
+    "Lab Order Profiles": ["orderMasterKey", "labTestMasterKey", "labPanelMasterKey", "specimenMasterKey"],
+    "Diagnosis Category Links": ["isPrimary", "sortOrder", "diagnosisMasterKey", "categoryMasterKey"],
+  };
+  const requiredAuthorityTableSha256 = Object.fromEntries(Object.entries(readback.tables).map(([tableName, table]) => {
+    const fieldNames = new Set(authorityFieldsByTable[tableName]);
+    const records = table.records.map((row) => ({
+      airtableRecordId: row.airtableRecordId,
+      createdTime: row.createdTime,
+      fields: Object.fromEntries(Object.entries(row.fields).filter(([fieldName]) => fieldNames.has(fieldName))),
+    })).sort((left, right) => left.airtableRecordId < right.airtableRecordId ? -1 : left.airtableRecordId > right.airtableRecordId ? 1 : 0);
+    return [tableName, sha256(JSON.stringify(canonicalSort(records)))];
+  }));
+  const requiredAuthorityAggregateSha256 = sha256(Object.keys(requiredAuthorityTableSha256).sort().map((tableName) => `${tableName}=${requiredAuthorityTableSha256[tableName]}`).join("\n"));
   const liveMasterKeys = new Set(readback.tables["Master Records"].records.map((row) => String(row.fields.masterKey)));
   if (liveMasterKeys.has(LEGACY_INITIAL_MASTER_KEY) || !liveMasterKeys.has(OPERATIONAL_INITIAL_MASTER_KEY)) throw new Error("Airtable audited initial-consultation identity baseline drifted.");
   const livePanelLinks = new Set(readback.tables["Lab Panel Items"].records.map((row) => `${linkedStableKey(row.fields.panelMasterKey)}+${linkedStableKey(row.fields.testMasterKey)}`));
@@ -829,14 +849,17 @@ function makeAirtableManifest(fixture: AuthoringFixture, adapterOutput: JsonObje
     mutationsPerformed: 0,
     authorityBoundary: "Local candidate only. A fresh exact Airtable readback and separate approval are required before execution.",
     casGate: {
-      requiredBaselineSha256: readback.baselineSha256,
+      requiredAuthorityAggregateSha256,
+      requiredAuthorityTableSha256,
+      legacyFullReadbackReferenceSha256: readback.baselineSha256,
+      excludedComputedFields: "display-only reciprocal backlinks and formula labels are excluded from the mutation CAS",
       requiredTableCounts: readback.tableCounts,
       requiredSourceIdentity: readback.sourceIdentity,
       sourcePayloadSha256: sha256(canonicalJson(adapterOutput)),
       failureMode: "abort_before_first_write",
     },
     dependencyOrder: [
-      "CAS all eight V3 final-readback table counts and canonical hash",
+      "CAS all eight V3 authority projections, stable record identities, and exact table counts",
       "Verify the preserved source identity",
       "Verify the already-applied audited initial-consultation identity fork by preserved record ID",
       "Create 324 Master Records",
@@ -925,7 +948,7 @@ function makeOrderSetManifest(fixture: AuthoringFixture) {
         childOrderCatalogRevision: { resolveBy: "workspace_catalog_current_revision", masterKey, resolvedValue: null },
         childOrderSetId: null,
         childSetRevisionId: null,
-        sortOrder: index,
+        sortOrder: index + 1,
         defaultSelected: true,
         billingReflectionDefault: !suppressChildBilling,
         defaultQuantity: 1,
@@ -938,16 +961,16 @@ function makeOrderSetManifest(fixture: AuthoringFixture) {
       childOrderCatalogRevision: null,
       childOrderSetId: { resolveBy: "created_template_key", templateKey: set.nestedTemplateKey, resolvedValue: null },
       childSetRevisionId: { resolveBy: "created_template_current_revision", templateKey: set.nestedTemplateKey, resolvedValue: null },
-      sortOrder: atomicItems.length,
+      sortOrder: atomicItems.length + 1,
       defaultSelected: true,
-      billingReflectionDefault: !suppressChildBilling,
+      billingReflectionDefault: false,
       defaultQuantity: 1,
       quantitySource: "fixed_one",
     }] : [];
     const priceRanges = set.amountBasis === "range_price" ? [
-      { sortOrder: 0, lowerBound: 1, upperBound: 2, priceKrw: set.templateKey.startsWith("dental") ? 220000 : 90000 },
-      { sortOrder: 1, lowerBound: 2, upperBound: 3, priceKrw: set.templateKey.startsWith("dental") ? 320000 : 150000 },
-      { sortOrder: 2, lowerBound: 3, upperBound: null, priceKrw: set.templateKey.startsWith("dental") ? 420000 : 210000 },
+      { sortOrder: 1, lowerBound: 0, upperBound: 2, priceKrw: set.templateKey.startsWith("dental") ? 220000 : 90000 },
+      { sortOrder: 2, lowerBound: 2, upperBound: 3, priceKrw: set.templateKey.startsWith("dental") ? 320000 : 150000 },
+      { sortOrder: 3, lowerBound: 3, upperBound: null, priceKrw: set.templateKey.startsWith("dental") ? 420000 : 210000 },
     ] : [];
     return {
       templateKey: set.templateKey,
@@ -960,8 +983,8 @@ function makeOrderSetManifest(fixture: AuthoringFixture) {
         amountBasis: set.amountBasis,
         setPriceKrw: set.amountBasis === "set_fixed_price" ? set.setPriceKrw : null,
         rangeBasis: set.amountBasis === "range_price" ? "manual_value" : null,
-        salesUnit: "case",
-        billingReflectionEnabled: true,
+        salesUnit: "per_order",
+        billingReflectionEnabled: set.amountBasis !== "included_order_sum",
         taxType: set.amountBasis === "included_order_sum" ? "derived" : "taxable",
         targetSpecies: set.species,
         careGuide: "합성 데모 세트입니다. 실제 진료 도입 전 병원별 검토가 필요합니다.",

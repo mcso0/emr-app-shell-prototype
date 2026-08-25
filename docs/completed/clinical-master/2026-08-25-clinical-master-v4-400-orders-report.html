@@ -22,9 +22,9 @@
   <main>
     <article>
       <p class="meta">CLAiR Clinical Master / PR-016 / 2026-08-25</p>
-      <h1>Operational Master V4 400개 오더 로컬 패키지</h1>
-      <p class="ok">상태: 로컬 생성·정적 검증 완료, Human Review 대기</p>
-      <p class="warn">Airtable·원격 Supabase·API·브라우저·배포 변경은 0건이다.</p>
+      <h1>Operational Master V4 400개 오더 발행 결과</h1>
+      <p class="ok">상태: Airtable 작성본·중앙 V4 발행·3개 워크스페이스 채택·Order 세트 생성 완료</p>
+      <p class="warn">운영 앱 코드는 아직 배포 전이며 정확한 릴리스 SHA 승인 게이트가 남아 있다.</p>
 
       <h2>핵심 결과</h2>
       <table>
@@ -34,10 +34,11 @@
           <tr><td>중앙 발행 후보</td><td>554개 supported records. diagnosis 24개와 links 12개는 기존 계약대로 authoring-only이며, 중앙 payload에는 가격·구간·Order Set 필드가 없다.</td></tr>
           <tr><td>원자 오더</td><td>정확히 400개. 모든 표준명은 한국어 선호 이름 1개이며 정규화 중복 0건이다.</td></tr>
           <tr><td>검사 그래프</td><td>검사 72개, 패널 18개, 패널 연결 120개, 주문 프로필 85개. 모든 order/test/panel/specimen 참조가 해석된다.</td></tr>
-          <tr><td>Airtable 후보</td><td>Master +324, Names +324, Panel Items +60, Profiles +55. 기존 13 paths·12 diagnosis links 유지. <code>writeAllowed: false</code>.</td></tr>
-          <tr><td>Order 세트</td><td>20개 템플릿 × 3개 대상 워크스페이스 = 60개 생성 operation. 고정가 4, 구성합계 14, 구간가 2.</td></tr>
+          <tr><td>Airtable 결과</td><td>Master 578, Names 578, Panel Items 120, Profiles 85. 기존 13 paths·12 diagnosis links 유지.</td></tr>
+          <tr><td>Supabase 결과</td><td>중앙 release No.12, 554개 payload. 세 워크스페이스 모두 400개 오더를 채택했고 pending review는 0건이다.</td></tr>
+          <tr><td>Order 세트</td><td>20개 × 3개 대상 워크스페이스 = 60개 활성 세트. 워크스페이스별 고정가 4, 구성합계 14, 구간가 2.</td></tr>
           <tr><td>중첩 세트</td><td>개/고양이 중성화 세트가 마취 전 평가를, 집중 입원 모니터링이 입원 기본 모니터링을 한 단계로 참조한다.</td></tr>
-          <tr><td>음성 대조군</td><td><code>clair-foreign-demo</code>에는 operation 0개이며 향후에도 pre/post fingerprint 동일성을 요구한다.</td></tr>
+          <tr><td>음성 대조군</td><td><code>clair-foreign-demo</code>의 catalog·lab·update·notification·audit·Order Set 11개 표면은 전후 모두 0건이다.</td></tr>
         </tbody>
       </table>
 
@@ -68,7 +69,9 @@
       <h2>검증</h2>
       <ul>
         <li>생성기 실행 및 <code>--check</code> 드리프트 게이트 통과</li>
-        <li>집중 Playwright 정적 계약 테스트 5/5 통과</li>
+        <li>V4 및 Phase C 집중 Playwright 계약 테스트 6/6 통과</li>
+        <li>로컬 전체 발행·채택·가격·세트 생성 리허설 후 롤백 및 잔여 0건 확인</li>
+        <li>원격 postflight: pilot 402/400 active, Cheongdam 413/389 active·11 paused, demo 419/400 active</li>
         <li>TypeScript <code>--noEmit</code> 통과</li>
         <li>집중 ESLint 경고 0건</li>
         <li><code>npm run docs:check</code>: Markdown 921개 링크 검사 통과</li>
@@ -81,12 +84,13 @@
         <li>adapter: <code>dfc2a1dac482aeff5df78aa1d223509639cc122426d21fb914a90d8561fc91c4</code></li>
         <li>pricing: <code>b6025796643ab84b23908ab0fccb3978d81d65f5ab0f58446d00c0e2088ab8db</code></li>
         <li>lab semantics: <code>8e1d9e93ff9072e8f91ff58567c214feaadb871b9493cea8b044c4a0c20f345c</code></li>
-        <li>Airtable manifest: <code>9eda4ddeae54e1c4fc038d99b87da6e08eb799fe23aedf84f3fa7abd24d99235</code></li>
-        <li>Order Set manifest: <code>bfb1b29cc17d9fb54b6035e814000e896dce002cb887d87ac93ad2f334dfe2c1</code></li>
+        <li>Airtable manifest: <code>f9e06e557f320944eac920a48cdee14af594596f0639892fec70c127d09c9789</code></li>
+        <li>Order Set manifest: <code>9d961876b6452c1477ba11707385b9f8f87b8009cf8fde14dd883e27ce24ec59</code></li>
+        <li>원격 commit candidate: <code>d4635a11fa60739ba34bb97768b10db026dc205d6b3260923ec42e415e7e8bd5</code></li>
       </ul>
 
       <h2>다음 승인 게이트</h2>
-      <p>다음 단계는 승욱의 내용 검토다. 원격 반영을 진행하려면 먼저 최신 Airtable 8개 테이블과 네 워크스페이스를 읽기 전용으로 다시 확인하고, 정확한 candidate를 재생성한 뒤 별도 쓰기 승인을 받아야 한다. 승인 후에도 순서는 Airtable additive upsert → readback → 중앙 단일 불변 릴리스 → 세 대상 워크스페이스 채택·가격 → 20개 세트 생성이며, 어느 단계에서도 기존 custom row를 삭제하지 않는다.</p>
+      <p>데이터 반영은 완료됐다. 다음은 앱 코드 PR과 고정 스테이징 검증이다. 운영 배포는 후보 커밋 SHA, 검사 결과, 스테이징 URL, 롤백 기준을 묶은 정확한 승인 패킷을 확인한 뒤 진행한다.</p>
     </article>
   </main>
 </body>
