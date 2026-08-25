@@ -22,7 +22,7 @@ const closureMigration = existsSync(closureMigrationPath)
   ? readFileSync(closureMigrationPath, "utf8")
   : "";
 const multiPrimaryMigrationPath =
-  "supabase/migrations/20260825133000_chart_multi_primary_diagnoses.sql";
+  "supabase/migrations/20260825135815_chart_multi_primary_diagnoses.sql";
 const multiPrimaryMigration = existsSync(multiPrimaryMigrationPath)
   ? readFileSync(multiPrimaryMigrationPath, "utf8")
   : "";
