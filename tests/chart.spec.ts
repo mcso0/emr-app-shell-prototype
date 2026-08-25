@@ -3867,6 +3867,22 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
         : null,
       gap: style.columnGap,
       height: element.getBoundingClientRect().height,
+      searchFillsAvailableWidth:
+        controls[1] && controls[2]
+          ? Math.abs(
+              controls[1].getBoundingClientRect().right +
+                Number.parseFloat(style.columnGap) -
+                controls[2].getBoundingClientRect().left,
+            )
+          : null,
+      selectValueFits: (() => {
+        const value = controls[0]?.querySelector(
+          '[data-slot="select-value"]',
+        );
+        return value
+          ? value.scrollWidth <= value.clientWidth + 1
+          : false;
+      })(),
       widths: controls.map((control) =>
         Math.round(control.getBoundingClientRect().width),
       ),
@@ -3874,10 +3890,13 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   });
   expect(toolbarGeometry.gap).toBe("10px");
   expect(toolbarGeometry.height).toBe(44);
-  expect(toolbarGeometry.widths[0]).toBe(82);
+  expect(toolbarGeometry.widths[0]).toBeGreaterThanOrEqual(96);
   expect(toolbarGeometry.widths[1]).toBeGreaterThan(0);
   expect(toolbarGeometry.widths[2]).toBe(1);
   expect(toolbarGeometry.widths[3]).toBe(66);
+  expect(toolbarGeometry.selectValueFits).toBe(true);
+  expect(toolbarGeometry.searchFillsAvailableWidth).not.toBeNull();
+  expect(toolbarGeometry.searchFillsAvailableWidth!).toBeLessThanOrEqual(1);
   expect(toolbarGeometry.dividerCenterOffset).not.toBeNull();
   expect(toolbarGeometry.dividerCenterOffset!).toBeLessThanOrEqual(0.5);
 
