@@ -1,7 +1,41 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 const chartUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed";
+
+async function expectEmptyStateCentered(title: Locator) {
+  await expect(title).toBeVisible();
+  await title.page().waitForTimeout(200);
+
+  const offsets = await title.evaluate((element) => {
+    const root = element.closest<HTMLElement>("[data-kind]");
+    const viewport = root?.closest<HTMLElement>(
+      "[data-slot='scroll-area-viewport']",
+    );
+    if (!root || !viewport) throw new Error("empty-state viewport is missing");
+
+    const childRects = Array.from(root.children)
+      .map((child) => child.getBoundingClientRect())
+      .filter((rect) => rect.width || rect.height);
+    const viewportRect = viewport.getBoundingClientRect();
+    const left = Math.min(...childRects.map((rect) => rect.left));
+    const right = Math.max(...childRects.map((rect) => rect.right));
+    const top = Math.min(...childRects.map((rect) => rect.top));
+    const bottom = Math.max(...childRects.map((rect) => rect.bottom));
+
+    return {
+      x:
+        (left + right) / 2 -
+        (viewportRect.left + viewportRect.right) / 2,
+      y:
+        (top + bottom) / 2 -
+        (viewportRect.top + viewportRect.bottom) / 2,
+    };
+  });
+
+  expect(Math.abs(offsets.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(offsets.y)).toBeLessThanOrEqual(1);
+}
 
 test("classification dialog explores, reviews, and commits catalog diagnoses", async ({
   page,
@@ -58,6 +92,9 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
   await expect(
     dialog.getByRole("button", { name: "진단명 검색" }),
   ).toBeVisible();
+  await expectEmptyStateCentered(
+    dialog.getByText("선택된 진단명이 없습니다", { exact: true }),
+  );
   const diagnosisHeading = dialog.getByText("진단명", { exact: true });
   const searchButton = dialog.getByRole("button", { name: "진단명 검색" });
   const [headingBox, searchButtonBox] = await Promise.all([
@@ -76,6 +113,10 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
   );
   expect(searchFieldWidth).toBeGreaterThanOrEqual(148);
   await expect(dialog.getByText(/검색결과 \d+건/)).toHaveCount(0);
+  await diagnosisSearch.fill("존재하지 않는 진단명");
+  await expectEmptyStateCentered(
+    dialog.getByText("검색 결과가 없습니다", { exact: true }),
+  );
   await diagnosisSearch.fill("위장");
   await expect(dialog.getByRole("option", { name: "위장염" })).toBeVisible();
   await dialog.getByRole("button", { name: "진단명 검색 닫기" }).click();
@@ -99,18 +140,50 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
     name: "위장염 삭제",
   });
   const constipationDelete = dialog.getByRole("button", { name: "변비 삭제" });
+  const clearButton = dialog.getByRole("button", { name: "전체 삭제" });
+  await page.mouse.move(0, 0);
+  await expect(clearButton).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await clearButton.hover();
+  await expect(clearButton).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0.04)",
+  );
+  await clearButton.focus();
   await expect(gastroenteritisDelete).toHaveCSS("opacity", "0");
   await expect(constipationDelete).toHaveCSS("opacity", "0");
+  const gastroenteritisType = dialog.getByLabel("위장염 진단 유형");
+  const controlRectsBeforeHover = await Promise.all([
+    gastroenteritisPrimary.boundingBox(),
+    gastroenteritisType.boundingBox(),
+  ]);
   await dialog.getByLabel("위장염 순서 변경").hover();
   await expect(gastroenteritisDelete).toHaveCSS("opacity", "1");
   await expect(constipationDelete).toHaveCSS("opacity", "0");
   const hoveredRow = gastroenteritisDelete.locator("xpath=..");
-  const hoverOverlay = await hoveredRow.evaluate((element) => {
-    const style = getComputedStyle(element, "::after");
-    return { background: style.backgroundImage, opacity: style.opacity };
-  });
-  expect(hoverOverlay.opacity).toBe("1");
-  expect(hoverOverlay.background).toContain("linear-gradient");
+  const hoverOverlay = await hoveredRow.evaluate(
+    (element) => getComputedStyle(element, "::after").backgroundImage,
+  );
+  expect(hoverOverlay).toBe("none");
+  const [primaryAfterHover, typeAfterHover, deleteAfterHover] =
+    await Promise.all([
+      gastroenteritisPrimary.boundingBox(),
+      gastroenteritisType.boundingBox(),
+      gastroenteritisDelete.boundingBox(),
+    ]);
+  expect(primaryAfterHover?.x).toBeCloseTo(
+    controlRectsBeforeHover[0]?.x ?? 0,
+    1,
+  );
+  expect(typeAfterHover?.x).toBeCloseTo(
+    controlRectsBeforeHover[1]?.x ?? 0,
+    1,
+  );
+  expect((typeAfterHover?.x ?? 0) + (typeAfterHover?.width ?? 0)).toBeLessThan(
+    deleteAfterHover?.x ?? 0,
+  );
   await dialog.getByLabel("변비 순서 변경").hover();
   await expect(gastroenteritisDelete).toHaveCSS("opacity", "0");
   await expect(constipationDelete).toHaveCSS("opacity", "1");
