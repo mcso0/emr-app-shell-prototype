@@ -1,0 +1,32 @@
+.dialog {
+  width: 100vw;
+  max-width: none !important;
+  height: 100dvh;
+  max-height: 100dvh !important;
+  border-radius: 0 !important;
+}
+
+@media (min-width: 640px) {
+  .dialog {
+    width: calc(100vw - 32px);
+    height: min(720px, calc(100dvh - 32px));
+    max-height: calc(100dvh - 32px) !important;
+    border-radius: var(--emr-radius-panel) !important;
+  }
+}
+
+@media (min-width: 960px) {
+  .dialog {
+    width: calc(100vw - 40px);
+    height: min(680px, calc(100dvh - 40px));
+    max-height: calc(100dvh - 40px) !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .dialog {
+    width: 1120px;
+    max-width: 1120px !important;
+    height: 680px;
+  }
+}

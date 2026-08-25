@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-08-24
+Updated: 2026-08-25
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -165,6 +165,18 @@ canonical `20260823035126` and comment-only alias `20260823063449` are both
 applied. Remote category/diagnosis/link table counts are `0/0/0`. The existing
 B1 publisher still rejects diagnosis record types, and publisher/adoption/
 pilot exclusion remains unchanged.
+
+CLINICAL-MASTER-PR-015 is the active diagnosis-runtime release candidate. Its
+local candidate adds an isolated diagnosis publisher, release-scoped adoption
+into `public.diagnosis_catalog`, active-membership plus `chart:view` catalog
+search, immutable chart diagnosis snapshots, and the approved responsive
+`분류 검색` dialog. A fresh local reset, exact `6 / 6 / 12 / 12` publish and
+idempotent retry, invalid-hierarchy rejection, rollback-only replay, three
+allowlisted workspace adoptions at 12 diagnoses each, unchanged foreign control,
+permission/direct-read denial probes, and catalog/free-text mixed persistence
+have passed locally. The shared remote Supabase migration, synthetic publish,
+three-workspace adoption, pull request merge, Vercel deployment, and authenticated
+post-deploy smoke have not yet occurred and must not be claimed as complete.
 
 ### Airtable pilot closeout (2026-08-23)
 

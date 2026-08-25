@@ -471,8 +471,11 @@ SOAP 템플릿.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | uuid pk | |
+| `workspace_id` | text fk | 진료와 동일한 workspace 범위 |
 | `encounter_id` | uuid fk | |
 | `diagnosis_catalog_id` | uuid fk nullable | |
+| `diagnosis_catalog_revision` | integer nullable | 선택 당시 workspace catalog revision |
+| `diagnosis_snapshot` | jsonb nullable | 선택 당시 진단명·계통·질환 구분 스냅샷 |
 | `diagnosis_text` | text | |
 | `diagnosis_type` | text | `suspected`, `confirmed`, `differential` |
 | `is_primary` | boolean | 진료별 최대 1개의 주진단 |
@@ -486,16 +489,50 @@ SOAP 템플릿.
 
 ### `diagnosis_catalog`
 
-자동완성/추천용 질병명 마스터.
+workspace가 채택·소유하는 자동완성/분류 검색용 진단 카탈로그.
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | uuid pk | |
-| `workspace_id` | text fk nullable | null이면 시스템 공용 |
+| `workspace_id` | text fk | workspace 소유 범위 |
 | `code` | text nullable | |
 | `name` | text | |
 | `species` | text nullable | |
 | `synonyms` | text[] nullable | |
+| `source_master_record_id` | uuid fk nullable | CLAiR master 진단 ID |
+| `master_revision` | integer nullable | 현재 확인한 source revision |
+| `catalog_revision` | integer | workspace catalog revision |
+| `first_adopted_revision` | integer nullable | 최초 채택 source revision |
+| `last_applied_revision` | integer nullable | 마지막 안전 반영 source revision |
+| `system_master_record_id` | uuid nullable | 주 계통 master ID |
+| `system_name` | text nullable | 주 계통 표시명 |
+| `disease_group_master_record_id` | uuid nullable | 주 질환 구분 master ID |
+| `disease_group_name` | text nullable | 주 질환 구분 표시명 |
+| `source_projection_snapshot` | jsonb nullable | source projection 증거 |
+| `source_projection_fingerprint` | text nullable | source projection SHA-256 |
+| `availability_state` | text | `active`, `inactive` |
+| `customization_state` | text | `unmodified`, `customized` |
+| `merge_state` | text | `synced`, `review_required` |
+
+### `diagnosis_catalog_classifications`
+
+workspace 진단 카탈로그의 손실 없는 계통·질환 구분 연결. 한 진단은 여러
+질환 구분에 연결될 수 있지만 주 연결은 정확히 하나다.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `workspace_id` | text fk | workspace 범위 |
+| `diagnosis_catalog_id` | uuid fk | workspace 복합 FK |
+| `system_master_record_id` | uuid | 계통 master ID |
+| `system_name` | text | 계통 표시명 |
+| `disease_group_master_record_id` | uuid | 질환 구분 master ID |
+| `disease_group_name` | text | 질환 구분 표시명 |
+| `system_master_revision` | integer | 계통 source revision |
+| `disease_group_master_revision` | integer | 질환 구분 source revision |
+| `is_primary` | boolean | 진단별 정확히 하나 |
+| `sort_order` | integer | 진단 내 분류 순서 |
+| `source_projection_snapshot` | jsonb | 연결 projection 증거 |
+| `source_projection_fingerprint` | text | 연결 projection SHA-256 |
 
 ### `prescriptions`
 

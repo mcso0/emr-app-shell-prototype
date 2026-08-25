@@ -21,12 +21,11 @@ shape that an authoring tool may validate and normalize; it does not create an
 Airtable Base, read an Airtable Base, publish an export, or write a database.
 
 This document is the source of truth for the focused server-side validator,
-normalizer, and PR-009 local publish adapter. The current SQL clinical-master
-publisher remains unchanged. The 13 record types below are accepted by this
-authoring contract, but
-`diagnosis_category` and `diagnosis` are authoring-only and are not a valid
-payload for the current Phase 1B-1 publisher. A later, separately approved
-diagnosis publisher slice is required.
+normalizer, and PR-009 local publish adapter. The 13 record types below are
+accepted by this authoring contract. CLINICAL-MASTER-PR-015 adds a separate,
+diagnosis-only adapter and SQL publisher path for `diagnosis_category`,
+`diagnosis`, and `diagnosisCategoryLinks`; mixed diagnosis/order payloads remain
+invalid and the established order/laboratory canonicalization stays unchanged.
 
 ## Physical tables
 
@@ -261,9 +260,10 @@ an existing `diagnosis` and category, cannot duplicate a diagnosis/category
 pair or sort order, and each diagnosis must have at least one link with exactly
 one `isPrimary: true` link.
 
-Diagnosis records and links are authoring-only in this v1 contract. They do not
-make the reserved diagnosis schema publishable and do not change the current
-SQL publisher.
+Diagnosis records and links remain authoring values rather than database
+authority. CLINICAL-MASTER-PR-015 may publish them only after the diagnosis-only
+adapter repeats this hierarchy/link validation and the private SQL publisher
+assigns database identities, revisions, and one atomic release.
 
 ## Stable keys and authority boundary
 
@@ -333,6 +333,12 @@ stable keys and counts in an `excluded` report instead of leaking them into the
 publisher payload. Any other record type, unsupported relation, failed gate,
 forbidden price/weight/Order Set field, or non-synthetic source fails closed.
 
+CLINICAL-MASTER-PR-015 adds the separate
+`server-clinical-master-diagnosis-publish-adapter.ts` path. It selects only the
+reviewed diagnosis records and links from the same normalized synthetic
+snapshot, produces a deterministic diagnosis-only payload, and never changes
+the PR-009 adapter's exclusion behavior.
+
 The local CLI is
 `scripts/clinical-master-airtable-publish-adapter.ts`. With Node 23+, run:
 
@@ -347,11 +353,12 @@ exclusion JSON. It has no Airtable credentials or API integration.
 
 ## Publisher boundary and verification
 
-The current SQL publisher remains untouched and continues to reject
-`diagnosis_category` and `diagnosis`. This module has no Airtable SDK, database
-write, migration, runtime route, UI, or publisher dependency. It only validates
-and normalizes a local synthetic authoring snapshot for a later, separately
-approved publishing slice.
+The established order/laboratory publisher still rejects diagnosis records in
+its legacy payload. The shared private entry point dispatches a diagnosis-only
+payload to the isolated PR-015 publisher and rejects mixed payloads. Neither
+adapter has an Airtable SDK or runtime credential dependency; only the private
+SQL publisher can create release, version, review, typed projection, and
+relationship rows.
 
 The focused implementation verification covers the happy path, shuffled-input
 determinism, normalization, table/type coverage, unknown/Airtable/generated
