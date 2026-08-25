@@ -56,7 +56,6 @@ import type {
   CustomerTableColumnDef,
   CustomerTableFilterOption,
 } from "./customer-table-columns";
-import styles from "./customer-data-table.module.css";
 
 export type CustomerTableReadStatus = "ready" | "denied" | "error";
 
@@ -282,17 +281,13 @@ export function CustomerDataTable<
         enableHiding: false,
         enableSorting: false,
         meta: {
+          actionVisibility: "contextual",
           label: "행 작업",
           role: "actions",
         },
         size: 52,
         cell: ({ row }) => (
-          <span
-            className={cn(
-              "inline-flex size-6 items-center justify-center",
-              styles.revealControl,
-            )}
-          >
+          <span className="inline-flex size-6 items-center justify-center">
             <CustomerRowActionMenu
               label={getRowLabel(row.original)}
               onOpen={() => onOpenRow(row.original)}
@@ -588,6 +583,7 @@ export function CustomerDataTable<
               const active = isActiveRow(row.original);
 
               return {
+                "aria-current": active ? "true" : undefined,
                 className: cn(
                   "group/customer-row cursor-pointer",
                   active &&

@@ -277,6 +277,7 @@ export function OrderWorkTable({
   onCompleteRows,
   onAssignOrder,
 }: OrderWorkTableProps) {
+  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
@@ -596,13 +597,22 @@ export function OrderWorkTable({
         density={density}
         overscrollAxes="horizontal"
         table={table}
-        getRowProps={(row) => ({
-          className:
-            "group/order-row cursor-pointer text-[var(--emr-text-secondary)]",
-          "data-testid": `order-row-${sectionId}-${row.original.id}`,
-          onClick: () =>
-            setActiveDrawer({ type: "order", id: row.original.id }),
-        })}
+        getRowProps={(row) => {
+          const detailActive =
+            activeDrawer?.type === "order" &&
+            activeDrawer.id === row.original.id;
+
+          return {
+            "aria-current": detailActive ? "true" : undefined,
+            className:
+              "group/order-row cursor-pointer text-[var(--emr-text-secondary)]",
+            "data-detail-active": detailActive ? "true" : undefined,
+            "data-state": detailActive ? "selected" : undefined,
+            "data-testid": `order-row-${sectionId}-${row.original.id}`,
+            onClick: () =>
+              setActiveDrawer({ type: "order", id: row.original.id }),
+          };
+        }}
         renderAfterRow={(row) =>
           row.original.warningMessage ? (
             <TableRow

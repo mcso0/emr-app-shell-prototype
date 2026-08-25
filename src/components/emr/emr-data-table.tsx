@@ -40,7 +40,10 @@ import { cn } from "@/lib/utils";
 
 export type EmrDataTableColumnRole = "data" | "selection" | "actions";
 
+export type EmrDataTableActionVisibility = "always" | "contextual";
+
 export type EmrDataTableColumnMeta = {
+  actionVisibility?: EmrDataTableActionVisibility;
   align?: "left" | "center" | "right";
   grow?: boolean;
   identity?: boolean;
@@ -448,6 +451,9 @@ function EmrDataTableBodyRow<TData>({
                 isActions && "overflow-visible !pl-2 !pr-5 text-right",
               )}
               data-column-id={cell.column.id}
+              data-emr-table-action-visibility={
+                isActions ? (meta?.actionVisibility ?? "always") : undefined
+              }
               style={{
                 verticalAlign: meta?.verticalAlign ?? "middle",
               }}

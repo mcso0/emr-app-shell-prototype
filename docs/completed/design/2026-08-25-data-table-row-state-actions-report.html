@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="EmrDataTable 행 활성 상태와 contextual 액션 노출 계약 통합 결과 보고서"
+    />
+    <title>데이터테이블 행 상태·액션 노출 통합 결과</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: #171717;
+        background: #f5f5f5;
+      }
+
+      body {
+        margin: 0;
+        padding: 48px 24px;
+      }
+
+      main {
+        width: min(920px, 100%);
+        margin: 0 auto;
+      }
+
+      header,
+      section {
+        margin-bottom: 20px;
+        padding: 28px;
+        border: 1px solid #e5e5e5;
+        border-radius: 16px;
+        background: #fff;
+      }
+
+      h1,
+      h2 {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 12px;
+        font-size: 30px;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 19px;
+      }
+
+      p,
+      li {
+        color: #525252;
+        line-height: 1.7;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f5f5f5;
+      }
+
+      .status {
+        display: inline-flex;
+        margin-bottom: 14px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        color: #166534;
+        background: #dcfce7;
+        font-size: 13px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="status">구현 및 검증 완료</span>
+        <h1>데이터테이블 행 상태·액션 노출 통합</h1>
+        <p>
+          병원관리 Order에서 모든 행의 작업 메뉴가 상시 노출되고, 열린 상세
+          drawer의 대상 행을 구분하기 어려웠던 문제를 공용
+          <code>EmrDataTable</code> 계약으로 정리했다.
+        </p>
+      </header>
+
+      <section>
+        <h2>변경 결과</h2>
+        <ul>
+          <li>
+            작업 컬럼에 <code>always</code>와 <code>contextual</code> 노출 정책을
+            추가했다. 기본값은 기존 동작을 보존하는 <code>always</code>다.
+          </li>
+          <li>
+            contextual 메뉴는 데스크톱 idle 상태에서 숨고 hover, 키보드 focus,
+            메뉴 열림, 선택 상태에서 나타난다. 터치와 좁은 화면에서는 항상
+            보인다.
+          </li>
+          <li>
+            병원관리 Order와 조제/처치의 활성 행은 열린 drawer 대상에서 직접
+            계산하며, 체크박스 일괄 선택과 분리했다.
+          </li>
+          <li>
+            고객관리와 구성원관리는 같은 공용 정책을 사용하고 고객관리의 로컬
+            reveal CSS는 제거했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위와 비변경 영역</h2>
+        <p>
+          명시적 작업 버튼, 읽기 전용 테이블, Order 세트, 수납, 검사/영상,
+          감사 로그, 입원관리의 동작은 변경하지 않았다. DB/API, 권한, drawer
+          폼과 저장 로직도 범위 밖으로 유지했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>집중 Playwright 10건 통과</li>
+          <li>ESLint와 TypeScript 검사 통과</li>
+          <li>Next.js와 Storybook production build 통과</li>
+          <li>문서 링크, secret scan, diff 검사 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 운영 단계</h2>
+        <p>
+          구현 자체의 알려진 잔여 위험은 없다. production 반영은 저장소의
+          manual Release Check, Preview 확인, 승인 패킷과 rollback 후보 확인을
+          거쳐 진행한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -618,6 +618,7 @@ function MembershipDataTable({
         enableResizing: false,
         header: () => <span className="sr-only">작업</span>,
         meta: {
+          actionVisibility: "contextual",
           align: "right",
           label: "작업",
           role: "actions",
@@ -683,6 +684,7 @@ function MembershipDataTable({
             membership !== null && selectedMembershipId === membership.id;
 
           return {
+            "aria-current": selected ? "true" : undefined,
             "aria-label": membership
               ? getRowEmail(membership) + " 상세 보기"
               : undefined,

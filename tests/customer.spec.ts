@@ -1125,6 +1125,7 @@ test("customer patient table keeps animal identity pinned while data columns scr
 
   await dubuRow.click();
   await expect(dubuRow).toHaveAttribute("data-state", "selected");
+  await expect(dubuRow).toHaveAttribute("aria-current", "true");
   const [selectedPinnedBackground, expectedSelectedBackground] =
     await Promise.all([
       animalCell.evaluate((cell) => getComputedStyle(cell).backgroundColor),
@@ -1921,12 +1922,28 @@ test("customer row action menu closes with Escape and explains unavailable actio
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 
   const row = page.getByTestId("customer-patient-row-patient-dubu");
-  await row.getByRole("button", { name: "두부 행 작업" }).click();
+  const actionCell = row.locator('td[data-column-id="actions"]');
+  const actionSurface = actionCell.locator(
+    "> .emr-data-table-cell-content > *",
+  );
+  const actionButton = row.getByRole("button", { name: "두부 행 작업" });
+
+  await expect(actionCell).toHaveAttribute(
+    "data-emr-table-action-visibility",
+    "contextual",
+  );
+  await expect(actionSurface).toHaveCSS("opacity", "0");
+  await row.hover();
+  await expect(actionSurface).toHaveCSS("opacity", "1");
+
+  await actionButton.click();
   await expect(page.getByRole("menu")).toContainText("차트 보러가기");
+  await page.mouse.move(0, 0);
+  await expect(actionSurface).toHaveCSS("opacity", "1");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
 
-  await row.getByRole("button", { name: "두부 행 작업" }).click();
+  await actionButton.click();
   await page.getByText("카카오톡 발송", { exact: true }).click();
   await expect(page.getByTestId("customer-row-action-feedback")).toContainText(
     "카카오톡 발송은 아직 연결되지 않았습니다",

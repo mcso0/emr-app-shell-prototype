@@ -1355,7 +1355,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   );
   const createOrder = useHospitalAdminStore((state) => state.createOrder);
   const duplicateOrder = useHospitalAdminStore((state) => state.duplicateOrder);
-  const focusedOrderId = useHospitalAdminStore((state) => state.focusedOrderId);
   const orders = useHospitalAdminStore((state) => state.orders);
   const searchQuery = useHospitalAdminStore((state) => state.searchQuery);
   const selectedCategoryId = useHospitalAdminStore(
@@ -1749,7 +1748,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         id: "actions",
         enableHiding: false,
         enableSorting: false,
-        meta: { align: "right", label: "작업", role: "actions" },
+        meta: {
+          actionVisibility: "contextual",
+          align: "right",
+          label: "작업",
+          role: "actions",
+        },
         size: 80,
         cell: ({ row }) => (
           <EmrRowActionMenu
@@ -2218,15 +2222,15 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             skeletonRowCount={6}
             table={orderTable}
             getRowProps={(row) => {
-              const focused = focusedOrderId === row.original.id;
+              const detailActive =
+                activeDrawer?.type === "hospital-order" &&
+                activeDrawer.id === row.original.id;
 
               return {
-                className: cn(
-                  "cursor-pointer bg-card",
-                  focused &&
-                    "bg-[var(--emr-state-selected)] shadow-[inset_3px_0_0_var(--emr-state-selected-border)]",
-                ),
-                "data-focused": focused ? "true" : undefined,
+                "aria-current": detailActive ? "true" : undefined,
+                className: "cursor-pointer bg-card",
+                "data-detail-active": detailActive ? "true" : undefined,
+                "data-state": detailActive ? "selected" : undefined,
                 "data-testid": `hospital-order-row-${row.original.id}`,
                 onClick: () => openDrawer(row.original),
               };
