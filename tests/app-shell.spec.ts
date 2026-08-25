@@ -1676,7 +1676,7 @@ test("orders module renders hospital admin order management instead of the place
   await page.goto("/w/clair-demo/orders?modulePanel=open&aside=closed");
 
   await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "병원관리");
-  await expect(page.getByTestId("hospital-admin-menu-order-management")).toContainText("Order 관리");
+  await expect(page.getByTestId("hospital-admin-menu-order-management")).toContainText("개별 Order");
   await expect(page.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
   await expect(page.getByTestId("order-queue-status-reRequested")).toHaveCount(0);
 });
@@ -1720,7 +1720,7 @@ test("hospital order table uses the shared data-table header without category ta
   await expect(header).toHaveAttribute("data-emr-table-workspace-header", "true");
   await expect(search).toBeVisible();
   await expect(header.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
-  await expect(header).not.toContainText("병원관리 / Order 관리");
+  await expect(header).not.toContainText("병원관리 / 개별 Order");
   await expect(
     page.getByRole("group", { name: "임상병리 검사 하위 타입" }),
   ).toHaveCount(0);
