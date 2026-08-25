@@ -3,18 +3,45 @@ import { expect, test } from "@playwright/test";
 const chartUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed";
 
-test("classification dialog explores, reviews, and commits catalog diagnoses", async ({ page }) => {
-  await page.route("**/chart/diagnosis-catalog", async (route) => {
+test("classification dialog explores, reviews, and commits catalog diagnoses", async ({
+  page,
+}) => {
+  await page.route("**/chart/diagnosis-catalog**", async (route) => {
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         ok: true,
         status: 200,
         systems: [{ id: "system-digestive", name: "소화기계", count: 2 }],
-        diseaseGroups: [{ id: "group-gastrointestinal", name: "위장관 질환", systemId: "system-digestive", count: 2 }],
+        diseaseGroups: [
+          {
+            id: "group-gastrointestinal",
+            name: "위장관 질환",
+            systemId: "system-digestive",
+            count: 2,
+          },
+        ],
         diagnoses: [
-          { catalogId: "catalog-gastroenteritis", masterId: "master-gastroenteritis", masterRevision: 1, code: null, name: "위장염", synonyms: ["장염"], system: { id: "system-digestive", name: "소화기계" }, diseaseGroup: { id: "group-gastrointestinal", name: "위장관 질환" } },
-          { catalogId: "catalog-constipation", masterId: "master-constipation", masterRevision: 1, code: null, name: "변비", synonyms: [], system: { id: "system-digestive", name: "소화기계" }, diseaseGroup: { id: "group-gastrointestinal", name: "위장관 질환" } },
+          {
+            catalogId: "catalog-gastroenteritis",
+            masterId: "master-gastroenteritis",
+            masterRevision: 1,
+            code: null,
+            name: "위장염",
+            synonyms: ["장염"],
+            system: { id: "system-digestive", name: "소화기계" },
+            diseaseGroup: { id: "group-gastrointestinal", name: "위장관 질환" },
+          },
+          {
+            catalogId: "catalog-constipation",
+            masterId: "master-constipation",
+            masterRevision: 1,
+            code: null,
+            name: "변비",
+            synonyms: [],
+            system: { id: "system-digestive", name: "소화기계" },
+            diseaseGroup: { id: "group-gastrointestinal", name: "위장관 질환" },
+          },
         ],
         nextCursor: null,
       }),
@@ -24,27 +51,66 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
 
   const panel = page.getByLabel("진단명 관리");
   await panel.getByRole("button", { name: "분류 검색" }).click();
-  const dialog = page.getByRole("dialog", { name: "분류 검색" });
+  const dialog = page.getByRole("dialog", { name: "분류검색" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("ASSESSMENT")).toHaveCount(0);
   await expect(dialog.getByText("분류를 탐색하면서")).toHaveCount(0);
-  await expect(dialog.locator('input[aria-label="계통분류 검색"]:visible')).toBeVisible();
-  await expect(dialog.locator('input[aria-label="질환 구분 검색"]:visible')).toBeVisible();
-  await expect(dialog.locator('input[aria-label="현재 분류 내 진단명 검색"]:visible')).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "진단명 검색" }),
+  ).toBeVisible();
+  const diagnosisHeading = dialog.getByText("진단명", { exact: true });
+  const searchButton = dialog.getByRole("button", { name: "진단명 검색" });
+  const [headingBox, searchButtonBox] = await Promise.all([
+    diagnosisHeading.boundingBox(),
+    searchButton.boundingBox(),
+  ]);
+  expect(searchButtonBox?.x).toBeGreaterThan(headingBox?.x ?? 0);
+
+  await searchButton.click();
+  const diagnosisSearch = dialog.getByRole("searchbox", {
+    name: "진단명 검색",
+  });
+  await expect(diagnosisSearch).toBeVisible();
+  const searchFieldWidth = await diagnosisSearch.evaluate(
+    (element) => element.parentElement?.getBoundingClientRect().width ?? 0,
+  );
+  expect(searchFieldWidth).toBeGreaterThanOrEqual(148);
+  await expect(dialog.getByText(/검색결과 \d+건/)).toHaveCount(0);
+  await diagnosisSearch.fill("위장");
+  await expect(dialog.getByRole("option", { name: "위장염" })).toBeVisible();
+  await dialog.getByRole("button", { name: "진단명 검색 닫기" }).click();
 
   await dialog.getByRole("option", { name: "위장염" }).click();
   await dialog.getByRole("option", { name: "변비" }).click();
   await expect(dialog.getByLabel("위장염 순서 변경")).toBeVisible();
   await expect(dialog.getByLabel("변비 순서 변경")).toBeVisible();
-  await expect(dialog.getByRole("radio", { name: "위장염 주진단 지정" })).toBeDisabled();
-  await expect(dialog.getByRole("radio", { name: "변비 주진단 지정" })).toBeDisabled();
-  const gastroenteritisDelete = dialog.getByRole("button", { name: "위장염 삭제" });
+  const gastroenteritisPrimary = dialog.getByRole("button", {
+    name: "위장염 주진단",
+  });
+  const constipationPrimary = dialog.getByRole("button", {
+    name: "변비 주진단",
+  });
+  await expect(gastroenteritisPrimary).toHaveAttribute("aria-pressed", "true");
+  await expect(constipationPrimary).toHaveAttribute("aria-pressed", "false");
+  await constipationPrimary.click();
+  await expect(gastroenteritisPrimary).toHaveAttribute("aria-pressed", "true");
+  await expect(constipationPrimary).toHaveAttribute("aria-pressed", "true");
+  const gastroenteritisDelete = dialog.getByRole("button", {
+    name: "위장염 삭제",
+  });
   const constipationDelete = dialog.getByRole("button", { name: "변비 삭제" });
   await expect(gastroenteritisDelete).toHaveCSS("opacity", "0");
   await expect(constipationDelete).toHaveCSS("opacity", "0");
   await dialog.getByLabel("위장염 순서 변경").hover();
   await expect(gastroenteritisDelete).toHaveCSS("opacity", "1");
   await expect(constipationDelete).toHaveCSS("opacity", "0");
+  const hoveredRow = gastroenteritisDelete.locator("xpath=..");
+  const hoverOverlay = await hoveredRow.evaluate((element) => {
+    const style = getComputedStyle(element, "::after");
+    return { background: style.backgroundImage, opacity: style.opacity };
+  });
+  expect(hoverOverlay.opacity).toBe("1");
+  expect(hoverOverlay.background).toContain("linear-gradient");
   await dialog.getByLabel("변비 순서 변경").hover();
   await expect(gastroenteritisDelete).toHaveCSS("opacity", "0");
   await expect(constipationDelete).toHaveCSS("opacity", "1");
@@ -57,7 +123,7 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
   expect(reviewOrder).toEqual(["변비 순서 변경", "위장염 순서 변경"]);
   await dialog.getByLabel("변비 진단 유형").click();
   await page.getByRole("option", { name: "확진" }).click();
-  await dialog.getByRole("button", { name: "선택 완료 (2)" }).click();
+  await dialog.getByRole("button", { name: "선택 완료", exact: true }).click();
 
   await expect(dialog).toHaveCount(0);
   await expect(panel.getByText("위장염")).toHaveCount(1);
@@ -74,11 +140,112 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
     await expect(dialog).toBeVisible();
     const size = await dialog.evaluate((element) => {
       const style = getComputedStyle(element);
-      return { height: parseFloat(style.height), width: parseFloat(style.width) };
+      return {
+        height: parseFloat(style.height),
+        width: parseFloat(style.width),
+      };
     });
     expect(size.width).toBeCloseTo(expectation.width, 0);
     expect(size.height).toBeCloseTo(expectation.height, 0);
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
   }
+});
+
+test("classification dialog switches to debounced server search and appends cursor pages", async ({
+  page,
+}) => {
+  const searchRequests: string[] = [];
+  await page.route("**/chart/diagnosis-catalog**", async (route) => {
+    const url = new URL(route.request().url());
+    const query = url.searchParams.get("q");
+    const cursor = url.searchParams.get("cursor");
+    if (query) searchRequests.push(`${query}:${cursor ?? "first"}`);
+
+    const diagnoses = cursor
+      ? [
+          {
+            catalogId: "catalog-patella-b",
+            masterId: "master-patella-b",
+            masterRevision: 1,
+            code: null,
+            name: "슬개골 탈구 B",
+            synonyms: [],
+            system: { id: "system-musculoskeletal", name: "근골격계" },
+            diseaseGroup: { id: "group-joint", name: "관절 질환" },
+          },
+        ]
+      : query
+        ? [
+            {
+              catalogId: "catalog-patella",
+              masterId: "master-patella",
+              masterRevision: 1,
+              code: null,
+              name: "슬개골 탈구",
+              synonyms: [],
+              system: { id: "system-musculoskeletal", name: "근골격계" },
+              diseaseGroup: { id: "group-joint", name: "관절 질환" },
+            },
+          ]
+        : [
+            {
+              catalogId: "catalog-gastroenteritis",
+              masterId: "master-gastroenteritis",
+              masterRevision: 1,
+              code: null,
+              name: "위장염",
+              synonyms: [],
+              system: { id: "system-digestive", name: "소화기계" },
+              diseaseGroup: {
+                id: "group-gastrointestinal",
+                name: "위장관 질환",
+              },
+            },
+          ];
+
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        systems: [{ id: "system-digestive", name: "소화기계", count: 51 }],
+        diseaseGroups: [
+          {
+            id: "group-gastrointestinal",
+            name: "위장관 질환",
+            systemId: "system-digestive",
+            count: 51,
+          },
+        ],
+        diagnoses,
+        nextCursor:
+          query && !cursor
+            ? "슬개골 탈구|33333333-3333-4333-8333-333333333333"
+            : query
+              ? null
+              : "위장염|33333333-3333-4333-8333-333333333333",
+      }),
+    });
+  });
+
+  await page.goto(chartUrl);
+  const panel = page.getByLabel("진단명 관리");
+  await panel.getByRole("button", { name: "분류 검색" }).click();
+  const dialog = page.getByRole("dialog", { name: "분류검색" });
+  await dialog.getByRole("button", { name: "진단명 검색" }).click();
+  const searchbox = dialog.getByRole("searchbox", { name: "진단명 검색" });
+  await searchbox.fill("슬개");
+
+  await expect(
+    dialog.getByRole("option", { name: "슬개골 탈구" }),
+  ).toBeVisible();
+  expect(searchRequests).toEqual(["슬개:first"]);
+  await dialog.getByRole("button", { name: "진단명 더 보기" }).click();
+  await expect(
+    dialog.getByRole("option", { name: "슬개골 탈구 B" }),
+  ).toBeVisible();
+  expect(searchRequests).toEqual([
+    "슬개:first",
+    "슬개:슬개골 탈구|33333333-3333-4333-8333-333333333333",
+  ]);
 });

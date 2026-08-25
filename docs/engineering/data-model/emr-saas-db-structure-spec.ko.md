@@ -478,7 +478,7 @@ SOAP 템플릿.
 | `diagnosis_snapshot` | jsonb nullable | 선택 당시 진단명·계통·질환 구분 스냅샷 |
 | `diagnosis_text` | text | |
 | `diagnosis_type` | text | `suspected`, `confirmed`, `differential` |
-| `is_primary` | boolean | 진료별 최대 1개의 주진단 |
+| `is_primary` | boolean | 진료별 복수 선택 가능한 주진단 표시 |
 | `closed_at` | timestamptz nullable | 진단 종결 시각, `null`이면 진행 중 |
 | `closed_by_user_id` | uuid fk nullable | 진단을 종결한 사용자 |
 | `sort_order` | integer | 기본 입력 순서 |

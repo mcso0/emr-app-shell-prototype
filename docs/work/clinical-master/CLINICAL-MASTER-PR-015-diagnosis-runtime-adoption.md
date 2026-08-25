@@ -153,3 +153,45 @@ three-workspace adoption, application deployment.
   catalog.
 - The primary UI classification uses the primary disease-group link. The master
   link model remains multi-classification capable.
+
+## 2026-08-25 Figma V2 Follow-up Candidate
+
+The report-reviewed classification dialog follow-up was implemented in the
+isolated `codex/diagnosis-classification-v2-20260825` worktree and promoted
+through the approved release flow. This slice does not publish a new master
+release or adopt another workspace; its exact multi-primary migration and app
+deployment are recorded below.
+
+- The dialog now uses the final 1120 × 680 four-column desktop contract, 56px
+  header, 64px footer, 16px section insets, 34px classification rows, and the
+  report-approved diagnosis and selected-item row components.
+- Diagnosis search keeps the icon at the right of the resting header. The open
+  search state replaces the title/count with a minimum 148px field, omits a
+  search-result count, debounces remote input by 150ms, and keeps prior results
+  visible while the next request is pending.
+- Initial catalog pages are cached and in-flight requests are deduplicated by
+  actor plus workspace. Permission loss clears the scoped cache. Catalogs with
+  a null cursor filter locally; larger catalogs use the existing permission-
+  checked route and cursor RPC in 50-row pages.
+- Selected rows support drag and keyboard reorder, independent diagnosis type,
+  multiple ghost-style `주진단` toggles, and a hover/focus-only outlined trash
+  action over a white gradient that masks the type dropdown.
+- Migration
+  `20260825135815_chart_multi_primary_diagnoses.sql` removes the encounter-level
+  unique-primary index and the latest save-RPC single-primary rejection while
+  retaining ordered lookup, workspace/permission checks, snapshots, and audit
+  output. The approved exact SQL was applied remotely as
+  `20260825135815_chart_multi_primary_diagnoses`; readback confirmed the unique
+  index is gone, the ordered partial index is non-unique, the single-primary
+  guard is absent, and the locked search path plus authenticated-only execute
+  boundary remain intact. Existing 14 diagnosis rows were preserved and no
+  encounter had multiple primary rows before rollout.
+- Focused coverage now proves the final search/header geometry, minimum search
+  width, multi-primary selection, hover gradient/delete behavior, responsive
+  dimensions, debounced server search, cursor append, scoped request cache, and
+  multi-primary server persistence.
+- Final local verification passed TypeScript, lint, production build,
+  documentation validation, tracked-secret scanning, diff checks, 14 focused
+  tests, and all 53 existing chart behavior tests. The remaining chart reference
+  screenshot mismatch reproduces unchanged on `origin/main` (4,827 pixels,
+  approximately 1%) and is not introduced by this candidate.

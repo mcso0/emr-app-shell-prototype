@@ -11,12 +11,20 @@ import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
-const migrationPath = "supabase/migrations/20260519200000_chart_diagnosis_persistence_rpc.sql";
-const migration = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+const migrationPath =
+  "supabase/migrations/20260519200000_chart_diagnosis_persistence_rpc.sql";
+const migration = existsSync(migrationPath)
+  ? readFileSync(migrationPath, "utf8")
+  : "";
 const closureMigrationPath =
   "supabase/migrations/20260815120000_chart_diagnosis_closure.sql";
 const closureMigration = existsSync(closureMigrationPath)
   ? readFileSync(closureMigrationPath, "utf8")
+  : "";
+const multiPrimaryMigrationPath =
+  "supabase/migrations/20260825135815_chart_multi_primary_diagnoses.sql";
+const multiPrimaryMigration = existsSync(multiPrimaryMigrationPath)
+  ? readFileSync(multiPrimaryMigrationPath, "utf8")
   : "";
 
 const validDiagnosisInput = {
@@ -56,17 +64,23 @@ test("diagnosis route requires an actor, saves via mock fallback, and reads afte
 }) => {
   const unauthenticated = await request.patch(
     `/api/workspaces/${workspaceId}/chart/diagnoses`,
-    { data: validDiagnosisInput }
+    { data: validDiagnosisInput },
   );
   expect(unauthenticated.status()).toBe(401);
-  await expectJson(unauthenticated, { ok: false, denialReason: "unauthenticated" });
-
-  const saved = await request.patch(`/api/workspaces/${workspaceId}/chart/diagnoses`, {
-    data: validDiagnosisInput,
-    headers: { "x-clair-demo-session-user-id": "user-vet" },
+  await expectJson(unauthenticated, {
+    ok: false,
+    denialReason: "unauthenticated",
   });
+
+  const saved = await request.patch(
+    `/api/workspaces/${workspaceId}/chart/diagnoses`,
+    {
+      data: validDiagnosisInput,
+      headers: { "x-clair-demo-session-user-id": "user-vet" },
+    },
+  );
   expect(saved.status()).toBe(200);
-  const savedBody = await saved.json() as {
+  const savedBody = (await saved.json()) as {
     ok: true;
     diagnoses: Array<{
       encounterId: string;
@@ -105,17 +119,16 @@ test("diagnosis route requires an actor, saves via mock fallback, and reads afte
 
   const readBack = await request.get(
     `/api/workspaces/${workspaceId}/chart/diagnoses?encounterId=${encounterId}`,
-    { headers: { "x-clair-demo-session-user-id": "user-vet" } }
+    { headers: { "x-clair-demo-session-user-id": "user-vet" } },
   );
   expect(readBack.status()).toBe(200);
-  const readBody = await readBack.json() as {
+  const readBody = (await readBack.json()) as {
     ok: true;
     diagnoses: Array<{ diagnosisText: string }>;
   };
-  expect(readBody.diagnoses.map((diagnosis) => diagnosis.diagnosisText)).toEqual([
-    "급성 위장관염 의심",
-    "보호자 설명용 임시 진단",
-  ]);
+  expect(
+    readBody.diagnoses.map((diagnosis) => diagnosis.diagnosisText),
+  ).toEqual(["급성 위장관염 의심", "보호자 설명용 임시 진단"]);
 });
 
 test("diagnosis core enforces active workspace membership, chart update permission, and encounter scope", async () => {
@@ -181,7 +194,10 @@ test("diagnosis core enforces active workspace membership, chart update permissi
         },
       ],
     }),
-    gateway: createMockChartDiagnosisGateway(undefined, () => "2026-05-19T14:00:00.000Z"),
+    gateway: createMockChartDiagnosisGateway(
+      undefined,
+      () => "2026-05-19T14:00:00.000Z",
+    ),
   });
   expect(allowedVet).toMatchObject({
     ok: true,
@@ -233,7 +249,9 @@ test("diagnosis Supabase gateway keeps workspace, encounter, rows, and actor sco
   const calls: string[] = [];
   const gateway = createSupabaseChartDiagnosisGateway({
     async rpc(functionName: string, args: Record<string, unknown>) {
-      calls.push(`${functionName}:${args.p_workspace_id}:${args.p_encounter_id}:${args.p_actor_user_id}`);
+      calls.push(
+        `${functionName}:${args.p_workspace_id}:${args.p_encounter_id}:${args.p_actor_user_id}`,
+      );
       return {
         data: [
           {
@@ -278,11 +296,13 @@ test("diagnosis Supabase gateway keeps workspace, encounter, rows, and actor sco
   ]);
   expect(result).toMatchObject({
     ok: true,
-    diagnoses: [{ id: "diagnosis-db-den-71", encounterId, isPrimary: true, sortOrder: 0 }],
+    diagnoses: [
+      { id: "diagnosis-db-den-71", encounterId, isPrimary: true, sortOrder: 0 },
+    ],
   });
 });
 
-test("diagnosis core rejects more than one primary diagnosis", async () => {
+test("diagnosis core preserves more than one primary diagnosis", async () => {
   const result = await saveChartDiagnoses({
     actorUserId: "user-vet",
     workspaceId,
@@ -296,30 +316,48 @@ test("diagnosis core rejects more than one primary diagnosis", async () => {
   });
 
   expect(result).toMatchObject({
-    ok: false,
-    status: 400,
-    error: "invalid_input",
-    fieldErrors: { diagnoses: "주진단은 하나만 선택할 수 있습니다." },
+    ok: true,
+    status: 200,
+    diagnoses: [
+      { diagnosisText: "급성 위장관염 의심", isPrimary: true, sortOrder: 0 },
+      {
+        diagnosisText: "보호자 설명용 임시 진단",
+        isPrimary: true,
+        sortOrder: 1,
+      },
+    ],
   });
 });
 
 test("diagnosis persistence migration defines local-first RPC boundary without secrets", () => {
-  expect(migration).toContain("create or replace function public.clair_get_chart_diagnoses");
-  expect(migration).toContain("create or replace function public.clair_save_chart_diagnoses");
-  expect(migration).toContain("private.clair_is_active_workspace_member(p_workspace_id)");
+  expect(migration).toContain(
+    "create or replace function public.clair_get_chart_diagnoses",
+  );
+  expect(migration).toContain(
+    "create or replace function public.clair_save_chart_diagnoses",
+  );
+  expect(migration).toContain(
+    "private.clair_is_active_workspace_member(p_workspace_id)",
+  );
   expect(migration).toContain("from public.encounters e");
   expect(migration).toContain("from public.diagnoses d");
   expect(migration).toContain("jsonb_array_elements");
   expect(migration).toContain("sort_order");
-  expect(migration).toContain("grant execute on function public.clair_save_chart_diagnoses");
-  expect(migration).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET|real patient/i);
+  expect(migration).toContain(
+    "grant execute on function public.clair_save_chart_diagnoses",
+  );
+  expect(migration).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
 
   expect(closureMigration).toContain("add column if not exists closed_at");
   expect(closureMigration).toContain("closed_by_user_id");
   expect(closureMigration).toContain("multiple_primary_diagnoses");
   expect(closureMigration).toContain("'isClosed', d.closed_at is not null");
   expect(closureMigration).toContain("v_existing_closure");
-  expect(closureMigration).toContain("v_actor_user_id is distinct from auth.uid()");
+  expect(closureMigration).toContain(
+    "v_actor_user_id is distinct from auth.uid()",
+  );
   expect(closureMigration).toContain("'chart:view'");
   expect(closureMigration).toContain("'chart:update'");
   expect(closureMigration.match(/set search_path = ''/g)).toHaveLength(2);
@@ -330,16 +368,32 @@ test("diagnosis persistence migration defines local-first RPC boundary without s
   expect(closureMigration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
   );
+
+  expect(multiPrimaryMigration).toContain(
+    "drop index if exists public.diagnoses_workspace_encounter_primary_key",
+  );
+  expect(multiPrimaryMigration).toContain(
+    "create or replace function public.clair_save_chart_diagnoses",
+  );
+  expect(multiPrimaryMigration).not.toContain("multiple_primary_diagnoses");
+  expect(multiPrimaryMigration).toContain("'isPrimary', is_primary");
+  expect(multiPrimaryMigration).toContain("order by sort_order, id");
+  expect(multiPrimaryMigration).toContain(
+    "grant execute on function public.clair_save_chart_diagnoses",
+  );
+  expect(multiPrimaryMigration).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
 });
 
 test("diagnosis route stays server-owned and secret-free", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/chart/diagnoses/route.ts",
-    "utf8"
+    "utf8",
   );
   const serverSource = readFileSync(
     "src/features/chart/server-diagnosis-persistence.ts",
-    "utf8"
+    "utf8",
   );
 
   expect(routeSource).toContain("readServerSession");
@@ -348,10 +402,15 @@ test("diagnosis route stays server-owned and secret-free", () => {
   expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
   expect(routeSource).toContain("permissionAdapter");
   expect(serverSource).toContain('import "server-only"');
-  expect(`${routeSource}\n${serverSource}`).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
+  expect(`${routeSource}\n${serverSource}`).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET/i,
+  );
 });
 
-async function expectJson(response: { json(): Promise<unknown> }, expected: Record<string, unknown>) {
+async function expectJson(
+  response: { json(): Promise<unknown> },
+  expected: Record<string, unknown>,
+) {
   const body = await response.json();
   expect(body).toMatchObject(expected);
 }
