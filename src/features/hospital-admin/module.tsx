@@ -8,11 +8,11 @@ import {
   type RowSelectionState,
   type SortingState,
   type Updater,
+  type VisibilityState,
 } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { CdsActionsCopyIcon } from "@/components/cds-icons/actions-and-controls";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrEmptyState } from "@/components/emr/empty-state";
@@ -53,6 +53,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Field,
   FieldContent,
   FieldDescription,
@@ -89,6 +97,7 @@ import {
   ActivityIcon,
   BuildingIcon,
   CalendarIcon,
+  ChevronDownIcon,
   ClipboardListIcon,
   DatabaseIcon,
   DocumentCheckIcon,
@@ -119,13 +128,10 @@ import {
   saleUnitLabels,
   serviceItemTypeLabels,
   targetLabels,
-  type HospitalOrderBillingFilter,
   type HospitalOrderCatalogItem,
   type HospitalOrderCategoryId,
   type HospitalOrderDraft,
-  type HospitalOrderStatusFilter,
   type HospitalOrderSubcategoryId,
-  type HospitalOrderWorkTypeFilter,
 } from "@/features/hospital-admin/data";
 import { WorkspaceMembershipManagement } from "@/features/auth/workspace-membership-management";
 import { HospitalBasicSettingsScreen } from "@/features/hospital-admin/settings/hospital-basic-settings-screen";
@@ -165,38 +171,6 @@ const hospitalAdminSections = new Set<HospitalAdminSection>([
   "space-time",
   "vitals",
 ]);
-
-const statusFilterItems: Array<{
-  label: string;
-  value: HospitalOrderStatusFilter;
-}> = [
-  { label: "전체", value: "all" },
-  { label: "사용", value: "active" },
-  { label: "중지", value: "inactive" },
-];
-
-const billingFilterItems: Array<{
-  label: string;
-  value: HospitalOrderBillingFilter;
-}> = [
-  { label: "청구 전체", value: "all" },
-  { label: "청구 가능", value: "billable" },
-  { label: "비청구", value: "not-billable" },
-];
-
-const workTypeFilterItems: Array<{
-  label: string;
-  value: HospitalOrderWorkTypeFilter;
-}> = [
-  { label: "업무 전체", value: "all" },
-  { label: "진료", value: "consultation" },
-  { label: "검사", value: "lab" },
-  { label: "의약품", value: "medication" },
-  { label: "처치", value: "treatment" },
-  { label: "영상", value: "imaging" },
-  { label: "입원", value: "hospitalization" },
-  { label: "기타", value: "misc" },
-];
 
 const drawerTabs = [
   { label: "부가정보", value: "meta" },
@@ -579,19 +553,13 @@ function getOrderCatalogMutationFailureMessage(
 function getVisibleOrders(
   orders: HospitalOrderCatalogItem[],
   {
-    billingFilter,
     searchQuery,
     selectedCategoryId,
     selectedSubcategoryId,
-    statusFilter,
-    workTypeFilter,
   }: {
-    billingFilter: HospitalOrderBillingFilter;
     searchQuery: string;
     selectedCategoryId: string;
     selectedSubcategoryId: string;
-    statusFilter: HospitalOrderStatusFilter;
-    workTypeFilter: HospitalOrderWorkTypeFilter;
   },
 ) {
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -599,22 +567,6 @@ function getVisibleOrders(
   return orders
     .filter((order) => order.categoryId === selectedCategoryId)
     .filter((order) => order.subcategoryId === selectedSubcategoryId)
-    .filter((order) => {
-      if (statusFilter === "active") return order.isActive;
-      if (statusFilter === "inactive") return !order.isActive;
-
-      return true;
-    })
-    .filter((order) => {
-      if (billingFilter === "billable") return order.billable;
-      if (billingFilter === "not-billable") return !order.billable;
-
-      return true;
-    })
-    .filter(
-      (order) =>
-        workTypeFilter === "all" || order.serviceItemType === workTypeFilter,
-    )
     .filter((order) => {
       if (!normalizedQuery) return true;
 
@@ -696,18 +648,6 @@ function getHospitalOrderTableFilterFields(
         targetLabels,
       ),
       valuePlaceholder: "대상 선택",
-    },
-    {
-      getValue: (order) => order.serviceItemType,
-      id: "serviceItemType",
-      label: "업무유형",
-      operators: [{ id: "is", label: "Is" }],
-      options: getUniqueHospitalOrderFilterOptions(
-        orders,
-        (order) => order.serviceItemType,
-        serviceItemTypeLabels,
-      ),
-      valuePlaceholder: "업무유형 선택",
     },
     {
       getValue: (order) => (order.billable ? "billable" : "not-billable"),
@@ -1349,7 +1289,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const { hydrated, hydrate, session } = useAuthClient();
   const activeSection = useHospitalAdminStore((state) => state.activeSection);
-  const billingFilter = useHospitalAdminStore((state) => state.billingFilter);
   const clearSelectedOrders = useHospitalAdminStore(
     (state) => state.clearSelectedOrders,
   );
@@ -1374,25 +1313,14 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const setActiveSection = useHospitalAdminStore(
     (state) => state.setActiveSection,
   );
-  const setBillingFilter = useHospitalAdminStore(
-    (state) => state.setBillingFilter,
-  );
   const setFocusedOrderId = useHospitalAdminStore(
     (state) => state.setFocusedOrderId,
   );
   const setOrders = useHospitalAdminStore((state) => state.setOrders);
   const setSearchQuery = useHospitalAdminStore((state) => state.setSearchQuery);
-  const setStatusFilter = useHospitalAdminStore(
-    (state) => state.setStatusFilter,
-  );
-  const setWorkTypeFilter = useHospitalAdminStore(
-    (state) => state.setWorkTypeFilter,
-  );
-  const statusFilter = useHospitalAdminStore((state) => state.statusFilter);
   const toggleOrderSelection = useHospitalAdminStore(
     (state) => state.toggleOrderSelection,
   );
-  const workTypeFilter = useHospitalAdminStore((state) => state.workTypeFilter);
   const [catalogReadStatus, setCatalogReadStatus] =
     useState<OrderCatalogReadStatus>("idle");
   const [catalogRetryKey, setCatalogRetryKey] = useState(0);
@@ -1408,6 +1336,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     ),
   );
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
+  const [orderColumnVisibility, setOrderColumnVisibility] =
+    useState<VisibilityState>({});
   const selectedSubcategory = getHospitalOrderSubcategory(
     selectedSubcategoryId,
   );
@@ -1463,22 +1393,11 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const baseVisibleOrders = useMemo(
     () =>
       getVisibleOrders(orders, {
-        billingFilter,
         searchQuery,
         selectedCategoryId,
         selectedSubcategoryId,
-        statusFilter,
-        workTypeFilter,
       }),
-    [
-      billingFilter,
-      orders,
-      searchQuery,
-      selectedCategoryId,
-      selectedSubcategoryId,
-      statusFilter,
-      workTypeFilter,
-    ],
+    [orders, searchQuery, selectedCategoryId, selectedSubcategoryId],
   );
   const orderFilterFields = useMemo(
     () =>
@@ -1602,6 +1521,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       {
         accessorKey: "standardName",
         id: "standardName",
+        enableHiding: false,
         enableSorting: true,
         meta: {
           identity: true,
@@ -1808,10 +1728,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
     getSortedRowModel: getSortedRowModel(),
+    onColumnVisibilityChange: setOrderColumnVisibility,
     onRowSelectionChange: handleOrderRowSelectionChange,
     onSortingChange: setOrderSorting,
     state: {
       columnPinning: { left: ["select", "standardName"], right: [] },
+      columnVisibility: orderColumnVisibility,
       rowSelection: orderRowSelection,
       sorting: orderSorting,
     },
@@ -1834,9 +1756,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     : "Order가 등록되면 이 표에 표시됩니다.";
   const resetOrderFilters = () => {
     setSearchQuery("");
-    setStatusFilter("all");
-    setBillingFilter("all");
-    setWorkTypeFilter("all");
     setOrderFilterModel(
       createInitialEmrTableFilterBuilderModel(
         "hospital-order-catalog-filter",
@@ -1990,7 +1909,11 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         countSkeletonTestId="hospital-order-page-header-count-skeleton"
         onSearchChange={setSearchQuery}
         primaryAction={
-          <Button size="sm" onClick={handleCreateOrder}>
+          <Button
+            size="sm"
+            className="h-8 min-h-8"
+            onClick={handleCreateOrder}
+          >
             + Order
           </Button>
         }
@@ -2000,79 +1923,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         searchValue={searchQuery}
         tableControls={
           <>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) =>
-                setStatusFilter(value as HospitalOrderStatusFilter)
-              }
-            >
-              <SelectTrigger
-                aria-label="사용여부 필터"
-                size="sm"
-                className="w-[96px] bg-card"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {statusFilterItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select
-              value={billingFilter}
-              onValueChange={(value) =>
-                setBillingFilter(value as HospitalOrderBillingFilter)
-              }
-            >
-              <SelectTrigger
-                aria-label="청구 필터"
-                size="sm"
-                className="w-[104px] bg-card"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {billingFilterItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select
-              value={workTypeFilter}
-              onValueChange={(value) =>
-                setWorkTypeFilter(value as HospitalOrderWorkTypeFilter)
-              }
-            >
-              <SelectTrigger
-                aria-label="업무유형 필터"
-                size="sm"
-                className="w-[104px] bg-card"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {workTypeFilterItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <EmrTableDensitySelector
-              value={tableDensity}
-              onValueChange={setTableDensity}
-            />
             <Popover
               open={orderFilterOpen}
               onOpenChange={(open) => {
@@ -2106,7 +1956,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                     orderFilterPopoverReady && !orderFilterAutoOpenConsumed
                   }
                   clearAllLabel="초기화"
-                  description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다."
+                  description="오더 필터는 완성된 조건만 자동 적용되며, 그룹 안과 그룹 사이는 선택한 AND/OR로 계산됩니다."
                   fields={orderFilterFields}
                   model={orderFilterModel}
                   title="필터"
@@ -2122,22 +1972,49 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                 />
               </PopoverContent>
             </Popover>
-            <Button
-              size="icon-sm"
-              variant="outline"
-              aria-label="컬럼 표시 설정"
-            >
-              <SlidersIcon />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={selectedOrderIds.length !== 1}
-              onClick={handleDuplicateFirstSelected}
-            >
-              <CdsActionsCopyIcon data-icon="inline-start" />
-              복제
-            </Button>
+            <EmrTableDensitySelector
+              value={tableDensity}
+              onValueChange={setTableDensity}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 min-h-8 rounded-lg bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5 shadow-[var(--clair-shadow-xs)]"
+                    aria-label={`${selectedLeafLabel} 컬럼 표시 설정`}
+                  />
+                }
+              >
+                전체 컬럼
+                <ChevronDownIcon data-icon="inline-end" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>표시 컬럼</DropdownMenuLabel>
+                  {orderTable
+                    .getAllLeafColumns()
+                    .filter(
+                      (column) =>
+                        column.id !== "select" && column.id !== "actions",
+                    )
+                    .map((column) => (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        checked={column.getIsVisible()}
+                        disabled={!column.getCanHide()}
+                        onCheckedChange={(checked) =>
+                          column.toggleVisibility(Boolean(checked))
+                        }
+                      >
+                        {column.columnDef.meta?.label ?? column.id}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         }
         testId="hospital-order-page-header"
