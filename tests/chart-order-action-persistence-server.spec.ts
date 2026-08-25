@@ -48,6 +48,8 @@ const a3Migration = readFileSync(
 const validConfirmInput = {
   action: "confirm" as const,
   encounterId,
+  expectedEtag: `"${"a".repeat(64)}"`,
+  idempotencyKey: "chart-confirm-test-request-0001",
   orderIds: [orderId],
 };
 
@@ -96,13 +98,9 @@ test("order action route confirms selected orders via mock fallback and reads af
   expect(saved.status()).toBe(200);
   const savedBody = (await saved.json()) as {
     ok: true;
-    fulfillmentWorkItems?: Array<{
-      id: string;
-      orderId: string;
-      queueType: string;
-      sourceSnapshot: { orderDisplayName: string };
-      status: string;
-    }>;
+    confirmationCommandId?: string;
+    queueProjectionIds?: string[];
+    tasks?: Array<Record<string, unknown>>;
     orderActions: Array<{
       billingCandidateStatus: string;
       confirmedAt?: string;
@@ -127,31 +125,11 @@ test("order action route confirms selected orders via mock fallback and reads af
     ]),
   );
   expect(savedBody.orderActions[0]?.confirmedAt).toBeTruthy();
-  expect(savedBody.fulfillmentWorkItems).toEqual([
-    expect.objectContaining({
-      id: `fulfill-${orderId}`,
-      orderId,
-      queueType: "dispensing",
-      sourceSnapshot: expect.objectContaining({
-        orderDisplayName: "Maropitant 16mg T",
-      }),
-    }),
-  ]);
-
-  const fulfillmentRead = await request.get(
-    `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing&encounterId=${encounterId}`,
-    { headers: { "x-clair-demo-session-user-id": "user-tech" } },
+  expect(savedBody.confirmationCommandId).toBe(
+    validConfirmInput.idempotencyKey,
   );
-  expect(fulfillmentRead.status()).toBe(200);
-  const fulfillmentReadBody = (await fulfillmentRead.json()) as {
-    ok: true;
-    workItems: Array<{ id: string; orderId: string }>;
-  };
-  expect(fulfillmentReadBody.workItems).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ id: `fulfill-${orderId}`, orderId }),
-    ]),
-  );
+  expect(savedBody.queueProjectionIds).toEqual([]);
+  expect(savedBody.tasks).toEqual([]);
 
   const readBack = await request.get(
     `/api/workspaces/${workspaceId}/chart/order-actions?encounterId=${encounterId}`,
@@ -426,13 +404,18 @@ test("confirmed order handoff requires a persisted server-owned row", async () =
 });
 
 test("order action core rejects unavailable IDs and legacy set selections", async () => {
+  const gateway = createMockChartOrderActionGateway();
+  const current = await gateway.readOrderActions({ encounterId, workspaceId });
+  if (!current.ok) throw new Error("missing mock chart action state");
   const paused = await saveChartOrderAction({
     actorUserId: "user-vet",
     input: {
-      action: "confirm",
+      ...validConfirmInput,
       encounterId,
+      expectedEtag: current.etag,
       orderIds: ["catalog-individual-std-ord-paused-example-den-286"],
     },
+    gateway,
     workspaceId,
   });
   expect(paused).toMatchObject({
@@ -597,6 +580,93 @@ test("order action Supabase gateway keeps action, actor, workspace, encounter, a
           sourcePresetId: "std-den-304-billing",
         },
         billingCandidateStatus: "not_requested",
+      },
+    ],
+  });
+});
+
+test("order action Supabase gateway sends confirmation through one idempotent atomic RPC", async () => {
+  const calls: Array<{ functionName: string; args: Record<string, unknown> }> = [];
+  const etag = `"${"d".repeat(64)}"`;
+  const actorUserId = "00000000-0000-4000-8000-000000000002";
+  const persistedEncounterId = "00000000-0000-4000-8000-000000000003";
+  const persistedOrderId = "00000000-0000-4000-8000-000000000301";
+  const idempotencyKey = "chart-confirm-atomic-gateway-0001";
+  const gateway = createSupabaseChartOrderActionGateway({
+    async rpc(functionName: string, args: Record<string, unknown>) {
+      calls.push({ functionName, args });
+      return {
+        data: {
+          commandId: "00000000-0000-4000-8000-000000000401",
+          etag,
+          confirmedRows: [],
+          billingCandidates: [
+            {
+              billingCandidateId: `billcand-${persistedOrderId}`,
+              billingName: "원자적 확정 검사",
+              orderId: persistedOrderId,
+              taskId: "00000000-0000-4000-8000-000000000501",
+              status: "candidate_created",
+              quantity: 2,
+              unitPrice: 15000,
+              amount: 30000,
+              currency: "KRW",
+              createdAt: "2026-08-25T12:00:00.000Z",
+            },
+          ],
+          queueProjectionIds: [
+            "00000000-0000-4000-8000-000000000601",
+          ],
+          tasks: [
+            {
+              taskId: "00000000-0000-4000-8000-000000000501",
+              orderId: persistedOrderId,
+              taskRole: "execution",
+              status: "pending",
+            },
+          ],
+        },
+        error: null,
+      };
+    },
+  });
+
+  const result = await gateway.saveOrderAction({
+    action: "confirm",
+    actorUserId,
+    workspaceId,
+    encounterId: persistedEncounterId,
+    expectedEtag: etag,
+    idempotencyKey,
+    orderIds: [persistedOrderId],
+  });
+
+  expect(calls).toEqual([
+    {
+      functionName: "clair_confirm_chart_order_candidates",
+      args: {
+        p_workspace_id: workspaceId,
+        p_actor_user_id: actorUserId,
+        p_encounter_id: persistedEncounterId,
+        p_selected_root_order_ids: [persistedOrderId],
+        p_expected_draft_etag: etag,
+        p_idempotency_key: idempotencyKey,
+      },
+    },
+  ]);
+  expect(result).toMatchObject({
+    ok: true,
+    serverAtomic: true,
+    confirmationCommandId: "00000000-0000-4000-8000-000000000401",
+    queueProjectionIds: ["00000000-0000-4000-8000-000000000601"],
+    billingCandidates: [
+      {
+        billingCandidateId: `billcand-${persistedOrderId}`,
+        description: "원자적 확정 검사",
+        lineTotal: 30000,
+        orderId: persistedOrderId,
+        quantity: 2,
+        unitPrice: 15000,
       },
     ],
   });

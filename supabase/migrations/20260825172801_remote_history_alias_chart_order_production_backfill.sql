@@ -1,0 +1,3 @@
+-- Remote history alias only.
+-- Exact canonical SQL: 20260825244000_chart_order_production_backfill.sql
+-- SHA-256: 529e470e3f2383aafc0d573fe60574ca1f2121388a965b337a44792ede10b137

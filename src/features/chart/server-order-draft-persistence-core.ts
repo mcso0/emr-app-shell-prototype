@@ -9,6 +9,17 @@ import { mockEncounters, mockInvoiceLines, mockOrders } from "@/mocks/emr-domain
 import type { EmrOrder, Encounter, InvoiceLine } from "@/types/emr-domain";
 import type { ChartOrderSetSelectionIntent } from "@/features/hospital-admin/server-order-catalog-core";
 import { createMockOrderCatalogGateway } from "@/features/hospital-admin/server-order-catalog-core";
+import {
+  CLINICAL_ORDER_DESTINATION_MODULES,
+  isClinicalOrderType,
+  validateClinicalOrderDetailInputs,
+} from "@/features/chart/order-execution-domain";
+import type {
+  ClinicalOrderDestinationModule,
+  ClinicalOrderExecutionMode,
+  ClinicalOrderPriority,
+  ClinicalOrderType,
+} from "@/types/emr-domain";
 
 export type ChartOrderQuantitySource =
   | "fixed_one"
@@ -28,6 +39,14 @@ export type ChartOrderRuntimeRow = {
   encounterId: string;
   rowType: "individual" | "set" | "set_child";
   orderType: "set" | "lab" | "imaging" | "dispensing" | "treatment";
+  clinicalOrderType: ClinicalOrderType;
+  destinationModule: ClinicalOrderDestinationModule | null;
+  executionMode: ClinicalOrderExecutionMode;
+  detailInputs: Record<string, unknown>;
+  detailSchemaVersion: number;
+  priority: ClinicalOrderPriority;
+  billingEligible: boolean;
+  revisionNo: number;
   parentOrderId: string | null;
   sourceSetId: string | null;
   sourceSetRevisionId: string | null;
@@ -58,13 +77,26 @@ export type ChartOrderSetLeafIntent = {
   quantity: number;
 };
 
+export type ChartOrderDraftEditableValues = {
+  detailInputs?: Record<string, unknown>;
+  detailSchemaVersion?: number;
+  priority?: ClinicalOrderPriority;
+};
+
+export type ChartOrderSetChildDraftInput = {
+  revisionItemId: string;
+  detailInputs: Record<string, unknown>;
+  detailSchemaVersion: number;
+  priority: ClinicalOrderPriority;
+};
+
 export type ChartOrderDraftRowInput =
   | {
       rowType: "individual";
       orderId: string;
       workspaceCatalogItemId: string;
       quantity: number;
-    }
+    } & ChartOrderDraftEditableValues
   | {
       rowType: "set";
       orderId: string;
@@ -72,7 +104,8 @@ export type ChartOrderDraftRowInput =
       sourceSetRevisionId: string;
       sourceSetRevisionNo: number;
       selectionIntent: ChartOrderSetSelectionIntent;
-    };
+      childInputs?: ChartOrderSetChildDraftInput[];
+    } & ChartOrderDraftEditableValues;
 
 export type ChartOrderDraftInput = {
   encounterId?: string;
@@ -93,6 +126,14 @@ export type ChartOrderDraftLine = {
   sourceMasterRevision?: number;
   workspaceCatalogRevision?: number;
   appliedSnapshot?: Record<string, unknown>;
+  clinicalOrderType?: ClinicalOrderType;
+  destinationModule?: ClinicalOrderDestinationModule | null;
+  executionMode?: ClinicalOrderExecutionMode;
+  detailInputs?: Record<string, unknown>;
+  detailSchemaVersion?: number;
+  priority?: ClinicalOrderPriority;
+  billingEligible?: boolean;
+  revisionNo?: number;
   updatedAt: string;
 };
 
@@ -173,6 +214,17 @@ export function getMockChartOrderDraftRuntimeRows({
   workspaceId: string;
 }) {
   return mockOrderDraftRuntimeStore.get(buildOrderDraftKey(workspaceId, encounterId));
+}
+
+export function getMockChartOrderDraftEtag({
+  encounterId,
+  workspaceId,
+}: {
+  encounterId: string;
+  workspaceId: string;
+}) {
+  const rows = getMockChartOrderDraftRuntimeRows({ encounterId, workspaceId });
+  return rows ? mockChartOrderEtag(rows) : undefined;
 }
 
 export async function readChartOrderDraft({
@@ -370,6 +422,10 @@ export function createMockChartOrderDraftGateway(
       );
       const nextRows = draftRows.map((draft) => {
         const seed = seedRows.find((row) => row.orderId === draft.orderId);
+        const legacyOrder = orders.find(
+          (order) =>
+            order.workspaceId === workspaceId && order.id === draft.orderId,
+        );
         const catalogRow =
           draft.rowType === "individual" && !seed?.serviceItemId
             ? catalogById.get(draft.workspaceCatalogItemId)
@@ -380,7 +436,25 @@ export function createMockChartOrderDraftGateway(
               catalogRow?.appliedSnapshot.appliedPriceKrw ??
               null
             : null;
-
+        const canonical =
+          catalogRow?.clinicalOrderType &&
+          catalogRow.executionMode &&
+          catalogRow.destinationModule !== undefined
+          ? {
+              clinicalOrderType: catalogRow.clinicalOrderType,
+              destinationModule: catalogRow.destinationModule,
+              executionMode: catalogRow.executionMode,
+            }
+          : catalogRow
+            ? resolveMockDraftCanonicalContract({
+                categoryGroup: catalogRow.categoryGroup,
+              })
+          : legacyOrder
+            ? resolveMockDraftCanonicalContract({
+                categoryGroup: legacyOrder.categoryGroup,
+                legacyOrderType: legacyOrder.orderType,
+              })
+            : resolveMockDraftCanonicalContract({ existing: seed });
         return {
           billingDisplayName:
             seed?.billingDisplayName ??
@@ -407,9 +481,33 @@ export function createMockChartOrderDraftGateway(
             seed?.workspaceCatalogRevision ?? catalogRow?.workspaceCatalogRevision,
           appliedSnapshot:
             seed?.appliedSnapshot ?? catalogRow?.appliedSnapshot,
+          clinicalOrderType: canonical.clinicalOrderType,
+          destinationModule: canonical.destinationModule,
+          executionMode: canonical.executionMode,
+          detailInputs: draft.detailInputs ?? seed?.detailInputs ?? {},
+          detailSchemaVersion:
+            draft.detailSchemaVersion ?? seed?.detailSchemaVersion ?? 1,
+          priority: draft.priority ?? seed?.priority ?? "normal",
+          billingEligible: seed?.billingEligible ?? true,
+          revisionNo: seed?.revisionNo ?? 0,
           updatedAt: timestamp,
         } satisfies ChartOrderDraftLine;
       });
+      for (const draft of draftRows) {
+        if (draft.rowType !== "individual" || !draft.detailInputs) continue;
+        const persisted = nextRows.find((row) => row.orderId === draft.orderId);
+        if (
+          !persisted?.clinicalOrderType ||
+          !validateClinicalOrderDetailInputs({
+            clinicalOrderType: persisted.clinicalOrderType,
+            detailInputs: draft.detailInputs,
+            requireComplete: false,
+            schemaVersion: draft.detailSchemaVersion ?? 1,
+          }).valid
+        ) {
+          return { ok: false, status: 422, error: "detail_inputs_invalid" };
+        }
+      }
 
       const setRuntimeRows = await buildMockSetRuntimeRows({
         encounterId,
@@ -542,6 +640,11 @@ export function createSupabaseChartOrderDraftGateway(
         if (error.message?.includes("revision_conflict")) return { ok: false, status: 409, error: "revision_conflict" };
         if (error.message?.includes("requires_refresh")) return { ok: false, status: 409, error: "catalog_revision_requires_refresh" };
         if (error.message?.includes("if_match_required")) return { ok: false, status: 428, error: "if_match_required" };
+        if (
+          error.message?.includes("detail_inputs_invalid") ||
+          error.message?.includes("child_detail_inputs_invalid") ||
+          error.message?.includes("set_child_input_unavailable")
+        ) return { ok: false, status: 422, error: mapChartDraftRpcError(error.message) };
         if (error.message?.includes("order_set_")) return { ok: false, status: 422, error: mapChartDraftRpcError(error.message) };
         return { ok: false, status: 500, error: "db_write_failed" };
       }
@@ -625,7 +728,7 @@ function getStoredOrSeedOrderDrafts({
   invoiceLines: InvoiceLine[];
   orders: EmrOrder[];
   workspaceId: string;
-}) {
+}): ChartOrderDraftLine[] {
   const stored = mockOrderDraftStore.get(buildOrderDraftKey(workspaceId, encounterId));
   if (stored) return stored;
 
@@ -638,6 +741,10 @@ function getStoredOrSeedOrderDrafts({
         ? invoiceLine.unitPrice
         : order.unitPriceSnapshot ?? null;
       const quantity = invoiceLine?.quantity ?? 1;
+      const canonical = resolveMockDraftCanonicalContract({
+        categoryGroup: order.categoryGroup,
+        legacyOrderType: order.orderType,
+      });
 
       return {
         billingDisplayName: invoiceLine?.description ?? order.displayName,
@@ -652,9 +759,117 @@ function getStoredOrSeedOrderDrafts({
         sourceMasterRevision: order.sourceMasterRevision,
         workspaceCatalogRevision: order.workspaceCatalogRevision,
         appliedSnapshot: order.appliedSnapshot,
+        ...canonical,
+        detailInputs: getMockSeedDetailInputs(order, canonical.clinicalOrderType),
+        detailSchemaVersion: 1,
+        priority: order.priority === "urgent" ? "urgent" : "normal",
+        billingEligible:
+          order.appliedSnapshot?.billingReflectionEnabled !== false,
+        revisionNo: 0,
         updatedAt: order.updatedAt,
-      };
+      } satisfies ChartOrderDraftLine;
     });
+}
+
+function getMockSeedDetailInputs(
+  order: EmrOrder,
+  clinicalOrderType: ClinicalOrderType,
+): Record<string, unknown> {
+  if (order.id === "order-kong-maropitant") {
+    return {
+      doseBasis: "patient",
+      dose: 16,
+      doseUnit: "mg",
+      route: "PO",
+      frequency: "once",
+      durationDays: 1,
+      totalQuantity: 1,
+    };
+  }
+  if (order.id === "order-kong-cbc") {
+    return {
+      specimenType: "blood",
+      testPanel: "CBC",
+      collectionCondition: "EDTA 전혈",
+    };
+  }
+  if (order.id === "order-kong-fluid") {
+    return {
+      method: "피하 수액",
+      site: "등쪽 피하",
+      administeredAmount: 100,
+      frequency: "once",
+      schedule: "즉시",
+    };
+  }
+  if (order.id === "order-kong-abdomen") {
+    return {
+      bodyRegion: "복부",
+      position: "VD/LAT",
+      viewCount: 2,
+      contrastRequired: false,
+      sedationRequired: false,
+    };
+  }
+
+  const instruction = order.instruction?.trim() || order.displayName;
+  switch (clinicalOrderType) {
+    case "consultation":
+      return {
+        responsibleClinicianId: order.requestedByUserId,
+        occurrenceCount: 1,
+        timing: "now",
+        instructionSummary: instruction,
+      };
+    case "clinical_lab":
+      return {
+        specimenType: "blood",
+        testPanel: order.displayName,
+        collectionCondition: instruction,
+      };
+    case "imaging":
+      return {
+        bodyRegion: order.displayName,
+        position: "standard",
+        viewCount: 1,
+        contrastRequired: false,
+        sedationRequired: false,
+      };
+    case "external_lab":
+      return {
+        providerId: "mock-external-lab",
+        specimenType: "blood",
+        testItem: order.displayName,
+        shippingCondition: instruction,
+      };
+    case "dispensing":
+      return {
+        doseBasis: "patient",
+        dose: 1,
+        doseUnit: "tablet",
+        route: "PO",
+        frequency: "once",
+        durationDays: 1,
+        totalQuantity: 1,
+      };
+    case "treatment":
+      return {
+        method: order.displayName,
+        site: "patient",
+        administeredAmount: 1,
+        frequency: "once",
+        schedule: instruction,
+      };
+    case "hospitalization":
+      return {
+        durationDays: 1,
+        wardOrCage: "mock-ward",
+        careLevel: "standard",
+        monitoringInterval: 60,
+      };
+    case "other":
+      return { structuredValue: instruction };
+  }
 }
 
 function buildOrderDraftKey(workspaceId: string, encounterId: string) {
@@ -702,19 +917,91 @@ function isValidDraftRow(value: unknown): value is ChartOrderDraftRowInput {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const row = value as Record<string, unknown>;
   if (row.rowType === "individual") {
-    return Object.keys(row).length === 4 &&
+    return hasOnlyKeys(row, [
+      "rowType",
+      "orderId",
+      "workspaceCatalogItemId",
+      "quantity",
+      "detailInputs",
+      "detailSchemaVersion",
+      "priority",
+    ]) &&
       typeof row.orderId === "string" && Boolean(row.orderId.trim()) &&
       typeof row.workspaceCatalogItemId === "string" && Boolean(row.workspaceCatalogItemId.trim()) &&
-      typeof row.quantity === "number" && Number.isFinite(row.quantity) && row.quantity > 0 && row.quantity <= 999999999.999 && hasThreeDecimalPlaces(row.quantity);
+      typeof row.quantity === "number" && Number.isFinite(row.quantity) && row.quantity > 0 && row.quantity <= 999999999.999 && hasThreeDecimalPlaces(row.quantity) &&
+      isValidEditableDraftValues(row);
   }
   if (row.rowType !== "set") return false;
-  if (Object.keys(row).length !== 6 ||
+  if (!hasOnlyKeys(row, [
+        "rowType",
+        "orderId",
+        "sourceSetId",
+        "sourceSetRevisionId",
+        "sourceSetRevisionNo",
+        "selectionIntent",
+        "detailInputs",
+        "detailSchemaVersion",
+        "priority",
+        "childInputs",
+      ]) ||
       typeof row.orderId !== "string" || !row.orderId.trim() ||
       typeof row.sourceSetId !== "string" || !row.sourceSetId.trim() ||
       typeof row.sourceSetRevisionId !== "string" || !row.sourceSetRevisionId.trim() ||
       typeof row.sourceSetRevisionNo !== "number" || !Number.isInteger(row.sourceSetRevisionNo) || row.sourceSetRevisionNo <= 0 ||
-      !isValidSelectionIntent(row.selectionIntent)) return false;
+      !isValidSelectionIntent(row.selectionIntent) ||
+      !isValidEditableDraftValues(row) ||
+      !isValidSetChildInputs(row.childInputs)) return false;
   return true;
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: string[]) {
+  const keys = Object.keys(value);
+  return keys.every((key) => allowed.includes(key));
+}
+
+function isValidEditableDraftValues(value: Record<string, unknown>) {
+  const hasDetails = Object.hasOwn(value, "detailInputs");
+  const hasVersion = Object.hasOwn(value, "detailSchemaVersion");
+  if (hasDetails !== hasVersion) return false;
+  if (
+    hasDetails &&
+    (!value.detailInputs ||
+      typeof value.detailInputs !== "object" ||
+      Array.isArray(value.detailInputs) ||
+      typeof value.detailSchemaVersion !== "number" ||
+      !Number.isInteger(value.detailSchemaVersion) ||
+      value.detailSchemaVersion <= 0)
+  ) return false;
+  return value.priority === undefined ||
+    value.priority === "normal" ||
+    value.priority === "urgent";
+}
+
+function isValidSetChildInputs(value: unknown) {
+  if (value === undefined) return true;
+  if (!Array.isArray(value)) return false;
+  const ids = new Set<string>();
+  return value.every((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+    const row = entry as Record<string, unknown>;
+    if (
+      Object.keys(row).length !== 4 ||
+      !hasOnlyKeys(row, [
+        "revisionItemId",
+        "detailInputs",
+        "detailSchemaVersion",
+        "priority",
+      ]) ||
+      typeof row.revisionItemId !== "string" ||
+      !row.revisionItemId.trim() ||
+      ids.has(row.revisionItemId) ||
+      !isValidEditableDraftValues(row) ||
+      !Object.hasOwn(row, "detailInputs") ||
+      (row.priority !== "normal" && row.priority !== "urgent")
+    ) return false;
+    ids.add(row.revisionItemId);
+    return true;
+  });
 }
 
 function isValidSelectionIntent(value: unknown): value is ChartOrderSetSelectionIntent {
@@ -770,6 +1057,84 @@ function mapCatalogCategoryToOrderType(
   }
 }
 
+function resolveMockDraftCanonicalContract({
+  categoryGroup,
+  existing,
+  legacyOrderType,
+}: {
+  categoryGroup?: string;
+  existing?: Partial<ChartOrderDraftLine>;
+  legacyOrderType?: unknown;
+}): {
+  clinicalOrderType: ClinicalOrderType;
+  destinationModule: ClinicalOrderDestinationModule | null;
+  executionMode: ClinicalOrderExecutionMode;
+} {
+  if (
+    existing?.clinicalOrderType &&
+    existing.executionMode &&
+    existing.destinationModule !== undefined
+  ) {
+    return {
+      clinicalOrderType: existing.clinicalOrderType,
+      destinationModule: existing.destinationModule,
+      executionMode: existing.executionMode,
+    };
+  }
+
+  switch (categoryGroup ?? legacyOrderType) {
+    case "set":
+      return {
+        clinicalOrderType: "other",
+        destinationModule: null,
+        executionMode: "aggregate",
+      };
+    case "consultation":
+      return {
+        clinicalOrderType: "consultation",
+        destinationModule: null,
+        executionMode: "immediate_complete",
+      };
+    case "lab":
+      return {
+        clinicalOrderType: "clinical_lab",
+        destinationModule: "lab",
+        executionMode: "routed",
+      };
+    case "imaging":
+      return {
+        clinicalOrderType: "imaging",
+        destinationModule: "imaging",
+        executionMode: "routed",
+      };
+    case "medication":
+    case "dispensing":
+      return {
+        clinicalOrderType: "dispensing",
+        destinationModule: "dispensing",
+        executionMode: "routed",
+      };
+    case "hospitalization":
+      return {
+        clinicalOrderType: "hospitalization",
+        destinationModule: "hospitalization",
+        executionMode: "routed",
+      };
+    case "treatment":
+      return {
+        clinicalOrderType: "treatment",
+        destinationModule: "treatment",
+        executionMode: "routed",
+      };
+    default:
+      return {
+        clinicalOrderType: "other",
+        destinationModule: null,
+        executionMode: "immediate_complete",
+      };
+  }
+}
+
 function hasThreeDecimalPlaces(value: number) {
   return value === Math.round(value * 1000) / 1000;
 }
@@ -804,12 +1169,51 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
     row[key] && typeof row[key] === "object" && !Array.isArray(row[key])
       ? row[key] as Record<string, unknown>
       : {};
+  const appliedSnapshot = objectValue("appliedSnapshot");
+  const categoryGroup = appliedSnapshot.categoryGroup;
+  const fallbackCanonical = resolveMockDraftCanonicalContract({
+    categoryGroup:
+      typeof categoryGroup === "string" ? categoryGroup : undefined,
+    legacyOrderType: row.orderType,
+  });
+  const clinicalOrderType = isClinicalOrderType(row.clinicalOrderType)
+    ? row.clinicalOrderType
+    : fallbackCanonical.clinicalOrderType;
+  const destinationModule =
+    row.destinationModule === null ||
+    (typeof row.destinationModule === "string" &&
+      (CLINICAL_ORDER_DESTINATION_MODULES as readonly string[]).includes(
+        row.destinationModule,
+      ))
+      ? (row.destinationModule as ClinicalOrderDestinationModule | null)
+      : fallbackCanonical.destinationModule;
+  const executionMode =
+    row.executionMode === "routed" ||
+    row.executionMode === "immediate_complete" ||
+    row.executionMode === "aggregate"
+      ? row.executionMode
+      : fallbackCanonical.executionMode;
   return {
     orderId: row.orderId,
     workspaceId: typeof row.workspaceId === "string" ? row.workspaceId : undefined,
     encounterId: row.encounterId,
     rowType: row.rowType,
     orderType: row.orderType as ChartOrderRuntimeRow["orderType"],
+    clinicalOrderType,
+    destinationModule,
+    executionMode,
+    detailInputs: objectValue("detailInputs"),
+    detailSchemaVersion:
+      typeof row.detailSchemaVersion === "number" &&
+      Number.isInteger(row.detailSchemaVersion)
+        ? row.detailSchemaVersion
+        : 1,
+    priority: row.priority === "urgent" ? "urgent" : "normal",
+    billingEligible: row.billingEligible !== false,
+    revisionNo:
+      typeof row.revisionNo === "number" && Number.isInteger(row.revisionNo)
+        ? row.revisionNo
+        : 0,
     parentOrderId: row.parentOrderId === null ? null : typeof row.parentOrderId === "string" ? row.parentOrderId : null,
     sourceSetId: row.sourceSetId === null ? null : typeof row.sourceSetId === "string" ? row.sourceSetId : null,
     sourceSetRevisionId: row.sourceSetRevisionId === null ? null : typeof row.sourceSetRevisionId === "string" ? row.sourceSetRevisionId : null,
@@ -930,6 +1334,15 @@ async function buildMockSetRuntimeRows({
       encounterId,
       rowType: "set",
       orderType: "set",
+      clinicalOrderType: "other",
+      destinationModule: null,
+      executionMode: "aggregate",
+      detailInputs: row.detailInputs ?? previousParent?.detailInputs ?? {},
+      detailSchemaVersion:
+        row.detailSchemaVersion ?? previousParent?.detailSchemaVersion ?? 1,
+      priority: row.priority ?? previousParent?.priority ?? "normal",
+      billingEligible: false,
+      revisionNo: previousParent?.revisionNo ?? 0,
       parentOrderId: null,
       sourceSetId: preview.set.sourceSetId,
       sourceSetRevisionId: preview.set.sourceSetRevisionId,
@@ -962,6 +1375,9 @@ async function buildMockSetRuntimeRows({
           candidate.sourceSetRevisionItemId === item.revisionItemId,
       );
       const childOrderId = previousChild?.orderId ?? createMockOrderDraftUuid();
+      const childInput = row.childInputs?.find(
+        (candidate) => candidate.revisionItemId === item.revisionItemId,
+      );
       const itemSnapshot = {
         ...(item.appliedSnapshot ?? {}),
         schemaVersion: preview.schemaVersion,
@@ -993,6 +1409,32 @@ async function buildMockSetRuntimeRows({
         typeof itemSnapshot.lineTotalSnapshot === "number"
           ? itemSnapshot.lineTotalSnapshot
           : 0;
+      const childCanonical = resolveMockDraftCanonicalContract({
+        categoryGroup:
+          typeof itemSnapshot.categoryGroup === "string"
+            ? itemSnapshot.categoryGroup
+            : undefined,
+        legacyOrderType: mapCatalogCategoryToOrderType(
+          typeof itemSnapshot.categoryGroup === "string"
+            ? itemSnapshot.categoryGroup
+            : undefined,
+        ),
+      });
+      if (
+        childInput &&
+        !validateClinicalOrderDetailInputs({
+          clinicalOrderType: childCanonical.clinicalOrderType,
+          detailInputs: childInput.detailInputs,
+          requireComplete: false,
+          schemaVersion: childInput.detailSchemaVersion,
+        }).valid
+      ) {
+        return {
+          ok: false,
+          status: 422,
+          error: "child_detail_inputs_invalid",
+        };
+      }
       runtimeRows.push({
         orderId: childOrderId,
         workspaceId,
@@ -1003,6 +1445,18 @@ async function buildMockSetRuntimeRows({
             ? itemSnapshot.categoryGroup
             : undefined,
         ),
+        clinicalOrderType: childCanonical.clinicalOrderType,
+        destinationModule: childCanonical.destinationModule,
+        executionMode: childCanonical.executionMode,
+        detailInputs:
+          childInput?.detailInputs ?? previousChild?.detailInputs ?? {},
+        detailSchemaVersion:
+          childInput?.detailSchemaVersion ??
+          previousChild?.detailSchemaVersion ??
+          1,
+        priority: childInput?.priority ?? previousChild?.priority ?? "normal",
+        billingEligible: previousChild?.billingEligible ?? true,
+        revisionNo: previousChild?.revisionNo ?? 0,
         parentOrderId: row.orderId,
         sourceSetId: preview.set.sourceSetId,
         sourceSetRevisionId: preview.set.sourceSetRevisionId,
@@ -1037,12 +1491,25 @@ function createMockOrderDraftUuid() {
 }
 
 function seedDraftLinesToRuntimeRows(rows: ChartOrderDraftLine[], workspaceId: string): ChartOrderRuntimeRow[] {
-  return rows.map((row) => ({
+  return rows.map((row) => {
+    const canonical = resolveMockDraftCanonicalContract({ existing: row });
+    return {
     orderId: row.orderId,
     workspaceId,
     encounterId: row.encounterId,
     rowType: "individual",
     orderType: "treatment",
+    clinicalOrderType: row.clinicalOrderType ?? canonical.clinicalOrderType,
+    destinationModule:
+      row.destinationModule !== undefined
+        ? row.destinationModule
+        : canonical.destinationModule,
+    executionMode: row.executionMode ?? canonical.executionMode,
+    detailInputs: row.detailInputs ?? {},
+    detailSchemaVersion: row.detailSchemaVersion ?? 1,
+    priority: row.priority ?? "normal",
+    billingEligible: row.billingEligible ?? true,
+    revisionNo: row.revisionNo ?? 0,
     parentOrderId: null,
     sourceSetId: null,
     sourceSetRevisionId: null,
@@ -1065,7 +1532,8 @@ function seedDraftLinesToRuntimeRows(rows: ChartOrderDraftLine[], workspaceId: s
     orderConfirmationStatus: "draft",
     status: "requested",
     updatedAt: row.updatedAt,
-  }));
+    };
+  });
 }
 
 function mockChartOrderEtag(rows: ChartOrderRuntimeRow[]) {
@@ -1074,6 +1542,9 @@ function mockChartOrderEtag(rows: ChartOrderRuntimeRow[]) {
 
 function mapChartDraftRpcError(message: string) {
   const known = [
+    "detail_inputs_invalid",
+    "child_detail_inputs_invalid",
+    "set_child_input_unavailable",
     "order_set_member_unavailable",
     "order_set_composition_review_required",
     "order_set_price_unset",

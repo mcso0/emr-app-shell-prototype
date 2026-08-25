@@ -1236,6 +1236,10 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
             workspaceId,
             encounterId,
             orderId: "00000000-0000-4000-8000-000000000301",
+            taskId: "00000000-0000-4000-8000-000000000801",
+            taskAttemptNo: 1,
+            clinicalOrderType: "clinical_lab",
+            destinationModule: "lab",
             orderType: "lab",
             queueType: "lab",
             status: "requested",
@@ -1300,7 +1304,11 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
     ok: true,
     workItems: [
       {
+        clinicalOrderType: "clinical_lab",
+        destinationModule: "lab",
         queueType: "lab",
+        taskAttemptNo: 1,
+        taskId: "00000000-0000-4000-8000-000000000801",
         sourceSnapshot: {
           orderDisplayName: "CBC 검사",
           workspaceCatalogItemId: "a3-catalog-cbc",

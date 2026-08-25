@@ -96,6 +96,47 @@ export type PermissionId = `${PermissionResource}:${PermissionAction}`;
 export type OrderGroupType = "dispensing" | "treatment" | "lab" | "imaging" | "mixed";
 export type OrderGroupStatus = "requested" | "in_progress" | "completed" | "cancelled";
 export type EmrOrderType = "dispensing" | "treatment" | "lab" | "imaging";
+export type ClinicalOrderType =
+  | "consultation"
+  | "clinical_lab"
+  | "imaging"
+  | "external_lab"
+  | "dispensing"
+  | "treatment"
+  | "hospitalization"
+  | "other";
+export type ClinicalOrderDestinationModule =
+  | "consultation"
+  | "lab"
+  | "imaging"
+  | "external_lab"
+  | "dispensing"
+  | "treatment"
+  | "hospitalization"
+  | "other";
+export type ClinicalOrderExecutionMode =
+  | "routed"
+  | "immediate_complete"
+  | "aggregate";
+export type ClinicalOrderPriority = "normal" | "urgent";
+export type UniversalOrderTaskStatus =
+  | "pending"
+  | "in_progress"
+  | "paused"
+  | "partial_complete"
+  | "complete"
+  | "cancelled";
+export type UniversalOrderTaskRole = "execution" | "aggregate";
+export type UniversalOrderTaskEventType =
+  | "created"
+  | "started"
+  | "paused"
+  | "resumed"
+  | "completed"
+  | "cancelled"
+  | "amended"
+  | "re_requested"
+  | "priority_changed";
 export type EmrOrderStatus = "requested" | "re_requested" | "in_progress" | "confirmed" | "completed" | "cancelled";
 export type EmrOrderWorkStatus = "pending" | "completed";
 export type OrderAssignmentStatus = "active" | "cancelled" | "completed";

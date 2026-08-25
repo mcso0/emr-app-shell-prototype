@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The production-bound project recorded canonical 20260824091724_clinical_master_release_scoped_workspace_adoption.sql under remote version 20260824101517.
+-- The remote stored statement and canonical local file have identical SHA-256 4699bbd82b0e5af6a40066750f6876110cf128b1e7d546f187aa10a1ed6c9cd2.
+-- Keep this file comment-only so fresh local replay executes the behavior once.

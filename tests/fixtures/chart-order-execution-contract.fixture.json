@@ -1,0 +1,160 @@
+{
+  "releaseKey": "chart-order-execution-contract-v1",
+  "detailSchemaVersion": 1,
+  "clinicalOrderTypes": [
+    {
+      "type": "consultation",
+      "label": "진료",
+      "destinationModule": null,
+      "executionMode": "immediate_complete",
+      "inlineFields": ["responsibleClinicianId", "occurrenceCount", "timing", "instructionSummary"],
+      "detailFields": ["consultationNote", "attachments"]
+    },
+    {
+      "type": "clinical_lab",
+      "label": "임상",
+      "destinationModule": "lab",
+      "executionMode": "routed",
+      "inlineFields": ["specimenType", "testPanel", "collectionCondition"],
+      "detailFields": ["pretreatment", "clinicalContext"]
+    },
+    {
+      "type": "imaging",
+      "label": "영상",
+      "destinationModule": "imaging",
+      "executionMode": "routed",
+      "inlineFields": ["bodyRegion", "position", "viewCount", "contrastRequired", "sedationRequired"],
+      "detailFields": ["imagingProtocol", "exceptions"]
+    },
+    {
+      "type": "external_lab",
+      "label": "원외(검사)",
+      "destinationModule": "external_lab",
+      "executionMode": "routed",
+      "inlineFields": ["providerId", "specimenType", "testItem", "shippingCondition"],
+      "detailFields": ["providerForm", "packaging", "tracking"]
+    },
+    {
+      "type": "dispensing",
+      "label": "조제",
+      "destinationModule": "dispensing",
+      "executionMode": "routed",
+      "inlineFields": ["doseBasis", "dose", "doseUnit", "route", "frequency", "durationDays", "totalQuantity"],
+      "detailFields": ["taperSchedule", "compoundNote", "guardianNote"]
+    },
+    {
+      "type": "treatment",
+      "label": "처치",
+      "destinationModule": "treatment",
+      "executionMode": "routed",
+      "inlineFields": ["method", "site", "administeredAmount", "frequency", "schedule"],
+      "detailFields": ["stagedInstructions", "exceptions"]
+    },
+    {
+      "type": "hospitalization",
+      "label": "입원",
+      "destinationModule": "hospitalization",
+      "executionMode": "routed",
+      "inlineFields": ["durationDays", "wardOrCage", "careLevel", "monitoringInterval"],
+      "detailFields": ["nursingPlan", "dietPlan", "isolationPlan"]
+    },
+    {
+      "type": "other",
+      "label": "기타",
+      "destinationModule": null,
+      "executionMode": "immediate_complete",
+      "inlineFields": ["structuredValue"],
+      "detailFields": ["description", "attachments", "exceptions"]
+    }
+  ],
+  "fieldDefinitionRequirements": [
+    "key",
+    "valueType",
+    "label",
+    "control",
+    "unit",
+    "options",
+    "displayOrder",
+    "required",
+    "defaultValue",
+    "validation",
+    "placement",
+    "bulkEditable",
+    "semantics",
+    "preConfirmEditable",
+    "postConfirmBehavior",
+    "snapshotPath"
+  ],
+  "legacyMapping": {
+    "categoryGroup": {
+      "consultation": "consultation",
+      "hospitalization": "hospitalization",
+      "imaging": "imaging",
+      "lab": "clinical_lab",
+      "medication": "dispensing",
+      "misc": "other",
+      "treatment": "treatment"
+    },
+    "destinationNormalization": {
+      "billing_only": { "destinationModule": null, "executionMode": "immediate_complete" },
+      "chart_only": { "destinationModule": null, "executionMode": "immediate_complete" }
+    },
+    "externalLabRule": "canonical_master_field_only",
+    "confirmedWithoutQueue": "complete_destinationless_with_legacy_classification"
+  },
+  "confirmationScenario": {
+    "workspaceId": "clair-demo",
+    "encounterId": "00000000-0000-4000-8000-000000000001",
+    "actorUserId": "00000000-0000-4000-8000-000000000002",
+    "initialEtag": "\"fixture-draft-v1\"",
+    "staleEtag": "\"fixture-draft-v0\"",
+    "idempotencyKey": "00000000-0000-4000-8000-000000000003",
+    "selectedRootOrderIds": [
+      "00000000-0000-4000-8000-000000000101",
+      "00000000-0000-4000-8000-000000000102",
+      "00000000-0000-4000-8000-000000000113"
+    ],
+    "rows": [
+      { "orderId": "00000000-0000-4000-8000-000000000101", "rowType": "individual", "clinicalOrderType": "consultation", "destinationModule": null, "executionMode": "immediate_complete", "priority": "normal", "priceKrw": 15000 },
+      { "orderId": "00000000-0000-4000-8000-000000000102", "rowType": "individual", "clinicalOrderType": "clinical_lab", "destinationModule": "lab", "executionMode": "routed", "priority": "urgent", "priceKrw": 50000 },
+      { "orderId": "00000000-0000-4000-8000-000000000103", "rowType": "individual", "clinicalOrderType": "imaging", "destinationModule": "imaging", "executionMode": "routed", "priority": "normal", "priceKrw": 70000 },
+      { "orderId": "00000000-0000-4000-8000-000000000104", "rowType": "individual", "clinicalOrderType": "external_lab", "destinationModule": "external_lab", "executionMode": "routed", "priority": "urgent", "priceKrw": 90000 },
+      { "orderId": "00000000-0000-4000-8000-000000000105", "rowType": "individual", "clinicalOrderType": "dispensing", "destinationModule": "dispensing", "executionMode": "routed", "priority": "normal", "priceKrw": 28000 },
+      { "orderId": "00000000-0000-4000-8000-000000000106", "rowType": "individual", "clinicalOrderType": "treatment", "destinationModule": "treatment", "executionMode": "routed", "priority": "normal", "priceKrw": 32000 },
+      { "orderId": "00000000-0000-4000-8000-000000000107", "rowType": "individual", "clinicalOrderType": "hospitalization", "destinationModule": "hospitalization", "executionMode": "routed", "priority": "normal", "priceKrw": 120000 },
+      { "orderId": "00000000-0000-4000-8000-000000000108", "rowType": "individual", "clinicalOrderType": "other", "destinationModule": null, "executionMode": "immediate_complete", "priority": "normal", "priceKrw": 10000 },
+      { "orderId": "00000000-0000-4000-8000-000000000109", "rowType": "individual", "clinicalOrderType": "dispensing", "destinationModule": "dispensing", "executionMode": "routed", "priority": "normal", "priceKrw": 14000 },
+      { "orderId": "00000000-0000-4000-8000-000000000110", "rowType": "individual", "clinicalOrderType": "clinical_lab", "destinationModule": "lab", "executionMode": "routed", "priority": "normal", "priceKrw": 25000 },
+      { "orderId": "00000000-0000-4000-8000-000000000111", "rowType": "individual", "clinicalOrderType": "treatment", "destinationModule": "treatment", "executionMode": "routed", "priority": "urgent", "priceKrw": 45000 },
+      { "orderId": "00000000-0000-4000-8000-000000000112", "rowType": "individual", "clinicalOrderType": "consultation", "destinationModule": null, "executionMode": "immediate_complete", "priority": "normal", "priceKrw": 10000 },
+      {
+        "orderId": "00000000-0000-4000-8000-000000000113",
+        "rowType": "set",
+        "clinicalOrderType": "other",
+        "destinationModule": null,
+        "executionMode": "aggregate",
+        "priority": "normal",
+        "priceKrw": 0,
+        "children": [
+          { "orderId": "00000000-0000-4000-8000-000000000114", "rowType": "set_child", "clinicalOrderType": "clinical_lab", "destinationModule": "lab", "executionMode": "routed", "priority": "normal", "priceKrw": 18000, "included": true },
+          { "orderId": "00000000-0000-4000-8000-000000000115", "rowType": "set_child", "clinicalOrderType": "imaging", "destinationModule": "imaging", "executionMode": "routed", "priority": "normal", "priceKrw": 24000, "included": true },
+          { "orderId": "00000000-0000-4000-8000-000000000116", "rowType": "set_child", "clinicalOrderType": "dispensing", "destinationModule": "dispensing", "executionMode": "routed", "priority": "normal", "priceKrw": 8000, "included": true }
+        ]
+      }
+    ],
+    "expected": {
+      "draftArtifactCounts": { "tasks": 0, "queues": 0, "billingCandidates": 0, "notifications": 0 },
+      "confirmedRootCount": 3,
+      "remainingDraftRootCount": 10,
+      "taskCount": 6,
+      "aggregateTaskCount": 1,
+      "executionTaskCount": 5,
+      "immediateCompleteTaskCount": 1,
+      "queueProjectionCount": 4,
+      "billingCandidateCount": 5,
+      "retryCreatesAdditionalArtifacts": false,
+      "differentPayloadSameKeyConflicts": true,
+      "staleEtagConflicts": true
+    }
+  }
+}
