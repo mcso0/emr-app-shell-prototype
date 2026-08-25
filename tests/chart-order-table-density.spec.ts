@@ -19,8 +19,7 @@ test("chart order table changes density from the selected-value dropdown", async
   await densityTrigger.click();
   await page.getByRole("menuitemradio", { name: "넓은 간격" }).click();
 
-  await expect(orderArea.locator("table[data-emr-density]")).toHaveAttribute(
-    "data-emr-density",
-    "comfortable",
-  );
+  await expect(
+    orderArea.getByRole("table", { name: "처방/오더 테이블" }),
+  ).toHaveAttribute("data-emr-density", "comfortable");
 });
