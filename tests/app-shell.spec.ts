@@ -240,6 +240,11 @@ test("global command palette opens patient guardian registration from any worksp
   await expect(page.getByRole("heading", { name: "신규 등록" })).toBeVisible();
   await expect(page.getByText("환자/보호자 모두 신규 등록")).toBeVisible();
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing\?modulePanel=open&aside=closed/);
+  await page.getByRole("button", { name: "다음" }).click();
+  await expect(page.getByRole("heading", { name: "신규 보호자 등록" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "이전" })).toBeVisible();
+  await page.getByRole("button", { name: "이전" }).click();
+  await expect(page.getByRole("heading", { name: "신규 등록" })).toBeVisible();
 });
 
 test("global command palette opens new reception drawer from any workspace module", async ({

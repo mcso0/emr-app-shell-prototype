@@ -19,11 +19,13 @@ const appointmentId = "appointment-nabi-260501";
 const validRegistrationInput = {
   mode: "new_guardian_patient" as const,
   guardian: {
+    birthDate: "1993-11-23",
     name: "김새봄",
     mobilePhone: "010-2222-3333",
     privacyConsent: true,
   },
   patient: {
+    estimatedAgeText: "2년",
     name: "새롬",
     species: "dog" as const,
     breed: "푸들",

@@ -10,6 +10,7 @@ import {
 const validRegistrationInput = {
   mode: "new_guardian_patient" as const,
   guardian: {
+    birthDate: "1993-11-23",
     name: "김새봄",
     mobilePhone: "010-2222-3333",
     privacyConsent: true,
@@ -98,6 +99,58 @@ test("reception registration core enforces reception create permission", async (
     ok: false,
     status: 403,
     denialReason: "permission_missing",
+  });
+});
+
+test("reception registration core rejects missing or future birth dates", async () => {
+  const missingDates = await registerReceptionPatientGuardian({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: {
+      ...validRegistrationInput,
+      guardian: {
+        ...validRegistrationInput.guardian,
+        birthDate: undefined,
+      },
+      patient: {
+        ...validRegistrationInput.patient,
+        estimatedAgeText: undefined,
+      },
+    },
+  });
+
+  expect(missingDates).toMatchObject({
+    ok: false,
+    status: 400,
+    fieldErrors: {
+      guardianBirthDate: "보호자 생년월일은 필수입니다.",
+      patientAge: "환자 나이 또는 생년월일은 필수입니다.",
+    },
+  });
+
+  const futureDates = await registerReceptionPatientGuardian({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: {
+      ...validRegistrationInput,
+      guardian: {
+        ...validRegistrationInput.guardian,
+        birthDate: "2026-05-02",
+      },
+      patient: {
+        ...validRegistrationInput.patient,
+        birthDate: "2026-05-02",
+      },
+    },
+  });
+
+  expect(futureDates).toMatchObject({
+    ok: false,
+    status: 400,
+    fieldErrors: {
+      guardianBirthDate: "보호자 생년월일을 올바르게 입력해 주세요.",
+      patientBirthDate: "환자 생년월일을 올바르게 입력해 주세요.",
+    },
   });
 });
 

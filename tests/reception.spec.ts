@@ -2213,8 +2213,11 @@ test("patient guardian registration creates a new guardian and patient after con
     page.getByRole("heading", { name: "신규 보호자 등록" }),
   ).toBeVisible();
   await expect(page.getByText("1/2 보호자")).toBeVisible();
+  await expect(page.getByRole("button", { name: "이전" })).toHaveCount(0);
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("보호자명은 필수입니다.")).toBeVisible();
+  await expect(page.getByLabel("보호자명")).toBeFocused();
+  await expect(page.getByLabel("보호자명")).toHaveAttribute("aria-invalid", "true");
   await page.getByLabel("보호자명").fill("김새봄");
   await page.getByLabel("보호자 생년월일").fill("19931340");
   await expect(page.getByLabel("보호자 생년월일")).toHaveValue("1993-13-40");
@@ -2335,10 +2338,7 @@ test("patient guardian registration dialogs keep dim backdrop without zoom motio
         await closePath.close(page, registrationDialog);
         await expect(
           page.getByRole("dialog", { name: "입력을 취소할까요?" }),
-        ).toBeVisible();
-        await expectRegistrationDialogsWithDimAndWithoutZoom(page);
-
-        await page.getByRole("button", { name: "취소하고 나가기" }).click();
+        ).toHaveCount(0);
         await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
       });
     }
@@ -2489,10 +2489,14 @@ test("patient guardian registration links an existing guardian to a new patient"
   ).toHaveCount(0);
   await expect(page.getByText("보호자 선택")).toBeVisible();
   await expect(page.getByText("환자 정보")).toBeVisible();
-  await expect(page.getByRole("button", { name: "다음" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "이전" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "다음" })).toBeEnabled();
+  await page.getByRole("button", { name: "다음" }).click();
+  await expect(page.getByText("기존 보호자를 선택해 주세요.")).toBeVisible();
+  await expect(page.getByLabel("기존 보호자 검색")).toBeFocused();
   await page.getByLabel("기존 보호자 검색").fill("오세아");
   await page.getByRole("option", { name: /오세아/ }).click();
-  await expect(page.getByRole("button", { name: "다음" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "다음" })).toBeEnabled();
 
   const registrationDialog = page.getByLabel("기존 보호자에 신규 환자 등록");
   await expect(page.getByLabel("기존 보호자 검색")).toHaveValue(
@@ -2513,16 +2517,57 @@ test("patient guardian registration links an existing guardian to a new patient"
   await page.getByRole("option", { name: "치와와" }).click();
   await expect(page.getByText("푸들")).toBeVisible();
   await expect(page.getByText("치와와")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "믹스" })).toBeChecked();
   await page.getByLabel("나이 개월").fill("8");
+  await expect(page.getByLabel("생년월일")).toHaveValue("2025-09-01");
+  await expect(page.getByRole("checkbox", { name: "추정" })).toBeVisible();
   await page.getByLabel("동물등록번호").fill("410-2026-00001");
   await expect(page.getByRole("button", { name: "다음" })).toBeEnabled();
   await page.getByRole("button", { name: "다음" }).click();
   await expect(
     page.getByRole("heading", { name: "등록 정보 확인" }),
   ).toBeVisible();
+  const confirmationDialog = page.getByRole("dialog", { name: "등록 정보 확인" });
+  await expect(confirmationDialog.getByText("기존 보호자/신규 환자")).toBeVisible();
+  await expect(confirmationDialog.getByText("기존", { exact: true })).toBeVisible();
+  await expect(confirmationDialog.getByText("신규", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "등록" }).click();
 
   await expect(page.getByText("환자 등록이 완료되었습니다.")).toBeVisible();
+});
+
+test("patient guardian registration footer stays in one row at 390px", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/w/clair-demo/reception");
+  await page
+    .getByRole("button", { name: "환자/보호자 등록", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "신규 환자/보호자 등록" })
+    .click();
+  await page.getByLabel("보호자명").fill("모바일보호자");
+  await page.getByLabel("보호자 생년월일").fill("19900101");
+  await page.getByLabel("보호자 휴대전화").fill("01012345678");
+  await page.getByRole("button", { name: "태블릿 서명 요청" }).click();
+  await page.getByRole("button", { name: "서명 완료 처리" }).click();
+  await page.getByRole("button", { name: "다음" }).click();
+
+  const dialog = page.getByRole("dialog", { name: /신규 환자 등록/ });
+  const footer = dialog.locator('[data-slot="dialog-footer"]');
+  await expect(footer).toHaveCSS("flex-direction", "row");
+  await expect(dialog.getByRole("button", { name: "취소" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "이전" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "다음" })).toBeVisible();
+
+  const buttonTops = await Promise.all(
+    ["취소", "이전", "다음"].map(async (name) => {
+      const box = await dialog.getByRole("button", { name }).boundingBox();
+      return box?.y ?? Number.NaN;
+    }),
+  );
+  expect(Math.max(...buttonTops) - Math.min(...buttonTops)).toBeLessThanOrEqual(1);
 });
 
 test("existing guardian registration uses only workspace lookup records and submits the live UUID", async ({

@@ -184,16 +184,20 @@ export function EmrRegistrationSection({
 export function EmrRegistrationFieldRow({
   children,
   className,
+  controlId,
   controlClassName,
   error,
+  errorId,
   icon,
   label,
   required,
 }: {
   children: ReactNode;
   className?: string;
+  controlId?: string;
   controlClassName?: string;
   error?: string;
+  errorId?: string;
   icon?: ReactNode;
   label: ReactNode;
   required?: boolean;
@@ -208,7 +212,10 @@ export function EmrRegistrationFieldRow({
       data-invalid={Boolean(error) || undefined}
       style={{ gap: "var(--clair-spacing-12)" }}
     >
-      <FieldLabel className="flex h-8 min-w-0 items-center gap-2 text-[14px] font-medium leading-5 text-[var(--clair-color-atomic-neutral-500)]">
+      <FieldLabel
+        className="flex h-8 min-w-0 items-center gap-2 text-[14px] font-medium leading-5 text-[var(--clair-color-atomic-neutral-500)]"
+        htmlFor={controlId}
+      >
         <span aria-hidden="true" className="flex size-[15px] shrink-0 items-center justify-center text-[var(--clair-color-atomic-neutral-500)]">
           {getRegistrationFieldIcon(label, icon)}
         </span>
@@ -223,7 +230,11 @@ export function EmrRegistrationFieldRow({
       </FieldLabel>
       <div className={cn("min-w-0", controlClassName)}>
         {children}
-        {error ? <FieldError className="mt-1 emr-text-metadata leading-4">{error}</FieldError> : null}
+        {error ? (
+          <FieldError id={errorId} className="mt-1 emr-text-metadata leading-4">
+            {error}
+          </FieldError>
+        ) : null}
       </div>
     </FormField>
   );
@@ -316,20 +327,24 @@ export function EmrRegistrationCheckboxLabel({
   control: ReactNode;
 }) {
   return (
-    <span className="inline-flex min-w-[50px] shrink-0 items-center justify-end gap-1.5 whitespace-nowrap emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
+    <label className="inline-flex min-w-[50px] shrink-0 cursor-pointer items-center justify-end gap-1.5 whitespace-nowrap emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
       {control}
       {children}
-    </span>
+    </label>
   );
 }
 
 export function EmrRegistrationSignatureConsentCard({
+  controlId,
   error,
+  errorId,
   signatureStatus,
   onCompleteSignature,
   onRequestSignature,
 }: {
+  controlId?: string;
   error?: string;
+  errorId?: string;
   signatureStatus: EmrRegistrationSignatureStatus;
   onCompleteSignature: () => void;
   onRequestSignature: () => void;
@@ -343,8 +358,18 @@ export function EmrRegistrationSignatureConsentCard({
   const handleClick = signatureStatus === "pending" ? onCompleteSignature : onRequestSignature;
 
   return (
-    <EmrRegistrationFieldRow error={error} label="전자 서명" required>
+    <EmrRegistrationFieldRow
+      controlId={controlId}
+      error={error}
+      errorId={errorId}
+      label="전자 서명"
+      required
+    >
       <Button
+        id={controlId}
+        aria-describedby={error ? errorId : undefined}
+        aria-invalid={Boolean(error) || undefined}
+        aria-label={actionLabel}
         type="button"
         variant="outline"
         className="w-[122px]"
@@ -358,10 +383,14 @@ export function EmrRegistrationSignatureConsentCard({
 }
 
 export function EmrRegistrationSummaryItem({
+  badgeLabel = "신규",
+  badgeTone = "primary",
   details,
   icon,
   title,
 }: {
+  badgeLabel?: string;
+  badgeTone?: "neutral" | "primary";
   details: ReactNode[];
   icon: ReactNode;
   title: ReactNode;
@@ -392,8 +421,15 @@ export function EmrRegistrationSummaryItem({
           </span>
         </div>
       </div>
-      <span className="flex h-5 w-[34px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--clair-color-atomic-sky-50)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.025em] text-[var(--clair-color-atomic-sky-600)]">
-        신규
+      <span
+        className={cn(
+          "flex h-5 min-w-[34px] shrink-0 items-center justify-center rounded-[6px] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.025em]",
+          badgeTone === "primary"
+            ? "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-atomic-sky-600)]"
+            : "bg-[var(--clair-color-atomic-neutral-100)] text-[var(--clair-color-atomic-neutral-600)]"
+        )}
+      >
+        {badgeLabel}
       </span>
     </section>
   );
