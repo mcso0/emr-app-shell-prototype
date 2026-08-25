@@ -485,7 +485,7 @@ fresh-migration, negative validation, adoption retry, permission, and snapshot
 replay have passed. Remote application and production delivery are recorded
 only after their separate release gates complete.
 
-Applied chart diagnoses continue to allow free text. Catalog selection may assist search and traceability, but must not automatically claim diagnostic correctness.
+Applied chart diagnoses continue to allow free text. Catalog selection may assist search and traceability, but must not automatically claim diagnostic correctness. An encounter may mark multiple applied diagnosis rows as primary; this chart workflow flag is distinct from the exactly-one primary classification link that chooses a catalog diagnosis's default disease-group projection.
 
 ## 15. Workspace Copy And Customization Model
 

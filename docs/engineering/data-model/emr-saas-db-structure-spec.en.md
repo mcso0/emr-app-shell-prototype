@@ -411,7 +411,7 @@ Actual diagnosis records.
 | `diagnosis_snapshot` | jsonb nullable | Diagnosis/system/disease-group display snapshot at selection time |
 | `diagnosis_text` | text | |
 | `diagnosis_type` | text | `suspected`, `confirmed`, `differential` |
-| `is_primary` | boolean | At most one primary diagnosis per encounter |
+| `is_primary` | boolean | Primary marker; multiple rows may be primary per encounter |
 | `closed_at` | timestamptz nullable | Diagnosis closure time; `null` means open |
 | `closed_by_user_id` | uuid fk nullable | User who closed the diagnosis |
 | `sort_order` | integer | Default input order |

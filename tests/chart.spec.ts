@@ -3686,7 +3686,7 @@ test("chart SOAP tabs add systems, prevent duplicates, and delete", async ({
 test("chart diagnosis search recommends, adds, marks, and removes session diagnoses", async ({
   page,
 }) => {
-  await page.route("**/chart/diagnosis-catalog", async (route) => {
+  await page.route("**/chart/diagnosis-catalog**", async (route) => {
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
@@ -3755,7 +3755,12 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
     diagnosisPanel.locator(
       '[data-emr-table-checkbox-tone="brand"][aria-checked="true"]',
     ),
-  ).toHaveCount(1);
+  ).toHaveCount(2);
+  await expect(
+    diagnosisPanel.getByRole("checkbox", {
+      name: "급성 위장관염 의심 주진단",
+    }),
+  ).toHaveAttribute("aria-checked", "true");
 
   const pancreatitisClosed = diagnosisPanel.getByRole("checkbox", {
     name: "췌장염 감별 종결",
@@ -3787,7 +3792,6 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
   const baselinePrimary = diagnosisPanel.getByRole("checkbox", {
     name: "급성 위장관염 의심 주진단",
   });
-  await baselinePrimary.click();
   await expect(baselinePrimary).toHaveAttribute("aria-checked", "true");
 
   for (const diagnosisName of ["췌장염 감별", "경도 탈수"]) {
