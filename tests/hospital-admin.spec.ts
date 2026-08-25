@@ -1912,6 +1912,25 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
   );
   await expect(pinnedDimmer).toHaveCount(1);
   await expect(pinnedDivider).toHaveCount(1);
+  const firstOrderRow = table
+    .locator('tbody tr[data-emr-data-table-row="true"]')
+    .first();
+  const firstPinnedOrderCell = firstOrderRow.locator(
+    'td[data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
+  );
+  const firstScrollingOrderCell = firstOrderRow.locator(
+    'td[data-emr-column-pinned="left"][data-emr-pinned-edge="true"] + td',
+  );
+  await expect(firstPinnedOrderCell).toHaveCSS("border-bottom-width", "1px");
+  await expect(firstPinnedOrderCell).toHaveCSS(
+    "border-bottom-color",
+    "rgb(229, 229, 229)",
+  );
+  await expect(firstScrollingOrderCell).toHaveCSS("border-bottom-width", "1px");
+  await expect(firstScrollingOrderCell).toHaveCSS(
+    "border-bottom-color",
+    "rgb(229, 229, 229)",
+  );
   const metrics = await tableViewport.evaluate((element) => {
     const tableContainerElement = element.querySelector(
       '[data-slot="table-container"]',
