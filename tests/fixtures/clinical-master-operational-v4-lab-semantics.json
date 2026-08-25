@@ -1,0 +1,1224 @@
+{
+  "schemaVersion": "clinical-master-operational-lab-semantics/v4",
+  "releaseKey": "cm.release.airtable.operational-master.v4",
+  "syntheticOnly": true,
+  "clinicalAuthority": false,
+  "scope": "Operational labels and relationship coverage only; no reference ranges, interpretation, dose, or treatment recommendation.",
+  "terminologyReferences": [
+    {
+      "organization": "AAHA",
+      "topic": "preventive healthcare",
+      "url": "https://www.aaha.org/resources/2011-aaha-avma-preventive-healthcare-guidelines/"
+    },
+    {
+      "organization": "AAHA",
+      "topic": "anesthesia and monitoring",
+      "url": "https://www.aaha.org/resources/2020-aaha-anesthesia-and-monitoring-guidelines-for-dogs-and-cats/"
+    },
+    {
+      "organization": "AAHA",
+      "topic": "dental care",
+      "url": "https://www.aaha.org/resources/2019-aaha-dental-care-guidelines-for-dogs-and-cats/"
+    },
+    {
+      "organization": "AAHA",
+      "topic": "fluid therapy",
+      "url": "https://www.aaha.org/resources/2024-aaha-fluid-therapy-guidelines-for-dogs-and-cats/"
+    },
+    {
+      "organization": "RECOVER",
+      "topic": "veterinary resuscitation",
+      "url": "https://recoverinitiative.org/2024-guidelines/"
+    },
+    {
+      "organization": "WSAVA",
+      "topic": "vaccination",
+      "url": "https://wsava.org/Global-Guidelines/Vaccination-Guidelines/"
+    },
+    {
+      "organization": "Cornell AHDC",
+      "topic": "clinical chemistry",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/veterinary-resources/testing-guidelines/clinical-chemistry"
+    }
+  ],
+  "addedTests": [
+    {
+      "masterKey": "cm.lab-test.v4.globulin",
+      "name": "혈청 글로불린 검사",
+      "testCode": "GLOB",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.g-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.ag-ratio",
+      "name": "알부민·글로불린 비율 검사",
+      "testCode": "AG_RATIO",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": null,
+      "decimalScale": 2,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.direct-bilirubin",
+      "name": "직접 빌리루빈 검사",
+      "testCode": "DBIL",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.ggt",
+      "name": "감마글루타밀전이효소 검사",
+      "testCode": "GGT",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.u-l",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.ldh",
+      "name": "젖산탈수소효소 검사",
+      "testCode": "LDH",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.u-l",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.ck",
+      "name": "크레아틴키나아제 검사",
+      "testCode": "CK",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.u-l",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.cholesterol",
+      "name": "총콜레스테롤 검사",
+      "testCode": "CHOL",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.triglyceride",
+      "name": "중성지방 검사",
+      "testCode": "TG",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.amylase",
+      "name": "아밀라아제 검사",
+      "testCode": "AMYL",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.u-l",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.lipase",
+      "name": "리파아제 검사",
+      "testCode": "LIPA",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.u-l",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.sdma",
+      "name": "SDMA 검사",
+      "testCode": "SDMA",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.fructosamine",
+      "name": "프럭토사민 검사",
+      "testCode": "FRUCTOSAMINE",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 0,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.bile-acids",
+      "name": "총담즙산 검사",
+      "testCode": "TBA",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": null,
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.lactate",
+      "name": "젖산 검사",
+      "testCode": "LACTATE",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mmol-l",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.crp",
+      "name": "C-반응단백 검사",
+      "testCode": "CRP",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.saa",
+      "name": "혈청 아밀로이드 A 검사",
+      "testCode": "SAA",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.total-t4",
+      "name": "총 T4 검사",
+      "testCode": "TT4",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": null,
+      "decimalScale": 2,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.free-t4",
+      "name": "유리 T4 검사",
+      "testCode": "FT4",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": null,
+      "decimalScale": 2,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.tsh",
+      "name": "갑상선자극호르몬 검사",
+      "testCode": "TSH",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": null,
+      "decimalScale": 2,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.cortisol",
+      "name": "코르티솔 검사",
+      "testCode": "CORTISOL",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": null,
+      "decimalScale": 2,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.urine-creatinine",
+      "name": "요 크레아티닌 검사",
+      "testCode": "UCREA",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": "cm.unit.mg-dl",
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.upc-ratio",
+      "name": "요단백·크레아티닌 비율 검사",
+      "testCode": "UPC",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": null,
+      "decimalScale": 2,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.urine-ph",
+      "name": "요 pH 검사",
+      "testCode": "UA_PH",
+      "resultInputTypeKey": "cm.result-input.numeric",
+      "canonicalUnitKey": null,
+      "decimalScale": 1,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.urine-glucose",
+      "name": "요당 검사",
+      "testCode": "UA_GLUCOSE",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.urine-ketone",
+      "name": "요케톤 검사",
+      "testCode": "UA_KETONE",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.urine-bilirubin",
+      "name": "요빌리루빈 검사",
+      "testCode": "UA_BILIRUBIN",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.fecal-flotation",
+      "name": "분변 부유 검사",
+      "testCode": "FECAL_FLOAT",
+      "resultInputTypeKey": "cm.result-input.text",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.fecal-occult-blood",
+      "name": "분변 잠혈 검사",
+      "testCode": "FECAL_OB",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.canine-parvovirus-antigen",
+      "name": "개 파보바이러스 항원 검사",
+      "testCode": "CPV_AG",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.canine-distemper-antigen",
+      "name": "개 디스템퍼바이러스 항원 검사",
+      "testCode": "CDV_AG",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.swab"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.canine-heartworm-antigen",
+      "name": "개 심장사상충 항원 검사",
+      "testCode": "CHW_AG",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.feline-panleukopenia-antigen",
+      "name": "고양이 범백혈구감소증 항원 검사",
+      "testCode": "FPV_AG",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.feline-leukemia-antigen",
+      "name": "고양이 백혈병바이러스 항원 검사",
+      "testCode": "FELV_AG",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+      "name": "고양이 면역결핍바이러스 항체 검사",
+      "testCode": "FIV_AB",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.feline-coronavirus-antibody",
+      "name": "고양이 코로나바이러스 항체 검사",
+      "testCode": "FCOV_AB",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "masterKey": "cm.lab-test.v4.babesia-pcr",
+      "name": "바베시아 PCR 검사",
+      "testCode": "BABESIA_PCR",
+      "resultInputTypeKey": "cm.result-input.coded",
+      "canonicalUnitKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    }
+  ],
+  "addedPanels": [
+    {
+      "slug": "expanded-chemistry",
+      "name": "확장 혈청화학 패널",
+      "panelCode": "CHEM_EXPANDED",
+      "specimenMasterKey": "cm.specimen.serum",
+      "masterKey": "cm.lab-panel.v4.expanded-chemistry"
+    },
+    {
+      "slug": "lipid",
+      "name": "지질 검사 패널",
+      "panelCode": "LIPID",
+      "specimenMasterKey": "cm.specimen.serum",
+      "masterKey": "cm.lab-panel.v4.lipid"
+    },
+    {
+      "slug": "pancreatic",
+      "name": "췌장 평가 패널",
+      "panelCode": "PANCREATIC",
+      "specimenMasterKey": "cm.specimen.serum",
+      "masterKey": "cm.lab-panel.v4.pancreatic"
+    },
+    {
+      "slug": "inflammatory",
+      "name": "염증 표지 패널",
+      "panelCode": "INFLAMMATORY",
+      "specimenMasterKey": "cm.specimen.serum",
+      "masterKey": "cm.lab-panel.v4.inflammatory"
+    },
+    {
+      "slug": "thyroid",
+      "name": "갑상선 검사 패널",
+      "panelCode": "THYROID",
+      "specimenMasterKey": "cm.specimen.serum",
+      "masterKey": "cm.lab-panel.v4.thyroid"
+    },
+    {
+      "slug": "adrenal",
+      "name": "부신 검사 패널",
+      "panelCode": "ADRENAL",
+      "specimenMasterKey": "cm.specimen.serum",
+      "masterKey": "cm.lab-panel.v4.adrenal"
+    },
+    {
+      "slug": "urine-protein",
+      "name": "요단백 평가 패널",
+      "panelCode": "URINE_PROTEIN",
+      "specimenMasterKey": "cm.specimen.urine",
+      "masterKey": "cm.lab-panel.v4.urine-protein"
+    },
+    {
+      "slug": "infectious-screen",
+      "name": "감염성 질환 선별 패널",
+      "panelCode": "INFECTIOUS_SCREEN",
+      "specimenMasterKey": "cm.specimen.edta-whole-blood",
+      "masterKey": "cm.lab-panel.v4.infectious-screen"
+    }
+  ],
+  "addedPanelLinks": [
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.chem-alt",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.chem-alp",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.synthetic-03",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.synthetic-04",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.v4.direct-bilirubin",
+      "sortOrder": 4,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.synthetic-05",
+      "sortOrder": 5,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.chem-total-protein",
+      "sortOrder": 6,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.v4.globulin",
+      "sortOrder": 7,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.v4.ag-ratio",
+      "sortOrder": 8,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.chem-bun",
+      "sortOrder": 9,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.chem-creatinine",
+      "sortOrder": 10,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "testMasterKey": "cm.lab-test.chem-glucose",
+      "sortOrder": 11,
+      "required": true,
+      "displayGroup": "expanded_chemistry"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.lipid",
+      "testMasterKey": "cm.lab-test.v4.cholesterol",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "lipid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.lipid",
+      "testMasterKey": "cm.lab-test.v4.triglyceride",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "lipid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.lipid",
+      "testMasterKey": "cm.lab-test.synthetic-05",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "lipid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.lipid",
+      "testMasterKey": "cm.lab-test.chem-glucose",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "lipid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.pancreatic",
+      "testMasterKey": "cm.lab-test.v4.amylase",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "pancreatic"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.pancreatic",
+      "testMasterKey": "cm.lab-test.v4.lipase",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "pancreatic"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.pancreatic",
+      "testMasterKey": "cm.lab-test.chem-glucose",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "pancreatic"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.pancreatic",
+      "testMasterKey": "cm.lab-test.synthetic-05",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "pancreatic"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.pancreatic",
+      "testMasterKey": "cm.lab-test.synthetic-06",
+      "sortOrder": 4,
+      "required": true,
+      "displayGroup": "pancreatic"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.pancreatic",
+      "testMasterKey": "cm.lab-test.v4.triglyceride",
+      "sortOrder": 5,
+      "required": true,
+      "displayGroup": "pancreatic"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.inflammatory",
+      "testMasterKey": "cm.lab-test.v4.crp",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "inflammatory"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.inflammatory",
+      "testMasterKey": "cm.lab-test.v4.saa",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "inflammatory"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.inflammatory",
+      "testMasterKey": "cm.lab-test.cbc-wbc",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "inflammatory"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.inflammatory",
+      "testMasterKey": "cm.lab-test.cbc-hct",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "inflammatory"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.inflammatory",
+      "testMasterKey": "cm.lab-test.cbc-plt",
+      "sortOrder": 4,
+      "required": true,
+      "displayGroup": "inflammatory"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.inflammatory",
+      "testMasterKey": "cm.lab-test.synthetic-05",
+      "sortOrder": 5,
+      "required": true,
+      "displayGroup": "inflammatory"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.thyroid",
+      "testMasterKey": "cm.lab-test.v4.total-t4",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "thyroid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.thyroid",
+      "testMasterKey": "cm.lab-test.v4.free-t4",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "thyroid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.thyroid",
+      "testMasterKey": "cm.lab-test.v4.tsh",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "thyroid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.thyroid",
+      "testMasterKey": "cm.lab-test.v4.cholesterol",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "thyroid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.thyroid",
+      "testMasterKey": "cm.lab-test.v4.ck",
+      "sortOrder": 4,
+      "required": true,
+      "displayGroup": "thyroid"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.adrenal",
+      "testMasterKey": "cm.lab-test.v4.cortisol",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "adrenal"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.adrenal",
+      "testMasterKey": "cm.lab-test.synthetic-08",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "adrenal"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.adrenal",
+      "testMasterKey": "cm.lab-test.synthetic-09",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "adrenal"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.adrenal",
+      "testMasterKey": "cm.lab-test.synthetic-10",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "adrenal"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.adrenal",
+      "testMasterKey": "cm.lab-test.chem-glucose",
+      "sortOrder": 4,
+      "required": true,
+      "displayGroup": "adrenal"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.v4.urine-creatinine",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.v4.upc-ratio",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.v4.urine-ph",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.v4.urine-glucose",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.v4.urine-ketone",
+      "sortOrder": 4,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.v4.urine-bilirubin",
+      "sortOrder": 5,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.synthetic-16",
+      "sortOrder": 6,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.synthetic-15",
+      "sortOrder": 7,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.ua-strip",
+      "sortOrder": 8,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "testMasterKey": "cm.lab-test.ua-sediment",
+      "sortOrder": 9,
+      "required": true,
+      "displayGroup": "urinalysis"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.fecal-flotation",
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.fecal-occult-blood",
+      "sortOrder": 1,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.canine-parvovirus-antigen",
+      "sortOrder": 2,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.canine-distemper-antigen",
+      "sortOrder": 3,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.canine-heartworm-antigen",
+      "sortOrder": 4,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.feline-panleukopenia-antigen",
+      "sortOrder": 5,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.feline-leukemia-antigen",
+      "sortOrder": 6,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+      "sortOrder": 7,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.feline-coronavirus-antibody",
+      "sortOrder": 8,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.v4.babesia-pcr",
+      "sortOrder": 9,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.giardia-antigen",
+      "sortOrder": 10,
+      "required": true,
+      "displayGroup": "infectious"
+    },
+    {
+      "panelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "testMasterKey": "cm.lab-test.fecal-microscopy",
+      "sortOrder": 11,
+      "required": true,
+      "displayGroup": "infectious"
+    }
+  ],
+  "addedOrderProfiles": [
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.01",
+      "orderName": "혈청 글로불린 검사",
+      "labTestMasterKey": "cm.lab-test.v4.globulin",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.02",
+      "orderName": "알부민·글로불린 비율 검사",
+      "labTestMasterKey": "cm.lab-test.v4.ag-ratio",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.03",
+      "orderName": "직접 빌리루빈 검사",
+      "labTestMasterKey": "cm.lab-test.v4.direct-bilirubin",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.04",
+      "orderName": "감마글루타밀전이효소 검사",
+      "labTestMasterKey": "cm.lab-test.v4.ggt",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.05",
+      "orderName": "젖산탈수소효소 검사",
+      "labTestMasterKey": "cm.lab-test.v4.ldh",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.06",
+      "orderName": "크레아틴키나아제 검사",
+      "labTestMasterKey": "cm.lab-test.v4.ck",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.07",
+      "orderName": "총콜레스테롤 검사",
+      "labTestMasterKey": "cm.lab-test.v4.cholesterol",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.08",
+      "orderName": "중성지방 검사",
+      "labTestMasterKey": "cm.lab-test.v4.triglyceride",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.09",
+      "orderName": "아밀라아제 검사",
+      "labTestMasterKey": "cm.lab-test.v4.amylase",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.10",
+      "orderName": "리파아제 검사",
+      "labTestMasterKey": "cm.lab-test.v4.lipase",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.11",
+      "orderName": "SDMA 검사",
+      "labTestMasterKey": "cm.lab-test.v4.sdma",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.12",
+      "orderName": "프럭토사민 검사",
+      "labTestMasterKey": "cm.lab-test.v4.fructosamine",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.13",
+      "orderName": "총담즙산 검사",
+      "labTestMasterKey": "cm.lab-test.v4.bile-acids",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.14",
+      "orderName": "젖산 검사",
+      "labTestMasterKey": "cm.lab-test.v4.lactate",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.15",
+      "orderName": "C-반응단백 검사",
+      "labTestMasterKey": "cm.lab-test.v4.crp",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.16",
+      "orderName": "혈청 아밀로이드 A 검사",
+      "labTestMasterKey": "cm.lab-test.v4.saa",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.17",
+      "orderName": "총 T4 검사",
+      "labTestMasterKey": "cm.lab-test.v4.total-t4",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.18",
+      "orderName": "유리 T4 검사",
+      "labTestMasterKey": "cm.lab-test.v4.free-t4",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.19",
+      "orderName": "갑상선자극호르몬 검사",
+      "labTestMasterKey": "cm.lab-test.v4.tsh",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.20",
+      "orderName": "코르티솔 검사",
+      "labTestMasterKey": "cm.lab-test.v4.cortisol",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.21",
+      "orderName": "요 크레아티닌 검사",
+      "labTestMasterKey": "cm.lab-test.v4.urine-creatinine",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.22",
+      "orderName": "요단백·크레아티닌 비율 검사",
+      "labTestMasterKey": "cm.lab-test.v4.upc-ratio",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.23",
+      "orderName": "요 pH 검사",
+      "labTestMasterKey": "cm.lab-test.v4.urine-ph",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.24",
+      "orderName": "요당 검사",
+      "labTestMasterKey": "cm.lab-test.v4.urine-glucose",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.25",
+      "orderName": "요케톤 검사",
+      "labTestMasterKey": "cm.lab-test.v4.urine-ketone",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.26",
+      "orderName": "요빌리루빈 검사",
+      "labTestMasterKey": "cm.lab-test.v4.urine-bilirubin",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.27",
+      "orderName": "분변 부유 검사",
+      "labTestMasterKey": "cm.lab-test.v4.fecal-flotation",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.28",
+      "orderName": "분변 잠혈 검사",
+      "labTestMasterKey": "cm.lab-test.v4.fecal-occult-blood",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.29",
+      "orderName": "개 파보바이러스 항원 검사",
+      "labTestMasterKey": "cm.lab-test.v4.canine-parvovirus-antigen",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.30",
+      "orderName": "개 디스템퍼바이러스 항원 검사",
+      "labTestMasterKey": "cm.lab-test.v4.canine-distemper-antigen",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.swab"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.31",
+      "orderName": "개 심장사상충 항원 검사",
+      "labTestMasterKey": "cm.lab-test.v4.canine-heartworm-antigen",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.32",
+      "orderName": "고양이 범백혈구감소증 항원 검사",
+      "labTestMasterKey": "cm.lab-test.v4.feline-panleukopenia-antigen",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.feces"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.33",
+      "orderName": "고양이 백혈병바이러스 항원 검사",
+      "labTestMasterKey": "cm.lab-test.v4.feline-leukemia-antigen",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.34",
+      "orderName": "고양이 면역결핍바이러스 항체 검사",
+      "labTestMasterKey": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.35",
+      "orderName": "고양이 코로나바이러스 항체 검사",
+      "labTestMasterKey": "cm.lab-test.v4.feline-coronavirus-antibody",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.36",
+      "orderName": "바베시아 PCR 검사",
+      "labTestMasterKey": "cm.lab-test.v4.babesia-pcr",
+      "labPanelMasterKey": null,
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.01",
+      "orderName": "확장 혈청화학 패널",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.02",
+      "orderName": "지질 검사 패널",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.lipid",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.03",
+      "orderName": "췌장 평가 패널",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.pancreatic",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.04",
+      "orderName": "염증 표지 패널",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.inflammatory",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.05",
+      "orderName": "갑상선 검사 패널",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.thyroid",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.06",
+      "orderName": "부신 검사 패널",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.adrenal",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.07",
+      "orderName": "요단백 평가 패널",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.08",
+      "orderName": "감염성 질환 선별 패널",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.basic-checkup",
+      "orderName": "기본 건강검진 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.senior-dog",
+      "orderName": "노령견 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.senior-cat",
+      "orderName": "노령묘 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.thyroid",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.vomiting-diarrhea",
+      "orderName": "구토·설사 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.pancreatic",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.weight-loss",
+      "orderName": "체중감소 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.thyroid",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.pu-pd",
+      "orderName": "다뇨·다갈 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.hepatobiliary",
+      "orderName": "간담도 평가 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.renal",
+      "orderName": "신장 평가 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.urine-protein",
+      "specimenMasterKey": "cm.specimen.urine"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.emergency-initial",
+      "orderName": "응급 초기 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.inflammatory",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.preanesthetic-expanded",
+      "orderName": "마취 전 확장 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.expanded-chemistry",
+      "specimenMasterKey": "cm.specimen.serum"
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.infectious-workup",
+      "orderName": "감염성 질환 검사 조합",
+      "labTestMasterKey": null,
+      "labPanelMasterKey": "cm.lab-panel.v4.infectious-screen",
+      "specimenMasterKey": "cm.specimen.edta-whole-blood"
+    }
+  ]
+}
