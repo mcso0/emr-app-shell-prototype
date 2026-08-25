@@ -21,6 +21,7 @@ const validVitals = {
 };
 
 const validWalkInInput = {
+  assignedStaffUserIds: ["user-desk-yuna"],
   patientId: "patient-coco",
   guardianId: "guardian-lee-jieun",
   primaryVeterinarianId: "49110000-0000-4000-8000-000000000003",
@@ -136,6 +137,28 @@ test("walk-in encounter core enforces reception create permission", async () => 
     status: 403,
     denialReason: "permission_missing",
   });
+});
+
+test("walk-in encounter requires exactly one reception assignee", async () => {
+  for (const assignedStaffUserIds of [
+    [],
+    ["user-desk-yuna", "user-tech-hayun"],
+  ]) {
+    const result = await createReceptionWalkInEncounter({
+      actorUserId: "user-front-desk",
+      workspaceId: "clair-demo",
+      input: { ...validWalkInInput, assignedStaffUserIds },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: {
+        assignedStaffUserIds: "접수 담당자를 1명 선택해 주세요.",
+      },
+    });
+  }
 });
 
 test("walk-in encounter core validates patient and guardian workspace context", async () => {

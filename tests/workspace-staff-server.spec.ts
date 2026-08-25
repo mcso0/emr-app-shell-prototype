@@ -94,6 +94,7 @@ test("workspace staff read filters active same-workspace veterinarians", async (
   expect(result).toMatchObject({
     ok: true,
     status: 200,
+    actorUserId: "user-front-desk",
     staff: [
       {
         id: "49110000-0000-4000-8000-000000000003",

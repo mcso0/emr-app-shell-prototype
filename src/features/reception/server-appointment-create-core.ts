@@ -327,6 +327,9 @@ function validateAppointmentCreateInput(input: ReceptionAppointmentCreateInput) 
   const startMs = Date.parse(input.scheduledStartAt);
 
   if (!input.patientId) fieldErrors.patientId = "patient_required";
+  if (!input.assignedStaffUserIds?.length) {
+    fieldErrors.assignedStaffUserIds = "assigned_staff_required";
+  }
   if (!Number.isFinite(startMs)) fieldErrors.scheduledStartAt = "scheduled_start_required";
   if (!input.durationMinutes || input.durationMinutes < 10 || input.durationMinutes > 240) {
     fieldErrors.durationMinutes = "duration_invalid";
