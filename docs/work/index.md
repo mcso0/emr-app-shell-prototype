@@ -319,6 +319,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CLINICAL-FULFILLMENT-PR-006 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-240 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-006-lifecycle-billing-sync.md`                 |
 | CLINICAL-FULFILLMENT-PR-007 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-241 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-007-handoff-replay-regression.md`              |
 | CLINICAL-FULFILLMENT-PR-008 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-242 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-008-project-closeout-staging-readiness.md`     |
+| CLINICAL-FULFILLMENT-PR-009 | in_progress  | clinical-fulfillment | P0       | Owner-approved Goal 2026-08-25 / PR TBD | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-009-chart-order-execution-system.md` |
 | DEMO-DATA-PR-001            | human_review | demo-data            | P0       | Project 04 / DEN-99  | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md`                |
 | DEMO-DATA-PR-002            | ready        | demo-data            | P0       | TBD                  | `docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md`                           |
 | DEMO-DB-PR-001              | human_review | demo-data            | P0       | Demo DB PR 1         | `docs/work/demo-data/DEMO-DB-PR-001-seed-inventory-readback-contract.md`                               |

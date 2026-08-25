@@ -6,7 +6,7 @@ tags:
   - supabase
   - migrations
   - release
-last_updated: 2026-08-23
+last_updated: 2026-08-25
 ---
 
 # Supabase Migration History Reconciliation
@@ -40,6 +40,49 @@ behavior-applied canonical versions listed below as `applied` in remote
 migration history. `migration repair` only updates the history table; it does
 not execute migration SQL or mutate schema/data. The remaining 14 local-only
 versions are a hard release gate.
+
+The production-bound project subsequently recorded four more exact-common
+migrations and two canonical files under different remote timestamps.
+Read-only comparison on 2026-08-25 proved raw byte identity between each remote
+stored statement and its canonical local file. The two additional comment-only
+aliases below therefore produce the current shape without executing SQL or
+repairing remote history:
+
+| local files | remote history rows | exact common | remote-only | local-only |
+| ---: | ---: | ---: | ---: | ---: |
+| 178 | 162 | 162 | 0 | 16 |
+
+The 16 local-only versions comprise the same 14 genuinely pending migrations
+and the two exact behavior-applied canonical versions `20260824091724` and
+`20260825040149`. A future exact-project history-only repair may mark only those
+two canonical versions applied after preserving this proof; broad `db push` or
+`--include-all` remains prohibited.
+
+The scoped chart-order execution migration on 2026-08-26 subsequently applied
+nine canonical SQL files under remote-generated versions and preserved each
+remote timestamp with a comment-only alias. The current verified shape is:
+
+| local files | remote history rows | exact common | remote-only | local-only |
+| ---: | ---: | ---: | ---: | ---: |
+| 196 | 171 | 171 | 0 | 25 |
+
+The 25 local-only versions are the 14 genuinely pending legacy versions below,
+the two earlier behavior-applied canonical versions `20260824091724` and
+`20260825040149`, and the nine exact chart-order canonical files represented by
+these aliases. Do not reapply any of those eleven behavior-applied canonical
+files merely to make the version numbers match.
+
+| Remote history alias | Canonical local migration | SHA-256 |
+| --- | --- | --- |
+| `20260825172441_remote_history_alias_chart_order_downstream_read_models.sql` | `20260825243000_chart_order_downstream_read_models.sql` | `97462643d2ab612b609894cc25bbe44c1685fa009020ca4d30b95b8dd393aee3` |
+| `20260825172602_remote_history_alias_chart_order_execution_master_contract.sql` | `20260825234000_chart_order_execution_master_contract.sql` | `9d6e7eb7ae555f950057039bc419a28f3b8950a32f3e0685bc9a7ca0f484c7e3` |
+| `20260825172702_remote_history_alias_chart_order_execution_master_legacy_route_fix.sql` | `20260825234500_chart_order_execution_master_legacy_route_fix.sql` | `e07c0076814831e24ea5c7d61a8aa31ca76af124816cd2783a019600e990f2f2` |
+| `20260825172717_remote_history_alias_chart_order_universal_task_contract.sql` | `20260825235000_chart_order_universal_task_contract.sql` | `f9122d253087e871a726f7fa1a33f52f445991f301be55311a1ee8d44520e406` |
+| `20260825172721_remote_history_alias_chart_order_shared_draft_contract.sql` | `20260825240000_chart_order_shared_draft_contract.sql` | `ba55c496fe146b73748b41dd3764e66984cb882947c7db7a4f5ff97999a89f2c` |
+| `20260825172726_remote_history_alias_chart_order_atomic_confirmation_contract.sql` | `20260825241000_chart_order_atomic_confirmation_contract.sql` | `c9013eaace5a99b31fdd572977c5693feb8f60248d6e13a3bdaa7080d69984e7` |
+| `20260825172731_remote_history_alias_chart_order_revision_attempt_contract.sql` | `20260825242000_chart_order_revision_attempt_contract.sql` | `d8ec2e337961dfb245d86dc3e755cfd4deeca171e6bc7e5b5e79ccac0b783792` |
+| `20260825172801_remote_history_alias_chart_order_production_backfill.sql` | `20260825244000_chart_order_production_backfill.sql` | `529e470e3f2383aafc0d573fe60574ca1f2121388a965b337a44792ede10b137` |
+| `20260825172957_remote_history_alias_chart_order_execution_fk_indexes.sql` | `20260825245000_chart_order_execution_fk_indexes.sql` | `d0d95181e58b575419e018d31d46eef37ff6013174feebd572afa36f4672db76` |
 
 Do not delete or rename the compatibility aliases below. Their SQL was applied remotely under the remote timestamp, while an identical canonical file exists locally under a different timestamp. The alias files intentionally contain comments only so fresh local replay does not execute the same SQL twice.
 
@@ -83,6 +126,8 @@ Do not delete or rename the compatibility aliases below. Their SQL was applied r
 | `20260816062243_remote_history_alias_chart_diagnosis_closure.sql` | `20260815120000_chart_diagnosis_closure.sql` |
 | `20260821071846_remote_history_alias_clinical_master_phase1_permission_source_assignment_precedence.sql` | `20260821063113_clinical_master_phase1_permission_source_assignment_precedence.sql` |
 | `20260823063449_remote_history_alias_clinical_master_diagnosis_foundation.sql` | `20260823035126_clinical_master_diagnosis_foundation.sql` |
+| `20260824101517_remote_history_alias_clinical_master_release_scoped_workspace_adoption.sql` | `20260824091724_clinical_master_release_scoped_workspace_adoption.sql` |
+| `20260825050710_remote_history_alias_diagnosis_runtime_catalog_adoption.sql` | `20260825040149_diagnosis_runtime_catalog_adoption.sql` |
 
 The canonical-content proof hashes for the 12 new aliases are SHA-256 values
 of the canonical local files. The alias files themselves remain comment-only.
@@ -101,6 +146,8 @@ of the canonical local files. The alias files themselves remain comment-only.
 | `20260815120000_chart_diagnosis_closure.sql` | `a0a563d84506aea992f145d8088c4714d3045f6771826c0c4557231697f067a4` |
 | `20260821063113_clinical_master_phase1_permission_source_assignment_precedence.sql` | `188328cde08de3b576214bb49e8847c4bf9ca1f68ab43ccb15a335c74e878484` |
 | `20260823035126_clinical_master_diagnosis_foundation.sql` | `14aad7316e76bcfec084ffae701bb48652105ff66f7c9315578ee077deac1612` |
+| `20260824091724_clinical_master_release_scoped_workspace_adoption.sql` | `4699bbd82b0e5af6a40066750f6876110cf128b1e7d546f187aa10a1ed6c9cd2` |
+| `20260825040149_diagnosis_runtime_catalog_adoption.sql` | `194300c38ae866abb376a378da5d64e5110c76f4f30e0b313f61c066a9cfe914` |
 
 For the chart preconsultation alias (`20260719120330` -> `20260719000000`),
 the raw canonical local file hash is
@@ -231,9 +278,13 @@ npx supabase@2.115.0 db push --project-ref qmerxgzrwaaahpkhjqlc --dry-run --skip
 
 Expected remote interpretation:
 
-- final repository/remote shape: `170/156/156/0/14`
+- current repository/remote shape: `196/171/171/0/25`
+- behavior-applied canonical local-only versions: `20260824091724`,
+  `20260825040149`, and the nine `20260825234000` through
+  `20260825245000` chart-order canonical files listed above
 - remote-only versions: `0`
-- local-only versions: the 14 explicitly pending versions above
+- local-only versions: the 14 explicitly pending versions plus 11
+  behavior-applied canonical versions represented by aliases
 - the linked dry-run refusal with `LegacyDbPushMissingRemoteError` is expected
   and must not be bypassed with `--include-all`
 
