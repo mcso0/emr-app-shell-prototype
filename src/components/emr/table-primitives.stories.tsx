@@ -160,6 +160,22 @@ export const HeaderAndCellText: Story = {
         "Plain header spacing must preserve the shared column resize handle.",
       );
     }
+
+    const resizeHeader = resizeHandle.closest("th");
+    if (!resizeHeader) {
+      throw new Error("Column resize handle must remain inside its table header.");
+    }
+
+    const headerRect = resizeHeader.getBoundingClientRect();
+    const resizeRect = resizeHandle.getBoundingClientRect();
+    const headerCenterY = headerRect.top + headerRect.height / 2;
+    const resizeCenterY = resizeRect.top + resizeRect.height / 2;
+
+    if (Math.abs(headerCenterY - resizeCenterY) > 0.5) {
+      throw new Error(
+        "Column resize handle must stay vertically centered in the table header.",
+      );
+    }
   },
   parameters: {
     docs: {
