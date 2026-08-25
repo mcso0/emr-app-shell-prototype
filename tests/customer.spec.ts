@@ -698,6 +698,17 @@ test("customer patient table keeps animal identity pinned while data columns scr
   const firstPinnedBodyEdge = firstPatientRow.locator(
     'td[data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
   );
+  await expect(firstPinnedBodyEdge).toHaveCSS("border-bottom-width", "1px");
+  await expect(firstPinnedBodyEdge).toHaveCSS("border-bottom-style", "solid");
+  await expect(firstPinnedBodyEdge).toHaveCSS(
+    "border-bottom-color",
+    "rgb(229, 229, 229)",
+  );
+  await expect(firstPatientCodeCell).toHaveCSS("border-bottom-width", "1px");
+  await expect(firstPatientCodeCell).toHaveCSS(
+    "border-bottom-color",
+    "rgb(229, 229, 229)",
+  );
   const dubuRow = page.getByTestId("customer-patient-row-patient-dubu");
   const animalCell = dubuRow.locator('td[data-column-id="name"]');
   const dubuPatientCodeCell = dubuRow.locator(

@@ -476,6 +476,22 @@
     color: var(--emr-table-data-text);
   }
 
+  [data-emr-data-table="true"][data-emr-data-table-pinning]
+    .emr-table-surface
+    tbody
+    > tr
+    > [data-slot="table-cell"] {
+    border-bottom: 1px solid var(--emr-table-data-border);
+  }
+
+  [data-emr-data-table="true"][data-emr-data-table-pinning]
+    .emr-table-surface
+    tbody
+    > tr:last-child
+    > [data-slot="table-cell"] {
+    border-bottom: 0;
+  }
+
   [data-emr-data-table="true"]
     .emr-table-surface[data-emr-pinning="columns"]
     tbody

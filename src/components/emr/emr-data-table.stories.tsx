@@ -352,7 +352,31 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const AllColumnsScroll: Story = {};
+function assertRowDivider(cell: Element | null, label: string) {
+  if (!(cell instanceof HTMLTableCellElement)) {
+    throw new Error(`${label} row-divider cell is missing.`);
+  }
+
+  const styles = getComputedStyle(cell);
+  if (
+    styles.borderBottomWidth !== "1px" ||
+    styles.borderBottomStyle !== "solid" ||
+    styles.borderBottomColor !== "rgb(229, 229, 229)"
+  ) {
+    throw new Error(`${label} row divider does not match neutral/200.`);
+  }
+}
+
+export const AllColumnsScroll: Story = {
+  play: async ({ canvasElement }) => {
+    assertRowDivider(
+      canvasElement.querySelector(
+        'tbody tr[data-emr-data-table-row="true"]:first-child td[data-column-id="owner"]',
+      ),
+      "Scrollable",
+    );
+  },
+};
 
 export const LeftAndRightPinned: Story = {
   args: { pinned: true },
@@ -383,6 +407,19 @@ export const LeftAndRightPinned: Story = {
     if (!viewport || !scrollOwner || !horizontalScrollbar || !tableContainer) {
       throw new Error("Pinned EmrDataTable scroll targets are missing.");
     }
+
+    assertRowDivider(
+      canvasElement.querySelector(
+        'tbody tr[data-emr-data-table-row="true"]:first-child td[data-column-id="name"]',
+      ),
+      "Pinned identity",
+    );
+    assertRowDivider(
+      canvasElement.querySelector(
+        'tbody tr[data-emr-data-table-row="true"]:first-child td[data-column-id="owner"]',
+      ),
+      "Pinned scrolling",
+    );
 
     const viewportRect = viewport.getBoundingClientRect();
     const scrollbarRect = horizontalScrollbar.getBoundingClientRect();
