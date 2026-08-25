@@ -158,7 +158,9 @@ import {
   NewUnifiedRegistrationButton,
   PatientProfileDrawer,
 } from "@/features/reception/profile-drawer";
+import { useAuthClient } from "@/features/auth/auth-client";
 import { useMockAuthStore } from "@/features/auth/session-store";
+import { resolveReceptionMockAssigneeUserId } from "@/features/reception/reception-assignee";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import type {
   ReceptionAppointmentCheckInInput,
@@ -600,14 +602,6 @@ function getReceptionDemoActorId(role?: string) {
     return "user-admin";
   if (role === "vet") return "user-vet";
   return "user-front-desk";
-}
-
-function getReceptionMockStaffUserId(role?: string) {
-  if (role === "hospital_admin") return "user-admin-minjae";
-  if (role === "billing_admin") return "user-billing-harin";
-  if (role === "vet") return "user-vet-suji";
-  if (role === "nurse") return "user-tech-hayun";
-  return "user-desk-yuna";
 }
 
 function getMockReceptionStaffRoles(
@@ -11099,6 +11093,11 @@ export function ReceptionDrawer({
     (state) => state.patientGuardians,
   );
   const authSession = useMockAuthStore((state) => state.session);
+  const {
+    hydrated: assigneeAuthHydrated,
+    hydrate: hydrateAssigneeAuth,
+    session: assigneeAuthSession,
+  } = useAuthClient();
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [editConfirmOpen, setEditConfirmOpen] = useState(false);
@@ -11118,6 +11117,10 @@ export function ReceptionDrawer({
 
     return () => onEditingChange?.(false);
   }, [editMode, onEditingChange]);
+
+  useEffect(() => {
+    if (!assigneeAuthHydrated) hydrateAssigneeAuth();
+  }, [assigneeAuthHydrated, hydrateAssigneeAuth]);
 
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const setWorkspaceOperatingDate = useReceptionStore(
@@ -11153,7 +11156,7 @@ export function ReceptionDrawer({
     : allReceptionStaff;
   const actorStaffUserId = liveStaffSourceEnabled
     ? workspaceActorUserId
-    : getReceptionMockStaffUserId(authSession?.role);
+    : resolveReceptionMockAssigneeUserId(assigneeAuthSession);
   const initialAssignedStaffUserId = staffMembers.some(
     (staffMember) => staffMember.id === actorStaffUserId,
   )
