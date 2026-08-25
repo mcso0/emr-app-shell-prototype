@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
+import { EmrRowActionMenu } from "./row-action-menu";
 import { EmrDataTable } from "./emr-data-table";
 
 type StoryRow = {
@@ -24,12 +25,14 @@ type StoryRow = {
 };
 
 type EmrDataTableStoryArgs = {
+  activeDetailRow: boolean;
   density: "compact" | "standard" | "comfortable";
   extraRows: boolean;
   loading: boolean;
   pinned: boolean;
   resizable: boolean;
   selectable: boolean;
+  showContextualActions: boolean;
   sortable: boolean;
 };
 
@@ -98,12 +101,14 @@ function StorySelectionControl({
 }
 
 function EmrDataTableStory({
+  activeDetailRow,
   density,
   extraRows,
   loading,
   pinned,
   resizable,
   selectable,
+  showContextualActions,
   sortable,
 }: EmrDataTableStoryArgs) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -223,8 +228,30 @@ function EmrDataTableStory({
           </button>
         ),
       },
+      ...(showContextualActions
+        ? [
+            {
+              id: "contextual-actions",
+              enableHiding: false,
+              enableSorting: false,
+              meta: {
+                actionVisibility: "contextual" as const,
+                align: "right" as const,
+                label: "보조 작업",
+                role: "actions" as const,
+              },
+              size: 52,
+              cell: ({ row }) => (
+                <EmrRowActionMenu
+                  ariaLabel={`${row.original.name} 보조 작업`}
+                  items={[{ key: "open", label: "상세 보기" }]}
+                />
+              ),
+            } satisfies ColumnDef<StoryRow, unknown>,
+          ]
+        : []),
     ],
-    [resizable, sortable],
+    [resizable, showContextualActions, sortable],
   );
   // TanStack Table is intentionally used as the headless controller in this
   // Storybook contract test.
@@ -268,6 +295,15 @@ function EmrDataTableStory({
         )}
         skeletonRowCount={4}
         table={table}
+        getRowProps={(row) => {
+          const active = activeDetailRow && row.original.id === "sample-1";
+
+          return {
+            "aria-current": active ? "true" : undefined,
+            "data-detail-active": active ? "true" : undefined,
+            "data-state": active ? "selected" : undefined,
+          };
+        }}
       />
     </div>
   );
@@ -286,6 +322,7 @@ const meta = {
     },
   },
   argTypes: {
+    activeDetailRow: { control: "boolean" },
     density: {
       control: "radio",
       options: ["compact", "standard", "comfortable"],
@@ -295,15 +332,18 @@ const meta = {
     pinned: { control: "boolean" },
     resizable: { control: "boolean" },
     selectable: { control: "boolean" },
+    showContextualActions: { control: "boolean" },
     sortable: { control: "boolean" },
   },
   args: {
+    activeDetailRow: false,
     density: "standard",
     extraRows: false,
     loading: false,
     pinned: false,
     resizable: false,
     selectable: true,
+    showContextualActions: false,
     sortable: true,
   },
 } satisfies Meta<EmrDataTableStoryArgs>;
@@ -383,6 +423,14 @@ export const Loading: Story = {
 
 export const Selection: Story = {
   args: { selectable: true },
+};
+
+export const ContextualActions: Story = {
+  args: { showContextualActions: true },
+};
+
+export const DetailActiveRow: Story = {
+  args: { activeDetailRow: true, showContextualActions: true },
 };
 
 export const Sorting: Story = {

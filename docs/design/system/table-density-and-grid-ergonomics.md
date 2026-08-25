@@ -256,6 +256,21 @@ DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYS
 - Let one non-pinned data column absorb remaining table width so the fixed
   selection and identity widths do not scale.
 
+### Row State and Action Visibility
+
+- `EmrDataTable` action columns opt in with
+  `actionVisibility: "always" | "contextual"`; the default is `always` so
+  explicit work buttons and read-only table behavior do not change.
+- Use `contextual` for secondary overflow menus. On fine-pointer desktop the
+  action is hidden while idle and shown for row hover, `focus-within`, an open
+  menu, or `data-state="selected"`. Touch and narrow layouts keep it visible.
+- A detail-active row derives from the currently open drawer target and uses
+  `data-state="selected"` plus `aria-current="true"`. This selected surface is
+  independent from checkbox row selection and must not activate the checkbox
+  or bulk-action bar.
+- Apply `--emr-surface-selected` to the full row and pinned cells. Do not add a
+  feature-local left stripe or status rail for the detail-active state.
+
 ## Header Interaction Rules
 
 Define each column with a header role:

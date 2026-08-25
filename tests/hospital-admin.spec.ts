@@ -30,6 +30,9 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(orderSetMenuItem).toContainText("B2");
   await orderSetMenuItem.click();
   await expect(page.getByRole("heading", { name: "Order 세트" })).toBeVisible();
+  await expect(
+    page.locator('[data-emr-table-action-visibility="contextual"]'),
+  ).toHaveCount(0);
   await page.goto("/w/clair-demo/orders?modulePanel=open&aside=history");
   await expect(
     page.getByRole("heading", { name: "임상병리 검사" }),
@@ -2239,7 +2242,9 @@ test("hospital admin order drawer creates a new workspace catalog order", async 
     .locator('[data-testid^="hospital-order-row-"]')
     .filter({ hasText: "원내 신규 CBC" })
     .first();
-  await expect(createdRow).toHaveAttribute("data-focused", "true");
+  await expect(createdRow).toHaveAttribute("data-detail-active", "true");
+  await expect(createdRow).toHaveAttribute("data-state", "selected");
+  await expect(createdRow).toHaveAttribute("aria-current", "true");
   await expect(
     createdRow.getByRole("checkbox", { name: "원내 신규 CBC 선택" }),
   ).not.toBeChecked();
@@ -2253,6 +2258,13 @@ test("hospital admin table selection drives bulk action instead of opening drawe
 
   const row = page.getByTestId("hospital-order-row-ord-lab-cbc-baso");
   await row.getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" }).click();
+  await expect(row).toHaveAttribute("data-state", "selected");
+  await expect(row).not.toHaveAttribute("data-detail-active", "true");
+  await expect(
+    row.locator(
+      'td[data-column-id="actions"] > .emr-data-table-cell-content > *',
+    ),
+  ).toHaveCSS("opacity", "1");
   await expect(page.getByText("선택한 오더 1개")).toBeVisible();
 
   await row.click({ position: { x: 180, y: 20 } });
@@ -2268,6 +2280,13 @@ test("hospital admin order drawer switches rows and closes from outside click", 
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
   await page.getByTestId("hospital-order-row-ord-lab-cbc-baso").click();
+  const firstRow = page.getByTestId(
+    "hospital-order-row-ord-lab-cbc-baso",
+  );
+  await expect(firstRow).toHaveAttribute("data-state", "selected");
+  await expect(firstRow).toHaveAttribute("aria-current", "true");
+  await expect(firstRow.getByRole("checkbox")).not.toBeChecked();
+  await expect(page.getByText(/선택한 오더 \d+개/)).toHaveCount(0);
   await expect(page.getByTestId("hospital-order-drawer")).toContainText(
     "[CBC 검사] #BASO",
   );
@@ -2280,12 +2299,31 @@ test("hospital admin order drawer switches rows and closes from outside click", 
   );
   await expect(
     page.getByTestId("hospital-order-row-ord-paused-example"),
-  ).toHaveAttribute("data-focused", "true");
+  ).toHaveAttribute("data-state", "selected");
+  await expect(firstRow).not.toHaveAttribute("data-state", "selected");
+
+  const selectedRow = page.getByTestId(
+    "hospital-order-row-ord-paused-example",
+  );
+  const selectedSurface = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = "var(--emr-surface-selected)";
+    document.body.appendChild(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
+  await expect(selectedRow).toHaveCSS("background-color", selectedSurface);
+  await expect(
+    selectedRow.locator('td[data-column-id="standardName"]'),
+  ).toHaveCSS("background-color", selectedSurface);
 
   await page
     .getByRole("heading", { level: 1, name: "임상병리 검사" })
     .click({ position: { x: 4, y: 4 } });
   await expect(page.getByTestId("hospital-order-drawer")).toHaveCount(0);
+  await expect(selectedRow).not.toHaveAttribute("data-state", "selected");
+  await expect(selectedRow).not.toHaveAttribute("aria-current", "true");
 });
 
 test("hospital admin order table shows skeleton rows while loading catalog", async ({
@@ -2611,10 +2649,30 @@ test("hospital admin row action menu opens details and closes on Escape", async 
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
   const row = page.getByTestId("hospital-order-row-ord-lab-cbc-baso");
-  await row
-    .getByRole("button", { name: "[CBC 검사] #BASO Order 행 작업" })
-    .click();
+  const actionCell = row.locator('td[data-column-id="actions"]');
+  const actionSurface = actionCell.locator(
+    "> .emr-data-table-cell-content > *",
+  );
+  const actionButton = row.getByRole("button", {
+    name: "[CBC 검사] #BASO Order 행 작업",
+  });
+
+  await expect(actionCell).toHaveAttribute(
+    "data-emr-table-action-visibility",
+    "contextual",
+  );
+  await expect(actionSurface).toHaveCSS("opacity", "0");
+  await row.hover();
+  await expect(actionSurface).toHaveCSS("opacity", "1");
+  await page.mouse.move(0, 0);
+  await actionButton.focus();
+  await expect(actionSurface).toHaveCSS("opacity", "1");
+
+  await actionButton.click();
   await expect(page.getByRole("menu")).toContainText("상세 보기");
+  await page.mouse.move(0, 0);
+  await expect(actionButton).toHaveAttribute("data-popup-open");
+  await expect(actionSurface.first()).toHaveCSS("opacity", "1");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
 
@@ -2625,7 +2683,83 @@ test("hospital admin row action menu opens details and closes on Escape", async 
   await expect(page.getByTestId("hospital-order-drawer")).toContainText(
     "[CBC 검사] #BASO",
   );
+  await expect(row).toHaveAttribute("data-state", "selected");
+  await expect(row).toHaveAttribute("aria-current", "true");
+  await expect(actionSurface).toHaveCSS("opacity", "1");
   await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
+test("hospital member row actions are contextual and preserve the active row", async ({
+  page,
+}) => {
+  await page.route(
+    "**/api/workspaces/clair-demo/memberships?includeArchived=true",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          enforcedBy: "workspace-membership-status-reader",
+          memberships: [
+            {
+              id: "membership-vet",
+              workspaceId: "clair-demo",
+              userSessionId: "user-vet",
+              displayName: "이수지",
+              email: "vet@clair.local",
+              roles: ["vet"],
+              permissionRoleKey: "general",
+              jobPositionKey: "veterinarian",
+              status: "active",
+              title: "수의사",
+              department: "진료팀",
+              createdAt: "2026-05-01T00:00:00.000Z",
+              activatedAt: "2026-05-01T00:00:00.000Z",
+              deactivatedAt: null,
+            },
+          ],
+          invitations: [],
+        }),
+      });
+    },
+  );
+  await page.goto("/w/clair-demo/orders?modulePanel=open&section=members");
+
+  const row = page.locator('[data-testid^="hospital-member-row-"]').first();
+  const actionCell = row.locator('td[data-column-id="actions"]');
+  const actionSurface = actionCell.locator(
+    "> .emr-data-table-cell-content > *",
+  );
+
+  await expect(row).toBeVisible();
+  await expect(actionCell).toHaveAttribute(
+    "data-emr-table-action-visibility",
+    "contextual",
+  );
+  await expect(actionSurface).toHaveCSS("opacity", "0");
+  await row.hover();
+  await expect(actionSurface).toHaveCSS("opacity", "1");
+
+  await row.click({ position: { x: 200, y: 20 } });
+  await expect(page.getByTestId("hospital-member-profile-panel")).toBeVisible();
+  await expect(row).toHaveAttribute("data-state", "selected");
+  await expect(row).toHaveAttribute("aria-current", "true");
+  await expect(actionSurface).toHaveCSS("opacity", "1");
+});
+
+test.describe("hospital admin contextual actions on touch", () => {
+  test.use({ hasTouch: true, viewport: { width: 1024, height: 768 } });
+
+  test("keeps the order action visible without hover", async ({ page }) => {
+    await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+    const row = page.getByTestId("hospital-order-row-ord-lab-cbc-baso");
+    const actionSurface = row.locator(
+      'td[data-column-id="actions"] > .emr-data-table-cell-content > *',
+    );
+
+    await expect(actionSurface).toHaveCSS("opacity", "1");
+  });
 });
 
 test("hospital settings screens render dividers only between section rows", async ({

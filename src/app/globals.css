@@ -651,6 +651,30 @@
   }
 
   @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+    [data-emr-table-action-visibility="contextual"]
+      > .emr-data-table-cell-content
+      > * {
+      opacity: 0;
+    }
+
+    tr:hover
+      > [data-emr-table-action-visibility="contextual"]
+      > .emr-data-table-cell-content
+      > *,
+    tr:focus-within
+      > [data-emr-table-action-visibility="contextual"]
+      > .emr-data-table-cell-content
+      > *,
+    tr[data-state="selected"]
+      > [data-emr-table-action-visibility="contextual"]
+      > .emr-data-table-cell-content
+      > *,
+    [data-emr-table-action-visibility="contextual"]:has([data-popup-open])
+      > .emr-data-table-cell-content
+      > * {
+      opacity: 1;
+    }
+
     [data-emr-table-selection-visibility="contextual"]
       > .emr-table-cell-content
       > * {

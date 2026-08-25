@@ -1218,6 +1218,34 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await expect(checkbox).toHaveCSS("opacity", "0.5");
 });
 
+test("dispensing drawer active row stays separate from bulk selection", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/dispensing");
+  await page.getByTestId("order-queue-item-dispensing-queue-0").click();
+
+  const detailRow = page.getByTestId("order-row-section-0-o-10023");
+  await detailRow.click({ position: { x: 100, y: 20 } });
+
+  await expect(page.getByText("상세 정보")).toBeVisible();
+  await expect(detailRow).toHaveAttribute("data-detail-active", "true");
+  await expect(detailRow).toHaveAttribute("data-state", "selected");
+  await expect(detailRow).toHaveAttribute("aria-current", "true");
+  await expect(detailRow.getByRole("checkbox")).not.toBeChecked();
+  await expect(page.getByText(/선택한 오더 \d+개/)).toHaveCount(0);
+
+  await page.getByRole("button", { name: "상세 닫기" }).click();
+  await expect(detailRow).not.toHaveAttribute("data-detail-active", "true");
+  await expect(detailRow).not.toHaveAttribute("aria-current", "true");
+
+  const bulkRow = page.getByTestId("order-row-section-0-o-10024");
+  await bulkRow.getByRole("checkbox").click();
+  await expect(bulkRow).toHaveAttribute("data-state", "selected");
+  await expect(bulkRow).not.toHaveAttribute("data-detail-active", "true");
+  await expect(page.getByText("선택한 오더 1개")).toBeVisible();
+  await expect(page.getByText("상세 정보")).toBeHidden();
+});
+
 test("dispensing table aligns selection header and row checkboxes", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
 
