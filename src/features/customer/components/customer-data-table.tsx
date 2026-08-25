@@ -47,7 +47,6 @@ import {
 } from "@/components/ui/popover";
 import { useCustomerStore } from "@/features/customer/store";
 import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
-import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { EmrTableDensity } from "@/components/emr/table-density";
 import { CustomerDataTableFooter } from "./customer-data-table-footer";
@@ -122,7 +121,7 @@ function CustomerRowActionMenu({
     <EmrRowActionMenu
       ariaLabel={`${label} 행 작업`}
       contentClassName="w-56"
-      triggerClassName="size-6 shrink-0 rounded-md border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] p-0 text-[var(--clair-color-atomic-neutral-700)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-black-alpha-4)] [&_svg]:size-3.5"
+      triggerClassName="size-6 shrink-0 rounded-md border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] p-0 text-[var(--clair-color-atomic-neutral-700)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--emr-state-hover)] [&_svg]:size-3.5"
       items={[
         {
           key: "open",
@@ -456,7 +455,7 @@ export function CustomerDataTable<
 
   return (
     <EmrPinnedTableWorkspace
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#fcfcfc]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--emr-surface-workspace)]"
       data-testid={testId}
       identityTextInset={48}
       selectionColumnWidth={pinnedColumnId ? 44 : 0}
@@ -584,11 +583,7 @@ export function CustomerDataTable<
 
               return {
                 "aria-current": active ? "true" : undefined,
-                className: cn(
-                  "group/customer-row cursor-pointer",
-                  active &&
-                    "bg-[var(--emr-state-selected)] hover:!bg-[var(--emr-state-selected)]",
-                ),
+                className: "group/customer-row cursor-pointer",
                 "data-state": active ? "selected" : undefined,
                 "data-testid": rowTestId(row.original),
                 onClick: () => onOpenRow(row.original),

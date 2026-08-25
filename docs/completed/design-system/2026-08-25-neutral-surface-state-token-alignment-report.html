@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Neutral 표면·행 상태 토큰 정리 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #171717;
+        background: #f5f5f5;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        width: min(920px, calc(100% - 40px));
+        margin: 40px auto;
+      }
+      article {
+        padding: 40px;
+        border: 1px solid #e5e5e5;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 16px 40px rgb(0 0 0 / 8%);
+      }
+      h1 {
+        margin: 12px 0 8px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 19px;
+      }
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #fafafa;
+      }
+      .eyebrow,
+      .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .eyebrow {
+        color: #525252;
+        background: #fafafa;
+      }
+      .status {
+        color: #166534;
+        background: #dcfce7;
+      }
+      .lead {
+        max-width: 760px;
+        color: #525252;
+        font-size: 17px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .metric {
+        padding: 18px;
+        border: 1px solid #e5e5e5;
+        border-radius: 12px;
+        background: #fcfcfc;
+      }
+      .metric strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 24px;
+      }
+      .metric span {
+        color: #525252;
+        font-size: 13px;
+      }
+      .note {
+        padding: 16px 18px;
+        border-left: 4px solid #737373;
+        border-radius: 8px;
+        background: #fafafa;
+      }
+      @media (max-width: 720px) {
+        main {
+          width: min(100% - 24px, 920px);
+          margin: 12px auto;
+        }
+        article {
+          padding: 24px 20px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <span class="eyebrow">DESIGN-SYSTEM-PR-094</span>
+        <h1>Neutral 표면·행 상태 토큰 정리</h1>
+        <p class="lead">
+          실제 화면의 흰색·Neutral 표면 체계와 상호작용 상태를 분리하고,
+          데이터테이블의 hover와 selected가 명확한 단계로 보이도록 전역 계약을
+          정리했다.
+        </p>
+        <span class="status">로컬 구현·집중 검증 완료</span>
+
+        <div class="grid">
+          <div class="metric">
+            <strong>4%</strong>
+            <span>hover 검정 오버레이</span>
+          </div>
+          <div class="metric">
+            <strong>6%</strong>
+            <span>selected 검정 오버레이</span>
+          </div>
+          <div class="metric">
+            <strong>8%</strong>
+            <span>active 검정 오버레이</span>
+          </div>
+        </div>
+
+        <h2>문제와 결정</h2>
+        <ul>
+          <li>
+            기존 selected는 보라 기운이 있는 cool-gray 고정색이었고, hover는
+            화면별로 4% 또는 6%가 섞여 있었다.
+          </li>
+          <li>
+            정적 배경은 equal-channel Neutral 계열로, 상호작용은 검정 alpha
+            오버레이로 분리했다.
+          </li>
+          <li>
+            <code>--emr-surface-hover</code>와
+            <code>--emr-surface-selected</code>는 호환 별칭만 유지한다.
+          </li>
+        </ul>
+
+        <h2>구현 결과</h2>
+        <ul>
+          <li>
+            앱·패널은 흰색, workspace는 <code>#FCFCFC</code>, muted/table
+            header는 Neutral 50, disabled는 Neutral 100으로 정리했다.
+          </li>
+          <li>
+            공용 데이터테이블의 전체 행과 pinned cell이 동일한 hover/selected
+            상태 토큰을 사용한다.
+          </li>
+          <li>
+            pinned cell은 상태 오버레이를 불투명한 기본 행 표면 위에 합성해
+            스크롤 콘텐츠가 비치지 않는다.
+          </li>
+          <li>
+            고객관리, 병원관리, Order 세트, 역할·권한, 차트의 기존
+            <code>#FCFCFC</code> 배경은 semantic workspace 토큰을 사용한다.
+          </li>
+        </ul>
+
+        <h2>검증 범위</h2>
+        <ul>
+          <li>
+            전역 토큰 계산값, legacy 별칭 방지, 고객관리 pinned 행,
+            병원관리 Order drawer 활성 행, Order 세트 진입을 확인했다.
+          </li>
+          <li>
+            ESLint, TypeScript, 문서 링크, 비밀정보, diff, Storybook build,
+            Next production build가 통과했다.
+          </li>
+          <li>Toggle·table workspace header Storybook 검증은 6/6 통과했다.</li>
+          <li>
+            공용 Table Storybook의 pinned-content 10px inset 1건은 동일한
+            <code>origin/main</code>에서도 재현되는 기존 실패이며, 이번 상태색
+            변경과 무관하다.
+          </li>
+        </ul>
+
+        <h2>제외 범위</h2>
+        <div class="note">
+          내비게이션 rail의 기존 Gray 팔레트와 정보·성공·경고·위험 등 semantic
+          status 색은 유지했다. 데이터, API, 권한, drawer, 저장, Order 세트
+          동작도 변경하지 않았다.
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

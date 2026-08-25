@@ -15,11 +15,11 @@
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: oklch(0.21 0.006 285.885);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
+  --secondary: var(--emr-surface-muted);
   --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
+  --muted: var(--emr-surface-muted);
   --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
+  --accent: var(--emr-surface-muted);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
@@ -29,7 +29,7 @@
 
   --brand: var(--clair-color-atomic-sky-500);
   --brand-foreground: oklch(1 0 0);
-  --selection: oklch(0.97 0.006 286);
+  --selection: var(--emr-state-selected);
   --selection-border: oklch(0.58 0.014 286);
 
   --chart-1: oklch(0.828 0.111 230.318);
@@ -61,23 +61,25 @@
   --clair-color-atomic-sky-800: #004185;
   --clair-color-atomic-sky-900: #002F61;
 
-  --emr-surface-0: #FAFAFA;
-  --emr-surface-1: #F8F8FA;
-  --emr-surface-2: #FCFCFD;
-  --emr-surface-3: #FFFFFF;
-  --emr-surface-app: #FFFFFF;
+  --emr-surface-0: var(--clair-color-atomic-neutral-50);
+  --emr-surface-1: #F8F8F8;
+  --emr-surface-2: #FCFCFC;
+  --emr-surface-3: var(--clair-color-atomic-common-100);
+  --emr-surface-app: var(--emr-surface-3);
   --emr-surface-auth: #F9F9F9;
   --emr-surface-content-panel: var(--emr-surface-1);
   --emr-surface-subpanel: var(--emr-surface-1);
   --emr-surface-sidepanel: #F9F9F9;
-  --emr-surface-workspace: #FFFFFF;
-  --emr-surface-rightpanel: #FFFFFF;
+  --emr-surface-workspace: var(--emr-surface-2);
+  --emr-surface-rightpanel: var(--emr-surface-3);
   --emr-surface-panel: var(--emr-surface-3);
-  --emr-surface-muted: oklch(0.967 0.001 286.375);
-  --emr-surface-hover: oklch(0.977 0.001 286.3);
-  --emr-surface-selected: oklch(0.97 0.006 286);
-  --emr-surface-disabled: oklch(0.955 0.001 286);
+  --emr-surface-muted: var(--emr-surface-0);
+  --emr-surface-disabled: var(--clair-color-atomic-neutral-100);
   --emr-surface-floating: var(--emr-surface-3);
+
+  /* Compatibility aliases. New interaction styling should use --emr-state-*. */
+  --emr-surface-hover: var(--emr-state-hover);
+  --emr-surface-selected: var(--emr-state-selected);
 
   /* Schedule v2: feature aliases only. Components must not embed palette or geometry values. */
   --emr-schedule-grid-staff-column: 13rem;
@@ -125,7 +127,7 @@
   --emr-navrail-item-selected: var(--clair-color-atomic-white-alpha-16);
 
   --emr-workspace-button-bg: var(--clair-color-atomic-common-100);
-  --emr-workspace-button-hover-bg: var(--clair-color-atomic-black-alpha-4);
+  --emr-workspace-button-hover-bg: var(--emr-state-hover);
   --emr-workspace-button-border: var(--emr-border-default);
   --emr-workspace-button-text: var(--clair-color-atomic-neutral-900);
   --emr-workspace-button-icon: var(--clair-color-atomic-gray-500);
@@ -164,7 +166,7 @@
   --emr-topbar-tab-min-width: 148px;
   --emr-topbar-tab-max-width: 148px;
   --emr-topbar-tab-bg: transparent;
-  --emr-topbar-tab-hover-bg: var(--clair-color-atomic-black-alpha-6);
+  --emr-topbar-tab-hover-bg: var(--emr-state-hover);
   --emr-topbar-tab-active-bg: var(--clair-color-atomic-common-100);
   --emr-topbar-tab-active-border: var(--emr-border-default);
   --emr-topbar-tab-active-shadow: var(--clair-shadow-xs);
@@ -208,7 +210,7 @@
   --emr-sidepanel-list-title-gap: var(--clair-spacing-12);
   --emr-sidepanel-list-title-left-gap: var(--clair-spacing-8);
   --emr-sidepanel-list-title-radius: var(--clair-radius-atomic-6);
-  --emr-sidepanel-list-title-hover-bg: var(--clair-color-atomic-black-alpha-8);
+  --emr-sidepanel-list-title-hover-bg: var(--emr-state-hover);
   --emr-sidepanel-list-title-text: var(--clair-color-atomic-neutral-700);
   --emr-sidepanel-list-title-count: var(--clair-color-atomic-neutral-500);
   --emr-sidepanel-list-title-action-size: var(--clair-control-height-xs);
@@ -269,7 +271,7 @@
   --emr-module-list-item-line-height: 18px;
   --emr-module-list-item-radius: var(--clair-radius-atomic-8);
   --emr-module-list-item-hover-bg: var(--emr-state-hover);
-  --emr-module-list-item-selected-bg: var(--emr-state-active);
+  --emr-module-list-item-selected-bg: var(--emr-state-selected);
   --emr-module-list-item-text: var(--clair-color-atomic-neutral-700);
   --emr-module-list-item-selected-text: var(--clair-color-atomic-neutral-900);
   --emr-module-list-item-disabled-text: var(--clair-color-atomic-neutral-400);
@@ -322,7 +324,7 @@
   --emr-sidepanel-task-card-gap: var(--clair-spacing-2);
   --emr-sidepanel-task-card-radius: var(--clair-radius-atomic-10);
   --emr-sidepanel-task-card-bg: var(--clair-color-atomic-common-100);
-  --emr-sidepanel-task-card-hover-bg: var(--clair-color-atomic-black-alpha-4);
+  --emr-sidepanel-task-card-hover-bg: var(--emr-state-hover);
   --emr-sidepanel-task-card-border: var(--emr-border-default);
   --emr-sidepanel-task-card-selected-bg: color-mix(
     in srgb,
@@ -379,7 +381,7 @@
   --emr-calendar-lane-header-action-radius: var(--clair-radius-atomic-4);
   --emr-calendar-lane-header-action-gap: var(--clair-spacing-4);
   --emr-calendar-lane-header-action-icon: var(--clair-spacing-14);
-  --emr-calendar-lane-header-action-hover: var(--clair-color-atomic-black-alpha-4);
+  --emr-calendar-lane-header-action-hover: var(--emr-state-hover);
   --emr-calendar-lane-avatar-size: var(--clair-spacing-24);
   --emr-calendar-lane-avatar-radius: var(--clair-radius-atomic-6);
   --emr-calendar-lane-avatar-border: var(--clair-color-atomic-neutral-200);
@@ -490,7 +492,7 @@
   --emr-content-history-group-title-gap: var(--clair-spacing-12);
   --emr-content-history-group-title-left-gap: var(--clair-spacing-8);
   --emr-content-history-group-title-radius: var(--clair-radius-atomic-6);
-  --emr-content-history-group-title-hover-bg: var(--clair-color-atomic-black-alpha-4);
+  --emr-content-history-group-title-hover-bg: var(--emr-state-hover);
   --emr-content-history-group-title-text: var(--clair-color-atomic-neutral-600);
   --emr-content-history-group-title-count: var(--clair-color-atomic-neutral-400);
   --emr-content-history-group-title-icon: var(--clair-color-atomic-neutral-400);
@@ -503,8 +505,8 @@
   --emr-content-history-card-padding: var(--clair-spacing-4);
   --emr-content-history-card-gap: var(--clair-spacing-4);
   --emr-content-history-card-radius: var(--clair-radius-atomic-6);
-  --emr-content-history-card-hover-bg: var(--clair-color-atomic-black-alpha-4);
-  --emr-content-history-card-selected-bg: var(--clair-color-atomic-black-alpha-6);
+  --emr-content-history-card-hover-bg: var(--emr-state-hover);
+  --emr-content-history-card-selected-bg: var(--emr-state-selected);
   --emr-content-history-card-title: var(--clair-color-atomic-neutral-800);
   --emr-content-history-card-meta: var(--clair-color-atomic-neutral-400);
   --emr-content-history-card-chip-bg: var(--emr-sidepanel-task-card-chip-bg);
@@ -558,9 +560,9 @@
   --emr-type-tracking-dialog-title: var(--clair-typography-heading-2-letter-spacing);
   --emr-dialog-close-offset: 10px;
 
-  --emr-state-hover: var(--clair-color-atomic-black-alpha-6);
+  --emr-state-hover: var(--clair-color-atomic-black-alpha-4);
+  --emr-state-selected: var(--clair-color-atomic-black-alpha-6);
   --emr-state-active: var(--clair-color-atomic-black-alpha-8);
-  --emr-state-selected: var(--emr-surface-selected);
   --emr-state-selected-border: var(--emr-line-selected);
   --emr-state-focus-ring: var(--ring);
   --emr-state-drag: oklch(0.78 0.012 286);

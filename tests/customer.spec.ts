@@ -1106,18 +1106,29 @@ test("customer patient table keeps animal identity pinned while data columns scr
 
   await dubuRow.hover();
   const [hoverPinnedBackground, expectedHoverBackground] = await Promise.all([
-    animalCell.evaluate((cell) => getComputedStyle(cell).backgroundColor),
+    animalCell.evaluate((cell) => {
+      const style = getComputedStyle(cell);
+      return {
+        color: style.backgroundColor,
+        image: style.backgroundImage,
+      };
+    }),
     page.evaluate(() => {
       const probe = document.createElement("div");
-      probe.style.backgroundColor = "var(--clair-color-atomic-black-alpha-4)";
+      probe.style.background =
+        "linear-gradient(var(--emr-state-hover), var(--emr-state-hover)), var(--clair-color-atomic-common-100)";
       document.body.appendChild(probe);
-      const color = getComputedStyle(probe).backgroundColor;
+      const style = getComputedStyle(probe);
+      const background = {
+        color: style.backgroundColor,
+        image: style.backgroundImage,
+      };
       probe.remove();
-      return color;
+      return background;
     }),
   ]);
 
-  expect(hoverPinnedBackground).toBe(expectedHoverBackground);
+  expect(hoverPinnedBackground).toEqual(expectedHoverBackground);
   await expect(dubuPatientCodeCell).toHaveCSS(
     "background-color",
     "rgba(0, 0, 0, 0)",
@@ -1128,18 +1139,29 @@ test("customer patient table keeps animal identity pinned while data columns scr
   await expect(dubuRow).toHaveAttribute("aria-current", "true");
   const [selectedPinnedBackground, expectedSelectedBackground] =
     await Promise.all([
-      animalCell.evaluate((cell) => getComputedStyle(cell).backgroundColor),
+      animalCell.evaluate((cell) => {
+        const style = getComputedStyle(cell);
+        return {
+          color: style.backgroundColor,
+          image: style.backgroundImage,
+        };
+      }),
       page.evaluate(() => {
         const probe = document.createElement("div");
-        probe.style.backgroundColor = "var(--emr-surface-selected)";
+        probe.style.background =
+          "linear-gradient(var(--emr-state-selected), var(--emr-state-selected)), var(--clair-color-atomic-common-100)";
         document.body.appendChild(probe);
-        const color = getComputedStyle(probe).backgroundColor;
+        const style = getComputedStyle(probe);
+        const background = {
+          color: style.backgroundColor,
+          image: style.backgroundImage,
+        };
         probe.remove();
-        return color;
+        return background;
       }),
     ]);
 
-  expect(selectedPinnedBackground).toBe(expectedSelectedBackground);
+  expect(selectedPinnedBackground).toEqual(expectedSelectedBackground);
   await expect(dubuPatientCodeCell).toHaveCSS(
     "background-color",
     "rgba(0, 0, 0, 0)",
@@ -1801,7 +1823,7 @@ test("customer side panel matches CDS.V2 module-list geometry, type, and color",
   expect(panelMetrics.leafLabelLetterSpacing).toBe("0.247px");
   expect(panelMetrics.leafLabelWeight).toBe("500");
   expect(panelMetrics.leafLabelColor).toBe("rgb(23, 23, 23)");
-  expect(panelMetrics.leafBackground).toBe("rgba(0, 0, 0, 0.08)");
+  expect(panelMetrics.leafBackground).toBe("rgba(0, 0, 0, 0.06)");
   expect(Math.round(panelMetrics.badgeHeight)).toBe(20);
   expect(panelMetrics.badgePaddingTop).toBe("2px");
   expect(panelMetrics.badgePaddingRight).toBe("6px");

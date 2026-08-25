@@ -1,7 +1,7 @@
 ---
 status: "approved"
 area: "design-system"
-updated: "2026-08-22"
+updated: "2026-08-25"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/engineering/current-status.md"
@@ -17,10 +17,13 @@ CLAiR EMR should remain a bright, long-session operational workspace. The Linear
 
 The first foundation pass should make shared EMR surfaces quieter and more consistent:
 
-- use a small surface ladder for app background, panels, muted headers, selected rows, and hover states
+- use a small equal-channel Neutral surface ladder for app background,
+  workspaces, panels, muted headers, and disabled surfaces
+- use black-alpha interaction overlays for hover, selected, and active states
 - prefer hairline borders over heavy shadow
 - keep compact control and panel radii, mostly 8px and 12px
-- keep primary emphasis on command ink, and use neutral/cool-neutral state color for focus and selection
+- keep primary emphasis on command ink, use 4%/6%/8% black overlays for
+  hover/selected/active, and keep focus on its dedicated ring token
 - let real product screens and dense workflow data carry the interface
 
 ## Explicit Non-Goals
@@ -37,9 +40,12 @@ The first foundation pass should make shared EMR surfaces quieter and more consi
 The public alias set for the first pass is:
 
 - `--emr-surface-app`
+- `--emr-surface-workspace`
 - `--emr-surface-panel`
 - `--emr-surface-muted`
-- `--emr-surface-selected`
+- `--emr-state-hover`
+- `--emr-state-selected`
+- `--emr-state-active`
 - `--emr-border-subtle`
 - `--emr-border-default`
 - `--emr-border-strong`
@@ -49,6 +55,13 @@ The public alias set for the first pass is:
 - `--emr-radius-panel`
 
 These aliases are intentionally small. They should cover shared panel, list, table, and selected-surface behavior before any screen-level visual expansion.
+
+The static surface ladder resolves to equal-channel Neutral values: white app
+and panel surfaces, `#FCFCFC` workspaces, Neutral 50 muted surfaces, and Neutral
+100 disabled surfaces. Interaction states are separate overlays: black 4% for
+hover, black 6% for selected, and black 8% for active. The older
+`--emr-surface-hover` and `--emr-surface-selected` names remain compatibility
+aliases only.
 
 The 2026-05-13 token direction clarifies that shadcn `--primary` is command ink rather than brand blue. Brand blue remains available through a limited identity token, while workflow and clinical colors move through explicit EMR status aliases.
 

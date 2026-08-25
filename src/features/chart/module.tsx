@@ -8112,7 +8112,7 @@ export function ChartContent({
   return (
     <div
       data-slot="chart-content"
-      className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
+      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
     >
       {!chartStartLocked ? (
         <>
@@ -8609,7 +8609,7 @@ export function ChartContent({
           ref={chartWorkspaceRef}
           data-slot="chart-workspace"
           className={cn(
-            "grid min-h-0 flex-1 bg-[#fcfcfc] px-2 pb-2",
+            "grid min-h-0 flex-1 bg-[var(--emr-surface-workspace)] px-2 pb-2",
             isChartResizing && "select-none",
           )}
           style={{

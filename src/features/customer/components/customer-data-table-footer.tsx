@@ -14,7 +14,7 @@ export function CustomerDataTableFooter({
 }: CustomerDataTableFooterProps) {
   return (
     <footer
-      className="flex min-h-16 shrink-0 flex-wrap items-center gap-6 bg-[#fcfcfc] px-12 py-3.5 text-[14px] font-normal leading-5 text-muted-foreground"
+      className="flex min-h-16 shrink-0 flex-wrap items-center gap-6 bg-[var(--emr-surface-workspace)] px-12 py-3.5 text-[14px] font-normal leading-5 text-muted-foreground"
       data-emr-table-workspace-footer="true"
       data-testid="customer-table-footer"
     >

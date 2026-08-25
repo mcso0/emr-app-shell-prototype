@@ -37,7 +37,7 @@ export function EmrDatePickerDayButton({
         today &&
           !selected &&
           !disabled &&
-          "font-semibold text-primary ring-1 ring-primary/35 ring-offset-1 ring-offset-background hover:bg-[var(--clair-color-atomic-black-alpha-4)]",
+          "font-semibold text-primary ring-1 ring-primary/35 ring-offset-1 ring-offset-background hover:bg-[var(--emr-state-hover)]",
         selected &&
           "bg-primary text-primary-foreground ring-0 ring-offset-0 hover:bg-primary/90",
         disabled &&

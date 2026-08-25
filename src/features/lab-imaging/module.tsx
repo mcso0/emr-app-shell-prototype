@@ -3453,7 +3453,7 @@ export function LabContent({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="relative bg-card data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--clair-color-atomic-black-alpha-4)] data-[state=on]:text-[var(--emr-text-primary)]"
+                  className="relative bg-card data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
                   aria-controls="lab-receipt-panel"
                   aria-expanded={rightPanelOpen}
                   aria-pressed={rightPanelOpen}

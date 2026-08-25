@@ -950,7 +950,7 @@ export function RolePermissionManagementScreen({
 
   if (!workspace.hydrated || (workspace.usesServerCatalog && workspace.catalogStatus === "loading")) {
     return (
-      <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]">
+      <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
         <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
         <div className="p-5">
           <EmrPageHeader title="역할 및 권한" />
@@ -962,7 +962,7 @@ export function RolePermissionManagementScreen({
 
   if (workspace.usesServerCatalog && workspace.catalogStatus === "error") {
     return (
-      <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]">
+      <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
         <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
         <div className="p-5">
           <EmrPageHeader title="역할 및 권한" />
@@ -985,7 +985,7 @@ export function RolePermissionManagementScreen({
   return (
     <div
       data-testid="hospital-admin-role-permission-screen"
-      className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
+      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
     >
       {workspace.canView && activeSettingsSection !== null ? (
         <SettingsBackHeader onBack={returnToSettingsHub} />

@@ -11,13 +11,13 @@ const toggleVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--clair-color-atomic-black-alpha-6)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
+          "bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--emr-state-selected)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
         primary:
           "bg-background text-[var(--clair-color-atomic-neutral-900)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-neutral-100)] data-pressed:bg-[var(--clair-color-atomic-neutral-800)] data-pressed:text-white data-pressed:hover:bg-[var(--clair-color-atomic-neutral-900)] dark:bg-background dark:text-foreground dark:hover:bg-muted dark:data-pressed:bg-foreground dark:data-pressed:text-background",
         ghost:
-          "bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--clair-color-atomic-black-alpha-6)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
+          "bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--emr-state-selected)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
         outline:
-          "border-[var(--emr-border-default)] bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--clair-color-atomic-black-alpha-4)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
+          "border-[var(--emr-border-default)] bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] data-pressed:bg-[var(--emr-state-selected)] data-pressed:shadow-[var(--clair-shadow-xs)] dark:hover:bg-muted dark:data-pressed:bg-muted",
       },
       size: {
         xs: "h-7 min-w-7 px-2.5 text-[0.8rem] [&_svg:not([class*='size-'])]:size-3.5",

@@ -277,7 +277,7 @@ export function EmrEmptyState({
           >
             {resolvedSize === "xl" ? (
               <div
-                className="flex size-full items-center justify-center rounded-[26px] border-2 border-[var(--clair-color-atomic-common-100)] bg-[linear-gradient(0deg,#FCFCFC_0%,#FAFAFA_81.7308%,#F8F8F8_100%)]"
+                className="flex size-full items-center justify-center rounded-[26px] border-2 border-[var(--clair-color-atomic-common-100)] bg-[linear-gradient(0deg,var(--emr-surface-2)_0%,var(--emr-surface-0)_81.7308%,var(--emr-surface-1)_100%)]"
                 data-slot="icon-surface"
               >
                 <div
