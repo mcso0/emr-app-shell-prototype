@@ -156,10 +156,11 @@ three-workspace adoption, application deployment.
 
 ## 2026-08-25 Figma V2 Follow-up Candidate
 
-The report-reviewed classification dialog follow-up is implemented locally in
-the isolated `codex/diagnosis-classification-v2-20260825` worktree. This slice
-does not publish a new master release, adopt another workspace, apply a remote
-migration, or deploy the application.
+The report-reviewed classification dialog follow-up was implemented in the
+isolated `codex/diagnosis-classification-v2-20260825` worktree and promoted
+through the approved release flow. This slice does not publish a new master
+release or adopt another workspace; its exact multi-primary migration and app
+deployment are recorded below.
 
 - The dialog now uses the final 1120 × 680 four-column desktop contract, 56px
   header, 64px footer, 16px section insets, 34px classification rows, and the
@@ -175,11 +176,16 @@ migration, or deploy the application.
 - Selected rows support drag and keyboard reorder, independent diagnosis type,
   multiple ghost-style `주진단` toggles, and a hover/focus-only outlined trash
   action over a white gradient that masks the type dropdown.
-- Local migration
-  `20260825133000_chart_multi_primary_diagnoses.sql` removes the encounter-level
+- Migration
+  `20260825135815_chart_multi_primary_diagnoses.sql` removes the encounter-level
   unique-primary index and the latest save-RPC single-primary rejection while
   retaining ordered lookup, workspace/permission checks, snapshots, and audit
-  output. It has not been applied to any remote database.
+  output. The approved exact SQL was applied remotely as
+  `20260825135815_chart_multi_primary_diagnoses`; readback confirmed the unique
+  index is gone, the ordered partial index is non-unique, the single-primary
+  guard is absent, and the locked search path plus authenticated-only execute
+  boundary remain intact. Existing 14 diagnosis rows were preserved and no
+  encounter had multiple primary rows before rollout.
 - Focused coverage now proves the final search/header geometry, minimum search
   width, multi-primary selection, hover gradient/delete behavior, responsive
   dimensions, debounced server search, cursor append, scoped request cache, and

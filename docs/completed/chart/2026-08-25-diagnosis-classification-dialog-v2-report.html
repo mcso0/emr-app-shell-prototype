@@ -35,13 +35,13 @@
   <body>
     <main>
       <header>
-        <p class="eyebrow">Diagnosis Classification · Local Candidate</p>
+        <p class="eyebrow">Diagnosis Classification · Release Candidate</p>
         <h1>분류검색을 실제 카탈로그와 빠르게 연결했다</h1>
         <p class="lede">최종 Figma 구현 보고서의 화면·상태·간격을 반영하고, workspace 진단 카탈로그를 사용자 범위 캐시와 커서 검색으로 읽으며 복수 주진단을 순서대로 저장할 수 있는 로컬 후보를 완성했다.</p>
         <div class="meta">
           <span class="pill ok">집중 검증 통과</span>
           <span class="pill">2026-08-25</span>
-          <span class="pill">원격 DB 미적용</span>
+          <span class="pill ok">원격 DB 적용·검증</span>
         </div>
       </header>
 
@@ -69,7 +69,7 @@
       <section>
         <h2>복수 주진단 저장 계약</h2>
         <p>클라이언트의 단일 선택 강제와 서버 입력 거부를 제거했다. 로컬 migration은 encounter별 unique partial index를 비고유 ordered index로 바꾸고 최신 <code>clair_save_chart_diagnoses</code>의 단일 주진단 제약만 제거한다. 기존 권한, encounter 잠금, catalog snapshot, audit before/after, <code>sort_order</code> 계약은 보존한다.</p>
-        <p class="caution">migration <code>20260825133000_chart_multi_primary_diagnoses.sql</code>은 로컬 파일만 생성했다. 실제 원격 DB에 적용하기 전 별도 승인과 exact-candidate 재검증이 필요하다.</p>
+        <p class="caution">승인된 exact SQL은 원격 history 버전 <code>20260825135815_chart_multi_primary_diagnoses</code>로 적용했다. 적용 후 unique index 제거, 비고유 ordered index, 단일 주진단 guard 제거, 잠긴 search path, anon 실행 금지와 authenticated 실행 허용을 다시 확인했다. 기존 진단 14건은 보존됐고 적용 전 복수 주진단 encounter는 0건이었다.</p>
       </section>
 
       <section>
