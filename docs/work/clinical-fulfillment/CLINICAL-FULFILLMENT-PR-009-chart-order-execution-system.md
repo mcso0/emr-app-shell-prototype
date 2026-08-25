@@ -1,6 +1,6 @@
 ---
 id: "CLINICAL-FULFILLMENT-PR-009"
-status: "in_progress"
+status: "completed"
 area: "clinical-fulfillment"
 priority: "P0"
 target_pr: "https://github.com/mcso0/emr-app-shell-prototype/pull/617"
@@ -460,12 +460,19 @@ application deployment.
   `https://github.com/mcso0/emr-app-shell-prototype/pull/617` against `main`.
 - The PR records the approved product contract, production migration/backfill,
   RLS boundary, validation results, application-deployment boundary, and the
-  rollback/forward-fix path. The exact candidate and check state remain pending
-  until the documentation link commit is pushed and GitHub checks settle.
+  rollback/forward-fix path. The latest PR head is verified by the manually
+  dispatched GitHub `Release Check`; its exact SHA, run URL, full check state,
+  and deployment-ready packet are retained in the mutable PR evidence.
+- GitHub reported the PR `MERGEABLE` and `CLEAN`, with no requested review or
+  unresolved review comment. GitBook and Vercel Preview checks passed. The
+  Ready Preview is SSO-protected: unauthenticated probes of `/` and the chart
+  route returned the expected Vercel SSO `302`, so no authenticated Preview
+  smoke is claimed.
 - No production application deployment, production alias transition,
   user-facing feature activation, post-deploy smoke, or cleanup migration has
   been performed. Because `main` is the unholdable Vercel Production trigger,
-  the intended terminal state is an exact, fully checked, merge-ready PR.
+  the terminal state is an exact, fully checked, merge-ready PR with merge
+  intentionally withheld at the deployment approval boundary.
 
 ## Work Classification
 
@@ -555,7 +562,7 @@ application deployment.
 | 8. Downstream alignment | `completed` | Cross-surface identity, status, count, and billing reconciliation passes |
 | 9. Production migration/backfill | `completed` | Exact SQL/hash, backward compatibility, postflight, and zero anomaly gates pass |
 | 10. Verification/reconciliation | `completed` | Required automated, static, security, build, browser, DB, and diff checks pass |
-| 11. Git delivery | `in_progress` | Commit/push/PR/checks and safe merge boundary are fully evidenced |
+| 11. Git delivery | `completed` | Commit/push/PR/checks and safe merge boundary are fully evidenced |
 
 Only one major phase may be `in_progress` at a time.
 
