@@ -1255,13 +1255,12 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
     {
       type: "section",
       id: "orders",
-      label: "Order 관리",
+      label: "개별 Order",
       icon: <DocumentIcon className="size-4 shrink-0" />,
       showGroupLabels: false,
       testId: "hospital-admin-menu-order-management",
       children: orderSectionChildren,
     },
-    ...hospitalAdminSidePanelItems.filter((item) => item.group === "catalog"),
     {
       type: "button",
       id: "order-set",
@@ -1272,10 +1271,11 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       ),
       active: activeSection === "order-sets",
       icon: <FolderIcon className="size-4 shrink-0" />,
-      label: "Order 세트",
+      label: "세트 Order",
       onClick: () => navigateToSection("order-sets"),
       testId: orderSetPlaceholderId,
     },
+    ...hospitalAdminSidePanelItems.filter((item) => item.group === "catalog"),
     {
       type: "button",
       id: "printer-settings",
@@ -1421,7 +1421,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           item.subcategoryId === selectedSubcategoryId,
       )?.label ??
     selectedSubcategory?.label ??
-    "Order 관리";
+    "개별 Order";
   const requestedSection = searchParams.get("section");
 
   useEffect(() => {
@@ -2207,7 +2207,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           data-testid="hospital-order-table"
         >
           <EmrDataTable
-            aria-label="병원관리 Order 관리 테이블"
+            aria-label="병원관리 개별 Order 테이블"
             className="table-fixed"
             containerClassName="h-full min-h-0 overflow-auto"
             density={tableDensity}

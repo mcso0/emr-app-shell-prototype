@@ -15,7 +15,7 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.locator("#hospital-admin-content-aside")).toHaveCount(0);
   await expect(
     page.getByTestId("hospital-admin-menu-order-management"),
-  ).toContainText("Order 관리");
+  ).toContainText("개별 Order");
   await expect(
     page.locator('[data-testid^="hospital-admin-category-"]'),
   ).toHaveCount(0);
@@ -26,7 +26,7 @@ test("hospital admin order management opens with category and subcategory naviga
       .getByRole("button", { name: /^전체/ }),
   ).toHaveCount(0);
   const orderSetMenuItem = page.getByTestId("order-set-placeholder");
-  await expect(orderSetMenuItem).toContainText("Order 세트");
+  await expect(orderSetMenuItem).toContainText("세트 Order");
   await expect(orderSetMenuItem).toContainText("B2");
   await orderSetMenuItem.click();
   await expect(page.getByRole("heading", { name: "Order 세트" })).toBeVisible();
@@ -45,11 +45,11 @@ test("hospital admin order management opens with category and subcategory naviga
     "역할 및 권한",
     "근무표",
     "감사 로그",
-    "Order 관리",
+    "개별 Order",
+    "세트 Order",
     "차트 템플릿",
     "장비 관리",
     "마약류 관리",
-    "Order 세트",
     "프린터 설정",
     "데이터랩",
   ];
@@ -341,7 +341,7 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(
     orderHeader.getByRole("textbox", { name: "오더 검색" }),
   ).toBeVisible();
-  await expect(orderHeader).not.toContainText("병원관리 / Order 관리");
+  await expect(orderHeader).not.toContainText("병원관리 / 개별 Order");
   await expect(
     page.getByRole("group", { name: "임상병리 검사 하위 타입" }),
   ).toHaveCount(0);
@@ -1562,7 +1562,7 @@ test("hospital admin order table uses shared header and cell text primitives", a
   const workspace = page.getByTestId("hospital-admin-order-content");
   const table = page
     .getByTestId("hospital-order-table")
-    .getByRole("table", { name: "병원관리 Order 관리 테이블" });
+    .getByRole("table", { name: "병원관리 개별 Order 테이블" });
   const headers = table.locator("thead th");
   const identityHeader = headers.filter({ hasText: "표준 Order명" });
 
@@ -1808,7 +1808,7 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
 
   const table = page
     .getByTestId("hospital-order-table")
-    .getByRole("table", { name: "병원관리 Order 관리 테이블" });
+    .getByRole("table", { name: "병원관리 개별 Order 테이블" });
   const tableContainer = table.locator("xpath=..");
   const tableViewport = tableContainer.locator(
     "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
@@ -2037,7 +2037,7 @@ test("all hospital admin Order leaves use the pinned standard Order identity tab
     }
     const orderTable = page
       .getByTestId("hospital-order-table")
-      .getByRole("table", { name: "병원관리 Order 관리 테이블" });
+      .getByRole("table", { name: "병원관리 개별 Order 테이블" });
     await expect(orderTable).toHaveAttribute("data-emr-pinning", "columns");
     const orderScrollOwner = orderTable.locator(
       "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']/*[@data-emr-pinned-table-scroll-owner='true']",
@@ -2513,7 +2513,7 @@ test("hospital admin order catalog supports single sort and section filter build
 
   const table = page
     .getByTestId("hospital-order-table")
-    .getByRole("table", { name: "병원관리 Order 관리 테이블" });
+    .getByRole("table", { name: "병원관리 개별 Order 테이블" });
   const orderRows = table.locator('[data-testid^="hospital-order-row-"]');
 
   await table.getByRole("button", { name: /판매금액 오름차순 정렬/ }).click();
