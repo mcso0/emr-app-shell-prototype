@@ -144,7 +144,7 @@ export function ChartActionBar({
   return (
     <div
       data-slot="chart-action-bar"
-      className="flex h-12 min-h-12 shrink-0 items-center justify-between gap-4 overflow-x-auto bg-[#fcfcfc] px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex h-12 min-h-12 shrink-0 items-center justify-between gap-4 overflow-x-auto bg-[var(--emr-surface-workspace)] px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div className="flex min-w-max items-center gap-2">
         {historyAction}

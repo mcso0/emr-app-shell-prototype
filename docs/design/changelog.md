@@ -2,6 +2,17 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-08-25
+
+- `changed`: Static backgrounds now use the equal-channel Neutral surface
+  ladder, while interaction feedback uses black-alpha overlays: hover 4%,
+  selected 6%, and active 8%.
+- `changed`: Shared data-table rows and pinned cells use the same semantic state
+  tokens; pinned cells compose the overlay over an opaque base to prevent
+  scroll-through.
+- `deprecated`: `--emr-surface-hover` and `--emr-surface-selected` remain
+  compatibility aliases only; new code uses `--emr-state-*`.
+
 ## 2026-08-22
 
 - `changed`: Structural borders now use only the neutral

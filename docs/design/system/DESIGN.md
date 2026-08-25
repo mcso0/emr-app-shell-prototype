@@ -9,8 +9,8 @@ status: "active"
 area: design
 doc_type: design-system
 tags: [design-system, ui, ux-writing, tokens, components, density]
-updated: "2026-07-24"
-last_updated: "2026-07-24"
+updated: "2026-08-25"
+last_updated: "2026-08-25"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -61,9 +61,12 @@ The first visual foundation is the Light Operational Foundation.
 CLAiR keeps the generated Clair token output as the base layer and adds a small EMR alias layer above it:
 
 - `--emr-surface-app`: app canvas
+- `--emr-surface-workspace`: near-white work canvas
 - `--emr-surface-panel`: primary panel surface
 - `--emr-surface-muted`: low-emphasis headers and nested surfaces
-- `--emr-surface-selected`: selected list, card, and row surface
+- `--emr-state-hover`: black 4% interaction overlay
+- `--emr-state-selected`: black 6% selection overlay
+- `--emr-state-active`: black 8% pressed or stronger active overlay
 - `--emr-border-subtle`: neutral/100 for small elements and low-emphasis internal separators
 - `--emr-border-default`: neutral/200 for ordinary cards, rows, controls, and panel-internal boundaries
 - `--emr-border-strong`: neutral/300 for layout-level boundaries and large component outer edges
@@ -84,19 +87,30 @@ CLAiR uses a bright clinical surface ladder:
 CLAiR follows the Neutral Command + Semantic Status direction:
 
 - primary is command ink, not brand blue
-- gray and cool-neutral surfaces carry structure, hover, selected, and focus states
+- equal-channel Neutral surfaces carry app, workspace, panel, header, nested,
+  and disabled structure
+- black-alpha overlays carry interaction state: hover 4%, selected 6%, and
+  active 8%
 - blue is reserved for information, links, and limited brand identity moments
 - success, warning, danger, info, and neutral status colors stay semantically distinct
 
-- app canvas: near-white operational background
-- panel: white or Clair normal background
-- muted surface: low-contrast header, table, and nested surface
-- selected surface: cool-neutral state fill with enough contrast from hover
+- app canvas: white operational background
+- workspace: Neutral `#FCFCFC` work canvas
+- panel: white surface
+- muted surface: Neutral 50 (`#FAFAFA`) for table headers and quiet nesting
+- disabled surface: Neutral 100 (`#F5F5F5`)
+- interaction state: black 4% hover, black 6% selected, black 8% active
 - border ladder: neutral/100, neutral/200, and neutral/300 mapped by structural hierarchy
 - accent: sparse information, link, and limited brand identity signal
 - focus: neutral gray ring through the shared `--ring` token by default
 
 Do not collapse the product into one brand color. Medical, billing, warning, danger, success, pending, and completed states keep their semantic colors.
+
+`--emr-surface-hover` and `--emr-surface-selected` remain compatibility aliases
+only. New implementation must use `--emr-state-hover`,
+`--emr-state-selected`, or `--emr-state-active` so a static surface role is not
+confused with an interaction state. Pinned table cells must compose the state
+overlay over their opaque base surface so scrolling content cannot show through.
 
 ## Typography
 

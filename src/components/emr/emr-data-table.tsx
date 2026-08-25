@@ -190,7 +190,7 @@ function getRowClassName<TData>(row: Row<TData>, className?: string) {
   return cn(
     "group/emr-data-table-row cursor-default border-[var(--emr-table-data-border)] bg-[var(--emr-table-data-row-surface)]",
     row.getIsSelected() &&
-      "data-[state=selected]:bg-[var(--emr-surface-selected)]",
+      "data-[state=selected]:bg-[var(--emr-state-selected)]",
     className,
   );
 }

@@ -32,7 +32,7 @@ const WORKSPACE_TAB_WIDTH_CLASS_NAME =
 const workspaceTabButtonClassName =
   "h-[var(--emr-topbar-control-size)] min-w-0 flex-1 justify-start gap-0 truncate rounded-[var(--emr-topbar-tab-radius)] border-transparent bg-transparent py-[var(--emr-topbar-tab-padding-y)] pl-[var(--emr-topbar-tab-padding-x)] pr-[var(--emr-topbar-tab-padding-right)] text-left [font-size:var(--emr-type-size-body)] font-medium ![letter-spacing:var(--emr-type-tracking-section)] [line-height:var(--emr-type-leading-body)] shadow-none hover:bg-transparent";
 const workspaceTabCloseClassName =
-  "mr-[var(--emr-topbar-tab-padding-x)] shrink-0 bg-transparent text-[var(--emr-topbar-tab-close)] opacity-0 transition-opacity duration-[var(--emr-topbar-motion-duration)] pointer-events-none hover:bg-[var(--clair-color-atomic-black-alpha-4)] hover:text-[var(--emr-topbar-tab-active-close)] group-hover/workspace-tab:pointer-events-auto group-hover/workspace-tab:opacity-100 group-focus-within/workspace-tab:pointer-events-auto group-focus-within/workspace-tab:opacity-100 motion-reduce:transition-none";
+  "mr-[var(--emr-topbar-tab-padding-x)] shrink-0 bg-transparent text-[var(--emr-topbar-tab-close)] opacity-0 transition-opacity duration-[var(--emr-topbar-motion-duration)] pointer-events-none hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-topbar-tab-active-close)] group-hover/workspace-tab:pointer-events-auto group-hover/workspace-tab:opacity-100 group-focus-within/workspace-tab:pointer-events-auto group-focus-within/workspace-tab:opacity-100 motion-reduce:transition-none";
 const workspaceTabIconFrameClassName =
   "flex size-[var(--clair-spacing-16)] shrink-0 items-center justify-center";
 const workspaceTabTooltipClassName =

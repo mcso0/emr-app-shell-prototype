@@ -194,7 +194,7 @@
 
   .emr-selected-surface {
     border-color: var(--emr-state-selected-border);
-    background-color: var(--emr-surface-selected);
+    background-color: var(--emr-state-selected);
   }
 
   .emr-text-micro {
@@ -342,16 +342,17 @@
   }
 
   [data-emr-pinned-table-viewport="true"] [data-slot="table-container"] {
-    background-color: #fcfcfc;
+    background-color: var(--emr-surface-workspace);
     background-image: linear-gradient(
       to right,
-      #ffffff 0,
-      #ffffff var(--emr-table-left-pinned-column-width, 0px),
-      #fcfcfc var(--emr-table-left-pinned-column-width, 0px),
-      #fcfcfc
+      var(--emr-surface-panel) 0,
+      var(--emr-surface-panel) var(--emr-table-left-pinned-column-width, 0px),
+      var(--emr-surface-workspace) var(--emr-table-left-pinned-column-width, 0px),
+      var(--emr-surface-workspace)
         calc(100% - var(--emr-table-right-pinned-column-width, 0px)),
-      #ffffff calc(100% - var(--emr-table-right-pinned-column-width, 0px)),
-      #ffffff 100%
+      var(--emr-surface-panel)
+        calc(100% - var(--emr-table-right-pinned-column-width, 0px)),
+      var(--emr-surface-panel) 100%
     );
   }
 
@@ -404,7 +405,7 @@
     --emr-table-row-height-compact: 36px;
     --emr-table-row-height-standard: 40px;
     --emr-table-row-height-comfortable: 52px;
-    --emr-table-header-surface: #fafafa;
+    --emr-table-header-surface: var(--emr-surface-muted);
     --emr-table-data-row-surface: var(--clair-color-atomic-common-100);
     --emr-table-data-text: var(--clair-color-atomic-neutral-700);
     --emr-table-data-border: var(--emr-border-default);
@@ -430,14 +431,18 @@
   }
 
   [data-emr-data-table="true"] .emr-table-surface tbody tr:hover {
-    background: var(--clair-color-atomic-black-alpha-4);
+    background:
+      linear-gradient(var(--emr-state-hover), var(--emr-state-hover)),
+      var(--emr-table-data-row-surface);
   }
 
   [data-emr-data-table="true"]
     .emr-table-surface
     tbody
     tr[data-state="selected"] {
-    background: var(--emr-surface-selected);
+    background:
+      linear-gradient(var(--emr-state-selected), var(--emr-state-selected)),
+      var(--emr-table-data-row-surface);
   }
 
   [data-emr-data-table="true"] .emr-table-surface [data-slot="table-head"] {
@@ -483,7 +488,9 @@
     tbody
     tr:hover
     > [data-emr-column-pinned] {
-    background: var(--clair-color-atomic-black-alpha-4);
+    background:
+      linear-gradient(var(--emr-state-hover), var(--emr-state-hover)),
+      var(--emr-table-data-row-surface);
   }
 
   [data-emr-data-table="true"]
@@ -491,7 +498,9 @@
     tbody
     tr[data-state="selected"]
     > [data-emr-column-pinned] {
-    background: var(--emr-surface-selected);
+    background:
+      linear-gradient(var(--emr-state-selected), var(--emr-state-selected)),
+      var(--emr-table-data-row-surface);
   }
 
   [data-emr-data-table="true"] .emr-data-table-cell-content {
@@ -600,14 +609,18 @@
     tbody
     tr:has([aria-expanded="true"])
     > [data-emr-column-pinned] {
-    background-color: var(--emr-surface-hover);
+    background:
+      linear-gradient(var(--emr-state-hover), var(--emr-state-hover)),
+      var(--emr-surface-panel);
   }
 
   .emr-table-surface[data-emr-pinning="columns"]
     tbody
     tr[data-state="selected"]
     > [data-emr-column-pinned] {
-    background-color: var(--emr-surface-selected);
+    background:
+      linear-gradient(var(--emr-state-selected), var(--emr-state-selected)),
+      var(--emr-surface-panel);
   }
 
   .emr-table-surface[data-emr-pinning="columns"]

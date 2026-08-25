@@ -1976,7 +1976,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
 
   return (
     <EmrPinnedTableWorkspace
-      className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
+      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
       data-testid="hospital-admin-order-content"
       identityTextInset={48}
       selectionColumnWidth={hospitalOrderSelectionColumnWidth}
@@ -2446,7 +2446,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col bg-[#fcfcfc]"
+      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
       data-testid="hospital-admin-audit-review"
     >
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />

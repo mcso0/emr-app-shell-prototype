@@ -18,7 +18,7 @@ function TableWorkspaceHeaderExample({
   const [searchValue, setSearchValue] = useState("");
 
   return (
-    <div className="min-w-[1080px] bg-[#fcfcfc]">
+    <div className="min-w-[1080px] bg-[var(--emr-surface-workspace)]">
       <EmrTableWorkspaceHeader
         count={3}
         countLoading={countLoading}

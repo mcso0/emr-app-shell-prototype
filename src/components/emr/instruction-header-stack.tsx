@@ -67,7 +67,7 @@ export function EmrInstructionHistoryToggle({
             type="button"
             variant="outline"
             size="icon-sm"
-            className="size-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--clair-color-atomic-black-alpha-4)] data-[state=on]:text-[var(--emr-text-primary)] [&_svg]:size-4"
+            className="size-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] [&_svg]:size-4"
             aria-label={`${ariaLabelPrefix} 패널 ${expanded ? "접기" : "열기"}`}
             aria-controls={controls}
             aria-expanded={expanded}

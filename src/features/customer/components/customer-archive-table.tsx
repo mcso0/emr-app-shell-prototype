@@ -315,7 +315,7 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
 
   return (
     <EmrPinnedTableWorkspace
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#fcfcfc]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--emr-surface-workspace)]"
       data-testid="customer-archive-table"
       identityTextInset={48}
     >

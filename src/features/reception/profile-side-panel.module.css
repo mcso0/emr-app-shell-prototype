@@ -1,5 +1,5 @@
 .panel {
-  --profile-neutral-50: #fafafa;
+  --profile-neutral-50: var(--emr-surface-muted);
   --profile-neutral-100: #f5f5f5;
   --profile-neutral-200: #e5e5e5;
   --profile-neutral-300: #d4d4d4;

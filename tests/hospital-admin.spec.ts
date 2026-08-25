@@ -245,7 +245,7 @@ test("hospital admin order management opens with category and subcategory naviga
   expect(sidePanelMetrics.leafLabelFontSize).toBe("13px");
   expect(sidePanelMetrics.leafLabelLineHeight).toBe("18px");
   expect(sidePanelMetrics.leafLabelColor).toBe("rgb(23, 23, 23)");
-  expect(sidePanelMetrics.leafBackground).toBe("rgba(0, 0, 0, 0.08)");
+  expect(sidePanelMetrics.leafBackground).toBe("rgba(0, 0, 0, 0.06)");
   expect(Math.round(sidePanelMetrics.leafBadgeHeight)).toBe(20);
   expect(sidePanelMetrics.leafBadgeFontSize).toBe("12px");
   expect(sidePanelMetrics.leafBadgeLineHeight).toBe("16px");
@@ -2307,16 +2307,24 @@ test("hospital admin order drawer switches rows and closes from outside click", 
   );
   const selectedSurface = await page.evaluate(() => {
     const probe = document.createElement("div");
-    probe.style.backgroundColor = "var(--emr-surface-selected)";
+    probe.style.background =
+      "linear-gradient(var(--emr-state-selected), var(--emr-state-selected)), var(--clair-color-atomic-common-100)";
     document.body.appendChild(probe);
-    const color = getComputedStyle(probe).backgroundColor;
+    const style = getComputedStyle(probe);
+    const background = {
+      color: style.backgroundColor,
+      image: style.backgroundImage,
+    };
     probe.remove();
-    return color;
+    return background;
   });
-  await expect(selectedRow).toHaveCSS("background-color", selectedSurface);
-  await expect(
+  for (const target of [
+    selectedRow,
     selectedRow.locator('td[data-column-id="standardName"]'),
-  ).toHaveCSS("background-color", selectedSurface);
+  ]) {
+    await expect(target).toHaveCSS("background-color", selectedSurface.color);
+    await expect(target).toHaveCSS("background-image", selectedSurface.image);
+  }
 
   await page
     .getByRole("heading", { level: 1, name: "임상병리 검사" })

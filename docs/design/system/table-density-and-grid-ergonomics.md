@@ -268,8 +268,13 @@ DESIGN-SYSTEM-PR-086 introduced the customer animal identity pin, and DESIGN-SYS
   `data-state="selected"` plus `aria-current="true"`. This selected surface is
   independent from checkbox row selection and must not activate the checkbox
   or bulk-action bar.
-- Apply `--emr-surface-selected` to the full row and pinned cells. Do not add a
-  feature-local left stripe or status rail for the detail-active state.
+- Apply `--emr-state-hover` (black 4%) and `--emr-state-selected` (black 6%)
+  to the full row and pinned cells; reserve `--emr-state-active` (black 8%) for
+  pressed or stronger active feedback. Do not add a feature-local left stripe
+  or status rail for the detail-active state.
+- Pinned cells must compose the same state overlay over their opaque row base.
+  This keeps the visual color aligned with the row without exposing scrolled
+  content through a translucent sticky cell.
 
 ## Header Interaction Rules
 

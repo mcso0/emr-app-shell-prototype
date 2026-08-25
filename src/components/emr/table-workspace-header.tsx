@@ -43,7 +43,7 @@ export function EmrTableWorkspaceHeader({
   return (
     <header
       className={cn(
-        "flex min-h-[108px] shrink-0 flex-col gap-3 bg-[#fcfcfc] px-12 py-4",
+        "flex min-h-[108px] shrink-0 flex-col gap-3 bg-[var(--emr-surface-workspace)] px-12 py-4",
         className,
       )}
       data-emr-table-workspace-header="true"
@@ -87,7 +87,7 @@ export function EmrTableWorkspaceHeader({
             {searchValue ? (
               <button
                 type="button"
-                className="absolute right-1 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-neutral-300)]"
+                className="absolute right-1 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-neutral-300)]"
                 aria-label={searchClearAriaLabel}
                 onClick={() => onSearchChange("")}
               >

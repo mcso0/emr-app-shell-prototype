@@ -48,7 +48,7 @@ export function OrderSetsPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#fcfcfc]">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <div className="min-h-0 flex-1 overflow-auto p-4">
         <section className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-card">

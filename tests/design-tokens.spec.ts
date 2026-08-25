@@ -108,9 +108,18 @@ test("neutral command token contract is exposed on the app shell", async ({ page
       ring: resolveColor("var(--ring)"),
       expectedRing: resolveColor("oklch(0.705 0.015 286.067)"),
       emrSurfaceApp: resolveColor("var(--emr-surface-app)"),
-      expectedEmrSurfaceApp: resolveColor("var(--emr-surface-0)"),
+      expectedEmrSurfaceApp: resolveColor("var(--clair-color-atomic-common-100)"),
+      emrSurfaceWorkspace: resolveColor("var(--emr-surface-workspace)"),
+      expectedEmrSurfaceWorkspace: resolveColor("#fcfcfc"),
+      emrSurfaceMuted: resolveColor("var(--emr-surface-muted)"),
+      expectedEmrSurfaceMuted: resolveColor("var(--clair-color-atomic-neutral-50)"),
+      emrStateHover: resolveColor("var(--emr-state-hover)"),
+      expectedEmrStateHover: resolveColor("var(--clair-color-atomic-black-alpha-4)"),
+      emrStateSelected: resolveColor("var(--emr-state-selected)"),
+      expectedEmrStateSelected: resolveColor("var(--clair-color-atomic-black-alpha-6)"),
+      emrStateActive: resolveColor("var(--emr-state-active)"),
+      expectedEmrStateActive: resolveColor("var(--clair-color-atomic-black-alpha-8)"),
       emrSurfaceSelected: resolveColor("var(--emr-surface-selected)"),
-      expectedEmrSurfaceSelected: resolveColor("oklch(0.97 0.006 286)"),
       emrStateSelectedBorder: resolveColor("var(--emr-state-selected-border)"),
       expectedEmrStateSelectedBorder: resolveColor("var(--emr-line-selected)"),
       emrStatusInfoText: resolveColor("var(--emr-status-info-text)"),
@@ -122,9 +131,37 @@ test("neutral command token contract is exposed on the app shell", async ({ page
   expect(colors.brand).toBe(colors.expectedBrand);
   expect(colors.ring).toBe(colors.expectedRing);
   expect(colors.emrSurfaceApp).toBe(colors.expectedEmrSurfaceApp);
-  expect(colors.emrSurfaceSelected).toBe(colors.expectedEmrSurfaceSelected);
+  expect(colors.emrSurfaceWorkspace).toBe(colors.expectedEmrSurfaceWorkspace);
+  expect(colors.emrSurfaceMuted).toBe(colors.expectedEmrSurfaceMuted);
+  expect(colors.emrStateHover).toBe(colors.expectedEmrStateHover);
+  expect(colors.emrStateSelected).toBe(colors.expectedEmrStateSelected);
+  expect(colors.emrStateActive).toBe(colors.expectedEmrStateActive);
+  expect(colors.emrSurfaceSelected).toBe(colors.emrStateSelected);
   expect(colors.emrStateSelectedBorder).toBe(colors.expectedEmrStateSelectedBorder);
   expect(colors.emrStatusInfoText).toBe(colors.expectedEmrStatusInfoText);
+});
+
+test("runtime surfaces use semantic aliases instead of legacy state names or local neutrals", async () => {
+  const sourceFiles = (await collectSourceFiles("src")).filter(
+    (filePath) =>
+      /\.(?:css|ts|tsx)$/.test(filePath) &&
+      !filePath.endsWith("src/styles/tokens/clair.css") &&
+      !filePath.endsWith("src/styles/tokens/emr-foundation.css"),
+  );
+  const offenders = (
+    await Promise.all(
+      sourceFiles.map(async (filePath) => {
+        const source = await fs.promises.readFile(filePath, "utf8");
+        return /--emr-surface-(?:hover|selected)|#(?:fcfcfc|fafafa|f9f9f9)/i.test(
+          source,
+        )
+          ? filePath
+          : null;
+      }),
+    )
+  ).filter(Boolean);
+
+  expect(offenders).toEqual([]);
 });
 
 test("EMR border semantic scale maps to neutral 100, 200, and 300", async ({ page }) => {
