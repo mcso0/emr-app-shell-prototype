@@ -3655,7 +3655,7 @@ function AssessmentPanel({
         <div className="flex min-h-0 flex-1 flex-col">
           <div
             data-slot="chart-assessment-toolbar"
-            className="grid h-11 shrink-0 grid-cols-[82px_minmax(0,1fr)_1px_66px] items-center gap-2.5 border-b border-[var(--emr-border-default)] px-3 py-2"
+            className="grid h-11 shrink-0 grid-cols-[auto_minmax(0,1fr)_1px_66px] items-center gap-2.5 border-b border-[var(--emr-border-default)] px-3 py-2"
           >
             <Select
               value={selectedSystem}
@@ -3664,7 +3664,7 @@ function AssessmentPanel({
               <SelectTrigger
                 aria-label="진단계통 필터"
                 size="sm"
-                className="w-full rounded-lg bg-card px-2"
+                className="w-fit min-w-24 rounded-lg bg-card px-2"
               >
                 <SelectValue>
                   {selectedSystem === "all" ? "계통 전체" : selectedSystem}
@@ -3687,7 +3687,7 @@ function AssessmentPanel({
             >
               <PopoverTrigger
                 nativeButton={false}
-                render={<div className="relative min-w-0" />}
+                render={<div className="relative min-w-0 w-full" />}
               >
                 <CdsActionsSearchIcon
                   aria-hidden="true"
