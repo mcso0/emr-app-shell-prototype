@@ -5,13 +5,10 @@ import {
   createEmptyHospitalOrderDraft,
   getDefaultSubcategoryId,
   hospitalOrderSeedItems,
-  type HospitalOrderBillingFilter,
   type HospitalOrderCatalogItem,
   type HospitalOrderCategoryId,
   type HospitalOrderDraft,
-  type HospitalOrderStatusFilter,
   type HospitalOrderSubcategoryId,
-  type HospitalOrderWorkTypeFilter,
 } from "@/features/hospital-admin/data";
 
 export type HospitalAdminSection =
@@ -29,7 +26,6 @@ export type HospitalAdminSection =
 
 type HospitalAdminStore = {
   activeSection: HospitalAdminSection;
-  billingFilter: HospitalOrderBillingFilter;
   focusedOrderId: string | null;
   orders: HospitalOrderCatalogItem[];
   searchQuery: string;
@@ -37,8 +33,6 @@ type HospitalAdminStore = {
   selectedOrderIds: string[];
   selectedSubcategoryId: HospitalOrderSubcategoryId;
   settingsDirty: boolean;
-  statusFilter: HospitalOrderStatusFilter;
-  workTypeFilter: HospitalOrderWorkTypeFilter;
   clearSelectedOrders: () => void;
   createOrder: (draft?: Partial<HospitalOrderDraft>) => HospitalOrderCatalogItem;
   deleteOrder: (orderId: string) => void;
@@ -48,7 +42,6 @@ type HospitalAdminStore = {
   pendingSection: HospitalAdminSection | null;
   requestSectionChange: (section: HospitalAdminSection) => void;
   setActiveSection: (section: HospitalAdminSection) => void;
-  setBillingFilter: (filter: HospitalOrderBillingFilter) => void;
   setFocusedOrderId: (orderId: string | null) => void;
   setOrders: (orders: HospitalOrderCatalogItem[]) => void;
   setSearchQuery: (query: string) => void;
@@ -56,8 +49,6 @@ type HospitalAdminStore = {
   setSelectedSubcategoryId: (subcategoryId: HospitalOrderSubcategoryId) => void;
   setSettingsDirty: (dirty: boolean) => void;
   selectOrder: (orderId: string) => void;
-  setStatusFilter: (filter: HospitalOrderStatusFilter) => void;
-  setWorkTypeFilter: (filter: HospitalOrderWorkTypeFilter) => void;
   toggleOrderSelection: (orderId: string, selected: boolean) => void;
   toggleVisibleOrderSelection: (orderIds: string[], selected: boolean) => void;
   updateOrder: (orderId: string, draft: Partial<HospitalOrderDraft>) => void;
@@ -71,7 +62,6 @@ const getNextOrderId = () => `${localDraftOrderIdPrefix}${Date.now().toString(36
 
 export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => ({
   activeSection: "orders",
-  billingFilter: "all",
   focusedOrderId: null,
   orders: hospitalOrderSeedItems,
   searchQuery: "",
@@ -79,8 +69,6 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
   selectedOrderIds: [],
   selectedSubcategoryId: defaultSubcategoryId,
   settingsDirty: false,
-  statusFilter: "all",
-  workTypeFilter: "all",
   clearSelectedOrders: () => set({ selectedOrderIds: [] }),
   createOrder: (draft = {}) => {
     const state = get();
@@ -151,7 +139,6 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
     set({ activeSection: section, pendingSection: null });
   },
   setActiveSection: (activeSection) => set({ activeSection }),
-  setBillingFilter: (billingFilter) => set({ billingFilter }),
   setFocusedOrderId: (focusedOrderId) => set({ focusedOrderId }),
   setOrders: (orders) =>
     set((state) => {
@@ -193,8 +180,6 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
     set({ focusedOrderId: null, selectedOrderIds: [], selectedSubcategoryId }),
   setSettingsDirty: (settingsDirty) => set({ settingsDirty }),
   selectOrder: (orderId) => set({ selectedOrderIds: [orderId] }),
-  setStatusFilter: (statusFilter) => set({ statusFilter }),
-  setWorkTypeFilter: (workTypeFilter) => set({ workTypeFilter }),
   toggleOrderSelection: (orderId, selected) =>
     set((state) => ({
       selectedOrderIds: selected
