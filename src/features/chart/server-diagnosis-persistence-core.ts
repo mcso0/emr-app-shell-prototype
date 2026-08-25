@@ -480,10 +480,6 @@ function validateDiagnosisInput(input: ReturnType<typeof normalizeDiagnosisInput
   );
   if (hasInvalidRow) fieldErrors.diagnoses = "진단명을 확인해 주세요.";
 
-  if (input.diagnoses.filter((row) => row.isPrimary).length > 1) {
-    fieldErrors.diagnoses = "주진단은 하나만 선택할 수 있습니다.";
-  }
-
   if (Object.keys(fieldErrors).length > 0) {
     return { valid: false as const, fieldErrors };
   }
