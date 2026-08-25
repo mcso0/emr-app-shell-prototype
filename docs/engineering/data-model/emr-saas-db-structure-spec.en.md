@@ -404,8 +404,11 @@ Actual diagnosis records.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | uuid pk | |
+| `workspace_id` | text fk | Same workspace as the encounter |
 | `encounter_id` | uuid fk | |
 | `diagnosis_catalog_id` | uuid fk nullable | |
+| `diagnosis_catalog_revision` | integer nullable | Workspace catalog revision at selection time |
+| `diagnosis_snapshot` | jsonb nullable | Diagnosis/system/disease-group display snapshot at selection time |
 | `diagnosis_text` | text | |
 | `diagnosis_type` | text | `suspected`, `confirmed`, `differential` |
 | `is_primary` | boolean | At most one primary diagnosis per encounter |
@@ -419,16 +422,50 @@ Actual diagnosis records.
 
 ### `diagnosis_catalog`
 
-Disease master data for autocomplete and recommendations.
+Workspace-owned diagnosis catalog for autocomplete and classification search.
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | uuid pk | |
-| `workspace_id` | text fk nullable | null means system-wide |
+| `workspace_id` | text fk | Workspace ownership boundary |
 | `code` | text nullable | |
 | `name` | text | |
 | `species` | text nullable | |
 | `synonyms` | text[] nullable | |
+| `source_master_record_id` | uuid fk nullable | CLAiR master diagnosis ID |
+| `master_revision` | integer nullable | Latest observed source revision |
+| `catalog_revision` | integer | Workspace catalog revision |
+| `first_adopted_revision` | integer nullable | First adopted source revision |
+| `last_applied_revision` | integer nullable | Last safely applied source revision |
+| `system_master_record_id` | uuid nullable | Primary system master ID |
+| `system_name` | text nullable | Primary system label |
+| `disease_group_master_record_id` | uuid nullable | Primary disease-group master ID |
+| `disease_group_name` | text nullable | Primary disease-group label |
+| `source_projection_snapshot` | jsonb nullable | Source projection evidence |
+| `source_projection_fingerprint` | text nullable | Source projection SHA-256 |
+| `availability_state` | text | `active`, `inactive` |
+| `customization_state` | text | `unmodified`, `customized` |
+| `merge_state` | text | `synced`, `review_required` |
+
+### `diagnosis_catalog_classifications`
+
+Lossless workspace diagnosis-to-system/disease-group relations. A diagnosis may
+have multiple disease-group links, with exactly one primary link.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `workspace_id` | text fk | Workspace scope |
+| `diagnosis_catalog_id` | uuid fk | Workspace composite FK |
+| `system_master_record_id` | uuid | System master ID |
+| `system_name` | text | System label |
+| `disease_group_master_record_id` | uuid | Disease-group master ID |
+| `disease_group_name` | text | Disease-group label |
+| `system_master_revision` | integer | System source revision |
+| `disease_group_master_revision` | integer | Disease-group source revision |
+| `is_primary` | boolean | Exactly one per diagnosis |
+| `sort_order` | integer | Classification order within the diagnosis |
+| `source_projection_snapshot` | jsonb | Relation projection evidence |
+| `source_projection_fingerprint` | text | Relation projection SHA-256 |
 
 ### `prescriptions`
 

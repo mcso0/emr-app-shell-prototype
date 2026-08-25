@@ -293,8 +293,11 @@ export type Diagnosis = {
   id: EmrId;
   encounterId: EmrId;
   diagnosisCatalogId?: EmrId;
+  diagnosisCatalogRevision?: number;
   diagnosisText: string;
   diagnosisType: DiagnosisType;
+  systemLabel?: string;
+  diseaseGroupLabel?: string;
   closedAt?: IsoDateTime;
   closedByUserId?: EmrId;
   isPrimary?: boolean;

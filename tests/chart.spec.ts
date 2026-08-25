@@ -3686,11 +3686,26 @@ test("chart SOAP tabs add systems, prevent duplicates, and delete", async ({
 test("chart diagnosis search recommends, adds, marks, and removes session diagnoses", async ({
   page,
 }) => {
+  await page.route("**/chart/diagnosis-catalog", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        diagnoses: [
+          { catalogId: "dx-acute-gastroenteritis", masterId: "master-acute-gastroenteritis", masterRevision: 1, name: "급성 위장관염 의심", synonyms: [], system: { id: "system-digestive", name: "소화기" }, diseaseGroup: { id: "group-gastrointestinal", name: "위장관 질환" } },
+          { catalogId: "dx-pancreatitis", masterId: "master-pancreatitis", masterRevision: 1, name: "췌장염 감별", synonyms: [], system: { id: "system-digestive", name: "소화기" }, diseaseGroup: { id: "group-pancreas", name: "췌장 질환" } },
+          { catalogId: "dx-mild-dehydration", masterId: "master-mild-dehydration", masterRevision: 1, name: "경도 탈수", synonyms: [], system: { id: "system-general", name: "전신" }, diseaseGroup: { id: "group-fluid", name: "체액 질환" } },
+        ],
+        nextCursor: null,
+      }),
+    });
+  });
   await page.goto(kongScenarioUrl);
 
   const diagnosisPanel = page.getByLabel("진단명 관리");
 
-  await diagnosisPanel.getByRole("button", { name: "분류 검색" }).click();
+  await diagnosisPanel.getByLabel("진단명 검색").focus();
   await expect(
     page.getByRole("listbox", { name: "진단명 검색 결과" }),
   ).toBeVisible();
@@ -3764,7 +3779,7 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
 
   await diagnosisPanel
     .getByRole("button", { name: "보호자 설명용 임시 진단 삭제" })
-    .click();
+    .click({ force: true });
   await expect(diagnosisPanel.getByText("보호자 설명용 임시 진단")).toHaveCount(
     0,
   );

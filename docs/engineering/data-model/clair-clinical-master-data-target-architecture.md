@@ -474,11 +474,16 @@ This replaces loosely encoded enum text with structured result definitions while
 | `master.diagnosis_care_guide_links` | Versioned diagnosis-to-guide relationship. |
 | `master.diagnosis_order_suggestions` | Optional non-automatic suggestion relationship. Deferred until separately approved. |
 
-Implementation note (2026-08-23): CLINICAL-MASTER-PR-007 reserves the first
-three private diagnosis tables with system-to-disease-group hierarchy,
-disease-group-only links, and deferred one-primary completeness. It creates no
-rows; publisher and workspace adoption remain deferred, and no remote database
-application or runtime diagnosis search is claimed.
+Implementation note (2026-08-25): CLINICAL-MASTER-PR-007 reserved the first
+three private diagnosis tables. CLINICAL-MASTER-PR-015 now implements the
+synthetic diagnosis-only publisher, payload-scoped workspace adoption,
+workspace catalog/classification projection, permission-checked search, and
+encounter-owned diagnosis revision/classification snapshots. The approved
+scope is exactly three demo workspaces and twelve synthetic diagnoses; the
+foreign workspace and existing free-text history remain unchanged. Local
+fresh-migration, negative validation, adoption retry, permission, and snapshot
+replay have passed. Remote application and production delivery are recorded
+only after their separate release gates complete.
 
 Applied chart diagnoses continue to allow free text. Catalog selection may assist search and traceability, but must not automatically claim diagnostic correctness.
 

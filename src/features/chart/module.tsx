@@ -164,6 +164,12 @@ import {
   ChartAssessmentTable,
   type ChartAssessmentDiagnosis,
 } from "@/features/chart/components/chart-assessment-table";
+import {
+  AssessmentClassificationSearchDialog,
+  type AssessmentClassificationCatalogItem,
+  type AssessmentClassificationCatalogStatus,
+  type AssessmentClassificationSelection,
+} from "@/features/chart/components/assessment-classification-search-dialog";
 import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { useChartStore } from "@/features/chart/store";
@@ -306,6 +312,36 @@ type ChartDiagnosisRouteResponse =
       denialReason?: string;
       error?: string;
     };
+type ChartDiagnosisCatalogRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      catalog?: AssessmentClassificationCatalogRawItem[];
+      diagnoses?: AssessmentClassificationCatalogRawItem[];
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
+type AssessmentClassificationCatalogRawItem = {
+  id?: string;
+  catalogId?: string;
+  code?: string | null;
+  name: string;
+  masterId?: string | null;
+  masterRevision?: number | null;
+  systemId?: string | null;
+  systemLabel?: string | null;
+  system?: { id?: string | null; name?: string | null } | null;
+  categoryId?: string | null;
+  categoryLabel?: string | null;
+  diseaseGroup?: { id?: string | null; name?: string | null } | null;
+  synonyms?: string[] | null;
+  defaultType?: DiagnosisType;
+  hint?: string | null;
+};
 type ChartOrderDraftRouteResponse =
   | {
       ok: true;
@@ -646,82 +682,9 @@ const getSoapSystemLabel = (diagnosis: Diagnosis) =>
     ? diagnosis.systemLabel
     : getDiagnosisSystemLabel(diagnosis);
 
-type DiagnosisCatalogItem = {
-  id: string;
-  name: string;
-  systemLabel: string;
-  synonyms: string[];
-  defaultType: DiagnosisType;
-  hint: string;
-};
+type DiagnosisCatalogItem = AssessmentClassificationCatalogItem;
 
 type EditableDiagnosis = ChartAssessmentDiagnosis;
-
-const diagnosisCatalog: DiagnosisCatalogItem[] = [
-  {
-    id: "dx-acute-gastroenteritis",
-    name: "급성 위장관염 의심",
-    systemLabel: "소화기",
-    synonyms: [
-      "acute gastroenteritis",
-      "AGE",
-      "구토",
-      "설사",
-      "식욕저하",
-      "위장염",
-    ],
-    defaultType: "suspected",
-    hint: "구토/설사/식욕저하 내원에서 자주 사용",
-  },
-  {
-    id: "dx-dietary-indiscretion",
-    name: "식이성 위장장애",
-    systemLabel: "소화기",
-    synonyms: ["dietary indiscretion", "음식", "과식", "구토"],
-    defaultType: "suspected",
-    hint: "식이 변화나 이물 섭취 가능성 확인 전",
-  },
-  {
-    id: "dx-foreign-body",
-    name: "위장관 이물 감별",
-    systemLabel: "소화기",
-    synonyms: ["foreign body", "이물", "구토", "복부영상"],
-    defaultType: "differential",
-    hint: "영상검사로 배제 또는 확인 필요",
-  },
-  {
-    id: "dx-pancreatitis",
-    name: "췌장염 감별",
-    systemLabel: "소화기",
-    synonyms: ["pancreatitis", "PLI", "복통", "구토", "식욕저하"],
-    defaultType: "differential",
-    hint: "혈액검사/특이 검사로 감별",
-  },
-  {
-    id: "dx-mild-dehydration",
-    name: "경도 탈수",
-    systemLabel: "전신",
-    synonyms: ["dehydration", "탈수", "수액", "구토"],
-    defaultType: "suspected",
-    hint: "수액 처치 판단 근거로 기록",
-  },
-  {
-    id: "dx-allergic-dermatitis",
-    name: "알러지성 피부염",
-    systemLabel: "피부",
-    synonyms: ["allergic dermatitis", "가려움", "발진", "피부염"],
-    defaultType: "confirmed",
-    hint: "피부 병변과 재진 이력 기반",
-  },
-  {
-    id: "dx-wellness-check",
-    name: "예방접종 전 건강 확인",
-    systemLabel: "예방",
-    synonyms: ["wellness", "vaccination", "예방접종", "건강검진"],
-    defaultType: "confirmed",
-    hint: "예방접종 전 진찰 기록",
-  },
-];
 
 const diagnosisTypeLabel: Record<DiagnosisType, string> = {
   confirmed: "확진",
@@ -733,11 +696,15 @@ const normalizeDiagnosisQuery = (value: string) =>
   value.trim().toLocaleLowerCase("ko-KR");
 
 const buildDiagnosisSearchText = (item: DiagnosisCatalogItem) =>
-  [item.name, item.systemLabel, item.hint, ...item.synonyms]
+  [item.name, item.systemLabel, item.categoryLabel, item.hint, ...item.synonyms]
     .join(" ")
     .toLocaleLowerCase("ko-KR");
 
-const getDiagnosisSearchResults = (query: string, soapNote?: SoapNote) => {
+const getDiagnosisSearchResults = (
+  query: string,
+  catalog: DiagnosisCatalogItem[],
+  soapNote?: SoapNote,
+) => {
   const normalizedQuery = normalizeDiagnosisQuery(query);
   const contextText = [
     soapNote?.subjective,
@@ -749,7 +716,7 @@ const getDiagnosisSearchResults = (query: string, soapNote?: SoapNote) => {
     .join(" ");
 
   if (normalizedQuery) {
-    return diagnosisCatalog
+    return catalog
       .filter((item) =>
         buildDiagnosisSearchText(item).includes(normalizedQuery),
       )
@@ -757,22 +724,23 @@ const getDiagnosisSearchResults = (query: string, soapNote?: SoapNote) => {
   }
 
   if (/(구토|위장|식욕|탈수|복부)/.test(contextText)) {
-    return diagnosisCatalog.slice(0, 5);
+    return catalog.slice(0, 5);
   }
 
-  return diagnosisCatalog.slice(0, 4);
+  return catalog.slice(0, 4);
 };
 
 const toEditableDiagnosis = (
   diagnosis: Diagnosis,
   index: number,
+  catalog: DiagnosisCatalogItem[] = [],
 ): EditableDiagnosis => ({
   ...diagnosis,
   catalogMatched:
     Boolean(diagnosis.diagnosisCatalogId) ||
-    diagnosisCatalog.some((item) => item.name === diagnosis.diagnosisText),
+    catalog.some((item) => item.name === diagnosis.diagnosisText),
   isPrimary: diagnosis.isPrimary ?? index === 0,
-  systemLabel: getDiagnosisSystemLabel(diagnosis),
+  systemLabel: diagnosis.systemLabel ?? getDiagnosisSystemLabel(diagnosis),
 });
 
 function getLiveHandoffBundle(encounterId: string) {
@@ -2259,6 +2227,89 @@ async function loadChartDiagnoses({
   }
 }
 
+async function loadChartDiagnosisCatalog({
+  actorHeaders,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  workspaceId: string;
+}): Promise<
+  | { ok: true; catalog: AssessmentClassificationCatalogItem[] }
+  | {
+      ok: false;
+      status: number;
+      catalogStatus: Exclude<AssessmentClassificationCatalogStatus, "ready">;
+      error?: string;
+    }
+> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/diagnosis-catalog`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      },
+    );
+    const body = (await response.json()) as ChartDiagnosisCatalogRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) {
+        return {
+          ok: false,
+          status: response.status,
+          catalogStatus:
+            body.denialReason === "permission_missing" ||
+            body.denialReason === "workspace_membership_missing"
+              ? "permission"
+              : "error",
+          error: body.error,
+        };
+      }
+
+      return {
+        ok: false,
+        status: response.status,
+        catalogStatus: "error",
+        error: "db_read_failed",
+      };
+    }
+
+    return {
+      ok: true,
+      catalog: (body.catalog ?? body.diagnoses ?? []).flatMap((item) => {
+        const id = item.id ?? item.catalogId;
+        const systemLabel = item.systemLabel ?? item.system?.name;
+        const categoryLabel = item.categoryLabel ?? item.diseaseGroup?.name;
+        if (!id || !systemLabel || !categoryLabel) return [];
+
+        return [
+          {
+            categoryId: item.categoryId ?? item.diseaseGroup?.id ?? undefined,
+            categoryLabel,
+            code: item.code ?? undefined,
+            defaultType: item.defaultType ?? "suspected",
+            hint: item.hint ?? undefined,
+            id,
+            masterId: item.masterId ?? undefined,
+            masterRevision: item.masterRevision ?? undefined,
+            name: item.name,
+            synonyms: item.synonyms ?? [],
+            systemId: item.systemId ?? item.system?.id ?? undefined,
+            systemLabel,
+          } satisfies AssessmentClassificationCatalogItem,
+        ];
+      }),
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 500,
+      catalogStatus: "error",
+      error: "db_read_failed",
+    };
+  }
+}
+
 async function saveChartDiagnosesRoute({
   actorHeaders,
   diagnoses,
@@ -3441,6 +3492,9 @@ function SoapPanel({
 }
 
 function AssessmentPanel({
+  classificationCatalog,
+  classificationCatalogError,
+  classificationCatalogStatus,
   collapseContentId,
   diagnosisRows,
   loading,
@@ -3451,6 +3505,9 @@ function AssessmentPanel({
   soapNote,
   writeDisabled,
 }: {
+  classificationCatalog: DiagnosisCatalogItem[];
+  classificationCatalogError?: string;
+  classificationCatalogStatus: AssessmentClassificationCatalogStatus;
   collapseContentId: string;
   diagnosisRows: EditableDiagnosis[];
   loading: boolean;
@@ -3463,24 +3520,26 @@ function AssessmentPanel({
 }) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [classificationSearchOpen, setClassificationSearchOpen] =
+    useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSystem, setSelectedSystem] = useState("all");
   const diagnosisSystems = useMemo(
     () =>
       Array.from(
         new Set([
-          ...diagnosisCatalog.map((item) => item.systemLabel),
+          ...classificationCatalog.map((item) => item.systemLabel),
           ...diagnosisRows.map((diagnosis) => diagnosis.systemLabel),
         ]),
       ),
-    [diagnosisRows],
+    [classificationCatalog, diagnosisRows],
   );
   const searchResults = useMemo(
     () =>
-      getDiagnosisSearchResults(searchQuery, soapNote).filter(
+      getDiagnosisSearchResults(searchQuery, classificationCatalog, soapNote).filter(
         (item) => selectedSystem === "all" || item.systemLabel === selectedSystem,
       ),
-    [searchQuery, selectedSystem, soapNote],
+    [classificationCatalog, searchQuery, selectedSystem, soapNote],
   );
   const visibleDiagnosisRows = useMemo(
     () =>
@@ -3493,7 +3552,7 @@ function AssessmentPanel({
   const normalizedSearchQuery = normalizeDiagnosisQuery(searchQuery);
   const canAddFreeText =
     normalizedSearchQuery.length > 0 &&
-    !diagnosisCatalog.some(
+    !classificationCatalog.some(
       (item) => normalizeDiagnosisQuery(item.name) === normalizedSearchQuery,
     );
   const resultModeLabel = normalizedSearchQuery
@@ -3614,6 +3673,52 @@ function AssessmentPanel({
 
   const removeDiagnosis = (diagnosisId: string) => {
     commitDiagnosisRows(diagnosisRows.filter((row) => row.id !== diagnosisId));
+  };
+
+  const addDiagnosesFromClassification = (
+    selections: AssessmentClassificationSelection[],
+  ) => {
+    const existingIds = new Set(
+      diagnosisRows
+        .map((row) => row.diagnosisCatalogId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    const existingNames = new Set(
+      diagnosisRows.map((row) => normalizeDiagnosisQuery(row.diagnosisText)),
+    );
+    const nextRows = [...diagnosisRows];
+    let hasPrimary = diagnosisRows.some((row) => row.isPrimary);
+
+    selections.forEach((item) => {
+      if (
+        existingIds.has(item.id) ||
+        existingNames.has(normalizeDiagnosisQuery(item.name))
+      ) {
+        return;
+      }
+
+      const isPrimary = !hasPrimary && (item.isPrimary || nextRows.length === 0);
+      nextRows.push({
+        catalogMatched: true,
+        createdAt: new Date().toISOString(),
+        createdByUserId: "user-vet-suji",
+        diagnosisCatalogId: item.id,
+        diagnosisText: item.name,
+        diagnosisType: item.diagnosisType,
+        encounterId: soapNote?.encounterId ?? "session-only-encounter",
+        id: `diagnosis-session-${item.id}`,
+        isPrimary,
+        sortOrder: nextRows.length,
+        systemLabel: item.systemLabel,
+      });
+      existingIds.add(item.id);
+      existingNames.add(normalizeDiagnosisQuery(item.name));
+      hasPrimary ||= isPrimary;
+    });
+
+    if (nextRows.length !== diagnosisRows.length) {
+      commitDiagnosisRows(nextRows);
+    }
   };
 
   return (
@@ -3777,8 +3882,8 @@ function AssessmentPanel({
               className="h-7 rounded-lg bg-card px-2 text-xs"
               disabled={writeDisabled}
               onClick={() => {
-                setSearchOpen(true);
-                searchInputRef.current?.focus();
+                setSearchOpen(false);
+                setClassificationSearchOpen(true);
               }}
             >
               분류 검색
@@ -3835,6 +3940,20 @@ function AssessmentPanel({
           </div>
         </div>
       </div>
+      <AssessmentClassificationSearchDialog
+        catalog={classificationCatalog}
+        catalogErrorMessage={classificationCatalogError}
+        catalogStatus={classificationCatalogStatus}
+        existingDiagnosisCatalogIds={diagnosisRows
+          .map((row) => row.diagnosisCatalogId)
+          .filter((id): id is string => Boolean(id))}
+        existingDiagnosisNames={diagnosisRows.map((row) => row.diagnosisText)}
+        hasExistingPrimary={diagnosisRows.some((row) => row.isPrimary)}
+        open={classificationSearchOpen}
+        writeDisabled={writeDisabled}
+        onComplete={addDiagnosesFromClassification}
+        onOpenChange={setClassificationSearchOpen}
+      />
     </section>
   );
 }
@@ -7241,17 +7360,34 @@ export function ChartContent({
     rows: EditableDiagnosis[];
   }>(() => ({
     encounterId: bundle?.encounter.id,
-    rows: bundle ? bundle.diagnoses.map(toEditableDiagnosis) : [],
+    rows: bundle
+      ? bundle.diagnoses.map((diagnosis, index) =>
+          toEditableDiagnosis(diagnosis, index),
+        )
+      : [],
   }));
   const [diagnosisPersistenceState, setDiagnosisPersistenceState] = useState<{
     encounterId?: string;
     status: "idle" | "loading" | "saving" | "saved" | "error";
   }>({ status: "idle" });
+  const [diagnosisCatalogState, setDiagnosisCatalogState] = useState<{
+    workspaceId?: string;
+    catalog: DiagnosisCatalogItem[];
+    status: AssessmentClassificationCatalogStatus;
+    error?: string;
+  }>({
+    catalog: [],
+    status: "loading",
+  });
 
   if (diagnosisState.encounterId !== activeEncounterId) {
     setDiagnosisState({
       encounterId: activeEncounterId,
-      rows: bundle ? bundle.diagnoses.map(toEditableDiagnosis) : [],
+      rows: bundle
+        ? bundle.diagnoses.map((diagnosis, index) =>
+            toEditableDiagnosis(diagnosis, index),
+          )
+        : [],
     });
   }
 
@@ -7260,7 +7396,9 @@ export function ChartContent({
     diagnosisState.encounterId === activeEncounterId
       ? rawDiagnosisRows
       : bundle
-        ? bundle.diagnoses.map(toEditableDiagnosis)
+        ? bundle.diagnoses.map((diagnosis, index) =>
+            toEditableDiagnosis(diagnosis, index),
+          )
         : [];
   const setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>> = (
     nextRows,
@@ -7607,7 +7745,9 @@ export function ChartContent({
 
     setDiagnosisState({
       encounterId: activeEncounterId,
-      rows: result.diagnoses.map(toEditableDiagnosis),
+      rows: result.diagnoses.map((diagnosis, index) =>
+        toEditableDiagnosis(diagnosis, index),
+      ),
     });
     setDiagnosisPersistenceState({
       encounterId: activeEncounterId,
@@ -7733,6 +7873,51 @@ export function ChartContent({
   }, [activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated]);
 
   useEffect(() => {
+    if (!authHydrated || !activeWorkspaceId) return;
+
+    const workspaceId = activeWorkspaceId;
+
+    let cancelled = false;
+
+    async function loadClassificationCatalog() {
+      setDiagnosisCatalogState((current) => ({
+        catalog: current.workspaceId === workspaceId ? current.catalog : [],
+        status: "loading",
+        workspaceId,
+      }));
+
+      const result = await loadChartDiagnosisCatalog({
+        actorHeaders,
+        workspaceId,
+      });
+
+      if (cancelled) return;
+
+      if (result.ok) {
+        setDiagnosisCatalogState({
+          catalog: result.catalog,
+          status: "ready",
+          workspaceId,
+        });
+        return;
+      }
+
+      setDiagnosisCatalogState({
+        catalog: [],
+        error: result.error,
+        status: result.catalogStatus,
+        workspaceId,
+      });
+    }
+
+    void loadClassificationCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspaceId, actorHeaders, authHydrated]);
+
+  useEffect(() => {
     if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
 
     let cancelled = false;
@@ -7754,7 +7939,9 @@ export function ChartContent({
       if (result.ok) {
         setDiagnosisState({
           encounterId: activeEncounterId,
-          rows: result.diagnoses.map(toEditableDiagnosis),
+          rows: result.diagnoses.map((diagnosis, index) =>
+            toEditableDiagnosis(diagnosis, index),
+          ),
         });
         setDiagnosisPersistenceState({
           encounterId: activeEncounterId,
@@ -8470,6 +8657,9 @@ export function ChartContent({
             >
               <AssessmentPanel
                 key={`chart-assessment-${bundle.encounter.id}`}
+                classificationCatalog={diagnosisCatalogState.catalog}
+                classificationCatalogError={diagnosisCatalogState.error}
+                classificationCatalogStatus={diagnosisCatalogState.status}
                 collapseContentId="chart-assessment-panel-content"
                 diagnosisRows={diagnosisRows}
                 loading={diagnosisLoading}

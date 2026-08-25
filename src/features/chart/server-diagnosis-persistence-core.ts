@@ -23,6 +23,9 @@ export type ChartDiagnosisInput = {
 };
 
 export type ChartDiagnosisRow = Diagnosis & {
+  diagnosisCatalogRevision?: number;
+  systemLabel?: string;
+  diseaseGroupLabel?: string;
   isPrimary: boolean;
   sortOrder: number;
   updatedByUserId?: string;
@@ -532,8 +535,14 @@ function mapDiagnosisRow(value: unknown): ChartDiagnosisRow | null {
     id: row.id,
     encounterId: row.encounterId,
     diagnosisCatalogId: trimToUndefined(row.diagnosisCatalogId),
+    diagnosisCatalogRevision:
+      typeof row.diagnosisCatalogRevision === "number"
+        ? row.diagnosisCatalogRevision
+        : undefined,
     diagnosisText: row.diagnosisText,
     diagnosisType: row.diagnosisType as DiagnosisType,
+    systemLabel: trimToUndefined(row.systemLabel),
+    diseaseGroupLabel: trimToUndefined(row.diseaseGroupLabel),
     closedAt: trimToUndefined(row.closedAt),
     closedByUserId: trimToUndefined(row.closedByUserId),
     isPrimary: row.isPrimary === true,
