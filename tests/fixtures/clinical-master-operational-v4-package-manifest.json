@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "clinical-master-operational-v4-package/v1",
+  "generatedAt": "2026-08-25",
+  "releaseKey": "cm.release.airtable.operational-master.v4",
+  "status": "local_review_candidate",
+  "remoteWritesPerformed": 0,
+  "counts": {
+    "authoringRecords": 578,
+    "names": 578,
+    "supportedRecords": 554,
+    "excludedRecords": 24,
+    "orders": 400,
+    "labTests": 72,
+    "labPanels": 18,
+    "classificationPaths": 13,
+    "labPanelItems": 120,
+    "labOrderProfiles": 85,
+    "diagnosisCategoryLinks": 12,
+    "orderSetTemplates": 20,
+    "orderSetOperations": 60
+  },
+  "categoryCounts": {
+    "consultation": 28,
+    "preventive": 26,
+    "lab": 85,
+    "imaging": 30,
+    "treatment": 45,
+    "dispensing": 53,
+    "surgery/anesthesia": 42,
+    "inpatient": 30,
+    "emergency": 24,
+    "dental": 24,
+    "certificate/misc": 13
+  },
+  "addedCategoryCounts": {
+    "consultation": 16,
+    "preventive": 14,
+    "lab": 55,
+    "imaging": 18,
+    "treatment": 27,
+    "dispensing": 37,
+    "surgery/anesthesia": 34,
+    "inpatient": 24,
+    "emergency": 21,
+    "dental": 22,
+    "certificate/misc": 12
+  },
+  "targetWorkspaceIds": [
+    "workspace-clinical-master-pilot-v1",
+    "workspace-clair-cheongdam",
+    "clair-demo"
+  ],
+  "excludedWorkspaceId": "clair-foreign-demo",
+  "boundaries": {
+    "syntheticOnly": true,
+    "clinicalAuthority": false,
+    "realHospitalPricing": false,
+    "medicationDoseOrFrequency": false,
+    "controlledDrugCatalog": false,
+    "remoteExecutionApproved": false
+  }
+}
