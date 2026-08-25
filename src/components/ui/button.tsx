@@ -15,7 +15,7 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[var(--emr-state-active)] aria-expanded:bg-[var(--emr-state-active)]",
         ghost:
-          "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
+          "bg-transparent text-foreground hover:bg-[var(--emr-state-hover)] hover:text-foreground aria-expanded:bg-[var(--emr-state-hover)] aria-expanded:text-foreground",
         destructive:
           "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)] hover:bg-[var(--emr-status-danger-hover-bg)] active:bg-[var(--emr-status-danger-hover-bg)] aria-expanded:bg-[var(--emr-status-danger-hover-bg)] focus-visible:ring-destructive/20",
       },
