@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CLAiR Clinical Master V4 400-order local package report</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f5f7fb; }
+    main { max-width: 960px; margin: 40px auto; padding: 0 24px 56px; }
+    article { background: #fff; border: 1px solid #dce2ec; border-radius: 16px; padding: 32px; box-shadow: 0 8px 24px rgba(27, 42, 70, .06); }
+    .meta { color: #5b6680; font-size: 14px; }
+    .ok { color: #087443; font-weight: 700; }
+    .warn { color: #8a5b00; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border-bottom: 1px solid #e5e9f0; padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: #46516b; font-size: 13px; }
+    code { background: #f0f3f8; border-radius: 4px; padding: 2px 4px; overflow-wrap: anywhere; }
+    li { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <p class="meta">CLAiR Clinical Master / PR-016 / 2026-08-25</p>
+      <h1>Operational Master V4 400개 오더 발행 결과</h1>
+      <p class="ok">상태: Airtable 작성본·중앙 V4 발행·3개 워크스페이스 채택·Order 세트 생성 완료</p>
+      <p class="warn">운영 앱 코드는 아직 배포 전이며 정확한 릴리스 SHA 승인 게이트가 남아 있다.</p>
+
+      <h2>핵심 결과</h2>
+      <table>
+        <thead><tr><th>영역</th><th>V4 결과</th></tr></thead>
+        <tbody>
+          <tr><td>Master / Names</td><td>각 578개. V3 254개를 그대로 보존하고 오더 280개, 검사 정의 36개, 패널 8개를 추가했다.</td></tr>
+          <tr><td>중앙 발행 후보</td><td>554개 supported records. diagnosis 24개와 links 12개는 기존 계약대로 authoring-only이며, 중앙 payload에는 가격·구간·Order Set 필드가 없다.</td></tr>
+          <tr><td>원자 오더</td><td>정확히 400개. 모든 표준명은 한국어 선호 이름 1개이며 정규화 중복 0건이다.</td></tr>
+          <tr><td>검사 그래프</td><td>검사 72개, 패널 18개, 패널 연결 120개, 주문 프로필 85개. 모든 order/test/panel/specimen 참조가 해석된다.</td></tr>
+          <tr><td>Airtable 결과</td><td>Master 578, Names 578, Panel Items 120, Profiles 85. 기존 13 paths·12 diagnosis links 유지.</td></tr>
+          <tr><td>Supabase 결과</td><td>중앙 release No.12, 554개 payload. 세 워크스페이스 모두 400개 오더를 채택했고 pending review는 0건이다.</td></tr>
+          <tr><td>Order 세트</td><td>20개 × 3개 대상 워크스페이스 = 60개 활성 세트. 워크스페이스별 고정가 4, 구성합계 14, 구간가 2.</td></tr>
+          <tr><td>중첩 세트</td><td>개/고양이 중성화 세트가 마취 전 평가를, 집중 입원 모니터링이 입원 기본 모니터링을 한 단계로 참조한다.</td></tr>
+          <tr><td>음성 대조군</td><td><code>clair-foreign-demo</code>의 catalog·lab·update·notification·audit·Order Set 11개 표면은 전후 모두 0건이다.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>400개 오더 분포</h2>
+      <table>
+        <thead><tr><th>영역</th><th>V3</th><th>V4</th><th>추가</th></tr></thead>
+        <tbody>
+          <tr><td>진찰·상담</td><td>12</td><td>28</td><td>16</td></tr>
+          <tr><td>예방</td><td>12</td><td>26</td><td>14</td></tr>
+          <tr><td>검사</td><td>30</td><td>85</td><td>55</td></tr>
+          <tr><td>영상</td><td>12</td><td>30</td><td>18</td></tr>
+          <tr><td>처치</td><td>18</td><td>45</td><td>27</td></tr>
+          <tr><td>조제</td><td>16</td><td>53</td><td>37</td></tr>
+          <tr><td>수술·마취</td><td>8</td><td>42</td><td>34</td></tr>
+          <tr><td>입원</td><td>6</td><td>30</td><td>24</td></tr>
+          <tr><td>응급</td><td>3</td><td>24</td><td>21</td></tr>
+          <tr><td>치과</td><td>2</td><td>24</td><td>22</td></tr>
+          <tr><td>증명서·기타</td><td>1</td><td>13</td><td>12</td></tr>
+          <tr><th>합계</th><th>120</th><th>400</th><th>280</th></tr>
+        </tbody>
+      </table>
+
+      <h2>사용 경계</h2>
+      <p>이 패키지는 세일즈 데모용 <strong>합성 데이터</strong>다. 실제 병원 수가나 한국 표준 수가를 나타내지 않으며, 약품은 성분·제형 이름까지만 포함하고 용량·투여 빈도·처방 추천·상품 SKU·마약류를 포함하지 않는다. 검사에도 기준 범위나 결과 해석을 넣지 않았다.</p>
+      <p>용어와 업무 범위는 AAHA 예방·마취·치과·수액 자료, RECOVER 응급 지침, WSAVA 백신 지침, Cornell AHDC 임상화학 자료를 확인하는 용도로만 사용했다. 발행 provenance는 계속 <code>synthetic</code>이며 임상 승인이나 진료 권위로 바뀌지 않는다.</p>
+      <p>가격은 각 워크스페이스가 소유하는 양의 정수 KRW 합성값이다. 기존 V3 120개 가격은 그대로 보존하고, 새 V4 280개만 100원 단위로 반올림된 비중복 값을 사용한다. 중앙 publisher payload와 완전히 분리했다. Order Set의 고정가·구간가 구성항목은 이중 청구 방지를 위해 기본 청구 반영을 끈 상태다.</p>
+
+      <h2>검증</h2>
+      <ul>
+        <li>생성기 실행 및 <code>--check</code> 드리프트 게이트 통과</li>
+        <li>V4 및 Phase C 집중 Playwright 계약 테스트 6/6 통과</li>
+        <li>로컬 전체 발행·채택·가격·세트 생성 리허설 후 롤백 및 잔여 0건 확인</li>
+        <li>원격 postflight: pilot 402/400 active, Cheongdam 413/389 active·11 paused, demo 419/400 active</li>
+        <li>TypeScript <code>--noEmit</code> 통과</li>
+        <li>집중 ESLint 경고 0건</li>
+        <li><code>npm run docs:check</code>: Markdown 921개 링크 검사 통과</li>
+        <li><code>git diff --check</code> 통과</li>
+      </ul>
+
+      <h2>고정 산출물 해시</h2>
+      <ul>
+        <li>authoring: <code>d733beccbec0a384b7098aacf6a40c1979ff4da45357605a47722396bf5e5e6b</code></li>
+        <li>adapter: <code>dfc2a1dac482aeff5df78aa1d223509639cc122426d21fb914a90d8561fc91c4</code></li>
+        <li>pricing: <code>b6025796643ab84b23908ab0fccb3978d81d65f5ab0f58446d00c0e2088ab8db</code></li>
+        <li>lab semantics: <code>8e1d9e93ff9072e8f91ff58567c214feaadb871b9493cea8b044c4a0c20f345c</code></li>
+        <li>Airtable manifest: <code>f9e06e557f320944eac920a48cdee14af594596f0639892fec70c127d09c9789</code></li>
+        <li>Order Set manifest: <code>9d961876b6452c1477ba11707385b9f8f87b8009cf8fde14dd883e27ce24ec59</code></li>
+        <li>원격 commit candidate: <code>d4635a11fa60739ba34bb97768b10db026dc205d6b3260923ec42e415e7e8bd5</code></li>
+      </ul>
+
+      <h2>다음 승인 게이트</h2>
+      <p>데이터 반영은 완료됐다. 다음은 앱 코드 PR과 고정 스테이징 검증이다. 운영 배포는 후보 커밋 SHA, 검사 결과, 스테이징 URL, 롤백 기준을 묶은 정확한 승인 패킷을 확인한 뒤 진행한다.</p>
+    </article>
+  </main>
+</body>
+</html>

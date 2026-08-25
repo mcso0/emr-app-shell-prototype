@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "clinical-master-operational-v4-phase-c-execution-readback/v1",
+  "executedAt": "2026-08-25",
+  "projectRef": "qmerxgzrwaaahpkhjqlc",
+  "commitCandidateSha256": "d4635a11fa60739ba34bb97768b10db026dc205d6b3260923ec42e415e7e8bd5",
+  "release": {
+    "id": "61ddac7c-b06e-4ea9-81df-c4fe4c2feb21",
+    "releaseNo": 12,
+    "releaseKey": "cm.release.airtable.operational-master.v4",
+    "recordCount": 554,
+    "adoptionScope": "payload",
+    "sourceFingerprint": "3bba1b06cd5334d77852b85b0ef0bd2654c0f308e034ea3e191198a12da36e6b"
+  },
+  "workspaces": [
+    { "workspaceId": "workspace-clinical-master-pilot-v1", "totalCatalog": 402, "payloadOrders": 400, "payloadActive": 400, "payloadPaused": 0, "pendingPayloadReviews": 0, "activeV4Sets": 20, "totalSets": 20 },
+    { "workspaceId": "workspace-clair-cheongdam", "totalCatalog": 413, "payloadOrders": 400, "payloadActive": 389, "payloadPaused": 11, "pendingPayloadReviews": 0, "activeV4Sets": 20, "totalSets": 24 },
+    { "workspaceId": "clair-demo", "totalCatalog": 419, "payloadOrders": 400, "payloadActive": 400, "payloadPaused": 0, "pendingPayloadReviews": 0, "activeV4Sets": 20, "totalSets": 20 }
+  ],
+  "perWorkspaceSetDistribution": { "set_fixed_price": 4, "included_order_sum": 14, "range_price": 2, "nestedItems": 3 },
+  "excludedWorkspace": {
+    "workspaceId": "clair-foreign-demo",
+    "surfaceCounts": { "catalog": 0, "labItems": 0, "labVersions": 0, "labLinks": 0, "masterUpdates": 0, "labItemUpdates": 0, "labCatalogUpdates": 0, "notifications": 0, "notificationStates": 0, "audit": 0, "sets": 0 }
+  }
+}

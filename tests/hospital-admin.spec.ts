@@ -32,7 +32,7 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.getByRole("heading", { name: "Order 세트" })).toBeVisible();
   await expect(
     page.locator('[data-emr-table-action-visibility="contextual"]'),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   await page.goto("/w/clair-demo/orders?modulePanel=open&aside=history");
   await expect(
     page.getByRole("heading", { name: "임상병리 검사" }),
@@ -359,6 +359,84 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.getByRole("heading", { name: "처방" })).toBeVisible();
   await expect(
     page.getByTestId("hospital-order-row-ord-med-maropitant"),
+  ).toBeVisible();
+});
+
+test("hospital admin Order Set uses the shared table workspace and revision drawer", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/orders?modulePanel=open&section=order-sets",
+  );
+
+  await expect(page.getByTestId("order-set-page-header")).toBeVisible();
+  await expect(
+    page.getByRole("table", { name: "병원관리 Order 세트 테이블" }),
+  ).toBeVisible();
+  const orderSetTable = page.getByRole("table", {
+    name: "병원관리 Order 세트 테이블",
+  });
+  await expect(
+    orderSetTable.getByRole("columnheader", { name: "작업" }),
+  ).toHaveCount(0);
+  await expect(
+    orderSetTable.locator('[data-column-id="actions"]').first(),
+  ).not.toHaveAttribute("data-emr-column-pinned", "right");
+  const orderSetRow = page.getByTestId("order-set-row-set-vomit-basic");
+  await orderSetRow.hover();
+  const pinnedBackgroundAlpha = await orderSetRow
+    .locator('[data-emr-column-pinned="left"]')
+    .evaluateAll((cells) =>
+      cells.map((cell) => {
+        const color = getComputedStyle(cell).backgroundColor;
+        const match = color.match(
+          /^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/,
+        );
+        return match ? Number(match[1]) : 1;
+      }),
+    );
+  expect(pinnedBackgroundAlpha.every((alpha) => alpha === 1)).toBe(true);
+  await expect(page.getByLabel("Order 세트 사용 여부 필터")).toContainText(
+    "사용",
+  );
+  await expect(page.getByLabel("Order 세트 가격 방식 필터")).toContainText(
+    "가격 전체",
+  );
+  await expect(page.getByRole("button", { name: "복제", exact: true })).toBeDisabled();
+
+  await page.getByRole("button", { name: "+ Order 세트", exact: true }).click();
+  const drawer = page.getByTestId("order-set-drawer");
+  await expect(drawer).toBeVisible();
+  await expect(
+    drawer.getByRole("heading", { name: "Order 세트 생성" }),
+  ).toBeVisible();
+  await expect(drawer.getByText("사용 안 함 상태로 만든 뒤 구성과 가격을 확인해 주세요.")).toHaveCount(0);
+  await expect(drawer.getByRole("tablist", { name: "Order 세트 편집 영역" })).toHaveCount(0);
+  await expect(
+    drawer.getByRole("combobox", { name: "Order 세트 사용 여부" }),
+  ).toContainText("사용 안 함");
+  await expect(
+    drawer.getByRole("heading", { name: "기본 정보", exact: true }),
+  ).toBeVisible();
+  await expect(
+    drawer.getByRole("heading", { name: "구성항목", exact: true }),
+  ).toBeVisible();
+  await expect(
+    drawer.getByRole("heading", { name: "가격·안내", exact: true }),
+  ).toBeVisible();
+
+  await drawer.getByLabel("Order 세트명").fill("활성화 검증 세트");
+  await drawer.getByLabel("청구서명").fill("활성화 검증 세트");
+  await drawer.getByRole("combobox", { name: "Order 세트 사용 여부" }).click();
+  await page.getByRole("option", { name: "사용", exact: true }).click();
+  await drawer.getByRole("button", { name: "Order 세트 저장" }).click();
+  await expect(
+    page.getByText("사용 상태로 저장하려면 구성항목이 필요합니다.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    drawer.getByRole("heading", { name: "구성항목", exact: true }),
   ).toBeVisible();
 });
 

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "clinical-master-operational-v4-phase-c/v1",
+  "status": "commit_candidate_pending_exact_execution",
+  "writeAllowed": false,
+  "remoteWritesPerformed": false,
+  "projectRef": "qmerxgzrwaaahpkhjqlc",
+  "payloadRecords": 554,
+  "atomicOrders": 400,
+  "workspaces": 3,
+  "orderSets": 60,
+  "excludedWorkspace": "clair-foreign-demo",
+  "files": {
+    "rollback": {
+      "sha256": "767375e0b6a6f5e7c802a5bbba5e7804d83e531ad47d4ba30fff9f0bdb18cb73",
+      "bytes": 589984
+    },
+    "commit": {
+      "sha256": "d4635a11fa60739ba34bb97768b10db026dc205d6b3260923ec42e415e7e8bd5",
+      "bytes": 589839
+    },
+    "postflight": {
+      "sha256": "ed5976ef61b1accf7ddd29a99fc8d368cf1ac240d1ad6006184e1a9c6212998d",
+      "bytes": 855
+    }
+  }
+}

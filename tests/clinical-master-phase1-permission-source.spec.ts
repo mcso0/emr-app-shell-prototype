@@ -70,16 +70,19 @@ test("permission replay covers assigned, legacy, membership, and Order Set bound
   }
 });
 
-test("Order Set API/UI maps empty 200 to no-data and non-2xx reads to read-error", () => {
+test("Order Set API/UI maps empty 200, denied, and failed reads to distinct table feedback", () => {
   expect(orderSetsRoute).toContain("if (result.ok)");
   expect(orderSetsRoute).toContain("status: 200");
   expect(orderSetsRoute).toContain("Response.json(result, { status: result.status })");
 
   expect(orderSetsPanel).toContain(
-    "if (!response.ok || !Array.isArray(body.summaries)) throw new Error(\"order_set_read_failed\")",
+    "if (!setsResponse.ok || !Array.isArray(setsBody.summaries)) throw new Error(\"order_set_read_failed\")",
   );
-  expect(orderSetsPanel).toContain('setStatus("error")');
-  expect(orderSetsPanel).toContain('if (summaries.length === 0)');
+  expect(orderSetsPanel).toContain('setReadStatus("denied")');
+  expect(orderSetsPanel).toContain('setReadStatus("error")');
+  expect(orderSetsPanel).toContain('visibleRows.length === 0');
   expect(orderSetsPanel).toContain('kind="read-error"');
-  expect(orderSetsPanel).toContain('kind="no-data"');
+  expect(orderSetsPanel).toContain('"no-data"');
+  expect(orderSetsPanel).toContain('"no-filter-results"');
+  expect(orderSetsPanel).toContain('kind="no-permission"');
 });
