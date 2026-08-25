@@ -2892,6 +2892,21 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(lockedState).toHaveClass(/scroll-fade-y/);
   await expect(lockedState).toHaveClass(/scroll-fade-8/);
   await expect(lockedState).toHaveCSS("overflow-y", "auto");
+  await expect(lockedState).toHaveCSS("padding-right", "16px");
+  const lockedStateFrameMetrics = await lockedState.evaluate((element) => {
+    const parent = element.parentElement;
+    if (!parent) throw new Error("chart locked-state frame is missing");
+
+    const frameRect = parent.getBoundingClientRect();
+    const scrollRect = element.getBoundingClientRect();
+
+    return {
+      framePaddingRight: getComputedStyle(parent).paddingRight,
+      rightInset: frameRect.right - scrollRect.right,
+    };
+  });
+  expect(lockedStateFrameMetrics.framePaddingRight).toBe("0px");
+  expect(Math.abs(lockedStateFrameMetrics.rightInset)).toBeLessThanOrEqual(1);
   await expect(lockedState).toContainText("진료 대기");
   await expect(lockedState).toContainText("차트번호 E-260625-0001");
   await expect(lockedState).toContainText("초코");
