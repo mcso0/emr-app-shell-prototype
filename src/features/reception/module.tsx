@@ -99,6 +99,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -530,6 +532,7 @@ type WorkspaceStaffReadResponse =
   | {
       ok: true;
       status: 200;
+      actorUserId: string;
       staff: Array<{
         department?: string;
         displayName: string;
@@ -597,6 +600,14 @@ function getReceptionDemoActorId(role?: string) {
     return "user-admin";
   if (role === "vet") return "user-vet";
   return "user-front-desk";
+}
+
+function getReceptionMockStaffUserId(role?: string) {
+  if (role === "hospital_admin") return "user-admin-minjae";
+  if (role === "billing_admin") return "user-billing-harin";
+  if (role === "vet") return "user-vet-suji";
+  if (role === "nurse") return "user-tech-hayun";
+  return "user-desk-yuna";
 }
 
 function getMockReceptionStaffRoles(
@@ -2945,27 +2956,34 @@ function ReceptionVeterinarianSelectItems({
 }
 
 function ReceptionStaffAssignmentSelect({
+  ariaRequired = false,
   compact = false,
+  label = "업무 담당자",
   onChange,
   selectedIds,
+  selectionMode = "multiple",
   staffMembers,
 }: {
+  ariaRequired?: boolean;
   compact?: boolean;
+  label?: string;
   onChange: (staffUserIds: string[]) => void;
   selectedIds: string[];
+  selectionMode?: "multiple" | "single";
   staffMembers: ReceptionStaffMember[];
 }) {
   const selectedStaff = staffMembers.filter((staffMember) =>
     selectedIds.includes(staffMember.id),
   );
-  const label = selectedStaff.length
+  const selectedLabel = selectedStaff.length
     ? selectedStaff.map((staffMember) => staffMember.name).join(", ")
-    : "업무 담당자를 선택해주세요";
+    : `${label}를 선택해주세요`;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label="업무 담당자"
+        aria-label={label}
+        aria-required={ariaRequired || undefined}
         render={
           <Button
             type="button"
@@ -2978,31 +2996,45 @@ function ReceptionStaffAssignmentSelect({
           />
         }
       >
-        <span className="truncate text-left">{label}</span>
+        <span className="truncate text-left">{selectedLabel}</span>
         <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-72 w-[280px] overflow-y-auto">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>업무 담당자</DropdownMenuLabel>
-          {staffMembers.map((staffMember) => {
-            const checked = selectedIds.includes(staffMember.id);
-            return (
-              <DropdownMenuCheckboxItem
-                key={staffMember.id}
-                checked={checked}
-                onCheckedChange={() =>
-                  onChange(
-                    checked
-                      ? selectedIds.filter((id) => id !== staffMember.id)
-                      : [...selectedIds, staffMember.id],
-                  )
-                }
-              >
-                {staffMember.name}
-                {staffMember.title ? ` · ${staffMember.title}` : ""}
-              </DropdownMenuCheckboxItem>
-            );
-          })}
+          <DropdownMenuLabel>{label}</DropdownMenuLabel>
+          {selectionMode === "single" ? (
+            <DropdownMenuRadioGroup
+              value={selectedIds[0] ?? ""}
+              onValueChange={(value) => onChange([value])}
+            >
+              {staffMembers.map((staffMember) => (
+                <DropdownMenuRadioItem key={staffMember.id} value={staffMember.id}>
+                  {staffMember.name}
+                  {staffMember.title ? ` · ${staffMember.title}` : ""}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          ) : (
+            staffMembers.map((staffMember) => {
+              const checked = selectedIds.includes(staffMember.id);
+              return (
+                <DropdownMenuCheckboxItem
+                  key={staffMember.id}
+                  checked={checked}
+                  onCheckedChange={() =>
+                    onChange(
+                      checked
+                        ? selectedIds.filter((id) => id !== staffMember.id)
+                        : [...selectedIds, staffMember.id],
+                    )
+                  }
+                >
+                  {staffMember.name}
+                  {staffMember.title ? ` · ${staffMember.title}` : ""}
+                </DropdownMenuCheckboxItem>
+              );
+            })
+          )}
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -4980,6 +5012,7 @@ function ReceptionReservationDatePicker({
                 "h-[var(--clair-control-height-md)] bg-[var(--emr-reception-create-field-bg)] emr-control-text font-medium text-[var(--clair-color-atomic-neutral-800)]",
             )}
             aria-label="예약일"
+            aria-required="true"
           />
         }
       >
@@ -6861,6 +6894,7 @@ export function ReceptionContent() {
         workspaceId,
       }).then((result) => {
         setStaffResourceResult(staffResourceKey, {
+          actorUserId: result.ok ? result.actorUserId : undefined,
           status: result.ok ? "ready" : "error",
           staff: mapWorkspaceStaffToReceptionStaff(result),
           veterinarians: mapWorkspaceStaffToVeterinarians(result),
@@ -7284,6 +7318,7 @@ function ReceptionBreakTimeConfirmDialog({
 function ReceptionWalkInFormDrawer({
   currentOperatingMinutes,
   initialDurationMinutes,
+  initialAssignedStaffUserId,
   initialPatientId,
   initialVeterinarianId,
   onCreate,
@@ -7296,6 +7331,7 @@ function ReceptionWalkInFormDrawer({
 }: {
   currentOperatingMinutes: number;
   initialDurationMinutes?: number;
+  initialAssignedStaffUserId?: string;
   initialPatientId?: string;
   initialVeterinarianId?: string;
   onCreate: (
@@ -7329,7 +7365,7 @@ function ReceptionWalkInFormDrawer({
     workspaceId,
   });
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const [department, setDepartment] = useState("");
+  const [department, setDepartment] = useState(defaultWalkInDepartment);
   const [duration, setDuration] = useState(
     initialDurationMinutes ? `${initialDurationMinutes}분` : defaultWalkInDuration,
   );
@@ -7339,6 +7375,7 @@ function ReceptionWalkInFormDrawer({
     initialVeterinarianId ?? "",
   );
   const [assignedStaffUserIds, setAssignedStaffUserIds] = useState<string[]>([]);
+  const assignedStaffDefaultAppliedRef = useRef(false);
   const [patientLookupOpen, setPatientLookupOpen] = useState(false);
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<
@@ -7432,10 +7469,25 @@ function ReceptionWalkInFormDrawer({
     ) === "break-warning";
   const canCreate = Boolean(
     operatingScheduleStatus === "ready" &&
-    patient &&
+      patient &&
+      department &&
+      duration &&
+      assignedStaffUserIds.length === 1 &&
       trimmedVisitPurpose &&
       Object.keys(vitalBuild.fieldErrors).length === 0,
   );
+
+  useEffect(() => {
+    if (
+      assignedStaffDefaultAppliedRef.current ||
+      !initialAssignedStaffUserId ||
+      !staffMembers.some((staffMember) => staffMember.id === initialAssignedStaffUserId)
+    ) {
+      return;
+    }
+    assignedStaffDefaultAppliedRef.current = true;
+    setAssignedStaffUserIds([initialAssignedStaffUserId]);
+  }, [initialAssignedStaffUserId, staffMembers]);
 
   useEffect(() => {
     if (vitalSettingsStatus !== "ready" || vitalSettingsAppliedRef.current) return;
@@ -7655,6 +7707,7 @@ function ReceptionWalkInFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
                 label="환자명"
+                required
                 variant="create"
               >
                 <div
@@ -7667,6 +7720,7 @@ function ReceptionWalkInFormDrawer({
                 >
                   <Input
                     aria-label="환자 검색"
+                    aria-required="true"
                     autoComplete="off"
                     className="bg-[var(--emr-reception-create-field-bg)] pr-[var(--clair-spacing-32)] font-medium"
                     placeholder="환자를 선택해주세요"
@@ -7789,6 +7843,7 @@ function ReceptionWalkInFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
                 label="진료과"
+                required
                 variant="create"
               >
                 <Select
@@ -7797,6 +7852,7 @@ function ReceptionWalkInFormDrawer({
                 >
                   <SelectTrigger
                     aria-label="진료과"
+                    aria-required="true"
                     className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium data-placeholder:text-[var(--clair-color-atomic-neutral-500)]"
                   >
                     <SelectValue placeholder="진료과를 선택해주세요" />
@@ -7852,22 +7908,6 @@ function ReceptionWalkInFormDrawer({
             </ReceptionSidePanelSection>
             <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="업무 담당" variant="create">
-              <ReceptionSidePanelField
-                icon={<CdsPeopleUserIcon className="size-3.5" />}
-                label="담당자"
-                variant="create"
-              >
-                <ReceptionStaffAssignmentSelect
-                  compact
-                  selectedIds={assignedStaffUserIds}
-                  staffMembers={staffMembers}
-                  onChange={setAssignedStaffUserIds}
-                />
-              </ReceptionSidePanelField>
-            </ReceptionSidePanelSection>
-            <ReceptionSidePanelDivider />
-
             <ReceptionSidePanelSection title="접수 정보" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsFilesCalendarIcon className="size-3.5" />}
@@ -7894,8 +7934,25 @@ function ReceptionWalkInFormDrawer({
                 />
               </ReceptionSidePanelField>
               <ReceptionSidePanelField
+                icon={<CdsPeopleUserIcon className="size-3.5" />}
+                label="접수 담당자"
+                required
+                variant="create"
+              >
+                <ReceptionStaffAssignmentSelect
+                  ariaRequired
+                  compact
+                  label="접수 담당자"
+                  selectedIds={assignedStaffUserIds}
+                  selectionMode="single"
+                  staffMembers={staffMembers}
+                  onChange={setAssignedStaffUserIds}
+                />
+              </ReceptionSidePanelField>
+              <ReceptionSidePanelField
                 icon={<CdsMedicalActivityIcon className="size-3.5" />}
                 label="예상소요시간"
+                required
                 variant="create"
               >
                 <Select
@@ -7904,6 +7961,7 @@ function ReceptionWalkInFormDrawer({
                 >
                   <SelectTrigger
                     aria-label="예상소요시간"
+                    aria-required="true"
                     className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium"
                   >
                     <SelectValue />
@@ -7926,10 +7984,12 @@ function ReceptionWalkInFormDrawer({
                 align="start"
                 icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
                 label="방문목적"
+                required
                 variant="create"
               >
                 <Textarea
                   aria-label="방문목적"
+                  aria-required="true"
                   className="min-h-[var(--emr-reception-create-textarea-min-height)] resize-none bg-[var(--emr-reception-create-field-bg)] font-medium"
                   placeholder="방문목적을 입력해주세요"
                   value={visitPurpose}
@@ -8023,6 +8083,7 @@ function ReceptionWalkInFormDrawer({
                 >
                   <Input
                     aria-label="환자 검색"
+                    aria-required="true"
                     autoComplete="off"
                     className="h-9 bg-card pr-[var(--clair-spacing-32)]"
                     placeholder="환자를 선택해주세요"
@@ -8111,6 +8172,7 @@ function ReceptionWalkInFormDrawer({
             <RegistrationFormField label="방문 목적" required>
               <Textarea
                 aria-label="방문 목적"
+                aria-required="true"
                 className="min-h-[104px] resize-none bg-card"
                 placeholder="방문목적을 입력해주세요"
                 value={visitPurpose}
@@ -8138,7 +8200,7 @@ function ReceptionWalkInFormDrawer({
                   value={department}
                   onValueChange={(value) => value && setDepartment(value)}
                 >
-                  <SelectTrigger aria-label="진료과" size="lg" className="w-full bg-card">
+                  <SelectTrigger aria-label="진료과" aria-required="true" size="lg" className="w-full bg-card">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -8174,15 +8236,7 @@ function ReceptionWalkInFormDrawer({
               </RegistrationFormField>
             </section>
 
-            <RegistrationFormField label="업무 담당자">
-              <ReceptionStaffAssignmentSelect
-                selectedIds={assignedStaffUserIds}
-                staffMembers={staffMembers}
-                onChange={setAssignedStaffUserIds}
-              />
-            </RegistrationFormField>
-
-            <section className="grid grid-cols-3 gap-3">
+            <section className="grid grid-cols-2 gap-3">
               <RegistrationFormField label="접수일">
                 <Input
                   aria-label="접수일"
@@ -8199,30 +8253,43 @@ function ReceptionWalkInFormDrawer({
                   className="h-9 bg-card"
                 />
               </RegistrationFormField>
-              <RegistrationFormField label="예상시간" required>
-                <Select
-                  value={duration}
-                  onValueChange={(value) => value && setDuration(value)}
-                >
-                  <SelectTrigger
-                    aria-label="예상시간"
-                    size="lg"
-                    className="w-full bg-card"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {durationOptions.map((item) => (
-                        <SelectItem key={item} value={item}>
-                          {item}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </RegistrationFormField>
             </section>
+
+            <RegistrationFormField label="접수 담당자" required>
+              <ReceptionStaffAssignmentSelect
+                ariaRequired
+                label="접수 담당자"
+                selectedIds={assignedStaffUserIds}
+                selectionMode="single"
+                staffMembers={staffMembers}
+                onChange={setAssignedStaffUserIds}
+              />
+            </RegistrationFormField>
+
+            <RegistrationFormField label="예상시간" required>
+              <Select
+                value={duration}
+                onValueChange={(value) => value && setDuration(value)}
+              >
+                <SelectTrigger
+                  aria-label="예상시간"
+                  aria-required="true"
+                  size="lg"
+                  className="w-full bg-card"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {durationOptions.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </RegistrationFormField>
 
             <RegistrationFormField label="접수 메모">
               <Textarea
@@ -8287,6 +8354,7 @@ function ReceptionReservationFormDrawer({
   appointments,
   currentOperatingMinutes,
   initialDate,
+  initialAssignedStaffUserId,
   initialDurationMinutes,
   initialTimeMinutes,
   initialVeterinarianId,
@@ -8302,6 +8370,7 @@ function ReceptionReservationFormDrawer({
   appointments: Appointment[];
   currentOperatingMinutes: number;
   initialDate?: string;
+  initialAssignedStaffUserId?: string;
   initialDurationMinutes?: number;
   initialTimeMinutes?: number;
   initialVeterinarianId?: string;
@@ -8344,6 +8413,7 @@ function ReceptionReservationFormDrawer({
     initialKnownVeterinarianId ?? "",
   );
   const [assignedStaffUserIds, setAssignedStaffUserIds] = useState<string[]>([]);
+  const assignedStaffDefaultAppliedRef = useRef(false);
   const patientLookup = useReceptionPatientLookup({
     authSessionId: authSession?.id,
     patientSummaries,
@@ -8403,6 +8473,9 @@ function ReceptionReservationFormDrawer({
   const canCreate =
     operatingScheduleStatus === "ready" &&
     Boolean(selectedPatient) &&
+    Boolean(date) &&
+    Boolean(duration) &&
+    assignedStaffUserIds.length > 0 &&
     Boolean(selectedTimeOption) &&
     !selectedTimeOption?.disabled &&
     !closedDay &&
@@ -8414,6 +8487,18 @@ function ReceptionReservationFormDrawer({
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
   };
+
+  useEffect(() => {
+    if (
+      assignedStaffDefaultAppliedRef.current ||
+      !initialAssignedStaffUserId ||
+      !staffMembers.some((staffMember) => staffMember.id === initialAssignedStaffUserId)
+    ) {
+      return;
+    }
+    assignedStaffDefaultAppliedRef.current = true;
+    setAssignedStaffUserIds([initialAssignedStaffUserId]);
+  }, [initialAssignedStaffUserId, staffMembers]);
 
   useEffect(() => {
     if (
@@ -8540,6 +8625,7 @@ function ReceptionReservationFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
                 label="환자명"
+                required
                 variant="create"
               >
                 <div
@@ -8552,6 +8638,7 @@ function ReceptionReservationFormDrawer({
                 >
                   <Input
                     aria-label="환자 검색"
+                    aria-required="true"
                     autoComplete="off"
                     className="bg-[var(--emr-reception-create-field-bg)] pr-[var(--clair-spacing-32)] font-medium"
                     placeholder="환자를 선택해주세요"
@@ -8679,26 +8766,11 @@ function ReceptionReservationFormDrawer({
             </ReceptionSidePanelSection>
             <ReceptionSidePanelDivider />
 
-            <ReceptionSidePanelSection title="업무 담당" variant="create">
-              <ReceptionSidePanelField
-                icon={<CdsPeopleUserIcon className="size-3.5" />}
-                label="담당자"
-                variant="create"
-              >
-                <ReceptionStaffAssignmentSelect
-                  compact
-                  selectedIds={assignedStaffUserIds}
-                  staffMembers={staffMembers}
-                  onChange={setAssignedStaffUserIds}
-                />
-              </ReceptionSidePanelField>
-            </ReceptionSidePanelSection>
-            <ReceptionSidePanelDivider />
-
             <ReceptionSidePanelSection title="예약 정보" variant="create">
               <ReceptionSidePanelField
                 icon={<CdsFilesCalendarIcon className="size-3.5" />}
                 label="예약일"
+                required
                 variant="create"
               >
                 <ReceptionReservationDatePicker
@@ -8711,6 +8783,7 @@ function ReceptionReservationFormDrawer({
               <ReceptionSidePanelField
                 icon={<CdsFilesClockIcon className="size-3.5" />}
                 label="예약시간"
+                required
                 variant="create"
               >
                 <div className="min-w-0">
@@ -8721,6 +8794,7 @@ function ReceptionReservationFormDrawer({
                   >
                     <SelectTrigger
                       aria-label="예약시간"
+                      aria-required="true"
                       className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium"
                     >
                       <span className="flex min-w-0 flex-1 truncate text-left">
@@ -8759,8 +8833,24 @@ function ReceptionReservationFormDrawer({
                 </div>
               </ReceptionSidePanelField>
               <ReceptionSidePanelField
+                icon={<CdsPeopleUserIcon className="size-3.5" />}
+                label="예약 담당자"
+                required
+                variant="create"
+              >
+                <ReceptionStaffAssignmentSelect
+                  ariaRequired
+                  compact
+                  label="예약 담당자"
+                  selectedIds={assignedStaffUserIds}
+                  staffMembers={staffMembers}
+                  onChange={setAssignedStaffUserIds}
+                />
+              </ReceptionSidePanelField>
+              <ReceptionSidePanelField
                 icon={<CdsMedicalActivityIcon className="size-3.5" />}
                 label="예상소요시간"
+                required
                 variant="create"
               >
                 <Select
@@ -8769,6 +8859,7 @@ function ReceptionReservationFormDrawer({
                 >
                   <SelectTrigger
                     aria-label="예상소요시간"
+                    aria-required="true"
                     className="w-full bg-[var(--emr-reception-create-field-bg)] font-medium"
                   >
                     <span className="flex min-w-0 flex-1 truncate text-left">
@@ -8871,6 +8962,7 @@ function ReceptionReservationFormDrawer({
                 >
                   <Input
                     aria-label="환자 검색"
+                    aria-required="true"
                     autoComplete="off"
                     className="h-9 bg-card pr-[var(--clair-spacing-32)]"
                     placeholder="환자를 선택해주세요"
@@ -8974,14 +9066,6 @@ function ReceptionReservationFormDrawer({
               </RegistrationFormField>
             </section>
 
-            <RegistrationFormField label="업무 담당자">
-              <ReceptionStaffAssignmentSelect
-                selectedIds={assignedStaffUserIds}
-                staffMembers={staffMembers}
-                onChange={setAssignedStaffUserIds}
-              />
-            </RegistrationFormField>
-
             <section className="grid grid-cols-2 gap-3">
               <RegistrationFormField
                 label="예약시간"
@@ -8995,6 +9079,7 @@ function ReceptionReservationFormDrawer({
                 >
                   <SelectTrigger
                     aria-label="예약시간"
+                    aria-required="true"
                     size="lg"
                     className="w-full bg-card"
                   >
@@ -9030,6 +9115,7 @@ function ReceptionReservationFormDrawer({
                 >
                   <SelectTrigger
                     aria-label="예상시간"
+                    aria-required="true"
                     size="lg"
                     className="w-full bg-card"
                   >
@@ -9047,6 +9133,16 @@ function ReceptionReservationFormDrawer({
                 </Select>
               </RegistrationFormField>
             </section>
+
+            <RegistrationFormField label="예약 담당자" required>
+              <ReceptionStaffAssignmentSelect
+                ariaRequired
+                label="예약 담당자"
+                selectedIds={assignedStaffUserIds}
+                staffMembers={staffMembers}
+                onChange={setAssignedStaffUserIds}
+              />
+            </RegistrationFormField>
 
             <RegistrationFormField label="예약 메모">
               <Textarea
@@ -9664,6 +9760,7 @@ function ReceptionSidePanelField({
   errorId,
   icon,
   label,
+  required = false,
   variant = "default",
 }: {
   align?: "center" | "start";
@@ -9672,6 +9769,7 @@ function ReceptionSidePanelField({
   errorId?: string;
   icon: ReactNode;
   label: string;
+  required?: boolean;
   variant?: ReceptionSidePanelLayoutVariant;
 }) {
   const isCreate = variant === "create";
@@ -9704,7 +9802,10 @@ function ReceptionSidePanelField({
         >
           {icon}
         </span>
-        <span className="min-w-0 truncate">{label}</span>
+        <span className="min-w-0 truncate">
+          {label}
+          {required ? <EmrRequiredIndicator className="ml-0.5" /> : null}
+        </span>
       </div>
       <div className="min-w-0">
         {children}
@@ -10478,6 +10579,7 @@ function ReceptionSidePanelDetail({
               errorId="reception-encounter-edit-department-error"
               icon={<CdsMedicalStethoscopeIcon className="size-3.5" />}
               label="진료과"
+              required={editMode}
               variant={detailVariant}
             >
               {editMode ? (
@@ -10498,6 +10600,7 @@ function ReceptionSidePanelDetail({
                     }
                     aria-invalid={Boolean(editFieldErrors.department) || undefined}
                     aria-label="진료과"
+                    aria-required="true"
                     className="w-full bg-card"
                   >
                     <SelectValue />
@@ -10615,6 +10718,7 @@ function ReceptionSidePanelDetail({
               errorId="reception-encounter-edit-durationMinutes-error"
               icon={<CdsMedicalActivityIcon className="size-3.5" />}
               label="예상소요시간"
+              required={editMode}
               variant={detailVariant}
             >
               {editMode ? (
@@ -10639,6 +10743,7 @@ function ReceptionSidePanelDetail({
                       Boolean(editFieldErrors.durationMinutes) || undefined
                     }
                     aria-label="예상소요시간"
+                    aria-required="true"
                     className="w-full bg-card"
                   >
                     <SelectValue />
@@ -10670,10 +10775,12 @@ function ReceptionSidePanelDetail({
               errorId="reception-encounter-edit-visitPurpose-error"
               icon={<CdsMedicalClipboardPenIcon className="size-3.5" />}
               label="방문목적"
+              required={editMode}
               variant={detailVariant}
             >
               <Textarea
                 aria-label="방문목적"
+                aria-required={editMode || undefined}
                 aria-describedby={
                   editFieldErrors.visitPurpose
                     ? "reception-encounter-edit-visitPurpose-error"
@@ -11031,6 +11138,9 @@ export function ReceptionDrawer({
       state.resourcesByKey[staffResourceKey]?.veterinarians ??
       emptyReceptionStaffVeterinarians,
   );
+  const workspaceActorUserId = useReceptionStaffResourceStore(
+    (state) => state.resourcesByKey[staffResourceKey]?.actorUserId,
+  );
   const workspaceStaffMembers = useReceptionStaffResourceStore(
     (state) =>
       state.resourcesByKey[staffResourceKey]?.staff ?? emptyReceptionStaffMembers,
@@ -11041,6 +11151,14 @@ export function ReceptionDrawer({
   const staffMembers = liveStaffSourceEnabled
     ? workspaceStaffMembers
     : allReceptionStaff;
+  const actorStaffUserId = liveStaffSourceEnabled
+    ? workspaceActorUserId
+    : getReceptionMockStaffUserId(authSession?.role);
+  const initialAssignedStaffUserId = staffMembers.some(
+    (staffMember) => staffMember.id === actorStaffUserId,
+  )
+    ? actorStaffUserId
+    : undefined;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const veterinarianStaffMembers = useMemo(
     () =>
@@ -11117,6 +11235,7 @@ export function ReceptionDrawer({
         initialDurationMinutes={
           calendarDraftSelectionForForm?.durationMinutes
         }
+        initialAssignedStaffUserId={initialAssignedStaffUserId}
         initialPatientId={initialPatientId}
         initialVeterinarianId={
           calendarDraftSelectionForForm?.primaryVeterinarianId
@@ -11183,6 +11302,7 @@ export function ReceptionDrawer({
         appointments={appointments}
         currentOperatingMinutes={currentOperatingMinutes}
         initialDate={reservationDraftDate}
+        initialAssignedStaffUserId={initialAssignedStaffUserId}
         initialDurationMinutes={reservationDraftSelection?.durationMinutes}
         initialTimeMinutes={reservationDraftTimeMinutes}
         initialVeterinarianId={reservationDraftSelection?.primaryVeterinarianId}

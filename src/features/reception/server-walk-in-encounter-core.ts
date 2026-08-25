@@ -534,13 +534,13 @@ function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
   const rawAssignedStaffUserIds = (input as { assignedStaffUserIds?: unknown })
     .assignedStaffUserIds;
   if (
-    rawAssignedStaffUserIds !== undefined &&
-    (!Array.isArray(rawAssignedStaffUserIds) ||
+    !Array.isArray(rawAssignedStaffUserIds) ||
+    rawAssignedStaffUserIds.length !== 1 ||
       rawAssignedStaffUserIds.some(
         (value) => typeof value !== "string" || !value.trim(),
-      ))
+      )
   ) {
-    fieldErrors.assignedStaffUserIds = "업무 담당자를 확인해 주세요.";
+    fieldErrors.assignedStaffUserIds = "접수 담당자를 1명 선택해 주세요.";
   }
 
   if (!trimToUndefined(input.patientId)) {

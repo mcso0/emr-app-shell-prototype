@@ -40,6 +40,7 @@ export type ReceptionStaffMember = {
 export type ReceptionStaffReadStatus = "idle" | "loading" | "ready" | "error";
 
 type ReceptionStaffResource = {
+  actorUserId?: string;
   staff: ReceptionStaffMember[];
   status: ReceptionStaffReadStatus;
   updatedAt?: number;
@@ -52,6 +53,7 @@ type ReceptionStaffResourceStore = {
   setResourceResult: (
     key: string,
     result: {
+      actorUserId?: string;
       status: Extract<ReceptionStaffReadStatus, "ready" | "error">;
       staff: ReceptionStaffMember[];
       veterinarians: ReceptionStaffVeterinarian[];
@@ -80,6 +82,7 @@ export const useReceptionStaffResourceStore = create<ReceptionStaffResourceStore
         resourcesByKey: {
           ...state.resourcesByKey,
           [key]: {
+            actorUserId: state.resourcesByKey[key]?.actorUserId,
             staff: state.resourcesByKey[key]?.staff ?? emptyReceptionStaffMembers,
             status: "loading",
             updatedAt: state.resourcesByKey[key]?.updatedAt,

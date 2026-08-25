@@ -3257,11 +3257,80 @@ test("walk-in reception drawer removes helper chrome and keeps focused placehold
     walkInForm.getByRole("button", { name: "카카오톡 발송" }),
   ).toHaveCount(0);
   await expect(walkInForm.getByRole("combobox", { name: "진료과" })).toContainText(
-    "진료과를 선택해주세요",
+    "영상의학과 · 방사선종양학과",
   );
   await expect(walkInForm.getByRole("combobox", { name: "담당의" })).toContainText(
     "담당의를 선택해주세요",
   );
+});
+
+test("reception and reservation create forms expose required fields and use the approved assignee modes", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception");
+  await openWalkInReceptionForm(page);
+
+  const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  for (const label of [
+    "환자 검색",
+    "진료과",
+    "접수 담당자",
+    "예상소요시간",
+    "방문목적",
+  ]) {
+    await expect(walkInForm.getByLabel(label, { exact: true })).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+  }
+
+  const receptionAssignee = walkInForm.getByRole("button", {
+    name: "접수 담당자",
+  });
+  await expect(receptionAssignee).toContainText("송민재");
+  await receptionAssignee.click();
+  await expect(page.getByRole("menuitemradio")).toHaveCount(14);
+  await expect(page.getByRole("menuitemcheckbox")).toHaveCount(0);
+  await page.getByRole("menuitemradio", { name: "송하윤 · 테크니션" }).click();
+  await expect(receptionAssignee).toContainText("송하윤");
+
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-reservation-form%3Anew",
+  );
+  const reservationForm = page.getByTestId("reservation-create-drawer");
+  for (const label of [
+    "환자 검색",
+    "예약일",
+    "예약시간",
+    "예약 담당자",
+    "예상소요시간",
+  ]) {
+    await expect(reservationForm.getByLabel(label, { exact: true })).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+  }
+
+  const reservationAssignee = reservationForm.getByRole("button", {
+    name: "예약 담당자",
+  });
+  await expect(reservationAssignee).toContainText("송민재");
+  await reservationAssignee.click();
+  await expect(page.getByRole("menuitemcheckbox")).toHaveCount(14);
+  await expect(page.getByRole("menuitemradio")).toHaveCount(0);
+});
+
+test("reception encounter edit keeps the same required field semantics", async ({
+  page,
+}) => {
+  const rightPanel = await openReceptionEncounterEdit(page);
+
+  for (const label of ["진료과", "예상소요시간", "방문목적"]) {
+    await expect(rightPanel.getByLabel(label, { exact: true })).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+  }
 });
 
 test("patient guardian registration surfaces server duplicate microchips and preserves the draft", async ({
@@ -5045,7 +5114,7 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
     walkInForm.getByRole("button", { name: "바이탈 추가" }),
   ).toHaveCount(0);
   await expect(walkInForm.getByRole("combobox", { name: "진료과" })).toContainText(
-    "진료과를 선택해주세요",
+    "영상의학과 · 방사선종양학과",
   );
   await expect(walkInForm.getByRole("combobox", { name: "담당의" })).toContainText(
     "담당의를 선택해주세요",
@@ -6915,8 +6984,8 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
   await walkInForm.getByLabel("방문목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("담당의").click();
   await page.getByRole("option", { name: "김도윤" }).click();
-  await walkInForm.getByRole("button", { name: "업무 담당자" }).click();
-  await page.getByRole("menuitemcheckbox", { name: "송하윤 · 테크니션" }).click();
+  await walkInForm.getByRole("button", { name: "접수 담당자" }).click();
+  await page.getByRole("menuitemradio", { name: "송하윤 · 테크니션" }).click();
   await page.keyboard.press("Escape");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await expect(walkInForm.getByLabel("접수시간")).toHaveValue("오전 10:45");

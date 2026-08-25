@@ -56,6 +56,7 @@ export type WorkspaceStaffReadResult =
   | {
       ok: true;
       status: 200;
+      actorUserId: string;
       staff: WorkspaceStaffMember[];
       sectionErrors?: { operationalStatus: "db_read_failed" };
       enforcedBy: "workspace-staff-read";
@@ -159,6 +160,13 @@ export async function readWorkspaceStaff({
   if (operatingDate && !isIsoOperatingDate(operatingDate)) {
     return { ok: false, status: 400, error: "invalid_operating_date" };
   }
+  if (!actorUserId) {
+    return {
+      ok: false,
+      status: 401,
+      denialReason: "unauthenticated",
+    };
+  }
 
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
@@ -185,6 +193,7 @@ export async function readWorkspaceStaff({
   return {
     ok: true,
     status: 200,
+    actorUserId,
     staff: result.staff,
     ...(result.sectionErrors ? { sectionErrors: result.sectionErrors } : {}),
     enforcedBy: "workspace-staff-read",

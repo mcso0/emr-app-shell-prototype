@@ -9,6 +9,7 @@ import {
 } from "../src/features/reception/server-appointment-create-core";
 
 const validInput = {
+  assignedStaffUserIds: ["user-desk-yuna"],
   assignedVeterinarianId: "user-vet-doyun",
   durationMinutes: 30,
   guardianId: "guardian-oh-sea",
@@ -160,6 +161,21 @@ test("appointment create core enforces reception create permission", async () =>
   });
 });
 
+test("appointment create requires at least one operational assignee", async () => {
+  const result = await createReceptionAppointment({
+    actorUserId: "user-front-desk",
+    input: { ...validInput, assignedStaffUserIds: [] },
+    workspaceId: "clair-demo",
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: { assignedStaffUserIds: "assigned_staff_required" },
+  });
+});
+
 test("appointment create core validates patient, business hours, closed day, and slot conflicts", async () => {
   const missingPatient = await createReceptionAppointment({
     actorUserId: "user-front-desk",
@@ -269,6 +285,7 @@ test("supabase appointment create gateway keeps workspace scope in the RPC write
   const rpcPayloads: unknown[] = [];
   const rpcInput = {
     ...validInput,
+    assignedStaffUserIds: ["00000000-0000-4000-8000-000000000003"],
     assignedVeterinarianId: "00000000-0000-4000-8000-000000000002",
   };
   const gateway = createSupabaseReceptionAppointmentCreateGateway({
@@ -337,6 +354,7 @@ test("appointment create keeps the created reservation when audit append fails a
     actorUserId: "49110000-0000-4000-8000-000000000001",
     workspaceId: "workspace-clair-cheongdam",
     input: {
+      assignedStaffUserIds: ["49110000-0000-4000-8000-000000000001"],
       assignedVeterinarianId: appointment.assignedVeterinarianId,
       durationMinutes: 30,
       guardianId: appointment.guardianId,
