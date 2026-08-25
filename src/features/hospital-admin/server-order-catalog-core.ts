@@ -2243,7 +2243,9 @@ function mapOrderSetSummaries(value: unknown): OrderSetSummary[] {
 
 function mapOrderSetSummary(value: unknown): OrderSetSummary | null {
   if (!isRecord(value)) return null;
-  const orderSetId = b2ReadString(value, "order_set_id", "orderSetId");
+  const orderSetId =
+    b2ReadString(value, "order_set_id", "orderSetId") ??
+    b2ReadString(value, "id");
   const availabilityStatus = b2ReadString(value, "availability_status", "availabilityStatus");
   const setName = b2ReadString(value, "set_name", "setName");
   const billingName = b2ReadString(value, "billing_name", "billingName");
