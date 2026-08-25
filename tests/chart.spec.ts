@@ -4483,6 +4483,10 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
     page.locator("[data-slot='chart-patient-context-bar']"),
   ).toHaveCSS("min-height", "56px");
   await expect(page.locator("[data-slot='patient-context-bar']")).toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 255)",
+  );
+  await expect(page.locator("[data-slot='patient-context-bar']")).toHaveCSS(
     "border-bottom-width",
     "1px",
   );
