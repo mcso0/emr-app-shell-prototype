@@ -105,6 +105,7 @@ export type OrderCatalogItem = {
   classificationPathId?: string;
   catalogRevision?: number;
   sourceProjectionFingerprint?: string;
+  dispensingLineage?: DispensingOrderLineageSnapshot;
   clinicalOrderType?: ClinicalOrderType;
   isExternalLab?: boolean;
   destinationModule?: ClinicalOrderDestinationModule | null;
@@ -453,6 +454,19 @@ export type MedicationOrderMetadata = {
   ingredientEnglishName?: string;
 };
 
+export type DispensingOrderLineageSnapshot = {
+  schemaVersion: 1;
+  sourceDispensingProfileId: string;
+  sourceDispensingProfileRevision: number;
+  sourceMedicationProductId: string;
+  sourceMedicationProductRevision: number;
+  sourceClinicalReviewId: string | null;
+  sourceEvidenceFingerprint: string;
+  clinicalUseAllowed: boolean;
+  dispensingProfileSnapshot: Record<string, unknown>;
+  dispensingProfileSnapshotSha256: string;
+};
+
 export type VaccineOrderMetadata = {
   vaccineTarget: Species[];
   vaccineClassification: "core" | "non_core" | "rabies" | "other";
@@ -568,6 +582,7 @@ export type ChartOrderCatalogSearchRow = {
   sourceMasterRecordId?: string;
   sourceMasterRevision?: number;
   workspaceCatalogRevision?: number;
+  dispensingLineage?: DispensingOrderLineageSnapshot;
   sourceSetId?: string | null;
   sourceSetRevisionId?: string | null;
   sourceSetRevisionNo?: number | null;
@@ -604,6 +619,7 @@ export type AppliedOrderSnapshot = {
   executionMode?: Exclude<ClinicalOrderExecutionMode, "aggregate">;
   detailSchemaVersion?: number;
   billingEligible?: boolean;
+  dispensingLineage?: DispensingOrderLineageSnapshot;
 };
 
 export type ExpandedOrderSetRow = {
@@ -1257,6 +1273,9 @@ export function createOrderPricingSnapshot(
     executionMode: executionContract.executionMode,
     detailSchemaVersion: executionContract.detailSchemaVersion,
     billingEligible: executionContract.billingEligible,
+    dispensingLineage: item.dispensingLineage
+      ? structuredClone(item.dispensingLineage)
+      : undefined,
   };
 }
 
@@ -1421,7 +1440,8 @@ export function createMockOrderCatalogGateway(
         .filter(
           (item) =>
             item.workspaceId === workspaceId &&
-            item.availabilityStatus === "active",
+            item.availabilityStatus === "active" &&
+            (!item.dispensingLineage || item.dispensingLineage.clinicalUseAllowed),
         )
         .map((item): ChartOrderCatalogSearchRow => {
           const appliedSnapshot = createOrderPricingSnapshot(item);
@@ -1443,6 +1463,7 @@ export function createMockOrderCatalogGateway(
             sourceMasterRecordId: item.sourceMasterRecordId,
             sourceMasterRevision: item.sourceMasterRevision,
             workspaceCatalogRevision: item.catalogRevision,
+            dispensingLineage: appliedSnapshot.dispensingLineage,
             sourceSetId: null,
             sourceSetRevisionId: null,
             sourceSetRevisionNo: null,
@@ -1955,6 +1976,15 @@ type OrderCatalogItemDbRow = {
   catalog_revision?: number | null;
   source_projection_snapshot?: Record<string, unknown> | null;
   source_projection_fingerprint?: string | null;
+  source_dispensing_profile_id?: string | null;
+  source_dispensing_profile_revision?: number | null;
+  source_medication_product_id?: string | null;
+  source_medication_product_revision?: number | null;
+  source_clinical_review_id?: string | null;
+  source_evidence_fingerprint?: string | null;
+  clinical_use_allowed?: boolean | null;
+  dispensing_profile_snapshot?: Record<string, unknown> | null;
+  dispensing_profile_snapshot_sha256?: string | null;
   clinical_order_type?: string | null;
   is_external_lab?: boolean | null;
   destination_module?: string | null;
@@ -2011,6 +2041,15 @@ const orderCatalogItemSelectColumns = [
   "catalog_revision",
   "source_projection_snapshot",
   "source_projection_fingerprint",
+  "source_dispensing_profile_id",
+  "source_dispensing_profile_revision",
+  "source_medication_product_id",
+  "source_medication_product_revision",
+  "source_clinical_review_id",
+  "source_evidence_fingerprint",
+  "clinical_use_allowed",
+  "dispensing_profile_snapshot",
+  "dispensing_profile_snapshot_sha256",
   "category_group",
   "category_label",
   "t_code",
@@ -2818,6 +2857,18 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     classificationPathId: row.classification_path_id ?? undefined,
     catalogRevision: row.catalog_revision ?? 1,
     sourceProjectionFingerprint: row.source_projection_fingerprint ?? undefined,
+    dispensingLineage: mapDispensingOrderLineageSnapshot({
+      schemaVersion: 1,
+      sourceDispensingProfileId: row.source_dispensing_profile_id,
+      sourceDispensingProfileRevision: row.source_dispensing_profile_revision,
+      sourceMedicationProductId: row.source_medication_product_id,
+      sourceMedicationProductRevision: row.source_medication_product_revision,
+      sourceClinicalReviewId: row.source_clinical_review_id,
+      sourceEvidenceFingerprint: row.source_evidence_fingerprint,
+      clinicalUseAllowed: row.clinical_use_allowed,
+      dispensingProfileSnapshot: row.dispensing_profile_snapshot,
+      dispensingProfileSnapshotSha256: row.dispensing_profile_snapshot_sha256,
+    }),
     clinicalOrderType: executionContract.clinicalOrderType,
     isExternalLab: executionContract.isExternalLab,
     destinationModule: executionContract.destinationModule,
@@ -3167,6 +3218,9 @@ function cloneItem(item: OrderCatalogItem): OrderCatalogItem {
     medicationMetadata: item.medicationMetadata
       ? { ...item.medicationMetadata }
       : undefined,
+    dispensingLineage: item.dispensingLineage
+      ? structuredClone(item.dispensingLineage)
+      : undefined,
     vaccineMetadata: item.vaccineMetadata
       ? {
           ...item.vaccineMetadata,
@@ -3355,6 +3409,7 @@ function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
     workspaceCatalogRevision: readNumber(
       row.workspaceCatalogRevision ?? row.workspace_catalog_revision,
     ),
+    dispensingLineage: appliedSnapshot.dispensingLineage,
     clinicalOrderType: appliedSnapshot.clinicalOrderType,
     destinationModule: appliedSnapshot.destinationModule,
     executionMode: appliedSnapshot.executionMode,
@@ -3621,6 +3676,77 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
     billingEligible: readBoolean(
       row.billingEligible ?? row.billing_eligible,
     ),
+    dispensingLineage: mapDispensingOrderLineageSnapshot(
+      row.dispensingLineage ?? row.dispensing_lineage,
+    ),
+  };
+}
+
+export function mapDispensingOrderLineageSnapshot(
+  value: unknown,
+): DispensingOrderLineageSnapshot | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const row = value as Record<string, unknown>;
+  const schemaVersion = readNumber(row.schemaVersion ?? row.schema_version);
+  const sourceDispensingProfileId = readString(
+    row.sourceDispensingProfileId ?? row.source_dispensing_profile_id,
+  );
+  const sourceDispensingProfileRevision = readNumber(
+    row.sourceDispensingProfileRevision ?? row.source_dispensing_profile_revision,
+  );
+  const sourceMedicationProductId = readString(
+    row.sourceMedicationProductId ?? row.source_medication_product_id,
+  );
+  const sourceMedicationProductRevision = readNumber(
+    row.sourceMedicationProductRevision ?? row.source_medication_product_revision,
+  );
+  const sourceClinicalReviewId = readString(
+    row.sourceClinicalReviewId ?? row.source_clinical_review_id,
+  ) ?? null;
+  const sourceEvidenceFingerprint = readString(
+    row.sourceEvidenceFingerprint ?? row.source_evidence_fingerprint,
+  );
+  const clinicalUseAllowed = readBoolean(
+    row.clinicalUseAllowed ?? row.clinical_use_allowed,
+  );
+  const dispensingProfileSnapshot =
+    row.dispensingProfileSnapshot ?? row.dispensing_profile_snapshot;
+  const dispensingProfileSnapshotSha256 = readString(
+    row.dispensingProfileSnapshotSha256 ?? row.dispensing_profile_snapshot_sha256,
+  );
+  if (
+    schemaVersion !== 1 ||
+    !sourceDispensingProfileId ||
+    !Number.isInteger(sourceDispensingProfileRevision) ||
+    Number(sourceDispensingProfileRevision) <= 0 ||
+    !sourceMedicationProductId ||
+    !Number.isInteger(sourceMedicationProductRevision) ||
+    Number(sourceMedicationProductRevision) <= 0 ||
+    !sourceEvidenceFingerprint ||
+    !/^[0-9a-f]{64}$/.test(sourceEvidenceFingerprint) ||
+    typeof clinicalUseAllowed !== "boolean" ||
+    (clinicalUseAllowed && !sourceClinicalReviewId) ||
+    !dispensingProfileSnapshot ||
+    typeof dispensingProfileSnapshot !== "object" ||
+    Array.isArray(dispensingProfileSnapshot) ||
+    !dispensingProfileSnapshotSha256 ||
+    !/^[0-9a-f]{64}$/.test(dispensingProfileSnapshotSha256)
+  ) {
+    return undefined;
+  }
+  return {
+    schemaVersion: 1,
+    sourceDispensingProfileId,
+    sourceDispensingProfileRevision: Number(sourceDispensingProfileRevision),
+    sourceMedicationProductId,
+    sourceMedicationProductRevision: Number(sourceMedicationProductRevision),
+    sourceClinicalReviewId,
+    sourceEvidenceFingerprint,
+    clinicalUseAllowed,
+    dispensingProfileSnapshot: structuredClone(
+      dispensingProfileSnapshot as Record<string, unknown>,
+    ),
+    dispensingProfileSnapshotSha256,
   };
 }
 

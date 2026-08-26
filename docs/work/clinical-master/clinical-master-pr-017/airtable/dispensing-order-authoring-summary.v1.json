@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "clair-dispensing-airtable-summary-v1",
+  "target": {
+    "baseId": "applMtgWwOxwPigB8",
+    "baseName": "CLAiR Clinical Master"
+  },
+  "newTableCount": 9,
+  "existingTableMutationCount": 0,
+  "deletionCount": 0,
+  "counts": {
+    "Active Ingredients V1": 79,
+    "Medication Products V1": 108,
+    "Product Ingredients V1": 132,
+    "Species Applicability V1": 150,
+    "Evidence Documents V1": 108,
+    "Evidence Assertions V1": 648,
+    "Clinical Reviews V1": 108,
+    "Regulatory Profiles V1": 108,
+    "Dispensing Orders V1": 108
+  },
+  "totalRecords": 1549,
+  "linkReferenceCount": 2400,
+  "missingLinkKeyCount": 0,
+  "duplicateExternalKeyCount": 0,
+  "clinicalUseAllowedCount": 0,
+  "schemaSha256": "ad693b212ff4507f944ddf54bf482cebe0d49f76d4994e7cf076836803e8a987",
+  "recordsSha256": "3fc910fb984fcfbb14341eb8e59d94dc86a737598e88d3419ac232c34fba6015"
+}

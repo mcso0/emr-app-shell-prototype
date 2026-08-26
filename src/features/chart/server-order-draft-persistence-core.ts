@@ -7,8 +7,14 @@ import {
 import { createHash } from "node:crypto";
 import { mockEncounters, mockInvoiceLines, mockOrders } from "@/mocks/emr-domain";
 import type { EmrOrder, Encounter, InvoiceLine } from "@/types/emr-domain";
-import type { ChartOrderSetSelectionIntent } from "@/features/hospital-admin/server-order-catalog-core";
-import { createMockOrderCatalogGateway } from "@/features/hospital-admin/server-order-catalog-core";
+import type {
+  ChartOrderSetSelectionIntent,
+  DispensingOrderLineageSnapshot,
+} from "@/features/hospital-admin/server-order-catalog-core";
+import {
+  createMockOrderCatalogGateway,
+  mapDispensingOrderLineageSnapshot,
+} from "@/features/hospital-admin/server-order-catalog-core";
 import {
   CLINICAL_ORDER_DESTINATION_MODULES,
   isClinicalOrderType,
@@ -55,6 +61,7 @@ export type ChartOrderRuntimeRow = {
   sourceSetRevisionItemId: string | null;
   workspaceCatalogItemId: string | null;
   workspaceCatalogRevision: number | null;
+  dispensingLineage: DispensingOrderLineageSnapshot | null;
   quantity: number;
   quantitySource: ChartOrderReadbackQuantitySource;
   unitPriceSnapshot: number | null;
@@ -125,6 +132,7 @@ export type ChartOrderDraftLine = {
   sourceMasterRecordId?: string;
   sourceMasterRevision?: number;
   workspaceCatalogRevision?: number;
+  dispensingLineage?: DispensingOrderLineageSnapshot;
   appliedSnapshot?: Record<string, unknown>;
   clinicalOrderType?: ClinicalOrderType;
   destinationModule?: ClinicalOrderDestinationModule | null;
@@ -479,6 +487,8 @@ export function createMockChartOrderDraftGateway(
             seed?.sourceMasterRevision ?? catalogRow?.sourceMasterRevision,
           workspaceCatalogRevision:
             seed?.workspaceCatalogRevision ?? catalogRow?.workspaceCatalogRevision,
+          dispensingLineage:
+            seed?.dispensingLineage ?? catalogRow?.dispensingLineage,
           appliedSnapshot:
             seed?.appliedSnapshot ?? catalogRow?.appliedSnapshot,
           clinicalOrderType: canonical.clinicalOrderType,
@@ -1222,6 +1232,9 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
     sourceSetRevisionItemId: row.sourceSetRevisionItemId === null ? null : typeof row.sourceSetRevisionItemId === "string" ? row.sourceSetRevisionItemId : null,
     workspaceCatalogItemId: row.workspaceCatalogItemId === null ? null : typeof row.workspaceCatalogItemId === "string" ? row.workspaceCatalogItemId : null,
     workspaceCatalogRevision: typeof row.workspaceCatalogRevision === "number" ? row.workspaceCatalogRevision : null,
+    dispensingLineage: mapDispensingOrderLineageSnapshot(
+      row.dispensingLineage ?? objectValue("appliedSnapshot").dispensingLineage,
+    ) ?? null,
     quantity: row.quantity,
     quantitySource: quantitySource as ChartOrderReadbackQuantitySource,
     unitPriceSnapshot: row.unitPriceSnapshot === null ? null : typeof row.unitPriceSnapshot === "number" ? row.unitPriceSnapshot : null,
@@ -1351,6 +1364,7 @@ async function buildMockSetRuntimeRows({
       sourceSetRevisionItemId: null,
       workspaceCatalogItemId: null,
       workspaceCatalogRevision: null,
+      dispensingLineage: null,
       quantity: 1,
       quantitySource: "fixed_one",
       unitPriceSnapshot: preview.set.setPriceKrw,
@@ -1465,6 +1479,9 @@ async function buildMockSetRuntimeRows({
         sourceSetRevisionItemId: item.revisionItemId,
         workspaceCatalogItemId: item.workspaceCatalogItemId,
         workspaceCatalogRevision: item.appliedCatalogRevision,
+        dispensingLineage: mapDispensingOrderLineageSnapshot(
+          itemSnapshot.dispensingLineage,
+        ) ?? null,
         quantity: item.quantity,
         quantitySource: item.quantitySource,
         unitPriceSnapshot: item.priceKrw,
@@ -1518,6 +1535,10 @@ function seedDraftLinesToRuntimeRows(rows: ChartOrderDraftLine[], workspaceId: s
     sourceSetRevisionItemId: null,
     workspaceCatalogItemId: row.workspaceCatalogItemId ?? null,
     workspaceCatalogRevision: row.workspaceCatalogRevision ?? null,
+    dispensingLineage:
+      row.dispensingLineage ??
+      mapDispensingOrderLineageSnapshot(row.appliedSnapshot?.dispensingLineage) ??
+      null,
     quantity: row.quantity,
     quantitySource: "manual",
     unitPriceSnapshot: row.unitPriceSnapshot,

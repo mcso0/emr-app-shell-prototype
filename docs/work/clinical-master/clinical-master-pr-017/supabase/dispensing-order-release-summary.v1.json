@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "clair-dispensing-release-summary-v1",
+  "datasetRevision": "2026-08-26.1",
+  "sourceDatasetSha256": "cc3ef6c977122bef5a708d5c6a800a3120b257584bd78ee72c26a67d2b95260f",
+  "payloadSha256": "3825feb207ed3ea3b9fcf3be69f3e1745f4571671d988da3d57a760e3f19460b",
+  "payloadFileSha256": "23e5d0c9f2a362c7634da96459d3f1280602b49190daefd186db9d3e4d93ad2f",
+  "recordCount": 108,
+  "genericOrderCount": 108,
+  "genericDependencyCount": 8,
+  "classificationPathCount": 1,
+  "counts": {
+    "ingredients": 79,
+    "evidenceDocuments": 108,
+    "products": 108,
+    "productIngredients": 132,
+    "speciesApplicability": 150,
+    "productHandling": 108,
+    "dispensingProfiles": 108,
+    "evidenceAssertions": 648,
+    "clinicalReviews": 108,
+    "regulatoryProfiles": 108
+  },
+  "clinicalUseAllowedCount": 0,
+  "approvedClinicalReviewCount": 0,
+  "approvedRegulatoryProfileCount": 0,
+  "approvedKoreanTranslationCount": 0
+}

@@ -99,6 +99,7 @@ import type {
   TechnicianUser,
   WorkspaceSlotAvailabilityProviderProps,
 } from "@/types/emr";
+import type { UniversalOrderTaskStatus } from "@/types/emr-domain";
 import type { EmrTableDensity } from "@/components/emr/table-density";
 
 type OrderGroupFilter = "all" | "oral" | "other";
@@ -117,18 +118,48 @@ type FulfillmentWorkItem = {
   encounterId: string;
   id: string;
   orderId: string;
+  patientId?: string | null;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
   sourceSnapshot?: {
+    dispensingLineage?: {
+      clinicalUseAllowed: boolean;
+      dispensingProfileSnapshot: Record<string, unknown>;
+      sourceClinicalReviewId: string | null;
+      sourceMedicationProductId: string;
+      sourceMedicationProductRevision: number;
+    };
     guardianName?: string;
+    detailInputs?: Record<string, unknown>;
+    effectiveDisplayName?: string;
+    inHospitalOrderName?: string;
     instruction?: string;
     orderDisplayName?: string;
     patientName?: string;
     requestingVetName?: string;
+    quantity?: number;
+    salesUnit?: string;
+    appliedSalesUnit?: string;
   };
   status: FulfillmentWorkItemStatus;
+  taskAttemptNo?: number | null;
+  taskId?: string | null;
+  taskStatus?: UniversalOrderTaskStatus | null;
   updatedAt?: string;
   workspaceId: string;
+};
+
+type ReviewedMedicationFacts = {
+  dosageForm?: string;
+  productName?: string;
+  routes: string[];
+  species: string[];
+  strength?: string;
+};
+type DispensingQuantityFacts = {
+  billingQuantity?: number;
+  billingUnit?: string;
+  prescribedTotal?: number;
 };
 type FulfillmentWorkItemReadSummary = {
   date?: string;
@@ -143,6 +174,28 @@ type DispensingFulfillmentQueueSnapshot = {
   sourceTotalCount?: number;
   status: DispensingFulfillmentQueueStatus;
   workItems: FulfillmentWorkItem[];
+};
+type FulfillmentWorkItemHistoryEvent = {
+  actorUserId: string | null;
+  createdAt: string;
+  id: string;
+  nextStatus: FulfillmentWorkItemStatus;
+  orderId: string;
+  previousStatus: FulfillmentWorkItemStatus | null;
+  reason: string | null;
+  source: "work_item_created" | "order_event";
+  workItemId: string;
+};
+type FulfillmentWorkItemHistoryCursor = {
+  createdAt: string;
+  eventId: string;
+};
+type FulfillmentWorkItemHistoryState = {
+  events: FulfillmentWorkItemHistoryEvent[];
+  hasMore: boolean;
+  loadingMore: boolean;
+  nextCursor: FulfillmentWorkItemHistoryCursor | null;
+  status: "idle" | "loading" | "ready" | "error" | "permission_denied";
 };
 type DispensingContentBodyProps = Pick<
   ShellComponentProps,
@@ -406,6 +459,108 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
   };
 }
 
+function useFulfillmentWorkItemHistory({
+  updatedAt,
+  workItemId,
+  workspaceId,
+}: {
+  updatedAt?: string;
+  workItemId?: string;
+  workspaceId: string;
+}) {
+  const [state, setState] = useState<FulfillmentWorkItemHistoryState>({
+    events: [],
+    hasMore: false,
+    loadingMore: false,
+    nextCursor: null,
+    status: "idle",
+  });
+
+  const load = useCallback(async (
+    append: boolean,
+    cursor: FulfillmentWorkItemHistoryCursor | null,
+  ) => {
+    if (!workItemId) {
+      setState({
+        events: [],
+        hasMore: false,
+        loadingMore: false,
+        nextCursor: null,
+        status: "idle",
+      });
+      return;
+    }
+
+    setState((current) => ({
+      ...current,
+      loadingMore: append,
+      status: append ? current.status : "loading",
+    }));
+    try {
+      const search = new URLSearchParams({ limit: "50" });
+      if (cursor) {
+        search.set("beforeCreatedAt", cursor.createdAt);
+        search.set("beforeEventId", cursor.eventId);
+      }
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/history?${search.toString()}`,
+        { headers: { "x-clair-demo-session-user-id": "user-tech" } },
+      );
+      const body = (await response.json()) as {
+        denialReason?: string;
+        history?: {
+          events?: FulfillmentWorkItemHistoryEvent[];
+          hasMore?: boolean;
+          nextCursor?: FulfillmentWorkItemHistoryCursor | null;
+        };
+        ok?: boolean;
+      };
+      if (!response.ok || !body.ok) {
+        setState((current) => ({
+          ...current,
+          loadingMore: false,
+          status:
+            response.status === 403 ||
+            body.denialReason === "permission_missing"
+              ? "permission_denied"
+              : "error",
+        }));
+        return;
+      }
+
+      const pageEvents = Array.isArray(body.history?.events)
+        ? body.history.events
+        : [];
+      setState((current) => ({
+        events: append ? [...pageEvents, ...current.events] : pageEvents,
+        hasMore: body.history?.hasMore === true,
+        loadingMore: false,
+        nextCursor: body.history?.nextCursor ?? null,
+        status: "ready",
+      }));
+    } catch {
+      setState((current) => ({
+        ...current,
+        loadingMore: false,
+        status: "error",
+      }));
+    }
+  }, [workItemId, workspaceId]);
+
+  const refresh = useCallback(() => load(false, null), [load]);
+  const loadMore = useCallback(
+    () => load(true, state.nextCursor),
+    [load, state.nextCursor],
+  );
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [refresh, updatedAt]);
+
+  return { ...state, loadMore, refresh };
+}
+
 function findFulfillmentForQueueItem(
   item: OrderQueueItem | null,
   workItems: FulfillmentWorkItem[],
@@ -513,7 +668,12 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
     receptionType: "외래",
     orderType: isTreatment ? "처치" : "조제",
     orderTypeCategory: workItem.queueType,
-    orderName: workItem.sourceSnapshot?.orderDisplayName ?? "Live order",
+    orderName:
+      readNonEmptyString(
+        workItem.sourceSnapshot?.orderDisplayName,
+        workItem.sourceSnapshot?.effectiveDisplayName,
+        workItem.sourceSnapshot?.inHospitalOrderName,
+      ) ?? "Live order",
     requesterName: getFulfillmentRequesterName(workItem),
     assigneeName: getFulfillmentAssigneeName(workItem),
     startedAt:
@@ -641,6 +801,8 @@ function createLiveOrderTableGroups(
     workItem.queueType === "treatment" ? "live-treatment" : "live-dispensing";
   const groupWorkStatus = mapFulfillmentToOrderGroupWorkStatus(workItem.status);
   const rowWorkStatus = mapFulfillmentToOrderRowWorkStatus(workItem.status);
+  const medicationFacts = getReviewedMedicationFacts(workItem);
+  const quantityFacts = getDispensingQuantityFacts(workItem);
 
   return [
     {
@@ -654,7 +816,10 @@ function createLiveOrderTableGroups(
           id: `live-order-row-${workItem.id}`,
           category: instructionType,
           name: selectedQueueItem.orderName,
-          route: workItem.queueType === "dispensing" ? "PO" : "-",
+          route:
+            workItem.queueType === "dispensing"
+              ? (medicationFacts?.routes.join(", ") ?? "-")
+              : "-",
           dose:
             workItem.sourceSnapshot?.instruction ?? selectedQueueItem.orderName,
           frequency: "-",
@@ -664,10 +829,16 @@ function createLiveOrderTableGroups(
           days: "1",
           doseTiming: "-",
           servings: "1",
-          amount: "1",
-          unit: "ea",
-          quantity: "1",
-          dosageForm: "-",
+          amount:
+            quantityFacts?.billingQuantity !== undefined
+              ? String(quantityFacts.billingQuantity)
+              : "-",
+          unit: quantityFacts?.billingUnit ?? "-",
+          quantity:
+            quantityFacts?.prescribedTotal !== undefined
+              ? String(quantityFacts.prescribedTotal)
+              : "-",
+          dosageForm: medicationFacts?.dosageForm ?? "-",
           storage: "지시 확인",
           medicationGuide:
             workItem.sourceSnapshot?.instruction ?? "오더 지시 확인",
@@ -679,6 +850,94 @@ function createLiveOrderTableGroups(
       ],
     },
   ];
+}
+
+function getReviewedMedicationFacts(
+  workItem?: FulfillmentWorkItem,
+): ReviewedMedicationFacts | undefined {
+  if (workItem?.queueType !== "dispensing") return undefined;
+  const lineage = workItem?.sourceSnapshot?.dispensingLineage;
+  if (!lineage?.clinicalUseAllowed || !lineage.sourceClinicalReviewId) {
+    return undefined;
+  }
+  const snapshot = lineage.dispensingProfileSnapshot;
+  const productName = readNonEmptyString(
+    snapshot.koreanDraftName,
+    snapshot.englishProductName,
+  );
+  const dosageForm = readNonEmptyString(snapshot.dosageForm);
+  const routes = readStringArray(snapshot.routes);
+  const species = readStringArray(snapshot.targetSpecies);
+  const strength = formatStrengthSnapshot(snapshot.strengthSnapshot);
+
+  return { dosageForm, productName, routes, species, strength };
+}
+
+function getDispensingQuantityFacts(
+  workItem?: FulfillmentWorkItem,
+): DispensingQuantityFacts | undefined {
+  if (workItem?.queueType !== "dispensing") return undefined;
+  const snapshot = workItem.sourceSnapshot;
+  const detailInputs = snapshot?.detailInputs;
+  const prescribedTotal = readNonNegativeNumber(detailInputs?.totalQuantity);
+  const billingQuantity = readNonNegativeNumber(snapshot?.quantity);
+  const billingUnit = readNonEmptyString(
+    snapshot?.salesUnit,
+    snapshot?.appliedSalesUnit,
+  );
+
+  if (
+    prescribedTotal === undefined &&
+    billingQuantity === undefined &&
+    !billingUnit
+  ) {
+    return undefined;
+  }
+
+  return { billingQuantity, billingUnit, prescribedTotal };
+}
+
+function readNonEmptyString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function readStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is string =>
+          typeof item === "string" && Boolean(item.trim()),
+      )
+    : [];
+}
+
+function readNonNegativeNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : undefined;
+}
+
+function formatStrengthSnapshot(value: unknown) {
+  if (!Array.isArray(value)) return undefined;
+  const strengths = value.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const row = item as Record<string, unknown>;
+    const numeratorValue = row.numeratorValue;
+    const numeratorUnit = readNonEmptyString(row.numeratorUnit);
+    if (typeof numeratorValue !== "number" || !numeratorUnit) return [];
+    const denominatorValue = row.denominatorValue;
+    const denominatorUnit = readNonEmptyString(row.denominatorUnit);
+    return [
+      `${numeratorValue} ${numeratorUnit}${
+        denominatorUnit
+          ? `/${typeof denominatorValue === "number" ? denominatorValue : 1} ${denominatorUnit}`
+          : ""
+      }`,
+    ];
+  });
+  return strengths.length ? strengths.join(" · ") : undefined;
 }
 
 function getDispensingTaskCardTypeLabel(item: OrderQueueItem) {
@@ -949,15 +1208,31 @@ export function DispensingContentAside({
     (allowLegacyFixtureFallback
       ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
       : null);
+  const selectedFulfillmentWorkItem = findFulfillmentForQueueItem(
+    selectedQueueItem,
+    fulfillmentQueue.workItems,
+  );
+  const fulfillmentHistory = useFulfillmentWorkItemHistory({
+    updatedAt: selectedFulfillmentWorkItem?.updatedAt,
+    workItemId: selectedFulfillmentWorkItem?.id,
+    workspaceId,
+  });
 
   if (!selectedQueueItem) return null;
 
   const historyLabel = `${getDispensingInstructionType(selectedQueueItem)} 이력`;
-  const visibleHistoryGroups = allowLegacyFixtureFallback ? historyGroups : [];
-  const totalHistoryCount = visibleHistoryGroups.reduce(
-    (total, group) => total + group.count,
-    0,
-  );
+  const visibleFixtureHistoryGroups = allowLegacyFixtureFallback
+    ? historyGroups
+    : [];
+  const visibleLiveHistoryGroups = allowLegacyFixtureFallback
+    ? []
+    : groupFulfillmentHistoryEvents(fulfillmentHistory.events);
+  const totalHistoryCount = allowLegacyFixtureFallback
+    ? visibleFixtureHistoryGroups.reduce(
+        (total, group) => total + group.count,
+        0,
+      )
+    : fulfillmentHistory.events.length;
   const toggleHistoryGroup = (date: string) => {
     setCollapsedHistoryGroups((current) => {
       const next = new Set(current);
@@ -982,7 +1257,49 @@ export function DispensingContentAside({
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
-          {visibleHistoryGroups.map((group) => (
+          {!allowLegacyFixtureFallback &&
+          fulfillmentHistory.status === "loading" ? (
+            <div className="p-3 emr-text-metadata text-[var(--emr-text-muted)]">
+              이력을 불러오는 중입니다.
+            </div>
+          ) : null}
+          {!allowLegacyFixtureFallback &&
+          fulfillmentHistory.status === "permission_denied" ? (
+            <EmrInlineAlert
+              severity="warning"
+              title="이력을 볼 권한이 없습니다."
+              testId="dispensing-history-state"
+            >
+              조제 또는 처치 조회 권한을 확인해 주세요.
+            </EmrInlineAlert>
+          ) : null}
+          {!allowLegacyFixtureFallback &&
+          fulfillmentHistory.status === "error" ? (
+            <EmrInlineAlert
+              severity="warning"
+              title="이력을 불러오지 못했습니다."
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void fulfillmentHistory.refresh()}
+                >
+                  다시 확인
+                </Button>
+              }
+              testId="dispensing-history-state"
+            >
+              잠시 후 다시 시도해 주세요.
+            </EmrInlineAlert>
+          ) : null}
+          {!allowLegacyFixtureFallback &&
+          fulfillmentHistory.status === "ready" &&
+          visibleLiveHistoryGroups.length === 0 ? (
+            <div className="p-3 emr-text-metadata text-[var(--emr-text-muted)]">
+              기록된 이력이 없습니다.
+            </div>
+          ) : null}
+          {visibleFixtureHistoryGroups.map((group) => (
             <EmrContentHistoryGroup
               key={group.date}
               collapsed={collapsedHistoryGroups.has(group.date)}
@@ -997,6 +1314,42 @@ export function DispensingContentAside({
               ))}
             </EmrContentHistoryGroup>
           ))}
+          {visibleLiveHistoryGroups.map((group) => (
+            <EmrContentHistoryGroup
+              key={group.date}
+              collapsed={collapsedHistoryGroups.has(group.date)}
+              count={group.items.length}
+              dataTestId={`history-group-${group.date}`}
+              label={group.label}
+              onToggle={() => toggleHistoryGroup(group.date)}
+              toggleTestId={`history-group-toggle-${group.date}`}
+            >
+              {group.items.map((item) => (
+                <FulfillmentHistoryItem
+                  key={item.id}
+                  instructionType={getDispensingInstructionType(
+                    selectedQueueItem,
+                  )}
+                  item={item}
+                />
+              ))}
+            </EmrContentHistoryGroup>
+          ))}
+          {!allowLegacyFixtureFallback && fulfillmentHistory.hasMore ? (
+            <div className="p-3">
+              <Button
+                className="w-full"
+                disabled={fulfillmentHistory.loadingMore}
+                size="sm"
+                variant="outline"
+                onClick={() => void fulfillmentHistory.loadMore()}
+              >
+                {fulfillmentHistory.loadingMore
+                  ? "이력을 더 불러오는 중입니다."
+                  : "이력 더보기"}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </ScrollArea>
     </EmrContentAsidePanel>
@@ -1050,6 +1403,77 @@ function HistoryItem({ item }: { item: string }) {
       }
     />
   );
+}
+
+function groupFulfillmentHistoryEvents(
+  events: FulfillmentWorkItemHistoryEvent[],
+) {
+  const groups = new Map<
+    string,
+    { date: string; label: string; items: FulfillmentWorkItemHistoryEvent[] }
+  >();
+  for (const event of [...events].reverse()) {
+    const date = event.createdAt.slice(0, 10);
+    const group = groups.get(date) ?? {
+      date,
+      label: date.replaceAll("-", "."),
+      items: [],
+    };
+    group.items.push(event);
+    groups.set(date, group);
+  }
+  return [...groups.values()];
+}
+
+function FulfillmentHistoryItem({
+  instructionType,
+  item,
+}: {
+  instructionType: "조제" | "처치";
+  item: FulfillmentWorkItemHistoryEvent;
+}) {
+  const statusLabel = getFulfillmentHistoryStatusLabel(
+    instructionType,
+    item.nextStatus,
+  );
+  const previousStatusLabel = item.previousStatus
+    ? getFulfillmentHistoryStatusLabel(instructionType, item.previousStatus)
+    : null;
+  const time = item.createdAt.slice(11, 16) || "시간 미상";
+
+  return (
+    <EmrContentHistoryItem
+      title={statusLabel}
+      subtitle={`${time} ${statusLabel}`}
+      meta={
+        <>
+          {previousStatusLabel ? (
+            <span className="truncate">
+              {previousStatusLabel} → {statusLabel}
+            </span>
+          ) : null}
+          {item.reason ? (
+            <span className="truncate">사유 {item.reason}</span>
+          ) : null}
+          <span className="truncate">
+            수행자 {item.actorUserId ?? "삭제된 사용자"}
+          </span>
+        </>
+      }
+    />
+  );
+}
+
+function getFulfillmentHistoryStatusLabel(
+  instructionType: "조제" | "처치",
+  status: FulfillmentWorkItemStatus,
+) {
+  if (status === "requested") return "요청";
+  if (status === "accepted") return "담당 접수";
+  if (status === "in_progress") return `${instructionType} 시작`;
+  if (status === "completed") return `${instructionType} 완료`;
+  if (status === "cancelled") return "취소";
+  return "재요청 필요";
 }
 
 function cloneOrderTableGroups(queueItemId?: string): OrderTableGroup[] {
@@ -1333,6 +1757,16 @@ function getFulfillmentStatusLabel(status?: FulfillmentWorkItemStatus) {
   return "미연결";
 }
 
+function getUniversalTaskStatusLabel(status?: UniversalOrderTaskStatus | null) {
+  if (status === "pending") return "대기";
+  if (status === "in_progress") return "진행중";
+  if (status === "paused") return "일시중지";
+  if (status === "partial_complete") return "부분완료";
+  if (status === "complete") return "완료";
+  if (status === "cancelled") return "취소";
+  return "미연결";
+}
+
 function DispensingFulfillmentQueueNotice({
   onRetry,
   status,
@@ -1484,6 +1918,12 @@ function DispensingContentBody({
       ),
     [fulfillmentQueue.workItems, selectedQueueItem],
   );
+  const reviewedMedicationFacts = getReviewedMedicationFacts(
+    selectedFulfillmentWorkItem,
+  );
+  const dispensingQuantityFacts = getDispensingQuantityFacts(
+    selectedFulfillmentWorkItem,
+  );
   const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
     allowLegacyFixtureFallback
       ? cloneOrderTableGroups(selectedQueueItemId)
@@ -1598,42 +2038,48 @@ function DispensingContentBody({
     const hasQueueItems = sourceQueueItemCount > 0;
 
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)]">
-        <EmrEmptyState
-          kind={hasQueueItems ? "no-scope-result" : "upstream-pending"}
-          priority="supporting"
-          size="xl"
-          surface="content"
-          description={
-            hasQueueItems
-              ? "대기열에서 조제/처치 업무를 선택하면 상세가 표시됩니다."
-              : "오늘 표시할 조제/처치 업무가 없습니다."
-          }
-          primaryAction={
-            hasQueueItems ? undefined : (
-              <Button
-                size="default"
-                variant="outline"
-                roundness="round"
-                className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
-                disabled={fulfillmentQueue.status === "loading"}
-                onClick={() => void fulfillmentQueue.refresh()}
-              >
-                <CdsActionsRefreshCcwIcon
-                  data-icon="inline-start"
-                  aria-hidden="true"
-                />
-                새로고침
-              </Button>
-            )
-          }
-          testId="dispensing-content-empty-state"
-          title={
-            hasQueueItems
-              ? "조제/처치 대기열에서 항목을 선택해 주세요"
-              : "조제/처치 업무가 없습니다"
-          }
+      <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
+        <DispensingFulfillmentQueueNotice
+          status={fulfillmentQueue.status}
+          onRetry={fulfillmentQueue.refresh}
         />
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <EmrEmptyState
+            kind={hasQueueItems ? "no-scope-result" : "upstream-pending"}
+            priority="supporting"
+            size="xl"
+            surface="content"
+            description={
+              hasQueueItems
+                ? "대기열에서 조제/처치 업무를 선택하면 상세가 표시됩니다."
+                : "오늘 표시할 조제/처치 업무가 없습니다."
+            }
+            primaryAction={
+              hasQueueItems ? undefined : (
+                <Button
+                  size="default"
+                  variant="outline"
+                  roundness="round"
+                  className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                  disabled={fulfillmentQueue.status === "loading"}
+                  onClick={() => void fulfillmentQueue.refresh()}
+                >
+                  <CdsActionsRefreshCcwIcon
+                    data-icon="inline-start"
+                    aria-hidden="true"
+                  />
+                  새로고침
+                </Button>
+              )
+            }
+            testId="dispensing-content-empty-state"
+            title={
+              hasQueueItems
+                ? "조제/처치 대기열에서 항목을 선택해 주세요"
+                : "조제/처치 업무가 없습니다"
+            }
+          />
+        </div>
       </div>
     );
   }
@@ -1835,7 +2281,67 @@ function DispensingContentBody({
                   )}
                 </Badge>
                 <span>담당 {instructionAssignee}</span>
+                {selectedFulfillmentWorkItem.patientId ? (
+                  <span>환자 {selectedFulfillmentWorkItem.patientId}</span>
+                ) : null}
+                <span>진료 {selectedFulfillmentWorkItem.encounterId}</span>
                 <span>오더 {selectedFulfillmentWorkItem.orderId}</span>
+                {selectedFulfillmentWorkItem.taskId ? (
+                  <span>
+                    Task {selectedFulfillmentWorkItem.taskId}
+                    {selectedFulfillmentWorkItem.taskAttemptNo
+                      ? ` / 시도 ${selectedFulfillmentWorkItem.taskAttemptNo}`
+                      : ""}
+                  </span>
+                ) : null}
+                {selectedFulfillmentWorkItem.taskStatus ? (
+                  <Badge variant="outline">
+                    Task 상태{" "}
+                    {getUniversalTaskStatusLabel(
+                      selectedFulfillmentWorkItem.taskStatus,
+                    )}
+                  </Badge>
+                ) : null}
+                {dispensingQuantityFacts?.prescribedTotal !== undefined ? (
+                  <span>
+                    처방 총량 {dispensingQuantityFacts.prescribedTotal}
+                  </span>
+                ) : null}
+                {dispensingQuantityFacts?.billingQuantity !== undefined ? (
+                  <span>
+                    청구 수량 {dispensingQuantityFacts.billingQuantity}
+                  </span>
+                ) : null}
+                {dispensingQuantityFacts?.billingUnit ? (
+                  <span>청구 단위 {dispensingQuantityFacts.billingUnit}</span>
+                ) : null}
+                {reviewedMedicationFacts ? (
+                  <span
+                    data-testid="dispensing-reviewed-medication-facts"
+                    className="contents"
+                  >
+                    {reviewedMedicationFacts.productName ? (
+                      <span>제품 {reviewedMedicationFacts.productName}</span>
+                    ) : null}
+                    {reviewedMedicationFacts.strength ? (
+                      <span>함량 {reviewedMedicationFacts.strength}</span>
+                    ) : null}
+                    {reviewedMedicationFacts.dosageForm ? (
+                      <span>제형 {reviewedMedicationFacts.dosageForm}</span>
+                    ) : null}
+                    {reviewedMedicationFacts.routes.length ? (
+                      <span>
+                        경로 {reviewedMedicationFacts.routes.join(", ")}
+                      </span>
+                    ) : null}
+                    {reviewedMedicationFacts.species.length ? (
+                      <span>
+                        대상종 {reviewedMedicationFacts.species.join(", ")}
+                      </span>
+                    ) : null}
+                    <Badge variant="outline">임상 검토 확인</Badge>
+                  </span>
+                ) : null}
               </div>
             ) : null}
           </div>

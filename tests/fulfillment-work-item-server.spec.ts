@@ -8,6 +8,7 @@ import { createMockChartOrderLifecycleGateway } from "../src/features/chart/serv
 import {
   createMockFulfillmentWorkItemGateway,
   createSupabaseFulfillmentWorkItemGateway,
+  readFulfillmentWorkItemHistory,
   readFulfillmentWorkItems,
   syncVetReviewedBillingCandidates,
   syncFulfillmentWorkItemsFromOrders,
@@ -38,6 +39,165 @@ const a3Migration = readFileSync(
   "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
   "utf8",
 );
+
+test("fulfillment history is scoped by workspace permission and preserves actor/reason transitions", async () => {
+  const gateway = createMockFulfillmentWorkItemGateway();
+  const listed = await gateway.listWorkItems({
+    queueType: "dispensing",
+    workspaceId,
+  });
+  expect(listed.ok).toBe(true);
+  if (!listed.ok) return;
+  const workItem = listed.workItems.find(
+    (item) => item.status !== "completed" && item.status !== "cancelled",
+  );
+  expect(workItem).toBeDefined();
+  if (!workItem) return;
+
+  const transition =
+    workItem.status === "requested"
+      ? "accepted"
+      : workItem.status === "accepted"
+        ? "in_progress"
+        : workItem.status === "in_progress"
+          ? "returned"
+          : "requested";
+  const updated = await gateway.updateWorkItem({
+    actorUserId: "user-tech",
+    reason: "history contract verification",
+    status: transition,
+    workItemId: workItem.id,
+    workspaceId,
+  });
+  expect(updated.ok).toBe(true);
+
+  const unauthenticated = await readFulfillmentWorkItemHistory({
+    actorUserId: null,
+    gateway,
+    workItemId: workItem.id,
+    workspaceId,
+  });
+  expect(unauthenticated).toMatchObject({
+    ok: false,
+    status: 401,
+    denialReason: "unauthenticated",
+  });
+
+  const denied = await readFulfillmentWorkItemHistory({
+    actorUserId: "user-front-desk",
+    gateway,
+    workItemId: workItem.id,
+    workspaceId,
+  });
+  expect(denied).toMatchObject({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
+
+  const allowed = await readFulfillmentWorkItemHistory({
+    actorUserId: "user-tech",
+    gateway,
+    workItemId: workItem.id,
+    workspaceId,
+  });
+  expect(allowed).toMatchObject({
+    ok: true,
+    status: 200,
+    enforcedBy: "fulfillment-work-item-history-persistence",
+    history: {
+      workItemId: workItem.id,
+      orderId: workItem.orderId,
+      workspaceId,
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          actorUserId: "user-tech",
+          previousStatus: workItem.status,
+          nextStatus: transition,
+          reason: "history contract verification",
+          source: "order_event",
+        }),
+      ]),
+    },
+  });
+
+  const crossWorkspace = await readFulfillmentWorkItemHistory({
+    actorUserId: "user-tech",
+    gateway,
+    workItemId: workItem.id,
+    workspaceId: "workspace-foreign",
+  });
+  expect(crossWorkspace).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "work_item_unavailable",
+  });
+});
+
+test("Supabase fulfillment history gateway validates and maps the dedicated RPC payload", async () => {
+  const calls: Array<{ functionName: string; args: Record<string, unknown> }> =
+    [];
+  const gateway = createSupabaseFulfillmentWorkItemGateway({
+    async rpc(functionName, args) {
+      calls.push({ functionName, args });
+      return {
+        data: {
+          workspaceId,
+          workItemId: "00000000-0000-4000-8000-000000000901",
+          orderId: "00000000-0000-4000-8000-000000000301",
+          queueType: "dispensing",
+          hasMore: false,
+          nextCursor: null,
+          events: [
+            {
+              id: "00000000-0000-4000-8000-000000000701",
+              workItemId: "00000000-0000-4000-8000-000000000901",
+              orderId: "00000000-0000-4000-8000-000000000301",
+              previousStatus: "accepted",
+              nextStatus: "in_progress",
+              actorUserId: "00000000-0000-4000-8000-000000000003",
+              reason: "조제 시작",
+              createdAt: "2026-08-26T15:20:00.000Z",
+              source: "order_event",
+            },
+          ],
+        },
+        error: null,
+      };
+    },
+  });
+
+  const result = await gateway.listWorkItemHistory({
+    workspaceId,
+    workItemId: "00000000-0000-4000-8000-000000000901",
+  });
+
+  expect(calls).toEqual([
+    {
+      functionName: "clair_list_fulfillment_work_item_history_v2",
+      args: {
+        p_before_created_at: null,
+        p_before_event_id: null,
+        p_limit: 50,
+        p_workspace_id: workspaceId,
+        p_work_item_id: "00000000-0000-4000-8000-000000000901",
+      },
+    },
+  ]);
+  expect(result).toMatchObject({
+    ok: true,
+    history: {
+      queueType: "dispensing",
+      events: [
+        expect.objectContaining({
+          previousStatus: "accepted",
+          nextStatus: "in_progress",
+          reason: "조제 시작",
+        }),
+      ],
+    },
+  });
+});
 
 test("fulfillment work item routes sync from chart orders, read by queue, and mutate lifecycle", async ({
   request,
@@ -172,6 +332,33 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
       expect.objectContaining({ id: workItemId, orderId }),
     ]),
   );
+
+  const unauthenticatedHistory = await request.get(
+    `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/history`,
+  );
+  expect(unauthenticatedHistory.status()).toBe(401);
+
+  const historyReadback = await request.get(
+    `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/history`,
+    { headers: { "x-clair-demo-session-user-id": "user-tech" } },
+  );
+  expect(historyReadback.status()).toBe(200);
+  await expectJson(historyReadback, {
+    ok: true,
+    enforcedBy: "fulfillment-work-item-history-persistence",
+    history: {
+      workspaceId,
+      workItemId,
+      orderId,
+      queueType: "dispensing",
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          nextStatus: "requested",
+          source: "work_item_created",
+        }),
+      ]),
+    },
+  });
 
   if (syncedWorkItem?.status === "completed") {
     return;
@@ -621,6 +808,64 @@ test("B3 fulfillment creates work only for selected atomic children and keeps th
   });
 });
 
+test("dispensing fulfillment promotes only an approved server-frozen lineage into the read model", async () => {
+  const gateway = createMockFulfillmentWorkItemGateway(
+    undefined,
+    () => "2026-08-26T06:20:00.000Z",
+  );
+  const approvedLineage = {
+    schemaVersion: 1 as const,
+    sourceDispensingProfileId: "01740000-0000-4000-8000-000000000001",
+    sourceDispensingProfileRevision: 1,
+    sourceMedicationProductId: "01730000-0000-4000-8000-000000000001",
+    sourceMedicationProductRevision: 1,
+    sourceClinicalReviewId: "01750000-0000-4000-8000-000000000001",
+    sourceEvidenceFingerprint: "a".repeat(64),
+    clinicalUseAllowed: true,
+    dispensingProfileSnapshot: {
+      dosageForm: "Tablet",
+      routes: ["oral"],
+      strengthSnapshot: [{ numeratorValue: 25, numeratorUnit: "mg" }],
+      targetSpecies: ["dog"],
+    },
+    dispensingProfileSnapshotSha256: "b".repeat(64),
+  };
+  const result = await gateway.syncFromOrders({
+    actorUserId: "user-vet",
+    encounterId,
+    orderIds: ["pr017-approved-dispensing-order"],
+    orderSnapshots: [
+      {
+        orderId: "pr017-approved-dispensing-order",
+        billingReflectionEnabled: true,
+        destinationModule: "dispensing",
+        taskRequired: true,
+        inHospitalOrderName: "PR-017 reviewed medicine",
+        appliedSnapshot: {
+          billingReflectionEnabled: true,
+          destinationModule: "dispensing",
+          dispensingLineage: approvedLineage,
+          effectiveDisplayName: "PR-017 reviewed medicine",
+          rowType: "individual",
+          taskRequired: true,
+        },
+      },
+    ],
+    workspaceId,
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    workItems: [
+      {
+        orderId: "pr017-approved-dispensing-order",
+        queueType: "dispensing",
+        sourceSnapshot: { dispensingLineage: approvedLineage },
+      },
+    ],
+  });
+});
+
 test("fulfillment core blocks terminal-state transitions", async () => {
   const gateway = createMockFulfillmentWorkItemGateway(
     undefined,
@@ -962,7 +1207,8 @@ test("fulfillment completion keeps source mutation successful when DB notificati
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
-    notificationPersistenceGateway: createThrowingNotificationPersistenceGateway(),
+    notificationPersistenceGateway:
+      createThrowingNotificationPersistenceGateway(),
     emitBillingReadyNotifications: true,
   });
 
@@ -1128,7 +1374,10 @@ test("vet-reviewed billing sync persists billing-ready notification through the 
     gateway,
     input: { status: "completed" },
     invoiceCandidateGateway,
-    lifecycleGateway: createMockChartOrderLifecycleGateway(undefined, timestamp),
+    lifecycleGateway: createMockChartOrderLifecycleGateway(
+      undefined,
+      timestamp,
+    ),
     workItemId: `fulfill-${labOrderId}`,
     workspaceId,
   });
@@ -1186,7 +1435,10 @@ test("vet-reviewed billing sync keeps audit and candidate success when DB notifi
     gateway,
     input: { status: "completed" },
     invoiceCandidateGateway,
-    lifecycleGateway: createMockChartOrderLifecycleGateway(undefined, timestamp),
+    lifecycleGateway: createMockChartOrderLifecycleGateway(
+      undefined,
+      timestamp,
+    ),
     workItemId: `fulfill-${labOrderId}`,
     workspaceId,
   });
@@ -1203,7 +1455,8 @@ test("vet-reviewed billing sync keeps audit and candidate success when DB notifi
       orderIds: [labOrderId],
     },
     invoiceCandidateGateway,
-    notificationPersistenceGateway: createThrowingNotificationPersistenceGateway(),
+    notificationPersistenceGateway:
+      createThrowingNotificationPersistenceGateway(),
     workspaceId,
   });
 
@@ -1234,10 +1487,12 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
           {
             id: "00000000-0000-4000-8000-000000000901",
             workspaceId,
+            patientId: "00000000-0000-4000-8000-000000000111",
             encounterId,
             orderId: "00000000-0000-4000-8000-000000000301",
             taskId: "00000000-0000-4000-8000-000000000801",
             taskAttemptNo: 1,
+            taskStatus: "paused",
             clinicalOrderType: "clinical_lab",
             destinationModule: "lab",
             orderType: "lab",
@@ -1307,8 +1562,10 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
         clinicalOrderType: "clinical_lab",
         destinationModule: "lab",
         queueType: "lab",
+        patientId: "00000000-0000-4000-8000-000000000111",
         taskAttemptNo: 1,
         taskId: "00000000-0000-4000-8000-000000000801",
+        taskStatus: "paused",
         sourceSnapshot: {
           orderDisplayName: "CBC 검사",
           workspaceCatalogItemId: "a3-catalog-cbc",
@@ -1453,7 +1710,9 @@ function createRecordingNotificationPersistenceGateway(
         ok: true,
         status: 200,
         action: "created",
-        notification: { id: `persisted-${event.dedupeKey}` } as GlobalNotification,
+        notification: {
+          id: `persisted-${event.dedupeKey}`,
+        } as GlobalNotification,
         enforcedBy: "notification-event-persistence-gateway",
       };
     },
