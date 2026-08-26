@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CLAiR 조제 오더 서비스 검토 프리셋 보고서</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f5f7fb; }
+    main { max-width: 920px; margin: 40px auto; padding: 0 24px 56px; }
+    article { background: #fff; border: 1px solid #dce2ec; border-radius: 16px; padding: 32px; box-shadow: 0 8px 24px rgba(27, 42, 70, .06); }
+    .meta { color: #5b6680; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border-bottom: 1px solid #e5e9f0; padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: #46516b; font-size: 13px; }
+    code { background: #f0f3f8; border-radius: 4px; padding: 2px 4px; overflow-wrap: anywhere; }
+    .ok { color: #087443; font-weight: 700; }
+    .warn { color: #8a5b00; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <p class="meta">CLAiR Clinical Master / CLINICAL-MASTER-PR-019 / 2026-08-26</p>
+      <h1>조제 오더 마스터 프리셋과 청담 서비스 검토 활성화</h1>
+      <p class="ok">상태: Airtable·Supabase 영구 반영 및 애플리케이션 릴리스 후보 검증 완료</p>
+
+      <h2>요청과 결과</h2>
+      <table>
+        <thead><tr><th>범위</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td>마스터 기본값</td><td>108개 조제 오더마다 용량, 단위, 경로, 빈도, 기간, 총량·단위, 복용 시점, 보관, 조제 메모, 보호자 안내를 서로 다르게 구성했다. 108개 세부 fingerprint가 모두 고유하다.</td></tr>
+          <tr><td>근거와 계보</td><td>108개 공식 VMD SPC에서 posology와 storage 구간을 고정 추출했다. 직접 근거와 합성 추론을 필드별로 구분하고 artifact SHA-256으로 동결했다.</td></tr>
+          <tr><td>청담 사용·가격</td><td>청담 워크스페이스에서 108개가 서비스 검토용 <code>사용</code>으로 보이며, 30개 가격대·7,000원 최저·12,500원 중앙값·28,500원 최고로 차등 적용됐다.</td></tr>
+          <tr><td>차트</td><td>Order/Plan에서 조제 오더 추가 시 마스터 기본값이 자동 입력되고, 수의사가 용량·빈도 등 값을 진료 건에서 수정할 수 있다.</td></tr>
+          <tr><td>조제/처치</td><td>확정 snapshot의 최종값을 Task/Queue가 이어받고, 조제/처치 표에서 1회 용량, 빈도, 일수, 복용 시점, 회분, 총량, 보관, 보호자 안내를 표시한다.</td></tr>
+          <tr><td>영구 저장</td><td>Airtable 108행과 Supabase master 108행·워크스페이스 projection 324행을 반영했다. 비교 대상 3개 워크스페이스는 각 108행이고 foreign control은 0행이다.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>중요한 신뢰 경계</h2>
+      <p class="warn">청담의 <code>사용</code>은 고객 시연과 서비스 운영 검토를 위한 effective 상태다. 임상 승인과 동일하지 않다.</p>
+      <p>모든 프리셋은 <code>synthetic_unreviewed</code>, <code>clinical_use_allowed = false</code>, canonical <code>pending_activation</code>을 유지한다. 이름 있는 수의사의 검토, 실제 병원의 처방·가격, 한국 규제 승인 또는 실제 환자 사용을 주장하지 않는다. <code>Clinical Reviews V1</code>의 reviewer와 reviewed timestamp는 모두 비어 있다.</p>
+
+      <h2>품질과 검증</h2>
+      <p><span class="ok">통과:</span> 결정적 artifact·migration 재생성, TypeScript, ESLint, docs:check, production build, secret scan, 핵심 Playwright 19/19, remote Airtable/Supabase exact readback, 가격 artifact 108/108 zero mismatch, 권한·함수 search path·ACL·foreign boundary 확인.</p>
+      <p>전체 관련 Playwright 묶음은 141개 중 136개가 통과했다. 실패 5개는 이번 변경 파일과 겹치지 않는 기존 Order Set 자동저장 경합 1개와 병원관리 strict locator/44px 대 56px 기하 계약 4개다. 이번 조제 프리셋·청담 표시·차트 자동입력·조제 readback의 집중 회귀 19개는 별도로 전부 통과했다.</p>
+
+      <h2>변경 묶음</h2>
+      <p>핵심 변경은 조제 프리셋 artifact와 생성기, Supabase 가격·프리셋·보정 migration, 차트 catalog snapshot 자동입력, 병원관리 effective service-review 상태, 조제/처치 live fulfillment 표시, 그리고 해당 회귀 테스트다. 상세 계약과 rollback 절차는 <code>docs/work/clinical-master/CLINICAL-MASTER-PR-019-dispensing-service-review-pricing.md</code>에 기록했다.</p>
+
+      <h2>Rollback</h2>
+      <p>문제가 생기면 청담 release 13의 service-review event를 <code>revoked</code>로 추가해 신규 사용을 먼저 차단하고, 고정된 108개 가격만 null로 복원한다. 애플리케이션은 직전 Ready production deployment 또는 직전 <code>origin/main</code>으로 되돌린 뒤 청담 차트·병원관리와 비교 워크스페이스·foreign control을 다시 확인한다.</p>
+    </article>
+  </main>
+</body>
+</html>

@@ -101,6 +101,8 @@ export type TechnicianUser = {
 };
 
 export type OrderDiffField =
+  | "dose"
+  | "frequency"
   | "days"
   | "doseTiming"
   | "servings"

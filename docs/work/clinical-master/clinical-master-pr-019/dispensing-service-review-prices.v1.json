@@ -1,0 +1,1779 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "dispensing-service-review-price-v1",
+  "generatedAt": "2026-08-26T00:00:00.000Z",
+  "scope": {
+    "workspaceId": "workspace-clair-cheongdam",
+    "releaseId": "78a57bf0-10a8-47db-9ae1-8a8cff79b2c4",
+    "serviceReviewOnly": true,
+    "clinicalUseAllowed": false
+  },
+  "source": {
+    "path": "docs/work/clinical-master/clinical-master-pr-017/supabase/dispensing-order-release-payload.v1.json",
+    "sourceDatasetSha256": "cc3ef6c977122bef5a708d5c6a800a3120b257584bd78ee72c26a67d2b95260f",
+    "payloadSha256": "3825feb207ed3ea3b9fcf3be69f3e1745f4571671d988da3d57a760e3f19460b",
+    "sourceFileSha256": "23e5d0c9f2a362c7634da96459d3f1280602b49190daefd186db9d3e4d93ad2f"
+  },
+  "assumptions": [
+    "Synthetic service-review prices, not surveyed per-product market prices.",
+    "Workspace-owned per-order sales price; no CLAiR canonical suggested price is created.",
+    "The 2025 Korean public fee medians anchor the range, while dosage form, category, ingredient count, and a deterministic small variation differentiate products.",
+    "Clinical and regulatory approval state remains unchanged and false/pending."
+  ],
+  "research": [
+    {
+      "authority": "대한민국 농림축산식품부",
+      "title": "2025 전국 동물병원 진료비 현황",
+      "url": "https://www.mafra.go.kr/bbs/home/792/592824/download.do",
+      "anchor": {
+        "broadSpectrumDewormingMedianKrw": 3000,
+        "externalParasitePreventionMedianKrw": 16000,
+        "heartwormPreventionMedianKrw": 16500
+      }
+    },
+    {
+      "authority": "동물병원 진료비 조사 공개 시스템",
+      "title": "투약/조제비 공개 항목 및 지역별 가격",
+      "url": "https://www.animalclinicfee.or.kr/info/payInfo.do",
+      "note": "Official figures cover three preventive-medication categories at 5 kg; they do not provide authoritative prices for all 108 products."
+    }
+  ],
+  "summary": {
+    "count": 108,
+    "minimumPriceKrw": 7000,
+    "medianPriceKrw": 12500,
+    "maximumPriceKrw": 28500,
+    "uniquePriceCount": 30,
+    "entriesSha256": "53a9b7fde84c76b8b35286f0981515e2df8692c52687276edceb80239b413499"
+  },
+  "entries": [
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a000129",
+      "sourceProductId": "A000129",
+      "englishProductName": "Antirobe 25 mg Capsules for Dogs and Cats",
+      "koreanDraftName": "Clindamycin 경질캡슐",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Capsule, hard",
+      "ingredientCount": 1,
+      "priceKrw": 8500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a001270",
+      "sourceProductId": "A001270",
+      "englishProductName": "Betamox Palatable Drops Powder for Oral Suspension 50 mg/ml",
+      "koreanDraftName": "Amoxicillin 경구현탁용산제",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Powder for oral suspension",
+      "ingredientCount": 1,
+      "priceKrw": 13500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 3000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a001642",
+      "sourceProductId": "A001642",
+      "englishProductName": "Isathal 10 mg/g Eye Drops, Suspension for Dogs, Cats and Rabbits",
+      "koreanDraftName": "Fusidic Acid 점안현탁액",
+      "coverageCategory": "ophthalmic_otic",
+      "dosageForm": "Eye drops, suspension",
+      "ingredientCount": 1,
+      "priceKrw": 19500,
+      "pricingBasis": {
+        "categoryBaseKrw": 14500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a001709",
+      "sourceProductId": "A001709",
+      "englishProductName": "Tolfedine Tablets 6 mg",
+      "koreanDraftName": "Tolfenamic Acid 정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 9500,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a002457",
+      "sourceProductId": "A002457",
+      "englishProductName": "Synulox Palatable Drops 40 mg/ml + 10 mg/ml, Powder for Oral Suspension",
+      "koreanDraftName": "Amoxicillin, Clavulanic Acid 경구현탁용산제",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Powder for oral suspension",
+      "ingredientCount": 2,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 3000,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a002967",
+      "sourceProductId": "A002967",
+      "englishProductName": "Prednicare 1 mg Tablets",
+      "koreanDraftName": "Prednisolone 정",
+      "coverageCategory": "anti_inflammatory_other",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 8000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a003212",
+      "sourceProductId": "A003212",
+      "englishProductName": "Ovarid 20 mg Tablets",
+      "koreanDraftName": "Megestrol Acetate 정",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a003564",
+      "sourceProductId": "A003564",
+      "englishProductName": "Medrone V Tablets 2 mg",
+      "koreanDraftName": "Methylprednisolone 정",
+      "coverageCategory": "anti_inflammatory_other",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 8000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a006644",
+      "sourceProductId": "A006644",
+      "englishProductName": "Cerenia 16 mg Tablets for Dogs",
+      "koreanDraftName": "Maropitant 정",
+      "coverageCategory": "gastrointestinal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 7000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a006680",
+      "sourceProductId": "A006680",
+      "englishProductName": "Benazecare Flavour 20 mg Tablets for Dogs",
+      "koreanDraftName": "Benazepril Hydrochloride 정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a006858",
+      "sourceProductId": "A006858",
+      "englishProductName": "Canidryl 100 mg Tablets for Dogs",
+      "koreanDraftName": "Carprofen 정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007066",
+      "sourceProductId": "A007066",
+      "englishProductName": "Profender 15 mg/3 mg Modified-Release Tablets for Small Dogs",
+      "koreanDraftName": "Emodepside, Praziquantel 정",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Tablet",
+      "ingredientCount": 2,
+      "priceKrw": 9500,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007101",
+      "sourceProductId": "A007101",
+      "englishProductName": "Xeden 15 mg Tablet for Cats",
+      "koreanDraftName": "Enrofloxacin 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 9000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007654",
+      "sourceProductId": "A007654",
+      "englishProductName": "Veraflox 15 mg Tablets for Cats and Dogs",
+      "koreanDraftName": "Pradofloxacin 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007656",
+      "sourceProductId": "A007656",
+      "englishProductName": "Profender 150 mg/30 mg Modified-Release Tablets for Large Dogs",
+      "koreanDraftName": "Emodepside, Praziquantel 방출조절정",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Modified-release tablet",
+      "ingredientCount": 2,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 2500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007661",
+      "sourceProductId": "A007661",
+      "englishProductName": "Onsior 6 mg Tablets for Cats",
+      "koreanDraftName": "Robenacoxib 정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 8500,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007860",
+      "sourceProductId": "A007860",
+      "englishProductName": "Procox 0.9 mg/ml + 18 mg/ml Oral Suspension for Dogs",
+      "koreanDraftName": "Emodepside, Toltrazuril 경구현탁액",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Oral suspension",
+      "ingredientCount": 2,
+      "priceKrw": 13500,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 4000,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007863",
+      "sourceProductId": "A007863",
+      "englishProductName": "Loxicom 0.5 mg/ml Oral Suspension for Cats",
+      "koreanDraftName": "Meloxicam 경구점적현탁액",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Oral drops, suspension",
+      "ingredientCount": 1,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 4000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008164",
+      "sourceProductId": "A008164",
+      "englishProductName": "Cimalgex 30mg Chewable Tablets for Dogs",
+      "koreanDraftName": "Cimicoxib 츄어블정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008340",
+      "sourceProductId": "A008340",
+      "englishProductName": "Pexion 100 mg Tablets for Dogs",
+      "koreanDraftName": "Imepitoin 정",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008454",
+      "sourceProductId": "A008454",
+      "englishProductName": "Semintra 4 mg/ml Oral Solution for Cats",
+      "koreanDraftName": "Telmisartan 경구용액",
+      "coverageCategory": "other",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 16500,
+      "pricingBasis": {
+        "categoryBaseKrw": 12000,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008547",
+      "sourceProductId": "A008547",
+      "englishProductName": "Thiafeline 2.5 mg Film-coated Tablets for Cats",
+      "koreanDraftName": "Thiamazole 필름코팅정",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Film-coated tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 1000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008570",
+      "sourceProductId": "A008570",
+      "englishProductName": "Cardalis 10 mg/80 mg Chewable Tablets for Dogs",
+      "koreanDraftName": "Benazepril Hydrochloride, Spironolactone 츄어블정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 2,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008873",
+      "sourceProductId": "A008873",
+      "englishProductName": "Ectotix 134 mg/1200 mg Spot-on Solution for Medium Dogs",
+      "koreanDraftName": "Fipronil, Permethrin (Cis:Trans 40:60) 점적용액",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Spot-on solution",
+      "ingredientCount": 2,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008889",
+      "sourceProductId": "A008889",
+      "englishProductName": "Milbeworm 16 mg/40 mg Film-coated Tablets for Cats",
+      "koreanDraftName": "Milbemycin Oxime (A3 and A4), Praziquantel 정",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Tablet",
+      "ingredientCount": 2,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008970",
+      "sourceProductId": "A008970",
+      "englishProductName": "Fortekor Plus 1.25 mg/2.5 mg Tablets",
+      "koreanDraftName": "Benazepril Hydrochloride, Pimobendan 정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Tablet",
+      "ingredientCount": 2,
+      "priceKrw": 11500,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009275",
+      "sourceProductId": "A009275",
+      "englishProductName": "Thyroxanil 200 Microgram Tablets for Dogs and Cats",
+      "koreanDraftName": "L Thyroxine Sodium 정",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009753",
+      "sourceProductId": "A009753",
+      "englishProductName": "Bravecto Plus 112.5 mg / 5.6 mg Spot-on Solution for Small Cats (1.2 – 2.8 kg)",
+      "koreanDraftName": "Fluralaner, Moxidectin 점적용액",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Spot-on solution",
+      "ingredientCount": 2,
+      "priceKrw": 15000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009895",
+      "sourceProductId": "A009895",
+      "englishProductName": "Semintra 10 mg/ml Oral Solution for Cats",
+      "koreanDraftName": "Telmisartan 경구현탁액",
+      "coverageCategory": "other",
+      "dosageForm": "Oral suspension",
+      "ingredientCount": 1,
+      "priceKrw": 17500,
+      "pricingBasis": {
+        "categoryBaseKrw": 12000,
+        "dosageFormAdjustmentKrw": 4000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009989",
+      "sourceProductId": "A009989",
+      "englishProductName": "Arixil Vet 20 mg Film-coated Tablet for Dogs",
+      "koreanDraftName": "Benazepril Hydrochloride 필름코팅정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Film-coated tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 1000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009990",
+      "sourceProductId": "A009990",
+      "englishProductName": "Chanhold 15 mg Spot-on Solution for Cats and Dogs < 2.5 kg",
+      "koreanDraftName": "Selamectin 점적용액",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Spot-on solution",
+      "ingredientCount": 1,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009992",
+      "sourceProductId": "A009992",
+      "englishProductName": "Chanhold 45 mg Spot-on Solution for Cats 2.6–7.5 kg",
+      "koreanDraftName": "Selamectin 점적용액",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Spot-on solution",
+      "ingredientCount": 1,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010086",
+      "sourceProductId": "A010086",
+      "englishProductName": "Mirataz 20 mg/ml Transdermal Ointment for Cats",
+      "koreanDraftName": "Mirtazapine 경피용액",
+      "coverageCategory": "dermatology_topical",
+      "dosageForm": "Transdermal Solution",
+      "ingredientCount": 1,
+      "priceKrw": 22500,
+      "pricingBasis": {
+        "categoryBaseKrw": 16000,
+        "dosageFormAdjustmentKrw": 5000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010345",
+      "sourceProductId": "A010345",
+      "englishProductName": "Felisecto Plus 15 mg/2.5 mg Spot-on Solution for Cats ≤2.5 kg",
+      "koreanDraftName": "Sarolaner, Selamectin 점적용액",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Spot-on solution",
+      "ingredientCount": 2,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010369",
+      "sourceProductId": "A010369",
+      "englishProductName": "Tsefalen 50mg/ml Powder for Oral Suspension for Dogs up to 20 kg and Cats",
+      "koreanDraftName": "Cefalexin 경구현탁용산제",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Powder for oral suspension",
+      "ingredientCount": 1,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 3000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010528",
+      "sourceProductId": "A010528",
+      "englishProductName": "Clindacutin 10 mg/g Ointment for Dogs",
+      "koreanDraftName": "Clindamycin 연고",
+      "coverageCategory": "dermatology_topical",
+      "dosageForm": "Ointment",
+      "ingredientCount": 1,
+      "priceKrw": 19500,
+      "pricingBasis": {
+        "categoryBaseKrw": 16000,
+        "dosageFormAdjustmentKrw": 2000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010636",
+      "sourceProductId": "A010636",
+      "englishProductName": "Daxocox 100 mg Tablets for Dogs",
+      "koreanDraftName": "Enflicoxib 정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010697",
+      "sourceProductId": "A010697",
+      "englishProductName": "Alphafluben 44 mg/ml Oral Gel for Dogs",
+      "koreanDraftName": "Flubendazole 경구겔",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Oral gel",
+      "ingredientCount": 1,
+      "priceKrw": 11500,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010709",
+      "sourceProductId": "A010709",
+      "englishProductName": "Bonqat 50 mg/ml Oral Solution for Cats",
+      "koreanDraftName": "Pregabalin 경구용액",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 18000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011300",
+      "sourceProductId": "A011300",
+      "englishProductName": "Alfamed 2.5 mg/ml Cutaneous Spray, Solution for Cats and Dogs",
+      "koreanDraftName": "Fipronil 피부분무용액",
+      "coverageCategory": "dermatology_topical",
+      "dosageForm": "Cutaneous spray, solution",
+      "ingredientCount": 1,
+      "priceKrw": 17500,
+      "pricingBasis": {
+        "categoryBaseKrw": 16000,
+        "dosageFormAdjustmentKrw": 2500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011336",
+      "sourceProductId": "A011336",
+      "englishProductName": "Amoxibactin 50 mg Tablets for Dogs and Cats",
+      "koreanDraftName": "Amoxicillin 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 8500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011385",
+      "sourceProductId": "A011385",
+      "englishProductName": "Arixil Vet 5 mg Film-coated Tablet for Dogs and Cats",
+      "koreanDraftName": "Benazepril Hydrochloride 필름코팅정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Film-coated tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 1000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011393",
+      "sourceProductId": "A011393",
+      "englishProductName": "Atopica 10 mg Soft Capsules for Dogs",
+      "koreanDraftName": "Ciclosporin A 연질캡슐",
+      "coverageCategory": "immunomodulator",
+      "dosageForm": "Capsule, soft",
+      "ingredientCount": 1,
+      "priceKrw": 27000,
+      "pricingBasis": {
+        "categoryBaseKrw": 24000,
+        "dosageFormAdjustmentKrw": 2000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011395",
+      "sourceProductId": "A011395",
+      "englishProductName": "Atopica 100 mg/ml Oral Solution for Cats and Dogs",
+      "koreanDraftName": "Ciclosporin A 경구용액",
+      "coverageCategory": "immunomodulator",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 28500,
+      "pricingBasis": {
+        "categoryBaseKrw": 24000,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011419",
+      "sourceProductId": "A011419",
+      "englishProductName": "Banacep Vet 5 mg Film-coated Tablet for Dogs and Cats Benazepril Hydrochloride",
+      "koreanDraftName": "Benazepril Hydrochloride 정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011451",
+      "sourceProductId": "A011451",
+      "englishProductName": "Boflox Flavour 20 mg Tablets for Dogs and Cats",
+      "koreanDraftName": "Marbofloxacin 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 8000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011490",
+      "sourceProductId": "A011490",
+      "englishProductName": "Caniphedrin 20 mg Tablets for Dogs",
+      "koreanDraftName": "Ephedrine Hydrochloride 정",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011516",
+      "sourceProductId": "A011516",
+      "englishProductName": "Carprodyl Quadri 120 mg Chewable Tablets for Dogs",
+      "koreanDraftName": "Carprofen 츄어블정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011528",
+      "sourceProductId": "A011528",
+      "englishProductName": "Cefabactin 250 mg Tablets for Dogs and Cats",
+      "koreanDraftName": "Cefalexin 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 9500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011579",
+      "sourceProductId": "A011579",
+      "englishProductName": "Clavaseptin 50 mg Palatable Tablets for Dogs and Cats",
+      "koreanDraftName": "Amoxicillin, Clavulanic Acid 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 2,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011588",
+      "sourceProductId": "A011588",
+      "englishProductName": "Clearium 31.2 mg/ml Shampoo for Dog",
+      "koreanDraftName": "Chlorhexidine Gluconate 약용샴푸",
+      "coverageCategory": "dermatology_topical",
+      "dosageForm": "Shampoo",
+      "ingredientCount": 1,
+      "priceKrw": 18500,
+      "pricingBasis": {
+        "categoryBaseKrw": 16000,
+        "dosageFormAdjustmentKrw": 2500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011594",
+      "sourceProductId": "A011594",
+      "englishProductName": "Clindabactin 55 mg Chewable Tablets for Dogs and Cats",
+      "koreanDraftName": "Clindamycin 츄어블정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 12000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011595",
+      "sourceProductId": "A011595",
+      "englishProductName": "Clindaseptin 25 mg/ml Oral Solution for Cats & Dogs",
+      "koreanDraftName": "Clindamycin 경구용액",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011642",
+      "sourceProductId": "A011642",
+      "englishProductName": "Dermanolon 1.77 mg/ml + 17.7 mg/ml Cutaneous Spray, Solution for Dogs and Cats",
+      "koreanDraftName": "Salicylic Acid, Triamcinolone Acetonide 피부분무용액",
+      "coverageCategory": "dermatology_topical",
+      "dosageForm": "Cutaneous spray, solution",
+      "ingredientCount": 2,
+      "priceKrw": 21000,
+      "pricingBasis": {
+        "categoryBaseKrw": 16000,
+        "dosageFormAdjustmentKrw": 2500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011648",
+      "sourceProductId": "A011648",
+      "englishProductName": "Dexacortone 0.5 mg Chewable Tablets for Dogs and Cats",
+      "koreanDraftName": "Dexamethasone 츄어블정",
+      "coverageCategory": "anti_inflammatory_other",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 9500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011677",
+      "sourceProductId": "A011677",
+      "englishProductName": "Doxybactin 50 mg Tablets for Dogs and Cats",
+      "koreanDraftName": "Doxycycline 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 8000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011717",
+      "sourceProductId": "A011717",
+      "englishProductName": "Efex 10 mg Chewable Tablets for Cats and Dogs",
+      "koreanDraftName": "Marbofloxacin 츄어블정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 10500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011738",
+      "sourceProductId": "A011738",
+      "englishProductName": "Emeprid 1 mg/ml Oral Solution for Dogs and Cats",
+      "koreanDraftName": "Metoclopramide Hydrochloride 경구용액",
+      "coverageCategory": "gastrointestinal",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011749",
+      "sourceProductId": "A011749",
+      "englishProductName": "Enrocat Flavour 25 mg/ml Oral Suspension for Cats",
+      "koreanDraftName": "Enrofloxacin 경구현탁액",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Oral suspension",
+      "ingredientCount": 1,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 4000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011769",
+      "sourceProductId": "A011769",
+      "englishProductName": "Enurace 10, 10 mg Tablets for Dogs",
+      "koreanDraftName": "Ephedrine 정",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011817",
+      "sourceProductId": "A011817",
+      "englishProductName": "Felimazole 1.25 mg Coated Tablets for Cats",
+      "koreanDraftName": "Thiamazole 코팅정",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Coated tablet",
+      "ingredientCount": 1,
+      "priceKrw": 14500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011819",
+      "sourceProductId": "A011819",
+      "englishProductName": "Felimazole 5 mg Coated Tablets for Cats",
+      "koreanDraftName": "Thiamazole 정",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 12000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011831",
+      "sourceProductId": "A011831",
+      "englishProductName": "Finilac 50 microgram/ml Oral Solution for Dogs and Cats",
+      "koreanDraftName": "Cabergoline 경구용액",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 15500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012004",
+      "sourceProductId": "A012004",
+      "englishProductName": "Intubeaze 20 mg/ml Laryngopharyngeal Spray, Solution for Cats",
+      "koreanDraftName": "Lidocaine Hydrochloride 후두인두분무용액",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Laryngopharyngeal Spray, Solution",
+      "ingredientCount": 1,
+      "priceKrw": 17500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 5000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012044",
+      "sourceProductId": "A012044",
+      "englishProductName": "Libeo 10 mg Chewable Tablets for Dogs",
+      "koreanDraftName": "Furosemide 츄어블정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012051",
+      "sourceProductId": "A012051",
+      "englishProductName": "Lodisure 1 mg Tablets for Cats",
+      "koreanDraftName": "Amlodipine 정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012078",
+      "sourceProductId": "A012078",
+      "englishProductName": "Mektix Chewable 16 mg/40 mg Film-coated Tablets for Cats Weighing at Least 2 kg",
+      "koreanDraftName": "Milbemycin Oxime (A3 and A4), Praziquantel 필름코팅정",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Film-coated tablet",
+      "ingredientCount": 2,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 1000,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012088",
+      "sourceProductId": "A012088",
+      "englishProductName": "Metrobactin 250 mg Tablets for Dogs and Cats",
+      "koreanDraftName": "Metronidazole 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 10000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012127",
+      "sourceProductId": "A012127",
+      "englishProductName": "Modulis 100 mg/ml Oral Solution for Dogs",
+      "koreanDraftName": "Ciclosporin A 경구용액",
+      "coverageCategory": "immunomodulator",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 28000,
+      "pricingBasis": {
+        "categoryBaseKrw": 24000,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012147",
+      "sourceProductId": "A012147",
+      "englishProductName": "Nelio 2.5 mg Tablet for Cats",
+      "koreanDraftName": "Benazepril 정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 12000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012149",
+      "sourceProductId": "A012149",
+      "englishProductName": "Nelio 5 mg Tablet for Cats",
+      "koreanDraftName": "Benazepril Hydrochloride 정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 10500,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012217",
+      "sourceProductId": "A012217",
+      "englishProductName": "Ophtocycline 10 mg/g Eye Ointment for Dogs, Cats and Horses",
+      "koreanDraftName": "Chlortetracycline Hydrochloride 안연고",
+      "coverageCategory": "ophthalmic_otic",
+      "dosageForm": "Eye ointment",
+      "ingredientCount": 1,
+      "priceKrw": 16000,
+      "pricingBasis": {
+        "categoryBaseKrw": 14500,
+        "dosageFormAdjustmentKrw": 3000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012355",
+      "sourceProductId": "A012355",
+      "englishProductName": "Prinocate 40 mg/4 mg Spot-on Solution for Small Cats and Ferrets",
+      "koreanDraftName": "Imidacloprid, Moxidectin 점적용액",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Spot-on solution",
+      "ingredientCount": 2,
+      "priceKrw": 13000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012373",
+      "sourceProductId": "A012373",
+      "englishProductName": "Proin 15 mg Chewable Tablets for Dogs",
+      "koreanDraftName": "Phenylpropanolamine Hydrochloride 츄어블정",
+      "coverageCategory": "urinary",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11000,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012406",
+      "sourceProductId": "A012406",
+      "englishProductName": "Recicort 1.77 mg/ml + 17.7 mg/ml Ear Drops, Solution for Dogs and Cats",
+      "koreanDraftName": "Salicylic Acid, Triamcinolone Acetonide 점이액",
+      "coverageCategory": "ophthalmic_otic",
+      "dosageForm": "Ear drops, solution",
+      "ingredientCount": 2,
+      "priceKrw": 20500,
+      "pricingBasis": {
+        "categoryBaseKrw": 14500,
+        "dosageFormAdjustmentKrw": 4500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012537",
+      "sourceProductId": "A012537",
+      "englishProductName": "Therios 75 mg Chewable Tablets for Cats",
+      "koreanDraftName": "Cefalexin 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 10000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012549",
+      "sourceProductId": "A012549",
+      "englishProductName": "Thyroxanil 600 Microgram Tablets for Dogs and Cats",
+      "koreanDraftName": "L Thyroxine Sodium, Magnesium Oxide Heavy, Magnesium Stearate 정",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Tablet",
+      "ingredientCount": 3,
+      "priceKrw": 15000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 3000,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012666",
+      "sourceProductId": "A012666",
+      "englishProductName": "Vitamivet K1 50 mg Film-coated Tablets for Dogs",
+      "koreanDraftName": "Phytomenadione 정",
+      "coverageCategory": "emergency_supportive",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11500,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012686",
+      "sourceProductId": "A012686",
+      "englishProductName": "Zitac Vet 100 mg Tablets for Dogs",
+      "koreanDraftName": "Cimetidine 정",
+      "coverageCategory": "gastrointestinal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 9000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012852",
+      "sourceProductId": "A012852",
+      "englishProductName": "Felinta 10 mg Prolonged-release Tablets for Cats",
+      "koreanDraftName": "Carbimazole 서방정",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Prolonged-release tablet",
+      "ingredientCount": 1,
+      "priceKrw": 17500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 2500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012862",
+      "sourceProductId": "A012862",
+      "englishProductName": "IncoVet, 40.28 mg/ml, Syrup for Dogs",
+      "koreanDraftName": "Phenylpropanolamine, Phenylpropanolamine Hydrochloride 시럽",
+      "coverageCategory": "urinary",
+      "dosageForm": "Syrup",
+      "ingredientCount": 2,
+      "priceKrw": 16500,
+      "pricingBasis": {
+        "categoryBaseKrw": 11000,
+        "dosageFormAdjustmentKrw": 2500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012911",
+      "sourceProductId": "A012911",
+      "englishProductName": "Cladaxxa 200 mg/50 mg Chewable Tablets for Cats and Dogs",
+      "koreanDraftName": "Amoxicillin, Clavulanic Acid 츄어블정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 2,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012998",
+      "sourceProductId": "A012998",
+      "englishProductName": "StromEase 25 mg/ml Eye Drops, Solution for Dogs and Cats",
+      "koreanDraftName": "Acetylcysteine 점안액",
+      "coverageCategory": "ophthalmic_otic",
+      "dosageForm": "Eye drops, solution",
+      "ingredientCount": 1,
+      "priceKrw": 17000,
+      "pricingBasis": {
+        "categoryBaseKrw": 14500,
+        "dosageFormAdjustmentKrw": 3000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013016",
+      "sourceProductId": "A013016",
+      "englishProductName": "Metaxx 0.25 mg Chewable Tablets for Cats",
+      "koreanDraftName": "Meloxicam 츄어블정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11500,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013034",
+      "sourceProductId": "A013034",
+      "englishProductName": "Eluracat 20 mg/ml Oral Solution for Cats",
+      "koreanDraftName": "Capromorelin tartrate 경구용액",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 17000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013216",
+      "sourceProductId": "A013216",
+      "englishProductName": "Elanco Milbemycin - Praziquantel 16 mg/40 mg Film-Coated Tablets for Cats",
+      "koreanDraftName": "Milbemycin Oxime (A3 and A4), Praziquantel 코팅정",
+      "coverageCategory": "antiparasitic",
+      "dosageForm": "Coated tablet",
+      "ingredientCount": 2,
+      "priceKrw": 9500,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013337",
+      "sourceProductId": "A013337",
+      "englishProductName": "Felimazole 5 mg/ml Oral Solution for Cats",
+      "koreanDraftName": "Thiamazole 경구용액",
+      "coverageCategory": "endocrine",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 16500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013391",
+      "sourceProductId": "A013391",
+      "englishProductName": "Arthrocam 0.5 mg/ml Oral Suspension for Cats",
+      "koreanDraftName": "Meloxicam 경구현탁액",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Oral suspension",
+      "ingredientCount": 1,
+      "priceKrw": 15500,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 4000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013459",
+      "sourceProductId": "A013459",
+      "englishProductName": "Clavusan 250 mg + 62.5 mg Tablets for Dogs and Cats",
+      "koreanDraftName": "Amoxicillin Trihydrate, Potassium Clavulanate 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 2,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013551",
+      "sourceProductId": "A013551",
+      "englishProductName": "Meloxicam Ceva 0.5 mg/ml Oral Suspension for Cats",
+      "koreanDraftName": "Meloxicam 경구용액",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 13500,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013555",
+      "sourceProductId": "A013555",
+      "englishProductName": "Fluoxevet 32 mg, Tablets for Dogs",
+      "koreanDraftName": "Fluoxetine 정",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 12000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013587",
+      "sourceProductId": "A013587",
+      "englishProductName": "Phenosan 100 mg Chewable Tablets for Dogs",
+      "koreanDraftName": "Phenobarbital 츄어블정",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013597",
+      "sourceProductId": "A013597",
+      "englishProductName": "Phenocoat 12.5 mg Film-coated Tablets for Dogs",
+      "koreanDraftName": "Phenobarbital 필름코팅정",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Film-coated tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13500,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 1000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013664",
+      "sourceProductId": "A013664",
+      "englishProductName": "Bexatil 15 mg Tablets for Cats",
+      "koreanDraftName": "Bexagliflozin 정",
+      "coverageCategory": "other",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13000,
+      "pricingBasis": {
+        "categoryBaseKrw": 12000,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013686",
+      "sourceProductId": "A013686",
+      "englishProductName": "Elanco Ilunocitinib 15 mg Film-coated Tablets for Dogs",
+      "koreanDraftName": "Ilunocitinib 필름코팅정",
+      "coverageCategory": "anti_inflammatory_other",
+      "dosageForm": "Film-coated tablet",
+      "ingredientCount": 1,
+      "priceKrw": 10500,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 1000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013695",
+      "sourceProductId": "A013695",
+      "englishProductName": "Urixine 40 mg/ml Syrup for Dogs",
+      "koreanDraftName": "Phenylpropanolamine 경구용액",
+      "coverageCategory": "urinary",
+      "dosageForm": "Oral solution",
+      "ingredientCount": 1,
+      "priceKrw": 15500,
+      "pricingBasis": {
+        "categoryBaseKrw": 11000,
+        "dosageFormAdjustmentKrw": 3500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013760",
+      "sourceProductId": "A013760",
+      "englishProductName": "Cepfenidex 2 mg/ml + 1 mg/ml Eye Drops, Solution for Dogs and Cats",
+      "koreanDraftName": "Chloramphenicol, Dexamethasone 점안액",
+      "coverageCategory": "ophthalmic_otic",
+      "dosageForm": "Eye drops, solution",
+      "ingredientCount": 2,
+      "priceKrw": 17500,
+      "pricingBasis": {
+        "categoryBaseKrw": 14500,
+        "dosageFormAdjustmentKrw": 3000,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013761",
+      "sourceProductId": "A013761",
+      "englishProductName": "Cepfenicol 5 mg/ml Eye Drops, Solution for Dogs and Cats",
+      "koreanDraftName": "Chloramphenicol 점안액",
+      "coverageCategory": "ophthalmic_otic",
+      "dosageForm": "Eye drops, solution",
+      "ingredientCount": 1,
+      "priceKrw": 17000,
+      "pricingBasis": {
+        "categoryBaseKrw": 14500,
+        "dosageFormAdjustmentKrw": 3000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013835",
+      "sourceProductId": "A013835",
+      "englishProductName": "Amlodicor 1.25 mg Chewable Tablets for Cats",
+      "koreanDraftName": "Amlodipine 츄어블정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 13000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013840",
+      "sourceProductId": "A013840",
+      "englishProductName": "DuOtic 10 mg / 1 mg Ear Gel for Dogs",
+      "koreanDraftName": "Betamethasone acetate, Terbinafine 점이겔",
+      "coverageCategory": "ophthalmic_otic",
+      "dosageForm": "Ear gel",
+      "ingredientCount": 2,
+      "priceKrw": 19500,
+      "pricingBasis": {
+        "categoryBaseKrw": 14500,
+        "dosageFormAdjustmentKrw": 4500,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014075",
+      "sourceProductId": "A014075",
+      "englishProductName": "Pardale-V 400 mg/9 mg Tablets",
+      "koreanDraftName": "Codeine Phosphate, Paracetamol 정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Tablet",
+      "ingredientCount": 2,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 1500,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014092",
+      "sourceProductId": "A014092",
+      "englishProductName": "Laxasan 667 mg/ml Syrup for Dogs and Cats",
+      "koreanDraftName": "Lactulose 시럽",
+      "coverageCategory": "gastrointestinal",
+      "dosageForm": "Syrup",
+      "ingredientCount": 1,
+      "priceKrw": 10000,
+      "pricingBasis": {
+        "categoryBaseKrw": 8500,
+        "dosageFormAdjustmentKrw": 2500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014184",
+      "sourceProductId": "A014184",
+      "englishProductName": "Robexera 6 mg Chewable Tablets for Cats",
+      "koreanDraftName": "Robenacoxib 츄어블정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Chewable tablet",
+      "ingredientCount": 1,
+      "priceKrw": 12500,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 1500,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 1000
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014340",
+      "sourceProductId": "A014340",
+      "englishProductName": "Bisolvon 10 mg/g Oral Powder",
+      "koreanDraftName": "Bromhexine Hydrochloride 경구용산제",
+      "coverageCategory": "respiratory",
+      "dosageForm": "Oral powder",
+      "ingredientCount": 1,
+      "priceKrw": 8500,
+      "pricingBasis": {
+        "categoryBaseKrw": 7500,
+        "dosageFormAdjustmentKrw": 1000,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 0
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014343",
+      "sourceProductId": "A014343",
+      "englishProductName": "Furosemide Tablets BP (Vet) 20 mg",
+      "koreanDraftName": "Furosemide 정",
+      "coverageCategory": "cardiovascular",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 11000,
+      "pricingBasis": {
+        "categoryBaseKrw": 11500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014435",
+      "sourceProductId": "A014435",
+      "englishProductName": "Ketofen 20 mg Tablets",
+      "koreanDraftName": "Ketoprofen 정",
+      "coverageCategory": "pain_nsaid",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 10500,
+      "pricingBasis": {
+        "categoryBaseKrw": 10000,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014491",
+      "sourceProductId": "A014491",
+      "englishProductName": "Baytril Flavour Tablets 15 mg",
+      "koreanDraftName": "Enrofloxacin 정",
+      "coverageCategory": "antimicrobial_antifungal",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 8000,
+      "pricingBasis": {
+        "categoryBaseKrw": 9500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": -1500
+      }
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a05081",
+      "sourceProductId": "A05081",
+      "englishProductName": "Clomicalm 20 mg Tablets for Dogs",
+      "koreanDraftName": "Clomipramine Hydrochloride 정",
+      "coverageCategory": "neurology_behavior",
+      "dosageForm": "Tablet",
+      "ingredientCount": 1,
+      "priceKrw": 14000,
+      "pricingBasis": {
+        "categoryBaseKrw": 13500,
+        "dosageFormAdjustmentKrw": 0,
+        "multiIngredientAdjustmentKrw": 0,
+        "deterministicVariationKrw": 500
+      }
+    }
+  ]
+}

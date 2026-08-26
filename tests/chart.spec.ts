@@ -5572,7 +5572,7 @@ async function verifyChartConfirmationRetry(page: Page) {
   );
 }
 
-test("chart catalog dialog searches 108 reviewed dispensing candidates at target scale", async ({
+test("chart catalog dialog searches 108 service-review dispensing candidates at target scale", async ({
   page,
 }) => {
   const rows = Array.from({ length: 108 }, (_, index) => {
@@ -5644,6 +5644,165 @@ test("chart catalog dialog searches 108 reviewed dispensing candidates at target
   await expect(
     page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0001"),
   ).toBeHidden();
+});
+
+test("chart dispensing catalog prefills master prescription values and preserves veterinarian edits", async ({
+  page,
+}) => {
+  const displayName = "테스트 Amoxicillin 조제";
+  const defaultDetailInputs = {
+    doseBasis: "patient",
+    dose: 0.5,
+    doseUnit: "ml",
+    route: "PO",
+    frequency: "bid",
+    durationDays: 7,
+    totalQuantity: 7,
+    totalQuantityUnit: "ml",
+    medicationInstruction: "any_time",
+    storageMethod: "room_temp",
+    compoundNote: "사용 전 충분히 흔든 뒤 총 조제량과 라벨을 대조한다.",
+    guardianNote: "정해진 시간에 1회 0.5mL씩 하루 2회, 7일간 투여하세요.",
+    extraLabelSpeciesConfirmed: false,
+  };
+  const draftPatchBodies: Array<Record<string, unknown>> = [];
+
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          ok: true,
+          status: 200,
+          rows: [
+            {
+              appliedSnapshot: {
+                appliedAmountBasis: "unit_price",
+                appliedBillingName: displayName,
+                appliedDestinationModule: "dispensing",
+                appliedDisplayName: displayName,
+                appliedPriceKrw: 11_500,
+                appliedSalesUnit: "per_each",
+                appliedStandardOrderName: displayName,
+                appliedTargetSpecies: ["dog", "cat"],
+                appliedTaskRequired: true,
+                appliedTaxIncluded: true,
+                billingEligible: true,
+                billingReflectionEnabled: true,
+                clinicalOrderType: "dispensing",
+                defaultDetailInputs,
+                destinationModule: "dispensing",
+                detailSchemaVersion: 1,
+                executionMode: "routed",
+                medicationMetadata: {
+                  schemaVersion: 2,
+                  presetOrigin: "clair_master",
+                  presetStatus: "synthetic_unreviewed",
+                  defaultDetailInputs,
+                },
+                sourcePresetId: "std-ord-med-maropitant",
+                sourcePresetVersion: "2026-08-26.1",
+                workspaceCatalogItemId: "ord-med-maropitant",
+              },
+              billingEligible: true,
+              billingName: displayName,
+              categoryGroup: "medication",
+              clinicalOrderType: "dispensing",
+              destinationModule: "dispensing",
+              detailSchemaVersion: 1,
+              displayName,
+              executionMode: "routed",
+              rowType: "individual",
+              sourcePresetId: "std-ord-med-maropitant",
+              sourcePresetVersion: "2026-08-26.1",
+              targetSpecies: ["dog", "cat"],
+              workspaceCatalogItemId: "ord-med-maropitant",
+              workspaceCatalogRevision: 1,
+            },
+          ],
+        },
+        status: 200,
+      });
+    },
+  );
+  page.on("request", (request) => {
+    if (
+      request.method() !== "PATCH" ||
+      !request.url().includes("/chart/order-drafts")
+    ) {
+      return;
+    }
+    const body = request.postDataJSON() as Record<string, unknown> | null;
+    if (body) draftPatchBodies.push(body);
+  });
+
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Workspace catalog에서 Order 추가",
+  });
+  const candidate = page.getByTestId(
+    "chart-order-catalog-candidate-std-ord-med-maropitant",
+  );
+  await expect(candidate).toContainText(displayName);
+  await candidate.getByRole("button", { name: "추가" }).click();
+  await dialog.getByRole("button", { name: "닫기" }).click();
+
+  await expect
+    .poll(() =>
+      draftPatchBodies.some((body) => {
+        if (!Array.isArray(body.rows)) return false;
+        return body.rows.some((value) => {
+          if (!value || typeof value !== "object") return false;
+          const row = value as Record<string, unknown>;
+          return (
+            row.workspaceCatalogItemId === "ord-med-maropitant" &&
+            JSON.stringify(row.detailInputs) ===
+              JSON.stringify(defaultDetailInputs)
+          );
+        });
+      }),
+    )
+    .toBe(true);
+
+  const addedDose = page
+    .getByLabel("Maropitant 16mg T 용량", { exact: true })
+    .nth(1);
+  const addedDays = page
+    .getByLabel("Maropitant 16mg T 일수", { exact: true })
+    .nth(1);
+  const addedFrequency = page
+    .getByLabel("Maropitant 16mg T 빈도", { exact: true })
+    .nth(1);
+  await expect(addedDose).toHaveValue("0.5");
+  await expect(addedDays).toHaveValue("7");
+  await addedDose.fill("0.75");
+  await addedFrequency.click();
+  await page.getByRole("option", { name: "TID", exact: true }).click();
+
+  await expect
+    .poll(() =>
+      draftPatchBodies.some((body) => {
+        if (!Array.isArray(body.rows)) return false;
+        return body.rows.some((value) => {
+          if (!value || typeof value !== "object") return false;
+          const row = value as Record<string, unknown>;
+          const details = row.detailInputs as
+            | Record<string, unknown>
+            | undefined;
+          return (
+            row.workspaceCatalogItemId === "ord-med-maropitant" &&
+            details?.dose === 0.75 &&
+            details.frequency === "tid" &&
+            details.durationDays === 7 &&
+            details.guardianNote === defaultDetailInputs.guardianNote
+          );
+        });
+      }),
+    )
+    .toBe(true);
 });
 
 test("chart order add searches active workspace catalog and adds a draft row", async ({

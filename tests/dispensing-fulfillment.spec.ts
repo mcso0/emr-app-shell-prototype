@@ -630,7 +630,18 @@ test("dispensing readback shows only reviewed immutable medication facts and no 
           ok: true,
           workItems: [
             createFulfillmentWorkItem({
-              detailInputs: { totalQuantity: 12 },
+              detailInputs: {
+                dose: 0.5,
+                doseUnit: "ml",
+                frequency: "bid",
+                durationDays: 7,
+                totalQuantity: 7,
+                totalQuantityUnit: "ml",
+                medicationInstruction: "after_meal",
+                storageMethod: "refrigerated_light_protected",
+                guardianNote:
+                  "식후에 1회 0.5mL씩 하루 2회, 7일간 투여하세요.",
+              },
               dispensingLineage,
               id: "pr017-reviewed-dispensing",
               orderDisplayName: "PR-017 검토 약품 조제",
@@ -680,9 +691,20 @@ test("dispensing readback shows only reviewed immutable medication facts and no 
     "Task task-pr017-reviewed-dispensing / 시도 3",
   );
   await expect(readback).toContainText("Task 상태 부분완료");
-  await expect(readback).toContainText("처방 총량 12");
+  await expect(readback).toContainText("처방 총량 7");
   await expect(readback).toContainText("청구 수량 2");
   await expect(readback).toContainText("청구 단위 per_each");
+  const prescriptionRow = page.getByTestId(
+    "order-row-section-0-live-order-row-pr017-reviewed-dispensing",
+  );
+  await expect(prescriptionRow).toContainText("0.5 ml");
+  await expect(prescriptionRow).toContainText("하루 2회");
+  await expect(prescriptionRow).toContainText("7");
+  await expect(prescriptionRow).toContainText("식후");
+  await expect(prescriptionRow).toContainText("냉장·차광");
+  await expect(prescriptionRow).toContainText(
+    "식후에 1회 0.5mL씩 하루 2회, 7일간 투여하세요.",
+  );
   await expect(readback).not.toContainText(/lot|expiry|BUD|로트|유효기간/i);
 });
 

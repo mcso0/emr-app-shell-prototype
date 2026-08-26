@@ -1,0 +1,143 @@
+-- Normalize once-daily versus single-administration semantics in the service-review
+-- prescription presets and refresh every release artifact hash deterministically.
+
+set lock_timeout = '5s';
+set statement_timeout = '120s';
+
+create temporary table dispensing_preset_frequency_normalization_rows
+on commit drop
+as
+select *
+from pg_catalog.jsonb_to_recordset($presets$__PRESET_ROWS_JSON__$presets$::jsonb)
+as preset(
+  "presetId" uuid,
+  "detailInputs" jsonb,
+  "medicationMetadata" jsonb,
+  "provenance" jsonb,
+  "frequencyEvidenceMode" text,
+  "durationEvidenceMode" text,
+  "medicationInstructionEvidenceMode" text,
+  "contentSha256" text
+);
+
+update master.dispensing_order_prescription_presets preset
+set
+  default_detail_inputs = source."detailInputs",
+  medication_metadata = source."medicationMetadata" || pg_catalog.jsonb_build_object(
+    'defaultDetailInputs', source."detailInputs"
+  ),
+  provenance = source."provenance" || pg_catalog.jsonb_build_object(
+    'sourceExtractEntriesSha256', '__SOURCE_EXTRACT_SHA256__',
+    'inferenceNotice', 'Service-review synthetic preset; a veterinarian must review before real clinical use.',
+    'fieldEvidence', pg_catalog.jsonb_build_object(
+      'productIdentity', 'master_direct',
+      'route', 'master_direct',
+      'dosageForm', 'master_direct',
+      'frequency', source."frequencyEvidenceMode",
+      'durationDays', source."durationEvidenceMode",
+      'dose', 'synthetic_product_shaped_inference',
+      'totalQuantity', 'derived_from_synthetic_dose_frequency_duration',
+      'medicationInstruction', source."medicationInstructionEvidenceMode",
+      'storageMethod', 'spc_direct_normalized'
+    )
+  ),
+  content_sha256 = source."contentSha256",
+  source_artifact_sha256 = '__ENTRIES_SHA256__'
+from dispensing_preset_frequency_normalization_rows source
+where preset.id = source."presetId"
+  and preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid
+  and preset.is_current;
+
+do $block$
+declare
+  v_count integer;
+  v_unique_details integer;
+begin
+  select
+    pg_catalog.count(*)::integer,
+    pg_catalog.count(distinct private.clinical_master_sha256(preset.default_detail_inputs))::integer
+  into v_count, v_unique_details
+  from master.dispensing_order_prescription_presets preset
+  where preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid
+    and preset.is_current
+    and preset.source_artifact_sha256 = '__ENTRIES_SHA256__';
+
+  if v_count <> 108 or v_unique_details <> 108 then
+    raise exception 'dispensing_preset_frequency_normalization_cardinality:%/%',
+      v_count, v_unique_details;
+  end if;
+
+  if exists (
+    select 1
+    from master.dispensing_order_prescription_presets preset
+    where preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid
+      and preset.is_current
+      and preset.default_detail_inputs ->> 'frequency' = 'once'
+      and (preset.default_detail_inputs ->> 'durationDays')::integer > 1
+  ) then
+    raise exception 'dispensing_preset_once_multi_day_semantics_invalid';
+  end if;
+end;
+$block$;
+
+do $block$
+declare
+  v_updated_count integer;
+begin
+  with targets as (
+    select
+      item.workspace_id,
+      item.id,
+      preset.medication_metadata,
+      item.dispensing_profile_snapshot || pg_catalog.jsonb_build_object(
+        'schemaVersion', 2,
+        'prescriptionPreset', pg_catalog.jsonb_build_object(
+          'presetId', preset.id,
+          'presetRevision', preset.preset_revision,
+          'presetStatus', preset.preset_status,
+          'detailSchemaVersion', preset.detail_schema_version,
+          'contentSha256', preset.content_sha256,
+          'clinicalUseAllowed', preset.clinical_use_allowed
+        )
+      ) as next_profile_snapshot
+    from public.order_catalog_items item
+    join master.dispensing_order_prescription_presets preset
+      on preset.dispensing_profile_id = item.source_dispensing_profile_id
+     and preset.dispensing_profile_revision = item.source_dispensing_profile_revision
+     and preset.is_current
+    where item.workspace_id = any(array[
+        'clair-demo',
+        'workspace-clair-cheongdam',
+        'workspace-clinical-master-pilot-v1'
+      ])
+      and preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid
+  )
+  update public.order_catalog_items item
+  set
+    medication_metadata = target.medication_metadata,
+    dispensing_profile_snapshot = target.next_profile_snapshot,
+    dispensing_profile_snapshot_sha256 = private.clinical_master_sha256(
+      target.next_profile_snapshot
+    ),
+    catalog_revision = item.catalog_revision + 1,
+    updated_at = pg_catalog.now()
+  from targets target
+  where item.workspace_id = target.workspace_id
+    and item.id = target.id;
+
+  get diagnostics v_updated_count = row_count;
+  if v_updated_count <> 324 then
+    raise exception 'dispensing_preset_frequency_normalization_projection_count:%',
+      v_updated_count;
+  end if;
+
+  if exists (
+    select 1
+    from public.order_catalog_items item
+    where item.workspace_id = 'clair-foreign-demo'
+      and item.source_dispensing_profile_id is not null
+  ) then
+    raise exception 'dispensing_preset_frequency_normalization_foreign_workspace_changed';
+  end if;
+end;
+$block$;

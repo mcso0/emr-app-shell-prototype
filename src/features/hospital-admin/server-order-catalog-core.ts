@@ -417,6 +417,12 @@ export type LabDefinitionMutationInput = {
 };
 
 export type MedicationOrderMetadata = {
+  schemaVersion?: 2;
+  presetOrigin?: "clair_master" | "workspace";
+  presetStatus?: "synthetic_unreviewed" | "clinically_reviewed";
+  sourcePrescriptionPresetId?: string;
+  sourcePrescriptionPresetRevision?: number;
+  defaultDetailInputs?: Record<string, unknown>;
   autoDispenseQuantityEnabled: boolean;
   administrationDays: number;
   dailyFrequencyCode: string;
@@ -429,7 +435,20 @@ export type MedicationOrderMetadata = {
     | "prescribed_quantity";
   doseAmount: number;
   doseAmountUnit: string;
-  administrationRoute: "PO" | "IV" | "CRI" | "SC";
+  administrationRoute:
+    | "PO"
+    | "IV"
+    | "CRI"
+    | "SC"
+    | "IM"
+    | "topical"
+    | "otic"
+    | "ophthalmic"
+    | "transdermal"
+    | "oromucosal"
+    | "inhalation"
+    | "nasal"
+    | "other";
   dispenseUnit: string;
   dispenseRoundingRule:
     | "as_is"
@@ -455,7 +474,7 @@ export type MedicationOrderMetadata = {
 };
 
 export type DispensingOrderLineageSnapshot = {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   sourceDispensingProfileId: string;
   sourceDispensingProfileRevision: number;
   sourceMedicationProductId: string;
@@ -621,6 +640,8 @@ export type AppliedOrderSnapshot = {
   executionMode?: Exclude<ClinicalOrderExecutionMode, "aggregate">;
   detailSchemaVersion?: number;
   billingEligible?: boolean;
+  defaultDetailInputs?: Record<string, unknown>;
+  medicationMetadata?: MedicationOrderMetadata;
   dispensingLineage?: DispensingOrderLineageSnapshot;
 };
 
@@ -752,6 +773,7 @@ export type SupabaseOrderCatalogRpcClient = {
     functionName:
       | "clair_list_order_catalog_chart_search"
       | "clair_list_order_catalog_chart_search_v2"
+      | "clair_list_order_catalog_admin_v2"
       | "clair_preview_chart_order_set"
       | "clair_update_order_catalog_item"
       | "clair_create_order_catalog_item"
@@ -1275,6 +1297,12 @@ export function createOrderPricingSnapshot(
     executionMode: executionContract.executionMode,
     detailSchemaVersion: executionContract.detailSchemaVersion,
     billingEligible: executionContract.billingEligible,
+    defaultDetailInputs: item.medicationMetadata?.defaultDetailInputs
+      ? structuredClone(item.medicationMetadata.defaultDetailInputs)
+      : undefined,
+    medicationMetadata: item.medicationMetadata
+      ? structuredClone(item.medicationMetadata)
+      : undefined,
     dispensingLineage: item.dispensingLineage
       ? structuredClone(item.dispensingLineage)
       : undefined,
@@ -1991,6 +2019,8 @@ type OrderCatalogItemDbRow = {
   clinical_use_allowed?: boolean | null;
   dispensing_profile_snapshot?: Record<string, unknown> | null;
   dispensing_profile_snapshot_sha256?: string | null;
+  service_review_only?: boolean | null;
+  service_review_release_id?: string | null;
   clinical_order_type?: string | null;
   is_external_lab?: boolean | null;
   destination_module?: string | null;
@@ -2089,6 +2119,18 @@ export function createSupabaseOrderCatalogGateway(
 ): OrderCatalogGateway {
   return {
     async listAdminCatalog({ workspaceId }) {
+      const adminRead = await client.rpc("clair_list_order_catalog_admin_v2", {
+        p_workspace_id: workspaceId,
+      });
+      if (!adminRead.error) {
+        return {
+          ok: true,
+          items: mapOrderCatalogDbRows(adminRead.data),
+        };
+      }
+
+      // Keep deploy-order compatibility while the migration and app release
+      // cross. The fallback intentionally omits service-review activation.
       const table = getSupabaseOrderCatalogTable(client);
       if (!table) return { ok: true, items: [] };
       const { data, error } = await table
@@ -2151,7 +2193,19 @@ export function createSupabaseOrderCatalogGateway(
         },
       );
       if (error) return mapCatalogRpcError(error.message);
-      return normalizeCatalogRpcItem(data);
+      const normalized = normalizeCatalogRpcItem(data);
+      if (!normalized.ok) return normalized;
+
+      const adminRead = await client.rpc("clair_list_order_catalog_admin_v2", {
+        p_workspace_id: workspaceId,
+      });
+      if (!adminRead.error) {
+        const enriched = mapOrderCatalogDbRows(adminRead.data).find(
+          (item) => item.id === normalized.item.id,
+        );
+        if (enriched) return { ok: true, item: enriched };
+      }
+      return normalized;
     },
     async mutateLabTestItem({ actorUserId, input, workspaceId }) {
       const { data, error } = await client.rpc(
@@ -2872,6 +2926,8 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
       sourceClinicalReviewId: row.source_clinical_review_id,
       sourceEvidenceFingerprint: row.source_evidence_fingerprint,
       clinicalUseAllowed: row.clinical_use_allowed,
+      serviceReviewOnly: row.service_review_only,
+      serviceReviewReleaseId: row.service_review_release_id,
       dispensingProfileSnapshot: row.dispensing_profile_snapshot,
       dispensingProfileSnapshotSha256: row.dispensing_profile_snapshot_sha256,
     }),
@@ -3909,6 +3965,26 @@ const defaultOrderCatalogItems: OrderCatalogItem[] = [
     priceKrw: 4500,
     defaultDestinationModule: "dispensing",
     medicationMetadata: {
+      schemaVersion: 2,
+      presetOrigin: "clair_master",
+      presetStatus: "synthetic_unreviewed",
+      sourcePrescriptionPresetId: "preset-maropitant-default",
+      sourcePrescriptionPresetRevision: 1,
+      defaultDetailInputs: {
+        doseBasis: "patient",
+        dose: 1,
+        doseUnit: "tablet",
+        route: "PO",
+        frequency: "sid",
+        durationDays: 3,
+        totalQuantity: 3,
+        totalQuantityUnit: "tablet",
+        medicationInstruction: "after_meal",
+        storageMethod: "room_temp",
+        compoundNote: "제품명과 함량을 확인한 뒤 총 정수를 계수해 주세요.",
+        guardianNote: "식후에 1회 1정씩 하루 1회, 3일간 투여하세요.",
+        extraLabelSpeciesConfirmed: false,
+      },
       autoDispenseQuantityEnabled: true,
       administrationDays: 3,
       dailyFrequencyCode: "sid",
