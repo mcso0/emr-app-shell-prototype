@@ -3981,7 +3981,7 @@ const defaultOrderCatalogItems: OrderCatalogItem[] = [
         totalQuantityUnit: "tablet",
         medicationInstruction: "after_meal",
         storageMethod: "room_temp",
-        compoundNote: "제품명과 함량을 확인한 뒤 총 정수를 계수한다.",
+        compoundNote: "제품명과 함량을 확인한 뒤 총 정수를 계수해 주세요.",
         guardianNote: "식후에 1회 1정씩 하루 1회, 3일간 투여하세요.",
         extraLabelSpeciesConfirmed: false,
       },
