@@ -463,6 +463,8 @@ export type DispensingOrderLineageSnapshot = {
   sourceClinicalReviewId: string | null;
   sourceEvidenceFingerprint: string;
   clinicalUseAllowed: boolean;
+  serviceReviewOnly?: true;
+  serviceReviewReleaseId?: string;
   dispensingProfileSnapshot: Record<string, unknown>;
   dispensingProfileSnapshotSha256: string;
 };
@@ -1440,8 +1442,12 @@ export function createMockOrderCatalogGateway(
         .filter(
           (item) =>
             item.workspaceId === workspaceId &&
-            item.availabilityStatus === "active" &&
-            (!item.dispensingLineage || item.dispensingLineage.clinicalUseAllowed),
+            (item.availabilityStatus === "active" ||
+              (item.availabilityStatus === "pending_activation" &&
+                item.dispensingLineage?.serviceReviewOnly)) &&
+            (!item.dispensingLineage ||
+              item.dispensingLineage.clinicalUseAllowed ||
+              item.dispensingLineage.serviceReviewOnly),
         )
         .map((item): ChartOrderCatalogSearchRow => {
           const appliedSnapshot = createOrderPricingSnapshot(item);
@@ -3709,6 +3715,12 @@ export function mapDispensingOrderLineageSnapshot(
   const clinicalUseAllowed = readBoolean(
     row.clinicalUseAllowed ?? row.clinical_use_allowed,
   );
+  const serviceReviewOnly = readBoolean(
+    row.serviceReviewOnly ?? row.service_review_only,
+  );
+  const serviceReviewReleaseId = readString(
+    row.serviceReviewReleaseId ?? row.service_review_release_id,
+  );
   const dispensingProfileSnapshot =
     row.dispensingProfileSnapshot ?? row.dispensing_profile_snapshot;
   const dispensingProfileSnapshotSha256 = readString(
@@ -3726,6 +3738,9 @@ export function mapDispensingOrderLineageSnapshot(
     !/^[0-9a-f]{64}$/.test(sourceEvidenceFingerprint) ||
     typeof clinicalUseAllowed !== "boolean" ||
     (clinicalUseAllowed && !sourceClinicalReviewId) ||
+    (serviceReviewOnly === true &&
+      (clinicalUseAllowed || !serviceReviewReleaseId)) ||
+    (serviceReviewOnly !== true && serviceReviewReleaseId !== undefined) ||
     !dispensingProfileSnapshot ||
     typeof dispensingProfileSnapshot !== "object" ||
     Array.isArray(dispensingProfileSnapshot) ||
@@ -3743,6 +3758,9 @@ export function mapDispensingOrderLineageSnapshot(
     sourceClinicalReviewId,
     sourceEvidenceFingerprint,
     clinicalUseAllowed,
+    ...(serviceReviewOnly === true
+      ? { serviceReviewOnly: true as const, serviceReviewReleaseId }
+      : {}),
     dispensingProfileSnapshot: structuredClone(
       dispensingProfileSnapshot as Record<string, unknown>,
     ),

@@ -7088,6 +7088,9 @@ function ChartOrderCatalogDialog({
                             ? "세트"
                             : orderTypeMeta[orderType].label}
                         </Badge>
+                        {row.dispensingLineage?.serviceReviewOnly ? (
+                          <Badge variant="secondary">서비스 검토용</Badge>
+                        ) : null}
                         <span className="font-semibold">{row.displayName}</span>
                         <span className="emr-text-metadata text-muted-foreground">
                           {getCatalogCandidatePriceLabel(row)}
@@ -7113,7 +7116,7 @@ function ChartOrderCatalogDialog({
                 <div className="grid min-h-32 place-items-center bg-card p-6 text-center emr-text-dense text-muted-foreground">
                   {loading
                     ? "불러오는 중"
-                    : "조건에 맞는 active catalog 후보가 없습니다."}
+                    : "조건에 맞는 표시 가능 catalog 후보가 없습니다."}
                 </div>
               ) : null}
             </div>

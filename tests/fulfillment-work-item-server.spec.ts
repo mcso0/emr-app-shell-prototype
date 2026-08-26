@@ -808,7 +808,7 @@ test("B3 fulfillment creates work only for selected atomic children and keeps th
   });
 });
 
-test("dispensing fulfillment promotes only an approved server-frozen lineage into the read model", async () => {
+test("dispensing fulfillment preserves approved and service-review server-frozen lineages", async () => {
   const gateway = createMockFulfillmentWorkItemGateway(
     undefined,
     () => "2026-08-26T06:20:00.000Z",
@@ -830,10 +830,20 @@ test("dispensing fulfillment promotes only an approved server-frozen lineage int
     },
     dispensingProfileSnapshotSha256: "b".repeat(64),
   };
+  const serviceReviewLineage = {
+    ...approvedLineage,
+    sourceClinicalReviewId: null,
+    clinicalUseAllowed: false,
+    serviceReviewOnly: true as const,
+    serviceReviewReleaseId: "78a57bf0-10a8-47db-9ae1-8a8cff79b2c4",
+  };
   const result = await gateway.syncFromOrders({
     actorUserId: "user-vet",
     encounterId,
-    orderIds: ["pr017-approved-dispensing-order"],
+    orderIds: [
+      "pr017-approved-dispensing-order",
+      "pr017-service-review-dispensing-order",
+    ],
     orderSnapshots: [
       {
         orderId: "pr017-approved-dispensing-order",
@@ -850,6 +860,21 @@ test("dispensing fulfillment promotes only an approved server-frozen lineage int
           taskRequired: true,
         },
       },
+      {
+        orderId: "pr017-service-review-dispensing-order",
+        billingReflectionEnabled: true,
+        destinationModule: "dispensing",
+        taskRequired: true,
+        inHospitalOrderName: "PR-017 service-review medicine",
+        appliedSnapshot: {
+          billingReflectionEnabled: true,
+          destinationModule: "dispensing",
+          dispensingLineage: serviceReviewLineage,
+          effectiveDisplayName: "PR-017 service-review medicine",
+          rowType: "individual",
+          taskRequired: true,
+        },
+      },
     ],
     workspaceId,
   });
@@ -861,6 +886,11 @@ test("dispensing fulfillment promotes only an approved server-frozen lineage int
         orderId: "pr017-approved-dispensing-order",
         queueType: "dispensing",
         sourceSnapshot: { dispensingLineage: approvedLineage },
+      },
+      {
+        orderId: "pr017-service-review-dispensing-order",
+        queueType: "dispensing",
+        sourceSnapshot: { dispensingLineage: serviceReviewLineage },
       },
     ],
   });

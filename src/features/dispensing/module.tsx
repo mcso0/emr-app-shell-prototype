@@ -124,6 +124,7 @@ type FulfillmentWorkItem = {
   sourceSnapshot?: {
     dispensingLineage?: {
       clinicalUseAllowed: boolean;
+      serviceReviewOnly?: true;
       dispensingProfileSnapshot: Record<string, unknown>;
       sourceClinicalReviewId: string | null;
       sourceMedicationProductId: string;
@@ -857,7 +858,11 @@ function getReviewedMedicationFacts(
 ): ReviewedMedicationFacts | undefined {
   if (workItem?.queueType !== "dispensing") return undefined;
   const lineage = workItem?.sourceSnapshot?.dispensingLineage;
-  if (!lineage?.clinicalUseAllowed || !lineage.sourceClinicalReviewId) {
+  if (
+    !lineage ||
+    (!lineage.clinicalUseAllowed && !lineage.serviceReviewOnly) ||
+    (!lineage.sourceClinicalReviewId && !lineage.serviceReviewOnly)
+  ) {
     return undefined;
   }
   const snapshot = lineage.dispensingProfileSnapshot;
