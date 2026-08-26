@@ -360,6 +360,9 @@ test("Supabase order catalog gateway persists create update and pause mutations"
     },
     async rpc(functionName: string, args: Record<string, unknown>) {
       calls.push(`${functionName}:${args.p_workspace_id}`);
+      if (functionName === "clair_list_order_catalog_admin_v2") {
+        return { data: rows, error: null };
+      }
       if (functionName === "clair_create_order_catalog_item") {
         const item = args.p_item as Record<string, unknown>;
         const row = toOrderCatalogDbRow(item, String(args.p_workspace_id));
@@ -558,7 +561,26 @@ test("medication vaccine and pricing snapshots remain stable after admin item up
     permissionAdapter: permissionAdapter(),
   });
 
-  expect(snapshot).toMatchObject({ appliedPriceKrw: 4500, appliedSalesUnit: "per_each", appliedAmountBasis: "unit_price" });
+  expect(snapshot).toMatchObject({
+    appliedPriceKrw: 4500,
+    appliedSalesUnit: "per_each",
+    appliedAmountBasis: "unit_price",
+    defaultDetailInputs: {
+      dose: 1,
+      doseUnit: "tablet",
+      frequency: "sid",
+      durationDays: 3,
+      totalQuantity: 3,
+    },
+    medicationMetadata: {
+      schemaVersion: 2,
+      presetStatus: "synthetic_unreviewed",
+    },
+  });
+  expect(snapshot.defaultDetailInputs).not.toBe(
+    medication?.medicationMetadata?.defaultDetailInputs,
+  );
+  expect(snapshot.medicationMetadata).not.toBe(medication?.medicationMetadata);
 });
 
 test("order catalog audit event migration extends allowed live audit event types", () => {

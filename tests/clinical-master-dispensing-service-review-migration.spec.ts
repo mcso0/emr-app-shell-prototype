@@ -34,6 +34,14 @@ const assignmentCancelMigrationPath = resolve(
   process.cwd(),
   "supabase/migrations/20260826180000_fulfillment_assignment_cancel_return.sql",
 );
+const pricingMigrationPath = resolve(
+  process.cwd(),
+  "supabase/migrations/20260826190000_clinical_master_dispensing_service_review_pricing.sql",
+);
+const pricingArtifactPath = resolve(
+  process.cwd(),
+  "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+);
 
 test("service-review migration is bounded to the three target workspaces and keeps clinical approval false", async () => {
   const migration = await readFile(migrationPath, "utf8");
@@ -125,6 +133,54 @@ test("service-review species usage is labeled operational and does not claim app
   );
   expect(migration).toContain("if v_count <> 1 then");
   expect(migration).not.toContain("then 'master_reviewed_service_review'");
+});
+
+test("Cheongdam service-review pricing stays synthetic, varied, and clinically inactive", async () => {
+  const [migration, artifactSource] = await Promise.all([
+    readFile(pricingMigrationPath, "utf8"),
+    readFile(pricingArtifactPath, "utf8"),
+  ]);
+  const artifact = JSON.parse(artifactSource) as {
+    scope: { workspaceId: string; clinicalUseAllowed: boolean };
+    summary: {
+      count: number;
+      minimumPriceKrw: number;
+      medianPriceKrw: number;
+      maximumPriceKrw: number;
+      uniquePriceCount: number;
+      entriesSha256: string;
+    };
+    entries: Array<{ orderMasterKey: string; priceKrw: number }>;
+  };
+
+  expect(artifact.scope).toEqual({
+    workspaceId: "workspace-clair-cheongdam",
+    releaseId: "78a57bf0-10a8-47db-9ae1-8a8cff79b2c4",
+    serviceReviewOnly: true,
+    clinicalUseAllowed: false,
+  });
+  expect(artifact.summary).toMatchObject({
+    count: 108,
+    minimumPriceKrw: 7000,
+    medianPriceKrw: 12500,
+    maximumPriceKrw: 28500,
+    uniquePriceCount: 30,
+    entriesSha256: "53a9b7fde84c76b8b35286f0981515e2df8692c52687276edceb80239b413499",
+  });
+  expect(new Set(artifact.entries.map((entry) => entry.orderMasterKey)).size).toBe(108);
+  expect(new Set(artifact.entries.map((entry) => entry.priceKrw)).size).toBe(30);
+
+  expect(migration).toContain("'workspace-clair-cheongdam'");
+  expect(migration).not.toContain("'clair-foreign-demo'");
+  expect(migration).toContain("item.availability_status = 'pending_activation'");
+  expect(migration).toContain("item.clinical_use_allowed = false");
+  expect(migration).toContain("clair_list_order_catalog_admin_v2");
+  expect(migration).toContain("set search_path = ''");
+  expect(migration).toContain("'workspace_service_review_price'");
+  expect(migration).toContain(
+    "then c.billing_reflection_enabled and c.price_krw is not null",
+  );
+  expect(migration).not.toMatch(/clinical_use_allowed\s*=\s*true/i);
 });
 
 test("fulfillment queue readback restores encounter patient context without weakening queue permissions", async () => {

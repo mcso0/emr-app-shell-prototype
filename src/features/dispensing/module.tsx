@@ -162,6 +162,16 @@ type DispensingQuantityFacts = {
   billingUnit?: string;
   prescribedTotal?: number;
 };
+type DispensingPrescriptionFacts = {
+  days?: number;
+  dose?: string;
+  frequency?: string;
+  medicationGuide?: string;
+  servings?: number;
+  storage?: string;
+  timing?: string;
+  totalQuantityUnit?: string;
+};
 type FulfillmentWorkItemReadSummary = {
   date?: string;
   queueType: FulfillmentQueueType;
@@ -809,6 +819,7 @@ function createLiveOrderTableGroups(
   const rowWorkStatus = mapFulfillmentToOrderRowWorkStatus(workItem.status);
   const medicationFacts = getReviewedMedicationFacts(workItem);
   const quantityFacts = getDispensingQuantityFacts(workItem);
+  const prescriptionFacts = getDispensingPrescriptionFacts(workItem);
   const requestedDate = (
     workItem.createdAt ??
     workItem.updatedAt ??
@@ -828,32 +839,44 @@ function createLiveOrderTableGroups(
         {
           id: `live-order-row-${workItem.id}`,
           category: instructionType,
-          name: selectedQueueItem.orderName,
+          name:
+            readNonEmptyString(
+              workItem.sourceSnapshot?.orderDisplayName,
+              workItem.sourceSnapshot?.effectiveDisplayName,
+              workItem.sourceSnapshot?.inHospitalOrderName,
+            ) ?? selectedQueueItem.orderName,
           route:
             workItem.queueType === "dispensing"
               ? (medicationFacts?.routes.join(", ") ?? "-")
               : "-",
-          dose:
+          dose: prescriptionFacts?.dose ??
             workItem.sourceSnapshot?.instruction ?? selectedQueueItem.orderName,
-          frequency: "-",
+          frequency: prescriptionFacts?.frequency ?? "-",
           status: workItem.status === "cancelled" ? "취소" : "요청",
           requestedAt: `${requestedDate} ${selectedQueueItem.time}`,
           doctor: selectedQueueItem.requesterName,
-          days: "1",
-          doseTiming: "-",
-          servings: "1",
+          days: prescriptionFacts?.days !== undefined
+            ? String(prescriptionFacts.days)
+            : "-",
+          doseTiming: prescriptionFacts?.timing ?? "-",
+          servings: prescriptionFacts?.servings !== undefined
+            ? String(prescriptionFacts.servings)
+            : "-",
           amount:
             quantityFacts?.billingQuantity !== undefined
               ? String(quantityFacts.billingQuantity)
               : "-",
-          unit: quantityFacts?.billingUnit ?? "-",
+          unit:
+            prescriptionFacts?.totalQuantityUnit ??
+            quantityFacts?.billingUnit ??
+            "-",
           quantity:
             quantityFacts?.prescribedTotal !== undefined
               ? String(quantityFacts.prescribedTotal)
               : "-",
           dosageForm: medicationFacts?.dosageForm ?? "-",
-          storage: "지시 확인",
-          medicationGuide:
+          storage: prescriptionFacts?.storage ?? "지시 확인",
+          medicationGuide: prescriptionFacts?.medicationGuide ??
             workItem.sourceSnapshot?.instruction ?? "오더 지시 확인",
           assignee: selectedQueueItem.assigneeName ?? "미지정",
           assigneeId: workItem.assignedToUserId ?? undefined,
@@ -912,6 +935,66 @@ function getDispensingQuantityFacts(
   }
 
   return { billingQuantity, billingUnit, prescribedTotal };
+}
+
+function getDispensingPrescriptionFacts(
+  workItem?: FulfillmentWorkItem,
+): DispensingPrescriptionFacts | undefined {
+  if (workItem?.queueType !== "dispensing") return undefined;
+  const detailInputs = workItem.sourceSnapshot?.detailInputs;
+  if (!detailInputs) return undefined;
+  const doseAmount = readNonNegativeNumber(detailInputs.dose);
+  const doseUnit = readNonEmptyString(detailInputs.doseUnit);
+  const days = readNonNegativeNumber(detailInputs.durationDays);
+  const frequencyCode = readNonEmptyString(detailInputs.frequency);
+  const timingCode = readNonEmptyString(detailInputs.medicationInstruction);
+  const storageCode = readNonEmptyString(detailInputs.storageMethod);
+  const totalQuantityUnit = readNonEmptyString(detailInputs.totalQuantityUnit);
+  const frequencyLabels: Record<string, string> = {
+    once: "1회",
+    sid: "하루 1회",
+    bid: "하루 2회",
+    tid: "하루 3회",
+    qid: "하루 4회",
+    prn: "필요 시",
+    custom: "직접 지시",
+  };
+  const frequencyCounts: Record<string, number> = {
+    once: 1,
+    sid: 1,
+    bid: 2,
+    tid: 3,
+    qid: 4,
+  };
+  const timingLabels: Record<string, string> = {
+    before_meal: "식전",
+    after_meal: "식후",
+    with_meal: "식사와 함께",
+    any_time: "시간 무관",
+  };
+  const storageLabels: Record<string, string> = {
+    room_temp: "실온",
+    room_temp_light_protected: "실온·차광",
+    refrigerated: "냉장",
+    refrigerated_light_protected: "냉장·차광",
+  };
+  return {
+    days,
+    dose:
+      doseAmount !== undefined && doseUnit
+        ? `${doseAmount} ${doseUnit}`
+        : undefined,
+    frequency: frequencyCode
+      ? (frequencyLabels[frequencyCode] ?? frequencyCode)
+      : undefined,
+    medicationGuide: readNonEmptyString(detailInputs.guardianNote),
+    servings: frequencyCode ? frequencyCounts[frequencyCode] : undefined,
+    storage: storageCode
+      ? (storageLabels[storageCode] ?? storageCode)
+      : undefined,
+    timing: timingCode ? (timingLabels[timingCode] ?? timingCode) : undefined,
+    totalQuantityUnit,
+  };
 }
 
 function readNonEmptyString(...values: unknown[]) {
@@ -1942,12 +2025,17 @@ function DispensingContentBody({
     selectedFulfillmentWorkItem,
   );
   const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
-    allowLegacyFixtureFallback
-      ? cloneOrderTableGroups(selectedQueueItemId)
-      : createLiveOrderTableGroups(
+    selectedFulfillmentWorkItem
+      ? createLiveOrderTableGroups(
           selectedQueueItem,
           selectedFulfillmentWorkItem,
-        ),
+        )
+      : allowLegacyFixtureFallback
+        ? cloneOrderTableGroups(selectedQueueItemId)
+        : createLiveOrderTableGroups(
+            selectedQueueItem,
+            selectedFulfillmentWorkItem,
+          ),
   );
   const selectedQueueStatusLabel = getQueueStatusLabel(
     moduleId,

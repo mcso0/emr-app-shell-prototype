@@ -647,7 +647,11 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     hospitalInstruction: item.internalInstruction ?? "",
     inHospitalName:
       dispensingProfileNames.korean ?? item.inHospitalOrderName,
-    isActive: item.availabilityStatus === "active",
+    isActive:
+      item.availabilityStatus === "active" ||
+      (item.availabilityStatus === "pending_activation" &&
+        item.dispensingLineage?.serviceReviewOnly === true &&
+        item.priceKrw !== null),
     isTaxable: item.taxIncluded,
     memo: buildCatalogMemo(item),
     orderType: "individual",
@@ -741,7 +745,14 @@ function buildWorkspaceCatalogPatchFromHospitalOrder(
 
   return {
     aliases: splitAliases(draft.aliases),
-    availabilityStatus: draft.isActive ? "active" : "paused",
+    availabilityStatus:
+      source.dispensingLineage?.serviceReviewOnly === true
+        ? draft.isActive
+          ? "pending_activation"
+          : "paused"
+        : draft.isActive
+          ? "active"
+          : "paused",
     billingName: draft.billingName,
     billingReflectionEnabled: draft.billable,
     careGuide: draft.careGuide,
@@ -976,7 +987,11 @@ function buildCatalogMemo(item: OrderCatalogItem) {
   const parts = [
     item.customizationState ? `customization:${item.customizationState}` : null,
     item.presetMergeStatus ? `merge:${item.presetMergeStatus}` : null,
-    item.availabilityStatus === "pending_activation" ? "검토 후 활성화" : null,
+    item.dispensingLineage?.serviceReviewOnly
+      ? "서비스 검토용"
+      : item.availabilityStatus === "pending_activation"
+        ? "검토 후 활성화"
+        : null,
     item.catalogRevision ? `revision:${item.catalogRevision}` : null,
   ];
 

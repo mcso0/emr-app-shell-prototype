@@ -4181,6 +4181,21 @@ const chartOrderFieldOptionLabels: Record<string, string> = {
   tablet: "정",
   capsule: "캡슐",
   drop: "방울",
+  pipette: "피펫",
+  application: "회분",
+  spray: "회 분사",
+  before_meal: "식전",
+  after_meal: "식후",
+  with_meal: "식사와 함께",
+  any_time: "시간 무관",
+  room_temp: "실온",
+  room_temp_light_protected: "실온·차광",
+  refrigerated: "냉장",
+  refrigerated_light_protected: "냉장·차광",
+  transdermal: "경피",
+  oromucosal: "구강점막",
+  inhalation: "흡입",
+  nasal: "비강",
   once: "1회",
   sid: "SID",
   bid: "BID",
@@ -6959,13 +6974,14 @@ function buildChartOrderDraftRowFromCatalog({
     updatedAt: now,
   };
   const quantityInput = "1";
+  const defaultDetailInputs = readCatalogDefaultDetailInputs(row);
 
   return {
     billingName: row.billingName,
     catalogSearchRow: row,
     committedBillingName: "",
     committedQuantityInput: "",
-    detailInputs: {},
+    detailInputs: defaultDetailInputs,
     detailSchemaVersion: row.detailSchemaVersion ?? 1,
     groupTitle: row.rowType === "set" ? "Order 세트" : "Workspace catalog",
     order,
@@ -6979,6 +6995,24 @@ function buildChartOrderDraftRowFromCatalog({
           row.appliedSnapshot.appliedPriceKrw)
         : row.appliedSnapshot.appliedPriceKrw,
   };
+}
+
+function readCatalogDefaultDetailInputs(
+  row: ChartOrderCatalogSearchRow,
+): Record<string, unknown> {
+  const snapshot = row.appliedSnapshot as Record<string, unknown>;
+  const direct = snapshot.defaultDetailInputs;
+  if (isRecordValue(direct)) return structuredClone(direct);
+  const medicationMetadata = snapshot.medicationMetadata;
+  if (isRecordValue(medicationMetadata)) {
+    const nested = medicationMetadata.defaultDetailInputs;
+    if (isRecordValue(nested)) return structuredClone(nested);
+  }
+  return {};
+}
+
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function createChartOrderDraftId() {

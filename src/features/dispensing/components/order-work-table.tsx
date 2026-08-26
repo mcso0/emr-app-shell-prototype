@@ -40,6 +40,7 @@ type OrderWorkTableProps = {
 };
 
 const numericDiffFields = new Set<OrderDiffField>([
+  "dose",
   "days",
   "servings",
   "amount",
@@ -381,6 +382,39 @@ export function OrderWorkTable({
         ),
       },
       {
+        accessorKey: "dose",
+        header: "1회 용량",
+        size: 104,
+        minSize: 80,
+        meta: {
+          align: "right",
+          headerInteraction: "sortable",
+          resize: "data-column",
+        },
+        cell: ({ row }) => (
+          <OrderValue
+            field="dose"
+            order={row.original}
+            value={row.original.dose}
+            align="right"
+          />
+        ),
+      },
+      {
+        accessorKey: "frequency",
+        header: "투여 빈도",
+        size: 96,
+        minSize: 80,
+        meta: { headerInteraction: "static", resize: "data-column" },
+        cell: ({ row }) => (
+          <OrderValue
+            field="frequency"
+            order={row.original}
+            value={row.original.frequency}
+          />
+        ),
+      },
+      {
         accessorKey: "days",
         header: "일수",
         size: 80,
@@ -434,7 +468,7 @@ export function OrderWorkTable({
       },
       {
         accessorKey: "amount",
-        header: "용량",
+        header: "청구 수량",
         size: 128,
         minSize: 88,
         meta: {
@@ -467,7 +501,7 @@ export function OrderWorkTable({
       },
       {
         accessorKey: "quantity",
-        header: "수량",
+        header: "처방 총량",
         size: 100,
         minSize: 72,
         meta: {

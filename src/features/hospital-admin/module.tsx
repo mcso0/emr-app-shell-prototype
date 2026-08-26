@@ -1603,8 +1603,9 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       },
       {
         accessorFn: (row) =>
-          row.sourceCatalogItem?.availabilityStatus ??
-          (row.isActive ? "active" : "inactive"),
+          row.isActive
+            ? "active"
+            : row.sourceCatalogItem?.availabilityStatus ?? "inactive",
         id: "status",
         enableSorting: false,
         meta: {
@@ -1618,12 +1619,17 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           const pendingActivation =
             row.original.sourceCatalogItem?.availabilityStatus ===
             "pending_activation";
+          const serviceReviewActive =
+            pendingActivation &&
+            row.original.sourceCatalogItem?.dispensingLineage
+              ?.serviceReviewOnly === true &&
+            row.original.isActive;
 
           return (
             <EmrTableCellText
               className={cn(
                 "font-semibold",
-                pendingActivation
+                pendingActivation && !serviceReviewActive
                   ? "text-[var(--emr-status-warning-text)]"
                   : row.original.isActive
                     ? "text-[var(--emr-status-success-text)]"
@@ -1631,7 +1637,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
               )}
               mode="one-line"
             >
-              {pendingActivation
+              {pendingActivation && !serviceReviewActive
                 ? "검토 대기"
                 : row.original.isActive
                   ? "사용"

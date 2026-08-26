@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  buildWorkspaceCatalogMutationFromHospitalOrder,
+  mapWorkspaceCatalogItemToHospitalOrder,
+} from "../src/features/hospital-admin/data";
+import type { OrderCatalogItem } from "../src/features/hospital-admin/server-order-catalog-core";
+
 function createServiceReviewDispensingMasterItem(index: number) {
   const productCode = index === 0 ? "a001270" : `a${String(index).padStart(6, "0")}`;
   const standardOrderId = `cm.order.dispensing-v1-uk-vmd-${productCode}`;
@@ -9,13 +15,14 @@ function createServiceReviewDispensingMasterItem(index: number) {
     index === 0
       ? "Betamox Palatable Drops Powder for Oral Suspension 50 mg/ml"
       : `Service Review Dispensing Product ${index + 1}`;
+  const priceKrw = index === 0 ? 13_500 : 7_000 + (index % 30) * 500;
 
   return {
     id: `master-workspace-clair-cheongdam-${standardOrderId}`,
     aliases: [],
     availabilityStatus: "pending_activation",
     billingName: standardOrderId,
-    billingReflectionEnabled: false,
+    billingReflectionEnabled: true,
     catalogRevision: 2,
     categoryGroup: "medication",
     categoryLabel: "CG_MEDICATION_SUPPLY",
@@ -47,11 +54,11 @@ function createServiceReviewDispensingMasterItem(index: number) {
     internalInstruction: "",
     originType: "clair_master",
     presetMergeStatus: "current",
-    priceKrw: null,
+    priceKrw,
     pricingRule: {
-      billingReflectionEnabled: false,
+      billingReflectionEnabled: true,
       priceBasis: "fixed_order_price",
-      priceKrw: null,
+      priceKrw,
       roundingRule: "as_is",
       salesUnit: "per_order",
       taxIncluded: true,
@@ -67,6 +74,28 @@ function createServiceReviewDispensingMasterItem(index: number) {
     workspaceId: "workspace-clair-cheongdam",
   };
 }
+
+test("priced service-review dispensing rows map to effective use without true activation", () => {
+  const source = createServiceReviewDispensingMasterItem(
+    0,
+  ) as unknown as OrderCatalogItem;
+  const hospitalOrder = mapWorkspaceCatalogItemToHospitalOrder(source);
+
+  expect(hospitalOrder).toMatchObject({ isActive: true, price: 13_500 });
+  const mutation = buildWorkspaceCatalogMutationFromHospitalOrder({
+    draft: { ...hospitalOrder, price: 14_500 },
+    source,
+    workspaceId: "workspace-clair-cheongdam",
+  });
+  expect(mutation).toMatchObject({
+    action: "update",
+    patch: {
+      availabilityStatus: "pending_activation",
+      priceKrw: 14_500,
+      pricingRule: { priceKrw: 14_500 },
+    },
+  });
+});
 
 test("hospital admin order management opens with category and subcategory navigation", async ({
   page,
@@ -498,9 +527,9 @@ test("hospital admin Order management shows all service-review dispensing master
     "Betamox Palatable Drops Powder for Oral Suspension 50 mg/ml",
   );
   await expect(proofRow).toContainText("Amoxicillin 경구현탁용산제");
-  await expect(proofRow).toContainText("검토 대기");
-  await expect(proofRow).toContainText("미설정");
-  await expect(proofRow).not.toContainText("0원");
+  await expect(proofRow).toContainText("사용");
+  await expect(proofRow).toContainText("13,500원");
+  await expect(proofRow).not.toContainText("검토 대기");
 });
 
 test("hospital admin Order Set uses the shared table workspace and revision drawer", async ({

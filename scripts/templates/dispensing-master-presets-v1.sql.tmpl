@@ -1,0 +1,756 @@
+-- Store differentiated service-review prescription presets in the master DB,
+-- project them to the allowlisted adopted workspaces, and carry their editable
+-- values through chart confirmation and dispensing/treatment readback.
+
+set lock_timeout = '5s';
+set statement_timeout = '120s';
+
+create table if not exists master.dispensing_order_prescription_presets (
+  id uuid primary key,
+  preset_key text not null,
+  preset_revision integer not null check (preset_revision > 0),
+  dispensing_profile_id uuid not null,
+  dispensing_profile_revision integer not null check (dispensing_profile_revision > 0),
+  preset_status text not null
+    check (preset_status in ('synthetic_unreviewed', 'clinically_reviewed')),
+  detail_schema_version integer not null check (detail_schema_version = 1),
+  default_detail_inputs jsonb not null
+    check (pg_catalog.jsonb_typeof(default_detail_inputs) = 'object'),
+  medication_metadata jsonb not null
+    check (pg_catalog.jsonb_typeof(medication_metadata) = 'object'),
+  provenance jsonb not null check (pg_catalog.jsonb_typeof(provenance) = 'object'),
+  content_sha256 text not null check (content_sha256 ~ '^[0-9a-f]{64}$'),
+  source_artifact_sha256 text not null check (source_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+  source_evidence_extract_sha256 text not null
+    check (source_evidence_extract_sha256 ~ '^[0-9a-f]{64}$'),
+  source_release_id uuid not null references master.master_releases(id) on delete restrict,
+  is_current boolean not null default true,
+  clinical_use_allowed boolean not null default false,
+  created_at timestamptz not null default pg_catalog.now(),
+  unique (preset_key, preset_revision),
+  unique (id, preset_revision),
+  unique (dispensing_profile_id, dispensing_profile_revision, preset_revision),
+  foreign key (dispensing_profile_id, dispensing_profile_revision)
+    references master.dispensing_order_profiles(id, profile_revision) on delete restrict,
+  check (
+    preset_status <> 'synthetic_unreviewed'
+    or clinical_use_allowed = false
+  ),
+  check (default_detail_inputs ?& array[
+    'doseBasis', 'dose', 'doseUnit', 'route', 'frequency', 'durationDays',
+    'totalQuantity', 'totalQuantityUnit', 'medicationInstruction',
+    'storageMethod', 'compoundNote', 'guardianNote'
+  ])
+);
+
+create unique index if not exists dispensing_order_prescription_presets_current_uq
+  on master.dispensing_order_prescription_presets (
+    dispensing_profile_id,
+    dispensing_profile_revision
+  )
+  where is_current;
+
+create index if not exists dispensing_order_prescription_presets_release_idx
+  on master.dispensing_order_prescription_presets (source_release_id);
+
+revoke all on table master.dispensing_order_prescription_presets
+  from public, anon, authenticated, service_role;
+
+with rows as (
+  select *
+  from pg_catalog.jsonb_to_recordset($presets$__PRESET_ROWS_JSON__$presets$::jsonb)
+  as preset(
+    "presetId" uuid,
+    "presetKey" text,
+    "presetRevision" integer,
+    "dispensingProfileId" uuid,
+    "dispensingProfileRevision" integer,
+    "presetStatus" text,
+    "detailSchemaVersion" integer,
+    "detailInputs" jsonb,
+    "medicationMetadata" jsonb,
+    "provenance" jsonb,
+    "frequencyEvidenceMode" text,
+    "durationEvidenceMode" text,
+    "medicationInstructionEvidenceMode" text,
+    "contentSha256" text,
+    "clinicalUseAllowed" boolean
+  )
+)
+insert into master.dispensing_order_prescription_presets (
+  id,
+  preset_key,
+  preset_revision,
+  dispensing_profile_id,
+  dispensing_profile_revision,
+  preset_status,
+  detail_schema_version,
+  default_detail_inputs,
+  medication_metadata,
+  provenance,
+  content_sha256,
+  source_artifact_sha256,
+  source_evidence_extract_sha256,
+  source_release_id,
+  is_current,
+  clinical_use_allowed
+)
+select
+  preset."presetId",
+  preset."presetKey",
+  preset."presetRevision",
+  preset."dispensingProfileId",
+  preset."dispensingProfileRevision",
+  preset."presetStatus",
+  preset."detailSchemaVersion",
+  preset."detailInputs",
+  preset."medicationMetadata" || pg_catalog.jsonb_build_object(
+    'defaultDetailInputs', preset."detailInputs"
+  ),
+  preset."provenance" || pg_catalog.jsonb_build_object(
+    'sourceExtractEntriesSha256', '__SOURCE_EXTRACT_SHA256__',
+    'inferenceNotice', 'Service-review synthetic preset; a veterinarian must review before real clinical use.',
+    'fieldEvidence', pg_catalog.jsonb_build_object(
+      'productIdentity', 'master_direct',
+      'route', 'master_direct',
+      'dosageForm', 'master_direct',
+      'frequency', preset."frequencyEvidenceMode",
+      'durationDays', preset."durationEvidenceMode",
+      'dose', 'synthetic_product_shaped_inference',
+      'totalQuantity', 'derived_from_synthetic_dose_frequency_duration',
+      'medicationInstruction', preset."medicationInstructionEvidenceMode",
+      'storageMethod', 'spc_direct_normalized'
+    )
+  ),
+  preset."contentSha256",
+  '__ENTRIES_SHA256__',
+  '__SOURCE_EXTRACT_SHA256__',
+  '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid,
+  true,
+  preset."clinicalUseAllowed"
+from rows preset;
+
+do $block$
+declare
+  v_count integer;
+  v_unique_details integer;
+begin
+  select
+    pg_catalog.count(*)::integer,
+    pg_catalog.count(distinct private.clinical_master_sha256(preset.default_detail_inputs))::integer
+  into v_count, v_unique_details
+  from master.dispensing_order_prescription_presets preset
+  where preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid
+    and preset.is_current;
+
+  if v_count <> 108 or v_unique_details <> 108 then
+    raise exception 'dispensing_master_preset_cardinality_mismatch:%/%',
+      v_count, v_unique_details;
+  end if;
+
+  if exists (
+    select 1
+    from master.dispensing_order_prescription_presets preset
+    where preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid
+      and (
+        preset.preset_status <> 'synthetic_unreviewed'
+        or preset.clinical_use_allowed
+        or preset.source_artifact_sha256 <> '__ENTRIES_SHA256__'
+        or preset.source_evidence_extract_sha256 <> '__SOURCE_EXTRACT_SHA256__'
+      )
+  ) then
+    raise exception 'dispensing_master_preset_safety_state_mismatch';
+  end if;
+end;
+$block$;
+
+-- Preserve the owning V1 schema function and add the new dispensing-only
+-- controls through the public name used by draft and confirmation validation.
+do $block$
+begin
+  if pg_catalog.to_regprocedure('private.clair_order_detail_field_schema_v1_pr019_base(text)') is null then
+    alter function private.clair_order_detail_field_schema_v1(text)
+      rename to clair_order_detail_field_schema_v1_pr019_base;
+  end if;
+end;
+$block$;
+
+create or replace function private.clair_order_detail_field_schema_v1(
+  p_clinical_order_type text
+)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  with base as (
+    select private.clair_order_detail_field_schema_v1_pr019_base(
+      p_clinical_order_type
+    ) as schema
+  ),
+  fields as (
+    select case
+      when field.value ->> 'key' = 'doseUnit' then
+        pg_catalog.jsonb_set(
+          field.value,
+          '{options}',
+          '["mg","mg/kg","ml","ml/kg","g","tablet","capsule","drop","pipette","application","spray"]'::jsonb
+        )
+      when field.value ->> 'key' = 'route' then
+        pg_catalog.jsonb_set(
+          field.value,
+          '{options}',
+          '["PO","IV","IM","SC","topical","otic","ophthalmic","transdermal","oromucosal","inhalation","nasal","other"]'::jsonb
+        )
+      else field.value
+    end as value
+    from base,
+      lateral pg_catalog.jsonb_array_elements(base.schema -> 'fields') field(value)
+    where p_clinical_order_type = 'dispensing'
+    union all
+    select pg_catalog.jsonb_build_object(
+      'key', 'totalQuantityUnit', 'valueType', 'string',
+      'label', '조제 단위', 'control', 'select', 'unit', null,
+      'options', '["mg","ml","g","tablet","capsule","drop","pipette","application","spray"]'::jsonb,
+      'displayOrder', 80, 'required', false, 'defaultValue', null,
+      'validation', '{}'::jsonb, 'placement', 'inline', 'bulkEditable', true,
+      'semantics', 'calculation_input', 'preConfirmEditable', true,
+      'postConfirmBehavior', 'amendment',
+      'snapshotPath', 'detailInputs.totalQuantityUnit'
+    ) where p_clinical_order_type = 'dispensing'
+    union all
+    select pg_catalog.jsonb_build_object(
+      'key', 'medicationInstruction', 'valueType', 'string',
+      'label', '복용 시점', 'control', 'select', 'unit', null,
+      'options', '["before_meal","after_meal","with_meal","any_time"]'::jsonb,
+      'displayOrder', 90, 'required', false, 'defaultValue', null,
+      'validation', '{}'::jsonb, 'placement', 'inline', 'bulkEditable', true,
+      'semantics', 'instruction', 'preConfirmEditable', true,
+      'postConfirmBehavior', 'amendment',
+      'snapshotPath', 'detailInputs.medicationInstruction'
+    ) where p_clinical_order_type = 'dispensing'
+    union all
+    select pg_catalog.jsonb_build_object(
+      'key', 'storageMethod', 'valueType', 'string',
+      'label', '보관 방법', 'control', 'select', 'unit', null,
+      'options', '["room_temp","room_temp_light_protected","refrigerated","refrigerated_light_protected"]'::jsonb,
+      'displayOrder', 100, 'required', false, 'defaultValue', null,
+      'validation', '{}'::jsonb, 'placement', 'inline', 'bulkEditable', true,
+      'semantics', 'instruction', 'preConfirmEditable', true,
+      'postConfirmBehavior', 'amendment',
+      'snapshotPath', 'detailInputs.storageMethod'
+    ) where p_clinical_order_type = 'dispensing'
+  )
+  select case
+    when p_clinical_order_type <> 'dispensing' then base.schema
+    else pg_catalog.jsonb_set(
+      base.schema,
+      '{fields}',
+      coalesce((
+        select pg_catalog.jsonb_agg(fields.value order by (fields.value ->> 'displayOrder')::integer)
+        from fields
+      ), '[]'::jsonb)
+    )
+  end
+  from base;
+$function$;
+
+revoke all on function private.clair_order_detail_field_schema_v1(text)
+  from public, anon, authenticated, service_role;
+
+create or replace function private.clair_current_dispensing_master_preset_metadata(
+  p_profile_id uuid,
+  p_profile_revision integer
+)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select preset.medication_metadata
+  from master.dispensing_order_prescription_presets preset
+  where preset.dispensing_profile_id = p_profile_id
+    and preset.dispensing_profile_revision = p_profile_revision
+    and preset.is_current
+  order by preset.preset_revision desc
+  limit 1;
+$function$;
+
+revoke all on function private.clair_current_dispensing_master_preset_metadata(uuid, integer)
+  from public, anon, authenticated, service_role;
+
+create or replace function private.clair_project_dispensing_master_preset()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_metadata jsonb;
+begin
+  if new.source_dispensing_profile_id is null
+    or new.source_dispensing_profile_revision is null
+  then
+    return new;
+  end if;
+  if tg_op = 'UPDATE'
+    and new.source_dispensing_profile_id is not distinct from old.source_dispensing_profile_id
+    and new.source_dispensing_profile_revision is not distinct from old.source_dispensing_profile_revision
+  then
+    return new;
+  end if;
+  if new.medication_metadata is not null and new.medication_metadata <> '{}'::jsonb then
+    return new;
+  end if;
+  v_metadata := private.clair_current_dispensing_master_preset_metadata(
+    new.source_dispensing_profile_id,
+    new.source_dispensing_profile_revision
+  );
+  if v_metadata is not null then
+    new.medication_metadata := v_metadata;
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function private.clair_project_dispensing_master_preset()
+  from public, anon, authenticated, service_role;
+
+drop trigger if exists order_catalog_project_dispensing_master_preset
+  on public.order_catalog_items;
+create trigger order_catalog_project_dispensing_master_preset
+before insert or update of source_dispensing_profile_id, source_dispensing_profile_revision
+on public.order_catalog_items
+for each row execute function private.clair_project_dispensing_master_preset();
+
+do $block$
+declare
+  v_target_count integer;
+  v_updated_count integer;
+begin
+  select pg_catalog.count(*)::integer
+    into v_target_count
+  from public.order_catalog_items item
+  join master.dispensing_order_prescription_presets preset
+    on preset.dispensing_profile_id = item.source_dispensing_profile_id
+   and preset.dispensing_profile_revision = item.source_dispensing_profile_revision
+   and preset.is_current
+  where item.workspace_id = any(array[
+      'clair-demo',
+      'workspace-clair-cheongdam',
+      'workspace-clinical-master-pilot-v1'
+    ])
+    and preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid;
+
+  if v_target_count <> 324 then
+    raise exception 'dispensing_master_preset_projection_target_count:%', v_target_count;
+  end if;
+
+  if exists (
+    select 1
+    from public.order_catalog_items item
+    join master.dispensing_order_prescription_presets preset
+      on preset.dispensing_profile_id = item.source_dispensing_profile_id
+     and preset.dispensing_profile_revision = item.source_dispensing_profile_revision
+     and preset.is_current
+    where item.workspace_id = any(array[
+        'clair-demo',
+        'workspace-clair-cheongdam',
+        'workspace-clinical-master-pilot-v1'
+      ])
+      and preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid
+      and coalesce(item.medication_metadata, '{}'::jsonb) <> '{}'::jsonb
+  ) then
+    raise exception 'dispensing_master_preset_projection_customization_collision';
+  end if;
+
+  with targets as (
+    select
+      item.workspace_id,
+      item.id,
+      preset.medication_metadata,
+      item.dispensing_profile_snapshot || pg_catalog.jsonb_build_object(
+        'schemaVersion', 2,
+        'prescriptionPreset', pg_catalog.jsonb_build_object(
+          'presetId', preset.id,
+          'presetRevision', preset.preset_revision,
+          'presetStatus', preset.preset_status,
+          'detailSchemaVersion', preset.detail_schema_version,
+          'contentSha256', preset.content_sha256,
+          'clinicalUseAllowed', preset.clinical_use_allowed
+        )
+      ) as next_profile_snapshot
+    from public.order_catalog_items item
+    join master.dispensing_order_prescription_presets preset
+      on preset.dispensing_profile_id = item.source_dispensing_profile_id
+     and preset.dispensing_profile_revision = item.source_dispensing_profile_revision
+     and preset.is_current
+    where item.workspace_id = any(array[
+        'clair-demo',
+        'workspace-clair-cheongdam',
+        'workspace-clinical-master-pilot-v1'
+      ])
+      and preset.source_release_id = '78a57bf0-10a8-47db-9ae1-8a8cff79b2c4'::uuid
+  )
+  update public.order_catalog_items item
+  set
+    medication_metadata = target.medication_metadata,
+    detail_field_schema = private.clair_order_detail_field_schema_v1('dispensing'),
+    dispensing_profile_snapshot = target.next_profile_snapshot,
+    dispensing_profile_snapshot_sha256 = private.clinical_master_sha256(
+      target.next_profile_snapshot
+    ),
+    catalog_revision = item.catalog_revision + 1,
+    updated_at = pg_catalog.now()
+  from targets target
+  where item.workspace_id = target.workspace_id
+    and item.id = target.id;
+
+  get diagnostics v_updated_count = row_count;
+  if v_updated_count <> 324 then
+    raise exception 'dispensing_master_preset_projection_update_count:%', v_updated_count;
+  end if;
+
+  if exists (
+    select 1
+    from public.order_catalog_items item
+    where item.workspace_id = 'clair-foreign-demo'
+      and item.source_dispensing_profile_id is not null
+  ) then
+    raise exception 'dispensing_master_preset_foreign_workspace_changed';
+  end if;
+end;
+$block$;
+
+create or replace function public.clair_list_order_catalog_chart_search_v2(
+  p_workspace_id text
+)
+returns table (
+  row_type text,
+  source_preset_id text,
+  source_preset_version text,
+  display_name text,
+  billing_name text,
+  category_group text,
+  target_species text[],
+  applied_snapshot jsonb,
+  source_set_id text,
+  source_set_revision_id uuid,
+  source_set_revision_no integer,
+  source_set_amount_basis text,
+  source_set_price_krw integer,
+  source_set_range_basis text,
+  source_set_tax_type text,
+  source_set_availability_status text,
+  source_set_needs_composition_review boolean,
+  source_set_validation_status text,
+  source_set_price_ranges jsonb,
+  source_set_pending_review_count integer
+)
+language sql
+security definer
+set search_path = ''
+as $function$
+  with base_rows as (
+    select *
+    from public.clair_list_order_catalog_chart_search_v2_phase2_base(p_workspace_id)
+  ),
+  service_review_rows as (
+    select
+      'individual'::text as row_type,
+      item.standard_order_id as source_preset_id,
+      item.source_preset_version,
+      item.in_hospital_order_name as display_name,
+      item.billing_name,
+      item.category_group,
+      item.target_species,
+      pg_catalog.jsonb_build_object(
+        'sourcePresetId', item.standard_order_id,
+        'sourcePresetVersion', item.source_preset_version,
+        'workspaceCatalogItemId', item.id,
+        'appliedStandardOrderName', item.standard_order_name,
+        'appliedDisplayName', item.in_hospital_order_name,
+        'appliedBillingName', item.billing_name,
+        'appliedPriceKrw', item.price_krw,
+        'appliedSalesUnit', item.sales_unit,
+        'appliedTaxIncluded', item.tax_included,
+        'appliedAmountBasis', item.pricing_rule ->> 'priceBasis',
+        'appliedTargetSpecies', pg_catalog.to_jsonb(item.target_species),
+        'appliedCareGuide', item.care_guide,
+        'appliedInternalInstruction', item.internal_instruction,
+        'appliedDestinationModule', item.default_destination_module,
+        'appliedTaskRequired', item.default_task_required,
+        'appliedBillingReflectionEnabled', item.billing_reflection_enabled,
+        'roundingRule', item.rounding_rule,
+        'billingReflectionEnabled', item.billing_reflection_enabled,
+        'defaultDetailInputs', item.medication_metadata -> 'defaultDetailInputs',
+        'medicationMetadata', item.medication_metadata
+      ) as applied_snapshot,
+      null::text as source_set_id,
+      null::uuid as source_set_revision_id,
+      null::integer as source_set_revision_no,
+      null::text as source_set_amount_basis,
+      null::integer as source_set_price_krw,
+      null::text as source_set_range_basis,
+      null::text as source_set_tax_type,
+      null::text as source_set_availability_status,
+      null::boolean as source_set_needs_composition_review,
+      null::text as source_set_validation_status,
+      null::jsonb as source_set_price_ranges,
+      null::integer as source_set_pending_review_count
+    from public.order_catalog_items item
+    join master.dispensing_order_profiles profile
+      on profile.id = item.source_dispensing_profile_id
+     and profile.profile_revision = item.source_dispensing_profile_revision
+    where item.workspace_id = p_workspace_id
+      and item.availability_status = 'pending_activation'
+      and item.clinical_use_allowed = false
+      and private.clair_dispensing_service_review_allowed(
+        p_workspace_id,
+        profile.source_release_id
+      )
+  ),
+  catalog_rows as (
+    select * from base_rows
+    union all
+    select * from service_review_rows
+  )
+  select
+    base.row_type,
+    base.source_preset_id,
+    base.source_preset_version,
+    base.display_name,
+    base.billing_name,
+    base.category_group,
+    base.target_species,
+    base.applied_snapshot || case
+      when base.row_type = 'set' then pg_catalog.jsonb_build_object(
+        'clinicalOrderType', 'other',
+        'destinationModule', null,
+        'executionMode', 'aggregate',
+        'detailSchemaVersion', 1,
+        'billingEligible', false
+      )
+      else pg_catalog.jsonb_build_object(
+        'clinicalOrderType', catalog.clinical_order_type,
+        'destinationModule', catalog.destination_module,
+        'executionMode', catalog.execution_mode,
+        'detailSchemaVersion', catalog.detail_schema_version,
+        'billingEligible', catalog.billing_eligible,
+        'defaultDetailInputs', catalog.medication_metadata -> 'defaultDetailInputs',
+        'medicationMetadata', catalog.medication_metadata
+      ) || case
+        when catalog.source_dispensing_profile_id is null then '{}'::jsonb
+        else pg_catalog.jsonb_build_object(
+          'dispensingLineage', pg_catalog.jsonb_build_object(
+            'schemaVersion', 2,
+            'sourceDispensingProfileId', catalog.source_dispensing_profile_id,
+            'sourceDispensingProfileRevision', catalog.source_dispensing_profile_revision,
+            'sourceMedicationProductId', catalog.source_medication_product_id,
+            'sourceMedicationProductRevision', catalog.source_medication_product_revision,
+            'sourceClinicalReviewId', catalog.source_clinical_review_id,
+            'sourceEvidenceFingerprint', catalog.source_evidence_fingerprint,
+            'clinicalUseAllowed', catalog.clinical_use_allowed,
+            'serviceReviewOnly', (
+              not catalog.clinical_use_allowed
+              and catalog.availability_status = 'pending_activation'
+              and private.clair_dispensing_service_review_allowed(
+                p_workspace_id,
+                profile.source_release_id
+              )
+            ),
+            'serviceReviewReleaseId', case
+              when not catalog.clinical_use_allowed then profile.source_release_id
+              else null
+            end,
+            'dispensingProfileSnapshot', catalog.dispensing_profile_snapshot,
+            'dispensingProfileSnapshotSha256', catalog.dispensing_profile_snapshot_sha256
+          )
+        )
+      end
+    end as applied_snapshot,
+    base.source_set_id,
+    base.source_set_revision_id,
+    base.source_set_revision_no,
+    base.source_set_amount_basis,
+    base.source_set_price_krw,
+    base.source_set_range_basis,
+    base.source_set_tax_type,
+    base.source_set_availability_status,
+    base.source_set_needs_composition_review,
+    base.source_set_validation_status,
+    base.source_set_price_ranges,
+    base.source_set_pending_review_count
+  from catalog_rows base
+  left join public.order_catalog_items catalog
+    on base.row_type = 'individual'
+   and catalog.workspace_id = p_workspace_id
+   and catalog.id = base.applied_snapshot ->> 'workspaceCatalogItemId'
+  left join master.dispensing_order_profiles profile
+    on profile.id = catalog.source_dispensing_profile_id
+   and profile.profile_revision = catalog.source_dispensing_profile_revision
+  where private.clair_current_user_has_workspace_permission(
+      p_workspace_id,
+      'service_catalog:view'
+    )
+    and (
+      base.row_type = 'set'
+      or catalog.source_dispensing_profile_id is null
+      or (
+        catalog.clinical_use_allowed
+        and master.clair_dispensing_profile_clinical_use_allowed(
+          catalog.source_dispensing_profile_id,
+          catalog.source_dispensing_profile_revision
+        )
+      )
+      or (
+        catalog.availability_status = 'pending_activation'
+        and catalog.clinical_use_allowed = false
+        and private.clair_dispensing_service_review_allowed(
+          p_workspace_id,
+          profile.source_release_id
+        )
+      )
+    );
+$function$;
+
+revoke all on function public.clair_list_order_catalog_chart_search_v2(text)
+  from public, anon, service_role;
+grant execute on function public.clair_list_order_catalog_chart_search_v2(text)
+  to authenticated;
+
+create or replace function private.clair_build_catalog_order_snapshot(
+  p_workspace_id text,
+  p_catalog_item_id text,
+  p_quantity numeric
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $function$
+declare
+  c public.order_catalog_items%rowtype;
+  v_billing_category text;
+  v_order_type text;
+  v_rounding_result numeric;
+  v_raw_line_total numeric;
+  v_line_total numeric;
+  v_path_key text;
+  v_path_item_type text;
+  v_service_review_allowed boolean := false;
+begin
+  if p_quantity is null
+     or p_quantity <= 0
+     or p_quantity > 9999
+     or p_quantity::text = 'NaN' then
+    raise exception 'invalid_order_quantity';
+  end if;
+
+  select * into c
+  from public.order_catalog_items
+  where workspace_id = p_workspace_id
+    and id = p_catalog_item_id;
+  if not found then raise exception 'catalog_item_unavailable'; end if;
+
+  v_service_review_allowed :=
+    private.clair_dispensing_service_review_catalog_item_allowed(
+      p_workspace_id,
+      c.id
+    );
+  if c.availability_status <> 'active' and not v_service_review_allowed then
+    raise exception 'catalog_item_unavailable';
+  end if;
+
+  select path.path_key, action.item_type
+    into v_path_key, v_path_item_type
+  from master.classification_paths path
+  join master.clinical_actions action
+    on action.master_record_id = path.clinical_action_id
+  where path.id = c.classification_path_id
+    and path.retired_in_release_id is null;
+  if v_path_key is null or v_path_item_type is distinct from c.category_group then
+    raise exception 'catalog_classification_unavailable';
+  end if;
+
+  v_billing_category :=
+    private.clair_map_catalog_category_to_billing_category(c.category_group);
+  if v_billing_category is null then raise exception 'unsupported_category_group'; end if;
+  if c.billing_reflection_enabled and c.price_krw is null and not v_service_review_allowed then
+    raise exception 'billable_price_required';
+  end if;
+
+  v_order_type := case c.category_group
+    when 'lab' then 'lab'
+    when 'imaging' then 'imaging'
+    when 'medication' then 'dispensing'
+    else 'treatment'
+  end;
+  v_raw_line_total := p_quantity * coalesce(c.price_krw, 0);
+  v_rounding_result := private.clair_round_catalog_order_amount(
+    v_raw_line_total,
+    c.rounding_rule
+  );
+  if c.price_krw is null then v_rounding_result := null; end if;
+  v_line_total := coalesce(v_rounding_result, v_raw_line_total);
+
+  return pg_catalog.jsonb_build_object(
+    'workspaceCatalogItemId', c.id,
+    'workspaceCatalogRevision', c.catalog_revision,
+    'sourceMasterRecordId', c.source_master_record_id,
+    'sourceMasterRevision', c.source_master_revision,
+    'classificationPathId', c.classification_path_id,
+    'classificationPathKey', v_path_key,
+    'sourcePresetId', c.standard_order_id,
+    'sourcePresetVersion', c.source_preset_version,
+    'standardOrderName', c.standard_order_name,
+    'inHospitalOrderName', c.in_hospital_order_name,
+    'billingName', c.billing_name,
+    'categoryGroup', c.category_group,
+    'billingCategory', v_billing_category,
+    'orderType', v_order_type,
+    'priceKrw', c.price_krw,
+    'taxType', case when c.tax_included then 'taxable' else 'non_taxable' end,
+    'quantity', p_quantity,
+    'lineTotalSnapshot', v_line_total,
+    'roundingResultKrw', v_rounding_result,
+    'salesUnit', c.sales_unit,
+    'taxIncluded', c.tax_included,
+    'roundingRule', c.rounding_rule,
+    'targetSpecies', pg_catalog.to_jsonb(c.target_species),
+    'destinationModule', c.default_destination_module,
+    'taskRequired', c.default_task_required,
+    'billingReflectionEnabled', case
+      when v_service_review_allowed
+        then c.billing_reflection_enabled and c.price_krw is not null
+      else c.billing_reflection_enabled
+    end,
+    'careGuide', c.care_guide,
+    'careGuideDeliveryEnabled', c.care_guide_delivery_enabled,
+    'internalInstruction', c.internal_instruction,
+    'internalInstructionDeliveryEnabled', c.internal_instruction_delivery_enabled,
+    'defaultDetailInputs', c.medication_metadata -> 'defaultDetailInputs',
+    'medicationMetadata', c.medication_metadata,
+    'amountBasis', c.sales_unit,
+    'rowType', 'individual',
+    'priceRuleSource', case
+      when v_service_review_allowed then 'workspace_service_review_price'
+      else 'catalog_price'
+    end,
+    'snapshotSource', 'order_catalog_items'
+  );
+end;
+$function$;
+
+revoke all on function private.clair_build_catalog_order_snapshot(text, text, numeric)
+  from public, anon, authenticated, service_role;
+
+comment on table master.dispensing_order_prescription_presets is
+  'Versioned master prescription presets. synthetic_unreviewed rows support service review only and never imply clinical approval.';
+comment on function public.clair_list_order_catalog_chart_search_v2(text) is
+  'Permission-checked chart search with master prescription defaults and release-pinned service-review lineage.';
+comment on function private.clair_build_catalog_order_snapshot(text, text, numeric) is
+  'Server-owned catalog snapshot including master default lineage; clinician-edited detailInputs are frozen separately at confirmation.';
