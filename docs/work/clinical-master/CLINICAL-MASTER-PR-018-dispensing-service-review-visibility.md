@@ -14,7 +14,7 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-017-evidence-grounded-dispensing-order-master.md"
 dependencies: ["CLINICAL-MASTER-PR-017"]
 updated: "2026-08-26"
-remote_writes: 6
+remote_writes: 7
 ---
 
 # Clinical Master PR-018: Dispensing service-review visibility
@@ -65,7 +65,7 @@ facing service-operations review.
 - Supabase project: `qmerxgzrwaaahpkhjqlc`.
 - Applied migrations: `20260826093004`, `20260826093201`,
   `20260826093549`, `20260826095444`, `20260826095618`, and
-  `20260826100007`.
+  `20260826100007`, plus ETag visibility hotfix `20260826110020`.
 - Readback: 108 service-review rows in each target workspace; foreign control
   zero; fake authenticated non-member zero.
 - Event table has RLS, no external table grants, and immutable update/delete.
@@ -100,6 +100,9 @@ npm run build
   save operation. The client advances to the returned ETag before persisting
   the next snapshot, preventing both partial rapid-entry saves and duplicate
   CAS requests.
+- The draft fingerprint helper is `VOLATILE`, so a writer RPC returns the
+  post-write ETag from the same statement instead of a `STABLE` pre-write
+  snapshot that makes the next serialized save conflict.
 - Supabase advisors: no new unresolved release-blocking finding. The private
   append-only event table intentionally has RLS with no client policy, and the
   authenticated definer RPC is intentionally exposed behind its explicit

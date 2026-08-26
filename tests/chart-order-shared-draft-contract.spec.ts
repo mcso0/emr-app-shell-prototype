@@ -5,6 +5,10 @@ const migration = readFileSync(
   "supabase/migrations/20260825240000_chart_order_shared_draft_contract.sql",
   "utf8",
 );
+const etagVisibilityMigration = readFileSync(
+  "supabase/migrations/20260826170000_chart_order_draft_etag_post_write_visibility.sql",
+  "utf8",
+);
 const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
 
 test("shared draft migration covers every editable value in readback and ETag input", () => {
@@ -42,7 +46,7 @@ test("shared draft save remains CAS-bound and creates no execution artifacts", (
 
 test("chart draft autosaves after 700ms, flushes on field exit, and blocks actions on conflict", () => {
   expect(chartModule).toMatch(
-    /orderDraftSaveState === "saving" \|\|\s*!draftTouchedRef\.current[\s\S]*?window\.setTimeout\(\(\) => \{\s*if \(!draftTouchedRef\.current\) return;\s*void autoSaveDraftRef\.current\(\);\s*\}, 700\);/,
+    /orderDraftSaveState === "saving" \|\|\s*!draftTouchedRef\.current[\s\S]*?window\.setTimeout\(\(\) => \{\s*if \(!draftTouchedRef\.current\) return;[\s\S]*?void autoSaveDraftRef\.current\(\);\s*\}, 700\);/,
   );
   expect(chartModule).toContain("window.setTimeout(() => {");
   expect(chartModule).toContain("}, 700);");
@@ -56,10 +60,19 @@ test("chart draft autosaves after 700ms, flushes on field exit, and blocks actio
 
 test("chart draft serializes edits made during an in-flight save", () => {
   expect(chartModule).toMatch(
-    /const inFlightSave = orderDraftSavePromiseRef\.current;\s*if \(inFlightSave\) return inFlightSave;/,
+    /const inFlightSave = orderDraftSavePromiseRef\.current;\s*if \(inFlightSave\) \{[\s\S]*?return inFlightSave;\s*\}/,
   );
   expect(chartModule).toMatch(
-    /orderDraftSaveInFlightRef\.current = true;\s*while \(draftTouchedRef\.current\) \{[\s\S]*?const expectedEtag = orderDraftEtagRef\.current;[\s\S]*?draftTouchedRef\.current = false;[\s\S]*?const result = await saveChartOrderDraftRoute\([\s\S]*?orderDraftEtagRef\.current = result\.etag;/,
+    /orderDraftSaveInFlightRef\.current = true;[\s\S]*?while \(draftTouchedRef\.current\) \{[\s\S]*?const expectedEtag = orderDraftEtagRef\.current;[\s\S]*?draftTouchedRef\.current = false;[\s\S]*?const result = await saveChartOrderDraftRoute\([\s\S]*?orderDraftEtagRef\.current = result\.etag;/,
   );
   expect(chartModule).not.toContain("window.setTimeout(() => {\n          if (draftTouchedRef.current) void autoSaveDraftRef.current();\n        }, 0);");
+});
+
+test("draft writers return a post-write ETag from the same RPC statement", () => {
+  expect(etagVisibilityMigration).toContain(
+    "alter function private.clair_b3_order_draft_etag(text, uuid) volatile;",
+  );
+  expect(etagVisibilityMigration).not.toMatch(
+    /\b(drop|truncate|delete|grant)\b/i,
+  );
 });
