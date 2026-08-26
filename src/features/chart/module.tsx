@@ -3769,47 +3769,103 @@ function AssessmentPanel({
     commitDiagnosisRows(diagnosisRows.filter((row) => row.id !== diagnosisId));
   };
 
-  const addDiagnosesFromClassification = (
+  const classificationInitialSelection = useMemo(() => {
+    const catalogById = new Map(
+      classificationCatalog.map((item) => [item.id, item]),
+    );
+
+    return diagnosisRows.flatMap<AssessmentClassificationSelection>((row) => {
+      if (!row.diagnosisCatalogId) return [];
+      const catalogItem = catalogById.get(row.diagnosisCatalogId) ?? {
+        id: row.diagnosisCatalogId,
+        name: row.diagnosisText,
+        systemLabel: row.systemLabel,
+        categoryLabel: row.diseaseGroupLabel ?? "",
+        synonyms: [],
+        defaultType: row.diagnosisType,
+      };
+
+      return [
+        {
+          ...catalogItem,
+          diagnosisType: row.diagnosisType,
+          isPrimary: row.isPrimary,
+        },
+      ];
+    });
+  }, [classificationCatalog, diagnosisRows]);
+
+  const applyDiagnosesFromClassification = (
     selections: AssessmentClassificationSelection[],
   ) => {
-    const existingIds = new Set(
-      diagnosisRows
-        .map((row) => row.diagnosisCatalogId)
-        .filter((id): id is string => Boolean(id)),
+    const existingByCatalogId = new Map(
+      diagnosisRows.flatMap((row) =>
+        row.diagnosisCatalogId ? [[row.diagnosisCatalogId, row] as const] : [],
+      ),
     );
-    const existingNames = new Set(
-      diagnosisRows.map((row) => normalizeDiagnosisQuery(row.diagnosisText)),
-    );
-    const nextRows = [...diagnosisRows];
-
-    selections.forEach((item) => {
-      if (
-        existingIds.has(item.id) ||
-        existingNames.has(normalizeDiagnosisQuery(item.name))
-      ) {
-        return;
+    const toDiagnosisRow = (
+      item: AssessmentClassificationSelection,
+    ): EditableDiagnosis => {
+      const existing = existingByCatalogId.get(item.id);
+      if (existing) {
+        return {
+          ...existing,
+          diagnosisType: item.diagnosisType,
+          isPrimary: item.isPrimary,
+        };
       }
 
-      nextRows.push({
+      return {
         catalogMatched: true,
         createdAt: new Date().toISOString(),
         createdByUserId: "user-vet-suji",
         diagnosisCatalogId: item.id,
         diagnosisText: item.name,
         diagnosisType: item.diagnosisType,
+        diseaseGroupLabel: item.categoryLabel,
         encounterId: soapNote?.encounterId ?? "session-only-encounter",
         id: `diagnosis-session-${item.id}`,
         isPrimary: item.isPrimary,
-        sortOrder: nextRows.length,
+        sortOrder: 0,
         systemLabel: item.systemLabel,
-      });
-      existingIds.add(item.id);
-      existingNames.add(normalizeDiagnosisQuery(item.name));
-    });
+      };
+    };
+    let selectionIndex = 0;
+    const nextRows: EditableDiagnosis[] = [];
 
-    if (nextRows.length !== diagnosisRows.length) {
-      commitDiagnosisRows(nextRows);
-    }
+    diagnosisRows.forEach((row) => {
+      if (!row.diagnosisCatalogId) {
+        nextRows.push(row);
+        return;
+      }
+      const selection = selections[selectionIndex];
+      selectionIndex += 1;
+      if (selection) nextRows.push(toDiagnosisRow(selection));
+    });
+    selections
+      .slice(selectionIndex)
+      .forEach((selection) => nextRows.push(toDiagnosisRow(selection)));
+
+    const orderedRows = nextRows.map((row, index) => ({
+      ...row,
+      sortOrder: index,
+    }));
+    const currentFingerprint = diagnosisRows.map((row) => [
+      row.id,
+      row.diagnosisCatalogId,
+      row.diagnosisType,
+      row.isPrimary,
+      row.sortOrder,
+    ]);
+    const nextFingerprint = orderedRows.map((row) => [
+      row.id,
+      row.diagnosisCatalogId,
+      row.diagnosisType,
+      row.isPrimary,
+      row.sortOrder,
+    ]);
+    if (JSON.stringify(currentFingerprint) !== JSON.stringify(nextFingerprint))
+      commitDiagnosisRows(orderedRows);
   };
 
   return (
@@ -4035,16 +4091,13 @@ function AssessmentPanel({
         catalog={classificationCatalog}
         catalogErrorMessage={classificationCatalogError}
         catalogStatus={classificationCatalogStatus}
-        existingDiagnosisCatalogIds={diagnosisRows
-          .map((row) => row.diagnosisCatalogId)
-          .filter((id): id is string => Boolean(id))}
-        existingDiagnosisNames={diagnosisRows.map((row) => row.diagnosisText)}
         diseaseGroups={classificationCatalogDiseaseGroups}
+        initialSelection={classificationInitialSelection}
         nextCursor={classificationCatalogNextCursor}
         open={classificationSearchOpen}
         systems={classificationCatalogSystems}
         writeDisabled={writeDisabled}
-        onComplete={addDiagnosesFromClassification}
+        onComplete={applyDiagnosesFromClassification}
         onOpenChange={setClassificationSearchOpen}
         onSearchCatalog={searchClassificationCatalog}
       />
