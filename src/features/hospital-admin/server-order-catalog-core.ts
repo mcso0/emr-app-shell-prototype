@@ -3673,6 +3673,10 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
   const billingReflectionEnabled = readBoolean(
     row.billingReflectionEnabled ?? row.billing_reflection_enabled,
   );
+  const defaultDetailInputs =
+    row.defaultDetailInputs ?? row.default_detail_inputs;
+  const medicationMetadata =
+    row.medicationMetadata ?? row.medication_metadata;
   if (
     !sourcePresetId ||
     !sourcePresetVersion ||
@@ -3738,6 +3742,12 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
     billingEligible: readBoolean(
       row.billingEligible ?? row.billing_eligible,
     ),
+    defaultDetailInputs: isRecord(defaultDetailInputs)
+      ? structuredClone(defaultDetailInputs)
+      : undefined,
+    medicationMetadata: isRecord(medicationMetadata)
+      ? (structuredClone(medicationMetadata) as MedicationOrderMetadata)
+      : undefined,
     dispensingLineage: mapDispensingOrderLineageSnapshot(
       row.dispensingLineage ?? row.dispensing_lineage,
     ),

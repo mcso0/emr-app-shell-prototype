@@ -684,6 +684,20 @@ test("order action route wires only server-owned action, billing, and fulfillmen
 
 test("order catalog Supabase gateway reads workspace chart-search rows from RPC", async () => {
   const calls: string[] = [];
+  const defaultDetailInputs = {
+    doseBasis: "patient",
+    dose: 1,
+    doseUnit: "spray",
+    route: "topical",
+    frequency: "bid",
+    durationDays: 10,
+    totalQuantity: 20,
+    totalQuantityUnit: "spray",
+    medicationInstruction: "any_time",
+    storageMethod: "room_temp",
+    compoundNote: "도포 부위와 분사 횟수를 확인한다.",
+    guardianNote: "지정 부위에 하루 2회 적용한다.",
+  };
   const gateway = createSupabaseOrderCatalogGateway({
     async rpc(functionName: string, args: Record<string, unknown>) {
       calls.push(`${functionName}:${args.p_workspace_id}`);
@@ -712,6 +726,13 @@ test("order catalog Supabase gateway reads workspace chart-search rows from RPC"
               appliedDestinationModule: "billing_only",
               appliedTaskRequired: false,
               billingReflectionEnabled: true,
+              defaultDetailInputs,
+              medicationMetadata: {
+                schemaVersion: 2,
+                presetOrigin: "clair_master",
+                presetStatus: "synthetic_unreviewed",
+                defaultDetailInputs,
+              },
             },
           },
         ],
@@ -733,6 +754,11 @@ test("order catalog Supabase gateway reads workspace chart-search rows from RPC"
         appliedBillingName: "진료 상담료",
         appliedPriceKrw: 22000,
         appliedDestinationModule: "billing_only",
+        defaultDetailInputs,
+        medicationMetadata: expect.objectContaining({
+          presetOrigin: "clair_master",
+          defaultDetailInputs,
+        }),
       }),
     }),
   ]);
