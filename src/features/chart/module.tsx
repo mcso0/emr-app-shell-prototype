@@ -2695,6 +2695,28 @@ function matchesPersistedConfirmationDraft({
   });
 }
 
+function matchesPersistedConfirmationResult({
+  orderIds,
+  result,
+}: {
+  orderIds: string[];
+  result: ChartOrderActionRouteResponse;
+}) {
+  if (!result.ok || orderIds.length === 0) return false;
+
+  const confirmedOrderIds = new Set(
+    (result.rows ?? [])
+      .filter(
+        (row) =>
+          row.orderConfirmationStatus === "confirmed" ||
+          row.status === "confirmed",
+      )
+      .map((row) => row.orderId),
+  );
+
+  return orderIds.every((orderId) => confirmedOrderIds.has(orderId));
+}
+
 async function loadChartOrderActions({
   actorHeaders,
   encounterId,
@@ -7480,6 +7502,7 @@ function OrderArea({
   collapsed,
   loading,
   onCollapsedChange,
+  onNavigateToDispensing,
   orderGroups,
   writeDisabled,
 }: {
@@ -7489,6 +7512,7 @@ function OrderArea({
   collapsed: boolean;
   loading: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
+  onNavigateToDispensing?: () => void;
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
 }) {
@@ -8252,6 +8276,17 @@ function OrderArea({
     orderDraftSaveState,
     writeDisabled,
   ]);
+  const recoverPersistedConfirmation = async (orderIds: string[]) => {
+    const readback = await loadChartOrderActions({
+      actorHeaders,
+      encounterId: bundle.encounter.id,
+      workspaceId: bundle.encounter.workspaceId,
+    });
+
+    return matchesPersistedConfirmationResult({ orderIds, result: readback })
+      ? readback
+      : null;
+  };
   const commitOrderConfirmation = async () => {
     if (writeDisabled || orderDraftSaveState === "conflict") {
       if (orderDraftSaveState === "conflict") {
@@ -8309,6 +8344,19 @@ function OrderArea({
       setOrderDraftSaveState("saved");
       void refreshOrderExecution();
       toast.success("Order 확정 상태를 저장했어요.");
+      const hasDispensingTask =
+        result.tasks?.some(
+          (task) => task.destinationModule === "dispensing",
+        ) ?? false;
+      const hasDispensingOrder =
+        result.rows?.some(
+          (row) =>
+            row.destinationModule === "dispensing" ||
+            row.appliedSnapshot?.destinationModule === "dispensing",
+        ) ?? false;
+      if (hasDispensingTask || hasDispensingOrder) {
+        onNavigateToDispensing?.();
+      }
     };
 
     const selectedRootOrderIds = Array.from(selectedOrderIds).sort();
@@ -8323,7 +8371,7 @@ function OrderArea({
       )
     ) {
       setOrderDraftSaveState("saving");
-      const retryResult = await saveChartOrderActionRoute({
+      let retryResult = await saveChartOrderActionRoute({
         action: "confirm",
         actorHeaders,
         encounterId: bundle.encounter.id,
@@ -8332,6 +8380,12 @@ function OrderArea({
         orderIds: pendingConfirmation.orderIds,
         workspaceId: bundle.encounter.workspaceId,
       });
+      if (!retryResult.ok && retryResult.status >= 500) {
+        retryResult =
+          (await recoverPersistedConfirmation(
+            pendingConfirmation.orderIds,
+          )) ?? retryResult;
+      }
       if (retryResult.ok) {
         applyConfirmedResult(retryResult);
         return;
@@ -8472,7 +8526,7 @@ function OrderArea({
       idempotencyKey,
       orderIds: [...actionOrderIds].sort(),
     };
-    const result = await saveChartOrderActionRoute({
+    let result = await saveChartOrderActionRoute({
       action: "confirm",
       actorHeaders,
       encounterId: bundle.encounter.id,
@@ -8481,6 +8535,13 @@ function OrderArea({
       orderIds: pendingConfirmationRef.current.orderIds,
       workspaceId: bundle.encounter.workspaceId,
     });
+
+    if (!result.ok && result.status >= 500) {
+      result =
+        (await recoverPersistedConfirmation(
+          pendingConfirmationRef.current.orderIds,
+        )) ?? result;
+    }
 
     if (!result.ok) {
       const conflict =
@@ -10384,6 +10445,16 @@ export function ChartContent({
   }
 
   const currentBundle = effectiveBundle;
+  const navigateToDispensing = () => {
+    const href = buildWorkspaceSurfaceRoute({
+      moduleId: "dispensing",
+      params: { encounterId: currentBundle.encounter.id },
+      search: searchParams,
+      workspaceId,
+    });
+
+    onNavigateWorkspaceSurface?.(href, "dispensing");
+  };
   const consultationCallRooms = getConsultationCallRooms();
   const selectedCallRoom = consultationCallRooms.find(
     (room) => room.id === selectedCallRoomId,
@@ -11061,6 +11132,7 @@ export function ChartContent({
               collapsed={orderPanelCollapsed}
               loading={orderLoading}
               onCollapsedChange={setOrderPanelCollapsed}
+              onNavigateToDispensing={navigateToDispensing}
               orderGroups={orderGroups}
               writeDisabled={detailHydrationPending}
             />
