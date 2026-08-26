@@ -8115,11 +8115,13 @@ function OrderArea({
       !canUpdateOrders ||
       !orderDraftEtag ||
       orderDraftSaveState === "loading" ||
-      orderDraftSaveState === "saving"
+      orderDraftSaveState === "saving" ||
+      !draftTouchedRef.current
     )
       return;
 
     const timer = window.setTimeout(() => {
+      if (!draftTouchedRef.current) return;
       void autoSaveDraftRef.current();
     }, 700);
     return () => window.clearTimeout(timer);

@@ -14,6 +14,18 @@ const eventIndexMigrationPath = resolve(
   process.cwd(),
   "supabase/migrations/20260826162000_clinical_master_dispensing_service_review_event_index.sql",
 );
+const executionMigrationPath = resolve(
+  process.cwd(),
+  "supabase/migrations/20260826163000_clinical_master_dispensing_service_review_execution.sql",
+);
+const unpricedExecutionMigrationPath = resolve(
+  process.cwd(),
+  "supabase/migrations/20260826164000_clinical_master_dispensing_service_review_unpriced_execution.sql",
+);
+const speciesExecutionMigrationPath = resolve(
+  process.cwd(),
+  "supabase/migrations/20260826165000_clinical_master_dispensing_service_review_species_execution.sql",
+);
 
 test("service-review migration is bounded to the three target workspaces and keeps clinical approval false", async () => {
   const migration = await readFile(migrationPath, "utf8");
@@ -50,4 +62,59 @@ test("service-review event release foreign key has a covering index", async () =
   expect(migration).toContain(
     "clinical_master_dispensing_service_review_events (release_id)",
   );
+});
+
+test("service-review execution remains pending, clinically disabled, and allowlisted", async () => {
+  const migration = await readFile(executionMigrationPath, "utf8");
+
+  expect(migration).toContain(
+    "private.clair_dispensing_service_review_catalog_item_allowed",
+  );
+  expect(migration).toContain("item.availability_status = 'pending_activation'");
+  expect(migration).toContain("item.clinical_use_allowed = false");
+  expect(migration).toContain(
+    "private.clair_dispensing_service_review_allowed(\n        p_workspace_id,\n        profile.source_release_id",
+  );
+  expect(migration).toContain("if c.availability_status <> 'active'");
+  expect(migration).toContain("raise exception 'catalog_item_unavailable'");
+});
+
+test("atomic confirmation forward patch is fail-closed and changes one predicate", async () => {
+  const migration = await readFile(executionMigrationPath, "utf8");
+
+  expect(migration).toContain("select pg_get_functiondef(v_function) into v_definition");
+  expect(migration).toContain("if v_needle_count <> 1 then");
+  expect(migration).toContain(
+    "raise exception 'clair_confirm_chart_order_candidates_definition_unexpected'",
+  );
+  expect(migration).toContain(
+    "and not private.clair_dispensing_service_review_catalog_item_allowed(\n            atomic.workspace_id,\n            catalog.id",
+  );
+});
+
+test("unpriced service-review orders stay outside billing reflection", async () => {
+  const migration = await readFile(unpricedExecutionMigrationPath, "utf8");
+
+  expect(migration).toContain("v_service_review_allowed boolean := false");
+  expect(migration).toContain(
+    "and c.price_krw is null\n    and not v_service_review_allowed",
+  );
+  expect(migration).toContain(
+    "when v_service_review_allowed then false\n      else c.billing_reflection_enabled",
+  );
+  expect(migration).toContain("raise exception 'billable_price_required'");
+});
+
+test("service-review species usage is labeled operational and does not claim approval", async () => {
+  const migration = await readFile(speciesExecutionMigrationPath, "utf8");
+
+  expect(migration).toContain("and not v_service_review_allowed");
+  expect(migration).toContain(
+    "when v_service_review_allowed then 'service_operations_review'",
+  );
+  expect(migration).toContain(
+    "when v_master_species_approved or v_service_review_allowed then null",
+  );
+  expect(migration).toContain("if v_count <> 1 then");
+  expect(migration).not.toContain("then 'master_reviewed_service_review'");
 });
