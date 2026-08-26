@@ -630,6 +630,7 @@ export function formatHospitalOrderAmount(amount: number) {
 
 export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): HospitalOrderCatalogItem {
   const placement = resolveHospitalOrderPlacement(item);
+  const dispensingProfileNames = readDispensingProfileNames(item);
 
   return {
     id: item.id,
@@ -644,7 +645,8 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
         : undefined,
     delivery: item.defaultTaskRequired ? "deliver" : "do-not-deliver",
     hospitalInstruction: item.internalInstruction ?? "",
-    inHospitalName: item.inHospitalOrderName,
+    inHospitalName:
+      dispensingProfileNames.korean ?? item.inHospitalOrderName,
     isActive: item.availabilityStatus === "active",
     isTaxable: item.taxIncluded,
     memo: buildCatalogMemo(item),
@@ -659,7 +661,8 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     saleUnit: mapSaleUnit(item.salesUnit),
     serviceItemType: item.categoryGroup,
     sourceCatalogItem: item,
-    standardName: item.standardOrderName,
+    standardName:
+      dispensingProfileNames.english ?? item.standardOrderName,
     subcategoryId: placement.subcategoryId,
     target: mapTargetSpecies(item.targetSpecies),
     updatedAtLabel: formatCatalogUpdatedAt(item.updatedAt),
@@ -832,6 +835,9 @@ function resolveHospitalOrderPlacement(item: OrderCatalogItem): {
   }
 
   if (item.categoryGroup === "medication") {
+    if (item.dispensingLineage) {
+      return { categoryId: "dispensing", subcategoryId: "injection" };
+    }
     if (label.includes("주사")) return { categoryId: "dispensing", subcategoryId: "injection" };
     if (label.includes("물품")) return { categoryId: "medical-supply", subcategoryId: "medical-supply" };
     return { categoryId: "dispensing", subcategoryId: "oral-medication" };
@@ -848,6 +854,22 @@ function resolveHospitalOrderPlacement(item: OrderCatalogItem): {
   }
 
   return { categoryId: "medical-supply", subcategoryId: "medical-supply" };
+}
+
+function readDispensingProfileNames(item: OrderCatalogItem) {
+  const snapshot = item.dispensingLineage?.dispensingProfileSnapshot;
+  if (!snapshot) return {};
+
+  const korean = snapshot.koreanDraftName;
+  const english = snapshot.englishProductName;
+  return {
+    korean:
+      typeof korean === "string" && korean.trim() ? korean.trim() : undefined,
+    english:
+      typeof english === "string" && english.trim()
+        ? english.trim()
+        : undefined,
+  };
 }
 
 function mapTargetSpecies(species: OrderCatalogItem["targetSpecies"]): HospitalOrderTarget {

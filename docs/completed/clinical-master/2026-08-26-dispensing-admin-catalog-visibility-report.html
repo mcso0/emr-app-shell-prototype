@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>조제 마스터 Order 관리 노출 수정 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #171717; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 880px; margin: 40px auto; padding: 36px; background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; }
+      h1 { margin-top: 0; font-size: 28px; }
+      h2 { margin-top: 28px; font-size: 18px; }
+      p, li { font-size: 15px; line-height: 1.7; }
+      code { padding: 2px 6px; border-radius: 6px; background: #f1f3f5; }
+      .summary { padding: 18px; border-radius: 12px; background: #f5f8ff; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>조제 마스터 Order 관리 노출 수정</h1>
+      <p class="summary">
+        원격 DB에 존재하던 조제 마스터 108건이 병원관리의 <strong>처방</strong>으로
+        잘못 분류되어 <strong>조제 0</strong>으로 보이던 화면 매핑을 수정했다.
+      </p>
+
+      <h2>원인</h2>
+      <p>
+        청담점에는 기존 medication 54건과 조제 마스터 108건이 있었다. 화면이
+        조제 마스터 lineage를 확인하지 않고 모두 일반 medication으로 분류해
+        <code>처방 162</code>, <code>조제 0</code>을 표시했다.
+      </p>
+
+      <h2>변경</h2>
+      <ul>
+        <li>dispensing lineage가 있는 마스터는 병원관리 <strong>조제</strong>에 배치한다.</li>
+        <li>마스터 스냅샷의 영문 제품명과 한글 검토명을 목록에 표시한다.</li>
+        <li>임상 미활성 상태는 <strong>검토 대기</strong>, 미정 가격은 <strong>미설정</strong>으로 표시한다.</li>
+        <li>기존 처방, 마스터 원본, 임상 승인, 가격, 활성화 상태는 변경하지 않는다.</li>
+      </ul>
+
+      <h2>검증</h2>
+      <p>
+        브라우저 회귀 테스트에서 108건을 주입해 <code>조제 108</code>, A001270의
+        영문·한글 제품명, <code>검토 대기</code>, <code>미설정</code> 표시를 확인한다.
+      </p>
+
+      <h2>남은 경계</h2>
+      <p>
+        이 변경은 서비스 운영 검토용 노출만 수정한다. 실제 진료용 임상 활성화는
+        계속 별도 승인과 임상 검토가 필요하다.
+      </p>
+    </main>
+  </body>
+</html>

@@ -1,5 +1,73 @@
 import { expect, test } from "@playwright/test";
 
+function createServiceReviewDispensingMasterItem(index: number) {
+  const productCode = index === 0 ? "a001270" : `a${String(index).padStart(6, "0")}`;
+  const standardOrderId = `cm.order.dispensing-v1-uk-vmd-${productCode}`;
+  const koreanName =
+    index === 0 ? "Amoxicillin 경구현탁용산제" : `검토용 조제 오더 ${index + 1}`;
+  const englishName =
+    index === 0
+      ? "Betamox Palatable Drops Powder for Oral Suspension 50 mg/ml"
+      : `Service Review Dispensing Product ${index + 1}`;
+
+  return {
+    id: `master-workspace-clair-cheongdam-${standardOrderId}`,
+    aliases: [],
+    availabilityStatus: "pending_activation",
+    billingName: standardOrderId,
+    billingReflectionEnabled: false,
+    catalogRevision: 2,
+    categoryGroup: "medication",
+    categoryLabel: "CG_MEDICATION_SUPPLY",
+    careGuide: "",
+    clinicalOrderType: "dispensing",
+    customizationState: "unmodified",
+    defaultDestinationModule: "dispensing",
+    defaultTaskRequired: true,
+    destinationModule: "dispensing",
+    dispensingLineage: {
+      schemaVersion: 1,
+      sourceDispensingProfileId: `profile-${productCode}`,
+      sourceDispensingProfileRevision: 1,
+      sourceMedicationProductId: `product-${productCode}`,
+      sourceMedicationProductRevision: 1,
+      sourceClinicalReviewId: null,
+      sourceEvidenceFingerprint: "a".repeat(64),
+      clinicalUseAllowed: false,
+      serviceReviewOnly: true,
+      serviceReviewReleaseId: "78a57bf0-10a8-47db-9ae1-8a8cff79b2c4",
+      dispensingProfileSnapshot: {
+        englishProductName: englishName,
+        koreanDraftName: koreanName,
+      },
+      dispensingProfileSnapshotSha256: "b".repeat(64),
+    },
+    executionMode: "routed",
+    inHospitalOrderName: standardOrderId,
+    internalInstruction: "",
+    originType: "clair_master",
+    presetMergeStatus: "current",
+    priceKrw: null,
+    pricingRule: {
+      billingReflectionEnabled: false,
+      priceBasis: "fixed_order_price",
+      priceKrw: null,
+      roundingRule: "as_is",
+      salesUnit: "per_order",
+      taxIncluded: true,
+    },
+    roundingRule: "as_is",
+    salesUnit: "per_order",
+    sourcePresetVersion: "master-r1",
+    standardOrderId,
+    standardOrderName: standardOrderId,
+    targetSpecies: ["dog", "cat"],
+    taxIncluded: true,
+    updatedAt: "2026-08-26T01:19:38.373902Z",
+    workspaceId: "workspace-clair-cheongdam",
+  };
+}
+
 test("hospital admin order management opens with category and subcategory navigation", async ({
   page,
 }) => {
@@ -360,6 +428,79 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(
     page.getByTestId("hospital-order-row-ord-med-maropitant"),
   ).toBeVisible();
+});
+
+test("hospital admin Order management shows all service-review dispensing masters under 조제", async ({
+  page,
+}) => {
+  const masterItems = Array.from({ length: 108 }, (_, index) =>
+    createServiceReviewDispensingMasterItem(index),
+  );
+  const legacyPrescriptionItems = Array.from({ length: 54 }, (_, index) => {
+    const base = createServiceReviewDispensingMasterItem(index + 108);
+    return {
+      ...base,
+      id: `legacy-prescription-${index + 1}`,
+      availabilityStatus: "active",
+      billingName: `기존 처방 ${index + 1}`,
+      clinicalOrderType: "medication",
+      dispensingLineage: undefined,
+      inHospitalOrderName: `기존 처방 ${index + 1}`,
+      originType: "workspace_custom",
+      priceKrw: 4500,
+      pricingRule: { ...base.pricingRule, priceKrw: 4500 },
+      standardOrderId: `legacy-prescription-${index + 1}`,
+      standardOrderName: `기존 처방 ${index + 1}`,
+    };
+  });
+
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/hospital-admin/order-catalog",
+    async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          items: [...legacyPrescriptionItems, ...masterItems],
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    "/w/workspace-clair-cheongdam/orders?modulePanel=open&section=orders",
+  );
+
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  await expect(
+    sidePanel.getByRole("button", { name: /^처방\s+54$/ }),
+  ).toBeVisible();
+  const dispensingLeaf = sidePanel.getByRole("button", {
+    name: /^조제\s+108$/,
+  });
+  await expect(dispensingLeaf).toBeVisible();
+  await dispensingLeaf.click();
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "조제", exact: true }),
+  ).toBeVisible();
+  const proofRow = page.getByTestId(
+    "hospital-order-row-master-workspace-clair-cheongdam-cm.order.dispensing-v1-uk-vmd-a001270",
+  );
+  await expect(proofRow).toBeVisible();
+  await expect(proofRow).toContainText(
+    "Betamox Palatable Drops Powder for Oral Suspension 50 mg/ml",
+  );
+  await expect(proofRow).toContainText("Amoxicillin 경구현탁용산제");
+  await expect(proofRow).toContainText("검토 대기");
+  await expect(proofRow).toContainText("미설정");
+  await expect(proofRow).not.toContainText("0원");
 });
 
 test("hospital admin Order Set uses the shared table workspace and revision drawer", async ({
