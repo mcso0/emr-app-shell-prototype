@@ -6336,6 +6336,7 @@ test("chart confirmation continues after an ambiguous draft response only when r
   };
   let draftPatchCount = 0;
   let draftReadbackCount = 0;
+  let confirmationPersisted = false;
   const actionBodies: Array<Record<string, unknown>> = [];
   await page.route(
     "**/api/workspaces/clair-demo/chart/order-drafts*",
@@ -6392,6 +6393,12 @@ test("chart confirmation continues after an ambiguous draft response only when r
     "**/api/workspaces/clair-demo/chart/order-actions*",
     async (route) => {
       if (route.request().method() === "GET") {
+        const confirmedRow = {
+          ...currentRow,
+          orderConfirmationStatus: "confirmed",
+          status: "confirmed",
+          updatedAt: "2026-08-26T12:02:00.000Z",
+        };
         await route.fulfill({
           contentType: "application/json",
           status: 200,
@@ -6399,7 +6406,7 @@ test("chart confirmation continues after an ambiguous draft response only when r
             ok: true,
             status: 200,
             etag: currentEtag,
-            rows: [],
+            rows: confirmationPersisted ? [confirmedRow] : [],
             orderActions: [],
           },
         });
@@ -6412,6 +6419,7 @@ test("chart confirmation continues after an ambiguous draft response only when r
       actionBodies.push(
         (route.request().postDataJSON() ?? {}) as Record<string, unknown>,
       );
+      confirmationPersisted = true;
       await route.fulfill({
         contentType: "application/json",
         status: 500,
@@ -6436,4 +6444,8 @@ test("chart confirmation continues after an ambiguous draft response only when r
     encounterId: kongEncounterId,
   });
   expect(actionBodies[0]?.orderIds).toHaveLength(1);
+  await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
+  expect(new URL(page.url()).searchParams.get("encounterId")).toBe(
+    kongEncounterId,
+  );
 });
