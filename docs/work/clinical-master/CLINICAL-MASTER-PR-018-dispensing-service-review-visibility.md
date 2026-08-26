@@ -53,6 +53,10 @@ facing service-operations review.
 
 - Each target workspace returns exactly 108 service-review dispensing rows;
   `clair-foreign-demo` returns zero.
+- Hospital-admin Order management groups the 108 master dispensing rows under
+  the visible `조제` leaf instead of combining them with legacy `처방` rows.
+- Pending master rows display `검토 대기` and an unset price displays
+  `미설정`; neither state is presented as an active clinical order or `0원`.
 - A non-member cannot read the rows.
 - Chart search visibly labels the rows as `서비스 검토용`.
 - Selected rows preserve lineage through order confirmation and fulfillment
@@ -128,6 +132,24 @@ npm run build
   append-only event table intentionally has RLS with no client policy, and the
   authenticated definer RPC is intentionally exposed behind its explicit
   workspace-permission check and fixed `pg_catalog` search path.
+
+## Hospital Admin Visibility Follow-up
+
+- Production data inspection found 54 existing medication rows and 108 master
+  dispensing rows. The client placed all 162 rows under `처방` because it used
+  the generic medication category before checking dispensing-master lineage;
+  this produced the reported `처방 162`, `조제 0` screen.
+- The hospital-admin projection now places rows with dispensing lineage under
+  `조제`, while legacy medication rows remain under `처방`.
+- The immutable dispensing-profile snapshot supplies the visible English and
+  Korean product names. This is a presentation-only mapping and does not
+  mutate the master, workspace catalog, clinical review, price, or activation
+  state.
+- Focused browser regression coverage supplies 108 service-review rows and
+  verifies the `조제 108` count, A001270 product names, `검토 대기`, and
+  `미설정` price display.
+- Representative report:
+  `docs/completed/clinical-master/2026-08-26-dispensing-admin-catalog-visibility-report.html`.
 
 ## Rollback
 

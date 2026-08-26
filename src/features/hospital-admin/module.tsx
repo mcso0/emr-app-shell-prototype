@@ -1602,7 +1602,9 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
       },
       {
-        accessorFn: (row) => (row.isActive ? "active" : "inactive"),
+        accessorFn: (row) =>
+          row.sourceCatalogItem?.availabilityStatus ??
+          (row.isActive ? "active" : "inactive"),
         id: "status",
         enableSorting: false,
         meta: {
@@ -1612,22 +1614,37 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           textMode: "one-line",
         },
         size: 86,
-        cell: ({ row }) => (
-          <EmrTableCellText
-            className={cn(
-              "font-semibold",
-              row.original.isActive
-                ? "text-[var(--emr-status-success-text)]"
-                : "text-muted-foreground",
-            )}
-            mode="one-line"
-          >
-            {row.original.isActive ? "사용" : "중지"}
-          </EmrTableCellText>
-        ),
+        cell: ({ row }) => {
+          const pendingActivation =
+            row.original.sourceCatalogItem?.availabilityStatus ===
+            "pending_activation";
+
+          return (
+            <EmrTableCellText
+              className={cn(
+                "font-semibold",
+                pendingActivation
+                  ? "text-[var(--emr-status-warning-text)]"
+                  : row.original.isActive
+                    ? "text-[var(--emr-status-success-text)]"
+                    : "text-muted-foreground",
+              )}
+              mode="one-line"
+            >
+              {pendingActivation
+                ? "검토 대기"
+                : row.original.isActive
+                  ? "사용"
+                  : "중지"}
+            </EmrTableCellText>
+          );
+        },
       },
       {
-        accessorKey: "price",
+        accessorFn: (row) =>
+          row.sourceCatalogItem
+            ? row.sourceCatalogItem.priceKrw
+            : row.price,
         id: "price",
         enableSorting: true,
         meta: {
@@ -1640,7 +1657,9 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         size: 110,
         cell: ({ row }) => (
           <EmrTableCellText className="font-semibold" mode="one-line">
-            {formatHospitalOrderAmount(row.original.price)}
+            {row.original.sourceCatalogItem?.priceKrw === null
+              ? "미설정"
+              : formatHospitalOrderAmount(row.original.price)}
           </EmrTableCellText>
         ),
         sortingFn: (left, right, id) =>
