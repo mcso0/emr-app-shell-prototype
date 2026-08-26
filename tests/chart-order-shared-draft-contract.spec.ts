@@ -54,11 +54,12 @@ test("chart draft autosaves after 700ms, flushes on field exit, and blocks actio
   expect(chartModule).toContain("서버 값 다시 불러오기");
 });
 
-test("chart draft follows a successful in-flight save with another save when edits remain", () => {
+test("chart draft serializes edits made during an in-flight save", () => {
   expect(chartModule).toMatch(
-    /const clearInFlightSave = \(saved: boolean\) => \{[\s\S]*?saved &&\s*draftTouchedRef\.current &&\s*!orderDraftConflictRef\.current[\s\S]*?window\.setTimeout\(\(\) => \{\s*if \(draftTouchedRef\.current\) void autoSaveDraftRef\.current\(\);\s*\}, 0\);/,
+    /const inFlightSave = orderDraftSavePromiseRef\.current;\s*if \(inFlightSave\) return inFlightSave;/,
   );
-  expect(chartModule).toContain(
-    "void operation.then(clearInFlightSave, () => clearInFlightSave(false));",
+  expect(chartModule).toMatch(
+    /orderDraftSaveInFlightRef\.current = true;\s*while \(draftTouchedRef\.current\) \{[\s\S]*?const expectedEtag = orderDraftEtagRef\.current;[\s\S]*?draftTouchedRef\.current = false;[\s\S]*?const result = await saveChartOrderDraftRoute\([\s\S]*?orderDraftEtagRef\.current = result\.etag;/,
   );
+  expect(chartModule).not.toContain("window.setTimeout(() => {\n          if (draftTouchedRef.current) void autoSaveDraftRef.current();\n        }, 0);");
 });
