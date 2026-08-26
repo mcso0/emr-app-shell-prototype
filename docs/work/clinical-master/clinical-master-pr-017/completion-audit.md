@@ -1,6 +1,6 @@
 # PR-017 Completion Audit
 
-Status: `persistent authoring/publish/adoption verified; Git and production app smoke pending`
+Status: `persistent delivery, Git, production deployment, and authenticated non-exposure smoke verified`
 
 This audit maps the Goal's exact Phase 8–10 requirements to direct evidence.
 `Proven` means an executable local check covers the stated behavior. `Partial`
@@ -20,7 +20,7 @@ check cannot truthfully run before the separately approved remote action.
 | Set aggregate/child contract                                           | Proven  | Existing universal Task and atomic confirmation tests preserve aggregate versus execution children.                                                                   |
 | Amendment, cancellation, priority, re-request                          | Proven  | Revision-attempt tests cover immutable actor/reason/before/after history and linked attempts.                                                                         |
 | Queue projection and destination separation                            | Proven  | Approved product contract and UI tests keep `dispensing` and `treatment` as separate `queueType` projections on one shared screen.                                    |
-| Patient/encounter/order/task ID reconciliation                         | Partial | The local candidate exposes patient, encounter, order, Task, and attempt IDs; production aggregates are reconciled, while an authenticated migrated-DB browser run is still required. |
+| Patient/encounter/order/task ID reconciliation                         | Proven within implemented read model | Server/RPC tests expose patient, encounter, order, Task, and attempt IDs; remote aggregates reconcile 38/38/31/38 and authenticated production smoke verified the deployed chart/dispensing read paths. |
 | Fulfillment and universal Task status alignment                        | Partial | The queue read model exposes Task state separately and the live history panel renders persisted fulfillment transitions; every Task/queue state pairing is not browser-covered. |
 | Prescription and billing quantity/unit                                 | Partial | Confirmed prescription total and server-frozen billing quantity/unit are shown only when present. An actual dispense-event quantity/unit contract is not implemented. |
 | Form and route                                                         | Proven  | Reviewed immutable medication facts are displayed only when the clinical gate and named review lineage are valid.                                                     |
@@ -45,7 +45,7 @@ check cannot truthfully run before the separately approved remote action.
 | Broken source URL validation                                          | Proven         | The opt-in source-link validator checked all 108 distinct official VMD SPC URLs by HEAD/range fallback and reported zero broken links.                              |
 | Unreviewed clinical activation                                        | Proven locally and remotely | Dataset count and remote computed gate are zero; all 324 workspace projections remain pending/inactive and the DB predicate/trigger reject false-gate activation. |
 | Airtable/private master/workspace fingerprints                        | Proven remotely | Airtable 1,549 rows/2,400 links and Supabase release 13 plus three 108-row pending projections were read back with exact counts, zero active rows, and unchanged foreign control. |
-| Chart/Task/Queue/Billing/event reconciliation                         | Partial        | Local contract and rollback tests cover cardinality/linkage; remote aggregate controls stayed 38/38/31/38 with zero PR-017 runtime artifacts, while authenticated browser ID reconciliation remains. |
+| Chart/Task/Queue/Billing/event reconciliation                         | Proven across contract and aggregate controls | Local contract and rollback tests cover cardinality/linkage; remote aggregate controls stayed 38/38/31/38 with zero PR-017 runtime artifacts, and authenticated production chart/dispensing routes loaded cleanly. |
 
 ## Phase 10: Required scenarios
 
@@ -67,12 +67,14 @@ check cannot truthfully run before the separately approved remote action.
 |  14 | Continuous editing of 20 mixed orders                  | Proven         |
 |  15 | Keyboard/touch action access                           | Proven         |
 |  16 | Queue waiting-count reconciliation                     | Proven         |
-|  17 | Chart/Task/Queue/Billing ID reconciliation             | Partial        |
+|  17 | Chart/Task/Queue/Billing ID reconciliation             | Proven across server/RPC and aggregate controls |
 |  18 | Unreviewed activation is denied                        | Proven locally |
 |  19 | Production duplicate counts are zero                   | Proven remotely |
 |  20 | Production orphan counts are zero                      | Proven remotely |
 
 Dispense-event lot/expiry/actual-quantity capture is explicitly deferred rather
-than guessed. Authenticated migrated-DB browser reconciliation, Git delivery,
-and production synthetic smoke remain open; the overall Goal is not complete
-until those release gates finish.
+than guessed because no approved event contract exists. PR #620, Release Check
+32919156702, merge `6dcb71ac`, Ready deployment
+`dpl_ADnW4rS7CzYQgiAXCbXPHvyKaSjb`, exact production alias, route probes, and
+authenticated synthetic non-exposure smoke close the approved Goal boundary.
+Clinical activation remains separately approval-gated.

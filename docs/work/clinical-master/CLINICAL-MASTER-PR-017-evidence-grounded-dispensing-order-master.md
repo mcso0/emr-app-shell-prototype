@@ -3,7 +3,7 @@ id: "CLINICAL-MASTER-PR-017"
 type: "Work Item"
 title: "Evidence-grounded dispensing order master and execution rollout"
 description: "Researches, validates, and delivers a clinically review-gated dispensing-order master with at least 100 unique atomic orders across Airtable, the private master, workspace adoption, chart execution, dispensing, treatment, and billing contracts."
-status: "in_progress"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
 tags:
@@ -210,9 +210,9 @@ clinical-review status, rollback or forward-fix, and stop conditions.
 | 7. Master and production DB       | `completed`         | Three exact migrations, inactive release 13, three 108-row pending adoptions, retries, RLS/ACL, audit, foreign control, and runtime reconciliation passed |
 | 8. Chart and execution screens    | `completed`         | Large-data interaction, accessibility, queue-count, extra-label veterinarian attestation, and persisted fulfillment-history evidence pass; unimplemented dispense-event facts remain explicitly out of scope |
 | 9. Data quality and safety        | `completed`         | Validator and 108 live source links pass; Airtable/private-master/workspace counts, fingerprints, duplicates, orphans, and inactive gates pass remotely |
-| 10. Functional verification       | `in_progress`       | 46 focused tests, two rollback replays, remote reconciliation, and retry gates pass; production route/authenticated non-exposure smoke remains   |
-| 11. Git delivery                  | `pending`           | Scoped commit, push, PR, checks, review, merge, and `origin/main` proof complete                                                                 |
-| 12. Production release            | `pending`           | Exact deployment Ready, alias verified, synthetic authenticated smoke complete, clinical activation still gated                                  |
+| 10. Functional verification       | `completed`         | 46 focused tests, two rollback replays, remote reconciliation, route probes, authenticated non-exposure smoke, and retry gates pass                |
+| 11. Git delivery                  | `completed`         | Candidate `f8a1d927`, PR #620, Release Check 32919156702, merge `6dcb71ac`, and exact `origin/main` proof complete                                  |
+| 12. Production release            | `completed`         | Deployment `dpl_ADnW4rS7CzYQgiAXCbXPHvyKaSjb` Ready, official alias and synthetic authenticated smoke verified; clinical activation remains gated   |
 
 Only one major phase may be `in_progress` at a time.
 
@@ -372,13 +372,28 @@ marking it complete.
   The direct 108-row search, 20-row continuous editing and DOM stability,
   keyboard focus, touch action, queue-count reconciliation, persisted
   fulfillment history, and rollback replays are green. The post-fix focused
-  suite is 46/46 and remote duplicate/orphan/runtime reconciliation is green;
-  production app smoke remains.
+  suite is 46/46 and remote duplicate/orphan/runtime reconciliation is green.
+- Phase 11 delivery used candidate
+  `f8a1d9274016757dbd975c4a55f4a1ddff0c014e` in PR #620. Release Check
+  [32919156702](https://github.com/mcso0/emr-app-shell-prototype/actions/runs/32919156702)
+  passed secrets, docs, UX copy, lint, typecheck, and build. GitHub merged the
+  PR as `6dcb71ac1b54098d47bf5bf7068b2a10083af158`; fetched `origin/main` and
+  `refs/heads/main` matched that SHA, and the candidate is its second parent.
+- Phase 12 production deployment
+  `dpl_ADnW4rS7CzYQgiAXCbXPHvyKaSjb` is Ready for merge SHA `6dcb71ac`.
+  The official alias `https://emr-app-shell-prototype.vercel.app` resolves to
+  that exact deployment. Unauthenticated probes returned root 307 to login,
+  login 200, chart shell 200, chart-order execution API 401, and fulfillment
+  history API 401. In the authenticated synthetic Cheongdam workspace, the
+  chart and dispensing routes loaded with zero captured browser errors; exact
+  search for one inactive release-13 product returned no candidate and an empty
+  result state. The immediately preceding Ready production rollback candidate
+  is `dpl_773HbNmYGPDtBNX4P3sjhJNHDBZ2` for `bf2f9ee0`.
 
 ## Done When
 
-The Goal is complete only after every research, dataset, documentation,
-authoring, master/adoption, application, data-quality, permission/RLS/audit,
-Git, deployment, and synthetic production-smoke condition in this work item is
-verified. Research, reports, local implementation, PR creation, merge, or
-deployment alone are not sufficient.
+The research, dataset, documentation, authoring, inactive master/adoption,
+application, data-quality, permission/RLS/audit, Git, deployment, and synthetic
+production-smoke conditions in this work item are verified. Clinical,
+regulatory, and translation review plus any real-patient exposure remain a
+separate explicit approval gate and were not performed.
