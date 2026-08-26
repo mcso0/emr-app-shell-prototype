@@ -1,0 +1,737 @@
+{
+  "schemaVersion": "clair-dispensing-airtable-schema-v1",
+  "target": {
+    "baseId": "applMtgWwOxwPigB8",
+    "baseName": "CLAiR Clinical Master"
+  },
+  "mutationPolicy": {
+    "mode": "create_new_tables_only",
+    "existingTableMutationAllowed": false,
+    "deletionAllowed": false,
+    "unknownFieldAllowed": false,
+    "linkedRecordsResolvedByExternalKey": true
+  },
+  "tables": [
+    {
+      "name": "Active Ingredients V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Normalized Name",
+          "type": "singleLineText"
+        },
+        {
+          "name": "English Source Name",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Korean Review Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "rejected"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Lifecycle Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "technical_validated"
+              },
+              {
+                "name": "clinical_review_pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "blocked"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Medication Products V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Source Product ID",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Authorization Number",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Authorization Territory",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Distribution Category",
+          "type": "singleLineText"
+        },
+        {
+          "name": "English Product Name",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Korean Draft Name",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Dosage Form",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Routes JSON",
+          "type": "multilineText"
+        },
+        {
+          "name": "Species JSON",
+          "type": "multilineText"
+        },
+        {
+          "name": "Strength JSON",
+          "type": "multilineText"
+        },
+        {
+          "name": "ATCvet Code",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Coverage Category",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Packaged Shelf Life JSON",
+          "type": "multilineText"
+        },
+        {
+          "name": "Opened Shelf Life JSON",
+          "type": "multilineText"
+        },
+        {
+          "name": "Storage Codes JSON",
+          "type": "multilineText"
+        },
+        {
+          "name": "Lifecycle Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "technical_validated"
+              },
+              {
+                "name": "clinical_review_pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "blocked"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Clinical Use Allowed",
+          "type": "checkbox",
+          "options": {
+            "icon": "check",
+            "color": "greenBright"
+          }
+        },
+        {
+          "name": "Evidence Documents",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Evidence Documents V1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Ingredients V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Ordinal",
+          "type": "number",
+          "options": {
+            "precision": 0
+          }
+        },
+        {
+          "name": "Strength JSON",
+          "type": "multilineText"
+        },
+        {
+          "name": "Pairing Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "ordinal_direct_pending_review"
+              },
+              {
+                "name": "manual_review_required"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Product",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Medication Products V1"
+          }
+        },
+        {
+          "name": "Ingredient",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Active Ingredients V1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Species Applicability V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Species Code",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "dog"
+              },
+              {
+                "name": "cat"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Evidence Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "direct"
+              },
+              {
+                "name": "inferred"
+              },
+              {
+                "name": "not_found"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Lifecycle Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "technical_validated"
+              },
+              {
+                "name": "clinical_review_pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "blocked"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Product",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Medication Products V1"
+          }
+        },
+        {
+          "name": "Evidence Document",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Evidence Documents V1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evidence Documents V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Authority",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Jurisdiction",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Document Type",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "SPC"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Source URL",
+          "type": "url"
+        },
+        {
+          "name": "SHA-256",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Page Count",
+          "type": "number",
+          "options": {
+            "precision": 0
+          }
+        },
+        {
+          "name": "Revision Raw",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Accessed At",
+          "type": "date",
+          "options": {
+            "dateFormat": {
+              "name": "iso"
+            }
+          }
+        },
+        {
+          "name": "Lifecycle Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "captured"
+              },
+              {
+                "name": "superseded"
+              },
+              {
+                "name": "blocked"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evidence Assertions V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Field Path",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Evidence Mode",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "direct"
+              },
+              {
+                "name": "inferred"
+              },
+              {
+                "name": "not_found"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Locator",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Extraction Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "technical_validated"
+              },
+              {
+                "name": "clinical_review_pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "rejected"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Product",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Medication Products V1"
+          }
+        },
+        {
+          "name": "Evidence Document",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Evidence Documents V1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clinical Reviews V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Subject Revision",
+          "type": "number",
+          "options": {
+            "precision": 0
+          }
+        },
+        {
+          "name": "Decision",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "rejected"
+              },
+              {
+                "name": "superseded"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Reviewer User ID",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Reviewer Eligibility Proof",
+          "type": "multilineText"
+        },
+        {
+          "name": "Decision Reason",
+          "type": "multilineText"
+        },
+        {
+          "name": "Reviewed At",
+          "type": "dateTime",
+          "options": {
+            "dateFormat": {
+              "name": "iso"
+            },
+            "timeFormat": {
+              "name": "24hour"
+            },
+            "timeZone": "Asia/Seoul"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Regulatory Profiles V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Jurisdiction",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "KR"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Authorization Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "not_verified"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "rejected"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Controlled Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "not_screened"
+              },
+              {
+                "name": "not_controlled"
+              },
+              {
+                "name": "controlled"
+              },
+              {
+                "name": "excluded"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Policy Version",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Review Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "rejected"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Clinical Use Allowed",
+          "type": "checkbox",
+          "options": {
+            "icon": "check",
+            "color": "greenBright"
+          }
+        },
+        {
+          "name": "Product",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Medication Products V1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dispensing Orders V1",
+      "primaryFieldName": "External Key",
+      "fields": [
+        {
+          "name": "External Key",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Master Order ID",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Canonical Order Key",
+          "type": "multilineText"
+        },
+        {
+          "name": "Canonical Fingerprint",
+          "type": "singleLineText"
+        },
+        {
+          "name": "English Display Name",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Korean Draft Name",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Korean Review Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "rejected"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Clinical Order Type",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "dispensing"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Destination",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "dispensing"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Lifecycle Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "technical_validated"
+              },
+              {
+                "name": "clinical_review_pending"
+              },
+              {
+                "name": "approved"
+              },
+              {
+                "name": "blocked"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Clinical Use Allowed",
+          "type": "checkbox",
+          "options": {
+            "icon": "check",
+            "color": "greenBright"
+          }
+        },
+        {
+          "name": "Activation Blocks JSON",
+          "type": "multilineText"
+        },
+        {
+          "name": "Dose Default",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Frequency Default",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Duration Default",
+          "type": "singleLineText"
+        },
+        {
+          "name": "BUD Rule",
+          "type": "singleLineText"
+        },
+        {
+          "name": "Product",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Medication Products V1"
+          }
+        },
+        {
+          "name": "Clinical Review",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Clinical Reviews V1"
+          }
+        },
+        {
+          "name": "Regulatory Profile",
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableName": "Regulatory Profiles V1"
+          }
+        }
+      ]
+    }
+  ]
+}

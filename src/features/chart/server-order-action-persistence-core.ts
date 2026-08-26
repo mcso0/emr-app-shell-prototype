@@ -40,6 +40,10 @@ import {
   type ChartOrderReadbackQuantitySource,
   type ChartOrderRuntimeRow,
 } from "@/features/chart/server-order-draft-persistence-core";
+import {
+  mapDispensingOrderLineageSnapshot,
+  type DispensingOrderLineageSnapshot,
+} from "@/features/hospital-admin/server-order-catalog-core";
 
 export type ChartOrderActionKind = "bill" | "confirm";
 
@@ -117,6 +121,7 @@ export type ChartOrderAppliedSnapshot = {
   priority?: ClinicalOrderPriority;
   billingEligible?: boolean;
   revisionNo?: number;
+  dispensingLineage?: DispensingOrderLineageSnapshot;
 };
 
 export type ChartOrderActionLine = {
@@ -160,6 +165,7 @@ export type ChartOrderActionLine = {
   sourceMasterRecordId?: string;
   sourceMasterRevision?: number;
   workspaceCatalogRevision?: number | null;
+  dispensingLineage?: DispensingOrderLineageSnapshot;
   status:
     | "requested"
     | "re_requested"
@@ -1246,6 +1252,9 @@ function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
     sourceSetRevisionItemId: typeof row.sourceSetRevisionItemId === "string" ? row.sourceSetRevisionItemId : null,
     workspaceCatalogItemId: typeof row.workspaceCatalogItemId === "string" ? row.workspaceCatalogItemId : null,
     workspaceCatalogRevision: typeof row.workspaceCatalogRevision === "number" ? row.workspaceCatalogRevision : null,
+    dispensingLineage: mapDispensingOrderLineageSnapshot(
+      row.dispensingLineage ?? objectOf("appliedSnapshot").dispensingLineage,
+    ) ?? null,
     quantity: row.quantity,
     quantitySource: quantitySource as ChartOrderRuntimeRow["quantitySource"],
     unitPriceSnapshot: row.unitPriceSnapshot === null ? null : typeof row.unitPriceSnapshot === "number" ? row.unitPriceSnapshot : null,
@@ -1294,6 +1303,7 @@ function runtimeRowToActionLine(row: ChartOrderRuntimeRow): ChartOrderActionLine
     orderConfirmationStatus: row.orderConfirmationStatus ?? "draft",
     orderId: row.orderId,
     workspaceCatalogItemId: row.workspaceCatalogItemId ?? undefined,
+    dispensingLineage: row.dispensingLineage ?? undefined,
     status: (row.status ?? "requested") as ChartOrderActionLine["status"],
     updatedAt: row.updatedAt,
   };
@@ -1335,6 +1345,10 @@ function actionLinesToRuntimeRows(rows: ChartOrderActionLine[], workspaceId: str
     sourceSetRevisionItemId: row.sourceSetRevisionItemId ?? null,
     workspaceCatalogItemId: row.workspaceCatalogItemId ?? null,
     workspaceCatalogRevision: row.workspaceCatalogRevision ?? null,
+    dispensingLineage:
+      row.dispensingLineage ??
+      mapDispensingOrderLineageSnapshot(row.appliedSnapshot?.dispensingLineage) ??
+      null,
     quantity: row.quantity ?? row.appliedSnapshot?.quantity ?? 1,
     quantitySource: row.quantitySource ?? "manual",
     unitPriceSnapshot: row.unitPriceSnapshot ?? row.appliedSnapshot?.priceKrw ?? null,
@@ -1485,6 +1499,9 @@ function mapOrderActionRow(value: unknown): ChartOrderActionLine | null {
       typeof row.sourceMasterRevision === "number" ? row.sourceMasterRevision : undefined,
     workspaceCatalogRevision:
       typeof row.workspaceCatalogRevision === "number" ? row.workspaceCatalogRevision : undefined,
+    dispensingLineage: mapDispensingOrderLineageSnapshot(
+      row.dispensingLineage ?? row.appliedSnapshot?.dispensingLineage,
+    ),
     status: row.status,
     updatedAt: row.updatedAt,
   } as ChartOrderActionLine;

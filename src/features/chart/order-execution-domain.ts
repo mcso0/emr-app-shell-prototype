@@ -212,6 +212,8 @@ export const CLINICAL_ORDER_FIELD_SCHEMAS: Readonly<
       field({ key: "taperSchedule", valueType: "string", label: "증감 스케줄", control: "schedule", displayOrder: 110, validation: { maxLength: 4000 }, placement: "detail", semantics: "instruction" }),
       field({ key: "compoundNote", valueType: "string", label: "조제 메모", control: "textarea", displayOrder: 120, validation: { maxLength: 2000 }, placement: "detail", semantics: "instruction" }),
       field({ key: "guardianNote", valueType: "string", label: "보호자 전달 메모", control: "textarea", displayOrder: 130, validation: { maxLength: 2000 }, placement: "detail", semantics: "instruction" }),
+      field({ key: "extraLabelSpeciesConfirmed", valueType: "boolean", label: "병원 종 범위 예외 확인", control: "switch", displayOrder: 140, defaultValue: false, placement: "detail", semantics: "clinical" }),
+      field({ key: "extraLabelSpeciesReason", valueType: "string", label: "종 범위 예외 사유", control: "textarea", displayOrder: 150, validation: { maxLength: 500 }, placement: "detail", semantics: "clinical" }),
     ],
   },
   treatment: {
