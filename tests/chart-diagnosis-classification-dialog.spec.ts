@@ -40,6 +40,7 @@ async function expectEmptyStateCentered(title: Locator) {
 test("classification dialog explores, reviews, and commits catalog diagnoses", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.route("**/chart/diagnosis-catalog**", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -76,6 +77,19 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
             system: { id: "system-digestive", name: "소화기계" },
             diseaseGroup: { id: "group-gastrointestinal", name: "위장관 질환" },
           },
+          ...Array.from({ length: 10 }, (_, index) => ({
+            catalogId: `catalog-extra-${index + 1}`,
+            masterId: `master-extra-${index + 1}`,
+            masterRevision: 1,
+            code: null,
+            name: `추가 진단 ${index + 1}`,
+            synonyms: [],
+            system: { id: "system-digestive", name: "소화기계" },
+            diseaseGroup: {
+              id: "group-gastrointestinal",
+              name: "위장관 질환",
+            },
+          })),
         ],
         nextCursor: null,
       }),
@@ -95,6 +109,43 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
   await expectEmptyStateCentered(
     dialog.getByText("선택된 진단명이 없습니다", { exact: true }),
   );
+  const systemOption = dialog.getByRole("option", { name: "전체 2" }).first();
+  const diagnosisOption = dialog.getByRole("option", { name: "위장염" });
+  const [systemRowStyle, diagnosisRowStyle] = await Promise.all([
+    systemOption.evaluate((element) => {
+      const label = element.querySelector("span");
+      const style = label ? getComputedStyle(label) : null;
+      return {
+        height: element.getBoundingClientRect().height,
+        fontWeight: style?.fontWeight,
+        lineHeight: style?.lineHeight,
+      };
+    }),
+    diagnosisOption.evaluate((element) => {
+      const label = element.querySelector("span");
+      const style = label ? getComputedStyle(label) : null;
+      return {
+        height: element.getBoundingClientRect().height,
+        fontWeight: style?.fontWeight,
+        lineHeight: style?.lineHeight,
+      };
+    }),
+  ]);
+  expect(systemRowStyle).toEqual({
+    height: 34,
+    fontWeight: "500",
+    lineHeight: "18px",
+  });
+  expect(diagnosisRowStyle).toEqual(systemRowStyle);
+  const sectionTitleWeights = await dialog.locator("section strong").evaluateAll(
+    (elements) => elements.map((element) => getComputedStyle(element).fontWeight),
+  );
+  expect(sectionTitleWeights).toEqual(["600", "600", "600", "600"]);
+  const scrollbarRight = await dialog
+    .getByRole("region", { name: "진단명" })
+    .locator('[data-slot="scroll-area-scrollbar"]')
+    .evaluate((element) => getComputedStyle(element).right);
+  expect(scrollbarRight).toBe("-13px");
   const diagnosisHeading = dialog.getByText("진단명", { exact: true });
   const searchButton = dialog.getByRole("button", { name: "진단명 검색" });
   const [headingBox, searchButtonBox] = await Promise.all([
@@ -125,68 +176,30 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
   await dialog.getByRole("option", { name: "변비" }).click();
   await expect(dialog.getByLabel("위장염 순서 변경")).toBeVisible();
   await expect(dialog.getByLabel("변비 순서 변경")).toBeVisible();
-  const gastroenteritisPrimary = dialog.getByRole("button", {
-    name: "위장염 주진단",
-  });
-  const constipationPrimary = dialog.getByRole("button", {
-    name: "변비 주진단",
-  });
-  await expect(gastroenteritisPrimary).toHaveAttribute("aria-pressed", "true");
-  await expect(constipationPrimary).toHaveAttribute("aria-pressed", "false");
-  await constipationPrimary.click();
-  await expect(gastroenteritisPrimary).toHaveAttribute("aria-pressed", "true");
-  await expect(constipationPrimary).toHaveAttribute("aria-pressed", "true");
+  await expect(dialog.getByRole("button", { name: /주진단$/ })).toHaveCount(0);
   const gastroenteritisDelete = dialog.getByRole("button", {
     name: "위장염 삭제",
   });
   const constipationDelete = dialog.getByRole("button", { name: "변비 삭제" });
   const clearButton = dialog.getByRole("button", { name: "전체 삭제" });
   await page.mouse.move(0, 0);
-  await expect(clearButton).toHaveCSS(
-    "background-color",
-    "rgba(0, 0, 0, 0)",
-  );
-  await clearButton.hover();
-  await expect(clearButton).toHaveCSS(
-    "background-color",
-    "rgba(0, 0, 0, 0.04)",
-  );
-  await clearButton.focus();
-  await expect(gastroenteritisDelete).toHaveCSS("opacity", "0");
-  await expect(constipationDelete).toHaveCSS("opacity", "0");
-  const gastroenteritisType = dialog.getByLabel("위장염 진단 유형");
-  const controlRectsBeforeHover = await Promise.all([
-    gastroenteritisPrimary.boundingBox(),
-    gastroenteritisType.boundingBox(),
-  ]);
-  await dialog.getByLabel("위장염 순서 변경").hover();
+  await expect(clearButton).toHaveCSS("height", "24px");
+  await expect(clearButton).toHaveCSS("font-size", "12px");
+  await expect(clearButton).not.toHaveCSS("border-color", "rgba(0, 0, 0, 0)");
   await expect(gastroenteritisDelete).toHaveCSS("opacity", "1");
-  await expect(constipationDelete).toHaveCSS("opacity", "0");
-  const hoveredRow = gastroenteritisDelete.locator("xpath=..");
-  const hoverOverlay = await hoveredRow.evaluate(
-    (element) => getComputedStyle(element, "::after").backgroundImage,
-  );
-  expect(hoverOverlay).toBe("none");
-  const [primaryAfterHover, typeAfterHover, deleteAfterHover] =
-    await Promise.all([
-      gastroenteritisPrimary.boundingBox(),
-      gastroenteritisType.boundingBox(),
-      gastroenteritisDelete.boundingBox(),
-    ]);
-  expect(primaryAfterHover?.x).toBeCloseTo(
-    controlRectsBeforeHover[0]?.x ?? 0,
-    1,
-  );
-  expect(typeAfterHover?.x).toBeCloseTo(
-    controlRectsBeforeHover[1]?.x ?? 0,
-    1,
-  );
-  expect((typeAfterHover?.x ?? 0) + (typeAfterHover?.width ?? 0)).toBeLessThan(
-    deleteAfterHover?.x ?? 0,
-  );
-  await dialog.getByLabel("변비 순서 변경").hover();
-  await expect(gastroenteritisDelete).toHaveCSS("opacity", "0");
   await expect(constipationDelete).toHaveCSS("opacity", "1");
+  await expect(gastroenteritisDelete).toHaveCSS("width", "24px");
+  await expect(gastroenteritisDelete).toHaveCSS("height", "24px");
+  const gastroenteritisType = dialog.getByLabel("위장염 진단 유형");
+  const [typeAfterRender, deleteAfterRender] = await Promise.all([
+    gastroenteritisType.boundingBox(),
+    gastroenteritisDelete.boundingBox(),
+  ]);
+  expect(
+    (typeAfterRender?.x ?? 0) + (typeAfterRender?.width ?? 0),
+  ).toBeLessThan(
+    deleteAfterRender?.x ?? 0,
+  );
   await dialog.getByLabel("변비 순서 변경").press("Alt+ArrowUp");
   const reviewOrder = await dialog
     .getByRole("button", { name: /순서 변경$/ })
@@ -199,6 +212,30 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
   await dialog.getByRole("button", { name: "선택 완료", exact: true }).click();
 
   await expect(dialog).toHaveCount(0);
+  await expect(panel.getByText("위장염")).toHaveCount(1);
+  await expect(panel.getByText("변비")).toHaveCount(1);
+
+  await panel.getByRole("button", { name: "분류 검색" }).click();
+  const existingGastroenteritis = dialog.getByRole("option", { name: "위장염" });
+  const existingConstipation = dialog.getByRole("option", { name: "변비" });
+  await expect(existingGastroenteritis).toHaveAttribute("aria-selected", "true");
+  await expect(existingGastroenteritis).toBeEnabled();
+  await expect(existingConstipation).toHaveAttribute("aria-selected", "true");
+  await expect(existingConstipation).toBeEnabled();
+  await existingGastroenteritis.click();
+  await expect(existingGastroenteritis).toHaveAttribute("aria-selected", "false");
+  await existingGastroenteritis.click();
+  await expect(existingGastroenteritis).toHaveAttribute("aria-selected", "true");
+  await dialog.getByRole("button", { name: "전체 삭제" }).click();
+  await expect(dialog.getByRole("button", { name: "선택 완료" })).toBeEnabled();
+  await dialog.getByRole("button", { name: "선택 완료" }).click();
+  await expect(panel.getByText("위장염")).toHaveCount(0);
+  await expect(panel.getByText("변비")).toHaveCount(0);
+
+  await panel.getByRole("button", { name: "분류 검색" }).click();
+  await dialog.getByRole("option", { name: "위장염" }).click();
+  await dialog.getByRole("option", { name: "변비" }).click();
+  await dialog.getByRole("button", { name: "선택 완료" }).click();
   await expect(panel.getByText("위장염")).toHaveCount(1);
   await expect(panel.getByText("변비")).toHaveCount(1);
 

@@ -66,8 +66,7 @@ type AssessmentClassificationSearchDialogProps = {
   catalogErrorMessage?: string;
   catalogStatus?: AssessmentClassificationCatalogStatus;
   diseaseGroups?: AssessmentClassificationCatalogFacet[];
-  existingDiagnosisCatalogIds?: string[];
-  existingDiagnosisNames: string[];
+  initialSelection: AssessmentClassificationSelection[];
   nextCursor?: string | null;
   open: boolean;
   systems?: AssessmentClassificationCatalogFacet[];
@@ -93,8 +92,7 @@ export function AssessmentClassificationSearchDialog({
   catalogErrorMessage,
   catalogStatus = "ready",
   diseaseGroups: providedDiseaseGroups,
-  existingDiagnosisCatalogIds = [],
-  existingDiagnosisNames,
+  initialSelection,
   nextCursor = null,
   open,
   systems: providedSystems,
@@ -115,10 +113,9 @@ export function AssessmentClassificationSearchDialog({
   const [remoteSearchStatus, setRemoteSearchStatus] = useState<
     "idle" | "loading" | "error"
   >("idle");
-  const [hoveredReviewId, setHoveredReviewId] = useState<string | null>(null);
-  const [focusedReviewId, setFocusedReviewId] = useState<string | null>(null);
   const [reorderMessage, setReorderMessage] = useState("");
   const requestSequenceRef = useRef(0);
+  const wasOpenRef = useRef(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, {
@@ -145,6 +142,11 @@ export function AssessmentClassificationSearchDialog({
   const totalCount =
     systems.reduce((sum, item) => sum + item.count, 0) || catalog.length;
   const localSnapshotComplete = nextCursor === null;
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) setDraft(initialSelection);
+    wasOpenRef.current = open;
+  }, [initialSelection, open]);
 
   useEffect(() => {
     if (
@@ -217,8 +219,6 @@ export function AssessmentClassificationSearchDialog({
     setSearchOpen(false);
     setRemotePage(null);
     setRemoteSearchStatus("idle");
-    setHoveredReviewId(null);
-    setFocusedReviewId(null);
     setReorderMessage("");
   };
   const handleOpenChange = (nextOpen: boolean) => {
@@ -226,14 +226,6 @@ export function AssessmentClassificationSearchDialog({
     onOpenChange(nextOpen);
   };
 
-  const existingNameSet = useMemo(
-    () => new Set(existingDiagnosisNames.map(normalize)),
-    [existingDiagnosisNames],
-  );
-  const existingIdSet = useMemo(
-    () => new Set(existingDiagnosisCatalogIds),
-    [existingDiagnosisCatalogIds],
-  );
   const localVisibleDiagnoses = catalog.filter((item) => {
     const query = normalize(diagnosisQuery);
     return (
@@ -251,8 +243,6 @@ export function AssessmentClassificationSearchDialog({
   const visibleDiagnoses = localSnapshotComplete
     ? localVisibleDiagnoses
     : visibleCatalog;
-  const revealedDeleteId = hoveredReviewId ?? focusedReviewId;
-
   const updateDraft = (
     id: string,
     update: (
@@ -265,16 +255,9 @@ export function AssessmentClassificationSearchDialog({
   };
   const removeDraftItem = (id: string) => {
     setDraft((current) => current.filter((item) => item.id !== id));
-    setHoveredReviewId((current) => (current === id ? null : current));
-    setFocusedReviewId((current) => (current === id ? null : current));
   };
   const toggleDiagnosis = (item: AssessmentClassificationCatalogItem) => {
-    if (
-      existingIdSet.has(item.id) ||
-      existingNameSet.has(normalize(item.name)) ||
-      writeDisabled ||
-      !catalogReady
-    ) {
+    if (writeDisabled || !catalogReady) {
       return;
     }
     setDraft((current) => {
@@ -393,7 +376,11 @@ export function AssessmentClassificationSearchDialog({
         primaryAction={
           <Button
             type="button"
-            disabled={!draft.length || writeDisabled || !catalogReady}
+            disabled={
+              (!draft.length && !initialSelection.length) ||
+              writeDisabled ||
+              !catalogReady
+            }
             onClick={() => {
               onComplete?.(draft);
               handleOpenChange(false);
@@ -508,8 +495,6 @@ export function AssessmentClassificationSearchDialog({
           <DiagnosisOptionList
             catalogReady={catalogReady}
             disabled={writeDisabled}
-            existingIdSet={existingIdSet}
-            existingNameSet={existingNameSet}
             items={visibleDiagnoses}
             selectedIds={new Set(draft.map((item) => item.id))}
             onToggle={toggleDiagnosis}
@@ -558,7 +543,6 @@ export function AssessmentClassificationSearchDialog({
                       <SortableReviewRow
                         key={item.id}
                         item={item}
-                        deleteVisible={revealedDeleteId === item.id}
                         disabled={writeDisabled}
                         onDiagnosisTypeChange={(diagnosisType) =>
                           updateDraft(item.id, (current) => ({
@@ -566,20 +550,8 @@ export function AssessmentClassificationSearchDialog({
                             diagnosisType,
                           }))
                         }
-                        onFocusChange={(focused) =>
-                          setFocusedReviewId(focused ? item.id : null)
-                        }
-                        onHoverChange={(hovered) =>
-                          setHoveredReviewId(hovered ? item.id : null)
-                        }
                         onMove={(direction) =>
                           moveDraftItem(item.id, direction)
-                        }
-                        onPrimaryChange={() =>
-                          updateDraft(item.id, (current) => ({
-                            ...current,
-                            isPrimary: !current.isPrimary,
-                          }))
                         }
                         onRemove={() => removeDraftItem(item.id)}
                       />
@@ -766,16 +738,12 @@ function ExplorerOption({
 function DiagnosisOptionList({
   catalogReady,
   disabled,
-  existingIdSet,
-  existingNameSet,
   items,
   selectedIds,
   onToggle,
 }: {
   catalogReady: boolean;
   disabled: boolean;
-  existingIdSet: Set<string>;
-  existingNameSet: Set<string>;
   items: AssessmentClassificationCatalogItem[];
   selectedIds: Set<string>;
   onToggle: (item: AssessmentClassificationCatalogItem) => void;
@@ -801,18 +769,15 @@ function DiagnosisOptionList({
     >
       {items.map((item) => {
         const selected = selectedIds.has(item.id);
-        const alreadyAdded =
-          existingIdSet.has(item.id) ||
-          existingNameSet.has(normalize(item.name));
-        const itemDisabled = alreadyAdded || disabled || !catalogReady;
+        const itemDisabled = disabled || !catalogReady;
         return (
           <button
             key={item.id}
             type="button"
             role="option"
-            aria-selected={selected || alreadyAdded}
+            aria-selected={selected}
             aria-disabled={itemDisabled}
-            aria-label={alreadyAdded ? `${item.name}, 이미 추가됨` : item.name}
+            aria-label={item.name}
             disabled={itemDisabled}
             title={item.name}
             className={styles.diagnosisOption}
@@ -846,8 +811,8 @@ function ReviewHeading({
       </span>
       <Button
         type="button"
-        variant="ghost"
-        size="sm"
+        variant="outline"
+        size="xs"
         className={styles.clearButton}
         disabled={!count}
         onClick={onClear}
@@ -860,24 +825,16 @@ function ReviewHeading({
 }
 
 function SortableReviewRow({
-  deleteVisible,
   disabled,
   item,
   onDiagnosisTypeChange,
-  onFocusChange,
-  onHoverChange,
   onMove,
-  onPrimaryChange,
   onRemove,
 }: {
-  deleteVisible: boolean;
   disabled: boolean;
   item: AssessmentClassificationSelection;
   onDiagnosisTypeChange: (value: DiagnosisType) => void;
-  onFocusChange: (focused: boolean) => void;
-  onHoverChange: (hovered: boolean) => void;
   onMove: (direction: -1 | 1) => void;
-  onPrimaryChange: () => void;
   onRemove: () => void;
 }) {
   const {
@@ -896,13 +853,6 @@ function SortableReviewRow({
       ref={setNodeRef}
       className={cn(styles.selectedRow, isDragging && styles.dragging)}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      onMouseEnter={() => onHoverChange(true)}
-      onMouseLeave={() => onHoverChange(false)}
-      onFocusCapture={() => onFocusChange(true)}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget))
-          onFocusChange(false);
-      }}
     >
       <Button
         {...attributes}
@@ -933,22 +883,6 @@ function SortableReviewRow({
       <strong className={styles.selectedName} title={item.name}>
         {item.name}
       </strong>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled={disabled}
-        aria-label={`${item.name} 주진단`}
-        aria-pressed={item.isPrimary}
-        className={cn(
-          styles.primaryButton,
-          item.isPrimary && styles.primaryActive,
-        )}
-        onClick={onPrimaryChange}
-      >
-        <CdsActionsCheckIcon aria-hidden="true" />
-        주진단
-      </Button>
       <Select
         value={item.diagnosisType}
         disabled={disabled}
@@ -977,17 +911,14 @@ function SortableReviewRow({
       </Select>
       <Button
         type="button"
-        variant="outline"
-        size="icon-sm"
+        variant="ghost"
+        size="icon-xs"
         disabled={disabled}
         aria-label={`${item.name} 삭제`}
-        className={cn(
-          styles.deleteButton,
-          deleteVisible && styles.deleteButtonVisible,
-        )}
+        className={styles.deleteButton}
         onClick={onRemove}
       >
-        <CdsActionsTrashIcon aria-hidden="true" />
+        <CdsActionsXIcon aria-hidden="true" />
       </Button>
     </div>
   );
