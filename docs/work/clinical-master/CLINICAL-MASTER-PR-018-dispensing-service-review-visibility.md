@@ -96,9 +96,10 @@ npm run build
 - Draft PATCH payloads exclude already confirmed rows. Confirmed orders remain
   visible for readback, while a later candidate can be saved and confirmed
   without asking the server to reopen immutable confirmation state.
-- A successful in-flight draft save immediately follows up when newer edits
-  remain, preventing only the first dispensing field from persisting during
-  rapid entry.
+- Draft edits made during an in-flight save stay inside the same serialized
+  save operation. The client advances to the returned ETag before persisting
+  the next snapshot, preventing both partial rapid-entry saves and duplicate
+  CAS requests.
 - Supabase advisors: no new unresolved release-blocking finding. The private
   append-only event table intentionally has RLS with no client policy, and the
   authenticated definer RPC is intentionally exposed behind its explicit

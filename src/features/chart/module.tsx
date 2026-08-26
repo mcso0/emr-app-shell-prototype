@@ -7994,12 +7994,7 @@ function OrderArea({
   };
   const commitDraftRows = ({ silent = false } = {}): Promise<boolean> => {
     const inFlightSave = orderDraftSavePromiseRef.current;
-    if (inFlightSave) {
-      return inFlightSave.then((saved) => {
-        if (!saved || !draftTouchedRef.current) return saved;
-        return commitDraftRows({ silent });
-      });
-    }
+    if (inFlightSave) return inFlightSave;
     if (
       writeDisabled ||
       orderDraftSaveState === "loading" ||
@@ -8010,110 +8005,104 @@ function OrderArea({
 
     const operation = (async () => {
       orderDraftSaveInFlightRef.current = true;
-      const preparedDraft = prepareChartOrderDraftRowsForPersistence(
-        draftRowsRef.current,
-      );
-      if (preparedDraft.orderIdMap.size > 0) {
-        setDraftRows(preparedDraft.rows);
-        setSelectedOrderIds((current) =>
-          remapChartOrderIdSet(current, preparedDraft.orderIdMap),
+      while (draftTouchedRef.current) {
+        const preparedDraft = prepareChartOrderDraftRowsForPersistence(
+          draftRowsRef.current,
         );
-      }
-
-      const expectedEtag = orderDraftEtagRef.current;
-      if (!expectedEtag) {
-        setOrderDraftSaveState("error");
-        if (!silent) toast.error("오더 버전을 먼저 불러와 주세요.");
-        return false;
-      }
-
-      draftTouchedRef.current = false;
-      setOrderDraftSaveState("saving");
-      const result = await saveChartOrderDraftRoute({
-        actorHeaders,
-        encounterId: bundle.encounter.id,
-        expectedEtag,
-        rows: preparedDraft.rows,
-        workspaceId: bundle.encounter.workspaceId,
-      });
-
-      if (!result.ok) {
-        const conflict =
-          result.denialReason === "revision_conflict" ||
-          result.error === "revision_conflict";
-        orderDraftConflictRef.current = conflict;
-        setOrderDraftSaveState(conflict ? "conflict" : "error");
-        draftTouchedRef.current = true;
-        if (!silent || conflict) {
-          toast.error(
-            conflict
-              ? "다른 기기에서 오더가 변경됐어요. 현재 편집값을 유지한 채 충돌을 해결해 주세요."
-              : result.denialReason === "permission_missing"
-                ? "오더 수정 권한이 없어 저장하지 못했어요."
-                : getChartOrderPersistenceErrorMessage(
-                    result.denialReason ?? result.error,
-                  ),
+        if (preparedDraft.orderIdMap.size > 0) {
+          setDraftRows(preparedDraft.rows);
+          setSelectedOrderIds((current) =>
+            remapChartOrderIdSet(current, preparedDraft.orderIdMap),
           );
         }
-        return false;
+
+        const expectedEtag = orderDraftEtagRef.current;
+        if (!expectedEtag) {
+          setOrderDraftSaveState("error");
+          if (!silent) toast.error("오더 버전을 먼저 불러와 주세요.");
+          return false;
+        }
+
+        draftTouchedRef.current = false;
+        setOrderDraftSaveState("saving");
+        const result = await saveChartOrderDraftRoute({
+          actorHeaders,
+          encounterId: bundle.encounter.id,
+          expectedEtag,
+          rows: preparedDraft.rows,
+          workspaceId: bundle.encounter.workspaceId,
+        });
+
+        if (!result.ok) {
+          const conflict =
+            result.denialReason === "revision_conflict" ||
+            result.error === "revision_conflict";
+          orderDraftConflictRef.current = conflict;
+          setOrderDraftSaveState(conflict ? "conflict" : "error");
+          draftTouchedRef.current = true;
+          if (!silent || conflict) {
+            toast.error(
+              conflict
+                ? "다른 기기에서 오더가 변경됐어요. 현재 편집값을 유지한 채 충돌을 해결해 주세요."
+                : result.denialReason === "permission_missing"
+                  ? "오더 수정 권한이 없어 저장하지 못했어요."
+                  : getChartOrderPersistenceErrorMessage(
+                      result.denialReason ?? result.error,
+                    ),
+            );
+          }
+          return false;
+        }
+
+        const nextCommittedRows = applyPersistedOrderDrafts(
+          preparedDraft.rows,
+          result.rows ?? [],
+          bundle.encounter.workspaceId,
+          { preserveMissingRows: true },
+        );
+        setCommittedRows(nextCommittedRows);
+        if (!draftTouchedRef.current) {
+          setDraftRows(nextCommittedRows);
+        } else {
+          const committedById = new Map(
+            nextCommittedRows.map((row) => [row.order.id, row]),
+          );
+          setDraftRows((currentRows) =>
+            currentRows.map((currentRow) => {
+              const committedRow = committedById.get(currentRow.order.id);
+              if (!committedRow) return currentRow;
+              return {
+                ...committedRow,
+                billingName: currentRow.billingName,
+                detailInputs: currentRow.detailInputs,
+                detailSchemaVersion: currentRow.detailSchemaVersion,
+                priority: currentRow.priority,
+                quantityInput: currentRow.quantityInput,
+                setSelectionIntent: currentRow.setSelectionIntent,
+              };
+            }),
+          );
+        }
+        if (result.etag) {
+          orderDraftEtagRef.current = result.etag;
+          setOrderDraftEtag(result.etag);
+        }
+        orderDraftConflictRef.current = false;
       }
 
-      const nextCommittedRows = applyPersistedOrderDrafts(
-        preparedDraft.rows,
-        result.rows ?? [],
-        bundle.encounter.workspaceId,
-        { preserveMissingRows: true },
-      );
-      setCommittedRows(nextCommittedRows);
-      if (!draftTouchedRef.current) {
-        setDraftRows(nextCommittedRows);
-      } else {
-        const committedById = new Map(
-          nextCommittedRows.map((row) => [row.order.id, row]),
-        );
-        setDraftRows((currentRows) =>
-          currentRows.map((currentRow) => {
-            const committedRow = committedById.get(currentRow.order.id);
-            if (!committedRow) return currentRow;
-            return {
-              ...committedRow,
-              billingName: currentRow.billingName,
-              detailInputs: currentRow.detailInputs,
-              detailSchemaVersion: currentRow.detailSchemaVersion,
-              priority: currentRow.priority,
-              quantityInput: currentRow.quantityInput,
-              setSelectionIntent: currentRow.setSelectionIntent,
-            };
-          }),
-        );
-      }
-      if (result.etag) {
-        orderDraftEtagRef.current = result.etag;
-        setOrderDraftEtag(result.etag);
-      }
-      orderDraftConflictRef.current = false;
       setOrderDraftSaveState("saved");
       if (!silent) toast.success("Order 업데이트를 저장했어요.");
       return true;
     })();
 
     orderDraftSavePromiseRef.current = operation;
-    const clearInFlightSave = (saved: boolean) => {
+    const clearInFlightSave = () => {
       if (orderDraftSavePromiseRef.current === operation) {
         orderDraftSavePromiseRef.current = null;
       }
       orderDraftSaveInFlightRef.current = false;
-      if (
-        saved &&
-        draftTouchedRef.current &&
-        !orderDraftConflictRef.current
-      ) {
-        window.setTimeout(() => {
-          if (draftTouchedRef.current) void autoSaveDraftRef.current();
-        }, 0);
-      }
     };
-    void operation.then(clearInFlightSave, () => clearInFlightSave(false));
+    void operation.then(clearInFlightSave, clearInFlightSave);
     return operation;
   };
   useEffect(() => {
