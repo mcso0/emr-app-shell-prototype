@@ -14,7 +14,7 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-017-evidence-grounded-dispensing-order-master.md"
 dependencies: ["CLINICAL-MASTER-PR-017"]
 updated: "2026-08-26"
-remote_writes: 3
+remote_writes: 6
 ---
 
 # Clinical Master PR-018: Dispensing service-review visibility
@@ -33,8 +33,12 @@ facing service-operations review.
 - Mark every exception lineage as `serviceReviewOnly` and release-pin it to
   release 13 (`78a57bf0-10a8-47db-9ae1-8a8cff79b2c4`).
 - Require authenticated `service_catalog:view` permission for chart search.
-- Preserve the existing species, route, veterinarian extra-label,
-  confirmation-snapshot, Task, Queue, and Billing boundaries.
+- Preserve the source product species and route evidence. For this explicitly
+  allowlisted service-operations review only, record
+  `speciesUseBasis = service_operations_review` instead of claiming a
+  veterinarian extra-label attestation that the review UI does not collect.
+- Preserve confirmation snapshots and Task/Queue creation. Unpriced review
+  rows force billing reflection off and create no Billing candidate.
 - Keep `clair-foreign-demo` unchanged.
 
 ## Out Of Scope
@@ -59,8 +63,9 @@ facing service-operations review.
 ## Remote State
 
 - Supabase project: `qmerxgzrwaaahpkhjqlc`.
-- Applied migrations: `20260826093004`, `20260826093201`, and
-  `20260826093549`.
+- Applied migrations: `20260826093004`, `20260826093201`,
+  `20260826093549`, `20260826095444`, `20260826095618`, and
+  `20260826100007`.
 - Readback: 108 service-review rows in each target workspace; foreign control
   zero; fake authenticated non-member zero.
 - Event table has RLS, no external table grants, and immutable update/delete.
@@ -81,6 +86,13 @@ npm run build
 - Focused chart, migration, and fulfillment suite: 29 passed.
 - TypeScript, ESLint, docs links, secret scan, and production build: passed.
 - Supabase readback: 108 rows per target, foreign zero, fake non-member zero.
+- Execution readback: one Cheongdam synthetic order confirmed with exactly one
+  universal Task and one dispensing Queue projection, zero Billing candidates,
+  and visible Queue readback. The order remains `serviceReviewOnly` and does
+  not claim clinical approval.
+- The chart draft auto-save now runs only after an actual edit. This prevents
+  the saved ETag from changing continuously and racing explicit confirmation;
+  the focused hotfix suite passes 15 tests.
 - Supabase advisors: no new unresolved release-blocking finding. The private
   append-only event table intentionally has RLS with no client policy, and the
   authenticated definer RPC is intentionally exposed behind its explicit

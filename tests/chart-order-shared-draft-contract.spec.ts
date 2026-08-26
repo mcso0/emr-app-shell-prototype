@@ -38,6 +38,9 @@ test("shared draft save remains CAS-bound and creates no execution artifacts", (
 });
 
 test("chart draft autosaves after 700ms, flushes on field exit, and blocks actions on conflict", () => {
+  expect(chartModule).toMatch(
+    /orderDraftSaveState === "saving" \|\|\s*!draftTouchedRef\.current[\s\S]*?window\.setTimeout\(\(\) => \{\s*if \(!draftTouchedRef\.current\) return;\s*void autoSaveDraftRef\.current\(\);\s*\}, 700\);/,
+  );
   expect(chartModule).toContain("window.setTimeout(() => {");
   expect(chartModule).toContain("}, 700);");
   expect(chartModule).toContain("onBlur={onFlushDraft}");
