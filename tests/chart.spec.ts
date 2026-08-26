@@ -6256,3 +6256,184 @@ test("chart confirmation retries the same atomic command without rewriting the d
 }) => {
   await verifyChartConfirmationRetry(page);
 });
+
+test("chart confirmation continues after an ambiguous draft response only when readback matches", async ({
+  page,
+}) => {
+  const orderId = "order-ambiguous-draft-readback";
+  const displayName = "Ambiguous draft readback medicine";
+  const firstEtag = `"${"7".repeat(64)}"`;
+  const savedEtag = `"${"8".repeat(64)}"`;
+  const detailInputs = {
+    doseBasis: "patient",
+    dose: 16,
+    doseUnit: "mg",
+    route: "PO",
+    frequency: "once",
+    durationDays: 1,
+    totalQuantity: 1,
+  };
+  let currentEtag = firstEtag;
+  let currentRow = {
+    orderId,
+    workspaceId: "clair-demo",
+    encounterId: kongEncounterId,
+    rowType: "individual",
+    orderType: "dispensing",
+    clinicalOrderType: "dispensing",
+    destinationModule: "dispensing",
+    executionMode: "routed",
+    detailInputs,
+    detailSchemaVersion: 1,
+    priority: "normal",
+    billingEligible: true,
+    revisionNo: 0,
+    parentOrderId: null,
+    sourceSetId: null,
+    sourceSetRevisionId: null,
+    sourceSetRevisionNo: null,
+    sourceSetVersion: null,
+    sourceSetRevisionItemId: null,
+    workspaceCatalogItemId: "svc-med-maropitant",
+    workspaceCatalogRevision: null,
+    dispensingLineage: null,
+    quantity: 1,
+    quantitySource: "manual",
+    unitPriceSnapshot: 4500,
+    lineTotalSnapshot: 4500,
+    snapshotSchemaVersion: 0,
+    snapshotHash: null,
+    appliedSnapshot: {
+      amountBasis: "per_order",
+      billingName: displayName,
+      billingReflectionEnabled: true,
+      categoryGroup: "medication",
+      clinicalOrderType: "dispensing",
+      destinationModule: "dispensing",
+      detailInputs,
+      detailSchemaVersion: 1,
+      executionMode: "routed",
+      inHospitalOrderName: displayName,
+      lineTotalSnapshot: 4500,
+      orderType: "dispensing",
+      priceKrw: 4500,
+      quantity: 1,
+      rowType: "individual",
+      sourcePresetId: "svc-med-maropitant",
+      standardOrderName: displayName,
+      targetSpecies: ["dog"],
+      taskRequired: true,
+      taxIncluded: true,
+      workspaceCatalogItemId: "svc-med-maropitant",
+    },
+    appliedPriceSnapshot: {},
+    calculationInputs: {},
+    calculationOutputs: {},
+    billingReflectionEnabled: true,
+    orderConfirmationStatus: "draft",
+    status: "requested",
+    updatedAt: "2026-08-26T12:00:00.000Z",
+  };
+  let draftPatchCount = 0;
+  let draftReadbackCount = 0;
+  const actionBodies: Array<Record<string, unknown>> = [];
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() === "GET") {
+        draftReadbackCount += 1;
+        await route.fulfill({
+          contentType: "application/json",
+          status: 200,
+          headers: { ETag: currentEtag },
+          json: {
+            ok: true,
+            status: 200,
+            etag: currentEtag,
+            rows: [currentRow],
+          },
+        });
+        return;
+      }
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+
+      draftPatchCount += 1;
+      const body = route.request().postDataJSON() as {
+        rows: Array<Record<string, unknown>>;
+      };
+      const savedRow = body.rows.find((row) => row.orderId === orderId);
+      expect(savedRow).toBeTruthy();
+      currentEtag = savedEtag;
+      currentRow = {
+        ...currentRow,
+        detailInputs:
+          (savedRow?.detailInputs as typeof detailInputs | undefined) ??
+          currentRow.detailInputs,
+        detailSchemaVersion:
+          (savedRow?.detailSchemaVersion as number | undefined) ??
+          currentRow.detailSchemaVersion,
+        priority:
+          (savedRow?.priority as string | undefined) ?? currentRow.priority,
+        quantity:
+          (savedRow?.quantity as number | undefined) ?? currentRow.quantity,
+        updatedAt: "2026-08-26T12:01:00.000Z",
+      };
+      await route.fulfill({
+        contentType: "application/json",
+        status: 500,
+        json: { ok: false, status: 500, error: "db_write_failed" },
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-actions*",
+    async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          contentType: "application/json",
+          status: 200,
+          json: {
+            ok: true,
+            status: 200,
+            etag: currentEtag,
+            rows: [],
+            orderActions: [],
+          },
+        });
+        return;
+      }
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+      actionBodies.push(
+        (route.request().postDataJSON() ?? {}) as Record<string, unknown>,
+      );
+      await route.fulfill({
+        contentType: "application/json",
+        status: 500,
+        json: { ok: false, status: 500, error: "db_write_failed" },
+      });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await page
+    .getByRole("checkbox", { name: `${displayName} 선택` })
+    .check();
+  await (await getChartOrderAction(page, "Order 확정")).click();
+  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
+  await confirmDialog.getByRole("button", { name: "Order 확정" }).click();
+
+  await expect.poll(() => draftPatchCount).toBe(1);
+  await expect.poll(() => draftReadbackCount).toBeGreaterThanOrEqual(1);
+  await expect.poll(() => actionBodies.length).toBe(1);
+  expect(actionBodies[0]).toMatchObject({
+    action: "confirm",
+    encounterId: kongEncounterId,
+  });
+  expect(actionBodies[0]?.orderIds).toHaveLength(1);
+});
