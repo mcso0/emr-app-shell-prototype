@@ -27,6 +27,9 @@ test("shared draft migration covers every editable value in readback and ETag in
 });
 
 test("shared draft save remains CAS-bound and creates no execution artifacts", () => {
+  expect(chartModule).toMatch(
+    /const draftRows = rows\.flatMap<ChartOrderDraftRowInput>\(\(row\) => \{\s*if \(isChartOrderConfirmedRow\(row\)\) return \[\];/,
+  );
   expect(migration).toContain("p_orders -> 'expectedEtag'");
   expect(migration).toContain("clair_save_chart_order_draft_phase2_base");
   expect(migration).toContain("set lock_timeout = '5s'");
