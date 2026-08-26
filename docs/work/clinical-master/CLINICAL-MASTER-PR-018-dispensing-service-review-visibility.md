@@ -14,7 +14,7 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-017-evidence-grounded-dispensing-order-master.md"
 dependencies: ["CLINICAL-MASTER-PR-017"]
 updated: "2026-08-26"
-remote_writes: 9
+remote_writes: 10
 ---
 
 # Clinical Master PR-018: Dispensing service-review visibility
@@ -66,7 +66,8 @@ facing service-operations review.
 - Applied migrations: `20260826093004`, `20260826093201`,
   `20260826093549`, `20260826095444`, `20260826095618`, and
   `20260826100007`, plus ETag visibility hotfix `20260826110020` and Queue
-  patient-context readback hotfix `20260826113706`.
+  patient-context readback hotfix `20260826113706`, plus assignment-cancel
+  return hotfix `20260826115430`.
 - Readback: 108 service-review rows in each target workspace; foreign control
   zero; fake authenticated non-member zero.
 - Event table has RLS, no external table grants, and immutable update/delete.
@@ -101,6 +102,11 @@ npm run build
   The second proof now returns synthetic patient `초코` and guardian `최도현`;
   the Queue header uses the persisted work-item creation date instead of the
   fixture-only `2026.04.14` value.
+- Queue assignment cancellation now persists an audited `returned` transition
+  with reason `담당 취소`, releases the assignee, and resumes the item to
+  `requested` with its universal Task restored to `pending`. Remote readback
+  for the second proof confirms Queue `requested`, Task `pending`, and no
+  assignee after the production-smoke reset.
 - The chart draft auto-save now runs only after an actual edit. This prevents
   the saved ETag from changing continuously and racing explicit confirmation;
   the focused hotfix suite passes 15 tests.

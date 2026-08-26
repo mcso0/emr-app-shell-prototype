@@ -220,6 +220,12 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
     updatedAt: "2026-06-14T01:30:00.000Z",
     workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
   };
+  let liveStatus: FulfillmentWorkItemStatus = "requested";
+  const patchBodies: Array<{
+    assignedToUserId?: string | null;
+    reason?: string;
+    status?: FulfillmentWorkItemStatus;
+  }> = [];
 
   await page.route(
     `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items?*`,
@@ -234,7 +240,17 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
           ok: true,
           status: 200,
           enforcedBy: "fulfillment-work-item-persistence",
-          workItems: queueType === "dispensing" ? [liveWorkItem] : [],
+          workItems:
+            queueType === "dispensing"
+              ? [
+                  {
+                    ...liveWorkItem,
+                    assignedToUserId:
+                      liveStatus === "requested" ? null : "user-tech",
+                    status: liveStatus,
+                  },
+                ]
+              : [],
         }),
       });
     },
@@ -245,9 +261,15 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
     `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items/${liveWorkItem.id}`,
     async (route) => {
       const body = JSON.parse(route.request().postData() ?? "{}") as {
-        status?: string;
+        assignedToUserId?: string | null;
+        reason?: string;
+        status?: FulfillmentWorkItemStatus;
       };
-      if (body.status) statusUpdates.push(body.status);
+      patchBodies.push(body);
+      if (body.status) {
+        liveStatus = body.status;
+        statusUpdates.push(body.status);
+      }
 
       await route.fulfill({
         status: 200,
@@ -259,8 +281,9 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
           workItems: [
             {
               ...liveWorkItem,
-              assignedToUserId: "user-tech",
-              status: body.status ?? "requested",
+              assignedToUserId:
+                liveStatus === "requested" ? null : "user-tech",
+              status: liveStatus,
             },
           ],
         }),
@@ -340,6 +363,26 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   await page.getByRole("button", { name: "담당하기" }).first().click();
 
   await expect.poll(() => statusUpdates).toEqual(["accepted", "in_progress"]);
+
+  await page
+    .getByRole("button", { name: "조제 오더 상태 액션 열기" })
+    .first()
+    .click();
+  await page.getByRole("menuitem", { name: "담당취소" }).click();
+  await expect.poll(() => statusUpdates).toEqual([
+    "accepted",
+    "in_progress",
+    "returned",
+    "requested",
+  ]);
+  expect(patchBodies[2]).toMatchObject({
+    assignedToUserId: null,
+    reason: "담당 취소",
+    status: "returned",
+  });
+  await expect(
+    page.getByTestId("dispensing-fulfillment-readback"),
+  ).toContainText("서버 상태 요청");
 });
 
 test("dispensing treatment workspace shows server readback and refreshes after persisted status mutation", async ({

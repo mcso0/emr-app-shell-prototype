@@ -429,6 +429,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
       let allTransitionsSucceeded = true;
 
       for (const status of statuses) {
+        const isAssignmentCancellation = status === "returned";
         const response = await fetch(
           `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
           {
@@ -437,7 +438,11 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
               "content-type": "application/json",
               "x-clair-demo-session-user-id": "user-tech",
             },
-            body: JSON.stringify({ status, assignedToUserId: "user-tech" }),
+            body: JSON.stringify({
+              status,
+              assignedToUserId: isAssignmentCancellation ? null : "user-tech",
+              reason: isAssignmentCancellation ? "담당 취소" : undefined,
+            }),
           },
         );
         if (!response.ok) {
