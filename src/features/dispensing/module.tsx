@@ -804,6 +804,13 @@ function createLiveOrderTableGroups(
   const rowWorkStatus = mapFulfillmentToOrderRowWorkStatus(workItem.status);
   const medicationFacts = getReviewedMedicationFacts(workItem);
   const quantityFacts = getDispensingQuantityFacts(workItem);
+  const requestedDate = (
+    workItem.createdAt ??
+    workItem.updatedAt ??
+    new Date().toISOString()
+  )
+    .slice(0, 10)
+    .replaceAll("-", ".");
 
   return [
     {
@@ -825,7 +832,7 @@ function createLiveOrderTableGroups(
             workItem.sourceSnapshot?.instruction ?? selectedQueueItem.orderName,
           frequency: "-",
           status: workItem.status === "cancelled" ? "취소" : "요청",
-          requestedAt: `2026.04.14 ${selectedQueueItem.time}`,
+          requestedAt: `${requestedDate} ${selectedQueueItem.time}`,
           doctor: selectedQueueItem.requesterName,
           days: "1",
           doseTiming: "-",
@@ -1997,9 +2004,8 @@ function DispensingContentBody({
       : primaryGroup?.workStatus === "완료"
         ? completeLabel
         : "대기중";
-  const instructionRequestedAt = selectedQueueItem
-    ? `2026.04.14 ${selectedQueueItem.time}`
-    : "2026.04.14 10:30";
+  const instructionRequestedAt =
+    primaryGroup?.rows[0]?.requestedAt ?? "2026.04.14 10:30";
   const instructionPatientSummary = getQueuePatientSummary(selectedQueueItem);
   const instructionId = selectedQueueItem?.instructionId ?? "RX-260414-0008";
   const instructionRequester = selectedQueueItem?.requesterName ?? "이수지";

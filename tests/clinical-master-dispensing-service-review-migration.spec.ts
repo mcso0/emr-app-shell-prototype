@@ -26,6 +26,10 @@ const speciesExecutionMigrationPath = resolve(
   process.cwd(),
   "supabase/migrations/20260826165000_clinical_master_dispensing_service_review_species_execution.sql",
 );
+const queuePatientContextMigrationPath = resolve(
+  process.cwd(),
+  "supabase/migrations/20260826173000_fulfillment_queue_patient_context_readback.sql",
+);
 
 test("service-review migration is bounded to the three target workspaces and keeps clinical approval false", async () => {
   const migration = await readFile(migrationPath, "utf8");
@@ -117,4 +121,21 @@ test("service-review species usage is labeled operational and does not claim app
   );
   expect(migration).toContain("if v_count <> 1 then");
   expect(migration).not.toContain("then 'master_reviewed_service_review'");
+});
+
+test("fulfillment queue readback restores encounter patient context without weakening queue permissions", async () => {
+  const migration = await readFile(queuePatientContextMigrationPath, "utf8");
+
+  expect(migration).toContain("private.clair_is_active_workspace_member");
+  expect(migration).toContain(
+    "private.clair_queue_permission_for_destination(p_queue_type, 'read')",
+  );
+  expect(migration).toContain("left join public.patients patient");
+  expect(migration).toContain("left join public.guardians guardian");
+  expect(migration).toContain("'patientName', patient.name");
+  expect(migration).toContain("'guardianName', guardian.name");
+  expect(migration).toContain(
+    ")) || item.source_snapshot",
+  );
+  expect(migration).not.toMatch(/\b(drop|truncate|delete)\b/i);
 });

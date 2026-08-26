@@ -326,6 +326,9 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   await expect(page.locator("aside").first().getByText("코코")).toHaveCount(0);
 
   await liveQueueItem.click();
+  await expect(
+    page.locator("[data-slot='instruction-header-order-info']"),
+  ).toContainText("2026.06.14 01:30");
   await page
     .getByRole("button", { name: "조제 이력 패널 열기" })
     .click();
