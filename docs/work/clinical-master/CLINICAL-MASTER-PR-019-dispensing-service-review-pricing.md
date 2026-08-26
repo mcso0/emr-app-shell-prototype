@@ -3,7 +3,7 @@ id: "CLINICAL-MASTER-PR-019"
 type: "Work Item"
 title: "Dispensing master defaults, Cheongdam activation, pricing, and fulfillment"
 description: "Adds hospital-like editable prescription presets to all 108 dispensing masters, adopts them as effectively usable with varied prices in Cheongdam, and carries confirmed chart orders into dispensing/treatment without claiming clinical approval."
-status: "in_progress"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
 tags: ["clinical-master", "dispensing", "service-review", "pricing", "synthetic-demo"]
@@ -14,7 +14,7 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-017-evidence-grounded-dispensing-order-master.md"
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-018-dispensing-service-review-visibility.md"
 dependencies: ["CLINICAL-MASTER-PR-018"]
-updated: "2026-08-26"
+updated: "2026-08-27"
 remote_writes: 22
 ---
 
@@ -146,6 +146,35 @@ preserving the separate clinically inactive and review-pending state.
   fixtures and displays 1회 용량, 투여 빈도, 일수, 복용 시점, 회분, 처방 총량,
   보관 방법, and 보호자 복약지도 from the confirmed snapshot.
 
+## Production Closeout
+
+- Delivery completed through PR #640. Final candidate
+  `d45ced1b63f591775d4498220149d4d6d4b8c720` merged to `origin/main` as
+  `a7050222dbe1a3ab392137b6e7ad91f6b0887d90`.
+- Vercel production deployment
+  `dpl_2j1EjMw6s2ZjxM9SgCroGRNVdnLM` is Ready on
+  `https://emr-app-shell-prototype.vercel.app`. The chart and dispensing routes
+  returned HTTP 200; the root HTTP 307 remains the expected login redirect.
+- Authenticated Cheongdam admin smoke counted exactly 108 `사용` rows, 108
+  priced rows, and 30 distinct prices. Visible examples included 8,000, 8,500,
+  11,000, 11,500, 13,000, 17,500, 27,000, and 28,500 KRW.
+- Authenticated production chart smoke added `Amoxicillin 정` from master
+  `cm.order.dispensing-v1-uk-vmd-a011336`. The row immediately showed patient
+  basis, 1 tablet, PO, BID, 5 days, total 10 tablets, any-time administration,
+  room-temperature storage, and 8,500 KRW.
+- Confirmation succeeded and automatically opened the same encounter in
+  `/dispensing`. The visible work item showed the same dose, frequency, days,
+  total quantity, storage, and guardian instruction.
+- Supabase readback for order `08e63c89-aea8-400a-8d35-459c11bc1ae8`
+  confirmed one immutable Order, pending universal Task, requested dispensing
+  Queue projection, and 8,500 KRW Billing candidate with the same source-master
+  lineage.
+- Ambiguous confirmation responses now recover only after an exact confirmed
+  action readback. A successful dispensing confirmation then performs the
+  destination handoff; other order destinations do not use this navigation.
+- Immediate application rollback baseline:
+  `dpl_7zuY23VUM2wKMuLaMmZNUDiy6dtv`.
+
 ## Done Criteria
 
 - The pricing artifact contains exactly 108 unique master keys, non-null
@@ -195,3 +224,7 @@ preserving the separate clinically inactive and review-pending state.
   passed 136/141; the five residual failures are the pre-existing Order Set
   autosave race and hospital-admin locator/44px-versus-56px geometry contracts,
   not the dispensing preset, service-review, or fulfillment paths changed here.
+- Final handoff follow-up passed focused ESLint, TypeScript, production build,
+  secret scan, diff check, and three focused Playwright cases covering retry,
+  ambiguous response recovery, automatic dispensing navigation, and editable
+  master prescription defaults.
