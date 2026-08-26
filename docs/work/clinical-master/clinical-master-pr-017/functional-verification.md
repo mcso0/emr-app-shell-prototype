@@ -1,6 +1,6 @@
 # PR-017 Functional Verification Matrix
 
-Status: `local contract and remote persistence verification pass; production app smoke pending`
+Status: `local, remote persistence, Git, deployment, and production non-exposure smoke pass`
 
 This matrix separates executable local evidence from the production-bound checks
 that cannot run before the explicit Supabase publish/adoption and release gates.
@@ -30,7 +30,7 @@ treated as a completed browser scenario.
 |  13 | Safety/regulatory block                             | Pass         | Predicate requires normal master safety, approved Korean regulatory review, non-controlled status, and approved evidence assertions.                            |
 |  14 | Atomic confirmation                                 | Pass         | Atomic-confirmation suite verifies one server-owned command boundary and immutable snapshots.                                                                   |
 |  15 | Confirmation retry                                  | Pass         | Stable idempotency key returns the persisted result; changed payload conflicts.                                                                                 |
-|  16 | Task and queue handoff                              | Partial      | Execution read model preserves Order to Task to Queue trace; migrated DB/browser ID reconciliation is still pending.                                            |
+|  16 | Task and queue handoff                              | Pass across server/RPC and aggregate controls | Execution read model preserves Order to Task to Queue trace; remote 38/38/31/38 aggregates reconcile and authenticated production chart/dispensing routes loaded cleanly. |
 |  17 | Billing separation                                  | Pass         | Confirmation and `Order 청구` remain separate; operational work status is not used as the default billing gate.                                                 |
 |  18 | Billing retry                                       | Pass         | Existing candidates and candidate sync retries are idempotent.                                                                                                  |
 |  19 | Dispensing completion                               | Partial      | Fulfillment transition completes the work item and aligns the universal Task; dispense-event lot/expiry/actual-quantity history is not implemented.             |
@@ -59,9 +59,10 @@ treated as a completed browser scenario.
 - The opt-in source-link validator checked all 108 distinct official source
   URLs and reported zero broken links.
 
-These results do not cover migrated-DB browser ID reconciliation,
-dispense-event lot/expiry/actual-quantity history, or production
-duplicate/orphan checks.
+These local results do not implement dispense-event
+lot/expiry/actual-quantity history. Remote production duplicate/orphan,
+aggregate reconciliation, and authenticated route/non-exposure checks are
+recorded below.
 
 ## Remote persistence verification
 
@@ -78,7 +79,18 @@ The approved production-bound persistence run established:
 - publish/adoption retry idempotency and three immutable actor-attributed
   adoption events.
 
-Authenticated production route/UI smoke remains part of the Git/deployment
-gate. Because all 108 records are intentionally unreviewed and inactive, a
-successful smoke must prove non-exposure rather than make them searchable for
-real clinical use.
+## Git and production verification
+
+- Candidate `f8a1d927` passed Release Check 32919156702 and merged through PR
+  #620 as `6dcb71ac`; fetched `origin/main` and remote `main` matched.
+- Vercel deployment `dpl_ADnW4rS7CzYQgiAXCbXPHvyKaSjb` is Ready for that
+  merge SHA and the official production alias resolves to the same deployment.
+- Unauthenticated root/login/chart/API probes returned the expected
+  307/200/200/401 boundaries; the new fulfillment-history API also returned
+  401 without a session.
+- Authenticated synthetic Cheongdam chart and dispensing routes loaded with
+  zero captured browser errors. Exact search for an inactive release-13
+  product returned no candidate and the empty-result state, proving that the
+  108 pending records did not become clinically searchable.
+- The immediately preceding Ready production deployment
+  `dpl_773HbNmYGPDtBNX4P3sjhJNHDBZ2` is the rollback candidate.

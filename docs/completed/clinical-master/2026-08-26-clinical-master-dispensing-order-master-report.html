@@ -31,7 +31,7 @@
       </p>
       <span class="badge">persistent data delivery complete</span>
       <span class="badge">clinical-use count 0</span>
-      <span class="badge warn">Git delivery and production smoke pending</span>
+      <span class="badge">Git and production delivery complete</span>
 
       <section>
         <h2>지속 반영 결과</h2>
@@ -67,9 +67,18 @@
       <section>
         <h2>남은 경계</h2>
         <ul>
-          <li>이 보고서가 처음 작성된 시점에는 commit, PR, merge, origin/main 증명, production deployment와 smoke가 남아 있다. 완료 후 이 문서에 정확한 원격 증거를 추가한다.</li>
           <li>108개 오더의 임상 검토·한국 규제 검토·번역 검토와 실제 임상 활성화는 별도 승인 없이는 수행하지 않는다.</li>
           <li>controlled-substance activation과 lot, expiry, BUD, actual dispense-event 사실은 구현 범위가 아니다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Git·배포 closeout</h2>
+        <ul>
+          <li>Candidate <code>f8a1d927</code>, PR #620, Release Check <code>32919156702</code>, merge <code>6dcb71ac</code>, exact <code>origin/main</code> 확인을 완료했다.</li>
+          <li>Production deployment <code>dpl_ADnW4rS7CzYQgiAXCbXPHvyKaSjb</code>는 merge SHA를 빌드한 Ready 배포이며 공식 alias가 같은 deployment를 가리킨다.</li>
+          <li>인증된 synthetic Cheongdam chart와 dispensing route가 오류 없이 열렸고, inactive release-13 제품의 exact search는 candidate 0과 empty state를 반환했다.</li>
+          <li>비인증 root/login/chart/API 경계와 새 fulfillment-history API 401을 확인했다. 직전 Ready rollback candidate는 <code>dpl_773HbNmYGPDtBNX4P3sjhJNHDBZ2</code>다.</li>
         </ul>
       </section>
 
