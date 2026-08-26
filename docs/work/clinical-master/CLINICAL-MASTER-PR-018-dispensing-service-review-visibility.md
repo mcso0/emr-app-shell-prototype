@@ -14,7 +14,7 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-017-evidence-grounded-dispensing-order-master.md"
 dependencies: ["CLINICAL-MASTER-PR-017"]
 updated: "2026-08-26"
-remote_writes: 8
+remote_writes: 9
 ---
 
 # Clinical Master PR-018: Dispensing service-review visibility
@@ -65,7 +65,8 @@ facing service-operations review.
 - Supabase project: `qmerxgzrwaaahpkhjqlc`.
 - Applied migrations: `20260826093004`, `20260826093201`,
   `20260826093549`, `20260826095444`, `20260826095618`, and
-  `20260826100007`, plus ETag visibility hotfix `20260826110020`.
+  `20260826100007`, plus ETag visibility hotfix `20260826110020` and Queue
+  patient-context readback hotfix `20260826113706`.
 - Readback: 108 service-review rows in each target workspace; foreign control
   zero; fake authenticated non-member zero.
 - Event table has RLS, no external table grants, and immutable update/delete.
@@ -84,6 +85,7 @@ npm run build
 ```
 
 - Focused chart, migration, and fulfillment suite: 29 passed.
+- Latest Queue patient-context and request-time hotfix suite: 22 passed.
 - TypeScript, ESLint, docs links, secret scan, and production build: passed.
 - Supabase readback: 108 rows per target, foreign zero, fake non-member zero.
 - Execution readback: two Cheongdam synthetic orders confirmed with exactly one
@@ -94,6 +96,11 @@ npm run build
   `8634b338-2201-4e97-a579-291cf8c866a8`, and Queue projection
   `b9b94442-3a42-458e-94e0-ee52f1278a3e`. Both orders remain
   `serviceReviewOnly` and do not claim clinical approval.
+- The authenticated Queue readback resolves missing frozen labels from the
+  same encounter after the existing membership and queue-permission checks.
+  The second proof now returns synthetic patient `초코` and guardian `최도현`;
+  the Queue header uses the persisted work-item creation date instead of the
+  fixture-only `2026.04.14` value.
 - The chart draft auto-save now runs only after an actual edit. This prevents
   the saved ETag from changing continuously and racing explicit confirmation;
   the focused hotfix suite passes 15 tests.
