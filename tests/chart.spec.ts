@@ -5586,7 +5586,7 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
         appliedDisplayName: `PR-017 조제 ${sequence}`,
         appliedPriceKrw: 0,
         appliedSalesUnit: "per_each",
-        appliedStandardOrderName: `PR-017 조제 ${sequence}`,
+        appliedStandardOrderName: `Official PR-017 Product ${sequence}`,
         appliedTargetSpecies: ["dog", "cat"],
         appliedTaskRequired: true,
         appliedTaxIncluded: true,
@@ -5644,6 +5644,12 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   await expect(
     page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0001"),
   ).toBeHidden();
+  await dialog
+    .getByLabel("카탈로그 Order 검색")
+    .fill("Official PR-017 Product 0108");
+  await expect(
+    page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0108"),
+  ).toBeVisible();
 });
 
 test("chart dispensing catalog prefills master prescription values and preserves veterinarian edits", async ({
