@@ -8098,13 +8098,22 @@ function OrderArea({
     })();
 
     orderDraftSavePromiseRef.current = operation;
-    const clearInFlightSave = () => {
+    const clearInFlightSave = (saved: boolean) => {
       if (orderDraftSavePromiseRef.current === operation) {
         orderDraftSavePromiseRef.current = null;
       }
       orderDraftSaveInFlightRef.current = false;
+      if (
+        saved &&
+        draftTouchedRef.current &&
+        !orderDraftConflictRef.current
+      ) {
+        window.setTimeout(() => {
+          if (draftTouchedRef.current) void autoSaveDraftRef.current();
+        }, 0);
+      }
     };
-    void operation.then(clearInFlightSave, clearInFlightSave);
+    void operation.then(clearInFlightSave, () => clearInFlightSave(false));
     return operation;
   };
   useEffect(() => {
