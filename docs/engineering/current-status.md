@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-08-26
+Updated: 2026-08-27
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -154,6 +154,21 @@ loaded VIP workspace, Order management, lab `34`, custom CBC active at
 `35,000` KRW, and the master panel paused at `36,001` KRW with zero console
 errors. The previous rollback production baseline is `origin/main`
 `7ca63194`. Clinical Master Phases 2–5 remain out of scope.
+
+CLINICAL-MASTER-PR-019 is completed within the service-review-only synthetic
+boundary. Cheongdam now shows exactly 108 dispensing rows as effective `사용`,
+all 108 are priced across 30 distinct price points, and master prescription
+defaults populate editable chart fields. An authenticated production flow added
+an 8,500 KRW `Amoxicillin 정` preset with 1 tablet / PO / BID / 5 days / total
+10 tablets / room-temperature storage, confirmed it, automatically opened the
+same encounter in dispensing, and showed the matching work instruction.
+Supabase readback confirmed the immutable Order plus one Task, one dispensing
+Queue projection, and one Billing candidate. PR #640 merged at
+`a7050222dbe1a3ab392137b6e7ad91f6b0887d90`; production deployment
+`dpl_2j1EjMw6s2ZjxM9SgCroGRNVdnLM` is Ready. These rows remain
+`synthetic_unreviewed`, `pending_activation`, and
+`clinical_use_allowed = false`; this is not clinical approval or real-hospital
+launch readiness.
 
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,
