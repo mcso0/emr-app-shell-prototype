@@ -93,6 +93,9 @@ npm run build
 - The chart draft auto-save now runs only after an actual edit. This prevents
   the saved ETag from changing continuously and racing explicit confirmation;
   the focused hotfix suite passes 15 tests.
+- Draft PATCH payloads exclude already confirmed rows. Confirmed orders remain
+  visible for readback, while a later candidate can be saved and confirmed
+  without asking the server to reopen immutable confirmation state.
 - Supabase advisors: no new unresolved release-blocking finding. The private
   append-only event table intentionally has RLS with no client policy, and the
   authenticated definer RPC is intentionally exposed behind its explicit

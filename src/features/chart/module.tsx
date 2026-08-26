@@ -2500,6 +2500,7 @@ async function saveChartOrderDraftRoute({
   }
   try {
     const draftRows = rows.flatMap<ChartOrderDraftRowInput>((row) => {
+      if (isChartOrderConfirmedRow(row)) return [];
       // Children are server-expanded rows. Sending them back as individual
       // draft inputs would lose the set parent/child discriminator on retry.
       if (row.runtimeRow?.rowType === "set_child") return [];
