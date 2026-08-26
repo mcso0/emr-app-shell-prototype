@@ -38,6 +38,10 @@ import {
   getOperatingDateFromIso,
   isIsoOperatingDate,
 } from "@/lib/emr-domain/demo-date";
+import {
+  mapDispensingOrderLineageSnapshot,
+  type DispensingOrderLineageSnapshot,
+} from "@/features/hospital-admin/server-order-catalog-core";
 import type {
   ClinicalOrderDestinationModule,
   ClinicalOrderType,
@@ -48,6 +52,7 @@ import type {
   OrderPriority,
   Patient,
   PermissionId,
+  UniversalOrderTaskStatus,
 } from "@/types/emr-domain";
 
 export type FulfillmentQueueType = EmrOrderType;
@@ -62,6 +67,8 @@ export type FulfillmentWorkItemStatus =
 export type FulfillmentSourceSnapshot = {
   billingReflectionEnabled: boolean;
   detail: Record<string, unknown>;
+  dispensingLineage?: DispensingOrderLineageSnapshot;
+  frozenOrderSnapshot?: Record<string, unknown>;
   guardianName?: string;
   instruction?: string;
   orderDisplayName: string;
@@ -80,10 +87,7 @@ export type FulfillmentSourceSnapshot = {
 
 export type FulfillmentOrderSnapshotInput = {
   amountBasis?:
-    | "included_order_sum"
-    | "set_fixed_price"
-    | "range_price"
-    | string;
+    "included_order_sum" | "set_fixed_price" | "range_price" | string;
   appliedPriceSnapshot?: Record<string, unknown>;
   appliedSnapshot?: Record<string, unknown>;
   billedAs?: "set_parent" | "atomic_child" | "nonbillable_parent";
@@ -135,6 +139,7 @@ export type FulfillmentWorkItem = {
   id: string;
   orderId: string;
   orderType: FulfillmentQueueType;
+  patientId?: string | null;
   priority: OrderPriority;
   queueType: FulfillmentQueueType;
   reason?: string | null;
@@ -144,7 +149,35 @@ export type FulfillmentWorkItem = {
   status: FulfillmentWorkItemStatus;
   taskAttemptNo?: number | null;
   taskId?: string | null;
+  taskStatus?: UniversalOrderTaskStatus | null;
   updatedAt: string;
+  workspaceId: string;
+};
+
+export type FulfillmentWorkItemHistoryEvent = {
+  actorUserId: string | null;
+  createdAt: string;
+  id: string;
+  nextStatus: FulfillmentWorkItemStatus;
+  orderId: string;
+  previousStatus: FulfillmentWorkItemStatus | null;
+  reason: string | null;
+  source: "work_item_created" | "order_event";
+  workItemId: string;
+};
+
+export type FulfillmentWorkItemHistoryCursor = {
+  createdAt: string;
+  eventId: string;
+};
+
+export type FulfillmentWorkItemHistorySnapshot = {
+  events: FulfillmentWorkItemHistoryEvent[];
+  hasMore: boolean;
+  nextCursor: FulfillmentWorkItemHistoryCursor | null;
+  orderId: string;
+  queueType: FulfillmentQueueType;
+  workItemId: string;
   workspaceId: string;
 };
 
@@ -218,7 +251,23 @@ type FulfillmentGatewayFailure = Exclude<
   { ok: true }
 >;
 
+export type FulfillmentHistoryGatewayResult =
+  | { ok: true; history: FulfillmentWorkItemHistorySnapshot }
+  | {
+      ok: false;
+      status: 409;
+      denialReason: "work_item_unavailable";
+    }
+  | { ok: false; status: 500; error: "db_read_failed" };
+
 export type FulfillmentWorkItemGateway = {
+  listWorkItemHistory(input: {
+    beforeCreatedAt?: string;
+    beforeEventId?: string;
+    limit?: number;
+    workItemId: string;
+    workspaceId: string;
+  }): Promise<FulfillmentHistoryGatewayResult>;
   listWorkItems(input: {
     date?: string;
     encounterId?: string;
@@ -265,6 +314,26 @@ export type FulfillmentWorkItemReadResult =
     }
   | FulfillmentGatewayFailure;
 
+export type FulfillmentWorkItemHistoryReadResult =
+  | {
+      ok: true;
+      status: 200;
+      enforcedBy: "fulfillment-work-item-history-persistence";
+      history: FulfillmentWorkItemHistorySnapshot;
+    }
+  | {
+      ok: false;
+      status: 400;
+      error: "invalid_input";
+      fieldErrors: Partial<Record<"cursor" | "limit" | "workItemId", string>>;
+    }
+  | {
+      ok: false;
+      status: 401 | 403;
+      denialReason: WorkspacePermissionDenialReason;
+    }
+  | Exclude<FulfillmentHistoryGatewayResult, { ok: true }>;
+
 export type FulfillmentWorkItemSyncResult =
   | {
       ok: true;
@@ -297,7 +366,7 @@ export type FulfillmentWorkItemUpdateResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: Partial<Record<"status" | "workItemId", string>>;
+      fieldErrors: Partial<Record<"reason" | "status" | "workItemId", string>>;
     }
   | {
       ok: false;
@@ -343,6 +412,10 @@ export type FulfillmentVetReviewBillingResult =
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 const fulfillmentMockStore = new Map<string, FulfillmentWorkItem>();
+const fulfillmentMockHistoryStore = new Map<
+  string,
+  FulfillmentWorkItemHistoryEvent[]
+>();
 
 const fulfillmentStatuses: FulfillmentWorkItemStatus[] = [
   "requested",
@@ -413,6 +486,91 @@ export async function readFulfillmentWorkItems({
   };
 }
 
+export async function readFulfillmentWorkItemHistory({
+  actorUserId,
+  beforeCreatedAt,
+  beforeEventId,
+  gateway = createMockFulfillmentWorkItemGateway(),
+  limit = 50,
+  permissionAdapter = createDemoFulfillmentPermissionAdapter(),
+  workItemId,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  beforeCreatedAt?: string | null;
+  beforeEventId?: string | null;
+  gateway?: Pick<FulfillmentWorkItemGateway, "listWorkItemHistory">;
+  limit?: number | null;
+  permissionAdapter?: WorkspacePermissionAdapter;
+  workItemId: string | null | undefined;
+  workspaceId: string;
+}): Promise<FulfillmentWorkItemHistoryReadResult> {
+  const normalizedWorkItemId = trimToUndefined(workItemId) ?? "";
+  const normalizedBeforeCreatedAt = trimToUndefined(beforeCreatedAt);
+  const normalizedBeforeEventId = trimToUndefined(beforeEventId);
+  if (
+    !normalizedWorkItemId ||
+    !Number.isInteger(limit) ||
+    (limit ?? 0) < 1 ||
+    (limit ?? 0) > 100 ||
+    Boolean(normalizedBeforeCreatedAt) !== Boolean(normalizedBeforeEventId) ||
+    (normalizedBeforeCreatedAt !== undefined &&
+      Number.isNaN(Date.parse(normalizedBeforeCreatedAt)))
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: {
+        ...(!normalizedWorkItemId
+          ? { workItemId: "업무 항목을 선택해 주세요." }
+          : {}),
+        ...(!Number.isInteger(limit) || (limit ?? 0) < 1 || (limit ?? 0) > 100
+          ? { limit: "이력 조회 수는 1~100이어야 합니다." }
+          : {}),
+        ...(Boolean(normalizedBeforeCreatedAt) !== Boolean(normalizedBeforeEventId) ||
+        (normalizedBeforeCreatedAt !== undefined &&
+          Number.isNaN(Date.parse(normalizedBeforeCreatedAt)))
+          ? { cursor: "이력 커서를 확인해 주세요." }
+          : {}),
+      },
+    };
+  }
+
+  const result = await gateway.listWorkItemHistory({
+    beforeCreatedAt: normalizedBeforeCreatedAt,
+    beforeEventId: normalizedBeforeEventId,
+    limit: limit ?? 50,
+    workItemId: normalizedWorkItemId,
+    workspaceId,
+  });
+  if (!result.ok) return result;
+  if (
+    result.history.workspaceId !== workspaceId ||
+    result.history.workItemId !== normalizedWorkItemId
+  ) {
+    return {
+      ok: false,
+      status: 409,
+      denialReason: "work_item_unavailable",
+    };
+  }
+
+  const permission = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: actorUserId,
+    workspaceId,
+    requiredPermission: permissionForQueue(result.history.queueType, "read"),
+  });
+  if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+
+  return {
+    ok: true,
+    status: 200,
+    enforcedBy: "fulfillment-work-item-history-persistence",
+    history: result.history,
+  };
+}
+
 export function getFulfillmentWorkItemReadSummary({
   filters,
   queueType,
@@ -443,7 +601,9 @@ export function getFulfillmentWorkItemReadSummary({
     ...(filters.encounterId ? { encounterId: filters.encounterId } : {}),
     ...(filters.orderId ? { orderId: filters.orderId } : {}),
     queueType,
-    ...(filters.status ? { status: filters.status as FulfillmentWorkItemStatus } : {}),
+    ...(filters.status
+      ? { status: filters.status as FulfillmentWorkItemStatus }
+      : {}),
     statusCounts,
     totalCount: workItems.length,
     workspaceId,
@@ -572,6 +732,52 @@ export async function updateFulfillmentWorkItem({
     ),
   });
   if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+
+  const assignmentUnchanged =
+    normalized.assignedToUserId === undefined ||
+    normalized.assignedToUserId ===
+      (workItem.workItem.assignedToUserId ?? undefined);
+  const reasonUnchanged =
+    normalized.reason === undefined ||
+    normalized.reason === (workItem.workItem.reason ?? undefined);
+  if (
+    normalized.status === workItem.workItem.status &&
+    assignmentUnchanged &&
+    reasonUnchanged
+  ) {
+    if (normalized.status === "completed") {
+      const downstreamSync = await syncDownstreamFromFulfillmentUpdate({
+        actorUserId,
+        auditGateway,
+        auditNow,
+        auditRequestId,
+        emitBillingReadyNotifications,
+        invoiceCandidateGateway,
+        lifecycleGateway,
+        notificationEventStore,
+        notificationEventScopeId,
+        notificationPersistenceGateway,
+        notificationStateStore,
+        requestedStatus: normalized.status,
+        updatedWorkItem: workItem.workItem,
+        workspaceId,
+      });
+      if (!downstreamSync.ok) return downstreamSync;
+      return {
+        ok: true,
+        status: 200,
+        enforcedBy: "fulfillment-work-item-persistence",
+        downstreamSync: downstreamSync.summary,
+        workItems: [workItem.workItem],
+      };
+    }
+    return {
+      ok: true,
+      status: 200,
+      enforcedBy: "fulfillment-work-item-persistence",
+      workItems: [workItem.workItem],
+    };
+  }
 
   const result = await gateway.updateWorkItem({
     actorUserId: actorUserId ?? "",
@@ -704,13 +910,16 @@ export async function syncVetReviewedBillingCandidates({
     return { ok: false, status: 409, denialReason: "invalid_review_gate" };
   }
 
-  for (const queueType of new Set(completedReviewItems.map((item) => item.queueType))) {
+  for (const queueType of new Set(
+    completedReviewItems.map((item) => item.queueType),
+  )) {
     const permission = resolveWorkspacePermission(permissionAdapter, {
       sessionUserId: actorUserId,
       workspaceId,
       requiredPermission: permissionForQueue(queueType, "mutate"),
     });
-    if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+    if (!permission.allowed)
+      return mapPermissionDenial(permission.denialReason);
   }
 
   const billingResult = await invoiceCandidateGateway.syncInvoiceCandidates({
@@ -748,8 +957,8 @@ export async function syncVetReviewedBillingCandidates({
         notificationEventScopeId,
         notificationPersistenceGateway,
         notificationStateStore,
-        sourceWorkItems: normalized.orderIds.map(
-          (orderId) => reviewItemByOrderId.get(orderId)!,
+        sourceWorkItems: normalized.orderIds.map((orderId) =>
+          reviewItemByOrderId.get(orderId)!,
         ),
         workspaceId,
       })
@@ -768,8 +977,8 @@ export async function syncVetReviewedBillingCandidates({
           },
         }
       : {}),
-    reviewedWorkItems: normalized.orderIds.map(
-      (orderId) => reviewItemByOrderId.get(orderId)!,
+    reviewedWorkItems: normalized.orderIds.map((orderId) =>
+      reviewItemByOrderId.get(orderId)!,
     ),
   };
 }
@@ -794,6 +1003,35 @@ export function createMockFulfillmentWorkItemGateway(
   const patients = dataset.patients ?? [];
 
   return {
+    async listWorkItemHistory({ workItemId, workspaceId }) {
+      const item = seedWorkItems({
+        encounters,
+        guardians,
+        orders,
+        patients,
+        workspaceId,
+      }).find((row) => row.id === workItemId);
+      if (!item) {
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "work_item_unavailable",
+        };
+      }
+
+      return {
+        ok: true,
+        history: {
+          events: getOrSeedMockFulfillmentHistory(item),
+          hasMore: false,
+          nextCursor: null,
+          orderId: item.orderId,
+          queueType: item.queueType,
+          workItemId: item.id,
+          workspaceId: item.workspaceId,
+        },
+      };
+    },
     async listWorkItems({
       encounterId,
       date,
@@ -811,7 +1049,9 @@ export function createMockFulfillmentWorkItemGateway(
       });
       const rows = seeded
         .filter((item) => item.queueType === queueType)
-        .filter((item) => !date || getFulfillmentWorkItemOperatingDate(item) === date)
+        .filter(
+          (item) => !date || getFulfillmentWorkItemOperatingDate(item) === date,
+        )
         .filter((item) => !encounterId || item.encounterId === encounterId)
         .filter((item) => !orderId || item.orderId === orderId)
         .filter((item) => !status || item.status === status)
@@ -898,10 +1138,7 @@ export function createMockFulfillmentWorkItemGateway(
         const snapshot = snapshotByOrderId.get(orderId);
         return Boolean(snapshot && isSnapshotFulfillmentRequired(snapshot));
       });
-      if (
-        selectedOrders.length !==
-        expectedAtomicOrderIds.length
-      ) {
+      if (selectedOrders.length !== expectedAtomicOrderIds.length) {
         return { ok: false, status: 409, denialReason: "order_unavailable" };
       }
 
@@ -948,6 +1185,7 @@ export function createMockFulfillmentWorkItemGateway(
       return { ok: true, workItems: workItems as FulfillmentWorkItem[] };
     },
     async updateWorkItem({
+      actorUserId,
       assignedToUserId,
       reason,
       status,
@@ -989,6 +1227,22 @@ export function createMockFulfillmentWorkItemGateway(
         buildWorkItemKey(workspaceId, next.orderId),
         next,
       );
+      const history = getOrSeedMockFulfillmentHistory(item);
+      history.push({
+        actorUserId: actorUserId || null,
+        createdAt: timestamp,
+        id: `history-${workItemId}-${history.length + 1}`,
+        nextStatus: status,
+        orderId: item.orderId,
+        previousStatus: item.status,
+        reason: normalizeOptionalField(reason) ?? null,
+        source: "order_event",
+        workItemId,
+      });
+      fulfillmentMockHistoryStore.set(
+        buildWorkItemKey(workspaceId, item.orderId),
+        history,
+      );
 
       return { ok: true, workItems: [next] };
     },
@@ -996,6 +1250,16 @@ export function createMockFulfillmentWorkItemGateway(
 }
 
 export type SupabaseFulfillmentWorkItemRpcClient = {
+  rpc(
+    functionName: "clair_list_fulfillment_work_item_history_v2",
+    args: {
+      p_before_created_at?: string | null;
+      p_before_event_id?: string | null;
+      p_limit?: number;
+      p_workspace_id: string;
+      p_work_item_id: string;
+    },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
     functionName: "clair_list_fulfillment_work_items",
     args: {
@@ -1032,6 +1296,31 @@ export function createSupabaseFulfillmentWorkItemGateway(
   client: SupabaseFulfillmentWorkItemRpcClient,
 ): FulfillmentWorkItemGateway {
   return {
+    async listWorkItemHistory({
+      beforeCreatedAt,
+      beforeEventId,
+      limit,
+      workItemId,
+      workspaceId,
+    }) {
+      const { data, error } = await client.rpc(
+        "clair_list_fulfillment_work_item_history_v2",
+        {
+          p_before_created_at: beforeCreatedAt ?? null,
+          p_before_event_id:
+            normalizeUuidForRpc(beforeEventId) ?? beforeEventId ?? null,
+          p_limit: limit ?? 50,
+          p_workspace_id: workspaceId,
+          p_work_item_id: normalizeUuidForRpc(workItemId) ?? workItemId,
+        },
+      );
+      if (error) return mapHistoryGatewayError(error.message);
+      const history = mapWorkItemHistorySnapshot(data);
+      if (!history) {
+        return { ok: false, status: 500, error: "db_read_failed" };
+      }
+      return { ok: true, history };
+    },
     async listWorkItems({
       encounterId,
       date,
@@ -1058,12 +1347,7 @@ export function createSupabaseFulfillmentWorkItemGateway(
         ),
       };
     },
-    async syncFromOrders({
-      actorUserId,
-      encounterId,
-      orderIds,
-      workspaceId,
-    }) {
+    async syncFromOrders({ actorUserId, encounterId, orderIds, workspaceId }) {
       const { data, error } = await client.rpc(
         "clair_sync_fulfillment_work_items_from_orders",
         {
@@ -1351,6 +1635,10 @@ function buildWorkItemFromOrder({
     orderSnapshot?.sourceOrderSnapshot ??
     orderSnapshot?.frozenOrderSnapshot ??
     orderSnapshot?.appliedSnapshot;
+  const dispensingLineage = getApprovedDispensingLineage({
+    frozenOrderSnapshot: frozenSnapshot,
+    sourceOrderSnapshot,
+  });
 
   return {
     assignedToUserId: order.currentAssigneeUserId ?? null,
@@ -1373,12 +1661,17 @@ function buildWorkItemFromOrder({
     sourceSnapshot: {
       billingReflectionEnabled,
       detail: buildSnapshotDetail(order, orderSnapshot, frozenSnapshot),
+      ...(dispensingLineage ? { dispensingLineage } : {}),
       guardianName:
         readSnapshotString(frozenSnapshot, "guardianName") ??
         orderSnapshot?.guardianName ??
         guardian?.name,
       instruction:
-        readSnapshotString(frozenSnapshot, "internalInstruction", "instruction") ??
+        readSnapshotString(
+          frozenSnapshot,
+          "internalInstruction",
+          "instruction",
+        ) ??
         orderSnapshot?.internalInstruction ??
         order.instruction,
       orderDisplayName:
@@ -1399,12 +1692,12 @@ function buildWorkItemFromOrder({
         : {}),
       serviceItemId:
         (readSnapshotString(frozenSnapshot, "workspaceCatalogItemId") ??
-          orderSnapshot?.workspaceCatalogItemId ??
-          order.workspaceCatalogItemId)
+        orderSnapshot?.workspaceCatalogItemId ??
+        order.workspaceCatalogItemId)
           ? undefined
-          : readSnapshotString(frozenSnapshot, "sourcePresetId") ??
+          : (readSnapshotString(frozenSnapshot, "sourcePresetId") ??
             orderSnapshot?.sourcePresetId ??
-            order.serviceItemId,
+            order.serviceItemId),
       ...(sourceOrderSnapshot ? { sourceOrderSnapshot } : {}),
       workspaceCatalogItemId:
         readSnapshotString(frozenSnapshot, "workspaceCatalogItemId") ??
@@ -1477,9 +1770,7 @@ async function syncDownstreamFromFulfillmentUpdate({
       ok: false;
       status: 409;
       denialReason:
-        | "encounter_unavailable"
-        | "order_unavailable"
-        | "invalid_transition";
+        "encounter_unavailable" | "order_unavailable" | "invalid_transition";
     }
   | { ok: false; status: 500; error: "db_write_failed" }
 > {
@@ -1552,16 +1843,17 @@ async function syncDownstreamFromFulfillmentUpdate({
   summary.auditEventCount = auditResult.eventCount;
 
   if (emitBillingReadyNotifications) {
-    const billingReadyNotificationCount = await emitBillingWaitingReadyNotifications({
-      actorUserId,
-      billingCandidates,
-      notificationEventStore,
-      notificationEventScopeId,
-      notificationPersistenceGateway,
-      notificationStateStore,
-      sourceWorkItems: updatedWorkItem ? [updatedWorkItem] : [],
-      workspaceId,
-    });
+    const billingReadyNotificationCount =
+      await emitBillingWaitingReadyNotifications({
+        actorUserId,
+        billingCandidates,
+        notificationEventStore,
+        notificationEventScopeId,
+        notificationPersistenceGateway,
+        notificationStateStore,
+        sourceWorkItems: updatedWorkItem ? [updatedWorkItem] : [],
+        workspaceId,
+      });
     summary.billingReadyNotificationCount = billingReadyNotificationCount;
   }
 
@@ -1696,7 +1988,11 @@ async function safeEmitPersistedLiveNotificationEvent({
   try {
     return await emitPersistedLiveNotificationEvent({ event, gateway });
   } catch {
-    return { ok: false as const, status: 500 as const, error: "db_write_failed" as const };
+    return {
+      ok: false as const,
+      status: 500 as const,
+      error: "db_write_failed" as const,
+    };
   }
 }
 
@@ -1932,17 +2228,11 @@ function mapWorkItemToBillingSnapshot(workItem: FulfillmentWorkItem) {
     asSnapshotRecord(detail.appliedSnapshot);
   const frozenPriceSnapshot = asSnapshotRecord(detail.frozenPriceSnapshot);
   return {
-    amountBasis: readSnapshotString(
-      sourceOrderSnapshot,
-      "amountBasis",
-    ),
+    amountBasis: readSnapshotString(sourceOrderSnapshot, "amountBasis"),
     appliedPriceSnapshot: frozenPriceSnapshot,
     appliedSnapshot: sourceOrderSnapshot,
     billedAs: readSnapshotString(detail, "billedAs") as
-      | "set_parent"
-      | "atomic_child"
-      | "nonbillable_parent"
-      | undefined,
+      "set_parent" | "atomic_child" | "nonbillable_parent" | undefined,
     billingName:
       typeof detail.billingName === "string" ? detail.billingName : undefined,
     billingReflectionEnabled: workItem.sourceSnapshot.billingReflectionEnabled,
@@ -1954,8 +2244,8 @@ function mapWorkItemToBillingSnapshot(workItem: FulfillmentWorkItem) {
     frozenOrderSnapshot: sourceOrderSnapshot,
     inHospitalOrderName: workItem.sourceSnapshot.orderDisplayName,
     lineTotalSnapshot:
-      (typeof detail.lineTotalSnapshot === "number" ||
-        detail.lineTotalSnapshot === null)
+      typeof detail.lineTotalSnapshot === "number" ||
+      detail.lineTotalSnapshot === null
         ? detail.lineTotalSnapshot
         : undefined,
     orderId: workItem.orderId,
@@ -1966,7 +2256,8 @@ function mapWorkItemToBillingSnapshot(workItem: FulfillmentWorkItem) {
           ? detail.unitPriceSnapshot
           : undefined,
     quantity: typeof detail.quantity === "number" ? detail.quantity : undefined,
-    parentOrderId: readSnapshotString(sourceOrderSnapshot, "parentOrderId") ?? null,
+    parentOrderId:
+      readSnapshotString(sourceOrderSnapshot, "parentOrderId") ?? null,
     rangeBasis: readSnapshotString(sourceOrderSnapshot, "rangeBasis"),
     rangeId: readSnapshotString(sourceOrderSnapshot, "rangeId") ?? null,
     rangeInput: readSnapshotNumberOrNull(sourceOrderSnapshot, "rangeInput"),
@@ -1978,17 +2269,9 @@ function mapWorkItemToBillingSnapshot(workItem: FulfillmentWorkItem) {
     roundingRule: readSnapshotString(
       frozenPriceSnapshot ?? sourceOrderSnapshot,
       "roundingRule",
-    ) as
-      | "as_is"
-      | "ceil"
-      | "floor"
-      | "round"
-      | undefined,
+    ) as "as_is" | "ceil" | "floor" | "round" | undefined,
     rowType: readSnapshotString(sourceOrderSnapshot, "rowType") as
-      | "individual"
-      | "set"
-      | "set_child"
-      | undefined,
+      "individual" | "set" | "set_child" | undefined,
     sourceOrderSnapshot,
     sourceSetId: readSnapshotString(sourceOrderSnapshot, "sourceSetId"),
     sourceSetRevisionId: readSnapshotString(
@@ -2038,8 +2321,11 @@ function buildSnapshotDetail(
   );
   return {
     billingName:
-      readSnapshotString(frozenSnapshot, "effectiveBillingName", "billingName") ??
-      orderSnapshot?.billingName,
+      readSnapshotString(
+        frozenSnapshot,
+        "effectiveBillingName",
+        "billingName",
+      ) ?? orderSnapshot?.billingName,
     destinationModule:
       readSnapshotString(frozenSnapshot, "destinationModule") ??
       orderSnapshot?.destinationModule,
@@ -2103,7 +2389,9 @@ function createVirtualOrderFromSnapshot({
     id: orderId,
     workspaceId,
     encounterId,
-    serviceItemId: snapshot.workspaceCatalogItemId ? undefined : snapshot.sourcePresetId,
+    serviceItemId: snapshot.workspaceCatalogItemId
+      ? undefined
+      : snapshot.sourcePresetId,
     workspaceCatalogItemId: snapshot.workspaceCatalogItemId,
     sourceMasterRecordId: snapshot.sourceMasterRecordId,
     sourceMasterRevision: snapshot.sourceMasterRevision,
@@ -2146,7 +2434,10 @@ function mapOrderStatusToWorkItemStatus(
 }
 
 function getFulfillmentWorkItemOperatingDate(item: FulfillmentWorkItem) {
-  return getOperatingDateFromIso(item.dueAt ?? undefined) ?? getOperatingDateFromIso(item.createdAt);
+  return (
+    getOperatingDateFromIso(item.dueAt ?? undefined) ??
+    getOperatingDateFromIso(item.createdAt)
+  );
 }
 
 function canTransition(
@@ -2174,16 +2465,15 @@ function normalizeFilters(input: FulfillmentWorkItemFilters) {
     encounterId: trimToUndefined(input.encounterId),
     orderId: trimToUndefined(input.orderId),
     queueType: trimToUndefined(input.queueType) as
-      | FulfillmentQueueType
-      | undefined,
+      FulfillmentQueueType | undefined,
     status: trimToUndefined(input.status) as
-      | FulfillmentWorkItemStatus
-      | undefined,
+      FulfillmentWorkItemStatus | undefined,
   };
 }
 
 function validateReadFilters(input: ReturnType<typeof normalizeFilters>) {
-  const fieldErrors: Partial<Record<"date" | "queueType" | "status", string>> = {};
+  const fieldErrors: Partial<Record<"date" | "queueType" | "status", string>> =
+    {};
   if (input.date && !isIsoOperatingDate(input.date)) {
     fieldErrors.date = "invalid_date";
   }
@@ -2250,10 +2540,13 @@ function normalizeUpdateInput(
 }
 
 function validateUpdateInput(input: ReturnType<typeof normalizeUpdateInput>) {
-  const fieldErrors: Partial<Record<"status" | "workItemId", string>> = {};
+  const fieldErrors: Partial<Record<"reason" | "status" | "workItemId", string>> = {};
   if (!input.workItemId) fieldErrors.workItemId = "업무 항목을 선택해 주세요.";
   if (!input.status || !isFulfillmentStatus(input.status)) {
     fieldErrors.status = "변경할 상태를 선택해 주세요.";
+  }
+  if (input.reason && input.reason.length > 500) {
+    fieldErrors.reason = "변경 사유는 500자 이하로 입력해 주세요.";
   }
   return Object.keys(fieldErrors).length > 0
     ? { valid: false as const, fieldErrors }
@@ -2298,6 +2591,15 @@ function mapGatewayError(
   return { ok: false, status: 500, error: fallback };
 }
 
+function mapHistoryGatewayError(
+  message: string | undefined,
+): FulfillmentHistoryGatewayResult {
+  if (message?.includes("work_item_unavailable")) {
+    return { ok: false, status: 409, denialReason: "work_item_unavailable" };
+  }
+  return { ok: false, status: 500, error: "db_read_failed" };
+}
+
 function findEncounter(
   encounters: Encounter[],
   workspaceId: string,
@@ -2315,6 +2617,26 @@ function buildWorkItemKey(workspaceId: string, orderId: string) {
   return `${workspaceId}:${orderId}`;
 }
 
+function getOrSeedMockFulfillmentHistory(item: FulfillmentWorkItem) {
+  const key = buildWorkItemKey(item.workspaceId, item.orderId);
+  const existing = fulfillmentMockHistoryStore.get(key);
+  if (existing) return [...existing];
+
+  const createdEvent: FulfillmentWorkItemHistoryEvent = {
+    actorUserId: item.requestedByUserId || null,
+    createdAt: item.createdAt,
+    id: `history-${item.id}-created`,
+    nextStatus: "requested",
+    orderId: item.orderId,
+    previousStatus: null,
+    reason: null,
+    source: "work_item_created",
+    workItemId: item.id,
+  };
+  fulfillmentMockHistoryStore.set(key, [createdEvent]);
+  return [createdEvent];
+}
+
 function isSupportedOrderType(value: unknown): value is FulfillmentQueueType {
   return (
     value === "lab" ||
@@ -2328,15 +2650,19 @@ function isAtomicFulfillmentOrder(order: EmrOrder) {
   if (!isSupportedOrderType(order.orderType)) return false;
   const snapshot = asSnapshotRecord(order.appliedSnapshot);
   const rowType =
-    readSnapshotString(order as EmrOrder & Record<string, unknown>, "rowType") ??
-    readSnapshotString(snapshot, "rowType");
+    readSnapshotString(
+      order as EmrOrder & Record<string, unknown>,
+      "rowType",
+    ) ?? readSnapshotString(snapshot, "rowType");
   return (
     rowType !== "set" &&
     rowType !== "set_child_container" &&
     rowType !== "order_set" &&
     readSnapshotString(snapshot, "orderType") !== "set" &&
-    readSnapshotString(order as EmrOrder & Record<string, unknown>, "orderType") !==
-      "set"
+    readSnapshotString(
+      order as EmrOrder & Record<string, unknown>,
+      "orderType",
+    ) !== "set"
   );
 }
 
@@ -2356,15 +2682,11 @@ function isContainerSnapshot(snapshot: FulfillmentOrderSnapshotInput) {
     rowType === "set_child_container" ||
     rowType === "order_set" ||
     readSnapshotString(appliedSnapshot, "rowType") === "set" ||
-    readSnapshotString(appliedSnapshot, "itemKind", "childKind") ===
-      "order_set"
+    readSnapshotString(appliedSnapshot, "itemKind", "childKind") === "order_set"
   );
 }
 
-function mapFulfillmentBillingCategory(
-  value?: string,
-  categoryGroup?: string,
-) {
+function mapFulfillmentBillingCategory(value?: string, categoryGroup?: string) {
   if (
     value === "consultation" ||
     value === "laboratory" ||
@@ -2406,7 +2728,8 @@ function readSnapshotNumber(
   if (!record) return undefined;
   for (const key of keys) {
     const candidate = record[key];
-    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+    if (typeof candidate === "number" && Number.isFinite(candidate))
+      return candidate;
   }
   return undefined;
 }
@@ -2420,7 +2743,8 @@ function readSnapshotNumberOrNull(
   for (const key of keys) {
     const candidate = record[key];
     if (candidate === null) return null;
-    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+    if (typeof candidate === "number" && Number.isFinite(candidate))
+      return candidate;
   }
   return undefined;
 }
@@ -2442,6 +2766,19 @@ function isFulfillmentStatus(
   value: unknown,
 ): value is FulfillmentWorkItemStatus {
   return fulfillmentStatuses.includes(value as FulfillmentWorkItemStatus);
+}
+
+function isUniversalOrderTaskStatus(
+  value: unknown,
+): value is UniversalOrderTaskStatus {
+  return [
+    "pending",
+    "in_progress",
+    "paused",
+    "partial_complete",
+    "complete",
+    "cancelled",
+  ].includes(String(value));
 }
 
 function normalizeOptionalField(value: unknown) {
@@ -2470,6 +2807,79 @@ function mapWorkItemRows(value: unknown): FulfillmentWorkItem[] {
   }, []);
 }
 
+function mapWorkItemHistorySnapshot(
+  value: unknown,
+): FulfillmentWorkItemHistorySnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Partial<FulfillmentWorkItemHistorySnapshot>;
+  if (
+    typeof row.workspaceId !== "string" ||
+    typeof row.workItemId !== "string" ||
+    typeof row.orderId !== "string" ||
+    !isSupportedOrderType(row.queueType) ||
+    !Array.isArray(row.events) ||
+    typeof row.hasMore !== "boolean" ||
+    (row.nextCursor !== null && !isFulfillmentHistoryCursor(row.nextCursor))
+  ) {
+    return null;
+  }
+
+  const events = row.events.reduce<FulfillmentWorkItemHistoryEvent[]>(
+    (mapped, event) => {
+      const historyEvent = mapWorkItemHistoryEvent(event);
+      if (historyEvent) mapped.push(historyEvent);
+      return mapped;
+    },
+    [],
+  );
+  if (events.length !== row.events.length) return null;
+
+  return {
+    events,
+    hasMore: row.hasMore,
+    nextCursor: row.nextCursor,
+    orderId: row.orderId,
+    queueType: row.queueType,
+    workItemId: row.workItemId,
+    workspaceId: row.workspaceId,
+  };
+}
+
+function isFulfillmentHistoryCursor(
+  value: unknown,
+): value is FulfillmentWorkItemHistoryCursor {
+  if (!value || typeof value !== "object") return false;
+  const cursor = value as Partial<FulfillmentWorkItemHistoryCursor>;
+  return (
+    typeof cursor.createdAt === "string" &&
+    !Number.isNaN(Date.parse(cursor.createdAt)) &&
+    typeof cursor.eventId === "string"
+  );
+}
+
+function mapWorkItemHistoryEvent(
+  value: unknown,
+): FulfillmentWorkItemHistoryEvent | null {
+  if (!value || typeof value !== "object") return null;
+  const event = value as Partial<FulfillmentWorkItemHistoryEvent>;
+  if (
+    typeof event.id !== "string" ||
+    typeof event.workItemId !== "string" ||
+    typeof event.orderId !== "string" ||
+    (event.previousStatus !== null &&
+      !isFulfillmentStatus(event.previousStatus)) ||
+    !isFulfillmentStatus(event.nextStatus) ||
+    (event.actorUserId !== null && typeof event.actorUserId !== "string") ||
+    (event.reason !== null && typeof event.reason !== "string") ||
+    (event.source !== "work_item_created" && event.source !== "order_event") ||
+    typeof event.createdAt !== "string"
+  ) {
+    return null;
+  }
+
+  return event as FulfillmentWorkItemHistoryEvent;
+}
+
 function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Partial<FulfillmentWorkItem>;
@@ -2491,21 +2901,30 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
     return null;
   }
   if (
-    (row.taskId !== undefined && row.taskId !== null && typeof row.taskId !== "string") ||
+    (row.taskId !== undefined &&
+      row.taskId !== null &&
+      typeof row.taskId !== "string") ||
     (row.taskAttemptNo !== undefined &&
       row.taskAttemptNo !== null &&
       (!Number.isInteger(row.taskAttemptNo) || row.taskAttemptNo <= 0)) ||
+    (row.patientId !== undefined &&
+      row.patientId !== null &&
+      typeof row.patientId !== "string") ||
+    (row.taskStatus !== undefined &&
+      row.taskStatus !== null &&
+      !isUniversalOrderTaskStatus(row.taskStatus)) ||
     (row.clinicalOrderType !== undefined &&
       row.clinicalOrderType !== null &&
       !isClinicalOrderType(row.clinicalOrderType)) ||
     (row.destinationModule !== undefined &&
       row.destinationModule !== null &&
       !isClinicalOrderDestinationModule(row.destinationModule)) ||
-    ((row.taskId === null || row.taskId === undefined) !==
-      (row.taskAttemptNo === null || row.taskAttemptNo === undefined))
+    (row.taskId === null || row.taskId === undefined) !==
+      (row.taskAttemptNo === null || row.taskAttemptNo === undefined)
   ) {
     return null;
   }
+  const sourceSnapshot = row.sourceSnapshot as FulfillmentSourceSnapshot;
   const frozenSnapshot =
     asSnapshotRecord(
       (
@@ -2526,13 +2945,45 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
     readSnapshotString(frozenSnapshot, "rowType") === "set" ||
     readSnapshotString(row.sourceSnapshot, "itemKind", "childKind") ===
       "order_set" ||
-    readSnapshotString(frozenSnapshot, "itemKind", "childKind") ===
-      "order_set"
+    readSnapshotString(frozenSnapshot, "itemKind", "childKind") === "order_set"
   ) {
     return null;
   }
 
-  return row as FulfillmentWorkItem;
+  const sourceSnapshotWithoutLineage = { ...sourceSnapshot };
+  delete sourceSnapshotWithoutLineage.dispensingLineage;
+  const dispensingLineage = getApprovedDispensingLineage(sourceSnapshot);
+
+  return {
+    ...row,
+    sourceSnapshot: {
+      ...sourceSnapshotWithoutLineage,
+      ...(dispensingLineage ? { dispensingLineage } : {}),
+    },
+  } as FulfillmentWorkItem;
+}
+
+function getApprovedDispensingLineage(
+  sourceSnapshot: Partial<FulfillmentSourceSnapshot>,
+) {
+  const candidates = [
+    sourceSnapshot.dispensingLineage,
+    asSnapshotRecord(sourceSnapshot.frozenOrderSnapshot)?.dispensingLineage,
+    asSnapshotRecord(
+      (
+        sourceSnapshot as FulfillmentSourceSnapshot & {
+          appliedSnapshot?: unknown;
+        }
+      ).appliedSnapshot,
+    )?.dispensingLineage,
+    asSnapshotRecord(sourceSnapshot.sourceOrderSnapshot)?.dispensingLineage,
+  ];
+
+  for (const candidate of candidates) {
+    const lineage = mapDispensingOrderLineageSnapshot(candidate);
+    if (lineage?.clinicalUseAllowed) return lineage;
+  }
+  return undefined;
 }
 
 function isClinicalOrderType(value: unknown): value is ClinicalOrderType {

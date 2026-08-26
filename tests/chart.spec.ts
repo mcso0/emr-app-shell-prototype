@@ -309,7 +309,10 @@ async function routePreconsultationContext(
   );
 }
 
-async function restoreKongOrderDraftDefaults(page: Page) {
+async function saveKongOrderDraftRows(
+  page: Page,
+  rows: ReadonlyArray<Record<string, unknown>>,
+) {
   const current = await page.request.get(
     `/api/workspaces/clair-demo/chart/order-drafts?encounterId=${kongEncounterId}`,
     { headers: { "x-clair-demo-session-user-id": "user-vet" } },
@@ -322,7 +325,7 @@ async function restoreKongOrderDraftDefaults(page: Page) {
       data: {
         encounterId: kongEncounterId,
         expectedEtag: currentBody.etag,
-        rows: kongDefaultOrderDraftRows,
+        rows,
       },
       headers: {
         "If-Match": currentBody.etag,
@@ -330,7 +333,11 @@ async function restoreKongOrderDraftDefaults(page: Page) {
       },
     },
   );
-  expect(response.status()).toBe(200);
+  expect(response.status(), await response.text()).toBe(200);
+}
+
+async function restoreKongOrderDraftDefaults(page: Page) {
+  await saveKongOrderDraftRows(page, kongDefaultOrderDraftRows);
   await page.reload();
   await page.waitForLoadState("networkidle");
 
@@ -1214,7 +1221,9 @@ test("chart Order table renders the eight-type union matrix without action or de
     "기타",
   ]) {
     await expect(
-      page.getByRole("tab", { name: new RegExp(`^${label.replace(/[()]/g, "\\$&")} \\d+$`) }),
+      page.getByRole("tab", {
+        name: new RegExp(`^${label.replace(/[()]/g, "\\$&")} \\d+$`),
+      }),
     ).toBeVisible();
   }
 
@@ -1269,7 +1278,9 @@ test("chart Order table renders the eight-type union matrix without action or de
   expect(ownerBox).not.toBeNull();
   expect(overlayBox).not.toBeNull();
   expect(
-    Math.abs(overlayBox!.x + overlayBox!.width - (ownerBox!.x + ownerBox!.width)),
+    Math.abs(
+      overlayBox!.x + overlayBox!.width - (ownerBox!.x + ownerBox!.width),
+    ),
   ).toBeLessThanOrEqual(2);
 });
 
@@ -1327,11 +1338,7 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
     });
   });
 
-  await selectChartOrderField(
-    page,
-    "[CBC 검사] #BASO 검체",
-    "혈액",
-  );
+  await selectChartOrderField(page, "[CBC 검사] #BASO 검체", "혈액");
   await page
     .getByLabel("[CBC 검사] #BASO 패널/항목", { exact: true })
     .fill("CBC differential BASO");
@@ -1348,7 +1355,8 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
           return body.rows.some((value) => {
             if (!value || typeof value !== "object") return false;
             const row = value as Record<string, unknown>;
-            const details = row.detailInputs as Record<string, unknown> | undefined;
+            const details = row.detailInputs as
+              Record<string, unknown> | undefined;
             return (
               row.workspaceCatalogItemId === "ord-lab-cbc-baso" &&
               row.priority === "urgent" &&
@@ -1372,7 +1380,9 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
   await expect(confirmButton).toBeEnabled();
   await confirmButton.click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
-  await expect(confirmDialog).toContainText("선택하지 않은 후보는 공유 Draft에 남고");
+  await expect(confirmDialog).toContainText(
+    "선택하지 않은 후보는 공유 Draft에 남고",
+  );
   await confirmDialog.getByRole("button", { name: "다시 확인" }).click();
 
   await page.reload();
@@ -1672,7 +1682,9 @@ test("chart selects the first live task on entry without flashing an empty state
   );
 
   await expect(page).toHaveURL(/encounterId=encounter-date-a/);
-  await expect(page.getByText("날짜에이", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("날짜에이", { exact: true }).first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Subject/Object" }),
   ).toBeVisible();
@@ -1782,9 +1794,15 @@ test("active chart context bar previews actual profiles and saves current encoun
               ],
             },
             access: {
-              information: { allowed: true, requiredPermission: "patient:view" },
+              information: {
+                allowed: true,
+                requiredPermission: "patient:view",
+              },
               history: { allowed: true, requiredPermission: "chart:view" },
-              reservations: { allowed: true, requiredPermission: "reception:view" },
+              reservations: {
+                allowed: true,
+                requiredPermission: "reception:view",
+              },
               billing: { allowed: true, requiredPermission: "billing:view" },
             },
           },
@@ -1813,9 +1831,15 @@ test("active chart context bar previews actual profiles and saves current encoun
               ],
             },
             access: {
-              information: { allowed: true, requiredPermission: "patient:view" },
+              information: {
+                allowed: true,
+                requiredPermission: "patient:view",
+              },
               history: { allowed: true, requiredPermission: "chart:view" },
-              reservations: { allowed: true, requiredPermission: "reception:view" },
+              reservations: {
+                allowed: true,
+                requiredPermission: "reception:view",
+              },
               billing: { allowed: true, requiredPermission: "billing:view" },
             },
           },
@@ -1943,7 +1967,9 @@ test("chart context bar keeps missing guardians non-interactive and explains una
     "title",
     "바이탈을 입력할 권한이 없어요.",
   );
-  await expect(page.getByRole("dialog", { name: "오늘 바이탈 입력" })).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", { name: "오늘 바이탈 입력" }),
+  ).toHaveCount(0);
 });
 
 test("chart keeps a valid direct link and normalizes a stale encounter to the first task", async ({
@@ -1978,7 +2004,9 @@ test("chart keeps a valid direct link and normalizes a stale encounter to the fi
 
   await expect(page).toHaveURL(/encounterId=encounter-direct-a/);
   await expect(page).not.toHaveURL(/patientId=|scenario=/);
-  await expect(page.getByText("직접에이", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("직접에이", { exact: true }).first(),
+  ).toBeVisible();
 });
 
 test("chart date changes show loading, clear old content, and select the next date first task", async ({
@@ -2113,7 +2141,9 @@ test("chart ignores a late queue response after a rapid date change", async ({
 
   releaseLateResponse?.();
   await expect(page).toHaveURL(/encounterId=encounter-race-c/);
-  await expect(page.getByText("레이스씨", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("레이스씨", { exact: true }).first(),
+  ).toBeVisible();
   await expect(page.getByTestId("chart-content-empty-state")).toHaveCount(0);
 });
 
@@ -2144,7 +2174,9 @@ test("chart coordinator selects the first queue task after entering from home wi
 
   await expect(page).toHaveURL(/encounterId=encounter-closed-panel-entry/);
   await expect(page).toHaveURL(/modulePanel=closed/);
-  await expect(page.getByText("닫힌패널", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("닫힌패널", { exact: true }).first(),
+  ).toBeVisible();
   await expect(page.getByTestId("chart-content-empty-state")).toHaveCount(0);
   await expect.poll(() => liveQueueRequestCount).toBe(1);
 });
@@ -2561,9 +2593,7 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
     await Promise.all([
       emptyBody.boundingBox(),
       emptyState.boundingBox(),
-      orderTable
-        .locator("[data-emr-data-table-header='true']")
-        .boundingBox(),
+      orderTable.locator("[data-emr-data-table-header='true']").boundingBox(),
       orderTable.boundingBox(),
       pinnedViewport.boundingBox(),
     ]);
@@ -2577,7 +2607,8 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   expect(Math.abs(emptyBodyBox!.x - viewportBox!.x)).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
-      emptyBodyBox!.x + emptyBodyBox!.width -
+      emptyBodyBox!.x +
+        emptyBodyBox!.width -
         (viewportBox!.x + viewportBox!.width),
     ),
   ).toBeLessThanOrEqual(1);
@@ -2586,19 +2617,22 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   ).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
-      emptyBodyBox!.y + emptyBodyBox!.height -
+      emptyBodyBox!.y +
+        emptyBodyBox!.height -
         (viewportBox!.y + viewportBox!.height),
     ),
   ).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
-      emptyStateBox!.x + emptyStateBox!.width / 2 -
+      emptyStateBox!.x +
+        emptyStateBox!.width / 2 -
         (emptyBodyBox!.x + emptyBodyBox!.width / 2),
     ),
   ).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
-      emptyStateBox!.y + emptyStateBox!.height / 2 -
+      emptyStateBox!.y +
+        emptyStateBox!.height / 2 -
         (emptyBodyBox!.y + emptyBodyBox!.height / 2),
     ),
   ).toBeLessThanOrEqual(1);
@@ -3819,9 +3853,7 @@ test("chart SOAP manual save persists through route-backed reload", async ({
     const request = response.request();
     return (
       request.method() === "PATCH" &&
-      response
-        .url()
-        .includes("/api/workspaces/clair-demo/chart/soap-notes") &&
+      response.url().includes("/api/workspaces/clair-demo/chart/soap-notes") &&
       request.postDataJSON()?.mode === "autosave"
     );
   });
@@ -3836,9 +3868,7 @@ test("chart SOAP manual save persists through route-backed reload", async ({
     const request = response.request();
     return (
       request.method() === "PATCH" &&
-      response
-        .url()
-        .includes("/api/workspaces/clair-demo/chart/soap-notes") &&
+      response.url().includes("/api/workspaces/clair-demo/chart/soap-notes") &&
       request.postDataJSON()?.mode === "manual_save"
     );
   });
@@ -3915,9 +3945,33 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
         ok: true,
         status: 200,
         diagnoses: [
-          { catalogId: "dx-acute-gastroenteritis", masterId: "master-acute-gastroenteritis", masterRevision: 1, name: "급성 위장관염 의심", synonyms: [], system: { id: "system-digestive", name: "소화기" }, diseaseGroup: { id: "group-gastrointestinal", name: "위장관 질환" } },
-          { catalogId: "dx-pancreatitis", masterId: "master-pancreatitis", masterRevision: 1, name: "췌장염 감별", synonyms: [], system: { id: "system-digestive", name: "소화기" }, diseaseGroup: { id: "group-pancreas", name: "췌장 질환" } },
-          { catalogId: "dx-mild-dehydration", masterId: "master-mild-dehydration", masterRevision: 1, name: "경도 탈수", synonyms: [], system: { id: "system-general", name: "전신" }, diseaseGroup: { id: "group-fluid", name: "체액 질환" } },
+          {
+            catalogId: "dx-acute-gastroenteritis",
+            masterId: "master-acute-gastroenteritis",
+            masterRevision: 1,
+            name: "급성 위장관염 의심",
+            synonyms: [],
+            system: { id: "system-digestive", name: "소화기" },
+            diseaseGroup: { id: "group-gastrointestinal", name: "위장관 질환" },
+          },
+          {
+            catalogId: "dx-pancreatitis",
+            masterId: "master-pancreatitis",
+            masterRevision: 1,
+            name: "췌장염 감별",
+            synonyms: [],
+            system: { id: "system-digestive", name: "소화기" },
+            diseaseGroup: { id: "group-pancreas", name: "췌장 질환" },
+          },
+          {
+            catalogId: "dx-mild-dehydration",
+            masterId: "master-mild-dehydration",
+            masterRevision: 1,
+            name: "경도 탈수",
+            synonyms: [],
+            system: { id: "system-general", name: "전신" },
+            diseaseGroup: { id: "group-fluid", name: "체액 질환" },
+          },
         ],
         nextCursor: null,
       }),
@@ -4098,12 +4152,8 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
             )
           : null,
       selectValueFits: (() => {
-        const value = controls[0]?.querySelector(
-          '[data-slot="select-value"]',
-        );
-        return value
-          ? value.scrollWidth <= value.clientWidth + 1
-          : false;
+        const value = controls[0]?.querySelector('[data-slot="select-value"]');
+        return value ? value.scrollWidth <= value.clientWidth + 1 : false;
       })(),
       widths: controls.map((control) =>
         Math.round(control.getBoundingClientRect().width),
@@ -4153,6 +4203,28 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   expect(rowGeometry.widths[0]).toBe(96);
   expect(rowGeometry.widths[1]).toBeGreaterThan(0);
   expect(rowGeometry.widths.slice(2)).toEqual([44, 40, 40, 72]);
+  const diagnosisRowDividerStyles = await table
+    .locator("[data-slot='chart-assessment-table-row']")
+    .evaluateAll((rows) =>
+      rows.flatMap((row) =>
+        Array.from(row.querySelectorAll("td")).map((cell) => {
+          const style = getComputedStyle(cell);
+          return {
+            color: style.borderBottomColor,
+            style: style.borderBottomStyle,
+            width: style.borderBottomWidth,
+          };
+        }),
+      ),
+    );
+  expect(diagnosisRowDividerStyles.length).toBeGreaterThan(0);
+  expect(diagnosisRowDividerStyles).toEqual(
+    diagnosisRowDividerStyles.map(() => ({
+      color: "rgb(229, 229, 229)",
+      style: "solid",
+      width: "1px",
+    })),
+  );
   expect(
     Math.abs(rowGeometry.viewportBottom - rowGeometry.panelBottom),
   ).toBeLessThanOrEqual(1);
@@ -4219,12 +4291,9 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
         title: rect(title).left,
       },
       diagnosisTextStart: {
-        body: rect(
-          rowCells[1].querySelector("[data-emr-cell-text-mode]"),
-        ).left,
-        header: rect(
-          headerCells[1].querySelector("button > span:first-child"),
-        ).left,
+        body: rect(rowCells[1].querySelector("[data-emr-cell-text-mode]")).left,
+        header: rect(headerCells[1].querySelector("button > span:first-child"))
+          .left,
       },
       statusCenters: headerCells.slice(2, 5).map((header, index) => ({
         body: rect(rowCells[index + 2].querySelector("[data-slot='checkbox']"))
@@ -4232,9 +4301,7 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
         header: rect(header).center,
       })),
       veterinarianTextStart: {
-        body: rect(
-          rowCells[5].querySelector("[data-emr-cell-text-mode]"),
-        ).left,
+        body: rect(rowCells[5].querySelector("[data-emr-cell-text-mode]")).left,
         header: rect(
           headerCells[5].querySelector(
             "[data-emr-table-content='true'] > span",
@@ -4274,9 +4341,11 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
     "14px",
   );
   const typographyGeometry = await Promise.all([
-    headers.first().evaluate((element) =>
-      Number.parseFloat(getComputedStyle(element).lineHeight),
-    ),
+    headers
+      .first()
+      .evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).lineHeight),
+      ),
     firstRow
       .getByRole("cell")
       .nth(1)
@@ -4364,17 +4433,31 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   await expect(deleteOverlay).toHaveCSS("opacity", "0");
   await firstRow.hover();
   await expect(deleteOverlay).toHaveCSS("opacity", "1");
+  await expect(deleteOverlay).toHaveCSS("width", "64px");
+  await expect(deleteButton).toHaveCSS("border-radius", "6px");
+  await expect(deleteButton.locator("svg")).toHaveCSS("width", "14px");
+  await expect(deleteButton.locator("svg")).toHaveCSS("height", "14px");
   const hoverSurface = await firstRow.evaluate((row) => {
     const overlay = row.querySelector(
       "[data-slot='chart-assessment-delete-overlay']",
     );
     if (!overlay) throw new Error("Assessment delete overlay is missing");
+    const surfaceProbe = document.createElement("span");
+    surfaceProbe.style.backgroundColor =
+      "var(--clair-color-atomic-neutral-100)";
+    document.body.appendChild(surfaceProbe);
+    const opaqueHoverSurface = getComputedStyle(surfaceProbe).backgroundColor;
+    surfaceProbe.remove();
     return {
+      opaqueHoverSurface,
       overlayBackground: getComputedStyle(overlay).backgroundImage,
       rowBackground: getComputedStyle(row).backgroundColor,
     };
   });
   expect(hoverSurface.overlayBackground).toContain(
+    hoverSurface.opaqueHoverSurface,
+  );
+  expect(hoverSurface.overlayBackground).not.toContain(
     hoverSurface.rowBackground,
   );
   await page.mouse.move(1, 1);
@@ -4464,9 +4547,9 @@ test("chart billing candidate is not exposed as a separate pre-confirm action", 
   await restoreKongOrderDraftDefaults(page);
 
   await page.getByRole("button", { name: "Plan/Order 작업" }).click();
-  await expect(
-    page.getByRole("menuitem", { name: "Order 청구" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "Order 청구" })).toHaveCount(
+    0,
+  );
   await dismissChartOrderActionMenu(page);
   await expect(
     page.getByTestId("chart-order-footer").getByRole("button", {
@@ -4644,8 +4727,9 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     "선택 오더 합계 9,000원",
   );
 
-  await (await getChartOrderAction(page, /Order 업데이트/)).click();
-  await expect(page.getByText(/변경 대기/)).toHaveCount(0);
+  await expect(page.getByText(/변경 대기/)).toHaveCount(0, {
+    timeout: 10_000,
+  });
   await expect(page.getByTestId("chart-order-footer")).toContainText(
     /청구 예상 총액/,
   );
@@ -4674,6 +4758,173 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await expect(page.getByTestId("chart-order-footer")).toContainText(
     /청구 예상 총액/,
   );
+});
+
+test("chart continuously edits a 20-row mixed draft with keyboard focus preserved", async ({
+  page,
+}) => {
+  let scaledRows: Array<Record<string, unknown>> = [];
+  let revision = 1;
+  const getScaleEtag = () => `"${revision.toString(16).padStart(64, "0")}"`;
+  const draftPatchBodies: Array<Record<string, unknown>> = [];
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("request", (request) => {
+    if (
+      request.method() === "PATCH" &&
+      request.url().includes("/chart/order-drafts")
+    ) {
+      draftPatchBodies.push(
+        (request.postDataJSON() ?? {}) as Record<string, unknown>,
+      );
+    }
+  });
+
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() === "PATCH") {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        const inputs = Array.isArray(body.rows) ? body.rows : [];
+        const quantities = new Map(
+          inputs.flatMap((row) => {
+            if (!row || typeof row !== "object") return [];
+            const value = row as Record<string, unknown>;
+            return typeof value.orderId === "string" &&
+              typeof value.quantity === "number"
+              ? [[value.orderId, value.quantity] as const]
+              : [];
+          }),
+        );
+        scaledRows = scaledRows.map((row) => ({
+          ...row,
+          quantity: quantities.get(String(row.orderId)) ?? row.quantity,
+        }));
+        revision += 1;
+        await route.fulfill({
+          contentType: "application/json",
+          json: {
+            etag: getScaleEtag(),
+            ok: true,
+            rows: scaledRows,
+            status: 200,
+          },
+          status: 200,
+        });
+        return;
+      }
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      if (!scaledRows.length) {
+        const upstream = await route.fetch();
+        const body = (await upstream.json()) as {
+          rows?: Array<Record<string, unknown>>;
+        };
+        const templates = body.rows ?? [];
+        expect(templates.length).toBeGreaterThanOrEqual(4);
+        scaledRows = Array.from({ length: 20 }, (_, index) => {
+          const template = templates[index % templates.length];
+          return {
+            ...structuredClone(template),
+            orderId: `${String(template.orderId)}-scale-${String(index + 1).padStart(2, "0")}`,
+            quantity: 1,
+          };
+        });
+      }
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          etag: getScaleEtag(),
+          ok: true,
+          rows: scaledRows,
+          status: 200,
+        },
+        status: 200,
+      });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await page.waitForLoadState("networkidle");
+
+  const quantityInputs = page.locator('input[aria-label$="수량 수정"]');
+  await expect(quantityInputs).toHaveCount(20);
+  const firstQuantityInput = quantityInputs.first();
+  const firstOrderRow = firstQuantityInput.locator(
+    "xpath=ancestor::*[starts-with(@data-testid, 'chart-order-row-')]",
+  );
+  await firstQuantityInput.evaluate((element) => {
+    element.setAttribute("data-render-stability-probe", "input");
+  });
+  await firstOrderRow.evaluate((element) => {
+    element.setAttribute("data-render-stability-probe", "row");
+  });
+  const interactionStartedAt = Date.now();
+
+  await firstQuantityInput.focus();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("2");
+  await page.keyboard.press("Tab");
+  await expect(firstQuantityInput).not.toBeFocused();
+  const focusedElement = page.locator(":focus");
+  await expect(focusedElement).toHaveCount(1);
+  expect(await focusedElement.evaluate((element) => element.tagName)).toMatch(
+    /^(BUTTON|INPUT)$/,
+  );
+
+  for (let index = 1; index < 20; index += 1) {
+    await quantityInputs.nth(index).fill(String(index + 2));
+  }
+  const interactionDurationMs = Date.now() - interactionStartedAt;
+  expect(interactionDurationMs).toBeLessThan(10_000);
+  await expect(firstQuantityInput).toHaveAttribute(
+    "data-render-stability-probe",
+    "input",
+  );
+  await expect(firstOrderRow).toHaveAttribute(
+    "data-render-stability-probe",
+    "row",
+  );
+  const expectedQuantities = Array.from(
+    { length: 20 },
+    (_, index) => index + 2,
+  );
+  const getFullySavedRows = () =>
+    draftPatchBodies
+      .map((body) => body.rows)
+      .find(
+        (rows): rows is Array<Record<string, unknown>> =>
+          Array.isArray(rows) &&
+          rows.length === 20 &&
+          rows
+            .map((row) => row.quantity)
+            .sort((left, right) => Number(left) - Number(right))
+            .every((quantity, index) => quantity === expectedQuantities[index]),
+      );
+  await expect
+    .poll(() => Boolean(getFullySavedRows()), { timeout: 10_000 })
+    .toBe(true);
+  expect(pageErrors).toEqual([]);
+  expect(
+    getFullySavedRows()!
+      .map((row) => row.quantity)
+      .sort((left, right) => Number(left) - Number(right)),
+  ).toEqual(expectedQuantities);
+
+  const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
+  const pinnedViewport = orderTable.locator(
+    "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
+  );
+  await expect(
+    pinnedViewport.locator('[data-emr-pinned-table-scrollbar="horizontal"]'),
+  ).toBeVisible();
+  await expect(
+    orderTable.locator(
+      "[data-slot='table-head'][data-column-id='displayName'][data-emr-column-pinned='left']",
+    ),
+  ).toBeVisible();
 });
 
 test("chart opens the Kong scenario as one SOAP, assessment, and order flow", async ({
@@ -5164,9 +5415,9 @@ test("chart result readback has no separate veterinarian or billing gate", async
     0,
   );
   await page.getByRole("button", { name: "Plan/Order 작업" }).click();
-  await expect(
-    page.getByRole("menuitem", { name: "Order 청구" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "Order 청구" })).toHaveCount(
+    0,
+  );
 });
 
 test("chart unavailable order actions show persistent inline guidance", async ({
@@ -5241,7 +5492,9 @@ test("chart order autosave preserves local edits and blocks confirmation on ETag
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   await expect(await getChartOrderAction(page, "Order 확정")).toBeDisabled();
   await dismissChartOrderActionMenu(page);
-  await expect(conflict.getByRole("button", { name: "서버 값 다시 불러오기" })).toBeVisible();
+  await expect(
+    conflict.getByRole("button", { name: "서버 값 다시 불러오기" }),
+  ).toBeVisible();
 });
 
 async function verifyChartConfirmationRetry(page: Page) {
@@ -5260,9 +5513,7 @@ async function verifyChartConfirmationRetry(page: Page) {
       }
       draftPatchCount += 1;
       const response = await route.fetch();
-      draftResponses.push(
-        (await response.json()) as Record<string, unknown>,
-      );
+      draftResponses.push((await response.json()) as Record<string, unknown>);
       await route.fulfill({ response });
     },
   );
@@ -5292,7 +5543,9 @@ async function verifyChartConfirmationRetry(page: Page) {
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   await (await getChartOrderAction(page, "Order 확정")).click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
-  const confirmButton = confirmDialog.getByRole("button", { name: "Order 확정" });
+  const confirmButton = confirmDialog.getByRole("button", {
+    name: "Order 확정",
+  });
   await confirmButton.click();
   await expect.poll(() => draftResponses.length).toBe(1);
   expect(draftResponses[0]).toMatchObject({ ok: true });
@@ -5318,6 +5571,80 @@ async function verifyChartConfirmationRetry(page: Page) {
     /^chart-confirm-[0-9a-f-]{36}$/,
   );
 }
+
+test("chart catalog dialog searches 108 reviewed dispensing candidates at target scale", async ({
+  page,
+}) => {
+  const rows = Array.from({ length: 108 }, (_, index) => {
+    const sequence = String(index + 1).padStart(4, "0");
+    const sourcePresetId = `pr017-dispensing-${sequence}`;
+    return {
+      appliedSnapshot: {
+        appliedAmountBasis: "fixed_order_price",
+        appliedBillingName: `PR-017 조제 ${sequence}`,
+        appliedDestinationModule: "dispensing",
+        appliedDisplayName: `PR-017 조제 ${sequence}`,
+        appliedPriceKrw: 0,
+        appliedSalesUnit: "per_each",
+        appliedStandardOrderName: `PR-017 조제 ${sequence}`,
+        appliedTargetSpecies: ["dog", "cat"],
+        appliedTaskRequired: true,
+        appliedTaxIncluded: true,
+        billingEligible: true,
+        billingReflectionEnabled: false,
+        clinicalOrderType: "dispensing",
+        destinationModule: "dispensing",
+        detailSchemaVersion: 1,
+        executionMode: "routed",
+        sourcePresetId,
+        sourcePresetVersion: "2026-08-26.1",
+        workspaceCatalogItemId: `pr017-catalog-${sequence}`,
+      },
+      billingEligible: true,
+      billingName: `PR-017 조제 ${sequence}`,
+      categoryGroup: "dispensing",
+      clinicalOrderType: "dispensing",
+      destinationModule: "dispensing",
+      detailSchemaVersion: 1,
+      displayName: `PR-017 조제 ${sequence}`,
+      executionMode: "routed",
+      rowType: "individual",
+      sourcePresetId,
+      sourcePresetVersion: "2026-08-26.1",
+      targetSpecies: ["dog", "cat"],
+      workspaceCatalogItemId: `pr017-catalog-${sequence}`,
+      workspaceCatalogRevision: 1,
+    };
+  });
+
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: true, rows, status: 200 },
+        status: 200,
+      });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+
+  const dialog = page.getByRole("dialog", {
+    name: "Workspace catalog에서 Order 추가",
+  });
+  await expect(
+    page.getByTestId("chart-order-catalog-search-status"),
+  ).toHaveText("Workspace catalog active 후보 108건");
+  await dialog.getByLabel("카탈로그 Order 검색").fill("PR-017 조제 0108");
+  await expect(
+    page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0108"),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0001"),
+  ).toBeHidden();
+});
 
 test("chart order add searches active workspace catalog and adds a draft row", async ({
   page,
@@ -5353,7 +5680,9 @@ test("chart order add searches active workspace catalog and adds a draft row", a
                   reRequestedFromTaskId: null,
                   effectiveSnapshot: { orderName: "[CBC 검사] #BASO" },
                   resultSnapshot:
-                    executionTaskStatus === "complete" ? { result: "정상" } : null,
+                    executionTaskStatus === "complete"
+                      ? { result: "정상" }
+                      : null,
                   startedAt: "2026-08-26T01:00:00.000Z",
                   completedAt:
                     executionTaskStatus === "complete"
@@ -5373,7 +5702,9 @@ test("chart order add searches active workspace catalog and adds a draft row", a
                   taskAttemptNo: 1,
                   orderId: executionOrderId,
                   eventType:
-                    executionTaskStatus === "complete" ? "completed" : "created",
+                    executionTaskStatus === "complete"
+                      ? "completed"
+                      : "created",
                   actorUserId: "user-vet",
                   reason: null,
                   beforeValues: {},
@@ -5410,7 +5741,10 @@ test("chart order add searches active workspace catalog and adds a draft row", a
                   taskAttemptNo: 1,
                   destinationModule: "lab",
                   queueType: "lab",
-                  queueStatus: executionTaskStatus === "complete" ? "completed" : "requested",
+                  queueStatus:
+                    executionTaskStatus === "complete"
+                      ? "completed"
+                      : "requested",
                   updatedAt: "2026-08-26T01:05:00.000Z",
                 },
               ]
@@ -5486,11 +5820,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
     page.getByRole("tab", { name: /전체오더 \d+/, exact: true }),
   ).toBeVisible();
 
-  await selectChartOrderField(
-    page,
-    "[CBC 검사] #BASO 검체",
-    "혈액",
-  );
+  await selectChartOrderField(page, "[CBC 검사] #BASO 검체", "혈액");
   await page
     .getByLabel("[CBC 검사] #BASO 패널/항목", { exact: true })
     .fill("CBC differential BASO");
@@ -5529,34 +5859,37 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   executionOrderId = actionBody.orderActions?.[0]?.orderId ?? null;
   expect(executionOrderId).toBeTruthy();
   expect(
-    draftPatchBodies.some((body) =>
-      typeof body.expectedEtag === "string" &&
-      Array.isArray(body.rows) &&
-      body.rows.some((row) => {
-        if (!row || typeof row !== "object") return false;
-        const draftRow = row as Record<string, unknown>;
-        return (
-          draftRow.workspaceCatalogItemId === "ord-lab-cbc-baso" &&
-          draftRow.quantity === 1 &&
-          !Object.prototype.hasOwnProperty.call(draftRow, "unitPriceSnapshot") &&
-          !Object.prototype.hasOwnProperty.call(draftRow, "serviceItemId")
-        );
-      }),
+    draftPatchBodies.some(
+      (body) =>
+        typeof body.expectedEtag === "string" &&
+        Array.isArray(body.rows) &&
+        body.rows.some((row) => {
+          if (!row || typeof row !== "object") return false;
+          const draftRow = row as Record<string, unknown>;
+          return (
+            draftRow.workspaceCatalogItemId === "ord-lab-cbc-baso" &&
+            draftRow.quantity === 1 &&
+            !Object.prototype.hasOwnProperty.call(
+              draftRow,
+              "unitPriceSnapshot",
+            ) &&
+            !Object.prototype.hasOwnProperty.call(draftRow, "serviceItemId")
+          );
+        }),
     ),
   ).toBe(true);
   expect(
-    actionPatchBodies.some((body) =>
-      typeof body.expectedEtag === "string" &&
-      typeof body.idempotencyKey === "string" &&
-      Array.isArray(body.orderIds) &&
-      body.orderIds.length > 0 &&
-      !Object.prototype.hasOwnProperty.call(body, "catalogSelections") &&
-      body.orderIds.some((orderId) => {
-        if (typeof orderId !== "string") return false;
-        return (
-          orderId.length > 0
-        );
-      }),
+    actionPatchBodies.some(
+      (body) =>
+        typeof body.expectedEtag === "string" &&
+        typeof body.idempotencyKey === "string" &&
+        Array.isArray(body.orderIds) &&
+        body.orderIds.length > 0 &&
+        !Object.prototype.hasOwnProperty.call(body, "catalogSelections") &&
+        body.orderIds.some((orderId) => {
+          if (typeof orderId !== "string") return false;
+          return orderId.length > 0;
+        }),
     ),
   ).toBe(true);
   await expect(addedRow).toContainText(/확정|수납 후보/);
@@ -5586,7 +5919,9 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   const amendmentDialog = page.getByRole("dialog", {
     name: "[CBC 검사] #BASO · 오더 정정",
   });
-  await expect(amendmentDialog).toContainText("확정 snapshot과 완료 결과는 유지");
+  await expect(amendmentDialog).toContainText(
+    "확정 snapshot과 완료 결과는 유지",
+  );
   await amendmentDialog.getByRole("button", { name: "취소" }).click();
   await restoredRow.hover();
   await confirmedActions
@@ -5636,7 +5971,10 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
 }) => {
   const draftPatchBodies: Array<Record<string, unknown>> = [];
   page.on("request", (request) => {
-    if (request.method() !== "PATCH" || !request.url().includes("/chart/order-drafts")) {
+    if (
+      request.method() !== "PATCH" ||
+      !request.url().includes("/chart/order-drafts")
+    ) {
       return;
     }
     try {
@@ -5660,7 +5998,9 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
   await expect(setCandidate).toContainText("구토 기본 세트");
   await setCandidate.getByRole("button", { name: "추가" }).click();
 
-  const setDialog = page.getByRole("dialog", { name: "구토 기본 세트 구성 선택" });
+  const setDialog = page.getByRole("dialog", {
+    name: "구토 기본 세트 구성 선택",
+  });
   await expect(setDialog).toBeVisible();
   const fixedLeaf = setDialog.getByLabel(/BASO.*구성 선택/);
   await expect(fixedLeaf).toBeChecked();
@@ -5677,17 +6017,19 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
   await expect(
     setParentRow.getByLabel("구토 기본 세트 청구서명 수정"),
   ).toHaveCount(0);
-  await expect(
-    setParentRow.getByLabel("구토 기본 세트 수량 수정"),
-  ).toHaveCount(0);
-  await setParentRow.getByRole("checkbox", { name: "구토 기본 세트 선택" }).click();
+  await expect(setParentRow.getByLabel("구토 기본 세트 수량 수정")).toHaveCount(
+    0,
+  );
+  await setParentRow
+    .getByRole("checkbox", { name: "구토 기본 세트 선택" })
+    .click();
 
   await (await getChartOrderAction(page, /Order 업데이트/)).click();
   await expect.poll(() => draftPatchBodies.length).toBeGreaterThan(0);
   const firstDraftBody = draftPatchBodies.at(-1) ?? {};
-  const firstSetRow = (firstDraftBody.rows as Array<Record<string, unknown>>).find(
-    (row) => row.rowType === "set",
-  );
+  const firstSetRow = (
+    firstDraftBody.rows as Array<Record<string, unknown>>
+  ).find((row) => row.rowType === "set");
   expect(firstSetRow).toMatchObject({
     rowType: "set",
     sourceSetId: "set-vomit-basic",
@@ -5721,19 +6063,25 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
   await expect(
     reloadedLeaf.getByRole("checkbox", { name: /Maropitant.*선택/ }),
   ).toBeDisabled();
-  await reloadedLeaf.getByRole("button", { name: /Maropitant.*세트 제외/ }).click();
+  await reloadedLeaf
+    .getByRole("button", { name: /Maropitant.*세트 제외/ })
+    .click();
   await expect(
     reloadedLeaf.getByRole("button", { name: /Maropitant.*세트 포함/ }),
   ).toBeVisible();
-  await reloadedLeaf.getByRole("button", { name: /Maropitant.*세트 포함/ }).click();
-  await expect(reloadedLeaf.getByLabel(/Maropitant.*수량 수정/)).toHaveValue("5");
+  await reloadedLeaf
+    .getByRole("button", { name: /Maropitant.*세트 포함/ })
+    .click();
+  await expect(reloadedLeaf.getByLabel(/Maropitant.*수량 수정/)).toHaveValue(
+    "5",
+  );
   await reloadedLeaf.getByLabel(/Maropitant.*수량 수정/).fill("6");
   await (await getChartOrderAction(page, /Order 업데이트/)).click();
   await expect.poll(() => draftPatchBodies.length).toBeGreaterThan(1);
   const retryDraftBody = draftPatchBodies.at(-1) ?? {};
-  const retrySetRow = (retryDraftBody.rows as Array<Record<string, unknown>>).find(
-    (row) => row.rowType === "set",
-  );
+  const retrySetRow = (
+    retryDraftBody.rows as Array<Record<string, unknown>>
+  ).find((row) => row.rowType === "set");
   expect(retrySetRow?.rowType).toBe("set");
   expect(retrySetRow?.orderId).toBe(firstSetRow?.orderId);
 });

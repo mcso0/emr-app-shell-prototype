@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "clair-dispensing-order-master-summary-v1",
+  "generatedAt": "2026-08-26",
+  "inputCandidateCount": 140,
+  "finalTechnicalValidatedCount": 108,
+  "excludedCounts": {
+    "needs_manual_review": 19,
+    "rejected": 13
+  },
+  "uniqueMasterOrderIdCount": 108,
+  "uniqueCanonicalOrderKeyCount": 108,
+  "uniqueSourceProductIdCount": 108,
+  "clinicalUseAllowedCount": 0,
+  "categories": {
+    "anti_inflammatory_other": 4,
+    "antimicrobial_antifungal": 20,
+    "antiparasitic": 13,
+    "cardiovascular": 12,
+    "dermatology_topical": 5,
+    "emergency_supportive": 1,
+    "endocrine": 10,
+    "gastrointestinal": 4,
+    "immunomodulator": 3,
+    "neurology_behavior": 9,
+    "ophthalmic_otic": 7,
+    "other": 3,
+    "pain_nsaid": 13,
+    "respiratory": 1,
+    "urinary": 3
+  },
+  "forms": {
+    "Capsule, hard": 1,
+    "Capsule, soft": 1,
+    "Chewable tablet": 13,
+    "Coated tablet": 2,
+    "Cutaneous spray, solution": 2,
+    "Ear drops, solution": 1,
+    "Ear gel": 1,
+    "Eye drops, solution": 3,
+    "Eye drops, suspension": 1,
+    "Eye ointment": 1,
+    "Film-coated tablet": 6,
+    "Laryngopharyngeal Spray, Solution": 1,
+    "Modified-release tablet": 1,
+    "Ointment": 1,
+    "Oral drops, suspension": 1,
+    "Oral gel": 1,
+    "Oral powder": 1,
+    "Oral solution": 11,
+    "Oral suspension": 4,
+    "Powder for oral suspension": 3,
+    "Prolonged-release tablet": 1,
+    "Shampoo": 1,
+    "Spot-on solution": 6,
+    "Syrup": 2,
+    "Tablet": 41,
+    "Transdermal Solution": 1
+  },
+  "routes": {
+    "cutaneous": 10,
+    "ophthalmic": 5,
+    "oral": 89,
+    "oromucosal": 1,
+    "otic": 2,
+    "transdermal": 1
+  },
+  "species": {
+    "cat": 74,
+    "dog": 76
+  },
+  "sourceJurisdictions": {
+    "UK": 108
+  },
+  "jsonSha256": "cc3ef6c977122bef5a708d5c6a800a3120b257584bd78ee72c26a67d2b95260f",
+  "csvSha256": "7b835fbcade53279056bfec766ae30b00e64a635c4724db2e0a545663d162398"
+}

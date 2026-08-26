@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR 조제 오더 마스터 전달 보고서</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 980px; margin: 0 auto; padding: 40px 24px 60px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 20px 22px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 5px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; overflow-wrap: anywhere; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 12px; margin-right: 6px; border-radius: 999px; background: #eaf7ee; color: #176b35; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      .warn { background: #fff8e6; color: #6d4b00; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">CLAiR Clinical Master / PR-017 / 2026-08-26</p>
+      <h1>근거 기반 조제 오더 마스터 전달 보고서</h1>
+      <p>
+        140개 후보에서 108개 고유 조제 오더를 검증하고 Airtable 작성 데이터와
+        Supabase 비활성 마스터·워크스페이스 projection까지 지속 반영했다. 실제
+        임상 검토와 임상 활성화는 수행하지 않았으며 별도 명시적 승인 경계로 남긴다.
+      </p>
+      <span class="badge">persistent data delivery complete</span>
+      <span class="badge">clinical-use count 0</span>
+      <span class="badge">Git and production delivery complete</span>
+
+      <section>
+        <h2>지속 반영 결과</h2>
+        <table>
+          <tr><th>구분</th><th>검증 결과</th></tr>
+          <tr><td>Airtable</td><td>기존 8개 테이블을 보존하고 격리된 V1 테이블 9개, 레코드 1,549개, 링크 2,400개를 생성했다. 중복·누락·예상 밖 external key와 임상 활성 행은 모두 0이다.</td></tr>
+          <tr><td>Supabase private master</td><td>정확한 additive migration 3개를 적용하고 릴리스 13(<code>78a57bf0-10a8-47db-9ae1-8a8cff79b2c4</code>)에 108개 오더와 1,657개 정규화 행을 비활성 상태로 게시했다.</td></tr>
+          <tr><td>Workspace adoption</td><td>승인된 3개 workspace에 각각 108개 <code>pending_activation</code> projection을 추가했다. 재시도는 0개를 생성했고 foreign workspace와 기존 runtime 집계는 변하지 않았다.</td></tr>
+          <tr><td>Clinical gate</td><td>clinical, Korean regulatory, translation review는 모두 pending이고 computed clinical-use, active projection, duplicate, orphan은 모두 0이다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>제품·실행 계약</h2>
+        <ul>
+          <li>제품의 모든 성분, 최신 한국 규제 revision, 제품별 허용 route를 서버에서 함께 검증한다.</li>
+          <li>병원 관리자는 workspace 종 범위를 넓히거나 줄일 수 있다. 마스터 승인 종 밖의 실제 주문은 active veterinarian의 명시적 확인과 사유를 요구하고 actor·reason·lineage를 불변 감사 기록으로 남긴다.</li>
+          <li>Chart 확인부터 Task, 조제 queue, billing candidate까지 1:1 cardinality와 idempotent retry를 유지한다.</li>
+          <li>조제 이력은 workspace·queue permission 범위의 RPC/API로 읽으며 actor, reason, 이전/다음 상태를 fixture 없이 표시한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>140 candidates / 108 final / duplicate stable ID·canonical key·source product 0 / active clinical row 0.</li>
+          <li>공식 source URL 108개 live 확인, broken link 0.</li>
+          <li>focused Playwright 46/46, TypeScript, lint, build, docs, secret scan, SQL rollback replays 통과.</li>
+          <li>독립 보안 재검증에서 High 0, Medium 0. 비수의사 extra-label self-attestation 거부와 수의사 actor lineage를 포함한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 경계</h2>
+        <ul>
+          <li>108개 오더의 임상 검토·한국 규제 검토·번역 검토와 실제 임상 활성화는 별도 승인 없이는 수행하지 않는다.</li>
+          <li>controlled-substance activation과 lot, expiry, BUD, actual dispense-event 사실은 구현 범위가 아니다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Git·배포 closeout</h2>
+        <ul>
+          <li>Candidate <code>f8a1d927</code>, PR #620, Release Check <code>32919156702</code>, merge <code>6dcb71ac</code>, exact <code>origin/main</code> 확인을 완료했다.</li>
+          <li>Production deployment <code>dpl_ADnW4rS7CzYQgiAXCbXPHvyKaSjb</code>는 merge SHA를 빌드한 Ready 배포이며 공식 alias가 같은 deployment를 가리킨다.</li>
+          <li>인증된 synthetic Cheongdam chart와 dispensing route가 오류 없이 열렸고, inactive release-13 제품의 exact search는 candidate 0과 empty state를 반환했다.</li>
+          <li>비인증 root/login/chart/API 경계와 새 fulfillment-history API 401을 확인했다. 직전 Ready rollback candidate는 <code>dpl_773HbNmYGPDtBNX4P3sjhJNHDBZ2</code>다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>관련 문서</h2>
+        <ul>
+          <li><a href="../../work/clinical-master/CLINICAL-MASTER-PR-017-evidence-grounded-dispensing-order-master.md">PR-017 work item</a></li>
+          <li><a href="../../work/clinical-master/clinical-master-pr-017/dispensing-order-master-report.html">검색·필터 가능한 데이터 보고서</a></li>
+          <li><a href="../../work/clinical-master/clinical-master-pr-017/completion-audit.md">completion audit</a></li>
+          <li><a href="../../work/clinical-master/clinical-master-pr-017/functional-verification.md">functional verification</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
