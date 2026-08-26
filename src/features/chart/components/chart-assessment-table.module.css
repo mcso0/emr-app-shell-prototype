@@ -149,15 +149,14 @@
   inset-block: 0;
   inset-inline-end: 0;
   display: flex;
-  width: var(--chart-assessment-veterinarian-column);
+  width: var(--clair-spacing-64);
   align-items: center;
   justify-content: flex-end;
   padding-inline-end: var(--chart-assessment-content-inset);
   background: linear-gradient(
     to right,
     transparent 0,
-    var(--chart-assessment-row-surface, var(--emr-surface-panel)) 42%,
-    var(--chart-assessment-row-surface, var(--emr-surface-panel)) 100%
+    var(--chart-assessment-delete-surface, var(--emr-surface-panel)) 100%
   );
   opacity: 0;
   pointer-events: none;
@@ -166,11 +165,20 @@
 }
 
 .tableRow {
+  --chart-assessment-delete-surface: var(--emr-surface-panel);
   --chart-assessment-row-surface: var(--emr-surface-panel);
+}
+
+.table .tableRow > .bodyCell[data-slot="table-cell"] {
+  border-bottom: var(--clair-border-width-default) solid
+    var(--emr-table-data-border);
 }
 
 .tableRow:hover,
 .tableRow:focus-within {
+  --chart-assessment-delete-surface: var(
+    --clair-color-atomic-neutral-100
+  );
   --chart-assessment-row-surface: var(--emr-state-hover);
   background: var(--chart-assessment-row-surface);
 }
@@ -183,6 +191,7 @@
 
 .deleteButton {
   border-color: var(--emr-border-default);
+  border-radius: var(--clair-radius-atomic-6);
   background: var(--clair-color-atomic-common-100);
   box-shadow: var(--clair-shadow-xs);
   color: var(--clair-color-atomic-neutral-700);

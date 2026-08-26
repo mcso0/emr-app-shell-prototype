@@ -4153,6 +4153,28 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   expect(rowGeometry.widths[0]).toBe(96);
   expect(rowGeometry.widths[1]).toBeGreaterThan(0);
   expect(rowGeometry.widths.slice(2)).toEqual([44, 40, 40, 72]);
+  const diagnosisRowDividerStyles = await table
+    .locator("[data-slot='chart-assessment-table-row']")
+    .evaluateAll((rows) =>
+      rows.flatMap((row) =>
+        Array.from(row.querySelectorAll("td")).map((cell) => {
+          const style = getComputedStyle(cell);
+          return {
+            color: style.borderBottomColor,
+            style: style.borderBottomStyle,
+            width: style.borderBottomWidth,
+          };
+        }),
+      ),
+    );
+  expect(diagnosisRowDividerStyles.length).toBeGreaterThan(0);
+  expect(diagnosisRowDividerStyles).toEqual(
+    diagnosisRowDividerStyles.map(() => ({
+      color: "rgb(229, 229, 229)",
+      style: "solid",
+      width: "1px",
+    })),
+  );
   expect(
     Math.abs(rowGeometry.viewportBottom - rowGeometry.panelBottom),
   ).toBeLessThanOrEqual(1);
@@ -4364,17 +4386,31 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   await expect(deleteOverlay).toHaveCSS("opacity", "0");
   await firstRow.hover();
   await expect(deleteOverlay).toHaveCSS("opacity", "1");
+  await expect(deleteOverlay).toHaveCSS("width", "64px");
+  await expect(deleteButton).toHaveCSS("border-radius", "6px");
+  await expect(deleteButton.locator("svg")).toHaveCSS("width", "14px");
+  await expect(deleteButton.locator("svg")).toHaveCSS("height", "14px");
   const hoverSurface = await firstRow.evaluate((row) => {
     const overlay = row.querySelector(
       "[data-slot='chart-assessment-delete-overlay']",
     );
     if (!overlay) throw new Error("Assessment delete overlay is missing");
+    const surfaceProbe = document.createElement("span");
+    surfaceProbe.style.backgroundColor =
+      "var(--clair-color-atomic-neutral-100)";
+    document.body.appendChild(surfaceProbe);
+    const opaqueHoverSurface = getComputedStyle(surfaceProbe).backgroundColor;
+    surfaceProbe.remove();
     return {
+      opaqueHoverSurface,
       overlayBackground: getComputedStyle(overlay).backgroundImage,
       rowBackground: getComputedStyle(row).backgroundColor,
     };
   });
   expect(hoverSurface.overlayBackground).toContain(
+    hoverSurface.opaqueHoverSurface,
+  );
+  expect(hoverSurface.overlayBackground).not.toContain(
     hoverSurface.rowBackground,
   );
   await page.mouse.move(1, 1);

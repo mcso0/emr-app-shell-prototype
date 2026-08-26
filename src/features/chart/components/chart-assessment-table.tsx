@@ -243,7 +243,10 @@ export function ChartAssessmentTable({
                         iconSize="sm"
                         onClick={() => onRemove(diagnosis.id)}
                       >
-                        <CdsActionsTrash2Icon aria-hidden="true" />
+                        <CdsActionsTrash2Icon
+                          aria-hidden="true"
+                          className="size-3.5"
+                        />
                       </EmrIconButton>
                     </span>
                   </TableCell>
