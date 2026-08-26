@@ -2498,8 +2498,9 @@ async function saveChartOrderDraftRoute({
   if (!/^"[0-9a-f]{64}"$/.test(expectedEtag)) {
     return { ok: false, status: 428, error: "if_match_required" };
   }
+  let draftRows: ChartOrderDraftRowInput[];
   try {
-    const draftRows = rows.flatMap<ChartOrderDraftRowInput>((row) => {
+    draftRows = rows.flatMap<ChartOrderDraftRowInput>((row) => {
       if (isChartOrderConfirmedRow(row)) return [];
       // Children are server-expanded rows. Sending them back as individual
       // draft inputs would lose the set parent/child discriminator on retry.
@@ -2581,6 +2582,11 @@ async function saveChartOrderDraftRoute({
         },
       ];
     });
+  } catch {
+    return { ok: false, status: 422, error: "order_set_preview_required" };
+  }
+
+  try {
     const response = await fetch(
       `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-drafts`,
       {
@@ -2609,7 +2615,7 @@ async function saveChartOrderDraftRoute({
       etag: body.etag ?? response.headers.get("etag") ?? undefined,
     };
   } catch {
-    return { ok: false, status: 422, error: "order_set_preview_required" };
+    return { ok: false, status: 500, error: "db_write_failed" };
   }
 }
 

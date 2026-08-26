@@ -6383,8 +6383,8 @@ test("chart confirmation continues after an ambiguous draft response only when r
       };
       await route.fulfill({
         contentType: "application/json",
-        status: 500,
-        json: { ok: false, status: 500, error: "db_write_failed" },
+        status: 200,
+        body: "",
       });
     },
   );
