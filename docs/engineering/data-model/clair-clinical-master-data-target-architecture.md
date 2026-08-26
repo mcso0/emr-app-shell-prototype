@@ -767,6 +767,17 @@ No current Airtable dataset is available. Initial master content must therefore 
 - Phase 1 does not need separate author/reviewer/publisher role UI for a one-person CLAiR team. One operator may perform those steps for structural and synthetic validation data, but every action still records actor, time, source, and reason.
 - Dosing, reference ranges, care guides, or other clinical claims may be labelled clinically reviewed only when a named veterinary reviewer has actually reviewed them. Emergency live authority and response SLA remain deferred until real hospital distribution requires them.
 
+### 21.1 Synthetic service-operations review exception
+
+An explicitly approved production-demo review may expose a published but
+clinically inactive dispensing catalog only in named synthetic workspaces. The
+exception must be server-enforced, append-only, release-pinned, permission
+checked, visibly labelled `serviceReviewOnly`, and independently revocable. It
+must not change `pending_activation`, `clinical_use_allowed = false`, the named
+clinical-review gate, or the foreign-workspace control. It is prohibited for
+real hospital operations, real patients, controlled substances, or any claim
+that the medication content is clinically approved.
+
 ## 22. Verification Scenarios For Future Implementation
 
 1. A published CLAiR order is copied once to a workspace in `pending_activation` and generates a notification.

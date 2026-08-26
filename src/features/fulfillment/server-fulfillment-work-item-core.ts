@@ -2981,7 +2981,7 @@ function getApprovedDispensingLineage(
 
   for (const candidate of candidates) {
     const lineage = mapDispensingOrderLineageSnapshot(candidate);
-    if (lineage?.clinicalUseAllowed) return lineage;
+    if (lineage?.clinicalUseAllowed || lineage?.serviceReviewOnly) return lineage;
   }
   return undefined;
 }

@@ -11,7 +11,10 @@ import {
 
 const sha = (character: string) => character.repeat(64);
 
-function lineage(clinicalUseAllowed: boolean): DispensingOrderLineageSnapshot {
+function lineage(
+  clinicalUseAllowed: boolean,
+  serviceReviewOnly = false,
+): DispensingOrderLineageSnapshot {
   return {
     schemaVersion: 1,
     sourceDispensingProfileId: "01740000-0000-4000-8000-000000000001",
@@ -23,6 +26,12 @@ function lineage(clinicalUseAllowed: boolean): DispensingOrderLineageSnapshot {
       : null,
     sourceEvidenceFingerprint: sha("a"),
     clinicalUseAllowed,
+    ...(serviceReviewOnly
+      ? {
+          serviceReviewOnly: true as const,
+          serviceReviewReleaseId: "78a57bf0-10a8-47db-9ae1-8a8cff79b2c4",
+        }
+      : {}),
     dispensingProfileSnapshot: {
       sourceDispensingProfileId: "01740000-0000-4000-8000-000000000001",
       sourceDispensingProfileRevision: 1,
@@ -35,6 +44,7 @@ function item(
   id: string,
   clinicalUseAllowed: boolean,
   workspaceId = "clair-demo",
+  serviceReviewOnly = false,
 ): OrderCatalogItem {
   return {
     id,
@@ -47,7 +57,7 @@ function item(
     inHospitalOrderName: `PR-017 ${id}`,
     billingName: `PR-017 ${id}`,
     aliases: [],
-    availabilityStatus: "active",
+    availabilityStatus: serviceReviewOnly ? "pending_activation" : "active",
     priceKrw: 1000,
     salesUnit: "per_each",
     targetSpecies: ["dog"],
@@ -74,27 +84,36 @@ function item(
     executionMode: "routed",
     detailSchemaVersion: 1,
     billingEligible: true,
-    dispensingLineage: lineage(clinicalUseAllowed),
+    dispensingLineage: lineage(clinicalUseAllowed, serviceReviewOnly),
     updatedAt: "2026-08-26T00:00:00.000Z",
   };
 }
 
-test("chart search excludes a lineaged dispensing row until the server clinical gate is true", async () => {
+test("chart search includes approved and explicitly scoped service-review dispensing rows", async () => {
   const approved = item("dispensing-approved", true);
+  const serviceReview = item(
+    "dispensing-service-review",
+    false,
+    "clair-demo",
+    true,
+  );
   const pending = item("dispensing-pending", false);
   const gateway = createMockOrderCatalogGateway({
-    items: [approved, pending],
+    items: [approved, serviceReview, pending],
     workspaceId: "clair-demo",
   });
 
   const result = await gateway.listChartSearch({ workspaceId: "clair-demo" });
-  expect(result.rows.map((row) => row.workspaceCatalogItemId)).toEqual([
+  const individualRows = result.rows.filter((row) => row.rowType === "individual");
+  expect(individualRows.map((row) => row.workspaceCatalogItemId)).toEqual([
     approved.id,
+    serviceReview.id,
   ]);
-  expect(result.rows[0]?.dispensingLineage).toEqual(approved.dispensingLineage);
-  expect(result.rows[0]?.appliedSnapshot.dispensingLineage).toEqual(
+  expect(individualRows[0]?.dispensingLineage).toEqual(approved.dispensingLineage);
+  expect(individualRows[0]?.appliedSnapshot.dispensingLineage).toEqual(
     approved.dispensingLineage,
   );
+  expect(individualRows[1]?.dispensingLineage?.serviceReviewOnly).toBe(true);
 });
 
 test("chart search retains 108 unique reviewed dispensing rows at target scale", async () => {
@@ -158,6 +177,15 @@ test("lineage parser accepts only complete revision-pinned fingerprints", () => 
     mapDispensingOrderLineageSnapshot({
       ...valid,
       sourceClinicalReviewId: null,
+    }),
+  ).toBeUndefined();
+
+  const serviceReview = lineage(false, true);
+  expect(mapDispensingOrderLineageSnapshot(serviceReview)).toEqual(serviceReview);
+  expect(
+    mapDispensingOrderLineageSnapshot({
+      ...serviceReview,
+      serviceReviewReleaseId: undefined,
     }),
   ).toBeUndefined();
 });
