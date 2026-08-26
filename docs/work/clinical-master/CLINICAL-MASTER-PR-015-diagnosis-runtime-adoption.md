@@ -69,8 +69,9 @@ diagnosis classification snapshots.
   persist its revision and immutable classification snapshot; free text remains
   supported.
 - The approved dialog supports combined classification search, selection,
-  reordering, type/primary adjustment, completion, responsive layouts, and
-  loading/empty/error/permission states.
+  reordering, diagnosis-type adjustment, active existing-selection
+  reconciliation, completion, responsive layouts, and loading/empty/error/
+  permission states.
 - Focused tests, security checks, typecheck, build, docs checks, rollback-only
   database replay, remote synthetic readback, and scoped authenticated smoke are
   recorded. Production merge/deploy still follows the exact-candidate release
@@ -129,9 +130,11 @@ Verified against a fresh local Supabase reset on 2026-08-25:
 - a free-text-only A→B edit produced distinct privacy-safe SHA-256 values in
   the before/after audit projection without storing unrestricted text in the
   audit event
-- the focused dialog browser test covers filtering, check state, duplicate-safe
-  completion, diagnosis type, preserved existing primary, drag/keyboard reorder,
-  hover-only trash action, completion readback, and all four responsive widths
+- the focused dialog browser test covers filtering, active existing-selection
+  state, deselection/reselection and empty reconciliation, diagnosis type,
+  preserved existing primary metadata, drag/keyboard reorder, the always-visible
+  remove action, Figma geometry, completion readback, and all four responsive
+  widths
 - independent security-boundary review finished with `MUST-FIX: 0`; remaining
   advice is limited to richer actor/reason metadata for future reusable
   privileged-adoption audit contracts and more specific route error rendering
@@ -195,3 +198,30 @@ deployment are recorded below.
   tests, and all 53 existing chart behavior tests. The remaining chart reference
   screenshot mismatch reproduces unchanged on `origin/main` (4,827 pixels,
   approximately 1%) and is not introduced by this candidate.
+
+## 2026-08-26 Figma Correction Candidate
+
+This follow-up corrects the already released classification dialog against the
+linked Figma V2 nodes. It changes only the client dialog and its encounter-draft
+reconciliation; it does not change clinical master data, Supabase schema, remote
+workspace adoption, permissions, or persistence APIs.
+
+- Diagnosis rows now use the same 34px density and typography as the diagnosis
+  system and disease-group rows. Section titles use the Figma semibold weight,
+  and `전체 삭제` uses the 24px outline button treatment.
+- The diagnosis-list scrollbar is anchored 4px inside the diagnosis section's
+  right edge instead of consuming space beside the selected-items column.
+- Selected rows remove the dialog-level `주진단` control. Their remove action is
+  an always-visible 24px ghost X button, while drag reorder and diagnosis-type
+  selection remain available. Existing primary metadata is preserved when a
+  retained diagnosis is saved; primary editing stays in the owning Assessment
+  diagnosis table.
+- Catalog-backed encounter diagnoses hydrate as selected but enabled rows when
+  the dialog opens. The veterinarian can deselect, reselect, clear, or replace
+  them, and completion reconciles the final catalog set. Retained row metadata
+  and free-text diagnoses are preserved; cancel still discards the draft.
+- Local verification passed focused ESLint, TypeScript, documentation links,
+  diff checks, and the webpack production build. The two focused classification
+  scenarios passed. In the combined 60-scenario chart run, 58 passed directly;
+  the two unrelated Order scenarios that timed out or lost follow-up state both
+  passed on their immediate isolated rerun.

@@ -66,6 +66,10 @@
   white-space: nowrap;
 }
 
+.sectionTitle > strong {
+  font-weight: inherit;
+}
+
 .countBadge {
   min-width: 20px;
   height: 20px;
@@ -126,6 +130,10 @@
   flex: 1 1 auto;
 }
 
+.diagnosisColumn .columnScroll > [data-slot="scroll-area-scrollbar"] {
+  right: -13px !important;
+}
+
 .list,
 .diagnosisList,
 .selectedList {
@@ -170,6 +178,7 @@
   flex: 1;
   overflow: hidden;
   font-size: 13px;
+  font-weight: 500;
   line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -185,12 +194,12 @@
 .diagnosisOption {
   display: grid;
   width: 100%;
-  min-height: 48px;
-  flex: 0 0 48px;
+  min-height: 34px;
+  flex: 0 0 34px;
   grid-template-columns: minmax(0, 1fr) 20px;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 5px 8px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -217,8 +226,8 @@
   min-width: 0;
   overflow: hidden;
   font-size: 13px;
-  font-weight: 600;
-  line-height: 20px;
+  font-weight: 500;
+  line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -246,9 +255,9 @@
   position: relative;
   display: grid;
   min-height: 44px;
-  grid-template-columns: 24px minmax(0, 1fr) auto 60px 28px;
+  grid-template-columns: 24px minmax(0, 1fr) 60px 24px;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   overflow: hidden;
   padding: 8px 12px 8px 8px;
   border: 1px solid var(--emr-border-default);
@@ -264,7 +273,7 @@
 
 .dragHandle {
   width: 24px;
-  height: 28px;
+  height: 24px;
   padding: 0;
   color: var(--emr-text-disabled);
   cursor: grab;
@@ -283,62 +292,31 @@
   min-width: 0;
   overflow: hidden;
   color: var(--emr-text-primary);
-  font-size: 12px;
-  font-weight: 600;
+  margin-right: 6px;
+  margin-left: -2px;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.primaryButton {
-  height: 28px;
-  padding-inline: 9px;
-  border-color: transparent;
-  background: transparent;
-  color: var(--emr-text-tertiary);
-  font-size: 11px;
-}
-
-.primaryButton > svg {
-  width: 14px;
-  height: 14px;
-  opacity: 0;
-}
-
-.primaryActive {
-  background: var(--clair-color-atomic-sky-50);
-  color: var(--clair-color-atomic-sky-700);
-}
-
-.primaryActive > svg {
-  opacity: 1;
 }
 
 .typeTrigger {
   width: 60px;
   height: 28px;
   padding-inline: 7px;
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .deleteButton {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   justify-self: end;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
-}
-
-.deleteButtonVisible {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .clearButton {
   margin-left: auto;
-  color: var(--emr-text-tertiary);
-  font-size: 11px;
 }
 
 .clearButton:hover:not(:disabled) {
@@ -406,13 +384,6 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation: none;
-  }
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .deleteButton {
-    opacity: 1;
-    pointer-events: auto;
   }
 }
 
