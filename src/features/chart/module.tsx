@@ -2573,12 +2573,7 @@ async function saveChartOrderDraftRoute({
         {
           rowType: "individual" as const,
           orderId: row.order.id,
-          workspaceCatalogItemId:
-            row.catalogSearchRow?.workspaceCatalogItemId ??
-            row.catalogSearchRow?.appliedSnapshot.workspaceCatalogItemId ??
-            row.order.workspaceCatalogItemId ??
-            row.order.serviceItemId ??
-            row.order.id,
+          workspaceCatalogItemId: getChartOrderDraftCatalogItemId(row),
           quantity: getDraftQuantity(row.quantityInput) ?? 0,
           detailInputs: row.detailInputs,
           detailSchemaVersion: row.detailSchemaVersion,
@@ -2616,6 +2611,82 @@ async function saveChartOrderDraftRoute({
   } catch {
     return { ok: false, status: 422, error: "order_set_preview_required" };
   }
+}
+
+function getChartOrderDraftCatalogItemId(row: ChartOrderDraftRow) {
+  return (
+    row.catalogSearchRow?.workspaceCatalogItemId ??
+    row.catalogSearchRow?.appliedSnapshot.workspaceCatalogItemId ??
+    row.order.workspaceCatalogItemId ??
+    row.order.serviceItemId ??
+    row.order.id
+  );
+}
+
+function matchesPersistedConfirmationDraft({
+  desiredRows,
+  orderIds,
+  persistedRows,
+}: {
+  desiredRows: ChartOrderDraftRow[];
+  orderIds: string[];
+  persistedRows: ChartOrderRuntimeRow[];
+}) {
+  const desiredDraftRows = desiredRows.filter(
+    (row) =>
+      !isChartOrderConfirmedRow(row) &&
+      row.runtimeRow?.rowType !== "set_child",
+  );
+  if (
+    desiredDraftRows.some(
+      (row) =>
+        row.runtimeRow?.rowType === "set" ||
+        row.catalogSearchRow?.rowType === "set" ||
+        Boolean(row.setPreview),
+    )
+  ) {
+    return false;
+  }
+  const persistedDraftRows = persistedRows.filter(
+    (row) =>
+      row.rowType !== "set_child" &&
+      (row.orderConfirmationStatus === undefined ||
+        row.orderConfirmationStatus === "draft" ||
+        row.orderConfirmationStatus === "pending"),
+  );
+  if (desiredDraftRows.length !== persistedDraftRows.length) return false;
+
+  const desiredById = new Map(
+    desiredDraftRows.map((row) => [row.order.id, row]),
+  );
+  const persistedById = new Map(
+    persistedDraftRows.map((row) => [row.orderId, row]),
+  );
+  if (orderIds.some((orderId) => !desiredById.has(orderId))) return false;
+
+  return desiredDraftRows.every((desired) => {
+    const orderId = desired.order.id;
+    const persisted = persistedById.get(orderId);
+    if (
+      !persisted ||
+      persisted.rowType !== "individual" ||
+      (persisted.orderConfirmationStatus !== undefined &&
+        persisted.orderConfirmationStatus !== "draft" &&
+        persisted.orderConfirmationStatus !== "pending")
+    ) {
+      return false;
+    }
+
+    return (
+      persisted.workspaceCatalogItemId ===
+        getChartOrderDraftCatalogItemId(desired) &&
+      persisted.quantity === (getDraftQuantity(desired.quantityInput) ?? 0) &&
+      persisted.detailSchemaVersion === desired.detailSchemaVersion &&
+      persisted.priority === desired.priority &&
+      JSON.stringify(persisted.detailInputs) ===
+        JSON.stringify(desired.detailInputs)
+    );
+  });
 }
 
 async function loadChartOrderActions({
@@ -8306,21 +8377,44 @@ function OrderArea({
       rows: preparedDraft.rows,
       workspaceId: bundle.encounter.workspaceId,
     });
+    let effectiveDraftResult = draftResult;
+    if (
+      !draftResult.ok &&
+      draftResult.status >= 500 &&
+      draftResult.error === "db_write_failed"
+    ) {
+      const readback = await loadChartOrderDraft({
+        actorHeaders,
+        encounterId: bundle.encounter.id,
+        workspaceId: bundle.encounter.workspaceId,
+      });
+      if (
+        readback.ok &&
+        readback.etag &&
+        matchesPersistedConfirmationDraft({
+          desiredRows: preparedDraft.rows,
+          orderIds,
+          persistedRows: readback.rows ?? [],
+        })
+      ) {
+        effectiveDraftResult = readback;
+      }
+    }
 
-    if (!draftResult.ok) {
+    if (!effectiveDraftResult.ok) {
       orderDraftSaveInFlightRef.current = false;
       const conflict =
-        draftResult.denialReason === "revision_conflict" ||
-        draftResult.error === "revision_conflict";
+        effectiveDraftResult.denialReason === "revision_conflict" ||
+        effectiveDraftResult.error === "revision_conflict";
       orderDraftConflictRef.current = conflict;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
       toast.error(
         conflict
           ? "다른 기기의 변경과 충돌했어요. 충돌을 해결한 뒤 확정해 주세요."
-          : draftResult.denialReason === "permission_missing"
+          : effectiveDraftResult.denialReason === "permission_missing"
             ? "오더 수정 권한이 없어 저장하지 못했어요."
             : getChartOrderPersistenceErrorMessage(
-                draftResult.denialReason ?? draftResult.error,
+                effectiveDraftResult.denialReason ?? effectiveDraftResult.error,
               ),
       );
       return;
@@ -8328,12 +8422,12 @@ function OrderArea({
 
     const savedDraftRows = applyPersistedOrderDrafts(
       preparedDraft.rows,
-      draftResult.rows ?? [],
+      effectiveDraftResult.rows ?? [],
       bundle.encounter.workspaceId,
       { preserveMissingRows: true },
     );
     const persistedOrderIds = new Set(
-      (draftResult.rows ?? [])
+      (effectiveDraftResult.rows ?? [])
         .filter((row) => row.rowType !== "set_child")
         .map((row) => row.orderId),
     );
@@ -8354,12 +8448,12 @@ function OrderArea({
     draftTouchedRef.current = false;
     setCommittedRows(savedDraftRows);
     setDraftRows(savedDraftRows);
-    if (draftResult.etag) {
-      orderDraftEtagRef.current = draftResult.etag;
-      setOrderDraftEtag(draftResult.etag);
+    if (effectiveDraftResult.etag) {
+      orderDraftEtagRef.current = effectiveDraftResult.etag;
+      setOrderDraftEtag(effectiveDraftResult.etag);
     }
     orderDraftConflictRef.current = false;
-    const actionExpectedEtag = draftResult.etag;
+    const actionExpectedEtag = effectiveDraftResult.etag;
     if (!actionExpectedEtag) {
       orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState("error");
