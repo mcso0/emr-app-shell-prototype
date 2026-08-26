@@ -46,7 +46,7 @@ test("shared draft save remains CAS-bound and creates no execution artifacts", (
 
 test("chart draft autosaves after 700ms, flushes on field exit, and blocks actions on conflict", () => {
   expect(chartModule).toMatch(
-    /orderDraftSaveState === "saving" \|\|\s*!draftTouchedRef\.current[\s\S]*?window\.setTimeout\(\(\) => \{\s*if \(!draftTouchedRef\.current\) return;[\s\S]*?void autoSaveDraftRef\.current\(\);\s*\}, 700\);/,
+    /orderDraftSaveState === "saving" \|\|\s*orderDraftSaveInFlightRef\.current \|\|\s*!draftTouchedRef\.current[\s\S]*?window\.setTimeout\(\(\) => \{[\s\S]*?!draftTouchedRef\.current \|\|\s*orderDraftSaveInFlightRef\.current[\s\S]*?void autoSaveDraftRef\.current\(\);\s*\}, 700\);/,
   );
   expect(chartModule).toContain("window.setTimeout(() => {");
   expect(chartModule).toContain("}, 700);");
@@ -60,12 +60,36 @@ test("chart draft autosaves after 700ms, flushes on field exit, and blocks actio
 
 test("chart draft serializes edits made during an in-flight save", () => {
   expect(chartModule).toMatch(
-    /const inFlightSave = orderDraftSavePromiseRef\.current;\s*if \(inFlightSave\) \{[\s\S]*?return inFlightSave;\s*\}/,
+    /const inFlightSave = orderDraftSavePromiseRef\.current;\s*if \(inFlightSave\) return inFlightSave;\s*if \(orderDraftSaveInFlightRef\.current\) return Promise\.resolve\(false\);/,
   );
   expect(chartModule).toMatch(
     /orderDraftSaveInFlightRef\.current = true;[\s\S]*?while \(draftTouchedRef\.current\) \{[\s\S]*?const expectedEtag = orderDraftEtagRef\.current;[\s\S]*?draftTouchedRef\.current = false;[\s\S]*?const result = await saveChartOrderDraftRoute\([\s\S]*?orderDraftEtagRef\.current = result\.etag;/,
   );
   expect(chartModule).not.toContain("window.setTimeout(() => {\n          if (draftTouchedRef.current) void autoSaveDraftRef.current();\n        }, 0);");
+});
+
+test("confirmed rows never reopen the mutable draft and confirmation keeps the save lock through the action RPC", () => {
+  expect(chartModule).toMatch(
+    /const deletedDraftOrderCount = committedRows\.filter\([\s\S]*?!isChartOrderConfirmedRow\(row\)[\s\S]*?const changedDraftOrderCount =[\s\S]*?if \(isChartOrderConfirmedRow\(row\)\) return false;/,
+  );
+
+  const confirmationStart = chartModule.indexOf(
+    "const actionExpectedEtag = draftResult.etag;",
+  );
+  const actionRequest = chartModule.indexOf(
+    "const result = await saveChartOrderActionRoute({",
+    confirmationStart,
+  );
+  const actionUnlock = chartModule.indexOf(
+    "orderDraftSaveInFlightRef.current = false;\n    applyConfirmedResult(result);",
+    actionRequest,
+  );
+  expect(confirmationStart).toBeGreaterThan(-1);
+  expect(actionRequest).toBeGreaterThan(confirmationStart);
+  expect(actionUnlock).toBeGreaterThan(actionRequest);
+  expect(chartModule).not.toContain(
+    "orderDraftConflictRef.current = false;\n    orderDraftSaveInFlightRef.current = false;\n    const actionExpectedEtag",
+  );
 });
 
 test("draft writers return a post-write ETag from the same RPC statement", () => {

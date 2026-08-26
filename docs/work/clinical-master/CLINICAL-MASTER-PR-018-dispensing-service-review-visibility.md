@@ -14,7 +14,7 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-017-evidence-grounded-dispensing-order-master.md"
 dependencies: ["CLINICAL-MASTER-PR-017"]
 updated: "2026-08-26"
-remote_writes: 7
+remote_writes: 8
 ---
 
 # Clinical Master PR-018: Dispensing service-review visibility
@@ -86,10 +86,14 @@ npm run build
 - Focused chart, migration, and fulfillment suite: 29 passed.
 - TypeScript, ESLint, docs links, secret scan, and production build: passed.
 - Supabase readback: 108 rows per target, foreign zero, fake non-member zero.
-- Execution readback: one Cheongdam synthetic order confirmed with exactly one
-  universal Task and one dispensing Queue projection, zero Billing candidates,
-  and visible Queue readback. The order remains `serviceReviewOnly` and does
-  not claim clinical approval.
+- Execution readback: two Cheongdam synthetic orders confirmed with exactly one
+  universal Task and one dispensing Queue projection each, zero Billing
+  candidates, and visible Queue readback. The second proof uses order
+  `875eb4d1-8286-4e0b-a8de-1e03d75246e9`, command
+  `e72c9941-3bcd-4167-8003-ab377bbe0757`, task
+  `8634b338-2201-4e97-a579-291cf8c866a8`, and Queue projection
+  `b9b94442-3a42-458e-94e0-ee52f1278a3e`. Both orders remain
+  `serviceReviewOnly` and do not claim clinical approval.
 - The chart draft auto-save now runs only after an actual edit. This prevents
   the saved ETag from changing continuously and racing explicit confirmation;
   the focused hotfix suite passes 15 tests.
@@ -103,6 +107,10 @@ npm run build
 - The draft fingerprint helper is `VOLATILE`, so a writer RPC returns the
   post-write ETag from the same statement instead of a `STABLE` pre-write
   snapshot that makes the next serialized save conflict.
+- Confirmed rows no longer count as mutable Draft changes, and confirmation
+  keeps the Draft save lock until the atomic action RPC finishes. A pending
+  autosave therefore cannot advance the ETag between the confirmation save and
+  action request.
 - Supabase advisors: no new unresolved release-blocking finding. The private
   append-only event table intentionally has RLS with no client policy, and the
   authenticated definer RPC is intentionally exposed behind its explicit
