@@ -30,6 +30,10 @@ const queuePatientContextMigrationPath = resolve(
   process.cwd(),
   "supabase/migrations/20260826173000_fulfillment_queue_patient_context_readback.sql",
 );
+const assignmentCancelMigrationPath = resolve(
+  process.cwd(),
+  "supabase/migrations/20260826180000_fulfillment_assignment_cancel_return.sql",
+);
 
 test("service-review migration is bounded to the three target workspaces and keeps clinical approval false", async () => {
   const migration = await readFile(migrationPath, "utf8");
@@ -137,5 +141,22 @@ test("fulfillment queue readback restores encounter patient context without weak
   expect(migration).toContain(
     ")) || item.source_snapshot",
   );
+  expect(migration).not.toMatch(/\b(drop|truncate|delete)\b/i);
+});
+
+test("fulfillment assignment cancellation requires an audited return and releases the assignee", async () => {
+  const migration = await readFile(assignmentCancelMigrationPath, "utf8");
+
+  expect(migration).toContain("p_actor_user_id is distinct from auth.uid()");
+  expect(migration).toContain("private.clair_is_active_workspace_member");
+  expect(migration).toContain(
+    "private.clair_queue_permission_for_destination",
+  );
+  expect(migration).toContain("raise exception 'reason_required'");
+  expect(migration).toContain(
+    "when p_status = 'returned' and p_assigned_to_user_id is null then null",
+  );
+  expect(migration).toContain("insert into public.order_task_events");
+  expect(migration).toContain("insert into public.order_events");
   expect(migration).not.toMatch(/\b(drop|truncate|delete)\b/i);
 });
