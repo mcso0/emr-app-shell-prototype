@@ -53,3 +53,12 @@ test("chart draft autosaves after 700ms, flushes on field exit, and blocks actio
   expect(chartModule).toContain("현재 편집값은 덮어쓰지 않았습니다");
   expect(chartModule).toContain("서버 값 다시 불러오기");
 });
+
+test("chart draft follows a successful in-flight save with another save when edits remain", () => {
+  expect(chartModule).toMatch(
+    /const clearInFlightSave = \(saved: boolean\) => \{[\s\S]*?saved &&\s*draftTouchedRef\.current &&\s*!orderDraftConflictRef\.current[\s\S]*?window\.setTimeout\(\(\) => \{\s*if \(draftTouchedRef\.current\) void autoSaveDraftRef\.current\(\);\s*\}, 0\);/,
+  );
+  expect(chartModule).toContain(
+    "void operation.then(clearInFlightSave, () => clearInFlightSave(false));",
+  );
+});
