@@ -7445,13 +7445,6 @@ function OrderArea({
   const orderDraftConflictRef = useRef(false);
   const orderDraftSaveInFlightRef = useRef(false);
   const orderDraftSavePromiseRef = useRef<Promise<boolean> | null>(null);
-  const orderDraftSaveAttemptRef = useRef(0);
-  const orderDraftDebugRef = useRef(
-    typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search)
-        .get("verify")
-        ?.includes("draft-debug") === true,
-  );
   const autoSaveDraftRef = useRef<() => Promise<boolean>>(async () => false);
   const pendingConfirmationRef = useRef<{
     expectedEtag: string;
@@ -7520,11 +7513,14 @@ function OrderArea({
   const actionableSelectedOrderCount = selectedOrders.filter(
     (order) => order.status !== "cancelled",
   ).length;
-  const deletedDraftOrderCount = committedRows.filter(({ order }) =>
-    draftRows.every((row) => row.order.id !== order.id),
+  const deletedDraftOrderCount = committedRows.filter(
+    (row) =>
+      !isChartOrderConfirmedRow(row) &&
+      draftRows.every((draftRow) => draftRow.order.id !== row.order.id),
   ).length;
   const changedDraftOrderCount =
     draftRows.filter((row) => {
+      if (isChartOrderConfirmedRow(row)) return false;
       const committedRow = committedRows.find(
         ({ order }) => order.id === row.order.id,
       );
@@ -7651,12 +7647,6 @@ function OrderArea({
     value: unknown | undefined,
   ) => {
     if (writeDisabled) return;
-    if (orderDraftDebugRef.current) {
-      console.info("[chart-draft-save] touch", {
-        fieldKey,
-        inFlight: orderDraftSaveInFlightRef.current,
-      });
-    }
     draftTouchedRef.current = true;
     setDraftRows((currentRows) =>
       currentRows.map((row) => {
@@ -8007,15 +7997,8 @@ function OrderArea({
   };
   const commitDraftRows = ({ silent = false } = {}): Promise<boolean> => {
     const inFlightSave = orderDraftSavePromiseRef.current;
-    if (inFlightSave) {
-      if (orderDraftDebugRef.current) {
-        console.info("[chart-draft-save] reuse", {
-          dirty: draftTouchedRef.current,
-          saveState: orderDraftSaveState,
-        });
-      }
-      return inFlightSave;
-    }
+    if (inFlightSave) return inFlightSave;
+    if (orderDraftSaveInFlightRef.current) return Promise.resolve(false);
     if (
       writeDisabled ||
       orderDraftSaveState === "loading" ||
@@ -8025,15 +8008,7 @@ function OrderArea({
       return Promise.resolve(false);
 
     const operation = (async () => {
-      const attempt = ++orderDraftSaveAttemptRef.current;
       orderDraftSaveInFlightRef.current = true;
-      if (orderDraftDebugRef.current) {
-        console.info("[chart-draft-save] start", {
-          attempt,
-          dirty: draftTouchedRef.current,
-          saveState: orderDraftSaveState,
-        });
-      }
       while (draftTouchedRef.current) {
         const preparedDraft = prepareChartOrderDraftRowsForPersistence(
           draftRowsRef.current,
@@ -8061,18 +8036,6 @@ function OrderArea({
           rows: preparedDraft.rows,
           workspaceId: bundle.encounter.workspaceId,
         });
-        if (orderDraftDebugRef.current) {
-          console.info("[chart-draft-save] result", {
-            attempt,
-            dirty: draftTouchedRef.current,
-            error: result.ok
-              ? undefined
-              : (result.denialReason ?? result.error),
-            expectedEtag,
-            ok: result.ok,
-            resultEtag: result.ok ? result.etag : undefined,
-          });
-        }
 
         if (!result.ok) {
           const conflict =
@@ -8142,11 +8105,6 @@ function OrderArea({
         orderDraftSavePromiseRef.current = null;
       }
       orderDraftSaveInFlightRef.current = false;
-      if (orderDraftDebugRef.current) {
-        console.info("[chart-draft-save] clear", {
-          dirty: draftTouchedRef.current,
-        });
-      }
     };
     void operation.then(clearInFlightSave, clearInFlightSave);
     return operation;
@@ -8161,17 +8119,17 @@ function OrderArea({
       !orderDraftEtag ||
       orderDraftSaveState === "loading" ||
       orderDraftSaveState === "saving" ||
+      orderDraftSaveInFlightRef.current ||
       !draftTouchedRef.current
     )
       return;
 
     const timer = window.setTimeout(() => {
-      if (!draftTouchedRef.current) return;
-      if (orderDraftDebugRef.current) {
-        console.info("[chart-draft-save] autosave", {
-          saveState: orderDraftSaveState,
-        });
-      }
+      if (
+        !draftTouchedRef.current ||
+        orderDraftSaveInFlightRef.current
+      )
+        return;
       void autoSaveDraftRef.current();
     }, 700);
     return () => window.clearTimeout(timer);
@@ -8366,9 +8324,9 @@ function OrderArea({
       setOrderDraftEtag(draftResult.etag);
     }
     orderDraftConflictRef.current = false;
-    orderDraftSaveInFlightRef.current = false;
     const actionExpectedEtag = draftResult.etag;
     if (!actionExpectedEtag) {
+      orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState("error");
       toast.error("확정할 오더 버전을 확인하지 못했어요.");
       return;
@@ -8398,6 +8356,7 @@ function OrderArea({
         result.denialReason === "confirmation_in_progress" ||
         result.error === "confirmation_in_progress";
       if (!retryable) pendingConfirmationRef.current = null;
+      orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
       toast.error(
         result.denialReason === "permission_missing"
@@ -8408,6 +8367,7 @@ function OrderArea({
       );
       return;
     }
+    orderDraftSaveInFlightRef.current = false;
     applyConfirmedResult(result);
   };
   const removeDraftRootOrders = (orderIds: string[]) => {
