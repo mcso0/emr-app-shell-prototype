@@ -7061,6 +7061,7 @@ function ChartOrderCatalogDialog({
       return [
         row.displayName,
         row.billingName,
+        row.appliedSnapshot.appliedStandardOrderName ?? "",
         row.sourcePresetId,
         row.categoryGroup,
       ].some((value) => value.toLowerCase().includes(normalizedQuery));
