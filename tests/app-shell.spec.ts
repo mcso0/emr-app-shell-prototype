@@ -1270,9 +1270,10 @@ test("dispensing table aligns selection header and row checkboxes", async ({ pag
 
 test("dispensing table column grips resize with a minimum width", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
+  await page.getByTestId("order-queue-item-dispensing-queue-0").click();
 
   const grip = page.getByRole("button", { name: "status 컬럼 너비 조절" }).first();
-  const header = page.getByRole("columnheader", { name: "상태" }).first();
+  const header = page.locator('th[data-column-id="status"]').first();
   const before = await header.boundingBox();
   const gripBox = await grip.boundingBox();
 

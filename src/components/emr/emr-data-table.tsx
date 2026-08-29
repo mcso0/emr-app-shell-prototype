@@ -186,6 +186,23 @@ function toggleColumnSorting<TData>(column: Column<TData, unknown>) {
   }
 }
 
+function resizeColumnFromKeyboard<TData>(
+  table: TanStackTable<TData>,
+  column: Column<TData, unknown>,
+  event: React.KeyboardEvent<HTMLButtonElement>,
+) {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  const delta =
+    (event.shiftKey ? 24 : 8) * (event.key === "ArrowRight" ? 1 : -1);
+  const minSize = column.columnDef.minSize ?? 20;
+  const maxSize = column.columnDef.maxSize ?? Number.MAX_SAFE_INTEGER;
+  const size = Math.min(maxSize, Math.max(minSize, column.getSize() + delta));
+  table.setColumnSizing((current) => ({ ...current, [column.id]: size }));
+}
+
 function getRenderedCellContent<TData>(
   cell: Cell<TData, unknown>,
 ): React.ReactNode {
@@ -574,6 +591,9 @@ function EmrDataTableHeader<TData>({
             resizeLabel={`${label} 컬럼 너비 조절`}
             sortDirection={sortDirection || undefined}
             sortLabel={canSort ? getSortLabel(label, sortDirection) : undefined}
+            onResizeKeyDown={(event) =>
+              resizeColumnFromKeyboard(header.getContext().table, column, event)
+            }
             onResizeMouseDown={header.getResizeHandler()}
             onResizeTouchStart={header.getResizeHandler()}
             onSort={canSort ? () => toggleColumnSorting(column) : undefined}

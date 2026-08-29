@@ -6,6 +6,7 @@ import {
   useReactTable,
   type ColumnDef,
   type RowSelectionState,
+  type SortingFn,
   type SortingState,
   type Updater,
   type VisibilityState,
@@ -200,6 +201,157 @@ const hospitalOrderBillingFilterOptions: HospitalOrderTableFilterOption[] = [
   { label: "청구 가능", value: "billable" },
   { label: "비청구", value: "not-billable" },
 ];
+const hospitalDispensingDoseUnitLabels: Record<string, string> = {
+  capsule: "캡슐",
+  g: "g",
+  ml: "mL",
+  sachet: "포",
+  tablet: "정",
+};
+const hospitalDispensingRouteLabels: Record<string, string> = {
+  CRI: "지속정주(CRI)",
+  IM: "근육(IM)",
+  IV: "정맥(IV)",
+  PO: "경구(PO)",
+  SC: "피하(SC)",
+  inhalation: "흡입",
+  nasal: "비강",
+  ophthalmic: "안과",
+  oromucosal: "구강점막",
+  other: "기타",
+  otic: "귀",
+  topical: "외용",
+  transdermal: "경피",
+};
+const hospitalDispensingFrequencyLabels: Record<string, string> = {
+  bid: "하루 2회(BID)",
+  once: "1회",
+  qid: "하루 4회(QID)",
+  qod: "격일(QOD)",
+  sid: "하루 1회(SID)",
+  tid: "하루 3회(TID)",
+};
+const hospitalDispensingInstructionLabels: Record<string, string> = {
+  after_meal: "식후",
+  any_time: "시간 무관",
+  before_meal: "식전",
+  with_meal: "식사와 함께",
+};
+const hospitalDispensingStorageLabels: Record<string, string> = {
+  refrigerated: "냉장",
+  refrigerated_light_protected: "냉장·차광",
+  room_temp: "실온",
+  room_temp_light_protected: "실온·차광",
+};
+const hospitalDispensingReviewLabels = {
+  approved: "수의사 승인",
+  clinical_reviewed: "임상 검토 완료",
+  clinical_unreviewed: "임상 미검토",
+  not_required: "해당 없음",
+  pending: "검토 대기",
+  rejected: "반려",
+} as const;
+type HospitalDispensingReviewKey = keyof typeof hospitalDispensingReviewLabels;
+
+function formatHospitalDispensingNumber(value: number) {
+  return Number.isInteger(value)
+    ? String(value)
+    : String(Number(value.toFixed(3)));
+}
+
+function formatHospitalDispensingAmount(value: number, unit: string) {
+  const unitLabel = hospitalDispensingDoseUnitLabels[unit] ?? unit;
+  return `${formatHospitalDispensingNumber(value)}${unitLabel}`;
+}
+
+function getHospitalDispensingReviewKey(
+  order: HospitalOrderCatalogItem,
+): HospitalDispensingReviewKey {
+  if (order.sourceKind === "clair_master") {
+    const source = order.sourceCatalogItem;
+    return source?.medicationMetadata?.presetStatus === "clinically_reviewed" &&
+      source.dispensingLineage?.clinicalUseAllowed === true
+      ? "clinical_reviewed"
+      : "clinical_unreviewed";
+  }
+
+  if (order.dispensingReviewStatus === "approved") return "approved";
+  if (order.dispensingReviewStatus === "pending") return "pending";
+  if (order.dispensingReviewStatus === "rejected") return "rejected";
+  return "not_required";
+}
+
+function getHospitalDispensingTableDetails(order: HospitalOrderCatalogItem) {
+  const preset = order.dispensingPreset;
+  const ingredient = preset?.ingredientName.trim() ?? "";
+  const ingredientStrength = [ingredient, order.dispensingStrength]
+    .filter(Boolean)
+    .join(" · ");
+  const reviewKey = getHospitalDispensingReviewKey(order);
+
+  return {
+    dosageForm: order.dispensingDosageForm ?? "",
+    dose: preset?.dose,
+    doseLabel: preset
+      ? formatHospitalDispensingAmount(preset.dose, preset.doseUnit)
+      : "",
+    durationDays: preset?.durationDays,
+    durationLabel: preset
+      ? `${formatHospitalDispensingNumber(preset.durationDays)}일`
+      : "",
+    frequency: preset?.frequency ?? "",
+    frequencyLabel: preset
+      ? (hospitalDispensingFrequencyLabels[preset.frequency] ??
+        preset.frequency)
+      : "",
+    ingredientStrength,
+    medicationInstruction: preset?.medicationInstruction ?? "",
+    medicationInstructionLabel: preset
+      ? (hospitalDispensingInstructionLabels[preset.medicationInstruction] ??
+        preset.medicationInstruction)
+      : "",
+    reviewKey,
+    reviewLabel: hospitalDispensingReviewLabels[reviewKey],
+    route: preset?.route ?? "",
+    routeLabel: preset
+      ? (hospitalDispensingRouteLabels[preset.route] ?? preset.route)
+      : "",
+    storageMethod: preset?.storageMethod ?? "",
+    storageMethodLabel: preset
+      ? (hospitalDispensingStorageLabels[preset.storageMethod] ??
+        preset.storageMethod)
+      : "",
+    totalQuantity: preset?.totalQuantity,
+    totalQuantityLabel: preset
+      ? formatHospitalDispensingAmount(
+          preset.totalQuantity,
+          preset.totalQuantityUnit,
+        )
+      : "",
+  };
+}
+
+function HospitalOrderTableCellValue({
+  className,
+  mode = "one-line",
+  value,
+}: {
+  className?: string;
+  mode?: EmrTableCellTextMode;
+  value?: string | null;
+}) {
+  const text = value?.trim() || "미설정";
+
+  return (
+    <EmrTableCellText
+      className={cn(!value?.trim() && "text-muted-foreground", className)}
+      fullText={text}
+      mode={mode}
+    >
+      {text}
+    </EmrTableCellText>
+  );
+}
 type OrderMenuChild = {
   label: string;
   categoryId?: HospitalOrderCategoryId;
@@ -616,10 +768,13 @@ function getVisibleOrders(
     .filter((order) => order.subcategoryId === selectedSubcategoryId)
     .filter((order) => {
       if (!normalizedQuery) return true;
+      const dispensingDetails = getHospitalDispensingTableDetails(order);
 
       return [
         order.aliases,
         order.billingName,
+        dispensingDetails.dosageForm,
+        dispensingDetails.ingredientStrength,
         order.inHospitalName,
         order.standardName,
       ].some((value) => value.toLowerCase().includes(normalizedQuery));
@@ -645,6 +800,12 @@ function compareHospitalOrderValues(
     sensitivity: "base",
   });
 }
+
+const compareHospitalOrderRows: SortingFn<HospitalOrderCatalogItem> = (
+  left,
+  right,
+  id,
+) => compareHospitalOrderValues(left.getValue(id), right.getValue(id));
 
 function getUniqueHospitalOrderFilterOptions(
   orders: HospitalOrderCatalogItem[],
@@ -673,6 +834,7 @@ function parseHospitalOrderPriceFilterValue(value: string) {
 
 function getHospitalOrderTableFilterFields(
   orders: HospitalOrderCatalogItem[],
+  selectedCategoryId: HospitalOrderCategoryId,
   selectedSubcategoryId: HospitalOrderSubcategoryId,
 ): Array<EmrTableFilterBuilderField<HospitalOrderCatalogItem>> {
   const fields: Array<EmrTableFilterBuilderField<HospitalOrderCatalogItem>> = [
@@ -734,6 +896,61 @@ function getHospitalOrderTableFilterFields(
       valuePlaceholder: "금액 입력",
     },
   ];
+
+  if (selectedCategoryId === "dispensing") {
+    return [
+      {
+        getValue: (order) =>
+          getHospitalDispensingTableDetails(order).dosageForm,
+        id: "dispensingDosageForm",
+        label: "제형",
+        operators: [{ id: "is", label: "Is" }],
+        options: getUniqueHospitalOrderFilterOptions(
+          orders,
+          (order) => getHospitalDispensingTableDetails(order).dosageForm,
+          {},
+        ),
+        valuePlaceholder: "제형 선택",
+      },
+      {
+        getValue: (order) => getHospitalDispensingTableDetails(order).route,
+        id: "dispensingRoute",
+        label: "투여 경로",
+        operators: [{ id: "is", label: "Is" }],
+        options: getUniqueHospitalOrderFilterOptions(
+          orders,
+          (order) => getHospitalDispensingTableDetails(order).route,
+          hospitalDispensingRouteLabels,
+        ),
+        valuePlaceholder: "투여 경로 선택",
+      },
+      {
+        getValue: (order) => getHospitalDispensingTableDetails(order).frequency,
+        id: "dispensingFrequency",
+        label: "투여 빈도",
+        operators: [{ id: "is", label: "Is" }],
+        options: getUniqueHospitalOrderFilterOptions(
+          orders,
+          (order) => getHospitalDispensingTableDetails(order).frequency,
+          hospitalDispensingFrequencyLabels,
+        ),
+        valuePlaceholder: "투여 빈도 선택",
+      },
+      {
+        getValue: (order) => getHospitalDispensingTableDetails(order).reviewKey,
+        id: "dispensingReview",
+        label: "검토 상태",
+        operators: [{ id: "is", label: "Is" }],
+        options: getUniqueHospitalOrderFilterOptions(
+          orders,
+          (order) => getHospitalDispensingTableDetails(order).reviewKey,
+          hospitalDispensingReviewLabels,
+        ),
+        valuePlaceholder: "검토 상태 선택",
+      },
+      ...fields,
+    ];
+  }
 
   if (selectedSubcategoryId !== "clinical-pathology") return fields;
 
@@ -1457,9 +1674,10 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     () =>
       getHospitalOrderTableFilterFields(
         baseVisibleOrders,
+        selectedCategoryId,
         selectedSubcategoryId,
       ),
-    [baseVisibleOrders, selectedSubcategoryId],
+    [baseVisibleOrders, selectedCategoryId, selectedSubcategoryId],
   );
   const activeOrderFilterCount = getEmrTableFilterBuilderActiveCount(
     orderFilterModel,
@@ -1541,6 +1759,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     }
   };
 
+  const isDispensingOrderTable = selectedCategoryId === "dispensing";
   const hospitalOrderColumns = useMemo<
     Array<ColumnDef<HospitalOrderCatalogItem, unknown>>
   >(
@@ -1548,8 +1767,11 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       {
         id: "select",
         enableHiding: false,
+        enableResizing: false,
         enableSorting: false,
         meta: { label: "오더 선택", role: "selection" },
+        maxSize: hospitalOrderSelectionColumnWidth,
+        minSize: hospitalOrderSelectionColumnWidth,
         size: hospitalOrderSelectionColumnWidth,
         header: ({ table }) => {
           const allSelected = table.getIsAllRowsSelected();
@@ -1593,6 +1815,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         id: "standardName",
         enableHiding: false,
         enableSorting: true,
+        maxSize: isDispensingOrderTable ? 360 : undefined,
         meta: {
           identity: true,
           label: "표준 Order명",
@@ -1600,7 +1823,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           role: "data",
           textMode: hospitalOrderNameTextMode,
         },
-        size: hospitalOrderIdentityColumnWidth,
+        minSize: isDispensingOrderTable ? 220 : undefined,
+        size: isDispensingOrderTable ? 260 : hospitalOrderIdentityColumnWidth,
         cell: ({ row }) => (
           <EmrTableIdentityCellContent>
             <EmrTableCellText
@@ -1614,30 +1838,36 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         sortingFn: (left, right, id) =>
           compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
       },
-      {
-        accessorFn: () => "개별",
-        id: "type",
-        enableSorting: false,
-        meta: {
-          label: "유형",
-          resize: "data-column",
-          role: "data",
-          textMode: "one-line",
-        },
-        size: 72,
-        cell: () => <Badge variant="outline">개별</Badge>,
-      },
+      ...(isDispensingOrderTable
+        ? []
+        : [
+            {
+              accessorFn: () => "개별",
+              id: "type",
+              enableSorting: false,
+              meta: {
+                label: "유형",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              size: 72,
+              cell: () => <Badge variant="outline">개별</Badge>,
+            },
+          ]),
       {
         accessorKey: "inHospitalName",
         id: "inHospitalName",
         enableSorting: true,
+        maxSize: isDispensingOrderTable ? 320 : undefined,
         meta: {
           label: "원내 Order명",
           resize: "data-column",
           role: "data",
           textMode: hospitalOrderNameTextMode,
         },
-        size: 170,
+        minSize: isDispensingOrderTable ? 180 : undefined,
+        size: isDispensingOrderTable ? 220 : 170,
         cell: ({ row }) => (
           <EmrTableCellText
             fullText={row.original.inHospitalName}
@@ -1649,43 +1879,387 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         sortingFn: (left, right, id) =>
           compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
       },
-      {
-        accessorKey: "billingName",
-        id: "billingName",
-        enableSorting: true,
-        meta: {
-          label: "청구서명",
-          resize: "data-column",
-          role: "data",
-          textMode: hospitalOrderNameTextMode,
-        },
-        size: 160,
-        cell: ({ row }) => (
-          <EmrTableCellText
-            fullText={row.original.billingName}
-            mode={hospitalOrderNameTextMode}
-          >
-            {row.original.billingName}
-          </EmrTableCellText>
-        ),
-        sortingFn: (left, right, id) =>
-          compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
-      },
+      ...(isDispensingOrderTable
+        ? [
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).ingredientStrength,
+              id: "dispensingIngredient",
+              enableSorting: true,
+              maxSize: 260,
+              meta: {
+                label: "성분·함량",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 144,
+              size: 180,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original)
+                      .ingredientStrength
+                  }
+                />
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).dosageForm,
+              id: "dispensingDosageForm",
+              enableSorting: true,
+              maxSize: 240,
+              meta: {
+                label: "제형",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 120,
+              size: 160,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original).dosageForm
+                  }
+                />
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).dose,
+              id: "dispensingDose",
+              enableSorting: false,
+              maxSize: 144,
+              meta: {
+                align: "right" as const,
+                label: "1회 용량",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 96,
+              size: 112,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original).doseLabel
+                  }
+                />
+              ),
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).routeLabel,
+              id: "dispensingRoute",
+              enableSorting: true,
+              maxSize: 128,
+              meta: {
+                label: "투여 경로",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 88,
+              size: 104,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original).routeLabel
+                  }
+                />
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).frequencyLabel,
+              id: "dispensingFrequency",
+              enableSorting: true,
+              maxSize: 128,
+              meta: {
+                label: "투여 빈도",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 88,
+              size: 104,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original)
+                      .frequencyLabel
+                  }
+                />
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).durationDays,
+              id: "dispensingDuration",
+              enableSorting: true,
+              maxSize: 104,
+              meta: {
+                align: "right" as const,
+                label: "투여 일수",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 80,
+              size: 88,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original)
+                      .durationLabel
+                  }
+                />
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).totalQuantity,
+              id: "dispensingTotalQuantity",
+              enableSorting: false,
+              maxSize: 160,
+              meta: {
+                align: "right" as const,
+                label: "처방 총량",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 104,
+              size: 128,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original)
+                      .totalQuantityLabel
+                  }
+                />
+              ),
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row)
+                  .medicationInstructionLabel,
+              id: "dispensingMedicationInstruction",
+              enableSorting: false,
+              maxSize: 144,
+              meta: {
+                label: "복용 시점",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 96,
+              size: 112,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original)
+                      .medicationInstructionLabel
+                  }
+                />
+              ),
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).storageMethodLabel,
+              id: "dispensingStorage",
+              enableSorting: false,
+              maxSize: 160,
+              meta: {
+                label: "보관 방법",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 104,
+              size: 120,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={
+                    getHospitalDispensingTableDetails(row.original)
+                      .storageMethodLabel
+                  }
+                />
+              ),
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                targetLabels[row.target],
+              id: "target",
+              enableSorting: false,
+              maxSize: 144,
+              meta: {
+                label: "대상",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 96,
+              size: 112,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  value={targetLabels[row.original.target]}
+                />
+              ),
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                getHospitalDispensingTableDetails(row).reviewKey,
+              id: "dispensingReview",
+              enableSorting: false,
+              maxSize: 176,
+              meta: {
+                label: "검토 상태",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 120,
+              size: 136,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => {
+                const detail = getHospitalDispensingTableDetails(row.original);
+                return (
+                  <HospitalOrderTableCellValue
+                    className={cn(
+                      "font-semibold",
+                      (detail.reviewKey === "clinical_unreviewed" ||
+                        detail.reviewKey === "pending") &&
+                        "text-[var(--emr-status-warning-text)]",
+                      (detail.reviewKey === "approved" ||
+                        detail.reviewKey === "clinical_reviewed") &&
+                        "text-[var(--emr-status-success-text)]",
+                      detail.reviewKey === "rejected" &&
+                        "text-[var(--emr-status-danger-text)]",
+                    )}
+                    value={detail.reviewLabel}
+                  />
+                );
+              },
+            },
+          ]
+        : []),
+      ...(isDispensingOrderTable
+        ? []
+        : [
+            {
+              accessorKey: "billingName",
+              id: "billingName",
+              enableSorting: true,
+              meta: {
+                label: "청구서명",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: hospitalOrderNameTextMode,
+              },
+              size: 160,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <EmrTableCellText
+                  fullText={row.original.billingName}
+                  mode={hospitalOrderNameTextMode}
+                >
+                  {row.original.billingName}
+                </EmrTableCellText>
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+          ]),
       {
         accessorFn: (row) =>
-          row.isActive
-            ? "active"
-            : row.sourceCatalogItem?.availabilityStatus ?? "inactive",
+          isDispensingOrderTable
+            ? row.isActive
+              ? "active"
+              : "inactive"
+            : row.isActive
+              ? "active"
+              : (row.sourceCatalogItem?.availabilityStatus ?? "inactive"),
         id: "status",
         enableSorting: false,
+        maxSize: isDispensingOrderTable ? 112 : undefined,
         meta: {
           label: "사용여부",
           resize: "data-column",
           role: "data",
           textMode: "one-line",
         },
-        size: 86,
+        minSize: isDispensingOrderTable ? 88 : undefined,
+        size: isDispensingOrderTable ? 96 : 86,
         cell: ({ row }) => {
+          if (isDispensingOrderTable) {
+            return (
+              <EmrTableCellText
+                className={cn(
+                  "font-semibold",
+                  row.original.isActive
+                    ? "text-[var(--emr-status-success-text)]"
+                    : "text-muted-foreground",
+                )}
+                mode="one-line"
+              >
+                {row.original.isActive ? "사용" : "중지"}
+              </EmrTableCellText>
+            );
+          }
+
           const pendingActivation =
             row.original.sourceCatalogItem?.availabilityStatus ===
             "pending_activation";
@@ -1716,60 +2290,137 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           );
         },
       },
-      {
-        accessorFn: (row) =>
-          row.sourceCatalogItem
-            ? row.sourceCatalogItem.priceKrw
-            : row.price,
-        id: "price",
-        enableSorting: true,
-        meta: {
-          align: "right",
-          label: "판매금액",
-          resize: "data-column",
-          role: "data",
-          textMode: "one-line",
-        },
-        size: 110,
-        cell: ({ row }) => (
-          <EmrTableCellText className="font-semibold" mode="one-line">
-            {row.original.sourceCatalogItem?.priceKrw === null
-              ? "미설정"
-              : formatHospitalOrderAmount(row.original.price)}
-          </EmrTableCellText>
-        ),
-        sortingFn: (left, right, id) =>
-          compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
-      },
-      {
-        accessorFn: (row) => targetLabels[row.target],
-        id: "target",
-        enableSorting: false,
-        meta: {
-          grow: true,
-          label: "대상",
-          resize: "data-column",
-          role: "data",
-          textMode: "one-line",
-        },
-        size: 158,
-        cell: ({ row }) => (
-          <EmrTableCellText mode="one-line">
-            {targetLabels[row.original.target]}
-          </EmrTableCellText>
-        ),
-      },
+      ...(isDispensingOrderTable
+        ? []
+        : [
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                row.sourceCatalogItem
+                  ? row.sourceCatalogItem.priceKrw
+                  : row.price,
+              id: "price",
+              enableSorting: true,
+              meta: {
+                align: "right" as const,
+                label: "판매금액",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              size: 110,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <EmrTableCellText className="font-semibold" mode="one-line">
+                  {row.original.sourceCatalogItem?.priceKrw === null
+                    ? "미설정"
+                    : formatHospitalOrderAmount(row.original.price)}
+                </EmrTableCellText>
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                targetLabels[row.target],
+              id: "target",
+              enableSorting: false,
+              meta: {
+                grow: true,
+                label: "대상",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              size: 158,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <EmrTableCellText mode="one-line">
+                  {targetLabels[row.original.target]}
+                </EmrTableCellText>
+              ),
+            },
+          ]),
+      ...(isDispensingOrderTable
+        ? [
+            {
+              accessorKey: "billingName",
+              id: "billingName",
+              enableSorting: true,
+              maxSize: 320,
+              meta: {
+                label: "청구서명",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: hospitalOrderNameTextMode,
+              },
+              minSize: 160,
+              size: 200,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  mode={hospitalOrderNameTextMode}
+                  value={row.original.billingName}
+                />
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+            {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                row.sourceCatalogItem
+                  ? row.sourceCatalogItem.priceKrw
+                  : row.price,
+              id: "price",
+              enableSorting: true,
+              maxSize: 144,
+              meta: {
+                align: "right" as const,
+                label: "판매금액",
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode: "one-line" as const,
+              },
+              minSize: 112,
+              size: 120,
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  className="font-semibold"
+                  value={
+                    row.original.sourceCatalogItem?.priceKrw === null
+                      ? ""
+                      : formatHospitalOrderAmount(row.original.price)
+                  }
+                />
+              ),
+              sortingFn: compareHospitalOrderRows,
+            },
+          ]
+        : []),
       {
         id: "actions",
         enableHiding: false,
+        enableResizing: false,
         enableSorting: false,
+        maxSize: isDispensingOrderTable ? 52 : 80,
         meta: {
           actionVisibility: "contextual",
           align: "right",
           label: "작업",
           role: "actions",
         },
-        size: 80,
+        minSize: isDispensingOrderTable ? 52 : 80,
+        size: isDispensingOrderTable ? 52 : 80,
         cell: ({ row }) => (
           <EmrRowActionMenu
             ariaLabel={`${row.original.standardName} Order 행 작업`}
@@ -1793,7 +2444,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         ),
       },
     ],
-    [duplicateOrder, openDrawer],
+    [duplicateOrder, isDispensingOrderTable, openDrawer],
   );
   const orderRowSelection = useMemo<RowSelectionState>(
     () => Object.fromEntries(selectedOrderIds.map((id) => [id, true])),
@@ -1827,7 +2478,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     onRowSelectionChange: handleOrderRowSelectionChange,
     onSortingChange: setOrderSorting,
     state: {
-      columnPinning: { left: ["select", "standardName"], right: [] },
+      columnPinning: {
+        left: isDispensingOrderTable
+          ? ["select", "standardName", "inHospitalName"]
+          : ["select", "standardName"],
+        right: [],
+      },
       columnVisibility: orderColumnVisibility,
       rowSelection: orderRowSelection,
       sorting: orderSorting,

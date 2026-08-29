@@ -32,6 +32,7 @@ type EmrTableHeaderCellProps = Omit<
   menuActive?: boolean;
   onFilter?: () => void;
   onMenu?: () => void;
+  onResizeKeyDown?: React.KeyboardEventHandler<HTMLButtonElement>;
   onResizeMouseDown?: React.MouseEventHandler<HTMLButtonElement>;
   onResizeTouchStart?: React.TouchEventHandler<HTMLButtonElement>;
   onSort?: () => void;
@@ -133,6 +134,7 @@ export function EmrTableHeaderCell({
   menuActive = false,
   onFilter,
   onMenu,
+  onResizeKeyDown,
   onResizeMouseDown,
   onResizeTouchStart,
   onSort,
@@ -152,7 +154,7 @@ export function EmrTableHeaderCell({
       : children;
   const resizable =
     resize === "data-column" &&
-    Boolean(onResizeMouseDown || onResizeTouchStart);
+    Boolean(onResizeKeyDown || onResizeMouseDown || onResizeTouchStart);
   const sortable = Boolean(onSort);
   const filterable = Boolean(onFilter);
   const menuable = Boolean(onMenu);
@@ -270,6 +272,7 @@ export function EmrTableHeaderCell({
           className="absolute right-[-4px] top-1/2 z-10 h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-border-default)] hover:bg-[var(--emr-state-selected)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--emr-state-drag)]"
           data-resizing={isResizing ? "true" : undefined}
           onClick={(event) => event.stopPropagation()}
+          onKeyDown={onResizeKeyDown}
           onMouseDown={onResizeMouseDown}
           onTouchStart={onResizeTouchStart}
         />
