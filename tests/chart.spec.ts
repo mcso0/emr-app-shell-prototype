@@ -830,13 +830,17 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(actionBar).toHaveCSS("border-bottom-width", "0px");
   await expect(actionBar).toHaveCSS("background-color", "rgb(252, 252, 252)");
   await expect(workspace).toHaveCSS("background-color", "rgb(252, 252, 252)");
+  await expect(page.locator("main.emr-workspace-frame-responsive")).toHaveCSS(
+    "border-color",
+    "rgb(212, 212, 212)",
+  );
   await expect(historyToggle).toHaveCSS("width", "24px");
   await expect(historyToggle).toHaveCSS("height", "24px");
 
   await expect(panels).toHaveCount(4);
   for (const panel of await panels.all()) {
     await expect(panel).toHaveCSS("background-color", "rgb(255, 255, 255)");
-    await expect(panel).toHaveCSS("border-color", "rgb(212, 212, 212)");
+    await expect(panel).toHaveCSS("border-color", "rgb(229, 229, 229)");
   }
 
   const subjectPanel = panels.filter({

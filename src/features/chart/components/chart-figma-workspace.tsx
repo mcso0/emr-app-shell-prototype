@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const chartWorkspacePanelClassName =
-  "group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--emr-border-strong)] bg-[var(--clair-color-atomic-common-100)] shadow-xs";
+  "group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] shadow-xs";
 
 type ChartPatientVitalItem = {
   label: string;
