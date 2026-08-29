@@ -5,6 +5,7 @@
   min-height: 0;
   max-width: 100%;
   background: var(--emr-surface-panel);
+  container-type: inline-size;
 }
 
 .tableViewport {
@@ -19,11 +20,11 @@
 
 .table {
   --chart-assessment-content-inset: var(--clair-spacing-12);
-  --chart-assessment-system-column: 96px;
-  --chart-assessment-primary-column: 44px;
-  --chart-assessment-confirmed-column: 40px;
-  --chart-assessment-closed-column: 40px;
-  --chart-assessment-veterinarian-column: 72px;
+  --chart-assessment-system-column: 100px;
+  --chart-assessment-primary-column: 52px;
+  --chart-assessment-confirmed-column: 52px;
+  --chart-assessment-closed-column: 52px;
+  --chart-assessment-veterinarian-column: 84px;
 
   width: 100%;
   min-width: 0 !important;
@@ -66,7 +67,7 @@
 }
 
 .table .firstHeaderCell[data-slot="table-head"] {
-  padding-inline-start: var(--clair-spacing-8);
+  padding-inline-start: var(--chart-assessment-content-inset);
 }
 
 .table .statusHeaderCell[data-slot="table-head"] {
@@ -74,14 +75,7 @@
 }
 
 .table .veterinarianHeaderCell[data-slot="table-head"] {
-  padding-inline: var(--chart-assessment-content-inset);
-}
-
-.table
-  .headerCell[data-slot="table-head"][data-emr-header-interaction="sortable"]
-  > :global(.emr-table-cell-content)
-  > button {
-  padding-inline: var(--clair-spacing-4);
+  padding-inline-end: var(--chart-assessment-content-inset);
 }
 
 .table .bodyCell[data-slot="table-cell"] {
@@ -219,6 +213,23 @@
   align-items: center;
   justify-content: center;
   padding: var(--clair-spacing-24) var(--clair-spacing-12);
+}
+
+@container (max-width: 339px) {
+  .table {
+    --chart-assessment-system-column: 92px;
+    --chart-assessment-primary-column: 44px;
+    --chart-assessment-confirmed-column: 44px;
+    --chart-assessment-closed-column: 44px;
+    --chart-assessment-veterinarian-column: 72px;
+  }
+
+  .table
+    .headerCell[data-slot="table-head"]
+    > :global(.emr-table-cell-content)
+    > :is(button, span) {
+    padding-inline: var(--clair-spacing-6);
+  }
 }
 
 @media (hover: none), (pointer: coarse) {
