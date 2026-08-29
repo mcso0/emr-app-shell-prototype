@@ -128,7 +128,9 @@ export type HospitalOrderCatalogItem = {
   orderType: HospitalOrderType;
   price: number;
   priceMode?: HospitalOrderPriceMode;
+  dispensingDosageForm?: string;
   dispensingPreset?: HospitalDispensingPreset;
+  dispensingStrength?: string;
   sourceKind?: "clair_master" | "hospital_created" | "legacy";
   dispensingReviewStatus?: HospitalDispensingReviewStatus;
   dispensingReviewRevision?: number;
@@ -686,7 +688,7 @@ export function formatHospitalOrderAmount(amount: number) {
 
 export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): HospitalOrderCatalogItem {
   const placement = resolveHospitalOrderPlacement(item);
-  const dispensingProfileNames = readDispensingProfileNames(item);
+  const dispensingProfile = readDispensingProfile(item);
 
   return {
     id: item.id,
@@ -702,7 +704,7 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     delivery: item.defaultTaskRequired ? "deliver" : "do-not-deliver",
     hospitalInstruction: item.internalInstruction ?? "",
     inHospitalName:
-      dispensingProfileNames.korean ?? item.inHospitalOrderName,
+      dispensingProfile.korean ?? item.inHospitalOrderName,
     isActive:
       item.availabilityStatus === "active" ||
       (item.availabilityStatus === "pending_activation" &&
@@ -716,7 +718,9 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
       item.pricingRule.priceBasis === "unit_price"
         ? "per_quantity"
         : "fixed",
+    dispensingDosageForm: dispensingProfile.dosageForm,
     dispensingPreset: readHospitalDispensingPreset(item),
+    dispensingStrength: dispensingProfile.strength,
     sourceKind:
       item.originType === "clair_master"
         ? "clair_master"
@@ -743,7 +747,7 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     serviceItemType: item.categoryGroup,
     sourceCatalogItem: item,
     standardName:
-      dispensingProfileNames.english ?? item.standardOrderName,
+      dispensingProfile.english ?? item.standardOrderName,
     subcategoryId: placement.subcategoryId,
     target: mapTargetSpecies(item.targetSpecies),
     updatedAtLabel: formatCatalogUpdatedAt(item.updatedAt),
@@ -1112,19 +1116,60 @@ function resolveHospitalOrderPlacement(item: OrderCatalogItem): {
   return { categoryId: "medical-supply", subcategoryId: "medical-supply" };
 }
 
-function readDispensingProfileNames(item: OrderCatalogItem) {
+function formatDispensingStrengthSnapshot(value: unknown) {
+  if (!Array.isArray(value)) return undefined;
+
+  const expressions = value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    const numeratorValue = record.numeratorValue;
+    const numeratorUnit = record.numeratorUnit;
+    const denominatorValue = record.denominatorValue;
+    const denominatorUnit = record.denominatorUnit;
+    if (
+      (typeof numeratorValue !== "number" &&
+        typeof numeratorValue !== "string") ||
+      typeof numeratorUnit !== "string" ||
+      !numeratorUnit.trim()
+    ) {
+      return [];
+    }
+
+    const numerator = `${numeratorValue} ${numeratorUnit.trim()}`;
+    if (typeof denominatorUnit !== "string" || !denominatorUnit.trim()) {
+      return [numerator];
+    }
+
+    const denominator =
+      typeof denominatorValue === "number" ||
+      typeof denominatorValue === "string"
+        ? `${denominatorValue} ${denominatorUnit.trim()}`
+        : denominatorUnit.trim();
+    return [`${numerator}/${denominator}`];
+  });
+
+  return expressions.length > 0 ? expressions.join(" · ") : undefined;
+}
+
+function readDispensingProfile(item: OrderCatalogItem) {
   const snapshot = item.dispensingLineage?.dispensingProfileSnapshot;
   if (!snapshot) return {};
 
   const korean = snapshot.koreanDraftName;
   const english = snapshot.englishProductName;
+  const dosageForm = snapshot.dosageForm;
   return {
+    dosageForm:
+      typeof dosageForm === "string" && dosageForm.trim()
+        ? dosageForm.trim()
+        : undefined,
     korean:
       typeof korean === "string" && korean.trim() ? korean.trim() : undefined,
     english:
       typeof english === "string" && english.trim()
         ? english.trim()
         : undefined,
+    strength: formatDispensingStrengthSnapshot(snapshot.strengthSnapshot),
   };
 }
 

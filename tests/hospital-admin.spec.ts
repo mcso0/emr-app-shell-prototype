@@ -7,10 +7,13 @@ import {
 import type { OrderCatalogItem } from "../src/features/hospital-admin/server-order-catalog-core";
 
 function createServiceReviewDispensingMasterItem(index: number) {
-  const productCode = index === 0 ? "a001270" : `a${String(index).padStart(6, "0")}`;
+  const productCode =
+    index === 0 ? "a001270" : `a${String(index).padStart(6, "0")}`;
   const standardOrderId = `cm.order.dispensing-v1-uk-vmd-${productCode}`;
   const koreanName =
-    index === 0 ? "Amoxicillin 경구현탁용산제" : `검토용 조제 오더 ${index + 1}`;
+    index === 0
+      ? "Amoxicillin 경구현탁용산제"
+      : `검토용 조제 오더 ${index + 1}`;
   const englishName =
     index === 0
       ? "Betamox Palatable Drops Powder for Oral Suspension 50 mg/ml"
@@ -49,8 +52,17 @@ function createServiceReviewDispensingMasterItem(index: number) {
       serviceReviewOnly: true,
       serviceReviewReleaseId: "78a57bf0-10a8-47db-9ae1-8a8cff79b2c4",
       dispensingProfileSnapshot: {
+        dosageForm: index === 0 ? "Powder for oral suspension" : "Tablet",
         englishProductName: englishName,
         koreanDraftName: koreanName,
+        strengthSnapshot: [
+          {
+            numeratorValue: index === 0 ? 50 : 10,
+            numeratorUnit: "mg",
+            denominatorValue: index === 0 ? null : undefined,
+            denominatorUnit: index === 0 ? "mL" : null,
+          },
+        ],
       },
       dispensingProfileSnapshotSha256: "b".repeat(64),
     },
@@ -61,7 +73,8 @@ function createServiceReviewDispensingMasterItem(index: number) {
       schemaVersion: 2,
       presetOrigin: "clair_master",
       presetStatus: "synthetic_unreviewed",
-      ingredientEnglishName: index === 0 ? "Amoxicillin" : `Ingredient ${index + 1}`,
+      ingredientEnglishName:
+        index === 0 ? "Amoxicillin" : `Ingredient ${index + 1}`,
       autoDispenseQuantityEnabled: true,
       defaultDetailInputs: {
         doseBasis: "patient",
@@ -107,7 +120,12 @@ test("priced service-review dispensing rows map to effective use without true ac
   ) as unknown as OrderCatalogItem;
   const hospitalOrder = mapWorkspaceCatalogItemToHospitalOrder(source);
 
-  expect(hospitalOrder).toMatchObject({ isActive: true, price: 13_500 });
+  expect(hospitalOrder).toMatchObject({
+    dispensingDosageForm: "Powder for oral suspension",
+    dispensingStrength: "50 mg/mL",
+    isActive: true,
+    price: 13_500,
+  });
   const mutation = buildWorkspaceCatalogMutationFromHospitalOrder({
     draft: { ...hospitalOrder, price: 14_500 },
     source,
@@ -558,9 +576,149 @@ test("hospital admin Order management shows all service-review dispensing master
     "Betamox Palatable Drops Powder for Oral Suspension 50 mg/ml",
   );
   await expect(proofRow).toContainText("Amoxicillin 경구현탁용산제");
+  await expect(proofRow).toContainText("Amoxicillin · 50 mg/mL");
+  await expect(proofRow).toContainText("Powder for oral suspension");
+  await expect(proofRow).toContainText("0.5정");
+  await expect(proofRow).toContainText("경구(PO)");
+  await expect(proofRow).toContainText("하루 1회(SID)");
+  await expect(proofRow).toContainText("3일");
+  await expect(proofRow).toContainText("1.5정");
+  await expect(proofRow).toContainText("식후");
+  await expect(proofRow).toContainText("실온");
+  await expect(proofRow).toContainText("임상 미검토");
   await expect(proofRow).toContainText("사용");
   await expect(proofRow).toContainText("13,500원");
   await expect(proofRow).not.toContainText("검토 대기");
+
+  const table = page
+    .getByTestId("hospital-order-table")
+    .getByRole("table", { name: "병원관리 개별 Order 테이블" });
+  await expect
+    .poll(() =>
+      table
+        .locator("thead [data-column-id]")
+        .evaluateAll((headers) =>
+          headers.map((header) => header.getAttribute("data-column-id")),
+        ),
+    )
+    .toEqual([
+      "select",
+      "standardName",
+      "inHospitalName",
+      "dispensingIngredient",
+      "dispensingDosageForm",
+      "dispensingDose",
+      "dispensingRoute",
+      "dispensingFrequency",
+      "dispensingDuration",
+      "dispensingTotalQuantity",
+      "dispensingMedicationInstruction",
+      "dispensingStorage",
+      "target",
+      "dispensingReview",
+      "status",
+      "billingName",
+      "price",
+      "actions",
+    ]);
+  await expect(table.locator('[data-column-id="type"]')).toHaveCount(0);
+  await expect(
+    page.locator('[data-emr-pinned-table-viewport="true"]'),
+  ).toHaveCSS("--emr-table-left-pinned-column-width", "524px");
+  await expect(table.locator('th[data-column-id="select"]')).toHaveCSS(
+    "width",
+    "44px",
+  );
+  await expect(table.locator('th[data-column-id="standardName"]')).toHaveCSS(
+    "width",
+    "260px",
+  );
+  await expect(table.locator('th[data-column-id="inHospitalName"]')).toHaveCSS(
+    "width",
+    "220px",
+  );
+  await expect(
+    table.locator('th[data-column-id="inHospitalName"]'),
+  ).toHaveAttribute("data-emr-column-pinned", "left");
+  await expect(table.locator('th[data-column-id="billingName"]')).not.toHaveAttribute(
+    "data-emr-column-pinned",
+    "left",
+  );
+
+  const tableScrollOwner = table.locator(
+    "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']/*[@data-emr-pinned-table-scroll-owner='true']",
+  );
+  for (const viewportWidth of [1920, 1440, 1280, 1024]) {
+    await page.setViewportSize({ width: viewportWidth, height: 900 });
+    await expect
+      .poll(() =>
+        tableScrollOwner.evaluate(
+          (element) => element.scrollWidth > element.clientWidth,
+        ),
+      )
+      .toBe(true);
+    await expect(
+      page.locator('[data-emr-pinned-table-viewport="true"]'),
+    ).toHaveCSS("--emr-table-left-pinned-column-width", "524px");
+  }
+  await page.setViewportSize({ width: 1920, height: 1080 });
+
+  const standardNameCell = proofRow.locator('[data-column-id="standardName"]');
+  const inHospitalNameCell = proofRow.locator(
+    '[data-column-id="inHospitalName"]',
+  );
+  const pinnedPositionsBeforeScroll = await Promise.all([
+    standardNameCell.boundingBox(),
+    inHospitalNameCell.boundingBox(),
+  ]);
+  await tableScrollOwner.evaluate((element) => {
+    element.scrollLeft = 640;
+  });
+  const pinnedPositionsAfterScroll = await Promise.all([
+    standardNameCell.boundingBox(),
+    inHospitalNameCell.boundingBox(),
+  ]);
+  expect(pinnedPositionsBeforeScroll[0]?.x).toBe(
+    pinnedPositionsAfterScroll[0]?.x,
+  );
+  expect(pinnedPositionsBeforeScroll[1]?.x).toBe(
+    pinnedPositionsAfterScroll[1]?.x,
+  );
+  await tableScrollOwner.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+
+  const identityHeader = table.locator('th[data-column-id="standardName"]');
+  const identityResizeGrip = identityHeader.getByRole("button", {
+    name: "표준 Order명 컬럼 너비 조절",
+  });
+  const widthBeforeKeyboardResize = (await identityHeader.boundingBox())?.width;
+  await identityResizeGrip.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(async () => (await identityHeader.boundingBox())?.width)
+    .toBe((widthBeforeKeyboardResize ?? 260) + 8);
+
+  const orderSearch = page.getByRole("textbox", { name: "오더 검색" });
+  await orderSearch.fill("Amoxicillin");
+  await expect(
+    table.locator('[data-testid^="hospital-order-row-"]'),
+  ).toHaveCount(1);
+  await orderSearch.fill("");
+
+  await page.getByRole("button", { name: "오더 필터 설정" }).click();
+  const filterBuilder = page.locator('[data-emr-table-filter-builder="true"]');
+  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await page.getByRole("option", { name: "제형" }).click({ force: true });
+  await filterBuilder.getByRole("combobox", { name: "필터 값" }).click();
+  await page
+    .getByRole("option", { name: "Powder for oral suspension" })
+    .click({ force: true });
+  await expect(
+    table.locator('[data-testid^="hospital-order-row-"]'),
+  ).toHaveCount(1);
+  await filterBuilder.getByRole("button", { name: "초기화" }).click();
+  await filterBuilder.getByRole("button", { name: "필터 닫기" }).click();
 
   await proofRow.click();
   const drawer = page.getByTestId("hospital-order-drawer");
@@ -569,23 +727,21 @@ test("hospital admin Order management shows all service-review dispensing master
     "Amoxicillin",
   );
   await expect(drawer.getByLabel("1회 용량")).toHaveValue("0.5");
-  await expect(drawer.getByRole("combobox", { name: "투여 빈도" })).toContainText(
-    "하루 1회",
-  );
+  await expect(
+    drawer.getByRole("combobox", { name: "투여 빈도" }),
+  ).toContainText("하루 1회");
   await expect(drawer.getByLabel("투여 일수")).toHaveValue("3");
   await expect(drawer.getByLabel("처방 총량")).toHaveValue("1.5");
-  await expect(drawer.getByRole("combobox", { name: "가격 방식" })).toContainText(
-    "처방 정액",
-  );
+  await expect(
+    drawer.getByRole("combobox", { name: "가격 방식" }),
+  ).toContainText("처방 정액");
   await expect(drawer.getByLabel("판매 금액")).toHaveValue("13500");
 });
 
 test("hospital admin Order Set uses the shared table workspace and revision drawer", async ({
   page,
 }) => {
-  await page.goto(
-    "/w/clair-demo/orders?modulePanel=open&section=order-sets",
-  );
+  await page.goto("/w/clair-demo/orders?modulePanel=open&section=order-sets");
 
   await expect(page.getByTestId("order-set-page-header")).toBeVisible();
   await expect(
@@ -607,9 +763,7 @@ test("hospital admin Order Set uses the shared table workspace and revision draw
     .evaluateAll((cells) =>
       cells.map((cell) => {
         const color = getComputedStyle(cell).backgroundColor;
-        const match = color.match(
-          /^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/,
-        );
+        const match = color.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/);
         return match ? Number(match[1]) : 1;
       }),
     );
@@ -620,7 +774,9 @@ test("hospital admin Order Set uses the shared table workspace and revision draw
   await expect(page.getByLabel("Order 세트 가격 방식 필터")).toContainText(
     "가격 전체",
   );
-  await expect(page.getByRole("button", { name: "복제", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "복제", exact: true }),
+  ).toBeDisabled();
 
   await page.getByRole("button", { name: "+ Order 세트", exact: true }).click();
   const drawer = page.getByTestId("order-set-drawer");
@@ -628,8 +784,12 @@ test("hospital admin Order Set uses the shared table workspace and revision draw
   await expect(
     drawer.getByRole("heading", { name: "Order 세트 생성" }),
   ).toBeVisible();
-  await expect(drawer.getByText("사용 안 함 상태로 만든 뒤 구성과 가격을 확인해 주세요.")).toHaveCount(0);
-  await expect(drawer.getByRole("tablist", { name: "Order 세트 편집 영역" })).toHaveCount(0);
+  await expect(
+    drawer.getByText("사용 안 함 상태로 만든 뒤 구성과 가격을 확인해 주세요."),
+  ).toHaveCount(0);
+  await expect(
+    drawer.getByRole("tablist", { name: "Order 세트 편집 영역" }),
+  ).toHaveCount(0);
   await expect(
     drawer.getByRole("combobox", { name: "Order 세트 사용 여부" }),
   ).toContainText("사용 안 함");
@@ -1883,6 +2043,8 @@ test("hospital admin order table uses shared header and cell text primitives", a
     "none",
   );
   await expect(headers.nth(1)).toContainText("표준 Order명");
+  await expect(table.locator('[data-column-id="type"]')).not.toHaveCount(0);
+  await expect(table.locator('[data-column-id^="dispensing"]')).toHaveCount(0);
   await expect(headers.nth(1)).toHaveAttribute(
     "data-emr-column-pinned",
     "left",
@@ -1908,9 +2070,7 @@ test("hospital admin order table uses shared header and cell text primitives", a
     page.getByTestId("hospital-order-catalog-read-status"),
   ).toContainText("Workspace catalog 기준");
   const row = page.getByTestId("hospital-order-row-ord-lab-cbc-baso");
-  const identityCell = row.locator(
-    '[data-column-id="standardName"]',
-  );
+  const identityCell = row.locator('[data-column-id="standardName"]');
   const selectAllOrderBox = await table
     .getByRole("checkbox", { name: "보이는 오더 전체 선택" })
     .boundingBox();
@@ -2050,9 +2210,7 @@ test("hospital admin Order table keeps long leaf rows vertically scrollable", as
         items: Array<Record<string, unknown>>;
         ok: true;
       };
-      const labSeed = body.items.find(
-        (item) => item.id === "ord-lab-cbc-baso",
-      );
+      const labSeed = body.items.find((item) => item.id === "ord-lab-cbc-baso");
 
       if (!labSeed) {
         throw new Error("Order table scroll fixture seed is missing.");
@@ -2080,16 +2238,18 @@ test("hospital admin Order table keeps long leaf rows vertically scrollable", as
   const scrollOwner = table.locator(
     '[data-emr-pinned-table-scroll-owner="true"]',
   );
-  await expect(table.locator('[data-testid^="hospital-order-row-"]')).toHaveCount(
-    30,
-  );
+  await expect(
+    table.locator('[data-testid^="hospital-order-row-"]'),
+  ).toHaveCount(30);
 
   const initialMetrics = await scrollOwner.evaluate((element) => ({
     clientHeight: element.clientHeight,
     scrollHeight: element.scrollHeight,
     scrollTop: element.scrollTop,
   }));
-  expect(initialMetrics.scrollHeight).toBeGreaterThan(initialMetrics.clientHeight);
+  expect(initialMetrics.scrollHeight).toBeGreaterThan(
+    initialMetrics.clientHeight,
+  );
   expect(initialMetrics.scrollTop).toBe(0);
 
   await scrollOwner.hover();
@@ -2257,9 +2417,7 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
     const pinnedCell = element.querySelector(
       'tbody [data-emr-column-pinned="left"]',
     );
-    const viewport = element.closest(
-      '[data-emr-pinned-table-viewport="true"]',
-    );
+    const viewport = element.closest('[data-emr-pinned-table-viewport="true"]');
     const dimmer = viewport?.querySelector(
       '[data-emr-pinned-table-dimmer="true"]',
     );
@@ -2376,23 +2534,17 @@ test("all hospital admin Order leaves use the pinned standard Order identity tab
     const orderScrollOwner = orderTable.locator(
       "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']/*[@data-emr-pinned-table-scroll-owner='true']",
     );
-    await expect(orderScrollOwner).toHaveCSS(
-      "overscroll-behavior-x",
-      "none",
-    );
-    await expect(orderScrollOwner).toHaveCSS(
-      "overscroll-behavior-y",
-      "none",
-    );
+    await expect(orderScrollOwner).toHaveCSS("overscroll-behavior-x", "none");
+    await expect(orderScrollOwner).toHaveCSS("overscroll-behavior-y", "none");
     await expect(
       orderTable
         .locator("thead th")
         .first()
         .getByRole("checkbox", { name: "보이는 오더 전체 선택" }),
     ).toBeVisible();
-    await expect(
-      orderTable.locator("thead th").nth(1),
-    ).toContainText("표준 Order명");
+    await expect(orderTable.locator("thead th").nth(1)).toContainText(
+      "표준 Order명",
+    );
   }
 });
 
@@ -2598,9 +2750,9 @@ test("hospital admin creates a workspace dispensing preset with defaults and pen
   const drawer = page.getByTestId("hospital-order-drawer");
   await expect(drawer.getByText("기본 처방값", { exact: true })).toBeVisible();
   await expect(drawer.getByLabel("1회 용량")).toHaveValue("1");
-  await expect(drawer.getByRole("combobox", { name: "투여 빈도" })).toContainText(
-    "하루 2회",
-  );
+  await expect(
+    drawer.getByRole("combobox", { name: "투여 빈도" }),
+  ).toContainText("하루 2회");
   await expect(drawer.getByLabel("투여 일수")).toHaveValue("5");
   await expect(drawer.getByLabel("처방 총량")).toHaveValue("10");
 
@@ -2639,9 +2791,7 @@ test("hospital admin creates a workspace dispensing preset with defaults and pen
     persistedDrawer.getByRole("combobox", { name: "가격 방식" }),
   ).toContainText("수량 연동");
   await expect(persistedDrawer.getByLabel("판매 금액")).toHaveValue("1650");
-  await expect(persistedDrawer).toContainText(
-    "10tablet × 1,650원 = 16,500원",
-  );
+  await expect(persistedDrawer).toContainText("10tablet × 1,650원 = 16,500원");
 });
 
 test("hospital admin table selection drives bulk action instead of opening drawer", async ({
@@ -2673,9 +2823,7 @@ test("hospital admin order drawer switches rows and closes from outside click", 
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
   await page.getByTestId("hospital-order-row-ord-lab-cbc-baso").click();
-  const firstRow = page.getByTestId(
-    "hospital-order-row-ord-lab-cbc-baso",
-  );
+  const firstRow = page.getByTestId("hospital-order-row-ord-lab-cbc-baso");
   await expect(firstRow).toHaveAttribute("data-state", "selected");
   await expect(firstRow).toHaveAttribute("aria-current", "true");
   await expect(firstRow.getByRole("checkbox")).not.toBeChecked();
@@ -2695,9 +2843,7 @@ test("hospital admin order drawer switches rows and closes from outside click", 
   ).toHaveAttribute("data-state", "selected");
   await expect(firstRow).not.toHaveAttribute("data-state", "selected");
 
-  const selectedRow = page.getByTestId(
-    "hospital-order-row-ord-paused-example",
-  );
+  const selectedRow = page.getByTestId("hospital-order-row-ord-paused-example");
   const selectedSurface = await page.evaluate(() => {
     const probe = document.createElement("div");
     probe.style.background =
@@ -3020,9 +3166,7 @@ test("hospital admin order catalog supports single sort and section filter build
   await table.getByRole("button", { name: /판매금액 오름차순 정렬/ }).click();
   await expect(orderRows.first()).toContainText("일시중지 예시");
 
-  await table
-    .getByRole("button", { name: /판매금액 내림차순 정렬/ })
-    .click();
+  await table.getByRole("button", { name: /판매금액 내림차순 정렬/ }).click();
   await expect(orderRows.first()).toContainText("[CBC 검사] #BASO");
 
   await page.getByRole("button", { name: "오더 필터 설정" }).click();
