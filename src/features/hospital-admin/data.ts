@@ -41,6 +41,28 @@ export type HospitalOrderTarget = "all" | "dog-cat" | "dog" | "cat" | "other";
 export type HospitalOrderSaleUnit = "each" | "day" | "session" | "pack";
 export type HospitalOrderRoundRule = "none" | "round-10" | "round-100";
 export type HospitalOrderType = "individual";
+export type HospitalOrderPriceMode = "per_quantity" | "fixed";
+export type HospitalDispensingReviewStatus =
+  | "not_required"
+  | "pending"
+  | "approved"
+  | "rejected";
+export type HospitalDispensingPreset = {
+  ingredientName: string;
+  dose: number;
+  doseUnit: string;
+  route: string;
+  frequency: string;
+  durationDays: number;
+  totalQuantity: number;
+  totalQuantityUnit: string;
+  medicationInstruction: string;
+  storageMethod: string;
+  compoundNote: string;
+  guardianNote: string;
+  autoDispenseQuantityEnabled: boolean;
+  manualQuantityReason: string;
+};
 export type ClinicalPathologyCategoryId =
   | "in-house-blood"
   | "microbiology"
@@ -105,6 +127,13 @@ export type HospitalOrderCatalogItem = {
   memo: string;
   orderType: HospitalOrderType;
   price: number;
+  priceMode?: HospitalOrderPriceMode;
+  dispensingPreset?: HospitalDispensingPreset;
+  sourceKind?: "clair_master" | "hospital_created" | "legacy";
+  dispensingReviewStatus?: HospitalDispensingReviewStatus;
+  dispensingReviewRevision?: number;
+  dispensingAuthoredBy?: string;
+  dispensingReviewedBy?: string;
   referenceItems: HospitalOrderReference[];
   roundRule: HospitalOrderRoundRule;
   saleUnit: HospitalOrderSaleUnit;
@@ -594,6 +623,7 @@ export function createEmptyHospitalOrderDraft(
   categoryId: HospitalOrderCategoryId,
   subcategoryId: HospitalOrderSubcategoryId
 ): HospitalOrderDraft {
+  const dispensing = categoryId === "dispensing";
   return {
     aliases: "",
     billable: true,
@@ -603,11 +633,18 @@ export function createEmptyHospitalOrderDraft(
     delivery: "deliver",
     hospitalInstruction: "",
     inHospitalName: "",
-    isActive: true,
+    isActive: !dispensing,
     isTaxable: false,
     memo: "",
     orderType: "individual",
     price: 0,
+    priceMode: dispensing ? "per_quantity" : "fixed",
+    dispensingPreset: dispensing
+      ? createEmptyHospitalDispensingPreset()
+      : undefined,
+    sourceKind: dispensing ? "hospital_created" : "legacy",
+    dispensingReviewStatus: dispensing ? "pending" : "not_required",
+    dispensingReviewRevision: dispensing ? 1 : 0,
     referenceItems: [
       { label: "관리 코드", value: "NEW-ORDER" },
       { label: "참조명", value: "-" },
@@ -615,12 +652,31 @@ export function createEmptyHospitalOrderDraft(
     ],
     roundRule: "none",
     saleUnit: "each",
-    serviceItemType: "lab",
+    serviceItemType: dispensing ? "medication" : "lab",
     standardName: "",
     subcategoryId,
     target: "all",
     updatedAtLabel: "방금",
     updatedBy: "송민재",
+  };
+}
+
+function createEmptyHospitalDispensingPreset(): HospitalDispensingPreset {
+  return {
+    ingredientName: "",
+    dose: 1,
+    doseUnit: "tablet",
+    route: "PO",
+    frequency: "bid",
+    durationDays: 5,
+    totalQuantity: 10,
+    totalQuantityUnit: "tablet",
+    medicationInstruction: "after_meal",
+    storageMethod: "room_temp",
+    compoundNote: "",
+    guardianNote: "식후 1회 1정씩 하루 2회, 5일간 투여하세요.",
+    autoDispenseQuantityEnabled: true,
+    manualQuantityReason: "",
   };
 }
 
@@ -656,6 +712,27 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     memo: buildCatalogMemo(item),
     orderType: "individual",
     price: item.priceKrw ?? 0,
+    priceMode:
+      item.pricingRule.priceBasis === "unit_price"
+        ? "per_quantity"
+        : "fixed",
+    dispensingPreset: readHospitalDispensingPreset(item),
+    sourceKind:
+      item.originType === "clair_master"
+        ? "clair_master"
+        : item.originType === "workspace_custom" &&
+            item.categoryGroup === "medication" &&
+            item.defaultDestinationModule === "dispensing"
+          ? "hospital_created"
+          : "legacy",
+    dispensingReviewStatus:
+      item.workspaceDispensingReview?.status ?? "not_required",
+    dispensingReviewRevision:
+      item.workspaceDispensingReview?.revision ?? 0,
+    dispensingAuthoredBy:
+      item.workspaceDispensingReview?.authoredByUserId,
+    dispensingReviewedBy:
+      item.workspaceDispensingReview?.reviewedByUserId,
     referenceItems: [
       { label: "Source preset", value: item.standardOrderId },
       { label: "Preset version", value: item.sourcePresetVersion },
@@ -671,6 +748,65 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     target: mapTargetSpecies(item.targetSpecies),
     updatedAtLabel: formatCatalogUpdatedAt(item.updatedAt),
     updatedBy: item.lastCustomizedByUserId ?? "CLAiR preset",
+  };
+}
+
+function readHospitalDispensingPreset(
+  item: OrderCatalogItem,
+): HospitalDispensingPreset | undefined {
+  if (
+    item.categoryGroup !== "medication" ||
+    item.defaultDestinationModule !== "dispensing"
+  ) {
+    return undefined;
+  }
+  const metadata = item.medicationMetadata;
+  const detail = metadata?.defaultDetailInputs ?? {};
+  const readString = (key: string, fallback = "") =>
+    typeof detail[key] === "string" && detail[key].trim()
+      ? detail[key].trim()
+      : fallback;
+  const readNumber = (key: string, fallback: number) =>
+    typeof detail[key] === "number" && Number.isFinite(detail[key])
+      ? detail[key]
+      : fallback;
+  return {
+    ingredientName:
+      metadata?.ingredientKoreanName ??
+      metadata?.ingredientEnglishName ??
+      "",
+    dose: readNumber("dose", metadata?.doseAmount ?? 1),
+    doseUnit: readString(
+      "doseUnit",
+      metadata?.doseAmountUnit?.toLowerCase() ?? "tablet",
+    ),
+    route: readString("route", metadata?.administrationRoute ?? "PO"),
+    frequency: readString(
+      "frequency",
+      metadata?.dailyFrequencyCode ?? "sid",
+    ),
+    durationDays: readNumber(
+      "durationDays",
+      metadata?.administrationDays ?? 1,
+    ),
+    totalQuantity: readNumber("totalQuantity", metadata?.doseAmount ?? 1),
+    totalQuantityUnit: readString(
+      "totalQuantityUnit",
+      metadata?.dispenseUnit?.toLowerCase() ?? "tablet",
+    ),
+    medicationInstruction: readString(
+      "medicationInstruction",
+      metadata?.medicationInstruction ?? "any_time",
+    ),
+    storageMethod: readString(
+      "storageMethod",
+      metadata?.storageMethod ?? "room_temp",
+    ),
+    compoundNote: readString("compoundNote"),
+    guardianNote: readString("guardianNote"),
+    autoDispenseQuantityEnabled:
+      metadata?.autoDispenseQuantityEnabled ?? true,
+    manualQuantityReason: readString("manualQuantityReason"),
   };
 }
 
@@ -738,6 +874,10 @@ function buildWorkspaceCatalogPatchFromHospitalOrder(
   const pricingRule = {
     ...source.pricingRule,
     billingReflectionEnabled: draft.billable,
+    priceBasis:
+      draft.priceMode === "per_quantity"
+        ? ("unit_price" as const)
+        : ("fixed_order_price" as const),
     priceKrw: draft.price,
     salesUnit,
     taxIncluded: draft.isTaxable,
@@ -758,6 +898,10 @@ function buildWorkspaceCatalogPatchFromHospitalOrder(
     careGuide: draft.careGuide,
     inHospitalOrderName: draft.inHospitalName,
     internalInstruction: draft.hospitalInstruction,
+    medicationMetadata: buildMedicationMetadataFromHospitalOrder(
+      draft,
+      source.medicationMetadata,
+    ),
     priceKrw: draft.price,
     pricingRule,
     roundingRule: mapHospitalRoundRuleToCatalogRoundRule(draft.roundRule),
@@ -773,7 +917,10 @@ function buildWorkspaceCatalogCreateInputFromHospitalOrder(
 ): Omit<OrderCatalogItem, "id" | "updatedAt"> & { id?: string } {
   const catalogDefaults = resolveCatalogDefaultsFromHospitalOrder(draft);
   const salesUnit = mapHospitalSaleUnitToCatalogSalesUnit(draft.saleUnit);
-  const priceBasis: OrderCatalogPriceBasis = salesUnit === "per_day" ? "unit_price" : "fixed_order_price";
+  const priceBasis: OrderCatalogPriceBasis =
+    draft.priceMode === "per_quantity"
+      ? "unit_price"
+      : "fixed_order_price";
 
   return {
     id: draft.id,
@@ -785,13 +932,19 @@ function buildWorkspaceCatalogCreateInputFromHospitalOrder(
     customizationState: "detached",
     customizedFields: ["*"],
     presetMergeStatus: "detached",
+    originType: "workspace_custom",
     categoryGroup: catalogDefaults.categoryGroup,
     categoryLabel: getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? catalogDefaults.categoryLabel,
     standardOrderName: draft.standardName,
     inHospitalOrderName: draft.inHospitalName,
     billingName: draft.billingName,
     aliases: splitAliases(draft.aliases),
-    availabilityStatus: draft.isActive ? "active" : "paused",
+    availabilityStatus:
+      draft.categoryId === "dispensing"
+        ? "pending_activation"
+        : draft.isActive
+          ? "active"
+          : "paused",
     priceKrw: draft.price,
     salesUnit,
     targetSpecies: mapHospitalTargetToSpecies(draft.target),
@@ -804,6 +957,7 @@ function buildWorkspaceCatalogCreateInputFromHospitalOrder(
     roundingRule: mapHospitalRoundRuleToCatalogRoundRule(draft.roundRule),
     linkedLabItemIds: [],
     linkedLabCategoryIds: [],
+    medicationMetadata: buildMedicationMetadataFromHospitalOrder(draft),
     pricingRule: {
       priceBasis,
       priceKrw: draft.price,
@@ -813,6 +967,97 @@ function buildWorkspaceCatalogCreateInputFromHospitalOrder(
       billingReflectionEnabled: draft.billable,
     },
   };
+}
+
+export function buildWorkspaceDispensingReviewMutation(
+  orderId: string,
+  expectedCatalogRevision: number,
+  decision: "approve" | "reject",
+  note?: string,
+): OrderCatalogMutationInput {
+  return {
+    action: "review",
+    itemId: orderId,
+    expectedCatalogRevision,
+    decision,
+    note,
+  };
+}
+
+function buildMedicationMetadataFromHospitalOrder(
+  draft: HospitalOrderDraft,
+  source?: OrderCatalogItem["medicationMetadata"],
+): OrderCatalogItem["medicationMetadata"] {
+  const preset = draft.dispensingPreset;
+  if (!preset) return source;
+  const frequencyDailyCount = getHospitalFrequencyDailyCount(
+    preset.frequency,
+  );
+  return {
+    ...source,
+    schemaVersion: 2,
+    presetOrigin:
+      draft.sourceKind === "clair_master" ? "clair_master" : "workspace",
+    presetStatus: source?.presetStatus ?? "synthetic_unreviewed",
+    defaultDetailInputs: {
+      ...(source?.defaultDetailInputs ?? {}),
+      doseBasis: "patient",
+      dose: preset.dose,
+      doseUnit: preset.doseUnit,
+      route: preset.route,
+      frequency: preset.frequency,
+      durationDays: preset.durationDays,
+      totalQuantity: preset.totalQuantity,
+      totalQuantityUnit: preset.totalQuantityUnit,
+      medicationInstruction: preset.medicationInstruction,
+      storageMethod: preset.storageMethod,
+      compoundNote: preset.compoundNote,
+      guardianNote: preset.guardianNote,
+      manualQuantityReason: preset.manualQuantityReason,
+    },
+    autoDispenseQuantityEnabled: preset.autoDispenseQuantityEnabled,
+    administrationDays: preset.durationDays,
+    dailyFrequencyCode: preset.frequency,
+    frequencyDailyCount,
+    doseBasis: "prescribed_quantity",
+    doseAmount: preset.dose,
+    doseAmountUnit: preset.doseUnit,
+    administrationRoute:
+      preset.route as NonNullable<
+        OrderCatalogItem["medicationMetadata"]
+      >["administrationRoute"],
+    dispenseUnit: preset.totalQuantityUnit,
+    dispenseRoundingRule: source?.dispenseRoundingRule ?? "ceil_0_5",
+    medicationInstruction:
+      preset.medicationInstruction as NonNullable<
+        OrderCatalogItem["medicationMetadata"]
+      >["medicationInstruction"],
+    storageMethod:
+      preset.storageMethod as NonNullable<
+        OrderCatalogItem["medicationMetadata"]
+      >["storageMethod"],
+    ingredientKoreanName: preset.ingredientName,
+    ingredientEnglishName: source?.ingredientEnglishName,
+  };
+}
+
+export function getHospitalFrequencyDailyCount(frequency: string) {
+  if (frequency === "bid") return 2;
+  if (frequency === "tid") return 3;
+  if (frequency === "qid") return 4;
+  if (frequency === "qod") return 0.5;
+  if (frequency === "once") return 1;
+  return 1;
+}
+
+export function calculateHospitalDispenseQuantity(
+  preset: HospitalDispensingPreset,
+) {
+  return (
+    preset.dose *
+    getHospitalFrequencyDailyCount(preset.frequency) *
+    preset.durationDays
+  );
 }
 
 function resolveHospitalOrderPlacement(item: OrderCatalogItem): {

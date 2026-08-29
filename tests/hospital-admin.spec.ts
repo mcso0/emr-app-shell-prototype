@@ -16,6 +16,11 @@ function createServiceReviewDispensingMasterItem(index: number) {
       ? "Betamox Palatable Drops Powder for Oral Suspension 50 mg/ml"
       : `Service Review Dispensing Product ${index + 1}`;
   const priceKrw = index === 0 ? 13_500 : 7_000 + (index % 30) * 500;
+  const dose = 0.5 + (index % 4) * 0.5;
+  const frequency = ["sid", "bid", "tid"][index % 3];
+  const frequencyCount = [1, 2, 3][index % 3];
+  const durationDays = 3 + (index % 5);
+  const totalQuantity = dose * frequencyCount * durationDays;
 
   return {
     id: `master-workspace-clair-cheongdam-${standardOrderId}`,
@@ -52,6 +57,27 @@ function createServiceReviewDispensingMasterItem(index: number) {
     executionMode: "routed",
     inHospitalOrderName: standardOrderId,
     internalInstruction: "",
+    medicationMetadata: {
+      schemaVersion: 2,
+      presetOrigin: "clair_master",
+      presetStatus: "synthetic_unreviewed",
+      ingredientEnglishName: index === 0 ? "Amoxicillin" : `Ingredient ${index + 1}`,
+      autoDispenseQuantityEnabled: true,
+      defaultDetailInputs: {
+        doseBasis: "patient",
+        dose,
+        doseUnit: "tablet",
+        route: "PO",
+        frequency,
+        durationDays,
+        totalQuantity,
+        totalQuantityUnit: "tablet",
+        medicationInstruction: index % 2 === 0 ? "after_meal" : "any_time",
+        storageMethod: "room_temp",
+        compoundNote: `조제 확인 메모 ${index + 1}`,
+        guardianNote: `보호자 복약 안내 ${index + 1}`,
+      },
+    },
     originType: "clair_master",
     presetMergeStatus: "current",
     priceKrw,
@@ -497,6 +523,11 @@ test("hospital admin Order management shows all service-review dispensing master
         body: JSON.stringify({
           ok: true,
           items: [...legacyPrescriptionItems, ...masterItems],
+          capabilities: {
+            canManageCatalog: true,
+            canAuthorDispensing: true,
+            canApproveDispensing: false,
+          },
         }),
       });
     },
@@ -530,6 +561,23 @@ test("hospital admin Order management shows all service-review dispensing master
   await expect(proofRow).toContainText("사용");
   await expect(proofRow).toContainText("13,500원");
   await expect(proofRow).not.toContainText("검토 대기");
+
+  await proofRow.click();
+  const drawer = page.getByTestId("hospital-order-drawer");
+  await expect(drawer.getByText("기본 처방값", { exact: true })).toBeVisible();
+  await expect(drawer.getByLabel("성분 또는 조제 내용")).toHaveValue(
+    "Amoxicillin",
+  );
+  await expect(drawer.getByLabel("1회 용량")).toHaveValue("0.5");
+  await expect(drawer.getByRole("combobox", { name: "투여 빈도" })).toContainText(
+    "하루 1회",
+  );
+  await expect(drawer.getByLabel("투여 일수")).toHaveValue("3");
+  await expect(drawer.getByLabel("처방 총량")).toHaveValue("1.5");
+  await expect(drawer.getByRole("combobox", { name: "가격 방식" })).toContainText(
+    "처방 정액",
+  );
+  await expect(drawer.getByLabel("판매 금액")).toHaveValue("13500");
 });
 
 test("hospital admin Order Set uses the shared table workspace and revision drawer", async ({
@@ -2439,7 +2487,7 @@ test("hospital admin order drawer edits and saves a selected order", async ({
   await drawer
     .getByPlaceholder("원내에서 사용할 Order명을 입력해 주세요")
     .fill("Maropitant 변경");
-  await drawer.locator('[data-slot="switch"]').click();
+  await drawer.getByRole("switch", { name: /오더 사용여부/ }).click();
   await drawer.getByRole("button", { name: "저장" }).click();
   await page.getByRole("button", { name: "저장" }).last().click();
 
@@ -2532,6 +2580,68 @@ test("hospital admin order drawer creates a new workspace catalog order", async 
     createdRow.getByRole("checkbox", { name: "원내 신규 CBC 선택" }),
   ).not.toBeChecked();
   await expect(page.getByText(/선택한 오더 \d+개/)).toHaveCount(0);
+});
+
+test("hospital admin creates a workspace dispensing preset with defaults and pending veterinarian review", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.getByRole("button", { name: /처방/ }).click();
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+
+  const createDialog = page.getByRole("dialog", { name: "조제 오더 추가" });
+  await expect(createDialog).toContainText("마스터에서 추가");
+  await createDialog
+    .getByRole("button", { name: /새 조제 오더 만들기/ })
+    .click();
+
+  const drawer = page.getByTestId("hospital-order-drawer");
+  await expect(drawer.getByText("기본 처방값", { exact: true })).toBeVisible();
+  await expect(drawer.getByLabel("1회 용량")).toHaveValue("1");
+  await expect(drawer.getByRole("combobox", { name: "투여 빈도" })).toContainText(
+    "하루 2회",
+  );
+  await expect(drawer.getByLabel("투여 일수")).toHaveValue("5");
+  await expect(drawer.getByLabel("처방 총량")).toHaveValue("10");
+
+  await drawer
+    .getByPlaceholder("표준 Order명을 입력해 주세요")
+    .fill("원내 위장관 조제정");
+  await drawer
+    .getByPlaceholder("원내에서 사용할 Order명을 입력해 주세요")
+    .fill("원내 위장관 조제정");
+  await drawer
+    .getByPlaceholder("청구서에 표시할 이름을 입력해 주세요")
+    .fill("위장관 조제 처방");
+  await drawer.getByLabel("성분 또는 조제 내용").fill("Famotidine 조제정");
+  await drawer.getByLabel("판매 금액").fill("1650");
+  await drawer.getByRole("button", { name: "저장" }).click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "수의사 승인 전에는 차트 검색에 표시되지 않습니다",
+  );
+  const createResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/hospital-admin/order-catalog"),
+  );
+  await page.getByRole("button", { name: "등록" }).click();
+  const createResponse = await createResponsePromise;
+  expect(createResponse.ok()).toBe(true);
+  await expect(page.getByTestId("hospital-order-drawer")).toHaveCount(1);
+  const persistedDrawer = page.getByTestId("hospital-order-drawer");
+  await expect(
+    persistedDrawer.getByText("검토 대기", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    persistedDrawer.getByRole("button", { name: "수의사 승인" }),
+  ).toBeDisabled();
+  await expect(
+    persistedDrawer.getByRole("combobox", { name: "가격 방식" }),
+  ).toContainText("수량 연동");
+  await expect(persistedDrawer.getByLabel("판매 금액")).toHaveValue("1650");
+  await expect(persistedDrawer).toContainText(
+    "10tablet × 1,650원 = 16,500원",
+  );
 });
 
 test("hospital admin table selection drives bulk action instead of opening drawer", async ({

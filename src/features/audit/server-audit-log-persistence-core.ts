@@ -44,6 +44,8 @@ export const liveAuditEventTypes = [
   "order_catalog.created",
   "order_catalog.updated",
   "order_catalog.paused",
+  "order_catalog.review_approved",
+  "order_catalog.review_rejected",
   "billing.invoice_candidate_generated",
   "billing.invoice_line_changed",
   "billing.invoice_issued",

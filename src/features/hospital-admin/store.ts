@@ -10,6 +10,7 @@ import {
   type HospitalOrderDraft,
   type HospitalOrderSubcategoryId,
 } from "@/features/hospital-admin/data";
+import type { OrderCatalogAdminCapabilities } from "@/features/hospital-admin/server-order-catalog";
 
 export type HospitalAdminSection =
   | "audit"
@@ -33,6 +34,7 @@ type HospitalAdminStore = {
   selectedOrderIds: string[];
   selectedSubcategoryId: HospitalOrderSubcategoryId;
   settingsDirty: boolean;
+  catalogCapabilities: OrderCatalogAdminCapabilities;
   clearSelectedOrders: () => void;
   createOrder: (draft?: Partial<HospitalOrderDraft>) => HospitalOrderCatalogItem;
   deleteOrder: (orderId: string) => void;
@@ -42,6 +44,9 @@ type HospitalAdminStore = {
   pendingSection: HospitalAdminSection | null;
   requestSectionChange: (section: HospitalAdminSection) => void;
   setActiveSection: (section: HospitalAdminSection) => void;
+  setCatalogCapabilities: (
+    capabilities: OrderCatalogAdminCapabilities,
+  ) => void;
   setFocusedOrderId: (orderId: string | null) => void;
   setOrders: (orders: HospitalOrderCatalogItem[]) => void;
   setSearchQuery: (query: string) => void;
@@ -69,6 +74,11 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
   selectedOrderIds: [],
   selectedSubcategoryId: defaultSubcategoryId,
   settingsDirty: false,
+  catalogCapabilities: {
+    canManageCatalog: false,
+    canAuthorDispensing: false,
+    canApproveDispensing: false,
+  },
   clearSelectedOrders: () => set({ selectedOrderIds: [] }),
   createOrder: (draft = {}) => {
     const state = get();
@@ -139,6 +149,8 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
     set({ activeSection: section, pendingSection: null });
   },
   setActiveSection: (activeSection) => set({ activeSection }),
+  setCatalogCapabilities: (catalogCapabilities) =>
+    set({ catalogCapabilities }),
   setFocusedOrderId: (focusedOrderId) => set({ focusedOrderId }),
   setOrders: (orders) =>
     set((state) => {
@@ -207,7 +219,7 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
           ? {
               ...order,
               ...draft,
-              id: order.id,
+              id: draft.id ?? order.id,
               updatedAtLabel: "방금",
               updatedBy: "송민재",
             }

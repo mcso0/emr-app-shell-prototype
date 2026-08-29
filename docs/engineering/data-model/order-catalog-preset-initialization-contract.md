@@ -10,9 +10,10 @@ tags: [data-model, order-catalog, presets, workspace, migration-boundary]
 related_work:
   - DEN-281
   - DEN-282
+  - CLINICAL-MASTER-PR-020
 supersedes: []
 superseded_by: []
-last_updated: 2026-08-18
+last_updated: 2026-08-29
 ---
 
 # Order Catalog Preset Initialization Contract
@@ -114,17 +115,18 @@ When CLAiR ships a new preset version:
 | --- | --- |
 | New preset id | Add a new workspace row automatically when eligible. |
 | Existing workspace row is `unmodified` | Auto-update copied fields to the new preset version. |
-| Existing workspace row is `customized` | Preserve the entire workspace row and create an update-review state. Phase 1 does not partially auto-merge it. |
+| Existing workspace row is `customized` | Preserve fields named in `customizedFields`, merge newer values into non-customized fields, and mark overlapping differences as `conflict`. |
 | Existing workspace row is `detached` | Do not auto-update. |
 | Preset was deprecated | Do not hard delete workspace rows. Mark `presetMergeStatus` or future review state. |
 | Conflict cannot be safely resolved | Preserve existing workspace row and mark `presetMergeStatus = conflict` or `update_available`. |
 
-The safest MVP implementation is conservative:
+The merge remains conservative at the field boundary:
 
 - auto-add new presets
 - auto-update unmodified rows
-- preserve customized rows
-- defer conflict review UX
+- preserve customized fields
+- merge non-customized fields
+- surface customized-field overlap as conflict for review
 
 ## Customization Detection
 
@@ -149,7 +151,14 @@ The minimum tracked fields for phase 1:
 - `pricingRule`
 - type-specific metadata
 
-Field-level tracking may explain the update diff, but phase 1 merge is row-conservative. A row with `customizationState = customized` is preserved wholesale until the hospital explicitly reviews the update. Field-by-field automatic merge is a later capability.
+Field-level tracking is authoritative for automatic merge. A row with
+`customizationState = customized` keeps the hospital values named in
+`customizedFields`; newer preset values may replace only fields outside that
+set. When the incoming value differs on a customized field, the hospital value
+wins and `presetMergeStatus = conflict` until explicit review.
+
+Hospital-created dispensing presets use `customizationState = detached`, have
+no CLAiR master lineage, and therefore never participate in master auto-merge.
 
 ## Chart Snapshot Boundary
 
@@ -170,8 +179,11 @@ Required applied snapshot fields remain defined in [Workspace Order Catalog Plat
 ## Permission And Audit Expectations
 
 - Initialization for new workspaces should be server-owned or operator-owned, not arbitrary client-side mutation.
-- Hospital users can manage workspace catalog rows only through the approved management permission for the phase.
-- Phase 1 management is hospital-admin only by product policy.
+- Non-dispensing catalog rows use the approved catalog-management permission.
+- Active hospital administrators and veterinarians may author workspace
+  dispensing presets. Only an active veterinarian may approve or reject a
+  hospital-created dispensing preset; administrator-veterinarians may
+  self-approve.
 - Future auto-merge should produce safe audit or system event metadata sufficient to answer which preset version changed which rows.
 - Audit payloads must not include raw SOAP text, secrets, provider payloads, or unnecessary personal data.
 
