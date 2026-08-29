@@ -2608,7 +2608,6 @@ test("hospital admin table pages keep the adaptive main-content header and zero 
     const rootRect = root.getBoundingClientRect();
     const slotRect = slot.getBoundingClientRect();
     const headerRect = headerRow.getBoundingClientRect();
-
     return {
       background: getComputedStyle(root).backgroundColor,
       slotHeight: slotRect.height,
@@ -2623,6 +2622,55 @@ test("hospital admin table pages keep the adaptive main-content header and zero 
     titleOffset: 56,
   });
   expect(Math.abs(auditMetrics.headerRowGap)).toBeLessThanOrEqual(0.5);
+});
+
+test("hospital audit table owns one fill viewport without an outer scroll area", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.getByTestId("hospital-admin-menu-audit").click();
+
+  const auditContent = page.getByTestId("hospital-admin-audit-review");
+  const auditTable = auditContent.getByRole("table", { name: "감사 로그" });
+  const dataTableRoot = auditTable.locator(
+    "xpath=ancestor::*[@data-emr-data-table='true']",
+  );
+
+  await expect(dataTableRoot).toBeVisible();
+  await expect(dataTableRoot).toHaveAttribute(
+    "data-emr-data-table-viewport-mode",
+    "fill",
+  );
+  await expect(
+    dataTableRoot.locator("xpath=ancestor::*[@data-slot='scroll-area']"),
+  ).toHaveCount(0);
+
+  const metrics = await dataTableRoot.evaluate((root) => {
+    const parent = root.parentElement as HTMLElement;
+    const horizontalOwners = Array.from(
+      root.querySelectorAll<HTMLElement>("*"),
+    ).filter((candidate) => {
+      const overflowX = getComputedStyle(candidate).overflowX;
+      return overflowX === "auto" || overflowX === "scroll";
+    });
+
+    return {
+      bottomGap:
+        parent.getBoundingClientRect().bottom -
+        root.getBoundingClientRect().bottom,
+      documentOverflow:
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+      horizontalOwnerCount: horizontalOwners.length,
+      horizontalOwnerSlot: horizontalOwners[0]?.getAttribute("data-slot"),
+    };
+  });
+
+  expect(metrics.horizontalOwnerCount).toBe(1);
+  expect(metrics.horizontalOwnerSlot).toBe("table-container");
+  expect(Math.abs(metrics.bottomGap)).toBeLessThanOrEqual(1);
+  expect(metrics.documentOverflow).toBe(0);
 });
 
 test("hospital admin order drawer edits and saves a selected order", async ({

@@ -45,6 +45,8 @@ export type EmrDataTableColumnRole = "data" | "selection" | "actions";
 
 export type EmrDataTableActionVisibility = "always" | "contextual";
 
+export type EmrDataTableViewportMode = "content" | "fill";
+
 export type EmrDataTableRowState =
   | "normal"
   | "draft"
@@ -78,6 +80,7 @@ declare module "@tanstack/react-table" {
 export type EmrDataTableProps<TData> = {
   table: TanStackTable<TData>;
   "aria-label": string;
+  viewportMode: EmrDataTableViewportMode;
   density?: EmrTableDensity;
   overscrollAxes?: TableOverscrollAxes;
   containerClassName?: string;
@@ -736,6 +739,7 @@ export function EmrDataTable<TData>({
   rowOverlayWidth = 166,
   selectionActionBarAriaLabel = "선택 행 작업",
   skeletonRowCount = 6,
+  viewportMode,
 }: EmrDataTableProps<TData>) {
   const tableRootRef = React.useRef<HTMLDivElement>(null);
   const [touchOverlayRowId, setTouchOverlayRowId] = React.useState<string | null>(
@@ -765,7 +769,10 @@ export function EmrDataTable<TData>({
       aria-label={ariaLabel}
       className={cn("table-fixed", className)}
       containerClassName={cn(
-        "isolate min-h-0 min-w-0 flex-1 overflow-auto bg-[var(--emr-table-data-row-surface)]",
+        "isolate min-w-0 bg-[var(--emr-table-data-row-surface)]",
+        viewportMode === "fill"
+          ? "min-h-0 flex-1 scroll-pt-10 overflow-auto"
+          : "w-full overflow-x-auto",
         containerClassName,
       )}
       containerStyle={hasPinnedColumns ? { overflow: "visible" } : undefined}
@@ -832,10 +839,16 @@ export function EmrDataTable<TData>({
   return (
     <div
       ref={tableRootRef}
-      className="flex min-h-0 min-w-0 flex-1 flex-col"
+      className={cn(
+        "flex min-h-0 min-w-0 flex-col",
+        viewportMode === "fill"
+          ? "h-full flex-1 overflow-hidden"
+          : "w-full shrink-0",
+      )}
       data-emr-data-table="true"
       data-emr-data-table-has-row-overlay={hasRowOverlay ? "true" : "false"}
       data-emr-data-table-pinning={hasPinnedColumns ? "columns" : "none"}
+      data-emr-data-table-viewport-mode={viewportMode}
       onKeyDown={(event) => {
         if (event.key === "Escape" && activeTouchOverlayRowId) {
           setTouchOverlayRowId(null);
@@ -844,7 +857,10 @@ export function EmrDataTable<TData>({
     >
       {hasPinnedColumns ? (
         <EmrPinnedTableViewport
-          className="min-h-0 min-w-0 flex-1"
+          className={cn(
+            "min-w-0 [&_[data-emr-pinned-table-scroll-owner=true]]:scroll-pt-10",
+            viewportMode === "fill" ? "min-h-0 flex-1" : "w-full",
+          )}
           leftPinnedColumnWidth={leftPinnedColumnWidth}
           overscrollAxes={overscrollAxes}
           rightPinnedColumnWidth={rightPinnedColumnWidth}

@@ -677,6 +677,7 @@ function MembershipDataTable({
         }
         skeletonRowCount={5}
         table={table}
+        viewportMode="content"
         getRowProps={(row) => {
           const membership =
             row.original.rowType === "member" ? row.original : null;

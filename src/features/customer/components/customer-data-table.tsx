@@ -572,12 +572,13 @@ export function CustomerDataTable<
           <EmrDataTable
             aria-label={`${title} 고객관리 테이블`}
             className="table-fixed"
-            containerClassName="isolate h-full min-h-0 min-w-0 overflow-auto bg-[var(--clair-color-atomic-common-100)]"
+            containerClassName="bg-[var(--clair-color-atomic-common-100)]"
             density={density}
             initialLoading={initialLoading}
             overscrollAxes="both"
             skeletonRowCount={6}
             table={table}
+            viewportMode="fill"
             getRowProps={(row) => {
               const active = isActiveRow(row.original);
 

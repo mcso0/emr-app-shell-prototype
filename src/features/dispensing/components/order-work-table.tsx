@@ -627,10 +627,10 @@ export function OrderWorkTable({
       <EmrDataTable
         aria-label={`조제/처치 ${sectionId} 오더 테이블`}
         className="table-fixed"
-        containerClassName="min-h-0 min-w-0 overflow-auto"
         density={density}
         overscrollAxes="horizontal"
         table={table}
+        viewportMode="content"
         getRowProps={(row) => {
           const detailActive =
             activeDrawer?.type === "order" &&

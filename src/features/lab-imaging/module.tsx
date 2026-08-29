@@ -2452,6 +2452,7 @@ function LabResultDataTable({
       }
       skeletonRowCount={5}
       table={table}
+      viewportMode="content"
       getRowProps={(row) => ({
         className: undefined,
         "data-testid": "lab-result-row-" + row.original.id,
@@ -3969,6 +3970,7 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
         density={density}
         overscrollAxes="horizontal"
         table={table}
+        viewportMode="content"
         getRowProps={(row) => ({
           className: undefined,
           "data-testid": "imaging-order-detail-row-" + row.original.study.id,

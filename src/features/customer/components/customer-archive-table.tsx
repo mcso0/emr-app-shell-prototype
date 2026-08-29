@@ -398,12 +398,13 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
           <EmrDataTable
             aria-label="삭제된 보호자/동물 고객관리 테이블"
             className="table-fixed"
-            containerClassName="isolate h-full min-h-0 min-w-0 overflow-auto bg-[var(--emr-surface-panel)]"
+            containerClassName="bg-[var(--emr-surface-panel)]"
             density="standard"
             initialLoading={readStatus === "idle" || readStatus === "loading"}
             overscrollAxes="both"
             skeletonRowCount={6}
             table={table}
+            viewportMode="fill"
             getRowProps={(row) => ({
               className: "bg-[var(--emr-surface-panel)]",
               "data-testid": `customer-archive-row-${row.original.target}-${row.original.id}`,
