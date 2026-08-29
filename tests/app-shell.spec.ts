@@ -206,7 +206,7 @@ test("legacy chart route opens treatment shell without tab sync loop", async ({ 
   await page.goto("/w/clair-demo/chart");
 
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료/차트");
-  await expect(page.getByText("기본 SOAP")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
   await expect(page).toHaveURL(/modulePanel=open/);
   await expect(page).not.toHaveURL(/right=/);
 });
@@ -1875,7 +1875,7 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await expect(
     page.getByRole("button", { name: /차트 이력 패널/ }),
   ).toBeVisible();
-  await expect(page.getByRole("tab", { name: "기본 SOAP" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 

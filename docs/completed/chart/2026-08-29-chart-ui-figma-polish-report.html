@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진료 차트 Figma UI 미세 정합 결과</title>
+    <style>
+      body { margin: 0; background: #f7f8fa; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; }
+      main { max-width: 920px; margin: 0 auto; padding: 40px 20px 56px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 20px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      ul { margin: 0; padding-left: 20px; }
+      code { border-radius: 4px; background: #eef1f6; padding: 2px 5px; }
+      .meta { color: #5f6b7a; }
+      .pending { color: #8a5400; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>진료 차트 Figma UI 미세 정합 결과</h1>
+      <p class="meta">2026-08-29 · CDS.V2 Figma 28183:11678</p>
+
+      <section>
+        <h2>요청과 결과</h2>
+        <p>S/O, Assessment, History, Plan/Order 패널의 여백·컨트롤·보더를 Figma 기준으로 보정했다. 데이터, 저장, 권한, 차트 상호작용 계약은 변경하지 않았다.</p>
+      </section>
+
+      <section>
+        <h2>반영 내용</h2>
+        <ul>
+          <li>네 패널 제목의 시각 여백을 좌·우·위 12px, 아래 6px로 통일했다.</li>
+          <li>Assessment와 History의 선택·검색 컨트롤을 높이 28px, 글자 12px, 줄높이 약 16px로 통일했다.</li>
+          <li>기본 S/O 탭의 표시 이름을 <code>기본 SOAP</code>에서 <code>기본 S/O</code>로 수정하되 내부 기본 섹션 식별자와 저장 계약은 유지했다.</li>
+          <li>Plan/Order 툴바·테이블, 테이블·푸터 경계에서 겹치던 보더를 제거해 각 경계가 1px 한 줄로 보이도록 했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>패널 제목 인셋, 컨트롤 높이·타이포그래피, Plan/Order 경계 보더를 focused Playwright 계약으로 고정했다.</li>
+          <li>차트 기준 화면과 Assessment 진단 테이블의 스냅샷을 갱신하고 렌더 결과를 육안 검토했다.</li>
+          <li>전체 차트 suite의 62개 중 61개가 통과했다. Order 세트 재저장 1개 실패는 최신 <code>origin/main</code>에서도 동일하게 재현되는 기존 결함으로 확인했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖 / 남은 확인</h2>
+        <ul>
+          <li>Order 세트 수량 변경 후 업데이트 액션이 활성화되지 않는 기존 테스트 결함은 별도 수정 대상이다.</li>
+          <li>진단·차트 데이터 모델, API, RLS, Supabase, 저장 흐름은 이번 범위에서 변경하지 않았다.</li>
+          <li class="pending">PR 검사, production 병합·배포 및 운영 URL smoke 증거는 릴리스 완료 후 최종 결과에 기록한다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

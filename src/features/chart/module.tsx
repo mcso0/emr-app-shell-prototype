@@ -1852,7 +1852,8 @@ function ChartInlineHistoryPanel({
           <Select defaultValue="diagnosis">
             <SelectTrigger
               aria-label="차트 이력 종류"
-              className="h-7 w-[92px] shrink-0 rounded-lg bg-card px-2 text-xs"
+              size="sm"
+              className="w-[92px] shrink-0 rounded-lg bg-card px-2 emr-control-text-compact"
             >
               진단이력
             </SelectTrigger>
@@ -1869,7 +1870,7 @@ function ChartInlineHistoryPanel({
               aria-label="차트 이력 검색"
               placeholder="키워드를 입력해주세요"
               value={query}
-              className="h-7 rounded-lg bg-card px-2 pr-8 text-xs"
+              className="h-7 rounded-lg bg-card px-2 pr-8 emr-control-text-compact"
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
@@ -3374,7 +3375,7 @@ function SoapPanel({
   };
 
   const soapTabItems = [
-    { value: "default", label: "기본 SOAP" },
+    { value: "default", label: "기본 S/O" },
     ...visibleSystemSections.map((section) => ({
       value: section.id,
       label: section.title,
@@ -3451,7 +3452,7 @@ function SoapPanel({
       data-slot="chart-workspace-panel"
       className={chartWorkspacePanelClassName}
     >
-      <div className="relative z-30 flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
+      <div className="relative z-30 flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Subject/Object
         </h2>
@@ -3974,7 +3975,7 @@ function AssessmentPanel({
       data-slot="chart-workspace-panel"
       className={chartWorkspacePanelClassName}
     >
-      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
+      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Assessment
         </h2>
@@ -4006,7 +4007,7 @@ function AssessmentPanel({
               <SelectTrigger
                 aria-label="진단계통 필터"
                 size="sm"
-                className="w-fit min-w-24 rounded-lg bg-card px-2"
+                className="w-fit min-w-24 rounded-lg bg-card px-2 emr-control-text-compact"
               >
                 <SelectValue>
                   {selectedSystem === "all" ? "계통 전체" : selectedSystem}
@@ -4042,7 +4043,7 @@ function AssessmentPanel({
                   disabled={writeDisabled}
                   placeholder="키워드를 입력해주세요"
                   value={searchQuery}
-                  className="h-7 rounded-lg bg-card px-2 pr-8 text-xs"
+                  className="h-7 rounded-lg bg-card px-2 pr-8 emr-control-text-compact"
                   onFocus={() => setSearchOpen(true)}
                   onValueChange={(value) => {
                     setSearchQuery(value);
@@ -5870,7 +5871,10 @@ function ChartOrderTable({
   });
 
   return (
-    <div className="h-full overflow-hidden border-y border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]">
+    <div
+      data-slot="chart-order-table-surface"
+      className="h-full overflow-hidden bg-[var(--emr-surface-panel)]"
+    >
       <div
         className={cn(
           "relative h-full min-h-0 min-w-0",
@@ -8829,7 +8833,7 @@ function OrderArea({
         "group/chart-collapsible-panel",
       )}
     >
-      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
+      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Plan/Order
         </h2>
