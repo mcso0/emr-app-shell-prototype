@@ -183,7 +183,7 @@ export function ChartAssessmentTable({
                   </TableCell>
                   <TableCell className={`${styles.bodyCell} ${styles.diagnosisCell}`}>
                     <EmrTableCellText
-                      mode="two-line-if-long"
+                      mode="one-line"
                       fullText={diagnosis.diagnosisText}
                     >
                       {diagnosis.diagnosisText}

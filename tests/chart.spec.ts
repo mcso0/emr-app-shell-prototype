@@ -4253,6 +4253,7 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
       height: row.getBoundingClientRect().height,
       panelBottom: panelRect.bottom,
       tableHeight: tableRect.height,
+      tableWidth: Math.round(tableRect.width),
       viewportBottom: viewportRect.bottom,
       viewportHeight: viewportRect.height,
       widths: Array.from(row.children).map((cell) =>
@@ -4262,9 +4263,10 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   });
   expect(rowGeometry.height).toBe(40);
   expect(rowGeometry.widths).toHaveLength(6);
-  expect(rowGeometry.widths[0]).toBe(96);
+  expect(rowGeometry.widths[0]).toBe(100);
   expect(rowGeometry.widths[1]).toBeGreaterThan(0);
-  expect(rowGeometry.widths.slice(2)).toEqual([44, 40, 40, 72]);
+  expect(rowGeometry.widths.slice(2)).toEqual([52, 52, 52, 84]);
+  expect(rowGeometry.widths[1]).toBe(rowGeometry.tableWidth - 340);
   const diagnosisRowDividerStyles = await table
     .locator("[data-slot='chart-assessment-table-row']")
     .evaluateAll((rows) =>
@@ -4347,10 +4349,19 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
         filter: rect(filter).left,
         systemBadge: rect(rowCells[0].querySelector("[data-slot='badge']"))
           .left,
-        systemHeader: rect(
-          headerCells[0].querySelector("button > span:first-child"),
-        ).left,
+        systemHeaderButton: rect(headerCells[0].querySelector("button")).left,
         title: rect(title).left,
+      },
+      headerInsets: {
+        firstCell: getComputedStyle(headerCells[0]).paddingLeft,
+        firstText: Math.round(
+          rect(headerCells[0].querySelector("button > span:first-child")).left -
+            rect(headerCells[0].querySelector("button")).left,
+        ),
+        lastCell: getComputedStyle(headerCells[5]).paddingRight,
+        sortableButton: getComputedStyle(
+          headerCells[0].querySelector("button")!,
+        ).paddingLeft,
       },
       diagnosisTextStart: {
         body: rect(rowCells[1].querySelector("[data-emr-cell-text-mode]")).left,
@@ -4364,11 +4375,15 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
       })),
       veterinarianTextStart: {
         body: rect(rowCells[5].querySelector("[data-emr-cell-text-mode]")).left,
-        header: rect(
-          headerCells[5].querySelector(
+        header: (() => {
+          const label = headerCells[5].querySelector(
             "[data-emr-table-content='true'] > span",
-          ),
-        ).left,
+          );
+          return (
+            rect(label).left +
+            Number.parseFloat(getComputedStyle(label!).paddingLeft)
+          );
+        })(),
       },
     };
   });
@@ -4380,14 +4395,20 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   for (const center of alignmentGeometry.statusCenters) {
     expect(center.body).toBeCloseTo(center.header, 2);
   }
-  expect(alignmentGeometry.veterinarianTextStart.body).toBeCloseTo(
-    alignmentGeometry.veterinarianTextStart.header,
-    2,
-  );
-  expect(alignmentGeometry.diagnosisTextStart.body).toBeCloseTo(
-    alignmentGeometry.diagnosisTextStart.header,
-    2,
-  );
+  expect(
+    alignmentGeometry.veterinarianTextStart.body -
+      alignmentGeometry.veterinarianTextStart.header,
+  ).toBeCloseTo(2, 2);
+  expect(
+    alignmentGeometry.diagnosisTextStart.header -
+      alignmentGeometry.diagnosisTextStart.body,
+  ).toBeCloseTo(6, 2);
+  expect(alignmentGeometry.headerInsets).toEqual({
+    firstCell: "12px",
+    firstText: 10,
+    lastCell: "12px",
+    sortableButton: "10px",
+  });
   for (const start of Object.values(alignmentGeometry.contentStart)) {
     expect(start).toBeCloseTo(alignmentGeometry.contentStart.title, 2);
   }
@@ -4395,6 +4416,28 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
     alignmentGeometry.contentEnd.searchButton,
     2,
   );
+
+  const diagnosisText = firstRow
+    .getByRole("cell")
+    .nth(1)
+    .locator("[data-emr-cell-text-mode]");
+  const veterinarianText = firstRow
+    .getByRole("cell")
+    .nth(5)
+    .locator("[data-emr-cell-text-mode]");
+  for (const cellText of [diagnosisText, veterinarianText]) {
+    await expect(cellText).toHaveAttribute(
+      "data-emr-cell-text-mode",
+      "one-line",
+    );
+    await expect(cellText).toHaveCSS("overflow", "hidden");
+    await expect(cellText).toHaveCSS("text-overflow", "ellipsis");
+    await expect(cellText).toHaveCSS("white-space", "nowrap");
+    await expect(cellText).toHaveAttribute(
+      "title",
+      (await cellText.textContent()) ?? "",
+    );
+  }
 
   await expect(headers.first()).toHaveCSS("font-size", "12px");
   await expect(headers.first()).toHaveCSS("font-weight", "500");
@@ -4446,11 +4489,25 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
 
   for (const width of [1624, 1440, 1327, 1280, 1024]) {
     await page.setViewportSize({ height: 1088, width });
+    await expect
+      .poll(() =>
+        tableViewport.evaluate((viewport) => {
+          const firstCell = viewport.querySelector("tbody tr > td:first-child");
+          if (!firstCell) return false;
+          const expectedWidth = viewport.clientWidth >= 340 ? 100 : 92;
+          return (
+            Math.round(firstCell.getBoundingClientRect().width) ===
+            expectedWidth
+          );
+        }),
+      )
+      .toBe(true);
     const horizontalGeometry = await tableViewport.evaluate((viewport) => {
       const table = viewport.querySelector("table");
       const lastHeader = table?.querySelector("th:last-child");
+      const firstRow = table?.querySelector("tbody tr");
 
-      if (!table || !lastHeader) {
+      if (!table || !lastHeader || !firstRow) {
         throw new Error("Assessment horizontal geometry target is missing");
       }
 
@@ -4464,6 +4521,9 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
         scrollWidth: viewport.scrollWidth,
         tableRight: tableRect.right,
         viewportRight: viewportRect.right,
+        widths: Array.from(firstRow.children).map((cell) =>
+          Math.round(cell.getBoundingClientRect().width),
+        ),
       };
     });
 
@@ -4476,6 +4536,14 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
     expect(horizontalGeometry.lastHeaderRight).toBeLessThanOrEqual(
       horizontalGeometry.viewportRight + 1,
     );
+    expect(new Set(horizontalGeometry.widths.slice(2, 5)).size).toBe(1);
+    if (horizontalGeometry.clientWidth >= 340) {
+      expect(horizontalGeometry.widths[0]).toBe(100);
+      expect(horizontalGeometry.widths.slice(2)).toEqual([52, 52, 52, 84]);
+    } else {
+      expect(horizontalGeometry.widths[0]).toBe(92);
+      expect(horizontalGeometry.widths.slice(2)).toEqual([44, 44, 44, 72]);
+    }
   }
 
   const systemHeader = table.getByRole("columnheader", { name: /진단계통/ });
