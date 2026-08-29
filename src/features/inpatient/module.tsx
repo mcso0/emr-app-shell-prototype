@@ -545,6 +545,7 @@ function InpatientWardSection({
         density={density}
         overscrollAxes="horizontal"
         table={table}
+        viewportMode="content"
         getRowProps={(row) => {
           const selected = selectedAdmissionId === row.original.id;
 

@@ -2899,7 +2899,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           <EmrDataTable
             aria-label="병원관리 개별 Order 테이블"
             className="table-fixed"
-            containerClassName="h-full min-h-0 overflow-auto"
             density={tableDensity}
             initialLoading={
               catalogReadStatus === "idle" || catalogReadStatus === "loading"
@@ -2907,6 +2906,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             overscrollAxes="both"
             skeletonRowCount={6}
             table={orderTable}
+            viewportMode="fill"
             getRowProps={(row) => {
               const detailActive =
                 activeDrawer?.type === "hospital-order" &&
@@ -3201,8 +3201,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-full">
-            <EmrDataTable
+          <EmrDataTable
               aria-label="감사 로그"
               className="table-fixed"
               density="standard"
@@ -3242,12 +3241,12 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
               )}
               skeletonRowCount={5}
               table={table}
+              viewportMode="fill"
               getRowProps={(row) => ({
                 className: undefined,
                 "data-testid": "audit-review-row-" + row.original.id,
               })}
             />
-          </ScrollArea>
         )}
       </section>
     </div>

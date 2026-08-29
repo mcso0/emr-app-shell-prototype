@@ -365,7 +365,7 @@ export function OrderSetsPanel({
           /></EmrTableFeedbackSurface>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden" data-testid="order-set-table">
-            <EmrDataTable aria-label="병원관리 Order 세트 테이블" className="table-fixed" containerClassName="h-full min-h-0 overflow-auto" density={density} initialLoading={readStatus === "loading"} overscrollAxes="both" skeletonRowCount={6} table={table} getRowProps={(row) => ({
+            <EmrDataTable aria-label="병원관리 Order 세트 테이블" className="table-fixed" density={density} initialLoading={readStatus === "loading"} overscrollAxes="both" skeletonRowCount={6} table={table} viewportMode="fill" getRowProps={(row) => ({
               "aria-current": focusedOrderSetId === row.original.orderSetId ? "true" : undefined,
               className: "cursor-pointer bg-card",
               "data-detail-active": focusedOrderSetId === row.original.orderSetId ? "true" : undefined,

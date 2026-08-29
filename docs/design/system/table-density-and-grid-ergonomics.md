@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-07-28"
+updated: "2026-08-29"
 linear_issue: "DEN-225"
 linear_project: "12 CLAiR EMR Table Density & Data Grid Ergonomics"
 source_docs:
@@ -144,6 +144,37 @@ Persistence:
 - Table density uses local component state during Project 12 and is visible near the relevant table header or table body.
 - Live user preference persistence is excluded.
 - If localStorage is added later, scope it per workspace/module/table id and version the key.
+
+## EmrDataTable Viewport Height Contract
+
+`EmrDataTable` requires one explicit outer-height mode. This is separate from
+the low-level `Table` `layout="fill" | "scroll"` width contract below.
+
+| `viewportMode` | Use when | Height and scroll behavior |
+| --- | --- | --- |
+| `fill` | The table is the remaining body of a bounded flex workspace, such as Chart Plan/Order, customer management, or hospital-admin grids. | The shared root owns `h-full`, flex growth, and overflow containment. Its single table viewport fills the frame, and the horizontal scrollbar stays at the frame bottom. |
+| `content` | The table is an inline section inside a page-owned vertical flow, such as billing checkout, dispensing/treatment, inpatient, membership, or clinical result detail. | The shared root keeps natural header-plus-row height. The table owns only horizontal overflow; the parent page remains the vertical scroll owner. |
+
+Rules:
+
+- `viewportMode` is required and has no default. New callers must decide the
+  height intent instead of inheriting accidental parent flex behavior.
+- A `fill` caller must provide a real bounded parent height and a flex path with
+  `min-h-0`. The shared component owns its own `h-full`, `flex-1`, and
+  `overflow-hidden` classes.
+- A `content` caller must not add `h-full`, `flex-1`, or a feature-local vertical
+  overflow wrapper to make the table fill available space.
+- `containerClassName` is retained for visual surface styling only. Callers must
+  not pass height, flex-growth, or overflow ownership utilities through it.
+- Pinned tables keep `EmrPinnedTableViewport` as their only horizontal and
+  vertical scroll owner. Non-pinned tables keep `data-slot="table-container"`
+  as their only horizontal scroll owner.
+- Do not wrap either mode in a feature-local `ScrollArea`. If a page needs
+  vertical scrolling around a `content` table, the page-level flow owns it.
+- In `fill`, the frame bottom, `data-emr-data-table` root bottom, viewport
+  bottom, and horizontal scrollbar bottom must align within 1px. In `content`,
+  a one-row table must remain at natural header-plus-row height even inside a
+  taller parent.
 
 ## Fill Vs Scroll Layout
 

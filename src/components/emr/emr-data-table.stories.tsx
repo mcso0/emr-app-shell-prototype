@@ -21,6 +21,7 @@ import { EmrRowActionMenu } from "./row-action-menu";
 import {
   EmrDataTable,
   type EmrDataTableRowState,
+  type EmrDataTableViewportMode,
 } from "./emr-data-table";
 
 type StoryRow = {
@@ -36,15 +37,16 @@ type StoryRow = {
 type EmrDataTableStoryArgs = {
   activeDetailRow: boolean;
   density: "compact" | "standard" | "comfortable";
-  extraRows: boolean;
   loading: boolean;
   pinned: boolean;
+  rowCount: "zero" | "one" | "many";
   resizable: boolean;
   rowOverlay: boolean;
   selectable: boolean;
   selectedRows: boolean;
   showContextualActions: boolean;
   sortable: boolean;
+  viewportMode: EmrDataTableViewportMode;
 };
 
 const storyRows: StoryRow[] = [
@@ -118,15 +120,16 @@ function StorySelectionControl({
 function EmrDataTableStory({
   activeDetailRow,
   density,
-  extraRows,
   loading,
   pinned,
+  rowCount,
   resizable,
   rowOverlay,
   selectable,
   selectedRows,
   showContextualActions,
   sortable,
+  viewportMode,
 }: EmrDataTableStoryArgs) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>(() => {
@@ -139,8 +142,13 @@ function EmrDataTableStory({
   });
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const data = useMemo(
-    () => (extraRows ? [...storyRows, ...extraStoryRows] : storyRows),
-    [extraRows],
+    () =>
+      rowCount === "zero"
+        ? []
+        : rowCount === "one"
+          ? storyRows.slice(0, 1)
+          : [...storyRows, ...extraStoryRows],
+    [rowCount],
   );
   const columnPinning = useMemo<ColumnPinningState>(
     () => ({
@@ -309,7 +317,7 @@ function EmrDataTableStory({
   });
 
   return (
-    <div className="h-[420px] min-w-0 rounded-xl border bg-white p-4">
+    <div className="flex h-[420px] min-w-0 flex-col rounded-xl border bg-white p-4">
       <EmrDataTable
         aria-label="EmrDataTable 공통 Storybook 예시"
         density={density}
@@ -327,6 +335,7 @@ function EmrDataTableStory({
         )}
         skeletonRowCount={4}
         table={table}
+        viewportMode={viewportMode}
         getRowState={(row) => row.original.rowState}
         getRowOverlayAriaLabel={(row) => `${row.original.name} 행 작업`}
         renderRowOverlay={rowOverlay
@@ -404,7 +413,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "TanStack Table v8 instance를 받아 고객관리 스타일로 렌더링하는 공통 데이터 테이블입니다. data, columns, 업무 상태는 feature controller가 소유합니다.",
+          "TanStack Table v8 instance를 받아 고객관리 스타일로 렌더링하는 공통 데이터 테이블입니다. data, columns, 업무 상태는 feature controller가 소유하며 viewportMode로 bounded fill 또는 natural content 높이를 반드시 선언합니다.",
       },
     },
   },
@@ -414,28 +423,36 @@ const meta = {
       control: "radio",
       options: ["compact", "standard", "comfortable"],
     },
-    extraRows: { control: "boolean" },
     loading: { control: "boolean" },
     pinned: { control: "boolean" },
+    rowCount: {
+      control: "radio",
+      options: ["zero", "one", "many"],
+    },
     resizable: { control: "boolean" },
     rowOverlay: { control: "boolean" },
     selectable: { control: "boolean" },
     selectedRows: { control: "boolean" },
     showContextualActions: { control: "boolean" },
     sortable: { control: "boolean" },
+    viewportMode: {
+      control: "radio",
+      options: ["fill", "content"],
+    },
   },
   args: {
     activeDetailRow: false,
     density: "standard",
-    extraRows: false,
     loading: false,
     pinned: false,
+    rowCount: "many",
     resizable: false,
     rowOverlay: false,
     selectable: true,
     selectedRows: false,
     showContextualActions: false,
     sortable: true,
+    viewportMode: "fill",
   },
 } satisfies Meta<EmrDataTableStoryArgs>;
 
@@ -457,6 +474,201 @@ function assertRowDivider(cell: Element | null, label: string) {
     throw new Error(`${label} row divider does not match neutral/200.`);
   }
 }
+
+type ViewportContractCase = {
+  pinned: boolean;
+  rowCount: EmrDataTableStoryArgs["rowCount"];
+  viewportMode: EmrDataTableViewportMode;
+};
+
+async function assertViewportContract(
+  canvasElement: HTMLElement,
+  contract: ViewportContractCase,
+) {
+  const storyFrame = canvasElement.firstElementChild as HTMLElement | null;
+  const dataTableRoot = canvasElement.querySelector(
+    '[data-emr-data-table="true"]',
+  ) as HTMLElement | null;
+  const tableContainer = dataTableRoot?.querySelector(
+    '[data-slot="table-container"]',
+  ) as HTMLElement | null;
+  const pinnedViewport = dataTableRoot?.querySelector(
+    '[data-emr-pinned-table-viewport="true"]',
+  ) as HTMLElement | null;
+  const scrollOwner = contract.pinned
+    ? (pinnedViewport?.querySelector(
+        '[data-emr-pinned-table-scroll-owner="true"]',
+      ) as HTMLElement | null)
+    : tableContainer;
+
+  if (!storyFrame || !dataTableRoot || !tableContainer || !scrollOwner) {
+    throw new Error("EmrDataTable viewport contract targets are missing.");
+  }
+
+  storyFrame.style.width = "720px";
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  await expect(dataTableRoot).toHaveAttribute(
+    "data-emr-data-table-viewport-mode",
+    contract.viewportMode,
+  );
+  await expect(
+    dataTableRoot.querySelectorAll(
+      'tbody tr[data-emr-data-table-row="true"]',
+    ).length,
+  ).toBe(contract.rowCount === "zero" ? 0 : contract.rowCount === "one" ? 1 : 11);
+
+  const horizontalOwners = Array.from(
+    dataTableRoot.querySelectorAll<HTMLElement>("*"),
+  ).filter((element) => {
+    const overflowX = getComputedStyle(element).overflowX;
+    return overflowX === "auto" || overflowX === "scroll";
+  });
+  await expect(horizontalOwners).toHaveLength(1);
+  await expect(horizontalOwners[0]).toBe(scrollOwner);
+
+  const frameRect = storyFrame.getBoundingClientRect();
+  const frameStyles = getComputedStyle(storyFrame);
+  const frameContentBottom =
+    frameRect.bottom - Number.parseFloat(frameStyles.paddingBottom);
+  const rootRect = dataTableRoot.getBoundingClientRect();
+  const scrollOwnerRect = scrollOwner.getBoundingClientRect();
+
+  if (contract.viewportMode === "fill") {
+    await expect(Math.abs(rootRect.bottom - frameContentBottom)).toBeLessThanOrEqual(1);
+    await expect(Math.abs(scrollOwnerRect.bottom - rootRect.bottom)).toBeLessThanOrEqual(1);
+  } else {
+    await expect(rootRect.height).toBeLessThan(scrollOwner.scrollHeight + 1);
+    if (contract.rowCount !== "many") {
+      await expect(rootRect.height).toBeLessThan(
+        frameRect.height -
+          Number.parseFloat(frameStyles.paddingTop) -
+          Number.parseFloat(frameStyles.paddingBottom),
+      );
+    }
+    await expect(scrollOwner.scrollHeight - scrollOwner.clientHeight).toBeLessThanOrEqual(1);
+  }
+
+  if (contract.rowCount === "many" && contract.viewportMode === "fill") {
+    await expect(scrollOwner.scrollHeight).toBeGreaterThan(scrollOwner.clientHeight);
+    const stickyHeader = dataTableRoot.querySelector(
+      '[data-slot="table-header"]',
+    ) as HTMLElement | null;
+    if (!stickyHeader) throw new Error("Sticky table header is missing.");
+    await expect(getComputedStyle(stickyHeader).position).toBe("sticky");
+  }
+
+  if (contract.pinned) {
+    const pinnedCell = dataTableRoot.querySelector(
+      '[data-emr-column-pinned="left"]',
+    ) as HTMLElement | null;
+    if (!pinnedViewport || !pinnedCell) {
+      throw new Error("Pinned viewport contract targets are missing.");
+    }
+    await expect(getComputedStyle(tableContainer).overflowX).toBe("visible");
+    await expect(getComputedStyle(pinnedCell).position).toBe("sticky");
+
+    let horizontalScrollbar: HTMLElement | null = null;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      horizontalScrollbar = pinnedViewport.querySelector(
+        '[data-emr-pinned-table-scrollbar="horizontal"]',
+      ) as HTMLElement | null;
+      if (horizontalScrollbar) break;
+      await new Promise((resolve) => window.setTimeout(resolve, 25));
+    }
+    if (!horizontalScrollbar) {
+      throw new Error("Pinned horizontal scrollbar is missing.");
+    }
+    if (contract.viewportMode === "fill") {
+      await expect(
+        Math.abs(
+          horizontalScrollbar.getBoundingClientRect().bottom - rootRect.bottom,
+        ),
+      ).toBeLessThanOrEqual(1);
+    }
+  }
+}
+
+function viewportContractStory(contract: ViewportContractCase): Story {
+  return {
+    args: contract,
+    play: async ({ canvasElement }) => {
+      await assertViewportContract(canvasElement, contract);
+    },
+  };
+}
+
+export const FillNonPinnedZeroRows = viewportContractStory({
+  pinned: false,
+  rowCount: "zero",
+  viewportMode: "fill",
+});
+
+export const FillNonPinnedOneRow = viewportContractStory({
+  pinned: false,
+  rowCount: "one",
+  viewportMode: "fill",
+});
+
+export const FillNonPinnedManyRows = viewportContractStory({
+  pinned: false,
+  rowCount: "many",
+  viewportMode: "fill",
+});
+
+export const FillPinnedZeroRows = viewportContractStory({
+  pinned: true,
+  rowCount: "zero",
+  viewportMode: "fill",
+});
+
+export const FillPinnedOneRow = viewportContractStory({
+  pinned: true,
+  rowCount: "one",
+  viewportMode: "fill",
+});
+
+export const FillPinnedManyRows = viewportContractStory({
+  pinned: true,
+  rowCount: "many",
+  viewportMode: "fill",
+});
+
+export const ContentNonPinnedZeroRows = viewportContractStory({
+  pinned: false,
+  rowCount: "zero",
+  viewportMode: "content",
+});
+
+export const ContentNonPinnedOneRow = viewportContractStory({
+  pinned: false,
+  rowCount: "one",
+  viewportMode: "content",
+});
+
+export const ContentNonPinnedManyRows = viewportContractStory({
+  pinned: false,
+  rowCount: "many",
+  viewportMode: "content",
+});
+
+export const ContentPinnedZeroRows = viewportContractStory({
+  pinned: true,
+  rowCount: "zero",
+  viewportMode: "content",
+});
+
+export const ContentPinnedOneRow = viewportContractStory({
+  pinned: true,
+  rowCount: "one",
+  viewportMode: "content",
+});
+
+export const ContentPinnedManyRows = viewportContractStory({
+  pinned: true,
+  rowCount: "many",
+  viewportMode: "content",
+});
 
 export const AllColumnsScroll: Story = {
   play: async ({ canvasElement }) => {
@@ -570,11 +782,11 @@ export const Resizing: Story = {
 };
 
 export const AdditionalRows: Story = {
-  args: { extraRows: true, pinned: true },
+  args: { pinned: true, rowCount: "many" },
 };
 
 export const ViewportRightRowOverlay: Story = {
-  args: { extraRows: true, pinned: true, rowOverlay: true },
+  args: { pinned: true, rowCount: "many", rowOverlay: true },
   play: async ({ canvasElement }) => {
     const storyFrame = canvasElement.firstElementChild as HTMLElement | null;
     if (!storyFrame) {
@@ -653,7 +865,7 @@ export const SelectionActionBarViewportPlacement: Story = {
 };
 
 export const RowStateGradients: Story = {
-  args: { extraRows: true, rowOverlay: true },
+  args: { rowCount: "many", rowOverlay: true },
 };
 
 export const TouchRowOverlayFallback: Story = {

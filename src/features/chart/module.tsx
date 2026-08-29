@@ -507,7 +507,7 @@ type ChartOrderCatalogRouteResponse =
 
 const CHART_TOP_DEFAULT_PERCENT = 50;
 const CHART_TOP_MIN_PX = 180;
-const CHART_ORDER_MIN_PX = 170;
+const CHART_ORDER_MIN_PX = 220;
 const CHART_RESIZER_HEIGHT_PX = 8;
 const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
@@ -5887,15 +5887,11 @@ function ChartOrderTable({
       className="h-full overflow-hidden bg-[var(--emr-surface-panel)]"
     >
       <div
-        className={cn(
-          "relative h-full min-h-0 min-w-0",
-          !loading && !rows.length && "flex",
-        )}
+        className="relative flex h-full min-h-0 min-w-0"
       >
         <EmrDataTable
           aria-label="처방/오더 테이블"
           className="bg-[var(--emr-surface-panel)] [--emr-table-row-height-compact:40px]"
-          containerClassName="h-full min-h-0 min-w-0 overflow-auto"
           density={density}
           initialLoading={loading && rows.length === 0}
           overscrollAxes="horizontal"
@@ -5914,6 +5910,7 @@ function ChartOrderTable({
           }
           skeletonRowCount={5}
           table={table}
+          viewportMode="fill"
           getRowState={(row) => {
             if (invalidOrderIds.has(row.original.order.id)) return "error";
             if (writeDisabled) return "disabled";
@@ -9083,7 +9080,7 @@ function OrderArea({
             </span>
           </EmrInlineAlert>
         ) : null}
-        <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]">
+        <div className="min-h-0 flex-1 overflow-hidden bg-[var(--emr-surface-panel)]">
           <ChartOrderTable
             density={orderTableDensity}
             executionTasks={orderExecution?.tasks ?? []}

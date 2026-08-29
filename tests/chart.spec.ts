@@ -1228,7 +1228,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
   });
   await horizontalScrollbar.click({
     position: {
-      x: scrollbarBox!.width - 2,
+      x: scrollbarBox!.width - 16,
       y: scrollbarBox!.height / 2,
     },
   });
@@ -1257,13 +1257,78 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
   expect(scrollLeft).toBeGreaterThan(0);
   expect(Math.abs(pinnedXAfter - pinnedXBefore)).toBeLessThanOrEqual(1);
   expect(scrollXAfter).toBeLessThan(scrollXBefore);
-  expect(
-    await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth -
-        document.documentElement.clientWidth,
-    ),
-  ).toBe(0);
+
+  await page.getByRole("tab", { name: "영상 1", exact: true }).click();
+  await expect(
+    orderTable.locator('tbody tr[data-emr-data-table-row="true"]'),
+  ).toHaveCount(1);
+  const orderTableRoot = orderTable.locator(
+    "xpath=ancestor::*[@data-emr-data-table='true']",
+  );
+  const orderTableSurface = page.locator(
+    '[data-slot="chart-order-table-surface"]',
+  );
+  const orderFooter = page.getByTestId("chart-order-footer");
+  await expect(orderTableRoot).toHaveAttribute(
+    "data-emr-data-table-viewport-mode",
+    "fill",
+  );
+  for (const viewportSize of [
+    { height: 1264, width: 2124 },
+    { height: 900, width: 1440 },
+    { height: 650, width: 1024 },
+  ]) {
+    await page.setViewportSize(viewportSize);
+    const [
+      surfaceAfterFilterBox,
+      rootAfterFilterBox,
+      viewportAfterFilterBox,
+      scrollbarAfterFilterBox,
+      footerAfterFilterBox,
+    ] = await Promise.all([
+      orderTableSurface.boundingBox(),
+      orderTableRoot.boundingBox(),
+      pinnedViewport.boundingBox(),
+      horizontalScrollbar.boundingBox(),
+      orderFooter.boundingBox(),
+    ]);
+    expect(surfaceAfterFilterBox).not.toBeNull();
+    expect(rootAfterFilterBox).not.toBeNull();
+    expect(viewportAfterFilterBox).not.toBeNull();
+    expect(scrollbarAfterFilterBox).not.toBeNull();
+    expect(footerAfterFilterBox).not.toBeNull();
+    const tableBottom =
+      surfaceAfterFilterBox!.y + surfaceAfterFilterBox!.height;
+    expect(
+      Math.abs(
+        rootAfterFilterBox!.y + rootAfterFilterBox!.height - tableBottom,
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        viewportAfterFilterBox!.y +
+          viewportAfterFilterBox!.height -
+          tableBottom,
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        scrollbarAfterFilterBox!.y +
+          scrollbarAfterFilterBox!.height -
+          tableBottom,
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(footerAfterFilterBox!.y - tableBottom),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(0);
+  }
 });
 
 test("chart Order table renders the eight-type union matrix without action or destination columns", async ({
@@ -5612,6 +5677,7 @@ test("chart order autosave preserves local edits and blocks confirmation on ETag
     },
   );
 
+  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   const billingName = page.getByLabel("Maropitant 16mg T 청구서명 수정");
   await billingName.fill("다른 기기와 충돌하는 로컬 편집값");
   await expect.poll(() => patchCount, { timeout: 2_500 }).toBe(1);
@@ -5619,7 +5685,6 @@ test("chart order autosave preserves local edits and blocks confirmation on ETag
   const conflict = page.getByTestId("chart-order-draft-conflict");
   await expect(conflict).toContainText("현재 편집값은 덮어쓰지 않았습니다");
   await expect(billingName).toHaveValue("다른 기기와 충돌하는 로컬 편집값");
-  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   await expect(await getChartOrderAction(page, "Order 확정")).toBeDisabled();
   await dismissChartOrderActionMenu(page);
   await expect(

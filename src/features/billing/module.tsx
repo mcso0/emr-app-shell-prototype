@@ -2330,6 +2330,7 @@ function BillingCheckoutDataTable({
       }
       overscrollAxes="horizontal"
       table={table}
+      viewportMode="content"
     />
   );
 }
