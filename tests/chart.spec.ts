@@ -713,7 +713,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
     page.getByRole("heading", { name: "Subject/Object" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
-  await expect(page.getByText("기본 SOAP")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
   await expect(
     page.getByRole("tab", { name: "소화기", exact: true }),
   ).toBeVisible();
@@ -903,6 +903,35 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   const orderPanel = panels.filter({
     has: page.getByRole("heading", { name: "Plan/Order" }),
   });
+
+  for (const { name, panel } of [
+    { name: "Subject/Object", panel: subjectPanel },
+    { name: "Assessment", panel: assessmentPanel },
+    { name: "History", panel: historyPanel },
+    { name: "Plan/Order", panel: orderPanel },
+  ]) {
+    const heading = panel.getByRole("heading", { name });
+    const header = heading.locator("xpath=..");
+    await expect(header).toHaveCSS("padding-left", "12px");
+    await expect(header).toHaveCSS("padding-right", "12px");
+    await expect(header).toHaveCSS("padding-top", "8px");
+    await expect(header).toHaveCSS("padding-bottom", "2px");
+
+    const titleInsets = await heading.evaluate((element) => {
+      const header = element.parentElement;
+      if (!header) throw new Error("Chart panel header is missing");
+      const headerRect = header.getBoundingClientRect();
+      const headingRect = element.getBoundingClientRect();
+      return {
+        bottom: Math.round(headerRect.bottom - headingRect.bottom),
+        left: Math.round(headingRect.left - headerRect.left),
+        top: Math.round(headingRect.top - headerRect.top),
+      };
+    });
+
+    expect(titleInsets).toEqual({ bottom: 6, left: 12, top: 12 });
+  }
+
   const orderActionButtons = orderPanel.locator(
     "[data-slot='chart-panel-actions'] button",
   );
@@ -940,6 +969,35 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(
     page.locator("[data-slot='chart-assessment-table-row']").first(),
   ).toHaveCSS("height", "40px");
+
+  for (const control of [
+    page.getByRole("combobox", { name: "진단계통 필터" }),
+    page.getByRole("textbox", { name: "진단명 검색" }),
+    page.getByRole("combobox", { name: "차트 이력 종류" }),
+    page.getByRole("textbox", { name: "차트 이력 검색" }),
+  ]) {
+    await expect(control).toHaveCSS("font-size", "12px");
+    await expect(control).toHaveCSS("height", "28px");
+    const lineHeight = await control.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).lineHeight),
+    );
+    expect(lineHeight).toBeCloseTo(16, 2);
+  }
+
+  const orderTableSurface = page.locator(
+    "[data-slot='chart-order-table-surface']",
+  );
+  const orderToolbarSurface = page
+    .locator("[data-slot='chart-order-toolbar-actions']")
+    .locator("xpath=..");
+  await expect(orderToolbarSurface).toHaveCSS("border-bottom-width", "1px");
+  await expect(orderTableSurface).toHaveCSS("border-top-width", "0px");
+  await expect(orderTableSurface).toHaveCSS("border-bottom-width", "0px");
+  await expect(page.getByTestId("chart-order-footer")).toHaveCSS(
+    "border-top-width",
+    "1px",
+  );
+
   await page.mouse.move(1, 1);
   await subjectPanel.getByRole("button", { name: "SOAP 추가" }).focus();
   await expect(subjectActions).toHaveCSS("opacity", "1");
@@ -5147,7 +5205,7 @@ test("chart queue selection changes the selected encounter", async ({
   await expect(lockedState).toContainText("기록된 바이탈이 없어요");
   await expect(lockedState).toContainText("이전 진료이력이 없어요");
   await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
-  await expect(page.getByText("기본 SOAP")).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "기본 S/O" })).toHaveCount(0);
 
   await lockedState
     .getByRole("button", { name: "호출하기", exact: true })

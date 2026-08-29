@@ -106,7 +106,7 @@ export function ChartWorkspacePanel({
       data-slot="chart-workspace-panel"
       className={cn(chartWorkspacePanelClassName, className)}
     >
-      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3">
+      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
         <h2 className="min-w-0 truncate text-sm font-semibold leading-5 text-foreground">
           {title}
         </h2>
