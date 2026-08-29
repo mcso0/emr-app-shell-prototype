@@ -119,6 +119,8 @@ import {
   formatHospitalOrderAmount,
   buildWorkspaceCatalogMutationFromHospitalOrder,
   buildWorkspaceCatalogPauseMutation,
+  buildWorkspaceDispensingReviewMutation,
+  calculateHospitalDispenseQuantity,
   clinicalPathologyCategoryOptions,
   getHospitalOrderCategory,
   getHospitalOrderSubcategory,
@@ -153,8 +155,11 @@ import type {
   EmrTableCellTextMode,
   EmrTableDensity,
 } from "@/components/emr/table-density";
-import type { OrderCatalogItem } from "@/features/hospital-admin/server-order-catalog";
-import type { OrderCatalogMutationInput } from "@/features/hospital-admin/server-order-catalog";
+import type {
+  OrderCatalogAdminCapabilities,
+  OrderCatalogItem,
+  OrderCatalogMutationInput,
+} from "@/features/hospital-admin/server-order-catalog";
 import type { ShellComponentProps } from "@/types/emr";
 
 const orderSetPlaceholderId = "order-set-placeholder";
@@ -460,7 +465,11 @@ type AuditReviewEventRow = {
 type OrderCatalogReadStatus = "idle" | "loading" | "ready" | "denied" | "error";
 
 type OrderCatalogAdminReadResponse =
-  | { ok: true; items: OrderCatalogItem[] }
+  | {
+      ok: true;
+      items: OrderCatalogItem[];
+      capabilities: OrderCatalogAdminCapabilities;
+    }
   | { ok: false; denialReason?: string; error?: string };
 
 type OrderCatalogAdminMutationResponse =
@@ -468,7 +477,13 @@ type OrderCatalogAdminMutationResponse =
   | { ok: false; denialReason?: string; error?: string };
 
 type OrderCatalogMutationStatus =
-  "idle" | "saving" | "stopping" | "saved" | "denied" | "error";
+  | "idle"
+  | "saving"
+  | "reviewing"
+  | "stopping"
+  | "saved"
+  | "denied"
+  | "error";
 
 async function mutateHospitalAdminOrderCatalog({
   input,
@@ -521,6 +536,38 @@ function validateHospitalOrderDraft(
   if (!Number.isFinite(draft.price) || draft.price < 0)
     return "판매금액은 0원 이상이어야 합니다.";
 
+  if (draft.categoryId === "dispensing") {
+    const preset = draft.dispensingPreset;
+    if (!preset) return "조제 기본값을 입력해 주세요.";
+    if (!preset.ingredientName.trim())
+      return "성분 또는 조제 내용을 입력해 주세요.";
+    if (!Number.isFinite(preset.dose) || preset.dose <= 0)
+      return "1회 용량은 0보다 커야 합니다.";
+    if (!preset.doseUnit.trim()) return "용량 단위를 입력해 주세요.";
+    if (!preset.route.trim()) return "투여 경로를 선택해 주세요.";
+    if (!preset.frequency.trim()) return "투여 빈도를 선택해 주세요.";
+    if (!Number.isFinite(preset.durationDays) || preset.durationDays <= 0)
+      return "투여 일수는 0보다 커야 합니다.";
+    if (!Number.isFinite(preset.totalQuantity) || preset.totalQuantity <= 0)
+      return "처방 총량은 0보다 커야 합니다.";
+    if (!preset.totalQuantityUnit.trim())
+      return "총량 단위를 입력해 주세요.";
+    if (
+      preset.autoDispenseQuantityEnabled &&
+      Math.abs(
+        preset.totalQuantity - calculateHospitalDispenseQuantity(preset),
+      ) > 0.001
+    ) {
+      return "자동 계산 총량과 처방 총량이 일치하지 않습니다.";
+    }
+    if (
+      !preset.autoDispenseQuantityEnabled &&
+      !preset.manualQuantityReason.trim()
+    ) {
+      return "수동 총량 보정 사유를 입력해 주세요.";
+    }
+  }
+
   return null;
 }
 
@@ -535,7 +582,7 @@ function getOrderCatalogMutationFailureMessage(
   result: Extract<OrderCatalogAdminMutationResponse, { ok: false }>,
 ) {
   if (result.denialReason === "permission_missing") {
-    return "병원관리자 권한이 있는 사용자만 Order를 변경할 수 있습니다.";
+    return "일반 Order는 병원관리자, 조제 Order는 병원관리자 또는 수의사가 작성할 수 있으며 승인은 수의사만 가능합니다.";
   }
   if (result.denialReason === "order_not_found") {
     return "변경할 Order를 찾지 못했습니다. 목록을 새로고침해 주세요.";
@@ -1292,6 +1339,9 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const clearSelectedOrders = useHospitalAdminStore(
     (state) => state.clearSelectedOrders,
   );
+  const catalogCapabilities = useHospitalAdminStore(
+    (state) => state.catalogCapabilities,
+  );
   const createOrder = useHospitalAdminStore((state) => state.createOrder);
   const duplicateOrder = useHospitalAdminStore((state) => state.duplicateOrder);
   const orders = useHospitalAdminStore((state) => state.orders);
@@ -1317,6 +1367,9 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     (state) => state.setFocusedOrderId,
   );
   const setOrders = useHospitalAdminStore((state) => state.setOrders);
+  const setCatalogCapabilities = useHospitalAdminStore(
+    (state) => state.setCatalogCapabilities,
+  );
   const setSearchQuery = useHospitalAdminStore((state) => state.setSearchQuery);
   const toggleOrderSelection = useHospitalAdminStore(
     (state) => state.toggleOrderSelection,
@@ -1338,6 +1391,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
   const [orderColumnVisibility, setOrderColumnVisibility] =
     useState<VisibilityState>({});
+  const [dispensingCreateOpen, setDispensingCreateOpen] = useState(false);
   const selectedSubcategory = getHospitalOrderSubcategory(
     selectedSubcategoryId,
   );
@@ -1445,8 +1499,24 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   );
 
   const handleCreateOrder = () => {
+    if (selectedCategoryId === "dispensing") {
+      setDispensingCreateOpen(true);
+      return;
+    }
     const order = createOrder();
 
+    setFocusedOrderId(order.id);
+    setActiveDrawer({
+      type: "hospital-order",
+      id: order.id,
+      subtitle: getNewOrderDrawerTitle(selectedSubcategory?.label),
+    });
+  };
+
+  const handleCreateWorkspaceDispensingOrder = () => {
+    const order = createOrder();
+
+    setDispensingCreateOpen(false);
     setFocusedOrderId(order.id);
     setActiveDrawer({
       type: "hospital-order",
@@ -1830,6 +1900,13 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         }
 
         setOrders(mapWorkspaceCatalogItemsToHospitalOrders(body.items));
+        setCatalogCapabilities(
+          body.capabilities ?? {
+            canManageCatalog: false,
+            canAuthorDispensing: false,
+            canApproveDispensing: false,
+          },
+        );
         setCatalogReadStatus("ready");
       } catch (error: unknown) {
         if ((error as { name?: string }).name === "AbortError") return;
@@ -1843,7 +1920,14 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       canceled = true;
       controller.abort();
     };
-  }, [catalogRetryKey, hydrated, session, setOrders, workspaceId]);
+  }, [
+    catalogRetryKey,
+    hydrated,
+    session,
+    setCatalogCapabilities,
+    setOrders,
+    workspaceId,
+  ]);
 
   if (activeSection === "members") {
     return (
@@ -1919,7 +2003,51 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             : "Workspace catalog 대기";
 
   return (
-    <EmrPinnedTableWorkspace
+    <>
+      <Dialog
+        open={dispensingCreateOpen}
+        onOpenChange={setDispensingCreateOpen}
+      >
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>조제 오더 추가</DialogTitle>
+            <DialogDescription>
+              기존 CLAiR 마스터를 먼저 검색하고, 병원 고유 조제법이 없을
+              때만 이 워크스페이스 전용 오더를 만들어 주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2 sm:grid-cols-2">
+            <Button
+              variant="outline"
+              className="h-auto items-start justify-start whitespace-normal p-4 text-left"
+              onClick={() => {
+                setDispensingCreateOpen(false);
+                setSearchQuery("");
+              }}
+            >
+              <span>
+                <strong className="block">마스터에서 추가</strong>
+                <span className="mt-1 block emr-text-metadata text-muted-foreground">
+                  현재 조제 목록과 검색에서 검토된 마스터를 선택합니다.
+                </span>
+              </span>
+            </Button>
+            <Button
+              className="h-auto items-start justify-start whitespace-normal p-4 text-left"
+              disabled={!catalogCapabilities.canAuthorDispensing}
+              onClick={handleCreateWorkspaceDispensingOrder}
+            >
+              <span>
+                <strong className="block">새 조제 오더 만들기</strong>
+                <span className="mt-1 block emr-text-metadata opacity-80">
+                  병원 전용으로 저장되며 수의사 승인 후 사용할 수 있습니다.
+                </span>
+              </span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <EmrPinnedTableWorkspace
       className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
       data-testid="hospital-admin-order-content"
       identityTextInset={48}
@@ -2159,7 +2287,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           </div>
         </div>
       ) : null}
-    </EmrPinnedTableWorkspace>
+      </EmrPinnedTableWorkspace>
+    </>
   );
 }
 
@@ -2554,7 +2683,9 @@ function DrawerSelect({
       }}
     >
       <SelectTrigger aria-label={ariaLabel} className="h-9 w-full bg-card">
-        <SelectValue />
+        <SelectValue>
+          {items.find((item) => item.value === value)?.label ?? value}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
@@ -2577,6 +2708,9 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
     (state) => state.clearSelectedOrders,
   );
   const orders = useHospitalAdminStore((state) => state.orders);
+  const catalogCapabilities = useHospitalAdminStore(
+    (state) => state.catalogCapabilities,
+  );
   const setFocusedOrderId = useHospitalAdminStore(
     (state) => state.setFocusedOrderId,
   );
@@ -2592,6 +2726,10 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   });
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [confirmReviewOpen, setConfirmReviewOpen] = useState(false);
+  const [reviewDecision, setReviewDecision] = useState<
+    "approve" | "reject"
+  >("approve");
   const [mutationStatus, setMutationStatus] =
     useState<OrderCatalogMutationStatus>("idle");
   const [mutationMessage, setMutationMessage] = useState<string | null>(null);
@@ -2599,7 +2737,9 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   const draft =
     draftState.orderId === order?.id ? draftState.draft : (order ?? null);
   const mutationInFlight =
-    mutationStatus === "saving" || mutationStatus === "stopping";
+    mutationStatus === "saving" ||
+    mutationStatus === "reviewing" ||
+    mutationStatus === "stopping";
   const setDraft = (
     nextDraft:
       | HospitalOrderDraft
@@ -2665,13 +2805,64 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   const category = getHospitalOrderCategory(draft.categoryId);
   const subcategory = getHospitalOrderSubcategory(draft.subcategoryId);
   const creatingNewOrder = !order.sourceCatalogItem;
+  const dispensingOrder = draft.categoryId === "dispensing";
+  const hospitalCreatedDispensing =
+    draft.sourceKind === "hospital_created" && dispensingOrder;
+  const reviewPending =
+    hospitalCreatedDispensing && draft.dispensingReviewStatus === "pending";
+  const canEdit = dispensingOrder
+    ? catalogCapabilities.canAuthorDispensing
+    : catalogCapabilities.canManageCatalog;
   const saveValidationMessage = validateHospitalOrderDraft(draft, {
     creating: creatingNewOrder,
   });
-  const saveDisabled = mutationInFlight || Boolean(saveValidationMessage);
+  const saveDisabled =
+    mutationInFlight || !canEdit || Boolean(saveValidationMessage);
   const drawerTitle = creatingNewOrder
     ? getNewOrderDrawerTitle(subcategory?.label)
     : draft.standardName || "오더 상세";
+  const duplicateDispensingOrders = hospitalCreatedDispensing
+    ? orders
+        .filter((candidate) => candidate.id !== order.id)
+        .filter((candidate) => candidate.categoryId === "dispensing")
+        .filter((candidate) => {
+          const draftName = draft.inHospitalName.trim().toLowerCase();
+          const candidateName = candidate.inHospitalName.trim().toLowerCase();
+          const ingredient =
+            draft.dispensingPreset?.ingredientName.trim().toLowerCase() ?? "";
+          const candidateIngredient =
+            candidate.dispensingPreset?.ingredientName
+              .trim()
+              .toLowerCase() ?? "";
+          return (
+            (draftName.length >= 3 && candidateName.includes(draftName)) ||
+            (ingredient.length >= 3 && candidateIngredient === ingredient)
+          );
+        })
+        .slice(0, 3)
+    : [];
+
+  const updateDispensingPreset = (
+    patch: Partial<NonNullable<HospitalOrderDraft["dispensingPreset"]>>,
+  ) => {
+    const current = draft.dispensingPreset;
+    if (!current) return;
+    let next = { ...current, ...patch };
+    if (
+      next.autoDispenseQuantityEnabled &&
+      ("dose" in patch ||
+        "frequency" in patch ||
+        "durationDays" in patch ||
+        "autoDispenseQuantityEnabled" in patch)
+    ) {
+      next = {
+        ...next,
+        totalQuantity: calculateHospitalDispenseQuantity(next),
+        manualQuantityReason: "",
+      };
+    }
+    updateDraft({ dispensingPreset: next });
+  };
 
   const handleSave = async () => {
     const validationMessage = validateHospitalOrderDraft(draft, {
@@ -2784,6 +2975,50 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
     setActiveDrawer(null);
   };
 
+  const handleReview = async (decision: "approve" | "reject") => {
+    if (!hydrated || !session || !order.sourceCatalogItem) {
+      setMutationStatus("denied");
+      setMutationMessage("로그인된 수의사 세션을 확인해 주세요.");
+      setConfirmReviewOpen(false);
+      return;
+    }
+    setMutationStatus("reviewing");
+    setMutationMessage("수의사 승인과 사용 상태를 저장하는 중입니다.");
+    const result = await mutateHospitalAdminOrderCatalog({
+      input: buildWorkspaceDispensingReviewMutation(
+        order.sourceCatalogItem.id,
+        order.sourceCatalogItem.catalogRevision ?? 1,
+        decision,
+        decision === "reject" ? "병원 검토 반려" : undefined,
+      ),
+      method: "PATCH",
+      session,
+      workspaceId,
+    });
+    setConfirmReviewOpen(false);
+    if (!result.ok) {
+      setMutationStatus(
+        result.denialReason === "permission_missing" ? "denied" : "error",
+      );
+      setMutationMessage(getOrderCatalogMutationFailureMessage(result));
+      return;
+    }
+    const nextOrder = mapWorkspaceCatalogItemToHospitalOrder(result.item);
+    updateOrder(order.id, nextOrder);
+    setDraft(nextOrder);
+    setMutationStatus("saved");
+    setMutationMessage(
+      decision === "approve"
+        ? "수의사 승인 후 사용 상태로 전환했습니다."
+        : "조제 오더를 반려하고 사용 중지 상태로 전환했습니다.",
+    );
+    toast.success(
+      decision === "approve"
+        ? "조제 오더를 승인하고 사용 상태로 전환했어요."
+        : "조제 오더를 반려했어요.",
+    );
+  };
+
   return (
     <div
       ref={drawerRef}
@@ -2824,8 +3059,8 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
           사용여부
           <Switch
             aria-label="오더 사용여부"
-            checked={draft.isActive}
-            disabled={mutationInFlight}
+            checked={reviewPending ? false : draft.isActive}
+            disabled={mutationInFlight || reviewPending || !canEdit}
             onCheckedChange={(checked) =>
               updateDraft({ isActive: Boolean(checked) })
             }
@@ -2847,6 +3082,46 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
               {category?.label} / {subcategory?.label}
             </div>
           </DrawerField>
+          {dispensingOrder ? (
+            <DrawerField
+              label="출처 / 검토"
+              hint={
+                draft.sourceKind === "clair_master"
+                  ? "CLAiR 마스터의 병원 기본값입니다. 병원 대상 범위 수정은 임상 검토 범위를 확장하지 않습니다."
+                  : "이 병원 워크스페이스 전용 오더입니다. CLAiR 글로벌 마스터로 자동 등록되지 않습니다."
+              }
+            >
+              <div className="flex min-h-9 flex-wrap items-center gap-2 rounded-lg border bg-[var(--emr-surface-muted)] px-3 py-2 emr-text-dense">
+                <Badge variant="outline">
+                  {draft.sourceKind === "clair_master"
+                    ? "CLAiR 마스터"
+                    : draft.sourceKind === "hospital_created"
+                      ? "병원 직접 생성"
+                      : "기존 오더"}
+                </Badge>
+                <Badge
+                  variant={
+                    draft.dispensingReviewStatus === "approved"
+                      ? "secondary"
+                      : "outline"
+                  }
+                >
+                  {draft.dispensingReviewStatus === "approved"
+                    ? "수의사 승인"
+                    : draft.dispensingReviewStatus === "rejected"
+                      ? "반려"
+                      : draft.dispensingReviewStatus === "pending"
+                        ? "검토 대기"
+                        : "마스터 검토 상태 별도"}
+                </Badge>
+                {draft.dispensingReviewRevision ? (
+                  <span className="text-muted-foreground">
+                    revision {draft.dispensingReviewRevision}
+                  </span>
+                ) : null}
+              </div>
+            </DrawerField>
+          ) : null}
           <DrawerField label="표준 Order명">
             <Input
               readOnly={!creatingNewOrder}
@@ -2883,6 +3158,19 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
               }
             />
           </DrawerField>
+          {duplicateDispensingOrders.length > 0 ? (
+            <DrawerField label="유사 오더">
+              <div className="rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-surface)] px-3 py-2 emr-text-metadata">
+                <strong className="block">기존 오더와 유사합니다.</strong>
+                <span className="mt-1 block text-muted-foreground">
+                  {duplicateDispensingOrders
+                    .map((candidate) => candidate.inHospitalName)
+                    .join(", ")}
+                  . 기존 항목을 확인한 뒤 필요하면 계속 등록할 수 있습니다.
+                </span>
+              </div>
+            </DrawerField>
+          ) : null}
           <DrawerField
             label="별칭"
             hint="진료항목을 검색하기 위한 별칭입니다. 쉼표로 여러 개를 입력할 수 있습니다."
@@ -2933,6 +3221,225 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
               }
             />
           </DrawerField>
+          {dispensingOrder && draft.dispensingPreset ? (
+            <>
+              <div className="border-t pt-5">
+                <div className="emr-text-body font-bold">기본 처방값</div>
+                <p className="mt-1 emr-text-metadata text-muted-foreground">
+                  새 차트 오더에 복사되는 병원 기본값이며, 수의사는 환자별로
+                  확정 전에 수정할 수 있습니다.
+                </p>
+              </div>
+              <DrawerField label="성분 / 조제 내용" required>
+                <Input
+                  aria-label="성분 또는 조제 내용"
+                  placeholder="예: Amoxicillin 50 mg 조제정"
+                  value={draft.dispensingPreset.ingredientName}
+                  onChange={(event) =>
+                    updateDispensingPreset({
+                      ingredientName: event.target.value,
+                    })
+                  }
+                />
+              </DrawerField>
+              <DrawerField label="1회 용량" required>
+                <div className="grid grid-cols-[minmax(0,1fr)_140px] gap-2">
+                  <Input
+                    aria-label="1회 용량"
+                    inputMode="decimal"
+                    value={draft.dispensingPreset.dose}
+                    onChange={(event) =>
+                      updateDispensingPreset({
+                        dose: Number(event.target.value),
+                      })
+                    }
+                  />
+                  <DrawerSelect
+                    ariaLabel="용량 단위"
+                    value={draft.dispensingPreset.doseUnit}
+                    items={[
+                      { label: "정", value: "tablet" },
+                      { label: "캡슐", value: "capsule" },
+                      { label: "mL", value: "ml" },
+                      { label: "g", value: "g" },
+                      { label: "포", value: "sachet" },
+                    ]}
+                    onValueChange={(doseUnit) =>
+                      updateDispensingPreset({
+                        doseUnit,
+                        totalQuantityUnit: doseUnit,
+                      })
+                    }
+                  />
+                </div>
+              </DrawerField>
+              <DrawerField label="경로 / 빈도" required>
+                <div className="grid grid-cols-2 gap-2">
+                  <DrawerSelect
+                    ariaLabel="투여 경로"
+                    value={draft.dispensingPreset.route}
+                    items={[
+                      { label: "경구(PO)", value: "PO" },
+                      { label: "피하(SC)", value: "SC" },
+                      { label: "근육(IM)", value: "IM" },
+                      { label: "외용", value: "topical" },
+                      { label: "귀", value: "otic" },
+                      { label: "안과", value: "ophthalmic" },
+                      { label: "경피", value: "transdermal" },
+                    ]}
+                    onValueChange={(route) =>
+                      updateDispensingPreset({ route })
+                    }
+                  />
+                  <DrawerSelect
+                    ariaLabel="투여 빈도"
+                    value={draft.dispensingPreset.frequency}
+                    items={[
+                      { label: "1회", value: "once" },
+                      { label: "하루 1회", value: "sid" },
+                      { label: "하루 2회", value: "bid" },
+                      { label: "하루 3회", value: "tid" },
+                      { label: "하루 4회", value: "qid" },
+                      { label: "격일", value: "qod" },
+                    ]}
+                    onValueChange={(frequency) =>
+                      updateDispensingPreset({ frequency })
+                    }
+                  />
+                </div>
+              </DrawerField>
+              <DrawerField label="일수 / 총량" required>
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px] gap-2">
+                  <Input
+                    aria-label="투여 일수"
+                    inputMode="decimal"
+                    value={draft.dispensingPreset.durationDays}
+                    onChange={(event) =>
+                      updateDispensingPreset({
+                        durationDays: Number(event.target.value),
+                      })
+                    }
+                  />
+                  <Input
+                    aria-label="처방 총량"
+                    disabled={
+                      draft.dispensingPreset.autoDispenseQuantityEnabled
+                    }
+                    inputMode="decimal"
+                    value={draft.dispensingPreset.totalQuantity}
+                    onChange={(event) =>
+                      updateDispensingPreset({
+                        totalQuantity: Number(event.target.value),
+                      })
+                    }
+                  />
+                  <Input
+                    aria-label="총량 단위"
+                    value={draft.dispensingPreset.totalQuantityUnit}
+                    onChange={(event) =>
+                      updateDispensingPreset({
+                        totalQuantityUnit: event.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <label className="mt-2 flex items-center gap-2 emr-text-metadata">
+                  <Switch
+                    aria-label="총량 자동 계산"
+                    checked={
+                      draft.dispensingPreset.autoDispenseQuantityEnabled
+                    }
+                    onCheckedChange={(checked) =>
+                      updateDispensingPreset({
+                        autoDispenseQuantityEnabled: Boolean(checked),
+                      })
+                    }
+                  />
+                  총량 자동 계산
+                  <span className="text-muted-foreground">
+                    {draft.dispensingPreset.dose} × 빈도 × {draft.dispensingPreset.durationDays}일
+                    = {calculateHospitalDispenseQuantity(
+                      draft.dispensingPreset,
+                    )}
+                    {draft.dispensingPreset.totalQuantityUnit}
+                  </span>
+                </label>
+                {!draft.dispensingPreset.autoDispenseQuantityEnabled ? (
+                  <Input
+                    aria-label="수동 총량 보정 사유"
+                    className="mt-2"
+                    placeholder="수동 총량 보정 사유를 입력해 주세요"
+                    value={draft.dispensingPreset.manualQuantityReason}
+                    onChange={(event) =>
+                      updateDispensingPreset({
+                        manualQuantityReason: event.target.value,
+                      })
+                    }
+                  />
+                ) : null}
+              </DrawerField>
+              <DrawerField label="복용 / 보관" required>
+                <div className="grid grid-cols-2 gap-2">
+                  <DrawerSelect
+                    ariaLabel="복용 시점"
+                    value={draft.dispensingPreset.medicationInstruction}
+                    items={[
+                      { label: "식후", value: "after_meal" },
+                      { label: "식전", value: "before_meal" },
+                      { label: "식사와 함께", value: "with_meal" },
+                      { label: "시간 무관", value: "any_time" },
+                    ]}
+                    onValueChange={(medicationInstruction) =>
+                      updateDispensingPreset({ medicationInstruction })
+                    }
+                  />
+                  <DrawerSelect
+                    ariaLabel="보관 방법"
+                    value={draft.dispensingPreset.storageMethod}
+                    items={[
+                      { label: "실온", value: "room_temp" },
+                      {
+                        label: "실온·차광",
+                        value: "room_temp_light_protected",
+                      },
+                      { label: "냉장", value: "refrigerated" },
+                      {
+                        label: "냉장·차광",
+                        value: "refrigerated_light_protected",
+                      },
+                    ]}
+                    onValueChange={(storageMethod) =>
+                      updateDispensingPreset({ storageMethod })
+                    }
+                  />
+                </div>
+              </DrawerField>
+              <DrawerField label="조제 지시">
+                <Textarea
+                  className="min-h-20 resize-none"
+                  placeholder="조제 과정에서 확인할 내용을 입력해 주세요"
+                  value={draft.dispensingPreset.compoundNote}
+                  onChange={(event) =>
+                    updateDispensingPreset({
+                      compoundNote: event.target.value,
+                    })
+                  }
+                />
+              </DrawerField>
+              <DrawerField label="보호자 복약지도">
+                <Textarea
+                  className="min-h-20 resize-none"
+                  placeholder="보호자에게 전달할 기본 복약지도를 입력해 주세요"
+                  value={draft.dispensingPreset.guardianNote}
+                  onChange={(event) =>
+                    updateDispensingPreset({
+                      guardianNote: event.target.value,
+                    })
+                  }
+                />
+              </DrawerField>
+            </>
+          ) : null}
           <DrawerField label="케어가이드">
             <Textarea
               className="min-h-24 resize-none"
@@ -2974,6 +3481,30 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
             </div>
           </DrawerField>
           <DrawerField label="금액" required>
+            {dispensingOrder ? (
+              <div className="mb-2 grid gap-2 md:grid-cols-[86px_minmax(100px,1fr)]">
+                <div className="flex items-center emr-text-metadata font-semibold text-muted-foreground">
+                  가격 방식
+                </div>
+                <DrawerSelect
+                  ariaLabel="가격 방식"
+                  value={draft.priceMode ?? "fixed"}
+                  items={[
+                    { label: "수량 연동", value: "per_quantity" },
+                    { label: "처방 정액", value: "fixed" },
+                  ]}
+                  onValueChange={(priceMode) =>
+                    updateDraft({
+                      priceMode: priceMode as NonNullable<
+                        HospitalOrderDraft["priceMode"]
+                      >,
+                      saleUnit:
+                        priceMode === "fixed" ? "session" : "each",
+                    })
+                  }
+                />
+              </div>
+            ) : null}
             <div className="grid gap-2 md:grid-cols-[86px_minmax(100px,1fr)_86px_minmax(100px,1fr)]">
               <div className="flex items-center emr-text-metadata font-semibold text-muted-foreground">
                 판매 단위
@@ -2992,7 +3523,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                 }
               />
               <div className="flex items-center emr-text-metadata font-semibold text-muted-foreground">
-                판매 금액
+                {draft.priceMode === "per_quantity" ? "단가" : "판매 금액"}
               </div>
               <Input
                 aria-label="판매 금액"
@@ -3006,6 +3537,14 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                 }
               />
             </div>
+            {dispensingOrder && draft.dispensingPreset ? (
+              <p className="mt-2 emr-text-metadata text-muted-foreground">
+                {draft.priceMode === "per_quantity"
+                  ? `차트 확정 총량 ${draft.dispensingPreset.totalQuantity}${draft.dispensingPreset.totalQuantityUnit} × ${draft.price.toLocaleString()}원 = ${(draft.dispensingPreset.totalQuantity * draft.price).toLocaleString()}원`
+                  : `차트 확정 시 수량과 관계없이 처방 1건당 ${draft.price.toLocaleString()}원`}
+                으로 스냅샷을 고정합니다.
+              </p>
+            ) : null}
             <div className="mt-2 grid gap-2 md:grid-cols-[86px_minmax(100px,1fr)_86px_minmax(100px,1fr)]">
               <div className="flex items-center emr-text-metadata font-semibold text-muted-foreground">
                 반올림
@@ -3103,6 +3642,63 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
       <footer className="flex shrink-0 items-center justify-between gap-3 border-t bg-card px-6 py-4 shadow-sm">
         {creatingNewOrder ? (
           <div />
+        ) : reviewPending ? (
+          <Dialog
+            open={confirmReviewOpen}
+            onOpenChange={setConfirmReviewOpen}
+          >
+            <div className="flex gap-2">
+              <Button
+                size="default"
+                variant="outline"
+                disabled={
+                  mutationInFlight ||
+                  !catalogCapabilities.canApproveDispensing
+                }
+                onClick={() => {
+                  setReviewDecision("reject");
+                  setConfirmReviewOpen(true);
+                }}
+              >
+                반려
+              </Button>
+              <Button
+                size="default"
+                disabled={
+                  mutationInFlight ||
+                  !catalogCapabilities.canApproveDispensing
+                }
+                onClick={() => {
+                  setReviewDecision("approve");
+                  setConfirmReviewOpen(true);
+                }}
+              >
+                수의사 승인
+              </Button>
+            </div>
+            {confirmReviewOpen ? (
+              <EmrConfirmDialogContent
+                title={
+                  reviewDecision === "approve"
+                    ? "조제 오더를 승인할까요?"
+                    : "조제 오더를 반려할까요?"
+                }
+                description={
+                  reviewDecision === "approve"
+                    ? "승인하면 이 워크스페이스의 차트 오더 검색에서 사용할 수 있습니다. 이미 확정된 과거 오더는 바뀌지 않습니다."
+                    : "반려하면 신규 차트 선택에서 제외되고, 작성 내용과 감사 이력은 유지됩니다."
+                }
+                cancelLabel="취소"
+                confirmLabel={reviewDecision === "approve" ? "승인" : "반려"}
+                confirmButtonVariant={
+                  reviewDecision === "reject" ? "destructive" : "default"
+                }
+                closeAriaLabel="조제 오더 검토 확인 닫기"
+                onCancel={() => setConfirmReviewOpen(false)}
+                onConfirm={() => void handleReview(reviewDecision)}
+              />
+            ) : null}
+          </Dialog>
         ) : (
           <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
             <Button
@@ -3163,8 +3759,12 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                 }
                 description={
                   creatingNewOrder
-                    ? `${draft.standardName} 항목이 이 병원의 Order Catalog에 등록되고, 저장 후 차트의 Order 추가 검색 후보로 표시됩니다.`
-                    : "병원관리 Order Catalog와 차트 선택 후보에 변경값이 반영됩니다. 이미 확정된 과거 Order snapshot은 유지됩니다."
+                    ? hospitalCreatedDispensing
+                      ? `${draft.standardName} 항목이 이 워크스페이스 전용 검토 대기 오더로 등록됩니다. 수의사 승인 전에는 차트 검색에 표시되지 않습니다.`
+                      : `${draft.standardName} 항목이 이 병원의 Order Catalog에 등록되고, 저장 후 차트의 Order 추가 검색 후보로 표시됩니다.`
+                    : hospitalCreatedDispensing
+                      ? "변경값은 새 revision과 검토 대기로 저장됩니다. 새 차트 오더부터 적용되고, 미확정 초안·확정·조제·청구 snapshot은 자동으로 바뀌지 않습니다."
+                      : "병원관리 Order Catalog와 차트 선택 후보에 변경값이 반영됩니다. 새 차트 오더부터 적용되며 미확정 초안과 이미 확정된 과거 Order snapshot은 유지됩니다."
                 }
                 cancelLabel="취소"
                 confirmLabel={creatingNewOrder ? "등록" : "저장"}

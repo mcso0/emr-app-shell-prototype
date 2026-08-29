@@ -5912,8 +5912,15 @@ test("chart dispensing catalog prefills master prescription values and preserves
   const addedFrequency = page
     .getByLabel("Maropitant 16mg T 빈도", { exact: true })
     .nth(1);
+  const addedRow = addedDose.locator("xpath=ancestor::tr");
+  const addedQuantity = addedRow.getByLabel(/수량 수정/);
   await expect(addedDose).toHaveValue("0.5");
   await expect(addedDays).toHaveValue("7");
+  await expect(addedQuantity).toHaveValue("7");
+  // The draft writer resolves the live catalog again; the mock authority for
+  // this known catalog id owns the current 4,500원 unit price.
+  await expect(addedRow).toContainText("4,500");
+  await expect(addedRow).toContainText("31,500");
   await addedDose.fill("0.75");
   await addedFrequency.click();
   await page.getByRole("option", { name: "TID", exact: true }).click();
@@ -6557,6 +6564,47 @@ test("chart confirmation continues after an ambiguous draft response only when r
       });
     },
   );
+  const fulfillmentWorkItemId = "work-ambiguous-draft-readback";
+  await page.route(
+    "**/api/workspaces/clair-demo/fulfillment/work-items?*",
+    async (route) => {
+      const queueType = new URL(route.request().url()).searchParams.get(
+        "queueType",
+      );
+      await route.fulfill({
+        contentType: "application/json",
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          enforcedBy: "fulfillment-work-item-persistence",
+          workItems:
+            queueType === "dispensing"
+              ? [
+                  {
+                    assignedToUserId: null,
+                    createdAt: "2026-08-26T12:02:00.000Z",
+                    encounterId: kongEncounterId,
+                    id: fulfillmentWorkItemId,
+                    orderId,
+                    queueType: "dispensing",
+                    requestedByUserId: "user-vet",
+                    sourceSnapshot: {
+                      instruction: "1회 16mg, 1회",
+                      orderDisplayName: displayName,
+                      patientName: "콩",
+                      requestingVetName: "송민재",
+                    },
+                    status: "requested",
+                    updatedAt: "2026-08-26T12:02:00.000Z",
+                    workspaceId: "clair-demo",
+                  },
+                ]
+              : [],
+        },
+      });
+    },
+  );
 
   await page.goto(kongScenarioUrl);
   await page
@@ -6578,4 +6626,9 @@ test("chart confirmation continues after an ambiguous draft response only when r
   expect(new URL(page.url()).searchParams.get("encounterId")).toBe(
     kongEncounterId,
   );
+  await expect(
+    page.getByTestId(
+      `order-queue-item-live-fulfillment-${fulfillmentWorkItemId}`,
+    ),
+  ).toContainText(displayName);
 });

@@ -127,12 +127,191 @@ test("preset merge auto-updates unmodified rows and preserves customized rows", 
     presets: [nextCbcPreset],
     workspaceId: "clair-demo",
   });
-  expect(customizedMerge).toMatchObject({ createdCount: 0, updatedCount: 0, preservedCount: 1 });
+  expect(customizedMerge).toMatchObject({ createdCount: 0, updatedCount: 1, preservedCount: 0 });
   expect(customizedMerge.items[0]).toMatchObject({
-    sourcePresetVersion: "v3",
-    lastAutoMergedPresetVersion: "v3",
+    sourcePresetVersion: "v4",
+    lastAutoMergedPresetVersion: "v4",
     billingName: "우리병원 CBC",
-    presetMergeStatus: "update_available",
+    priceKrw: 13000,
+    presetMergeStatus: "conflict",
+  });
+});
+
+test("workspace dispensing creation stays pending until veterinarian approval", async () => {
+  const gateway = createMockOrderCatalogGateway();
+  const catalog = await gateway.listAdminCatalog({ workspaceId: "clair-demo" });
+  const seed = catalog.items.find((item) => item.id === "ord-med-maropitant");
+  expect(seed).toBeTruthy();
+  const { updatedAt: _updatedAt, ...item } = {
+    ...seed!,
+    id: "client-draft-id",
+    standardOrderId: "client-custom-id",
+    workspaceId: "foreign-workspace",
+    originType: "workspace_custom" as const,
+    availabilityStatus: "active" as const,
+  };
+  void _updatedAt;
+
+  const created = await mutateOrderCatalogItem({
+    actorUserId: "user-admin",
+    workspaceId: "clair-demo",
+    input: { action: "create", item },
+    gateway,
+    permissionAdapter: permissionAdapter(),
+  });
+  expect(created).toMatchObject({
+    ok: true,
+    item: {
+      availabilityStatus: "pending_activation",
+      originType: "workspace_custom",
+      workspaceDispensingReview: { status: "pending", revision: 1 },
+    },
+  });
+  if (!created.ok) return;
+  expect(created.item.id).not.toBe("client-draft-id");
+  expect(created.item.workspaceId).toBe("clair-demo");
+
+  const veterinarianCreated = await mutateOrderCatalogItem({
+    actorUserId: "user-vet",
+    workspaceId: "clair-demo",
+    input: {
+      action: "create",
+      item: { ...item, id: "veterinarian-client-draft" },
+    },
+    gateway,
+    permissionAdapter: permissionAdapter(),
+  });
+  expect(veterinarianCreated).toMatchObject({
+    ok: true,
+    item: {
+      availabilityStatus: "pending_activation",
+      workspaceDispensingReview: {
+        status: "pending",
+        authoredByUserId: "user-vet",
+      },
+    },
+  });
+
+  const pendingChart = await searchOrderCatalogForChart({
+    actorUserId: "user-vet",
+    workspaceId: "clair-demo",
+    gateway,
+    permissionAdapter: permissionAdapter(),
+  });
+  expect(pendingChart.ok).toBe(true);
+  if (pendingChart.ok) {
+    expect(pendingChart.rows.map((row) => row.workspaceCatalogItemId)).not.toContain(
+      created.item.id,
+    );
+  }
+
+  const adminReview = await mutateOrderCatalogItem({
+    actorUserId: "user-admin",
+    workspaceId: "clair-demo",
+    input: {
+      action: "review",
+      decision: "approve",
+      itemId: created.item.id,
+      expectedCatalogRevision: created.item.catalogRevision ?? 1,
+    },
+    gateway,
+    permissionAdapter: permissionAdapter(),
+  });
+  expect(adminReview).toMatchObject({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
+
+  const approved = await mutateOrderCatalogItem({
+    actorUserId: "user-vet",
+    workspaceId: "clair-demo",
+    input: {
+      action: "review",
+      decision: "approve",
+      itemId: created.item.id,
+      expectedCatalogRevision: created.item.catalogRevision ?? 1,
+    },
+    gateway,
+    permissionAdapter: permissionAdapter(),
+  });
+  expect(approved).toMatchObject({
+    ok: true,
+    item: {
+      availabilityStatus: "active",
+      workspaceDispensingReview: { status: "approved", revision: 2 },
+    },
+  });
+
+  const approvedChart = await searchOrderCatalogForChart({
+    actorUserId: "user-vet",
+    workspaceId: "clair-demo",
+    gateway,
+    permissionAdapter: permissionAdapter(),
+  });
+  expect(approvedChart.ok).toBe(true);
+  if (approvedChart.ok) {
+    expect(approvedChart.rows.map((row) => row.workspaceCatalogItemId)).toContain(
+      created.item.id,
+    );
+  }
+});
+
+test("administrator veterinarian may author and self-approve a workspace dispensing order", async () => {
+  const gateway = createMockOrderCatalogGateway();
+  const catalog = await gateway.listAdminCatalog({ workspaceId: "clair-demo" });
+  const seed = catalog.items.find((item) => item.id === "ord-med-maropitant");
+  expect(seed).toBeTruthy();
+  const { updatedAt: _updatedAt, ...item } = {
+    ...seed!,
+    id: "self-review-draft",
+    originType: "workspace_custom" as const,
+  };
+  void _updatedAt;
+  const permissions = createMockWorkspacePermissionAdapter({
+    users: [{ id: "user-admin-vet", status: "active" }],
+    memberships: [
+      {
+        id: "membership-admin-vet",
+        workspaceId: "clair-demo",
+        userId: "user-admin-vet",
+        roles: ["hospital_admin", "vet"],
+        status: "active",
+      },
+    ],
+    permissionPolicies: [
+      {
+        workspaceId: "clair-demo",
+        role: "hospital_admin",
+        permissionIds: ["*"] as never,
+      },
+    ],
+  });
+
+  const created = await mutateOrderCatalogItem({
+    actorUserId: "user-admin-vet",
+    workspaceId: "clair-demo",
+    input: { action: "create", item },
+    gateway,
+    permissionAdapter: permissions,
+  });
+  expect(created.ok).toBe(true);
+  if (!created.ok) return;
+  const approved = await mutateOrderCatalogItem({
+    actorUserId: "user-admin-vet",
+    workspaceId: "clair-demo",
+    input: {
+      action: "review",
+      decision: "approve",
+      itemId: created.item.id,
+      expectedCatalogRevision: created.item.catalogRevision ?? 1,
+    },
+    gateway,
+    permissionAdapter: permissions,
+  });
+  expect(approved).toMatchObject({
+    ok: true,
+    item: { availabilityStatus: "active" },
   });
 });
 
@@ -272,6 +451,42 @@ test("order catalog mutations emit safe audit events with changed field metadata
   expect(JSON.stringify(auditGateway.events[0])).not.toMatch(
     /full[_-]?soap|raw[_-]?payload|token|secret|provider/i,
   );
+});
+
+test("database-audited dispensing mutations do not emit a duplicate server audit", async () => {
+  const baseGateway = createMockOrderCatalogGateway(
+    undefined,
+    "2026-05-27T03:10:00.000Z",
+  );
+  const auditGateway = createMockLiveAuditAppendGateway();
+  const gateway = {
+    ...baseGateway,
+    async mutateOrder(
+      input: Parameters<typeof baseGateway.mutateOrder>[0],
+    ) {
+      const result = await baseGateway.mutateOrder(input);
+      return result.ok
+        ? { ...result, databaseAuditWritten: true as const }
+        : result;
+    },
+  };
+
+  const result = await mutateOrderCatalogItem({
+    actorUserId: "user-admin",
+    auditGateway,
+    gateway,
+    input: {
+      action: "update",
+      itemId: "ord-med-maropitant",
+      expectedCatalogRevision: 1,
+      patch: { priceKrw: 14000 },
+    },
+    permissionAdapter: permissionAdapter(),
+    workspaceId: "clair-demo",
+  });
+
+  expect(result).toMatchObject({ ok: true, status: 200 });
+  expect(auditGateway.events).toHaveLength(0);
 });
 
 test("order catalog route wires Supabase audit gateway for live mutations", () => {

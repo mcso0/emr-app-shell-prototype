@@ -28,9 +28,10 @@ related_work:
   - DEN-308
   - DEN-309
   - DEN-335
+  - CLINICAL-MASTER-PR-020
 supersedes: []
 superseded_by: []
-last_updated: 2026-08-18
+last_updated: 2026-08-29
 ---
 
 # Workspace Order Catalog Platform
@@ -63,7 +64,7 @@ flowchart LR
 
 | Existing work                                               | Reuse                                                                                                                                                        | Required reinforcement                                                                                                           |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| Project 07 `Hospital Admin Order Catalog Persistence`       | Reuse the local-first catalog foundation, admin/chart read boundaries, mutation boundary, order set expansion, lab item delete locks, and pricing snapshots. | Add product policy for system preset auto-merge, hospital-admin-only MVP management, "사용 중지" UX, and full category coverage. |
+| Project 07 `Hospital Admin Order Catalog Persistence`       | Reuse the local-first catalog foundation, admin/chart read boundaries, mutation boundary, order set expansion, lab item delete locks, and pricing snapshots. | Add product policy for system preset auto-merge, role-aware dispensing preset management, "사용 중지" UX, and full category coverage. |
 | Project 08 `Clinical Order Fulfillment Handoff Persistence` | Reuse confirmed-order-to-fulfillment work item routes, source snapshots, queue adoption, lifecycle readback, and billing candidate sync foundations.         | Add routing policy from workspace catalog destination, separated billing state, and technician return-only policy.               |
 | CSV/import planning                                         | Reuse no implementation.                                                                                                                                     | Design only a future-ready CSV template; do not build import in MVP phase 1.                                                     |
 
@@ -84,13 +85,23 @@ The first MVP scope must include all major hospital work-order categories:
 
 Leaving any of these out would make the hospital workflow feel incomplete.
 
-### 2. Phase-1 Management Permission
+### 2. Management And Dispensing Review Permission
 
-For phase 1, only `hospital_admin` can create, edit, or stop using workspace catalog orders.
+Non-dispensing workspace catalog management continues to require the approved
+catalog-management boundary such as `service_catalog:manage`.
 
-Future phases may allow managers or explicitly permitted vets, but that is a product permission change and needs a separate approval gate.
+Dispensing presets have a narrower clinical lifecycle:
 
-Implementation should still prefer a permission boundary such as `service_catalog:manage` so the role mapping can expand later without rewriting catalog behavior.
+- an active hospital administrator or veterinarian may author and edit a
+  workspace dispensing preset;
+- only an active veterinarian may approve or reject a hospital-created
+  dispensing preset;
+- a hospital administrator who is also an active veterinarian may approve the
+  preset they authored;
+- a hospital-created preset stays `pending_activation` and is excluded from
+  new chart selection until veterinarian approval;
+- the server and database re-check workspace membership and veterinarian
+  eligibility; client-only controls are never the permission boundary.
 
 ### 3. System Preset Auto-Merge
 
@@ -100,8 +111,8 @@ System preset updates should merge automatically with workspace catalogs:
 | --------------------------------------- | ------------------------------------------------------------------------------------ |
 | New CLAiR preset                        | Automatically add to workspace catalog when eligible.                                |
 | Existing row not customized by hospital | Automatically update from the latest preset.                                         |
-| Existing row customized by hospital     | Preserve hospital values; do not overwrite.                                          |
-| Conflict or meaningful preset change    | Preserve hospital values and leave future "update available" review UX as follow-up. |
+| Existing row customized by hospital     | Preserve customized fields while auto-merging non-customized fields.                 |
+| Conflict on a customized field          | Preserve the hospital value and mark a conflict for explicit review.                 |
 
 Implementation should track enough source metadata to support this later, such as source preset id, source preset version, imported version, and customized fields.
 
@@ -119,7 +130,11 @@ Rules:
 
 ### 5. Price Change Policy
 
-Phase 1 uses immediate price changes for future orders.
+Price changes apply immediately to future orders. Dispensing presets support
+both `unit_price` (수량 연동) and `fixed_order_price` (처방 정액). Unit pricing
+multiplies the frozen chart quantity by the frozen unit price; fixed pricing
+uses the frozen prescription price once regardless of clinical dispense
+quantity.
 
 CLAiR does not provide an authoritative default or suggested price in phase 1. The hospital workspace owns the current price. The target contract distinguishes an unset price from an intentionally free zero price, and a billable order cannot become active while its price is unset. Existing non-null zero defaults are compatibility behavior until a scoped schema migration changes them.
 
@@ -143,8 +158,26 @@ Chart confirmation must copy the catalog values needed to preserve historical re
 - billing reflection flag
 - destination and task-required flags
 - source preset id/version and workspace catalog row id
+- default dispensing details such as dose, route, frequency, duration, total
+  quantity, medication timing, storage, and instructions where relevant
+- hospital-created dispensing review status and revision where relevant
 
 Later catalog edits affect future order selection only. They must not mutate existing encounter orders, fulfillment source snapshots, or billing candidate amounts.
+
+### 6A. Dispensing Preset Detail And History Policy
+
+Every usable dispensing preset must provide clinically recognizable defaults
+for ingredient or compound content, dose and unit, route, frequency, duration,
+total quantity and unit, medication timing, and storage. Compound instructions,
+guardian guidance, and a manual quantity-adjustment reason are retained when
+applicable. These values are copied into a new chart draft and remain editable
+for the patient before confirmation.
+
+Hospital-created presets are workspace-owned and never acquire CLAiR master
+lineage. Saving a substantive edit to an approved hospital-created preset sends
+the revised preset back to veterinarian review. Already-confirmed orders keep
+their immutable applied and detail snapshots; the edit affects only new chart
+additions after approval.
 
 ### 7. Routing And Billing Policy
 
@@ -218,6 +251,12 @@ CSV import implementation is a later project. It would include upload UI, parsin
 | Fulfillment replay                     | `tests/fulfillment-handoff-replay.spec.ts`                                                                         |
 
 ## Implementation Guardrails
+
+- CLINICAL-MASTER-PR-020 adds the generic workspace dispensing preset drawer,
+  direct hospital creation, veterinarian review lifecycle, quantity-linked and
+  fixed prescription pricing, and server-owned review/audit fields. The feature
+  is workspace-scoped and must not contain a Cheongdam-only condition;
+  Cheongdam is the representative production smoke workspace.
 
 - DEN-307 adds the staging chart encounter-id bridge required for the live draft/confirmation path. Client/demo encounter ids such as `encounter-kong-260501` and `encounter-coco-260501` must be resolved on the server before calling live Supabase chart draft/action RPCs that require UUID encounter ids. The bridge remains workspace-member scoped and must not become a broad client-controlled encounter lookup.
 - DEN-308 separates hospital-admin table bulk checkbox selection from row focus. New or saved catalog rows may be highlighted for user orientation, but they must not be auto-selected for bulk actions. Catalog read should show table skeleton rows, save/use-stop mutations should use blocking progress UI, and row switching must preserve the drawer workflow without bypassing server mutation permissions.

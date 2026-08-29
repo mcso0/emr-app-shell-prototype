@@ -4998,7 +4998,18 @@ const getDraftLineTotal = (row: ChartOrderDraftRow) => {
   )
     return undefined;
 
-  return quantity * row.unitPrice;
+  return getChartOrderDraftAmountBasis(row) === "fixed_order_price"
+    ? row.unitPrice
+    : quantity * row.unitPrice;
+};
+
+const getChartOrderDraftAmountBasis = (row: ChartOrderDraftRow) => {
+  const catalogBasis = row.catalogSearchRow?.appliedSnapshot.appliedAmountBasis;
+  if (catalogBasis) return catalogBasis;
+  const runtimeSnapshot = row.runtimeRow?.appliedSnapshot;
+  const runtimeBasis =
+    runtimeSnapshot?.amountBasis ?? runtimeSnapshot?.appliedAmountBasis;
+  return typeof runtimeBasis === "string" ? runtimeBasis : "unit_price";
 };
 
 const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
@@ -7076,8 +7087,16 @@ function buildChartOrderDraftRowFromCatalog({
     createdAt: now,
     updatedAt: now,
   };
-  const quantityInput = "1";
   const defaultDetailInputs = readCatalogDefaultDetailInputs(row);
+  const defaultTotalQuantity = defaultDetailInputs.totalQuantity;
+  const quantityInput =
+    row.rowType === "individual" &&
+    row.appliedSnapshot.appliedAmountBasis === "unit_price" &&
+    typeof defaultTotalQuantity === "number" &&
+    Number.isFinite(defaultTotalQuantity) &&
+    defaultTotalQuantity > 0
+      ? String(defaultTotalQuantity)
+      : "1";
 
   return {
     billingName: row.billingName,

@@ -473,7 +473,11 @@ export function createMockChartOrderDraftGateway(
           encounterId,
           lineTotalSnapshot:
             draft.rowType === "individual"
-              ? roundMoney(draft.quantity * (unitPriceSnapshot ?? 0))
+              ? calculateMockCatalogLineTotal({
+                  appliedSnapshot: catalogRow?.appliedSnapshot,
+                  quantity: draft.quantity,
+                  unitPrice: unitPriceSnapshot,
+                })
               : 0,
           orderId: draft.orderId,
           quantity:
@@ -759,7 +763,11 @@ function getStoredOrSeedOrderDrafts({
       return {
         billingDisplayName: invoiceLine?.description ?? order.displayName,
         encounterId,
-        lineTotalSnapshot: roundMoney(quantity * (unitPriceSnapshot ?? 0)),
+        lineTotalSnapshot: calculateMockCatalogLineTotal({
+          appliedSnapshot: order.appliedSnapshot,
+          quantity,
+          unitPrice: unitPriceSnapshot,
+        }),
         orderId: order.id,
         quantity,
         unitPriceSnapshot,
@@ -1050,6 +1058,24 @@ function trimToUndefined(value?: string | null) {
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function calculateMockCatalogLineTotal({
+  appliedSnapshot,
+  quantity,
+  unitPrice,
+}: {
+  appliedSnapshot?: Record<string, unknown>;
+  quantity: number;
+  unitPrice: number | null;
+}) {
+  const amountBasis =
+    appliedSnapshot?.appliedAmountBasis ?? appliedSnapshot?.amountBasis;
+  return roundMoney(
+    amountBasis === "fixed_order_price"
+      ? (unitPrice ?? 0)
+      : quantity * (unitPrice ?? 0),
+  );
 }
 
 function mapCatalogCategoryToOrderType(

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CLAiR 워크스페이스 조제 프리셋 구현 보고서</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f5f7fb; }
+    main { max-width: 920px; margin: 40px auto; padding: 0 24px 56px; }
+    article { background: #fff; border: 1px solid #dce2ec; border-radius: 16px; padding: 32px; box-shadow: 0 8px 24px rgba(27, 42, 70, .06); }
+    .meta { color: #5b6680; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border-bottom: 1px solid #e5e9f0; padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: #46516b; font-size: 13px; }
+    code { background: #f0f3f8; border-radius: 4px; padding: 2px 4px; overflow-wrap: anywhere; }
+    .ok { color: #087443; font-weight: 700; }
+    .warn { color: #8a5b00; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <p class="meta">CLAiR Clinical Master / CLINICAL-MASTER-PR-020 / 2026-08-29</p>
+      <h1>병원 조제 프리셋 작성·수의사 승인·차트 연결</h1>
+      <p class="ok">상태: 구현과 집중 검증 완료, PR·원격 DB·production 릴리스 게이트 진행 전 후보</p>
+
+      <h2>요청과 결과</h2>
+      <table>
+        <thead><tr><th>요청</th><th>구현 결과</th></tr></thead>
+        <tbody>
+          <tr><td>기존 드로우에서 세부값 확인·수정</td><td>조제 오더에만 성분, 1회 용량, 단위, 투여 경로·빈도, 일수, 총량, 복용 시점, 보관, 조제 메모, 보호자 안내를 표시하고 수정할 수 있다.</td></tr>
+          <tr><td>병원 직접 생성</td><td>관리자와 수의사가 워크스페이스 전용 조제 프리셋을 만들 수 있다. 서버가 ID와 계보를 소유하며 글로벌 마스터로 자동 승격하지 않는다.</td></tr>
+          <tr><td>안전한 승인</td><td>직접 생성한 프리셋은 검토 대기로 시작해 차트 검색에서 제외된다. 활성 수의사만 승인·반려할 수 있고, 관리자 겸 수의사의 자기 승인은 감사 사실을 남긴 채 허용한다.</td></tr>
+          <tr><td>두 가격 방식</td><td><code>수량 × 단가</code>와 <code>처방 정액</code>을 모두 지원한다. 차트 확정 시 가격 방식과 최종 금액을 snapshot으로 고정한다.</td></tr>
+          <tr><td>업무 연결</td><td>차트에서 마스터 기본값이 자동 입력되고 수의사가 수정할 수 있다. 확정 후 같은 encounter의 조제/처치 화면으로 이동하며 해당 업무 행이 표시된다.</td></tr>
+          <tr><td>과거 오더 보호</td><td>카탈로그를 수정해도 이미 확정·조제·청구된 snapshot은 바뀌지 않는다. 미확정 초안도 자동으로 덮어쓰지 않는다.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>권한과 워크스페이스 경계</h2>
+      <p>작성은 활성 관리자 또는 활성 수의사, 승인은 활성 수의사만 가능하다. 공개 RPC가 인증·활성 멤버십·역할을 다시 확인하며, 클라이언트가 보낸 ID·master 계보·검토 상태는 신뢰하지 않는다. 같은 이름의 프리셋도 각 워크스페이스에서 독립적으로 관리된다.</p>
+
+      <h2>검증 결과</h2>
+      <p><span class="ok">통과:</span> TypeScript, ESLint(오류 0), 문서 링크, secret scan, 보고서 standalone/contract, 핵심 브라우저 5/5, 카탈로그·권한·snapshot·migration 계약 19/19.</p>
+      <p>로컬 SQL 트랜잭션에서 관리자 작성, 관리자 승인 거부, 수의사 승인 후 사용 전환, 서버 ID 강제, 다른 워크스페이스 차단을 직접 확인하고 rollback했다.</p>
+      <p class="warn">저장소 전체 clean DB reset은 이번 SQL에 도달하기 전 기존 20260826160000 migration이 원격 작성 workspace/release 행을 가정해 중단된다. 새 migration은 현재 base schema에 정상 적용됐고 새 DB lint finding은 0건이다.</p>
+      <p>넓은 회귀 묶음은 84건 중 74건이 통과했다. 남은 실패는 기존 fulfillment replay의 idempotency key 누락, 오래된 56px 기하 기대값, 무관한 audit 기대값 등 이번 변경 밖의 suite drift로 분리했다. 이번 변경 때문에 모호해진 switch locator는 접근성 이름 기준으로 수정 후 통과했다.</p>
+
+      <h2>변경 영역</h2>
+      <p>Hospital Admin 조제 드로우·store·server catalog, chart draft 가격 계산과 snapshot, audit event 허용 목록, Supabase workspace dispensing create/update/review RPC, product/data-model/permission 문서, focused Playwright 및 migration 계약 테스트가 변경됐다.</p>
+
+      <h2>주의와 다음 단계</h2>
+      <p>이 보고서는 merge 전 릴리스 후보 증거다. 원격 Supabase 적용, PR preview, exact SHA Release Check, <code>origin/main</code> merge, Ready production 배포, 청담 인증 브라우저 smoke는 별도 릴리스 증거로 확인해야 한다.</p>
+
+      <h2>Rollback</h2>
+      <p>문제가 생기면 병원 생성 프리셋을 사용 중지해 신규 차트 선택을 먼저 차단한다. 확정 snapshot은 유지하고 직접 생성·승인 UI를 비활성화한 뒤 직전 Ready deployment로 되돌린다.</p>
+    </article>
+  </main>
+</body>
+</html>

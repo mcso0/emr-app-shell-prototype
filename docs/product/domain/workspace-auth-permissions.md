@@ -9,9 +9,10 @@ related_work:
   - DEN-18
   - AUTH-PR-044
   - CHART-PR-015
+  - CLINICAL-MASTER-PR-020
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-20T00:00:00.000Z
+last_updated: 2026-08-29T00:00:00.000Z
 description: >-
   Defines workspace-based auth, membership, roles, permission behavior, and
   profile authorization boundaries.
@@ -154,7 +155,7 @@ Legend:
 | Billing refund/adjustment approval      | Owner / Admin by approved permission                      | Admin by approved permission | No                            | Configured, excluding owner-only powers             |
 | Inpatient / 입원                          | View / Create/Edit / Admin                                | View / Create/Edit / Admin   | View / Create/Edit / Complete | Configured                                          |
 | Hospital profile / 병원 기본정보              | Owner / Admin                                             | Admin                        | No                            | Configured                                          |
-| Order catalog / 병원관리 Order 관리           | Owner / Admin                                             | Admin                        | View                          | Configured                                          |
+| Order catalog / 병원관리 Order 관리           | Owner / Admin; veterinarian approval for hospital-created dispensing | Admin; may author dispensing | Veterinarian may author and approve dispensing; otherwise View | Configured, subject to the same veterinarian approval gate |
 | Member invitation / 구성원 초대              | Owner / Admin                                             | Admin                        | No                            | Configured if role-management permission is granted |
 | Member role/status management           | Owner / Admin                                             | Admin                        | No                            | Configured if role-management permission is granted |
 | Custom role management                  | Owner / Admin with grant ceiling                          | Admin with grant ceiling     | No                            | No self-escalation                                  |
@@ -168,6 +169,7 @@ Open product detail for later implementation:
 
 * Billing processing means reception/payment desk actions. Refund approval, destructive adjustment, settlement, accounting, and provider payment integrations require separate scope.
 * Admin can configure and administer modules, and can write charts by default, but final clinical authorship/approval should still be represented clearly in audit trails.
+* Workspace dispensing presets are the explicit exception to the general catalog-management matrix: active administrators and veterinarians may author them, but only an active veterinarian may approve or reject a hospital-created preset. A user who is both administrator and veterinarian may self-approve. The database, not the drawer, owns this gate.
 * `billing_admin` / `수납 관리자` is not a canonical MVP role. It may become a later custom role or large-hospital extension only after a separate product decision.
 * DEN-301 phase-1 policy: treatment fulfillment and dispensing fulfillment intentionally share the same permission boundary. A user with `dispensing:view` and `dispensing:complete` can read and complete both dispensing and treatment queue work in phase 1.
 * 마약류 are explicitly out of the phase-1 shared treatment/dispensing policy. Narcotic or controlled-substance workflows require a separate security and permission scope later, expected to be veterinarian-only or limited to users with explicit controlled-substance authority.

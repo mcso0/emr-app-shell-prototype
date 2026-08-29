@@ -59,6 +59,22 @@ export type OrderCatalogPresetMergeStatus =
   | "deprecated_source"
   | "detached";
 
+export type WorkspaceDispensingReviewStatus =
+  | "not_required"
+  | "pending"
+  | "approved"
+  | "rejected";
+
+export type WorkspaceDispensingReview = {
+  status: WorkspaceDispensingReviewStatus;
+  revision: number;
+  authoredByUserId?: string;
+  authoredAt?: string;
+  reviewedByUserId?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+};
+
 export type OrderCatalogItem = {
   id: string;
   workspaceId: string;
@@ -113,6 +129,7 @@ export type OrderCatalogItem = {
   detailSchemaVersion?: number;
   detailFieldSchema?: ClinicalOrderFieldSchema;
   billingEligible?: boolean;
+  workspaceDispensingReview?: WorkspaceDispensingReview;
   updatedAt: string;
 };
 
@@ -473,6 +490,12 @@ export type MedicationOrderMetadata = {
   ingredientEnglishName?: string;
 };
 
+export type OrderCatalogAdminCapabilities = {
+  canManageCatalog: boolean;
+  canAuthorDispensing: boolean;
+  canApproveDispensing: boolean;
+};
+
 export type DispensingOrderLineageSnapshot = {
   schemaVersion: 1 | 2;
   sourceDispensingProfileId: string;
@@ -643,6 +666,7 @@ export type AppliedOrderSnapshot = {
   defaultDetailInputs?: Record<string, unknown>;
   medicationMetadata?: MedicationOrderMetadata;
   dispensingLineage?: DispensingOrderLineageSnapshot;
+  workspaceDispensingReview?: WorkspaceDispensingReview;
 };
 
 export type ExpandedOrderSetRow = {
@@ -683,6 +707,13 @@ export type OrderCatalogMutationInput =
         labDefinition?: LabDefinitionMutationInput;
       };
     }
+  | {
+      action: "review";
+      decision: "approve" | "reject";
+      itemId: string;
+      expectedCatalogRevision: number;
+      note?: string;
+    }
   | { action: "pause"; itemId: string; expectedCatalogRevision: number };
 
 export type OrderCatalogGateway = {
@@ -697,7 +728,11 @@ export type OrderCatalogGateway = {
     mutation: OrderCatalogMutationInput;
     workspaceId: string;
   }): Promise<
-    | { ok: true; item: OrderCatalogItem }
+    | {
+        ok: true;
+        item: OrderCatalogItem;
+        databaseAuditWritten?: true;
+      }
     | { ok: false; status: 400; error: "invalid_input" }
     | { ok: false; status: 409; error: "catalog_revision_conflict" }
     | { ok: false; status: 500; error: "db_write_failed" }
@@ -777,6 +812,8 @@ export type SupabaseOrderCatalogRpcClient = {
       | "clair_preview_chart_order_set"
       | "clair_update_order_catalog_item"
       | "clair_create_order_catalog_item"
+      | "clair_create_workspace_dispensing_order"
+      | "clair_review_workspace_dispensing_order"
       | "clair_update_workspace_lab_test_item"
       | "clair_list_order_sets"
       | "clair_get_order_set"
@@ -809,6 +846,13 @@ export type SupabaseOrderCatalogRpcClient = {
           p_workspace_id: string;
         }
       | { p_item: Record<string, unknown>; p_workspace_id: string }
+      | {
+          p_action: "approve" | "reject";
+          p_expected_catalog_revision: number;
+          p_item_id: string;
+          p_note: string | null;
+          p_workspace_id: string;
+        }
       | { p_query: string | null; p_workspace_id: string }
       | { p_order_set_id: string; p_workspace_id: string }
       | {
@@ -868,7 +912,12 @@ export async function listOrderCatalogForAdmin({
   gateway?: OrderCatalogGateway;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
-}): Promise<OrderCatalogResult<{ items: OrderCatalogItem[] }>> {
+}): Promise<
+  OrderCatalogResult<{
+    items: OrderCatalogItem[];
+    capabilities: OrderCatalogAdminCapabilities;
+  }>
+> {
   const permission = requirePermission(
     permissionAdapter,
     actorUserId,
@@ -881,6 +930,11 @@ export async function listOrderCatalogForAdmin({
     ok: true,
     status: 200,
     items: result.items,
+    capabilities: resolveOrderCatalogAdminCapabilities(
+      permissionAdapter,
+      actorUserId,
+      workspaceId,
+    ),
     enforcedBy: "order-catalog-admin-read",
   };
 }
@@ -934,44 +988,66 @@ export async function mutateOrderCatalogItem({
   if (!isValidOrderCatalogMutationInput(input)) {
     return { ok: false, status: 400, error: "invalid_input" };
   }
-  const permission = requirePermission(
+  const viewPermission = requirePermission(
     permissionAdapter,
     actorUserId,
     workspaceId,
-    "service_catalog:manage",
+    "service_catalog:view",
   );
-  if (!permission.allowed) return permission.denied;
+  if (!viewPermission.allowed) return viewPermission.denied;
   const beforeItem = await readCatalogItemBeforeMutation({
     gateway,
     input,
     workspaceId,
   });
+  const capabilities = resolveOrderCatalogAdminCapabilities(
+    permissionAdapter,
+    actorUserId,
+    workspaceId,
+  );
+  const dispensingMutation = isDispensingCatalogMutation(input, beforeItem);
+  const allowed =
+    input.action === "review"
+      ? capabilities.canApproveDispensing &&
+        beforeItem?.originType === "workspace_custom"
+      : dispensingMutation
+        ? capabilities.canAuthorDispensing
+        : capabilities.canManageCatalog;
+  if (!allowed) {
+    return {
+      ok: false,
+      status: 403,
+      denialReason: "permission_missing",
+    };
+  }
   const result = await gateway.mutateOrder({
     actorUserId: actorUserId ?? "",
     mutation: input,
     workspaceId,
   });
   if (!result.ok) return result;
-  const audit = await emitLiveMutationAuditEvent({
-    auditGateway,
-    auditNow,
-    input: {
-      workspaceId,
-      actorUserId,
-      eventType: orderCatalogAuditEventType(input),
-      targetType: "order_catalog_item",
-      targetId: result.item.id,
-      requestId: auditRequestId,
-      before: beforeItem ? summarizeCatalogAuditItem(beforeItem) : {},
-      after: summarizeCatalogAuditItem(result.item),
-      metadata: {
-        action: input.action,
-        changedFields: orderCatalogChangedFields(input),
-        source: "order-catalog-admin-mutation",
+  if (!result.databaseAuditWritten) {
+    const audit = await emitLiveMutationAuditEvent({
+      auditGateway,
+      auditNow,
+      input: {
+        workspaceId,
+        actorUserId,
+        eventType: orderCatalogAuditEventType(input),
+        targetType: "order_catalog_item",
+        targetId: result.item.id,
+        requestId: auditRequestId,
+        before: beforeItem ? summarizeCatalogAuditItem(beforeItem) : {},
+        after: summarizeCatalogAuditItem(result.item),
+        metadata: {
+          action: input.action,
+          changedFields: orderCatalogChangedFields(input),
+          source: "order-catalog-admin-mutation",
+        },
       },
-    },
-  });
-  if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
+    });
+    if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
+  }
   return {
     ok: true,
     status: 200,
@@ -1070,6 +1146,12 @@ function isValidOrderCatalogMutationInput(
     return typeof input.itemId === "string" && input.itemId.trim().length > 0
       && validRevision(input.expectedCatalogRevision)
       && isRecord(input.patch);
+  }
+  if (input.action === "review") {
+    return typeof input.itemId === "string" && input.itemId.trim().length > 0
+      && validRevision(input.expectedCatalogRevision)
+      && (input.decision === "approve" || input.decision === "reject")
+      && (input.note === undefined || typeof input.note === "string");
   }
   return input.action === "pause"
     && typeof input.itemId === "string"
@@ -1306,6 +1388,9 @@ export function createOrderPricingSnapshot(
     dispensingLineage: item.dispensingLineage
       ? structuredClone(item.dispensingLineage)
       : undefined,
+    workspaceDispensingReview: item.workspaceDispensingReview
+      ? { ...item.workspaceDispensingReview }
+      : undefined,
   };
 }
 
@@ -1388,14 +1473,20 @@ export function initializeWorkspaceOrderCatalogFromPresets({
     }
 
     const customizationState = getCustomizationState(current);
-    if (
-      preset.presetStatus === "deprecated" ||
-      customizationState !== "unmodified"
-    ) {
+    if (preset.presetStatus === "deprecated") {
       itemsByPresetId.set(preset.presetId, {
         ...current,
         presetMergeStatus:
-          customizationState === "detached" ? "detached" : "update_available",
+          customizationState === "detached" ? "detached" : "deprecated_source",
+      });
+      preservedCount += 1;
+      continue;
+    }
+
+    if (customizationState === "detached") {
+      itemsByPresetId.set(preset.presetId, {
+        ...current,
+        presetMergeStatus: "detached",
       });
       preservedCount += 1;
       continue;
@@ -1406,6 +1497,37 @@ export function initializeWorkspaceOrderCatalogFromPresets({
       current.lastAutoMergedPresetVersion === preset.presetVersion
     ) {
       preservedCount += 1;
+      continue;
+    }
+
+    if (customizationState === "customized") {
+      const presetFields = copyPresetFields(preset);
+      const customizedFields = new Set(current.customizedFields ?? []);
+      const merged = { ...current } as Record<string, unknown>;
+      let conflict = false;
+
+      for (const [fieldName, presetValue] of Object.entries(presetFields)) {
+        if (customizedFields.has(fieldName)) {
+          if (!hasSameCatalogFieldValue(merged[fieldName], presetValue)) {
+            conflict = true;
+          }
+          continue;
+        }
+        merged[fieldName] = structuredClone(presetValue);
+      }
+
+      itemsByPresetId.set(preset.presetId, {
+        ...(merged as OrderCatalogItem),
+        sourcePresetVersion: preset.presetVersion,
+        initialImportedPresetVersion:
+          current.initialImportedPresetVersion ?? current.sourcePresetVersion,
+        lastAutoMergedPresetVersion: preset.presetVersion,
+        customizationState: "customized",
+        customizedFields: [...customizedFields],
+        presetMergeStatus: conflict ? "conflict" : "current",
+        updatedAt: now,
+      });
+      updatedCount += 1;
       continue;
     }
 
@@ -1556,15 +1678,35 @@ export function createMockOrderCatalogGateway(
         const validation = validateOrderItem(mutation.item);
         if (!validation.valid)
           return { ok: false, status: 400, error: "invalid_input" };
-        const id = mutation.item.id ?? `ord-${items.size + 1}`;
+        const workspaceDispensing =
+          mutation.item.categoryGroup === "medication" &&
+          mutation.item.defaultDestinationModule === "dispensing";
+        const id = workspaceDispensing
+          ? `ord-workspace-dispensing-${items.size + 1}`
+          : (mutation.item.id ?? `ord-${items.size + 1}`);
         const next = markCatalogItemCustomized(
           {
             ...mutation.item,
             id,
+            workspaceId,
+            standardOrderId: workspaceDispensing
+              ? `workspace-custom-${id}`
+              : mutation.item.standardOrderId,
+            availabilityStatus: workspaceDispensing
+              ? "pending_activation"
+              : mutation.item.availabilityStatus,
             catalogRevision: mutation.item.catalogRevision ?? 1,
             customizationState: mutation.item.customizationState ?? "detached",
             customizedFields: mutation.item.customizedFields ?? ["*"],
             presetMergeStatus: mutation.item.presetMergeStatus ?? "detached",
+            workspaceDispensingReview: workspaceDispensing
+              ? {
+                  status: "pending",
+                  revision: 1,
+                  authoredByUserId: actorUserId,
+                  authoredAt: now,
+                }
+              : { status: "not_required", revision: 0 },
             updatedAt: now,
           },
           ["*"],
@@ -1585,6 +1727,34 @@ export function createMockOrderCatalogGateway(
         return { ok: false, status: 409, error: "catalog_revision_conflict" };
       }
 
+      if (mutation.action === "review") {
+        if (
+          current.originType !== "workspace_custom" ||
+          current.categoryGroup !== "medication" ||
+          current.defaultDestinationModule !== "dispensing" ||
+          current.workspaceDispensingReview?.status !== "pending"
+        ) {
+          return { ok: false, status: 400, error: "invalid_input" };
+        }
+        const approved = mutation.decision === "approve";
+        const reviewed: OrderCatalogItem = {
+          ...current,
+          availabilityStatus: approved ? "active" : "paused",
+          catalogRevision: (current.catalogRevision ?? 1) + 1,
+          workspaceDispensingReview: {
+            ...current.workspaceDispensingReview,
+            status: approved ? "approved" : "rejected",
+            revision: current.workspaceDispensingReview.revision + 1,
+            reviewedByUserId: actorUserId,
+            reviewedAt: now,
+            reviewNote: mutation.note?.trim() || undefined,
+          },
+          updatedAt: now,
+        };
+        items.set(reviewed.id, reviewed);
+        return { ok: true, item: cloneItem(reviewed) };
+      }
+
       const next =
         mutation.action === "pause"
           ? markCatalogItemCustomized(
@@ -1599,12 +1769,32 @@ export function createMockOrderCatalogGateway(
               actorUserId,
             )
           : markCatalogItemCustomized(
-              {
-                ...current,
-                ...mutation.patch,
-                catalogRevision: (current.catalogRevision ?? 1) + 1,
-                updatedAt: now,
-              },
+              (() => {
+                const updated = {
+                  ...current,
+                  ...mutation.patch,
+                  catalogRevision: (current.catalogRevision ?? 1) + 1,
+                  updatedAt: now,
+                };
+                if (
+                  current.originType === "workspace_custom" &&
+                  current.categoryGroup === "medication" &&
+                  current.defaultDestinationModule === "dispensing"
+                ) {
+                  return {
+                    ...updated,
+                    availabilityStatus: "pending_activation" as const,
+                    workspaceDispensingReview: {
+                      status: "pending" as const,
+                      revision:
+                        (current.workspaceDispensingReview?.revision ?? 0) + 1,
+                      authoredByUserId: actorUserId,
+                      authoredAt: now,
+                    },
+                  };
+                }
+                return updated;
+              })(),
               Object.keys(mutation.patch),
               now,
               actorUserId,
@@ -2028,6 +2218,13 @@ type OrderCatalogItemDbRow = {
   detail_schema_version?: number | null;
   detail_field_schema?: Record<string, unknown> | null;
   billing_eligible?: boolean | null;
+  workspace_dispensing_review_status?: string | null;
+  workspace_dispensing_review_revision?: number | null;
+  workspace_dispensing_authored_by_user_id?: string | null;
+  workspace_dispensing_authored_at?: string | null;
+  workspace_dispensing_reviewed_by_user_id?: string | null;
+  workspace_dispensing_reviewed_at?: string | null;
+  workspace_dispensing_review_note?: string | null;
   category_group: string;
   category_label: string;
   t_code?: string | null;
@@ -2077,6 +2274,13 @@ const orderCatalogItemSelectColumns = [
   "catalog_revision",
   "source_projection_snapshot",
   "source_projection_fingerprint",
+  "workspace_dispensing_review_status",
+  "workspace_dispensing_review_revision",
+  "workspace_dispensing_authored_by_user_id",
+  "workspace_dispensing_authored_at",
+  "workspace_dispensing_reviewed_by_user_id",
+  "workspace_dispensing_reviewed_at",
+  "workspace_dispensing_review_note",
   "source_dispensing_profile_id",
   "source_dispensing_profile_revision",
   "source_medication_product_id",
@@ -2173,8 +2377,26 @@ export function createSupabaseOrderCatalogGateway(
           actorUserId,
         );
         const { data, error } = await client.rpc(
-          "clair_create_order_catalog_item",
+          mutation.item.categoryGroup === "medication" &&
+            mutation.item.defaultDestinationModule === "dispensing"
+            ? "clair_create_workspace_dispensing_order"
+            : "clair_create_order_catalog_item",
           { p_workspace_id: workspaceId, p_item: orderCatalogItemToRpcInput(next) },
+        );
+        if (error) return mapCatalogRpcError(error.message);
+        return normalizeCatalogRpcItem(data);
+      }
+
+      if (mutation.action === "review") {
+        const { data, error } = await client.rpc(
+          "clair_review_workspace_dispensing_order",
+          {
+            p_workspace_id: workspaceId,
+            p_item_id: mutation.itemId,
+            p_expected_catalog_revision: mutation.expectedCatalogRevision,
+            p_action: mutation.decision,
+            p_note: mutation.note?.trim() || null,
+          },
         );
         if (error) return mapCatalogRpcError(error.message);
         return normalizeCatalogRpcItem(data);
@@ -2203,7 +2425,15 @@ export function createSupabaseOrderCatalogGateway(
         const enriched = mapOrderCatalogDbRows(adminRead.data).find(
           (item) => item.id === normalized.item.id,
         );
-        if (enriched) return { ok: true, item: enriched };
+        if (enriched) {
+          return {
+            ok: true,
+            item: enriched,
+            ...(normalized.databaseAuditWritten
+              ? { databaseAuditWritten: true as const }
+              : {}),
+          };
+        }
       }
       return normalized;
     },
@@ -2665,14 +2895,24 @@ function b2ReadBoolean(row: Record<string, unknown>, snake: string, camel = snak
 }
 
 function normalizeCatalogRpcItem(value: unknown):
-  | { ok: true; item: OrderCatalogItem }
+  | {
+      ok: true;
+      item: OrderCatalogItem;
+      databaseAuditWritten?: true;
+    }
   | { ok: false; status: 400; error: "invalid_input" }
   | { ok: false; status: 500; error: "db_write_failed" } {
   const itemValue =
     isRecord(value) && isRecord(value.item) ? value.item : value;
   const item = mapOrderCatalogDbRow(itemValue);
   return item
-    ? { ok: true, item }
+    ? {
+        ok: true,
+        item,
+        ...(isRecord(value) && value.databaseAuditWritten === true
+          ? { databaseAuditWritten: true as const }
+          : {}),
+      }
     : { ok: false, status: 500, error: "db_write_failed" };
 }
 
@@ -2691,9 +2931,11 @@ function mapCatalogRpcError(
   }
   if (
     message?.includes("catalog_") ||
+    message?.includes("dispensing_review") ||
     message?.includes("pending_activation") ||
     message?.includes("active_billable") ||
-    message?.includes("workspace_admin_required")
+    message?.includes("workspace_admin_required") ||
+    message?.includes("veterinarian_required")
   ) {
     return { ok: false, status: 400, error: "invalid_input" };
   }
@@ -2938,6 +3180,7 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     detailSchemaVersion: executionContract.detailSchemaVersion,
     detailFieldSchema: executionContract.detailFieldSchema,
     billingEligible: executionContract.billingEligible,
+    workspaceDispensingReview: mapWorkspaceDispensingReview(row),
     categoryGroup: row.category_group as ServiceItemType,
     categoryLabel: row.category_label,
     tCode: row.t_code ?? undefined,
@@ -3007,6 +3250,31 @@ function mapOrderPricingRule(row: Partial<OrderCatalogItemDbRow>) {
   } as OrderPricingRule;
 }
 
+function mapWorkspaceDispensingReview(
+  row: Partial<OrderCatalogItemDbRow>,
+): WorkspaceDispensingReview | undefined {
+  const status = row.workspace_dispensing_review_status;
+  if (
+    status !== "not_required" &&
+    status !== "pending" &&
+    status !== "approved" &&
+    status !== "rejected"
+  ) {
+    return undefined;
+  }
+  return {
+    status,
+    revision: row.workspace_dispensing_review_revision ?? 0,
+    authoredByUserId:
+      row.workspace_dispensing_authored_by_user_id ?? undefined,
+    authoredAt: row.workspace_dispensing_authored_at ?? undefined,
+    reviewedByUserId:
+      row.workspace_dispensing_reviewed_by_user_id ?? undefined,
+    reviewedAt: row.workspace_dispensing_reviewed_at ?? undefined,
+    reviewNote: row.workspace_dispensing_review_note ?? undefined,
+  };
+}
+
 function hasObjectKeys(value: unknown) {
   return Boolean(
     value &&
@@ -3070,6 +3338,35 @@ export function createDemoOrderCatalogPermissionAdapter() {
   });
 }
 
+export function resolveOrderCatalogAdminCapabilities(
+  permissionAdapter: WorkspacePermissionAdapter,
+  actorUserId: string | null,
+  workspaceId: string,
+): OrderCatalogAdminCapabilities {
+  const context = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: actorUserId,
+    workspaceId,
+  });
+  if (!context.allowed) {
+    return {
+      canManageCatalog: false,
+      canAuthorDispensing: false,
+      canApproveDispensing: false,
+    };
+  }
+  const canManageCatalog = context.effectivePermissionIds.includes(
+    "service_catalog:manage",
+  );
+  const veterinarian =
+    context.assignedRoles.includes("vet") ||
+    context.jobPosition?.key === "veterinarian";
+  return {
+    canManageCatalog,
+    canAuthorDispensing: canManageCatalog || veterinarian,
+    canApproveDispensing: veterinarian,
+  };
+}
+
 function requirePermission(
   permissionAdapter: WorkspacePermissionAdapter,
   actorUserId: string | null,
@@ -3109,15 +3406,35 @@ async function readCatalogItemBeforeMutation({
   return current.items.find((item) => item.id === input.itemId) ?? null;
 }
 
+function isDispensingCatalogMutation(
+  input: OrderCatalogMutationInput,
+  current: OrderCatalogItem | null,
+) {
+  const item = input.action === "create" ? input.item : current;
+  return (
+    item?.categoryGroup === "medication" &&
+    (item.defaultDestinationModule === "dispensing" ||
+      item.destinationModule === "dispensing")
+  );
+}
+
 function orderCatalogAuditEventType(input: OrderCatalogMutationInput) {
   if (input.action === "create") return "order_catalog.created" as const;
   if (input.action === "pause") return "order_catalog.paused" as const;
+  if (input.action === "review") {
+    return input.decision === "approve"
+      ? ("order_catalog.review_approved" as const)
+      : ("order_catalog.review_rejected" as const);
+  }
   return "order_catalog.updated" as const;
 }
 
 function orderCatalogChangedFields(input: OrderCatalogMutationInput) {
   if (input.action === "create") return ["*"];
   if (input.action === "pause") return ["availabilityStatus"];
+  if (input.action === "review") {
+    return ["workspaceDispensingReview", "availabilityStatus"];
+  }
   return Object.keys(input.patch).sort();
 }
 
@@ -3136,6 +3453,7 @@ function summarizeCatalogAuditItem(item: OrderCatalogItem) {
     defaultDestinationModule: item.defaultDestinationModule,
     defaultTaskRequired: item.defaultTaskRequired,
     billingReflectionEnabled: item.billingReflectionEnabled,
+    workspaceDispensingReview: item.workspaceDispensingReview,
     pricingRule: {
       priceBasis: item.pricingRule.priceBasis,
       priceKrw: item.pricingRule.priceKrw,
@@ -3232,6 +3550,10 @@ function createCatalogItemId({
   );
 }
 
+function hasSameCatalogFieldValue(left: unknown, right: unknown) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 function getCustomizationState(
   item: OrderCatalogItem,
 ): OrderCatalogCustomizationState {
@@ -3278,7 +3600,15 @@ function cloneItem(item: OrderCatalogItem): OrderCatalogItem {
       ? [...item.customizedFields]
       : undefined,
     medicationMetadata: item.medicationMetadata
-      ? { ...item.medicationMetadata }
+      ? {
+          ...item.medicationMetadata,
+          defaultDetailInputs: item.medicationMetadata.defaultDetailInputs
+            ? structuredClone(item.medicationMetadata.defaultDetailInputs)
+            : undefined,
+        }
+      : undefined,
+    workspaceDispensingReview: item.workspaceDispensingReview
+      ? { ...item.workspaceDispensingReview }
       : undefined,
     dispensingLineage: item.dispensingLineage
       ? structuredClone(item.dispensingLineage)
@@ -3751,6 +4081,37 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
     dispensingLineage: mapDispensingOrderLineageSnapshot(
       row.dispensingLineage ?? row.dispensing_lineage,
     ),
+    workspaceDispensingReview: mapWorkspaceDispensingReviewValue(
+      row.workspaceDispensingReview ?? row.workspace_dispensing_review,
+    ),
+  };
+}
+
+function mapWorkspaceDispensingReviewValue(
+  value: unknown,
+): WorkspaceDispensingReview | undefined {
+  if (!isRecord(value)) return undefined;
+  const status = readString(value.status);
+  if (
+    status !== "not_required" &&
+    status !== "pending" &&
+    status !== "approved" &&
+    status !== "rejected"
+  ) {
+    return undefined;
+  }
+  return {
+    status,
+    revision: readNumber(value.revision) ?? 0,
+    authoredByUserId: readString(
+      value.authoredByUserId ?? value.authored_by_user_id,
+    ),
+    authoredAt: readString(value.authoredAt ?? value.authored_at),
+    reviewedByUserId: readString(
+      value.reviewedByUserId ?? value.reviewed_by_user_id,
+    ),
+    reviewedAt: readString(value.reviewedAt ?? value.reviewed_at),
+    reviewNote: readString(value.reviewNote ?? value.review_note),
   };
 }
 
