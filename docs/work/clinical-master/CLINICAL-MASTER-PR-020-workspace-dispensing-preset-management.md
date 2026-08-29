@@ -111,6 +111,10 @@ active veterinarian to approve it before chart search can use it.
   the new pending-review writer. Renamed legacy create/update layers have no
   `authenticated` execution grant, preventing direct Data API calls from
   bypassing the veterinarian-review dispatcher.
+- Workspace dispensing create, update/pause, and review now append a safe
+  central `audit_events` row inside the same database transaction. Direct RPC
+  calls cannot omit audit history, and the application skips its legacy
+  follow-up audit call when the database reports `databaseAuditWritten=true`.
 - Quantity-linked and fixed prescription prices now use the same selected
   pricing basis in the admin drawer, chart draft calculation, and frozen order
   snapshot. A confirmed order remains immutable when the catalog changes.

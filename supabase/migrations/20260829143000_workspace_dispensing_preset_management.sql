@@ -78,6 +78,136 @@ alter table public.audit_events
     'hospital.logo_updated','hospital.logo_removed'
   ));
 
+create or replace function private.clair_pr020_order_catalog_audit_snapshot(
+  p_item public.order_catalog_items
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $function$
+begin
+  if p_item is null then
+    return '{}'::jsonb;
+  end if;
+  return pg_catalog.jsonb_build_object(
+    'id', (p_item).id,
+    'standardOrderId', (p_item).standard_order_id,
+    'categoryGroup', (p_item).category_group,
+    'categoryLabel', (p_item).category_label,
+    'standardOrderName', (p_item).standard_order_name,
+    'inHospitalOrderName', (p_item).in_hospital_order_name,
+    'billingName', (p_item).billing_name,
+    'availabilityStatus', (p_item).availability_status,
+    'priceKrw', (p_item).price_krw,
+    'salesUnit', (p_item).sales_unit,
+    'defaultDestinationModule', (p_item).default_destination_module,
+    'defaultTaskRequired', (p_item).default_task_required,
+    'billingReflectionEnabled', (p_item).billing_reflection_enabled,
+    'workspaceDispensingReview', pg_catalog.jsonb_build_object(
+      'status', (p_item).workspace_dispensing_review_status,
+      'revision', (p_item).workspace_dispensing_review_revision,
+      'authoredByUserId', (p_item).workspace_dispensing_authored_by_user_id,
+      'authoredAt', (p_item).workspace_dispensing_authored_at,
+      'reviewedByUserId', (p_item).workspace_dispensing_reviewed_by_user_id,
+      'reviewedAt', (p_item).workspace_dispensing_reviewed_at
+    ),
+    'pricingRule', pg_catalog.jsonb_build_object(
+      'priceBasis', (p_item).pricing_rule ->> 'priceBasis',
+      'priceKrw', (p_item).price_krw,
+      'salesUnit', (p_item).sales_unit,
+      'taxIncluded', (p_item).tax_included,
+      'billingReflectionEnabled', (p_item).billing_reflection_enabled
+    ),
+    'updatedAt', (p_item).updated_at
+  );
+end;
+$function$;
+
+revoke all on function private.clair_pr020_order_catalog_audit_snapshot(
+  public.order_catalog_items
+) from public, anon, authenticated, service_role;
+
+create or replace function private.clair_pr020_append_order_catalog_audit(
+  p_workspace_id text,
+  p_event_type text,
+  p_target_id text,
+  p_before public.order_catalog_items,
+  p_after public.order_catalog_items,
+  p_action text,
+  p_changed_fields text[]
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if auth.uid() is null then
+    raise exception 'authentication_required' using errcode = '42501';
+  end if;
+  if p_event_type not in (
+      'order_catalog.created',
+      'order_catalog.updated',
+      'order_catalog.paused',
+      'order_catalog.review_approved',
+      'order_catalog.review_rejected'
+    ) then
+    raise exception 'order_catalog_audit_event_invalid' using errcode = '22023';
+  end if;
+  if (p_after).workspace_id is distinct from p_workspace_id
+     or (p_after).id is distinct from p_target_id then
+    raise exception 'order_catalog_audit_target_mismatch' using errcode = '42501';
+  end if;
+
+  insert into public.audit_events (
+    id, workspace_id, actor_user_id, actor_membership_id,
+    event_type, target_type, target_id,
+    encounter_id, patient_id, guardian_id, request_id, reason,
+    before_snapshot, after_snapshot, metadata, occurred_at
+  ) values (
+    'audit_pr020_' || pg_catalog.replace(
+      extensions.gen_random_uuid()::text,
+      '-',
+      ''
+    ),
+    p_workspace_id,
+    auth.uid(),
+    null,
+    p_event_type,
+    'order_catalog_item',
+    p_target_id,
+    null,
+    null,
+    null,
+    null,
+    null,
+    private.clair_pr020_order_catalog_audit_snapshot(p_before),
+    private.clair_pr020_order_catalog_audit_snapshot(p_after),
+    pg_catalog.jsonb_build_object(
+      'action', p_action,
+      'changedFields', pg_catalog.to_jsonb(coalesce(
+        p_changed_fields,
+        array[]::text[]
+      )),
+      'source', 'order-catalog-db-mutation'
+    ),
+    pg_catalog.now()
+  );
+end;
+$function$;
+
+revoke all on function private.clair_pr020_append_order_catalog_audit(
+  text,
+  text,
+  text,
+  public.order_catalog_items,
+  public.order_catalog_items,
+  text,
+  text[]
+) from public, anon, authenticated, service_role;
+
 create or replace function private.clair_validate_workspace_dispensing_preset(
   p_medication_metadata jsonb,
   p_price_krw integer,
@@ -339,10 +469,21 @@ begin
     'pending', 1, auth.uid(), pg_catalog.now()
   ) returning * into v_item;
 
+  perform private.clair_pr020_append_order_catalog_audit(
+    p_workspace_id,
+    'order_catalog.created',
+    v_item.id,
+    null::public.order_catalog_items,
+    v_item,
+    'create',
+    array['*']::text[]
+  );
+
   return pg_catalog.jsonb_build_object(
     'ok', true,
     'status', 200,
     'item', pg_catalog.to_jsonb(v_item),
+    'databaseAuditWritten', true,
     'enforcedBy', 'clair_create_workspace_dispensing_order'
   );
 end;
@@ -656,10 +797,33 @@ begin
   where workspace_id = p_workspace_id and id = p_item_id
   returning * into v_next;
 
+  perform private.clair_pr020_append_order_catalog_audit(
+    p_workspace_id,
+    case
+      when pg_catalog.cardinality(v_changed) = 1
+        and 'availabilityStatus' = any(v_changed)
+        and v_next.availability_status = 'paused'
+        then 'order_catalog.paused'
+      else 'order_catalog.updated'
+    end,
+    v_next.id,
+    v_item,
+    v_next,
+    case
+      when pg_catalog.cardinality(v_changed) = 1
+        and 'availabilityStatus' = any(v_changed)
+        and v_next.availability_status = 'paused'
+        then 'pause'
+      else 'update'
+    end,
+    v_changed
+  );
+
   return pg_catalog.jsonb_build_object(
     'ok', true,
     'status', 200,
     'item', pg_catalog.to_jsonb(v_next),
+    'databaseAuditWritten', true,
     'enforcedBy', 'clair_update_workspace_dispensing_order'
   );
 end;
@@ -761,6 +925,7 @@ set search_path = ''
 as $function$
 declare
   v_item public.order_catalog_items%rowtype;
+  v_before public.order_catalog_items%rowtype;
 begin
   if auth.uid() is null then
     raise exception 'authentication_required' using errcode = '42501';
@@ -794,6 +959,7 @@ begin
   if v_item.workspace_dispensing_review_status <> 'pending' then
     raise exception 'dispensing_review_not_pending' using errcode = '22023';
   end if;
+  v_before := v_item;
   perform private.clair_validate_workspace_dispensing_preset(
     v_item.medication_metadata,
     v_item.price_krw,
@@ -819,10 +985,24 @@ begin
   where workspace_id = p_workspace_id and id = p_item_id
   returning * into v_item;
 
+  perform private.clair_pr020_append_order_catalog_audit(
+    p_workspace_id,
+    case
+      when p_action = 'approve' then 'order_catalog.review_approved'
+      else 'order_catalog.review_rejected'
+    end,
+    v_item.id,
+    v_before,
+    v_item,
+    'review',
+    array['workspaceDispensingReview', 'availabilityStatus']::text[]
+  );
+
   return pg_catalog.jsonb_build_object(
     'ok', true,
     'status', 200,
     'item', pg_catalog.to_jsonb(v_item),
+    'databaseAuditWritten', true,
     'enforcedBy', 'clair_review_workspace_dispensing_order'
   );
 end;

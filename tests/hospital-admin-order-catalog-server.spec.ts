@@ -453,6 +453,42 @@ test("order catalog mutations emit safe audit events with changed field metadata
   );
 });
 
+test("database-audited dispensing mutations do not emit a duplicate server audit", async () => {
+  const baseGateway = createMockOrderCatalogGateway(
+    undefined,
+    "2026-05-27T03:10:00.000Z",
+  );
+  const auditGateway = createMockLiveAuditAppendGateway();
+  const gateway = {
+    ...baseGateway,
+    async mutateOrder(
+      input: Parameters<typeof baseGateway.mutateOrder>[0],
+    ) {
+      const result = await baseGateway.mutateOrder(input);
+      return result.ok
+        ? { ...result, databaseAuditWritten: true as const }
+        : result;
+    },
+  };
+
+  const result = await mutateOrderCatalogItem({
+    actorUserId: "user-admin",
+    auditGateway,
+    gateway,
+    input: {
+      action: "update",
+      itemId: "ord-med-maropitant",
+      expectedCatalogRevision: 1,
+      patch: { priceKrw: 14000 },
+    },
+    permissionAdapter: permissionAdapter(),
+    workspaceId: "clair-demo",
+  });
+
+  expect(result).toMatchObject({ ok: true, status: 200 });
+  expect(auditGateway.events).toHaveLength(0);
+});
+
 test("order catalog route wires Supabase audit gateway for live mutations", () => {
   expect(routeSource).toContain("createSupabaseLiveAuditAppendGateway");
   expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");

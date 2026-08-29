@@ -728,7 +728,11 @@ export type OrderCatalogGateway = {
     mutation: OrderCatalogMutationInput;
     workspaceId: string;
   }): Promise<
-    | { ok: true; item: OrderCatalogItem }
+    | {
+        ok: true;
+        item: OrderCatalogItem;
+        databaseAuditWritten?: true;
+      }
     | { ok: false; status: 400; error: "invalid_input" }
     | { ok: false; status: 409; error: "catalog_revision_conflict" }
     | { ok: false; status: 500; error: "db_write_failed" }
@@ -1022,26 +1026,28 @@ export async function mutateOrderCatalogItem({
     workspaceId,
   });
   if (!result.ok) return result;
-  const audit = await emitLiveMutationAuditEvent({
-    auditGateway,
-    auditNow,
-    input: {
-      workspaceId,
-      actorUserId,
-      eventType: orderCatalogAuditEventType(input),
-      targetType: "order_catalog_item",
-      targetId: result.item.id,
-      requestId: auditRequestId,
-      before: beforeItem ? summarizeCatalogAuditItem(beforeItem) : {},
-      after: summarizeCatalogAuditItem(result.item),
-      metadata: {
-        action: input.action,
-        changedFields: orderCatalogChangedFields(input),
-        source: "order-catalog-admin-mutation",
+  if (!result.databaseAuditWritten) {
+    const audit = await emitLiveMutationAuditEvent({
+      auditGateway,
+      auditNow,
+      input: {
+        workspaceId,
+        actorUserId,
+        eventType: orderCatalogAuditEventType(input),
+        targetType: "order_catalog_item",
+        targetId: result.item.id,
+        requestId: auditRequestId,
+        before: beforeItem ? summarizeCatalogAuditItem(beforeItem) : {},
+        after: summarizeCatalogAuditItem(result.item),
+        metadata: {
+          action: input.action,
+          changedFields: orderCatalogChangedFields(input),
+          source: "order-catalog-admin-mutation",
+        },
       },
-    },
-  });
-  if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
+    });
+    if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
+  }
   return {
     ok: true,
     status: 200,
@@ -2419,7 +2425,15 @@ export function createSupabaseOrderCatalogGateway(
         const enriched = mapOrderCatalogDbRows(adminRead.data).find(
           (item) => item.id === normalized.item.id,
         );
-        if (enriched) return { ok: true, item: enriched };
+        if (enriched) {
+          return {
+            ok: true,
+            item: enriched,
+            ...(normalized.databaseAuditWritten
+              ? { databaseAuditWritten: true as const }
+              : {}),
+          };
+        }
       }
       return normalized;
     },
@@ -2881,14 +2895,24 @@ function b2ReadBoolean(row: Record<string, unknown>, snake: string, camel = snak
 }
 
 function normalizeCatalogRpcItem(value: unknown):
-  | { ok: true; item: OrderCatalogItem }
+  | {
+      ok: true;
+      item: OrderCatalogItem;
+      databaseAuditWritten?: true;
+    }
   | { ok: false; status: 400; error: "invalid_input" }
   | { ok: false; status: 500; error: "db_write_failed" } {
   const itemValue =
     isRecord(value) && isRecord(value.item) ? value.item : value;
   const item = mapOrderCatalogDbRow(itemValue);
   return item
-    ? { ok: true, item }
+    ? {
+        ok: true,
+        item,
+        ...(isRecord(value) && value.databaseAuditWritten === true
+          ? { databaseAuditWritten: true as const }
+          : {}),
+      }
     : { ok: false, status: 500, error: "db_write_failed" };
 }
 

@@ -55,3 +55,15 @@ test("legacy public catalog writers cannot bypass dispensing review", () => {
     "revoke all on function public.clair_update_order_catalog_item_a2_unlocked",
   );
 });
+
+test("dispensing writers append audit events atomically in the database", () => {
+  expect(migration).toContain(
+    "create or replace function private.clair_pr020_append_order_catalog_audit",
+  );
+  expect(migration).toContain("insert into public.audit_events");
+  expect(migration).toContain("'order_catalog.created'");
+  expect(migration).toContain("'order_catalog.review_approved'");
+  expect(migration).toContain("'order_catalog.review_rejected'");
+  expect(migration).toContain("'databaseAuditWritten', true");
+  expect(migration).toContain("'source', 'order-catalog-db-mutation'");
+});
