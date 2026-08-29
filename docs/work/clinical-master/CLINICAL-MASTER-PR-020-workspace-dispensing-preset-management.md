@@ -106,6 +106,11 @@ active veterinarian to approve it before chart search can use it.
 - Workspace admins and veterinarians can create a workspace-owned dispensing
   preset. The server owns its ID and lineage, starts it as pending, and excludes
   it from chart search until an active veterinarian approves it.
+- The existing generic catalog create/update RPC names remain compatible for
+  non-dispensing callers, but medication/dispensing creation is routed through
+  the new pending-review writer. Renamed legacy create/update layers have no
+  `authenticated` execution grant, preventing direct Data API calls from
+  bypassing the veterinarian-review dispatcher.
 - Quantity-linked and fixed prescription prices now use the same selected
   pricing basis in the admin drawer, chart draft calculation, and frozen order
   snapshot. A confirmed order remains immutable when the catalog changes.
@@ -121,7 +126,7 @@ active veterinarian to approve it before chart search can use it.
 - Focused Hospital Admin, chart default/edit, confirmation redirect, visible
   dispensing work-item, and existing drawer edit Playwright checks — 5/5 passed.
 - Order-catalog permission, merge, audit, snapshot, and migration contract
-  checks — 19/19 passed.
+  checks — 20/20 passed, including the legacy-RPC bypass guard.
 - Broader Hospital Admin/fulfillment/audit run — 74/84 passed. The one
   newly-ambiguous switch locator was corrected and passed alone. The remaining
   failures reproduce existing suite drift outside this change, including the
@@ -130,6 +135,13 @@ active veterinarian to approve it before chart search can use it.
 - The new migration applied successfully to the local schema, and a rolled-back
   SQL transaction passed admin authoring, admin approval denial, veterinarian
   approval/use activation, server-owned ID, and cross-workspace denial.
+- A remote read-only ACL preflight found the pre-existing generic create and A2
+  update layers were executable by `authenticated`; the release candidate now
+  revokes those internal grants and keeps only the guarded public wrappers.
+  A local authenticated rollback replay proved a disguised medication
+  classification still routes to pending review, all four renamed/internal
+  writer calls are denied, non-dispensing creation remains compatible, and no
+  probe row persists.
 - A clean repository-wide `supabase db reset --no-seed` is currently blocked
   before this migration by the pre-existing `20260826160000` migration assuming
   remote-authored workspace/release rows. This migration itself introduces no

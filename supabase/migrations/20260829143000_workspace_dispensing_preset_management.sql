@@ -353,6 +353,101 @@ revoke all on function public.clair_create_workspace_dispensing_order(text, json
 grant execute on function public.clair_create_workspace_dispensing_order(text, jsonb)
   to authenticated;
 
+-- Keep the generic catalog creation endpoint for non-dispensing categories,
+-- but make every medication/dispensing request pass through the veterinarian
+-- review lifecycle above.  The prior generic writer defaulted to `active` and
+-- must not remain a directly callable bypass after it is renamed.
+do $block$
+begin
+  if pg_catalog.to_regprocedure(
+       'public.clair_create_order_catalog_item_pr020_legacy(text,jsonb)'
+     ) is null
+     and pg_catalog.to_regprocedure(
+       'public.clair_create_order_catalog_item(text,jsonb)'
+     ) is not null then
+    alter function public.clair_create_order_catalog_item(text, jsonb)
+      rename to clair_create_order_catalog_item_pr020_legacy;
+  end if;
+end;
+$block$;
+
+revoke all on function public.clair_create_order_catalog_item_pr020_legacy(
+  text, jsonb
+) from public, anon, authenticated, service_role;
+
+create or replace function public.clair_create_order_catalog_item(
+  p_workspace_id text,
+  p_item jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_requested_category text := coalesce(
+    p_item ->> 'categoryGroup',
+    p_item ->> 'category_group'
+  );
+  v_requested_destination text := coalesce(
+    p_item ->> 'defaultDestinationModule',
+    p_item ->> 'default_destination_module'
+  );
+  v_requested_path_text text := nullif(coalesce(
+    p_item ->> 'classificationPathId',
+    p_item ->> 'classification_path_id'
+  ), '');
+  v_requested_path_id uuid;
+  v_path_item_type text;
+  v_path_destination text;
+begin
+  if p_item is null or pg_catalog.jsonb_typeof(p_item) <> 'object' then
+    raise exception 'catalog_item_object_required' using errcode = '22023';
+  end if;
+
+  if v_requested_path_text is not null then
+    begin
+      v_requested_path_id := v_requested_path_text::uuid;
+    exception when invalid_text_representation then
+      raise exception 'catalog_classification_path_invalid' using errcode = '22023';
+    end;
+
+    select action.item_type, route.destination_module
+      into v_path_item_type, v_path_destination
+    from master.classification_paths path
+    join master.clinical_actions action
+      on action.master_record_id = path.clinical_action_id
+    join master.task_routes route
+      on route.master_record_id = path.task_route_id
+    where path.id = v_requested_path_id
+      and path.retired_in_release_id is null;
+  end if;
+
+  if v_requested_category = 'medication'
+     or v_requested_destination = 'dispensing'
+     or v_path_item_type = 'medication'
+     or v_path_destination = 'dispensing' then
+    return public.clair_create_workspace_dispensing_order(
+      p_workspace_id,
+      p_item || pg_catalog.jsonb_build_object(
+        'categoryGroup', 'medication',
+        'defaultDestinationModule', 'dispensing'
+      )
+    );
+  end if;
+
+  return public.clair_create_order_catalog_item_pr020_legacy(
+    p_workspace_id,
+    p_item
+  );
+end;
+$function$;
+
+revoke all on function public.clair_create_order_catalog_item(text, jsonb)
+  from public, anon, service_role;
+grant execute on function public.clair_create_order_catalog_item(text, jsonb)
+  to authenticated;
+
 create or replace function private.clair_update_workspace_dispensing_order(
   p_workspace_id text,
   p_item_id text,
@@ -588,6 +683,20 @@ begin
   end if;
 end;
 $block$;
+
+-- The renamed dispatcher and its older A2 layers are implementation details.
+-- Their former authenticated grants would allow direct callers to skip the
+-- PR-020 dispensing-review dispatcher, so only the new public wrapper remains
+-- executable by authenticated clients.
+revoke all on function public.clair_update_order_catalog_item_pr020_legacy(
+  text, text, integer, jsonb
+) from public, anon, authenticated, service_role;
+revoke all on function public.clair_update_order_catalog_item_a2_base(
+  text, text, integer, jsonb
+) from public, anon, authenticated, service_role;
+revoke all on function public.clair_update_order_catalog_item_a2_unlocked(
+  text, text, integer, jsonb
+) from public, anon, authenticated, service_role;
 
 create or replace function public.clair_update_order_catalog_item(
   p_workspace_id text,

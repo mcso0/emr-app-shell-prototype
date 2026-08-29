@@ -32,3 +32,26 @@ test("workspace dispensing migration never accepts client master lineage or clie
   expect(migration).not.toContain("nullif(pg_catalog.btrim(p_item ->> 'id')");
   expect(migration).toContain("where workspace_id = p_workspace_id and id = p_item_id");
 });
+
+test("legacy public catalog writers cannot bypass dispensing review", () => {
+  expect(migration).toContain(
+    "rename to clair_create_order_catalog_item_pr020_legacy",
+  );
+  expect(migration).toContain(
+    "return public.clair_create_workspace_dispensing_order(",
+  );
+  expect(migration).toContain("v_path_item_type = 'medication'");
+  expect(migration).toContain("v_path_destination = 'dispensing'");
+  expect(migration).toContain(
+    "revoke all on function public.clair_create_order_catalog_item_pr020_legacy",
+  );
+  expect(migration).toContain(
+    "revoke all on function public.clair_update_order_catalog_item_pr020_legacy",
+  );
+  expect(migration).toContain(
+    "revoke all on function public.clair_update_order_catalog_item_a2_base",
+  );
+  expect(migration).toContain(
+    "revoke all on function public.clair_update_order_catalog_item_a2_unlocked",
+  );
+});
