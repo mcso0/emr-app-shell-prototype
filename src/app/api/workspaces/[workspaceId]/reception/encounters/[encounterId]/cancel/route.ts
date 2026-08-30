@@ -19,7 +19,10 @@ import {
 } from "@/features/audit/server-audit-log-persistence";
 import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  normalizeSupabaseRequestId,
+} from "@/lib/supabase/server";
 
 type RouteContext = {
   params: Promise<{
@@ -40,7 +43,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   return handleEncounterCancel(request, context);
 }
 
-async function handleEncounterCancel(request: Request, { params }: RouteContext) {
+async function handleEncounterCancel(
+  request: Request,
+  { params }: RouteContext,
+) {
   const { encounterId, workspaceId } = await params;
   const serverSession = await readServerSession();
   const identity = resolveRoleUpdateActorIdentity({
@@ -69,7 +75,11 @@ async function handleEncounterCancel(request: Request, { params }: RouteContext)
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readJsonBody(request);
-  const client = identity.source === "supabase_session" ? await createClient() : null;
+  const auditRequestId = normalizeSupabaseRequestId(getAuditRequestId(request));
+  const client =
+    identity.source === "supabase_session"
+      ? await createClient({ requestId: auditRequestId })
+      : null;
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
         gateway: createSupabaseWorkspacePermissionGateway(
@@ -95,16 +105,27 @@ async function handleEncounterCancel(request: Request, { params }: RouteContext)
           client as unknown as SupabaseLiveAuditAppendRpcClient,
         )
       : undefined,
-    auditRequestId: getAuditRequestId(request),
+    auditRequestId,
   });
+
+  if (!result.ok && result.status === 500) {
+    console.error("Reception encounter cancel failed", {
+      operation: "reception_encounter_cancel",
+      error: result.error,
+    });
+  }
 
   return Response.json(result, { status: result.status });
 }
 
-async function readJsonBody(request: Request): Promise<EncounterCancelRequestBody> {
+async function readJsonBody(
+  request: Request,
+): Promise<EncounterCancelRequestBody> {
   try {
     const value = (await request.json()) as unknown;
-    return value && typeof value === "object" ? value as EncounterCancelRequestBody : {};
+    return value && typeof value === "object"
+      ? (value as EncounterCancelRequestBody)
+      : {};
   } catch {
     return {};
   }

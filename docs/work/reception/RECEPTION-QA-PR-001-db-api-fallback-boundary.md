@@ -54,7 +54,7 @@ Freeze the data-boundary contract for DEN-514 through DEN-517 so the reception/r
 - Appointment creation is missing as a live contract. Current support covers appointment read/check-in, not create/update/cancel/no-show.
 - Encounter detail edit is missing as a live contract for mutable reception fields: weight, visit purpose, duration, department, veterinarian, and memo.
 - DB RPC permission enforcement is weaker than server route enforcement. Current reception RPCs mainly enforce active workspace membership and object workspace scope; server core enforces `reception:view`, `reception:create`, or `reception:update`.
-- Reception write audit is not atomic with DB mutation. Walk-in create, appointment check-in, and encounter cancel emit audit after RPC mutation in TypeScript.
+- Reception write audit is not uniformly atomic with DB mutation. Walk-in create and appointment check-in still emit audit after RPC mutation in TypeScript. RECEPTION-LIVE-PR-018 moves encounter cancel state changes and `reception.encounter_cancelled` audit emission into one DB transaction.
 - Walk-in create passes actor ID into RPC but currently stores `checked_in_by_user_id` as `null`.
 - Route/UI tests that use demo headers or intercepted responses prove wiring only. They do not prove live Supabase/RLS behavior.
 
