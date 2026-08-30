@@ -1002,7 +1002,7 @@ test("customer patient table keeps animal identity pinned while data columns scr
   expect(boundaryStyles.dimmer).toMatchObject({
     backgroundColor: "rgba(0, 0, 0, 0.04)",
     boxShadow: "none",
-    opacity: "1",
+    opacity: "0",
     pointerEvents: "none",
     position: "absolute",
     width: "6px",
