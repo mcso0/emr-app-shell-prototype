@@ -3,7 +3,7 @@ id: "CLINICAL-BILLING-PR-017"
 status: "human_review"
 area: "clinical-billing"
 priority: "P0"
-target_pr: "User request / GitHub PR pending"
+target_pr: "GitHub PR #673"
 source_docs:
   - "docs/product/domain/order-fulfillment-handoff.md"
   - "docs/engineering/data-model/order-fulfillment-handoff-contract.md"
