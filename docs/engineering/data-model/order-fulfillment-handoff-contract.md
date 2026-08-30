@@ -108,14 +108,14 @@ Type-specific `detail` examples:
 
 | Fulfillment status | Order lifecycle effect | Billing effect |
 | --- | --- | --- |
-| `requested` | order remains `requested` or `in_progress` depending on chart action | none automatically; chart `Order 청구` may create or refresh a billing candidate after unfinished-work confirmation |
-| `accepted` | order can remain `in_progress` | none automatically; chart `Order 청구` may create or refresh a billing candidate after unfinished-work confirmation |
-| `in_progress` | order should be `in_progress` | none automatically; chart `Order 청구` may create or refresh a billing candidate after unfinished-work confirmation |
-| `completed` | order becomes `completed` for the local-first fulfillment path | chart `Order 청구` may create or refresh a billing candidate without additional unfinished-work confirmation |
+| `requested` | order remains `requested` or `in_progress` depending on chart action | confirmation may create an internal candidate; chart `Order 청구` invoice-links it after unfinished-work acknowledgement |
+| `accepted` | order can remain `in_progress` | confirmed candidate may be invoice-linked without changing work state after acknowledgement |
+| `in_progress` | order should be `in_progress` | confirmed candidate may be invoice-linked without changing work state after acknowledgement |
+| `completed` | order becomes `completed` for the local-first fulfillment path | confirmed candidate may be invoice-linked without an unfinished-work warning |
 | `cancelled` | order becomes `cancelled` | candidate is not created from this fulfillment update |
 | `returned` | order becomes `re_requested` | candidate does not advance automatically; chart user confirmation is required if billing is intentionally requested |
 
-`DEN-335` establishes the current policy: chart `Order 청구` is the trusted chart action for billing candidate creation across lab, imaging, dispensing, and treatment. The action must not change order or fulfillment work status.
+`CLINICAL-BILLING-PR-017` supersedes the older selected-row billing wording. Confirmation creates the internal frozen candidate; encounter-scoped chart `Order 청구` is the trusted, atomic invoice-link boundary. Draft rows are included only in the estimate, and the action must not change encounter, order execution, or fulfillment work status.
 
 `DEN-340` validates that the current table split can represent separated work and billing states without a schema migration:
 
@@ -125,7 +125,7 @@ Type-specific `detail` examples:
 - `clair_save_chart_order_action(action = 'bill')` marks the selected non-cancelled order as a billing candidate and preserves order/work/fulfillment status.
 - `clair_sync_billing_invoice_candidates` validates the same workspace/encounter/order scope, excludes cancelled and non-billable rows, lazily creates a draft invoice anchor when needed, upserts deterministic invoice lines, and recalculates invoice totals from server-owned order snapshots.
 
-The current two-RPC path is acceptable for local-first MVP and DEN-341 staging replay because failed invoice sync can be retried after `billing_candidate_status = 'candidate_created'`; the sync RPC accepts that state and is idempotent for the active invoice/order pair. A single consolidated RPC/transaction is not required for DEN-341, but should be treated as an approval-gated hardening option if the product requires strict all-or-nothing UX for chart billing action plus invoice candidate creation.
+The PR-017 path consolidates stale-summary validation, candidate selection, invoice-line linkage, invoice total refresh, candidate status update, and audit into `clair_request_chart_order_billing`. It holds the encounter billing advisory lock, accepts only server-derived requestable IDs, and records an actor/workspace/encounter-bound idempotency command so a lost success response can be replayed without duplicating the invoice, line, audit event, or command. `order_billing_candidates` is the invoice-line authority after a billing-only correction; its billing name, quantity, unit price, and amount must exactly match the generated line. The legacy two-RPC action remains compatibility code but is not the footer action authority.
 
 `DEN-349` originally fixed candidate promotion language around a user-facing `청구 확정` step:
 

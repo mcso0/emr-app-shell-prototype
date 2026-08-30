@@ -117,9 +117,10 @@ Fulfillment work item states are intentionally operational. They do not replace 
 * Cancelling an order must decide whether active fulfillment work is cancelled, returned, or locked for review.
 * Completing a work item can update order lifecycle, but completion is not the only path to billing candidate creation.
 * Billing candidates must use server-owned service item and price snapshots. Client-submitted amount is not trusted.
-* `Order 청구` is the chart-owned action that moves selected billable orders to billing candidate state across `lab`, `imaging`, `dispensing`, and `treatment`.
-* `Order 청구` must not change operational work status. `requested + 수납 후보`, `in_progress + 수납 후보`, and `completed + 수납 후보` are all valid combinations.
-* `Order 청구` means the selected billable orders have been intentionally requested for payment. They should appear in the billing workspace as `수납대기` / `수납 후보` and are payable regardless of current operational work status, except cancelled rows.
+* Confirmation may create an internal `candidate_created` record from the frozen snapshot. That record is billing-ready input, not yet a payable handoff.
+* `Order 청구` is the encounter-scoped chart action that atomically links every eligible confirmed candidate to one invoice across `lab`, `imaging`, `dispensing`, and `treatment`. Table checkbox selection is not its scope.
+* `Order 청구` must not change encounter or operational work status. `requested + 청구됨`, `in_progress + 청구됨`, and `completed + 청구됨` are all valid combinations.
+* `Order 청구` means the eligible confirmed orders have been intentionally requested for payment. They appear in Billing as invoice-linked payable rows regardless of operational work status, except cancelled rows. Draft amounts remain estimate-only.
 * The billing workspace should not require a second user-facing `청구 확정` step before payment. The primary billing action should be `수납 진행` or `결제 진행`, after the billing user reviews selected rows, optional add-on sale items, discounts, surcharges, and memo context.
 * If the implementation needs an immutable amount snapshot before payment provider handoff, that confirmation should be an internal checkout preparation/issue transition tied to `수납 진행`, not a separate primary UX step named `청구 확정`.
 * Payment completion happens through `수납 완료`; it must change payment state only and must not be the first point where candidates become visible.
@@ -153,20 +154,20 @@ member without creating a second work-history model.
 
 ## Billing State Matrix
 
-| Work state                  | Billing candidate rule                                                                              | User confirmation       |
+| Work state                  | Billing handoff rule                                                                                | User confirmation       |
 | --------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------- |
-| `requested`                 | Can be moved to billing candidate by chart `Order 청구` when billable                                 | Required                |
-| `accepted` / `in_progress`  | Can be moved to billing candidate by chart `Order 청구` when billable                                 | Required                |
-| `completed`                 | Can be moved to billing candidate by chart `Order 청구` when billable                                 | Not required by default |
-| `re_requested` / `returned` | Can be billed only if the chart user intentionally selects it and confirms unfinished/rework status | Required                |
-| `cancelled`                 | Must not create a new active billing candidate                                                      | Not applicable          |
-| Existing billing candidate  | Re-running `Order 청구` should be idempotent and must not fail because a candidate already exists     | Not required by default |
+| `requested`                 | Confirmed candidate can be invoice-linked by encounter `Order 청구`                                  | Unfinished warning      |
+| `accepted` / `in_progress`  | Confirmed candidate can be invoice-linked by encounter `Order 청구`                                  | Unfinished warning      |
+| `completed`                 | Confirmed candidate can be invoice-linked by encounter `Order 청구`                                  | Not required by default |
+| `re_requested` / `returned` | Can be invoiced only after explicit unfinished/rework acknowledgement                                | Required                |
+| `cancelled`                 | Must not create or link a new active billing candidate                                               | Not applicable          |
+| Existing invoice link       | Replaying the same `Order 청구` command returns the same invoice handoff and must not duplicate an invoice line or audit event | Not required by default |
 
 ## Billing Checkout Timing
 
 | Step                     | Product meaning                                                                                                                                          | Data authority                                                                                                     |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `Order 청구`               | Chart user requests payment for selected billable orders.                                                                                                | Server-owned order snapshots create or refresh billing queue candidates. Work status is preserved.                 |
+| `Order 청구`               | Chart user requests payment for all currently eligible confirmed encounter orders. Draft rows remain estimate-only.                                      | Server-owned candidates are atomically invoice-linked. Encounter and work status are preserved.                    |
 | Billing workspace review | Billing/front desk sees `수납대기` / `수납 후보` rows, can combine guardian-owned patient balances, add approved non-clinical sale items, and apply adjustments. | Candidate-backed invoice rows remain payable but distinguishable from paid history.                                |
 | `수납 진행` / `결제 진행`        | Billing/front desk presents the final amount and starts checkout/payment.                                                                                | Server recalculates and snapshots the final payable amount; invoice may move to `issued` internally at this point. |
 | `수납 완료`                  | Payment has been completed.                                                                                                                              | Payment state changes to paid/approved against the checkout amount.                                                |

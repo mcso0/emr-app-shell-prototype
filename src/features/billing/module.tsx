@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -82,6 +83,10 @@ import {
   type BillingQueueRow,
 } from "@/features/billing/data";
 import { resolveBillingAmountInclusion } from "@/features/billing/billing-data-contract";
+import {
+  getBillingProtectedSnapshotOwnerKey,
+  resolveBillingProtectedSnapshot,
+} from "@/features/billing/billing-protected-snapshot";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
@@ -107,6 +112,7 @@ import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { mockOrders } from "@/mocks/emr-domain";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
+import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import type {
@@ -122,6 +128,9 @@ import type {
   EmrOrderWorkStatus,
   Payment,
   PaymentMethod,
+  Patient,
+  Guardian,
+  Encounter,
   ServiceItemType,
 } from "@/types/emr-domain";
 import animalDogIcon from "../../../icons/Illustration/animal-dog.svg";
@@ -236,6 +245,10 @@ type BillingInvoiceCandidateRouteResponse =
       error?: string;
       status: number;
     };
+
+type ChartOrderBillingSummaryRouteResponse =
+  | { ok: true; summary: ChartOrderBillingSummary; status: 200 }
+  | { ok: false; denialReason?: string; error?: string; status: number };
 
 type BillingInvoiceLineRouteResponse =
   | {
@@ -467,6 +480,27 @@ async function loadBillingInvoiceCandidates({
     }
 
     return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function loadChartOrderBillingSummaryForBilling({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartOrderBillingSummaryRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-billing-summary?encounterId=${encodeURIComponent(encounterId)}`,
+      { cache: "no-store", headers: actorHeaders },
+    );
+    const body = await response.json() as ChartOrderBillingSummaryRouteResponse;
+    return body.ok ? { ...body, status: 200 } : { ...body, status: response.status };
   } catch {
     return { ok: false, status: 500, error: "db_read_failed" };
   }
@@ -830,15 +864,31 @@ function asServiceItemType(value?: string): ServiceItemType | undefined {
 function createLiveCandidateBillingDetail({
   candidates,
   encounterId,
+  summary,
   workspaceId,
 }: {
   candidates: BillingInvoiceCandidateSnapshot[];
   encounterId?: string;
+  summary?: ChartOrderBillingSummary;
   workspaceId: string;
 }): BillingDetail | null {
   if (!encounterId) return null;
 
-  const handoff = readChartLiveEncounterHandoff(encounterId);
+  const persistedHandoff = readChartLiveEncounterHandoff(encounterId);
+  const context = summary?.context;
+  const handoff = persistedHandoff ?? (context ? {
+    encounter: { ...context.encounter, workspaceId } as Encounter,
+    patient: {
+      ...context.patient,
+      workspaceId,
+      breed: context.patient.breed ?? undefined,
+      handlingCautionLocked: true,
+    } as Patient,
+    primaryGuardian: context.guardian
+      ? { ...context.guardian, workspaceId } as Guardian
+      : undefined,
+    updatedAt: summary?.generatedAt ?? context.encounter.updatedAt,
+  } : null);
   if (!handoff) return null;
 
   const invoiceId = candidates[0]?.invoiceId ?? `invoice-live-${encounterId}`;
@@ -883,6 +933,50 @@ function createLiveCandidateBillingDetail({
     patient: handoff.patient,
     payments: [],
     requestedByName: "이수지",
+  };
+}
+
+function createServerBackedBillingDetail({
+  invoice,
+  invoiceLines,
+  payments,
+  summary,
+}: {
+  invoice?: Invoice;
+  invoiceLines: InvoiceLine[];
+  payments: Payment[];
+  summary?: ChartOrderBillingSummary;
+}): BillingDetail | null {
+  const context = summary?.context;
+  if (!context || !invoice) return null;
+  const encounter = {
+    ...context.encounter,
+    workspaceId: summary.workspaceId,
+  } as Encounter;
+  const patient = {
+    ...context.patient,
+    workspaceId: summary.workspaceId,
+    breed: context.patient.breed ?? undefined,
+    handlingCautionLocked: true,
+  } as Patient;
+  const guardian = context.guardian
+    ? ({ ...context.guardian, workspaceId: summary.workspaceId } as Guardian)
+    : undefined;
+  const lines = invoiceLines.filter((line) => line.invoiceId === invoice.id);
+  const invoicePayments = payments.filter((payment) => payment.invoiceId === invoice.id);
+  return {
+    encounter,
+    guardian,
+    invoice,
+    invoiceLines: lines,
+    lineCount: lines.length,
+    lineSummary: getBillingFlowLabel(lines),
+    paidAmount: invoicePayments
+      .filter((payment) => payment.status === "approved")
+      .reduce((sum, payment) => sum + payment.amount, 0),
+    patient,
+    payments: invoicePayments,
+    requestedByName: "담당 수의사",
   };
 }
 
@@ -942,18 +1036,16 @@ function useBillingWorkspaceData() {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const searchParams = useSearchParams();
   const { session: authSession } = useAuthClient();
-  const applyInvoiceSnapshot = useBillingStore(
-    (state) => state.applyInvoiceSnapshot,
-  );
-  const applyPaymentStatusSnapshot = useBillingStore(
-    (state) => state.applyPaymentStatusSnapshot,
-  );
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
   const invoices = useBillingStore((state) => state.invoices);
   const payments = useBillingStore((state) => state.payments);
   const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
   const scenario = getDemoScenarioFromParams(searchParams);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
+  const protectedOwnerKey = getBillingProtectedSnapshotOwnerKey(
+    authSession,
+    workspaceId,
+  );
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
   const queryEncounterId =
@@ -962,7 +1054,20 @@ function useBillingWorkspaceData() {
   const [persistedCandidates, setPersistedCandidates] = useState<{
     candidates: BillingInvoiceCandidateSnapshot[];
     encounterId?: string;
+    ownerKey?: string;
   }>({ candidates: [] });
+  const [protectedOrderBillingSummary, setProtectedOrderBillingSummary] =
+    useState<{ ownerKey: string; summary: ChartOrderBillingSummary }>();
+  const [protectedInvoiceSnapshot, setProtectedInvoiceSnapshot] = useState<{
+    invoice: BillingPersistedInvoiceSnapshot;
+    lines: InvoiceLine[];
+    ownerKey: string;
+  }>();
+  const [protectedPaymentSnapshot, setProtectedPaymentSnapshot] = useState<{
+    invoice: BillingPersistedInvoiceSnapshot;
+    ownerKey: string;
+    payments: Payment[];
+  }>();
   const [invoiceLinesState, setInvoiceLinesState] =
     useState<BillingApiRequestState>(billingApiIdleState);
   const [paymentStatusState, setPaymentStatusState] =
@@ -972,12 +1077,66 @@ function useBillingWorkspaceData() {
     () => getDemoActorHeader(authSession),
     [authSession],
   );
-  const workspaceInvoices = legacySalesDemo ? invoices : emptyBillingInvoices;
+  const ownedInvoiceSnapshot = resolveBillingProtectedSnapshot(
+    protectedInvoiceSnapshot
+      ? { ownerKey: protectedInvoiceSnapshot.ownerKey, value: protectedInvoiceSnapshot }
+      : undefined,
+    protectedOwnerKey,
+  );
+  const ownedPaymentSnapshot = resolveBillingProtectedSnapshot(
+    protectedPaymentSnapshot
+      ? { ownerKey: protectedPaymentSnapshot.ownerKey, value: protectedPaymentSnapshot }
+      : undefined,
+    protectedOwnerKey,
+  );
+  const orderBillingSummary = resolveBillingProtectedSnapshot(
+    protectedOrderBillingSummary
+      ? { ownerKey: protectedOrderBillingSummary.ownerKey, value: protectedOrderBillingSummary.summary }
+      : undefined,
+    protectedOwnerKey,
+  );
+  const protectedInvoice = ownedPaymentSnapshot?.invoice ?? ownedInvoiceSnapshot?.invoice;
+  const workspaceInvoices = legacySalesDemo
+    ? invoices
+    : protectedInvoice
+      ? [protectedInvoice]
+      : [];
+  const workspaceInvoiceIds = new Set(workspaceInvoices.map((invoice) => invoice.id));
   const workspaceInvoiceLines = legacySalesDemo
     ? invoiceLines
-    : emptyBillingInvoiceLines;
-  const workspacePayments = legacySalesDemo ? payments : emptyBillingPayments;
+    : (ownedInvoiceSnapshot?.lines ?? []).filter((line) =>
+        workspaceInvoiceIds.has(line.invoiceId),
+      );
+  const workspacePayments = legacySalesDemo
+    ? payments
+    : (ownedPaymentSnapshot?.payments ?? []).filter((payment) =>
+        workspaceInvoiceIds.has(payment.invoiceId),
+      );
   const retrySnapshots = () => setSnapshotReloadKey((current) => current + 1);
+  const applyWorkspaceInvoiceSnapshot = (
+    invoice: BillingPersistedInvoiceSnapshot,
+    lines: InvoiceLine[],
+  ) => {
+    if (legacySalesDemo) {
+      useBillingStore.getState().applyInvoiceSnapshot(invoice, lines);
+      return;
+    }
+    setProtectedInvoiceSnapshot({ invoice, lines, ownerKey: protectedOwnerKey });
+  };
+  const applyWorkspacePaymentSnapshot = (
+    invoice: BillingPersistedInvoiceSnapshot,
+    nextPayments: Payment[],
+  ) => {
+    if (legacySalesDemo) {
+      useBillingStore.getState().applyPaymentStatusSnapshot(invoice, nextPayments);
+      return;
+    }
+    setProtectedPaymentSnapshot({
+      invoice,
+      ownerKey: protectedOwnerKey,
+      payments: nextPayments,
+    });
+  };
   const baseDetail =
     getBillingDetail(
       effectiveInvoiceId,
@@ -1001,31 +1160,32 @@ function useBillingWorkspaceData() {
           baseDetail.invoice.id,
         )
       : workspaceInvoiceLines;
-  const effectiveInvoices = useMemo(
-    () =>
-      workspaceInvoices.map((invoice) => {
-        const subtotalAmount = effectiveInvoiceLines
-          .filter((line) => line.invoiceId === invoice.id)
-          .reduce((total, line) => total + line.lineTotal, 0);
+  const effectiveInvoices = workspaceInvoices.map((invoice) => {
+    const subtotalAmount = effectiveInvoiceLines
+      .filter((line) => line.invoiceId === invoice.id)
+      .reduce((total, line) => total + line.lineTotal, 0);
 
-        return {
-          ...invoice,
-          subtotalAmount,
-          totalAmount: Math.max(
-            0,
-            subtotalAmount - invoice.discountAmount + invoice.taxAmount,
-          ),
-        };
-      }),
-    [effectiveInvoiceLines, workspaceInvoices],
-  );
+    return {
+      ...invoice,
+      subtotalAmount,
+      totalAmount: Math.max(
+        0,
+        subtotalAmount - invoice.discountAmount + invoice.taxAmount,
+      ),
+    };
+  });
   const detail =
     getBillingDetail(
       effectiveInvoiceId,
       effectiveInvoices,
       effectiveInvoiceLines,
       workspacePayments,
-    ) ??
+    ) ?? createServerBackedBillingDetail({
+      invoice: effectiveInvoices.find((invoice) => invoice.id === effectiveInvoiceId),
+      invoiceLines: effectiveInvoiceLines,
+      payments: workspacePayments,
+      summary: orderBillingSummary,
+    }) ??
     (legacySalesDemo
       ? getBillingDetail(
           "invoice-coco-260501",
@@ -1034,10 +1194,14 @@ function useBillingWorkspaceData() {
           workspacePayments,
         )
       : null);
-  const baseEncounterId = baseDetail?.encounter.id;
-  const baseEncounterWorkspaceId = baseDetail?.encounter.workspaceId;
-  const baseInvoiceId = baseDetail?.invoice.id;
-  const baseInvoiceWorkspaceId = baseDetail?.invoice.workspaceId;
+  const baseEncounterId = queryEncounterId ?? baseDetail?.encounter.id;
+  const baseEncounterWorkspaceId = queryEncounterId
+    ? workspaceId
+    : baseDetail?.encounter.workspaceId;
+  const baseInvoiceId = queryInvoiceId ?? baseDetail?.invoice.id;
+  const baseInvoiceWorkspaceId = queryInvoiceId
+    ? workspaceId
+    : baseDetail?.invoice.workspaceId;
   useEffect(() => {
     const encounterId = queryEncounterId ?? baseEncounterId;
     const candidateWorkspaceId = queryEncounterId
@@ -1049,17 +1213,33 @@ function useBillingWorkspaceData() {
     let cancelled = false;
 
     async function loadPersistedCandidates() {
-      const result = await loadBillingInvoiceCandidates({
-        actorHeaders,
-        encounterId: resolvedEncounterId,
-        workspaceId: resolvedWorkspaceId,
-      });
-
-      if (cancelled || !result.ok) return;
-      setPersistedCandidates({
-        candidates: result.candidates,
-        encounterId: resolvedEncounterId,
-      });
+      const [candidateResult, summaryResult] = await Promise.all([
+        loadBillingInvoiceCandidates({
+          actorHeaders,
+          encounterId: resolvedEncounterId,
+          workspaceId: resolvedWorkspaceId,
+        }),
+        loadChartOrderBillingSummaryForBilling({
+          actorHeaders,
+          encounterId: resolvedEncounterId,
+          workspaceId: resolvedWorkspaceId,
+        }),
+      ]);
+      if (cancelled) return;
+      if (candidateResult.ok) {
+        setPersistedCandidates({
+          candidates: candidateResult.candidates,
+          encounterId: resolvedEncounterId,
+          ownerKey: protectedOwnerKey,
+        });
+      } else {
+        setPersistedCandidates({ candidates: [], ownerKey: protectedOwnerKey });
+      }
+      setProtectedOrderBillingSummary(
+        summaryResult.ok
+          ? { ownerKey: protectedOwnerKey, summary: summaryResult.summary }
+          : undefined,
+      );
     }
 
     void loadPersistedCandidates();
@@ -1072,6 +1252,7 @@ function useBillingWorkspaceData() {
     baseEncounterId,
     baseEncounterWorkspaceId,
     queryEncounterId,
+    protectedOwnerKey,
     workspaceId,
   ]);
   useEffect(() => {
@@ -1090,11 +1271,20 @@ function useBillingWorkspaceData() {
 
       if (cancelled) return;
       if (!result.ok) {
+        setProtectedInvoiceSnapshot(undefined);
         setInvoiceLinesState(getBillingApiFailureState(result));
         return;
       }
 
-      applyInvoiceSnapshot(result.invoice, result.lines);
+      if (legacySalesDemo) {
+        useBillingStore.getState().applyInvoiceSnapshot(result.invoice, result.lines);
+      } else {
+        setProtectedInvoiceSnapshot({
+          invoice: result.invoice,
+          lines: result.lines,
+          ownerKey: protectedOwnerKey,
+        });
+      }
       setInvoiceLinesState(
         result.lines.length ? billingApiReadyState : billingApiEmptyState,
       );
@@ -1107,9 +1297,10 @@ function useBillingWorkspaceData() {
     };
   }, [
     actorHeaders,
-    applyInvoiceSnapshot,
     baseInvoiceId,
     baseInvoiceWorkspaceId,
+    legacySalesDemo,
+    protectedOwnerKey,
     snapshotReloadKey,
   ]);
   useEffect(() => {
@@ -1128,11 +1319,23 @@ function useBillingWorkspaceData() {
 
       if (cancelled) return;
       if (!result.ok) {
+        setProtectedPaymentSnapshot(undefined);
         setPaymentStatusState(getBillingApiFailureState(result));
         return;
       }
 
-      applyPaymentStatusSnapshot(result.invoice, result.payments);
+      if (legacySalesDemo) {
+        useBillingStore.getState().applyPaymentStatusSnapshot(
+          result.invoice,
+          result.payments,
+        );
+      } else {
+        setProtectedPaymentSnapshot({
+          invoice: result.invoice,
+          ownerKey: protectedOwnerKey,
+          payments: result.payments,
+        });
+      }
       setPaymentStatusState(billingApiReadyState);
     }
 
@@ -1143,38 +1346,42 @@ function useBillingWorkspaceData() {
     };
   }, [
     actorHeaders,
-    applyPaymentStatusSnapshot,
     baseInvoiceId,
     baseInvoiceWorkspaceId,
+    legacySalesDemo,
+    protectedOwnerKey,
     snapshotReloadKey,
   ]);
-  const groups = useMemo(
-    () =>
-      getBillingGuardianGroups(
-        effectiveInvoices,
-        effectiveInvoiceLines,
-        workspacePayments,
-      ),
-    [effectiveInvoiceLines, effectiveInvoices, workspacePayments],
+  const groups = getBillingGuardianGroups(
+    effectiveInvoices,
+    effectiveInvoiceLines,
+    workspacePayments,
   );
 
   const liveCandidateDetail =
-    queryEncounterId && persistedCandidates.encounterId === queryEncounterId
+    queryEncounterId &&
+    persistedCandidates.ownerKey === protectedOwnerKey &&
+    persistedCandidates.encounterId === queryEncounterId
       ? createLiveCandidateBillingDetail({
           candidates: persistedCandidates.candidates,
           encounterId: queryEncounterId,
+          summary: orderBillingSummary,
           workspaceId,
         })
       : null;
 
   return {
+    applyInvoiceSnapshot: applyWorkspaceInvoiceSnapshot,
+    applyPaymentStatusSnapshot: applyWorkspacePaymentSnapshot,
     apiState: {
       invoiceLines: invoiceLinesState,
       paymentStatus: paymentStatusState,
       retrySnapshots,
     },
     detail:
-      queryEncounterId && liveCandidateDetail ? liveCandidateDetail : detail,
+      queryEncounterId && !queryInvoiceId
+        ? (liveCandidateDetail ?? detail)
+        : (detail ?? (queryEncounterId ? liveCandidateDetail : null)),
     groups,
     invoiceLines: effectiveInvoiceLines,
     invoices: effectiveInvoices,
@@ -2997,18 +3204,21 @@ export function BillingContent({
   hasRightPanel,
   workspaceId,
 }: ShellComponentProps) {
-  const { apiState, detail, invoices, queryInvoiceId, selectedInvoiceId } =
-    useBillingWorkspaceData();
+  const {
+    apiState,
+    applyInvoiceSnapshot,
+    applyPaymentStatusSnapshot,
+    detail,
+    invoiceLines,
+    invoices,
+    payments,
+    queryInvoiceId,
+    selectedInvoiceId,
+  } = useBillingWorkspaceData();
   const { session: authSession } = useAuthClient();
   const actorHeaders = useMemo(
     () => getDemoActorHeader(authSession),
     [authSession],
-  );
-  const applyInvoiceSnapshot = useBillingStore(
-    (state) => state.applyInvoiceSnapshot,
-  );
-  const applyPaymentStatusSnapshot = useBillingStore(
-    (state) => state.applyPaymentStatusSnapshot,
   );
   const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
   const storedInvoiceLines = useBillingStore((state) => state.invoiceLines);
@@ -3028,6 +3238,7 @@ export function BillingContent({
   const [linePersistenceState, setLinePersistenceState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
+  const invoiceLineEditVersionRef = useRef(new Map<string, number>());
   const [checkoutSession, setCheckoutSession] =
     useState<GuardianCheckoutSessionSnapshot>();
   const [checkoutState, setCheckoutState] =
@@ -3035,21 +3246,24 @@ export function BillingContent({
   const [checkoutReloadKey, setCheckoutReloadKey] = useState(0);
   const retryCheckout = () => setCheckoutReloadKey((current) => current + 1);
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const checkoutInvoiceLines = legacySalesDemo ? storedInvoiceLines : invoiceLines;
+  const checkoutInvoices = legacySalesDemo ? storedInvoices : invoices;
+  const checkoutPayments = legacySalesDemo ? storedPayments : payments;
   const effectiveDetail = useMemo(
     () =>
-      detail
+      detail && legacySalesDemo
         ? mergeBillingDetailStoreSnapshot({
             detail,
-            invoiceLines: storedInvoiceLines,
-            invoices: storedInvoices,
-            payments: storedPayments,
+            invoiceLines: checkoutInvoiceLines,
+            invoices: checkoutInvoices,
+            payments: checkoutPayments,
           })
-        : null,
-    [detail, storedInvoiceLines, storedInvoices, storedPayments],
+        : detail,
+    [checkoutInvoiceLines, checkoutInvoices, checkoutPayments, detail, legacySalesDemo],
   );
   const checkoutGroups = useMemo(() => {
     const detailInvoiceIsOutsideStore = effectiveDetail
-      ? !storedInvoices.some(
+      ? !checkoutInvoices.some(
           (invoice) => invoice.id === effectiveDetail.invoice.id,
         )
       : false;
@@ -3058,9 +3272,9 @@ export function BillingContent({
     }
 
     const groups = getBillingCheckoutGroups({
-      invoiceLines: storedInvoiceLines,
-      invoices: storedInvoices,
-      payments: storedPayments,
+      invoiceLines: checkoutInvoiceLines,
+      invoices: checkoutInvoices,
+      payments: checkoutPayments,
       selectedInvoiceIds,
     }).filter(
       (group) =>
@@ -3081,10 +3295,10 @@ export function BillingContent({
     return [createCheckoutGroupFromBillingDetail(effectiveDetail)];
   }, [
     effectiveDetail,
+    checkoutInvoiceLines,
+    checkoutInvoices,
+    checkoutPayments,
     selectedInvoiceIds,
-    storedInvoiceLines,
-    storedInvoices,
-    storedPayments,
   ]);
   const checkoutInvoiceIds = useMemo(
     () => checkoutGroups.map((group) => group.invoice.id),
@@ -3206,13 +3420,14 @@ export function BillingContent({
       checkoutTableLines.find((line) => line.id === lineId) ??
       effectiveDetail.invoiceLines.find((line) => line.id === lineId);
     const targetInvoice = targetLine
-      ? (storedInvoices.find(
-          (invoice) => invoice.id === targetLine.invoiceId,
-        ) ?? invoices.find((invoice) => invoice.id === targetLine.invoiceId))
+      ? checkoutInvoices.find((invoice) => invoice.id === targetLine.invoiceId)
       : effectiveDetail.invoice;
     if (!targetLine || !targetInvoice) return;
+    if (targetLine.quantity === safeQuantity) return;
+    const editVersion = (invoiceLineEditVersionRef.current.get(lineId) ?? 0) + 1;
+    invoiceLineEditVersionRef.current.set(lineId, editVersion);
 
-    updateInvoiceLineQuantity(lineId, safeQuantity);
+    if (legacySalesDemo) updateInvoiceLineQuantity(lineId, safeQuantity);
     setLinePersistenceState("saving");
 
     const result = await saveBillingInvoiceLines({
@@ -3221,6 +3436,7 @@ export function BillingContent({
       lines: [{ invoiceLineId: lineId, quantity: safeQuantity }],
       workspaceId: targetInvoice.workspaceId,
     });
+    if (invoiceLineEditVersionRef.current.get(lineId) !== editVersion) return;
 
     if (!result.ok) {
       setLinePersistenceState("error");
@@ -3236,8 +3452,7 @@ export function BillingContent({
     target: BillingInvoiceStatusTransitionTarget,
   ) {
     const targetInvoice =
-      storedInvoices.find((invoice) => invoice.id === invoiceId) ??
-      invoices.find((invoice) => invoice.id === invoiceId) ??
+      checkoutInvoices.find((invoice) => invoice.id === invoiceId) ??
       (effectiveDetail?.invoice.id === invoiceId
         ? effectiveDetail.invoice
         : undefined);
@@ -3254,7 +3469,7 @@ export function BillingContent({
     });
 
     if (!result.ok) {
-      transitionInvoiceStatus(invoiceId, target);
+      if (legacySalesDemo) transitionInvoiceStatus(invoiceId, target);
       setLinePersistenceState("error");
       return;
     }
@@ -3377,23 +3592,21 @@ function PaymentStatusNote({
 }
 
 export function BillingRightPanel() {
-  const { detail } = useBillingWorkspaceData();
+  const {
+    applyInvoiceSnapshot,
+    applyPaymentStatusSnapshot,
+    detail,
+    invoiceLines,
+    invoices,
+    payments,
+  } = useBillingWorkspaceData();
   const { session: authSession } = useAuthClient();
   const actorHeaders = useMemo(
     () => getDemoActorHeader(authSession),
     [authSession],
   );
-  const applyInvoiceSnapshot = useBillingStore(
-    (state) => state.applyInvoiceSnapshot,
-  );
-  const applyPaymentStatusSnapshot = useBillingStore(
-    (state) => state.applyPaymentStatusSnapshot,
-  );
   const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
-  const invoiceLines = useBillingStore((state) => state.invoiceLines);
-  const invoices = useBillingStore((state) => state.invoices);
   const paymentMethod = useBillingStore((state) => state.paymentMethod);
-  const payments = useBillingStore((state) => state.payments);
   const selectedInvoiceIds = useBillingStore(
     (state) => state.selectedInvoiceIds,
   );

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plan/Order 금융 요약과 오더 청구 수행 보고서</title>
+    <style>
+      :root { color-scheme: light; --bg:#f6f7f9; --panel:#fff; --text:#171717; --muted:#667085; --line:#e4e7ec; --soft:#eef4ff; --blue:#175cd3; --green:#067647; --amber:#b54708; }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main { max-width:1040px; margin:0 auto; padding:48px 28px 72px; }
+      header { padding:0 4px 12px; }
+      h1,h2 { margin:0; line-height:1.25; }
+      h1 { margin-top:8px; font-size:32px; }
+      h2 { margin-bottom:12px; font-size:20px; }
+      p { margin:8px 0 0; }
+      section { margin-top:20px; padding:24px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+      .eyebrow { color:var(--blue); font-size:13px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+      .summary { border-color:#bfd3ff; background:var(--soft); font-size:17px; }
+      .meta { color:var(--muted); }
+      .ok { color:var(--green); font-weight:800; }
+      .warn { color:var(--amber); font-weight:800; }
+      ul { margin:8px 0 0; padding-left:20px; }
+      li + li { margin-top:6px; }
+      table { width:100%; margin-top:12px; border-collapse:collapse; font-size:14px; }
+      th,td { padding:11px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+      th { background:#f9fafb; }
+      code { padding:2px 5px; border-radius:5px; background:#f2f4f7; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">CLINICAL-BILLING-PR-017 · Human Review</p>
+        <h1>Plan/Order 금융 요약과 오더 청구</h1>
+        <p class="meta">2026-08-30 · GitHub PR #673 · 차트가 끝나기 전에도 안전한 중간 정산을 시작할 수 있도록 한 개선</p>
+      </header>
+
+      <section class="summary">
+        <h2>대표 관점 요약</h2>
+        <p>테이블 높이를 거의 늘리지 않으면서 왼쪽에는 오더 상태, 오른쪽에는 금액과 핵심 행동을 한 줄로 배치했다. <strong>Order 청구</strong>는 차트 완료와 분리했고, 확정된 청구 가능 오더만 서버에서 다시 계산해 수납 화면으로 넘긴다.</p>
+      </section>
+
+      <section>
+        <h2>화면과 업무 흐름</h2>
+        <ul>
+          <li>선택된 행의 <strong>Order 확정</strong>은 기존 플로팅 액션 바에 유지했다.</li>
+          <li>하단 요약은 오더 건수·확정 전·확정 후와 발생액·할인·청구 예상 총액을 좌우로 그룹화했다.</li>
+          <li><strong>금액 상세</strong>은 보조 고스트 버튼, <strong>Order 청구</strong>는 가장 오른쪽의 주 행동으로 구성했다.</li>
+          <li>금액 상세 패널은 딤·블러·백드롭·포커스 트랩 없이 열려 테이블을 계속 확인하고 조작할 수 있다.</li>
+          <li>청구 후 <code>encounterId</code>와 <code>invoiceId</code>를 포함해 수납으로 이동하므로 새로고침과 직접 진입에도 같은 청구를 읽는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>금액·권한 안전장치</h2>
+        <table>
+          <thead><tr><th>경계</th><th>적용 내용</th></tr></thead>
+          <tbody>
+            <tr><td>금액 권위</td><td>브라우저 합계를 신뢰하지 않고, 확정·미취소·미청구 오더의 frozen candidate를 서버에서 invoice line으로 변환한다.</td></tr>
+            <tr><td>동시성</td><td>encounter → orders → candidates 순으로 잠근 뒤 revision을 검증해 동시 금액 정정과 오래된 청구 요청의 충돌을 차단한다.</td></tr>
+            <tr><td>멱등성</td><td>같은 사용자·workspace·encounter·command 재요청은 최초 invoice를 반환하며 중복 line과 audit event를 만들지 않는다.</td></tr>
+            <tr><td>정보 격리</td><td>차트와 수납의 보호 snapshot을 사용자 session 및 workspace에 묶고, 권한 또는 사용자 변경 시 이전 상태를 다시 표시하지 않는다.</td></tr>
+            <tr><td>진료 상태</td><td>청구·수납이 encounter 완료나 fulfillment work status를 변경하지 않는다.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><span class="ok">PASS:</span> TypeScript, ESLint, production build, docs check, secret scan, diff check.</li>
+          <li><span class="ok">PASS:</span> Plan/Order summary server, order persistence, invoice candidate sync, guardian checkout hardening 회귀.</li>
+          <li><span class="ok">PASS:</span> Billing UI 전체 13개 시나리오와 차트 금융 요약 핵심 시나리오.</li>
+          <li><span class="ok">PASS:</span> 로컬 Supabase migration + SQL contract를 transaction rollback 방식으로 재현.</li>
+          <li><span class="ok">APPROVE:</span> 독립 workspace/RLS/billing integrity/concurrency 경계 리뷰.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위와 남은 확인</h2>
+        <ul>
+          <li><span class="warn">범위 밖:</span> 임의 금액 부분결제, PG 승인·환불·회계·세금·영수증 외부 연동.</li>
+          <li>원격 적용은 synthetic/demo production-bound Supabase의 schema와 함수 catalog만 검증하며 실제 환자·보호자·결제 행은 조회하지 않는다.</li>
+          <li>롤백은 앱 revert와 additive DB rollback SQL을 후보로 보존한다. 이미 생성된 업무 데이터를 파괴하는 자동 rollback은 실행하지 않는다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

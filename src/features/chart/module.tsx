@@ -223,6 +223,11 @@ import {
   type DiagnosisCatalogClientResult,
 } from "@/features/chart/diagnosis-catalog-client";
 import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog";
+import {
+  ChartOrderBillingDetailAside,
+  ChartOrderFinanceFooter,
+} from "@/features/chart/components/chart-order-finance-footer";
+import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import { useChartStore } from "@/features/chart/store";
@@ -445,6 +450,18 @@ type ChartOrderActionRouteResponse =
       denialReason?: string;
       error?: string;
     };
+type ChartOrderBillingSummaryRouteResponse =
+  | {
+      ok: true;
+      status: 200;
+      summary: ChartOrderBillingSummary;
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
 type ChartOrderSetPreviewRouteResponse =
   | {
       ok: true;
@@ -509,6 +526,7 @@ type ChartOrderExecutionReadRouteResponse =
 type ChartBillingCandidateSnapshot = {
   billingCandidateId: string;
   orderId: string;
+  status?: "candidate_created" | "invoice_linked" | "cancelled";
 };
 type ChartBillingCandidateRouteResponse =
   | {
@@ -3116,6 +3134,67 @@ async function saveChartOrderActionRoute({
   }
 }
 
+async function loadChartOrderBillingSummaryRoute({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartOrderBillingSummaryRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-billing-summary?encounterId=${encodeURIComponent(encounterId)}`,
+      { cache: "no-store", headers: actorHeaders },
+    );
+    const body = await response.json() as ChartOrderBillingSummaryRouteResponse;
+    return body.ok ? { ...body, status: 200 } : { ...body, status: response.status };
+  } catch {
+    return { ok: false, status: 500, error: "network_error" };
+  }
+}
+
+async function requestChartOrderBillingRoute({
+  acknowledgeUnfinished,
+  actorHeaders,
+  encounterId,
+  expectedEtag,
+  idempotencyKey,
+  workspaceId,
+}: {
+  acknowledgeUnfinished: boolean;
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  expectedEtag: string;
+  idempotencyKey: string;
+  workspaceId: string;
+}): Promise<ChartOrderBillingSummaryRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-billing-summary`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "if-match": expectedEtag,
+          ...actorHeaders,
+        },
+        body: JSON.stringify({
+          acknowledgeUnfinished,
+          encounterId,
+          expectedEtag,
+          idempotencyKey,
+        }),
+      },
+    );
+    const body = await response.json() as ChartOrderBillingSummaryRouteResponse;
+    return body.ok ? { ...body, status: 200 } : { ...body, status: response.status };
+  } catch {
+    return { ok: false, status: 500, error: "network_error" };
+  }
+}
+
 async function saveChartOrderExecutionMutationRoute({
   action,
   actorHeaders,
@@ -4437,6 +4516,7 @@ type ChartOrderTableRow = {
 
 type ChartOrderDraftRow = ChartOrderTableRow & {
   billingCandidateId?: string | null;
+  billingCandidateStatus?: "candidate_created" | "invoice_linked" | "cancelled";
   billingName: string;
   committedBillingName: string;
   committedQuantityInput: string;
@@ -4837,6 +4917,7 @@ function buildChartOrderDraftRowFromRuntime(
   return {
     ...(fallback ?? {}),
     billingCandidateId: fallback?.billingCandidateId,
+    billingCandidateStatus: fallback?.billingCandidateStatus,
     billingName,
     committedBillingName: billingName,
     committedQuantityInput: quantityInput,
@@ -5069,6 +5150,12 @@ const applyPersistedOrderActions = (
         ...nextRow,
         billingCandidateId:
           legacySnapshot?.billingCandidateId ?? row.billingCandidateId,
+        billingCandidateStatus:
+          legacySnapshot?.billingCandidateStatus === "candidate_created" ||
+          legacySnapshot?.billingCandidateStatus === "invoice_linked" ||
+          legacySnapshot?.billingCandidateStatus === "cancelled"
+            ? legacySnapshot.billingCandidateStatus
+            : row.billingCandidateStatus,
       };
     }
 
@@ -5078,6 +5165,12 @@ const applyPersistedOrderActions = (
         legacySnapshot?.billingCandidateId === undefined
           ? row.billingCandidateId
           : legacySnapshot.billingCandidateId,
+      billingCandidateStatus:
+        legacySnapshot?.billingCandidateStatus === "candidate_created" ||
+        legacySnapshot?.billingCandidateStatus === "invoice_linked" ||
+        legacySnapshot?.billingCandidateStatus === "cancelled"
+          ? legacySnapshot.billingCandidateStatus
+          : row.billingCandidateStatus,
       order: {
         ...row.order,
         status: legacySnapshot?.status ?? row.order.status,
@@ -5197,12 +5290,13 @@ const applyBillingCandidatesToOrderRows = (
     return {
       ...row,
       billingCandidateId: candidate.billingCandidateId,
+      billingCandidateStatus: candidate.status ?? "invoice_linked",
     };
   });
 };
 
 const getChartOrderStatusLabel = (row: ChartOrderDraftRow) => {
-  if (row.billingCandidateId) return "수납 후보";
+  if (row.billingCandidateStatus === "invoice_linked") return "청구됨";
   return orderStatusLabel[row.order.status];
 };
 
@@ -7244,6 +7338,16 @@ function createChartOrderConfirmationIdempotencyKey() {
   return `chart-confirm-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function createChartOrderBillingIdempotencyKey() {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return `chart-billing-${crypto.randomUUID()}`;
+  }
+  return `chart-billing-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function hasSameChartOrderSelection(left: string[], right: string[]) {
   return (
     left.length === right.length &&
@@ -8194,6 +8298,7 @@ function OrderArea({
   collapsed,
   loading,
   onCollapsedChange,
+  onNavigateToBilling,
   onNavigateToDispensing,
   orderGroups,
   writeDisabled,
@@ -8204,6 +8309,7 @@ function OrderArea({
   collapsed: boolean;
   loading: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
+  onNavigateToBilling?: (invoiceId: string) => void;
   onNavigateToDispensing?: () => void;
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
@@ -8239,6 +8345,12 @@ function OrderArea({
   const [historyOrderId, setHistoryOrderId] = useState<string | null>(null);
   const [orderExecution, setOrderExecution] =
     useState<ChartOrderExecutionReadModel>();
+  const [billingSummary, setBillingSummary] =
+    useState<ChartOrderBillingSummary>();
+  const [billingSummaryLoading, setBillingSummaryLoading] = useState(true);
+  const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
+  const [billingRequesting, setBillingRequesting] = useState(false);
+  const [billingError, setBillingError] = useState<string>();
   const [orderMutationDraft, setOrderMutationDraft] =
     useState<ChartOrderMutationDraft | null>(null);
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
@@ -8286,6 +8398,10 @@ function OrderArea({
     expectedEtag: string;
     idempotencyKey: string;
     orderIds: string[];
+  } | null>(null);
+  const pendingBillingRequestRef = useRef<{
+    expectedEtag: string;
+    idempotencyKey: string;
   } | null>(null);
   const orderLoading = loading || orderDraftSaveState === "loading";
   const allOrders = useMemo(
@@ -8341,27 +8457,70 @@ function OrderArea({
       orderFilter === "all" || getChartOrderClinicalType(row) === orderFilter,
   );
   const visibleOrderRows = filteredOrderRows;
-  const totalAmount = draftRows.reduce(
-    (sum, row) => sum + (getDraftLineTotal(row) ?? 0),
-    0,
-  );
   const selectedAmount = draftRows.reduce((sum, row) => {
     if (!selectedOrderIds.has(row.order.id)) return sum;
 
     return sum + (getDraftLineTotal(row) ?? 0);
   }, 0);
+  const localBillingSummary = useMemo<ChartOrderBillingSummary>(() => {
+    const confirmedRows = draftRows.filter(isChartOrderConfirmedRow);
+    const draftOnlyRows = draftRows.filter((row) => !isChartOrderConfirmedRow(row));
+    const confirmedAmount = confirmedRows.reduce(
+      (sum, row) => sum + (getDraftLineTotal(row) ?? 0),
+      0,
+    );
+    const draftAmount = draftOnlyRows.reduce(
+      (sum, row) => sum + (getDraftLineTotal(row) ?? 0),
+      0,
+    );
+    const requestableRows = confirmedRows.filter(
+      (row) => row.billingCandidateStatus === "candidate_created",
+    );
+    const requestedRows = confirmedRows.filter(
+      (row) => row.billingCandidateStatus === "invoice_linked",
+    );
+    return {
+      workspaceId: bundle.encounter.workspaceId,
+      encounterId: bundle.encounter.id,
+      etag: '"local-summary"',
+      generatedAt: new Date(0).toISOString(),
+      currency: "KRW",
+      context: null,
+      invoiceId: null,
+      orderCounts: {
+        total: draftRows.length,
+        confirmed: confirmedRows.length,
+        draft: draftOnlyRows.length,
+        recheck: draftRows.filter((row) => row.order.status === "re_requested").length,
+        requested: requestedRows.length,
+        requestable: requestableRows.length,
+        cancelled: draftRows.filter((row) => row.order.status === "cancelled").length,
+      },
+      amounts: {
+        gross: confirmedAmount + draftAmount,
+        confirmed: confirmedAmount,
+        draft: draftAmount,
+        discount: 0,
+        surcharge: 0,
+        tax: 0,
+        paid: 0,
+        outstanding: 0,
+        estimatedTotal: confirmedAmount + draftAmount,
+        requestableTotal: requestableRows.reduce(
+          (sum, row) => sum + (getDraftLineTotal(row) ?? 0),
+          0,
+        ),
+      },
+      requestableOrderIds: requestableRows.map((row) => row.order.id),
+      unfinishedOrders: [],
+    };
+  }, [bundle.encounter.id, bundle.encounter.workspaceId, draftRows]);
   const selectedOrderRows = draftRows.filter(({ order }) =>
     selectedOrderIds.has(order.id),
   );
   const selectedOrders = selectedOrderRows.map(({ order }) => order);
-  const recheckOrderCount = allOrders.filter(
-    (order) => order.status === "re_requested",
-  ).length;
   const selectedRecheckOrderCount = selectedOrders.filter(
     (order) => order.status === "re_requested",
-  ).length;
-  const actionableSelectedOrderCount = selectedOrders.filter(
-    (order) => order.status !== "cancelled",
   ).length;
   const deletedDraftOrderCount = committedRows.filter(
     (row) =>
@@ -8972,6 +9131,34 @@ function OrderArea({
     initialDraftRows,
     orderDraftReloadKey,
     setDraftRows,
+  ]);
+  useEffect(() => {
+    let cancelled = false;
+    void loadChartOrderBillingSummaryRoute({
+      actorHeaders,
+      encounterId: bundle.encounter.id,
+      workspaceId: bundle.encounter.workspaceId,
+    }).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setBillingSummary(result.summary);
+      } else {
+        setBillingError(
+          result.denialReason === "permission_missing"
+            ? "금액 정보를 확인할 권한이 없습니다."
+            : "금액 정보를 불러오지 못했어요.",
+        );
+      }
+      setBillingSummaryLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    actorHeaders,
+    bundle.encounter.id,
+    bundle.encounter.workspaceId,
+    orderDraftReloadKey,
   ]);
   const refreshOrderExecution = async () => {
     const result = await loadChartOrderExecution({
@@ -9662,29 +9849,96 @@ function OrderArea({
     void refreshOrderExecution();
     toast.success(`${chartOrderMutationLabels[draft.action]}을 기록했어요.`);
   };
-  const hasSelectedOrders = selectedOrderIds.size > 0;
   const orderActionLabel = "Order 확정";
   const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
-  const draftStatusText = hasDraftChanges
-    ? ` · 변경 대기 ${changedDraftOrderCount}건${draftSaveInvalidOrderIds.size ? ` · 입력 확인 필요 ${draftSaveInvalidOrderIds.size}건` : ""}`
-    : orderLoading
-      ? " · 오더 정보를 불러오는 중"
+  const effectiveBillingSummary = billingSummary ?? localBillingSummary;
+  const orderFooterAccessibilitySummary = [
+    `선택 오더 ${selectedOrderIds.size}건`,
+    `선택 오더 합계 ${selectedAmount.toLocaleString()}원`,
+    hasDraftChanges
+      ? `변경 대기 ${changedDraftOrderCount}건${draftSaveInvalidOrderIds.size ? ` · 입력 확인 필요 ${draftSaveInvalidOrderIds.size}건` : ""}`
       : orderDraftSaveState === "saving"
-        ? " · 저장 중"
+        ? "저장 중"
         : orderDraftSaveState === "saved"
-          ? " · 저장됨"
+          ? "저장됨"
           : orderDraftSaveState === "error"
-            ? " · 저장 실패"
+            ? "저장 실패"
             : orderDraftSaveState === "conflict"
-              ? " · 충돌 해결 필요"
-              : "";
+              ? "충돌 해결 필요"
+              : "",
+  ].filter(Boolean).join(" · ");
+  const requestEncounterBilling = async (acknowledgeUnfinished: boolean) => {
+    if (hasDraftChanges) {
+      setBillingError("변경한 오더를 먼저 업데이트한 뒤 청구해 주세요.");
+      setBillingDrawerOpen(true);
+      return;
+    }
+    if (
+      effectiveBillingSummary.unfinishedOrders.length > 0 &&
+      !acknowledgeUnfinished
+    ) {
+      setBillingDrawerOpen(true);
+      setBillingError("진행 중 오더를 확인한 뒤 중간 정산으로 청구해 주세요.");
+      return;
+    }
+    setBillingRequesting(true);
+    setBillingError(undefined);
+    const pendingRequest =
+      pendingBillingRequestRef.current?.expectedEtag === effectiveBillingSummary.etag
+        ? pendingBillingRequestRef.current
+        : {
+            expectedEtag: effectiveBillingSummary.etag,
+            idempotencyKey: createChartOrderBillingIdempotencyKey(),
+          };
+    pendingBillingRequestRef.current = pendingRequest;
+    const result = await requestChartOrderBillingRoute({
+      acknowledgeUnfinished,
+      actorHeaders,
+      encounterId: bundle.encounter.id,
+      expectedEtag: effectiveBillingSummary.etag,
+      idempotencyKey: pendingRequest.idempotencyKey,
+      workspaceId: bundle.encounter.workspaceId,
+    });
+    setBillingRequesting(false);
+    if (!result.ok) {
+      setBillingDrawerOpen(true);
+      setBillingError(
+        result.error === "revision_conflict"
+          ? "금액이 변경됐어요. 최신 금액을 다시 확인해 주세요."
+          : result.error === "unfinished_ack_required"
+            ? "진행 중 오더를 확인한 뒤 다시 청구해 주세요."
+            : result.error === "no_billable_orders"
+              ? "현재 청구할 수 있는 확정 오더가 없습니다."
+              : result.denialReason === "permission_missing"
+                ? "Order 청구 권한이 없습니다."
+                : "Order 청구를 완료하지 못했어요.",
+      );
+      if (result.error === "revision_conflict") {
+        pendingBillingRequestRef.current = null;
+        setOrderDraftReloadKey((key) => key + 1);
+      }
+      return;
+    }
+    pendingBillingRequestRef.current = null;
+    setBillingSummary(result.summary);
+    toast.success("확정된 오더를 청구 화면으로 보냈어요.");
+    if (result.summary.invoiceId) onNavigateToBilling?.(result.summary.invoiceId);
+  };
+  useEffect(() => {
+    if (!billingDrawerOpen) return;
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setBillingDrawerOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [billingDrawerOpen]);
   return (
     <section
       data-slot="chart-workspace-panel"
       data-collapsed={collapsed ? "true" : "false"}
       className={cn(
         chartWorkspacePanelClassName,
-        "group/chart-collapsible-panel",
+        "group/chart-collapsible-panel relative",
       )}
     >
       <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
@@ -9749,17 +10003,6 @@ function OrderArea({
                 onClick={() => void commitDraftRows()}
               >
                 Order 업데이트
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                disabled={
-                  writeDisabled ||
-                  !hasSelectedOrders ||
-                  orderDraftSaveState === "conflict"
-                }
-                onClick={() => setOrderActionDialog("confirm")}
-              >
-                Order 확정
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -10020,21 +10263,27 @@ function OrderArea({
           }}
           onRangeInputChange={setSetRangeInput}
         />
-        <div
-          data-testid="chart-order-footer"
-          className="flex h-[52px] min-h-[52px] shrink-0 items-center justify-between border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 text-[13px] leading-[18px] text-muted-foreground"
-        >
-          <div className="min-w-0">
-            <span>총 {visibleOrderRows.length}건</span>
-            <span className="sr-only">
-              선택 오더 {selectedOrderIds.size}건 · 확정 대상{" "}
-              {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}
-              건 · 선택 오더 합계 {selectedAmount.toLocaleString()}원 · 청구
-              예상 총액 {totalAmount.toLocaleString()}원 {draftStatusText}
-            </span>
-          </div>
-          <span className="tabular-nums">1/1 페이지</span>
-        </div>
+        <ChartOrderFinanceFooter
+          accessibilitySummary={orderFooterAccessibilitySummary}
+          drawerOpen={billingDrawerOpen}
+          error={billingError}
+          loading={billingSummaryLoading}
+          requesting={billingRequesting}
+          summary={effectiveBillingSummary}
+          onOpenDetails={() => {
+            setBillingDrawerOpen((open) => !open);
+            setBillingError(undefined);
+          }}
+          onRequestBilling={() => void requestEncounterBilling(false)}
+        />
+        <ChartOrderBillingDetailAside
+          error={billingError}
+          open={billingDrawerOpen}
+          requesting={billingRequesting}
+          summary={effectiveBillingSummary}
+          onClose={() => setBillingDrawerOpen(false)}
+          onRequestBilling={() => void requestEncounterBilling(true)}
+        />
         <Dialog
           open={orderActionDialog !== null}
           onOpenChange={(open) => !open && setOrderActionDialog(null)}
@@ -11477,6 +11726,19 @@ export function ChartContent({
 
     onNavigateWorkspaceSurface?.(href, "dispensing");
   };
+  const navigateToBilling = (invoiceId: string) => {
+    const href = buildWorkspaceSurfaceRoute({
+      moduleId: "billing",
+      params: {
+        encounterId: currentBundle.encounter.id,
+        invoiceId,
+      },
+      removeParams: ["orderId", "taskId", "historyEncounterId"],
+      search: searchParams,
+      workspaceId,
+    });
+    onNavigateWorkspaceSurface?.(href, "billing");
+  };
   const consultationCallRooms = getConsultationCallRooms();
   const selectedCallRoom = consultationCallRooms.find(
     (room) => room.id === selectedCallRoomId,
@@ -12188,13 +12450,14 @@ export function ChartContent({
           </button>
           <div className="min-h-0 min-w-0">
             <OrderArea
-              key={bundle.encounter.id}
+              key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}`}
               actorHeaders={actorHeaders}
               bundle={bundle}
               collapseContentId="chart-order-panel-content"
               collapsed={orderPanelCollapsed}
               loading={orderLoading}
               onCollapsedChange={setOrderPanelCollapsed}
+              onNavigateToBilling={navigateToBilling}
               onNavigateToDispensing={navigateToDispensing}
               orderGroups={orderGroups}
               writeDisabled={chartWriteDisabled}
