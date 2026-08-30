@@ -319,7 +319,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CLINICAL-BILLING-PR-015     | human_review | clinical-billing     | P0       | Project 04 / DEN-80  | `docs/work/clinical-billing/CLINICAL-BILLING-PR-015-outpatient-persistence-regression.md`              |
 | CLINICAL-BILLING-PR-016     | human_review | clinical-billing     | P0       | Project 04 / DEN-81  | `docs/work/clinical-billing/CLINICAL-BILLING-PR-016-audit-security-readiness-handoff.md`               |
 | CLINICAL-BILLING-PR-017     | done         | clinical-billing     | P0       | GitHub PR #673       | `docs/work/clinical-billing/CLINICAL-BILLING-PR-017-plan-order-billing-summary-handoff.md`             |
-| CLINICAL-BILLING-PR-018     | active       | clinical-billing     | P0       | Browser report / stale Plan/Order amount | `docs/work/clinical-billing/CLINICAL-BILLING-PR-018-plan-order-billing-summary-freshness.md` |
+| CLINICAL-BILLING-PR-018     | human_review | clinical-billing     | P0       | GitHub PR #676       | `docs/work/clinical-billing/CLINICAL-BILLING-PR-018-plan-order-billing-summary-freshness.md` |
 | CLINICAL-FULFILLMENT-PR-001 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-235 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-001-scope-data-contract.md`                    |
 | CLINICAL-FULFILLMENT-PR-002 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-236 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-002-schema-route-contract.md`                  |
 | CLINICAL-FULFILLMENT-PR-003 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-237 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-003-chart-confirmation-sync.md`                |

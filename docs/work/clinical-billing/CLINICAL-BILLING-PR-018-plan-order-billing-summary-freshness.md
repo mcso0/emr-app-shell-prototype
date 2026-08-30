@@ -1,9 +1,9 @@
 ---
 id: "CLINICAL-BILLING-PR-018"
-status: "active"
+status: "human_review"
 area: "clinical-billing"
 priority: "P0"
-target_pr: "TBD"
+target_pr: "GitHub PR #676"
 source_docs:
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-017-plan-order-billing-summary-handoff.md"
   - "docs/product/domain/order-fulfillment-handoff.md"
@@ -83,3 +83,7 @@ server-owned summary is not known to be current.
   overlap handling, failed-refresh billing lockout, delayed GET after successful
   POST, partial confirmation failure, execution revision conflict, local-only
   estimate lockout, and normal mock admin/vet permission parity.
+- Local candidate verification: secret scan, docs links, diff check, full lint,
+  TypeScript, and production build passed; 53 focused/adjacent server-browser
+  tests, 2 existing chart billing UI tests, and 1 durable Billing handoff UI test
+  passed on 2026-08-31.
