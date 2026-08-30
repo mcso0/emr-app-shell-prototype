@@ -13,6 +13,11 @@ const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
 const migrationPath = "supabase/migrations/20260519180000_chart_soap_note_persistence_rpc.sql";
 const migration = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+const hotfixMigrationPath =
+  "supabase/migrations/20260830203427_chart_soap_note_rpc_signature_drift_hotfix.sql";
+const hotfixMigration = existsSync(hotfixMigrationPath)
+  ? readFileSync(hotfixMigrationPath, "utf8")
+  : "";
 
 const validSoapInput = {
   encounterId,
@@ -232,10 +237,10 @@ test("SOAP note core blocks chart mutation before consultation starts", async ()
 });
 
 test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC calls", async () => {
-  const calls: string[] = [];
+  const calls: Array<{ functionName: string; args: Record<string, unknown> }> = [];
   const gateway = createSupabaseChartSoapNoteGateway({
     async rpc(functionName: string, args: Record<string, unknown>) {
-      calls.push(`${functionName}:${args.p_workspace_id}:${args.p_encounter_id}`);
+      calls.push({ functionName, args });
       return {
         data: {
           id: "soap-db-den-69",
@@ -269,7 +274,17 @@ test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC call
     mode: "autosave",
   });
 
-  expect(calls).toEqual([`clair_save_chart_soap_note:${workspaceId}:${encounterId}`]);
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toMatchObject({
+    functionName: "clair_save_chart_soap_note",
+    args: {
+      p_workspace_id: workspaceId,
+      p_actor_user_id: "00000000-0000-4000-8000-000000000002",
+      p_encounter_id: encounterId,
+      p_expected_updated_at: "2026-05-19T12:00:00.000Z",
+      p_mode: "autosave",
+    },
+  });
   expect(result).toMatchObject({
     ok: true,
     soapNote: { id: "soap-db-den-69", encounterId },
@@ -287,6 +302,32 @@ test("SOAP note persistence migration defines local-first RPC boundary without s
   expect(migration).toContain("status = case when status = 'waiting' then 'in_consultation'");
   expect(migration).toContain("grant execute on function public.clair_save_chart_soap_note");
   expect(migration).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET|real patient/i);
+});
+
+test("SOAP note forward migration converges the live RPC signature and enforces direct-call gates", () => {
+  expect(hotfixMigration).toContain(
+    "drop function if exists public.clair_save_chart_soap_note(text, text, uuid, jsonb, text)"
+  );
+  expect(hotfixMigration).toContain(
+    "drop function if exists public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text)"
+  );
+  expect(hotfixMigration).toContain("p_expected_updated_at timestamptz default null");
+  expect(hotfixMigration).toContain("v_actor_user_id is distinct from auth.uid()");
+  expect(hotfixMigration).toContain(
+    "private.clair_current_user_has_workspace_permission(p_workspace_id, 'chart:update')"
+  );
+  expect(hotfixMigration).toContain("v_encounter_status not in ('in_consultation', 'ordered')");
+  expect(hotfixMigration).toContain("raise exception 'soap_note_conflict'");
+  expect(hotfixMigration).toContain("set search_path = ''");
+  expect(hotfixMigration).toContain(
+    "grant execute on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text) to authenticated"
+  );
+  expect(hotfixMigration).toContain(
+    "revoke all on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text) from anon"
+  );
+  expect(hotfixMigration).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i
+  );
 });
 
 test("SOAP note route stays server-owned and secret-free", () => {
