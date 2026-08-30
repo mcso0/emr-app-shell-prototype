@@ -1981,11 +1981,12 @@ function getReceptionEmptyStateCopy({
   todayDate: string;
 }) {
   void operatingDate;
-  void listMode;
   void queueSummary;
   void todayDate;
 
-  return "접수/예약이 없습니다";
+  if (listMode === "reception") return "현재 진료 대기 중인 접수가 없습니다";
+  if (listMode === "appointment") return "현재 접수 전 예약이 없습니다";
+  return "현재 대기 중인 접수/예약이 없습니다";
 }
 
 const formatPatientWeightKgInput = (weightKg?: number) =>
@@ -3035,8 +3036,21 @@ function ReceptionStaffAssignmentSelect({
   );
 }
 
-const getReceptionEncounterStatusLabel = (status: Encounter["status"]) =>
-  status === "waiting" ? "진료대기" : getStatusLabel("encounter", status);
+const getReceptionEncounterStatusLabel = (status: Encounter["status"]) => {
+  if (status === "waiting") return "진료대기";
+  if (status === "ordered") return "진료 진행중";
+  return getStatusLabel("encounter", status);
+};
+
+const getReceptionEncounterStatusTone = (
+  status: Encounter["status"],
+): "default" | "green" | "orange" | "sky" | "red" => {
+  if (status === "completed") return "green";
+  if (status === "waiting" || status === "ready_for_billing") return "orange";
+  if (status === "in_consultation" || status === "ordered") return "sky";
+  if (status === "cancelled") return "red";
+  return "default";
+};
 
 const getDurationMinutesFromLabel = (label: string) => {
   const minutes = Number(label.replace("분", ""));
@@ -3179,6 +3193,8 @@ type CalendarTaskCardProps = {
   patientLabel: string;
   purposeLabel: string;
   purposeTestId?: string;
+  statusLabel?: string;
+  statusTestId?: string;
   testId: string;
   timeLabel?: string;
   tone?: "default" | "neutral";
@@ -3210,6 +3226,8 @@ function CalendarTaskCard({
   patientLabel,
   purposeLabel,
   purposeTestId,
+  statusLabel,
+  statusTestId,
   testId,
   timeLabel,
   tone = "default",
@@ -3279,10 +3297,18 @@ function CalendarTaskCard({
           />
           <span
             data-testid={purposeTestId}
-            className={calendarTaskIdentityClassName}
+            className={cn("flex-1", calendarTaskIdentityClassName)}
           >
             {identityLabel}
           </span>
+          {statusLabel ? (
+            <span
+              data-testid={statusTestId}
+              className="shrink-0 emr-text-micro font-semibold text-current opacity-80"
+            >
+              {statusLabel}
+            </span>
+          ) : null}
           {timeLabel ? (
             <span
               data-testid={`${testId}-time`}
@@ -3307,6 +3333,14 @@ function CalendarTaskCard({
             >
               {identityLabel}
             </span>
+            {statusLabel ? (
+              <span
+                data-testid={statusTestId}
+                className="shrink-0 emr-text-micro font-semibold text-current opacity-80"
+              >
+                {statusLabel}
+              </span>
+            ) : null}
           </span>
           {!noShow && !medium && description ? (
             <span
@@ -3333,15 +3367,18 @@ function CalendarTaskCard({
 function ReceptionStatusBadge({
   className,
   label,
+  testId,
   tone = "default",
 }: {
   className?: string;
   label: string;
+  testId?: string;
   tone?: "default" | "green" | "orange" | "sky" | "red";
 }) {
   return (
     <Badge
       variant="outline"
+      data-testid={testId}
       className={cn(
         "h-6 rounded-lg px-2 py-0.5 emr-text-metadata font-medium leading-4",
         tone === "green" &&
@@ -3395,7 +3432,12 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     useState<ReceptionCardActionFeedback | null>(null);
   const [collapsedQueueGroups, setCollapsedQueueGroups] = useState<
     Record<ReceptionQueueSideDisplayGroup, boolean>
-  >({ appointment: false, cancelled: false, reception: false });
+  >({
+    appointment: false,
+    billing_handoff: true,
+    exception: true,
+    reception: false,
+  });
   const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null);
   const searchQuery = useReceptionStore((state) => state.searchQuery);
   const selectAppointment = useReceptionStore(
@@ -3538,7 +3580,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       Object.fromEntries(
         receptionQueueTabItems.map((item) => [
           item.value,
-          getReceptionSideQueueItems(filteredQueueItems, item.value).length,
+          getReceptionActiveSideQueueItems(filteredQueueItems, item.value).length,
         ]),
       ) as Record<ReceptionSideListMode, number>,
     [filteredQueueItems],
@@ -3610,7 +3652,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   ]);
   const handleRestoreQueueItem = useCallback(
     async (item: ReceptionQueueSideItem) => {
-      if (item.statusGroup !== "cancelled" || pendingRestoreId) return;
+      if (!isReceptionQueueSideItemRestorable(item) || pendingRestoreId) return;
       if (isReceptionQueueSideItemPast(item, operatingDate, currentOperatingMinutes)) {
         const confirmed = window.confirm(
           "원래 시간이 이미 지났습니다. 그래도 이 접수/예약을 원래 시간대에 복구하시겠습니까?",
@@ -3761,7 +3803,11 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           visibleQueueGroups.map((group) => (
             <ReceptionQueueSideGroup
               key={group.statusGroup}
-              collapsed={collapsedQueueGroups[group.statusGroup]}
+              collapsed={
+                searchQuery.trim()
+                  ? false
+                  : collapsedQueueGroups[group.statusGroup]
+              }
               group={group}
               pendingRestoreId={pendingRestoreId}
               selectedItemId={getReceptionSideSelectedQueueItemId(activeDrawer)}
@@ -3838,7 +3884,11 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   );
 }
 
-type ReceptionQueueSideDisplayGroup = "reception" | "appointment" | "cancelled";
+type ReceptionQueueSideDisplayGroup =
+  | "reception"
+  | "appointment"
+  | "billing_handoff"
+  | "exception";
 
 type ReceptionQueueSideItem = {
   appointment?: Appointment;
@@ -3868,7 +3918,8 @@ const receptionQueueGroupMeta: Record<
 > = {
   reception: { iconState: "in-progress", label: "접수" },
   appointment: { iconState: "to-do", label: "예약" },
-  cancelled: { iconState: "cancel", label: "취소" },
+  billing_handoff: { iconState: "to-do", label: "수납대기" },
+  exception: { iconState: "cancel", label: "취소·노쇼" },
 };
 
 function ReceptionQueueSideGroup({
@@ -3891,9 +3942,11 @@ function ReceptionQueueSideGroup({
   selectedItemId?: string;
 }) {
   const colorToken =
-    group.statusGroup === "cancelled"
+    group.statusGroup === "exception"
       ? "--emr-status-danger-bg"
-      : "--emr-status-info-bg";
+      : group.statusGroup === "billing_handoff"
+        ? "--emr-status-warning-bg"
+        : "--emr-status-info-bg";
 
   return (
     <EmrSidePanelCollapsibleGroup
@@ -3956,7 +4009,7 @@ function getReceptionQueueSideActionItems({
     },
   ];
 
-  if (item.encounter && item.statusGroup !== "cancelled") {
+  if (item.encounter && item.statusGroup === "reception") {
     items.push({
       key: "chart",
       label: "차트 보러가기",
@@ -3966,7 +4019,7 @@ function getReceptionQueueSideActionItems({
     });
   }
 
-  if (item.statusGroup === "cancelled") {
+  if (isReceptionQueueSideItemRestorable(item)) {
     items.push({
       key: "restore",
       label: pendingRestoreId === item.id ? "복구 중" : "복구하기",
@@ -4012,9 +4065,8 @@ function getReceptionQueueSideItems({
         patientId: patient.id,
       }) ?? row.primaryGuardian;
       const queueKind = "reception";
-      const statusGroup = isCancelledReceptionQueueRow(row)
-        ? "cancelled"
-        : "reception";
+      const statusGroup = getReceptionQueueRowSideStatusGroup(row);
+      if (!statusGroup) return [];
       const veterinarianName =
         row.veterinarianName ??
         getScopedStaffDisplayName({
@@ -4048,17 +4100,22 @@ function getReceptionQueueSideItems({
             actionAriaLabel: `${patient.name} 카드 작업`,
             actionTestId: `reception-card-action-${row.encounter.id}`,
             assigneeName: veterinarianName,
-            eventKind: statusGroup === "cancelled" ? "cancel" : "request",
+            eventKind: isCancelledReceptionQueueRow(row) ? "cancel" : "request",
             eventText:
-              statusGroup === "cancelled"
+              isCancelledReceptionQueueRow(row)
                 ? `${getShortTime(row.queueEntry.finishedAt ?? sortAt)} 취소`
+                : statusGroup === "billing_handoff"
+                  ? `${getShortTime(sortAt)} 수납대기`
                 : `${getShortTime(sortAt)} 접수`,
             eventTime: getShortTime(sortAt),
             eventActorName: "접수",
             guardianName: primaryGuardian?.name ?? "보호자 미지정",
             patientName: patient.name,
             receptionType: "외래",
-            secondLineBadgeLabel: getReceptionQueueSideStatusLabel(statusGroup),
+            secondLineBadgeLabel: getReceptionQueueSideItemStatusLabel({
+              encounter: row.encounter,
+              statusGroup,
+            }),
             secondLineText: visitText,
             testId: `patient-card-${patient.id}`,
           },
@@ -4081,8 +4138,8 @@ function getReceptionQueueSideItems({
         patientGuardians,
         patientId: patient.id,
       });
-      const statusGroup =
-        appointment.status === "cancelled" ? "cancelled" : "appointment";
+      const statusGroup = getReceptionAppointmentSideStatusGroup(appointment);
+      if (!statusGroup) return [];
       const veterinarianName =
         getScopedStaffDisplayName({
           allowMockFallback: allowMockStaffFallback,
@@ -4112,17 +4169,22 @@ function getReceptionQueueSideItems({
             actionAriaLabel: `${patient.name} 카드 작업`,
             actionTestId: `reception-card-action-${appointment.id}`,
             assigneeName: veterinarianName,
-            eventKind: statusGroup === "cancelled" ? "cancel" : "request",
+            eventKind: appointment.status === "cancelled" ? "cancel" : "request",
             eventText:
-              statusGroup === "cancelled"
+              appointment.status === "cancelled"
                 ? `${getShortTime(appointment.updatedAt)} 취소`
+                : appointment.status === "no_show"
+                  ? `${getShortTime(appointment.updatedAt)} 노쇼`
                 : `${getShortTime(appointment.scheduledStartAt)} 예약`,
             eventTime: getShortTime(appointment.scheduledStartAt),
             eventActorName: "예약",
             guardianName: primaryGuardian?.name ?? "보호자 미지정",
             patientName: patient.name,
             receptionType: "예약",
-            secondLineBadgeLabel: getReceptionQueueSideStatusLabel(statusGroup),
+            secondLineBadgeLabel: getReceptionQueueSideItemStatusLabel({
+              appointment,
+              statusGroup,
+            }),
             secondLineText: `${visitText} · ${getAppointmentDurationLabel(appointment)}`,
             testId: `appointment-queue-card-${appointment.id}`,
           },
@@ -4154,8 +4216,20 @@ function getReceptionSideQueueItems(
   return items;
 }
 
+function getReceptionActiveSideQueueItems(
+  items: ReceptionQueueSideItem[],
+  mode: ReceptionSideListMode,
+) {
+  return getReceptionSideQueueItems(items, mode).filter(
+    (item) =>
+      item.statusGroup === "reception" || item.statusGroup === "appointment",
+  );
+}
+
 function getReceptionSideQueueGroups(items: ReceptionQueueSideItem[]) {
-  return (["reception", "appointment", "cancelled"] as const).flatMap((statusGroup) => {
+  return (
+    ["reception", "appointment", "billing_handoff", "exception"] as const
+  ).flatMap((statusGroup) => {
     const groupItems = items.filter((item) => item.statusGroup === statusGroup);
     if (!groupItems.length) return [];
 
@@ -4179,14 +4253,73 @@ function getFilteredReceptionQueueSideItems(
   return items.filter((item) => item.searchText.includes(normalizedQuery));
 }
 
-function getReceptionQueueSideStatusLabel(statusGroup: ReceptionQueueSideDisplayGroup) {
-  return statusGroup === "cancelled" ? "취소" : "대기";
+function getReceptionQueueSideItemStatusLabel({
+  appointment,
+  encounter,
+  statusGroup,
+}: {
+  appointment?: Appointment;
+  encounter?: Encounter;
+  statusGroup: ReceptionQueueSideDisplayGroup;
+}) {
+  if (statusGroup === "reception") return "진료대기";
+  if (statusGroup === "billing_handoff") return "수납대기";
+  if (appointment?.status === "no_show") return "노쇼";
+  if (statusGroup === "exception") return "취소";
+  if (appointment) return getStatusLabel("appointment", appointment.status);
+  if (encounter) return getReceptionEncounterStatusLabel(encounter.status);
+  return undefined;
 }
 
 function getReceptionQueueSideStatusOrder(statusGroup: ReceptionQueueSideDisplayGroup) {
   if (statusGroup === "reception") return 0;
   if (statusGroup === "appointment") return 1;
-  return 2;
+  if (statusGroup === "billing_handoff") return 2;
+  return 3;
+}
+
+function getReceptionQueueRowSideStatusGroup(
+  row: ReturnType<typeof getReceptionQueueRows>[number],
+): ReceptionQueueSideDisplayGroup | undefined {
+  if (isCancelledReceptionQueueRow(row)) return "exception";
+  if (
+    row.encounter.status === "ready_for_billing" ||
+    row.queueEntry.queueType === "billing"
+  ) {
+    return row.queueEntry.status === "waiting" ? "billing_handoff" : undefined;
+  }
+  if (
+    row.encounter.status === "waiting" &&
+    row.queueEntry.status === "waiting" &&
+    row.queueEntry.queueType === "consultation"
+  ) {
+    return "reception";
+  }
+  return undefined;
+}
+
+function getReceptionAppointmentSideStatusGroup(
+  appointment: Appointment,
+): ReceptionQueueSideDisplayGroup | undefined {
+  if (appointment.status === "cancelled" || appointment.status === "no_show") {
+    return "exception";
+  }
+  if (
+    appointment.status === "requested" ||
+    appointment.status === "confirmed" ||
+    appointment.status === "changed"
+  ) {
+    return "appointment";
+  }
+  return undefined;
+}
+
+function isReceptionQueueSideItemRestorable(item: ReceptionQueueSideItem) {
+  return (
+    item.statusGroup === "exception" &&
+    (item.encounter?.status === "cancelled" ||
+      item.appointment?.status === "cancelled")
+  );
 }
 
 function isCancelledReceptionQueueRow(row: ReturnType<typeof getReceptionQueueRows>[number]) {
@@ -4321,6 +4454,19 @@ function ScheduleAppointmentCard({
   profileDataset?: ReceptionProfileDataset;
   veterinarians?: Veterinarian[];
 }) {
+  const persistedEncounterStatus = useReceptionStore(
+    (state) =>
+      state.draftCheckIns.find(
+        (draft) => draft.appointmentId === appointment.id,
+      )?.encounter.status,
+  );
+  const linkedEncounterStatus =
+    persistedEncounterStatus ??
+    (isLegacySalesDemoWorkspace(appointment.workspaceId)
+      ? mockEncounters.find(
+          (encounter) => encounter.appointmentId === appointment.id,
+        )?.status
+      : undefined);
   const patient = getAppointmentPatient(appointment, profileDataset);
   const guardian = getAppointmentGuardian(appointment, profileDataset);
   const reservationMemo = appointment.visitPurpose ?? appointment.symptomNote;
@@ -4378,6 +4524,12 @@ function ScheduleAppointmentCard({
       patientLabel={patientLabel}
       purposeLabel={appointmentSummary}
       purposeTestId={`appointment-purpose-${appointment.id}`}
+      statusLabel={
+        linkedEncounterStatus
+          ? getReceptionEncounterStatusLabel(linkedEncounterStatus)
+          : getStatusLabel("appointment", appointment.status)
+      }
+      statusTestId={`appointment-status-${appointment.id}`}
       testId={`appointment-card-${appointment.id}`}
       timeLabel={timeLabel}
       type={cardType}
@@ -4472,6 +4624,8 @@ function ScheduleWalkInQueueCard({
       patientLabel={patientLabel}
       purposeLabel={visitPurpose}
       purposeTestId={`walkin-purpose-${draft.encounter.id}`}
+      statusLabel={getReceptionEncounterStatusLabel(draft.encounter.status)}
+      statusTestId={`walkin-status-${draft.encounter.id}`}
       testId={`walkin-card-${draft.encounter.id}`}
       timeLabel={timeLabel}
       tone={unassignedCompact ? "neutral" : "default"}
@@ -10480,6 +10634,24 @@ function ReceptionSidePanelDetail({
             />
           ) : null}
 
+          {selectedEncounter || selectedAppointment ? (
+            <div className="flex justify-end">
+              <ReceptionStatusBadge
+                label={
+                  selectedEncounter
+                    ? getReceptionEncounterStatusLabel(selectedEncounter.status)
+                    : getStatusLabel("appointment", selectedAppointment!.status)
+                }
+                testId="reception-detail-status"
+                tone={
+                  selectedEncounter
+                    ? getReceptionEncounterStatusTone(selectedEncounter.status)
+                    : getAppointmentTone(selectedAppointment!.status)
+                }
+              />
+            </div>
+          ) : null}
+
           <ReceptionSidePanelSection title="환자/보호자" variant={detailVariant}>
             <ReceptionSidePanelField
               icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
@@ -11818,13 +11990,19 @@ export function ReceptionDrawer({
                   {guardian?.mobilePhone ? ` · ${guardian.mobilePhone}` : ""}
                 </div>
               </div>
-              {selectedAppointment ? (
+              {selectedAppointment || selectedEncounter ? (
                 <ReceptionStatusBadge
-                  label={getStatusLabel(
-                    "appointment",
-                    selectedAppointment.status,
-                  )}
-                  tone={getAppointmentTone(selectedAppointment.status)}
+                  label={
+                    selectedAppointment
+                      ? getStatusLabel("appointment", selectedAppointment.status)
+                      : getReceptionEncounterStatusLabel(selectedEncounter!.status)
+                  }
+                  testId="reception-detail-status"
+                  tone={
+                    selectedAppointment
+                      ? getAppointmentTone(selectedAppointment.status)
+                      : getReceptionEncounterStatusTone(selectedEncounter!.status)
+                  }
                 />
               ) : null}
             </div>
