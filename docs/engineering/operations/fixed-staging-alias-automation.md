@@ -6,7 +6,7 @@ doc_type: operating-runbook
 related_work:
   - RELEASE-OPS-PR-002
   - RELEASE-OPS-PR-003
-last_updated: 2026-07-18
+last_updated: 2026-08-30
 ---
 
 # Fixed Staging Alias Automation
@@ -68,7 +68,7 @@ After a `staging` branch deployment completes and an approved operator manually 
 
 - [ ] Fixed staging URL points to the latest Vercel deployment expected for `staging`.
 - [ ] 진료/차트 screen loads at `https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app/w/workspace-clair-cheongdam/treatment?modulePanel=open&aside=closed`.
-- [ ] 세션 초기화 button is visible.
+- [ ] 세션 초기화 button is not visible in the global workspace topbar.
 - [ ] 진료 대기열 sort/filter/display/search controls show the compact header form: visible `요청순`, filter icon, `M` density button, and search icon.
 - [ ] 조제/처치 대기열 sort/filter/display/search controls show the same compact header form.
 - [ ] Clicking the search icon opens inline search without showing the old header text as the main UI.

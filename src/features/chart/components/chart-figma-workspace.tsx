@@ -192,7 +192,7 @@ export function ChartPanelActionGroup({ children }: { children?: ReactNode }) {
   return (
     <div
       data-slot="chart-panel-actions"
-      className="flex shrink-0 items-center gap-1 has-[[aria-expanded=true]:not([data-chart-panel-collapse])]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chart-panel:opacity-100 [@media(hover:hover)]:group-focus-within/chart-panel:opacity-100"
+      className="flex shrink-0 items-center gap-1 has-[[aria-expanded=true]:not([data-chart-panel-collapse])]:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chart-panel:opacity-100"
     >
       {children}
     </div>
