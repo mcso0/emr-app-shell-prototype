@@ -654,7 +654,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             notificationDrawerOpen={notificationDrawerOpen}
             refreshLabel={moduleRefreshAction?.label ?? `${moduleDefinition.label} 새로고침`}
             tabs={tabs}
-            workspaceId={workspaceId}
             onActivateTab={handleActivateTab}
             onBack={handleTabBack}
             onCloseTab={handleCloseTab}
