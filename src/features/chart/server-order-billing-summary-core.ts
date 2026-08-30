@@ -262,13 +262,33 @@ function mapDbError(message: string | undefined, fallback: GatewayError): Gatewa
 
 function createDemoPermissionAdapter() {
   return createMockWorkspacePermissionAdapter({
-    users: [{ id: "playwright-default-session", status: "active" }],
-    memberships: [{
-      id: "membership-playwright-admin",
-      workspaceId: "clair-demo",
-      userId: "playwright-default-session",
-      roles: ["hospital_admin"],
-      status: "active",
-    }],
+    users: [
+      { id: "playwright-default-session", status: "active" },
+      { id: "user-admin", status: "active" },
+      { id: "user-vet", status: "active" },
+    ],
+    memberships: [
+      {
+        id: "membership-playwright-admin",
+        workspaceId: "clair-demo",
+        userId: "playwright-default-session",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-admin",
+        workspaceId: "clair-demo",
+        userId: "user-admin",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-vet",
+        workspaceId: "clair-demo",
+        userId: "user-vet",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
   });
 }
