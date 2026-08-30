@@ -1275,6 +1275,30 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
     "displayName",
   ]);
 
+  const selectionHeader = orderTable.locator(
+    'th[data-column-id="select"]',
+  );
+  const statusHeader = orderTable.locator('th[data-column-id="status"]');
+  const selectionCheckbox = page.getByRole("checkbox", {
+    name: "오더 전체 선택",
+  });
+  const statusSortButton = orderTable.getByRole("button", {
+    name: "상태 오름차순 정렬",
+  });
+
+  await expect(selectionHeader).toHaveCSS("width", "32px");
+  await expect(statusHeader).toHaveCSS("width", "84px");
+
+  const selectionCheckboxBox = await selectionCheckbox.boundingBox();
+  const statusSortButtonBox = await statusSortButton.boundingBox();
+
+  expect(selectionCheckboxBox).not.toBeNull();
+  expect(statusSortButtonBox).not.toBeNull();
+  expect(
+    statusSortButtonBox!.x -
+      (selectionCheckboxBox!.x + selectionCheckboxBox!.width),
+  ).toBeGreaterThanOrEqual(4);
+
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
   await expect(selectionActions).toBeVisible();

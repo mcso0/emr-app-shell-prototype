@@ -5599,9 +5599,9 @@ function ChartOrderTable({
     () => [
       {
         id: "select",
-        size: 28,
-        minSize: 28,
-        maxSize: 28,
+        size: 32,
+        minSize: 32,
+        maxSize: 32,
         enableResizing: false,
         enableSorting: false,
         header: ({ table }) => (
@@ -5682,9 +5682,9 @@ function ChartOrderTable({
       {
         id: "status",
         accessorFn: (row) => row.order.status,
-        size: 88,
-        minSize: 88,
-        maxSize: 88,
+        size: 84,
+        minSize: 84,
+        maxSize: 84,
         enableResizing: false,
         header: chartOrderSortLabels.status,
         sortingFn: (rowA, rowB) =>

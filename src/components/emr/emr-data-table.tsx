@@ -453,7 +453,7 @@ function EmrDataTableSkeletonRows<TData>({
             className={cn(
               "overflow-hidden !p-0",
               isSelection && "!p-0",
-              isSelection && selectionColumnSize === 28 && "!pl-3 !pr-0",
+              isSelection && selectionColumnSize === 32 && "!pl-3 !pr-1",
             )}
             data-column-id={column.id}
             style={
@@ -472,7 +472,7 @@ function EmrDataTableSkeletonRows<TData>({
                 "emr-data-table-cell-content flex",
                 isSelection ? "justify-center" : "justify-start",
                 isSelection &&
-                  selectionColumnSize === 28 &&
+                  selectionColumnSize === 32 &&
                   "!px-0 !justify-start",
                 meta?.identity && "!px-0",
               )}
@@ -559,7 +559,7 @@ function EmrDataTableHeader<TData>({
               aria-label={label}
               className={cn(
                 "!p-0 [&_.emr-table-cell-content]:!p-0",
-                selectionColumnSize === 28 ? "!pl-3 !pr-0" : "!pl-5 !pr-2",
+                selectionColumnSize === 32 ? "!pl-3 !pr-1" : "!pl-5 !pr-2",
               )}
               data-column-id={column.id}
               style={{
@@ -656,7 +656,7 @@ function EmrDataTableBodyRow<TData>({
                 key={cell.id}
                 className={cn(
                   "!p-0 [&_.emr-table-cell-content]:!p-0",
-                  selectionColumnSize === 28 ? "!pl-3 !pr-0" : "!pl-5 !pr-2",
+                  selectionColumnSize === 32 ? "!pl-3 !pr-1" : "!pl-5 !pr-2",
                 )}
                 controlVisibility="contextual"
                 data-column-id={cell.column.id}
