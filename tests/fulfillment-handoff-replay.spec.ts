@@ -1,6 +1,8 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
+import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
+
 const workspaceId = "clair-demo";
 const encounterId = "encounter-kong-260501";
 const a3Migration = readFileSync(
@@ -36,7 +38,7 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
       orderIds: replayOrders.map((order) => order.orderId),
     },
     headers: {
-      "If-Match": currentEtag,
+      [chartOrderExpectedEtagHeader]: currentEtag,
       "x-clair-demo-session-user-id": "user-vet",
     },
   });
@@ -61,7 +63,7 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
       orderIds: replayOrders.map((order) => order.orderId),
     },
     headers: {
-      "If-Match": retryEtag,
+      [chartOrderExpectedEtagHeader]: retryEtag,
       "x-clair-demo-session-user-id": "user-vet",
     },
   });
@@ -172,7 +174,7 @@ test("fulfillment handoff replay keeps tenant and role boundaries closed", async
       orderIds: ["order-kong-fluid"],
     },
     headers: {
-      "If-Match": currentEtag,
+      [chartOrderExpectedEtagHeader]: currentEtag,
       "x-clair-demo-session-user-id": "user-front-desk",
     },
   });
@@ -187,7 +189,7 @@ test("fulfillment handoff replay keeps tenant and role boundaries closed", async
       orderIds: ["order-kong-fluid"],
     },
     headers: {
-      "If-Match": currentEtag,
+      [chartOrderExpectedEtagHeader]: currentEtag,
       "x-clair-demo-session-user-id": "user-vet",
     },
   });

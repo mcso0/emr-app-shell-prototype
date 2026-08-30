@@ -8,6 +8,7 @@ import {
 
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import type { ChartLiveQueueRecord } from "../src/features/chart/chart-live-queue";
+import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
 import {
   addDaysToIsoDate,
   formatCompactKoreanOperatingDateLabel,
@@ -328,7 +329,7 @@ async function saveKongOrderDraftRows(
         rows,
       },
       headers: {
-        "If-Match": currentBody.etag,
+        [chartOrderExpectedEtagHeader]: currentBody.etag,
         "x-clair-demo-session-user-id": "user-vet",
       },
     },
@@ -5708,6 +5709,48 @@ test("chart order autosave preserves local edits and blocks confirmation on ETag
   ).toBeVisible();
 });
 
+test("chart order autosave waits for a new edit after a failed attempt", async ({
+  page,
+}) => {
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+
+  let patchCount = 0;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts",
+    async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+      patchCount += 1;
+      const headers = route.request().headers();
+      expect(headers[chartOrderExpectedEtagHeader.toLowerCase()]).toMatch(
+        /^"[0-9a-f]{64}"$/,
+      );
+      expect(headers["if-match"]).toBeUndefined();
+      await route.fulfill({
+        contentType: "application/json",
+        status: 503,
+        json: { ok: false, status: 503, error: "db_write_failed" },
+      });
+    },
+  );
+
+  const billingName = page.getByLabel("Maropitant 16mg T 청구서명 수정");
+  await billingName.fill("첫 번째 저장 실패 후 유지할 편집값");
+  await expect.poll(() => patchCount, { timeout: 2_500 }).toBe(1);
+  await page.waitForTimeout(1_200);
+  expect(patchCount).toBe(1);
+  await expect(page.getByTestId("chart-order-state-error")).toBeVisible();
+  await expect(billingName).toHaveValue("첫 번째 저장 실패 후 유지할 편집값");
+
+  await billingName.fill("새로 수정한 편집값");
+  await expect.poll(() => patchCount, { timeout: 2_500 }).toBe(2);
+  await page.waitForTimeout(1_200);
+  expect(patchCount).toBe(2);
+});
+
 async function verifyChartConfirmationRetry(page: Page) {
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
@@ -5735,6 +5778,11 @@ async function verifyChartConfirmationRetry(page: Page) {
         await route.continue();
         return;
       }
+      const headers = route.request().headers();
+      expect(headers[chartOrderExpectedEtagHeader.toLowerCase()]).toMatch(
+        /^"[0-9a-f]{64}"$/,
+      );
+      expect(headers["if-match"]).toBeUndefined();
       actionBodies.push(
         (route.request().postDataJSON() ?? {}) as Record<string, unknown>,
       );
