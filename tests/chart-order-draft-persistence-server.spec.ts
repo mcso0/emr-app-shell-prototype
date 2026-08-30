@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import { resolveServerChartEncounterId } from "../src/features/chart/server-encounter-id-bridge-core";
+import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
 import {
   createMockChartOrderDraftGateway,
   createSupabaseChartOrderDraftGateway,
@@ -119,6 +120,22 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
   expect(current.status()).toBe(200);
   const currentBody = (await current.json()) as { etag: string };
 
+  const standardHeaderOnly = await request.patch(
+    `/api/workspaces/${workspaceId}/chart/order-drafts`,
+    {
+      data: strictDraftInput(currentBody.etag),
+      headers: {
+        "If-Match": currentBody.etag,
+        "x-clair-demo-session-user-id": "user-vet",
+      },
+    },
+  );
+  expect(standardHeaderOnly.status()).toBe(428);
+  await expectJson(standardHeaderOnly, {
+    ok: false,
+    error: "if_match_required",
+  });
+
   const unauthenticated = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-drafts`,
     { data: strictDraftInput(currentBody.etag) },
@@ -137,7 +154,7 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
         orders: [],
       },
       headers: {
-        "If-Match": currentBody.etag,
+        [chartOrderExpectedEtagHeader]: currentBody.etag,
         "x-clair-demo-session-user-id": "user-vet",
       },
     },
@@ -153,14 +170,16 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
     {
       data: strictDraftInput(currentBody.etag),
       headers: {
-        "If-Match": currentBody.etag,
+        [chartOrderExpectedEtagHeader]: currentBody.etag,
         "x-clair-demo-session-user-id": "user-vet",
       },
     },
   );
   expect(saved.status()).toBe(200);
+  expect(saved.headers()["etag"]).toBeUndefined();
   const savedBody = (await saved.json()) as {
     ok: true;
+    etag: string;
     rows: Array<{
       rowType: string;
       encounterId: string;
@@ -173,6 +192,7 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
   };
 
   expect(savedBody.enforcedBy).toBe("chart-order-draft-persistence");
+  expect(savedBody.etag).toMatch(/^"[0-9a-f]{64}"$/);
   expect(savedBody.rows).toEqual(
     expect.arrayContaining([
       expect.objectContaining({

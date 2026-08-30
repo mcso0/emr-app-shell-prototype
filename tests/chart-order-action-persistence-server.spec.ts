@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import { resolveServerChartEncounterId } from "../src/features/chart/server-encounter-id-bridge-core";
+import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
 import {
   createMockChartOrderActionGateway,
   createSupabaseChartOrderActionGateway,
@@ -85,7 +86,7 @@ test("order action route confirms selected orders via mock fallback and reads af
   expect(current.status()).toBe(200);
   const currentBody = (await current.json()) as { ok: true; etag: string };
 
-  const saved = await request.patch(
+  const standardHeaderOnly = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-actions`,
     {
       data: { ...validConfirmInput, expectedEtag: currentBody.etag },
@@ -95,9 +96,27 @@ test("order action route confirms selected orders via mock fallback and reads af
       },
     },
   );
+  expect(standardHeaderOnly.status()).toBe(428);
+  await expectJson(standardHeaderOnly, {
+    ok: false,
+    error: "if_match_required",
+  });
+
+  const saved = await request.patch(
+    `/api/workspaces/${workspaceId}/chart/order-actions`,
+    {
+      data: { ...validConfirmInput, expectedEtag: currentBody.etag },
+      headers: {
+        [chartOrderExpectedEtagHeader]: currentBody.etag,
+        "x-clair-demo-session-user-id": "user-vet",
+      },
+    },
+  );
   expect(saved.status()).toBe(200);
+  expect(saved.headers()["etag"]).toBeUndefined();
   const savedBody = (await saved.json()) as {
     ok: true;
+    etag: string;
     confirmationCommandId?: string;
     queueProjectionIds?: string[];
     tasks?: Array<Record<string, unknown>>;
@@ -113,6 +132,7 @@ test("order action route confirms selected orders via mock fallback and reads af
   };
 
   expect(savedBody.enforcedBy).toBe("chart-order-action-persistence");
+  expect(savedBody.etag).toMatch(/^"[0-9a-f]{64}"$/);
   expect(savedBody.orderActions).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
