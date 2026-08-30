@@ -202,8 +202,7 @@ export function derivePersonalProfileInitials(label: string) {
 
 export function formatCompactAvatarInitials(initials: string) {
   const compact = Array.from(initials.replace(/[^A-Za-z0-9가-힣]/g, ""));
-  const length = compact.some((character) => /[가-힣]/.test(character)) ? 1 : 2;
-  return (compact.slice(0, length).join("") || "U").toUpperCase();
+  return (compact[0] || "U").toUpperCase();
 }
 
 function isSessionPersonalProfile(value: unknown): value is SessionPersonalProfile {
