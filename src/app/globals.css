@@ -847,6 +847,14 @@
   }
 
   .emr-table-surface[data-emr-pinning="columns"]
+    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]
+    + [data-slot="table-head"]:not([data-emr-column-pinned])
+    > :first-child[data-emr-table-content="true"]
+    > :first-child {
+    padding-inline-start: 0;
+  }
+
+  .emr-table-surface[data-emr-pinning="columns"]
     [data-emr-column-pinned="right"][data-emr-pinned-edge="true"] {
     box-shadow: -1px 0 0 var(--emr-border-default);
   }

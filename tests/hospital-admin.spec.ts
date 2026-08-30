@@ -645,6 +645,28 @@ test("hospital admin Order management shows all service-review dispensing master
     "left",
   );
 
+  const dispensingIngredientHeaderLabel = table.locator(
+    'th[data-column-id="dispensingIngredient"] [data-emr-table-content="true"] > :first-child > span:first-child',
+  );
+  const dispensingIngredientBodyText = proofRow
+    .locator(
+      'td[data-column-id="dispensingIngredient"] [data-emr-cell-text-mode]',
+    )
+    .first();
+  const [dispensingIngredientHeaderLabelBox, dispensingIngredientBodyTextBox] =
+    await Promise.all([
+      dispensingIngredientHeaderLabel.boundingBox(),
+      dispensingIngredientBodyText.boundingBox(),
+    ]);
+  expect(dispensingIngredientHeaderLabelBox).not.toBeNull();
+  expect(dispensingIngredientBodyTextBox).not.toBeNull();
+  expect(
+    Math.abs(
+      dispensingIngredientHeaderLabelBox!.x -
+        dispensingIngredientBodyTextBox!.x,
+    ),
+  ).toBeLessThanOrEqual(1);
+
   const tableScrollOwner = table.locator(
     "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']/*[@data-emr-pinned-table-scroll-owner='true']",
   );
