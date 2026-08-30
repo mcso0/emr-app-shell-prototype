@@ -365,6 +365,29 @@ async function restoreKongOrderDraftDefaults(page: Page) {
   await expect(billingName).toHaveValue(/.+/);
 }
 
+async function searchChartOrderCatalog(
+  dialog: Locator,
+  query: string,
+  categoryLabel = "전체",
+) {
+  await dialog
+    .getByRole("button", { name: `${categoryLabel} 오더 검색 열기` })
+    .click();
+  await dialog
+    .getByRole("combobox", {
+      name: `${categoryLabel} 오더 검색`,
+      exact: true,
+    })
+    .fill(query);
+}
+
+async function confirmChartOrderCatalogSelection(
+  dialog: Locator,
+  count: number,
+) {
+  await dialog.getByRole("button", { name: `선택한 ${count}개 추가` }).click();
+}
+
 test("waiting chart saves and clears only today's vital values through the dialog", async ({
   page,
 }) => {
@@ -1522,14 +1545,14 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
   await page.goto(kongScenarioUrl);
   await page.getByRole("button", { name: "+ Order", exact: true }).click();
   const catalogDialog = page.getByRole("dialog", {
-    name: "Workspace catalog에서 Order 추가",
+    name: "오더 추가",
   });
-  await catalogDialog.getByLabel("카탈로그 Order 검색").fill("BASO");
+  await searchChartOrderCatalog(catalogDialog, "BASO");
   const candidate = page.getByTestId(
     "chart-order-catalog-candidate-std-ord-lab-cbc-baso",
   );
-  await candidate.getByRole("button", { name: "추가" }).click();
-  await catalogDialog.getByRole("button", { name: "닫기" }).click();
+  await candidate.click();
+  await confirmChartOrderCatalogSelection(catalogDialog, 1);
   await expect(page.getByTestId("chart-order-footer")).toContainText("저장됨", {
     timeout: 10_000,
   });
@@ -1782,10 +1805,8 @@ test("chart Plan/Order header adds Order and collapse actions without changing b
   }
 
   await page.getByRole("button", { name: "Order 추가" }).click();
-  await expect(
-    page.getByRole("dialog", { name: "Workspace catalog에서 Order 추가" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByRole("dialog", { name: "오더 추가" })).toBeVisible();
+  await page.getByRole("button", { name: "오더 추가 닫기" }).click();
 
   for (const panelId of ["soap", "assessment", "history"] as const) {
     const clinicalPanel = clinicalPanelGroup.locator(
@@ -1828,10 +1849,8 @@ test("chart Plan/Order header adds Order and collapse actions without changing b
 
   await page.getByRole("button", { name: "Order 추가" }).click();
   await expect(orderPanel).toHaveAttribute("data-collapsed", "false");
-  await expect(
-    page.getByRole("dialog", { name: "Workspace catalog에서 Order 추가" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByRole("dialog", { name: "오더 추가" })).toBeVisible();
+  await page.getByRole("button", { name: "오더 추가 닫기" }).click();
 
   await orderPanel.hover();
   await collapseButton.click();
@@ -2973,9 +2992,7 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   ).toBeLessThanOrEqual(1);
 
   await emptyState.getByRole("button", { name: "+ Order" }).click();
-  await expect(
-    page.getByRole("dialog", { name: "Workspace catalog에서 Order 추가" }),
-  ).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "오더 추가" })).toBeVisible();
   await expect(
     chartContent.locator("[data-slot='chart-panel-skeleton']"),
   ).toHaveCount(0);
@@ -6082,12 +6099,11 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   await page.getByRole("button", { name: "+ Order", exact: true }).click();
 
   const dialog = page.getByRole("dialog", {
-    name: "Workspace catalog에서 Order 추가",
+    name: "오더 추가",
   });
-  await expect(
-    page.getByTestId("chart-order-catalog-search-status"),
-  ).toHaveText("Workspace catalog active 후보 108건");
-  await dialog.getByLabel("카탈로그 Order 검색").fill("PR-017 조제 0108");
+  await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("108개", { exact: true })).toBeVisible();
+  await searchChartOrderCatalog(dialog, "PR-017 조제 0108");
   await expect(
     page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0108"),
   ).toBeVisible();
@@ -6095,11 +6111,134 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
     page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0001"),
   ).toBeHidden();
   await dialog
-    .getByLabel("카탈로그 Order 검색")
+    .getByRole("combobox", { name: "전체 오더 검색", exact: true })
     .fill("Official PR-017 Product 0108");
   await expect(
     page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0108"),
   ).toBeVisible();
+});
+
+test("chart order add reorders selected orders with a grab handle before adding", async ({
+  page,
+}) => {
+  const createCatalogRow = (
+    sourcePresetId: string,
+    displayName: string,
+    appliedPriceKrw: number,
+  ) => ({
+    appliedSnapshot: {
+      appliedAmountBasis: "unit_price",
+      appliedBillingName: displayName,
+      appliedDestinationModule: "lab",
+      appliedDisplayName: displayName,
+      appliedPriceKrw,
+      appliedSalesUnit: "per_each",
+      appliedStandardOrderName: displayName,
+      appliedTargetSpecies: ["dog", "cat"],
+      appliedTaskRequired: true,
+      appliedTaxIncluded: true,
+      billingEligible: true,
+      billingReflectionEnabled: true,
+      clinicalOrderType: "clinical_lab",
+      defaultDetailInputs: {},
+      destinationModule: "lab",
+      detailSchemaVersion: 1,
+      executionMode: "routed",
+      sourcePresetId,
+      sourcePresetVersion: "2026-08-30.1",
+      workspaceCatalogItemId: sourcePresetId,
+    },
+    billingEligible: true,
+    billingName: displayName,
+    categoryGroup: "lab",
+    clinicalOrderType: "clinical_lab",
+    destinationModule: "lab",
+    detailSchemaVersion: 1,
+    displayName,
+    executionMode: "routed",
+    rowType: "individual",
+    sourcePresetId,
+    sourcePresetVersion: "2026-08-30.1",
+    targetSpecies: ["dog", "cat"],
+    workspaceCatalogItemId: sourcePresetId,
+    workspaceCatalogRevision: 1,
+  });
+
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          ok: true,
+          rows: [
+            createCatalogRow("reorder-lab-a", "재정렬 검사 A", 10_000),
+            createCatalogRow("reorder-lab-b", "재정렬 검사 B", 20_000),
+          ],
+          status: 200,
+        },
+        status: 200,
+      });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+
+  const dialog = page.getByRole("dialog", { name: "오더 추가" });
+  await page.getByTestId("chart-order-catalog-candidate-reorder-lab-a").click();
+  await page.getByTestId("chart-order-catalog-candidate-reorder-lab-b").click();
+
+  const dragHandle = dialog.getByRole("button", {
+    name: "재정렬 검사 B 순서 변경",
+  });
+  await expect(dragHandle).toHaveCSS("cursor", "grab");
+  const [dragBox, targetBox] = await Promise.all([
+    dragHandle.boundingBox(),
+    dialog
+      .getByRole("button", { name: "재정렬 검사 A 순서 변경" })
+      .boundingBox(),
+  ]);
+  expect(dragBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+  await page.mouse.move(
+    dragBox!.x + dragBox!.width / 2,
+    dragBox!.y + dragBox!.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    targetBox!.x + targetBox!.width / 2,
+    targetBox!.y + targetBox!.height / 2,
+    { steps: 8 },
+  );
+  await page.mouse.up();
+  await page.waitForTimeout(60);
+
+  const selectedNames = await dialog
+    .getByRole("listitem")
+    .locator("strong")
+    .allTextContents();
+  expect(selectedNames).toEqual(["재정렬 검사 B", "재정렬 검사 A"]);
+  await confirmChartOrderCatalogSelection(dialog, 2);
+
+  const reorderedA = page
+    .getByRole("row")
+    .filter({ hasText: "재정렬 검사 A" })
+    .first();
+  const reorderedB = page
+    .getByRole("row")
+    .filter({ hasText: "재정렬 검사 B" })
+    .first();
+  await expect(reorderedA).toBeVisible();
+  await expect(reorderedB).toBeVisible();
+  const [rowABox, rowBBox] = await Promise.all([
+    reorderedA.boundingBox(),
+    reorderedB.boundingBox(),
+  ]);
+  expect(rowABox).not.toBeNull();
+  expect(rowBBox).not.toBeNull();
+  expect(rowBBox!.y).toBeLessThan(rowABox!.y);
 });
 
 test("chart dispensing catalog prefills master prescription values and preserves veterinarian edits", async ({
@@ -6197,14 +6336,14 @@ test("chart dispensing catalog prefills master prescription values and preserves
   await restoreKongOrderDraftDefaults(page);
   await page.getByRole("button", { name: "+ Order", exact: true }).click();
   const dialog = page.getByRole("dialog", {
-    name: "Workspace catalog에서 Order 추가",
+    name: "오더 추가",
   });
   const candidate = page.getByTestId(
     "chart-order-catalog-candidate-std-ord-med-maropitant",
   );
   await expect(candidate).toContainText(displayName);
-  await candidate.getByRole("button", { name: "추가" }).click();
-  await dialog.getByRole("button", { name: "닫기" }).click();
+  await candidate.click();
+  await confirmChartOrderCatalogSelection(dialog, 1);
 
   await expect
     .poll(() =>
@@ -6411,24 +6550,22 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await page.getByRole("button", { name: "+ Order", exact: true }).click();
 
   const dialog = page.getByRole("dialog", {
-    name: "Workspace catalog에서 Order 추가",
+    name: "오더 추가",
   });
   await expect(dialog).toBeVisible();
-  await expect(
-    page.getByTestId("chart-order-catalog-search-status"),
-  ).toContainText("Workspace catalog active 후보");
+  await expect(dialog.getByText("오더 분류", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("선택한 오더", { exact: true })).toBeVisible();
   await expect(dialog.getByText("일시중지 예시")).toHaveCount(0);
 
-  await dialog.getByLabel("카탈로그 Order 검색").fill("BASO");
+  await searchChartOrderCatalog(dialog, "BASO");
   const candidate = page.getByTestId(
     "chart-order-catalog-candidate-std-ord-lab-cbc-baso",
   );
   await expect(candidate).toContainText("[CBC 검사] #BASO");
-  const addButton = candidate.getByRole("button", { name: /추가|추가됨/ });
-  if (await addButton.isEnabled()) {
-    await addButton.click();
+  if (await candidate.isEnabled()) {
+    await candidate.click();
   }
-  await dialog.getByRole("button", { name: "닫기" }).click();
+  await confirmChartOrderCatalogSelection(dialog, 1);
 
   const addedRow = page
     .getByRole("row")
@@ -6611,14 +6748,15 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
 
   await page.getByRole("button", { name: "+ Order", exact: true }).click();
   const catalogDialog = page.getByRole("dialog", {
-    name: "Workspace catalog에서 Order 추가",
+    name: "오더 추가",
   });
-  await catalogDialog.getByLabel("카탈로그 Order 검색").fill("구토 기본 세트");
+  await searchChartOrderCatalog(catalogDialog, "구토 기본 세트");
   const setCandidate = page.getByTestId(
     "chart-order-catalog-candidate-set-vomit-basic",
   );
   await expect(setCandidate).toContainText("구토 기본 세트");
-  await setCandidate.getByRole("button", { name: "추가" }).click();
+  await setCandidate.click();
+  await confirmChartOrderCatalogSelection(catalogDialog, 1);
 
   const setDialog = page.getByRole("dialog", {
     name: "구토 기본 세트 구성 선택",
@@ -6647,8 +6785,31 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
     .click();
 
   await (await getChartOrderAction(page, /Order 업데이트/)).click();
-  await expect.poll(() => draftPatchBodies.length).toBeGreaterThan(0);
-  const firstDraftBody = draftPatchBodies.at(-1) ?? {};
+  await expect
+    .poll(() =>
+      draftPatchBodies.some(
+        (body) =>
+          Array.isArray(body.rows) &&
+          body.rows.some(
+            (row) =>
+              Boolean(row) &&
+              typeof row === "object" &&
+              (row as Record<string, unknown>).rowType === "set",
+          ),
+      ),
+    )
+    .toBe(true);
+  const firstDraftBody =
+    draftPatchBodies.findLast(
+      (body) =>
+        Array.isArray(body.rows) &&
+        body.rows.some(
+          (row) =>
+            Boolean(row) &&
+            typeof row === "object" &&
+            (row as Record<string, unknown>).rowType === "set",
+        ),
+    ) ?? {};
   const firstSetRow = (
     firstDraftBody.rows as Array<Record<string, unknown>>
   ).find((row) => row.rowType === "set");
@@ -6698,9 +6859,47 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
     "5",
   );
   await reloadedLeaf.getByLabel(/Maropitant.*수량 수정/).fill("6");
-  await (await getChartOrderAction(page, /Order 업데이트/)).click();
-  await expect.poll(() => draftPatchBodies.length).toBeGreaterThan(1);
-  const retryDraftBody = draftPatchBodies.at(-1) ?? {};
+  const updateAction = await getChartOrderAction(page, /Order 업데이트/);
+  if (await updateAction.isEnabled()) {
+    await updateAction.click();
+  } else {
+    await dismissChartOrderActionMenu(page);
+  }
+  await expect
+    .poll(() =>
+      draftPatchBodies.some(
+        (body) =>
+          Array.isArray(body.rows) &&
+          body.rows.some((row) => {
+            if (!row || typeof row !== "object") return false;
+            const record = row as Record<string, unknown>;
+            const selectionIntent = record.selectionIntent as
+              { items?: Array<Record<string, unknown>> } | undefined;
+            return selectionIntent?.items?.some(
+              (item) =>
+                item.revisionItemId === "setitem-vomit-maropitant" &&
+                item.quantity === 6,
+            );
+          }),
+      ),
+    )
+    .toBe(true);
+  const retryDraftBody =
+    draftPatchBodies.findLast(
+      (body) =>
+        Array.isArray(body.rows) &&
+        body.rows.some((row) => {
+          if (!row || typeof row !== "object") return false;
+          const record = row as Record<string, unknown>;
+          const selectionIntent = record.selectionIntent as
+            { items?: Array<Record<string, unknown>> } | undefined;
+          return selectionIntent?.items?.some(
+            (item) =>
+              item.revisionItemId === "setitem-vomit-maropitant" &&
+              item.quantity === 6,
+          );
+        }),
+    ) ?? {};
   const retrySetRow = (
     retryDraftBody.rows as Array<Record<string, unknown>>
   ).find((row) => row.rowType === "set");
