@@ -587,22 +587,49 @@ test("customer workspace renders animal master list and opens the common patient
   const patientNameHeader = patientTable.locator("th", { hasText: "동물명" });
   await expect(patientNameHeader).toHaveAttribute(
     "data-emr-header-interaction",
-    "static",
+    "sortable",
   );
   await expect(patientNameHeader).toHaveAttribute(
     "data-emr-column-resize",
-    "none",
+    "data-column",
   );
+  const patientNameResizeGrip = patientNameHeader.getByRole("button", {
+    name: "동물명 컬럼 너비 조절",
+  });
+  const patientNameHeaderBox = await patientNameHeader.boundingBox();
+  const patientNameResizeGripBox = await patientNameResizeGrip.boundingBox();
+
+  expect(patientNameHeaderBox).not.toBeNull();
+  expect(patientNameResizeGripBox).not.toBeNull();
+  await page.mouse.move(
+    patientNameResizeGripBox!.x + patientNameResizeGripBox!.width / 2,
+    patientNameResizeGripBox!.y + patientNameResizeGripBox!.height / 2,
+  );
+  await page.mouse.down();
+  try {
+    await page.mouse.move(
+      patientNameResizeGripBox!.x + patientNameResizeGripBox!.width / 2 + 24,
+      patientNameResizeGripBox!.y + patientNameResizeGripBox!.height / 2,
+      { steps: 4 },
+    );
+    await expect
+      .poll(async () => (await patientNameHeader.boundingBox())?.width)
+      .toBeGreaterThan(patientNameHeaderBox!.width + 16);
+  } finally {
+    await page.mouse.up();
+  }
+  await expect(
+    patientTable.locator('th[data-column-id="patientNo"]'),
+  ).toHaveAttribute("data-emr-column-resize", "none");
   await expect(
     patientNameHeader.getByRole("button", {
       name: /동물명 오름차순 정렬/,
     }),
   ).toBeEnabled();
-  await expect(
-    patientTable.getByRole("button", {
-      name: "품종 정렬은 현재 지원하지 않습니다",
-    }),
-  ).toBeDisabled();
+  await expect(patientTable.locator("th", { hasText: "품종" })).toHaveAttribute(
+    "data-emr-header-interaction",
+    "filterable",
+  );
   await expect(
     patientTable.locator("th", { hasText: "행 작업" }),
   ).toHaveAttribute("data-emr-column-resize", "none");
@@ -619,13 +646,11 @@ test("customer workspace renders animal master list and opens the common patient
     }),
   ).toBeVisible();
   await expect(
-    dubuRow.locator('[data-emr-cell-text-mode="one-line"]', {
-      hasText: /010-/,
-    }),
-  ).toBeVisible();
+    dubuRow.locator('[data-column-id="phone"]'),
+  ).toContainText(/010-/);
   await page
     .getByTestId("customer-patient-table")
-    .getByRole("button", { name: "컬럼" })
+    .getByRole("button", { name: "동물 컬럼 표시 설정" })
     .click();
   await expect(page.getByText("표시 컬럼")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -1511,7 +1536,9 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     "data-emr-header-interaction",
     "static",
   );
-  await expect(plannedSortHeader.getByRole("button")).toHaveCount(0);
+  await expect(
+    plannedSortHeader.getByRole("button", { name: /정렬/ }),
+  ).toHaveCount(0);
 
   const firstRowCheckboxInput = firstRow.getByRole("checkbox");
   const firstRowCheckbox = firstRow.locator('[data-slot="checkbox"]');

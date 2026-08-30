@@ -414,6 +414,9 @@ Implementation guidance:
 - Use `aria-sort` only on sorted columns.
 - Use visible active states for sort/filter; hover-only state is not enough.
 - Resize handles use `cursor: col-resize` and an edge hit zone, not a permanent icon inside every header label.
+- A resize-enabled TanStack table must use `columnResizeMode: "onChange"` so the rendered header and body widths follow the pointer before release. The default `onEnd` mode does not satisfy the CLAiR live-feedback contract.
+- Pointer regression tests must measure the column width while the primary pointer button is still down. An assertion made only after `mouse.up()` does not prove live resize feedback.
+- Fixed-width identifiers and display columns remain non-resizable even inside a resize-enabled table. For the customer master-data grids this excludes selection, patient code, and row actions; the remaining eligible data columns expose the shared edge hit zone.
 - Use lucide `ArrowUpDown`, `ArrowUp`, `ArrowDown`, `ListFilter` or `Funnel`, `SlidersHorizontal`, `Settings2`, `MoreHorizontal`, and `GripVertical` only where the action exists.
 
 ## Cell Text Wrapping Rules
@@ -504,6 +507,14 @@ Implementation guidance:
 - Scalar values stay `one-line`; high-meaning Order names, in-hospital names, and billing names use limited `two-line-if-long`.
 - Hospital admin category navigation, search/filter controls, row selection, drawer edit/delete, row action menu, and mock/session behavior remain unchanged.
 - The focused regression contract lives in `tests/hospital-admin.spec.ts` and checks primitive data attributes plus cell text modes.
+
+### DESIGN-SYSTEM-PR-097 Live Column Resize Contract
+
+- Customer animal/guardian data grids, hospital-admin Order, and hospital-admin Order Set use TanStack `columnResizeMode: "onChange"`.
+- Customer table composition assigns the shared `data-column` resize policy to eligible data columns while keeping fixed-width patient code, selection, and row-action columns at `none`.
+- Hospital-admin keeps its existing column policy and hit zones; only the update timing changes from TanStack's `onEnd` default to live pointer feedback.
+- Focused Playwright coverage holds the pointer down, moves the resize grip, and asserts the header width before pointer release.
+- Sorting, filtering, selection, pinning, row data, persistence, DB, Supabase, auth, and permission contracts remain unchanged.
 
 ## Implementation Gate
 

@@ -273,6 +273,7 @@ export function OrderSetsPanel({
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     columns,
+    columnResizeMode: "onChange",
     data: visibleRows,
     enableColumnPinning: true,
     enableMultiSort: false,
