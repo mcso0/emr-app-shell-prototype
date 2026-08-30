@@ -1,6 +1,6 @@
 ---
 id: "CLINICAL-BILLING-PR-017"
-status: "human_review"
+status: "done"
 area: "clinical-billing"
 priority: "P0"
 target_pr: "GitHub PR #673"
@@ -124,5 +124,7 @@ order and financial summary, a non-modal amount-detail aside, and a chart-owned
 
 - Independent workspace, RLS, billing integrity, concurrency, and protected
   client-state review: `APPROVE` on 2026-08-30.
+- Representative acceptance: 승욱 approved the released result on 2026-08-30;
+  the work item moved from `human_review` to `done`.
 - Representative-facing report:
   `docs/completed/clinical-billing/2026-08-30-clinical-billing-pr-017-plan-order-billing-summary-report.html`
