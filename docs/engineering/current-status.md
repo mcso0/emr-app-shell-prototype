@@ -43,6 +43,14 @@ The app currently has usable prototype screens for:
 | Audit                     | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Auth/workspace            | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, active-membership App Shell switching with tenant-context-safe navigation, current-user private avatar hydration in the profile menu, and local DB/RLS foundations                                                                                                                                                                                                                                                                                                               |
 
+RECEPTION-LIVE-PR-018 locally repairs the reception encounter-cancel contract:
+the app-facing four-argument RPC now requires actor/session equality, active
+workspace membership, and DB-backed `reception:update`, then commits encounter,
+consultation queue, and central audit changes in one transaction. The additive
+reason column, overload grants, induced-audit-failure rollback, permission,
+inactive-member, cross-workspace, and rollback-only success probes pass locally.
+Remote migration and application release remain exact-candidate approval gates.
+
 CLINICAL-FULFILLMENT-PR-009 is at the post-migration verification gate. The
 production-bound Supabase project now has the additive eight-type Order master,
 shared Draft/ETag, universal Task, routed Queue projection, Billing candidate,
