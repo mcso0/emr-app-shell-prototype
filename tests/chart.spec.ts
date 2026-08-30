@@ -313,19 +313,40 @@ async function routePreconsultationContext(
 async function saveKongOrderDraftRows(
   page: Page,
   rows: ReadonlyArray<Record<string, unknown>>,
+  { removeOmittedTopLevelRows = false } = {},
 ) {
   const current = await page.request.get(
     `/api/workspaces/clair-demo/chart/order-drafts?encounterId=${kongEncounterId}`,
     { headers: { "x-clair-demo-session-user-id": "user-vet" } },
   );
   expect(current.status()).toBe(200);
-  const currentBody = (await current.json()) as { etag: string };
+  const currentBody = (await current.json()) as {
+    etag: string;
+    rows?: Array<Record<string, unknown>>;
+  };
+  const retainedOrderIds = new Set(
+    rows.flatMap((row) =>
+      typeof row.orderId === "string" ? [row.orderId] : [],
+    ),
+  );
+  const removedOrderIds = removeOmittedTopLevelRows
+    ? (currentBody.rows ?? []).flatMap((row) => {
+        const orderId = typeof row.orderId === "string" ? row.orderId : null;
+        const rowType = typeof row.rowType === "string" ? row.rowType : null;
+        return orderId &&
+          rowType !== "set_child" &&
+          !retainedOrderIds.has(orderId)
+          ? [orderId]
+          : [];
+      })
+    : [];
   const response = await page.request.patch(
     "/api/workspaces/clair-demo/chart/order-drafts",
     {
       data: {
         encounterId: kongEncounterId,
         expectedEtag: currentBody.etag,
+        removedOrderIds,
         rows,
       },
       headers: {
@@ -338,7 +359,9 @@ async function saveKongOrderDraftRows(
 }
 
 async function restoreKongOrderDraftDefaults(page: Page) {
-  await saveKongOrderDraftRows(page, kongDefaultOrderDraftRows);
+  await saveKongOrderDraftRows(page, kongDefaultOrderDraftRows, {
+    removeOmittedTopLevelRows: true,
+  });
   await page.reload();
   await page.waitForLoadState("networkidle");
 
@@ -5126,6 +5149,28 @@ test("chart order table supports single sort without a filter control", async ({
 test("chart order table edits quantity, commits draft changes, and deletes rows", async ({
   page,
 }) => {
+  let removalPatchBody: Record<string, unknown> | undefined;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.fallback();
+        return;
+      }
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      if (
+        !Array.isArray(body.removedOrderIds) ||
+        !body.removedOrderIds.length
+      ) {
+        await route.fallback();
+        return;
+      }
+      removalPatchBody = body;
+      const response = await route.fetch();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await route.fulfill({ response });
+    },
+  );
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
 
@@ -5135,15 +5180,17 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await maropitantQuantity.fill("0");
 
   await expect(
-    page.getByText("변경 대기 1건 · 입력 확인 필요 1건"),
-  ).toBeVisible();
+    page.getByTestId("chart-order-save-status"),
+  ).toContainText("변경 대기 1건 · 입력 확인 필요 1건");
 
   await maropitantQuantity.fill("2");
   await page
     .getByLabel("Maropitant 16mg T 청구서명 수정")
     .fill("Maropitant 16mg T 변경");
 
-  await expect(page.getByText("변경 대기 1건")).toBeVisible();
+  await expect(page.getByTestId("chart-order-save-status")).toContainText(
+    "변경 대기 1건",
+  );
   await expect(page.getByTestId("chart-order-footer")).toContainText(
     /청구 예상 총액/,
   );
@@ -5160,30 +5207,251 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     /청구 예상 총액/,
   );
 
-  await page.getByRole("button", { name: "CBC 검사 후보 삭제" }).click();
+  await page
+    .getByRole("button", { name: "CBC 검사 후보 삭제" })
+    .click({ force: true });
   const deleteDialog = page.getByRole("dialog");
 
   await expect(deleteDialog.getByText("오더를 삭제할까요?")).toBeVisible();
+  await expect(
+    deleteDialog.getByText(/삭제하면 즉시 저장합니다/),
+  ).toBeVisible();
   await deleteDialog.getByRole("button", { name: "삭제", exact: true }).click();
 
+  const pendingRemovalRow = page.getByTestId("chart-order-row-order-kong-cbc");
+  await expect(pendingRemovalRow).toContainText("삭제 중");
+  await expect(page.getByTestId("chart-order-save-status")).toContainText(
+    "저장 중",
+  );
   await expect(page.getByLabel("CBC 검사 수량 수정")).toHaveCount(0);
-  await expect(page.getByText("변경 대기 1건")).toBeVisible();
+  expect(removalPatchBody?.removedOrderIds).toEqual(["order-kong-cbc"]);
+  await expect(page.getByTestId("chart-order-save-status")).toContainText(
+    "저장됨",
+  );
   await expect(page.getByTestId("chart-order-footer")).toContainText(
     /청구 예상 총액/,
   );
 
-  await (await getChartOrderAction(page, /변경 취소/)).click();
-
-  await expect(page.getByLabel("CBC 검사 수량 수정")).toBeVisible();
-  await expect(page.getByText(/변경 대기/)).toHaveCount(0);
-  await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
-  );
+  await page.reload();
+  await expect(page.getByLabel("CBC 검사 수량 수정")).toHaveCount(0);
 
   await restoreKongOrderDraftDefaults(page);
+  await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
+  await page.getByRole("checkbox", { name: "피하 수액 처치 선택" }).check();
+  await page
+    .getByRole("toolbar", { name: "선택 행 작업" })
+    .getByRole("button", { name: "후보 삭제" })
+    .click();
+  const bulkDeleteDialog = page.getByRole("dialog");
+  await expect(bulkDeleteDialog).toContainText("2개 오더를");
+  await bulkDeleteDialog.getByRole("button", { name: "취소" }).click();
   await expect(page.getByTestId("chart-order-footer")).toContainText(
     /청구 예상 총액/,
   );
+});
+
+test("chart candidate removal keeps the row and offers retry when persistence fails", async ({
+  page,
+}) => {
+  let failRemoval = true;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.fallback();
+        return;
+      }
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      if (
+        !Array.isArray(body.removedOrderIds) ||
+        !body.removedOrderIds.length
+      ) {
+        await route.fallback();
+        return;
+      }
+      if (failRemoval) {
+        await route.fulfill({
+          contentType: "application/json",
+          json: { ok: false, status: 500, error: "db_write_failed" },
+          status: 500,
+        });
+        return;
+      }
+      await route.fallback();
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  await page
+    .getByRole("button", { name: "CBC 검사 후보 삭제" })
+    .click({ force: true });
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "삭제", exact: true })
+    .click();
+
+  await expect(page.getByLabel("CBC 검사 수량 수정")).toBeVisible();
+  const errorAlert = page.getByTestId("chart-order-state-error");
+  await expect(errorAlert).toBeVisible();
+  await expect(page.getByTestId("chart-order-save-status")).toContainText(
+    "저장 실패",
+  );
+
+  failRemoval = false;
+  await errorAlert.getByRole("button", { name: "다시 저장" }).click();
+  await expect(page.getByLabel("CBC 검사 수량 수정")).toHaveCount(0);
+  await restoreKongOrderDraftDefaults(page);
+});
+
+test("chart order add announces success only after the candidate is persisted", async ({
+  page,
+}) => {
+  let releaseSave!: () => void;
+  const saveGate = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  let gated = false;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.fallback();
+        return;
+      }
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      const rows = Array.isArray(body.rows) ? body.rows : [];
+      const addsBaso = rows.some(
+        (value) =>
+          value &&
+          typeof value === "object" &&
+          (value as Record<string, unknown>).workspaceCatalogItemId ===
+            "ord-lab-cbc-baso",
+      );
+      if (!addsBaso || gated) {
+        await route.fallback();
+        return;
+      }
+      gated = true;
+      const response = await route.fetch();
+      await saveGate;
+      await route.fulfill({ response });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "오더 추가" });
+  await searchChartOrderCatalog(dialog, "BASO");
+  const candidate = page.getByTestId(
+    "chart-order-catalog-candidate-std-ord-lab-cbc-baso",
+  );
+  await candidate.click();
+  await confirmChartOrderCatalogSelection(dialog, 1);
+
+  await expect(page.getByText(/추가했어요 · 저장 중/)).toBeVisible();
+  await expect(page.getByText(/Order 후보를 추가하고 저장했어요/)).toHaveCount(
+    0,
+  );
+  await expect(page.getByTestId("chart-order-save-status")).toContainText(
+    "저장 중",
+  );
+
+  releaseSave();
+  await expect(
+    page.getByText("1개 Order 후보를 추가하고 저장했어요."),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "[CBC 검사] #BASO 후보 삭제" })
+    .click({ force: true });
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "삭제", exact: true })
+    .click();
+  await expect(page.getByText("1개 후보를 삭제하고 저장했어요.")).toBeVisible();
+});
+
+test("chart order added during an in-flight save can be removed without resurrection", async ({
+  page,
+}) => {
+  let releaseAddSave!: () => void;
+  const addSaveGate = new Promise<void>((resolve) => {
+    releaseAddSave = resolve;
+  });
+  let gatedAdd = false;
+  let addedOrderId = "";
+  let removalPatchBody: Record<string, unknown> | null = null;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.fallback();
+        return;
+      }
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      if (
+        Array.isArray(body.removedOrderIds) &&
+        body.removedOrderIds.length > 0
+      ) {
+        removalPatchBody = body;
+        await route.fallback();
+        return;
+      }
+      const rows = Array.isArray(body.rows) ? body.rows : [];
+      const addedBasoRow = rows.find(
+        (value) =>
+          value &&
+          typeof value === "object" &&
+          (value as Record<string, unknown>).workspaceCatalogItemId ===
+            "ord-lab-cbc-baso",
+      );
+      if (!addedBasoRow || gatedAdd) {
+        await route.fallback();
+        return;
+      }
+      addedOrderId = String(
+        (addedBasoRow as Record<string, unknown>).orderId ?? "",
+      );
+      gatedAdd = true;
+      const response = await route.fetch();
+      await addSaveGate;
+      await route.fulfill({ response });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "오더 추가" });
+  await searchChartOrderCatalog(dialog, "BASO");
+  await page
+    .getByTestId("chart-order-catalog-candidate-std-ord-lab-cbc-baso")
+    .click();
+  await confirmChartOrderCatalogSelection(dialog, 1);
+
+  await expect(page.getByTestId("chart-order-save-status")).toContainText(
+    "저장 중",
+  );
+  await page
+    .getByRole("button", { name: "[CBC 검사] #BASO 후보 삭제" })
+    .click({ force: true });
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "삭제", exact: true })
+    .click();
+  await expect(
+    page.getByTestId(`chart-order-row-${addedOrderId}`),
+  ).toContainText("삭제 중");
+
+  releaseAddSave();
+  await expect
+    .poll(() => removalPatchBody?.removedOrderIds)
+    .toEqual([addedOrderId]);
+  await expect(page.getByLabel("[CBC 검사] #BASO 수량 수정")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel("[CBC 검사] #BASO 수량 수정")).toHaveCount(0);
 });
 
 test("chart continuously edits a 20-row mixed draft with keyboard focus preserved", async ({

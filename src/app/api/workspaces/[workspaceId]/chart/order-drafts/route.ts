@@ -121,7 +121,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const inputKeys = Object.keys(input as Record<string, unknown>);
   if (
     inputKeys.some(
-      (key) => key !== "encounterId" && key !== "expectedEtag" && key !== "rows",
+      (key) =>
+        key !== "encounterId" &&
+        key !== "expectedEtag" &&
+        key !== "removedOrderIds" &&
+        key !== "rows",
     )
   ) {
     return Response.json(
@@ -138,6 +142,20 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return Response.json(
       { ok: false, status: 428, error: "if_match_required", message: "오더 버전 확인이 필요합니다." },
       { status: 428 },
+    );
+  }
+  if (
+    input.removedOrderIds !== undefined &&
+    !Array.isArray(input.removedOrderIds)
+  ) {
+    return Response.json(
+      {
+        ok: false,
+        status: 400,
+        error: "invalid_input",
+        fieldErrors: { removedOrderIds: "삭제할 오더 후보를 확인해 주세요." },
+      },
+      { status: 400 },
     );
   }
   if (!expectedEtagHeader) {

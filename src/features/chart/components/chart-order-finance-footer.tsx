@@ -12,6 +12,7 @@ export function ChartOrderFinanceFooter({
   onOpenDetails,
   onRequestBilling,
   requesting,
+  saveStatusText,
   summary,
 }: {
   accessibilitySummary?: string;
@@ -21,6 +22,7 @@ export function ChartOrderFinanceFooter({
   onOpenDetails: () => void;
   onRequestBilling: () => void;
   requesting: boolean;
+  saveStatusText: string;
   summary: ChartOrderBillingSummary;
 }) {
   const counts = summary.orderCounts;
@@ -33,6 +35,9 @@ export function ChartOrderFinanceFooter({
       {accessibilitySummary ? <span className="sr-only">{accessibilitySummary}</span> : null}
       <div className="flex min-w-0 items-center gap-3 text-[var(--emr-text-secondary)]">
         <span className="font-semibold text-foreground">오더 {counts.total}건</span>
+        <span data-testid="chart-order-save-status" role="status">
+          · {saveStatusText}
+        </span>
         <span aria-hidden className="h-3 w-px bg-[var(--emr-border-default)]" />
         <span>확정 후 <b className="text-foreground">{counts.confirmed}</b></span>
         <span>확정 전 <b className="text-[var(--emr-status-warning-text)]">{counts.draft}</b></span>

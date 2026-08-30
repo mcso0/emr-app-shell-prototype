@@ -117,6 +117,7 @@ export type ChartOrderDraftRowInput =
 export type ChartOrderDraftInput = {
   encounterId?: string;
   expectedEtag?: string;
+  removedOrderIds?: string[];
   rows?: ChartOrderDraftRowInput[];
 };
 
@@ -167,6 +168,7 @@ export type ChartOrderDraftGateway = {
     actorUserId: string;
     encounterId: string;
     expectedEtag: string;
+    removedOrderIds?: string[];
     rows: ChartOrderDraftRowInput[];
     workspaceId: string;
   }): Promise<ChartOrderDraftGatewayResult>;
@@ -184,7 +186,7 @@ export type ChartOrderDraftReadResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: Partial<Record<"encounterId" | "expectedEtag" | "rows", string>>;
+      fieldErrors: Partial<Record<"encounterId" | "expectedEtag" | "removedOrderIds" | "rows", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
   | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" | "revision_conflict" | "catalog_revision_requires_refresh" }
@@ -203,7 +205,7 @@ export type ChartOrderDraftSaveResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: Partial<Record<"encounterId" | "expectedEtag" | "rows", string>>;
+      fieldErrors: Partial<Record<"encounterId" | "expectedEtag" | "removedOrderIds" | "rows", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
   | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" | "revision_conflict" | "catalog_revision_requires_refresh" | "idempotency_conflict" }
@@ -338,6 +340,7 @@ export async function saveChartOrderDraft({
     actorUserId: actorUserId ?? "",
     encounterId: normalized.encounterId,
     expectedEtag: normalized.expectedEtag,
+    removedOrderIds: normalized.removedOrderIds,
     rows: normalized.rows,
     workspaceId,
   });
@@ -401,7 +404,7 @@ export function createMockChartOrderDraftGateway(
         rows,
       };
     },
-    async saveOrderDraft({ encounterId, rows: draftRows, expectedEtag, workspaceId }) {
+    async saveOrderDraft({ encounterId, removedOrderIds = [], rows: draftRows, expectedEtag, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, error: "encounter_unavailable" };
       if (!canMutateChart(encounter)) return { ok: false, status: 409, error: "stale_status" };
@@ -412,6 +415,15 @@ export function createMockChartOrderDraftGateway(
         seedDraftLinesToRuntimeRows(seedRows, workspaceId);
       if (expectedEtag !== mockChartOrderEtag(currentRows)) {
         return { ok: false, status: 409, error: "revision_conflict" };
+      }
+      const submittedOrderIds = new Set(draftRows.map((row) => row.orderId));
+      const removedRootOrderIds = new Set(removedOrderIds);
+      const invalidRemoval = removedOrderIds.some((orderId) => {
+        const row = currentRows.find((candidate) => candidate.orderId === orderId);
+        return !row || row.rowType === "set_child" || submittedOrderIds.has(orderId);
+      });
+      if (invalidRemoval) {
+        return { ok: false, status: 422, error: "invalid_removed_order_ids" };
       }
       const timestamp = now();
       const catalogResult = await createMockOrderCatalogGateway().listChartSearch({
@@ -535,12 +547,21 @@ export function createMockChartOrderDraftGateway(
       if (!setRuntimeRows.ok) return setRuntimeRows;
 
       mockOrderDraftStore.set(buildOrderDraftKey(workspaceId, encounterId), nextRows);
-      const runtimeRows = [
+      const submittedRuntimeRows = [
         ...nextRows
           .filter((row) => !draftRows.some((draft) => draft.rowType === "set" && draft.orderId === row.orderId))
           .map((row) => seedDraftLinesToRuntimeRows([row], workspaceId)[0]),
         ...setRuntimeRows.rows,
       ].filter((row): row is ChartOrderRuntimeRow => Boolean(row));
+      const runtimeRows = [
+        ...currentRows.filter(
+          (row) =>
+            !submittedOrderIds.has(row.orderId) &&
+            !removedRootOrderIds.has(row.orderId) &&
+            !(row.parentOrderId && removedRootOrderIds.has(row.parentOrderId)),
+        ),
+        ...submittedRuntimeRows,
+      ];
       mockOrderDraftRuntimeStore.set(
         buildOrderDraftKey(workspaceId, encounterId),
         runtimeRows,
@@ -615,6 +636,7 @@ export type SupabaseChartOrderDraftRpcClient = {
       p_encounter_id: string;
       p_orders: {
         expectedEtag: string;
+        removedOrderIds: string[];
         rows: ChartOrderDraftRowInput[];
       };
     }
@@ -640,12 +662,12 @@ export function createSupabaseChartOrderDraftGateway(
       if (!mapped) return { ok: false, status: 500, error: "db_read_failed" };
       return mapped;
     },
-    async saveOrderDraft({ actorUserId, encounterId, expectedEtag, rows, workspaceId }) {
+    async saveOrderDraft({ actorUserId, encounterId, expectedEtag, removedOrderIds = [], rows, workspaceId }) {
       const { data, error } = await client.rpc("clair_save_chart_order_draft", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
-        p_orders: { expectedEtag, rows },
+        p_orders: { expectedEtag, removedOrderIds, rows },
       });
 
       if (error) {
@@ -654,6 +676,11 @@ export function createSupabaseChartOrderDraftGateway(
         if (error.message?.includes("revision_conflict")) return { ok: false, status: 409, error: "revision_conflict" };
         if (error.message?.includes("requires_refresh")) return { ok: false, status: 409, error: "catalog_revision_requires_refresh" };
         if (error.message?.includes("if_match_required")) return { ok: false, status: 428, error: "if_match_required" };
+        if (
+          error.message?.includes("invalid_removed_order_ids") ||
+          error.message?.includes("order_removal_unavailable") ||
+          error.message?.includes("order_removal_has_downstream_artifacts")
+        ) return { ok: false, status: 422, error: mapChartDraftRpcError(error.message) };
         if (
           error.message?.includes("detail_inputs_invalid") ||
           error.message?.includes("child_detail_inputs_invalid") ||
@@ -899,11 +926,16 @@ function normalizeOrderDraftInput(input: ChartOrderDraftInput) {
     ? input as Record<string, unknown>
     : {};
   const hasExactEnvelope = Object.keys(record).every((key) =>
-    key === "encounterId" || key === "expectedEtag" || key === "rows",
+    key === "encounterId" || key === "expectedEtag" || key === "removedOrderIds" || key === "rows",
   );
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
     expectedEtag: trimToUndefined(input.expectedEtag) ?? "",
+    removedOrderIds: Array.isArray(input.removedOrderIds)
+      ? input.removedOrderIds.map((orderId) => trimToUndefined(orderId) ?? "")
+      : [],
+    hasRemovedOrderIds:
+      input.removedOrderIds === undefined || Array.isArray(input.removedOrderIds),
     rows: Array.isArray(input.rows) ? input.rows : [],
     hasRows: Array.isArray(input.rows),
     hasExactEnvelope,
@@ -911,7 +943,7 @@ function normalizeOrderDraftInput(input: ChartOrderDraftInput) {
 }
 
 function validateOrderDraftInput(input: ReturnType<typeof normalizeOrderDraftInput>) {
-  const fieldErrors: Partial<Record<"encounterId" | "expectedEtag" | "rows", string>> = {};
+  const fieldErrors: Partial<Record<"encounterId" | "expectedEtag" | "removedOrderIds" | "rows", string>> = {};
 
   if (!input.encounterId) fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
   if (!input.hasExactEnvelope || !input.hasRows) {
@@ -923,6 +955,16 @@ function validateOrderDraftInput(input: ReturnType<typeof normalizeOrderDraftInp
   if (input.rows.length > 100) fieldErrors.rows = "오더 row가 너무 많습니다.";
   const invalidRows = input.rows.some((row) => !isValidDraftRow(row));
   if (invalidRows) fieldErrors.rows = "오더 선택과 수량을 확인해 주세요.";
+  const submittedOrderIds = new Set(input.rows.map((row) => row.orderId));
+  if (
+    !input.hasRemovedOrderIds ||
+    input.removedOrderIds.length > 100 ||
+    input.removedOrderIds.some((orderId) => !orderId) ||
+    new Set(input.removedOrderIds).size !== input.removedOrderIds.length ||
+    input.removedOrderIds.some((orderId) => submittedOrderIds.has(orderId))
+  ) {
+    fieldErrors.removedOrderIds = "삭제할 오더 후보를 확인해 주세요.";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { valid: false as const, fieldErrors };
@@ -1592,6 +1634,9 @@ function mapChartDraftRpcError(message: string) {
     "detail_inputs_invalid",
     "child_detail_inputs_invalid",
     "set_child_input_unavailable",
+    "invalid_removed_order_ids",
+    "order_removal_unavailable",
+    "order_removal_has_downstream_artifacts",
     "order_set_member_unavailable",
     "order_set_composition_review_required",
     "order_set_price_unset",

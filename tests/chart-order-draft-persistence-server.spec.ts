@@ -81,10 +81,14 @@ const validOrderDraftRows = [
 
 const validEtag = `"${"0".repeat(64)}"`;
 
-function strictDraftInput(expectedEtag = validEtag, targetEncounterId = encounterId) {
+function strictDraftInput(
+  expectedEtag = validEtag,
+  targetEncounterId = encounterId,
+) {
   return {
     encounterId: targetEncounterId,
     expectedEtag,
+    removedOrderIds: [],
     rows: validOrderDraftRows,
   };
 }
@@ -255,6 +259,26 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
     fieldErrors: { rows: "오더 선택과 수량을 확인해 주세요." },
   });
 
+  const invalidRemovalIntent = await saveChartOrderDraft({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      encounterId,
+      expectedEtag: validEtag,
+      removedOrderIds: ["order-coco-cbc", "order-coco-cbc"],
+      rows: validOrderDraftRows.filter(
+        (row) => row.orderId !== "order-coco-cbc",
+      ),
+    },
+  });
+  expect(invalidRemovalIntent).toMatchObject({
+    ok: false,
+    status: 400,
+    fieldErrors: {
+      removedOrderIds: "삭제할 오더 후보를 확인해 주세요.",
+    },
+  });
+
   const frontDeskDenied = await saveChartOrderDraft({
     actorUserId: "user-front-desk",
     workspaceId,
@@ -312,7 +336,9 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
   const allowedVet = await saveChartOrderDraft({
     actorUserId: "user-vet",
     workspaceId,
-    input: strictDraftInput(allowedCurrent.ok ? allowedCurrent.etag : validEtag),
+    input: strictDraftInput(
+      allowedCurrent.ok ? allowedCurrent.etag : validEtag,
+    ),
     permissionAdapter: createMockWorkspacePermissionAdapter({
       users: [{ id: "user-vet", status: "active" }],
       memberships: [
@@ -368,6 +394,91 @@ test("order draft core blocks chart mutation before consultation starts", async 
     ok: false,
     status: 409,
     denialReason: "stale_status",
+  });
+});
+
+test("order draft persists explicit candidate removal and keeps omission non-destructive", async () => {
+  const removalEncounter: Encounter = {
+    ...setRuntimeEncounter,
+    id: "encounter-order-draft-removal",
+    patientId: "patient-order-draft-removal",
+    guardianId: "guardian-order-draft-removal",
+    encounterNo: "E-ORDER-DRAFT-REMOVAL",
+  };
+  const gateway = createMockChartOrderDraftGateway({
+    encounters: [removalEncounter],
+    invoiceLines: [],
+    orders: [],
+  });
+  const initial = await gateway.readOrderDraft({
+    encounterId: removalEncounter.id,
+    workspaceId,
+  });
+  expect(initial.ok).toBe(true);
+  if (!initial.ok) return;
+
+  const rows = [
+    {
+      rowType: "individual" as const,
+      orderId: "order-removal-a",
+      workspaceCatalogItemId: "ord-lab-cbc-baso",
+      quantity: 1,
+    },
+    {
+      rowType: "individual" as const,
+      orderId: "order-removal-b",
+      workspaceCatalogItemId: "ord-treatment-fluid",
+      quantity: 1,
+    },
+  ];
+  const created = await gateway.saveOrderDraft({
+    actorUserId: "user-vet",
+    encounterId: removalEncounter.id,
+    expectedEtag: initial.etag,
+    removedOrderIds: [],
+    rows,
+    workspaceId,
+  });
+  expect(created.ok).toBe(true);
+  if (!created.ok) return;
+
+  const omittedOnly = await gateway.saveOrderDraft({
+    actorUserId: "user-vet",
+    encounterId: removalEncounter.id,
+    expectedEtag: created.etag,
+    removedOrderIds: [],
+    rows: [rows[0]],
+    workspaceId,
+  });
+  expect(omittedOnly).toMatchObject({
+    ok: true,
+    rows: expect.arrayContaining([
+      expect.objectContaining({ orderId: "order-removal-a" }),
+      expect.objectContaining({ orderId: "order-removal-b" }),
+    ]),
+  });
+  if (!omittedOnly.ok) return;
+
+  const removed = await gateway.saveOrderDraft({
+    actorUserId: "user-vet",
+    encounterId: removalEncounter.id,
+    expectedEtag: omittedOnly.etag,
+    removedOrderIds: ["order-removal-b"],
+    rows: [rows[0]],
+    workspaceId,
+  });
+  expect(removed).toMatchObject({
+    ok: true,
+    rows: [expect.objectContaining({ orderId: "order-removal-a" })],
+  });
+
+  const readback = await gateway.readOrderDraft({
+    encounterId: removalEncounter.id,
+    workspaceId,
+  });
+  expect(readback).toMatchObject({
+    ok: true,
+    rows: [expect.objectContaining({ orderId: "order-removal-a" })],
   });
 });
 
@@ -509,8 +620,10 @@ test("shared draft persists editable details across devices and rejects a stale 
 
 test("order draft Supabase gateway keeps workspace, encounter, actor, and server amount fields in RPC calls", async () => {
   const calls: string[] = [];
+  const rpcPayloads: Array<Record<string, unknown>> = [];
   const gateway = createSupabaseChartOrderDraftGateway({
     async rpc(functionName: string, args: Record<string, unknown>) {
+      rpcPayloads.push(args);
       calls.push(
         `${functionName}:${args.p_workspace_id}:${args.p_encounter_id}:${args.p_actor_user_id ?? "read"}`,
       );
@@ -540,6 +653,7 @@ test("order draft Supabase gateway keeps workspace, encounter, actor, and server
     workspaceId,
     encounterId,
     expectedEtag: validEtag,
+    removedOrderIds: ["00000000-0000-4000-8000-000000000199"],
     rows: [
       {
         rowType: "individual",
@@ -553,6 +667,18 @@ test("order draft Supabase gateway keeps workspace, encounter, actor, and server
   expect(calls).toEqual([
     `clair_save_chart_order_draft:${workspaceId}:${encounterId}:00000000-0000-4000-8000-000000000002`,
   ]);
+  expect(rpcPayloads[0]?.p_orders).toEqual({
+    expectedEtag: validEtag,
+    removedOrderIds: ["00000000-0000-4000-8000-000000000199"],
+    rows: [
+      {
+        rowType: "individual",
+        orderId: "00000000-0000-4000-8000-000000000101",
+        workspaceCatalogItemId: "ord-lab-cbc-baso",
+        quantity: 2,
+      },
+    ],
+  });
   expect(result).toMatchObject({
     ok: true,
     rows: [
@@ -691,7 +817,9 @@ test("A3 order drafts use workspace catalog lineage and nullable server snapshot
   expect(a3Migration).toContain("private.clair_build_catalog_order_snapshot");
   expect(a3Migration).toContain("service_item_id, workspace_catalog_item_id");
   expect(a3Migration).toContain("unit_price_snapshot, requested_by_user_id");
-  expect(a3Migration).toContain("applied_snapshot = private.clair_build_catalog_order_snapshot");
+  expect(a3Migration).toContain(
+    "applied_snapshot = private.clair_build_catalog_order_snapshot",
+  );
   expect(a3Migration).toContain("unitPriceSnapshot', o.unit_price_snapshot");
   expect(a3Migration).toContain("serviceItemId', o.service_item_id");
 });
@@ -804,7 +932,9 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
   const firstChild = firstSave.rows.find(
     (row) => row.rowType === "set_child" && row.parentOrderId === parentOrderId,
   );
-  const firstParent = firstSave.rows.find((row) => row.orderId === parentOrderId);
+  const firstParent = firstSave.rows.find(
+    (row) => row.orderId === parentOrderId,
+  );
   expect(firstChild?.orderId).toBeTruthy();
   expect(firstParent?.snapshotHash).toBeNull();
 
@@ -817,10 +947,7 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
   });
   expect(reloaded.ok).toBe(true);
   if (!reloaded.ok) return;
-  expect(reloaded.rows.map((row) => row.rowType)).toEqual([
-    "set",
-    "set_child",
-  ]);
+  expect(reloaded.rows.map((row) => row.rowType)).toEqual(["set", "set_child"]);
   expect(reloaded.rows[1]).toMatchObject({
     orderId: firstChild!.orderId,
     parentOrderId,
@@ -872,7 +999,9 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
 });
 
 test("range-based set preview requires explicit input and rejects no-match values", async () => {
-  const rangeSet = (rangeBasis: "patient_weight_kg" | "manual_value"): OrderSet => ({
+  const rangeSet = (
+    rangeBasis: "patient_weight_kg" | "manual_value",
+  ): OrderSet => ({
     id: `set-range-${rangeBasis}`,
     workspaceId,
     sourceSetVersion: "v1",
@@ -885,8 +1014,20 @@ test("range-based set preview requires explicit input and rejects no-match value
     rangeBasis,
     taxType: "taxable",
     priceRanges: [
-      { id: "range-0-10", sortOrder: 1, lowerBound: 0, upperBound: 10, priceKrw: 1000 },
-      { id: "range-20-open", sortOrder: 2, lowerBound: 20, upperBound: null, priceKrw: 2000 },
+      {
+        id: "range-0-10",
+        sortOrder: 1,
+        lowerBound: 0,
+        upperBound: 10,
+        priceKrw: 1000,
+      },
+      {
+        id: "range-20-open",
+        sortOrder: 2,
+        lowerBound: 20,
+        upperBound: null,
+        priceKrw: 2000,
+      },
     ],
     salesUnit: "per_each",
     billingReflectionEnabled: true,

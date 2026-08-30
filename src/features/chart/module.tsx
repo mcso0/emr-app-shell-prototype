@@ -2736,12 +2736,14 @@ async function saveChartOrderDraftRoute({
   actorHeaders,
   encounterId,
   expectedEtag,
+  removedOrderIds = [],
   rows,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   encounterId: string;
   expectedEtag: string;
+  removedOrderIds?: string[];
   rows: ChartOrderDraftRow[];
   workspaceId: string;
 }): Promise<ChartOrderDraftRouteResponse> {
@@ -2849,6 +2851,7 @@ async function saveChartOrderDraftRoute({
         body: JSON.stringify({
           encounterId,
           expectedEtag,
+          removedOrderIds,
           rows: draftRows,
         }),
       },
@@ -5592,6 +5595,7 @@ function ChartOrderTable({
   onUpdateDetailInput,
   onUpdatePriority,
   onUpdateQuantity,
+  pendingRemovalOrderIds,
   rows,
   selectedOrderIds,
   sortState,
@@ -5625,6 +5629,7 @@ function ChartOrderTable({
   ) => void;
   onUpdatePriority: (orderId: string, priority: ClinicalOrderPriority) => void;
   onUpdateQuantity: (orderId: string, quantityInput: string) => void;
+  pendingRemovalOrderIds: Set<string>;
   rows: ChartOrderDraftRow[];
   selectedOrderIds: Set<string>;
   sortState: ChartOrderSortState;
@@ -5740,6 +5745,7 @@ function ChartOrderTable({
             checked={row.getIsSelected()}
             disabled={
               writeDisabled ||
+              pendingRemovalOrderIds.has(row.original.order.id) ||
               !row.getCanSelect() ||
               row.original.runtimeRow?.rowType === "set_child"
             }
@@ -5808,12 +5814,21 @@ function ChartOrderTable({
         header: chartOrderSortLabels.status,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "status"),
-        cell: ({ row }) => (
-          <EmrStatusBadge
-            label={getChartOrderStatusLabel(row.original)}
-            marker="none"
-          />
-        ),
+        cell: ({ row }) => {
+          const pendingRemoval = pendingRemovalOrderIds.has(
+            row.original.order.id,
+          );
+          return (
+            <EmrStatusBadge
+              label={
+                pendingRemoval
+                  ? "삭제 중"
+                  : getChartOrderStatusLabel(row.original)
+              }
+              marker={pendingRemoval ? "icon" : "none"}
+            />
+          );
+        },
         meta: {
           label: chartOrderSortLabels.status,
           headerInteraction: "sortable",
@@ -5864,7 +5879,10 @@ function ChartOrderTable({
                   aria-pressed={included}
                   className="h-5 shrink-0 rounded-full px-1.5 emr-text-micro"
                   data-row-interactive="true"
-                  disabled={writeDisabled}
+                  disabled={
+                    writeDisabled ||
+                    pendingRemovalOrderIds.has(row.original.order.id)
+                  }
                   size="xs"
                   variant={included ? "outline" : "ghost"}
                   onClick={() =>
@@ -5903,7 +5921,11 @@ function ChartOrderTable({
               <Switch
                 aria-label={`${row.original.order.displayName} 긴급`}
                 checked={row.original.priority === "urgent"}
-                disabled={writeDisabled || confirmed}
+                disabled={
+                  writeDisabled ||
+                  confirmed ||
+                  pendingRemovalOrderIds.has(row.original.order.id)
+                }
                 size="xs"
                 onCheckedChange={(checked) =>
                   editableCallbacksRef.current.onUpdatePriority(
@@ -5974,7 +5996,10 @@ function ChartOrderTable({
                 )
               }
               row={row.original}
-              writeDisabled={writeDisabled}
+              writeDisabled={
+                writeDisabled ||
+                pendingRemovalOrderIds.has(row.original.order.id)
+              }
             />
           ),
           meta: {
@@ -6017,7 +6042,10 @@ function ChartOrderTable({
             <Input
               aria-label={`${row.original.order.displayName} 청구서명 수정`}
               data-row-interactive="true"
-              disabled={writeDisabled}
+              disabled={
+                writeDisabled ||
+                pendingRemovalOrderIds.has(row.original.order.id)
+              }
               value={row.original.billingName}
               className="h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata"
               onChange={(event) =>
@@ -6073,7 +6101,10 @@ function ChartOrderTable({
               aria-label={`${row.original.order.displayName} 수량 수정`}
               aria-invalid={invalidQuantity}
               data-row-interactive="true"
-              disabled={writeDisabled}
+              disabled={
+                writeDisabled ||
+                pendingRemovalOrderIds.has(row.original.order.id)
+              }
               inputMode="decimal"
               title={
                 invalidQuantity ? "수량은 숫자로 입력해 주세요." : undefined
@@ -6172,7 +6203,7 @@ function ChartOrderTable({
         },
       },
     ],
-    [writeDisabled],
+    [pendingRemovalOrderIds, writeDisabled],
   );
   // TanStack Table owns the controller lifecycle; React Compiler cannot safely memoize it.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -6183,7 +6214,9 @@ function ChartOrderTable({
     columnResizeMode: "onChange",
     enableColumnResizing: true,
     enableRowSelection: (row) =>
-      !writeDisabled && isChartOrderTopLevelRow(row.original),
+      !writeDisabled &&
+      !pendingRemovalOrderIds.has(row.original.order.id) &&
+      isChartOrderTopLevelRow(row.original),
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.order.id,
     getSortedRowModel: getSortedRowModel(),
@@ -6229,7 +6262,11 @@ function ChartOrderTable({
           viewportMode="fill"
           getRowState={(row) => {
             if (invalidOrderIds.has(row.original.order.id)) return "error";
-            if (writeDisabled) return "disabled";
+            if (
+              writeDisabled ||
+              pendingRemovalOrderIds.has(row.original.order.id)
+            )
+              return "disabled";
             return isChartOrderConfirmedRow(row.original)
               ? "confirmed"
               : "draft";
@@ -6241,6 +6278,7 @@ function ChartOrderTable({
           renderRowOverlay={({ row }) => {
             const orderRow = row.original;
             const { order } = orderRow;
+            const pendingRemoval = pendingRemovalOrderIds.has(order.id);
             const confirmed = isChartOrderConfirmedRow(orderRow);
             const setChild = orderRow.runtimeRow?.rowType === "set_child";
             const setParent = orderRow.runtimeRow?.rowType === "set";
@@ -6270,6 +6308,7 @@ function ChartOrderTable({
               "size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]";
 
             if (!confirmed) {
+              if (pendingRemoval) return null;
               return (
                 <>
                   {!setChild ? (
@@ -6497,6 +6536,11 @@ function ChartOrderTable({
           getRowProps={(row) => ({
             className: cn("text-[var(--emr-text-secondary)]"),
             "data-dirty": isChartOrderDraftRowDirty(row.original)
+              ? "true"
+              : undefined,
+            "data-pending-removal": pendingRemovalOrderIds.has(
+              row.original.order.id,
+            )
               ? "true"
               : undefined,
             "data-testid": `chart-order-row-${row.original.order.id}`,
@@ -7298,6 +7342,11 @@ function getChartOrderPersistenceErrorMessage(error?: string) {
       return "다른 사용자가 오더를 변경했어요. 다시 불러온 뒤 저장해 주세요.";
     case "stale_status":
       return "차트 상태가 변경되어 오더를 저장할 수 없어요.";
+    case "invalid_removed_order_ids":
+    case "order_removal_unavailable":
+      return "삭제할 수 없는 오더 후보가 포함되어 있어요. 최신 상태를 다시 확인해 주세요.";
+    case "order_removal_has_downstream_artifacts":
+      return "이미 확정·수행·청구에 연결된 오더는 후보 삭제로 제거할 수 없어요.";
     case "order_set_empty_selection":
       return "하나 이상의 구성 항목을 선택해 주세요.";
     case "order_set_quantity_invalid":
@@ -8340,7 +8389,7 @@ function OrderArea({
   );
   const [orderActionDialog, setOrderActionDialog] =
     useState<OrderActionDialogType | null>(null);
-  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const [deleteOrderIds, setDeleteOrderIds] = useState<string[]>([]);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [historyOrderId, setHistoryOrderId] = useState<string | null>(null);
   const [orderExecution, setOrderExecution] =
@@ -8389,6 +8438,12 @@ function OrderArea({
   const orderDraftSaveInFlightRef = useRef(false);
   const orderDraftSavePromiseRef = useRef<Promise<boolean> | null>(null);
   const autoSaveDraftRef = useRef<() => Promise<boolean>>(async () => false);
+  const inFlightDraftOrderIdsRef = useRef<Set<string>>(new Set());
+  const pendingAddedOrderIdsRef = useRef<Set<string>>(new Set());
+  const pendingRemovedRootOrderIdsRef = useRef<Set<string>>(new Set());
+  const [pendingRemovedRootOrderIds, setPendingRemovedRootOrderIds] = useState<
+    Set<string>
+  >(() => new Set());
   const markDraftTouched = () => {
     draftTouchedRef.current = true;
     draftEditVersionRef.current += 1;
@@ -8404,6 +8459,22 @@ function OrderArea({
     idempotencyKey: string;
   } | null>(null);
   const orderLoading = loading || orderDraftSaveState === "loading";
+  const pendingRemovalOrderIds = useMemo(
+    () =>
+      new Set(
+        draftRows
+          .filter(
+            (row) =>
+              pendingRemovedRootOrderIds.has(row.order.id) ||
+              Boolean(
+                row.runtimeRow?.parentOrderId &&
+                pendingRemovedRootOrderIds.has(row.runtimeRow.parentOrderId),
+              ),
+          )
+          .map((row) => row.order.id),
+      ),
+    [draftRows, pendingRemovedRootOrderIds],
+  );
   const allOrders = useMemo(
     () => draftRows.map(({ order }) => order),
     [draftRows],
@@ -8525,7 +8596,8 @@ function OrderArea({
   const deletedDraftOrderCount = committedRows.filter(
     (row) =>
       !isChartOrderConfirmedRow(row) &&
-      draftRows.every((draftRow) => draftRow.order.id !== row.order.id),
+      (pendingRemovedRootOrderIds.has(row.order.id) ||
+        draftRows.every((draftRow) => draftRow.order.id !== row.order.id)),
   ).length;
   const changedDraftOrderCount =
     draftRows.filter((row) => {
@@ -8539,6 +8611,7 @@ function OrderArea({
   const draftSaveInvalidOrderIds = new Set<string>();
   const confirmationInvalidOrderIds = new Set<string>();
   for (const row of draftRows) {
+    if (pendingRemovalOrderIds.has(row.order.id)) continue;
     if (getDraftQuantity(row.quantityInput) === null) {
       draftSaveInvalidOrderIds.add(row.order.id);
       confirmationInvalidOrderIds.add(row.order.id);
@@ -8578,10 +8651,9 @@ function OrderArea({
     hasDraftChanges &&
     draftSaveInvalidOrderIds.size === 0 &&
     orderDraftSaveState !== "conflict";
-  const deleteTargetRow = draftRows.find(
-    ({ order }) => order.id === deleteOrderId,
+  const deleteTargetRows = draftRows.filter(({ order }) =>
+    deleteOrderIds.includes(order.id),
   );
-  const deleteTargetOrder = deleteTargetRow?.order;
   const detailOrderRow = draftRows.find(
     ({ order }) => order.id === detailOrderId,
   );
@@ -8807,20 +8879,20 @@ function OrderArea({
   };
   const appendCatalogRowsToDraft = (rows: ChartOrderCatalogSearchRow[]) => {
     if (!rows.length) return;
+    const firstSortOrder = draftRowsRef.current.length + 1;
+    const appendedRows = rows.map((row, index) =>
+      buildChartOrderDraftRowFromCatalog({
+        bundle,
+        row,
+        sortOrder: (firstSortOrder + index) * 10,
+      }),
+    );
+    appendedRows.forEach((row) =>
+      pendingAddedOrderIdsRef.current.add(row.order.id),
+    );
     markDraftTouched();
-    setDraftRows((currentRows) => {
-      const firstSortOrder = currentRows.length + 1;
-      return [
-        ...currentRows,
-        ...rows.map((row, index) =>
-          buildChartOrderDraftRowFromCatalog({
-            bundle,
-            row,
-            sortOrder: (firstSortOrder + index) * 10,
-          }),
-        ),
-      ];
-    });
+    setDraftRows((currentRows) => [...currentRows, ...appendedRows]);
+    toast.info(`선택한 Order ${appendedRows.length}개를 추가했어요 · 저장 중`);
   };
   const processCatalogSelection = (rows: ChartOrderCatalogSearchRow[]) => {
     const nextSetIndex = rows.findIndex((row) => row.rowType === "set");
@@ -8829,9 +8901,6 @@ function OrderArea({
     appendCatalogRowsToDraft(immediateRows);
 
     if (nextSetIndex === -1) {
-      if (rows.length) {
-        toast.success(`선택한 Order ${rows.length}개를 추가했어요.`);
-      }
       return;
     }
 
@@ -8981,18 +9050,17 @@ function OrderArea({
     const preview = await requestSetPreview(setCandidate, selectionIntent);
     if (!preview) return;
 
+    const appendedSetRow = buildChartOrderDraftRowFromCatalog({
+      bundle,
+      row: setCandidate,
+      setPreview: preview,
+      setSelectionIntent: selectionIntent,
+      sortOrder: (draftRowsRef.current.length + 1) * 10,
+    });
+    pendingAddedOrderIdsRef.current.add(appendedSetRow.order.id);
     markDraftTouched();
-    setDraftRows((currentRows) => [
-      ...currentRows,
-      buildChartOrderDraftRowFromCatalog({
-        bundle,
-        row: setCandidate,
-        setPreview: preview,
-        setSelectionIntent: selectionIntent,
-        sortOrder: (currentRows.length + 1) * 10,
-      }),
-    ]);
-    toast.success(`${setCandidate.displayName} Order 세트를 추가했어요.`);
+    setDraftRows((currentRows) => [...currentRows, appendedSetRow]);
+    toast.info(`${setCandidate.displayName} Order 세트를 추가했어요 · 저장 중`);
     const remainingRows = catalogSelectionQueue;
     setCatalogSelectionQueue([]);
     resetSetConfiguration();
@@ -9004,6 +9072,10 @@ function OrderArea({
     if (writeDisabled) return;
     draftTouchedRef.current = false;
     orderDraftFailedAutoSaveVersionRef.current = null;
+    pendingAddedOrderIdsRef.current.clear();
+    inFlightDraftOrderIdsRef.current.clear();
+    pendingRemovedRootOrderIdsRef.current.clear();
+    setPendingRemovedRootOrderIds(new Set());
     setDraftRows(committedRows);
     setSelectedOrderIds((current) => {
       const next = new Set(current);
@@ -9028,6 +9100,10 @@ function OrderArea({
       draftEditVersionRef.current = 0;
       orderDraftFailedAutoSaveVersionRef.current = null;
       orderDraftConflictRef.current = false;
+      pendingAddedOrderIdsRef.current.clear();
+      inFlightDraftOrderIdsRef.current.clear();
+      pendingRemovedRootOrderIdsRef.current.clear();
+      setPendingRemovedRootOrderIds(new Set());
       setOrderDraftSaveState("loading");
 
       const result = await loadChartOrderDraft({
@@ -9194,11 +9270,34 @@ function OrderArea({
       orderDraftSaveInFlightRef.current = true;
       while (draftTouchedRef.current) {
         const attemptedDraftEditVersion = draftEditVersionRef.current;
+        const attemptedRemovedRootOrderIds = new Set(
+          pendingRemovedRootOrderIdsRef.current,
+        );
+        const attemptedAddedOrderIds = new Set(pendingAddedOrderIdsRef.current);
+        const isAttemptedRemovalRow = (row: ChartOrderDraftRow) =>
+          attemptedRemovedRootOrderIds.has(row.order.id) ||
+          Boolean(
+            row.runtimeRow?.parentOrderId &&
+            attemptedRemovedRootOrderIds.has(row.runtimeRow.parentOrderId),
+          );
+        const persistenceSourceRows = draftRowsRef.current.filter(
+          (row) => !isAttemptedRemovalRow(row),
+        );
         const preparedDraft = prepareChartOrderDraftRowsForPersistence(
-          draftRowsRef.current,
+          persistenceSourceRows,
         );
         if (preparedDraft.orderIdMap.size > 0) {
-          setDraftRows(preparedDraft.rows);
+          const preparedById = new Map(
+            preparedDraft.rows.map((row) => [row.order.id, row]),
+          );
+          setDraftRows((currentRows) =>
+            currentRows.map((row) => {
+              if (isAttemptedRemovalRow(row)) return row;
+              const preparedId =
+                preparedDraft.orderIdMap.get(row.order.id) ?? row.order.id;
+              return preparedById.get(preparedId) ?? row;
+            }),
+          );
           setSelectedOrderIds((current) =>
             remapChartOrderIdSet(current, preparedDraft.orderIdMap),
           );
@@ -9213,15 +9312,43 @@ function OrderArea({
 
         draftTouchedRef.current = false;
         setOrderDraftSaveState("saving");
+        inFlightDraftOrderIdsRef.current = new Set(
+          preparedDraft.rows.map((row) => row.order.id),
+        );
         const result = await saveChartOrderDraftRoute({
           actorHeaders,
           encounterId: bundle.encounter.id,
           expectedEtag,
+          removedOrderIds: Array.from(attemptedRemovedRootOrderIds),
           rows: preparedDraft.rows,
           workspaceId: bundle.encounter.workspaceId,
         });
+        inFlightDraftOrderIdsRef.current.clear();
 
         if (!result.ok) {
+          const failedInFlightAddRemovals = new Set(
+            Array.from(attemptedAddedOrderIds).filter((orderId) =>
+              pendingRemovedRootOrderIdsRef.current.has(orderId),
+            ),
+          );
+          failedInFlightAddRemovals.forEach((orderId) =>
+            pendingRemovedRootOrderIdsRef.current.delete(orderId),
+          );
+          if (failedInFlightAddRemovals.size > 0) {
+            setPendingRemovedRootOrderIds(
+              new Set(pendingRemovedRootOrderIdsRef.current),
+            );
+            setDraftRows((currentRows) =>
+              currentRows.filter(
+                (row) =>
+                  !failedInFlightAddRemovals.has(row.order.id) &&
+                  !(
+                    row.runtimeRow?.parentOrderId &&
+                    failedInFlightAddRemovals.has(row.runtimeRow.parentOrderId)
+                  ),
+              ),
+            );
+          }
           const conflict =
             result.denialReason === "revision_conflict" ||
             result.error === "revision_conflict";
@@ -9230,7 +9357,12 @@ function OrderArea({
           draftTouchedRef.current = true;
           orderDraftFailedAutoSaveVersionRef.current =
             attemptedDraftEditVersion;
-          if (!silent || conflict) {
+          if (
+            !silent ||
+            conflict ||
+            attemptedRemovedRootOrderIds.size > 0 ||
+            attemptedAddedOrderIds.size > 0
+          ) {
             toast.error(
               conflict
                 ? "다른 기기에서 오더가 변경됐어요. 현재 편집값을 유지한 채 충돌을 해결해 주세요."
@@ -9251,6 +9383,15 @@ function OrderArea({
           { preserveMissingRows: true },
         );
         setCommittedRows(nextCommittedRows);
+        attemptedRemovedRootOrderIds.forEach((orderId) =>
+          pendingRemovedRootOrderIdsRef.current.delete(orderId),
+        );
+        setPendingRemovedRootOrderIds(
+          new Set(pendingRemovedRootOrderIdsRef.current),
+        );
+        attemptedAddedOrderIds.forEach((orderId) =>
+          pendingAddedOrderIdsRef.current.delete(orderId),
+        );
         if (!draftTouchedRef.current) {
           setDraftRows(nextCommittedRows);
         } else {
@@ -9258,19 +9399,21 @@ function OrderArea({
             nextCommittedRows.map((row) => [row.order.id, row]),
           );
           setDraftRows((currentRows) =>
-            currentRows.map((currentRow) => {
-              const committedRow = committedById.get(currentRow.order.id);
-              if (!committedRow) return currentRow;
-              return {
-                ...committedRow,
-                billingName: currentRow.billingName,
-                detailInputs: currentRow.detailInputs,
-                detailSchemaVersion: currentRow.detailSchemaVersion,
-                priority: currentRow.priority,
-                quantityInput: currentRow.quantityInput,
-                setSelectionIntent: currentRow.setSelectionIntent,
-              };
-            }),
+            currentRows
+              .filter((currentRow) => !isAttemptedRemovalRow(currentRow))
+              .map((currentRow) => {
+                const committedRow = committedById.get(currentRow.order.id);
+                if (!committedRow) return currentRow;
+                return {
+                  ...committedRow,
+                  billingName: currentRow.billingName,
+                  detailInputs: currentRow.detailInputs,
+                  detailSchemaVersion: currentRow.detailSchemaVersion,
+                  priority: currentRow.priority,
+                  quantityInput: currentRow.quantityInput,
+                  setSelectionIntent: currentRow.setSelectionIntent,
+                };
+              }),
           );
         }
         if (result.etag) {
@@ -9279,6 +9422,21 @@ function OrderArea({
         }
         orderDraftFailedAutoSaveVersionRef.current = null;
         orderDraftConflictRef.current = false;
+        if (attemptedRemovedRootOrderIds.size > 0) {
+          toast.success(
+            `${attemptedRemovedRootOrderIds.size}개 후보를 삭제하고 저장했어요.`,
+          );
+        }
+        const acknowledgedAdditionCount = Array.from(
+          attemptedAddedOrderIds,
+        ).filter(
+          (orderId) => !pendingRemovedRootOrderIdsRef.current.has(orderId),
+        ).length;
+        if (acknowledgedAdditionCount > 0) {
+          toast.success(
+            `${acknowledgedAdditionCount}개 Order 후보를 추가하고 저장했어요.`,
+          );
+        }
       }
 
       setOrderDraftSaveState("saved");
@@ -9343,7 +9501,11 @@ function OrderArea({
       : null;
   };
   const commitOrderConfirmation = async () => {
-    if (writeDisabled || orderDraftSaveState === "conflict") {
+    if (
+      writeDisabled ||
+      pendingRemovedRootOrderIdsRef.current.size > 0 ||
+      orderDraftSaveState === "conflict"
+    ) {
       if (orderDraftSaveState === "conflict") {
         toast.error("오더 draft 충돌을 해결한 뒤 확정해 주세요.");
       }
@@ -9622,11 +9784,43 @@ function OrderArea({
     orderDraftSaveInFlightRef.current = false;
     applyConfirmedResult(result);
   };
-  const removeDraftRootOrders = (orderIds: string[]) => {
-    if (writeDisabled) return;
+  const requestDraftRootRemoval = (orderIds: string[]) => {
+    if (writeDisabled || orderIds.length === 0) return;
+    const requestedRootIds = draftRowsRef.current
+      .filter(
+        (row) =>
+          orderIds.includes(row.order.id) &&
+          isChartOrderTopLevelRow(row) &&
+          !isChartOrderConfirmedRow(row) &&
+          !pendingRemovedRootOrderIdsRef.current.has(row.order.id),
+      )
+      .map((row) => row.order.id);
+    if (requestedRootIds.length === 0) return;
+    setDeleteOrderIds(requestedRootIds);
+  };
+  const confirmDeleteOrder = () => {
+    if (writeDisabled || deleteOrderIds.length === 0) return;
+    const orderIds = [...deleteOrderIds];
     const rootIds = new Set(orderIds);
+    const persistedRootIds = new Set(
+      draftRowsRef.current
+        .filter(
+          (row) =>
+            rootIds.has(row.order.id) &&
+            isChartOrderTopLevelRow(row) &&
+            !isChartOrderConfirmedRow(row) &&
+            (committedRows.some(
+              (committedRow) => committedRow.order.id === row.order.id,
+            ) ||
+              inFlightDraftOrderIdsRef.current.has(row.order.id)),
+        )
+        .map((row) => row.order.id),
+    );
+    const localOnlyRootIds = new Set(
+      orderIds.filter((orderId) => !persistedRootIds.has(orderId)),
+    );
     const removableIds = new Set(
-      draftRows
+      draftRowsRef.current
         .filter(
           (row) =>
             !isChartOrderConfirmedRow(row) &&
@@ -9637,28 +9831,45 @@ function OrderArea({
         )
         .map((row) => row.order.id),
     );
-    if (removableIds.size === 0) return;
-    markDraftTouched();
-    setDraftRows((currentRows) =>
-      currentRows.filter(({ order }) => !removableIds.has(order.id)),
+    if (removableIds.size === 0) {
+      setDeleteOrderIds([]);
+      return;
+    }
+    const nextRows = draftRowsRef.current.filter(
+      (row) =>
+        !localOnlyRootIds.has(row.order.id) &&
+        !(
+          row.runtimeRow?.parentOrderId &&
+          localOnlyRootIds.has(row.runtimeRow.parentOrderId)
+        ),
     );
+    draftRowsRef.current = nextRows;
+    setDraftRows(nextRows);
+    removableIds.forEach((orderId) =>
+      pendingAddedOrderIdsRef.current.delete(orderId),
+    );
+    persistedRootIds.forEach((orderId) =>
+      pendingRemovedRootOrderIdsRef.current.add(orderId),
+    );
+    setPendingRemovedRootOrderIds(
+      new Set(pendingRemovedRootOrderIdsRef.current),
+    );
+    markDraftTouched();
     setSelectedOrderIds((current) => {
       const next = new Set(current);
       removableIds.forEach((orderId) => next.delete(orderId));
       return next;
     });
-  };
-  const confirmDeleteOrder = () => {
-    if (!deleteOrderId) return;
-    removeDraftRootOrders([deleteOrderId]);
-    setDeleteOrderId(null);
+    setDeleteOrderIds([]);
+    void commitDraftRows({ silent: true });
   };
   const confirmSingleOrder = (orderId: string) => {
     const row = draftRows.find((candidate) => candidate.order.id === orderId);
     if (
       !row ||
       !isChartOrderTopLevelRow(row) ||
-      isChartOrderConfirmedRow(row)
+      isChartOrderConfirmedRow(row) ||
+      pendingRemovedRootOrderIdsRef.current.has(orderId)
     ) {
       return;
     }
@@ -9851,21 +10062,24 @@ function OrderArea({
   };
   const orderActionLabel = "Order 확정";
   const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
+  const draftStatusText = orderLoading
+    ? "오더 정보를 불러오는 중"
+    : orderDraftSaveState === "saving"
+      ? "저장 중"
+      : orderDraftSaveState === "error"
+        ? "저장 실패"
+        : orderDraftSaveState === "conflict"
+          ? "충돌 해결 필요"
+          : hasDraftChanges
+            ? `변경 대기 ${changedDraftOrderCount}건${draftSaveInvalidOrderIds.size ? ` · 입력 확인 필요 ${draftSaveInvalidOrderIds.size}건` : ""}`
+            : orderDraftSaveState === "saved"
+              ? "저장됨"
+              : "변경 없음";
   const effectiveBillingSummary = billingSummary ?? localBillingSummary;
   const orderFooterAccessibilitySummary = [
     `선택 오더 ${selectedOrderIds.size}건`,
     `선택 오더 합계 ${selectedAmount.toLocaleString()}원`,
-    hasDraftChanges
-      ? `변경 대기 ${changedDraftOrderCount}건${draftSaveInvalidOrderIds.size ? ` · 입력 확인 필요 ${draftSaveInvalidOrderIds.size}건` : ""}`
-      : orderDraftSaveState === "saving"
-        ? "저장 중"
-        : orderDraftSaveState === "saved"
-          ? "저장됨"
-          : orderDraftSaveState === "error"
-            ? "저장 실패"
-            : orderDraftSaveState === "conflict"
-              ? "충돌 해결 필요"
-              : "",
+    draftStatusText,
   ].filter(Boolean).join(" · ");
   const requestEncounterBilling = async (acknowledgeUnfinished: boolean) => {
     if (hasDraftChanges) {
@@ -10126,6 +10340,15 @@ function OrderArea({
             severity="error"
             title="오더 정보를 반영하지 못했습니다"
             className="mx-3 mt-2 w-auto shrink-0 emr-text-metadata"
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void commitDraftRows()}
+              >
+                다시 저장
+              </Button>
+            }
             testId="chart-order-state-error"
           >
             현재 표의 내용은 유지됩니다. 권한과 연결 상태를 확인한 뒤 변경사항을
@@ -10173,8 +10396,8 @@ function OrderArea({
             onAddOrder={openCatalogDialog}
             onConfirmOrder={confirmSingleOrder}
             onConfirmSelected={confirmSelectedOrders}
-            onDeleteOrder={setDeleteOrderId}
-            onDeleteSelected={removeDraftRootOrders}
+            onDeleteOrder={(orderId) => requestDraftRootRemoval([orderId])}
+            onDeleteSelected={requestDraftRootRemoval}
             onFlushDraft={() => {
               if (canUpdateOrders) void autoSaveDraftRef.current();
             }}
@@ -10193,6 +10416,7 @@ function OrderArea({
               updateDraftRow(orderId, { quantityInput })
             }
             rows={visibleOrderRows}
+            pendingRemovalOrderIds={pendingRemovalOrderIds}
             selectedOrderIds={selectedOrderIds}
             sortState={orderSortState}
             writeDisabled={writeDisabled}
@@ -10269,6 +10493,7 @@ function OrderArea({
           error={billingError}
           loading={billingSummaryLoading}
           requesting={billingRequesting}
+          saveStatusText={draftStatusText}
           summary={effectiveBillingSummary}
           onOpenDetails={() => {
             setBillingDrawerOpen((open) => !open);
@@ -10319,6 +10544,7 @@ function OrderArea({
             confirmLabel={orderActionLabel}
             confirmDisabled={
               writeDisabled ||
+              pendingRemovedRootOrderIds.size > 0 ||
               orderDraftSaveState === "conflict" ||
               orderDraftSaveState === "saving"
             }
@@ -10327,21 +10553,23 @@ function OrderArea({
           />
         </Dialog>
         <Dialog
-          open={deleteOrderId !== null}
-          onOpenChange={(open) => !open && setDeleteOrderId(null)}
+          open={deleteOrderIds.length > 0}
+          onOpenChange={(open) => !open && setDeleteOrderIds([])}
         >
-          {deleteTargetOrder ? (
+          {deleteTargetRows.length > 0 ? (
             <EmrConfirmDialogContent
               title="오더를 삭제할까요?"
               description={
                 <span className="grid gap-3">
                   <span>
-                    {deleteTargetOrder.displayName} 오더를 현재 차트의 draft에서
-                    제외합니다. 저장 시 서버 draft에도 반영됩니다.
+                    {deleteTargetRows.length === 1
+                      ? `${deleteTargetRows[0]?.order.displayName} 오더를`
+                      : `${deleteTargetRows.length}개 오더를`}{" "}
+                    현재 차트의 확정 전 후보에서 제외합니다.
                   </span>
                   <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
-                    삭제 후 `Order 업데이트`를 눌러 현재 세션 변경으로 확정할 수
-                    있습니다.
+                    삭제하면 즉시 저장합니다. 확정·수행·청구된 오더는 이
+                    작업으로 변경되지 않습니다.
                   </span>
                 </span>
               }
@@ -10350,7 +10578,7 @@ function OrderArea({
               confirmButtonVariant="destructive"
               closeAriaLabel="오더 삭제 확인 닫기"
               confirmDisabled={writeDisabled}
-              onCancel={() => setDeleteOrderId(null)}
+              onCancel={() => setDeleteOrderIds([])}
               onConfirm={confirmDeleteOrder}
             />
           ) : null}
