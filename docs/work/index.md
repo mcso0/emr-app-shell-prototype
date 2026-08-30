@@ -379,6 +379,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CHART-PR-023                | implemented  | chart                | P0       | Browser comments / chart context profile previews and active-encounter vital action | `docs/work/chart/CHART-PR-023-context-profile-vital-actions.md` |
 | CHART-PR-024                | implemented  | chart                | P0       | Browser comments / Figma Assessment diagnosis table fidelity | `docs/work/chart/CHART-PR-024-assessment-diagnosis-table-fidelity.md` |
 | CHART-PR-025                | implemented  | chart                | P0       | Browser comment / live patient chart history | `docs/work/chart/CHART-PR-025-live-patient-chart-history.md` |
+| CHART-PR-026                | implemented  | chart                | P0       | Production hotfix / SOAP RPC signature drift | `docs/work/chart/CHART-PR-026-soap-rpc-signature-drift-hotfix.md` |
 | LAB-PR-001                  | done         | lab                  | P1       | PR 1                 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md`                                               |
 | IMAGING-PR-001              | done         | imaging              | P1       | PR 1                 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md`                                            |
 | HOSPITAL-ADMIN-PR-001       | done         | hospital-admin       | P1       | PR 1                 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md`                           |

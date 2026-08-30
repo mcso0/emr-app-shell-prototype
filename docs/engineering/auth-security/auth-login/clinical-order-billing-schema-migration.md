@@ -1,7 +1,7 @@
 ---
 title: "Clinical Order Billing Schema Migration"
 status: "human_review"
-updated: "2026-05-19"
+updated: "2026-08-30"
 source:
   - "DEN-68"
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-002-schema-migration.md"
@@ -18,7 +18,7 @@ DEN-68 adds the local-first schema foundation required for Project 04 chart, ord
 
 The migration is intentionally schema-only. It does not implement route handlers, UI persistence, final domain RLS policies, remote Supabase validation, production deployment, or real data access.
 
-DEN-69 adds the first route-owned SOAP persistence boundary on top of this schema. DEN-70 adds chart completion persistence as the next route-owned handoff. DEN-81 closes the Project 04 persistence sequence with an audit/security handoff. All remain local-first and do not apply anything to remote Supabase.
+DEN-69 adds the first route-owned SOAP persistence boundary on top of this schema. DEN-70 adds chart completion persistence as the next route-owned handoff. DEN-81 closes the Project 04 persistence sequence with an audit/security handoff. CHART-PR-026 adds a forward function-only migration after the already-applied DEN-69 file drifted from the live five-argument writer to the application's six-argument contract.
 
 ## Migration
 
@@ -35,6 +35,7 @@ File:
 - `supabase/migrations/20260520090000_billing_invoice_candidate_sync_rpc.sql`
 - `supabase/migrations/20260520100000_billing_invoice_line_persistence_rpc.sql`
 - `supabase/migrations/20260520110000_billing_payment_status_persistence_rpc.sql`
+- `supabase/migrations/20260830203427_chart_soap_note_rpc_signature_drift_hotfix.sql`
 
 New table groups:
 
@@ -50,9 +51,9 @@ DEN-100 adds a follow-up bridge migration for chart-applied order rows. It exten
 DEN-69 adds local-first RPC functions:
 
 - `public.clair_get_chart_soap_note(p_workspace_id, p_encounter_id)`
-- `public.clair_save_chart_soap_note(p_workspace_id, p_actor_user_id, p_encounter_id, p_note, p_mode)`
+- `public.clair_save_chart_soap_note(p_workspace_id, p_actor_user_id, p_encounter_id, p_note, p_expected_updated_at, p_mode)`
 
-These functions check active workspace membership and encounter workspace scope. The app route still performs the domain permission check before calling the persistence gateway.
+The current writer checks authenticated actor equality, active workspace membership, `chart:update`, encounter workspace/lifecycle scope, and optimistic `updated_at` conflicts inside the RPC. The app route retains the same permission check before calling the persistence gateway.
 
 DEN-70 adds local-first chart completion fields and RPC functions:
 
