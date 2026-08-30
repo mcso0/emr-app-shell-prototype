@@ -4,7 +4,7 @@ status: draft
 area: design
 doc_type: ux-flow
 related_feature: PRODUCT-FEATURE-RECEPTION-APPOINTMENT
-last_updated: 2026-07-05
+last_updated: 2026-08-30
 ---
 
 # Reception / Appointment UX Flow
@@ -17,11 +17,15 @@ last_updated: 2026-07-05
 
 ### Reception Side Panel
 
-- 현재 대기/접수 환자를 빠르게 훑는 영역.
+- 데스크가 현재 처리할 진료대기 접수와 접수 전 예약을 빠르게 훑는 영역.
 - 대기, 예약, 전체 같은 목록 유형을 전환한다.
 - 기본 목록은 대기 중심이며, 예약 흐름은 calendar board가 주로 담당한다.
 - 보호자명, 환자명, 전화번호, 방문 목적 검색을 지원한다.
-- 예약확정, 접수완료, 진료대기, 노쇼, 취소 상태를 구분한다.
+- 활성 tab count는 진료대기 접수와 접수 전 예약만 포함한다.
+- 진료중/진료 진행중 encounter는 활성 side queue에서 제거하고 calendar/detail에서 높은 수준의 상태만 유지한다.
+- 수납대기는 접힌 `수납대기` 인계 그룹에, 취소와 노쇼는 접힌 `취소·노쇼` 예외 그룹에 표시한다.
+- 보조 그룹은 활성 tab count에서 제외하지만 선택한 운영일의 검색과 상세 접근은 유지한다.
+- 예약확정, 진료대기, 수납대기, 노쇼, 취소 상태를 구분한다.
 - 담당 수의사 지정/미지정이 목록에서 드러나야 한다.
 - 대기 시간이 길어질수록 neutral, yellow, orange, red 단계로 긴급도를 드러낸다.
 
@@ -35,6 +39,7 @@ last_updated: 2026-07-05
 - 수의사 선택 옵션은 스케줄 board의 표시 대상만 바꾼다.
 - 좌측 진료 대기열/환자 카드 선택 여부는 스케줄 board를 필터링하거나 선택 상태와 연결하지 않는다.
 - 각 schedule card는 상태색 배경 위에 담당 수의사 accent bar를 더해 수의사 배정을 빠르게 구분한다.
+- 접수 후 schedule card는 `진료대기`, `진료중`, `진료 진행중`, `수납대기` 중 높은 수준의 진행 상태를 표시하고 진료/오더 상세는 노출하지 않는다.
 - 동물 이름과 내원 목적을 보호자명/전화번호보다 높은 위계로 표시하고, 반복 목적은 작은 icon label을 병행한다.
 - day view의 현재 시간 line에는 현재 시각 label을 함께 표시한다.
 - 스케줄 운영 toolbar의 registration action은 `환자/보호자 등록`으로 단일화하고, 기존 환자 즉시 접수를 위한 primary `진료 접수`, `더보기`를 함께 배치한다.
@@ -149,7 +154,11 @@ last_updated: 2026-07-05
 4. 데스크 직원은 수의사별 스케줄과 빈 시간대를 확인한 뒤 현장 접수 환자를 배정한다.
 5. 미지정 대기 환자를 확인하고 필요 시 담당 수의사를 지정한다.
 6. 접수완료/진료대기 환자를 진료팀이 확인할 수 있는 상태로 유지한다.
-7. 진료 화면으로 이동해도 같은 encounter context가 보존된다.
+7. 호출해 진료가 시작되면 해당 환자는 좌측 활성 대기열에서 제거되고 calendar/detail에는 `진료중`으로 표시된다.
+8. 오더 수행 단계는 활성 대기열에서 제거하고 `진료 진행중`으로만 표시한다.
+9. 진료 종료 후 결제 전 환자는 접힌 `수납대기` 인계 그룹에서 확인한다.
+10. 대기로 되돌린 encounter는 기존 접수/대기열 정렬 시각을 유지해 원래 순서로 복귀한다.
+11. 진료 화면으로 이동해도 같은 encounter context가 보존된다.
 
 ### Required UI Feedback
 
@@ -158,6 +167,8 @@ last_updated: 2026-07-05
 - 미지정 schedule card는 gray accent를 사용한다.
 - 예약확정 card의 `접수 처리` action은 card background와 충분히 대비되는 solid button으로 표시한다.
 - 오늘 운영 흐름에서 취소/노쇼는 주요 대기보다 낮은 시각적 우선순위를 가진다.
+- 취소/노쇼는 선택한 운영일의 접힌 예외 그룹에 남고 활성 tab count에서는 제외한다.
+- 노쇼 항목은 `노쇼`로 표시하며 취소 복구 action을 노출하지 않는다.
 - 좌측 환자 카드 선택 강조와 스케줄 card 강조는 별개의 상태로 다룬다.
 - Existing task drag/drop schedule editing remains deferred until appointment mutation behavior is scoped. New session-only task creation by clicking or dragging empty time ranges is in scope for the calendar creation UX.
 

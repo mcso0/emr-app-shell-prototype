@@ -289,7 +289,7 @@ test("reception date heading matches the CDS V2 left slot", async ({ page }) => 
 test("reception renders the first-path workspace instead of the placeholder", async ({
   page,
 }) => {
-  await page.goto("/w/clair-demo/reception");
+  await page.goto("/w/clair-demo/reception?date=2026-05-01");
 
   const sidePanel = page.locator("aside").first();
 
@@ -302,7 +302,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15_000 });
   const dateControl = page.getByTestId("reception-date-control");
   const scheduleToolbar = page.getByTestId("schedule-toolbar");
   const selectedDateButton = dateControl.getByRole("button", {
@@ -472,7 +472,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
           buttons.map((button) => button.textContent?.trim()),
         ),
     )
-    .toEqual(["전체6", "접수4", "예약2"]);
+    .toEqual(["전체2", "접수1", "예약1"]);
   await expect
     .poll(() =>
       sidePanel
@@ -481,12 +481,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
           cards.map((card) => card.getAttribute("data-testid")),
         ),
     )
-    .toEqual([
-      "patient-card-patient-haru",
-      "patient-card-patient-kong",
-      "patient-card-patient-dubu",
-      "patient-card-patient-coco",
-    ]);
+    .toEqual(["patient-card-patient-haru"]);
   await expect(sidePanel.getByTestId("reception-queue-group-reception")).toContainText(
     "접수",
   );
@@ -841,16 +836,17 @@ test("reception prioritizes the Kong vomit queue and detail context from query p
     .first();
   const kongCard = sidePanel.getByTestId("patient-card-patient-kong");
 
-  await expect(kongCard).toBeVisible();
-  await expect(kongCard).toContainText("콩이");
-  await expect(kongCard).toContainText("김하늘");
-  await expect(kongCard).toContainText("예약");
-  await expect(kongCard).toContainText("반복 구토와 식욕 저하");
-  await expect(kongCard).toContainText("이수지");
+  await expect(kongCard).toHaveCount(0);
+  await expect(
+    page.getByTestId("appointment-status-appointment-kong-260501"),
+  ).toHaveText("진료 진행중");
 
   await page.getByTestId("appointment-card-appointment-kong-260501").click();
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
+  await expect(page.getByTestId("reception-detail-status")).toHaveText(
+    "진료 진행중",
+  );
   await expect(
     page.getByTestId("reception-right-panel").getByRole("textbox").nth(1),
   ).toHaveValue(/^김하늘/);
@@ -866,13 +862,7 @@ test("reception prioritizes the Kong vomit queue and detail context from query p
     .getByTestId("reception-right-panel")
     .getByRole("button", { name: "닫기", exact: true })
     .click();
-  await kongCard.click();
-
-  await expect(page.getByText("접수 상세").first()).toBeVisible();
-  await expect(
-    page.getByTestId("reception-right-panel").getByRole("textbox").nth(1),
-  ).toHaveValue(/^김하늘/);
-  await expect(page.getByText("콩이").last()).toBeVisible();
+  await expect(kongCard).toHaveCount(0);
 });
 
 test("reception calendar options expose Excel import and export actions", async ({
@@ -2032,13 +2022,7 @@ test("reception side panel cards keep order, open reception info, and clear sele
   await page.goto("/w/clair-demo/reception");
 
   const sidePanel = page.locator("aside").first();
-  const initialCardOrder = [
-    "patient-card-patient-kong",
-    "patient-card-patient-dubu",
-    "patient-card-patient-coco",
-    "patient-card-patient-nabi",
-    "patient-card-patient-haru",
-  ];
+  const initialCardOrder = ["patient-card-patient-haru"];
   await expect
     .poll(() =>
       sidePanel
@@ -2048,6 +2032,22 @@ test("reception side panel cards keep order, open reception info, and clear sele
         ),
     )
     .toEqual(initialCardOrder);
+  await sidePanel
+    .getByRole("button", { name: "수납대기 펼치기" })
+    .click();
+  const expandedCardOrder = [
+    "patient-card-patient-haru",
+    "patient-card-patient-dubu",
+  ];
+  await expect
+    .poll(() =>
+      sidePanel
+        .locator('[data-testid^="patient-card-"]')
+        .evaluateAll((cards) =>
+          cards.map((card) => card.getAttribute("data-testid")),
+        ),
+    )
+    .toEqual(expandedCardOrder);
   const dubuCard = sidePanel.getByTestId("patient-card-patient-dubu");
   await dubuCard.click();
   await expect
@@ -2058,15 +2058,18 @@ test("reception side panel cards keep order, open reception info, and clear sele
           cards.map((card) => card.getAttribute("data-testid")),
         ),
     )
-    .toEqual(initialCardOrder);
+    .toEqual(expandedCardOrder);
   const detailDrawer = page
     .getByRole("complementary")
     .filter({ hasText: "접수 상세" })
     .last();
   await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
   await expect(dubuCard).toHaveAttribute("data-selected", "true");
-  await page.getByRole("button", { name: "상세 닫기" }).click();
-  await expect(dubuCard).not.toHaveAttribute("data-selected", "true");
+  await page
+    .getByTestId("reception-right-panel")
+    .getByRole("button", { name: "우측 사이드 패널 닫기" })
+    .click();
+  await expect(page.getByTestId("reception-right-panel")).toHaveCount(0);
 });
 
 test("patient drawer supports editing and guardian navigation", async ({
@@ -3495,31 +3498,34 @@ test("reception side panel searches by patient and guardian context", async ({
     .filter({ hasText: "접수/예약" })
     .first();
   await sidePanel.getByRole("button", { name: "검색" }).click();
-  await sidePanel.getByRole("searchbox", { name: "대기열 검색" }).fill("코코");
+  await sidePanel.getByRole("searchbox", { name: "대기열 검색" }).fill("하루");
 
   await expect(
-    sidePanel.getByTestId("patient-card-patient-coco"),
+    sidePanel.getByTestId("patient-card-patient-haru"),
   ).toBeVisible();
   await expect(
-    sidePanel.getByTestId("patient-card-patient-coco"),
-  ).toContainText("이지은");
+    sidePanel.getByTestId("patient-card-patient-haru"),
+  ).toContainText("강서윤");
+  await expect(
+    sidePanel.getByTestId("appointment-queue-card-appointment-haru-260501"),
+  ).toBeVisible();
   await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toBeHidden();
   await sidePanel.getByRole("button", { name: "대기열 검색 닫기" }).click();
   await expect(
     sidePanel.getByRole("searchbox", { name: "대기열 검색" }),
   ).toHaveCount(0);
   await expect(
-    sidePanel.getByTestId("patient-card-patient-kong"),
+    sidePanel.getByTestId("patient-card-patient-haru"),
   ).toBeVisible();
 });
 
-test("reception card action menu exposes unavailable feedback and closes on Escape", async ({
+test("reception card action menu exposes chart navigation and closes on Escape", async ({
   page,
 }) => {
   await page.goto("/w/clair-demo/reception");
 
-  const card = page.getByTestId("patient-card-patient-coco");
-  const actionButton = card.getByRole("button", { name: "코코 카드 작업" });
+  const card = page.getByTestId("patient-card-patient-haru");
+  const actionButton = card.getByRole("button", { name: "하루 카드 작업" });
   await expect
     .poll(() =>
       actionButton.evaluate((button) => getComputedStyle(button).opacity),
@@ -3534,14 +3540,6 @@ test("reception card action menu exposes unavailable feedback and closes on Esca
   await actionButton.click();
   await expect(page.getByRole("menu")).toContainText("차트 보러가기");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("menu")).toHaveCount(0);
-
-  await card.hover();
-  await actionButton.click();
-  await page.getByText("카카오톡 발송", { exact: true }).click();
-  await expect(
-    page.getByTestId("reception-card-action-feedback"),
-  ).toContainText("카카오톡 발송은 아직 연결되지 않았습니다");
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
@@ -3559,19 +3557,59 @@ test("reception side panel groups active encounters and pending reservations by 
         buttons.map((button) => button.textContent?.trim()),
       ),
     )
-    .toEqual(["전체6", "접수4", "예약2"]);
+    .toEqual(["전체2", "접수1", "예약1"]);
 
   const receptionGroup = sidePanel.getByTestId("reception-queue-group-reception");
   const appointmentGroup = sidePanel.getByTestId("reception-queue-group-appointment");
+  const billingGroup = sidePanel.getByTestId(
+    "reception-queue-group-billing_handoff",
+  );
+  const exceptionGroup = sidePanel.getByTestId("reception-queue-group-exception");
 
-  await expect(receptionGroup).toContainText(/접수\s*4/);
-  await expect(appointmentGroup).toContainText(/예약\s*2/);
+  await expect(receptionGroup).toContainText(/접수\s*1/);
+  await expect(appointmentGroup).toContainText(/예약\s*1/);
+  await expect(billingGroup).toContainText(/수납대기\s*1/);
+  await expect(exceptionGroup).toContainText(/취소·노쇼\s*1/);
   await expect(
     receptionGroup.getByTestId("reception-queue-group-reception-status-icon"),
   ).toHaveAttribute("data-state-icon-state", "in-progress");
   await expect(
     appointmentGroup.getByTestId("reception-queue-group-appointment-status-icon"),
   ).toHaveAttribute("data-state-icon-state", "to-do");
+  await expect(
+    billingGroup.getByRole("button", { name: "수납대기 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    exceptionGroup.getByRole("button", { name: "취소·노쇼 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await expect(receptionGroup).toContainText("진료대기");
+  await expect(appointmentGroup).toContainText("예약확정");
+  await expect(sidePanel.getByTestId("patient-card-patient-coco")).toHaveCount(0);
+  await expect(sidePanel.getByTestId("patient-card-patient-kong")).toHaveCount(0);
+
+  await billingGroup.getByRole("button", { name: "수납대기 펼치기" }).click();
+  const billingCard = billingGroup.getByTestId("patient-card-patient-dubu");
+  await expect(billingCard).toContainText("수납대기");
+  await billingCard.click();
+  await expect(page.getByTestId("reception-detail-status")).toHaveText("수납대기");
+
+  await exceptionGroup
+    .getByRole("button", { name: "취소·노쇼 펼치기" })
+    .click();
+  const noShowCard = exceptionGroup.getByTestId(
+    "appointment-queue-card-appointment-haru-260501",
+  );
+  await expect(noShowCard).toContainText("노쇼");
+  await noShowCard.getByRole("button", { name: "하루 카드 작업" }).click();
+  await expect(page.getByRole("menu")).not.toContainText("복구하기");
+  await page.keyboard.press("Escape");
+
+  await expect(
+    page.getByTestId("appointment-status-appointment-coco-260501"),
+  ).toHaveText("진료 진행중");
+  await expect(
+    page.getByTestId("appointment-status-appointment-kong-260501"),
+  ).toHaveText("진료 진행중");
   await expect(sidePanel.getByTestId("reception-queue-status-waiting")).toHaveCount(0);
 });
 
@@ -3580,8 +3618,8 @@ test("reception side-panel card action menu uses compact single-line actions", a
 }) => {
   await page.goto("/w/clair-demo/reception");
 
-  const card = page.getByTestId("patient-card-patient-coco");
-  const actionButton = card.getByRole("button", { name: "코코 카드 작업" });
+  const card = page.getByTestId("patient-card-patient-haru");
+  const actionButton = card.getByRole("button", { name: "하루 카드 작업" });
   await actionButton.evaluate((button) => button.focus());
   await actionButton.click();
 
@@ -3605,10 +3643,11 @@ test("reception side-panel card action menu uses compact single-line actions", a
 test("server-backed reception queue read hydrates the side panel from persisted encounters", async ({
   page,
 }) => {
-  let requested = false;
+  let requestCount = 0;
+  let queueState: "waiting" | "in_consultation" = "waiting";
 
   await page.route("**/reception/queue**", async (route) => {
-    requested = true;
+    requestCount += 1;
     expect(route.request().method()).toBe("GET");
     const requestedDate =
       new URL(route.request().url()).searchParams.get("date") ?? "2026-05-01";
@@ -3635,8 +3674,12 @@ test("server-backed reception queue read hydrates the side panel from persisted 
               chiefComplaint: "DEN-62 persisted queue read",
               visitPurpose: "DEN-62 persisted queue read",
               receptionMemo: "서버 대기열 read boundary",
-              status: "waiting",
+              status: queueState,
               checkedInAt: requestedStartedAt,
+              startedAt:
+                queueState === "in_consultation"
+                  ? `${requestedDate}T09:40:00+09:00`
+                  : undefined,
               createdAt: requestedStartedAt,
               updatedAt: requestedStartedAt,
             },
@@ -3645,10 +3688,15 @@ test("server-backed reception queue read hydrates the side panel from persisted 
               workspaceId: "clair-demo",
               encounterId: "encounter-live-queue-coco",
               queueType: "consultation",
-              status: "waiting",
+              status:
+                queueState === "in_consultation" ? "in_progress" : "waiting",
               priority: "normal",
               sortOrder: 1,
               enteredAt: requestedStartedAt,
+              calledAt:
+                queueState === "in_consultation"
+                  ? `${requestedDate}T09:40:00+09:00`
+                  : undefined,
             },
           },
         ],
@@ -3659,12 +3707,33 @@ test("server-backed reception queue read hydrates the side panel from persisted 
 
   await page.goto("/w/clair-demo/reception");
 
-  await expect.poll(() => requested).toBe(true);
+  await expect.poll(() => requestCount).toBeGreaterThan(0);
   const persistedQueueCard = page
     .getByTestId("patient-card-patient-coco")
     .filter({ hasText: "DEN-62 persisted queue read" });
   await expect(persistedQueueCard).toContainText("DEN-62 persisted queue read");
   await expect(persistedQueueCard).toContainText("김도윤");
+  await expect(persistedQueueCard).toContainText("진료대기");
+
+  await persistedQueueCard.click();
+  await expect(page.getByTestId("reception-detail-status")).toHaveText("진료대기");
+
+  queueState = "in_consultation";
+  const consultationRequestCount = requestCount;
+  await page.getByRole("button", { name: "접수/예약 새로고침" }).click();
+  await expect.poll(() => requestCount).toBeGreaterThan(consultationRequestCount);
+  await expect(persistedQueueCard).toHaveCount(0);
+  await expect(page.getByTestId("reception-detail-status")).toHaveText("진료중");
+  await expect(
+    page.getByTestId("walkin-status-encounter-live-queue-coco"),
+  ).toHaveText("진료중");
+
+  queueState = "waiting";
+  const waitingRequestCount = requestCount;
+  await page.getByRole("button", { name: "접수/예약 새로고침" }).click();
+  await expect.poll(() => requestCount).toBeGreaterThan(waitingRequestCount);
+  await expect(persistedQueueCard).toContainText("09:25 접수");
+  await expect(page.getByTestId("reception-detail-status")).toHaveText("진료대기");
 });
 
 test("server-backed reception day calendar read hydrates appointments and walk-ins", async ({
@@ -5144,7 +5213,7 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await page.goto("/w/clair-demo/reception");
 
   const sidePanel = page.locator("aside").first();
-  await sidePanel.getByTestId("patient-card-patient-dubu").click();
+  await sidePanel.getByTestId("patient-card-patient-haru").click();
   await expect(page.getByTestId("reception-right-panel")).toContainText("접수 상세");
   await page.getByRole("button", { name: "우측 사이드 패널 닫기" }).click();
   await openWalkInReceptionForm(page);
@@ -7271,10 +7340,14 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toHaveCount(0);
-  await expect(page.getByTestId("reception-queue-group-cancelled")).toContainText(
+  const exceptionGroup = page.getByTestId("reception-queue-group-exception");
+  await expect(exceptionGroup).toContainText(
     "취소",
   );
-  await expect(page.getByTestId("reception-queue-group-cancelled")).toContainText(
+  await exceptionGroup
+    .getByRole("button", { name: "취소·노쇼 펼치기" })
+    .click();
+  await expect(exceptionGroup).toContainText(
     "두부",
   );
 });
