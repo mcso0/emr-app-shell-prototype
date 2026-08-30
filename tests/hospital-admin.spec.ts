@@ -2109,6 +2109,47 @@ test("hospital admin order table uses shared header and cell text primitives", a
     "data-emr-column-resize",
     "data-column",
   );
+  const identityResizeGrip = identityHeader.getByRole("button", {
+    name: "표준 Order명 컬럼 너비 조절",
+  });
+  await expect(identityResizeGrip).toBeVisible();
+  await expect
+    .poll(() =>
+      identityResizeGrip.evaluate(
+        (element) => getComputedStyle(element, "::before").opacity,
+      ),
+    )
+    .toBe("0");
+  await expect
+    .poll(() =>
+      identityResizeGrip.evaluate(
+        (element) => getComputedStyle(element).cursor,
+      ),
+    )
+    .toBe("col-resize");
+
+  const identityHeaderBox = await identityHeader.boundingBox();
+  const identityResizeGripBox = await identityResizeGrip.boundingBox();
+
+  expect(identityHeaderBox).not.toBeNull();
+  expect(identityResizeGripBox).not.toBeNull();
+  await page.mouse.move(
+    identityResizeGripBox!.x + identityResizeGripBox!.width / 2,
+    identityResizeGripBox!.y + identityResizeGripBox!.height / 2,
+  );
+  await page.mouse.down();
+  try {
+    await page.mouse.move(
+      identityResizeGripBox!.x + identityResizeGripBox!.width / 2 + 32,
+      identityResizeGripBox!.y + identityResizeGripBox!.height / 2,
+      { steps: 4 },
+    );
+    await expect
+      .poll(async () => (await identityHeader.boundingBox())?.width)
+      .toBeGreaterThan(identityHeaderBox!.width + 24);
+  } finally {
+    await page.mouse.up();
+  }
   await expect(headers.filter({ hasText: "사용여부" })).toHaveAttribute(
     "data-emr-header-interaction",
     "static",
@@ -2124,6 +2165,13 @@ test("hospital admin order table uses shared header and cell text primitives", a
   const inHospitalNameResizeGrip = inHospitalNameHeader.getByRole("button", {
     name: "원내 Order명 컬럼 너비 조절",
   });
+  await expect
+    .poll(() =>
+      inHospitalNameResizeGrip.evaluate(
+        (element) => getComputedStyle(element, "::before").opacity,
+      ),
+    )
+    .toBe("1");
   const inHospitalNameHeaderBox = await inHospitalNameHeader.boundingBox();
   const inHospitalNameResizeGripBox =
     await inHospitalNameResizeGrip.boundingBox();

@@ -182,6 +182,9 @@ Rules:
 the scrollable table region.
 
 - Keep the 1px pinned divider visible at every horizontal scroll position.
+- Keep the resize hit zone active on the last left-pinned header, but hide its
+  internal 1px grip indicator because the shared pinned divider owns that
+  boundary. Non-boundary resize grip indicators remain visible.
 - Hide the left dimmer while the viewport is at its horizontal start. Show it
   only when the shared scroll-area root exposes `data-overflow-x-start`.
 - Hide the right dimmer while the viewport is at its horizontal end. Show it
