@@ -385,7 +385,8 @@ async function confirmChartOrderCatalogSelection(
   dialog: Locator,
   count: number,
 ) {
-  await dialog.getByRole("button", { name: `선택한 ${count}개 추가` }).click();
+  await expect(dialog.getByText(`선택한 오더 ${count}개`, { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "선택 완료", exact: true }).click();
 }
 
 test("waiting chart saves and clears only today's vital values through the dialog", async ({
@@ -6143,10 +6144,46 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   });
   await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
   await expect(dialog.getByText("108개", { exact: true })).toBeVisible();
+  const selectedColumn = dialog.locator(
+    'section[aria-label="선택한 오더"]',
+  );
+  const selectedViewport = selectedColumn.locator(
+    '[data-slot="scroll-area-viewport"]',
+  );
+  const selectedEmptyState = selectedColumn
+    .getByText("선택한 오더가 없습니다", { exact: true })
+    .locator("xpath=ancestor::section[1]");
+  const [selectedViewportBox, selectedEmptyStateBox] = await Promise.all([
+    selectedViewport.boundingBox(),
+    selectedEmptyState.boundingBox(),
+  ]);
+  expect(selectedViewportBox).not.toBeNull();
+  expect(selectedEmptyStateBox).not.toBeNull();
+  expect(
+    Math.abs(
+      selectedViewportBox!.x +
+        selectedViewportBox!.width / 2 -
+        (selectedEmptyStateBox!.x + selectedEmptyStateBox!.width / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      selectedViewportBox!.y +
+        selectedViewportBox!.height / 2 -
+        (selectedEmptyStateBox!.y + selectedEmptyStateBox!.height / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
   await searchChartOrderCatalog(dialog, "PR-017 조제 0108");
-  await expect(
-    page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0108"),
-  ).toBeVisible();
+  const targetCandidate = page.getByTestId(
+    "chart-order-catalog-candidate-pr017-dispensing-0108",
+  );
+  await expect(targetCandidate).toBeVisible();
+  await expect(targetCandidate).toHaveCSS("height", "34px");
+  await expect(targetCandidate.locator("span").first()).toHaveCSS(
+    "font-size",
+    "13px",
+  );
+  await expect(targetCandidate.locator("small")).toHaveCount(0);
   await expect(
     page.getByTestId("chart-order-catalog-candidate-pr017-dispensing-0001"),
   ).toBeHidden();
@@ -6227,7 +6264,14 @@ test("chart order add reorders selected orders with a grab handle before adding"
   await page.getByRole("button", { name: "+ Order", exact: true }).click();
 
   const dialog = page.getByRole("dialog", { name: "오더 추가" });
-  await page.getByTestId("chart-order-catalog-candidate-reorder-lab-a").click();
+  const firstCandidate = page.getByTestId(
+    "chart-order-catalog-candidate-reorder-lab-a",
+  );
+  await firstCandidate.click();
+  await expect(firstCandidate).toHaveAttribute("aria-selected", "true");
+  await expect(firstCandidate.locator("svg")).toHaveCount(1);
+  await expect(firstCandidate.locator("small")).toHaveCount(0);
+  await expect(firstCandidate).not.toContainText("✓");
   await page.getByTestId("chart-order-catalog-candidate-reorder-lab-b").click();
 
   const dragHandle = dialog.getByRole("button", {
@@ -6279,6 +6323,110 @@ test("chart order add reorders selected orders with a grab handle before adding"
   expect(rowABox).not.toBeNull();
   expect(rowBBox).not.toBeNull();
   expect(rowBBox!.y).toBeLessThan(rowABox!.y);
+});
+
+test("chart order catalog lets veterinarians deselect unconfirmed draft orders and cancel safely", async ({
+  page,
+}) => {
+  const displayName = "Maropitant 16mg T";
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          ok: true,
+          rows: [
+            {
+              appliedSnapshot: {
+                appliedAmountBasis: "unit_price",
+                appliedBillingName: displayName,
+                appliedDestinationModule: "dispensing",
+                appliedDisplayName: displayName,
+                appliedPriceKrw: 4_500,
+                appliedSalesUnit: "per_each",
+                appliedStandardOrderName: displayName,
+                appliedTargetSpecies: ["dog", "cat"],
+                appliedTaskRequired: true,
+                appliedTaxIncluded: true,
+                billingEligible: true,
+                billingReflectionEnabled: true,
+                clinicalOrderType: "dispensing",
+                defaultDetailInputs: {},
+                destinationModule: "dispensing",
+                detailSchemaVersion: 1,
+                executionMode: "routed",
+                sourcePresetId: "svc-med-maropitant",
+                sourcePresetVersion: "2026-08-30.1",
+                workspaceCatalogItemId: "svc-med-maropitant",
+              },
+              billingEligible: true,
+              billingName: displayName,
+              categoryGroup: "medication",
+              clinicalOrderType: "dispensing",
+              destinationModule: "dispensing",
+              detailSchemaVersion: 1,
+              displayName,
+              executionMode: "routed",
+              rowType: "individual",
+              sourcePresetId: "svc-med-maropitant",
+              sourcePresetVersion: "2026-08-30.1",
+              targetSpecies: ["dog", "cat"],
+              workspaceCatalogItemId: "svc-med-maropitant",
+              workspaceCatalogRevision: 1,
+            },
+          ],
+          status: 200,
+        },
+        status: 200,
+      });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+
+  let dialog = page.getByRole("dialog", { name: "오더 추가" });
+  let candidate = page.getByTestId(
+    "chart-order-catalog-candidate-svc-med-maropitant",
+  );
+  await expect(candidate).toHaveAttribute("aria-selected", "true");
+  await expect(candidate).toBeEnabled();
+  await expect(
+    page.getByTestId("chart-order-catalog-selection-svc-med-maropitant"),
+  ).toBeVisible();
+
+  await candidate.click();
+  await expect(candidate).toHaveAttribute("aria-selected", "false");
+  await expect(
+    page.getByTestId("chart-order-catalog-selection-svc-med-maropitant"),
+  ).toHaveCount(0);
+  await dialog.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await page.waitForTimeout(200);
+
+  const reopenButton = page.getByRole("button", {
+    name: "+ Order",
+    exact: true,
+  });
+  await expect(reopenButton).toBeEnabled();
+  await reopenButton.click();
+  dialog = page.getByRole("dialog", { name: "오더 추가" });
+  await expect(dialog).toBeVisible();
+  candidate = page.getByTestId(
+    "chart-order-catalog-candidate-svc-med-maropitant",
+  );
+  await expect(candidate).toHaveAttribute("aria-selected", "true");
+
+  await candidate.click();
+  await dialog
+    .getByRole("button", { name: "선택 완료", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.getByLabel("Maropitant 16mg T 청구서명 수정", { exact: true }),
+  ).toHaveCount(0);
 });
 
 test("chart dispensing catalog prefills master prescription values and preserves veterinarian edits", async ({
