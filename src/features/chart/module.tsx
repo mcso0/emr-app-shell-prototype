@@ -1,6 +1,23 @@
 "use client";
 
 import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
@@ -11,6 +28,7 @@ import {
   type SortingState,
   type Updater,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   useCallback,
   useEffect,
@@ -24,6 +42,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { IconReorderAlt } from "obra-icons-react";
 import { toast } from "sonner";
 import {
   CdsActionsCheckIcon,
@@ -7343,147 +7362,677 @@ function createChartOrderDraftId() {
   );
 }
 
+type ChartOrderCatalogCategory =
+  "all" | ChartOrderCatalogSearchRow["categoryGroup"];
+type ChartOrderCatalogStatus =
+  "idle" | "loading" | "ready" | "denied" | "error";
+
+const chartOrderCatalogCategories: ReadonlyArray<{
+  label: string;
+  value: ChartOrderCatalogCategory;
+}> = [
+  { label: "전체", value: "all" },
+  { label: "진료", value: "consultation" },
+  { label: "검사", value: "lab" },
+  { label: "영상", value: "imaging" },
+  { label: "조제", value: "medication" },
+  { label: "처치", value: "treatment" },
+  { label: "입원", value: "hospitalization" },
+  { label: "기타", value: "misc" },
+  { label: "세트", value: "set" },
+];
+
+function getChartOrderCatalogCategoryLabel(
+  category: ChartOrderCatalogCategory,
+) {
+  return (
+    chartOrderCatalogCategories.find((item) => item.value === category)
+      ?.label ?? "전체"
+  );
+}
+
+function SortableChartOrderCatalogSelection({
+  onRemove,
+  row,
+}: {
+  onRemove: () => void;
+  row: ChartOrderCatalogSearchRow;
+}) {
+  const sourceKey = getChartCatalogSourceKey(row);
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: sourceKey });
+
+  return (
+    <li
+      className={cn(
+        "flex min-h-15 items-center gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-card px-2.5 py-2 motion-reduce:!transition-none",
+        isDragging &&
+          "relative z-10 shadow-[var(--clair-shadow-md)] ring-1 ring-ring/30",
+      )}
+      data-testid={`chart-order-catalog-selection-${row.sourcePresetId}`}
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+    >
+      <Button
+        {...attributes}
+        {...listeners}
+        aria-label={`${row.displayName} 순서 변경`}
+        className="!size-7 shrink-0 cursor-grab touch-none text-muted-foreground hover:bg-transparent active:cursor-grabbing [&_svg]:!size-4"
+        ref={setActivatorNodeRef}
+        size="icon-xs"
+        type="button"
+        variant="ghost"
+      >
+        <IconReorderAlt />
+      </Button>
+      <span className="min-w-0 flex-1">
+        <strong className="block truncate emr-text-dense-label">
+          {row.displayName}
+        </strong>
+        <small className="block truncate emr-text-metadata text-muted-foreground">
+          {getChartOrderCatalogCategoryLabel(row.categoryGroup)} ·{" "}
+          {getCatalogCandidatePriceLabel(row)}
+        </small>
+      </span>
+      <Button
+        aria-label={`${row.displayName} 선택 해제`}
+        className="!size-7 shrink-0 text-muted-foreground"
+        onClick={onRemove}
+        size="icon-xs"
+        type="button"
+        variant="ghost"
+      >
+        <CdsActionsXIcon />
+      </Button>
+    </li>
+  );
+}
+
 function ChartOrderCatalogDialog({
   bundle,
   candidates,
   selectedCatalogSourceKeys,
-  loading,
   open,
-  query,
-  statusText,
+  status,
   onAdd,
   onOpenChange,
-  onQueryChange,
   onRetry,
 }: {
   bundle: ChartBundle;
   candidates: ChartOrderCatalogSearchRow[];
   selectedCatalogSourceKeys: Set<string>;
-  loading: boolean;
   open: boolean;
-  query: string;
-  statusText: string;
-  onAdd: (row: ChartOrderCatalogSearchRow) => void;
+  status: ChartOrderCatalogStatus;
+  onAdd: (rows: ChartOrderCatalogSearchRow[]) => void;
   onOpenChange: (open: boolean) => void;
-  onQueryChange: (query: string) => void;
   onRetry: () => void;
 }) {
-  const normalizedQuery = query.trim().toLowerCase();
-  const visibleCandidates = candidates
-    .filter((row) =>
-      isCatalogCandidateTargetingPatient(row, bundle.patient.species),
-    )
-    .filter((row) => {
-      if (!normalizedQuery) return true;
-
-      return [
-        row.displayName,
-        row.billingName,
-        row.appliedSnapshot.appliedStandardOrderName ?? "",
-        row.sourcePresetId,
-        row.categoryGroup,
-      ].some((value) => value.toLowerCase().includes(normalizedQuery));
+  const [activeCandidateIndex, setActiveCandidateIndex] = useState(0);
+  const [category, setCategory] = useState<ChartOrderCatalogCategory>("all");
+  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<
+    ChartOrderCatalogSearchRow[]
+  >([]);
+  const categoryTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const mobileCategoryRef = useRef<HTMLButtonElement>(null);
+  const candidateScrollRef = useRef<HTMLDivElement>(null);
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+  const patientCandidates = useMemo(
+    () =>
+      candidates.filter((row) =>
+        isCatalogCandidateTargetingPatient(row, bundle.patient.species),
+      ),
+    [bundle.patient.species, candidates],
+  );
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<ChartOrderCatalogCategory, number>(
+      chartOrderCatalogCategories.map((item) => [item.value, 0]),
+    );
+    counts.set("all", patientCandidates.length);
+    patientCandidates.forEach((row) => {
+      counts.set(row.categoryGroup, (counts.get(row.categoryGroup) ?? 0) + 1);
     });
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl gap-0 p-0">
-        <DialogHeader className="border-b px-5 py-4">
-          <DialogTitle>Workspace catalog에서 Order 추가</DialogTitle>
-          <DialogDescription>
-            현재 병원의 active catalog와 order set만 신규 차트 오더 후보로
-            표시됩니다.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-3 p-5">
-          <div className="flex min-h-9 items-center gap-2 rounded-[var(--emr-radius-control)] border bg-card px-2.5">
-            <CdsActionsSearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
-            <Input
-              aria-label="카탈로그 Order 검색"
-              className="h-8 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
-              placeholder="Order명, 청구명, preset id 검색"
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-            />
-          </div>
-          <div
-            className="emr-text-metadata text-muted-foreground"
-            data-testid="chart-order-catalog-search-status"
-          >
-            {statusText}
-          </div>
-          <ScrollArea
-            className="h-[420px] rounded-[var(--emr-radius-control)] border"
-            viewportClassName="scroll-fade-y scroll-fade-8"
-          >
-            <div className="grid divide-y">
-              {visibleCandidates.map((row) => {
-                const sourceKey = getChartCatalogSourceKey(row);
-                const alreadySelected =
-                  selectedCatalogSourceKeys.has(sourceKey);
-                const orderType = mapCatalogCategoryToOrderType(
-                  row.categoryGroup,
-                );
+    return counts;
+  }, [patientCandidates]);
+  const categoryCandidates = useMemo(
+    () =>
+      category === "all"
+        ? patientCandidates
+        : patientCandidates.filter((row) => row.categoryGroup === category),
+    [category, patientCandidates],
+  );
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleCandidates = useMemo(
+    () =>
+      categoryCandidates.filter((row) => {
+        if (!normalizedQuery) return true;
 
+        return [
+          row.displayName,
+          row.billingName,
+          row.appliedSnapshot.appliedStandardOrderName ?? "",
+          row.sourcePresetId,
+          row.categoryGroup,
+        ].some((value) => value.toLowerCase().includes(normalizedQuery));
+      }),
+    [categoryCandidates, normalizedQuery],
+  );
+  const selectedSourceKeys = useMemo(
+    () => new Set(selectedRows.map(getChartCatalogSourceKey)),
+    [selectedRows],
+  );
+  // The catalog can contain hundreds of rows; keep rendering bounded inside the dialog.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const candidateVirtualizer = useVirtualizer({
+    count: visibleCandidates.length,
+    estimateSize: () => 56,
+    getScrollElement: () => candidateScrollRef.current,
+    overscan: 6,
+  });
+  const categoryLabel = getChartOrderCatalogCategoryLabel(category);
+  const liveStatusText =
+    status === "loading"
+      ? "오더를 불러오는 중입니다."
+      : status === "denied"
+        ? "오더 검색 권한이 없습니다."
+        : status === "error"
+          ? "오더를 불러오지 못했습니다."
+          : `${categoryLabel} 오더 ${visibleCandidates.length}개, 선택한 오더 ${selectedRows.length}개`;
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
+
+  const resetDialogState = () => {
+    setActiveCandidateIndex(0);
+    setCategory("all");
+    setQuery("");
+    setSearchOpen(false);
+    setSelectedRows([]);
+  };
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) resetDialogState();
+    onOpenChange(nextOpen);
+  };
+  const closeSearch = () => {
+    setActiveCandidateIndex(0);
+    setQuery("");
+    setSearchOpen(false);
+    requestAnimationFrame(() => searchButtonRef.current?.focus());
+  };
+  const selectCategory = (nextCategory: ChartOrderCatalogCategory) => {
+    setActiveCandidateIndex(0);
+    setCategory(nextCategory);
+    setQuery("");
+    setSearchOpen(false);
+    candidateVirtualizer.scrollToOffset(0);
+  };
+  const handleCategoryKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    let nextIndex = index;
+    if (event.key === "ArrowDown")
+      nextIndex = (index + 1) % chartOrderCatalogCategories.length;
+    else if (event.key === "ArrowUp")
+      nextIndex =
+        (index - 1 + chartOrderCatalogCategories.length) %
+        chartOrderCatalogCategories.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End")
+      nextIndex = chartOrderCatalogCategories.length - 1;
+    else return;
+
+    event.preventDefault();
+    selectCategory(chartOrderCatalogCategories[nextIndex].value);
+    requestAnimationFrame(() => categoryTabRefs.current[nextIndex]?.focus());
+  };
+  const toggleSelectedRow = (row: ChartOrderCatalogSearchRow) => {
+    const sourceKey = getChartCatalogSourceKey(row);
+    if (selectedCatalogSourceKeys.has(sourceKey)) return;
+    setSelectedRows((currentRows) =>
+      currentRows.some(
+        (currentRow) => getChartCatalogSourceKey(currentRow) === sourceKey,
+      )
+        ? currentRows.filter(
+            (currentRow) => getChartCatalogSourceKey(currentRow) !== sourceKey,
+          )
+        : [...currentRows, row],
+    );
+  };
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSearch();
+      return;
+    }
+    if (
+      event.key !== "ArrowDown" &&
+      event.key !== "ArrowUp" &&
+      event.key !== "Enter"
+    )
+      return;
+    if (!visibleCandidates.length) return;
+
+    event.preventDefault();
+    if (event.key === "Enter") {
+      toggleSelectedRow(visibleCandidates[activeCandidateIndex]);
+      return;
+    }
+    const nextIndex =
+      event.key === "ArrowDown"
+        ? Math.min(activeCandidateIndex + 1, visibleCandidates.length - 1)
+        : Math.max(activeCandidateIndex - 1, 0);
+    setActiveCandidateIndex(nextIndex);
+    candidateVirtualizer.scrollToIndex(nextIndex, { align: "auto" });
+  };
+  const handleSelectionDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setSelectedRows((currentRows) => {
+      const oldIndex = currentRows.findIndex(
+        (row) => getChartCatalogSourceKey(row) === active.id,
+      );
+      const newIndex = currentRows.findIndex(
+        (row) => getChartCatalogSourceKey(row) === over.id,
+      );
+      if (oldIndex < 0 || newIndex < 0) return currentRows;
+
+      return arrayMove(currentRows, oldIndex, newIndex);
+    });
+  };
+  const confirmSelection = () => {
+    if (!selectedRows.length) return;
+    onAdd(selectedRows);
+    resetDialogState();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="grid h-[min(760px,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-none grid-rows-[54px_minmax(0,1fr)_64px] gap-0 overflow-hidden rounded-xl p-0 sm:max-w-[1120px]"
+        initialFocus={() =>
+          window.matchMedia("(min-width: 768px)").matches
+            ? categoryTabRefs.current[0]
+            : mobileCategoryRef.current
+        }
+        showCloseButton={false}
+      >
+        <DialogHeader className="flex-row items-center justify-between border-b border-[var(--emr-border-default)] px-5">
+          <DialogTitle>오더 추가</DialogTitle>
+          <Button
+            aria-label="오더 추가 닫기"
+            className="text-muted-foreground"
+            onClick={() => handleOpenChange(false)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <CdsActionsXIcon />
+          </Button>
+        </DialogHeader>
+
+        <div className="grid min-h-0 overflow-y-auto md:grid-cols-[166px_minmax(0,1fr)_286px] md:overflow-hidden lg:grid-cols-[166px_minmax(0,1fr)_286px]">
+          <aside
+            aria-label="오더 분류"
+            className="hidden min-h-0 flex-col border-r border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] md:flex"
+          >
+            <div className="flex h-14 shrink-0 items-center px-4">
+              <strong className="emr-text-dense-label">오더 분류</strong>
+            </div>
+            <div
+              aria-label="오더 카테고리"
+              aria-orientation="vertical"
+              className="grid gap-1 px-3 pb-3"
+              role="tablist"
+            >
+              {chartOrderCatalogCategories.map((item, index) => {
+                const selected = category === item.value;
                 return (
-                  <div
-                    key={`${row.rowType}-${row.sourcePresetId}`}
-                    className="grid gap-2 bg-card p-3 md:grid-cols-[minmax(0,1fr)_auto]"
-                    data-testid={`chart-order-catalog-candidate-${row.sourcePresetId}`}
+                  <button
+                    aria-controls="chart-order-catalog-results"
+                    aria-selected={selected}
+                    className={cn(
+                      "flex h-10 items-center justify-between rounded-[var(--emr-radius-control)] px-3 text-left emr-text-dense transition-colors hover:bg-[var(--emr-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                      selected &&
+                        "bg-[var(--emr-surface-selected)] font-semibold",
+                    )}
+                    id={`chart-order-catalog-tab-${item.value}`}
+                    key={item.value}
+                    onClick={() => selectCategory(item.value)}
+                    onKeyDown={(event) => handleCategoryKeyDown(event, index)}
+                    ref={(node) => {
+                      categoryTabRefs.current[index] = node;
+                    }}
+                    role="tab"
+                    tabIndex={selected ? 0 : -1}
+                    type="button"
                   >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge
-                          variant={
-                            row.rowType === "set" ? "secondary" : "outline"
-                          }
-                        >
-                          {row.rowType === "set"
-                            ? "세트"
-                            : orderTypeMeta[orderType].label}
-                        </Badge>
-                        {row.dispensingLineage?.serviceReviewOnly ? (
-                          <Badge variant="secondary">서비스 검토용</Badge>
-                        ) : null}
-                        <span className="font-semibold">{row.displayName}</span>
-                        <span className="emr-text-metadata text-muted-foreground">
-                          {getCatalogCandidatePriceLabel(row)}
-                        </span>
-                      </div>
-                      <div className="mt-1 emr-text-metadata text-muted-foreground">
-                        청구서명 {row.billingName} · 대상{" "}
-                        {row.targetSpecies.join(", ")} · source{" "}
-                        {row.sourcePresetId}
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      disabled={alreadySelected}
-                      onClick={() => onAdd(row)}
-                    >
-                      {alreadySelected ? "추가됨" : "추가"}
-                    </Button>
-                  </div>
+                    <span>{item.label}</span>
+                    <span className="emr-text-metadata text-muted-foreground">
+                      {categoryCounts.get(item.value) ?? 0}
+                    </span>
+                  </button>
                 );
               })}
-              {!visibleCandidates.length ? (
-                <div className="grid min-h-32 place-items-center bg-card p-6 text-center emr-text-dense text-muted-foreground">
-                  {loading
-                    ? "불러오는 중"
-                    : "조건에 맞는 표시 가능 catalog 후보가 없습니다."}
+            </div>
+          </aside>
+
+          <section
+            aria-labelledby={`chart-order-catalog-tab-${category}`}
+            className="flex min-h-[320px] min-w-0 flex-col border-b border-[var(--emr-border-default)] md:min-h-0 md:border-r md:border-b-0"
+            id="chart-order-catalog-results"
+            role="tabpanel"
+          >
+            <div className="border-b border-[var(--emr-border-default)] p-3 md:hidden">
+              <Select
+                onValueChange={(value) =>
+                  selectCategory(value as ChartOrderCatalogCategory)
+                }
+                value={category}
+              >
+                <SelectTrigger
+                  aria-label="오더 분류"
+                  className="w-full bg-card"
+                  ref={mobileCategoryRef}
+                >
+                  <span className="flex flex-1 justify-between gap-2">
+                    <span>{categoryLabel}</span>
+                    <span className="text-muted-foreground">
+                      {categoryCounts.get(category) ?? 0}
+                    </span>
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {chartOrderCatalogCategories.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label} · {categoryCounts.get(item.value) ?? 0}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-border-default)] px-4">
+              {searchOpen ? (
+                <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-card px-2.5">
+                  <CdsActionsSearchIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <Input
+                    aria-activedescendant={
+                      visibleCandidates[activeCandidateIndex]
+                        ? `chart-order-catalog-option-${getChartCatalogSourceKey(visibleCandidates[activeCandidateIndex])}`
+                        : undefined
+                    }
+                    aria-controls="chart-order-catalog-list"
+                    aria-expanded="true"
+                    aria-label={`${categoryLabel} 오더 검색`}
+                    className="h-8 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                    onChange={(event) => {
+                      setActiveCandidateIndex(0);
+                      setQuery(event.target.value);
+                      candidateVirtualizer.scrollToOffset(0);
+                    }}
+                    onKeyDown={handleSearchKeyDown}
+                    placeholder={`${categoryLabel} 오더에서 오더명, 청구명 검색`}
+                    ref={searchInputRef}
+                    role="combobox"
+                    value={query}
+                  />
+                  <Button
+                    aria-label="오더 검색 닫기"
+                    className="!size-7 shrink-0 text-muted-foreground"
+                    onClick={closeSearch}
+                    size="icon-xs"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <CdsActionsXIcon />
+                  </Button>
                 </div>
+              ) : (
+                <>
+                  <span className="min-w-0 truncate">
+                    <strong className="emr-text-dense-label">
+                      {categoryLabel} 오더
+                    </strong>
+                    <span className="ml-2 emr-text-metadata text-muted-foreground">
+                      {categoryCounts.get(category) ?? 0}개
+                    </span>
+                  </span>
+                  <Button
+                    aria-expanded="false"
+                    aria-label={`${categoryLabel} 오더 검색 열기`}
+                    className="text-muted-foreground"
+                    onClick={() => setSearchOpen(true)}
+                    ref={searchButtonRef}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <CdsActionsSearchIcon />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <div
+              className="min-h-0 flex-1 overflow-y-auto scroll-fade-y scroll-fade-8"
+              ref={candidateScrollRef}
+            >
+              {status === "loading" ? (
+                <div aria-label="오더를 불러오는 중" className="grid">
+                  {Array.from({ length: 10 }, (_, index) => (
+                    <div
+                      className="h-14 animate-pulse border-b border-[var(--emr-border-subtle)] bg-[var(--emr-surface-muted)]/55"
+                      key={index}
+                    />
+                  ))}
+                </div>
+              ) : status === "error" || status === "denied" ? (
+                <div className="p-4">
+                  <EmrInlineAlert
+                    action={
+                      status === "error" ? (
+                        <Button onClick={onRetry} size="sm" type="button">
+                          다시 시도
+                        </Button>
+                      ) : undefined
+                    }
+                    severity={status === "error" ? "error" : "warning"}
+                    title={
+                      status === "error"
+                        ? "오더를 불러오지 못했습니다"
+                        : "오더 검색 권한이 없습니다"
+                    }
+                  >
+                    {status === "error"
+                      ? "잠시 후 다시 시도해 주세요."
+                      : "워크스페이스 관리자에게 권한을 확인해 주세요."}
+                  </EmrInlineAlert>
+                </div>
+              ) : visibleCandidates.length ? (
+                <div
+                  aria-label={`${categoryLabel} 오더 검색 결과`}
+                  aria-multiselectable="true"
+                  id="chart-order-catalog-list"
+                  role="listbox"
+                  style={{
+                    height: `${candidateVirtualizer.getTotalSize()}px`,
+                    position: "relative",
+                  }}
+                >
+                  {candidateVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const row = visibleCandidates[virtualRow.index];
+                    const sourceKey = getChartCatalogSourceKey(row);
+                    const alreadyAdded =
+                      selectedCatalogSourceKeys.has(sourceKey);
+                    const selected = selectedSourceKeys.has(sourceKey);
+                    return (
+                      <button
+                        aria-label={`${row.displayName} ${alreadyAdded ? "이미 추가됨" : selected ? "선택 해제" : "선택"}`}
+                        aria-selected={selected}
+                        className={cn(
+                          "absolute left-0 grid h-14 w-full grid-cols-[minmax(0,1fr)_88px_42px] items-center gap-3 border-b border-[var(--emr-border-subtle)] bg-card px-4 text-left transition-colors hover:bg-[var(--emr-surface-muted)] focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40 motion-reduce:!transition-none",
+                          selected && "bg-[var(--emr-surface-selected)]",
+                          virtualRow.index === activeCandidateIndex &&
+                            searchOpen &&
+                            "bg-[var(--emr-surface-muted)]",
+                        )}
+                        data-testid={`chart-order-catalog-candidate-${row.sourcePresetId}`}
+                        disabled={alreadyAdded}
+                        id={`chart-order-catalog-option-${sourceKey}`}
+                        key={sourceKey}
+                        onClick={() => toggleSelectedRow(row)}
+                        onMouseEnter={() =>
+                          setActiveCandidateIndex(virtualRow.index)
+                        }
+                        role="option"
+                        style={{
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        type="button"
+                      >
+                        <span className="min-w-0">
+                          <strong className="block truncate emr-text-dense-label">
+                            {row.displayName}
+                          </strong>
+                          <small className="block truncate emr-text-metadata text-muted-foreground">
+                            {row.billingName} · 대상{" "}
+                            {row.targetSpecies.join(", ")}
+                          </small>
+                        </span>
+                        <span className="text-right emr-text-metadata text-muted-foreground">
+                          {getCatalogCandidatePriceLabel(row)}
+                        </span>
+                        <span className="text-right emr-text-metadata font-medium text-[var(--emr-status-info-text)]">
+                          {alreadyAdded ? "추가됨" : selected ? "✓" : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid min-h-48 place-items-center p-6 text-center">
+                  <div>
+                    <strong className="block emr-text-dense-label">
+                      조건에 맞는 오더가 없습니다
+                    </strong>
+                    <p className="mt-1 emr-text-metadata text-muted-foreground">
+                      검색어를 지우거나 다른 분류를 선택해 주세요.
+                    </p>
+                    {query ? (
+                      <Button
+                        className="mt-3"
+                        onClick={closeSearch}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        검색 초기화
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <aside
+            aria-label="선택한 오더"
+            className="flex min-h-[220px] min-w-0 flex-col bg-[var(--emr-surface-panel)] md:min-h-0"
+          >
+            <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-[var(--emr-border-default)] px-4">
+              <span className="min-w-0 truncate">
+                <strong className="emr-text-dense-label">선택한 오더</strong>
+                <span className="ml-2 emr-text-metadata text-muted-foreground">
+                  {selectedRows.length}개
+                </span>
+              </span>
+              {selectedRows.length ? (
+                <Button
+                  className="shrink-0"
+                  onClick={() => setSelectedRows([])}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  전체 삭제
+                </Button>
               ) : null}
             </div>
-          </ScrollArea>
+            <ScrollArea className="min-h-0 flex-1">
+              {selectedRows.length ? (
+                <DndContext
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleSelectionDragEnd}
+                  sensors={sensors}
+                >
+                  <SortableContext
+                    items={selectedRows.map(getChartCatalogSourceKey)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <ul className="grid gap-2 p-3">
+                      {selectedRows.map((row) => (
+                        <SortableChartOrderCatalogSelection
+                          key={getChartCatalogSourceKey(row)}
+                          onRemove={() => toggleSelectedRow(row)}
+                          row={row}
+                        />
+                      ))}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <div className="grid min-h-40 place-items-center p-5 text-center emr-text-metadata text-muted-foreground">
+                  선택한 오더가 없습니다.
+                </div>
+              )}
+            </ScrollArea>
+          </aside>
+        </div>
+
+        <footer className="flex flex-col-reverse items-stretch justify-between gap-2 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-5 py-3 sm:flex-row sm:items-center">
+          <strong className="emr-text-dense-label">
+            선택한 오더 {selectedRows.length}개
+          </strong>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onRetry}>
-              다시 불러오기
+            <Button
+              onClick={() => handleOpenChange(false)}
+              type="button"
+              variant="outline"
+            >
+              취소
             </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              닫기
+            <Button
+              disabled={!selectedRows.length || status === "loading"}
+              onClick={confirmSelection}
+              type="button"
+            >
+              선택한 {selectedRows.length}개 추가
             </Button>
           </div>
-        </div>
+        </footer>
+        <span aria-live="polite" className="sr-only">
+          {liveStatusText}
+        </span>
       </DialogContent>
     </Dialog>
   );
@@ -7769,13 +8318,14 @@ function OrderArea({
   const [orderMutationDraft, setOrderMutationDraft] =
     useState<ChartOrderMutationDraft | null>(null);
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
-  const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogRows, setCatalogRows] = useState<ChartOrderCatalogSearchRow[]>(
     [],
   );
-  const [catalogSearchStatus, setCatalogSearchStatus] = useState<
-    "idle" | "loading" | "ready" | "denied" | "error"
-  >("idle");
+  const [catalogSearchStatus, setCatalogSearchStatus] =
+    useState<ChartOrderCatalogStatus>("idle");
+  const [catalogSelectionQueue, setCatalogSelectionQueue] = useState<
+    ChartOrderCatalogSearchRow[]
+  >([]);
   const [setCandidate, setSetCandidate] =
     useState<ChartOrderCatalogSearchRow | null>(null);
   const [setPreview, setSetPreview] = useState<ChartOrderSetPreview | null>(
@@ -8112,12 +8662,16 @@ function OrderArea({
       void loadCatalogRows();
     }
   };
-  const closeSetConfiguration = () => {
+  const resetSetConfiguration = () => {
     setSetCandidate(null);
     setSetPreview(null);
     setSetRangeInput("");
     setSetPreviewError(undefined);
     setSetPreviewLoading(false);
+  };
+  const closeSetConfiguration = () => {
+    setCatalogSelectionQueue([]);
+    resetSetConfiguration();
   };
   const requestSetPreview = async (
     row: ChartOrderCatalogSearchRow,
@@ -8154,40 +8708,67 @@ function OrderArea({
     setSetPreview(result.preview);
     return result.preview;
   };
-  const addCatalogOrderToDraft = (row: ChartOrderCatalogSearchRow) => {
-    if (writeDisabled) return;
-    const sourceKey = getChartCatalogSourceKey(row);
-    if (
-      draftRows.some(
-        (draftRow) => getChartDraftRowCatalogSourceKey(draftRow) === sourceKey,
-      )
-    ) {
-      return;
-    }
+  const appendCatalogRowsToDraft = (rows: ChartOrderCatalogSearchRow[]) => {
+    if (!rows.length) return;
+    markDraftTouched();
+    setDraftRows((currentRows) => {
+      const firstSortOrder = currentRows.length + 1;
+      return [
+        ...currentRows,
+        ...rows.map((row, index) =>
+          buildChartOrderDraftRowFromCatalog({
+            bundle,
+            row,
+            sortOrder: (firstSortOrder + index) * 10,
+          }),
+        ),
+      ];
+    });
+  };
+  const processCatalogSelection = (rows: ChartOrderCatalogSearchRow[]) => {
+    const nextSetIndex = rows.findIndex((row) => row.rowType === "set");
+    const immediateRows =
+      nextSetIndex === -1 ? rows : rows.slice(0, nextSetIndex);
+    appendCatalogRowsToDraft(immediateRows);
 
-    if (row.rowType === "set") {
-      setSetCandidate(row);
-      setSetPreview(null);
-      setSetPreviewError(undefined);
-      setSetRangeInput("");
-      setCatalogDialogOpen(false);
-      if (collapsed) onCollapsedChange(false);
-      if (row.sourceSetAmountBasis !== "range_price") {
-        void requestSetPreview(row, { items: [] });
+    if (nextSetIndex === -1) {
+      if (rows.length) {
+        toast.success(`선택한 Order ${rows.length}개를 추가했어요.`);
       }
       return;
     }
 
-    markDraftTouched();
-    setDraftRows((currentRows) => [
-      ...currentRows,
-      buildChartOrderDraftRowFromCatalog({
-        bundle,
-        row,
-        sortOrder: (currentRows.length + 1) * 10,
-      }),
-    ]);
-    toast.success(`${row.displayName} Order를 추가했어요.`);
+    const row = rows[nextSetIndex];
+    setCatalogSelectionQueue(rows.slice(nextSetIndex + 1));
+    setSetCandidate(row);
+    setSetPreview(null);
+    setSetPreviewError(undefined);
+    setSetRangeInput("");
+    setCatalogDialogOpen(false);
+    if (collapsed) onCollapsedChange(false);
+    if (row.sourceSetAmountBasis !== "range_price") {
+      void requestSetPreview(row, { items: [] });
+    }
+  };
+  const addCatalogOrdersToDraft = (rows: ChartOrderCatalogSearchRow[]) => {
+    if (writeDisabled) return;
+    const selectedSourceKeys = new Set(
+      draftRowsRef.current
+        .map((draftRow) => getChartDraftRowCatalogSourceKey(draftRow))
+        .filter((sourceKey): sourceKey is string => Boolean(sourceKey)),
+    );
+    const nextSourceKeys = new Set<string>();
+    const nextRows = rows.filter((row) => {
+      const sourceKey = getChartCatalogSourceKey(row);
+      if (selectedSourceKeys.has(sourceKey) || nextSourceKeys.has(sourceKey)) {
+        return false;
+      }
+      nextSourceKeys.add(sourceKey);
+      return true;
+    });
+    if (!nextRows.length) return;
+
+    processCatalogSelection(nextRows);
   };
   const applySetConfiguration = async (
     selectionIntent: ChartOrderSetSelectionIntent,
@@ -8208,7 +8789,12 @@ function OrderArea({
       }),
     ]);
     toast.success(`${setCandidate.displayName} Order 세트를 추가했어요.`);
-    closeSetConfiguration();
+    const remainingRows = catalogSelectionQueue;
+    setCatalogSelectionQueue([]);
+    resetSetConfiguration();
+    if (remainingRows.length) {
+      window.setTimeout(() => processCatalogSelection(remainingRows), 0);
+    }
   };
   const resetDraftRows = () => {
     if (writeDisabled) return;
@@ -9049,17 +9635,6 @@ function OrderArea({
             : orderDraftSaveState === "conflict"
               ? " · 충돌 해결 필요"
               : "";
-  const catalogStatusText =
-    catalogSearchStatus === "loading"
-      ? "Workspace catalog 후보를 불러오는 중"
-      : catalogSearchStatus === "ready"
-        ? `Workspace catalog active 후보 ${catalogRows.length}건`
-        : catalogSearchStatus === "denied"
-          ? "Workspace catalog 검색 권한이 없습니다"
-          : catalogSearchStatus === "error"
-            ? "Workspace catalog 후보를 불러오지 못했습니다"
-            : "Workspace catalog 검색 대기";
-
   return (
     <section
       data-slot="chart-workspace-panel"
@@ -9369,13 +9944,10 @@ function OrderArea({
           bundle={bundle}
           candidates={catalogRows}
           selectedCatalogSourceKeys={draftCatalogSourceKeys}
-          loading={catalogSearchStatus === "loading"}
           open={catalogDialogOpen}
-          query={catalogQuery}
-          statusText={catalogStatusText}
-          onAdd={addCatalogOrderToDraft}
+          status={catalogSearchStatus}
+          onAdd={addCatalogOrdersToDraft}
           onOpenChange={setCatalogDialogOpen}
-          onQueryChange={setCatalogQuery}
           onRetry={() => void loadCatalogRows()}
         />
         <ChartOrderSetConfigurationDialog

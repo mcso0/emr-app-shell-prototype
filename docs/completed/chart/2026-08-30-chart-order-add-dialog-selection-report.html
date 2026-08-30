@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chart 오더 추가 다이얼로그 구현 완료 보고서</title>
+    <style>
+      :root { color-scheme: light; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1f2925; background: #f4f6f5; }
+      body { max-width: 920px; margin: 0 auto; padding: 48px 24px 72px; }
+      main { padding: 36px; border: 1px solid #dbe1de; border-radius: 16px; background: #fff; box-shadow: 0 12px 32px rgb(26 43 36 / 8%); }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 32px 0 12px; font-size: 18px; }
+      p, li { line-height: 1.65; }
+      .meta { color: #65726d; }
+      .result { margin: 24px 0; padding: 18px 20px; border-left: 4px solid #2f745e; background: #eef6f2; }
+      code { padding: 2px 6px; border-radius: 5px; background: #eef1f0; font-size: 0.92em; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 11px 12px; border-bottom: 1px solid #e4e8e6; text-align: left; vertical-align: top; }
+      th { width: 150px; color: #52615b; }
+      .pass { color: #21644f; font-weight: 700; }
+      .blocked { color: #9a5b1d; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Chart 오더 추가 다이얼로그 구현 완료</h1>
+      <p class="meta">2026-08-30 · 진료/차트 &gt; Order &gt; + Order</p>
+      <div class="result">
+        기존 즉시 추가형 검색 모달을 Assessment 분류검색을 참고한 3단 선택기로 교체했다. 선택한 오더는 오른쪽 목록에서 해제·전체 삭제·그랩 재정렬할 수 있으며, 정렬된 배열 순서가 새 draft row의 <code>sortOrder</code>로 이어진다. Order 세트가 섞인 선택도 기존 구성 다이얼로그를 순차 적용해 선택 순서를 보존한다.
+      </div>
+
+      <h2>구현 범위</h2>
+      <ul>
+        <li>타이틀과 닫기만 남긴 54px 헤더</li>
+        <li>오더 분류 / 카테고리별 후보 / 선택한 오더의 3단 구조</li>
+        <li>후보 열 헤더에서 현재 카테고리 범위로 열리는 검색</li>
+        <li>56px 후보 행과 <code>@tanstack/react-virtual</code> 가상화</li>
+        <li>오른쪽 선택 큐의 개별 해제, 전체 삭제, 포인터·키보드 재정렬</li>
+        <li>선택 순서를 보존하는 복수 오더 일괄 추가</li>
+        <li>로딩·빈 결과·오류·권한 없음·이미 추가됨 상태와 반응형 적층</li>
+      </ul>
+
+      <h2>변경 파일</h2>
+      <table>
+        <tr><th>구현</th><td><code>src/features/chart/module.tsx</code></td></tr>
+        <tr><th>집중 회귀 테스트</th><td><code>tests/chart.spec.ts</code></td></tr>
+        <tr><th>계약·시안</th><td><code>.codex/visualizations/.../order-add-dialog-implementation-report</code></td></tr>
+      </table>
+
+      <h2>검증</h2>
+      <table>
+        <tr><th class="pass">PASS</th><td><code>npx eslint src/features/chart/module.tsx tests/chart.spec.ts</code></td></tr>
+        <tr><th class="pass">PASS · 7</th><td>카테고리 범위 검색·일괄 추가, 포인터 그랩 재정렬·draft 행 순서, 기존 Order 세트 구성 흐름 Playwright</td></tr>
+        <tr><th class="pass">PASS</th><td><code>npm run security:secrets</code> · <code>npm run docs:check</code> · <code>git diff --check</code></td></tr>
+        <tr><th class="pass">PASS</th><td>보고서 계약 82개 / 검증 11개, standalone HTML build·structure</td></tr>
+        <tr><th class="pass">PASS</th><td><code>npx tsc --noEmit --pretty false</code> · 최신 <code>origin/main</code> 기준 clean worktree</td></tr>
+        <tr><th class="pass">PASS</th><td><code>npm run build</code> · Next.js 16.2.6 production build</td></tr>
+      </table>
+
+      <h2>의도적으로 제외한 범위</h2>
+      <p>별칭·사람이 읽는 카테고리 라벨을 위한 API/RPC 확장, 최근 사용·즐겨찾기·빈도 데이터, 공용 Dialog 변형, Figma 게시는 변경하지 않았다.</p>
+    </main>
+  </body>
+</html>
