@@ -1865,8 +1865,15 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
         }
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-1 pb-3">
+      <ScrollArea
+        className="min-h-0 flex-1"
+        style={{
+          marginInline: "calc(var(--emr-content-aside-padding-x) * -1)",
+          width:
+            "calc(100% + (var(--emr-content-aside-padding-x) * 2))",
+        }}
+      >
+        <div className="flex flex-col gap-1 px-[var(--emr-content-aside-padding-x)] pb-3">
           {liveHistoryScopeMatches && chartHistoryStatus === "loading" ? (
             <div
               className="flex items-center gap-2 px-2 py-3 emr-text-metadata text-[var(--emr-text-secondary)]"
@@ -1925,10 +1932,16 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
           ))}
         </div>
       </ScrollArea>
-      <div className="flex shrink-0 gap-2 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] py-3">
-        <Button variant="outline" size="default" className="bg-card">
-          수술 차트
-        </Button>
+      <div
+        className="flex shrink-0 justify-end gap-2 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] py-3"
+        data-testid="chart-history-footer-actions"
+      >
+        <span className="inline-flex" title="수술 차트는 기능 구현 중입니다.">
+          <Button variant="outline" size="default" className="bg-card" disabled>
+            수술 차트
+            <span className="sr-only">기능 구현 중입니다.</span>
+          </Button>
+        </span>
         <Button size="default">외래 차트 추가</Button>
       </div>
     </EmrContentAsidePanel>

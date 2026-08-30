@@ -641,6 +641,70 @@ test("chart vital history follows workspace omission and re-add without rewritin
   expect(historicalVital.heartRateBpm).toBe(88);
 });
 
+test("chart history aside anchors scroll chrome and right-aligns unavailable actions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 350 });
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history");
+
+  const chartHistoryAside = page.locator("#chart-content-aside");
+  await expect(chartHistoryAside).toBeVisible();
+  await expect(chartHistoryAside.getByText("차트이력")).toBeVisible();
+  const historyLayout = await chartHistoryAside.evaluate((aside) => {
+    const scrollArea = aside.querySelector<HTMLElement>(
+      '[data-slot="scroll-area"]',
+    );
+    const scrollBar = aside.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-scrollbar"]',
+    );
+    const historyCard = aside.querySelector<HTMLElement>(
+      '[data-slot="content-history-item"]',
+    );
+    if (!scrollArea || !scrollBar || !historyCard) {
+      throw new Error("chart history scroll geometry is missing");
+    }
+
+    const asideRect = aside.getBoundingClientRect();
+    const scrollAreaRect = scrollArea.getBoundingClientRect();
+    const scrollBarRect = scrollBar.getBoundingClientRect();
+    const historyCardRect = historyCard.getBoundingClientRect();
+
+    return {
+      asideRight: asideRect.right,
+      cardRight: historyCardRect.right,
+      scrollAreaRight: scrollAreaRect.right,
+      scrollBarLeft: scrollBarRect.left,
+      scrollBarRight: scrollBarRect.right,
+      scrollBarWidth: scrollBarRect.width,
+    };
+  });
+  expect(
+    Math.abs(historyLayout.asideRight - historyLayout.scrollAreaRight),
+  ).toBeLessThanOrEqual(1);
+  expect(historyLayout.cardRight).toBeLessThan(historyLayout.scrollAreaRight);
+  expect(historyLayout.scrollBarWidth).toBeGreaterThan(0);
+  expect(
+    Math.abs(historyLayout.asideRight - historyLayout.scrollBarRight),
+  ).toBeLessThanOrEqual(1);
+  expect(historyLayout.cardRight).toBeLessThanOrEqual(
+    historyLayout.scrollBarLeft,
+  );
+
+  const historyFooter = chartHistoryAside.getByTestId(
+    "chart-history-footer-actions",
+  );
+  await expect(historyFooter).toHaveCSS("justify-content", "flex-end");
+  await expect(
+    chartHistoryAside.getByRole("button", { name: /수술 차트/ }),
+  ).toBeDisabled();
+  await expect(
+    chartHistoryAside.getByTitle("수술 차트는 기능 구현 중입니다."),
+  ).toBeVisible();
+  await expect(
+    chartHistoryAside.getByRole("button", { name: "외래 차트 추가" }),
+  ).toBeEnabled();
+});
+
 test("chart workspace renders queue, history, SOAP, assessment, and orders", async ({
   page,
 }) => {
