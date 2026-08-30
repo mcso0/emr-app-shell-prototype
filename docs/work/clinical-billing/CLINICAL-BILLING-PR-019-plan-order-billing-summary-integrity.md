@@ -1,9 +1,9 @@
 ---
 id: "CLINICAL-BILLING-PR-019"
-status: "active"
+status: "human_review"
 area: "clinical-billing"
 priority: "P0"
-target_pr: "TBD"
+target_pr: "GitHub PR #677"
 source_docs:
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-017-plan-order-billing-summary-handoff.md"
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-018-plan-order-billing-summary-freshness.md"
@@ -87,3 +87,24 @@ confirmation, invoice, or encounter lifecycle boundaries.
   tables, and idempotent command state are in scope.
 - Do not apply this migration remotely or move a fixed deployment alias until
   the exact source SHA, migration target, and rollback packet are approved.
+
+## Verification Evidence
+
+- The focused adjacent Playwright suite passed `47/47`, covering billing
+  summary, atomic confirmation, order actions, invoice-candidate sync, and the
+  fulfillment replay boundary.
+- The forward SQL contract passed with a `processing` confirmation command and
+  rolled back without residue.
+- The migration-before runner passed legacy deterministic-command repair,
+  candidate and invoice-authority conflict rejection, audit provenance,
+  completed result repair, voided-invoice ETag stability, and rollback.
+- Lint, TypeScript, production build, documentation links, diff whitespace, and
+  secret scanning passed. The production build retained the existing broad NFT
+  trace warning from `src/lib/prd-viewer/doc-reader.ts`.
+- An independent security and billing-boundary review returned `APPROVE` with
+  zero must-fix findings after executing the migration-before runner.
+- A clean full local database reset remains blocked before this migration by
+  existing seed-order assumptions in unrelated dispensing migrations. Local DB
+  lint also retains two unrelated baseline function errors. The PR019 migration
+  itself reapplied successfully on the local chart schema and both SQL
+  contracts passed.
