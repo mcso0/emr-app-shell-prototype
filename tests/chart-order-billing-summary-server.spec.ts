@@ -81,6 +81,21 @@ test("billing summary keeps chart:view and chart:update as separate server gates
   expect(foreignResult).toEqual({ ok: false, status: 403, denialReason: "workspace_membership_missing" });
 });
 
+test("default mock billing summary permissions include the normal admin and vet sessions", async () => {
+  for (const actorUserId of ["user-admin", "user-vet"]) {
+    const result = await readChartOrderBillingSummary({
+      actorUserId,
+      workspaceId,
+      encounterId,
+    });
+    expect(result).toMatchObject({
+      enforcedBy: "chart-order-billing-summary",
+      ok: true,
+      status: 200,
+    });
+  }
+});
+
 test("billing request is revision-aware and returns an invoice handoff", async () => {
   const gateway = createMockChartOrderBillingSummaryGateway(summary);
   const conflict = await requestChartOrderBilling({

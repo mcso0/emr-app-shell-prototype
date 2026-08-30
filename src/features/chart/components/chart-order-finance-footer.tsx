@@ -4,11 +4,20 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 
+export type ChartOrderBillingSummaryFreshness =
+  | "loading"
+  | "fresh"
+  | "refreshing"
+  | "stale"
+  | "error";
+
 export function ChartOrderFinanceFooter({
   accessibilitySummary,
+  canRequestBilling,
   drawerOpen,
   error,
-  loading,
+  freshness,
+  hasAuthoritativeSummary,
   onOpenDetails,
   onRequestBilling,
   requesting,
@@ -16,9 +25,11 @@ export function ChartOrderFinanceFooter({
   summary,
 }: {
   accessibilitySummary?: string;
+  canRequestBilling: boolean;
   drawerOpen: boolean;
   error?: string;
-  loading: boolean;
+  freshness: ChartOrderBillingSummaryFreshness;
+  hasAuthoritativeSummary: boolean;
   onOpenDetails: () => void;
   onRequestBilling: () => void;
   requesting: boolean;
@@ -27,6 +38,7 @@ export function ChartOrderFinanceFooter({
 }) {
   const counts = summary.orderCounts;
   const amounts = summary.amounts;
+  const freshnessText = getFreshnessText(freshness);
   return (
     <footer
       data-testid="chart-order-footer"
@@ -59,11 +71,24 @@ export function ChartOrderFinanceFooter({
         </div>
         <span aria-hidden className="h-5 w-px bg-[var(--emr-border-default)]" />
         <p className="whitespace-nowrap text-[13px] text-[var(--emr-text-secondary)]">
-          청구 예상 총액{" "}
+          {hasAuthoritativeSummary ? "청구 예상 총액" : "서버 확인 전 예상 총액"}{" "}
           <strong className="ml-1 tabular-nums text-[16px] text-foreground">
             {formatWon(amounts.estimatedTotal)}
           </strong>
         </p>
+        {freshnessText ? (
+          <span
+            role="status"
+            className={cn(
+              "whitespace-nowrap text-[11px]",
+              freshness === "stale" || freshness === "error"
+                ? "text-[var(--emr-status-warning-text)]"
+                : "text-[var(--emr-text-tertiary)]",
+            )}
+          >
+            {freshnessText}
+          </span>
+        ) : null}
         <Button
           type="button"
           size="sm"
@@ -77,7 +102,7 @@ export function ChartOrderFinanceFooter({
         <Button
           type="button"
           size="sm"
-          disabled={loading || requesting || counts.requestable === 0}
+          disabled={!canRequestBilling || requesting}
           onClick={onRequestBilling}
         >
           {requesting ? "청구 중" : "Order 청구"}
@@ -89,15 +114,23 @@ export function ChartOrderFinanceFooter({
 }
 
 export function ChartOrderBillingDetailAside({
+  canRequestBilling,
   error,
+  freshness,
+  hasAuthoritativeSummary,
   onClose,
+  onRetry,
   onRequestBilling,
   open,
   requesting,
   summary,
 }: {
+  canRequestBilling: boolean;
   error?: string;
+  freshness: ChartOrderBillingSummaryFreshness;
+  hasAuthoritativeSummary: boolean;
   onClose: () => void;
+  onRetry: () => void;
   onRequestBilling: () => void;
   open: boolean;
   requesting: boolean;
@@ -105,6 +138,7 @@ export function ChartOrderBillingDetailAside({
 }) {
   const counts = summary.orderCounts;
   const amounts = summary.amounts;
+  const freshnessText = getFreshnessText(freshness);
   return (
     <aside
       id="chart-order-billing-detail-aside"
@@ -126,7 +160,11 @@ export function ChartOrderBillingDetailAside({
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         <section className="rounded-xl border border-[var(--emr-border-accent)] bg-[var(--emr-surface-selected)] p-4">
           <div className="flex items-center justify-between text-xs text-[var(--emr-text-secondary)]">
-            <span>청구 예상 총액</span>
+            <span>
+              {hasAuthoritativeSummary
+                ? "청구 예상 총액"
+                : "서버 확인 전 예상 총액"}
+            </span>
             <span>청구 가능 {counts.requestable}건</span>
           </div>
           <p className="mt-1 text-[28px] font-bold leading-9 tabular-nums text-[var(--emr-text-accent)]">
@@ -135,6 +173,31 @@ export function ChartOrderBillingDetailAside({
           <p className="mt-1 text-xs text-[var(--emr-text-secondary)]">
             확정 전 금액은 예상에만 포함되며 현재 청구에서는 제외돼요.
           </p>
+          {freshnessText ? (
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p
+                role="status"
+                className={cn(
+                  "text-xs",
+                  freshness === "stale" || freshness === "error"
+                    ? "text-[var(--emr-status-warning-text)]"
+                    : "text-[var(--emr-text-secondary)]",
+                )}
+              >
+                {freshnessText}
+              </p>
+              {freshness === "stale" || freshness === "error" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={onRetry}
+                >
+                  금액 다시 확인
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </section>
 
         <section aria-labelledby="billing-order-state-title">
@@ -187,7 +250,7 @@ export function ChartOrderBillingDetailAside({
         <Button
           type="button"
           size="sm"
-          disabled={requesting || counts.requestable === 0}
+          disabled={!canRequestBilling || requesting}
           onClick={onRequestBilling}
         >
           {requesting ? "청구 중" : "Order 청구"}
@@ -210,4 +273,14 @@ function MoneyRow({ label, tone, value }: { label: string; tone?: "success"; val
 
 function formatWon(value: number) {
   return `${Math.round(value).toLocaleString("ko-KR")}원`;
+}
+
+function getFreshnessText(freshness: ChartOrderBillingSummaryFreshness) {
+  if (freshness === "loading" || freshness === "refreshing") {
+    return "금액 갱신 중";
+  }
+  if (freshness === "stale" || freshness === "error") {
+    return "최신 금액 확인 필요";
+  }
+  return undefined;
 }
