@@ -61,10 +61,11 @@ const originalAuthEnv = {
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test("compact profile avatar keeps one Korean character and two Latin characters", () => {
+test("compact profile avatar keeps one character across Korean and Latin initials", () => {
   expect(formatCompactAvatarInitials("관리")).toBe("관");
-  expect(formatCompactAvatarInitials("AD")).toBe("AD");
-  expect(formatCompactAvatarInitials("A D")).toBe("AD");
+  expect(formatCompactAvatarInitials("SM")).toBe("S");
+  expect(formatCompactAvatarInitials("AD")).toBe("A");
+  expect(formatCompactAvatarInitials("A D")).toBe("A");
   expect(formatCompactAvatarInitials("  ")).toBe("U");
 });
 
@@ -1432,6 +1433,7 @@ test("profile menu opens personal profile settings with personal-only fields", a
   await page.goto("/w/clair-demo/reception?modulePanel=open&aside=closed");
 
   await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
+  await expect(page.getByTestId("top-menu-profile-avatar-fallback").first()).toHaveText("M");
   await page.getByTestId("top-menu-mock-user").click();
   await page.getByRole("menuitem", { name: "개인 프로필 설정" }).click();
 
