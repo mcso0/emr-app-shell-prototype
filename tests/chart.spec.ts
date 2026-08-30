@@ -1834,6 +1834,109 @@ test("chart selects the first live task on entry without flashing an empty state
   await expect(page.getByTestId("chart-content-empty-state")).toHaveCount(0);
 });
 
+test("live patient chart history shows every encounter and keeps past charts read-only", async ({
+  page,
+}) => {
+  const current = createLiveChartQueueRecord({
+    encounterId: "encounter-history-current",
+    patientName: "초코",
+    sortOrder: 1,
+  });
+  const oldEncounterId = "encounter-history-old";
+  const oldEncounterNo = "E-260701-OLD001";
+
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    (route) => fulfillLiveChartQueue(route, [current]),
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/history?*`,
+    async (route) => {
+      const common = {
+        workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+        patientId: current.patient.id,
+        guardianId: current.primaryGuardian!.id,
+        primaryVeterinarianId: "user-vet",
+        receptionType: "walk_in",
+        createdAt: "2026-07-01T06:00:00.000Z",
+        updatedAt: "2026-07-01T06:30:00.000Z",
+      } as const;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-patient-history-read",
+          items: [
+            {
+              encounter: {
+                ...common,
+                ...current.encounter,
+                receptionType: "walk_in",
+              },
+              primaryGuardian: current.primaryGuardian,
+              veterinarianName: "이수지",
+              diagnoses: [{ diagnosisText: "근골격계" }],
+              soapNote: { assessment: "현재 진료" },
+            },
+            {
+              encounter: {
+                ...common,
+                id: oldEncounterId,
+                encounterNo: oldEncounterNo,
+                visitPurpose: "외래 재진",
+                chiefComplaint: "이전 보행 이상",
+                status: "completed",
+                checkedInAt: "2026-07-01T06:00:00.000Z",
+                completedAt: "2026-07-01T06:30:00.000Z",
+              },
+              primaryGuardian: current.primaryGuardian,
+              veterinarianName: "이수지",
+              diagnoses: [{ diagnosisText: "슬개골 탈구 의심" }],
+              soapNote: { assessment: "보행 상태 추적" },
+            },
+          ],
+          nextCursor: null,
+          totalCount: 2,
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?encounterId=${current.encounter.id}&modulePanel=open&aside=history`,
+  );
+
+  const aside = page.locator("#chart-content-aside");
+  const oldHistoryItem = aside.getByTestId(
+    `chart-history-item-${oldEncounterId}`,
+  );
+  await expect(aside).toContainText("차트이력");
+  await expect(oldHistoryItem).toContainText("슬개골 탈구 의심");
+  await oldHistoryItem.click();
+
+  await expect(page).toHaveURL(
+    new RegExp(`encounterId=${current.encounter.id}`),
+  );
+  await expect(
+    page.getByTestId(`order-queue-item-${current.encounter.id}`),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByTestId("chart-historical-readonly-badge"),
+  ).toBeVisible();
+  await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
+
+  await aside.getByTestId(`chart-history-item-${current.encounter.id}`).click();
+  await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByText(current.encounter.encounterNo).first(),
+  ).toBeVisible();
+});
+
 test("active chart context bar previews actual profiles and saves current encounter vitals", async ({
   page,
 }) => {
