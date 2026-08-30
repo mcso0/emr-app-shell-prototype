@@ -319,7 +319,10 @@ export function EmrModuleListSidePanel({
         collapseLabel={collapseLabel}
         onCollapse={onCollapse}
       />
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea
+        className="min-h-0 flex-1"
+        viewportClassName="scroll-fade-y scroll-fade-8"
+      >
         <div
           className="grid w-full gap-[var(--emr-module-list-section-gap)] py-[var(--emr-module-list-body-padding-y)]"
           data-emr-module-list-body="true"
