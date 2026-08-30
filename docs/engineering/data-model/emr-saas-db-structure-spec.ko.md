@@ -673,6 +673,13 @@ workspace 진단 카탈로그의 손실 없는 계통·질환 구분 연결. 한
 | `created_at` | timestamptz | |
 | `updated_at` | timestamptz | |
 
+차트의 확정 전 오더 후보 삭제는 일반 저장 payload에서 행이 빠진 사실로
+추론하지 않는다. 클라이언트가 같은 ETag/CAS 요청에 `removedOrderIds`로 루트
+후보를 명시한 경우에만 `draft`/`pending` 루트와 미확정 세트 하위를
+soft-cancel하고 `order_events`에 사유를 기록한다. 확정, Task/fulfillment,
+청구 연결이 시작된 대상은 이 경로에서 원자적으로 거부하며 별도 취소·수정
+계약을 사용한다.
+
 ### `order_assignments`
 
 오더 담당자 배정 이력.

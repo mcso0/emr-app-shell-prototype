@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chart 오더 후보 추가·삭제 저장 UX 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #1f2925;
+        background: #f4f6f5;
+      }
+      body {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+      main {
+        padding: 36px;
+        border: 1px solid #dbe1de;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 32px rgb(26 43 36 / 8%);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        line-height: 1.65;
+      }
+      .meta {
+        color: #65726d;
+      }
+      .result {
+        margin: 24px 0;
+        padding: 18px 20px;
+        border-left: 4px solid #2f745e;
+        background: #eef6f2;
+      }
+      code {
+        padding: 2px 6px;
+        border-radius: 5px;
+        background: #eef1f0;
+        font-size: 0.92em;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #e4e8e6;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        width: 160px;
+        color: #52615b;
+      }
+      .pass {
+        color: #21644f;
+        font-weight: 700;
+      }
+      .note {
+        color: #725b23;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>삭제한 오더 후보가 다시 나타나는 저장 불일치 수정</h1>
+      <p class="meta">2026-08-30 · 진료/차트 &gt; Plan/Order · CHART-PR-027</p>
+      <div class="result">
+        행 누락을 삭제로 추정하지 않고 <code>removedOrderIds</code>로 삭제
+        의도를 명시했다. 삭제 대상은 서버 응답 전까지
+        <strong>삭제 중</strong>으로 남고, 성공 응답 후에만 사라진다. 실패하면
+        행과 의도를 유지하고 다시 저장할 수 있어, 삭제 직후 사라졌다가 서버
+        readback으로 복원되던 문제를 막았다.
+      </div>
+
+      <h2>사용자 경험</h2>
+      <ul>
+        <li>단건과 일괄 후보 삭제에 동일한 확인 다이얼로그 적용</li>
+        <li>저장 중·저장됨·저장 실패·충돌 상태를 표 하단에 상시 표시</li>
+        <li>삭제 실패 시 행을 유지하고 <code>다시 저장</code> 제공</li>
+        <li>오더 추가 성공은 로컬 반영 시점이 아니라 서버 저장 완료 후 안내</li>
+      </ul>
+
+      <h2>데이터 안전 경계</h2>
+      <ul>
+        <li>
+          같은 workspace·encounter의 미확정 루트와 미확정 세트 하위만
+          soft-cancel
+        </li>
+        <li>확정·Task·fulfillment·청구 연결 대상은 원자적으로 거부</li>
+        <li>취소 사유와 행별 <code>order_events</code> 감사 이벤트 기록</li>
+        <li>기존 클라이언트처럼 삭제 ID를 생략하면 누락 행을 삭제하지 않음</li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <table>
+        <tr>
+          <th class="pass">PASS · 22</th>
+          <td>서버 저장·권한·ETag·명시적 삭제·마이그레이션 정적 계약</td>
+        </tr>
+        <tr>
+          <th class="pass">PASS · 4</th>
+          <td>
+            삭제 후 reload 유지, 실패 재시도, 추가 성공 ACK 시점, 추가 저장 중
+            즉시 삭제 브라우저 회귀
+          </td>
+        </tr>
+        <tr>
+          <th class="pass">PASS</th>
+          <td>로컬 Supabase 단일 트랜잭션 SQL 적용 후 rollback</td>
+        </tr>
+        <tr>
+          <th class="pass">PASS</th>
+          <td>
+            ESLint, TypeScript, Next.js build, docs, secret, UX copy, diff
+          </td>
+        </tr>
+      </table>
+
+      <h2>검증 한계</h2>
+      <p class="note">
+        브라우저 검증은 합성 데모 시나리오이며 실제 사용자 조사 근거가 아니다.
+        원격 Supabase 마이그레이션, 프로덕션 배포, 실제 진료 데이터 변경은 이번
+        작업에서 수행하지 않았다.
+      </p>
+    </main>
+  </body>
+</html>

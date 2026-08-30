@@ -146,6 +146,14 @@ Rules:
 
 Rules:
 
+- A chart Plan/Order row remains a pre-request candidate while
+  `order_confirmation_status` is `draft` or `pending`. Removing that candidate
+  is an explicit, version-checked intent: omission from a draft save does not
+  cancel it, while `removedOrderIds` may soft-cancel only same-encounter,
+  unconfirmed roots and their unconfirmed set children.
+- Candidate removal must fail atomically once confirmation, task/fulfillment,
+  or billing artifacts exist. Those rows follow the separate cancellation or
+  amendment workflow instead.
 - Order work status can be simpler than order state: `pending` or `completed`.
 - Result review and work execution can be separate, especially for lab/imaging. Billing candidate state is also separate and may advance through chart `Order 청구` without marking work complete.
 - If unfinished selected orders are billed, the UI must confirm: `아직 완료되지 않은 오더가 있습니다. 수납을 진행할까요?`
