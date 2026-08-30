@@ -141,6 +141,41 @@ test("neutral command token contract is exposed on the app shell", async ({ page
   expect(colors.emrStatusInfoText).toBe(colors.expectedEmrStatusInfoText);
 });
 
+test("shared date navigator uses the semantic hover state token", async ({ page }) => {
+  await page.goto(treatmentUrl);
+
+  const dateButton = page
+    .locator("aside")
+    .first()
+    .getByRole("button", { name: "26.05.01(금) 날짜 선택" });
+  await expect(dateButton).toBeVisible();
+
+  const expectedColors = await page.evaluate(() => {
+    const hoverProbe = document.createElement("span");
+    hoverProbe.style.backgroundColor = "var(--emr-state-hover)";
+    const mutedProbe = document.createElement("span");
+    mutedProbe.style.backgroundColor = "var(--emr-surface-muted)";
+    document.body.append(hoverProbe, mutedProbe);
+
+    const colors = {
+      hover: getComputedStyle(hoverProbe).backgroundColor,
+      muted: getComputedStyle(mutedProbe).backgroundColor,
+    };
+
+    hoverProbe.remove();
+    mutedProbe.remove();
+    return colors;
+  });
+
+  await dateButton.hover();
+  await expect
+    .poll(() =>
+      dateButton.evaluate((button) => getComputedStyle(button).backgroundColor),
+    )
+    .toBe(expectedColors.hover);
+  expect(expectedColors.hover).not.toBe(expectedColors.muted);
+});
+
 test("runtime surfaces use semantic aliases instead of legacy state names or local neutrals", async () => {
   const sourceFiles = (await collectSourceFiles("src")).filter(
     (filePath) =>
