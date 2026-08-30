@@ -29,9 +29,11 @@ export type ChartQueueRow = {
 };
 
 export type ChartHistoryRow = {
-  diagnoses: Diagnosis[];
+  diagnoses: Array<Pick<Diagnosis, "diagnosisText">>;
   encounter: Encounter;
-  soapNote?: SoapNote;
+  primaryGuardian?: Guardian;
+  soapNote?: Pick<SoapNote, "assessment">;
+  veterinarianName?: string;
 };
 
 export type ChartOrderGroup = {

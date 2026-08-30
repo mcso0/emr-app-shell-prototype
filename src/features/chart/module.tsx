@@ -157,6 +157,8 @@ import type {
   ChartLiveQueueRecord,
   ChartLiveQueueResponse,
 } from "@/features/chart/chart-live-queue";
+import { loadChartPatientHistoryPage } from "@/features/chart/chart-patient-history-client";
+import type { ChartPatientHistoryRecord } from "@/features/chart/chart-patient-history";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
@@ -844,7 +846,7 @@ function getSelectedBundle(
   );
 }
 
-function useSelectedChartBundle(workspaceId: string) {
+function useActiveChartBundle(workspaceId: string) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -855,6 +857,55 @@ function useSelectedChartBundle(workspaceId: string) {
 
   return getSelectedBundle(selectedEncounterId, records, {
     allowMockFallback,
+  });
+}
+
+function getDisplayedChartBundle({
+  activeBundle,
+  historyRecords,
+  historyViewEncounterId,
+}: {
+  activeBundle: ChartBundle | null;
+  historyRecords: ChartPatientHistoryRecord[];
+  historyViewEncounterId: string;
+}) {
+  if (!activeBundle || !historyViewEncounterId) return activeBundle;
+
+  const record = historyRecords.find(
+    (item) => item.encounter.id === historyViewEncounterId,
+  );
+  if (!record || record.encounter.patientId !== activeBundle.patient.id) {
+    return activeBundle;
+  }
+
+  return createChartEncounterBundleFromLiveHandoff({
+    encounter: record.encounter,
+    patient: activeBundle.patient,
+    primaryGuardian: record.primaryGuardian,
+    veterinarianName: record.veterinarianName,
+  });
+}
+
+function useDisplayedChartBundle(workspaceId: string) {
+  const activeBundle = useActiveChartBundle(workspaceId);
+  const chartHistoryRecords = useChartStore(
+    (state) => state.chartHistoryRecords,
+  );
+  const chartHistoryScope = useChartStore((state) => state.chartHistoryScope);
+  const historyViewEncounterId = useChartStore(
+    (state) => state.historyViewEncounterId,
+  );
+  const historyRecords =
+    activeBundle &&
+    chartHistoryScope?.workspaceId === workspaceId &&
+    chartHistoryScope.patientId === activeBundle.patient.id
+      ? chartHistoryRecords
+      : [];
+
+  return getDisplayedChartBundle({
+    activeBundle,
+    historyRecords,
+    historyViewEncounterId,
   });
 }
 
@@ -1201,7 +1252,7 @@ export function ChartSlotAvailabilityProvider({
   workspaceId,
 }: WorkspaceSlotAvailabilityProviderProps) {
   useChartLiveQueueCoordinator(workspaceId);
-  const bundle = useSelectedChartBundle(workspaceId);
+  const bundle = useActiveChartBundle(workspaceId);
 
   return children({
     hasContentAside: Boolean(bundle),
@@ -1223,6 +1274,8 @@ function getChartHistoryVeterinarianName(
   row: ChartHistoryRow,
   bundle: ChartBundle,
 ) {
+  if (row.veterinarianName) return row.veterinarianName;
+
   if (row.encounter.id === bundle.encounter.id) {
     return resolveChartBundleVeterinarianName(bundle) ?? "미정";
   }
@@ -1230,7 +1283,12 @@ function getChartHistoryVeterinarianName(
   return getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정";
 }
 
-function getChartHistoryRowsForBundle(bundle: ChartBundle): ChartHistoryRow[] {
+function getChartHistoryRowsForBundle(
+  bundle: ChartBundle,
+  liveRows?: ChartPatientHistoryRecord[],
+): ChartHistoryRow[] {
+  if (liveRows) return liveRows;
+
   const rows = getChartHistoryRows(bundle.patient.id);
 
   if (rows.some((row) => row.encounter.id === bundle.encounter.id)) {
@@ -1242,9 +1300,11 @@ function getChartHistoryRowsForBundle(bundle: ChartBundle): ChartHistoryRow[] {
       (diagnosis) => diagnosis.encounterId === bundle.encounter.id,
     ),
     encounter: bundle.encounter,
+    primaryGuardian: bundle.primaryGuardian,
     soapNote: bundle.soapNotes.find(
       (soapNote) => soapNote.encounterId === bundle.encounter.id,
     ),
+    veterinarianName: bundle.veterinarianName,
   };
 
   return [currentRow, ...rows].sort((a, b) =>
@@ -1470,6 +1530,13 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
+  const historyViewEncounterId = useChartStore(
+    (state) => state.historyViewEncounterId,
+  );
+  const chartHistoryRecords = useChartStore(
+    (state) => state.chartHistoryRecords,
+  );
+  const chartHistoryScope = useChartStore((state) => state.chartHistoryScope);
   const { session: authSession } = useAuthClient();
   const actorHeaders = useMemo(
     () => getDemoActorHeader(authSession),
@@ -1481,10 +1548,27 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const { queueScopeMatches, records: liveQueueRecords } =
     useScopedChartLiveQueue(workspaceId);
   const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
-  const bundle = getSelectedBundle(
+  const activeBundle = getSelectedBundle(
     queueScopeMatches || allowMockFallback ? selectedEncounterId : "",
     liveQueueRecords,
     { allowMockFallback },
+  );
+  const chartHistoryScopeMatches = Boolean(
+    activeBundle &&
+    chartHistoryScope?.workspaceId === workspaceId &&
+    chartHistoryScope.patientId === activeBundle.patient.id,
+  );
+  const scopedChartHistoryRecords = useMemo(
+    () => (chartHistoryScopeMatches ? chartHistoryRecords : []),
+    [chartHistoryRecords, chartHistoryScopeMatches],
+  );
+  const bundle = getDisplayedChartBundle({
+    activeBundle,
+    historyRecords: scopedChartHistoryRecords,
+    historyViewEncounterId,
+  });
+  const isHistoricalView = Boolean(
+    bundle && activeBundle && bundle.encounter.id !== activeBundle.encounter.id,
   );
 
   const selectedLiveQueueRecord = liveQueueRecords.find(
@@ -1496,6 +1580,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
       primaryGuardian: bundle?.primaryGuardian,
     });
   const chartStartLocked =
+    !isHistoricalView &&
     bundle?.encounter.status === "waiting" &&
     selectedLiveQueueRecord?.queueEntry.status === "waiting";
   const latestVitals = usePatientLatestVitalItems({
@@ -1513,19 +1598,23 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   if (chartStartLocked) return null;
 
   const veterinarianName = getChartBundleVeterinarianName(bundle);
-  const queueStatus = selectedLiveQueueRecord?.queueEntry.status;
+  const queueStatus = isHistoricalView
+    ? undefined
+    : selectedLiveQueueRecord?.queueEntry.status;
   const vitalWriteStateAllowed =
     bundle.encounter.status === "in_consultation" &&
     queueStatus === "in_progress";
   const vitalActionDisabled =
-    !vitalWriteStateAllowed || !latestVitals.canWriteVitals;
-  const vitalActionDisabledReason = !vitalWriteStateAllowed
-    ? "진료 중인 접수에서만 바이탈을 입력할 수 있어요."
-    : latestVitals.status === "loading"
-      ? "바이탈 입력 권한을 확인하고 있어요."
-      : latestVitals.status === "error"
-        ? "바이탈 입력 권한을 확인하지 못했어요."
-        : "바이탈을 입력할 권한이 없어요.";
+    isHistoricalView || !vitalWriteStateAllowed || !latestVitals.canWriteVitals;
+  const vitalActionDisabledReason = isHistoricalView
+    ? "과거 차트 보기에서는 바이탈을 수정할 수 없어요."
+    : !vitalWriteStateAllowed
+      ? "진료 중인 접수에서만 바이탈을 입력할 수 있어요."
+      : latestVitals.status === "loading"
+        ? "바이탈 입력 권한을 확인하고 있어요."
+        : latestVitals.status === "error"
+          ? "바이탈 입력 권한을 확인하지 못했어요."
+          : "바이탈을 입력할 권한이 없어요.";
   const currentEncounterVital =
     latestVitals.vital?.encounterId === bundle.encounter.id
       ? latestVitals.vital
@@ -1668,21 +1757,55 @@ function getPatientStatusLabel(status: "active" | "inactive" | "deceased") {
 }
 
 export function ChartContentAside({ workspaceId }: ShellComponentProps) {
-  const bundle = useSelectedChartBundle(workspaceId);
+  const bundle = useDisplayedChartBundle(workspaceId);
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
-  const selectEncounter = useChartStore((state) => state.selectEncounter);
+  const historyViewEncounterId = useChartStore(
+    (state) => state.historyViewEncounterId,
+  );
+  const chartHistoryError = useChartStore((state) => state.chartHistoryError);
+  const chartHistoryRecords = useChartStore(
+    (state) => state.chartHistoryRecords,
+  );
+  const chartHistoryScope = useChartStore((state) => state.chartHistoryScope);
+  const chartHistoryStatus = useChartStore((state) => state.chartHistoryStatus);
+  const chartHistoryTotalCount = useChartStore(
+    (state) => state.chartHistoryTotalCount,
+  );
+  const requestChartHistoryRefresh = useChartStore(
+    (state) => state.requestChartHistoryRefresh,
+  );
+  const selectHistoryEncounter = useChartStore(
+    (state) => state.selectHistoryEncounter,
+  );
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
   );
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<
     Set<string>
   >(() => new Set());
-  const historyRows = useMemo(
-    () => (bundle ? getChartHistoryRowsForBundle(bundle) : []),
-    [bundle],
+  const liveHistoryScopeMatches = Boolean(
+    bundle &&
+    chartHistoryScope?.workspaceId === workspaceId &&
+    chartHistoryScope.patientId === bundle.patient.id,
   );
+  const liveHistoryRows =
+    !isLegacySalesDemoWorkspace(workspaceId) &&
+    liveHistoryScopeMatches &&
+    chartHistoryStatus === "ready"
+      ? chartHistoryRecords
+      : undefined;
+  const historyRows = useMemo(
+    () => (bundle ? getChartHistoryRowsForBundle(bundle, liveHistoryRows) : []),
+    [bundle, liveHistoryRows],
+  );
+  const effectiveSelectedEncounterId =
+    historyViewEncounterId || selectedEncounterId;
+  const historyCount =
+    liveHistoryScopeMatches && chartHistoryStatus === "ready"
+      ? chartHistoryTotalCount
+      : historyRows.length;
   const historyGroups = useMemo(
     () =>
       historyRows.reduce<Array<{ date: string; rows: ChartHistoryRow[] }>>(
@@ -1723,7 +1846,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   return (
     <EmrContentAsidePanel id="chart-content-aside">
       <EmrContentAsideHeader
-        count={historyRows.length}
+        count={historyCount}
         label="차트이력"
         collapseAriaLabel="차트 이력 목록 접기"
         onCollapse={() => setContentAsideOpen(false)}
@@ -1744,6 +1867,36 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1 pb-3">
+          {liveHistoryScopeMatches && chartHistoryStatus === "loading" ? (
+            <div
+              className="flex items-center gap-2 px-2 py-3 emr-text-metadata text-[var(--emr-text-secondary)]"
+              data-testid="chart-history-loading-state"
+              role="status"
+            >
+              <Skeleton className="h-3 w-20 motion-reduce:animate-none" />
+              <span className="sr-only">차트 이력을 불러오는 중입니다</span>
+            </div>
+          ) : null}
+          {liveHistoryScopeMatches && chartHistoryStatus === "error" ? (
+            <EmrInlineAlert
+              severity="error"
+              title="차트 이력을 불러오지 못했습니다"
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={requestChartHistoryRefresh}
+                >
+                  다시 시도
+                </Button>
+              }
+              testId="chart-history-error-alert"
+            >
+              {chartHistoryError === "permission_missing"
+                ? "현재 계정의 차트 조회 권한을 확인해 주세요."
+                : "연결 상태를 확인한 뒤 다시 시도해 주세요."}
+            </EmrInlineAlert>
+          ) : null}
           {historyGroups.map((group) => (
             <EmrContentHistoryGroup
               key={group.date}
@@ -1758,8 +1911,14 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
                   key={row.encounter.id}
                   bundle={bundle}
                   row={row}
-                  selected={row.encounter.id === selectedEncounterId}
-                  onSelect={() => selectEncounter(row.encounter.id)}
+                  selected={row.encounter.id === effectiveSelectedEncounterId}
+                  onSelect={() =>
+                    selectHistoryEncounter(
+                      row.encounter.id === selectedEncounterId
+                        ? ""
+                        : row.encounter.id,
+                    )
+                  }
                 />
               ))}
             </EmrContentHistoryGroup>
@@ -1779,21 +1938,25 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
 function ChartInlineHistoryPanel({
   bundle,
   collapseContentId,
+  historyError,
+  historyRows,
+  historyStatus,
   onCollapse,
+  onRetry,
   onSelectEncounter,
   selectedEncounterId,
 }: {
   bundle: ChartBundle;
   collapseContentId: string;
+  historyError?: string;
+  historyRows: ChartHistoryRow[];
+  historyStatus: "idle" | "loading" | "ready" | "error";
   onCollapse: () => void;
+  onRetry: () => void;
   onSelectEncounter: (encounterId: string) => void;
   selectedEncounterId: string;
 }) {
   const [query, setQuery] = useState("");
-  const historyRows = useMemo(
-    () => getChartHistoryRowsForBundle(bundle),
-    [bundle],
-  );
   const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
   const visibleRows = useMemo(
     () =>
@@ -1891,6 +2054,32 @@ function ChartInlineHistoryPanel({
     >
       <ScrollArea className="h-full bg-[var(--emr-surface-panel)]">
         <div className="flex min-h-full flex-col gap-1 p-3">
+          {historyStatus === "loading" ? (
+            <div
+              className="flex items-center gap-2 px-2 py-3 emr-text-metadata text-[var(--emr-text-secondary)]"
+              data-testid="chart-inline-history-loading-state"
+              role="status"
+            >
+              <Skeleton className="h-3 w-24 motion-reduce:animate-none" />
+              <span className="sr-only">차트 이력을 불러오는 중입니다</span>
+            </div>
+          ) : null}
+          {historyStatus === "error" ? (
+            <EmrInlineAlert
+              severity="error"
+              title="차트 이력을 불러오지 못했습니다"
+              action={
+                <Button size="sm" variant="outline" onClick={onRetry}>
+                  다시 시도
+                </Button>
+              }
+              testId="chart-inline-history-error-alert"
+            >
+              {historyError === "permission_missing"
+                ? "현재 계정의 차트 조회 권한을 확인해 주세요."
+                : "연결 상태를 확인한 뒤 다시 시도해 주세요."}
+            </EmrInlineAlert>
+          ) : null}
           {historyGroups.map((group) => (
             <EmrContentHistoryGroup
               key={group.date}
@@ -1911,7 +2100,9 @@ function ChartInlineHistoryPanel({
               ))}
             </EmrContentHistoryGroup>
           ))}
-          {!visibleRows.length ? (
+          {!visibleRows.length &&
+          historyStatus !== "loading" &&
+          historyStatus !== "error" ? (
             <div className="flex min-h-52 flex-1 items-center justify-center">
               <EmrEmptyState
                 kind={historyRows.length ? "no-filter-results" : "no-data"}
@@ -9586,10 +9777,34 @@ export function ChartContent({
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
+  const historyViewEncounterId = useChartStore(
+    (state) => state.historyViewEncounterId,
+  );
+  const chartHistoryError = useChartStore((state) => state.chartHistoryError);
+  const chartHistoryRecords = useChartStore(
+    (state) => state.chartHistoryRecords,
+  );
+  const chartHistoryRefreshNonce = useChartStore(
+    (state) => state.chartHistoryRefreshNonce,
+  );
+  const chartHistoryScope = useChartStore((state) => state.chartHistoryScope);
+  const chartHistoryStatus = useChartStore((state) => state.chartHistoryStatus);
+  const chartHistoryTotalCount = useChartStore(
+    (state) => state.chartHistoryTotalCount,
+  );
   const pendingConsultationCallEncounterId = useChartStore(
     (state) => state.pendingConsultationCallEncounterId,
   );
   const selectEncounter = useChartStore((state) => state.selectEncounter);
+  const selectHistoryEncounter = useChartStore(
+    (state) => state.selectHistoryEncounter,
+  );
+  const requestChartHistoryRefresh = useChartStore(
+    (state) => state.requestChartHistoryRefresh,
+  );
+  const setChartHistoryState = useChartStore(
+    (state) => state.setChartHistoryState,
+  );
   const clearPendingConsultationCall = useChartStore(
     (state) => state.clearPendingConsultationCall,
   );
@@ -9655,10 +9870,27 @@ export function ChartContent({
   } = useAuthClient();
   const chartWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const resizingPointerIdRef = useRef<number | null>(null);
-  const bundle = getSelectedBundle(
+  const activeBundle = getSelectedBundle(
     queueScopeMatches || allowMockFallback ? selectedEncounterId : "",
     liveQueueRecords,
     { allowMockFallback },
+  );
+  const chartHistoryScopeMatches = Boolean(
+    activeBundle &&
+    chartHistoryScope?.workspaceId === workspaceId &&
+    chartHistoryScope.patientId === activeBundle.patient.id,
+  );
+  const scopedChartHistoryRecords = useMemo(
+    () => (chartHistoryScopeMatches ? chartHistoryRecords : []),
+    [chartHistoryRecords, chartHistoryScopeMatches],
+  );
+  const bundle = getDisplayedChartBundle({
+    activeBundle,
+    historyRecords: scopedChartHistoryRecords,
+    historyViewEncounterId,
+  });
+  const isHistoricalView = Boolean(
+    bundle && activeBundle && bundle.encounter.id !== activeBundle.encounter.id,
   );
   const { openGuardianProfile, openPatientProfile } =
     useChartPatientGuardianProfileActions({
@@ -9808,11 +10040,9 @@ export function ChartContent({
     () => orderGroups.flatMap(({ orders }) => orders),
     [orderGroups],
   );
-  const effectiveQueueEntry =
-    selectedLiveQueueRecord?.queueEntry ??
-    (bundle?.encounter.id === selectedEncounterId
-      ? selectedLiveQueueRecord?.queueEntry
-      : undefined);
+  const effectiveQueueEntry = isHistoricalView
+    ? undefined
+    : selectedLiveQueueRecord?.queueEntry;
   const soapLoading =
     Boolean(activeEncounterId && activeWorkspaceId) &&
     !allowMockFallback &&
@@ -9834,6 +10064,7 @@ export function ChartContent({
   const detailLoading =
     soapLoading || diagnosisLoading || chartCompletionLoading;
   const detailHydrationPending = detailLoading;
+  const chartWriteDisabled = detailHydrationPending || isHistoricalView;
   const orderLoading = detailHydrationPending;
   const showDetailPendingIndicator = useDelayedBoolean(
     detailHydrationPending,
@@ -9933,6 +10164,10 @@ export function ChartContent({
   const handleChartCompletionConfirm = async () => {
     if (chartCompletionState.status === "saving") return;
     if (detailHydrationPending) return;
+    if (isHistoricalView) {
+      toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
+      return;
+    }
     if (!activeEncounterId || !activeWorkspaceId) {
       toast.error("진료 차트를 먼저 선택해 주세요.");
       return;
@@ -9972,6 +10207,7 @@ export function ChartContent({
       status: "saved",
     });
     setChartCompleteDialogOpen(false);
+    requestChartHistoryRefresh();
     toast.success("진료 완료 상태를 저장했어요.");
   };
   const handleConsultationFlowMutation = async (
@@ -9979,6 +10215,10 @@ export function ChartContent({
   ) => {
     if (consultationFlowState.status === "saving") return;
     if (detailHydrationPending) return;
+    if (isHistoricalView) {
+      toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
+      return;
+    }
     if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
       toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
       return;
@@ -10036,6 +10276,7 @@ export function ChartContent({
     setReturnToWaitingDialogOpen(false);
     setSelectedCallRoomId("");
     setSaveCallRoomPreference(false);
+    requestChartHistoryRefresh();
     toast.success(
       action === "call"
         ? "환자를 호출하고 진료를 시작했어요."
@@ -10047,6 +10288,10 @@ export function ChartContent({
   const handleCancelEncounterConfirm = async () => {
     if (encounterCancelState.status === "saving") return;
     if (detailHydrationPending) return;
+    if (isHistoricalView) {
+      toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
+      return;
+    }
     if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
       toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
       return;
@@ -10089,10 +10334,15 @@ export function ChartContent({
     setEncounterCancelState({ status: "idle" });
     setCancelEncounterDialogOpen(false);
     setCancelEncounterReason("");
+    requestChartHistoryRefresh();
     toast.success("진료를 취소했어요.");
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
     if (detailHydrationPending) return;
+    if (isHistoricalView) {
+      toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
+      return;
+    }
     if (!activeEncounterId || !activeWorkspaceId) {
       toast.error("진료 차트를 먼저 선택해 주세요.");
       return;
@@ -10133,6 +10383,7 @@ export function ChartContent({
       encounterId: activeEncounterId,
       status: "saved",
     });
+    requestChartHistoryRefresh();
   };
   const handleReturnToQueue = useCallback(() => {
     setSelectedQueueItem("treatment", "");
@@ -10157,6 +10408,108 @@ export function ChartContent({
   useEffect(() => {
     hydrateAuthSession();
   }, [hydrateAuthSession]);
+
+  useEffect(() => {
+    const patientId = activeBundle?.patient.id;
+    if (allowMockFallback || !authHydrated || !patientId) return;
+
+    let cancelled = false;
+
+    async function loadHistory() {
+      setChartHistoryState({
+        records: [],
+        scope: { patientId: patientId!, workspaceId },
+        status: "loading",
+        totalCount: 0,
+      });
+
+      const records: ChartPatientHistoryRecord[] = [];
+      const seenCursors = new Set<string>();
+      let cursor: string | undefined;
+      let totalCount = 0;
+
+      while (true) {
+        const result = await loadChartPatientHistoryPage({
+          actorHeaders,
+          cursor,
+          patientId: patientId!,
+          workspaceId,
+        });
+        if (cancelled) return;
+
+        if (!result.ok) {
+          setChartHistoryState({
+            error: result.denialReason ?? result.error ?? "db_read_failed",
+            records: [],
+            scope: { patientId: patientId!, workspaceId },
+            status: "error",
+            totalCount: 0,
+          });
+          return;
+        }
+
+        records.push(...result.items);
+        totalCount = result.totalCount;
+        if (!result.nextCursor || records.length >= totalCount) break;
+        if (seenCursors.has(result.nextCursor)) {
+          setChartHistoryState({
+            error: "db_read_failed",
+            records: [],
+            scope: { patientId: patientId!, workspaceId },
+            status: "error",
+            totalCount: 0,
+          });
+          return;
+        }
+        seenCursors.add(result.nextCursor);
+        cursor = result.nextCursor;
+      }
+
+      setChartHistoryState({
+        records,
+        scope: { patientId: patientId!, workspaceId },
+        status: "ready",
+        totalCount,
+      });
+    }
+
+    void loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeBundle?.patient.id,
+    actorHeaders,
+    allowMockFallback,
+    authHydrated,
+    chartHistoryRefreshNonce,
+    setChartHistoryState,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    if (
+      !historyViewEncounterId ||
+      !chartHistoryScopeMatches ||
+      chartHistoryStatus !== "ready"
+    ) {
+      return;
+    }
+
+    if (
+      !scopedChartHistoryRecords.some(
+        (record) => record.encounter.id === historyViewEncounterId,
+      )
+    ) {
+      selectHistoryEncounter("");
+    }
+  }, [
+    chartHistoryScopeMatches,
+    chartHistoryStatus,
+    historyViewEncounterId,
+    scopedChartHistoryRecords,
+    selectHistoryEncounter,
+  ]);
 
   const handleOpenCallDialog = () => {
     const roomIds = new Set(getConsultationCallRooms().map((room) => room.id));
@@ -10506,26 +10859,29 @@ export function ChartContent({
     effectiveQueueEntry,
   );
   const primaryAction =
+    !isHistoricalView &&
     currentBundle.encounter.status === "waiting" &&
     effectiveQueueEntry?.status === "waiting"
       ? "call"
-      : canCompleteCurrentChart
+      : !isHistoricalView && canCompleteCurrentChart
         ? "complete"
         : null;
   const canUseConsultationSecondaryActions =
-    currentBundle.encounter.status === "in_consultation" ||
-    effectiveQueueEntry?.status === "in_progress" ||
-    effectiveQueueEntry?.status === "called";
+    !isHistoricalView &&
+    (currentBundle.encounter.status === "in_consultation" ||
+      effectiveQueueEntry?.status === "in_progress" ||
+      effectiveQueueEntry?.status === "called");
   const hasChartWorkContent =
     hasSavedSoapContent(effectiveLatestSoap) ||
     diagnosisRows.length > 0 ||
     allOrders.length > 0;
   const primaryActionBusy =
-    detailHydrationPending ||
+    chartWriteDisabled ||
     consultationFlowState.status === "saving" ||
     chartCompletionState.status === "saving" ||
     encounterCancelState.status === "saving";
   const chartStartLocked =
+    !isHistoricalView &&
     currentBundle.encounter.status === "waiting" &&
     effectiveQueueEntry?.status === "waiting";
   const callDialogTitle = `${currentBundle.patient.name}/${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}을 호출하시겠습니까?`;
@@ -10545,7 +10901,32 @@ export function ChartContent({
     currentBundle.encounter.checkedInAt ?? currentBundle.encounter.createdAt;
   const chartDate = getShortDateTime(chartCheckedInAt).split(" ")[0] ?? "-";
   const chartStartTime = getShortClockTime(chartCheckedInAt);
-  const chartHistoryCount = getChartHistoryRowsForBundle(currentBundle).length;
+  const liveHistoryRows =
+    !allowMockFallback &&
+    chartHistoryScopeMatches &&
+    chartHistoryStatus === "ready"
+      ? scopedChartHistoryRecords
+      : undefined;
+  const chartHistoryRows = getChartHistoryRowsForBundle(
+    currentBundle,
+    liveHistoryRows,
+  );
+  const chartHistoryCount =
+    chartHistoryScopeMatches && chartHistoryStatus === "ready"
+      ? chartHistoryTotalCount
+      : chartHistoryRows.length;
+  const visibleHistoryStatus = allowMockFallback
+    ? ("ready" as const)
+    : chartHistoryScopeMatches
+      ? chartHistoryStatus
+      : ("loading" as const);
+  const effectiveSelectedEncounterId =
+    historyViewEncounterId || selectedEncounterId;
+  const handleSelectHistoryEncounter = (encounterId: string) => {
+    selectHistoryEncounter(
+      encounterId === selectedEncounterId ? "" : encounterId,
+    );
+  };
 
   return (
     <div
@@ -10572,7 +10953,15 @@ export function ChartContent({
             startTime={chartStartTime}
             visitLabel={chartHistoryCount > 1 ? "재진" : "초진"}
             pendingIndicator={
-              showDetailPendingIndicator ? (
+              isHistoricalView ? (
+                <Badge
+                  variant="outline"
+                  className="h-7 rounded-lg px-2 emr-text-metadata"
+                  data-testid="chart-historical-readonly-badge"
+                >
+                  과거 차트 · 읽기 전용
+                </Badge>
+              ) : showDetailPendingIndicator ? (
                 <ChartDetailPendingIndicator />
               ) : null
             }
@@ -11073,15 +11462,16 @@ export function ChartContent({
                 encounterId={bundle.encounter.id}
                 loading={soapLoading}
                 onCollapse={() => setClinicalPanelCollapsed("soap", true)}
-                onPersistedSoapNote={(soapNote) =>
+                onPersistedSoapNote={(soapNote) => {
                   setPersistedSoapState({
                     encounterId: bundle.encounter.id,
                     soapNote,
                     status: "idle",
-                  })
-                }
+                  });
+                  requestChartHistoryRefresh();
+                }}
                 soapNote={effectiveLatestSoap}
-                writeDisabled={detailHydrationPending}
+                writeDisabled={chartWriteDisabled}
                 workspaceId={bundle.encounter.workspaceId}
               />
             </ChartCollapsiblePanel>
@@ -11116,7 +11506,7 @@ export function ChartContent({
                 searchClassificationCatalog={searchDiagnosisCatalogPage}
                 setDiagnosisRows={setDiagnosisRows}
                 soapNote={effectiveLatestSoap}
-                writeDisabled={detailHydrationPending}
+                writeDisabled={chartWriteDisabled}
               />
             </ChartCollapsiblePanel>
             <ChartCollapsiblePanel
@@ -11130,9 +11520,13 @@ export function ChartContent({
               <ChartInlineHistoryPanel
                 bundle={currentBundle}
                 collapseContentId="chart-history-panel-content"
+                historyError={chartHistoryError}
+                historyRows={chartHistoryRows}
+                historyStatus={visibleHistoryStatus}
                 onCollapse={() => setClinicalPanelCollapsed("history", true)}
-                selectedEncounterId={selectedEncounterId}
-                onSelectEncounter={selectEncounter}
+                onRetry={requestChartHistoryRefresh}
+                selectedEncounterId={effectiveSelectedEncounterId}
+                onSelectEncounter={handleSelectHistoryEncounter}
               />
             </ChartCollapsiblePanel>
           </ChartCollapsiblePanelGroup>
@@ -11172,7 +11566,7 @@ export function ChartContent({
               onCollapsedChange={setOrderPanelCollapsed}
               onNavigateToDispensing={navigateToDispensing}
               orderGroups={orderGroups}
-              writeDisabled={detailHydrationPending}
+              writeDisabled={chartWriteDisabled}
             />
           </div>
         </div>
