@@ -176,6 +176,21 @@ Rules:
   a one-row table must remain at natural header-plus-row height even inside a
   taller parent.
 
+### Pinned Scroll Boundary Indicator
+
+`EmrPinnedTableViewport` owns the visual boundary between pinned columns and
+the scrollable table region.
+
+- Keep the 1px pinned divider visible at every horizontal scroll position.
+- Hide the left dimmer while the viewport is at its horizontal start. Show it
+  only when the shared scroll-area root exposes `data-overflow-x-start`.
+- Hide the right dimmer while the viewport is at its horizontal end. Show it
+  only when the shared scroll-area root exposes `data-overflow-x-end`.
+- When the table has no horizontal overflow, both dimmers remain hidden.
+- Feature tables must not add their own scroll listeners, React state, shadows,
+  or local boundary overlays. The Base UI scroll-area overflow attributes are
+  the shared state source.
+
 ## Fill Vs Scroll Layout
 
 Use `fill` when the table can fit the available workspace without compromising column meaning.

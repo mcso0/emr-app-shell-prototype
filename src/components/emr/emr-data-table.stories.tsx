@@ -706,10 +706,30 @@ export const LeftAndRightPinned: Story = {
     const tableContainer = viewport?.querySelector(
       '[data-slot="table-container"]',
     ) as HTMLElement | null;
+    const leftDimmer = viewport?.querySelector(
+      '[data-emr-pinned-table-dimmer="true"][data-emr-pinned-side="left"]',
+    ) as HTMLElement | null;
+    const rightDimmer = viewport?.querySelector(
+      '[data-emr-pinned-table-dimmer="true"][data-emr-pinned-side="right"]',
+    ) as HTMLElement | null;
 
-    if (!viewport || !scrollOwner || !horizontalScrollbar || !tableContainer) {
+    if (
+      !viewport ||
+      !scrollOwner ||
+      !horizontalScrollbar ||
+      !tableContainer ||
+      !leftDimmer ||
+      !rightDimmer
+    ) {
       throw new Error("Pinned EmrDataTable scroll targets are missing.");
     }
+
+    await waitFor(() => {
+      expect(viewport).not.toHaveAttribute("data-overflow-x-start");
+      expect(viewport).toHaveAttribute("data-overflow-x-end");
+      expect(getComputedStyle(leftDimmer).opacity).toBe("0");
+      expect(getComputedStyle(rightDimmer).opacity).toBe("1");
+    });
 
     assertRowDivider(
       canvasElement.querySelector(
@@ -749,11 +769,35 @@ export const LeftAndRightPinned: Story = {
       );
     }
 
-    scrollOwner.scrollLeft = scrollOwner.scrollWidth;
+    const maximumScroll = scrollOwner.scrollWidth - scrollOwner.clientWidth;
+    scrollOwner.scrollLeft = maximumScroll / 2;
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    if (scrollOwner.scrollLeft <= 0) {
-      throw new Error("Pinned EmrDataTable viewport did not scroll.");
-    }
+    await waitFor(() => {
+      expect(viewport).toHaveAttribute("data-overflow-x-start");
+      expect(viewport).toHaveAttribute("data-overflow-x-end");
+      expect(getComputedStyle(leftDimmer).opacity).toBe("1");
+      expect(getComputedStyle(rightDimmer).opacity).toBe("1");
+    });
+
+    scrollOwner.scrollLeft = maximumScroll;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await waitFor(() => {
+      expect(scrollOwner.scrollLeft).toBeGreaterThan(0);
+      expect(viewport).toHaveAttribute("data-overflow-x-start");
+      expect(viewport).not.toHaveAttribute("data-overflow-x-end");
+      expect(getComputedStyle(leftDimmer).opacity).toBe("1");
+      expect(getComputedStyle(rightDimmer).opacity).toBe("0");
+    });
+
+    storyFrame.style.width = "1600px";
+    scrollOwner.scrollLeft = 0;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await waitFor(() => {
+      expect(viewport).not.toHaveAttribute("data-overflow-x-start");
+      expect(viewport).not.toHaveAttribute("data-overflow-x-end");
+      expect(getComputedStyle(leftDimmer).opacity).toBe("0");
+      expect(getComputedStyle(rightDimmer).opacity).toBe("0");
+    });
   },
 };
 

@@ -2312,6 +2312,9 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
   );
   await expect(pinnedDimmer).toHaveCount(1);
   await expect(pinnedDivider).toHaveCount(1);
+  await expect(tableViewport).not.toHaveAttribute("data-overflow-x-start");
+  await expect(tableViewport).toHaveAttribute("data-overflow-x-end");
+  await expect(pinnedDimmer).toHaveCSS("opacity", "0");
   const firstOrderRow = table
     .locator('tbody tr[data-emr-data-table-row="true"]')
     .first();
@@ -2423,7 +2426,7 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
     leftOffset: 224,
     backgroundColor: "rgba(0, 0, 0, 0.04)",
     boxShadow: "none",
-    opacity: "1",
+    opacity: "0",
     pointerEvents: "none",
   });
   expect(
@@ -2470,6 +2473,9 @@ test("hospital admin Order table keeps the shared pinned boundary fixed over the
 
   expect(scrollMetrics.scrollOwnerScrollLeft).toBeGreaterThan(0);
   expect(scrollMetrics.rootScrollLeft).toBe(0);
+  await expect(tableViewport).toHaveAttribute("data-overflow-x-start");
+  await expect(tableViewport).not.toHaveAttribute("data-overflow-x-end");
+  await expect(pinnedDimmer).toHaveCSS("opacity", "1");
   expect(
     Math.abs(scrollMetrics.pinnedLeftAfter - scrollMetrics.pinnedLeftBefore),
   ).toBeLessThanOrEqual(0.5);

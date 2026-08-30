@@ -370,6 +370,10 @@
     pointer-events: none;
   }
 
+  [data-emr-pinned-table-dimmer="true"] {
+    opacity: 0;
+  }
+
   [data-emr-pinned-table-dimmer="true"][data-emr-pinned-side="left"] {
     z-index: 13;
     inset-inline-start: var(--emr-table-left-pinned-column-width);
@@ -382,6 +386,13 @@
     inset-inline-end: var(--emr-table-right-pinned-column-width);
     inline-size: var(--clair-spacing-6);
     background: var(--clair-color-atomic-black-alpha-4);
+  }
+
+  [data-emr-pinned-table-viewport="true"][data-overflow-x-start]
+    > [data-emr-pinned-table-dimmer="true"][data-emr-pinned-side="left"],
+  [data-emr-pinned-table-viewport="true"][data-overflow-x-end]
+    > [data-emr-pinned-table-dimmer="true"][data-emr-pinned-side="right"] {
+    opacity: 1;
   }
 
   [data-emr-pinned-table-divider="true"][data-emr-pinned-side="left"] {
