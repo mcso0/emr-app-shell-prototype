@@ -161,6 +161,64 @@ test("billing renders live candidate rows from an encounter handoff", async ({ p
   await expect(billingTable.locator("tbody tr", { hasText: "Live CBC 검사" })).toContainText("35,000원");
 });
 
+test("billing reconstructs a chart handoff from durable encounter and invoice data", async ({ page }) => {
+  const invoice = {
+    id: "invoice-live-deep-link",
+    workspaceId: "clair-demo",
+    encounterId: "encounter-live-deep-link",
+    guardianId: "guardian-live-deep-link",
+    invoiceNo: "INV-DEEP-001",
+    status: "draft",
+    subtotalAmount: 35000,
+    discountAmount: 0,
+    taxAmount: 0,
+    totalAmount: 35000,
+    createdAt: "2026-08-30T09:00:00.000Z",
+  };
+  await page.route("**/chart/order-billing-summary?encounterId=encounter-live-deep-link", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        summary: {
+          workspaceId: "clair-demo",
+          encounterId: "encounter-live-deep-link",
+          etag: '"deep-link"',
+          generatedAt: "2026-08-30T09:00:00.000Z",
+          currency: "KRW",
+          invoiceId: invoice.id,
+          context: {
+            encounter: { id: "encounter-live-deep-link", patientId: "patient-live-deep-link", guardianId: "guardian-live-deep-link", encounterNo: "E-DEEP-001", status: "ordered", createdAt: "2026-08-30T08:00:00.000Z", updatedAt: "2026-08-30T09:00:00.000Z" },
+            patient: { id: "patient-live-deep-link", patientNo: "P-DEEP-001", name: "구름", species: "dog", breed: "수컷", sex: "male", status: "active", createdAt: "2026-08-30T08:00:00.000Z", updatedAt: "2026-08-30T09:00:00.000Z" },
+            guardian: { id: "guardian-live-deep-link", name: "문지아", createdAt: "2026-08-30T08:00:00.000Z", updatedAt: "2026-08-30T09:00:00.000Z" },
+          },
+          orderCounts: { total: 1, confirmed: 1, draft: 0, recheck: 0, requested: 1, requestable: 0, cancelled: 0 },
+          amounts: { gross: 35000, confirmed: 35000, draft: 0, discount: 0, surcharge: 0, tax: 0, paid: 0, outstanding: 35000, estimatedTotal: 35000, requestableTotal: 0 },
+          requestableOrderIds: [],
+          unfinishedOrders: [],
+        },
+      },
+    });
+  });
+  await page.route("**/billing/invoice-candidates?encounterId=encounter-live-deep-link", async (route) => {
+    await route.fulfill({ contentType: "application/json", json: { ok: true, status: 200, candidates: [{ billingCandidateId: "billcand-deep-1", description: "중간 정산 CBC", invoiceId: invoice.id, lineTotal: 35000, orderId: "order-deep-1", quantity: 1, unitPrice: 35000 }] } });
+  });
+  await page.route("**/billing/invoice-lines?invoiceId=invoice-live-deep-link", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, enforcedBy: "billing-invoice-line-persistence", invoice, lines: [{ id: "line-deep-1", invoiceId: invoice.id, orderId: "order-deep-1", description: "중간 정산 CBC", quantity: 1, unitPrice: 35000, lineTotal: 35000 }] },
+    });
+  });
+  await page.route("**/billing/payment-status?invoiceId=invoice-live-deep-link", async (route) => {
+    await route.fulfill({ contentType: "application/json", json: { ok: true, status: 200, enforcedBy: "billing-payment-status-persistence", invoice, payments: [] } });
+  });
+
+  await page.goto("/w/clair-demo/billing?encounterId=encounter-live-deep-link&invoiceId=invoice-live-deep-link&modulePanel=open&right=closed&aside=closed");
+  await expect(page.getByText("문지아 · 구름")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("table", { name: "청구 항목 테이블" }).getByText("중간 정산 CBC")).toBeVisible();
+});
+
 test("billing maps encounter candidates into the current invoice table context", async ({
   page,
 }) => {
@@ -350,7 +408,7 @@ test("billing workspace renders waiting invoice, checkout selection, editable li
   await page.getByRole("button", { name: "수납 진행" }).click();
   const issueDialog = page.getByRole("dialog", { name: "수납 진행 전 확인" });
   await expect(issueDialog).toBeVisible();
-  await expect(issueDialog).toContainText("121,500원");
+  await expect(issueDialog).toContainText("156,500원");
   await expect(issueDialog).toContainText("실제 PG, VAT, 영수증");
   await issueDialog.getByRole("button", { name: "수납 진행 저장" }).click();
   await expect(page.getByText("수납진행").first()).toBeVisible();

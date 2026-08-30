@@ -4927,7 +4927,8 @@ test("chart safety context and confirmation dialogs identify the active patient"
     /자동저장됨|작성중/,
   );
 
-  await expect(await getChartOrderAction(page, "Order 확정")).toBeDisabled();
+  await page.getByRole("button", { name: "Plan/Order 작업" }).click();
+  await expect(page.getByRole("menuitem", { name: "Order 확정" })).toHaveCount(0);
   await dismissChartOrderActionMenu(page);
 
   await page.getByRole("button", { name: "진료 완료" }).click();
@@ -4941,9 +4942,9 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await chartCompleteDialog.getByRole("button", { name: "계속 작성" }).click();
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
-  await expect(await getChartOrderAction(page, "Order 확정")).toBeEnabled();
-
-  await page.getByRole("menuitem", { name: "Order 확정" }).click();
+  const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
+  await expect(selectionActions.getByRole("button", { name: "선택 확정" })).toBeEnabled();
+  await selectionActions.getByRole("button", { name: "선택 확정" }).click();
   const orderConfirmDialog = page.getByRole("dialog");
   await expect(orderConfirmDialog.getByText("Order 확정 확인")).toBeVisible();
   await expect(
@@ -4958,7 +4959,7 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await expect(orderConfirmDialog.getByText("재요청 포함: 없음")).toBeVisible();
 });
 
-test("chart billing candidate is not exposed as a separate pre-confirm action", async ({
+test("chart keeps confirmation selection-scoped and billing encounter-scoped", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
@@ -4973,8 +4974,15 @@ test("chart billing candidate is not exposed as a separate pre-confirm action", 
     page.getByTestId("chart-order-footer").getByRole("button", {
       name: "Order 청구",
     }),
-  ).toHaveCount(0);
+  ).toBeVisible();
+  await page.getByTestId("chart-order-footer").getByRole("button", {
+    name: "금액 상세",
+  }).click();
+  const detailAside = page.getByLabel("Plan/Order 금액 상세");
+  await expect(detailAside).toBeVisible();
+  await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+  await expect(detailAside).toBeVisible();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
   await expect(selectionActions).toContainText("확정 전 후보");
   await expect(
