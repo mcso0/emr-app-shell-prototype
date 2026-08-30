@@ -889,9 +889,21 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   const assessmentPanel = panels.filter({
     has: page.getByRole("heading", { name: "Assessment" }),
   });
+  const assessmentActions = assessmentPanel.locator(
+    "[data-slot='chart-panel-actions']",
+  );
   await expect(
-    assessmentPanel.locator("[data-slot='chart-panel-actions'] button").nth(0),
+    assessmentActions.locator("button").nth(0),
   ).toHaveAttribute("aria-label", "Assessment 패널 접기");
+
+  await assessmentPanel
+    .getByRole("textbox", { name: "진단명 검색" })
+    .click();
+  await page.mouse.move(1, 1);
+  await expect(assessmentActions).toHaveCSS("opacity", "0");
+  await subjectPanel.hover();
+  await expect(subjectActions).toHaveCSS("opacity", "1");
+  await expect(assessmentActions).toHaveCSS("opacity", "0");
 
   const historyPanel = panels.filter({
     has: page.getByRole("heading", { name: "History" }),
@@ -998,12 +1010,16 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "1px",
   );
 
-  await page.mouse.move(1, 1);
-  await subjectPanel.getByRole("button", { name: "SOAP 추가" }).focus();
-  await expect(subjectActions).toHaveCSS("opacity", "1");
   const soapAddTrigger = subjectPanel.getByRole("button", {
     name: "SOAP 추가",
   });
+  await page.mouse.move(1, 1);
+  await subjectCollapseButton.focus();
+  await page.keyboard.press("Tab");
+  await expect(subjectActions).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Tab");
+  await expect(soapAddTrigger).toBeFocused();
+  await expect(subjectActions).toHaveCSS("opacity", "1");
   await soapAddTrigger.click();
   const soapAddMenu = page.getByRole("menu");
   await expect(soapAddMenu).toBeVisible();
