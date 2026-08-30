@@ -365,11 +365,11 @@
 
 .skeletonList > span {
   display: grid;
-  min-height: 56px;
+  min-height: 34px;
   grid-template-columns: minmax(0, 1fr) 72px;
   align-items: center;
   gap: 20px;
-  padding: 10px 12px;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--emr-border-subtle);
   background: var(--emr-surface-panel);
 }

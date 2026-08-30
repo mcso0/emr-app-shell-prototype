@@ -262,7 +262,7 @@ export const ClassificationExplorerOption = forwardRef<
   },
   ref,
 ) {
-  const detailed = Boolean(description || trailing);
+  const detailed = Boolean(description);
   return (
     <button
       {...props}

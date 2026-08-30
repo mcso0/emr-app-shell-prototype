@@ -7398,19 +7398,24 @@ function getChartOrderCatalogCategoryLabel(
 function ChartOrderCatalogDialog({
   bundle,
   candidates,
-  selectedCatalogSourceKeys,
+  initialSelectedCatalogSourceKeys,
+  lockedCatalogSourceKeys,
   open,
   status,
-  onAdd,
+  onApply,
   onOpenChange,
   onRetry,
 }: {
   bundle: ChartBundle;
   candidates: ChartOrderCatalogSearchRow[];
-  selectedCatalogSourceKeys: Set<string>;
+  initialSelectedCatalogSourceKeys: readonly string[];
+  lockedCatalogSourceKeys: Set<string>;
   open: boolean;
   status: ChartOrderCatalogStatus;
-  onAdd: (rows: ChartOrderCatalogSearchRow[]) => void;
+  onApply: (
+    rows: ChartOrderCatalogSearchRow[],
+    selectedSourceKeys: Set<string>,
+  ) => void;
   onOpenChange: (open: boolean) => void;
   onRetry: () => void;
 }) {
@@ -7421,8 +7426,11 @@ function ChartOrderCatalogDialog({
   const [selectedRows, setSelectedRows] = useState<
     ChartOrderCatalogSearchRow[]
   >([]);
+  const [deselectedInitialSourceKeys, setDeselectedInitialSourceKeys] =
+    useState<Set<string>>(() => new Set());
   const categoryTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const candidateScrollRef = useRef<HTMLDivElement>(null);
+  const initializedSelectionRef = useRef(false);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const sensors = useSensors(
@@ -7472,15 +7480,28 @@ function ChartOrderCatalogDialog({
       }),
     [categoryCandidates, normalizedQuery],
   );
-  const selectedSourceKeys = useMemo(
-    () => new Set(selectedRows.map(getChartCatalogSourceKey)),
-    [selectedRows],
+  const initialSelectedSourceKeySet = useMemo(
+    () => new Set(initialSelectedCatalogSourceKeys),
+    [initialSelectedCatalogSourceKeys],
   );
+  const selectedSourceKeys = useMemo(() => {
+    const keys = new Set(
+      initialSelectedCatalogSourceKeys.filter(
+        (sourceKey) => !deselectedInitialSourceKeys.has(sourceKey),
+      ),
+    );
+    selectedRows.forEach((row) => keys.add(getChartCatalogSourceKey(row)));
+    return keys;
+  }, [
+    deselectedInitialSourceKeys,
+    initialSelectedCatalogSourceKeys,
+    selectedRows,
+  ]);
   // The catalog can contain hundreds of rows; keep rendering bounded inside the dialog.
   // eslint-disable-next-line react-hooks/incompatible-library
   const candidateVirtualizer = useVirtualizer({
     count: visibleCandidates.length,
-    estimateSize: () => 56,
+    estimateSize: () => 42,
     getScrollElement: () => candidateScrollRef.current,
     overscan: 6,
   });
@@ -7499,10 +7520,30 @@ function ChartOrderCatalogDialog({
   }, [searchOpen]);
 
   useEffect(() => {
-    if (status !== "ready") return;
+    if (!open) {
+      initializedSelectionRef.current = false;
+      return;
+    }
+    if (status !== "ready" || initializedSelectionRef.current) return;
+
+    const candidateBySourceKey = new Map(
+      candidates.map((row) => [getChartCatalogSourceKey(row), row]),
+    );
+    setSelectedRows(
+      initialSelectedCatalogSourceKeys.flatMap((sourceKey) => {
+        const row = candidateBySourceKey.get(sourceKey);
+        return row ? [row] : [];
+      }),
+    );
+    setDeselectedInitialSourceKeys(new Set());
+    initializedSelectionRef.current = true;
+  }, [candidates, initialSelectedCatalogSourceKeys, open, status]);
+
+  useEffect(() => {
+    if (!open || status !== "ready") return;
     const frame = requestAnimationFrame(() => candidateVirtualizer.measure());
     return () => cancelAnimationFrame(frame);
-  }, [candidateVirtualizer, status, visibleCandidates.length]);
+  }, [candidateVirtualizer, open, status, visibleCandidates.length]);
 
   const resetDialogState = () => {
     setActiveCandidateIndex(0);
@@ -7510,6 +7551,8 @@ function ChartOrderCatalogDialog({
     setQuery("");
     setSearchOpen(false);
     setSelectedRows([]);
+    setDeselectedInitialSourceKeys(new Set());
+    initializedSelectionRef.current = false;
   };
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) resetDialogState();
@@ -7550,16 +7593,28 @@ function ChartOrderCatalogDialog({
   };
   const toggleSelectedRow = (row: ChartOrderCatalogSearchRow) => {
     const sourceKey = getChartCatalogSourceKey(row);
-    if (selectedCatalogSourceKeys.has(sourceKey)) return;
-    setSelectedRows((currentRows) =>
-      currentRows.some(
-        (currentRow) => getChartCatalogSourceKey(currentRow) === sourceKey,
-      )
-        ? currentRows.filter(
-            (currentRow) => getChartCatalogSourceKey(currentRow) !== sourceKey,
-          )
-        : [...currentRows, row],
-    );
+    if (lockedCatalogSourceKeys.has(sourceKey)) return;
+    if (selectedSourceKeys.has(sourceKey)) {
+      setSelectedRows((currentRows) =>
+        currentRows.filter(
+          (currentRow) => getChartCatalogSourceKey(currentRow) !== sourceKey,
+        ),
+      );
+      if (initialSelectedSourceKeySet.has(sourceKey)) {
+        setDeselectedInitialSourceKeys((currentKeys) =>
+          new Set(currentKeys).add(sourceKey),
+        );
+      }
+      return;
+    }
+
+    setSelectedRows((currentRows) => [...currentRows, row]);
+    setDeselectedInitialSourceKeys((currentKeys) => {
+      if (!currentKeys.has(sourceKey)) return currentKeys;
+      const nextKeys = new Set(currentKeys);
+      nextKeys.delete(sourceKey);
+      return nextKeys;
+    });
   };
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -7613,8 +7668,7 @@ function ChartOrderCatalogDialog({
     });
   };
   const confirmSelection = () => {
-    if (!selectedRows.length) return;
-    onAdd(selectedRows);
+    onApply(selectedRows, selectedSourceKeys);
     resetDialogState();
     onOpenChange(false);
   };
@@ -7646,11 +7700,11 @@ function ChartOrderCatalogDialog({
         }
         primaryAction={
           <Button
-            disabled={!selectedRows.length || status === "loading"}
+            disabled={status !== "ready"}
             onClick={confirmSelection}
             type="button"
           >
-            선택한 {selectedRows.length}개 추가
+            선택 완료
           </Button>
         }
       >
@@ -7764,23 +7818,25 @@ function ChartOrderCatalogDialog({
                 {candidateVirtualizer.getVirtualItems().map((virtualRow) => {
                   const row = visibleCandidates[virtualRow.index];
                   const sourceKey = getChartCatalogSourceKey(row);
-                  const alreadyAdded = selectedCatalogSourceKeys.has(sourceKey);
+                  const locked = lockedCatalogSourceKeys.has(sourceKey);
                   const selected = selectedSourceKeys.has(sourceKey);
                   return (
                     <ClassificationExplorerOption
                       aria-label={`${row.displayName} ${
-                        alreadyAdded
-                          ? "이미 추가됨"
+                        locked
+                          ? "이미 확정됨"
                           : selected
                             ? "선택 해제"
                             : "선택"
                       }`}
                       className={orderCatalogDialogStyles.candidateOption}
+                      data-active={
+                        virtualRow.index === activeCandidateIndex && searchOpen
+                          ? "true"
+                          : undefined
+                      }
                       data-testid={`chart-order-catalog-candidate-${row.sourcePresetId}`}
-                      description={`${row.billingName} · 대상 ${row.targetSpecies.join(
-                        ", ",
-                      )}`}
-                      disabled={alreadyAdded}
+                      disabled={locked}
                       id={`chart-order-catalog-option-${sourceKey}`}
                       key={sourceKey}
                       label={row.displayName}
@@ -7788,28 +7844,17 @@ function ChartOrderCatalogDialog({
                       onMouseEnter={() =>
                         setActiveCandidateIndex(virtualRow.index)
                       }
-                      selected={
-                        selected ||
-                        (virtualRow.index === activeCandidateIndex &&
-                          searchOpen)
-                      }
+                      selected={selected}
                       selectedIndicator
                       style={{
                         transform: `translateY(${virtualRow.start}px)`,
                       }}
                       trailing={
-                        <>
-                          <span
-                            className={orderCatalogDialogStyles.candidatePrice}
-                          >
-                            {getCatalogCandidatePriceLabel(row)}
-                          </span>
-                          <span
-                            className={orderCatalogDialogStyles.candidateState}
-                          >
-                            {alreadyAdded ? "추가됨" : selected ? "✓" : ""}
-                          </span>
-                        </>
+                        <span
+                          className={orderCatalogDialogStyles.candidatePrice}
+                        >
+                          {getCatalogCandidatePriceLabel(row)}
+                        </span>
                       }
                     />
                   );
@@ -7843,7 +7888,12 @@ function ChartOrderCatalogDialog({
             <ClassificationExplorerReviewHeading
               count={selectedRows.length}
               label="선택한 오더"
-              onClear={() => setSelectedRows([])}
+              onClear={() => {
+                setSelectedRows([]);
+                setDeselectedInitialSourceKeys(
+                  new Set(initialSelectedCatalogSourceKeys),
+                );
+              }}
             />
           }
         >
@@ -8242,15 +8292,29 @@ function OrderArea({
     () => draftRows.map(({ order }) => order),
     [draftRows],
   );
-  const draftCatalogSourceKeys = useMemo(
-    () =>
-      new Set(
-        draftRows
-          .map((row) => getChartDraftRowCatalogSourceKey(row))
-          .filter((sourceKey): sourceKey is string => Boolean(sourceKey)),
+  const catalogDialogSelection = useMemo(() => {
+    const initialSelectedSourceKeys: string[] = [];
+    const lockedSourceKeys = new Set<string>();
+
+    draftRows.forEach((row) => {
+      const sourceKey = getChartDraftRowCatalogSourceKey(row);
+      if (!sourceKey) return;
+      if (isChartOrderConfirmedRow(row) || !isChartOrderTopLevelRow(row)) {
+        lockedSourceKeys.add(sourceKey);
+        return;
+      }
+      if (!initialSelectedSourceKeys.includes(sourceKey)) {
+        initialSelectedSourceKeys.push(sourceKey);
+      }
+    });
+
+    return {
+      initialSelectedSourceKeys: initialSelectedSourceKeys.filter(
+        (sourceKey) => !lockedSourceKeys.has(sourceKey),
       ),
-    [draftRows],
-  );
+      lockedSourceKeys,
+    };
+  }, [draftRows]);
   const orderCountByType = draftRows.reduce<Record<ClinicalOrderType, number>>(
     (counts, row) => ({
       ...counts,
@@ -8624,25 +8688,132 @@ function OrderArea({
       void requestSetPreview(row, { items: [] });
     }
   };
-  const addCatalogOrdersToDraft = (rows: ChartOrderCatalogSearchRow[]) => {
+  const applyCatalogSelection = (
+    rows: ChartOrderCatalogSearchRow[],
+    selectedSourceKeys: Set<string>,
+  ) => {
     if (writeDisabled) return;
-    const selectedSourceKeys = new Set(
-      draftRowsRef.current
+    const currentRows = draftRowsRef.current;
+    const childRowsByParentId = new Map<string, ChartOrderDraftRow[]>();
+    currentRows.forEach((row) => {
+      const parentOrderId = row.runtimeRow?.parentOrderId;
+      if (!parentOrderId) return;
+      childRowsByParentId.set(parentOrderId, [
+        ...(childRowsByParentId.get(parentOrderId) ?? []),
+        row,
+      ]);
+    });
+    const knownParentIds = new Set(
+      currentRows
+        .filter(isChartOrderTopLevelRow)
+        .map((row) => row.order.id),
+    );
+    const groups = currentRows.flatMap((row) => {
+      if (
+        row.runtimeRow?.parentOrderId &&
+        knownParentIds.has(row.runtimeRow.parentOrderId)
+      ) {
+        return [];
+      }
+      return [[row, ...(childRowsByParentId.get(row.order.id) ?? [])]];
+    });
+    const isSelectableCatalogGroup = (group: ChartOrderDraftRow[]) => {
+      const root = group[0];
+      const sourceKey = getChartDraftRowCatalogSourceKey(root);
+      return (
+        isChartOrderTopLevelRow(root) &&
+        !isChartOrderConfirmedRow(root) &&
+        sourceKey !== undefined &&
+        !catalogDialogSelection.lockedSourceKeys.has(sourceKey)
+      );
+    };
+    const selectableGroups = groups.filter(isSelectableCatalogGroup);
+    const existingGroupBySourceKey = new Map(
+      selectableGroups.flatMap((group) => {
+        const sourceKey = getChartDraftRowCatalogSourceKey(group[0]);
+        return sourceKey ? [[sourceKey, group] as const] : [];
+      }),
+    );
+    const orderedExistingSourceKeys = rows
+      .map(getChartCatalogSourceKey)
+      .filter(
+        (sourceKey) =>
+          selectedSourceKeys.has(sourceKey) &&
+          existingGroupBySourceKey.has(sourceKey),
+      );
+    existingGroupBySourceKey.forEach((_group, sourceKey) => {
+      if (
+        selectedSourceKeys.has(sourceKey) &&
+        !orderedExistingSourceKeys.includes(sourceKey)
+      ) {
+        orderedExistingSourceKeys.push(sourceKey);
+      }
+    });
+    const orderedExistingGroups = orderedExistingSourceKeys.flatMap(
+      (sourceKey) => {
+        const group = existingGroupBySourceKey.get(sourceKey);
+        return group ? [group] : [];
+      },
+    );
+    const firstSelectableGroupIndex = groups.findIndex(
+      isSelectableCatalogGroup,
+    );
+    const fixedGroups = groups.filter(
+      (group) => !isSelectableCatalogGroup(group),
+    );
+    const insertionIndex =
+      firstSelectableGroupIndex < 0
+        ? fixedGroups.length
+        : groups
+            .slice(0, firstSelectableGroupIndex)
+            .filter((group) => !isSelectableCatalogGroup(group)).length;
+    const nextGroups = [
+      ...fixedGroups.slice(0, insertionIndex),
+      ...orderedExistingGroups,
+      ...fixedGroups.slice(insertionIndex),
+    ];
+    const reconciledRows = nextGroups.flat().map((row, index) =>
+      isChartOrderConfirmedRow(row)
+        ? row
+        : {
+            ...row,
+            order: { ...row.order, sortOrder: (index + 1) * 10 },
+          },
+    );
+    const existingOrderIds = currentRows.map((row) => row.order.id);
+    const reconciledOrderIds = reconciledRows.map((row) => row.order.id);
+    const existingSelectionChanged = !hasSameChartOrderSelection(
+      existingOrderIds,
+      reconciledOrderIds,
+    );
+    if (existingSelectionChanged) {
+      markDraftTouched();
+      setDraftRows(reconciledRows);
+      const reconciledOrderIdSet = new Set(reconciledOrderIds);
+      setSelectedOrderIds((current) => {
+        const next = new Set(current);
+        next.forEach((orderId) => {
+          if (!reconciledOrderIdSet.has(orderId)) next.delete(orderId);
+        });
+        return next;
+      });
+    }
+
+    const existingSourceKeys = new Set(
+      currentRows
         .map((draftRow) => getChartDraftRowCatalogSourceKey(draftRow))
         .filter((sourceKey): sourceKey is string => Boolean(sourceKey)),
     );
     const nextSourceKeys = new Set<string>();
     const nextRows = rows.filter((row) => {
       const sourceKey = getChartCatalogSourceKey(row);
-      if (selectedSourceKeys.has(sourceKey) || nextSourceKeys.has(sourceKey)) {
+      if (existingSourceKeys.has(sourceKey) || nextSourceKeys.has(sourceKey)) {
         return false;
       }
       nextSourceKeys.add(sourceKey);
       return true;
     });
-    if (!nextRows.length) return;
-
-    processCatalogSelection(nextRows);
+    if (nextRows.length) processCatalogSelection(nextRows);
   };
   const applySetConfiguration = async (
     selectionIntent: ChartOrderSetSelectionIntent,
@@ -9815,10 +9986,13 @@ function OrderArea({
         <ChartOrderCatalogDialog
           bundle={bundle}
           candidates={catalogRows}
-          selectedCatalogSourceKeys={draftCatalogSourceKeys}
+          initialSelectedCatalogSourceKeys={
+            catalogDialogSelection.initialSelectedSourceKeys
+          }
+          lockedCatalogSourceKeys={catalogDialogSelection.lockedSourceKeys}
           open={catalogDialogOpen}
           status={catalogSearchStatus}
-          onAdd={addCatalogOrdersToDraft}
+          onApply={applyCatalogSelection}
           onOpenChange={setCatalogDialogOpen}
           onRetry={() => void loadCatalogRows()}
         />
