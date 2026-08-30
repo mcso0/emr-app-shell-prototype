@@ -479,7 +479,9 @@ test("hospital admin order management opens with category and subcategory naviga
     page.getByRole("heading", { name: "임상병리 검사" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /임상병리 검사/ }),
+    page
+      .getByTestId("hospital-admin-side-panel")
+      .getByRole("button", { name: /^임상병리 검사(?:\s+\d+)?$/ }),
   ).toHaveAttribute("aria-pressed", "true");
   const orderHeader = page.getByTestId("hospital-order-page-header");
   await expect(
@@ -756,6 +758,34 @@ test("hospital admin Order Set uses the shared table workspace and revision draw
   await expect(
     orderSetTable.locator('[data-column-id="actions"]').first(),
   ).not.toHaveAttribute("data-emr-column-pinned", "right");
+  const orderSetNameHeader = orderSetTable.locator(
+    'th[data-column-id="setName"]',
+  );
+  const orderSetNameResizeGrip = orderSetNameHeader.getByRole("button", {
+    name: "Order 세트명 컬럼 너비 조절",
+  });
+  const orderSetNameHeaderBox = await orderSetNameHeader.boundingBox();
+  const orderSetNameResizeGripBox = await orderSetNameResizeGrip.boundingBox();
+
+  expect(orderSetNameHeaderBox).not.toBeNull();
+  expect(orderSetNameResizeGripBox).not.toBeNull();
+  await page.mouse.move(
+    orderSetNameResizeGripBox!.x + orderSetNameResizeGripBox!.width / 2,
+    orderSetNameResizeGripBox!.y + orderSetNameResizeGripBox!.height / 2,
+  );
+  await page.mouse.down();
+  try {
+    await page.mouse.move(
+      orderSetNameResizeGripBox!.x + orderSetNameResizeGripBox!.width / 2 + 32,
+      orderSetNameResizeGripBox!.y + orderSetNameResizeGripBox!.height / 2,
+      { steps: 4 },
+    );
+    await expect
+      .poll(async () => (await orderSetNameHeader.boundingBox())?.width)
+      .toBeGreaterThan(orderSetNameHeaderBox!.width + 24);
+  } finally {
+    await page.mouse.up();
+  }
   const orderSetRow = page.getByTestId("order-set-row-set-vomit-basic");
   await orderSetRow.hover();
   const pinnedBackgroundAlpha = await orderSetRow
@@ -2065,6 +2095,38 @@ test("hospital admin order table uses shared header and cell text primitives", a
     "data-emr-column-resize",
     "none",
   );
+
+  const inHospitalNameHeader = table.locator(
+    'th[data-column-id="inHospitalName"]',
+  );
+  const inHospitalNameResizeGrip = inHospitalNameHeader.getByRole("button", {
+    name: "원내 Order명 컬럼 너비 조절",
+  });
+  const inHospitalNameHeaderBox = await inHospitalNameHeader.boundingBox();
+  const inHospitalNameResizeGripBox =
+    await inHospitalNameResizeGrip.boundingBox();
+
+  expect(inHospitalNameHeaderBox).not.toBeNull();
+  expect(inHospitalNameResizeGripBox).not.toBeNull();
+  await page.mouse.move(
+    inHospitalNameResizeGripBox!.x + inHospitalNameResizeGripBox!.width / 2,
+    inHospitalNameResizeGripBox!.y + inHospitalNameResizeGripBox!.height / 2,
+  );
+  await page.mouse.down();
+  try {
+    await page.mouse.move(
+      inHospitalNameResizeGripBox!.x +
+        inHospitalNameResizeGripBox!.width / 2 +
+        32,
+      inHospitalNameResizeGripBox!.y + inHospitalNameResizeGripBox!.height / 2,
+      { steps: 4 },
+    );
+    await expect
+      .poll(async () => (await inHospitalNameHeader.boundingBox())?.width)
+      .toBeGreaterThan(inHospitalNameHeaderBox!.width + 24);
+  } finally {
+    await page.mouse.up();
+  }
 
   await expect(
     page.getByTestId("hospital-order-catalog-read-status"),

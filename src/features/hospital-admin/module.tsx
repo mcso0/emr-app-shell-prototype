@@ -2467,6 +2467,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   // eslint-disable-next-line react-hooks/incompatible-library
   const orderTable = useReactTable({
     columns: hospitalOrderColumns,
+    columnResizeMode: "onChange",
     data: filteredOrderRows,
     enableColumnPinning: true,
     enableMultiSort: false,

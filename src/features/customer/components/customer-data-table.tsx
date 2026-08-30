@@ -224,6 +224,7 @@ export function CustomerDataTable<
       {
         id: "select",
         enableHiding: false,
+        enableResizing: false,
         enableSorting: false,
         meta: {
           label: `${title} 선택`,
@@ -267,17 +268,32 @@ export function CustomerDataTable<
           </span>
         ),
       },
-      ...columns.map((column) => ({
-        ...column,
-        meta: {
-          ...column.meta,
-          identity: column.id === pinnedColumnId,
-          role: "data" as const,
-        },
-      })),
+      ...columns.map((column) => {
+        const fixedWidth =
+          typeof column.minSize === "number" &&
+          typeof column.maxSize === "number" &&
+          column.minSize === column.maxSize;
+        const resize =
+          column.meta.resize ??
+          (column.enableResizing === false || fixedWidth
+            ? "none"
+            : "data-column");
+
+        return {
+          ...column,
+          enableResizing: resize === "data-column",
+          meta: {
+            ...column.meta,
+            identity: column.id === pinnedColumnId,
+            resize,
+            role: "data" as const,
+          },
+        };
+      }),
       {
         id: "actions",
         enableHiding: false,
+        enableResizing: false,
         enableSorting: false,
         meta: {
           actionVisibility: "contextual",
@@ -311,6 +327,7 @@ export function CustomerDataTable<
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     columns: tableColumns,
+    columnResizeMode: "onChange",
     data: filteredRows,
     enableColumnPinning: Boolean(pinnedColumnId),
     enableMultiSort: false,
