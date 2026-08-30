@@ -35,6 +35,7 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
       action: "confirm",
       encounterId,
       expectedEtag: currentEtag,
+      idempotencyKey: "fulfillment-replay-confirm-1",
       orderIds: replayOrders.map((order) => order.orderId),
     },
     headers: {
@@ -45,14 +46,15 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
   expect(confirmed.status()).toBe(200);
   const confirmedBody = await confirmed.json() as {
     ok: true;
-    fulfillmentWorkItems?: Array<{ id: string; orderId: string; queueType: string }>;
+    confirmationCommandId?: string;
+    queueProjectionIds?: string[];
+    tasks?: unknown[];
   };
-  expect(confirmedBody.fulfillmentWorkItems).toEqual(expect.arrayContaining(
-    replayOrders.map((order) => expect.objectContaining({
-      orderId: order.orderId,
-      queueType: order.queueType,
-    }))
-  ));
+  expect(confirmedBody).toMatchObject({
+    confirmationCommandId: "fulfillment-replay-confirm-1",
+    queueProjectionIds: [],
+    tasks: [],
+  });
 
   const retryEtag = await readChartActionEtag(request);
   const confirmedAgain = await request.patch(`/api/workspaces/${workspaceId}/chart/order-actions`, {
@@ -60,6 +62,7 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
       action: "confirm",
       encounterId,
       expectedEtag: retryEtag,
+      idempotencyKey: "fulfillment-replay-confirm-2",
       orderIds: replayOrders.map((order) => order.orderId),
     },
     headers: {
@@ -171,6 +174,7 @@ test("fulfillment handoff replay keeps tenant and role boundaries closed", async
       action: "confirm",
       encounterId,
       expectedEtag: currentEtag,
+      idempotencyKey: "fulfillment-replay-frontdesk-denied",
       orderIds: ["order-kong-fluid"],
     },
     headers: {
@@ -186,6 +190,7 @@ test("fulfillment handoff replay keeps tenant and role boundaries closed", async
       action: "confirm",
       encounterId,
       expectedEtag: currentEtag,
+      idempotencyKey: "fulfillment-replay-foreign-denied",
       orderIds: ["order-kong-fluid"],
     },
     headers: {

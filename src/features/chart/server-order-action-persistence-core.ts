@@ -610,8 +610,16 @@ export function createMockChartOrderActionGateway(
         if (!selected.has(row.orderId) && !selectedByParent) return row;
 
         if (action === "confirm") {
+          const createsBillingCandidate =
+            shouldCreateAtomicConfirmationBillingCandidate(row);
           return {
             ...row,
+            billingCandidateId: createsBillingCandidate
+              ? row.billingCandidateId ?? `billcand-${row.orderId}`
+              : row.billingCandidateId,
+            billingCandidateStatus: createsBillingCandidate
+              ? "candidate_created" as const
+              : row.billingCandidateStatus,
             confirmedAt: timestamp,
             confirmedByUserId: actorUserId,
             orderConfirmationStatus: "confirmed" as const,
@@ -646,12 +654,7 @@ export function createMockChartOrderActionGateway(
       const atomicBillingCandidates =
         action === "confirm"
           ? selectedRows
-              .filter(
-                (row) =>
-                  row.rowType !== "set" &&
-                  row.billingReflectionEnabled !== false &&
-                  (row.lineTotalSnapshot ?? 0) > 0,
-              )
+              .filter(shouldCreateAtomicConfirmationBillingCandidate)
               .map((row) => ({
                 billingCandidateId: `billcand-${row.orderId}`,
                 description:
@@ -916,6 +919,18 @@ function orderToActionLine(order: EmrOrder): ChartOrderActionLine {
     appliedSnapshot && typeof appliedSnapshot.parentOrderId === "string"
       ? appliedSnapshot.parentOrderId
       : undefined;
+  const lineTotalSnapshot =
+    appliedSnapshot && typeof appliedSnapshot.lineTotalSnapshot === "number"
+      ? appliedSnapshot.lineTotalSnapshot
+      : undefined;
+  const quantity =
+    appliedSnapshot && typeof appliedSnapshot.quantity === "number"
+      ? appliedSnapshot.quantity
+      : undefined;
+  const unitPriceSnapshot =
+    appliedSnapshot && typeof appliedSnapshot.priceKrw === "number"
+      ? appliedSnapshot.priceKrw
+      : undefined;
   return {
     appliedSnapshot: isChartOrderAppliedSnapshot(appliedSnapshot)
       ? appliedSnapshot
@@ -925,16 +940,23 @@ function orderToActionLine(order: EmrOrder): ChartOrderActionLine {
     confirmedAt: null,
     confirmedByUserId: null,
     encounterId: order.encounterId,
+    lineTotalSnapshot,
     orderConfirmationStatus:
       order.status === "completed" ? "confirmed" : "draft",
     orderId: order.id,
+    orderType:
+      appliedSnapshot?.orderType === "set"
+        ? "set"
+        : order.orderType,
     parentOrderId,
     billingReflectionEnabled,
     rowType:
       rowType === "individual" || rowType === "set" || rowType === "set_child"
         ? rowType
         : undefined,
+    quantity,
     status: order.status,
+    unitPriceSnapshot,
     updatedAt: order.updatedAt,
   };
 }
@@ -1027,10 +1049,23 @@ function shouldCreateBillingCandidateForOrderAction(
 
   if (row.status === "cancelled") return false;
   if (row.billingReflectionEnabled === false) return false;
+  if (row.appliedSnapshot?.billingEligible === false) return false;
   if (row.rowType === "set_child" && row.billingReflectionEnabled !== true) {
     return false;
   }
   return row.appliedSnapshot?.billingReflectionEnabled !== false;
+}
+
+function shouldCreateAtomicConfirmationBillingCandidate(
+  row: ChartOrderActionLine,
+) {
+  if (row.status === "cancelled") return false;
+  if (row.billingReflectionEnabled === false) return false;
+  if (row.appliedSnapshot?.billingEligible === false) return false;
+  if ((row.lineTotalSnapshot ?? 0) <= 0) return false;
+  if (row.rowType !== "set") return true;
+  return row.appliedSnapshot?.amountBasis === "set_fixed_price" ||
+    row.appliedSnapshot?.amountBasis === "range_price";
 }
 
 function trimToUndefined(value?: string | null) {
