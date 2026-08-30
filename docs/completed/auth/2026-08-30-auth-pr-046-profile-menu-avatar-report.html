@@ -29,7 +29,7 @@
       <header>
         <div class="eyebrow">AUTH-PR-046 · 2026-08-30</div>
         <h1>업로드한 프로필 사진이 상단 메뉴에도 이어져</h1>
-        <p class="summary">직원 프로필에서 올린 사진을 현재 사용자 전용 읽기로 연결했다. 사진이 없으면 한글은 한 글자, 영문은 두 글자로 안정적으로 표시한다.</p>
+        <p class="summary">직원 프로필에서 올린 사진을 현재 사용자 전용 읽기로 연결했다. 사진이 없으면 언어와 무관하게 폴백을 한 글자로 안정적으로 표시한다.</p>
         <div class="status">구현 및 로컬 범위 검증 완료</div>
       </header>
       <section>
@@ -39,7 +39,7 @@
           <li>현재 사용자의 private avatar pointer를 서버에서 읽어 5분 signed URL로 전달한다.</li>
           <li>응답은 <code>private, no-store</code>이며 signed URL은 브라우저 저장소에 남기지 않고 만료 전에 갱신한다.</li>
           <li>업로드·삭제·이름 저장 직후 상단 프로필이 자동으로 다시 읽힌다.</li>
-          <li>한글 폴백은 한 글자, 영문 폴백은 두 글자를 유지한다.</li>
+          <li>한글·영문 폴백 모두 첫 글자 한 개만 표시한다.</li>
         </ul>
       </section>
       <section>

@@ -17,7 +17,7 @@ Render the signed-in user's uploaded profile image in the App Shell profile menu
 - Keep signed URLs response-only with `private, no-store` API caching.
 - Refresh the in-memory current-user read before the five-minute signed URL expires.
 - Render the existing shadcn/Base UI Avatar primitive in the topbar and dropdown.
-- Show one Hangul character or two Latin characters in the compact fallback.
+- Show exactly one character in the compact fallback, regardless of language.
 - Refresh the current-user profile after personal-profile save, avatar upload, or avatar removal.
 - Preserve browser profile fallback in mock mode.
 
@@ -44,7 +44,7 @@ Render the signed-in user's uploaded profile image in the App Shell profile menu
 ## Done When
 
 - A signed-in Supabase user with an uploaded image sees it in the topbar and profile dropdown.
-- Missing, removed, or failed images fall back to one Hangul or two Latin characters without changing the 48px trigger geometry.
+- Missing, removed, or failed images fall back to exactly one character without changing the 48px trigger geometry.
 - Mock/browser profile behavior remains available without calling the live-only GET.
 - Upload, remove, and personal profile save refresh the App Shell identity display.
 - Focused route, initials, UI, and shared avatar resolver tests pass with lint, typecheck, docs, secret, diff, and production build gates.
