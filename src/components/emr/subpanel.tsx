@@ -123,7 +123,7 @@ const emrDatePickerWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const emrDateNavigatorClassName =
   "flex h-[calc(var(--clair-control-height-md)+var(--clair-spacing-8)*2)] shrink-0 items-center justify-between gap-[var(--clair-spacing-6)] px-[var(--clair-spacing-12)]";
 const emrDateNavigatorTriggerClassName =
-  "emr-text-dense-label flex h-[var(--clair-control-height-md)] min-w-0 flex-1 items-center justify-center gap-[var(--clair-spacing-6)] rounded-[var(--clair-radius-md)] px-[var(--clair-spacing-10)] font-medium tabular-nums text-foreground outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50";
+  "emr-text-dense-label flex h-[var(--clair-control-height-md)] min-w-0 flex-1 items-center justify-center gap-[var(--clair-spacing-6)] rounded-[var(--clair-radius-md)] px-[var(--clair-spacing-10)] font-medium tabular-nums text-foreground outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50";
 const emrDateNavigatorIconButtonClassName =
   "rounded-[var(--clair-radius-md)] bg-transparent text-[var(--emr-text-tertiary)] shadow-none transition-transform hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] active:scale-[0.96]";
 const emrDateNavigatorTodayBadgeClassName =
