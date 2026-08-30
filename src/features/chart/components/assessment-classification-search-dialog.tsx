@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -15,24 +15,12 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { IconReorderAlt } from "obra-icons-react";
-import {
-  CdsActionsCheckIcon,
-  CdsActionsSearchIcon,
-  CdsActionsTrashIcon,
-  CdsActionsXIcon,
-} from "@/components/cds-icons/actions-and-controls";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -46,8 +34,16 @@ import type {
   DiagnosisCatalogClientQuery,
   DiagnosisCatalogClientResult,
 } from "@/features/chart/diagnosis-catalog-client";
-import { cn } from "@/lib/utils";
 import type { DiagnosisType } from "@/types/emr-domain";
+import {
+  ClassificationExplorerColumn,
+  ClassificationExplorerHeading,
+  ClassificationExplorerList,
+  ClassificationExplorerOption,
+  ClassificationExplorerReviewHeading,
+  ClassificationExplorerSearchHeader,
+  ClassificationExplorerSortableRow,
+} from "./classification-explorer-ui";
 import styles from "./assessment-classification-search-dialog.module.css";
 
 export type { AssessmentClassificationCatalogItem } from "@/features/chart/diagnosis-catalog-client";
@@ -390,18 +386,19 @@ export function AssessmentClassificationSearchDialog({
           </Button>
         }
       >
-        <ExplorerColumn
+        <ClassificationExplorerColumn
           label="진단 계통"
-          count={systems.length}
+          header={
+            <ClassificationExplorerHeading
+              count={systems.length}
+              label="진단 계통"
+            />
+          }
           status={catalogStatus}
           statusMessage={catalogErrorMessage}
         >
-          <div
-            className={styles.list}
-            role="listbox"
-            aria-label="진단 계통 목록"
-          >
-            <ExplorerOption
+          <ClassificationExplorerList ariaLabel="진단 계통 목록">
+            <ClassificationExplorerOption
               count={totalCount}
               label="전체"
               selected={selectedSystemId === "all"}
@@ -412,7 +409,7 @@ export function AssessmentClassificationSearchDialog({
               }}
             />
             {systems.map((system) => (
-              <ExplorerOption
+              <ClassificationExplorerOption
                 key={system.id}
                 count={system.count}
                 label={system.name}
@@ -424,21 +421,22 @@ export function AssessmentClassificationSearchDialog({
                 }}
               />
             ))}
-          </div>
-        </ExplorerColumn>
+          </ClassificationExplorerList>
+        </ClassificationExplorerColumn>
 
-        <ExplorerColumn
+        <ClassificationExplorerColumn
           label="질환 구분"
-          count={visibleDiseaseGroups.length}
+          header={
+            <ClassificationExplorerHeading
+              count={visibleDiseaseGroups.length}
+              label="질환 구분"
+            />
+          }
           status={catalogStatus}
           statusMessage={catalogErrorMessage}
         >
-          <div
-            className={styles.list}
-            role="listbox"
-            aria-label="질환 구분 목록"
-          >
-            <ExplorerOption
+          <ClassificationExplorerList ariaLabel="질환 구분 목록">
+            <ClassificationExplorerOption
               count={
                 selectedSystemId === "all"
                   ? totalCount
@@ -451,7 +449,7 @@ export function AssessmentClassificationSearchDialog({
               onClick={() => setSelectedDiseaseGroupId("all")}
             />
             {visibleDiseaseGroups.map((diseaseGroup) => (
-              <ExplorerOption
+              <ClassificationExplorerOption
                 key={diseaseGroup.id}
                 count={diseaseGroup.count}
                 label={diseaseGroup.name}
@@ -460,19 +458,20 @@ export function AssessmentClassificationSearchDialog({
                 onClick={() => setSelectedDiseaseGroupId(diseaseGroup.id)}
               />
             ))}
-          </div>
-        </ExplorerColumn>
+          </ClassificationExplorerList>
+        </ClassificationExplorerColumn>
 
-        <ExplorerColumn
+        <ClassificationExplorerColumn
           label="진단명"
-          count={totalCount}
           className={styles.diagnosisColumn}
           status={catalogStatus}
           statusMessage={catalogErrorMessage}
           header={
-            <DiagnosisHeader
+            <ClassificationExplorerSearchHeader
               count={totalCount}
               disabled={!catalogReady || writeDisabled}
+              label="진단명"
+              placeholder="진단명 검색"
               query={diagnosisQuery}
               searchOpen={searchOpen}
               searching={remoteSearchStatus === "loading"}
@@ -513,225 +512,96 @@ export function AssessmentClassificationSearchDialog({
                 : "진단명 더 보기"}
             </Button>
           ) : null}
-        </ExplorerColumn>
+        </ClassificationExplorerColumn>
 
-        <section
-          aria-label="선택 항목 검토"
-          className={cn(styles.column, styles.selectedColumn)}
+        <ClassificationExplorerColumn
+          label="선택 항목 검토"
+          className={styles.selectedColumn}
+          header={
+            <ClassificationExplorerReviewHeading
+              count={draft.length}
+              disabled={writeDisabled}
+              onClear={() => setDraft([])}
+            />
+          }
+          tone="muted"
         >
-          <ReviewHeading count={draft.length} onClear={() => setDraft([])} />
-          <ScrollArea className={styles.columnScroll}>
-            {draft.length ? (
-              <DndContext
-                collisionDetection={closestCenter}
-                sensors={sensors}
-                onDragCancel={() =>
-                  setReorderMessage("순서 변경을 취소했습니다.")
-                }
-                onDragEnd={handleDragEnd}
-                onDragStart={handleDragStart}
+          {draft.length ? (
+            <DndContext
+              collisionDetection={closestCenter}
+              sensors={sensors}
+              onDragCancel={() =>
+                setReorderMessage("순서 변경을 취소했습니다.")
+              }
+              onDragEnd={handleDragEnd}
+              onDragStart={handleDragStart}
+            >
+              <SortableContext
+                items={draft.map((item) => item.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={draft.map((item) => item.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div
-                    className={styles.selectedList}
-                    aria-label="선택 진단 순서"
-                  >
-                    {draft.map((item) => (
-                      <SortableReviewRow
-                        key={item.id}
-                        item={item}
-                        disabled={writeDisabled}
-                        onDiagnosisTypeChange={(diagnosisType) =>
-                          updateDraft(item.id, (current) => ({
-                            ...current,
-                            diagnosisType,
-                          }))
-                        }
-                        onMove={(direction) =>
-                          moveDraftItem(item.id, direction)
-                        }
-                        onRemove={() => removeDraftItem(item.id)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            ) : (
-              <EmrEmptyState
-                kind="no-data"
-                surface="content"
-                priority="supporting"
-                title="선택된 진단명이 없습니다"
-                description="탐색 영역에서 진단명을 선택해 주세요."
-                className={styles.emptyState}
-              />
-            )}
-          </ScrollArea>
-        </section>
+                <ClassificationExplorerList ariaLabel="선택 진단 순서" selected>
+                  {draft.map((item) => (
+                    <ClassificationExplorerSortableRow
+                      key={item.id}
+                      id={item.id}
+                      label={item.name}
+                      disabled={writeDisabled}
+                      onMove={(direction) => moveDraftItem(item.id, direction)}
+                      onRemove={() => removeDraftItem(item.id)}
+                      trailing={
+                        <Select
+                          value={item.diagnosisType}
+                          disabled={writeDisabled}
+                          onValueChange={(value) =>
+                            value &&
+                            updateDraft(item.id, (current) => ({
+                              ...current,
+                              diagnosisType: value as DiagnosisType,
+                            }))
+                          }
+                        >
+                          <SelectTrigger
+                            aria-label={`${item.name} 진단 유형`}
+                            size="sm"
+                            className={styles.typeTrigger}
+                          >
+                            <SelectValue>
+                              {diagnosisTypeItems.find(
+                                (type) => type.value === item.diagnosisType,
+                              )?.label ?? "의심"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            {diagnosisTypeItems.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      }
+                    />
+                  ))}
+                </ClassificationExplorerList>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <EmrEmptyState
+              kind="no-data"
+              surface="content"
+              priority="supporting"
+              title="선택된 진단명이 없습니다"
+              description="탐색 영역에서 진단명을 선택해 주세요."
+              className={styles.emptyState}
+            />
+          )}
+        </ClassificationExplorerColumn>
         <span className="sr-only" aria-live="polite">
           {reorderMessage}
         </span>
       </EmrDialogShell>
     </Dialog>
-  );
-}
-
-function ExplorerColumn({
-  children,
-  className,
-  count,
-  header,
-  label,
-  status,
-  statusMessage,
-}: {
-  children: ReactNode;
-  className?: string;
-  count: number;
-  header?: ReactNode;
-  label: string;
-  status: AssessmentClassificationCatalogStatus;
-  statusMessage?: string;
-}) {
-  return (
-    <section className={cn(styles.column, className)} aria-label={label}>
-      {header ?? <SectionHeading count={count} label={label} />}
-      {status === "ready" ? (
-        <ScrollArea className={styles.columnScroll}>{children}</ScrollArea>
-      ) : (
-        <CatalogColumnStatus
-          label={label}
-          message={statusMessage}
-          status={status}
-        />
-      )}
-    </section>
-  );
-}
-
-function SectionHeading({ count, label }: { count: number; label: string }) {
-  return (
-    <div className={styles.sectionHeader}>
-      <span className={styles.sectionTitle}>
-        <strong>{label}</strong>
-        <Badge variant="secondary" className={styles.countBadge}>
-          {count}
-        </Badge>
-      </span>
-    </div>
-  );
-}
-
-function DiagnosisHeader({
-  count,
-  disabled,
-  query,
-  searchOpen,
-  searching,
-  onCloseSearch,
-  onOpenSearch,
-  onQueryChange,
-}: {
-  count: number;
-  disabled: boolean;
-  query: string;
-  searchOpen: boolean;
-  searching: boolean;
-  onCloseSearch: () => void;
-  onOpenSearch: () => void;
-  onQueryChange: (value: string) => void;
-}) {
-  if (searchOpen) {
-    return (
-      <div className={cn(styles.sectionHeader, styles.searchHeader)}>
-        <label className={styles.searchField}>
-          <span className="sr-only">진단명 검색</span>
-          <CdsActionsSearchIcon aria-hidden="true" />
-          <Input
-            autoFocus
-            type="search"
-            aria-label="진단명 검색"
-            value={query}
-            placeholder="진단명 검색"
-            disabled={disabled}
-            onKeyDown={(event) => {
-              if (event.key !== "Escape") return;
-              event.preventDefault();
-              if (query) onQueryChange("");
-              else onCloseSearch();
-            }}
-            onValueChange={onQueryChange}
-          />
-        </label>
-        {searching ? (
-          <span className={styles.searchingStatus} role="status">
-            검색 중
-          </span>
-        ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="진단명 검색 닫기"
-          onClick={onCloseSearch}
-        >
-          <CdsActionsXIcon aria-hidden="true" />
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.sectionHeader}>
-      <span className={styles.sectionTitle}>
-        <strong>진단명</strong>
-        <Badge variant="secondary" className={styles.countBadge}>
-          {count}
-        </Badge>
-      </span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className={styles.headerSearchButton}
-        aria-label="진단명 검색"
-        disabled={disabled}
-        onClick={onOpenSearch}
-      >
-        <CdsActionsSearchIcon aria-hidden="true" />
-      </Button>
-    </div>
-  );
-}
-
-function ExplorerOption({
-  count,
-  disabled,
-  label,
-  selected,
-  onClick,
-}: {
-  count: number;
-  disabled: boolean;
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={selected}
-      disabled={disabled}
-      className={styles.listRow}
-      onClick={onClick}
-    >
-      <span>{label}</span>
-      <em>{count}</em>
-    </button>
   );
 }
 
@@ -762,204 +632,25 @@ function DiagnosisOptionList({
   }
 
   return (
-    <div
-      className={styles.diagnosisList}
-      role="listbox"
-      aria-label="진단명 목록"
-    >
+    <ClassificationExplorerList ariaLabel="진단명 목록">
       {items.map((item) => {
         const selected = selectedIds.has(item.id);
         const itemDisabled = disabled || !catalogReady;
         return (
-          <button
+          <ClassificationExplorerOption
             key={item.id}
-            type="button"
-            role="option"
-            aria-selected={selected}
             aria-disabled={itemDisabled}
             aria-label={item.name}
             disabled={itemDisabled}
             title={item.name}
-            className={styles.diagnosisOption}
+            label={item.name}
+            selected={selected}
+            selectedIndicator
             onClick={() => onToggle(item)}
-          >
-            <span>{item.name}</span>
-            <i>
-              <CdsActionsCheckIcon aria-hidden="true" />
-            </i>
-          </button>
+          />
         );
       })}
-    </div>
-  );
-}
-
-function ReviewHeading({
-  count,
-  onClear,
-}: {
-  count: number;
-  onClear: () => void;
-}) {
-  return (
-    <div className={styles.sectionHeader}>
-      <span className={styles.sectionTitle}>
-        <strong>선택 항목</strong>
-        <Badge variant="secondary" className={styles.countBadge}>
-          {count}
-        </Badge>
-      </span>
-      <Button
-        type="button"
-        variant="outline"
-        size="xs"
-        className={styles.clearButton}
-        disabled={!count}
-        onClick={onClear}
-      >
-        <CdsActionsTrashIcon aria-hidden="true" data-icon="inline-start" />
-        전체 삭제
-      </Button>
-    </div>
-  );
-}
-
-function SortableReviewRow({
-  disabled,
-  item,
-  onDiagnosisTypeChange,
-  onMove,
-  onRemove,
-}: {
-  disabled: boolean;
-  item: AssessmentClassificationSelection;
-  onDiagnosisTypeChange: (value: DiagnosisType) => void;
-  onMove: (direction: -1 | 1) => void;
-  onRemove: () => void;
-}) {
-  const {
-    attributes,
-    isDragging,
-    listeners,
-    setActivatorNodeRef,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ disabled, id: item.id });
-  const sortableKeyDown = listeners?.onKeyDown;
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(styles.selectedRow, isDragging && styles.dragging)}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-    >
-      <Button
-        {...attributes}
-        {...listeners}
-        ref={setActivatorNodeRef}
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        disabled={disabled}
-        aria-label={`${item.name} 순서 변경`}
-        className={styles.dragHandle}
-        onKeyDown={(event) => {
-          if (event.altKey && event.key === "ArrowUp") {
-            event.preventDefault();
-            onMove(-1);
-            return;
-          }
-          if (event.altKey && event.key === "ArrowDown") {
-            event.preventDefault();
-            onMove(1);
-            return;
-          }
-          sortableKeyDown?.(event);
-        }}
-      >
-        <IconReorderAlt aria-hidden="true" />
-      </Button>
-      <strong className={styles.selectedName} title={item.name}>
-        {item.name}
-      </strong>
-      <Select
-        value={item.diagnosisType}
-        disabled={disabled}
-        onValueChange={(value) =>
-          value && onDiagnosisTypeChange(value as DiagnosisType)
-        }
-      >
-        <SelectTrigger
-          aria-label={`${item.name} 진단 유형`}
-          size="sm"
-          className={styles.typeTrigger}
-        >
-          <SelectValue>
-            {diagnosisTypeItems.find(
-              (type) => type.value === item.diagnosisType,
-            )?.label ?? "의심"}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent align="end">
-          {diagnosisTypeItems.map((type) => (
-            <SelectItem key={type.value} value={type.value}>
-              {type.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={disabled}
-        aria-label={`${item.name} 삭제`}
-        className={styles.deleteButton}
-        onClick={onRemove}
-      >
-        <CdsActionsXIcon aria-hidden="true" />
-      </Button>
-    </div>
-  );
-}
-
-function CatalogColumnStatus({
-  label,
-  message,
-  status,
-}: {
-  label: string;
-  message?: string;
-  status: AssessmentClassificationCatalogStatus;
-}) {
-  if (status === "loading") {
-    return (
-      <div className={styles.feedback} role="status" aria-live="polite">
-        <span className={styles.spinner} aria-hidden="true" />
-        <strong>{label}을 불러오는 중입니다</strong>
-      </div>
-    );
-  }
-
-  return (
-    <EmrEmptyState
-      kind={status === "permission" ? "no-permission" : "read-error"}
-      surface="content"
-      priority="local-recovery"
-      title={
-        status === "permission"
-          ? `${label}을 볼 권한이 없습니다`
-          : `${label}을 불러오지 못했습니다`
-      }
-      description={
-        message ??
-        (status === "permission"
-          ? "차트 조회 권한을 확인해 주세요."
-          : "잠시 후 다시 시도해 주세요.")
-      }
-      className={styles.emptyState}
-    />
+    </ClassificationExplorerList>
   );
 }
 

@@ -980,13 +980,12 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   const assessmentActions = assessmentPanel.locator(
     "[data-slot='chart-panel-actions']",
   );
-  await expect(
-    assessmentActions.locator("button").nth(0),
-  ).toHaveAttribute("aria-label", "Assessment 패널 접기");
+  await expect(assessmentActions.locator("button").nth(0)).toHaveAttribute(
+    "aria-label",
+    "Assessment 패널 접기",
+  );
 
-  await assessmentPanel
-    .getByRole("textbox", { name: "진단명 검색" })
-    .click();
+  await assessmentPanel.getByRole("textbox", { name: "진단명 검색" }).click();
   await page.mouse.move(1, 1);
   await expect(assessmentActions).toHaveCSS("opacity", "0");
   await subjectPanel.hover();
@@ -1298,9 +1297,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
     "displayName",
   ]);
 
-  const selectionHeader = orderTable.locator(
-    'th[data-column-id="select"]',
-  );
+  const selectionHeader = orderTable.locator('th[data-column-id="select"]');
   const statusHeader = orderTable.locator('th[data-column-id="status"]');
   const selectionCheckbox = page.getByRole("checkbox", {
     name: "오더 전체 선택",
@@ -1446,9 +1443,9 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
           tableBottom,
       ),
     ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(footerAfterFilterBox!.y - tableBottom),
-    ).toBeLessThanOrEqual(1);
+    expect(Math.abs(footerAfterFilterBox!.y - tableBottom)).toBeLessThanOrEqual(
+      1,
+    );
     expect(
       await page.evaluate(
         () =>
@@ -6039,6 +6036,49 @@ async function verifyChartConfirmationRetry(page: Page) {
   );
 }
 
+test("chart order catalog shows a visible loading state and count skeletons before rows arrive", async ({
+  page,
+}) => {
+  let releaseCatalog!: () => void;
+  const catalogGate = new Promise<void>((resolve) => {
+    releaseCatalog = resolve;
+  });
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search",
+    async (route) => {
+      await catalogGate;
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: true, rows: [], status: 200 },
+        status: 200,
+      });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+
+  const dialog = page.getByRole("dialog", { name: "오더 추가" });
+  await expect(
+    dialog.getByText("오더를 불러오는 중입니다", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByTestId("classification-explorer-skeleton-list"),
+  ).toBeVisible();
+  await expect(
+    dialog.getByTestId("classification-explorer-option-count-skeleton"),
+  ).toHaveCount(9);
+  await expect(
+    dialog.getByTestId("classification-explorer-count-skeleton"),
+  ).toHaveCount(1);
+
+  releaseCatalog();
+  await expect(
+    dialog.getByText("오더를 불러오는 중입니다", { exact: true }),
+  ).toBeHidden();
+  await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
+});
+
 test("chart catalog dialog searches 108 service-review dispensing candidates at target scale", async ({
   page,
 }) => {
@@ -6392,8 +6432,7 @@ test("chart dispensing catalog prefills master prescription values and preserves
           if (!value || typeof value !== "object") return false;
           const row = value as Record<string, unknown>;
           const details = row.detailInputs as
-            | Record<string, unknown>
-            | undefined;
+            Record<string, unknown> | undefined;
           return (
             row.workspaceCatalogItemId === "ord-med-maropitant" &&
             details?.dose === 0.75 &&
@@ -7126,9 +7165,7 @@ test("chart confirmation continues after an ambiguous draft response only when r
   );
 
   await page.goto(kongScenarioUrl);
-  await page
-    .getByRole("checkbox", { name: `${displayName} 선택` })
-    .check();
+  await page.getByRole("checkbox", { name: `${displayName} 선택` }).check();
   await (await getChartOrderAction(page, "Order 확정")).click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
   await confirmDialog.getByRole("button", { name: "Order 확정" }).click();
