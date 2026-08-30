@@ -12,9 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  Avatar,
+  AvatarBadge,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { formatCompactAvatarInitials } from "@/features/auth/personal-profile-session";
 
 export type AuthProfileMenuProps = {
   activityLabel: string;
+  avatarUrl?: string;
   roleLabel: string;
   userInitial: string;
   userName: string;
@@ -24,12 +32,15 @@ export type AuthProfileMenuProps = {
 
 export function AuthProfileMenu({
   activityLabel,
+  avatarUrl,
   roleLabel,
   userInitial,
   userName,
   onLogout,
   profileHref,
 }: AuthProfileMenuProps) {
+  const compactInitials = formatCompactAvatarInitials(userInitial);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -43,10 +54,25 @@ export function AuthProfileMenu({
             "!h-[var(--emr-topbar-control-size)] !w-[var(--emr-topbar-profile-width)] !gap-[var(--emr-topbar-tab-inner-gap)] !border !border-[var(--emr-topbar-profile-border)] !bg-[var(--emr-topbar-profile-bg)] !p-[var(--clair-spacing-4)] !text-[var(--emr-topbar-icon)] !shadow-[var(--clair-shadow-xs)] hover:!border-[var(--emr-topbar-profile-border)] hover:!bg-[var(--emr-topbar-tab-hover-bg)] aria-expanded:!border-[var(--emr-topbar-profile-border)] aria-expanded:!bg-[var(--emr-topbar-tab-hover-bg)] aria-expanded:[&_svg[data-slot=profile-chevron]]:rotate-180",
         })}
       >
-        <span className="relative flex size-[var(--clair-spacing-24)] shrink-0 items-center justify-center rounded-full border border-[var(--emr-topbar-profile-avatar-border)] bg-[var(--emr-topbar-profile-avatar-bg)] text-[var(--emr-type-size-micro)] font-medium leading-[var(--emr-type-leading-micro)] tracking-[var(--emr-type-tracking-micro)] ![color:var(--emr-topbar-profile-avatar-text)]">
-          {userInitial}
-          <span className="absolute bottom-px right-px size-[var(--clair-spacing-6)] rounded-full border border-[var(--emr-topbar-profile-bg)] bg-[var(--emr-status-success-text)]" />
-        </span>
+        <Avatar
+          size="sm"
+          className="size-[var(--clair-spacing-24)] bg-[var(--emr-topbar-profile-avatar-bg)] after:border-[var(--emr-topbar-profile-avatar-border)]"
+        >
+          {avatarUrl ? (
+            <AvatarImage
+              data-testid="top-menu-profile-avatar-image"
+              src={avatarUrl}
+              alt=""
+            />
+          ) : null}
+          <AvatarFallback
+            data-testid="top-menu-profile-avatar-fallback"
+            className="bg-[var(--emr-topbar-profile-avatar-bg)] text-[var(--emr-type-size-micro)] font-medium leading-[var(--emr-type-leading-micro)] tracking-[var(--emr-type-tracking-micro)] ![color:var(--emr-topbar-profile-avatar-text)]"
+          >
+            {compactInitials}
+          </AvatarFallback>
+          <AvatarBadge className="!size-[var(--clair-spacing-6)] !bg-[var(--emr-status-success-text)] !ring-1 !ring-[var(--emr-topbar-profile-bg)]" />
+        </Avatar>
         <CdsNavigationChevronDownIcon
           data-slot="profile-chevron"
           className="size-[var(--clair-spacing-12)] shrink-0 transition-transform duration-[var(--clair-motion-duration-fast)]"
@@ -57,10 +83,13 @@ export function AuthProfileMenu({
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-2 py-1.5">
             <span className="flex items-center gap-2">
-              <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[12px] font-bold leading-none text-primary-foreground">
-                {userInitial}
-                <span className="absolute -bottom-0.5 -right-0.5 size-[9px] rounded-full border-[1.5px] border-card bg-[var(--emr-status-success-text)]" />
-              </span>
+              <Avatar className="size-7 bg-primary after:border-transparent">
+                {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
+                <AvatarFallback className="bg-primary text-[12px] font-bold leading-none text-primary-foreground">
+                  {compactInitials}
+                </AvatarFallback>
+                <AvatarBadge className="!size-[9px] !bg-[var(--emr-status-success-text)] !ring-[1.5px] !ring-card" />
+              </Avatar>
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate text-[13px] font-semibold leading-4 text-foreground">
                   {userName}

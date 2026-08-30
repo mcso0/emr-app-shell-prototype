@@ -15,6 +15,7 @@ import {
 } from "../src/features/auth/workspace-access-contract";
 import {
   PERSONAL_PROFILE_STORAGE_KEY,
+  formatCompactAvatarInitials,
   upsertSessionPersonalProfile,
   validatePersonalProfileInput,
   type PersonalProfilesState,
@@ -59,6 +60,13 @@ const originalAuthEnv = {
 };
 
 test.use({ storageState: { cookies: [], origins: [] } });
+
+test("compact profile avatar keeps one Korean character and two Latin characters", () => {
+  expect(formatCompactAvatarInitials("관리")).toBe("관");
+  expect(formatCompactAvatarInitials("AD")).toBe("AD");
+  expect(formatCompactAvatarInitials("A D")).toBe("AD");
+  expect(formatCompactAvatarInitials("  ")).toBe("U");
+});
 
 function withAuthRuntimeEnv(
   env: {
@@ -1491,6 +1499,7 @@ test("personal profile settings validate editable fields and save session-only d
   await page.getByRole("link", { name: /VIP 동물의료센터 청담점/ }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
   await page.getByTestId("top-menu-mock-user").click();
+  await expect(page.getByTestId("top-menu-profile-avatar-fallback").first()).toHaveText("김");
   await expect(page.getByRole("menu")).toContainText("김승욱");
 });
 

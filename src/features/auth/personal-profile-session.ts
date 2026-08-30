@@ -25,6 +25,10 @@ export type SessionPersonalProfile = {
   updatedAt: string;
 };
 
+export type CurrentPersonalProfile = SessionPersonalProfile & {
+  avatarUrl?: string;
+};
+
 export type PersonalProfilesState = {
   profiles: SessionPersonalProfile[];
   updatedAt: string;
@@ -194,6 +198,12 @@ export function persistPersonalProfilesState(
 export function derivePersonalProfileInitials(label: string) {
   const compact = label.replace(/[^A-Za-z0-9가-힣]/g, "");
   return (compact.slice(0, 2) || "U").toUpperCase();
+}
+
+export function formatCompactAvatarInitials(initials: string) {
+  const compact = Array.from(initials.replace(/[^A-Za-z0-9가-힣]/g, ""));
+  const length = compact.some((character) => /[가-힣]/.test(character)) ? 1 : 2;
+  return (compact.slice(0, length).join("") || "U").toUpperCase();
 }
 
 function isSessionPersonalProfile(value: unknown): value is SessionPersonalProfile {
