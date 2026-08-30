@@ -3,8 +3,7 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
-import { AVATAR_STORAGE_BUCKET } from "@/features/staff/staff-avatar";
-import { PRIVATE_PROFILE_AVATAR_BUCKET } from "@/features/staff/server-profile-avatar-core";
+import { resolveProfileAvatarUrl } from "@/features/staff/server-profile-avatar-read";
 
 export type StaffOperationalProfile = {
   avatarUrl?: string;
@@ -446,32 +445,8 @@ async function resolveAvatar(
 ): Promise<
   Pick<StaffOperationalProfile, "avatarUrl"> | Record<string, never>
 > {
-  const privatePath = row?.avatar_storage_path;
-  if (typeof privatePath === "string" && privatePath.trim()) {
-    try {
-      const { data, error } = await client.storage
-        .from(PRIVATE_PROFILE_AVATAR_BUCKET)
-        .createSignedUrl(privatePath.trim(), 5 * 60);
-      return !error && typeof data?.signedUrl === "string" && data.signedUrl
-        ? { avatarUrl: data.signedUrl }
-        : {};
-    } catch {
-      return {};
-    }
-  }
-  if (row?.avatar_legacy_hidden === true) return {};
-
-  const value = row?.avatar_url;
-  if (typeof value !== "string" || !value.trim()) return {};
-  const reference = value.trim();
-  if (reference.startsWith("/") || reference.startsWith("http")) {
-    return { avatarUrl: reference };
-  }
-  return {
-    avatarUrl: client.storage
-      .from(AVATAR_STORAGE_BUCKET)
-      .getPublicUrl(reference).data.publicUrl,
-  };
+  const avatarUrl = await resolveProfileAvatarUrl(client.storage, row);
+  return avatarUrl ? { avatarUrl } : {};
 }
 
 function resolveMembershipStatus(

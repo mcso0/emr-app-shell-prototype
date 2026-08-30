@@ -9,7 +9,8 @@ doc_type: data-contract
 tags: [staff, profile, avatar, storage, rls, image-security]
 related_work:
   - RECEPTION-LIVE-PR-015
-last_updated: 2026-07-16
+  - AUTH-PR-046
+last_updated: 2026-08-30
 ---
 
 # Private Profile Avatars
@@ -82,6 +83,19 @@ The API generates both UUIDs. A client can submit an upload ID returned by
   direct authenticated avatar-column writes are denied.
 - A transaction-local RPC marker lets the guarded self RPC update the two
   columns without allowing ordinary authenticated table updates to bypass it.
+
+## Read Consumers
+
+- Staff operational reads and the current-user personal profile read use one
+  private-pointer-first resolver and preserve the explicit hidden-legacy rule.
+- `GET /api/users/me/profile` accepts no target user or workspace identifier.
+  It derives the current user from the verified Supabase session and returns a
+  five-minute signed avatar URL only for that user.
+- The current-user response is `private, no-store`. Signed URLs remain in
+  response/UI memory only, are refreshed before their five-minute expiry, and
+  are not written to browser profile storage.
+- Successful self-service upload or removal emits the existing personal-profile
+  change event so App Shell consumers request a fresh current-user profile.
 
 ## Image Validation
 

@@ -17,6 +17,24 @@ async function patchProfile(
   });
 }
 
+test("personal profile read stays authenticated, live-only, and private no-store", async ({
+  request,
+}) => {
+  const unauthenticated = await request.get("/api/users/me/profile");
+  expect(unauthenticated.status()).toBe(401);
+  expect(unauthenticated.headers()["cache-control"]).toContain("private");
+  expect(unauthenticated.headers()["cache-control"]).toContain("no-store");
+
+  const mockMode = await request.get("/api/users/me/profile", {
+    headers: { "x-clair-demo-session-user-id": "user-admin" },
+  });
+  expect(mockMode.status()).toBe(503);
+  await expectJson(mockMode, {
+    ok: false,
+    error: "configured_data_source_required",
+  });
+});
+
 test("personal profile route saves editable fields and rejects authority fields", async ({
   request,
 }) => {
@@ -62,7 +80,11 @@ test("personal profile route defines DB persistence without auth authority field
   );
 
   expect(routeSource).toContain("savePersonalProfile");
+  expect(routeSource).toContain("readPersonalProfile");
+  expect(routeSource).toContain('"Cache-Control": "private, no-store"');
   expect(serverSource).toContain('import "server-only"');
+  expect(serverSource).toContain("avatar_storage_path");
+  expect(serverSource).toContain("resolveProfileAvatarUrl");
   expect(serverSource).not.toMatch(/role_permission|membership|permissions/);
   expect(migrationSource).toContain("clair_save_personal_profile");
   expect(migrationSource).toContain("notification_preferences");

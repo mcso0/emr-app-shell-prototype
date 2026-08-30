@@ -11,12 +11,7 @@ import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation"
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuthClient } from "@/features/auth/auth-client";
-import {
-  createPersonalProfileSession,
-  getDefaultSessionPersonalProfile,
-  getSessionPersonalProfile,
-  readPersonalProfilesState,
-} from "@/features/auth/personal-profile-session";
+import { useCurrentPersonalProfile } from "@/features/auth/use-current-personal-profile";
 import { useSessionWorkspaceDisplayName } from "@/features/auth/workspace-display";
 import { cn } from "@/lib/utils";
 import { AuthProfileMenu } from "@/shell/auth-profile-menu";
@@ -49,29 +44,22 @@ function getActiveMinutes(issuedAt?: string, now = Date.now()) {
   return Math.max(0, Math.floor((now - issuedTime) / 60000));
 }
 
-function readBrowserPersonalProfile(session: NonNullable<ReturnType<typeof useAuthClient>["session"]>) {
-  if (typeof window === "undefined") {
-    return getDefaultSessionPersonalProfile(createPersonalProfileSession(session));
-  }
-
-  return getSessionPersonalProfile(
-    readPersonalProfilesState(window.sessionStorage, window.localStorage),
-    createPersonalProfileSession(session)
-  );
-}
-
 export function TopMenu({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [now, setNow] = useState(() => Date.now());
   const workspaceDisplayName = useSessionWorkspaceDisplayName(workspaceId);
   const { hydrated, session, hydrate, signOut } = useAuthClient();
-  const personalProfile = hydrated && session ? readBrowserPersonalProfile(session) : null;
+  const personalProfile = useCurrentPersonalProfile({ hydrated, session });
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
   const userProfile =
     hydrated && session && personalProfile
-      ? { initial: personalProfile.initials, name: personalProfile.displayName }
-      : { initial: "G", name: "Guest" };
+      ? {
+          avatarUrl: personalProfile.avatarUrl,
+          initial: personalProfile.initials,
+          name: personalProfile.displayName,
+        }
+      : { avatarUrl: undefined, initial: "G", name: "Guest" };
   const activityModuleLabel = getModuleActivityLabel(pathname);
   const activeMinutes = getActiveMinutes(hydrated && session ? session.issuedAt : undefined, now);
   const activityLabel =
@@ -127,6 +115,7 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
         </Button>
         <AuthProfileMenu
           activityLabel={activityLabel}
+          avatarUrl={userProfile.avatarUrl}
           roleLabel={roleLabel}
           userInitial={userProfile.initial}
           userName={userProfile.name}

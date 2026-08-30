@@ -22,6 +22,7 @@ import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tab, TabGroup, TabPanel, TabsList } from "@/components/ui/tabs";
+import { PERSONAL_PROFILE_STORAGE_EVENT } from "@/features/auth/personal-profile-session";
 import {
   EditableProfileAvatar,
   PresenceBadge,
@@ -369,6 +370,7 @@ export function StaffOperationalProfilePanel({
             },
           };
         });
+        window.dispatchEvent(new Event(PERSONAL_PROFILE_STORAGE_EVENT));
         uploadId = null;
       } catch (error) {
         if (uploadId) {
@@ -401,6 +403,7 @@ export function StaffOperationalProfilePanel({
         },
       };
     });
+    window.dispatchEvent(new Event(PERSONAL_PROFILE_STORAGE_EVENT));
   }, [actorUserId, requestKey, response, workspaceId]);
 
   return (

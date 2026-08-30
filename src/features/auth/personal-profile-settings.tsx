@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuthClient } from "@/features/auth/auth-client";
 import {
+  PERSONAL_PROFILE_STORAGE_EVENT,
   createEmptyPersonalProfilesState,
   createPersonalProfileSession,
   derivePersonalProfileInitials,
@@ -207,7 +208,7 @@ function PersonalProfileForm({
       window.sessionStorage,
       window.localStorage
     );
-    window.dispatchEvent(new Event("clair.personalProfiles.v1"));
+    window.dispatchEvent(new Event(PERSONAL_PROFILE_STORAGE_EVENT));
     setFieldErrors({});
     setSaveNotice({ tone: "success", message: "프로필이 저장되었습니다." });
     setDisplayName(persistedInput.displayName);

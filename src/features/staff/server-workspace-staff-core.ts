@@ -6,8 +6,7 @@ import {
   type WorkspaceRoleId,
 } from "@/features/auth/permission-resolver";
 import { mockStaffUsers } from "@/mocks/emr-domain";
-import { AVATAR_STORAGE_BUCKET } from "@/features/staff/staff-avatar";
-import { PRIVATE_PROFILE_AVATAR_BUCKET } from "@/features/staff/server-profile-avatar-core";
+import { resolveProfileAvatarUrl } from "@/features/staff/server-profile-avatar-read";
 import { isIsoOperatingDate } from "@/lib/emr-domain/demo-date";
 
 export type WorkspaceStaffOperationalStatusCode =
@@ -357,29 +356,7 @@ async function resolveStaffAvatarUrl(
   client: SupabaseWorkspaceStaffClient,
   profile: SupabaseStaffProfileRow,
 ): Promise<string | undefined> {
-  const privatePath = profile.avatar_storage_path?.trim();
-  if (privatePath) {
-    try {
-      const { data, error } = await client.storage
-        .from(PRIVATE_PROFILE_AVATAR_BUCKET)
-        .createSignedUrl(privatePath, 5 * 60);
-      return !error && typeof data?.signedUrl === "string" && data.signedUrl
-        ? data.signedUrl
-        : undefined;
-    } catch {
-      return undefined;
-    }
-  }
-  if (profile.avatar_legacy_hidden === true) return undefined;
-
-  const avatarReference = profile.avatar_url;
-  const reference = avatarReference?.trim();
-  if (!reference) return undefined;
-  if (reference.startsWith("/") || reference.startsWith("http")) {
-    return reference;
-  }
-
-  return client.storage.from(AVATAR_STORAGE_BUCKET).getPublicUrl(reference).data.publicUrl;
+  return resolveProfileAvatarUrl(client.storage, profile);
 }
 
 export function createDemoWorkspaceStaffPermissionAdapter() {

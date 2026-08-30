@@ -239,6 +239,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | AUTH-PR-042                 | human_review | auth                 | P1       | Project 14 / DEN-277 | `docs/work/auth/AUTH-PR-042-login-production-entry-polish.md`                                          |
 | AUTH-PR-043                 | human_review | auth                 | P1       | Project 14 / DEN-278 | `docs/work/auth/AUTH-PR-043-invite-link-password-onboarding-implementation.md`                         |
 | AUTH-PR-045                 | implemented  | auth                 | P1       | Browser comment / active membership workspace switching | `docs/work/auth/AUTH-PR-045-workspace-switcher-active-membership-navigation.md` |
+| AUTH-PR-046                 | implemented  | auth                 | P1       | Browser comment / profile menu avatar sync | `docs/work/auth/AUTH-PR-046-profile-menu-avatar-sync.md` |
 | AUDIT-SECURITY-PR-001       | human_review | audit-security       | P0       | Project 05 / DEN-82  | `docs/work/audit-security/AUDIT-SECURITY-PR-001-mvp-pilot-readiness-criteria.md`                       |
 | AUDIT-SECURITY-PR-002       | human_review | audit-security       | P0       | Project 05 / DEN-83  | `docs/work/audit-security/AUDIT-SECURITY-PR-002-live-mvp-audit-event-matrix.md`                        |
 | AUDIT-SECURITY-PR-003       | human_review | audit-security       | P0       | Project 05 / DEN-84  | `docs/work/audit-security/AUDIT-SECURITY-PR-003-live-mvp-audit-log-persistence.md`                     |
