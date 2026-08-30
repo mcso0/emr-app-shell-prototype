@@ -15,6 +15,7 @@ import {
   type ChartOrderDraftInput,
   type SupabaseChartOrderDraftRpcClient,
 } from "@/features/chart/server-order-draft-persistence";
+import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import {
   resolveServerChartEncounterId,
   type SupabaseEncounterIdBridgeClient,
@@ -114,7 +115,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readJsonBody(request);
-  const ifMatch = request.headers.get("if-match");
+  const expectedEtagHeader = request.headers.get(
+    chartOrderExpectedEtagHeader,
+  );
   const inputKeys = Object.keys(input as Record<string, unknown>);
   if (
     inputKeys.some(
@@ -137,13 +140,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       { status: 428 },
     );
   }
-  if (!ifMatch) {
+  if (!expectedEtagHeader) {
     return Response.json(
       { ok: false, status: 428, error: "if_match_required", message: "오더 버전 확인이 필요합니다." },
       { status: 428 },
     );
   }
-  if (ifMatch !== input.expectedEtag) {
+  if (expectedEtagHeader !== input.expectedEtag) {
     return Response.json(
       { ok: false, status: 400, error: "etag_header_body_mismatch", message: "오더 버전 정보가 일치하지 않습니다." },
       { status: 400 },
@@ -179,9 +182,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       : undefined,
   });
 
-  const response = Response.json(result, { status: result.status });
-  if (result.ok) response.headers.set("ETag", result.etag);
-  return response;
+  return Response.json(result, { status: result.status });
 }
 
 async function readJsonBody(request: Request): Promise<ChartOrderDraftInput> {

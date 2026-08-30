@@ -195,6 +195,7 @@ import {
 } from "@/features/chart/diagnosis-catalog-client";
 import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
+import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import { useChartStore } from "@/features/chart/store";
 import { useChartPatientGuardianProfileActions } from "@/features/chart/use-chart-patient-guardian-profile-actions";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
@@ -2594,7 +2595,7 @@ async function saveChartOrderDraftRoute({
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "If-Match": expectedEtag,
+          [chartOrderExpectedEtagHeader]: expectedEtag,
           ...(actorHeaders ?? {}),
         },
         body: JSON.stringify({
@@ -2611,10 +2612,7 @@ async function saveChartOrderDraftRoute({
       return { ok: false, status: response.status, error: "db_write_failed" };
     }
 
-    return {
-      ...body,
-      etag: body.etag ?? response.headers.get("etag") ?? undefined,
-    };
+    return body;
   } catch {
     return { ok: false, status: 500, error: "db_write_failed" };
   }
@@ -2864,7 +2862,7 @@ async function saveChartOrderActionRoute({
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "If-Match": expectedEtag ?? "",
+          [chartOrderExpectedEtagHeader]: expectedEtag ?? "",
           ...(actorHeaders ?? {}),
         },
         body: JSON.stringify({
@@ -2883,10 +2881,7 @@ async function saveChartOrderActionRoute({
       return { ok: false, status: response.status, error: "db_write_failed" };
     }
 
-    return {
-      ...body,
-      etag: body.etag ?? response.headers.get("etag") ?? undefined,
-    };
+    return body;
   } catch {
     return { ok: false, status: 500, error: "db_write_failed" };
   }
@@ -7598,10 +7593,17 @@ function OrderArea({
   const orderDraftEtagRef = useRef(orderDraftEtag);
   const [orderDraftReloadKey, setOrderDraftReloadKey] = useState(0);
   const draftTouchedRef = useRef(false);
+  const draftEditVersionRef = useRef(0);
+  const orderDraftFailedAutoSaveVersionRef = useRef<number | null>(null);
   const orderDraftConflictRef = useRef(false);
   const orderDraftSaveInFlightRef = useRef(false);
   const orderDraftSavePromiseRef = useRef<Promise<boolean> | null>(null);
   const autoSaveDraftRef = useRef<() => Promise<boolean>>(async () => false);
+  const markDraftTouched = () => {
+    draftTouchedRef.current = true;
+    draftEditVersionRef.current += 1;
+    orderDraftFailedAutoSaveVersionRef.current = null;
+  };
   const pendingConfirmationRef = useRef<{
     expectedEtag: string;
     idempotencyKey: string;
@@ -7755,7 +7757,7 @@ function OrderArea({
     >,
   ) => {
     if (writeDisabled) return;
-    draftTouchedRef.current = true;
+    markDraftTouched();
     setDraftRows((currentRows) => {
       const target = currentRows.find((row) => row.order.id === orderId);
       const nextRows = currentRows.map((row) =>
@@ -7803,7 +7805,7 @@ function OrderArea({
     value: unknown | undefined,
   ) => {
     if (writeDisabled) return;
-    draftTouchedRef.current = true;
+    markDraftTouched();
     setDraftRows((currentRows) =>
       currentRows.map((row) => {
         if (row.order.id !== orderId || isChartOrderConfirmedRow(row)) {
@@ -7824,7 +7826,7 @@ function OrderArea({
     priority: ClinicalOrderPriority,
   ) => {
     if (writeDisabled) return;
-    draftTouchedRef.current = true;
+    markDraftTouched();
     setDraftRows((currentRows) =>
       currentRows.map((row) =>
         row.order.id === orderId && !isChartOrderConfirmedRow(row)
@@ -7839,7 +7841,7 @@ function OrderArea({
   };
   const toggleSetChild = (orderId: string) => {
     if (writeDisabled) return;
-    draftTouchedRef.current = true;
+    markDraftTouched();
     setDraftRows((currentRows) => {
       const child = currentRows.find((row) => row.order.id === orderId);
       const parentId = child?.runtimeRow?.parentOrderId;
@@ -7972,7 +7974,7 @@ function OrderArea({
       return;
     }
 
-    draftTouchedRef.current = true;
+    markDraftTouched();
     setDraftRows((currentRows) => [
       ...currentRows,
       buildChartOrderDraftRowFromCatalog({
@@ -7990,7 +7992,7 @@ function OrderArea({
     const preview = await requestSetPreview(setCandidate, selectionIntent);
     if (!preview) return;
 
-    draftTouchedRef.current = true;
+    markDraftTouched();
     setDraftRows((currentRows) => [
       ...currentRows,
       buildChartOrderDraftRowFromCatalog({
@@ -8007,6 +8009,7 @@ function OrderArea({
   const resetDraftRows = () => {
     if (writeDisabled) return;
     draftTouchedRef.current = false;
+    orderDraftFailedAutoSaveVersionRef.current = null;
     setDraftRows(committedRows);
     setSelectedOrderIds((current) => {
       const next = new Set(current);
@@ -8028,6 +8031,8 @@ function OrderArea({
 
     async function loadPersistedOrderDrafts() {
       draftTouchedRef.current = false;
+      draftEditVersionRef.current = 0;
+      orderDraftFailedAutoSaveVersionRef.current = null;
       orderDraftConflictRef.current = false;
       setOrderDraftSaveState("loading");
 
@@ -8166,6 +8171,7 @@ function OrderArea({
     const operation = (async () => {
       orderDraftSaveInFlightRef.current = true;
       while (draftTouchedRef.current) {
+        const attemptedDraftEditVersion = draftEditVersionRef.current;
         const preparedDraft = prepareChartOrderDraftRowsForPersistence(
           draftRowsRef.current,
         );
@@ -8200,6 +8206,8 @@ function OrderArea({
           orderDraftConflictRef.current = conflict;
           setOrderDraftSaveState(conflict ? "conflict" : "error");
           draftTouchedRef.current = true;
+          orderDraftFailedAutoSaveVersionRef.current =
+            attemptedDraftEditVersion;
           if (!silent || conflict) {
             toast.error(
               conflict
@@ -8247,6 +8255,7 @@ function OrderArea({
           orderDraftEtagRef.current = result.etag;
           setOrderDraftEtag(result.etag);
         }
+        orderDraftFailedAutoSaveVersionRef.current = null;
         orderDraftConflictRef.current = false;
       }
 
@@ -8276,6 +8285,8 @@ function OrderArea({
       orderDraftSaveState === "loading" ||
       orderDraftSaveState === "saving" ||
       orderDraftSaveInFlightRef.current ||
+      orderDraftFailedAutoSaveVersionRef.current ===
+        draftEditVersionRef.current ||
       !draftTouchedRef.current
     )
       return;
@@ -8283,7 +8294,9 @@ function OrderArea({
     const timer = window.setTimeout(() => {
       if (
         !draftTouchedRef.current ||
-        orderDraftSaveInFlightRef.current
+        orderDraftSaveInFlightRef.current ||
+        orderDraftFailedAutoSaveVersionRef.current ===
+          draftEditVersionRef.current
       )
         return;
       void autoSaveDraftRef.current();
@@ -8431,6 +8444,7 @@ function OrderArea({
     const preparedDraft = prepareChartOrderDraftRowsForPersistence(
       draftRowsRef.current,
     );
+    const attemptedDraftEditVersion = draftEditVersionRef.current;
     const nextSelectedOrderIds = remapChartOrderIdSet(
       selectedOrderIds,
       preparedDraft.orderIdMap,
@@ -8488,6 +8502,7 @@ function OrderArea({
         effectiveDraftResult.error === "revision_conflict";
       orderDraftConflictRef.current = conflict;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
+      orderDraftFailedAutoSaveVersionRef.current = attemptedDraftEditVersion;
       toast.error(
         conflict
           ? "다른 기기의 변경과 충돌했어요. 충돌을 해결한 뒤 확정해 주세요."
@@ -8526,6 +8541,7 @@ function OrderArea({
     }
 
     draftTouchedRef.current = false;
+    orderDraftFailedAutoSaveVersionRef.current = null;
     setCommittedRows(savedDraftRows);
     setDraftRows(savedDraftRows);
     if (effectiveDraftResult.etag) {
@@ -8602,7 +8618,7 @@ function OrderArea({
         .map((row) => row.order.id),
     );
     if (removableIds.size === 0) return;
-    draftTouchedRef.current = true;
+    markDraftTouched();
     setDraftRows((currentRows) =>
       currentRows.filter(({ order }) => !removableIds.has(order.id)),
     );
@@ -9070,6 +9086,8 @@ function OrderArea({
                 className="w-fit"
                 onClick={() => {
                   draftTouchedRef.current = false;
+                  draftEditVersionRef.current = 0;
+                  orderDraftFailedAutoSaveVersionRef.current = null;
                   orderDraftConflictRef.current = false;
                   setOrderDraftSaveState("loading");
                   setOrderDraftReloadKey((current) => current + 1);
