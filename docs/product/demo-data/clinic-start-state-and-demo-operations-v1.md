@@ -1,7 +1,7 @@
 ---
 title: "Clinic Start State and Demo Operations"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-08-30"
 owner: "product"
 source_request: "2026-06-11 owner intake"
 ---
@@ -83,9 +83,9 @@ The demo needs two separate concepts:
 
 The first pass must support reset. Scenario replay is useful but should not be built before the basic clinic setup works. Real day progression is the preferred direction, but it should be accepted only after the audit confirms the state model can keep previous-day records without stale-default leakage.
 
-As of 2026-06-16, the first Cheongdam reset implementation exists for `workspace-clair-cheongdam`:
+As of 2026-06-16, the first Cheongdam reset implementation exists for `workspace-clair-cheongdam`. As of 2026-08-30, its server capability remains available but no workspace exposes a reset control in the global topbar:
 
-- The visible reset control appears in the Cheongdam workspace topbar only for the hospital administrator mock/admin context, left of the notification icon and separated from the original topbar actions by a divider.
+- The global workspace topbar does not expose the reset control, including for Cheongdam hospital administrators.
 - The server route is `POST /api/workspaces/[workspaceId]/demo/session-reset`.
 - Remote Supabase reset is backed by `public.clair_reset_cheongdam_demo_session(text, text)`, limited to `workspace-clair-cheongdam`, `auth.uid()` actor match, and active workspace admin membership.
 - Reset clears daily-work state across reception queue, appointments, encounters, SOAP/diagnoses, orders, fulfillment work items, invoices, invoice lines, and payments.
@@ -171,7 +171,7 @@ The PRD/docs viewer should eventually expose scenario-level planning for epics, 
 - completing fulfillment work and reading the status back in chart
 - moving billable work into billing and completing payment
 - verifying role-specific navigation and basic blocked actions
-- resetting the clinic back to the empty seed
+- resetting the clinic back to the empty seed through the operator/backend flow
 - following a short demo script that 승욱 can use to click through and judge the flow
 
 ## Out Of Scope
@@ -186,6 +186,7 @@ The PRD/docs viewer should eventually expose scenario-level planning for epics, 
 
 ## Changelog
 
+- 2026-08-30: Removed the Cheongdam demo reset control from the global workspace topbar for every workspace while preserving the Cheongdam-only admin API, permission, RPC, and migration boundaries as an operator/backend capability.
 - 2026-06-17: Updated the data-mode policy after owner direction: `workspace-clair-cheongdam` is the default seed-backed operating proof, while legacy `clair-demo` Sales Demo fixtures are cleanup candidates rather than preserved fallback requirements.
 - 2026-06-16: Added DEN-507 Cheongdam synthetic demo session reset contract and implementation boundary. Reset is admin-only, Cheongdam-only, server/API-backed for Supabase, local-only in mock mode, and preserves Cheongdam seed master/config data while deleting daily-work, billing checkout flow state, and safely identified generated registration records. Staging replay/readback confirmed the synthetic reception/chart/fulfillment/billing marker was removed and seed guardians/patients stayed at 25/25.
 - 2026-06-12: Added DEN-483 rework boundary for seeded patient/guardian usage in Cheongdam walk-in reception creation. The reception drawer now preserves a selected live lookup patient through the display-label re-search, so the generated walk-in payload keeps seeded patient and guardian IDs. Staging write-through creation remains approval-gated because it would create active daily work in the empty-clinic baseline.

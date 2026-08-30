@@ -12,7 +12,7 @@ source_docs:
   - "docs/product/roadmap/product-mvp-scope.md"
 dependencies:
   - "DEMO-DATA-PR-001"
-updated: "2026-06-17"
+updated: "2026-08-30"
 ---
 
 # Clinic Start State and Demo Operations
@@ -112,6 +112,12 @@ Stop and ask 승욱 before:
 - provider/payment/email/KakaoTalk/PACS/device integration
 
 ## Notes
+
+- 2026-08-30 global reset-control removal note:
+  - Removed the `세션 초기화` control and its dedicated divider from the global workspace topbar for every workspace, including Cheongdam hospital administrators.
+  - Preserved the Cheongdam-only `POST /api/workspaces/[workspaceId]/demo/session-reset` route, server permission checks, Supabase RPC, migration history, and focused server/rate-limit regression coverage as an operator/backend capability.
+  - Replaced the topbar invocation regression with an admin-session non-exposure assertion and kept the original 2026-06-16 implementation record below as history.
+  - Clean `origin/main` candidate verification passed for the Cheongdam admin topbar regression (1 test), demo reset and workspace rate-limit regressions (10 tests), secret scan, docs links, repository lint, TypeScript, production build, and diff checks. The build retained the existing non-blocking `src/lib/prd-viewer/doc-reader.ts` NFT trace warning.
 
 - 2026-06-17 cleanup-prep note:
   - Owner direction now treats Sales Demo fallback as discardable legacy scope, not a preservation requirement.
