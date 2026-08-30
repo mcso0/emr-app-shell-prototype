@@ -692,6 +692,9 @@ test("customer patient table keeps animal identity pinned while data columns scr
   const subsequentPatientCodeSurface =
     subsequentPatientCodeCell.locator("code");
   const patientCodeHeaderSurface = patientCodeHeader.locator("button");
+  const patientCodeHeaderLabel = patientCodeHeader.locator(
+    '[data-emr-table-content="true"] > :first-child > span:first-child',
+  );
   const pinnedHeaderEdge = patientTable.locator(
     'thead th[data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
   );
@@ -756,6 +759,7 @@ test("customer patient table keeps animal identity pinned while data columns scr
   await expect(firstPatientRow).toBeVisible();
   await expect(subsequentPatientRow).toBeVisible();
   await expect(patientCodeHeaderSurface).toBeVisible();
+  await expect(patientCodeHeaderLabel).toBeVisible();
   await expect(firstPatientCodeSurface).toBeVisible();
   await expect(subsequentPatientCodeSurface).toBeVisible();
   await expect(animalCell).toHaveCSS("position", "sticky");
@@ -908,6 +912,17 @@ test("customer patient table keeps animal identity pinned while data columns scr
       );
     }
   }
+
+  const [patientCodeHeaderLabelBox, patientCodeBodySurfaceBox] =
+    await Promise.all([
+      patientCodeHeaderLabel.boundingBox(),
+      firstPatientCodeSurface.boundingBox(),
+    ]);
+  expect(patientCodeHeaderLabelBox).not.toBeNull();
+  expect(patientCodeBodySurfaceBox).not.toBeNull();
+  expect(
+    Math.abs(patientCodeHeaderLabelBox!.x - patientCodeBodySurfaceBox!.x),
+  ).toBeLessThanOrEqual(1);
 
   const contentHookStyles = await Promise.all(
     [
