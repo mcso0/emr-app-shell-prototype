@@ -161,6 +161,8 @@ export function EmrTableHeaderCell({
   const plainTextLabel =
     typeof displayedChildren === "string" ||
     typeof displayedChildren === "number";
+  const hidePinnedBoundaryResizeIndicator =
+    props.pinned === "left" && props.pinnedEdge;
 
   return (
     <TableHead
@@ -269,7 +271,10 @@ export function EmrTableHeaderCell({
           data-row-interactive="true"
           type="button"
           aria-label={resizeLabel ?? `${label} 컬럼 너비 조절`}
-          className="absolute right-[-4px] top-1/2 z-10 h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-border-default)] hover:bg-[var(--emr-state-selected)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--emr-state-drag)]"
+          className={cn(
+            "absolute right-[-4px] top-1/2 z-10 h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-border-default)] hover:bg-[var(--emr-state-selected)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--emr-state-drag)]",
+            hidePinnedBoundaryResizeIndicator && "before:opacity-0",
+          )}
           data-resizing={isResizing ? "true" : undefined}
           onClick={(event) => event.stopPropagation()}
           onKeyDown={onResizeKeyDown}

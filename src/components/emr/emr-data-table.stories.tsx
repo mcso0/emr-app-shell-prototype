@@ -823,6 +823,30 @@ export const Sorting: Story = {
 
 export const Resizing: Story = {
   args: { pinned: true, resizable: true },
+  play: async ({ canvasElement }) => {
+    const pinnedBoundaryHeader = canvasElement.querySelector(
+      'th[data-column-id="name"][data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
+    );
+    const pinnedBoundaryGrip = pinnedBoundaryHeader?.querySelector(
+      'button[aria-label="이름 컬럼 너비 조절"]',
+    ) as HTMLButtonElement | null;
+    const scrollingGrip = canvasElement.querySelector(
+      'th[data-column-id="owner"] button[aria-label="담당 컬럼 너비 조절"]',
+    ) as HTMLButtonElement | null;
+
+    if (!pinnedBoundaryGrip || !scrollingGrip) {
+      throw new Error("Resizable EmrDataTable story grips are missing.");
+    }
+
+    await waitFor(() => {
+      expect(getComputedStyle(pinnedBoundaryGrip).width).toBe("8px");
+      expect(getComputedStyle(pinnedBoundaryGrip).cursor).toBe("col-resize");
+      expect(getComputedStyle(pinnedBoundaryGrip, "::before").opacity).toBe(
+        "0",
+      );
+      expect(getComputedStyle(scrollingGrip, "::before").opacity).toBe("1");
+    });
+  },
 };
 
 export const AdditionalRows: Story = {
