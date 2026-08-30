@@ -6,9 +6,10 @@ doc_type: feature
 related_work:
   - "docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md"
   - "docs/work/reception/RECEPTION-QA-PR-009-command-new-reception-flow.md"
+  - "docs/work/reception/RECEPTION-PR-019-active-queue-state-presentation.md"
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-22
+last_updated: 2026-08-30
 ---
 
 # Reception / Appointment Feature Spec
@@ -141,6 +142,30 @@ last_updated: 2026-07-22
 | 수납대기 | 진료와 주요 오더가 끝나 수납 대기 | 수납 화면 연결 |
 | 완료 | 수납 또는 내원 종료 처리됨 | 이력 확인 |
 | 취소 | 접수 후 취소됨 | 취소 이력 확인 |
+
+### Reception Side Queue Presentation
+
+좌측 접수/예약 목록은 encounter 전체 이력이 아니라 데스크가 지금 처리할
+업무를 우선하는 표시 전용 projection이다. 원본 appointment, encounter,
+queue 상태를 대체하지 않는다.
+
+| Source state | Side queue presentation | Active tab count |
+|---|---|---|
+| Appointment `requested`, `confirmed`, `changed` | Expanded `예약`, truthful appointment label | Included |
+| Encounter `waiting` + consultation queue `waiting` | Expanded `접수`, `진료대기` | Included |
+| Encounter `in_consultation` or `ordered`, or queue `called`/`in_progress` | Removed from the active side queue; calendar/detail shows `진료중` or `진료 진행중` | Excluded |
+| Encounter `ready_for_billing` + billing queue `waiting` | Collapsed `수납대기` handoff group | Excluded |
+| Cancelled appointment/encounter or appointment `no_show` | Collapsed `취소·노쇼` exception group with item-specific `취소` or `노쇼` label | Excluded |
+| Encounter `completed` or queue `done` | Removed from the default side queue | Excluded |
+
+Rules:
+
+- 진료 호출은 `waiting`에서 `in_consultation`으로 즉시 전환하는 진료 시작으로 본다.
+- 진료 시작 또는 오더 진행 후에도 캘린더와 상세는 진료 내용 없이 높은 수준의 진행 상태만 표시한다.
+- 대기로 되돌릴 때 기존 `checkedInAt`/queue `enteredAt` 정렬 기준을 유지해 원래 순서로 복귀한다.
+- `수납대기`는 non-legacy billing queue가 동일 업무를 안정적으로 소유할 때까지 접수 화면의 임시 인계 확인 그룹으로 유지한다.
+- `취소·노쇼`는 선택한 운영일 동안 검색과 상세 접근을 유지하고 자동 시간 만료로 숨기지 않는다.
+- 취소 항목만 기존 복구 action을 제공한다. 노쇼 확정/복구 writer는 별도 product/API scope다.
 
 ### Veterinarian Assignment
 
