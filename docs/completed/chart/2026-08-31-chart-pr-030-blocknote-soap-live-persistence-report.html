@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BlockNote SOAP 라이브 전환 결과 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #1f2925;
+        background: #f4f6f5;
+      }
+      body {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+      main {
+        padding: 36px;
+        border: 1px solid #dbe1de;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 32px rgb(26 43 36 / 8%);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      h2 {
+        margin: 30px 0 10px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        line-height: 1.65;
+      }
+      .meta,
+      .caveat {
+        color: #65726d;
+      }
+      .result {
+        margin: 24px 0;
+        padding: 18px 20px;
+        border-left: 4px solid #2f745e;
+        background: #eef6f2;
+      }
+      .gate {
+        margin-top: 14px;
+        padding: 14px 16px;
+        border: 1px solid #e4c98b;
+        border-radius: 10px;
+        background: #fff9e9;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #e4e8e6;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        width: 190px;
+        color: #21644f;
+      }
+      code {
+        border-radius: 4px;
+        padding: 2px 5px;
+        background: #eef1ef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>SOAP 에디터를 BlockNote 기반 라이브 구조로 전환했다</h1>
+      <p class="meta">2026-08-31 · 진료/차트 · CHART-PR-030</p>
+
+      <div class="result">
+        기존 직접 Tiptap 에디터를 제거하고, 대표 검토에서 승인한
+        <strong>하나의 연속된 BlockNote 문서</strong>로 S/O/A/P를 작성하도록
+        구현했다. 블록 JSON을 정본으로 보존하면서 기존 차트 소비자는 계속 네 개의
+        S/O/A/P 텍스트를 읽을 수 있다.
+      </div>
+
+      <h2>요청과 구현 결과</h2>
+      <ul>
+        <li>노션과 유사한 왼쪽 추가·드래그 컨트롤, 슬래시 메뉴, 선택 툴바를 BlockNote 기본 상호작용으로 제공한다.</li>
+        <li>기본 SOAP와 계통별 SOAP 템플릿을 한 문서에 삽입하고 중복 삽입을 막는다.</li>
+        <li>이미지·동영상·광학검사는 저장·권한·기기 연동 계약 전까지 삽입하지 않는다.</li>
+        <li>BlockNote JSON V1을 정본으로 저장하고 기존 S/O/A/P는 서버가 파생한다.</li>
+        <li>저장 실패·충돌·응답 유실 시 입력을 보존하며, 자동 저장은 단일 순서로 처리한다.</li>
+      </ul>
+
+      <h2>배포 안전장치</h2>
+      <ul>
+        <li>기존 6-인자 저장 RPC는 유지하고 새 앱은 별도 V2 RPC를 호출한다.</li>
+        <li>DB 마이그레이션을 먼저 적용해도 기존 화면은 legacy 행을 계속 저장할 수 있다.</li>
+        <li>한 번 V2 정본이 생긴 행은 구버전 탭이 S/O/A/P만 덮어써 정본과 어긋나게 만들 수 없다.</li>
+        <li><code>chart:update</code>만 가진 역할은 legacy 저장을 계속 할 수 있지만, <code>chart:view</code>가 필요한 조회 권한까지 얻지는 않는다.</li>
+        <li>V2 저장과 메타데이터 감사 이벤트는 하나의 DB 트랜잭션으로 처리한다.</li>
+      </ul>
+
+      <h2>주요 변경 영역</h2>
+      <table>
+        <tr>
+          <th>화면</th>
+          <td>라이브 SOAP BlockNote 에디터, CLAiR 토큰 스타일, 템플릿·상태·읽기 전용 처리</td>
+        </tr>
+        <tr>
+          <th>저장</th>
+          <td>문서 검증·투영, 단일 순서 autosave, 충돌·응답 유실 복구, V2 RPC 호출</td>
+        </tr>
+        <tr>
+          <th>데이터베이스</th>
+          <td>nullable V1 정본 컬럼, additive V2 writer, legacy writer 호환, stale legacy guard, 감사</td>
+        </tr>
+        <tr>
+          <th>정리</th>
+          <td>애플리케이션의 직접 Tiptap import와 직접 의존성 제거</td>
+        </tr>
+      </table>
+
+      <h2>검증 결과</h2>
+      <table>
+        <tr>
+          <th>PASS · 기능</th>
+          <td>문서·autosave·저장·RPC 계약 30개, 대표 차트 브라우저 흐름 10개</td>
+        </tr>
+        <tr>
+          <th>PASS · DB</th>
+          <td>migration-first 호환, update-only 권한, V2 저장·재수정, 감사, stale legacy 차단, rollback residue</td>
+        </tr>
+        <tr>
+          <th>PASS · 품질</th>
+          <td>TypeScript, ESLint, Next.js, Storybook, 문서 링크, 비밀정보, diff whitespace</td>
+        </tr>
+      </table>
+
+      <h2>현재 상태와 다음 결정</h2>
+      <div class="gate">
+        승인된 migration-first 순서로 shared synthetic/demo DB의 원격 버전
+        <strong>20260831082106</strong>을 적용하고 권한·호환·rollback-only readback을 마쳤다.
+        PR #684의 candidate <strong>914b2761</strong>은 Release Check를 통과해 main과
+        production에 반영됐고, 인증된 차트에서 BlockNote 문서·S/O/A/P 기본값·저장 제어와
+        console error/warn 0건을 확인했다.
+      </div>
+      <p class="caveat">
+        앱만 이전 버전으로 되돌리면 legacy 행은 계속 편집할 수 있지만, 이미 V2로 저장된
+        행은 정본 보호를 위해 구버전 편집이 거부된다. 이미지·동영상·광학검사, 협업,
+        AI, 서명·개정 이력은 이번 범위가 아니다.
+      </p>
+    </main>
+  </body>
+</html>

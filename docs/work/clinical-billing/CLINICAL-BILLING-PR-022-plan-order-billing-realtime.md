@@ -109,5 +109,25 @@ identity, order, payment, and amount data out of Realtime payloads.
   docs-viewer Turbopack NFT warning but compiled successfully.
 - Independent security-boundary review returned `APPROVE / MUST-FIX 0` for the
   exact migration and client snapshot.
-- No remote migration, shared database, staging, `main`, or production change
-  is claimed for PR-022.
+- PR #683 merged the candidate to `staging`; hotfix PR #686 then accepted only
+  Supabase Realtime's UUID transport `id`, stripped it before application
+  validation, and preserved the documented payload contract. The hotfix
+  focused suite passed `7/7`, all common gates passed, and Release Check
+  `33378221247` completed successfully.
+- Migration `20260831073721_chart_order_billing_summary_realtime.sql` with
+  SHA-256
+  `ab19e8532613571f3457ba424feba4698548b2e9214f5d71fec858ccc764c362`
+  was applied to the inspected synthetic/demo staging Supabase project.
+  Remote catalog checks confirmed the policy, helper functions, triggers, and
+  ACLs; authenticated active `chart:view` receive passed while missing
+  permission, cross-workspace, and inactive membership were denied. The
+  rollback-only rehearsal left no PR-022 residue.
+- Fixed staging deployment `dpl_3QKyNch3EYdR7dCQhHxs6EJQR7n9` reached Ready
+  in `syd1`. In two active synthetic browser sessions, changing the same
+  encounter updated the other session from `201,000` to `402,000` without a
+  reload or focus transition. A separate authenticated transport probe
+  observed one private event in `19ms`; this is a single raw-delivery sample,
+  not the two-user UI p95 acceptance measurement.
+- Synthetic readback was restored to quantity `1.000` and authoritative total
+  `201000.00` after verification. `main` and production remained unchanged at
+  this evidence checkpoint.

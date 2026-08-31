@@ -318,7 +318,7 @@ test("chart detail panels remount encounter-scoped local state on queue switch",
   const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
 
   expect(chartModule).toMatch(
-    /<SoapPanel\s+key=\{`chart-soap-\$\{bundle\.encounter\.id\}-/,
+    /<SoapPanel\s+key=\{`chart-soap-\$\{bundle\.encounter\.id\}`\}/,
   );
   expect(chartModule).toContain('key={`chart-assessment-${bundle.encounter.id}`}');
   expect(chartModule).toMatch(/<OrderArea\s+key=\{bundle\.encounter\.id\}/);

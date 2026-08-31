@@ -388,6 +388,9 @@ For actual next work, start from the active Linear project and issue, then use t
 | CHART-PR-025                | implemented  | chart                | P0       | Browser comment / live patient chart history | `docs/work/chart/CHART-PR-025-live-patient-chart-history.md` |
 | CHART-PR-026                | implemented  | chart                | P0       | Production hotfix / SOAP RPC signature drift | `docs/work/chart/CHART-PR-026-soap-rpc-signature-drift-hotfix.md` |
 | CHART-PR-027                | implemented  | chart                | P0       | User request / Plan-Order candidate removal persistence | `docs/work/chart/CHART-PR-027-order-draft-removal-persistence.md` |
+| CHART-PR-028                | implemented  | chart                | P0       | Browser comments / diagnosis and chart history information hierarchy | `docs/work/chart/CHART-PR-028-history-information-hierarchy.md` |
+| CHART-PR-029                | human_review | chart                | P0       | User-approved BlockNote SOAP editor prototype | `docs/work/chart/CHART-PR-029-blocknote-soap-editor-prototype.md` |
+| CHART-PR-030                | human_review | chart                | P0       | User-approved live BlockNote SOAP editor replacement | `docs/work/chart/CHART-PR-030-blocknote-soap-live-persistence.md` |
 | LAB-PR-001                  | done         | lab                  | P1       | PR 1                 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md`                                               |
 | IMAGING-PR-001              | done         | imaging              | P1       | PR 1                 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md`                                            |
 | HOSPITAL-ADMIN-PR-001       | done         | hospital-admin       | P1       | PR 1                 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md`                           |
