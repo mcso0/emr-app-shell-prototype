@@ -3,7 +3,7 @@ id: "CLINICAL-BILLING-PR-020"
 status: "human_review"
 area: "clinical-billing"
 priority: "P0"
-target_pr: "TBD"
+target_pr: "#681"
 source_docs:
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-018-plan-order-billing-summary-freshness.md"
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-019-plan-order-billing-summary-integrity.md"
