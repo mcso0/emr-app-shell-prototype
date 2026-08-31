@@ -31,9 +31,9 @@
   <body>
     <main>
       <header>
-        <p class="eyebrow">CLINICAL-BILLING-PR-021 · Candidate</p>
+        <p class="eyebrow">CLINICAL-BILLING-PR-021 · Fixed staging verified</p>
         <h1>Plan/Order 리전 및 서버 타이밍</h1>
-        <p class="meta">2026-08-31 · PR #682 · Preview Ready in syd1 · fixed staging/main/production 미변경</p>
+        <p class="meta">2026-08-31 · PR #682 · staging merge 15d12733 · fixed staging syd1 · main/production 미변경</p>
       </header>
 
       <section class="summary">
@@ -73,7 +73,10 @@
           <li><span class="ok">PASS:</span> secret scan, docs links, diff whitespace, 전체 ESLint, TypeScript, production build.</li>
           <li><span class="ok">PASS:</span> Preview <code>dpl_9uBmmV3NiuA2txZVbh3ggGuo7A32</code> Ready, Vercel inspect에서 Next.js Lambda <code>syd1</code> 배치 확인.</li>
           <li><span class="ok">PASS:</span> 기존 고정 스테이징에서 합성 수량 편집 30회 후 201,000원으로 복구했고, 직접 Summary readback도 1건·201,000원으로 일치했다.</li>
-          <li><span class="warn">STAGING GATE:</span> 순수 Summary GET route 30회 HTTP median/p95는 고정 스테이징 전환 승인 뒤 timing header로 수집한다. 브라우저 세션을 추출하거나 auth 경계를 약화하지 않는다.</li>
+          <li><span class="ok">PASS:</span> fixed staging warm Summary GET 30회 서버 total median/p95 <code>143.6/366.4ms</code>, mutation 30회 서버 total median/p95 <code>237.1/890.6ms</code>.</li>
+          <li><span class="ok">PASS:</span> 합성 편집의 사용자 체감 확정 median/p95 <code>1,629/1,984ms</code>로 기존 iad1 기준보다 약 36.8%/41.4% 개선됐다. 700ms debounce와 자동화 overhead를 포함한다.</li>
+          <li><span class="ok">PASS:</span> 정상 mutation마다 PATCH 1회, 자동 Summary GET 0회였고 최종 수량 1·201,000원·console error 0건으로 복구했다.</li>
+          <li><span class="warn">CAVEAT:</span> 계측 전 iad1의 동일한 authenticated Summary route header 기준은 없어 route-to-route 개선율은 주장하지 않는다.</li>
         </ul>
       </section>
 
@@ -81,7 +84,8 @@
         <h2>릴리스 경계</h2>
         <ul>
           <li>이 candidate는 shared DB schema를 변경하지 않는다.</li>
-          <li>PR Preview에서 <code>syd1</code> 배치를 먼저 확인하고, exact SHA와 이전 Ready rollback 후보를 포함한 별도 승인 패킷 전에는 fixed staging을 움직이지 않는다.</li>
+          <li>Release Check <code>33367555659</code>와 fixed staging alias run <code>33368035853</code>이 통과했고, Ready deployment <code>dpl_EDK7HMBoo1Re9TSTCp5bpqoi2voQ</code>가 <code>syd1</code>에서 동작한다.</li>
+          <li>이전 Ready deployment <code>dpl_CXPRbT2rhYgKQgToa5kcnifbVY2o</code>를 rollback 후보로 유지한다.</li>
           <li><code>main</code>과 production은 PR-022 완료 및 최종 승인 전까지 변경하지 않는다.</li>
         </ul>
       </section>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plan/Order 다중 사용자 금액 갱신 수행 보고서</title>
+    <style>
+      :root { color-scheme:light; --bg:#f6f7f9; --panel:#fff; --text:#171717; --muted:#667085; --line:#e4e7ec; --soft:#eef4ff; --blue:#175cd3; --green:#067647; --amber:#b54708; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--bg); color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.6; }
+      main { max-width:1040px; margin:0 auto; padding:48px 28px 72px; }
+      header { padding:0 4px 12px; }
+      h1,h2 { margin:0; line-height:1.25; }
+      h1 { margin-top:8px; font-size:32px; }
+      h2 { margin-bottom:12px; font-size:20px; }
+      p { margin:8px 0 0; }
+      section { margin-top:20px; padding:24px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+      .eyebrow { color:var(--blue); font-size:13px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+      .summary { border-color:#bfd3ff; background:var(--soft); font-size:17px; }
+      .meta { color:var(--muted); }
+      .ok { color:var(--green); font-weight:800; }
+      .warn { color:var(--amber); font-weight:800; }
+      ul { margin:8px 0 0; padding-left:20px; }
+      li + li { margin-top:6px; }
+      table { width:100%; margin-top:12px; border-collapse:collapse; font-size:14px; }
+      th,td { padding:11px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+      th { background:#f9fafb; }
+      code { padding:2px 5px; border-radius:5px; background:#f2f4f7; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">CLINICAL-BILLING-PR-022 · Local candidate</p>
+        <h1>Plan/Order 다중 사용자 금액 갱신</h1>
+        <p class="meta">2026-08-31 · private Realtime invalidation · 원격 migration/staging/main/production 미변경</p>
+      </header>
+
+      <section class="summary">
+        <h2>결과 요약</h2>
+        <p>다른 사용자가 같은 진료의 오더나 청구 상태를 바꾸면 현재 화면이 최소 Realtime 신호를 받고 서버 금액을 한 번 다시 조회하도록 구현했다. 신호에는 금액·오더명·환자·보호자·결제 정보가 들어가지 않는다.</p>
+      </section>
+
+      <section>
+        <h2>동작 방식</h2>
+        <table>
+          <thead><tr><th>상황</th><th>처리</th></tr></thead>
+          <tbody>
+            <tr><td>다른 사용자 변경</td><td>300ms 동안 이벤트를 합친 뒤 authoritative Summary GET 1회</td></tr>
+            <tr><td>동일 transaction 중복</td><td>transaction ID로 중복 제거</td></tr>
+            <tr><td>현재 ETag와 동일</td><td>재조회 없이 무시</td></tr>
+            <tr><td>로컬 편집·저장 중</td><td>pending으로 보류하고 안전해진 뒤 1회 판단</td></tr>
+            <tr><td>자체 mutation 응답과 동일</td><td>응답의 ETag를 확인하고 후속 GET 없이 pending 해제</td></tr>
+            <tr><td>구독 실패·재연결</td><td>기존 focus/visibility 재검증 경로 유지</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>권한과 데이터 경계</h2>
+        <ul>
+          <li>topic은 workspace와 encounter 단위 private channel이다.</li>
+          <li><code>realtime.messages</code> SELECT는 authenticated 활성 멤버십과 <code>chart:view</code>를 모두 요구한다.</li>
+          <li>클라이언트 INSERT/send policy와 public channel은 만들지 않았다.</li>
+          <li>금액, 환자·보호자, 오더명, 결제·invoice 상세는 payload에 포함하지 않는다.</li>
+          <li>공개 mutation RPC 이름·인자, actor/membership/action permission, base ACL, Summary 응답 계약은 유지했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>현재 검증</h2>
+        <ul>
+          <li><span class="ok">PASS:</span> focused client 및 회귀 72/72 — payload scope, event flood, 중복 transaction, current ETag, 저장 중 보류, in-flight follow-up, unmount, 기존 금액 freshness.</li>
+          <li><span class="ok">PASS:</span> secret scan, docs link, diff whitespace, 전체 ESLint, TypeScript, production build. 기존 docs-viewer Turbopack NFT 경고 외 컴파일 성공.</li>
+          <li><span class="ok">PASS:</span> local SQL apply/reapply — private payload, 4개 금융 trigger, wrapper 1회 emit, ACL, authorized receive, missing permission·inactive member·cross-workspace denial.</li>
+          <li><span class="ok">PASS:</span> transaction rollback 뒤 PR-022 policy·function·trigger·base wrapper residue 0건.</li>
+          <li><span class="ok">APPROVE:</span> 독립 security-boundary review 결과 MUST-FIX 0건.</li>
+          <li><span class="warn">PENDING:</span> PR Preview, 원격 migration과 두 브라우저 세션 smoke.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>릴리스 경계</h2>
+        <ul>
+          <li>현재 결과는 clean worktree의 로컬 candidate이며 shared Supabase에 적용하지 않았다.</li>
+          <li>원격 migration은 exact candidate SHA·대상·rollback·검증 절차를 담은 별도 승인 뒤에만 적용한다.</li>
+          <li><code>main</code>과 production은 두 세션 반영 p95 1.5초 이하와 회귀 검증 전까지 변경하지 않는다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
