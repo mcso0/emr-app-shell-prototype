@@ -33,7 +33,7 @@
       <header>
         <p class="eyebrow">CLINICAL-BILLING-PR-021 · Candidate</p>
         <h1>Plan/Order 리전 및 서버 타이밍</h1>
-        <p class="meta">2026-08-31 · isolated staging branch · fixed staging/main/production 미변경</p>
+        <p class="meta">2026-08-31 · PR #682 · Preview Ready in syd1 · fixed staging/main/production 미변경</p>
       </header>
 
       <section class="summary">
@@ -70,7 +70,8 @@
           <li><span class="ok">PASS:</span> focused Playwright 52/52 — 성공·401 early denial header, auth/capability 회귀, privacy-safe helper.</li>
           <li><span class="ok">PASS:</span> focused ESLint, TypeScript, diff whitespace.</li>
           <li><span class="ok">PASS:</span> 공식 Vercel 문서에서 project-level <code>vercel.json</code> region 설정을 확인했다.</li>
-          <li><span class="warn">PENDING:</span> 전체 공통 게이트, PR Preview Ready 및 <code>syd1</code> 배치 확인.</li>
+          <li><span class="ok">PASS:</span> secret scan, docs links, diff whitespace, 전체 ESLint, TypeScript, production build.</li>
+          <li><span class="ok">PASS:</span> Preview <code>dpl_9uBmmV3NiuA2txZVbh3ggGuo7A32</code> Ready, Vercel inspect에서 Next.js Lambda <code>syd1</code> 배치 확인.</li>
           <li><span class="warn">STAGING GATE:</span> 인증된 Summary GET 30회 HTTP median/p95는 고정 스테이징 전환 승인 뒤 timing header로 수집한다. 브라우저 세션을 추출하거나 auth 경계를 약화하지 않는다.</li>
         </ul>
       </section>
