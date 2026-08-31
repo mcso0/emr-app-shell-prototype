@@ -71,6 +71,8 @@ export const chartSoapBlockSchema = BlockNoteSchema.create({
     checkListItem: defaultBlockSpecs.checkListItem,
     quote: defaultBlockSpecs.quote,
     divider: defaultBlockSpecs.divider,
+    image: defaultBlockSpecs.image,
+    video: defaultBlockSpecs.video,
     soapSection: soapSectionBlock(),
   },
 });
@@ -108,6 +110,45 @@ function createSectionBlock({
       },
     ],
   };
+}
+
+function createBasicSectionBlocks({
+  content,
+  kind,
+  label,
+  systemLabel,
+}: {
+  content: string;
+  kind: SoapSectionKind;
+  label: string;
+  systemLabel: string;
+}): ChartSoapPartialBlock[] {
+  return [
+    {
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text: `${sectionCode[kind]}  `,
+          styles: { bold: true },
+        },
+        {
+          type: "text",
+          text: label,
+          styles: { bold: true },
+        },
+        {
+          type: "text",
+          text: `  ${systemLabel}`,
+          styles: {},
+        },
+      ],
+    },
+    {
+      type: "paragraph",
+      content,
+    },
+  ];
 }
 
 export function createDefaultSoapTemplateBlocks(
@@ -153,6 +194,45 @@ export function createDefaultSoapTemplateBlocks(
   ];
 }
 
+export function createDefaultSoapBasicBlockTemplateBlocks(
+  withSampleContent = false,
+): ChartSoapPartialBlock[] {
+  return [
+    ...createBasicSectionBlocks({
+      content: withSampleContent
+        ? "어제 저녁부터 오른쪽 앞다리를 들고 걸어요. 식욕은 평소와 같아요."
+        : "",
+      kind: "subjective",
+      label: "주관적 · 보호자 진술",
+      systemLabel: "기본 SOAP",
+    }),
+    ...createBasicSectionBlocks({
+      content: withSampleContent
+        ? "우측 전지 촉진 시 경미한 통증 반응. 체온 38.6°C, 체중 4.2kg."
+        : "",
+      kind: "objective",
+      label: "객관적 · 신체검사 소견",
+      systemLabel: "기본 SOAP",
+    }),
+    ...createBasicSectionBlocks({
+      content: withSampleContent
+        ? "연부조직 손상 의심. 골절 가능성은 낮으나 영상검사로 배제 필요."
+        : "",
+      kind: "assessment",
+      label: "평가 · 임상 판단",
+      systemLabel: "기본 SOAP",
+    }),
+    ...createBasicSectionBlocks({
+      content: withSampleContent
+        ? "통증 조절 후 3일간 활동 제한. 증상 지속 시 방사선 검사 진행."
+        : "",
+      kind: "plan",
+      label: "계획 · 치료 및 추적",
+      systemLabel: "기본 SOAP",
+    }),
+  ];
+}
+
 export function createMusculoskeletalSoapTemplateBlocks(): ChartSoapPartialBlock[] {
   return [
     createSectionBlock({
@@ -182,6 +262,35 @@ export function createMusculoskeletalSoapTemplateBlocks(): ChartSoapPartialBlock
       label: "계획 · 검사 및 처치",
       systemLabel: "근골격계",
       scope: "system",
+    }),
+  ];
+}
+
+export function createMusculoskeletalSoapBasicBlockTemplateBlocks(): ChartSoapPartialBlock[] {
+  return [
+    ...createBasicSectionBlocks({
+      content: "파행 시작 시점, 외상 여부, 통증 양상, 활동 변화",
+      kind: "subjective",
+      label: "주관적 · 파행 문진",
+      systemLabel: "근골격계",
+    }),
+    ...createBasicSectionBlocks({
+      content: "보행 평가, 관절 가동 범위, 촉진 통증, 부종 및 좌우 대칭",
+      kind: "objective",
+      label: "객관적 · 근골격 검사",
+      systemLabel: "근골격계",
+    }),
+    ...createBasicSectionBlocks({
+      content: "문제 목록과 감별 진단",
+      kind: "assessment",
+      label: "평가 · 감별 진단",
+      systemLabel: "근골격계",
+    }),
+    ...createBasicSectionBlocks({
+      content: "영상검사, 통증 조절, 활동 제한 및 재검 계획",
+      kind: "plan",
+      label: "계획 · 검사 및 처치",
+      systemLabel: "근골격계",
     }),
   ];
 }
