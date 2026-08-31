@@ -133,37 +133,6 @@ async function selectChartOrderField(
   await page.getByRole("option", { name: option, exact: true }).click();
 }
 
-async function addChartSoapSystem(page: Page, systemLabel: string) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    if (
-      await page.getByRole("tab", { name: systemLabel, exact: true }).count()
-    ) {
-      return;
-    }
-
-    await page.getByRole("button", { name: "SOAP 추가" }).click();
-    const systemItem = page.getByRole("menuitem", {
-      name: systemLabel,
-      exact: true,
-    });
-
-    if (await systemItem.isDisabled()) {
-      await page.keyboard.press("Escape");
-      return;
-    }
-
-    try {
-      await systemItem.click({ timeout: 3_000 });
-      await expect(page.getByLabel(`${systemLabel} SOAP 기록`)).toBeVisible();
-      return;
-    } catch {
-      await page.keyboard.press("Escape").catch(() => undefined);
-    }
-  }
-
-  throw new Error(`${systemLabel} SOAP를 안정적으로 추가하지 못했습니다.`);
-}
-
 async function grantCheongdamWorkspaceAccess(page: Page) {
   await page.addInitScript(
     ([storageKey, workspaceId]) => {
@@ -825,10 +794,11 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
     page.getByRole("heading", { name: "Subject/Object" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
+  await expect(page.getByLabel("SOAP 블록 문서")).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "소화기", exact: true }),
+    page.getByText("주관적 · 보호자 진술", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "SOAP 추가" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /진단명/ })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "전체오더" })).toBeVisible();
@@ -865,12 +835,8 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByText("피하 수액 처치").first()).toBeVisible();
   const diagnosisPanel = page.getByLabel("진단명 관리");
   await expect(
-    diagnosisPanel
-      .locator('[data-emr-cell-text-mode="two-line-if-long"]', {
-        hasText: "급성 위장관염 의심",
-      })
-      .first(),
-  ).toContainText("급성 위장관염 의심");
+    diagnosisPanel.getByRole("row", { name: /급성 위장관염 의심/ }),
+  ).toBeVisible();
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
   await expect(orderTable.locator('th:has-text("Order명")')).toHaveAttribute(
     "data-emr-header-interaction",
@@ -917,10 +883,10 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
         (firstOrderCheckboxBox!.x + firstOrderCheckboxBox!.width / 2),
     ),
   ).toBeLessThanOrEqual(1);
-  await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
-  await page.getByRole("menuitem", { name: "첨부" }).click();
-  await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
-  await expect(page.getByRole("menuitem", { name: "첨부 1" })).toBeVisible();
+  await page.getByRole("button", { name: "SOAP 작업" }).click();
+  await expect(
+    page.getByRole("menuitem", { name: "이미지 · 동영상 연동 준비 중" }),
+  ).toBeDisabled();
   await page.keyboard.press("Escape");
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
@@ -975,11 +941,11 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   );
   await expect(subjectActionButtons.nth(2)).toHaveAttribute(
     "aria-label",
-    "SOAP 추가",
+    "SOAP 저장",
   );
   await expect(subjectActionButtons.nth(3)).toHaveAttribute(
     "aria-label",
-    "기본 SOAP 작업",
+    "SOAP 작업",
   );
   const subjectCollapseButton = subjectActionButtons.nth(0);
   await subjectCollapseButton.focus();
@@ -1072,14 +1038,8 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "Plan/Order 작업",
   );
 
-  await expect(page.locator("[data-slot='chart-soap-toolbar']")).toHaveCSS(
-    "height",
-    "44px",
-  );
-  await expect(page.locator("[data-slot='chart-soap-toolbar']")).toHaveCSS(
-    "border-bottom-color",
-    "rgb(229, 229, 229)",
-  );
+  await expect(page.locator("[data-slot='chart-soap-toolbar']")).toHaveCount(0);
+  await expect(subjectPanel.getByLabel("SOAP 블록 문서")).toBeVisible();
   await expect(
     page.locator("[data-slot='chart-assessment-toolbar']"),
   ).toHaveCSS("height", "44px");
@@ -1121,22 +1081,21 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "1px",
   );
 
-  const soapAddTrigger = subjectPanel.getByRole("button", {
-    name: "SOAP 추가",
+  const soapSaveTrigger = subjectPanel.getByRole("button", {
+    name: "SOAP 저장",
   });
   await page.mouse.move(1, 1);
   await subjectCollapseButton.focus();
   await page.keyboard.press("Tab");
   await expect(subjectActions).toHaveCSS("opacity", "1");
   await page.keyboard.press("Tab");
-  await expect(soapAddTrigger).toBeFocused();
+  await expect(soapSaveTrigger).toBeFocused();
   await expect(subjectActions).toHaveCSS("opacity", "1");
-  await soapAddTrigger.click();
-  const soapAddMenu = page.getByRole("menu");
-  await expect(soapAddMenu).toBeVisible();
-  await expect(soapAddTrigger).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Tab");
+  await expect(
+    subjectPanel.getByRole("button", { name: "SOAP 작업" }),
+  ).toBeFocused();
   await expect(subjectActions).toHaveCSS("opacity", "1");
-  await page.keyboard.press("Escape");
 
   const orderToolbar = page.locator(
     "[data-slot='chart-order-toolbar-actions']",
@@ -1681,7 +1640,7 @@ test("chart clinical panels collapse independently without unmounting their cont
   const assessmentPanel = panelGroup.locator('[data-panel-id="assessment"]');
   const historyPanel = panelGroup.locator('[data-panel-id="history"]');
   const soapContent = page.locator("#chart-soap-panel-content");
-  const soapEditor = page.getByLabel("기본 SOAP 기록");
+  const soapEditor = page.getByLabel("SOAP 블록 문서");
 
   await expect(panelGroup).toHaveAttribute("data-collapsed-count", "0");
   await expect(historyPanel).toHaveAttribute("data-collapsed", "false");
@@ -1705,7 +1664,7 @@ test("chart clinical panels collapse independently without unmounting their cont
   await soapPanel.hover();
   await expect(soapCollapseButton).toHaveCSS("opacity", "1");
   await page.mouse.move(0, 0);
-  await page.getByRole("button", { name: "SOAP 추가" }).focus();
+  await page.getByRole("button", { name: "SOAP 저장" }).focus();
   await tabBackwardTo(page, soapCollapseButton, 2);
   await expect(soapCollapseButton).toBeFocused();
   await expect(soapCollapseButton).toHaveCSS("opacity", "1");
@@ -4200,50 +4159,27 @@ test("chart diagnosis panel omits comment and plan text areas", async ({
   await expect(diagnosisPanel.getByText("사전 연결 · 의심")).toHaveCount(0);
 });
 
-test("chart SOAP editor keeps SOAP fields structured and uses an inline link popover", async ({
+test("chart SOAP editor keeps one BlockNote document and reveals its provided selection toolbar", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
 
-  const subjectiveEditor = page.getByLabel("기본 SOAP 기록");
+  const soapDocument = page.getByLabel("SOAP 블록 문서");
+  const soapEditor = soapDocument.locator('[contenteditable="true"]').first();
 
-  await expect(page.getByText("주관적", { exact: true }).first()).toBeVisible();
-  await expect(subjectiveEditor).toContainText(
+  await expect(
+    soapDocument.getByText("주관적 · 보호자 진술", { exact: true }),
+  ).toBeVisible();
+  await expect(soapDocument).toContainText(
     "보호자 진술상 전날 밤부터 구토 3회",
   );
+  await expect(page.locator(".bn-formatting-toolbar")).toHaveCount(0);
 
-  await subjectiveEditor.click();
-  await expect(
-    page.getByRole("toolbar", { name: "기본 SOAP 선택 서식 도구" }),
-  ).toHaveCount(0);
-  await subjectiveEditor.press("ControlOrMeta+A");
-  const soapSelectionToolbar = page.getByRole("toolbar", {
-    name: "기본 SOAP 선택 서식 도구",
-  });
+  await soapEditor.click();
+  await page.keyboard.press("ControlOrMeta+A");
+  const soapSelectionToolbar = page.locator(".bn-formatting-toolbar");
   await expect(soapSelectionToolbar).toBeVisible();
-  await expect(page.getByText("주관적", { exact: true }).first()).toBeVisible();
-  await expect(
-    soapSelectionToolbar.getByRole("button", { name: "기본 SOAP 굵게" }),
-  ).toBeEnabled();
-  await expect(
-    soapSelectionToolbar.getByRole("button", { name: "기본 SOAP 글머리 목록" }),
-  ).toBeEnabled();
-
-  let promptOpened = false;
-  page.on("dialog", async (dialog) => {
-    promptOpened = true;
-    await dialog.dismiss();
-  });
-
-  await soapSelectionToolbar
-    .getByRole("button", { name: "기본 SOAP 링크" })
-    .click();
-  await expect(page.getByText("링크 추가")).toBeVisible();
-  await page.getByLabel("링크 URL").fill("example.com/chart-note");
-  await page.getByRole("button", { name: "적용" }).click();
-  expect(promptOpened).toBe(false);
 });
-
 test("chart SOAP manual save persists through route-backed reload", async ({
   page,
 }) => {
@@ -4261,7 +4197,10 @@ test("chart SOAP manual save persists through route-backed reload", async ({
     "encounterId=encounter-coco-260501",
   );
 
-  const soapEditor = page.getByLabel("기본 SOAP 기록");
+  const soapDocument = page.getByLabel("SOAP 블록 문서");
+  const soapEditor = soapDocument
+    .locator('.bn-block-content[data-content-type="paragraph"]')
+    .first();
   const savedText = `DEN-69 SOAP route-backed save ${Date.now()}`;
   await expect(soapEditor).toBeEditable();
   const autosaveResponse = page.waitForResponse((response) => {
@@ -4274,10 +4213,10 @@ test("chart SOAP manual save persists through route-backed reload", async ({
   });
 
   await soapEditor.click();
-  await page.keyboard.press("ControlOrMeta+A");
-  await page.keyboard.type(savedText);
+  await page.keyboard.press("End");
+  await page.keyboard.type(` ${savedText}`);
   expect((await autosaveResponse).ok()).toBe(true);
-  await expect(page.getByLabel("기본 SOAP 기록")).toContainText(savedText);
+  await expect(soapDocument).toContainText(savedText);
 
   const manualSaveResponse = page.waitForResponse((response) => {
     const request = response.request();
@@ -4287,69 +4226,161 @@ test("chart SOAP manual save persists through route-backed reload", async ({
       request.postDataJSON()?.mode === "manual_save"
     );
   });
-  await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
-  await page.getByRole("menuitem", { name: "SOAP 저장" }).click();
+  await page.getByRole("button", { name: "SOAP 저장" }).click();
   expect((await manualSaveResponse).ok()).toBe(true);
   await expect(page.getByTestId("chart-soap-status")).toContainText(
     /작성중|자동저장됨/,
   );
 
   await page.reload();
-  await expect(page.getByLabel("기본 SOAP 기록")).toContainText(savedText);
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText(savedText);
 });
 
-test("chart SOAP add opens a dropdown menu instead of a modal", async ({
+test("chart SOAP reconciles a committed response-loss retry without a false conflict", async ({
+  page,
+}) => {
+  let patchCount = 0;
+  let readCount = 0;
+  let committedNote: Record<string, unknown> | null = null;
+
+  await page.route("**/api/workspaces/clair-demo/chart/soap-notes**", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET") {
+      readCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          soapNote: committedNote,
+        }),
+      });
+      return;
+    }
+
+    const input = request.postDataJSON() as {
+      blockDocument: unknown;
+      encounterId: string;
+    };
+    patchCount += 1;
+    expect(request.headers()["x-request-id"]).toMatch(/^chart-soap-/);
+
+    if (patchCount === 1) {
+      committedNote = {
+        id: "soap-response-loss",
+        encounterId: input.encounterId,
+        authorUserId: "user-vet",
+        subjective: "response loss",
+        objective: "",
+        assessment: "",
+        plan: "",
+        blockDocument: input.blockDocument,
+        status: "autosaved",
+        autosavedAt: "2026-08-31T10:00:00.000Z",
+        createdAt: "2026-08-31T10:00:00.000Z",
+        updatedAt: "2026-08-31T10:00:00.000Z",
+      };
+      await route.abort("connectionreset");
+      return;
+    }
+
+    await route.fulfill({
+      status: 409,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: false,
+        status: 409,
+        denialReason: "soap_note_conflict",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history");
+  const soapDocument = page.getByLabel("SOAP 블록 문서");
+  const soapEditor = soapDocument
+    .locator('.bn-block-content[data-content-type="paragraph"]')
+    .first();
+  const localText = ` response-loss-${Date.now()}`;
+  await soapEditor.click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(localText);
+
+  const saveError = page.getByTestId("chart-soap-save-error");
+  await expect(saveError).toBeVisible();
+  await expect(soapDocument).toContainText(localText.trim());
+  await saveError.getByRole("button", { name: "다시 저장" }).click();
+
+  await expect(
+    page.getByText("임상 기록은 서버에 반영되었습니다. 중복 저장하지 말고 관리자에게 변경 이력 상태를 확인해 주세요."),
+  ).toBeVisible();
+  await expect(saveError).toHaveCount(0);
+  expect(patchCount).toBe(2);
+  expect(readCount).toBeGreaterThanOrEqual(2);
+});
+
+test("chart SOAP slash command opens BlockNote suggestions instead of a separate modal", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
-  await expect(page.getByRole("button", { name: "SOAP 추가" })).toBeEnabled();
+  const soapDocument = page.getByLabel("SOAP 블록 문서");
+  const lastParagraph = soapDocument
+    .locator('.bn-block-content[data-content-type="paragraph"]')
+    .last();
 
-  await page.getByRole("button", { name: "SOAP 추가" }).click();
+  await lastParagraph.click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("/근골격");
 
-  await expect(page.getByRole("menu")).toBeVisible();
+  const suggestionMenu = page.getByRole("listbox");
+  await expect(suggestionMenu).toBeVisible();
+  await expect(
+    suggestionMenu.getByRole("option", { name: /근골격계 SOAP 템플릿/ }),
+  ).toBeVisible();
   await expect(
     page.getByRole("dialog", { name: "SOAP 진단계통 선택" }),
   ).toHaveCount(0);
 });
 
-test("chart SOAP tabs add systems, prevent duplicates, and delete", async ({
+test("chart SOAP slash template inserts a system block group and prevents duplicate insertion", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
-  await expect(page.getByRole("button", { name: "SOAP 추가" })).toBeEnabled();
+  const soapDocument = page.getByLabel("SOAP 블록 문서");
+  const openMusculoskeletalMenu = async () => {
+    const lastParagraph = soapDocument
+      .locator('.bn-block-content[data-content-type="paragraph"]')
+      .last();
+    await lastParagraph.click();
+    await page.keyboard.press("End");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("/근골격");
+    const option = page
+      .getByRole("listbox")
+      .getByRole("option", { name: /근골격계 SOAP 템플릿/ });
+    await expect(option).toBeVisible();
+    await option.click();
+  };
 
-  await page.getByRole("button", { name: "SOAP 추가" }).click();
-  const addMenu = page.getByRole("menu");
-  await expect(addMenu).toBeVisible();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await addMenu.getByRole("menuitem", { name: "호흡기" }).click();
-  await expect(page.getByLabel("호흡기 SOAP 기록")).toContainText(
-    "보호자 진술:",
+  await openMusculoskeletalMenu();
+  const musculoskeletalSubjective = soapDocument.getByText(
+    "주관적 · 파행 문진",
+    { exact: true },
   );
-
-  await page.getByRole("button", { name: "SOAP 추가" }).click();
-  const addedSystemMenu = page.getByRole("menu");
+  await expect(musculoskeletalSubjective).toHaveCount(1);
   await expect(
-    addedSystemMenu.getByRole("menuitem", { name: /호흡기/ }),
-  ).toBeDisabled();
-  expect(
-    await addedSystemMenu.getByText("이미 추가됨").count(),
-  ).toBeGreaterThanOrEqual(2);
-  await page.keyboard.press("Escape");
-
-  await page.getByRole("button", { name: "호흡기 SOAP 작업" }).click();
-  await page.getByRole("menuitem", { name: "삭제", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "삭제" }).click();
-  await expect(
-    page.getByRole("tab", { name: "호흡기", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page
-      .getByRole("tablist", { name: "SOAP 분류" })
-      .getByRole("tab", { selected: true }),
+    page.getByText("근골격계 템플릿을 추가했습니다.", { exact: true }),
   ).toBeVisible();
-});
 
+  await openMusculoskeletalMenu();
+  await expect(
+    page.getByText("근골격계 템플릿이 이미 문서에 있습니다.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(musculoskeletalSubjective).toHaveCount(1);
+});
 test("chart diagnosis search recommends, adds, marks, and removes session diagnoses", async ({
   page,
 }) => {
@@ -5060,14 +5091,18 @@ test("chart keeps confirmation selection-scoped and billing encounter-scoped", a
 
 test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await page.goto(kongScenarioUrl);
-  await expect(page.getByRole("button", { name: "SOAP 추가" })).toBeEnabled();
-
-  for (const systemLabel of ["호흡기", "피부", "전신", "예방"]) {
-    await addChartSoapSystem(page, systemLabel);
+  const soapDocument = page.getByLabel("SOAP 블록 문서");
+  const lastParagraph = soapDocument
+    .locator('.bn-block-content[data-content-type="paragraph"]')
+    .last();
+  await lastParagraph.click();
+  await page.keyboard.press("End");
+  for (let index = 0; index < 24; index += 1) {
+    await page.keyboard.press("Enter");
+    await page.keyboard.type(`SOAP 확장 행 ${index + 1}`);
   }
 
-  await expect(page.getByRole("button", { name: "SOAP 더보기" })).toBeVisible();
-  await expect(page.getByLabel("예방 SOAP 기록")).toBeVisible();
+  await expect(soapDocument).toContainText("SOAP 확장 행 24");
   await expectTopEdgeInViewport(
     page,
     page.getByRole("tab", { name: "전체오더" }),
@@ -5879,7 +5914,7 @@ test("chart queue selection changes the selected encounter", async ({
   await expect(lockedState).toContainText("기록된 바이탈이 없어요");
   await expect(lockedState).toContainText("이전 진료이력이 없어요");
   await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "기본 S/O" })).toHaveCount(0);
+  await expect(page.getByLabel("SOAP 블록 문서")).toHaveCount(0);
 
   await lockedState
     .getByRole("button", { name: "호출하기", exact: true })

@@ -18,13 +18,48 @@ const hotfixMigrationPath =
 const hotfixMigration = existsSync(hotfixMigrationPath)
   ? readFileSync(hotfixMigrationPath, "utf8")
   : "";
+const blockDocumentMigrationPath =
+  "supabase/migrations/20260831120000_chart_soap_block_document.sql";
+const blockDocumentMigration = existsSync(blockDocumentMigrationPath)
+  ? readFileSync(blockDocumentMigrationPath, "utf8")
+  : "";
+
+const validBlockDocument = {
+  schemaVersion: 1 as const,
+  blocks: [
+    {
+      id: "section-subjective",
+      type: "soapSection",
+      props: {
+        kind: "subjective",
+        label: "주관적",
+        systemLabel: "기본 SOAP",
+        scope: "default",
+      },
+      children: [
+        {
+          id: "subjective-text",
+          type: "paragraph",
+          props: {
+            backgroundColor: "default",
+            textColor: "default",
+            textAlignment: "left",
+          },
+          content: [{ type: "text", text: "블록 보호자 진술", styles: {} }],
+          children: [],
+        },
+      ],
+    },
+  ],
+};
 
 const validSoapInput = {
   encounterId,
-  subjective: "보호자 설명: DEN-69 synthetic SOAP 저장 확인",
-  objective: "활력 징후 기록",
-  assessment: "업무 흐름 재현용 평가",
-  plan: "업무 흐름 재현용 계획",
+  blockDocument: validBlockDocument,
+  subjective: "블록 보호자 진술",
+  objective: "",
+  assessment: "",
+  plan: "",
   mode: "autosave" as const,
 };
 
@@ -162,6 +197,243 @@ test("SOAP note core enforces active workspace membership, chart update permissi
   });
 });
 
+test("SOAP note core validates canonical JSON and derives legacy projections instead of trusting client fields", async () => {
+  let receivedFields: Record<string, string> | undefined;
+  const result = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      ...validSoapInput,
+      subjective: "클라이언트가 보낸 불일치 문자열",
+      blockDocument: validBlockDocument,
+    },
+    gateway: {
+      async saveSoapNote(input) {
+        receivedFields = input.fields;
+        return {
+          ok: true,
+          soapNote: {
+            id: "soap-block-document",
+            encounterId,
+            authorUserId: "user-vet",
+            ...input.fields,
+            blockDocument: input.blockDocument,
+            status: "autosaved",
+            createdAt: "2026-08-31T00:00:00.000Z",
+            updatedAt: "2026-08-31T00:00:00.000Z",
+          },
+        };
+      },
+    },
+  });
+
+  expect(receivedFields).toEqual({
+    subjective: "블록 보호자 진술",
+    objective: "",
+    assessment: "",
+    plan: "",
+  });
+  expect(result).toMatchObject({
+    ok: true,
+    soapNote: {
+      blockDocument: validBlockDocument,
+      subjective: "블록 보호자 진술",
+    },
+  });
+
+  const rejected = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      encounterId,
+      blockDocument: { ...validBlockDocument, schemaVersion: 2 },
+    },
+  });
+  expect(rejected).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: { blockDocument: "지원하지 않는 SOAP 문서 버전입니다." },
+  });
+});
+
+test("SOAP note core preserves the canonical Unicode field-length boundary", async () => {
+  const maxDocument = structuredClone(validBlockDocument);
+  maxDocument.blocks[0]!.children[0]!.content[0]!.text = "😀".repeat(10_000);
+
+  const accepted = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      encounterId,
+      blockDocument: maxDocument,
+    },
+    gateway: {
+      async saveSoapNote(input) {
+        return {
+          ok: true,
+          soapNote: {
+            id: "soap-unicode-max",
+            encounterId,
+            authorUserId: "user-vet",
+            ...input.fields,
+            blockDocument: input.blockDocument,
+            status: "autosaved",
+            createdAt: "2026-08-31T00:00:00.000Z",
+            updatedAt: "2026-08-31T00:00:00.000Z",
+          },
+        };
+      },
+    },
+  });
+  expect(accepted).toMatchObject({
+    ok: true,
+    soapNote: { subjective: "😀".repeat(10_000) },
+  });
+
+  const oversizedDocument = structuredClone(maxDocument);
+  oversizedDocument.blocks[0]!.children[0]!.content[0]!.text = "😀".repeat(10_001);
+  const rejected = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      encounterId,
+      blockDocument: oversizedDocument,
+    },
+  });
+  expect(rejected).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: { blockDocument: "SOAP 문서가 허용된 크기를 초과했습니다." },
+  });
+});
+
+test("SOAP note core rejects an implicit legacy-shaped write that omits the canonical document", async () => {
+  const result = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      encounterId,
+      subjective: "이 요청은 기존 canonical 문서를 지우면 안 됩니다.",
+    },
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: { blockDocument: "SOAP 블록 문서가 필요합니다." },
+  });
+});
+
+test("SOAP note core fails closed when a required audit append fails", async () => {
+  const result = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: validSoapInput,
+    auditGateway: {
+      async appendEvent() {
+        return { ok: false, status: 500, error: "db_write_failed" };
+      },
+    },
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 500,
+    error: "db_write_failed",
+  });
+});
+
+test("SOAP note core falls back when a database audit marker is false or incomplete", async () => {
+  let fallbackAuditCalls = 0;
+  const incompleteMarkers = [
+    {
+      auditHandledBy: "database_transaction" as const,
+      auditRecorded: false,
+    },
+    {
+      auditHandledBy: "database_transaction" as const,
+      auditRecorded: true,
+    },
+  ];
+
+  for (const marker of incompleteMarkers) {
+    const result = await saveChartSoapNote({
+      actorUserId: "user-vet",
+      workspaceId,
+      input: validSoapInput,
+      gateway: {
+        async saveSoapNote(input) {
+          return {
+            ok: true,
+            soapNote: {
+              id: `soap-fallback-audit-${fallbackAuditCalls}`,
+              encounterId,
+              authorUserId: "user-vet",
+              ...input.fields,
+              blockDocument: input.blockDocument,
+              status: "autosaved",
+              createdAt: "2026-08-31T00:00:00.000Z",
+              updatedAt: "2026-08-31T00:00:00.000Z",
+            },
+            ...marker,
+          };
+        },
+      },
+      auditGateway: {
+        async appendEvent(event) {
+          fallbackAuditCalls += 1;
+          return { ok: true, event };
+        },
+      },
+    });
+
+    expect(result).toMatchObject({ ok: true, auditRecorded: true });
+  }
+
+  expect(fallbackAuditCalls).toBe(2);
+});
+
+test("SOAP note core trusts a complete database-transaction audit marker without appending a duplicate", async () => {
+  let fallbackAuditCalls = 0;
+  const result = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: validSoapInput,
+    gateway: {
+      async saveSoapNote(input) {
+        return {
+          ok: true,
+          soapNote: {
+            id: "soap-transactional-audit",
+            encounterId,
+            authorUserId: "user-vet",
+            ...input.fields,
+            blockDocument: input.blockDocument,
+            status: "autosaved",
+            createdAt: "2026-08-31T00:00:00.000Z",
+            updatedAt: "2026-08-31T00:00:00.000Z",
+          },
+          auditHandledBy: "database_transaction",
+          auditRecorded: true,
+          auditEventId: "chart-soap-save-audit-1",
+        };
+      },
+    },
+    auditGateway: {
+      async appendEvent() {
+        fallbackAuditCalls += 1;
+        return { ok: false, status: 500, error: "db_write_failed" };
+      },
+    },
+  });
+
+  expect(fallbackAuditCalls).toBe(0);
+  expect(result).toMatchObject({ ok: true, auditRecorded: true });
+});
+
 test("SOAP note core rejects stale expectedUpdatedAt when another tab saved first", async () => {
   const nowValues = [
     "2026-05-19T12:00:00.000Z",
@@ -246,7 +518,7 @@ test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC call
           id: "soap-db-den-69",
           encounterId,
           authorUserId: "00000000-0000-4000-8000-000000000002",
-          subjective: validSoapInput.subjective,
+          subjective: "\u00a0블록 보호자 진술\u00a0",
           objective: validSoapInput.objective,
           assessment: validSoapInput.assessment,
           plan: validSoapInput.plan,
@@ -254,6 +526,9 @@ test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC call
           autosavedAt: "2026-05-19T12:00:00.000Z",
           createdAt: "2026-05-19T12:00:00.000Z",
           updatedAt: "2026-05-19T12:00:00.000Z",
+          auditHandledBy: "database_transaction",
+          auditRecorded: true,
+          auditEventId: "chart-soap-save-db-audit",
         },
         error: null,
       };
@@ -271,24 +546,106 @@ test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC call
       assessment: validSoapInput.assessment,
       plan: validSoapInput.plan,
     },
+    blockDocument: validBlockDocument,
     mode: "autosave",
+    requestId: "request-soap-save-1",
   });
 
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({
-    functionName: "clair_save_chart_soap_note",
+    functionName: "clair_save_chart_soap_note_v2",
     args: {
       p_workspace_id: workspaceId,
       p_actor_user_id: "00000000-0000-4000-8000-000000000002",
       p_encounter_id: encounterId,
       p_expected_updated_at: "2026-05-19T12:00:00.000Z",
       p_mode: "autosave",
+      p_request_id: "request-soap-save-1",
+      p_note: {
+        blockDocument: validBlockDocument,
+        subjective: validSoapInput.subjective,
+      },
     },
   });
   expect(result).toMatchObject({
     ok: true,
-    soapNote: { id: "soap-db-den-69", encounterId },
+    soapNote: {
+      id: "soap-db-den-69",
+      encounterId,
+      subjective: "\u00a0블록 보호자 진술\u00a0",
+    },
+    auditHandledBy: "database_transaction",
+    auditRecorded: true,
+    auditEventId: "chart-soap-save-db-audit",
   });
+});
+
+test("SOAP BlockNote migration keeps canonical JSON and legacy projections inside the guarded RPC boundary", () => {
+  expect(blockDocumentMigration).toContain("add column if not exists block_document jsonb");
+  expect(blockDocumentMigration).toContain("block_document_schema_version smallint");
+  expect(blockDocumentMigration).toContain("soap_notes_block_document_pair_check");
+  expect(blockDocumentMigration).toContain("octet_length(block_document::text) <= 262144");
+  expect(blockDocumentMigration).toContain("private.clair_soap_document_field");
+  expect(blockDocumentMigration).toContain("private.clair_soap_document_is_valid");
+  expect(blockDocumentMigration).toContain(
+    "and jsonb_array_length(v_block->'children') > 0",
+  );
+  expect(blockDocumentMigration).toContain("v_block_count > 400");
+  expect(blockDocumentMigration).toContain("or v_id = any(v_ids)");
+  expect(blockDocumentMigration).toContain("private.clair_soap_inline_is_valid");
+  expect(blockDocumentMigration).toContain("private.clair_soap_link_is_valid");
+  expect(blockDocumentMigration).toContain(
+    "or not private.clair_soap_link_is_valid(v_inline->>'href')",
+  );
+  expect(blockDocumentMigration).toContain("private.clair_soap_styles_are_valid");
+  expect(blockDocumentMigration).toContain(
+    "private.clair_soap_trim_boundary_whitespace",
+  );
+  expect(blockDocumentMigration).toContain("char_length(v_subjective) > 10000");
+  expect(blockDocumentMigration).toContain("if p_depth = 0 then");
+  expect(blockDocumentMigration).toContain("jsonb_typeof(p_document) is distinct from 'object'");
+  expect(blockDocumentMigration).toContain("soap_document_projection_mismatch");
+  expect(blockDocumentMigration).toContain(
+    "private.clair_guard_legacy_soap_projection_update",
+  );
+  expect(blockDocumentMigration).toContain(
+    "raise exception 'soap_client_upgrade_required'",
+  );
+  expect(blockDocumentMigration).toContain("'blockDocument', case");
+  expect(blockDocumentMigration).toContain("block_document = v_document->'blocks'");
+  expect(blockDocumentMigration).toContain("raise exception 'block_document_required'");
+  expect(blockDocumentMigration).toContain(
+    "if p_mode is null or p_mode not in ('autosave', 'manual_save')",
+  );
+  expect(blockDocumentMigration).toContain("raise exception 'invalid_save_mode'");
+  expect(blockDocumentMigration).toContain("public.clair_append_audit_event");
+  expect(blockDocumentMigration).toContain("'auditHandledBy', 'database_transaction'");
+  expect(blockDocumentMigration).not.toContain(
+    "select public.clair_get_chart_soap_note(p_workspace_id, p_encounter_id)",
+  );
+  expect(blockDocumentMigration).toContain(
+    "create or replace function public.clair_save_chart_soap_note(",
+  );
+  expect(blockDocumentMigration).toContain("set search_path = ''");
+  expect(blockDocumentMigration).toContain("chart:view");
+  expect(blockDocumentMigration).toContain("chart:update");
+  expect(blockDocumentMigration).toContain("v_actor_user_id is distinct from auth.uid()");
+  expect(blockDocumentMigration).toContain("raise exception 'soap_note_conflict'");
+  expect(blockDocumentMigration).toContain(
+    "revoke all on function public.clair_get_chart_soap_note(text, uuid) from anon",
+  );
+  expect(blockDocumentMigration).toContain(
+    "grant execute on function public.clair_save_chart_soap_note_v2(text, text, uuid, jsonb, timestamptz, text, text) to authenticated",
+  );
+  expect(blockDocumentMigration).toContain(
+    "grant execute on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text) to authenticated",
+  );
+  expect(blockDocumentMigration).not.toContain(
+    "drop function if exists public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text)",
+  );
+  expect(blockDocumentMigration).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
 });
 
 test("SOAP note persistence migration defines local-first RPC boundary without secrets", () => {

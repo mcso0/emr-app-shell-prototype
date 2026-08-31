@@ -2,10 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ko } from "@blocknote/core/locales";
-import {
-  filterSuggestionItems,
-  insertOrUpdateBlockForSlashMenu,
-} from "@blocknote/core/extensions";
+import { filterSuggestionItems } from "@blocknote/core/extensions";
 import {
   getDefaultReactSlashMenuItems,
   SuggestionMenuController,
@@ -47,29 +44,46 @@ const mediaMenuTitles = new Set([
 ]);
 
 function hasSoapSystem(
-  blocks: readonly ChartSoapBlock[],
+  editor: ChartSoapBlockEditorInstance,
   systemLabel: string,
 ): boolean {
-  return blocks.some(
-    (block) =>
+  let found = false;
+  editor.forEachBlock((block) => {
+    if (
       block.type === "soapSection" &&
-      block.props.systemLabel === systemLabel,
-  );
+      block.props.systemLabel === systemLabel
+    ) {
+      found = true;
+      return false;
+    }
+    return true;
+  });
+  return found;
 }
 
 function insertSoapTemplate(
   editor: ChartSoapBlockEditorInstance,
   blocks: ChartSoapPartialBlock[],
 ) {
-  const [firstBlock, ...remainingBlocks] = blocks;
-  if (!firstBlock) return;
+  if (!blocks.length) return;
 
-  const insertedFirstBlock = insertOrUpdateBlockForSlashMenu(editor, firstBlock);
-  const insertedRemainingBlocks = remainingBlocks.length
-    ? editor.insertBlocks(remainingBlocks, insertedFirstBlock, "after")
-    : [];
-  const lastInsertedBlock =
-    insertedRemainingBlocks.at(-1) ?? insertedFirstBlock;
+  const cursorBlock = editor.getTextCursorPosition().block;
+  let rootBlock: ChartSoapBlock = cursorBlock;
+  let parentBlock = editor.getParentBlock(rootBlock);
+  while (parentBlock) {
+    rootBlock = parentBlock;
+    parentBlock = editor.getParentBlock(rootBlock);
+  }
+
+  const insertedBlocks =
+    rootBlock.id === cursorBlock.id
+      ? editor.replaceBlocks([cursorBlock], blocks).insertedBlocks
+      : (() => {
+          editor.removeBlocks([cursorBlock]);
+          return editor.insertBlocks(blocks, rootBlock, "after");
+        })();
+  const lastInsertedBlock = insertedBlocks.at(-1);
+  if (!lastInsertedBlock) return;
   const editableChild = lastInsertedBlock.children.at(0);
 
   if (editableChild) {
@@ -77,7 +91,7 @@ function insertSoapTemplate(
   }
 }
 
-function buildSoapSuggestionItems({
+export function buildSoapSuggestionItems({
   editor,
   onNotice,
 }: {
@@ -91,7 +105,7 @@ function buildSoapSuggestionItems({
     blocks: ChartSoapPartialBlock[];
     systemLabel: string;
   }) => {
-    if (hasSoapSystem(editor.document, systemLabel)) {
+    if (hasSoapSystem(editor, systemLabel)) {
       onNotice(`${systemLabel} 템플릿이 이미 문서에 있습니다.`);
       return;
     }
