@@ -43,6 +43,21 @@ test("billing summary realtime payload accepts only the scoped minimal v1 contra
   ).toEqual(payload("tx-1"));
   expect(
     parseChartBillingSummaryRealtimePayload(
+      {
+        ...payload("tx-system-id"),
+        id: "fdc183cc-ccea-4b8b-b991-4ab525c79cfb",
+      },
+      { encounterId, workspaceId },
+    ),
+  ).toEqual(payload("tx-system-id"));
+  expect(
+    parseChartBillingSummaryRealtimePayload(
+      { ...payload("tx-invalid-system-id"), id: "not-a-uuid" },
+      { encounterId, workspaceId },
+    ),
+  ).toBeNull();
+  expect(
+    parseChartBillingSummaryRealtimePayload(
       { ...payload("tx-2"), amount: 201_000 },
       { encounterId, workspaceId },
     ),
