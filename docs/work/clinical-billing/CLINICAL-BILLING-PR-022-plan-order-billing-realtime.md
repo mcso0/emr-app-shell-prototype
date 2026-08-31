@@ -1,9 +1,9 @@
 ---
 id: "CLINICAL-BILLING-PR-022"
-status: "in_progress"
+status: "human_review"
 area: "clinical-billing"
 priority: "P0"
-target_pr: "TBD"
+target_pr: "#683"
 source_docs:
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-020-plan-order-billing-response-latency.md"
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-021-plan-order-region-timing.md"
