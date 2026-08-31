@@ -180,31 +180,26 @@ Queue projection, and one Billing candidate. PR #640 merged at
 `clinical_use_allowed = false`; this is not clinical approval or real-hospital
 launch readiness.
 
-CLINICAL-MASTER-PR-022 is blocked after the approved performance-candidate
-remote publish fully rolled back. The earlier packet applied six additive
-execution-preset migrations; both earlier 689-record publisher calls returned
-Cloudflare 524 and were later proven fully rolled back. Candidate commit
-`4549c6fd36b9347e05361b0d63a610ac33dfd10f` then received a separate exact-SHA
-approval. Its performance migration and final consultation runtime
-compatibility migration were applied to the shared synthetic/demo project as
-history `20260831122808` and `20260831122838`. Post-apply owner/config/ACL,
-public writer MD5 `a85f22b4af1e2cb1e5262b3ce0993a30`, foundation `510/108/108`,
-backfill audit `324`, and frozen stable-key/lineage SHA gates passed. The exact
-1,982,060-byte payload contained 689 records / 522 orders and only
-`synthetic_unreviewed`, `clinicalUseAllowed=false` presets. Its one approved
-publisher call used `lock_timeout=5s` and `statement_timeout=60s` and was
-canceled with SQLSTATE `57014`. The immediate 2026-08-31 12:37:27 UTC readback
-returned target release 0, manifest 0, preset version/current `108/108`, master
-orders 510, and active publisher/adopter backends 0. Independent boundary
-review therefore classifies it as **COMPLETE ROLLBACK / SAFE STOP**. The two new
-migrations remain applied because they preserve performance and consultation/
-billing/Realtime permission-order fixes, but publisher replay, workspace
-adoption, history repair, deletion, PR/merge, deployment, and clinical
-activation are prohibited. Local 3-second rehearsal performance did not
-predict the remote 60-second result. The next remote attempt requires read-only
-remote bottleneck analysis, a different performance candidate, a new exact SHA
-packet, isolated verification, independent security review, and separate
-approval.
+CLINICAL-MASTER-PR-022 has completed the implementation and shared
+synthetic/demo Supabase rollout; code delivery and authenticated UI smoke remain
+in progress. The final set-based publisher migrations preserved owner,
+`SECURITY DEFINER`, fixed search path and private ACLs. Exact 1,982,060-byte
+payload SHA `834812eaea2afb2fafb93ea3b0a23efb5bc7df54ea3ac8977983683523c4e278`
+published release no. 50 (`647629e9-41fe-4d75-a572-99f34bf428ea`) in 25.2s and
+the same-input retry completed in 10.85s with `idempotent=true`. Final remote
+counts are manifest/stage `689/689`, immutable versions 535, review events
+1,070, execution preset version/current `630/522`, and semantic mismatch 0.
+All three allowlisted workspaces now have `522/522/0` catalog/preset-link/empty-
+default counts. The guarded rollout accepted 414 current-release updates and
+dismissed 108 dispensing updates whose workspace profiles remain safely pinned
+to master order revision 1; existing profile-matched presets were preserved.
+Cheongdam's 12 paused rows were also preserved. Chart search returns prefilled
+details for every visible row: demo `522/522`, Cheongdam `510/510`, pilot
+`520/520`. Target current-preset, deferred profile/preset and clinical-gate
+mismatches are zero, and `clair-foreign-demo` catalog/update/lab/notification/
+audit changes are zero. All content remains `synthetic_unreviewed` with
+`clinicalUseAllowed=false`; clinical validation, dispensing revision-2 profile
+republish and clinical activation are deferred.
 
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,

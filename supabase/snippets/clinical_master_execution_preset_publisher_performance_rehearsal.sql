@@ -531,6 +531,31 @@ begin
   end if;
   if (
     select pg_catalog.count(*)
+    from master.master_record_versions
+    where release_id = v_release_id
+  ) <> 535 or exists (
+    select 1
+    from master.master_record_versions version
+    join private.clinical_master_lab_publish_stage stage
+      on stage.release_id = version.release_id
+     and stage.master_record_id = version.master_record_id
+    where version.release_id = v_release_id
+      and (
+        version.revision is distinct from stage.effective_revision
+        or (version.snapshot - 'revision')
+          is distinct from stage.base_content || stage.relation_content
+      )
+  ) or exists (
+    select 1
+    from private.clinical_master_lab_publish_stage stage
+    join master.master_records owner on owner.id = stage.master_record_id
+    where stage.release_id = v_release_id
+      and owner.current_revision is distinct from stage.effective_revision
+  ) then
+    raise exception 'publisher_rehearsal_stage_version_mismatch';
+  end if;
+  if (
+    select pg_catalog.count(*)
     from master.master_review_events event
     join master.master_record_versions version
       on version.master_record_id = event.master_record_id
@@ -591,6 +616,11 @@ begin
       from private.clinical_master_release_payload_owner_manifest
       where release_id = (v_first ->> 'releaseId')::uuid
     ) <> 689
+    or (
+      select pg_catalog.count(*)
+      from master.master_record_versions
+      where release_id = (v_first ->> 'releaseId')::uuid
+    ) <> 535
     or coalesce(
       pg_catalog.current_setting(
         'clinical_master.publisher_canonical_sha256',

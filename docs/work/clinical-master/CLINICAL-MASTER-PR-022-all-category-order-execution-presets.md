@@ -3,7 +3,7 @@ id: "CLINICAL-MASTER-PR-022"
 type: "Work Item"
 title: "All-category clinical-master order execution presets"
 description: "Adds a generic, evidence-labeled execution-preset contract for every clinical-master order category and carries editable defaults through workspace adoption into immutable chart snapshots."
-status: "blocked"
+status: "in_progress"
 area: "clinical-master"
 priority: "P0"
 tags: ["clinical-master", "order-presets", "workspace-adoption", "chart-orders", "supabase", "synthetic-demo"]
@@ -19,8 +19,8 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-020-workspace-dispensing-preset-management.md"
 dependencies: ["CLINICAL-MASTER-PR-016", "CLINICAL-MASTER-PR-017", "CLINICAL-MASTER-PR-020"]
 updated: "2026-08-31"
-remote_writes: 11
-remote_publish_outcome: "rolled_back"
+remote_writes: 19
+remote_publish_outcome: "published_release_50_and_workspace_rollout_completed"
 ---
 
 # Clinical Master PR-022: All-category order execution presets
@@ -41,7 +41,9 @@ patient, provider, ward, device, or price authority into the central master.
 - Implementation worktree:
   `/Users/iseung-ug/project/emr-app-shell-prototype/.worktrees/clinical-master-execution-presets-20260831`
 - Branch: `codex/clinical-master-execution-presets-20260831`
-- Current `origin/main` baseline: `00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f`
+- Current delivery rebase target: `a43de024a84aaf1783d294bc877230eaf2878a4f`
+  (`origin/main` at final remote rollout closeout).
+- Historical implementation baseline: `00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f`.
 - Historical candidate commit used at the completed remote execution gate:
   `1c75aa04079bcdda36e50bfcc9ce0bf4350f4494`
 - Current-main feature commit: `b465608c`.
@@ -277,12 +279,64 @@ action, present:
   performance `INFO 402 / WARN 13`; no clean-advisor claim is made. Master
   release/current-preset covering-index notices are investigation inputs, not
   a proven timeout cause.
+- The follow-up read-only bottleneck packet mapped the installed cumulative
+  publisher line 606 to the `masterKey` assignment inside the 689-owner revision
+  loop. Before that loop the failed transaction had attempted the full 689-row
+  combined stage, 2,455 stage updates, and 522/72/18 order/test/panel durable
+  stage inserts. The assignment itself is not the slow operation; the timer was
+  delivered at a PL/pgSQL interrupt point, and the exact iteration is unknown.
+- Current locks were zero and deadlocks remained zero. The combined stage was
+  3.9 MB with heap block read/hit `70/74252`, `seq_scan=0`, and
+  `idx_scan=7521`. A safe `EXPLAIN` of the relation helper used the existing
+  `(release_id, master_key)` index through the four-row release join. Relation
+  size, blocking lock, sequential scan, and the advisor's child-side FK index
+  notices are therefore not supported as the primary timeout cause.
+- Remote retrospective attribution is bounded because
+  `track_functions=none` and `pg_stat_statements.track=top`; neither setting was
+  changed and statistics were not reset. The leading implementation hypothesis
+  is cumulative CPU/SPI cost from repeated row-wise payload, stage, latest-
+  version, snapshot, and owner processing on the remote compute, not a single
+  confirmed slow statement.
+- A new local-only migration replaces the second row-wise owner revision pass
+  with a release-stage-backed set update and folds the four repeated latest-
+  version passes into release-scoped CTEs. It preserves the installed canonical
+  digest and omitted-lab patches and compares function owner, security-definer,
+  search path, ACL, volatility, and parallel safety before/after replacement.
+- Isolated migration apply and reapply passed. The exact functional rehearsal
+  passed with 535 release versions, manifest 689, review events 1,070, presets
+  `630/522`, stage/version mismatch 0, owner/current mismatch 0, and forced-
+  timeout residue 0.
+- The local-only benchmark records fixture/migration hashes, relation/TOAST
+  sizes, table statistics, function hashes, PostgreSQL settings, and raw JSONL.
+  It accepts only a local `unix://` Docker endpoint, a `supabase_db_` container,
+  the Supabase Postgres image, and exact `510/108/108` template baseline, and it
+  drops every runner-created database in `finally`.
+- Two ABBA cycles passed: four baseline and four candidate runs, with candidate
+  faster in all four samples and SQL median 3.051s -> 2.926s (4.1%). A separate
+  committed publish/new-connection retry passed at 3.048s / 1.380s with the same
+  release, `idempotent=true`, and zero count/revision delta.
+- These results initially proved only the local semantic/atomic contract and
+  same-template comparison. A later exact-SHA remote gate applied the C1/C2
+  migrations, completed release no. 50 publish/retry, and completed the guarded
+  three-workspace rollout described below.
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS.
 - `npm run build`: PASS with one pre-existing PRD-viewer NFT trace warning.
 - `npm run docs:check`: PASS.
 - `npm run security:secrets`: PASS.
 - `git diff --check`: PASS.
+- Final C2 ABBA median: baseline 2.824s -> candidate 2.545s (9.85%);
+  committed publish/new-connection retry 2.633s / 1.375s.
+- Remote exact publish/retry: 25.2s / 10.85s, release no. 50,
+  manifest/stage `689/689`, version 535, preset version/current `630/522`,
+  semantic mismatch 0.
+- Guarded rollout packet SHA
+  `ed17b6bc96b26f01c3791c9a9dbe989cd95f94abedbb8dd035372f4027ce590f`
+  passed rollback rehearsal, residue readback, independent High/Medium/Low
+  `0/0/0`, persistent execution, and immediate semantic readback.
+- Target catalog/preset/default completeness is `522/522/0` in all three
+  workspaces. Chart search prefill is demo `522/522`, Cheongdam `510/510`, pilot
+  `520/520`; foreign-control mutations are zero.
 
 Implementation report:
 
@@ -291,24 +345,25 @@ Implementation report:
 
 ## Current Status
 
-The implementation and local verification remain complete. The first approved
-remote packet applied the six PR-022 foundation migrations; both earlier
-publisher calls returned Cloudflare 524 and were proven fully rolled back.
+The implementation and remote synthetic/demo data rollout are complete. Project
+`qmerxgzrwaaahpkhjqlc` has the exact C1/C2 set-based migrations installed with
+post-apply owner/config/ACL and function-definition verification. Exact payload
+SHA `834812eaea2afb2fafb93ea3b0a23efb5bc7df54ea3ac8977983683523c4e278`
+published release no. 50 (`647629e9-41fe-4d75-a572-99f34bf428ea`) in 25.2s;
+the same-input retry completed in 10.85s and returned `idempotent=true`.
 
-A separate approval then authorized the exact performance candidate at commit
-`4549c6fd36b9347e05361b0d63a610ac33dfd10f`. Project
-`qmerxgzrwaaahpkhjqlc` now has the performance and consultation runtime
-compatibility migrations applied as history `20260831122808` and
-`20260831122838`. All post-apply security and frozen baseline gates passed.
-The exact 689/522 payload was called once under a 60-second statement timeout
-and returned SQLSTATE `57014`. Immediate readback showed target release 0,
-manifest 0, preset version/current `108/108`, master orders 510, and no active
-publisher/adopter backend, proving complete rollback. Adoption was not called.
+All three allowlisted workspaces now have 522 catalog rows, 522 preset links,
+and zero empty defaults. Exact current-release review resolution accepted 414
+rows and safely dismissed the 108 dispensing updates whose workspace-owned
+profiles remain pinned to master order revision 1; their existing profile-
+matched presets were preserved instead of being force-upgraded to revision 2.
+Cheongdam's 12 paused rows were also preserved. Chart search returns prefilled
+details for every visible row: demo `522/522`, Cheongdam `510/510`, and pilot
+`520/520`. Target current-preset, deferred profile/preset, and clinical-gate
+mismatches are all zero. The non-target `clair-foreign-demo` has zero catalog,
+master-update, lab item/link, notification, and audit changes.
 
-Status remains **BLOCKED / NEW PERFORMANCE CANDIDATE APPROVAL REQUIRED**. The
-two new migrations remain applied, but publisher replay, workspace adoption,
-migration/history repair, deletion, staging/pg_cron workaround, push/PR/merge,
-deployment, and clinical activation are prohibited. Local 3-second timing did
-not resolve the remote 60-second behavior. The next attempt requires read-only
-remote bottleneck analysis, a different candidate, new exact SHA packet,
-isolated verification, independent security review, and separate approval.
+Status is **IN PROGRESS / CODE DELIVERY AND AUTHENTICATED UI SMOKE REMAIN**.
+All content remains `synthetic_unreviewed` and
+`clinicalUseAllowed=false`. Clinical validation, dispensing revision-2 profile
+republish, and clinical activation are explicitly deferred.

@@ -12,9 +12,15 @@ import {
 } from "../src/features/chart/server-order-draft-persistence-core";
 import {
   createMockOrderCatalogGateway,
+  type OrderCatalogItem,
   type OrderSet,
 } from "../src/features/hospital-admin/server-order-catalog-core";
-import type { EmrOrder, Encounter } from "../src/types/emr-domain";
+import type {
+  ClinicalOrderType,
+  EmrOrder,
+  Encounter,
+  ServiceItemType,
+} from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
@@ -1129,6 +1135,210 @@ test("new Order Set child draft inputs preserve applied catalog defaults", async
     "detailInputs: readCatalogDefaultDetailInputs(item)",
   );
   expect(childInputsSource).not.toContain("detailInputs: {},");
+});
+
+test("new chart orders start with workspace presets across every non-dispensing category", async () => {
+  const seedGateway = createMockOrderCatalogGateway();
+  const seedCatalog = await seedGateway.listAdminCatalog({ workspaceId });
+  const base = seedCatalog.items.find((item) => item.id === "ord-lab-cbc-baso");
+  expect(base).toBeTruthy();
+  if (!base) return;
+
+  const cases: Array<{
+    clinicalOrderType: ClinicalOrderType;
+    categoryGroup: ServiceItemType;
+    defaultDestinationModule: OrderCatalogItem["defaultDestinationModule"];
+    destinationModule: OrderCatalogItem["destinationModule"];
+    executionMode: OrderCatalogItem["executionMode"];
+    defaults: Record<string, unknown>;
+  }> = [
+    {
+      clinicalOrderType: "consultation",
+      categoryGroup: "consultation",
+      defaultDestinationModule: "chart_only",
+      destinationModule: null,
+      executionMode: "immediate_complete",
+      defaults: {
+        occurrenceCount: 1,
+        timing: "now",
+        instructionSummary: "초진 상담",
+      },
+    },
+    {
+      clinicalOrderType: "clinical_lab",
+      categoryGroup: "lab",
+      defaultDestinationModule: "lab",
+      destinationModule: "lab",
+      executionMode: "routed",
+      defaults: {
+        specimenType: "serum",
+        testPanel: "chemistry_basic",
+        collectionCondition: "fresh_same_day",
+      },
+    },
+    {
+      clinicalOrderType: "imaging",
+      categoryGroup: "imaging",
+      defaultDestinationModule: "imaging",
+      destinationModule: "imaging",
+      executionMode: "routed",
+      defaults: {
+        bodyRegion: "흉부",
+        position: "VD/Lateral",
+        viewCount: 2,
+        contrastRequired: false,
+        sedationRequired: false,
+      },
+    },
+    {
+      clinicalOrderType: "external_lab",
+      categoryGroup: "lab",
+      defaultDestinationModule: "lab",
+      destinationModule: "external_lab",
+      executionMode: "routed",
+      defaults: {
+        providerId: "workspace-provider",
+        specimenType: "serum",
+        testItem: "SDMA",
+        shippingCondition: "냉장 발송",
+      },
+    },
+    {
+      clinicalOrderType: "treatment",
+      categoryGroup: "treatment",
+      defaultDestinationModule: "treatment",
+      destinationModule: "treatment",
+      executionMode: "routed",
+      defaults: {
+        method: "상처 세척",
+        site: "좌측 전지",
+        administeredAmount: 1,
+        frequency: "once",
+        schedule: "now",
+      },
+    },
+    {
+      clinicalOrderType: "hospitalization",
+      categoryGroup: "hospitalization",
+      defaultDestinationModule: "treatment",
+      destinationModule: "hospitalization",
+      executionMode: "routed",
+      defaults: {
+        durationDays: 1,
+        wardOrCage: "workspace-cage",
+        careLevel: "standard",
+        monitoringInterval: 120,
+      },
+    },
+    {
+      clinicalOrderType: "system_exam",
+      categoryGroup: "consultation",
+      defaultDestinationModule: "chart_only",
+      destinationModule: null,
+      executionMode: "immediate_complete",
+      defaults: {
+        bodySystem: "심혈관계",
+        examScope: "심혈관계 평가",
+      },
+    },
+    {
+      clinicalOrderType: "other",
+      categoryGroup: "misc",
+      defaultDestinationModule: "chart_only",
+      destinationModule: null,
+      executionMode: "immediate_complete",
+      defaults: { structuredValue: "기타 구조화 기본값" },
+    },
+  ];
+  const items = cases.map((entry, index): OrderCatalogItem => ({
+    ...base,
+    id: `preset-category-${entry.clinicalOrderType}`,
+    standardOrderId: `master-order-${entry.clinicalOrderType}`,
+    sourcePresetVersion: "release-v1",
+    categoryGroup: entry.categoryGroup,
+    categoryLabel: entry.clinicalOrderType,
+    standardOrderName: `마스터 ${entry.clinicalOrderType}`,
+    inHospitalOrderName: `워크스페이스 ${entry.clinicalOrderType}`,
+    billingName: `청구 ${entry.clinicalOrderType}`,
+    aliases: [],
+    availabilityStatus: "active",
+    defaultDestinationModule: entry.defaultDestinationModule,
+    clinicalOrderType: entry.clinicalOrderType,
+    destinationModule: entry.destinationModule,
+    executionMode: entry.executionMode,
+    detailSchemaVersion: 1,
+    defaultDetailInputs: entry.defaults,
+    sourceMasterRecordId: `00000000-0000-5000-8000-${String(index + 1).padStart(12, "0")}`,
+    sourceMasterRevision: 1,
+    catalogRevision: 1,
+    updatedAt: "2026-08-31T00:00:00.000Z",
+  }));
+  const catalogGateway = createMockOrderCatalogGateway({
+    items,
+    workspaceId,
+  });
+  const encounter: Encounter = {
+    ...setRuntimeEncounter,
+    id: "encounter-all-category-preset-prefill",
+    primaryVeterinarianId: "primary-veterinarian",
+  };
+  const gateway = createMockChartOrderDraftGateway({
+    catalogGateway,
+    encounters: [encounter],
+    orders: [],
+  });
+  const permissionAdapter = createMockWorkspacePermissionAdapter({
+    users: [{ id: "draft-actor", status: "active" }],
+    memberships: [
+      {
+        id: "membership-all-category-preset-prefill",
+        workspaceId,
+        userId: "draft-actor",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
+  });
+  const initial = await gateway.readOrderDraft({
+    encounterId: encounter.id,
+    workspaceId,
+  });
+  expect(initial.ok).toBe(true);
+  if (!initial.ok) return;
+
+  const saved = await saveChartOrderDraft({
+    actorUserId: "draft-actor",
+    gateway,
+    input: {
+      encounterId: encounter.id,
+      expectedEtag: initial.etag,
+      rows: items.map((item) => ({
+        rowType: "individual" as const,
+        orderId: `draft-${item.clinicalOrderType}`,
+        workspaceCatalogItemId: item.id,
+        quantity: 1,
+      })),
+    },
+    permissionAdapter,
+    workspaceId,
+  });
+  expect(saved.ok).toBe(true);
+  if (!saved.ok) return;
+  for (const entry of cases) {
+    const row = saved.rows.find(
+      (candidate) => candidate.orderId === `draft-${entry.clinicalOrderType}`,
+    );
+    expect(row).toMatchObject({
+      clinicalOrderType: entry.clinicalOrderType,
+      detailInputs:
+        entry.clinicalOrderType === "consultation"
+          ? {
+              ...entry.defaults,
+              responsibleClinicianId: "primary-veterinarian",
+            }
+          : entry.defaults,
+    });
+  }
 });
 
 test("consultation draft resolves responsible clinician from encounter primary veterinarian, not actor", async () => {
