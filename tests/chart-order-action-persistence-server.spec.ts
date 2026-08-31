@@ -254,6 +254,67 @@ test("mock order action keeps nonbillable set children out of candidate lifecycl
   expect(billingCallCount).toBe(0);
 });
 
+test("atomic mock confirmation keeps fixed and range set parent-once parity", async () => {
+  const templateOrder = mockOrders.find((order) => order.id === orderId);
+  const templateEncounter = mockEncounters.find(
+    (encounter) => encounter.id === encounterId,
+  );
+  if (!templateOrder || !templateEncounter) {
+    throw new Error("missing chart order mock templates");
+  }
+  const mockEncounterId = "encounter-atomic-set-parent-parity";
+  const buildSetParent = (
+    id: string,
+    amountBasis: "included_order_sum" | "range_price" | "set_fixed_price",
+    lineTotalSnapshot: number,
+    billingReflectionEnabled: boolean,
+  ) => ({
+    ...templateOrder,
+    id,
+    encounterId: mockEncounterId,
+    appliedSnapshot: {
+      ...(templateOrder.appliedSnapshot ?? {}),
+      amountBasis,
+      billingName: id,
+      billingReflectionEnabled,
+      inHospitalOrderName: id,
+      lineTotalSnapshot,
+      orderType: "set",
+      priceKrw: lineTotalSnapshot,
+      quantity: 1,
+      rowType: "set",
+      standardOrderName: id,
+      taxIncluded: true,
+    },
+  });
+  const gateway = createMockChartOrderActionGateway({
+    encounters: [{ ...templateEncounter, id: mockEncounterId }],
+    orders: [
+      buildSetParent("atomic-fixed-parent", "set_fixed_price", 50000, true),
+      buildSetParent("atomic-range-parent", "range_price", 60000, true),
+      buildSetParent("atomic-sum-parent", "included_order_sum", 25000, false),
+    ],
+  });
+
+  const result = await gateway.saveOrderAction({
+    action: "confirm",
+    actorUserId: "user-vet",
+    encounterId: mockEncounterId,
+    expectedEtag: "legacy",
+    idempotencyKey: "atomic-set-parent-parity",
+    orderIds: ["atomic-fixed-parent", "atomic-range-parent", "atomic-sum-parent"],
+    workspaceId,
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    billingCandidates: [
+      expect.objectContaining({ orderId: "atomic-fixed-parent", lineTotal: 50000 }),
+      expect.objectContaining({ orderId: "atomic-range-parent", lineTotal: 60000 }),
+    ],
+  });
+});
+
 test("order action downstream billing receives persisted order IDs", async () => {
   const gateway = createMockChartOrderActionGateway(
     undefined,

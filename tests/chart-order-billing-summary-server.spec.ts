@@ -81,6 +81,21 @@ test("billing summary keeps chart:view and chart:update as separate server gates
   expect(foreignResult).toEqual({ ok: false, status: 403, denialReason: "workspace_membership_missing" });
 });
 
+test("default mock billing summary permissions include the normal admin and vet sessions", async () => {
+  for (const actorUserId of ["user-admin", "user-vet"]) {
+    const result = await readChartOrderBillingSummary({
+      actorUserId,
+      workspaceId,
+      encounterId,
+    });
+    expect(result).toMatchObject({
+      enforcedBy: "chart-order-billing-summary",
+      ok: true,
+      status: 200,
+    });
+  }
+});
+
 test("billing request is revision-aware and returns an invoice handoff", async () => {
   const gateway = createMockChartOrderBillingSummaryGateway(summary);
   const conflict = await requestChartOrderBilling({
@@ -200,6 +215,58 @@ test("migration makes billing explicit, atomic, and encounter-status neutral", a
   expect(linker.indexOf("from public.orders orders")).toBeLessThan(
     linker.indexOf("from public.order_billing_candidates candidate"),
   );
+});
+
+test("billing integrity patch includes fixed and range set parents and excludes voided invoice money", async () => {
+  const migration = await readFile(
+    path.join(
+      process.cwd(),
+      "supabase/migrations/20260831010000_chart_order_billing_summary_integrity.sql",
+    ),
+    "utf8",
+  );
+
+  for (const contract of [
+    "clair_assert_set_parent_billing_candidate_integrity",
+    "clair_create_set_parent_billing_candidate",
+    "chart_order_set_parent_billing_candidate",
+    "task_role = 'aggregate'",
+    "applied_price_snapshot ->> 'billedAs' = 'set_parent'",
+    "o.row_type in ('individual','set_child','set')",
+    "t.task_role in ('execution','aggregate')",
+    "i.status <> 'voided'",
+    "nullif(orders.confirmed_snapshot ->> 'confirmationCommandId', '')",
+    "chart-order-backfill-command-v1|",
+    "orders.id = any(command.selected_root_order_ids)",
+    "line.billing_candidate_id = v_candidate.id",
+    "invoice.encounter_id = v_order.encounter_id",
+    "v_candidate.created_by_user_id is distinct from v_command.actor_user_id",
+    "v_candidate.billing_name_snapshot is distinct from v_expected_billing_name",
+    "v_candidate.unit_price is distinct from coalesce(v_order.unit_price_snapshot, 0)",
+    "set result = jsonb_set(",
+    "set_parent_billing_candidate_backfill_incomplete",
+    "sum_set_parent_billing_candidate_detected",
+  ]) {
+    expect(migration).toContain(contract);
+  }
+
+  const paidTotals = migration.slice(
+    migration.indexOf("), paid_totals as ("),
+    migration.indexOf("), surcharge_totals as ("),
+  );
+  const surchargeTotals = migration.slice(
+    migration.indexOf("), surcharge_totals as ("),
+    migration.indexOf("), requestable as ("),
+  );
+  expect(paidTotals).toContain("i.status <> 'voided'");
+  expect(surchargeTotals).toContain("i.status <> 'voided'");
+  expect(migration).toContain(
+    "revoke all on function private.clair_create_set_parent_billing_candidate()",
+  );
+  expect(migration).toContain(
+    "revoke all on function private.clair_assert_set_parent_billing_candidate_integrity(text,uuid,boolean)",
+  );
+  expect(migration).not.toMatch(/update\s+public\.encounters/i);
 });
 
 test("live billing UI keeps protected snapshots out of the actor-agnostic global store", async () => {

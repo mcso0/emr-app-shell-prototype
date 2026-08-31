@@ -226,6 +226,7 @@ import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog
 import {
   ChartOrderBillingDetailAside,
   ChartOrderFinanceFooter,
+  type ChartOrderBillingSummaryFreshness,
 } from "@/features/chart/components/chart-order-finance-footer";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
@@ -8396,10 +8397,16 @@ function OrderArea({
     useState<ChartOrderExecutionReadModel>();
   const [billingSummary, setBillingSummary] =
     useState<ChartOrderBillingSummary>();
-  const [billingSummaryLoading, setBillingSummaryLoading] = useState(true);
+  const billingSummaryRef = useRef<ChartOrderBillingSummary | undefined>(
+    undefined,
+  );
+  const billingSummaryRequestSequenceRef = useRef(0);
+  const [billingSummaryFreshness, setBillingSummaryFreshness] =
+    useState<ChartOrderBillingSummaryFreshness>("loading");
   const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
   const [billingRequesting, setBillingRequesting] = useState(false);
-  const [billingError, setBillingError] = useState<string>();
+  const [billingSummaryError, setBillingSummaryError] = useState<string>();
+  const [billingRequestError, setBillingRequestError] = useState<string>();
   const [orderMutationDraft, setOrderMutationDraft] =
     useState<ChartOrderMutationDraft | null>(null);
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
@@ -9208,34 +9215,69 @@ function OrderArea({
     orderDraftReloadKey,
     setDraftRows,
   ]);
-  useEffect(() => {
-    let cancelled = false;
-    void loadChartOrderBillingSummaryRoute({
+  const refreshBillingSummary = useCallback(async () => {
+    const requestSequence = billingSummaryRequestSequenceRef.current + 1;
+    billingSummaryRequestSequenceRef.current = requestSequence;
+    setBillingSummaryFreshness(
+      billingSummaryRef.current ? "refreshing" : "loading",
+    );
+    setBillingSummaryError(undefined);
+    const result = await loadChartOrderBillingSummaryRoute({
       actorHeaders,
       encounterId: bundle.encounter.id,
       workspaceId: bundle.encounter.workspaceId,
-    }).then((result) => {
-      if (cancelled) return;
-      if (result.ok) {
-        setBillingSummary(result.summary);
-      } else {
-        setBillingError(
-          result.denialReason === "permission_missing"
-            ? "금액 정보를 확인할 권한이 없습니다."
-            : "금액 정보를 불러오지 못했어요.",
-        );
-      }
-      setBillingSummaryLoading(false);
     });
-    return () => {
-      cancelled = true;
-    };
+    if (billingSummaryRequestSequenceRef.current !== requestSequence) {
+      return false;
+    }
+    if (result.ok) {
+      billingSummaryRef.current = result.summary;
+      setBillingSummary(result.summary);
+      setBillingSummaryFreshness("fresh");
+      setBillingSummaryError(undefined);
+      return true;
+    }
+    setBillingSummaryFreshness(
+      billingSummaryRef.current ? "stale" : "error",
+    );
+    setBillingSummaryError(
+      result.denialReason === "permission_missing"
+        ? "금액 정보를 확인할 권한이 없습니다."
+        : "최신 금액을 불러오지 못했어요. 다시 확인해 주세요.",
+    );
+    return false;
   }, [
     actorHeaders,
     bundle.encounter.id,
     bundle.encounter.workspaceId,
-    orderDraftReloadKey,
   ]);
+  useEffect(() => {
+    void refreshBillingSummary();
+    return () => {
+      billingSummaryRequestSequenceRef.current += 1;
+    };
+  }, [refreshBillingSummary]);
+  useEffect(() => {
+    const refreshIfSafe = () => {
+      if (
+        draftTouchedRef.current ||
+        orderDraftSaveInFlightRef.current ||
+        orderDraftSavePromiseRef.current
+      ) {
+        return;
+      }
+      void refreshBillingSummary();
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshIfSafe();
+    };
+    window.addEventListener("focus", refreshIfSafe);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.removeEventListener("focus", refreshIfSafe);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [refreshBillingSummary]);
   const refreshOrderExecution = async () => {
     const result = await loadChartOrderExecution({
       actorHeaders,
@@ -9268,6 +9310,7 @@ function OrderArea({
 
     const operation = (async () => {
       orderDraftSaveInFlightRef.current = true;
+      let persistedMutation = false;
       while (draftTouchedRef.current) {
         const attemptedDraftEditVersion = draftEditVersionRef.current;
         const attemptedRemovedRootOrderIds = new Set(
@@ -9352,6 +9395,7 @@ function OrderArea({
           const conflict =
             result.denialReason === "revision_conflict" ||
             result.error === "revision_conflict";
+          if (conflict) void refreshBillingSummary();
           orderDraftConflictRef.current = conflict;
           setOrderDraftSaveState(conflict ? "conflict" : "error");
           draftTouchedRef.current = true;
@@ -9422,6 +9466,7 @@ function OrderArea({
         }
         orderDraftFailedAutoSaveVersionRef.current = null;
         orderDraftConflictRef.current = false;
+        persistedMutation = true;
         if (attemptedRemovedRootOrderIds.size > 0) {
           toast.success(
             `${attemptedRemovedRootOrderIds.size}개 후보를 삭제하고 저장했어요.`,
@@ -9439,6 +9484,7 @@ function OrderArea({
         }
       }
 
+      if (persistedMutation) await refreshBillingSummary();
       setOrderDraftSaveState("saved");
       if (!silent) toast.success("Order 업데이트를 저장했어요.");
       return true;
@@ -9560,6 +9606,7 @@ function OrderArea({
       setOrderActionDialog(null);
       setOrderDraftSaveState("saved");
       void refreshOrderExecution();
+      void refreshBillingSummary();
       toast.success("Order 확정 상태를 저장했어요.");
       const hasDispensingTask =
         result.tasks?.some((task) => task.destinationModule === "dispensing") ??
@@ -9608,6 +9655,7 @@ function OrderArea({
       const conflict =
         retryResult.denialReason === "revision_conflict" ||
         retryResult.error === "revision_conflict";
+      if (conflict) void refreshBillingSummary();
       const retryable =
         retryResult.status >= 500 ||
         retryResult.denialReason === "confirmation_in_progress" ||
@@ -9682,6 +9730,7 @@ function OrderArea({
       const conflict =
         effectiveDraftResult.denialReason === "revision_conflict" ||
         effectiveDraftResult.error === "revision_conflict";
+      if (conflict) void refreshBillingSummary();
       orderDraftConflictRef.current = conflict;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
       orderDraftFailedAutoSaveVersionRef.current = attemptedDraftEditVersion;
@@ -9703,6 +9752,7 @@ function OrderArea({
       bundle.encounter.workspaceId,
       { preserveMissingRows: true },
     );
+    void refreshBillingSummary();
     const persistedOrderIds = new Set(
       (effectiveDraftResult.rows ?? [])
         .filter((row) => row.rowType !== "set_child")
@@ -9765,6 +9815,7 @@ function OrderArea({
       const conflict =
         result.denialReason === "revision_conflict" ||
         result.error === "revision_conflict";
+      if (conflict) void refreshBillingSummary();
       const retryable =
         result.status >= 500 ||
         result.denialReason === "confirmation_in_progress" ||
@@ -9977,6 +10028,14 @@ function OrderArea({
       workspaceId: bundle.encounter.workspaceId,
     });
     if (!result.ok) {
+      if (result.denialReason === "revision_conflict") {
+        pendingBillingRequestRef.current = null;
+        setBillingSummaryFreshness("stale");
+        setBillingSummaryError(
+          "다른 사용자가 오더를 변경했어요. 최신 금액을 다시 확인해 주세요.",
+        );
+        void refreshBillingSummary();
+      }
       const error =
         result.denialReason === "amendment_requires_pending"
           ? "진행을 시작한 오더는 같은 attempt에서 정정할 수 없습니다. 재요청을 사용해 주세요."
@@ -10058,6 +10117,7 @@ function OrderArea({
     setSelectedOrderIds(new Set());
     setOrderMutationDraft(null);
     void refreshOrderExecution();
+    void refreshBillingSummary();
     toast.success(`${chartOrderMutationLabels[draft.action]}을 기록했어요.`);
   };
   const orderActionLabel = "Order 확정";
@@ -10076,6 +10136,14 @@ function OrderArea({
               ? "저장됨"
               : "변경 없음";
   const effectiveBillingSummary = billingSummary ?? localBillingSummary;
+  const hasAuthoritativeBillingSummary = Boolean(billingSummary);
+  const billingError = billingRequestError ?? billingSummaryError;
+  const canRequestBilling =
+    billingSummaryFreshness === "fresh" &&
+    hasAuthoritativeBillingSummary &&
+    !hasDraftChanges &&
+    !billingRequesting &&
+    effectiveBillingSummary.orderCounts.requestable > 0;
   const orderFooterAccessibilitySummary = [
     `선택 오더 ${selectedOrderIds.size}건`,
     `선택 오더 합계 ${selectedAmount.toLocaleString()}원`,
@@ -10083,25 +10151,37 @@ function OrderArea({
   ].filter(Boolean).join(" · ");
   const requestEncounterBilling = async (acknowledgeUnfinished: boolean) => {
     if (hasDraftChanges) {
-      setBillingError("변경한 오더를 먼저 업데이트한 뒤 청구해 주세요.");
+      setBillingRequestError("변경한 오더를 먼저 업데이트한 뒤 청구해 주세요.");
       setBillingDrawerOpen(true);
+      return;
+    }
+    const authoritativeSummary = billingSummaryRef.current;
+    if (billingSummaryFreshness !== "fresh" || !authoritativeSummary) {
+      setBillingRequestError("최신 금액을 확인한 뒤 다시 청구해 주세요.");
+      setBillingDrawerOpen(true);
+      if (
+        billingSummaryFreshness !== "loading" &&
+        billingSummaryFreshness !== "refreshing"
+      ) {
+        void refreshBillingSummary();
+      }
       return;
     }
     if (
-      effectiveBillingSummary.unfinishedOrders.length > 0 &&
+      authoritativeSummary.unfinishedOrders.length > 0 &&
       !acknowledgeUnfinished
     ) {
       setBillingDrawerOpen(true);
-      setBillingError("진행 중 오더를 확인한 뒤 중간 정산으로 청구해 주세요.");
+      setBillingRequestError("진행 중 오더를 확인한 뒤 중간 정산으로 청구해 주세요.");
       return;
     }
     setBillingRequesting(true);
-    setBillingError(undefined);
+    setBillingRequestError(undefined);
     const pendingRequest =
-      pendingBillingRequestRef.current?.expectedEtag === effectiveBillingSummary.etag
+      pendingBillingRequestRef.current?.expectedEtag === authoritativeSummary.etag
         ? pendingBillingRequestRef.current
         : {
-            expectedEtag: effectiveBillingSummary.etag,
+            expectedEtag: authoritativeSummary.etag,
             idempotencyKey: createChartOrderBillingIdempotencyKey(),
           };
     pendingBillingRequestRef.current = pendingRequest;
@@ -10109,14 +10189,14 @@ function OrderArea({
       acknowledgeUnfinished,
       actorHeaders,
       encounterId: bundle.encounter.id,
-      expectedEtag: effectiveBillingSummary.etag,
+      expectedEtag: authoritativeSummary.etag,
       idempotencyKey: pendingRequest.idempotencyKey,
       workspaceId: bundle.encounter.workspaceId,
     });
     setBillingRequesting(false);
     if (!result.ok) {
       setBillingDrawerOpen(true);
-      setBillingError(
+      setBillingRequestError(
         result.error === "revision_conflict"
           ? "금액이 변경됐어요. 최신 금액을 다시 확인해 주세요."
           : result.error === "unfinished_ack_required"
@@ -10129,12 +10209,20 @@ function OrderArea({
       );
       if (result.error === "revision_conflict") {
         pendingBillingRequestRef.current = null;
+        setBillingSummaryFreshness("stale");
+        setBillingSummaryError("최신 금액을 불러오지 못했어요. 다시 확인해 주세요.");
         setOrderDraftReloadKey((key) => key + 1);
+        void refreshBillingSummary();
       }
       return;
     }
     pendingBillingRequestRef.current = null;
+    billingSummaryRequestSequenceRef.current += 1;
+    billingSummaryRef.current = result.summary;
     setBillingSummary(result.summary);
+    setBillingSummaryFreshness("fresh");
+    setBillingSummaryError(undefined);
+    setBillingRequestError(undefined);
     toast.success("확정된 오더를 청구 화면으로 보냈어요.");
     if (result.summary.invoiceId) onNavigateToBilling?.(result.summary.invoiceId);
   };
@@ -10489,24 +10577,30 @@ function OrderArea({
         />
         <ChartOrderFinanceFooter
           accessibilitySummary={orderFooterAccessibilitySummary}
+          canRequestBilling={canRequestBilling}
           drawerOpen={billingDrawerOpen}
           error={billingError}
-          loading={billingSummaryLoading}
+          freshness={billingSummaryFreshness}
+          hasAuthoritativeSummary={hasAuthoritativeBillingSummary}
           requesting={billingRequesting}
           saveStatusText={draftStatusText}
           summary={effectiveBillingSummary}
           onOpenDetails={() => {
             setBillingDrawerOpen((open) => !open);
-            setBillingError(undefined);
+            setBillingRequestError(undefined);
           }}
           onRequestBilling={() => void requestEncounterBilling(false)}
         />
         <ChartOrderBillingDetailAside
+          canRequestBilling={canRequestBilling}
           error={billingError}
+          freshness={billingSummaryFreshness}
+          hasAuthoritativeSummary={hasAuthoritativeBillingSummary}
           open={billingDrawerOpen}
           requesting={billingRequesting}
           summary={effectiveBillingSummary}
           onClose={() => setBillingDrawerOpen(false)}
+          onRetry={() => void refreshBillingSummary()}
           onRequestBilling={() => void requestEncounterBilling(true)}
         />
         <Dialog
