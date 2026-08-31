@@ -62,6 +62,13 @@ test("Phase 4 tables keep command, billing, and outbox writes behind the RPC", (
 test("Phase 4 fixture proves partial set expansion, projections, retry, and rollback", () => {
   expect(sqlFixture).toContain("phase4_atomic_confirmation_ok");
   expect(sqlFixture).toContain("phase4_atomic_db_invariants_ok");
+  expect(sqlFixture).toContain("phase4_set_parent_billing_candidate_mismatch");
+  expect(sqlFixture).toContain("phase4_set_parent_billing_summary_mismatch");
+  expect(sqlFixture).toContain("phase4_voided_invoice_money_excluded_ok");
+  expect(sqlFixture).toContain("phase4_historical_set_parent_backfill_ok");
+  expect(sqlFixture).toContain("phase4_set_parent_conflict_fail_closed_ok");
+  expect(sqlFixture).toContain("phase4_invoice_authority_conflict_fail_closed_ok");
+  expect(sqlFixture).toContain("PR019_MIGRATION_REAPPLY");
   expect(sqlFixture).toContain("phase4_mid_commit_rollback_ok");
   expect(sqlFixture).toContain("phase4_mid_commit_db_rollback_ok");
   expect(sqlFixture).toContain("idempotency_conflict");
