@@ -230,6 +230,7 @@ import {
   type ChartOrderBillingSummaryFreshness,
 } from "@/features/chart/components/chart-order-finance-footer";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
+import { useChartBillingSummaryRealtime } from "@/features/chart/chart-order-billing-summary-realtime";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import { useChartStore } from "@/features/chart/store";
@@ -9375,6 +9376,17 @@ function OrderArea({
     bundle.encounter.id,
     bundle.encounter.workspaceId,
   ]);
+  useChartBillingSummaryRealtime({
+    currentEtag: billingSummary?.etag,
+    encounterId: bundle.encounter.id,
+    hasUnsavedEdits: hasDraftChanges,
+    mutationInFlight:
+      orderDraftSaveState === "saving" ||
+      billingRequesting ||
+      Boolean(orderMutationDraft?.saving),
+    onInvalidated: refreshBillingSummary,
+    workspaceId: bundle.encounter.workspaceId,
+  });
   useEffect(() => {
     void refreshBillingSummary();
     return () => {
