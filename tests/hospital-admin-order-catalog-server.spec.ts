@@ -77,6 +77,97 @@ test("workspace preset initialization is idempotent and preserves deterministic 
   );
 });
 
+test("generic execution defaults copy through workspace merge and immutable snapshots", async () => {
+  const cbcPreset = defaultSystemOrderPresets.find(
+    (preset) => preset.presetId === "std-ord-lab-cbc-baso",
+  );
+  expect(cbcPreset).toBeTruthy();
+  const v1Defaults = {
+    specimenType: "edta_whole_blood",
+    testPanel: "cbc",
+    collectionCondition: "fresh_same_day",
+    nested: { source: "master" },
+  };
+  const v1Policies = {
+    specimenType: "derived_from_profile",
+    testPanel: "derived_from_profile",
+    collectionCondition: "preset_fixed",
+  };
+  const seed = initializeWorkspaceOrderCatalogFromPresets({
+    now: "2026-05-25T00:00:00.000Z",
+    presets: [{ ...cbcPreset!, defaultDetailInputs: v1Defaults }],
+    workspaceId: "clair-demo",
+  });
+  const seedItem = seed.items.find(
+    (item) => item.standardOrderId === "std-ord-lab-cbc-baso",
+  );
+  expect(seedItem?.defaultDetailInputs).toEqual(v1Defaults);
+  expect(seedItem?.defaultDetailInputs).not.toBe(v1Defaults);
+
+  const v2Defaults = {
+    ...v1Defaults,
+    collectionCondition: "fasted_if_possible",
+  };
+  const merged = initializeWorkspaceOrderCatalogFromPresets({
+    existingItems: seed.items,
+    now: "2026-05-25T01:00:00.000Z",
+    presets: [{ ...cbcPreset!, presetVersion: "v4", defaultDetailInputs: v2Defaults }],
+    workspaceId: "clair-demo",
+  });
+  const mergedItem = merged.items.find(
+    (item) => item.standardOrderId === "std-ord-lab-cbc-baso",
+  );
+  expect(mergedItem?.defaultDetailInputs).toEqual(v2Defaults);
+
+  const snapshot = createOrderPricingSnapshot(mergedItem!);
+  expect(snapshot.defaultDetailInputs).toEqual(v2Defaults);
+  expect(snapshot.defaultDetailInputs).not.toBe(mergedItem?.defaultDetailInputs);
+  (snapshot.defaultDetailInputs as { nested: { source: string } }).nested.source =
+    "snapshot";
+  expect(mergedItem?.defaultDetailInputs).toEqual(v2Defaults);
+
+  const lineageSnapshot = createOrderPricingSnapshot({
+    ...mergedItem!,
+    defaultDetailInputPolicies: v1Policies,
+    executionPresetLineage: {
+      sourceExecutionPresetId: "00000000-0000-5000-8000-000000000022",
+      sourceExecutionPresetRevision: 2,
+      sourceExecutionPresetSha256: "a".repeat(64),
+    },
+  });
+  expect(lineageSnapshot.defaultDetailInputPolicies).toEqual(v1Policies);
+  expect(lineageSnapshot.executionPresetLineage).toEqual({
+    sourceExecutionPresetId: "00000000-0000-5000-8000-000000000022",
+    sourceExecutionPresetRevision: 2,
+    sourceExecutionPresetSha256: "a".repeat(64),
+  });
+});
+
+test("dispensing snapshots fall back to medication defaults unless a generic preset is present", async () => {
+  const gateway = createMockOrderCatalogGateway();
+  const catalog = await gateway.listAdminCatalog({ workspaceId: "clair-demo" });
+  const medication = catalog.items.find((item) => item.id === "ord-med-maropitant");
+  expect(medication?.defaultDetailInputs).toBeUndefined();
+  expect(medication?.medicationMetadata?.defaultDetailInputs).toBeDefined();
+
+  const fallbackSnapshot = createOrderPricingSnapshot(medication!);
+  expect(fallbackSnapshot.defaultDetailInputs).toMatchObject({
+    dose: 1,
+    doseUnit: "tablet",
+    frequency: "sid",
+    durationDays: 3,
+    totalQuantity: 3,
+  });
+
+  const genericDefaults = { dose: 2, doseUnit: "tablet", frequency: "bid" };
+  const directSnapshot = createOrderPricingSnapshot({
+    ...medication!,
+    defaultDetailInputs: genericDefaults,
+  });
+  expect(directSnapshot.defaultDetailInputs).toEqual(genericDefaults);
+  expect(directSnapshot.defaultDetailInputs).not.toBe(genericDefaults);
+});
+
 test("preset merge auto-updates unmodified rows and preserves customized rows", async () => {
   const now = "2026-05-25T00:00:00.000Z";
   const cbcPreset = defaultSystemOrderPresets.find((preset) => preset.presetId === "std-ord-lab-cbc-baso");
@@ -419,6 +510,10 @@ test("order catalog mutations emit safe audit events with changed field metadata
       expectedCatalogRevision: 1,
       patch: {
         billingName: "CBC 감사 테스트",
+        defaultDetailInputs: {
+          specimenType: "edta_whole_blood",
+          collectionCondition: "fresh_same_day",
+        },
         priceKrw: 13000,
       },
     },
@@ -441,10 +536,14 @@ test("order catalog mutations emit safe audit events with changed field metadata
     after: expect.objectContaining({
       billingName: "CBC 감사 테스트",
       priceKrw: 13000,
+      defaultDetailInputs: {
+        specimenType: "edta_whole_blood",
+        collectionCondition: "fresh_same_day",
+      },
     }),
     metadata: {
       action: "update",
-      changedFields: ["billingName", "priceKrw"],
+      changedFields: ["billingName", "defaultDetailInputs", "priceKrw"],
       source: "order-catalog-admin-mutation",
     },
   });
@@ -631,6 +730,10 @@ test("Supabase order catalog gateway persists create update and pause mutations"
         roundingRule: "as_is",
         linkedLabItemIds: [],
         linkedLabCategoryIds: [],
+        defaultDetailInputs: {
+          specimenType: "serum",
+          testPanel: "chemistry_basic",
+        },
         pricingRule: {
           priceBasis: "fixed_order_price",
           priceKrw: 12000,
@@ -649,6 +752,10 @@ test("Supabase order catalog gateway persists create update and pause mutations"
     ok: true,
     item: expect.objectContaining({
       billingName: "DEN-302 청구명",
+      defaultDetailInputs: {
+        specimenType: "serum",
+        testPanel: "chemistry_basic",
+      },
       customizationState: "detached",
       lastCustomizedByUserId: "user-admin",
     }),
@@ -906,6 +1013,7 @@ function toOrderCatalogDbRow(item: Record<string, unknown>, workspaceId: string)
     internal_instruction_delivery_enabled: item.internalInstructionDeliveryEnabled,
     tax_included: item.taxIncluded,
     rounding_rule: item.roundingRule,
+    default_detail_inputs: item.defaultDetailInputs,
     pricing_rule: item.pricingRule,
     medication_metadata: item.medicationMetadata,
     vaccine_metadata: item.vaccineMetadata,

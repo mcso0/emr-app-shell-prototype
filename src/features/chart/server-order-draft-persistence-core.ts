@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { mockEncounters, mockInvoiceLines, mockOrders } from "@/mocks/emr-domain";
 import type { EmrOrder, Encounter, InvoiceLine } from "@/types/emr-domain";
 import type {
+  OrderCatalogGateway,
   ChartOrderSetSelectionIntent,
   DispensingOrderLineageSnapshot,
 } from "@/features/hospital-admin/server-order-catalog-core";
@@ -402,6 +403,10 @@ export async function saveChartOrderDraft({
 
 export function createMockChartOrderDraftGateway(
   dataset: {
+    catalogGateway?: Pick<
+      OrderCatalogGateway,
+      "listChartSearch" | "previewOrderSet"
+    >;
     encounters?: Encounter[];
     invoiceLines?: InvoiceLine[];
     orders?: EmrOrder[];
@@ -415,6 +420,8 @@ export function createMockChartOrderDraftGateway(
   const encounters = dataset.encounters ?? [];
   const invoiceLines = dataset.invoiceLines ?? [];
   const orders = dataset.orders ?? [];
+  const catalogGateway =
+    dataset.catalogGateway ?? createMockOrderCatalogGateway();
 
   return {
     async readOrderDraft({ encounterId, workspaceId }) {
@@ -452,7 +459,7 @@ export function createMockChartOrderDraftGateway(
         return { ok: false, status: 422, error: "invalid_removed_order_ids" };
       }
       const timestamp = now();
-      const catalogResult = await createMockOrderCatalogGateway().listChartSearch({
+      const catalogResult = await catalogGateway.listChartSearch({
         workspaceId,
       });
       const catalogById = new Map(
@@ -495,12 +502,20 @@ export function createMockChartOrderDraftGateway(
             ? resolveMockDraftCanonicalContract({
                 categoryGroup: catalogRow.categoryGroup,
               })
-          : legacyOrder
-            ? resolveMockDraftCanonicalContract({
-                categoryGroup: legacyOrder.categoryGroup,
-                legacyOrderType: legacyOrder.orderType,
-              })
-            : resolveMockDraftCanonicalContract({ existing: seed });
+            : legacyOrder
+              ? resolveMockDraftCanonicalContract({
+                  categoryGroup: legacyOrder.categoryGroup,
+                  legacyOrderType: legacyOrder.orderType,
+                })
+              : resolveMockDraftCanonicalContract({ existing: seed });
+        const detailInputs = mergeConsultationResponsibleClinician({
+          clinicalOrderType: canonical.clinicalOrderType,
+          detailInputs:
+            draft.detailInputs ??
+            seed?.detailInputs ??
+            readMockCatalogDefaultDetailInputs(catalogRow?.appliedSnapshot),
+          primaryVeterinarianId: encounter.primaryVeterinarianId,
+        });
         return {
           billingDisplayName:
             seed?.billingDisplayName ??
@@ -536,7 +551,7 @@ export function createMockChartOrderDraftGateway(
           clinicalOrderType: canonical.clinicalOrderType,
           destinationModule: canonical.destinationModule,
           executionMode: canonical.executionMode,
-          detailInputs: draft.detailInputs ?? seed?.detailInputs ?? {},
+          detailInputs,
           detailSchemaVersion:
             draft.detailSchemaVersion ?? seed?.detailSchemaVersion ?? 1,
           priority: draft.priority ?? seed?.priority ?? "normal",
@@ -552,7 +567,7 @@ export function createMockChartOrderDraftGateway(
           !persisted?.clinicalOrderType ||
           !validateClinicalOrderDetailInputs({
             clinicalOrderType: persisted.clinicalOrderType,
-            detailInputs: draft.detailInputs,
+            detailInputs: persisted.detailInputs,
             requireComplete: false,
             schemaVersion: draft.detailSchemaVersion ?? 1,
           }).valid
@@ -568,6 +583,8 @@ export function createMockChartOrderDraftGateway(
           getMockChartOrderDraftRuntimeRows({ encounterId, workspaceId }) ??
           currentRows,
         now: timestamp,
+        primaryVeterinarianId: encounter.primaryVeterinarianId,
+        catalogGateway,
         workspaceId,
       });
       if (!setRuntimeRows.ok) return setRuntimeRows;
@@ -792,6 +809,52 @@ function canMutateChart(encounter: Encounter) {
   return encounter.status === "in_consultation" || encounter.status === "ordered";
 }
 
+function mergeConsultationResponsibleClinician({
+  clinicalOrderType,
+  detailInputs,
+  primaryVeterinarianId,
+}: {
+  clinicalOrderType: ClinicalOrderType;
+  detailInputs: Record<string, unknown>;
+  primaryVeterinarianId?: string;
+}) {
+  const normalizedPrimaryVeterinarianId = primaryVeterinarianId?.trim();
+  if (clinicalOrderType !== "consultation") {
+    return detailInputs;
+  }
+  const nextDetailInputs = { ...detailInputs };
+  if (!normalizedPrimaryVeterinarianId) {
+    delete nextDetailInputs.responsibleClinicianId;
+    return nextDetailInputs;
+  }
+  return {
+    ...nextDetailInputs,
+    responsibleClinicianId: normalizedPrimaryVeterinarianId,
+  };
+}
+
+function readMockCatalogDefaultDetailInputs(
+  appliedSnapshot: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const direct = appliedSnapshot?.defaultDetailInputs;
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
+    return structuredClone(direct as Record<string, unknown>);
+  }
+  const medicationMetadata = appliedSnapshot?.medicationMetadata;
+  if (
+    medicationMetadata &&
+    typeof medicationMetadata === "object" &&
+    !Array.isArray(medicationMetadata)
+  ) {
+    const nested = (medicationMetadata as Record<string, unknown>)
+      .defaultDetailInputs;
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      return structuredClone(nested as Record<string, unknown>);
+    }
+  }
+  return {};
+}
+
 function getStoredOrSeedOrderDrafts({
   encounterId,
   invoiceLines,
@@ -944,6 +1007,13 @@ function getMockSeedDetailInputs(
         wardOrCage: "mock-ward",
         careLevel: "standard",
         monitoringInterval: 60,
+      };
+    case "system_exam":
+      return {
+        bodySystem: "전신상태·활력",
+        examScope: "전신 상태와 활력 평가",
+        examMethod: "표준 신체검사",
+        findingSummary: instruction,
       };
     case "other":
       return { structuredValue: instruction };
@@ -1359,16 +1429,23 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
 }
 
 async function buildMockSetRuntimeRows({
+  catalogGateway,
   encounterId,
   draftRows,
   existingRows,
   now,
+  primaryVeterinarianId,
   workspaceId,
 }: {
+  catalogGateway: Pick<
+    OrderCatalogGateway,
+    "listChartSearch" | "previewOrderSet"
+  >;
   encounterId: string;
   draftRows: ChartOrderDraftRowInput[];
   existingRows: ChartOrderRuntimeRow[];
   now: string;
+  primaryVeterinarianId?: string;
   workspaceId: string;
 }): Promise<
   | { ok: true; rows: ChartOrderRuntimeRow[] }
@@ -1380,10 +1457,9 @@ async function buildMockSetRuntimeRows({
   );
   if (setRows.length === 0) return { ok: true, rows: [] };
 
-  const gateway = createMockOrderCatalogGateway();
   const runtimeRows: ChartOrderRuntimeRow[] = [];
   for (const row of setRows) {
-    const previewResult = await gateway.previewOrderSet?.({
+    const previewResult = await catalogGateway.previewOrderSet?.({
       encounterId,
       orderSetId: row.sourceSetId,
       revisionId: row.sourceSetRevisionId,
@@ -1529,22 +1605,49 @@ async function buildMockSetRuntimeRows({
         typeof itemSnapshot.lineTotalSnapshot === "number"
           ? itemSnapshot.lineTotalSnapshot
           : 0;
-      const childCanonical = resolveMockDraftCanonicalContract({
-        categoryGroup:
-          typeof itemSnapshot.categoryGroup === "string"
-            ? itemSnapshot.categoryGroup
-            : undefined,
-        legacyOrderType: mapCatalogCategoryToOrderType(
-          typeof itemSnapshot.categoryGroup === "string"
-            ? itemSnapshot.categoryGroup
-            : undefined,
-        ),
+      const childClinicalOrderType = isClinicalOrderType(
+        itemSnapshot.clinicalOrderType,
+      )
+        ? itemSnapshot.clinicalOrderType
+        : undefined;
+      const childCanonical = childClinicalOrderType
+        ? resolveMockDraftCanonicalContract({
+            existing: {
+              clinicalOrderType: childClinicalOrderType,
+              destinationModule:
+                childClinicalOrderType === "consultation"
+                  ? null
+                  : undefined,
+              executionMode:
+                childClinicalOrderType === "consultation"
+                  ? "immediate_complete"
+                  : undefined,
+            },
+          })
+        : resolveMockDraftCanonicalContract({
+            categoryGroup:
+              typeof itemSnapshot.categoryGroup === "string"
+                ? itemSnapshot.categoryGroup
+                : undefined,
+            legacyOrderType: mapCatalogCategoryToOrderType(
+              typeof itemSnapshot.categoryGroup === "string"
+                ? itemSnapshot.categoryGroup
+                : undefined,
+            ),
+          });
+      const childDetailInputs = mergeConsultationResponsibleClinician({
+        clinicalOrderType: childCanonical.clinicalOrderType,
+        detailInputs:
+          childInput?.detailInputs ??
+          previousChild?.detailInputs ??
+          readMockCatalogDefaultDetailInputs(itemSnapshot),
+        primaryVeterinarianId,
       });
       if (
         childInput &&
         !validateClinicalOrderDetailInputs({
           clinicalOrderType: childCanonical.clinicalOrderType,
-          detailInputs: childInput.detailInputs,
+          detailInputs: childDetailInputs,
           requireComplete: false,
           schemaVersion: childInput.detailSchemaVersion,
         }).valid
@@ -1568,8 +1671,7 @@ async function buildMockSetRuntimeRows({
         clinicalOrderType: childCanonical.clinicalOrderType,
         destinationModule: childCanonical.destinationModule,
         executionMode: childCanonical.executionMode,
-        detailInputs:
-          childInput?.detailInputs ?? previousChild?.detailInputs ?? {},
+        detailInputs: childDetailInputs,
         detailSchemaVersion:
           childInput?.detailSchemaVersion ??
           previousChild?.detailSchemaVersion ??

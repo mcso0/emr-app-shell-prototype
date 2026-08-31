@@ -75,6 +75,12 @@ export type WorkspaceDispensingReview = {
   reviewNote?: string;
 };
 
+export type ExecutionPresetLineageSnapshot = {
+  sourceExecutionPresetId: string;
+  sourceExecutionPresetRevision: number;
+  sourceExecutionPresetSha256: string;
+};
+
 export type OrderCatalogItem = {
   id: string;
   workspaceId: string;
@@ -110,6 +116,9 @@ export type OrderCatalogItem = {
   roundingRule: "as_is" | "ceil" | "floor" | "round";
   linkedLabItemIds: string[];
   linkedLabCategoryIds: string[];
+  defaultDetailInputs?: Record<string, unknown>;
+  defaultDetailInputPolicies?: Record<string, unknown>;
+  executionPresetLineage?: ExecutionPresetLineageSnapshot;
   medicationMetadata?: MedicationOrderMetadata;
   vaccineMetadata?: VaccineOrderMetadata;
   pricingRule: OrderPricingRule;
@@ -161,6 +170,7 @@ export type SystemOrderPreset = {
   roundingRule: "as_is" | "ceil" | "floor" | "round";
   linkedLabItemIds: string[];
   linkedLabCategoryIds: string[];
+  defaultDetailInputs?: Record<string, unknown>;
   medicationMetadata?: MedicationOrderMetadata;
   vaccineMetadata?: VaccineOrderMetadata;
   pricingRule: OrderPricingRule;
@@ -664,6 +674,8 @@ export type AppliedOrderSnapshot = {
   detailSchemaVersion?: number;
   billingEligible?: boolean;
   defaultDetailInputs?: Record<string, unknown>;
+  defaultDetailInputPolicies?: Record<string, unknown>;
+  executionPresetLineage?: ExecutionPresetLineageSnapshot;
   medicationMetadata?: MedicationOrderMetadata;
   dispensingLineage?: DispensingOrderLineageSnapshot;
   workspaceDispensingReview?: WorkspaceDispensingReview;
@@ -1379,8 +1391,12 @@ export function createOrderPricingSnapshot(
     executionMode: executionContract.executionMode,
     detailSchemaVersion: executionContract.detailSchemaVersion,
     billingEligible: executionContract.billingEligible,
-    defaultDetailInputs: item.medicationMetadata?.defaultDetailInputs
-      ? structuredClone(item.medicationMetadata.defaultDetailInputs)
+    defaultDetailInputs: resolveDefaultDetailInputs(item),
+    defaultDetailInputPolicies: item.defaultDetailInputPolicies
+      ? structuredClone(item.defaultDetailInputPolicies)
+      : undefined,
+    executionPresetLineage: item.executionPresetLineage
+      ? { ...item.executionPresetLineage }
       : undefined,
     medicationMetadata: item.medicationMetadata
       ? structuredClone(item.medicationMetadata)
@@ -2246,6 +2262,11 @@ type OrderCatalogItemDbRow = {
   internal_instruction_delivery_enabled?: boolean | null;
   tax_included: boolean;
   rounding_rule: string;
+  default_detail_inputs?: Record<string, unknown> | null;
+  default_detail_input_policies?: Record<string, unknown> | null;
+  source_execution_preset_id?: string | null;
+  source_execution_preset_revision?: number | null;
+  source_execution_preset_sha256?: string | null;
   pricing_rule?: Record<string, unknown> | null;
   medication_metadata?: Record<string, unknown> | null;
   vaccine_metadata?: Record<string, unknown> | null;
@@ -2311,6 +2332,11 @@ const orderCatalogItemSelectColumns = [
   "internal_instruction_delivery_enabled",
   "tax_included",
   "rounding_rule",
+  "default_detail_inputs",
+  "default_detail_input_policies",
+  "source_execution_preset_id",
+  "source_execution_preset_revision",
+  "source_execution_preset_sha256",
   "pricing_rule",
   "medication_metadata",
   "vaccine_metadata",
@@ -3070,6 +3096,9 @@ function orderCatalogItemToRpcInput(item: OrderCatalogItem) {
       item.internalInstructionDeliveryEnabled ?? false,
     taxIncluded: item.taxIncluded,
     roundingRule: item.roundingRule,
+    ...(item.defaultDetailInputs !== undefined
+      ? { defaultDetailInputs: structuredClone(item.defaultDetailInputs) }
+      : {}),
     pricingRule: item.pricingRule,
     medicationMetadata: item.medicationMetadata ?? {},
     vaccineMetadata: item.vaccineMetadata ?? {},
@@ -3206,6 +3235,17 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     roundingRule: row.rounding_rule as OrderCatalogItem["roundingRule"],
     linkedLabItemIds: [],
     linkedLabCategoryIds: [],
+    defaultDetailInputs: isRecord(row.default_detail_inputs)
+      ? structuredClone(row.default_detail_inputs)
+      : undefined,
+    defaultDetailInputPolicies: isRecord(row.default_detail_input_policies)
+      ? structuredClone(row.default_detail_input_policies)
+      : undefined,
+    executionPresetLineage: mapExecutionPresetLineage({
+      sourceExecutionPresetId: row.source_execution_preset_id,
+      sourceExecutionPresetRevision: row.source_execution_preset_revision,
+      sourceExecutionPresetSha256: row.source_execution_preset_sha256,
+    }),
     medicationMetadata: hasObjectKeys(row.medication_metadata)
       ? (row.medication_metadata as MedicationOrderMetadata)
       : undefined,
@@ -3275,12 +3315,24 @@ function mapWorkspaceDispensingReview(
   };
 }
 
-function hasObjectKeys(value: unknown) {
+function hasObjectKeys(value: unknown): value is Record<string, unknown> {
   return Boolean(
     value &&
       typeof value === "object" &&
+      !Array.isArray(value) &&
       Object.keys(value as Record<string, unknown>).length > 0,
   );
+}
+
+function resolveDefaultDetailInputs(
+  item: Pick<OrderCatalogItem, "defaultDetailInputs" | "medicationMetadata">,
+) {
+  if (hasObjectKeys(item.defaultDetailInputs)) {
+    return structuredClone(item.defaultDetailInputs);
+  }
+  return hasObjectKeys(item.medicationMetadata?.defaultDetailInputs)
+    ? structuredClone(item.medicationMetadata.defaultDetailInputs)
+    : undefined;
 }
 
 function isCustomizationState(
@@ -3453,6 +3505,13 @@ function summarizeCatalogAuditItem(item: OrderCatalogItem) {
     defaultDestinationModule: item.defaultDestinationModule,
     defaultTaskRequired: item.defaultTaskRequired,
     billingReflectionEnabled: item.billingReflectionEnabled,
+    defaultDetailInputs: resolveDefaultDetailInputs(item),
+    defaultDetailInputPolicies: item.defaultDetailInputPolicies
+      ? structuredClone(item.defaultDetailInputPolicies)
+      : undefined,
+    executionPresetLineage: item.executionPresetLineage
+      ? { ...item.executionPresetLineage }
+      : undefined,
     workspaceDispensingReview: item.workspaceDispensingReview,
     pricingRule: {
       priceBasis: item.pricingRule.priceBasis,
@@ -3522,6 +3581,10 @@ function copyPresetFields(
     roundingRule: preset.roundingRule,
     linkedLabItemIds: [...preset.linkedLabItemIds],
     linkedLabCategoryIds: [...preset.linkedLabCategoryIds],
+    defaultDetailInputs:
+      preset.defaultDetailInputs !== undefined
+        ? structuredClone(preset.defaultDetailInputs)
+        : undefined,
     medicationMetadata: preset.medicationMetadata
       ? { ...preset.medicationMetadata }
       : undefined,
@@ -3596,6 +3659,16 @@ function cloneItem(item: OrderCatalogItem): OrderCatalogItem {
     targetSpecies: [...item.targetSpecies],
     linkedLabItemIds: [...item.linkedLabItemIds],
     linkedLabCategoryIds: [...item.linkedLabCategoryIds],
+    defaultDetailInputs:
+      item.defaultDetailInputs !== undefined
+        ? structuredClone(item.defaultDetailInputs)
+        : undefined,
+    defaultDetailInputPolicies: item.defaultDetailInputPolicies
+      ? structuredClone(item.defaultDetailInputPolicies)
+      : undefined,
+    executionPresetLineage: item.executionPresetLineage
+      ? { ...item.executionPresetLineage }
+      : undefined,
     customizedFields: item.customizedFields
       ? [...item.customizedFields]
       : undefined,
@@ -4005,8 +4078,15 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
   );
   const defaultDetailInputs =
     row.defaultDetailInputs ?? row.default_detail_inputs;
+  const defaultDetailInputPolicies =
+    row.defaultDetailInputPolicies ?? row.default_detail_input_policies;
+  const executionPresetLineage =
+    row.executionPresetLineage ?? row.execution_preset_lineage;
   const medicationMetadata =
     row.medicationMetadata ?? row.medication_metadata;
+  const parsedMedicationMetadata = isRecord(medicationMetadata)
+    ? (structuredClone(medicationMetadata) as MedicationOrderMetadata)
+    : undefined;
   if (
     !sourcePresetId ||
     !sourcePresetVersion ||
@@ -4072,18 +4152,50 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
     billingEligible: readBoolean(
       row.billingEligible ?? row.billing_eligible,
     ),
-    defaultDetailInputs: isRecord(defaultDetailInputs)
+    defaultDetailInputs: hasObjectKeys(defaultDetailInputs)
       ? structuredClone(defaultDetailInputs)
+      : hasObjectKeys(parsedMedicationMetadata?.defaultDetailInputs)
+        ? structuredClone(parsedMedicationMetadata.defaultDetailInputs)
+        : undefined,
+    defaultDetailInputPolicies: isRecord(defaultDetailInputPolicies)
+      ? structuredClone(defaultDetailInputPolicies)
       : undefined,
-    medicationMetadata: isRecord(medicationMetadata)
-      ? (structuredClone(medicationMetadata) as MedicationOrderMetadata)
-      : undefined,
+    executionPresetLineage: mapExecutionPresetLineage(executionPresetLineage),
+    medicationMetadata: parsedMedicationMetadata,
     dispensingLineage: mapDispensingOrderLineageSnapshot(
       row.dispensingLineage ?? row.dispensing_lineage,
     ),
     workspaceDispensingReview: mapWorkspaceDispensingReviewValue(
       row.workspaceDispensingReview ?? row.workspace_dispensing_review,
     ),
+  };
+}
+
+function mapExecutionPresetLineage(
+  value: unknown,
+): ExecutionPresetLineageSnapshot | undefined {
+  if (!isRecord(value)) return undefined;
+  const sourceExecutionPresetId = readString(
+    value.sourceExecutionPresetId ?? value.source_execution_preset_id,
+  );
+  const sourceExecutionPresetRevision = readNumber(
+    value.sourceExecutionPresetRevision ??
+      value.source_execution_preset_revision,
+  );
+  const sourceExecutionPresetSha256 = readString(
+    value.sourceExecutionPresetSha256 ?? value.source_execution_preset_sha256,
+  );
+  if (
+    !sourceExecutionPresetId ||
+    !sourceExecutionPresetRevision ||
+    !sourceExecutionPresetSha256
+  ) {
+    return undefined;
+  }
+  return {
+    sourceExecutionPresetId,
+    sourceExecutionPresetRevision,
+    sourceExecutionPresetSha256,
   };
 }
 
@@ -4256,6 +4368,10 @@ function orderCatalogItemToSystemPreset(
     roundingRule: item.roundingRule,
     linkedLabItemIds: [...item.linkedLabItemIds],
     linkedLabCategoryIds: [...item.linkedLabCategoryIds],
+    defaultDetailInputs:
+      item.defaultDetailInputs !== undefined
+        ? structuredClone(item.defaultDetailInputs)
+        : undefined,
     medicationMetadata: item.medicationMetadata
       ? { ...item.medicationMetadata }
       : undefined,

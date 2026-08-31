@@ -14,7 +14,7 @@ import {
   createMockOrderCatalogGateway,
   type OrderSet,
 } from "../src/features/hospital-admin/server-order-catalog-core";
-import type { Encounter } from "../src/types/emr-domain";
+import type { EmrOrder, Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
@@ -51,6 +51,7 @@ const a3Migration = readFileSync(
   "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
   "utf8",
 );
+const chartModuleSource = readFileSync("src/features/chart/module.tsx", "utf8");
 
 const validOrderDraftRows = [
   {
@@ -887,6 +888,36 @@ test("order draft route stays server-owned and secret-free", () => {
   );
 });
 
+test("denied or cross-workspace draft saves cannot read runtime context before chart permissions preflight", () => {
+  const routeSource = readFileSync(
+    "src/app/api/workspaces/[workspaceId]/chart/order-drafts/route.ts",
+    "utf8",
+  );
+  const patchStart = routeSource.indexOf("export async function PATCH");
+  const permissionPreflight = routeSource.indexOf(
+    'requiredPermission: "chart:update"',
+    patchStart,
+  );
+  const viewPermissionPreflight = routeSource.indexOf(
+    'requiredPermission: "chart:view"',
+    patchStart,
+  );
+  const runtimeResolver = routeSource.indexOf(
+    "resolveConsultationRuntimeRows({",
+    patchStart,
+  );
+  expect(patchStart).toBeGreaterThanOrEqual(0);
+  expect(permissionPreflight).toBeGreaterThan(patchStart);
+  expect(viewPermissionPreflight).toBeGreaterThan(permissionPreflight);
+  expect(runtimeResolver).toBeGreaterThan(viewPermissionPreflight);
+  expect(routeSource.slice(runtimeResolver, runtimeResolver + 500)).toContain(
+    "workspaceId",
+  );
+  expect(routeSource.slice(runtimeResolver, runtimeResolver + 500)).toContain(
+    "encounterId",
+  );
+});
+
 test("set draft keeps explicit leaf intent and runtime identity across reload and CAS retry", async () => {
   const catalog = createMockOrderCatalogGateway();
   const catalogResult = await catalog.listChartSearch({ workspaceId });
@@ -1039,6 +1070,349 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
   const retryParent = retry.rows.find((row) => row.orderId === parentOrderId);
   expect(retryParent?.snapshotHash).toBeNull();
   expect(retry.etag).not.toBe(firstSave.etag);
+});
+
+test("new Order Set child draft inputs preserve applied catalog defaults", async () => {
+  const catalog = createMockOrderCatalogGateway();
+  const catalogResult = await catalog.listChartSearch({ workspaceId });
+  const setRow = catalogResult.rows.find(
+    (row) => row.rowType === "set" && row.sourceSetId === "set-vomit-basic",
+  );
+  expect(setRow).toBeTruthy();
+
+  const preview = await catalog.previewOrderSet!({
+    encounterId: setRuntimeEncounter.id,
+    orderSetId: setRow!.sourceSetId!,
+    revisionId: setRow!.sourceSetRevisionId!,
+    selectionIntent: {
+      items: [
+        { revisionItemId: "setitem-vomit-baso", selected: false, quantity: 1 },
+        {
+          revisionItemId: "setitem-vomit-maropitant",
+          selected: true,
+          quantity: 5,
+        },
+      ],
+    },
+    workspaceId,
+  });
+  expect(preview.ok).toBe(true);
+  if (!preview.ok) return;
+
+  const child = preview.preview.items.find(
+    (item) => item.revisionItemId === "setitem-vomit-maropitant",
+  );
+  expect(child?.appliedSnapshot).toMatchObject({
+    medicationMetadata: {
+      defaultDetailInputs: {
+        dose: 1,
+        durationDays: 3,
+        frequency: "sid",
+        route: "PO",
+        totalQuantity: 3,
+      },
+    },
+  });
+
+  const childInputsStart = chartModuleSource.indexOf("const childInputs =");
+  const childInputsEnd = chartModuleSource.indexOf(
+    "return [",
+    childInputsStart,
+  );
+  expect(childInputsStart).toBeGreaterThanOrEqual(0);
+  expect(childInputsEnd).toBeGreaterThan(childInputsStart);
+  const childInputsSource = chartModuleSource.slice(
+    childInputsStart,
+    childInputsEnd,
+  );
+  expect(childInputsSource).toContain(
+    "detailInputs: readCatalogDefaultDetailInputs(item)",
+  );
+  expect(childInputsSource).not.toContain("detailInputs: {},");
+});
+
+test("consultation draft resolves responsible clinician from encounter primary veterinarian, not actor", async () => {
+  const consultationEncounter: Encounter = {
+    ...setRuntimeEncounter,
+    id: "encounter-consultation-runtime",
+    primaryVeterinarianId: "primary-veterinarian",
+  };
+  const consultationOrder: EmrOrder = {
+    id: "order-consultation-runtime",
+    workspaceId,
+    encounterId: consultationEncounter.id,
+    categoryGroup: "consultation",
+    orderType: "treatment",
+    displayName: "일반 진료",
+    status: "requested",
+    workStatus: "pending",
+    priority: "normal",
+    requestedByUserId: "draft-actor",
+    requestedAt: "2026-06-25T14:15:00+09:00",
+    sortOrder: 10,
+    createdAt: "2026-06-25T14:15:00+09:00",
+    updatedAt: "2026-06-25T14:15:00+09:00",
+  };
+  const gateway = createMockChartOrderDraftGateway({
+    encounters: [consultationEncounter],
+    orders: [consultationOrder],
+  });
+  const permissionAdapter = createMockWorkspacePermissionAdapter({
+    users: [{ id: "draft-actor", status: "active" }],
+    memberships: [
+      {
+        id: "membership-consultation-runtime",
+        workspaceId,
+        userId: "draft-actor",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
+  });
+  const initial = await gateway.readOrderDraft({
+    encounterId: consultationEncounter.id,
+    workspaceId,
+  });
+  expect(initial.ok).toBe(true);
+  if (!initial.ok) return;
+
+  const saved = await saveChartOrderDraft({
+    actorUserId: "draft-actor",
+    gateway,
+    input: {
+      encounterId: consultationEncounter.id,
+      expectedEtag: initial.etag,
+      rows: [
+        {
+          rowType: "individual",
+          orderId: consultationOrder.id,
+          workspaceCatalogItemId: "legacy-consultation",
+          quantity: 1,
+          detailInputs: {
+            responsibleClinicianId: "draft-actor",
+            occurrenceCount: 1,
+            timing: "now",
+            instructionSummary: "진료 상담",
+          },
+          detailSchemaVersion: 1,
+          priority: "normal",
+        },
+      ],
+    },
+    permissionAdapter,
+    workspaceId,
+  });
+  expect(saved.ok).toBe(true);
+  if (!saved.ok) return;
+  expect(saved.rows[0]?.detailInputs).toMatchObject({
+    responsibleClinicianId: "primary-veterinarian",
+  });
+  expect(saved.rows[0]?.detailInputs.responsibleClinicianId).not.toBe(
+    "draft-actor",
+  );
+});
+
+test("consultation draft remains incomplete when encounter has no primary veterinarian", async () => {
+  const consultationEncounter: Encounter = {
+    ...setRuntimeEncounter,
+    id: "encounter-consultation-runtime-missing-vet",
+    primaryVeterinarianId: undefined,
+  };
+  const consultationOrder: EmrOrder = {
+    id: "order-consultation-runtime-missing-vet",
+    workspaceId,
+    encounterId: consultationEncounter.id,
+    categoryGroup: "consultation",
+    orderType: "treatment",
+    displayName: "일반 진료",
+    status: "requested",
+    workStatus: "pending",
+    priority: "normal",
+    requestedByUserId: "draft-actor",
+    requestedAt: "2026-06-25T14:15:00+09:00",
+    sortOrder: 10,
+    createdAt: "2026-06-25T14:15:00+09:00",
+    updatedAt: "2026-06-25T14:15:00+09:00",
+  };
+  const gateway = createMockChartOrderDraftGateway({
+    encounters: [consultationEncounter],
+    orders: [consultationOrder],
+  });
+  const permissionAdapter = createMockWorkspacePermissionAdapter({
+    users: [{ id: "draft-actor", status: "active" }],
+    memberships: [
+      {
+        id: "membership-consultation-runtime-missing-vet",
+        workspaceId,
+        userId: "draft-actor",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
+  });
+  const initial = await gateway.readOrderDraft({
+    encounterId: consultationEncounter.id,
+    workspaceId,
+  });
+  expect(initial.ok).toBe(true);
+  if (!initial.ok) return;
+
+  const saved = await saveChartOrderDraft({
+    actorUserId: "draft-actor",
+    gateway,
+    input: {
+      encounterId: consultationEncounter.id,
+      expectedEtag: initial.etag,
+      rows: [
+        {
+          rowType: "individual",
+          orderId: consultationOrder.id,
+          workspaceCatalogItemId: "legacy-consultation",
+          quantity: 1,
+          detailInputs: {
+            responsibleClinicianId: "draft-actor",
+            occurrenceCount: 1,
+            timing: "now",
+            instructionSummary: "진료 상담",
+          },
+          detailSchemaVersion: 1,
+          priority: "normal",
+        },
+      ],
+    },
+    permissionAdapter,
+    workspaceId,
+  });
+  expect(saved.ok).toBe(true);
+  if (!saved.ok) return;
+  expect(saved.rows[0]?.detailInputs).not.toHaveProperty(
+    "responsibleClinicianId",
+  );
+  expect(saved.rows[0]?.detailInputs).toMatchObject({
+    occurrenceCount: 1,
+    timing: "now",
+    instructionSummary: "진료 상담",
+  });
+});
+
+test("Order Set consultation child resolves responsible clinician from encounter primary veterinarian", async () => {
+  const catalog = createMockOrderCatalogGateway();
+  const setRow = (await catalog.listChartSearch({ workspaceId })).rows.find(
+    (row) => row.rowType === "set" && row.sourceSetId === "set-vomit-basic",
+  );
+  expect(setRow).toBeTruthy();
+  if (!setRow?.sourceSetId || !setRow.sourceSetRevisionId) return;
+  const basePreview = catalog.previewOrderSet!;
+  const catalogGateway = {
+    listChartSearch: catalog.listChartSearch.bind(catalog),
+    previewOrderSet: async (input: Parameters<typeof basePreview>[0]) => {
+      const result = await basePreview.call(catalog, input);
+      if (!result.ok) return result;
+      return {
+        ...result,
+        preview: {
+          ...result.preview,
+          items: result.preview.items.map((item) =>
+            item.revisionItemId === "setitem-vomit-maropitant"
+              ? {
+                  ...item,
+                  appliedSnapshot: {
+                    ...item.appliedSnapshot,
+                    clinicalOrderType: "consultation" as const,
+                    defaultDetailInputs: {
+                      occurrenceCount: 1,
+                      timing: "now",
+                      instructionSummary: "세트 상담",
+                    },
+                  },
+                }
+              : item,
+          ),
+        },
+      };
+    },
+  };
+  const encounter: Encounter = {
+    ...setRuntimeEncounter,
+    id: "encounter-order-set-consultation-runtime",
+    primaryVeterinarianId: "primary-veterinarian",
+  };
+  const gateway = createMockChartOrderDraftGateway({
+    catalogGateway,
+    encounters: [encounter],
+    orders: [],
+  });
+  const permissionAdapter = createMockWorkspacePermissionAdapter({
+    users: [{ id: "draft-actor", status: "active" }],
+    memberships: [
+      {
+        id: "membership-order-set-consultation-runtime",
+        workspaceId,
+        userId: "draft-actor",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
+  });
+  const initial = await gateway.readOrderDraft({
+    encounterId: encounter.id,
+    workspaceId,
+  });
+  expect(initial.ok).toBe(true);
+  if (!initial.ok) return;
+
+  const saved = await saveChartOrderDraft({
+    actorUserId: "draft-actor",
+    gateway,
+    input: {
+      encounterId: encounter.id,
+      expectedEtag: initial.etag,
+      rows: [
+        {
+          rowType: "set",
+          orderId: "set-parent-consultation-runtime",
+          sourceSetId: setRow.sourceSetId,
+          sourceSetRevisionId: setRow.sourceSetRevisionId,
+          sourceSetRevisionNo: setRow.sourceSetRevisionNo!,
+          selectionIntent: {
+            items: [
+              {
+                revisionItemId: "setitem-vomit-baso",
+                selected: false,
+                quantity: 1,
+              },
+              {
+                revisionItemId: "setitem-vomit-maropitant",
+                selected: true,
+                quantity: 1,
+              },
+            ],
+          },
+          childInputs: [
+            {
+              revisionItemId: "setitem-vomit-maropitant",
+              detailInputs: {
+                responsibleClinicianId: "draft-actor",
+                occurrenceCount: 1,
+                timing: "now",
+                instructionSummary: "세트 상담",
+              },
+              detailSchemaVersion: 1,
+              priority: "normal",
+            },
+          ],
+        },
+      ],
+    },
+    permissionAdapter,
+    workspaceId,
+  });
+  expect(saved.ok).toBe(true);
+  if (!saved.ok) return;
+  const child = saved.rows.find((row) => row.rowType === "set_child");
+  expect(child?.detailInputs).toMatchObject({
+    responsibleClinicianId: "primary-veterinarian",
+  });
 });
 
 test("range-based set preview requires explicit input and rejects no-match values", async () => {

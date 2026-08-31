@@ -320,6 +320,7 @@ const clinicalOrderTypes = new Set<ClinicalOrderType>([
   "dispensing",
   "treatment",
   "hospitalization",
+  "system_exam",
   "other",
 ]);
 const destinations = new Set<ClinicalOrderDestinationModule>([
@@ -346,6 +347,10 @@ function mapTask(value: unknown): ChartOrderExecutionTask | null {
   ) return null;
   const destination = row.destinationModule;
   if (destination !== null && !destinations.has(destination as ClinicalOrderDestinationModule)) return null;
+  if (
+    row.clinicalOrderType === "system_exam" &&
+    (destination !== null || row.status !== "complete")
+  ) return null;
   return {
     taskId: row.taskId,
     orderId: row.orderId,

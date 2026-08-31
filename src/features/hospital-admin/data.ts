@@ -1,12 +1,15 @@
 "use client";
 
-import type { ServiceItemType } from "@/types/emr-domain";
+import type { ClinicalOrderType, ServiceItemType } from "@/types/emr-domain";
 import type {
   OrderCatalogItem,
   OrderCatalogMutationInput,
   OrderCatalogPriceBasis,
   OrderCatalogSalesUnit,
 } from "@/features/hospital-admin/server-order-catalog";
+import {
+  resolveClinicalOrderMasterContract,
+} from "@/features/chart/order-execution-domain";
 
 export type HospitalOrderCategoryId =
   | "consultation"
@@ -18,13 +21,15 @@ export type HospitalOrderCategoryId =
   | "hospitalization"
   | "therapy"
   | "dispensing"
-  | "medical-supply";
+  | "medical-supply"
+  | "misc";
 export type HospitalOrderSubcategoryId =
   | "basic-consultation"
   | "other-consultation"
   | "prevention"
   | "clinical-pathology"
   | "blood-chemistry"
+  | "system-exam"
   | "external-lab"
   | "radiography"
   | "ultrasound"
@@ -35,7 +40,8 @@ export type HospitalOrderSubcategoryId =
   | "therapy"
   | "oral-medication"
   | "injection"
-  | "medical-supply";
+  | "medical-supply"
+  | "other";
 export type HospitalOrderDelivery = "deliver" | "do-not-deliver";
 export type HospitalOrderTarget = "all" | "dog-cat" | "dog" | "cat" | "other";
 export type HospitalOrderSaleUnit = "each" | "day" | "session" | "pack";
@@ -118,6 +124,10 @@ export type HospitalOrderCatalogItem = {
   billingName: string;
   careGuide: string;
   categoryId: HospitalOrderCategoryId;
+  /** Effective master/workspace execution defaults (never schema defaults). */
+  defaultDetailInputs?: Record<string, unknown>;
+  clinicalOrderType?: ClinicalOrderType;
+  detailSchemaVersion?: number;
   clinicalPathologyCategoryId?: ClinicalPathologyCategoryId;
   delivery: HospitalOrderDelivery;
   hospitalInstruction: string;
@@ -208,6 +218,12 @@ export const hospitalOrderCategories: HospitalOrderCategory[] = [
     sortOrder: 70,
   },
   {
+    id: "misc",
+    label: "기타",
+    description: "기타 임상 오더와 구조화 입력을 관리합니다.",
+    sortOrder: 80,
+  },
+  {
     id: "medical-supply",
     label: "의료물품",
     description: "진료와 조제에 쓰이는 의료물품입니다.",
@@ -250,6 +266,13 @@ export const hospitalOrderSubcategories: HospitalOrderSubcategory[] = [
     label: "혈액화학",
     description: "혈청화학, 간/신장 panel",
     sortOrder: 20,
+  },
+  {
+    id: "system-exam",
+    categoryId: "lab",
+    label: "계통검사",
+    description: "계통별 신체검사와 소견 입력",
+    sortOrder: 25,
   },
   {
     id: "external-lab",
@@ -326,6 +349,13 @@ export const hospitalOrderSubcategories: HospitalOrderSubcategory[] = [
     categoryId: "medical-supply",
     label: "의료물품",
     description: "소모품과 의료물품",
+    sortOrder: 10,
+  },
+  {
+    id: "other",
+    categoryId: "misc",
+    label: "기타",
+    description: "기타 구조화 임상 오더",
     sortOrder: 10,
   },
 ];
@@ -626,12 +656,19 @@ export function createEmptyHospitalOrderDraft(
   subcategoryId: HospitalOrderSubcategoryId
 ): HospitalOrderDraft {
   const dispensing = categoryId === "dispensing";
+  const serviceItemType = getHospitalOrderServiceItemType(categoryId);
+  const clinicalOrderType = getHospitalOrderClinicalOrderType(
+    categoryId,
+    subcategoryId,
+  );
   return {
     aliases: "",
     billable: true,
     billingName: "",
     careGuide: "",
     categoryId,
+    clinicalOrderType,
+    detailSchemaVersion: 1,
     delivery: "deliver",
     hospitalInstruction: "",
     inHospitalName: "",
@@ -654,13 +691,44 @@ export function createEmptyHospitalOrderDraft(
     ],
     roundRule: "none",
     saleUnit: "each",
-    serviceItemType: dispensing ? "medication" : "lab",
+    serviceItemType,
     standardName: "",
     subcategoryId,
     target: "all",
     updatedAtLabel: "방금",
     updatedBy: "송민재",
   };
+}
+
+function getHospitalOrderServiceItemType(
+  categoryId: HospitalOrderCategoryId,
+): ServiceItemType {
+  if (categoryId === "dispensing" || categoryId === "medical-supply") {
+    return "medication";
+  }
+  if (categoryId === "lab") return "lab";
+  if (categoryId === "imaging") return "imaging";
+  if (categoryId === "hospitalization") return "hospitalization";
+  if (categoryId === "misc") return "misc";
+  if (categoryId === "consultation") return "consultation";
+  return "treatment";
+}
+
+function getHospitalOrderClinicalOrderType(
+  categoryId: HospitalOrderCategoryId,
+  subcategoryId: HospitalOrderSubcategoryId,
+): ClinicalOrderType {
+  if (subcategoryId === "system-exam") return "system_exam";
+  if (subcategoryId === "external-lab") return "external_lab";
+  if (categoryId === "consultation") return "consultation";
+  if (categoryId === "lab") return "clinical_lab";
+  if (categoryId === "imaging") return "imaging";
+  if (categoryId === "hospitalization") return "hospitalization";
+  if (categoryId === "misc") return "other";
+  if (categoryId === "dispensing" || categoryId === "medical-supply") {
+    return "dispensing";
+  }
+  return "treatment";
 }
 
 function createEmptyHospitalDispensingPreset(): HospitalDispensingPreset {
@@ -686,9 +754,42 @@ export function formatHospitalOrderAmount(amount: number) {
   return `${amount.toLocaleString()}원`;
 }
 
+/**
+ * Return the authored execution defaults for a catalog row.
+ *
+ * The generic catalog column is authoritative when it contains values. Older
+ * medication rows may only have the nested representation, so keep that as a
+ * compatibility fallback. Every returned object is cloned so drawer edits
+ * cannot mutate the server response kept in `sourceCatalogItem`.
+ */
+export function getEffectiveHospitalOrderDefaultDetailInputs(
+  item: Pick<OrderCatalogItem, "defaultDetailInputs" | "medicationMetadata">,
+): Record<string, unknown> | undefined {
+  if (hasNonEmptyDetailInputs(item.defaultDetailInputs)) {
+    return structuredClone(item.defaultDetailInputs);
+  }
+  if (hasNonEmptyDetailInputs(item.medicationMetadata?.defaultDetailInputs)) {
+    return structuredClone(item.medicationMetadata.defaultDetailInputs);
+  }
+  return undefined;
+}
+
 export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): HospitalOrderCatalogItem {
   const placement = resolveHospitalOrderPlacement(item);
   const dispensingProfile = readDispensingProfile(item);
+  const executionContract = resolveClinicalOrderMasterContract({
+    categoryGroup: item.categoryGroup,
+    clinicalOrderType: item.clinicalOrderType,
+    isExternalLab: item.isExternalLab,
+    destinationModule: item.destinationModule,
+    defaultDestinationModule: item.defaultDestinationModule,
+    executionMode: item.executionMode,
+    defaultTaskRequired: item.defaultTaskRequired,
+    detailSchemaVersion: item.detailSchemaVersion,
+    detailFieldSchema: item.detailFieldSchema,
+    billingEligible: item.billingEligible,
+    billingReflectionEnabled: item.billingReflectionEnabled,
+  });
 
   return {
     id: item.id,
@@ -697,11 +798,14 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     billingName: item.billingName,
     careGuide: item.careGuide ?? "",
     categoryId: placement.categoryId,
+    clinicalOrderType: executionContract.clinicalOrderType,
     clinicalPathologyCategoryId:
       placement.subcategoryId === "clinical-pathology"
         ? resolveClinicalPathologyCategoryId(item.categoryLabel)
         : undefined,
     delivery: item.defaultTaskRequired ? "deliver" : "do-not-deliver",
+    defaultDetailInputs: getEffectiveHospitalOrderDefaultDetailInputs(item),
+    detailSchemaVersion: executionContract.detailSchemaVersion,
     hospitalInstruction: item.internalInstruction ?? "",
     inHospitalName:
       dispensingProfile.korean ?? item.inHospitalOrderName,
@@ -765,7 +869,8 @@ function readHospitalDispensingPreset(
     return undefined;
   }
   const metadata = item.medicationMetadata;
-  const detail = metadata?.defaultDetailInputs ?? {};
+  const detail =
+    getEffectiveHospitalOrderDefaultDetailInputs(item) ?? {};
   const readString = (key: string, fallback = "") =>
     typeof detail[key] === "string" && detail[key].trim()
       ? detail[key].trim()
@@ -812,6 +917,17 @@ function readHospitalDispensingPreset(
       metadata?.autoDispenseQuantityEnabled ?? true,
     manualQuantityReason: readString("manualQuantityReason"),
   };
+}
+
+function hasNonEmptyDetailInputs(
+  value: unknown,
+): value is Record<string, unknown> {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length > 0,
+  );
 }
 
 function resolveClinicalPathologyCategoryId(
@@ -887,6 +1003,15 @@ function buildWorkspaceCatalogPatchFromHospitalOrder(
     taxIncluded: draft.isTaxable,
   };
 
+  const medicationMetadata = buildMedicationMetadataFromHospitalOrder(
+    draft,
+    source.medicationMetadata,
+  );
+  const effectiveDefaultDetailInputs =
+    draft.categoryId === "dispensing"
+      ? medicationMetadata?.defaultDetailInputs
+      : draft.defaultDetailInputs;
+
   return {
     aliases: splitAliases(draft.aliases),
     availabilityStatus:
@@ -902,10 +1027,17 @@ function buildWorkspaceCatalogPatchFromHospitalOrder(
     careGuide: draft.careGuide,
     inHospitalOrderName: draft.inHospitalName,
     internalInstruction: draft.hospitalInstruction,
-    medicationMetadata: buildMedicationMetadataFromHospitalOrder(
-      draft,
-      source.medicationMetadata,
-    ),
+    // Keep both representations in sync while older readers still consume
+    // medicationMetadata.defaultDetailInputs. The generic copy is explicit,
+    // deep-cloned, and authoritative for the new catalog/chart path.
+    ...(effectiveDefaultDetailInputs !== undefined
+      ? {
+          defaultDetailInputs: structuredClone(
+            effectiveDefaultDetailInputs,
+          ),
+        }
+      : {}),
+    medicationMetadata,
     priceKrw: draft.price,
     pricingRule,
     roundingRule: mapHospitalRoundRuleToCatalogRoundRule(draft.roundRule),
@@ -938,6 +1070,12 @@ function buildWorkspaceCatalogCreateInputFromHospitalOrder(
     presetMergeStatus: "detached",
     originType: "workspace_custom",
     categoryGroup: catalogDefaults.categoryGroup,
+    ...(draft.clinicalOrderType
+      ? { clinicalOrderType: draft.clinicalOrderType }
+      : {}),
+    ...(draft.detailSchemaVersion !== undefined
+      ? { detailSchemaVersion: draft.detailSchemaVersion }
+      : {}),
     categoryLabel: getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? catalogDefaults.categoryLabel,
     standardOrderName: draft.standardName,
     inHospitalOrderName: draft.inHospitalName,
@@ -1069,6 +1207,19 @@ function resolveHospitalOrderPlacement(item: OrderCatalogItem): {
   subcategoryId: HospitalOrderSubcategoryId;
 } {
   const label = item.categoryLabel;
+
+  // The explicit contract wins over legacy labels. In particular, system
+  // examinations used to be presented as blood chemistry because both rows
+  // lived under the lab category.
+  if (item.clinicalOrderType === "system_exam") {
+    return { categoryId: "lab", subcategoryId: "system-exam" };
+  }
+  if (item.clinicalOrderType === "external_lab") {
+    return { categoryId: "lab", subcategoryId: "external-lab" };
+  }
+  if (item.clinicalOrderType === "other" || item.categoryGroup === "misc") {
+    return { categoryId: "misc", subcategoryId: "other" };
+  }
 
   if (item.categoryGroup === "consultation") {
     return {
@@ -1258,6 +1409,14 @@ function resolveCatalogDefaultsFromHospitalOrder(draft: HospitalOrderDraft): {
     return {
       categoryGroup: "hospitalization",
       categoryLabel: "입원",
+      defaultDestinationModule: "chart_only",
+    };
+  }
+
+  if (draft.categoryId === "misc") {
+    return {
+      categoryGroup: "misc",
+      categoryLabel: "기타",
       defaultDestinationModule: "chart_only",
     };
   }

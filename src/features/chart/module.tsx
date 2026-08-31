@@ -287,6 +287,7 @@ import type {
 import {
   CLINICAL_ORDER_FIELD_SCHEMAS,
   CLINICAL_ORDER_TYPES,
+  isClinicalOrderType,
   resolveClinicalOrderMasterContract,
   validateClinicalOrderDetailInputs,
   type ClinicalOrderFieldDefinition,
@@ -2655,6 +2656,7 @@ async function saveChartOrderDraftRoute({
   actorHeaders,
   encounterId,
   expectedEtag,
+  primaryVeterinarianId,
   removedOrderIds = [],
   rows,
   workspaceId,
@@ -2662,6 +2664,7 @@ async function saveChartOrderDraftRoute({
   actorHeaders?: Record<string, string>;
   encounterId: string;
   expectedEtag: string;
+  primaryVeterinarianId?: string;
   removedOrderIds?: string[];
   rows: ChartOrderDraftRow[];
   workspaceId: string;
@@ -2710,7 +2713,11 @@ async function saveChartOrderDraftRoute({
           )
           .map((candidate) => ({
             revisionItemId: candidate.runtimeRow?.sourceSetRevisionItemId ?? "",
-            detailInputs: candidate.detailInputs,
+            detailInputs: mergeChartOrderRuntimeDetailInputs({
+              clinicalOrderType: candidate.runtimeRow?.clinicalOrderType,
+              detailInputs: candidate.detailInputs,
+              primaryVeterinarianId,
+            }),
             detailSchemaVersion: candidate.detailSchemaVersion,
             priority: candidate.priority,
           }));
@@ -2721,7 +2728,15 @@ async function saveChartOrderDraftRoute({
                 .filter((item) => item.selected)
                 .map((item) => ({
                   revisionItemId: item.revisionItemId,
-                  detailInputs: {},
+                  detailInputs: mergeChartOrderRuntimeDetailInputs({
+                    clinicalOrderType: isClinicalOrderType(
+                      item.appliedSnapshot?.clinicalOrderType,
+                    )
+                      ? item.appliedSnapshot.clinicalOrderType
+                      : undefined,
+                    detailInputs: readCatalogDefaultDetailInputs(item),
+                    primaryVeterinarianId,
+                  }),
                   detailSchemaVersion: 1,
                   priority: "normal" as const,
                 }));
@@ -2747,7 +2762,13 @@ async function saveChartOrderDraftRoute({
           orderId: row.order.id,
           workspaceCatalogItemId: getChartOrderDraftCatalogItemId(row),
           quantity: getDraftQuantity(row.quantityInput) ?? 0,
-          detailInputs: row.detailInputs,
+          detailInputs: mergeChartOrderRuntimeDetailInputs({
+            clinicalOrderType:
+              row.runtimeRow?.clinicalOrderType ??
+              row.catalogSearchRow?.clinicalOrderType,
+            detailInputs: row.detailInputs,
+            primaryVeterinarianId,
+          }),
           detailSchemaVersion: row.detailSchemaVersion,
           priority: row.priority,
         },
@@ -7273,7 +7294,11 @@ function buildChartOrderDraftRowFromCatalog({
     createdAt: now,
     updatedAt: now,
   };
-  const defaultDetailInputs = readCatalogDefaultDetailInputs(row);
+  const defaultDetailInputs = mergeChartOrderRuntimeDetailInputs({
+    clinicalOrderType: row.clinicalOrderType ?? row.appliedSnapshot.clinicalOrderType,
+    detailInputs: readCatalogDefaultDetailInputs(row),
+    primaryVeterinarianId: bundle.encounter.primaryVeterinarianId,
+  });
   const defaultTotalQuantity = defaultDetailInputs.totalQuantity;
   const quantityInput =
     row.rowType === "individual" &&
@@ -7306,17 +7331,45 @@ function buildChartOrderDraftRowFromCatalog({
 }
 
 function readCatalogDefaultDetailInputs(
-  row: ChartOrderCatalogSearchRow,
+  row: { appliedSnapshot?: unknown },
 ): Record<string, unknown> {
-  const snapshot = row.appliedSnapshot as Record<string, unknown>;
+  const snapshot = isRecordValue(row.appliedSnapshot)
+    ? row.appliedSnapshot
+    : {};
   const direct = snapshot.defaultDetailInputs;
-  if (isRecordValue(direct)) return structuredClone(direct);
+  if (isRecordValue(direct) && Object.keys(direct).length > 0) {
+    return structuredClone(direct);
+  }
   const medicationMetadata = snapshot.medicationMetadata;
   if (isRecordValue(medicationMetadata)) {
     const nested = medicationMetadata.defaultDetailInputs;
     if (isRecordValue(nested)) return structuredClone(nested);
   }
   return {};
+}
+
+function mergeChartOrderRuntimeDetailInputs({
+  clinicalOrderType,
+  detailInputs,
+  primaryVeterinarianId,
+}: {
+  clinicalOrderType?: ClinicalOrderType;
+  detailInputs: Record<string, unknown>;
+  primaryVeterinarianId?: string;
+}): Record<string, unknown> {
+  const normalizedPrimaryVeterinarianId = primaryVeterinarianId?.trim();
+  if (clinicalOrderType !== "consultation") {
+    return detailInputs;
+  }
+  const nextDetailInputs = { ...detailInputs };
+  if (!normalizedPrimaryVeterinarianId) {
+    delete nextDetailInputs.responsibleClinicianId;
+    return nextDetailInputs;
+  }
+  return {
+    ...nextDetailInputs,
+    responsibleClinicianId: normalizedPrimaryVeterinarianId,
+  };
 }
 
 function isRecordValue(value: unknown): value is Record<string, unknown> {
@@ -8339,6 +8392,7 @@ function OrderArea({
       hospitalization: 0,
       imaging: 0,
       other: 0,
+      system_exam: 0,
       treatment: 0,
     },
   );
@@ -9217,6 +9271,7 @@ function OrderArea({
           actorHeaders,
           encounterId: bundle.encounter.id,
           expectedEtag,
+          primaryVeterinarianId: bundle.encounter.primaryVeterinarianId,
           removedOrderIds: Array.from(attemptedRemovedRootOrderIds),
           rows: preparedDraft.rows,
           workspaceId: bundle.encounter.workspaceId,
@@ -9588,6 +9643,7 @@ function OrderArea({
         actorHeaders,
         encounterId: bundle.encounter.id,
         expectedEtag: expectedDraftEtag,
+        primaryVeterinarianId: bundle.encounter.primaryVeterinarianId,
         rows: preparedDraft.rows,
         workspaceId: bundle.encounter.workspaceId,
       });

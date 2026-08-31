@@ -104,6 +104,7 @@ export type ClinicalOrderType =
   | "dispensing"
   | "treatment"
   | "hospitalization"
+  | "system_exam"
   | "other";
 export type ClinicalOrderDestinationModule =
   | "consultation"

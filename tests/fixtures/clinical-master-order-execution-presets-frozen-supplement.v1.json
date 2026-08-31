@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Explicit frozen supplement for the two live master orders not present in the v4 authoring fixture or PR-017 dispensing release payload.",
+  "records": [
+    {
+      "masterKey": "cm.order.consult.initial",
+      "masterRecordId": "5e40ba8e-597a-4067-99b0-91a6ec60bb2f",
+      "currentRevision": 2,
+      "classificationPathKey": "cm.path.consultation",
+      "currentReleaseId": "98383567-0b0b-4114-b78b-e845d8932ea2",
+      "releaseNo": 6,
+      "name": "Initial Consultation Changed"
+    },
+    {
+      "masterKey": "phase1.optionb.v1.order.metabolic",
+      "masterRecordId": "b9deb110-8f3b-494b-835b-4270e733eac2",
+      "currentRevision": 1,
+      "classificationPathKey": "phase1a2.fallback.path.lab",
+      "currentReleaseId": "b3865d12-daa9-4404-935e-9f95f5f87f94",
+      "releaseNo": 2,
+      "name": "합성 기초 혈액검사"
+    }
+  ]
+}

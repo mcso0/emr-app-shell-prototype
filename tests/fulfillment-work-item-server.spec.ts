@@ -1611,6 +1611,51 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
   });
 });
 
+test("system exam projections fail closed before entering a fulfillment queue", async () => {
+  const gateway = createSupabaseFulfillmentWorkItemGateway({
+    async rpc() {
+      return {
+        data: [
+          {
+            id: "00000000-0000-4000-8000-000000000903",
+            workspaceId,
+            encounterId,
+            orderId: "00000000-0000-4000-8000-000000000303",
+            orderType: "treatment",
+            queueType: "treatment",
+            status: "requested",
+            priority: "normal",
+            requestedByUserId: "00000000-0000-4000-8000-000000000002",
+            clinicalOrderType: "system_exam",
+            destinationModule: null,
+            assignedToUserId: null,
+            dueAt: null,
+            completedAt: null,
+            cancelledAt: null,
+            returnedAt: null,
+            reason: null,
+            sourceSnapshot: {
+              orderDisplayName: "심혈관계 신체검사",
+              billingReflectionEnabled: false,
+              detail: {},
+            },
+            createdAt: "2026-08-31T09:44:00.000Z",
+            updatedAt: "2026-08-31T09:44:00.000Z",
+          },
+        ],
+        error: null,
+      };
+    },
+  });
+
+  const result = await gateway.listWorkItems({
+    workspaceId,
+    queueType: "treatment",
+  });
+
+  expect(result).toEqual({ ok: true, workItems: [] });
+});
+
 test("fulfillment order sync persists the frozen source snapshot without an enrichment RPC", async () => {
   const gateway = createSupabaseFulfillmentWorkItemGateway({
     async rpc() {

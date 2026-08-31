@@ -136,6 +136,14 @@ import {
   type HospitalOrderDraft,
   type HospitalOrderSubcategoryId,
 } from "@/features/hospital-admin/data";
+import {
+  CLINICAL_ORDER_FIELD_SCHEMAS,
+  resolveClinicalOrderMasterContract,
+  validateClinicalOrderDetailInputs,
+  type ClinicalOrderFieldDefinition,
+  type ClinicalOrderMasterContract,
+} from "@/features/chart/order-execution-domain";
+import type { ClinicalOrderType } from "@/types/emr-domain";
 import { WorkspaceMembershipManagement } from "@/features/auth/workspace-membership-management";
 import { HospitalBasicSettingsScreen } from "@/features/hospital-admin/settings/hospital-basic-settings-screen";
 import { HospitalContactSettingsScreen } from "@/features/hospital-admin/settings/hospital-contact-settings-screen";
@@ -355,6 +363,7 @@ function HospitalOrderTableCellValue({
 type OrderMenuChild = {
   label: string;
   categoryId?: HospitalOrderCategoryId;
+  clinicalOrderType?: ClinicalOrderType;
   disabled?: boolean;
   subcategoryId?: HospitalOrderSubcategoryId;
 };
@@ -493,7 +502,8 @@ const orderMenuGroups: OrderMenuGroup[] = [
       {
         label: "계통 검사",
         categoryId: "lab" as const,
-        subcategoryId: "blood-chemistry" as const,
+        clinicalOrderType: "system_exam",
+        subcategoryId: "system-exam" as const,
       },
       {
         label: "의뢰 검사",
@@ -548,6 +558,18 @@ const orderMenuGroups: OrderMenuGroup[] = [
         label: "치료",
         categoryId: "therapy" as const,
         subcategoryId: "therapy" as const,
+      },
+    ],
+  },
+  {
+    id: "other",
+    label: "기타",
+    children: [
+      {
+        label: "기타",
+        categoryId: "misc" as const,
+        clinicalOrderType: "other",
+        subcategoryId: "other" as const,
       },
     ],
   },
@@ -720,7 +742,47 @@ function validateHospitalOrderDraft(
     }
   }
 
+  const detailContract = getHospitalOrderDetailContract(draft);
+  if (
+    detailContract &&
+    detailContract.clinicalOrderType !== "dispensing"
+  ) {
+    const validation = validateClinicalOrderDetailInputs({
+      clinicalOrderType: detailContract.clinicalOrderType,
+      detailInputs: draft.defaultDetailInputs ?? {},
+      requireComplete: false,
+      schemaVersion: detailContract.detailSchemaVersion,
+    });
+    if (!validation.valid) return "기본 세부값의 형식이나 선택값을 확인해 주세요.";
+  }
+
   return null;
+}
+
+function getHospitalOrderDetailContract(
+  draft: HospitalOrderDraft,
+): ClinicalOrderMasterContract | null {
+  const source = draft.sourceCatalogItem;
+  if (!source) return null;
+
+  try {
+    return resolveClinicalOrderMasterContract({
+      categoryGroup: source.categoryGroup,
+      clinicalOrderType: draft.clinicalOrderType ?? source.clinicalOrderType,
+      isExternalLab: source.isExternalLab,
+      destinationModule: source.destinationModule,
+      defaultDestinationModule: source.defaultDestinationModule,
+      executionMode: source.executionMode,
+      defaultTaskRequired: source.defaultTaskRequired,
+      detailSchemaVersion:
+        draft.detailSchemaVersion ?? source.detailSchemaVersion,
+      detailFieldSchema: source.detailFieldSchema,
+      billingEligible: source.billingEligible,
+      billingReflectionEnabled: source.billingReflectionEnabled,
+    });
+  } catch {
+    return null;
+  }
 }
 
 function getNewOrderDrawerTitle(subcategoryLabel?: string) {
@@ -3356,6 +3418,265 @@ function DrawerSelect({
   );
 }
 
+const hospitalRuntimeDetailFieldKeys = new Set([
+  "responsibleClinicianId",
+  "providerId",
+  "wardOrCage",
+]);
+
+const hospitalOrderDetailOptionLabels: Record<string, string> = {
+  after_meal: "식후",
+  any_time: "시간 무관",
+  before_meal: "식전",
+  bilateral: "양측",
+  blood: "혈액",
+  body_surface_area: "체표면적 기준",
+  feces: "분변",
+  left: "좌측",
+  midline: "정중선",
+  not_applicable: "해당 없음",
+  now: "즉시",
+  plasma: "혈장",
+  refrigerated: "냉장",
+  right: "우측",
+  room_temp: "실온",
+  serum: "혈청",
+  swab: "면봉",
+  tissue: "조직",
+  urine: "뇨",
+  with_meal: "식사와 함께",
+};
+
+function formatHospitalOrderDetailOption(value: string) {
+  return hospitalOrderDetailOptionLabels[value] ?? value;
+}
+
+function formatHospitalOrderDetailDefault(value: unknown) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "boolean") return value ? "예" : "아니오";
+  if (value === null || value === undefined || value === "") return "미설정";
+  return String(value);
+}
+
+function HospitalOrderDefaultDetailFields({
+  contract,
+  disabled,
+  onChange,
+  values,
+}: {
+  contract: ClinicalOrderMasterContract;
+  disabled: boolean;
+  onChange: (key: string, value: unknown) => void;
+  values: Record<string, unknown>;
+}) {
+  const canonicalSchema = CLINICAL_ORDER_FIELD_SCHEMAS[contract.clinicalOrderType];
+  const fields = (contract.detailFieldSchema.fields.length > 0
+    ? contract.detailFieldSchema.fields
+    : canonicalSchema.fields
+  ).slice().sort((left, right) => left.displayOrder - right.displayOrder);
+
+  return (
+    <div className="border-t pt-5" data-testid="hospital-order-default-details">
+      <div className="emr-text-body font-bold">기본 세부값</div>
+      <p className="mt-1 emr-text-metadata text-muted-foreground">
+        새 차트 Order에 복사되는 마스터 기본값입니다. 진료 시점에 정해지는
+        담당자·검사 기관·병동은 임의로 채우지 않고 워크스페이스 정책으로
+        결정합니다.
+      </p>
+      <div className="mt-4 grid gap-4">
+        {fields.map((definition) => {
+          const value = values[definition.key];
+          const runtimeResolved = hospitalRuntimeDetailFieldKeys.has(
+            definition.key,
+          );
+          const schemaDefault = definition.defaultValue;
+          const hint = runtimeResolved
+            ? "진료/워크스페이스에서 결정됩니다. 마스터 기본값은 입력하지 않습니다."
+            : schemaDefault !== null && schemaDefault !== undefined
+              ? `미설정 시 차트 스키마 기본값: ${formatHospitalOrderDetailDefault(schemaDefault)}`
+              : undefined;
+
+          if (runtimeResolved) {
+            return (
+              <DrawerField
+                key={definition.key}
+                hint={hint}
+                label={definition.label}
+                required={definition.required}
+              >
+                <div
+                  aria-label={definition.label}
+                  className="flex min-h-9 items-center rounded-md border bg-muted/30 px-3 emr-text-body text-muted-foreground"
+                >
+                  {value === undefined || value === null || value === ""
+                    ? "진료/워크스페이스에서 결정"
+                    : formatHospitalOrderDetailDefault(value)}
+                </div>
+              </DrawerField>
+            );
+          }
+
+          return (
+            <DrawerField
+              key={definition.key}
+              hint={hint}
+              label={definition.label}
+              required={definition.required}
+            >
+              <HospitalOrderDefaultDetailControl
+                definition={definition}
+                disabled={disabled}
+                value={value}
+                onChange={(nextValue) => onChange(definition.key, nextValue)}
+              />
+            </DrawerField>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HospitalOrderDefaultDetailControl({
+  definition,
+  disabled,
+  onChange,
+  value,
+}: {
+  definition: ClinicalOrderFieldDefinition;
+  disabled: boolean;
+  onChange: (value: unknown) => void;
+  value: unknown;
+}) {
+  const ariaLabel = definition.label;
+  const stringValue =
+    typeof value === "string"
+      ? value
+      : Array.isArray(value)
+        ? value.join(", ")
+        : value === undefined || value === null
+          ? ""
+          : String(value);
+  const inputConstraints = {
+    maxLength: definition.validation.maxLength,
+    min: definition.validation.min,
+    max: definition.validation.max,
+    step:
+      definition.validation.precision === undefined
+        ? undefined
+        : 10 ** -definition.validation.precision,
+  };
+
+  if (definition.control === "switch") {
+    return (
+      <label className="flex min-h-9 items-center gap-2 emr-text-body">
+        <Switch
+          aria-label={ariaLabel}
+          checked={value === true}
+          disabled={disabled}
+          onCheckedChange={(checked) => onChange(Boolean(checked))}
+        />
+        {value === true ? "사용" : "미사용"}
+      </label>
+    );
+  }
+
+  if (definition.control === "select" && definition.options.length > 0) {
+    return (
+      <Select
+        disabled={disabled}
+        value={stringValue}
+        onValueChange={(nextValue) => onChange(nextValue)}
+      >
+        <SelectTrigger aria-label={ariaLabel} className="h-9 w-full bg-card">
+          <SelectValue placeholder="기본값을 선택해 주세요">
+            {formatHospitalOrderDetailOption(stringValue)}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {definition.options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {formatHospitalOrderDetailOption(option)}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  if (
+    definition.control === "textarea" ||
+    definition.control === "schedule" ||
+    definition.valueType === "attachment_array"
+  ) {
+    return (
+      <Textarea
+        aria-label={ariaLabel}
+        className="min-h-20 resize-none"
+        disabled={disabled}
+        maxLength={definition.validation.maxLength}
+        placeholder="기본값을 입력해 주세요"
+        value={stringValue}
+        onChange={(event) => {
+          const next = event.target.value;
+          onChange(
+            definition.valueType === "attachment_array"
+              ? next
+                  .split(",")
+                  .map((entry) => entry.trim())
+                  .filter(Boolean)
+              : next,
+          );
+        }}
+      />
+    );
+  }
+
+  if (definition.valueType === "number" || definition.control === "number") {
+    return (
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label={ariaLabel}
+          disabled={disabled}
+          inputMode="decimal"
+          type="number"
+          value={stringValue}
+          {...inputConstraints}
+          onChange={(event) => {
+            const next = event.target.value;
+            onChange(next === "" ? undefined : Number(next));
+          }}
+        />
+        {definition.unit ? (
+          <span className="shrink-0 emr-text-metadata text-muted-foreground">
+            {definition.unit}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        aria-label={ariaLabel}
+        disabled={disabled}
+        maxLength={definition.validation.maxLength}
+        placeholder="기본값을 입력해 주세요"
+        value={stringValue}
+        onChange={(event) => onChange(event.target.value || undefined)}
+      />
+      {definition.unit ? (
+        <span className="shrink-0 emr-text-metadata text-muted-foreground">
+          {definition.unit}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   const { hydrated, hydrate, session } = useAuthClient();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
@@ -3462,6 +3783,13 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   const subcategory = getHospitalOrderSubcategory(draft.subcategoryId);
   const creatingNewOrder = !order.sourceCatalogItem;
   const dispensingOrder = draft.categoryId === "dispensing";
+  const detailContract = getHospitalOrderDetailContract(draft);
+  const generalDefaultDetailEditorVisible = Boolean(
+    !creatingNewOrder &&
+      !dispensingOrder &&
+      detailContract &&
+      detailContract.clinicalOrderType !== "dispensing",
+  );
   const hospitalCreatedDispensing =
     draft.sourceKind === "hospital_created" && dispensingOrder;
   const reviewPending =
@@ -3518,6 +3846,21 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
       };
     }
     updateDraft({ dispensingPreset: next });
+  };
+
+  const updateDefaultDetailInput = (key: string, value: unknown) => {
+    const nextDefaults = { ...(draft.defaultDetailInputs ?? {}) };
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === "string" && value.trim() === "") ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      delete nextDefaults[key];
+    } else {
+      nextDefaults[key] = value;
+    }
+    updateDraft({ defaultDetailInputs: nextDefaults });
   };
 
   const handleSave = async () => {
@@ -4095,6 +4438,14 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                 />
               </DrawerField>
             </>
+          ) : null}
+          {generalDefaultDetailEditorVisible && detailContract ? (
+            <HospitalOrderDefaultDetailFields
+              contract={detailContract}
+              disabled={mutationInFlight || !canEdit}
+              onChange={updateDefaultDetailInput}
+              values={draft.defaultDetailInputs ?? {}}
+            />
           ) : null}
           <DrawerField label="케어가이드">
             <Textarea

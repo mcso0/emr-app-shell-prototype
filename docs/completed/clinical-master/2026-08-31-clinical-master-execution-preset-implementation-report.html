@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CLAiR 전 카테고리 마스터 오더 실행 프리셋 구현 보고서</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f4f6fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; line-height: 1.62; }
+    main { max-width: 1120px; margin: 0 auto; padding: 40px 24px 72px; }
+    article { background: #fff; border: 1px solid #dce2ec; border-radius: 20px; padding: clamp(24px, 5vw, 52px); box-shadow: 0 14px 36px rgba(27, 42, 70, .07); }
+    h1 { margin: 8px 0 14px; font-size: clamp(30px, 5vw, 48px); line-height: 1.15; letter-spacing: -.035em; }
+    h2 { margin: 44px 0 16px; padding-top: 8px; border-top: 1px solid #e7ebf2; font-size: 25px; letter-spacing: -.02em; }
+    h3 { margin: 28px 0 10px; font-size: 18px; }
+    p, li { color: #354159; }
+    a { color: #2457d6; }
+    code { background: #eef2f8; border-radius: 5px; padding: 2px 5px; overflow-wrap: anywhere; }
+    .meta { margin: 0; color: #667189; font-size: 14px; }
+    .status { margin: 24px 0; padding: 18px 20px; border: 1px solid #a8dbc1; border-radius: 12px; background: #eefaf4; color: #0b6d42; font-weight: 700; }
+    .warning { margin: 18px 0; padding: 18px 20px; border: 1px solid #e4ca8c; border-radius: 12px; background: #fff9e9; color: #71510a; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
+    .metric { padding: 16px; border: 1px solid #dde4ef; border-radius: 12px; background: #fafbfd; }
+    .metric strong { display: block; color: #172033; font-size: 25px; line-height: 1.2; }
+    .metric span { display: block; margin-top: 6px; color: #667189; font-size: 13px; }
+    .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 22px 0; }
+    .flow div { position: relative; padding: 14px; border: 1px solid #d9e1ee; border-radius: 10px; background: #f8faff; font-weight: 650; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin: 18px 0 24px; font-size: 14px; }
+    th, td { border-bottom: 1px solid #e5e9f0; padding: 10px 9px; text-align: left; vertical-align: top; }
+    th { color: #46516b; background: #f8f9fc; font-size: 13px; }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    .small { color: #667189; font-size: 13px; }
+    .pass { color: #087443; font-weight: 700; }
+    .no { color: #9a3e2d; font-weight: 700; }
+    @media (max-width: 760px) { .grid, .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } article { padding: 24px 18px; } table { display: block; overflow-x: auto; } }
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <p class="meta">CLAiR Clinical Master · CLINICAL-MASTER-PR-022 · 2026-08-31 · remote writes 0</p>
+      <h1>전 카테고리 마스터 오더<br>실행 프리셋 구현 보고서</h1>
+      <p class="status">최종 판단: 로컬 구현 후보와 격리 DB 검증 완료. 원격 적용·임상 활성화는 아직 수행하지 않음.</p>
+
+      <div class="grid">
+        <div class="metric"><strong>522</strong><span>현재 프리셋이 있는 오더</span></div>
+        <div class="metric"><strong>689</strong><span>최종 게시 레코드</span></div>
+        <div class="metric"><strong>3 × 522</strong><span>격리 DB 대상 workspace catalog</span></div>
+        <div class="metric"><strong>0</strong><span>원격 write / 임상 활성화</span></div>
+      </div>
+
+      <h2>1. 최종 판단</h2>
+      <p>기존 510개 마스터 오더와 새로 정의한 12개 계통별 신체검사 오더를 합쳐 <strong>522개 오더 모두에 정확히 하나의 현재 실행 프리셋</strong>이 존재한다. 최종 게시 입력은 <strong>689개 레코드 / 522개 오더</strong>이며 고정 산출물 SHA-256은 <code>1eeb5035d70d5f28035df49d1d32c3689ffe79a4bb28062e5606256802572e0c</code>다.</p>
+      <div class="flow">
+        <div>마스터 프리셋</div><div>워크스페이스 복사·수정</div><div>차트 초안 자동입력</div><div>확정 snapshot 불변</div>
+      </div>
+      <p>병원은 워크스페이스 복사본을 수정하거나 사용 중지할 수 있다. 수정하지 않은 복사본은 마스터 개정에 자동 동기화되고, 수정한 복사본은 덮어쓰지 않고 검토 대상으로 남는다. 필수값이 비어 있으면 확정을 막고, 확정된 유효 세부값은 이후 마스터·워크스페이스 변경과 무관하게 보존된다. <code>system_exam</code>은 차트에서 완료되고 fulfillment queue로 전달되지 않는다.</p>
+      <p class="warning">모든 프리셋은 <code>synthetic_unreviewed</code>, <code>clinicalUseAllowed=false</code>다. 기술 후보가 완성됐다는 뜻이지 임상 승인 또는 실제 진료 활성화를 뜻하지 않는다.</p>
+
+      <h2>2. 구현 계약</h2>
+      <ol>
+        <li>모든 적용 대상 마스터 오더가 버전이 있는 실행 프리셋을 보유한다.</li>
+        <li>워크스페이스 채택 시 오더와 세부 기본값을 함께 복사한다.</li>
+        <li>병원은 복사본을 수정하거나 사용 중지할 수 있다.</li>
+        <li>사용자가 수정한 값은 다음 마스터 채택에서 자동 덮어쓰지 않는다.</li>
+        <li>차트 초안은 유효 프리셋 값을 자동 입력한다.</li>
+        <li>환자·담당자·장소처럼 마스터가 알 수 없는 값은 runtime 또는 workspace에서 해석한다.</li>
+        <li>필수값 누락은 확정을 막고, 확정 snapshot은 불변으로 유지한다.</li>
+      </ol>
+
+      <h2>3. 사전 조사</h2>
+      <h3>코드·데이터 기준선</h3>
+      <p>동결 입력의 published normal 마스터 오더는 510개였다. 조제 프리셋 완성 108개, 일부 검사 프로필만 존재 86개, 타입화된 실행 프리셋 없음 316개였고 전용 계통별 신체검사 카테고리는 없었다. 기존 조제 기본값은 그대로 재사용하고 나머지 카테고리를 공통 계약으로 확장했다.</p>
+
+      <h3>외부 임상정보 조사</h3>
+      <p>외부 자료는 실제 처방이나 환자별 임상 결정을 만들기 위한 것이 아니라 현실적인 구조·필드·단위·운영 용어를 정하기 위한 참고로만 사용했다.</p>
+      <table>
+        <thead><tr><th>참고 자료</th><th>적용 범위</th><th>적용하지 않은 범위</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://ucum.org/">UCUM</a></td><td>기계 단위 코드와 표시 단위 분리</td><td>환자별 용량·결과 자동 결정</td></tr>
+          <tr><td><a href="https://eclinpath.com/test-basics/sample-collection-2/">Cornell eClinpath sample collection</a> / <a href="https://eclinpath.com/chemistry/sample-collection-chem/">chemistry sample</a></td><td>검체, 채취·취급 구조, 검사 프로필 필드</td><td>장비별 참고범위·판정값 추정</td></tr>
+          <tr><td><a href="https://www.dicomstandard.org/activity/wgs/wg-25">DICOM WG-25</a></td><td>종·부위·자세 등 영상 구조화</td><td>PACS·장비 식별자 임의 생성</td></tr>
+          <tr><td><a href="https://www.aaha.org/resources/2020-aaha-anesthesia-and-monitoring-guidelines-for-dogs-and-cats/">AAHA Anesthesia</a>, <a href="https://www.aaha.org/resources/2019-aaha-dental-care-guidelines-for-dogs-and-cats/">Dental</a>, <a href="https://www.aaha.org/resources/2024-aaha-fluid-therapy-guidelines-for-dogs-and-cats/">Fluid Therapy</a>, <a href="https://www.aaha.org/resources/2021-aaha-aafp-feline-life-stage-guidelines/feline-life-stage-home/">Feline Life Stage</a></td><td>마취·치과·수액·예방진료 기록 항목</td><td>환자별 약물·용량·속도 결정</td></tr>
+          <tr><td><a href="https://recoverinitiative.org/2024-guidelines/">RECOVER 2024</a></td><td>응급·소생 오더의 구조와 즉시성</td><td>실제 CPR 프로토콜 임의 승인</td></tr>
+          <tr><td><a href="https://www.vmd.defra.gov.uk/ProductInformationDatabase/">UK VMD Product Information Database</a></td><td>제품·규제 출처와 약품정보 분리</td><td>국내 허가·병원 재고 사실 생성</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. 최종 데이터셋</h2>
+      <h3>기존 510개 작성 카테고리</h3>
+      <table>
+        <thead><tr><th>카테고리</th><th class="num">수</th><th>카테고리</th><th class="num">수</th></tr></thead>
+        <tbody>
+          <tr><td>상담</td><td class="num">31</td><td>예방진료</td><td class="num">24</td></tr>
+          <tr><td>임상병리검사</td><td class="num">86</td><td>영상검사</td><td class="num">30</td></tr>
+          <tr><td>조제</td><td class="num">159</td><td>조제 보조 품목</td><td class="num">2</td></tr>
+          <tr><td>처치</td><td class="num">45</td><td>수술·마취</td><td class="num">42</td></tr>
+          <tr><td>치과</td><td class="num">24</td><td>입원</td><td class="num">30</td></tr>
+          <tr><td>증명서</td><td class="num">13</td><td>응급</td><td class="num">24</td></tr>
+          <tr><th>합계</th><th class="num">510</th><td></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <h3>최종 실행 타입</h3>
+      <table>
+        <thead><tr><th>타입</th><th class="num">현재 프리셋</th><th>동작</th></tr></thead>
+        <tbody>
+          <tr><td><code>consultation</code></td><td class="num">55</td><td>상담·예방, 담당 수의사 runtime 해석</td></tr>
+          <tr><td><code>clinical_lab</code></td><td class="num">86</td><td>검체·검사/패널·채취 지침</td></tr>
+          <tr><td><code>imaging</code></td><td class="num">30</td><td>부위·자세·검사 지침</td></tr>
+          <tr><td><code>dispensing</code></td><td class="num">159</td><td>기존 조제 기본값 호환</td></tr>
+          <tr><td><code>treatment</code></td><td class="num">111</td><td>처치·수술·마취·치과</td></tr>
+          <tr><td><code>hospitalization</code></td><td class="num">30</td><td>입원; 병동·케이지는 workspace 해석</td></tr>
+          <tr><td><code>system_exam</code></td><td class="num">12</td><td>계통 신체검사, chart-only</td></tr>
+          <tr><td><code>other</code></td><td class="num">39</td><td>증명·응급·비임상 보조</td></tr>
+          <tr><td><code>external_lab</code></td><td class="num">0</td><td>계약은 지원하지만 동결 입력에 독립 active identity가 없어 임의 생성하지 않음</td></tr>
+          <tr><th>합계</th><th class="num">522</th><td>510 기존 + 12 계통검사</td></tr>
+        </tbody>
+      </table>
+      <p>689개 게시 레코드는 오더 522 외에 clinical action 25, chart group 8, lab panel 18, lab test 72, order category 15, result input type 3, task route 7, specimen type 8, unit 9, species 2를 포함한다.</p>
+
+      <h3>결정론 산출물</h3>
+      <table>
+        <thead><tr><th>산출물</th><th>크기</th><th>SHA-256</th></tr></thead>
+        <tbody>
+          <tr><td>기존 오더 프리셋</td><td>510</td><td><code>02c4ad67463545fa502e263fd7681b203b3e866702d23cbf364edbfe6276f6c0</code></td></tr>
+          <tr><td>510개 source entry</td><td>510</td><td><code>a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25</code></td></tr>
+          <tr><td>510개 입력 lineage</td><td>510</td><td><code>e8c5b28660efd3c6c0091a105fcd5e6234010a851f07cc4e16f1da91582b3198</code></td></tr>
+          <tr><td>live 전체 lineage</td><td>510</td><td><code>b4d56f15dfcf53e867db2e022f6e7c742c2354b507eb4a88feb981b351b039bb</code></td></tr>
+          <tr><td>계통검사 작성</td><td>12</td><td><code>594241e8d753a9117f18ffc392930f51e01976f6ed19f9f36f341d8f456521c6</code></td></tr>
+          <tr><td>최종 게시 입력</td><td>689 / 522</td><td><code>1eeb5035d70d5f28035df49d1d32c3689ffe79a4bb28062e5606256802572e0c</code></td></tr>
+        </tbody>
+      </table>
+      <p>live lineage fixture는 읽기 전용 조회로 확보한 정확한 510개 <code>{masterKey, currentRevision, currentReleaseId}</code> 집합이다. 생성기와 release compiler는 이 64자리 SHA를 재계산하고 한 행의 revision·release identity·artifact hash라도 달라지면 게시 입력 생성을 거부한다.</p>
+
+      <h2>5. 구현 내용</h2>
+      <h3>공통 마스터 프리셋</h3>
+      <p><code>master.order_execution_presets</code>와 current pointer에 preset/order revision, clinical type, schema version, defaults, field policies, provenance, review/activation state, canonical hash, source artifact와 release lineage를 저장한다. 버전 update/delete, unknown field, enum·schema·hash 불일치, 동일하거나 낮은 revision을 fail closed 처리한다. 현재 publisher는 <code>synthetic_unreviewed</code>와 <code>clinicalUseAllowed=false</code>만 허용해 payload가 임상 검토 증거 없이 스스로 승격할 수 없다.</p>
+
+      <h3>필드 소유권</h3>
+      <p>값은 encounter/runtime → workspace override → master preset → schema default → 사용자 입력 순으로 해석한다. 정책은 <code>preset_fixed</code>, <code>derived_from_profile</code>, <code>schema_default</code>, <code>workspace_resolved</code>, <code>runtime_resolved</code>, <code>required_manual</code>, <code>not_applicable</code>다. 장비·외부기관·병동·케이지·가격은 중앙 마스터가 소유하지 않으며 담당 수의사는 actor가 아닌 encounter 주치의에서 해석한다.</p>
+
+      <h3>게시·채택</h3>
+      <ul>
+        <li>publisher의 <code>executionPreset</code> envelope와 canonical hash를 검증해 immutable master version으로 투영한다.</li>
+        <li>689개 payload를 정확한 allowlist workspace에만 채택한다.</li>
+        <li>재게시·재채택은 idempotent하며, 생략된 기존 lab dependency revision도 보존한다.</li>
+        <li>lab conflict counter는 실제 insert가 발생했을 때만 증가한다.</li>
+        <li>기존 조제 nested default와 새 generic default를 호환한다.</li>
+      </ul>
+
+      <h3>워크스페이스 관리</h3>
+      <p>병원관리 drawer에서 타입 스키마에 맞는 세부 기본값을 확인·수정·사용 중지한다. partial edit는 가격·조제·백신 metadata를 지우지 않는다. CAS revision을 강제하고 stale revision은 <code>40001</code>로 거부한다. 사용자 수정은 <code>customized</code>와 변경 필드를 기록하며, 다음 채택은 값을 보존하고 review 행을 만든다. 사용 중지는 <code>order_catalog.paused</code> / <code>pause</code> 감사 이벤트로 남는다.</p>
+
+      <h3>차트와 snapshot</h3>
+      <p>개별 오더와 Order Set child 모두 유효 기본값을 초안에 복사한다. 상담 담당자는 encounter 주치의로 해석하며 없으면 임의 actor를 넣지 않는다. required/unknown field 검증 후 확정하고, 확정 오더·fulfillment source·billing candidate는 당시 snapshot을 유지한다. <code>system_exam</code> queue projection은 서버가 fail closed로 버린다.</p>
+
+      <h3>보안 경계</h3>
+      <p>master preset은 RLS enabled이며 client role에 직접 공개하지 않는다. private publisher/adopter/project/sync와 내부 chart draft base RPC execute를 회수했다. catalog writer와 master-update resolver는 역할 label이나 TypeScript 선검사에 의존하지 않고 DB에서 <code>service_catalog:manage</code>를 다시 확인한다. 차트 runtime read는 <code>chart:update</code> preflight 뒤에만 실행한다. security-definer 함수는 빈 <code>search_path</code>, workspace/actor permission, CAS와 audit를 유지하고, candidate-only backfill 감사 324건은 재적용에도 증가하지 않는다. current preset identity 교체와 activated/source release 불일치도 거부한다.</p>
+
+      <h2>6. 격리 로컬 DB 리허설</h2>
+      <p>로컬 Docker Supabase 전용 DB에서만 수행했다. 원본 로컬 <code>postgres</code>와 원격 DB는 변경하지 않았다. <code>pg_dump --no-owner --no-privileges</code> clone 특성상 ACL은 PR-022의 명시적 revoke로 정규화한 뒤 검증했다.</p>
+
+      <h3>게시</h3>
+      <table>
+        <tbody>
+          <tr><th>release id</th><td><code>b705c57b-a379-47c3-bb70-869fb999ba8b</code></td></tr>
+          <tr><th>release no / key</th><td>6 / <code>cm.release.execution-presets.v1.2026-08-31.1</code></td></tr>
+          <tr><th>DB source fingerprint</th><td><code>8b939f7a0c752bb7b8989aca80380e51c1a720a8b98ccb35d1ceb1408648a0f0</code></td></tr>
+          <tr><th>scope / records</th><td><code>payload</code> / 689</td></tr>
+          <tr><th>동일 재게시</th><td>같은 release, <code>idempotent=true</code></td></tr>
+        </tbody>
+      </table>
+      <p>master current 522개 모두 <code>synthetic_unreviewed</code>, <code>clinicalUseAllowed=false</code>였고 payload hash와 current hash 불일치는 0개였다.</p>
+
+      <h3>채택</h3>
+      <p>대상은 <code>clair-demo</code>, <code>workspace-clair-cheongdam</code>, <code>workspace-clinical-master-pilot-v1</code> 세 곳이었다.</p>
+      <table>
+        <thead><tr><th>항목</th><th class="num">각 workspace</th></tr></thead>
+        <tbody>
+          <tr><td>최초 신규 catalog</td><td class="num">414</td></tr>
+          <tr><td>기존 행 동기화</td><td class="num">414</td></tr>
+          <tr><td>검토 snapshot</td><td class="num">522</td></tr>
+          <tr><td>임상병리 catalog / 신규 item / link</td><td class="num">86 / 68 / 278</td></tr>
+          <tr><td>기존 1개 포함 최종 유효 item / link</td><td class="num">69 / 279</td></tr>
+          <tr><td>최종 catalog / 빈 defaults</td><td class="num">522 / 0</td></tr>
+          <tr><td>재채택 신규·동기화·검토·lab·알림</td><td class="num">모두 0</td></tr>
+        </tbody>
+      </table>
+      <p>negative control <code>clair-foreign-demo</code>는 catalog 0개를 유지했다.</p>
+      <p>격리 harness에는 live-only 동결 오더 두 건이 참조하는 immutable lab dependency 5개가 로컬 clone에 없었다. 읽기 전용 live 조회로 정확한 ID·key·revision·관계를 확인한 뒤 로컬 전용 seed로만 보충했다. 그래서 adopter 신규 수는 item 68/link 278이고 기존 1개를 합친 최종 유효 수는 69/279다. 원격에는 쓰지 않았다.</p>
+
+      <h3>사용자 수정 보존</h3>
+      <p>청담의 복부 방사선 프로토콜을 <code>청담 워크스페이스 복부 촬영 프로토콜</code>로 수정하고 사용 중지했다. revision 1 → 2 → 3, <code>customized</code>, 변경 필드 <code>defaultDetailInputs</code>·<code>availabilityStatus</code>와 <code>order_catalog.paused</code> / <code>pause</code> 감사 이벤트가 기록됐다. 재채택 뒤 수정값·revision·paused 상태는 그대로였고 pending review가 생성됐다.</p>
+
+      <h3>재적용·권한·음성 게이트</h3>
+      <p>6개 PR-022 migration 재적용이 통과했고 backfill 감사 행은 324개를 유지했다. default/resolver가 모두 없는 required field와 current preset identity 교체는 <code>23514</code>, stale CAS는 <code>40001</code>, immutable preset update는 <code>55000</code>으로 거부됐다. master 직접 접근과 private/internal writer execute도 client role에 거부된다.</p>
+      <p><code>hospital_admin</code> 역할을 유지한 채 permission assignment에서 <code>service_catalog:manage</code>를 제거한 격리 트랜잭션에서는 master-update <code>accept_source</code>와 <code>dismiss</code>가 모두 <code>42501</code>로 거부됐다. 트랜잭션 rollback 뒤 원래 assignment와 감사 324건이 그대로임을 확인했다.</p>
+
+      <h3>과거 실행 데이터</h3>
+      <p><code>orders</code>, <code>order_confirmation_commands</code>, <code>order_fulfillment_work_items</code>, <code>order_tasks</code>, <code>order_billing_candidates</code>는 모두 0을 유지했다. 게시·채택 리허설이 확정·실행·청구 데이터를 만들거나 수정하지 않았고 snapshot 불변은 집중 테스트로 별도 검증했다.</p>
+
+      <h2>7. 검증 결과</h2>
+      <table>
+        <thead><tr><th>검증</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td>변경된 전체 spec 정상 서버 실행</td><td class="pass">168 / 171 passed</td></tr>
+          <tr><td>기능 관련 spec</td><td class="pass">전부 통과</td></tr>
+          <tr><td>기존 병원관리 header 기하 spec</td><td>3건 실패: 기대 56px / 현재 44px</td></tr>
+          <tr><td>라우트 실서버 집중 검증</td><td class="pass">3 / 3 passed</td></tr>
+          <tr><td>최종 clinical-master/security 집중 검증</td><td class="pass">52 / 52 passed</td></tr>
+          <tr><td>TypeScript / ESLint</td><td class="pass">통과 / 통과</td></tr>
+          <tr><td>production build</td><td class="pass">통과</td></tr>
+          <tr><td>산출물 check mode</td><td class="pass">510 / 12 / 522 통과</td></tr>
+          <tr><td>문서 링크</td><td class="pass">955개 docs/agent Markdown 검사 통과</td></tr>
+          <tr><td>diff / secret scan</td><td class="pass">통과 / 3,893 tracked files 통과</td></tr>
+        </tbody>
+      </table>
+      <p>변경된 13개 spec을 정상 Next dev server에서 함께 실행한 결과 171건 중 168건이 통과했다. 실패 3건은 이번 diff가 건드리지 않은 기존 main-content header 기대값 56px과 현재 구현 44px의 불일치였다. 프리셋·카탈로그·차트·fulfillment 검증은 모두 통과했고, 서버 없는 정적 설정에서 URL이 없어 실패했던 라우트 3건도 정상 서버 집중 실행에서 3/3 통과했다. 해당 UI 기하나 기존 기대값을 임의 수정하지 않았다.</p>
+      <p class="small">빌드는 성공했지만 기존 <code>next.config.mjs</code> → PRD viewer import trace의 NFT 범위 경고 1건이 남아 있다. 이번 프리셋 변경과 무관한 기존 경고다.</p>
+
+      <h3>독립 보안 재심사</h3>
+      <p>독립 hard-gate 리뷰는 최초 <strong>MUST-FIX</strong>로 live lineage, required-field completeness, preset identity, DB writer permission·backfill audit, synthetic self-promotion 문제를 지적했다. 이를 수정한 뒤 마지막 master-update resolver 권한 우회까지 추가 발견해 보완했다.</p>
+      <p class="status">최종 재심사: APPROVE · P0 0건 · P1 0건</p>
+      <p class="small">이 승인은 로컬 구현과 보안 경계 승인이다. 원격 Supabase 적용, 실제 publish/adoption, 배포 또는 임상 활성화 승인이 아니다.</p>
+
+      <h2>8. 구현 중 수정한 결함</h2>
+      <ol>
+        <li>임상병리 검체 enum의 <code>tissue</code> 누락</li>
+        <li>계통검사 publisher action의 legacy <code>consultation</code> 오분류</li>
+        <li>누적 publisher의 생략된 lab dependency revision null overwrite</li>
+        <li>lab adopter의 conflict 이후 false create counter</li>
+        <li>nullable price partial edit의 pricing rule SQL null 변환</li>
+        <li>비조제 사용 중지 감사 이벤트의 update 오기록</li>
+        <li>private publisher/adopter 및 내부 chart base RPC execute 권한</li>
+        <li>live lineage SHA 잘림과 510개 집합 미재계산</li>
+        <li>required field의 default 또는 resolver 완전성 미강제</li>
+        <li>current preset identity의 새 ID/revision 1 초기화 가능성</li>
+        <li>catalog writer와 master-update resolver의 canonical permission 우회</li>
+        <li>backfill durable audit와 candidate-only idempotency 부족</li>
+        <li>payload의 임상 검토 없는 synthetic self-promotion</li>
+        <li>정상 default가 있는 required <code>preset_fixed</code>의 잘못된 거부</li>
+        <li>PR-019 rev2 전진 뒤 foundation reapply rev1 projection mismatch</li>
+        <li>publish/adopt reapply의 legacy function 중복 rename</li>
+      </ol>
+      <p>각 수정에 fail-closed 또는 회귀 테스트를 추가했다.</p>
+
+      <h2>9. 변경 범위</h2>
+      <p>결정론 compiler 3개, 동결 fixture와 최종 게시 입력, migration 6개, 병원관리 catalog/UI, 차트 초안·runtime resolver·snapshot transport, fulfillment queue 차단, 타입·테스트, 작업 항목과 보고서를 변경했다. 기존 데모/확정 기록, 원격 데이터, 배포, dependency version은 변경하지 않았다.</p>
+
+      <h2>10. 남은 외부 승인 게이트</h2>
+      <ol>
+        <li>후보 diff와 exact SHA 사람 최종 리뷰</li>
+        <li>승인된 원격 Supabase에 migration 적용</li>
+        <li>고정 SHA의 689-record payload 게시</li>
+        <li>정확히 세 workspace만 채택하고 before/after/retry fingerprint 확인</li>
+        <li><code>clair-foreign-demo</code> 불변 재확인</li>
+        <li>인증 병원관리·차트 브라우저 smoke</li>
+        <li>임상 검토된 프리셋만 별도 활성화</li>
+        <li>커밋·푸시·PR·merge·Ready deployment와 rollback 증거</li>
+      </ol>
+      <p class="warning">record count, source fingerprint, preset hash, workspace allowlist 중 하나라도 다르면 원격 실행을 즉시 중단해야 한다. 임상 검토 전에는 <code>clinicalUseAllowed=false</code>를 유지한다.</p>
+
+      <h2>11. 결론</h2>
+      <p><strong>“마스터 프리셋이 워크스페이스로 함께 복사되고, 병원이 수정·사용 중지하며, 차트 추가 시 자동 입력되고, 확정 후 불변으로 남는가?”</strong>에 대한 로컬 구현 답은 <span class="pass">예</span>다.</p>
+      <p><strong>“지금 원격 병원에서 바로 임상 사용 가능한가?”</strong>에 대한 답은 <span class="no">아니오</span>다. 합성 프리셋 임상 검토, 원격 적용 승인, 인증 브라우저 검증과 배포 절차가 남아 있다.</p>
+    </article>
+  </main>
+</body>
+</html>

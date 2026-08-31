@@ -8,7 +8,7 @@ import {
 } from "@/features/chart/order-execution-domain";
 import type { ClinicalOrderType } from "@/types/emr-domain";
 
-test("all eight clinical types expose complete versioned field metadata", () => {
+test("all nine clinical types expose complete versioned field metadata", () => {
   expect(CLINICAL_ORDER_TYPES).toEqual([
     "consultation",
     "clinical_lab",
@@ -17,6 +17,7 @@ test("all eight clinical types expose complete versioned field metadata", () => 
     "dispensing",
     "treatment",
     "hospitalization",
+    "system_exam",
     "other",
   ]);
 
