@@ -9,6 +9,7 @@ const chartBillingSummaryEtagPattern = /^"[0-9a-f]{64}"$/i;
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const allowedPayloadKeys = new Set([
+  "id",
   "workspaceId",
   "encounterId",
   "etag",
@@ -76,6 +77,8 @@ export function parseChartBillingSummaryRealtimePayload(
     payload.occurredAt.length === 0 ||
     payload.occurredAt.length > 64 ||
     Number.isNaN(Date.parse(payload.occurredAt)) ||
+    (payload.id !== undefined &&
+      (typeof payload.id !== "string" || !uuidPattern.test(payload.id))) ||
     (payload.etag !== undefined &&
       (typeof payload.etag !== "string" ||
         !chartBillingSummaryEtagPattern.test(payload.etag)))
