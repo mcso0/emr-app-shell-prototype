@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BlockNote SOAP 에디터 인터랙티브 시안 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #1f2925;
+        background: #f4f6f5;
+      }
+      body {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+      main {
+        padding: 36px;
+        border: 1px solid #dbe1de;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 32px rgb(26 43 36 / 8%);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      h2 {
+        margin: 30px 0 10px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        line-height: 1.65;
+      }
+      .meta,
+      .caveat {
+        color: #65726d;
+      }
+      .result {
+        margin: 24px 0;
+        padding: 18px 20px;
+        border-left: 4px solid #2f745e;
+        background: #eef6f2;
+      }
+      .review-link {
+        display: inline-flex;
+        margin-top: 8px;
+        border-radius: 8px;
+        padding: 10px 14px;
+        background: #1f2925;
+        color: #fff;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #e4e8e6;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        width: 190px;
+        color: #21644f;
+      }
+      code {
+        border-radius: 4px;
+        padding: 2px 5px;
+        background: #eef1ef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>SOAP를 실제 BlockNote 방식으로 시험할 수 있게 했다</h1>
+      <p class="meta">2026-08-31 · 진료/차트 · CHART-PR-029</p>
+
+      <div class="result">
+        임의로 노션 UI를 흉내 낸 화면이 아니라, 무료·오픈소스 범위의
+        <strong>BlockNote ShadCN 에디터 자체</strong>를 사용한 인터랙티브 시안을
+        만들었다. 구현 전 대표 검토를 위해 저장되지 않는 Storybook 환경으로
+        분리했다.
+      </div>
+
+      <a
+        class="review-link"
+        href="http://127.0.0.1:6011/?path=/story/features-chart-soap-blocknote-prototype--representative-review"
+      >인터랙티브 시안 열기</a>
+
+      <h2>기획·UX 스펙</h2>
+      <ul>
+        <li>네 개의 카드가 아니라 한 개의 연속된 블록 문서로 S/O/A/P를 작성한다.</li>
+        <li>블록 hover 시 BlockNote 기본 왼쪽 <code>+</code>와 드래그 핸들을 사용한다.</li>
+        <li><code>/</code>와 왼쪽 <code>+</code>는 같은 블록·SOAP 템플릿 메뉴를 연다.</li>
+        <li>텍스트 선택 시 BlockNote 기본 플로팅 포맷 툴바를 사용한다.</li>
+        <li>기본 SOAP와 근골격계 SOAP 템플릿을 한 번에 삽입한다.</li>
+        <li>이미지·동영상·광학검사는 연동 계약 전까지 “미연동”으로 안내하고 삽입하지 않는다.</li>
+      </ul>
+
+      <h2>이번에 변경한 것</h2>
+      <ul>
+        <li><code>@blocknote/core</code>, <code>react</code>, <code>shadcn</code> 0.54.0을 정확 버전으로 추가</li>
+        <li>SOAP 섹션 커스텀 블록과 두 종류의 한국어 템플릿 추가</li>
+        <li>BlockNote의 메뉴·드래그·선택 툴바는 유지하고 CLAiR 토큰과 Pretendard만 적용</li>
+        <li>향후 저장 정본 검토를 위한 BlockNote JSON 인스펙터 추가</li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <table>
+        <tr>
+          <th>PASS · 인터랙션</th>
+          <td>SOAP 삽입, 슬래시 메뉴, 왼쪽 추가·드래그 컨트롤, 선택 툴바, 초기화, JSON</td>
+        </tr>
+        <tr>
+          <th>PASS · 빌드</th>
+          <td>전체 ESLint, TypeScript, Storybook 빌드, Next.js 프로덕션 빌드</td>
+        </tr>
+        <tr>
+          <th>PASS · 저장소</th>
+          <td>
+            문서 링크, 비밀정보, diff whitespace 점검. 운영 의존성 audit 수치는
+            기존 체크아웃과 동일하다.
+          </td>
+        </tr>
+      </table>
+
+      <h2>현재 경계와 다음 결정</h2>
+      <p class="caveat">
+        이번 시안은 네트워크·DB에 저장하지 않고 라이브 진료 화면도 교체하지 않았다.
+        승인 후 다음 작업에서 BlockNote JSON 정본, 기존 S/O/A/P 필드 호환 투영,
+        과거 기록 hydration, autosave·충돌·감사 계약을 먼저 정한 뒤 라이브 에디터를
+        전환한다. 그 전까지 기존 직접 Tiptap 의존성은 제거하지 않는다.
+      </p>
+    </main>
+  </body>
+</html>
