@@ -1097,7 +1097,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     page.getByRole("combobox", { name: "진단계통 필터" }),
     page.getByRole("textbox", { name: "진단명 검색" }),
     page.getByRole("combobox", { name: "차트 이력 종류" }),
-    page.getByRole("textbox", { name: "차트 이력 검색" }),
+    page.getByRole("textbox", { name: "진단 이력 검색" }),
   ]) {
     await expect(control).toHaveCSS("font-size", "12px");
     await expect(control).toHaveCSS("height", "28px");
@@ -2023,7 +2023,11 @@ test("live patient chart history shows every encounter and keeps past charts rea
               },
               primaryGuardian: current.primaryGuardian,
               veterinarianName: "이수지",
-              diagnoses: [{ diagnosisText: "슬개골 탈구 의심" }],
+              diagnoses: [
+                { diagnosisText: "슬개골 탈구 의심" },
+                { diagnosisText: "골관절염" },
+                { diagnosisText: "십자인대 손상 감별" },
+              ],
               soapNote: { assessment: "보행 상태 추적" },
             },
           ],
@@ -2039,12 +2043,50 @@ test("live patient chart history shows every encounter and keeps past charts rea
   );
 
   const aside = page.locator("#chart-content-aside");
+  const currentHistoryItem = aside.getByTestId(
+    `chart-history-item-${current.encounter.id}`,
+  );
   const oldHistoryItem = aside.getByTestId(
     `chart-history-item-${oldEncounterId}`,
   );
+  const inlineHistoryItem = page.getByTestId(
+    `chart-diagnosis-history-item-${oldEncounterId}`,
+  );
   await expect(aside).toContainText("차트이력");
-  await expect(oldHistoryItem).toContainText("슬개골 탈구 의심");
-  await oldHistoryItem.click();
+  await expect(currentHistoryItem).toContainText("11:00");
+  await expect(currentHistoryItem).toContainText("일반 진료");
+  await expect(currentHistoryItem).toContainText("진료중");
+  await expect(oldHistoryItem).toContainText("15:00");
+  await expect(oldHistoryItem).toContainText("외래 재진");
+  await expect(oldHistoryItem).toContainText("완료");
+  await expect(oldHistoryItem).toContainText("담당 이수지");
+  await expect(oldHistoryItem).not.toContainText("슬개골 탈구 의심");
+  await expect(oldHistoryItem).not.toContainText(oldEncounterNo);
+  await expect(oldHistoryItem).not.toContainText("26.07.01 15:00");
+
+  await expect(inlineHistoryItem).toContainText("15:00");
+  await expect(inlineHistoryItem).toContainText("슬개골 탈구 의심 외 2건");
+  await expect(inlineHistoryItem).toContainText("담당 이수지");
+  await expect(inlineHistoryItem).not.toContainText("완료");
+  await expect(inlineHistoryItem).not.toContainText(oldEncounterNo);
+  await expect(
+    page.getByTestId(
+      `chart-diagnosis-history-item-${current.encounter.id}`,
+    ),
+  ).toHaveCount(0);
+
+  const diagnosisHistorySearch = page.getByLabel("진단 이력 검색");
+  await diagnosisHistorySearch.fill("십자인대 손상 감별");
+  await expect(inlineHistoryItem).toBeVisible();
+  await diagnosisHistorySearch.fill(oldEncounterNo);
+  await expect(inlineHistoryItem).toHaveCount(0);
+  await expect(page.getByTestId("chart-history-empty-state")).toContainText(
+    "검색 결과가 없습니다",
+  );
+  await diagnosisHistorySearch.clear();
+  await expect(inlineHistoryItem).toBeVisible();
+
+  await inlineHistoryItem.click();
 
   await expect(page).toHaveURL(
     new RegExp(`encounterId=${current.encounter.id}`),
@@ -2057,7 +2099,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   ).toBeVisible();
   await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
 
-  await aside.getByTestId(`chart-history-item-${current.encounter.id}`).click();
+  await currentHistoryItem.click();
   await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(
     0,
   );
@@ -5998,7 +6040,8 @@ test("chart history selection returns to a previous encounter for the patient", 
   const selectedHistoryItem = page
     .locator("#chart-content-aside")
     .getByTestId("chart-history-item-encounter-coco-260501");
-  await expect(selectedHistoryItem).toContainText("급성 위장관염 의심");
+  await expect(selectedHistoryItem).toContainText("내과 진료");
+  await expect(selectedHistoryItem).not.toContainText("급성 위장관염 의심");
   await selectedHistoryItem.click();
 
   await expect(
