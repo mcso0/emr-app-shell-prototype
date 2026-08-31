@@ -118,5 +118,12 @@ boundaries.
   restore edit, changed the authoritative amount from 201,000원 to 402,000원,
   and restored it to 201,000원. The two normal saves produced two mutation
   PATCH requests and zero trailing Summary GET requests.
+- The `main`/`staging` reconciliation candidate removed blur-triggered writes
+  from continuous fields, kept table column instances stable while draft rows
+  change, disabled confirmation during a revision conflict, and skips the
+  redundant draft PATCH when autosave already persisted the selected rows.
+  Focused chart integration passed `9/9`; billing, Realtime, Server-Timing, and
+  SOAP contracts passed `55/55`; PR-020, PR-022, and SOAP migration
+  apply/reapply/permission/rollback contracts passed against local Supabase.
 - `origin/main` and the production deployment remained unchanged. Region and
   request-stage performance work continues in `CLINICAL-BILLING-PR-021`.

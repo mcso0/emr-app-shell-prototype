@@ -8,14 +8,19 @@ import {
   emitLiveMutationAuditEvent,
   type LiveMutationAuditOptions,
 } from "@/features/audit/server-mutation-audit-core";
+import {
+  validateAndProjectSoapDocument,
+  type SoapDocumentProjection,
+} from "@/features/chart/chart-soap-document";
 import { mockEncounters, mockSoapNotes } from "@/mocks/emr-domain";
-import type { Encounter, SoapNote } from "@/types/emr-domain";
+import type { Encounter, SoapBlockDocument, SoapNote } from "@/types/emr-domain";
 
 export type ChartSoapSaveMode = "autosave" | "manual_save";
 
 export type ChartSoapNoteInput = {
   encounterId?: string;
   expectedUpdatedAt?: string | null;
+  blockDocument?: unknown;
   subjective?: string;
   objective?: string;
   assessment?: string;
@@ -24,9 +29,14 @@ export type ChartSoapNoteInput = {
 };
 
 export type ChartSoapNoteGatewayResult =
-  | { ok: true; soapNote: SoapNote | null }
+  | {
+      ok: true;
+      soapNote: SoapNote | null;
+      auditHandledBy?: "database_transaction";
+      auditRecorded?: boolean;
+      auditEventId?: string;
+    }
   | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" | "stale_status" }
-  | { ok: false; status: 409; denialReason: "soap_note_conflict" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type ChartSoapNoteGateway = {
@@ -36,10 +46,12 @@ export type ChartSoapNoteGateway = {
   }): Promise<ChartSoapNoteGatewayResult>;
   saveSoapNote(input: {
     actorUserId: string;
-    fields: Required<Pick<ChartSoapNoteInput, "assessment" | "objective" | "plan" | "subjective">>;
+    blockDocument: SoapBlockDocument;
+    fields: SoapDocumentProjection;
     encounterId: string;
     expectedUpdatedAt?: string | null;
     mode: ChartSoapSaveMode;
+    requestId?: string | null;
     workspaceId: string;
   }): Promise<ChartSoapNoteGatewayResult>;
 };
@@ -66,6 +78,7 @@ export type ChartSoapNoteSaveResult =
       ok: true;
       status: 200;
       soapNote: SoapNote;
+      auditRecorded: boolean;
       enforcedBy: "chart-soap-note-persistence";
     }
   | {
@@ -185,15 +198,12 @@ export async function saveChartSoapNote({
 
   const result = await gateway.saveSoapNote({
     actorUserId: actorUserId ?? "",
+    blockDocument: validation.blockDocument,
     encounterId: normalized.encounterId,
     expectedUpdatedAt: normalized.expectedUpdatedAt,
-    fields: {
-      assessment: normalized.assessment,
-      objective: normalized.objective,
-      plan: normalized.plan,
-      subjective: normalized.subjective,
-    },
+    fields: validation.fields,
     mode: normalized.mode,
+    requestId: auditRequestId,
     workspaceId,
   });
 
@@ -206,31 +216,44 @@ export async function saveChartSoapNote({
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
-  const audit = await emitLiveMutationAuditEvent({
-    auditGateway,
-    auditNow,
-    input: {
-      workspaceId,
-      actorUserId,
-      eventType: "chart.soap_saved",
-      targetType: "soap_note",
-      targetId: result.soapNote.id,
-      encounterId: normalized.encounterId,
-      requestId: auditRequestId,
-      after: {
-        mode: normalized.mode,
-        noteStatus: result.soapNote.status,
-        updatedAt: result.soapNote.updatedAt,
+  const hasTransactionalAudit =
+    result.auditHandledBy === "database_transaction" &&
+    result.auditRecorded === true &&
+    typeof result.auditEventId === "string" &&
+    result.auditEventId.trim().length > 0;
+  let auditRecorded = hasTransactionalAudit;
+
+  if (!hasTransactionalAudit) {
+    const audit = await emitLiveMutationAuditEvent({
+      auditGateway,
+      auditNow,
+      input: {
+        workspaceId,
+        actorUserId,
+        eventType: "chart.soap_saved",
+        targetType: "soap_note",
+        targetId: result.soapNote.id,
+        encounterId: normalized.encounterId,
+        requestId: auditRequestId,
+        after: {
+          mode: normalized.mode,
+          noteStatus: result.soapNote.status,
+          updatedAt: result.soapNote.updatedAt,
+          documentSchemaVersion: validation.blockDocument.schemaVersion,
+          blockCount: validation.blockCount,
+        },
+        metadata: { source: "chart-soap-note-persistence" },
       },
-      metadata: { source: "chart-soap-note-persistence" },
-    },
-  });
-  if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
+    });
+    if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
+    auditRecorded = true;
+  }
 
   return {
     ok: true,
     status: 200,
     soapNote: result.soapNote,
+    auditRecorded,
     enforcedBy: "chart-soap-note-persistence",
   };
 }
@@ -262,7 +285,7 @@ export function createMockChartSoapNoteGateway(
         }),
       };
     },
-    async saveSoapNote({ actorUserId, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
+    async saveSoapNote({ actorUserId, blockDocument, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
       if (!canMutateChart(encounter)) return { ok: false, status: 409, denialReason: "stale_status" };
@@ -289,6 +312,7 @@ export function createMockChartSoapNoteGateway(
         objective: fields.objective,
         assessment: fields.assessment,
         plan: fields.plan,
+        blockDocument,
         status: mode === "autosave" ? "autosaved" : "draft",
         autosavedAt: mode === "autosave" ? timestamp : stored?.autosavedAt,
         signedAt: stored?.signedAt,
@@ -312,14 +336,15 @@ export type SupabaseChartSoapNoteRpcClient = {
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_save_chart_soap_note",
+    functionName: "clair_save_chart_soap_note_v2",
     args: {
       p_workspace_id: string;
       p_actor_user_id: string;
       p_encounter_id: string;
-      p_note: Required<Pick<ChartSoapNoteInput, "assessment" | "objective" | "plan" | "subjective">>;
+      p_note: SoapDocumentProjection & { blockDocument: SoapBlockDocument };
       p_expected_updated_at?: string | null;
       p_mode: ChartSoapSaveMode;
+      p_request_id?: string | null;
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
@@ -343,14 +368,18 @@ export function createSupabaseChartSoapNoteGateway(
 
       return { ok: true, soapNote: mapSoapNote(data) };
     },
-    async saveSoapNote({ actorUserId, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
-      const { data, error } = await client.rpc("clair_save_chart_soap_note", {
+    async saveSoapNote({ actorUserId, blockDocument, encounterId, expectedUpdatedAt, fields, mode, requestId, workspaceId }) {
+      const { data, error } = await client.rpc("clair_save_chart_soap_note_v2", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
-        p_note: fields,
+        p_note: {
+          ...fields,
+          blockDocument,
+        },
         p_expected_updated_at: expectedUpdatedAt ?? null,
         p_mode: mode,
+        p_request_id: requestId ?? null,
       });
 
       if (error) {
@@ -369,7 +398,12 @@ export function createSupabaseChartSoapNoteGateway(
       const soapNote = mapSoapNote(data);
       if (!soapNote) return { ok: false, status: 500, error: "db_write_failed" };
 
-      return { ok: true, soapNote };
+      const transactionalAudit = mapTransactionalSoapAudit(data);
+      return {
+        ok: true,
+        soapNote,
+        ...(transactionalAudit ?? {}),
+      };
     },
   };
 }
@@ -459,6 +493,7 @@ function normalizeSoapInput(input: ChartSoapNoteInput) {
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
     expectedUpdatedAt: normalizeExpectedUpdatedAt(input.expectedUpdatedAt),
+    blockDocument: input.blockDocument,
     subjective: normalizeField(input.subjective),
     objective: normalizeField(input.objective),
     assessment: normalizeField(input.assessment),
@@ -469,15 +504,30 @@ function normalizeSoapInput(input: ChartSoapNoteInput) {
 
 function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>) {
   const fieldErrors: Partial<Record<keyof ChartSoapNoteInput, string>> = {};
+  let fields: SoapDocumentProjection = {
+    assessment: input.assessment,
+    objective: input.objective,
+    plan: input.plan,
+    subjective: input.subjective,
+  };
+  let blockDocument: SoapBlockDocument | undefined;
+  let blockCount: number | undefined;
 
   if (!input.encounterId) fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
   if (input.expectedUpdatedAt !== undefined && input.expectedUpdatedAt !== null && Number.isNaN(Date.parse(input.expectedUpdatedAt))) {
     fieldErrors.expectedUpdatedAt = "SOAP 기준 저장 시각이 올바르지 않습니다.";
   }
 
-  for (const field of ["assessment", "objective", "plan", "subjective"] as const) {
-    if (input[field].length > 10000) {
-      fieldErrors[field] = "SOAP 내용이 너무 깁니다.";
+  if (input.blockDocument === undefined) {
+    fieldErrors.blockDocument = "SOAP 블록 문서가 필요합니다.";
+  } else {
+    const documentResult = validateAndProjectSoapDocument(input.blockDocument);
+    if (!documentResult.ok) {
+      fieldErrors.blockDocument = getSoapDocumentValidationMessage(documentResult.error);
+    } else {
+      fields = documentResult.projection;
+      blockDocument = documentResult.document;
+      blockCount = documentResult.blockCount;
     }
   }
 
@@ -485,7 +535,23 @@ function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>) {
     return { valid: false as const, fieldErrors };
   }
 
-  return { valid: true as const, fieldErrors: {} };
+  return {
+    valid: true as const,
+    fieldErrors: {},
+    fields,
+    blockDocument: blockDocument as SoapBlockDocument,
+    blockCount: blockCount ?? 0,
+  };
+}
+
+function getSoapDocumentValidationMessage(error: string) {
+  if (error === "unsupported_schema_version") {
+    return "지원하지 않는 SOAP 문서 버전입니다.";
+  }
+  if (error === "document_too_large" || error === "field_too_long") {
+    return "SOAP 문서가 허용된 크기를 초과했습니다.";
+  }
+  return "SOAP 문서 구조가 올바르지 않습니다.";
 }
 
 function normalizeField(value: unknown) {
@@ -499,6 +565,12 @@ function normalizeExpectedUpdatedAt(value: unknown) {
 
 function trimToUndefined(value?: string | null) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function projectionToUndefined(value?: string | null) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.replace(/^[ \t\n\r\f\v]+|[ \t\n\r\f\v]+$/g, "");
+  return normalized || undefined;
 }
 
 function mapSoapNote(value: unknown): SoapNote | null {
@@ -516,18 +588,55 @@ function mapSoapNote(value: unknown): SoapNote | null {
     return null;
   }
 
-  return {
+  const mapped: SoapNote = {
     id: row.id,
     encounterId: row.encounterId,
     authorUserId: row.authorUserId,
-    subjective: trimToUndefined(row.subjective),
-    objective: trimToUndefined(row.objective),
-    assessment: trimToUndefined(row.assessment),
-    plan: trimToUndefined(row.plan),
+    subjective: projectionToUndefined(row.subjective),
+    objective: projectionToUndefined(row.objective),
+    assessment: projectionToUndefined(row.assessment),
+    plan: projectionToUndefined(row.plan),
     status: row.status as SoapNote["status"],
     autosavedAt: trimToUndefined(row.autosavedAt),
     signedAt: trimToUndefined(row.signedAt),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+
+  if (row.blockDocument !== undefined) {
+    const documentResult = validateAndProjectSoapDocument(row.blockDocument);
+    if (documentResult.ok) {
+      mapped.blockDocument = documentResult.document;
+    } else {
+      mapped.blockDocumentError = "invalid_stored_document";
+    }
+  }
+
+  return mapped;
+}
+
+function mapTransactionalSoapAudit(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const row = value as {
+    auditHandledBy?: unknown;
+    auditRecorded?: unknown;
+    auditEventId?: unknown;
+    audit_handled_by?: unknown;
+    audit_recorded?: unknown;
+    audit_event_id?: unknown;
+  };
+  const handledBy = row.auditHandledBy ?? row.audit_handled_by;
+  const recorded = row.auditRecorded ?? row.audit_recorded;
+  const eventId = row.auditEventId ?? row.audit_event_id;
+  if (handledBy !== "database_transaction" || typeof recorded !== "boolean") {
+    return null;
+  }
+
+  return {
+    auditHandledBy: "database_transaction" as const,
+    auditRecorded: recorded,
+    ...(typeof eventId === "string" && eventId.trim()
+      ? { auditEventId: eventId.trim() }
+      : {}),
   };
 }

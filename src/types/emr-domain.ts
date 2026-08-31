@@ -323,11 +323,18 @@ export type SoapNote = {
   objective?: string;
   assessment?: string;
   plan?: string;
+  blockDocument?: SoapBlockDocument;
+  blockDocumentError?: "invalid_stored_document";
   status: SoapNoteStatus;
   autosavedAt?: IsoDateTime;
   signedAt?: IsoDateTime;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
+};
+
+export type SoapBlockDocument = {
+  schemaVersion: 1;
+  blocks: unknown[];
 };
 
 export type Diagnosis = {
