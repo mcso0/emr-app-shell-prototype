@@ -190,9 +190,11 @@ the same-input retry completed in 10.85s with `idempotent=true`. Final remote
 counts are manifest/stage `689/689`, immutable versions 535, review events
 1,070, execution preset version/current `630/522`, and semantic mismatch 0.
 All three allowlisted workspaces now have `522/522/0` catalog/preset-link/empty-
-default counts. The guarded rollout accepted 414 current-release updates and
-dismissed 108 dispensing updates whose workspace profiles remain safely pinned
-to master order revision 1; existing profile-matched presets were preserved.
+default counts. The guarded rollout resolved 414 current-scope rows per
+workspace: demo and Cheongdam accepted 414, while pilot accepted 413 and
+auto-resolved 1 already-current row. All three dismissed 108 dispensing updates
+whose workspace profiles remain safely pinned to master order revision 1;
+existing profile-matched presets were preserved.
 Cheongdam's 12 paused rows were also preserved. Chart search returns prefilled
 details for every visible row: demo `522/522`, Cheongdam `510/510`, pilot
 `520/520`. Target current-preset, deferred profile/preset and clinical-gate

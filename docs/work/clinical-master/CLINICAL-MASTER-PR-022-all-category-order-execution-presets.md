@@ -353,10 +353,12 @@ published release no. 50 (`647629e9-41fe-4d75-a572-99f34bf428ea`) in 25.2s;
 the same-input retry completed in 10.85s and returned `idempotent=true`.
 
 All three allowlisted workspaces now have 522 catalog rows, 522 preset links,
-and zero empty defaults. Exact current-release review resolution accepted 414
-rows and safely dismissed the 108 dispensing updates whose workspace-owned
-profiles remain pinned to master order revision 1; their existing profile-
-matched presets were preserved instead of being force-upgraded to revision 2.
+and zero empty defaults. Exact current-release review resolution covered 414
+current-scope rows per workspace: demo and Cheongdam accepted 414, while pilot
+accepted 413 and auto-resolved 1 already-current row. All three safely dismissed
+the 108 dispensing updates whose workspace-owned profiles remain pinned to
+master order revision 1; their existing profile-matched presets were preserved
+instead of being force-upgraded to revision 2.
 Cheongdam's 12 paused rows were also preserved. Chart search returns prefilled
 details for every visible row: demo `522/522`, Cheongdam `510/510`, and pilot
 `520/520`. Target current-preset, deferred profile/preset, and clinical-gate
