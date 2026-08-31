@@ -147,9 +147,11 @@
 
       <h2>현재 상태와 다음 결정</h2>
       <div class="gate">
-        로컬 구현과 검증은 완료했다. 원격 DB에는 아직 마이그레이션을 적용하지 않았고,
-        프로덕션에도 배포하지 않았다. 안전한 순서는
-        <strong>원격 마이그레이션 승인·적용 → V2 앱을 main에 병합·배포 → 인증된 SOAP 저장·재조회 smoke</strong>다.
+        승인된 migration-first 순서로 shared synthetic/demo DB의 원격 버전
+        <strong>20260831082106</strong>을 적용하고 권한·호환·rollback-only readback을 마쳤다.
+        PR #684의 candidate <strong>914b2761</strong>은 Release Check를 통과해 main과
+        production에 반영됐고, 인증된 차트에서 BlockNote 문서·S/O/A/P 기본값·저장 제어와
+        console error/warn 0건을 확인했다.
       </div>
       <p class="caveat">
         앱만 이전 버전으로 되돌리면 legacy 행은 계속 편집할 수 있지만, 이미 V2로 저장된

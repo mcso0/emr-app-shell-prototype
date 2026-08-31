@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
+import { createMockChartOrderBillingSummaryFromMutationRows } from "../src/features/chart/chart-order-billing-summary-contract";
 import {
   createMockChartOrderExecutionMutationGateway,
   createSupabaseChartOrderExecutionMutationGateway,
@@ -86,18 +88,64 @@ test("order mutations require order:update while billing-only correction require
   expect(frontDeskBilling).toMatchObject({ ok: true, status: 200 });
 });
 
+test("execution mutation does not expose billing Summary without chart:view", async () => {
+  let gatewayCalled = false;
+  const result = await mutateChartOrderExecution({
+    actorUserId: "user-order-update-only",
+    workspaceId,
+    input: validInput,
+    gateway: {
+      async mutateOrderExecution() {
+        gatewayCalled = true;
+        throw new Error("gateway must not run without chart:view");
+      },
+    },
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-order-update-only", status: "active" }],
+      memberships: [
+        {
+          id: "membership-order-update-only",
+          workspaceId,
+          userId: "user-order-update-only",
+          roles: [],
+          permissionRole: {
+            key: "order-update-only",
+            label: "Order update only",
+            roleType: "custom",
+            permissionIds: ["order:update"],
+          },
+          status: "active",
+        },
+      ],
+    }),
+  });
+
+  expect(result).toEqual({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
+  expect(gatewayCalled).toBe(false);
+});
+
 test("execution mutation route keeps identity and capability enforcement server-owned", async ({
   request,
 }) => {
   const route = `/api/workspaces/${workspaceId}/chart/order-execution-mutations`;
   const unauthenticated = await request.post(route, { data: validInput });
   expect(unauthenticated.status()).toBe(401);
+  expect(unauthenticated.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=0\.0, rpc;dur=0\.0, total;dur=\d+\.\d$/,
+  );
 
   const amended = await request.post(route, {
     data: validInput,
     headers: { "x-clair-demo-session-user-id": "user-vet" },
   });
   expect(amended.status()).toBe(200);
+  expect(amended.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=\d+\.\d, rpc;dur=\d+\.\d, total;dur=\d+\.\d$/,
+  );
   await expect(amended.json()).resolves.toMatchObject({
     ok: true,
     enforcedBy: "chart-order-execution-mutation",
@@ -175,6 +223,12 @@ test("Supabase gateway dispatches the actor-bound mutation RPC once", async () =
           orderId: "95000000-0000-4000-8000-000000000101",
           orderRevisionId: "95000000-0000-4000-8000-000000000201",
           revisionNo: 2,
+          billingSummary: createMockChartOrderBillingSummaryFromMutationRows({
+            encounterId: "00000000-0000-4000-8000-000000000003",
+            etag: '"billing-re-request"',
+            rows: [],
+            workspaceId: "workspace-clair-cheongdam",
+          }),
         },
         error: null,
       };

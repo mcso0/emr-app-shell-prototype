@@ -72,13 +72,16 @@ test("candidate removal is explicit, soft-cancelled, root-scoped, and downstream
   expect(candidateRemovalMigration).not.toMatch(/\bdelete\s+from\b/i);
 });
 
-test("chart draft autosaves after 700ms, flushes on field exit, and blocks actions on conflict", () => {
+test("chart draft separates 150ms discrete saves from 700ms continuous edits", () => {
   expect(chartModule).toContain("!canUpdateOrders");
   expect(chartModule).toContain('orderDraftSaveState === "saving"');
   expect(chartModule).toContain("orderDraftSaveInFlightRef.current");
   expect(chartModule).toContain("!draftTouchedRef.current");
   expect(chartModule).toContain("window.setTimeout(() => {");
-  expect(chartModule).toContain("}, 700);");
+  expect(chartModule).toContain("const chartOrderDiscreteSaveDelayMs = 150");
+  expect(chartModule).toContain("const chartOrderContinuousSaveDelayMs = 700");
+  expect(chartModule).toContain("}, draftSaveDelayMsRef.current);");
+  expect(chartModule).toContain('markDraftTouched("discrete")');
   expect(chartModule).toContain("onBlur={onFlushDraft}");
   expect(chartModule).toContain(
     'if (event.key === "Enter") event.currentTarget.blur()',
@@ -87,6 +90,16 @@ test("chart draft autosaves after 700ms, flushes on field exit, and blocks actio
   expect(chartModule).toContain('testId="chart-order-draft-conflict"');
   expect(chartModule).toContain("현재 편집값은 덮어쓰지 않았습니다");
   expect(chartModule).toContain("서버 값 다시 불러오기");
+});
+
+test("chart draft clears a local add-delete net-zero change without a request", () => {
+  expect(chartModule).toContain("const hasRemainingChanges =");
+  expect(chartModule).toContain("draftTouchedRef.current = false");
+  const removalBlock = chartModule.slice(
+    chartModule.indexOf("const confirmDeleteOrder = () =>"),
+    chartModule.indexOf("const confirmSingleOrder =", chartModule.indexOf("const confirmDeleteOrder = () =>")),
+  );
+  expect(removalBlock).not.toContain("commitDraftRows(");
 });
 
 test("chart draft serializes edits made during an in-flight save", () => {
@@ -114,7 +127,7 @@ test("confirmed rows never reopen the mutable draft and confirmation keeps the s
     confirmationStart,
   );
   const actionUnlock = chartModule.indexOf(
-    "orderDraftSaveInFlightRef.current = false;\n    applyConfirmedResult(result);",
+    "orderDraftSaveInFlightRef.current = false;\n    await applyConfirmedResult(result, recoveredConfirmation);",
     actionRequest,
   );
   expect(confirmationStart).toBeGreaterThan(-1);

@@ -113,11 +113,30 @@ The authenticated database writer appends the metadata-only `chart.soap_saved` a
 - The migration was executed against the isolated local Supabase PostgreSQL database inside transactions and rolled back. Runtime checks passed for direct-RPC canonical save/projection, database audit creation and marker, request ID, grant matrix, actor mismatch, missing permission, unavailable encounter, stale encounter status, legacy-write rejection, invalid/null save modes, exact depth-4 accept/depth-5 reject behavior, valid-link accept/malformed-link reject parity, explicit NEL/BOM link rejection, 10,000-code-point emoji accept/10,001 reject, 200/100/2,048-code-point ID/label/link boundaries, and explicit boundary-whitespace parity.
 - `tests/queue-loading-state.spec.ts` remains red in 7 unrelated pre-existing source/geometry assertions (current 40px icon versus stale 32px expectation, retired loading copy, and stale source-string contracts). Three tests in that file pass; this slice does not change those unrelated product contracts.
 
+## Remote Release Evidence
+
+- The separately approved migration was applied to the shared synthetic/demo
+  Supabase target as remote version `20260831082106`. Remote readback confirmed
+  the legacy writer, V2 writer, canonical columns, compatibility guard, and
+  scoped grants; the rollback-only compatibility replay left no patient,
+  encounter, SOAP, or audit residue.
+- PR #684 merged candidate
+  `914b2761665f6583ac0b3294ff4ce0c8e23e1400` to `main` as
+  `4a160fdad66953cc8d5b666f17ad8424aa00b1a9` after Release Check
+  `33371657552` passed. Production deployment
+  `dpl_8bwWbHXcKLfKJfG7bHzTRn7Vzr4h` reached Ready and authenticated smoke
+  confirmed the BlockNote document, S/O/A/P defaults, SOAP save control, and
+  zero console errors or warnings.
+- Ordinary application rollback keeps the additive database migration in place
+  so canonical V2 rows are not exposed to a projection-only legacy overwrite.
+
 ## Known Follow-up
 
 - The pre-existing public `clair_append_audit_event` RPC is executable by authenticated members and does not fully bind supplied actor, membership, event target, and encounter values to `auth.uid()` and one workspace. The new SOAP writer supplies verified values, but the global audit log can still receive forged direct append calls. Hardening that shared RPC or moving it behind a private/internal boundary changes the authorization architecture and requires a separately approved security work item.
 - Encounter switch and React unmount flush the latest encounter-scoped document, but a browser tab/process termination can still end transport before completion. A stronger browser-close delivery guarantee requires a separately designed server queue, durable client outbox, or equivalent transport contract.
-- Remote migration application, remote grant readback, production data verification, deployment, and merge remain unperformed and approval-gated. The safe forward order is migration first, then the V2-calling application.
+- Repeated remote performance measurement and hard browser/process termination
+  durability remain follow-ups. The approved migration-first production release
+  and authenticated functional smoke are complete.
 
 ## Rollback
 

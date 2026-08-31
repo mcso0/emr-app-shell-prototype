@@ -225,20 +225,23 @@ import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog
 import {
   ChartOrderBillingDetailAside,
   ChartOrderFinanceFooter,
+  type ChartOrderBillingAmountDisplayState,
   type ChartOrderBillingSummaryFreshness,
 } from "@/features/chart/components/chart-order-finance-footer";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
+import { useChartBillingSummaryRealtime } from "@/features/chart/chart-order-billing-summary-realtime";
 import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
 import { ChartSoapLiveBlockEditor } from "@/features/chart/components/chart-soap-live-block-editor";
 import { createLegacySoapTemplateBlocks } from "@/features/chart/components/chart-soap-block-schema";
-import type { ChartSoapBlock, ChartSoapPartialBlock } from "@/features/chart/components/chart-soap-block-schema";
+import type {
+  ChartSoapBlock,
+  ChartSoapPartialBlock,
+} from "@/features/chart/components/chart-soap-block-schema";
 import {
   SOAP_BLOCK_DOCUMENT_SCHEMA_VERSION,
   areSoapBlockDocumentsEqual,
 } from "@/features/chart/chart-soap-document";
-import {
-  SoapAutosaveCoordinator,
-} from "@/features/chart/chart-soap-autosave-coordinator";
+import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import { useChartStore } from "@/features/chart/store";
 import { useChartPatientGuardianProfileActions } from "@/features/chart/use-chart-patient-guardian-profile-actions";
@@ -316,12 +319,7 @@ import type {
 type ChartBundle = ChartEncounterBundle;
 type OrderFilter = "all" | ClinicalOrderType;
 type SoapSaveState =
-  | "idle"
-  | "saving"
-  | "saved"
-  | "saved_with_warning"
-  | "error"
-  | "conflict";
+  "idle" | "saving" | "saved" | "saved_with_warning" | "error" | "conflict";
 type ChartSoapNoteRouteResponse =
   | {
       ok: true;
@@ -411,6 +409,7 @@ type ChartOrderDraftRouteResponse =
   | {
       ok: true;
       status: number;
+      billingSummary?: ChartOrderBillingSummary;
       etag?: string;
       rows?: ChartOrderRuntimeRow[];
     }
@@ -453,6 +452,7 @@ type ChartOrderActionRouteResponse =
   | {
       ok: true;
       status: number;
+      billingSummary?: ChartOrderBillingSummary;
       etag?: string;
       rows?: ChartOrderRuntimeRow[];
       billingCandidates?: ChartBillingCandidateSnapshot[];
@@ -517,6 +517,7 @@ type ChartOrderExecutionMutationRouteResponse =
   | {
       ok: true;
       status: 200;
+      billingSummary: ChartOrderBillingSummary;
       mutation: ChartOrderExecutionMutationResult;
       enforcedBy: "chart-order-execution-mutation";
     }
@@ -577,6 +578,8 @@ const CHART_RESIZER_HEIGHT_PX = 8;
 const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
 const chartDetailPendingDelayMs = 200;
+const chartOrderDiscreteSaveDelayMs = 150;
+const chartOrderContinuousSaveDelayMs = 700;
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
 
 const emptyChartQueueItems: OrderQueueItem[] = [];
@@ -2040,8 +2043,7 @@ function ChartInlineHistoryPanel({
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
   const priorDiagnosisRows = useMemo(
-    () =>
-      historyRows.filter((row) => row.encounter.id !== activeEncounterId),
+    () => historyRows.filter((row) => row.encounter.id !== activeEncounterId),
     [activeEncounterId, historyRows],
   );
   const visibleRows = useMemo(
@@ -2282,7 +2284,9 @@ const hasSavedSoapContent = (soapNote?: SoapNote | null) =>
     ].some((value) => Boolean(value?.trim())),
   );
 
-function getSoapInitialBlockContent(soapNote?: SoapNote): ChartSoapPartialBlock[] {
+function getSoapInitialBlockContent(
+  soapNote?: SoapNote,
+): ChartSoapPartialBlock[] {
   if (soapNote?.blockDocument?.blocks.length) {
     return soapNote.blockDocument.blocks as ChartSoapPartialBlock[];
   }
@@ -3066,8 +3070,11 @@ async function loadChartOrderBillingSummaryRoute({
       `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-billing-summary?encounterId=${encodeURIComponent(encounterId)}`,
       { cache: "no-store", headers: actorHeaders },
     );
-    const body = await response.json() as ChartOrderBillingSummaryRouteResponse;
-    return body.ok ? { ...body, status: 200 } : { ...body, status: response.status };
+    const body =
+      (await response.json()) as ChartOrderBillingSummaryRouteResponse;
+    return body.ok
+      ? { ...body, status: 200 }
+      : { ...body, status: response.status };
   } catch {
     return { ok: false, status: 500, error: "network_error" };
   }
@@ -3106,8 +3113,11 @@ async function requestChartOrderBillingRoute({
         }),
       },
     );
-    const body = await response.json() as ChartOrderBillingSummaryRouteResponse;
-    return body.ok ? { ...body, status: 200 } : { ...body, status: response.status };
+    const body =
+      (await response.json()) as ChartOrderBillingSummaryRouteResponse;
+    return body.ok
+      ? { ...body, status: 200 }
+      : { ...body, status: response.status };
   } catch {
     return { ok: false, status: 500, error: "network_error" };
   }
@@ -3312,12 +3322,12 @@ function SoapPanel({
   );
   const diagnosisSystemTabs = useMemo(
     () =>
-      Array.from(new Set(diagnoses.map(getSoapSystemLabel).filter(Boolean))).map(
-        (label) => ({
-          id: buildSystemSoapId(label),
-          label,
-        }),
-      ),
+      Array.from(
+        new Set(diagnoses.map(getSoapSystemLabel).filter(Boolean)),
+      ).map((label) => ({
+        id: buildSystemSoapId(label),
+        label,
+      })),
     [diagnoses],
   );
   const visibleSystemTabs = diagnosisSystemTabs.slice(
@@ -3404,8 +3414,7 @@ function SoapPanel({
       (state, result) => {
         setSaveState(state);
         if (state === "error") {
-          const failedResult =
-            result && !result.ok ? result : undefined;
+          const failedResult = result && !result.ok ? result : undefined;
           setSaveErrorMessage(
             failedResult?.denialReason === "permission_missing"
               ? "SOAP 저장 권한이 없어 서버에 반영하지 못했습니다."
@@ -3483,7 +3492,9 @@ function SoapPanel({
               ? "저장 실패"
               : getSoapSectionStatusText(
                   soapNote?.status,
-                  soapNote?.signedAt ?? soapNote?.autosavedAt ?? soapNote?.updatedAt,
+                  soapNote?.signedAt ??
+                    soapNote?.autosavedAt ??
+                    soapNote?.updatedAt,
                 );
 
   return (
@@ -3602,7 +3613,8 @@ function SoapPanel({
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
           testId="chart-soap-document-recovery-warning"
         >
-          현재 화면의 내용을 확인한 뒤 저장하면 지원되는 문서 형식으로 다시 기록됩니다.
+          현재 화면의 내용을 확인한 뒤 저장하면 지원되는 문서 형식으로 다시
+          기록됩니다.
         </EmrInlineAlert>
       ) : null}
 
@@ -3611,8 +3623,8 @@ function SoapPanel({
           role="alert"
           className="border-b border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-4 py-2 text-sm text-[var(--emr-status-warning-text)]"
         >
-          다른 탭이나 사용자가 먼저 SOAP를 저장했습니다. 현재 입력은 이 화면에 유지됩니다.
-          서버 최신본을 확인하기 전에는 자동으로 덮어쓰지 않습니다.
+          다른 탭이나 사용자가 먼저 SOAP를 저장했습니다. 현재 입력은 이 화면에
+          유지됩니다. 서버 최신본을 확인하기 전에는 자동으로 덮어쓰지 않습니다.
         </div>
       ) : null}
 
@@ -3623,7 +3635,8 @@ function SoapPanel({
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
           testId="chart-soap-audit-warning"
         >
-          임상 기록은 서버에 반영되었습니다. 중복 저장하지 말고 관리자에게 변경 이력 상태를 확인해 주세요.
+          임상 기록은 서버에 반영되었습니다. 중복 저장하지 말고 관리자에게 변경
+          이력 상태를 확인해 주세요.
         </EmrInlineAlert>
       ) : null}
 
@@ -3672,10 +3685,7 @@ function SoapPanel({
         />
       </div>
 
-      <Dialog
-        open={resetDialogOpen}
-        onOpenChange={setResetDialogOpen}
-      >
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <EmrConfirmDialogContent
           title="SOAP 기본 템플릿으로 초기화"
           description="현재 블록 문서를 주관적, 객관적, 평가, 계획 기본 템플릿으로 바꾸고 자동저장합니다."
@@ -5044,6 +5054,93 @@ const getChartOrderDraftAmountBasis = (row: ChartOrderDraftRow) => {
   return typeof runtimeBasis === "string" ? runtimeBasis : "unit_price";
 };
 
+function getChartOrderDraftBillingProjection(rows: ChartOrderDraftRow[]) {
+  const activeDraftRows = rows.filter(
+    (row) => !isChartOrderConfirmedRow(row) && row.order.status !== "cancelled",
+  );
+  return {
+    amount: activeDraftRows.reduce(
+      (sum, row) => sum + getChartOrderDraftBillableAmount(row),
+      0,
+    ),
+    rootCount: activeDraftRows.filter(isChartOrderTopLevelRow).length,
+  };
+}
+
+function getChartOrderDraftBillableAmount(row: ChartOrderDraftRow) {
+  if (
+    row.order.status === "cancelled" ||
+    row.runtimeRow?.billingEligible === false ||
+    row.runtimeRow?.billingReflectionEnabled === false ||
+    row.catalogSearchRow?.billingEligible === false ||
+    row.catalogSearchRow?.appliedSnapshot.billingReflectionEnabled === false
+  ) {
+    return 0;
+  }
+
+  const rowType =
+    row.runtimeRow?.rowType ?? row.catalogSearchRow?.rowType ?? "individual";
+  if (rowType === "set_child") {
+    return isChartOrderSetChildIncluded(row)
+      ? (getDraftLineTotal(row) ?? 0)
+      : 0;
+  }
+  if (rowType !== "set") return getDraftLineTotal(row) ?? 0;
+
+  const amountBasis =
+    row.setPreview?.set.amountBasis ??
+    row.runtimeRow?.appliedSnapshot.amountBasis;
+  if (amountBasis !== "included_order_sum") {
+    return getDraftLineTotal(row) ?? row.setPreview?.pricing.finalTotalKrw ?? 0;
+  }
+
+  // Persisted included-order-sum sets expose their reflecting child rows.
+  // Before the first save, use the preview leaves because no child rows exist.
+  if (row.runtimeRow) return 0;
+  return (row.setPreview?.items ?? []).reduce((sum, item) => {
+    if (
+      !item.selected ||
+      !item.billingReflectionEnabled ||
+      typeof item.priceKrw !== "number"
+    ) {
+      return sum;
+    }
+    return sum + item.priceKrw * item.quantity;
+  }, 0);
+}
+
+function buildChartOrderBillingPreview({
+  authoritative,
+  committedRows,
+  draftRows,
+}: {
+  authoritative: ChartOrderBillingSummary;
+  committedRows: ChartOrderDraftRow[];
+  draftRows: ChartOrderDraftRow[];
+}) {
+  const committed = getChartOrderDraftBillingProjection(committedRows);
+  const current = getChartOrderDraftBillingProjection(draftRows);
+  const amountDelta = current.amount - committed.amount;
+  const rootCountDelta = current.rootCount - committed.rootCount;
+  return {
+    ...authoritative,
+    amounts: {
+      ...authoritative.amounts,
+      draft: Math.max(0, authoritative.amounts.draft + amountDelta),
+      estimatedTotal: Math.max(
+        0,
+        authoritative.amounts.estimatedTotal + amountDelta,
+      ),
+      gross: Math.max(0, authoritative.amounts.gross + amountDelta),
+    },
+    orderCounts: {
+      ...authoritative.orderCounts,
+      draft: Math.max(0, authoritative.orderCounts.draft + rootCountDelta),
+      total: Math.max(0, authoritative.orderCounts.total + rootCountDelta),
+    },
+  } satisfies ChartOrderBillingSummary;
+}
+
 const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
   row.billingName !== row.committedBillingName ||
   row.quantityInput !== row.committedQuantityInput ||
@@ -5264,7 +5361,6 @@ function ChartOrderInlineFieldCell({
       }
       type={definition.valueType === "number" ? "number" : "text"}
       value={stringValue}
-      onBlur={onFlushDraft}
       onChange={(event) => {
         const nextValue = event.target.value;
         onUpdateDetailInput(
@@ -5285,6 +5381,7 @@ function ChartOrderInlineFieldCell({
 }
 
 function ChartOrderTable({
+  confirmationDisabled,
   density,
   executionTasks,
   hasAnyRows,
@@ -5312,6 +5409,7 @@ function ChartOrderTable({
   sortState,
   writeDisabled,
 }: {
+  confirmationDisabled: boolean;
   density: EmrTableDensity;
   executionTasks: ChartOrderExecutionTask[];
   hasAnyRows: boolean;
@@ -5366,6 +5464,8 @@ function ChartOrderTable({
     onUpdatePriority,
     onUpdateQuantity,
   };
+  const pendingRemovalOrderIdsRef = useRef(pendingRemovalOrderIds);
+  pendingRemovalOrderIdsRef.current = pendingRemovalOrderIds;
   const latestTaskByOrderId = useMemo(() => {
     const latest = new Map<string, ChartOrderExecutionTask>();
     executionTasks.forEach((task) => {
@@ -5456,7 +5556,7 @@ function ChartOrderTable({
             checked={row.getIsSelected()}
             disabled={
               writeDisabled ||
-              pendingRemovalOrderIds.has(row.original.order.id) ||
+              pendingRemovalOrderIdsRef.current.has(row.original.order.id) ||
               !row.getCanSelect() ||
               row.original.runtimeRow?.rowType === "set_child"
             }
@@ -5526,7 +5626,7 @@ function ChartOrderTable({
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "status"),
         cell: ({ row }) => {
-          const pendingRemoval = pendingRemovalOrderIds.has(
+          const pendingRemoval = pendingRemovalOrderIdsRef.current.has(
             row.original.order.id,
           );
           return (
@@ -5592,7 +5692,7 @@ function ChartOrderTable({
                   data-row-interactive="true"
                   disabled={
                     writeDisabled ||
-                    pendingRemovalOrderIds.has(row.original.order.id)
+                    pendingRemovalOrderIdsRef.current.has(row.original.order.id)
                   }
                   size="xs"
                   variant={included ? "outline" : "ghost"}
@@ -5635,7 +5735,7 @@ function ChartOrderTable({
                 disabled={
                   writeDisabled ||
                   confirmed ||
-                  pendingRemovalOrderIds.has(row.original.order.id)
+                  pendingRemovalOrderIdsRef.current.has(row.original.order.id)
                 }
                 size="xs"
                 onCheckedChange={(checked) =>
@@ -5709,7 +5809,7 @@ function ChartOrderTable({
               row={row.original}
               writeDisabled={
                 writeDisabled ||
-                pendingRemovalOrderIds.has(row.original.order.id)
+                pendingRemovalOrderIdsRef.current.has(row.original.order.id)
               }
             />
           ),
@@ -5755,7 +5855,7 @@ function ChartOrderTable({
               data-row-interactive="true"
               disabled={
                 writeDisabled ||
-                pendingRemovalOrderIds.has(row.original.order.id)
+                pendingRemovalOrderIdsRef.current.has(row.original.order.id)
               }
               value={row.original.billingName}
               className="h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata"
@@ -5765,7 +5865,6 @@ function ChartOrderTable({
                   event.target.value,
                 )
               }
-              onBlur={() => editableCallbacksRef.current.onFlushDraft()}
               onKeyDown={(event) => {
                 if (event.key === "Enter") event.currentTarget.blur();
               }}
@@ -5814,7 +5913,7 @@ function ChartOrderTable({
               data-row-interactive="true"
               disabled={
                 writeDisabled ||
-                pendingRemovalOrderIds.has(row.original.order.id)
+                pendingRemovalOrderIdsRef.current.has(row.original.order.id)
               }
               inputMode="decimal"
               title={
@@ -5831,7 +5930,6 @@ function ChartOrderTable({
                   event.target.value,
                 )
               }
-              onBlur={() => editableCallbacksRef.current.onFlushDraft()}
               onKeyDown={(event) => {
                 if (event.key === "Enter") event.currentTarget.blur();
               }}
@@ -5914,7 +6012,7 @@ function ChartOrderTable({
         },
       },
     ],
-    [pendingRemovalOrderIds, writeDisabled],
+    [writeDisabled],
   );
   // TanStack Table owns the controller lifecycle; React Compiler cannot safely memoize it.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -6026,7 +6124,11 @@ function ChartOrderTable({
                     <EmrIconButton
                       aria-label={`${order.displayName} 확정`}
                       className={iconClassName}
-                      disabled={writeDisabled || invalidOrderIds.has(order.id)}
+                      disabled={
+                        confirmationDisabled ||
+                        writeDisabled ||
+                        invalidOrderIds.has(order.id)
+                      }
                       onClick={() => onConfirmOrder(order.id)}
                       type="button"
                     >
@@ -6174,6 +6276,7 @@ function ChartOrderTable({
                   <>
                     <Button
                       disabled={
+                        confirmationDisabled ||
                         writeDisabled ||
                         selectedOriginalRows.some((selectedRow) =>
                           invalidOrderIds.has(selectedRow.order.id),
@@ -7687,11 +7790,7 @@ function ChartOrderCatalogDialog({
                   return (
                     <ClassificationExplorerOption
                       aria-label={`${row.displayName} ${
-                        locked
-                          ? "이미 확정됨"
-                          : selected
-                            ? "선택 해제"
-                            : "선택"
+                        locked ? "이미 확정됨" : selected ? "선택 해제" : "선택"
                       }`}
                       className={orderCatalogDialogStyles.candidateOption}
                       data-active={
@@ -8150,6 +8249,7 @@ function OrderArea({
   const [orderDraftReloadKey, setOrderDraftReloadKey] = useState(0);
   const draftTouchedRef = useRef(false);
   const draftEditVersionRef = useRef(0);
+  const draftSaveDelayMsRef = useRef(chartOrderContinuousSaveDelayMs);
   const orderDraftFailedAutoSaveVersionRef = useRef<number | null>(null);
   const orderDraftConflictRef = useRef(false);
   const orderDraftSaveInFlightRef = useRef(false);
@@ -8161,9 +8261,15 @@ function OrderArea({
   const [pendingRemovedRootOrderIds, setPendingRemovedRootOrderIds] = useState<
     Set<string>
   >(() => new Set());
-  const markDraftTouched = () => {
+  const markDraftTouched = (
+    saveTiming: "continuous" | "discrete" = "continuous",
+  ) => {
     draftTouchedRef.current = true;
     draftEditVersionRef.current += 1;
+    draftSaveDelayMsRef.current =
+      saveTiming === "discrete"
+        ? chartOrderDiscreteSaveDelayMs
+        : chartOrderContinuousSaveDelayMs;
     orderDraftFailedAutoSaveVersionRef.current = null;
   };
   const pendingConfirmationRef = useRef<{
@@ -8251,14 +8357,26 @@ function OrderArea({
     return sum + (getDraftLineTotal(row) ?? 0);
   }, 0);
   const localBillingSummary = useMemo<ChartOrderBillingSummary>(() => {
-    const confirmedRows = draftRows.filter(isChartOrderConfirmedRow);
-    const draftOnlyRows = draftRows.filter((row) => !isChartOrderConfirmedRow(row));
+    const activeRows = draftRows.filter(
+      (row) => row.order.status !== "cancelled",
+    );
+    const activeTopLevelRows = activeRows.filter(isChartOrderTopLevelRow);
+    const confirmedRows = activeRows.filter(isChartOrderConfirmedRow);
+    const confirmedTopLevelRows = activeTopLevelRows.filter(
+      isChartOrderConfirmedRow,
+    );
+    const draftOnlyRows = activeRows.filter(
+      (row) => !isChartOrderConfirmedRow(row),
+    );
+    const draftTopLevelRows = activeTopLevelRows.filter(
+      (row) => !isChartOrderConfirmedRow(row),
+    );
     const confirmedAmount = confirmedRows.reduce(
-      (sum, row) => sum + (getDraftLineTotal(row) ?? 0),
+      (sum, row) => sum + getChartOrderDraftBillableAmount(row),
       0,
     );
     const draftAmount = draftOnlyRows.reduce(
-      (sum, row) => sum + (getDraftLineTotal(row) ?? 0),
+      (sum, row) => sum + getChartOrderDraftBillableAmount(row),
       0,
     );
     const requestableRows = confirmedRows.filter(
@@ -8276,13 +8394,18 @@ function OrderArea({
       context: null,
       invoiceId: null,
       orderCounts: {
-        total: draftRows.length,
-        confirmed: confirmedRows.length,
-        draft: draftOnlyRows.length,
-        recheck: draftRows.filter((row) => row.order.status === "re_requested").length,
+        total: activeTopLevelRows.length,
+        confirmed: confirmedTopLevelRows.length,
+        draft: draftTopLevelRows.length,
+        recheck: activeTopLevelRows.filter(
+          (row) => row.order.status === "re_requested",
+        ).length,
         requested: requestedRows.length,
         requestable: requestableRows.length,
-        cancelled: draftRows.filter((row) => row.order.status === "cancelled").length,
+        cancelled: draftRows.filter(
+          (row) =>
+            row.order.status === "cancelled" && isChartOrderTopLevelRow(row),
+        ).length,
       },
       amounts: {
         gross: confirmedAmount + draftAmount,
@@ -8295,7 +8418,7 @@ function OrderArea({
         outstanding: 0,
         estimatedTotal: confirmedAmount + draftAmount,
         requestableTotal: requestableRows.reduce(
-          (sum, row) => sum + (getDraftLineTotal(row) ?? 0),
+          (sum, row) => sum + getChartOrderDraftBillableAmount(row),
           0,
         ),
       },
@@ -8466,7 +8589,7 @@ function OrderArea({
     priority: ClinicalOrderPriority,
   ) => {
     if (writeDisabled) return;
-    markDraftTouched();
+    markDraftTouched("discrete");
     setDraftRows((currentRows) =>
       currentRows.map((row) =>
         row.order.id === orderId && !isChartOrderConfirmedRow(row)
@@ -8481,7 +8604,7 @@ function OrderArea({
   };
   const toggleSetChild = (orderId: string) => {
     if (writeDisabled) return;
-    markDraftTouched();
+    markDraftTouched("discrete");
     setDraftRows((currentRows) => {
       const child = currentRows.find((row) => row.order.id === orderId);
       const parentId = child?.runtimeRow?.parentOrderId;
@@ -8607,7 +8730,7 @@ function OrderArea({
     appendedRows.forEach((row) =>
       pendingAddedOrderIdsRef.current.add(row.order.id),
     );
-    markDraftTouched();
+    markDraftTouched("discrete");
     setDraftRows((currentRows) => [...currentRows, ...appendedRows]);
     toast.info(`선택한 Order ${appendedRows.length}개를 추가했어요 · 저장 중`);
   };
@@ -8649,9 +8772,7 @@ function OrderArea({
       ]);
     });
     const knownParentIds = new Set(
-      currentRows
-        .filter(isChartOrderTopLevelRow)
-        .map((row) => row.order.id),
+      currentRows.filter(isChartOrderTopLevelRow).map((row) => row.order.id),
     );
     const groups = currentRows.flatMap((row) => {
       if (
@@ -8732,7 +8853,7 @@ function OrderArea({
       reconciledOrderIds,
     );
     if (existingSelectionChanged) {
-      markDraftTouched();
+      markDraftTouched("discrete");
       setDraftRows(reconciledRows);
       const reconciledOrderIdSet = new Set(reconciledOrderIds);
       setSelectedOrderIds((current) => {
@@ -8775,7 +8896,7 @@ function OrderArea({
       sortOrder: (draftRowsRef.current.length + 1) * 10,
     });
     pendingAddedOrderIdsRef.current.add(appendedSetRow.order.id);
-    markDraftTouched();
+    markDraftTouched("discrete");
     setDraftRows((currentRows) => [...currentRows, appendedSetRow]);
     toast.info(`${setCandidate.displayName} Order 세트를 추가했어요 · 저장 중`);
     const remainingRows = catalogSelectionQueue;
@@ -8788,6 +8909,7 @@ function OrderArea({
   const resetDraftRows = () => {
     if (writeDisabled) return;
     draftTouchedRef.current = false;
+    draftSaveDelayMsRef.current = chartOrderContinuousSaveDelayMs;
     orderDraftFailedAutoSaveVersionRef.current = null;
     pendingAddedOrderIdsRef.current.clear();
     inFlightDraftOrderIdsRef.current.clear();
@@ -8815,6 +8937,7 @@ function OrderArea({
     async function loadPersistedOrderDrafts() {
       draftTouchedRef.current = false;
       draftEditVersionRef.current = 0;
+      draftSaveDelayMsRef.current = chartOrderContinuousSaveDelayMs;
       orderDraftFailedAutoSaveVersionRef.current = null;
       orderDraftConflictRef.current = false;
       pendingAddedOrderIdsRef.current.clear();
@@ -8925,6 +9048,23 @@ function OrderArea({
     orderDraftReloadKey,
     setDraftRows,
   ]);
+  const acceptAuthoritativeBillingSummary = useCallback(
+    (summary: ChartOrderBillingSummary) => {
+      if (
+        summary.workspaceId !== bundle.encounter.workspaceId ||
+        summary.encounterId !== bundle.encounter.id
+      ) {
+        return false;
+      }
+      billingSummaryRequestSequenceRef.current += 1;
+      billingSummaryRef.current = summary;
+      setBillingSummary(summary);
+      setBillingSummaryFreshness("fresh");
+      setBillingSummaryError(undefined);
+      return true;
+    },
+    [bundle.encounter.id, bundle.encounter.workspaceId],
+  );
   const refreshBillingSummary = useCallback(async () => {
     const requestSequence = billingSummaryRequestSequenceRef.current + 1;
     billingSummaryRequestSequenceRef.current = requestSequence;
@@ -8941,15 +9081,9 @@ function OrderArea({
       return false;
     }
     if (result.ok) {
-      billingSummaryRef.current = result.summary;
-      setBillingSummary(result.summary);
-      setBillingSummaryFreshness("fresh");
-      setBillingSummaryError(undefined);
-      return true;
+      return acceptAuthoritativeBillingSummary(result.summary);
     }
-    setBillingSummaryFreshness(
-      billingSummaryRef.current ? "stale" : "error",
-    );
+    setBillingSummaryFreshness(billingSummaryRef.current ? "stale" : "error");
     setBillingSummaryError(
       result.denialReason === "permission_missing"
         ? "금액 정보를 확인할 권한이 없습니다."
@@ -8957,10 +9091,22 @@ function OrderArea({
     );
     return false;
   }, [
+    acceptAuthoritativeBillingSummary,
     actorHeaders,
     bundle.encounter.id,
     bundle.encounter.workspaceId,
   ]);
+  useChartBillingSummaryRealtime({
+    currentEtag: billingSummary?.etag,
+    encounterId: bundle.encounter.id,
+    hasUnsavedEdits: hasDraftChanges,
+    mutationInFlight:
+      orderDraftSaveState === "saving" ||
+      billingRequesting ||
+      Boolean(orderMutationDraft?.saving),
+    onInvalidated: refreshBillingSummary,
+    workspaceId: bundle.encounter.workspaceId,
+  });
   useEffect(() => {
     void refreshBillingSummary();
     return () => {
@@ -9020,7 +9166,6 @@ function OrderArea({
 
     const operation = (async () => {
       orderDraftSaveInFlightRef.current = true;
-      let persistedMutation = false;
       while (draftTouchedRef.current) {
         const attemptedDraftEditVersion = draftEditVersionRef.current;
         const attemptedRemovedRootOrderIds = new Set(
@@ -9130,6 +9275,18 @@ function OrderArea({
           return false;
         }
 
+        if (
+          !result.billingSummary ||
+          !acceptAuthoritativeBillingSummary(result.billingSummary)
+        ) {
+          draftTouchedRef.current = true;
+          setOrderDraftSaveState("error");
+          orderDraftFailedAutoSaveVersionRef.current =
+            attemptedDraftEditVersion;
+          toast.error("저장 응답의 금액 범위를 확인하지 못했어요.");
+          return false;
+        }
+
         const nextCommittedRows = applyPersistedOrderDrafts(
           preparedDraft.rows,
           result.rows ?? [],
@@ -9176,7 +9333,7 @@ function OrderArea({
         }
         orderDraftFailedAutoSaveVersionRef.current = null;
         orderDraftConflictRef.current = false;
-        persistedMutation = true;
+        draftSaveDelayMsRef.current = chartOrderContinuousSaveDelayMs;
         if (attemptedRemovedRootOrderIds.size > 0) {
           toast.success(
             `${attemptedRemovedRootOrderIds.size}개 후보를 삭제하고 저장했어요.`,
@@ -9194,7 +9351,6 @@ function OrderArea({
         }
       }
 
-      if (persistedMutation) await refreshBillingSummary();
       setOrderDraftSaveState("saved");
       if (!silent) toast.success("Order 업데이트를 저장했어요.");
       return true;
@@ -9236,7 +9392,7 @@ function OrderArea({
       )
         return;
       void autoSaveDraftRef.current();
-    }, 700);
+    }, draftSaveDelayMsRef.current);
     return () => window.clearTimeout(timer);
   }, [
     canUpdateOrders,
@@ -9292,9 +9448,20 @@ function OrderArea({
       }
     }
 
-    const applyConfirmedResult = (
+    const applyConfirmedResult = async (
       result: Extract<ChartOrderActionRouteResponse, { ok: true }>,
+      allowSummaryRecovery = false,
     ) => {
+      const summaryAccepted = result.billingSummary
+        ? acceptAuthoritativeBillingSummary(result.billingSummary)
+        : allowSummaryRecovery
+          ? await refreshBillingSummary()
+          : false;
+      if (!summaryAccepted) {
+        setOrderDraftSaveState("error");
+        toast.error("확정 결과의 최신 금액을 확인하지 못했어요.");
+        return false;
+      }
       const applyResult = (currentRows: ChartOrderDraftRow[]) =>
         applyBillingCandidatesToOrderRows(
           applyPersistedOrderActions(
@@ -9316,7 +9483,6 @@ function OrderArea({
       setOrderActionDialog(null);
       setOrderDraftSaveState("saved");
       void refreshOrderExecution();
-      void refreshBillingSummary();
       toast.success("Order 확정 상태를 저장했어요.");
       const hasDispensingTask =
         result.tasks?.some((task) => task.destinationModule === "dispensing") ??
@@ -9330,6 +9496,7 @@ function OrderArea({
       if (hasDispensingTask || hasDispensingOrder) {
         onNavigateToDispensing?.();
       }
+      return true;
     };
 
     const selectedRootOrderIds = Array.from(selectedOrderIds).sort();
@@ -9353,13 +9520,18 @@ function OrderArea({
         orderIds: pendingConfirmation.orderIds,
         workspaceId: bundle.encounter.workspaceId,
       });
+      let recoveredConfirmation = false;
       if (!retryResult.ok && retryResult.status >= 500) {
-        retryResult =
-          (await recoverPersistedConfirmation(pendingConfirmation.orderIds)) ??
-          retryResult;
+        const recovered = await recoverPersistedConfirmation(
+          pendingConfirmation.orderIds,
+        );
+        if (recovered) {
+          retryResult = recovered;
+          recoveredConfirmation = true;
+        }
       }
       if (retryResult.ok) {
-        applyConfirmedResult(retryResult);
+        await applyConfirmedResult(retryResult, recoveredConfirmation);
         return;
       }
       const conflict =
@@ -9404,98 +9576,123 @@ function OrderArea({
 
     orderDraftSaveInFlightRef.current = true;
     setOrderDraftSaveState("saving");
-    const draftResult = await saveChartOrderDraftRoute({
-      actorHeaders,
-      encounterId: bundle.encounter.id,
-      expectedEtag: expectedDraftEtag,
-      rows: preparedDraft.rows,
-      workspaceId: bundle.encounter.workspaceId,
-    });
-    let effectiveDraftResult = draftResult;
-    if (
-      !draftResult.ok &&
-      draftResult.status >= 500 &&
-      draftResult.error === "db_write_failed"
-    ) {
-      const readback = await loadChartOrderDraft({
+    let actionExpectedEtag = expectedDraftEtag;
+    let actionOrderIds = orderIds.filter((orderId) =>
+      preparedDraft.rows.some(
+        (row) => row.order.id === orderId && isChartOrderTopLevelRow(row),
+      ),
+    );
+
+    if (draftTouchedRef.current) {
+      const draftResult = await saveChartOrderDraftRoute({
         actorHeaders,
         encounterId: bundle.encounter.id,
+        expectedEtag: expectedDraftEtag,
+        rows: preparedDraft.rows,
         workspaceId: bundle.encounter.workspaceId,
       });
+      let effectiveDraftResult = draftResult;
+      let recoveredDraftSave = false;
       if (
-        readback.ok &&
-        readback.etag &&
-        matchesPersistedConfirmationDraft({
-          desiredRows: preparedDraft.rows,
-          orderIds,
-          persistedRows: readback.rows ?? [],
-        })
+        !draftResult.ok &&
+        draftResult.status >= 500 &&
+        draftResult.error === "db_write_failed"
       ) {
-        effectiveDraftResult = readback;
+        const readback = await loadChartOrderDraft({
+          actorHeaders,
+          encounterId: bundle.encounter.id,
+          workspaceId: bundle.encounter.workspaceId,
+        });
+        if (
+          readback.ok &&
+          readback.etag &&
+          matchesPersistedConfirmationDraft({
+            desiredRows: preparedDraft.rows,
+            orderIds,
+            persistedRows: readback.rows ?? [],
+          })
+        ) {
+          effectiveDraftResult = readback;
+          recoveredDraftSave = true;
+        }
       }
-    }
 
-    if (!effectiveDraftResult.ok) {
-      orderDraftSaveInFlightRef.current = false;
-      const conflict =
-        effectiveDraftResult.denialReason === "revision_conflict" ||
-        effectiveDraftResult.error === "revision_conflict";
-      if (conflict) void refreshBillingSummary();
-      orderDraftConflictRef.current = conflict;
-      setOrderDraftSaveState(conflict ? "conflict" : "error");
-      orderDraftFailedAutoSaveVersionRef.current = attemptedDraftEditVersion;
-      toast.error(
-        conflict
-          ? "다른 기기의 변경과 충돌했어요. 충돌을 해결한 뒤 확정해 주세요."
-          : effectiveDraftResult.denialReason === "permission_missing"
-            ? "오더 수정 권한이 없어 저장하지 못했어요."
-            : getChartOrderPersistenceErrorMessage(
-                effectiveDraftResult.denialReason ?? effectiveDraftResult.error,
-              ),
+      if (!effectiveDraftResult.ok) {
+        orderDraftSaveInFlightRef.current = false;
+        const conflict =
+          effectiveDraftResult.denialReason === "revision_conflict" ||
+          effectiveDraftResult.error === "revision_conflict";
+        if (conflict) void refreshBillingSummary();
+        orderDraftConflictRef.current = conflict;
+        setOrderDraftSaveState(conflict ? "conflict" : "error");
+        orderDraftFailedAutoSaveVersionRef.current = attemptedDraftEditVersion;
+        toast.error(
+          conflict
+            ? "다른 기기의 변경과 충돌했어요. 충돌을 해결한 뒤 확정해 주세요."
+            : effectiveDraftResult.denialReason === "permission_missing"
+              ? "오더 수정 권한이 없어 저장하지 못했어요."
+              : getChartOrderPersistenceErrorMessage(
+                  effectiveDraftResult.denialReason ??
+                    effectiveDraftResult.error,
+                ),
+        );
+        return;
+      }
+
+      const draftSummaryAccepted = effectiveDraftResult.billingSummary
+        ? acceptAuthoritativeBillingSummary(effectiveDraftResult.billingSummary)
+        : recoveredDraftSave
+          ? await refreshBillingSummary()
+          : false;
+      if (!draftSummaryAccepted) {
+        orderDraftSaveInFlightRef.current = false;
+        setOrderDraftSaveState("error");
+        toast.error("저장 결과의 최신 금액을 확인하지 못했어요.");
+        return;
+      }
+
+      const savedDraftRows = applyPersistedOrderDrafts(
+        preparedDraft.rows,
+        effectiveDraftResult.rows ?? [],
+        bundle.encounter.workspaceId,
+        { preserveMissingRows: true },
       );
-      return;
-    }
+      const persistedOrderIds = new Set(
+        (effectiveDraftResult.rows ?? [])
+          .filter((row) => row.rowType !== "set_child")
+          .map((row) => row.orderId),
+      );
+      actionOrderIds = orderIds.filter((orderId) =>
+        persistedOrderIds.has(orderId),
+      );
 
-    const savedDraftRows = applyPersistedOrderDrafts(
-      preparedDraft.rows,
-      effectiveDraftResult.rows ?? [],
-      bundle.encounter.workspaceId,
-      { preserveMissingRows: true },
-    );
-    void refreshBillingSummary();
-    const persistedOrderIds = new Set(
-      (effectiveDraftResult.rows ?? [])
-        .filter((row) => row.rowType !== "set_child")
-        .map((row) => row.orderId),
-    );
-    const actionOrderIds = orderIds.filter((orderId) =>
-      persistedOrderIds.has(orderId),
-    );
+      if (actionOrderIds.length !== orderIds.length) {
+        orderDraftSaveInFlightRef.current = false;
+        setOrderDraftSaveState("error");
+        setCommittedRows(savedDraftRows);
+        setDraftRows(savedDraftRows);
+        setSelectedOrderIds(new Set(actionOrderIds));
+        toast.error("선택한 오더를 서버 draft에 저장하지 못했어요.");
+        return;
+      }
+
+      draftTouchedRef.current = false;
+      orderDraftFailedAutoSaveVersionRef.current = null;
+      setCommittedRows(savedDraftRows);
+      setDraftRows(savedDraftRows);
+      if (effectiveDraftResult.etag) {
+        actionExpectedEtag = effectiveDraftResult.etag;
+        orderDraftEtagRef.current = effectiveDraftResult.etag;
+        setOrderDraftEtag(effectiveDraftResult.etag);
+      }
+      orderDraftConflictRef.current = false;
+    }
 
     if (actionOrderIds.length !== orderIds.length) {
       orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState("error");
-      setCommittedRows(savedDraftRows);
-      setDraftRows(savedDraftRows);
       setSelectedOrderIds(new Set(actionOrderIds));
-      toast.error("선택한 오더를 서버 draft에 저장하지 못했어요.");
-      return;
-    }
-
-    draftTouchedRef.current = false;
-    orderDraftFailedAutoSaveVersionRef.current = null;
-    setCommittedRows(savedDraftRows);
-    setDraftRows(savedDraftRows);
-    if (effectiveDraftResult.etag) {
-      orderDraftEtagRef.current = effectiveDraftResult.etag;
-      setOrderDraftEtag(effectiveDraftResult.etag);
-    }
-    orderDraftConflictRef.current = false;
-    const actionExpectedEtag = effectiveDraftResult.etag;
-    if (!actionExpectedEtag) {
-      orderDraftSaveInFlightRef.current = false;
-      setOrderDraftSaveState("error");
-      toast.error("확정할 오더 버전을 확인하지 못했어요.");
+      toast.error("선택한 오더를 서버 draft에서 확인하지 못했어요.");
       return;
     }
     const idempotencyKey = createChartOrderConfirmationIdempotencyKey();
@@ -9513,12 +9710,16 @@ function OrderArea({
       orderIds: pendingConfirmationRef.current.orderIds,
       workspaceId: bundle.encounter.workspaceId,
     });
+    let recoveredConfirmation = false;
 
     if (!result.ok && result.status >= 500) {
-      result =
-        (await recoverPersistedConfirmation(
-          pendingConfirmationRef.current.orderIds,
-        )) ?? result;
+      const recovered = await recoverPersistedConfirmation(
+        pendingConfirmationRef.current.orderIds,
+      );
+      if (recovered) {
+        result = recovered;
+        recoveredConfirmation = true;
+      }
     }
 
     if (!result.ok) {
@@ -9543,7 +9744,7 @@ function OrderArea({
       return;
     }
     orderDraftSaveInFlightRef.current = false;
-    applyConfirmedResult(result);
+    await applyConfirmedResult(result, recoveredConfirmation);
   };
   const requestDraftRootRemoval = (orderIds: string[]) => {
     if (writeDisabled || orderIds.length === 0) return;
@@ -9615,14 +9816,33 @@ function OrderArea({
     setPendingRemovedRootOrderIds(
       new Set(pendingRemovedRootOrderIdsRef.current),
     );
-    markDraftTouched();
+    const nextRowById = new Map(nextRows.map((row) => [row.order.id, row]));
+    const hasRemainingChanges =
+      pendingRemovedRootOrderIdsRef.current.size > 0 ||
+      nextRows.some((row) => {
+        if (isChartOrderConfirmedRow(row)) return false;
+        const committedRow = committedRows.find(
+          (candidate) => candidate.order.id === row.order.id,
+        );
+        return committedRow ? isChartOrderDraftRowDirty(row) : true;
+      }) ||
+      committedRows.some(
+        (row) =>
+          !isChartOrderConfirmedRow(row) && !nextRowById.has(row.order.id),
+      );
+    if (hasRemainingChanges) {
+      markDraftTouched("discrete");
+    } else {
+      draftTouchedRef.current = false;
+      orderDraftFailedAutoSaveVersionRef.current = null;
+      setOrderDraftSaveState("saved");
+    }
     setSelectedOrderIds((current) => {
       const next = new Set(current);
       removableIds.forEach((orderId) => next.delete(orderId));
       return next;
     });
     setDeleteOrderIds([]);
-    void commitDraftRows({ silent: true });
   };
   const confirmSingleOrder = (orderId: string) => {
     const row = draftRows.find((candidate) => candidate.order.id === orderId);
@@ -9762,6 +9982,15 @@ function OrderArea({
       return;
     }
 
+    if (!acceptAuthoritativeBillingSummary(result.billingSummary)) {
+      setOrderMutationDraft({
+        ...draft,
+        error: "변경 결과의 최신 금액 범위를 확인하지 못했어요.",
+        saving: false,
+      });
+      return;
+    }
+
     const payload = result.mutation.order;
     const nextDetailInputs =
       payload.detailInputs &&
@@ -9827,7 +10056,6 @@ function OrderArea({
     setSelectedOrderIds(new Set());
     setOrderMutationDraft(null);
     void refreshOrderExecution();
-    void refreshBillingSummary();
     toast.success(`${chartOrderMutationLabels[draft.action]}을 기록했어요.`);
   };
   const orderActionLabel = "Order 확정";
@@ -9845,10 +10073,26 @@ function OrderArea({
             : orderDraftSaveState === "saved"
               ? "저장됨"
               : "변경 없음";
-  const effectiveBillingSummary = billingSummary ?? localBillingSummary;
   const hasAuthoritativeBillingSummary = Boolean(billingSummary);
+  const billingAmountDisplayState: ChartOrderBillingAmountDisplayState =
+    hasDraftChanges && draftSaveInvalidOrderIds.size > 0
+      ? "invalid"
+      : orderDraftSaveState === "error" || orderDraftSaveState === "conflict"
+        ? "save_error"
+        : hasDraftChanges
+          ? "preview"
+          : "authoritative";
+  const effectiveBillingSummary =
+    billingSummary && billingAmountDisplayState === "preview"
+      ? buildChartOrderBillingPreview({
+          authoritative: billingSummary,
+          committedRows,
+          draftRows,
+        })
+      : (billingSummary ?? localBillingSummary);
   const billingError = billingRequestError ?? billingSummaryError;
   const canRequestBilling =
+    billingAmountDisplayState === "authoritative" &&
     billingSummaryFreshness === "fresh" &&
     hasAuthoritativeBillingSummary &&
     !hasDraftChanges &&
@@ -9858,7 +10102,9 @@ function OrderArea({
     `선택 오더 ${selectedOrderIds.size}건`,
     `선택 오더 합계 ${selectedAmount.toLocaleString()}원`,
     draftStatusText,
-  ].filter(Boolean).join(" · ");
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const requestEncounterBilling = async (acknowledgeUnfinished: boolean) => {
     if (hasDraftChanges) {
       setBillingRequestError("변경한 오더를 먼저 업데이트한 뒤 청구해 주세요.");
@@ -9882,13 +10128,16 @@ function OrderArea({
       !acknowledgeUnfinished
     ) {
       setBillingDrawerOpen(true);
-      setBillingRequestError("진행 중 오더를 확인한 뒤 중간 정산으로 청구해 주세요.");
+      setBillingRequestError(
+        "진행 중 오더를 확인한 뒤 중간 정산으로 청구해 주세요.",
+      );
       return;
     }
     setBillingRequesting(true);
     setBillingRequestError(undefined);
     const pendingRequest =
-      pendingBillingRequestRef.current?.expectedEtag === authoritativeSummary.etag
+      pendingBillingRequestRef.current?.expectedEtag ===
+      authoritativeSummary.etag
         ? pendingBillingRequestRef.current
         : {
             expectedEtag: authoritativeSummary.etag,
@@ -9920,21 +10169,24 @@ function OrderArea({
       if (result.error === "revision_conflict") {
         pendingBillingRequestRef.current = null;
         setBillingSummaryFreshness("stale");
-        setBillingSummaryError("최신 금액을 불러오지 못했어요. 다시 확인해 주세요.");
+        setBillingSummaryError(
+          "최신 금액을 불러오지 못했어요. 다시 확인해 주세요.",
+        );
         setOrderDraftReloadKey((key) => key + 1);
         void refreshBillingSummary();
       }
       return;
     }
     pendingBillingRequestRef.current = null;
-    billingSummaryRequestSequenceRef.current += 1;
-    billingSummaryRef.current = result.summary;
-    setBillingSummary(result.summary);
-    setBillingSummaryFreshness("fresh");
-    setBillingSummaryError(undefined);
+    if (!acceptAuthoritativeBillingSummary(result.summary)) {
+      setBillingRequestError("청구 결과의 금액 범위를 확인하지 못했어요.");
+      setBillingDrawerOpen(true);
+      return;
+    }
     setBillingRequestError(undefined);
     toast.success("확정된 오더를 청구 화면으로 보냈어요.");
-    if (result.summary.invoiceId) onNavigateToBilling?.(result.summary.invoiceId);
+    if (result.summary.invoiceId)
+      onNavigateToBilling?.(result.summary.invoiceId);
   };
   useEffect(() => {
     if (!billingDrawerOpen) return;
@@ -10186,6 +10438,10 @@ function OrderArea({
         ) : null}
         <div className="min-h-0 flex-1 overflow-hidden bg-[var(--emr-surface-panel)]">
           <ChartOrderTable
+            confirmationDisabled={
+              orderDraftSaveState === "conflict" ||
+              pendingRemovedRootOrderIds.size > 0
+            }
             density={orderTableDensity}
             executionTasks={orderExecution?.tasks ?? []}
             hasAnyRows={draftRows.length > 0}
@@ -10289,6 +10545,7 @@ function OrderArea({
           accessibilitySummary={orderFooterAccessibilitySummary}
           canRequestBilling={canRequestBilling}
           drawerOpen={billingDrawerOpen}
+          displayState={billingAmountDisplayState}
           error={billingError}
           freshness={billingSummaryFreshness}
           hasAuthoritativeSummary={hasAuthoritativeBillingSummary}
@@ -10303,6 +10560,7 @@ function OrderArea({
         />
         <ChartOrderBillingDetailAside
           canRequestBilling={canRequestBilling}
+          displayState={billingAmountDisplayState}
           error={billingError}
           freshness={billingSummaryFreshness}
           hasAuthoritativeSummary={hasAuthoritativeBillingSummary}

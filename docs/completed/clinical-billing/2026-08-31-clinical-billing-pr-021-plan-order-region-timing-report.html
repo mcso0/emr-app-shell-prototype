@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plan/Order 리전 및 서버 타이밍 수행 보고서</title>
+    <style>
+      :root { color-scheme:light; --bg:#f6f7f9; --panel:#fff; --text:#171717; --muted:#667085; --line:#e4e7ec; --soft:#eef4ff; --blue:#175cd3; --green:#067647; --amber:#b54708; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--bg); color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.6; }
+      main { max-width:1040px; margin:0 auto; padding:48px 28px 72px; }
+      header { padding:0 4px 12px; }
+      h1,h2 { margin:0; line-height:1.25; }
+      h1 { margin-top:8px; font-size:32px; }
+      h2 { margin-bottom:12px; font-size:20px; }
+      p { margin:8px 0 0; }
+      section { margin-top:20px; padding:24px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+      .eyebrow { color:var(--blue); font-size:13px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+      .summary { border-color:#bfd3ff; background:var(--soft); font-size:17px; }
+      .meta { color:var(--muted); }
+      .ok { color:var(--green); font-weight:800; }
+      .warn { color:var(--amber); font-weight:800; }
+      ul { margin:8px 0 0; padding-left:20px; }
+      li + li { margin-top:6px; }
+      table { width:100%; margin-top:12px; border-collapse:collapse; font-size:14px; }
+      th,td { padding:11px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+      th { background:#f9fafb; }
+      code { padding:2px 5px; border-radius:5px; background:#f2f4f7; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">CLINICAL-BILLING-PR-021 · Fixed staging verified</p>
+        <h1>Plan/Order 리전 및 서버 타이밍</h1>
+        <p class="meta">2026-08-31 · PR #682 · staging merge 15d12733 · fixed staging syd1 · main/production 미변경</p>
+      </header>
+
+      <section class="summary">
+        <h2>결과 요약</h2>
+        <p>남은 지연을 session·permission·RPC·전체 시간으로 나누어 관측하고, 확인된 Sydney 데이터 리전에 Node Functions를 맞추는 변경이다. DB Summary 실행은 이미 빠르고 인덱스 병목이 없어 새 인덱스는 추가하지 않았다.</p>
+      </section>
+
+      <section>
+        <h2>변경 범위</h2>
+        <ul>
+          <li>Summary GET과 draft·confirmation·execution mutation에 <code>Server-Timing</code>을 추가했다.</li>
+          <li>구조화 로그는 allowlist route key, method, status, 네 timing 값만 기록한다.</li>
+          <li>루트 <code>vercel.json</code>에 <code>regions: ["syd1"]</code>을 설정했다.</li>
+          <li>요청·응답 계약, 인증, workspace membership, permission, rate limit, ETag는 변경하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>조사 근거</h2>
+        <table>
+          <thead><tr><th>항목</th><th>결과</th><th>판단</th></tr></thead>
+          <tbody>
+            <tr><td>기존 Vercel 함수</td><td><code>iad1</code>, 합성 편집 30회: 예상 median/p95 56/207ms, 확정 median/p95 2,579/3,388ms</td><td>확정 경로 지연 재현. 700ms debounce와 UI overhead 포함</td></tr>
+            <tr><td>Supabase</td><td><code>ap-southeast-2</code>, ACTIVE_HEALTHY</td><td><code>syd1</code> 정렬 조건 충족</td></tr>
+            <tr><td>Summary 30회 warm</td><td>median 0.691ms, p95 7.635ms</td><td>DB p95 200ms 기준 미만</td></tr>
+            <tr><td>latest Task lookup</td><td>7 candidates, 5.710ms, index scan, disk read 0</td><td>새 인덱스 근거 없음</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>현재 검증</h2>
+        <ul>
+          <li><span class="ok">PASS:</span> focused Playwright 52/52 — 성공·401 early denial header, auth/capability 회귀, privacy-safe helper.</li>
+          <li><span class="ok">PASS:</span> focused ESLint, TypeScript, diff whitespace.</li>
+          <li><span class="ok">PASS:</span> 공식 Vercel 문서에서 project-level <code>vercel.json</code> region 설정을 확인했다.</li>
+          <li><span class="ok">PASS:</span> secret scan, docs links, diff whitespace, 전체 ESLint, TypeScript, production build.</li>
+          <li><span class="ok">PASS:</span> Preview <code>dpl_9uBmmV3NiuA2txZVbh3ggGuo7A32</code> Ready, Vercel inspect에서 Next.js Lambda <code>syd1</code> 배치 확인.</li>
+          <li><span class="ok">PASS:</span> 기존 고정 스테이징에서 합성 수량 편집 30회 후 201,000원으로 복구했고, 직접 Summary readback도 1건·201,000원으로 일치했다.</li>
+          <li><span class="ok">PASS:</span> fixed staging warm Summary GET 30회 서버 total median/p95 <code>143.6/366.4ms</code>, mutation 30회 서버 total median/p95 <code>237.1/890.6ms</code>.</li>
+          <li><span class="ok">PASS:</span> 합성 편집의 사용자 체감 확정 median/p95 <code>1,629/1,984ms</code>로 기존 iad1 기준보다 약 36.8%/41.4% 개선됐다. 700ms debounce와 자동화 overhead를 포함한다.</li>
+          <li><span class="ok">PASS:</span> 정상 mutation마다 PATCH 1회, 자동 Summary GET 0회였고 최종 수량 1·201,000원·console error 0건으로 복구했다.</li>
+          <li><span class="warn">CAVEAT:</span> 계측 전 iad1의 동일한 authenticated Summary route header 기준은 없어 route-to-route 개선율은 주장하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>릴리스 경계</h2>
+        <ul>
+          <li>이 candidate는 shared DB schema를 변경하지 않는다.</li>
+          <li>Release Check <code>33367555659</code>와 fixed staging alias run <code>33368035853</code>이 통과했고, Ready deployment <code>dpl_EDK7HMBoo1Re9TSTCp5bpqoi2voQ</code>가 <code>syd1</code>에서 동작한다.</li>
+          <li>이전 Ready deployment <code>dpl_CXPRbT2rhYgKQgToa5kcnifbVY2o</code>를 rollback 후보로 유지한다.</li>
+          <li><code>main</code>과 production은 PR-022 완료 및 최종 승인 전까지 변경하지 않는다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

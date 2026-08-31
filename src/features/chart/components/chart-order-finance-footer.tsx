@@ -11,11 +11,18 @@ export type ChartOrderBillingSummaryFreshness =
   | "stale"
   | "error";
 
+export type ChartOrderBillingAmountDisplayState =
+  | "authoritative"
+  | "preview"
+  | "invalid"
+  | "save_error";
+
 export function ChartOrderFinanceFooter({
   accessibilitySummary,
   canRequestBilling,
   drawerOpen,
   error,
+  displayState,
   freshness,
   hasAuthoritativeSummary,
   onOpenDetails,
@@ -28,6 +35,7 @@ export function ChartOrderFinanceFooter({
   canRequestBilling: boolean;
   drawerOpen: boolean;
   error?: string;
+  displayState: ChartOrderBillingAmountDisplayState;
   freshness: ChartOrderBillingSummaryFreshness;
   hasAuthoritativeSummary: boolean;
   onOpenDetails: () => void;
@@ -38,7 +46,11 @@ export function ChartOrderFinanceFooter({
 }) {
   const counts = summary.orderCounts;
   const amounts = summary.amounts;
-  const freshnessText = getFreshnessText(freshness);
+  const freshnessText = getBillingStatusText(displayState, freshness);
+  const amountLabel = getBillingAmountLabel(
+    displayState,
+    hasAuthoritativeSummary,
+  );
   return (
     <footer
       data-testid="chart-order-footer"
@@ -71,7 +83,7 @@ export function ChartOrderFinanceFooter({
         </div>
         <span aria-hidden className="h-5 w-px bg-[var(--emr-border-default)]" />
         <p className="whitespace-nowrap text-[13px] text-[var(--emr-text-secondary)]">
-          {hasAuthoritativeSummary ? "청구 예상 총액" : "서버 확인 전 예상 총액"}{" "}
+          {amountLabel}{" "}
           <strong className="ml-1 tabular-nums text-[16px] text-foreground">
             {formatWon(amounts.estimatedTotal)}
           </strong>
@@ -81,7 +93,10 @@ export function ChartOrderFinanceFooter({
             role="status"
             className={cn(
               "whitespace-nowrap text-[11px]",
-              freshness === "stale" || freshness === "error"
+              displayState === "invalid" ||
+                displayState === "save_error" ||
+                freshness === "stale" ||
+                freshness === "error"
                 ? "text-[var(--emr-status-warning-text)]"
                 : "text-[var(--emr-text-tertiary)]",
             )}
@@ -115,6 +130,7 @@ export function ChartOrderFinanceFooter({
 
 export function ChartOrderBillingDetailAside({
   canRequestBilling,
+  displayState,
   error,
   freshness,
   hasAuthoritativeSummary,
@@ -126,6 +142,7 @@ export function ChartOrderBillingDetailAside({
   summary,
 }: {
   canRequestBilling: boolean;
+  displayState: ChartOrderBillingAmountDisplayState;
   error?: string;
   freshness: ChartOrderBillingSummaryFreshness;
   hasAuthoritativeSummary: boolean;
@@ -138,7 +155,11 @@ export function ChartOrderBillingDetailAside({
 }) {
   const counts = summary.orderCounts;
   const amounts = summary.amounts;
-  const freshnessText = getFreshnessText(freshness);
+  const freshnessText = getBillingStatusText(displayState, freshness);
+  const amountLabel = getBillingAmountLabel(
+    displayState,
+    hasAuthoritativeSummary,
+  );
   return (
     <aside
       id="chart-order-billing-detail-aside"
@@ -161,9 +182,7 @@ export function ChartOrderBillingDetailAside({
         <section className="rounded-xl border border-[var(--emr-border-accent)] bg-[var(--emr-surface-selected)] p-4">
           <div className="flex items-center justify-between text-xs text-[var(--emr-text-secondary)]">
             <span>
-              {hasAuthoritativeSummary
-                ? "청구 예상 총액"
-                : "서버 확인 전 예상 총액"}
+              {amountLabel}
             </span>
             <span>청구 가능 {counts.requestable}건</span>
           </div>
@@ -179,7 +198,10 @@ export function ChartOrderBillingDetailAside({
                 role="status"
                 className={cn(
                   "text-xs",
-                  freshness === "stale" || freshness === "error"
+                  displayState === "invalid" ||
+                    displayState === "save_error" ||
+                    freshness === "stale" ||
+                    freshness === "error"
                     ? "text-[var(--emr-status-warning-text)]"
                     : "text-[var(--emr-text-secondary)]",
                 )}
@@ -283,4 +305,22 @@ function getFreshnessText(freshness: ChartOrderBillingSummaryFreshness) {
     return "최신 금액 확인 필요";
   }
   return undefined;
+}
+
+function getBillingAmountLabel(
+  displayState: ChartOrderBillingAmountDisplayState,
+  hasAuthoritativeSummary: boolean,
+) {
+  if (displayState === "preview") return "오더 예상 총액";
+  return hasAuthoritativeSummary ? "청구 예상 총액" : "서버 확인 전 예상 총액";
+}
+
+function getBillingStatusText(
+  displayState: ChartOrderBillingAmountDisplayState,
+  freshness: ChartOrderBillingSummaryFreshness,
+) {
+  if (displayState === "preview") return "예상 · 저장 중";
+  if (displayState === "invalid") return "입력 확인 필요 · 금액 미반영";
+  if (displayState === "save_error") return "저장 실패 · 금액 미반영";
+  return getFreshnessText(freshness);
 }

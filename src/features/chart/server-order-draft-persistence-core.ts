@@ -20,6 +20,11 @@ import {
   isClinicalOrderType,
   validateClinicalOrderDetailInputs,
 } from "@/features/chart/order-execution-domain";
+import {
+  createMockChartOrderBillingSummaryFromMutationRows,
+  mapChartOrderBillingSummary,
+  type ChartOrderBillingSummary,
+} from "@/features/chart/chart-order-billing-summary-contract";
 import type {
   ClinicalOrderDestinationModule,
   ClinicalOrderExecutionMode,
@@ -149,6 +154,7 @@ export type ChartOrderDraftLine = {
 export type ChartOrderDraftGatewayResult =
   | {
       ok: true;
+      billingSummary?: ChartOrderBillingSummary;
       etag: string;
       rows: ChartOrderRuntimeRow[];
     }
@@ -196,6 +202,7 @@ export type ChartOrderDraftReadResult =
 export type ChartOrderDraftSaveResult =
   | {
       ok: true;
+      billingSummary: ChartOrderBillingSummary;
       etag: string;
       rows: ChartOrderRuntimeRow[];
       status: 200;
@@ -336,6 +343,20 @@ export async function saveChartOrderDraft({
     };
   }
 
+  const chartViewPermission = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: actorUserId,
+    workspaceId,
+    requiredPermission: "chart:view",
+  });
+
+  if (!chartViewPermission.allowed) {
+    return {
+      ok: false,
+      status: chartViewPermission.denialReason === "unauthenticated" ? 401 : 403,
+      denialReason: chartViewPermission.denialReason ?? "permission_missing",
+    };
+  }
+
   const result = await gateway.saveOrderDraft({
     actorUserId: actorUserId ?? "",
     encounterId: normalized.encounterId,
@@ -365,9 +386,14 @@ export async function saveChartOrderDraft({
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
+  if (!result.billingSummary) {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+
   return {
     ok: true,
     status: 200,
+    billingSummary: result.billingSummary,
     etag: result.etag,
     rows: result.rows,
     enforcedBy: "chart-order-draft-persistence",
@@ -611,9 +637,16 @@ export function createMockChartOrderDraftGateway(
           updatedAt: timestamp,
         });
       }
+      const etag = mockChartOrderEtag(runtimeRows);
       return {
         ok: true,
-        etag: mockChartOrderEtag(runtimeRows),
+        billingSummary: createMockChartOrderBillingSummaryFromMutationRows({
+          encounterId,
+          etag,
+          rows: runtimeRows,
+          workspaceId,
+        }),
+        etag,
         rows: runtimeRows,
       };
     },
@@ -1227,8 +1260,13 @@ function mapOrderDraftResponse(value: unknown): ChartOrderDraftGatewayResult | n
     (row): row is ChartOrderRuntimeRow => Boolean(row),
   );
   if (rows.length !== rawRows.length) return null;
+  const billingSummary = body.billingSummary === undefined
+    ? undefined
+    : (mapChartOrderBillingSummary(body.billingSummary) ?? undefined);
+  if (body.billingSummary !== undefined && !billingSummary) return null;
   return {
     ok: true,
+    billingSummary,
     etag,
     rows,
   };

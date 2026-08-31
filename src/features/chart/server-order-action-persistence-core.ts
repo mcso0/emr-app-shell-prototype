@@ -35,6 +35,11 @@ import {
   isClinicalOrderType,
 } from "@/features/chart/order-execution-domain";
 import {
+  createMockChartOrderBillingSummaryFromMutationRows,
+  mapChartOrderBillingSummary,
+  type ChartOrderBillingSummary,
+} from "@/features/chart/chart-order-billing-summary-contract";
+import {
   getMockChartOrderDraftEtag,
   getMockChartOrderDraftRuntimeRows,
   type ChartOrderReadbackQuantitySource,
@@ -179,6 +184,7 @@ export type ChartOrderActionLine = {
 export type ChartOrderActionGatewayResult =
   | {
       ok: true;
+      billingSummary?: ChartOrderBillingSummary;
       etag: string;
       rows: ChartOrderRuntimeRow[];
       orderActions: ChartOrderActionLine[];
@@ -248,6 +254,7 @@ export type ChartOrderActionReadResult =
 export type ChartOrderActionSaveResult =
   | {
       ok: true;
+      billingSummary?: ChartOrderBillingSummary;
       status: 200;
       etag: string;
       rows: ChartOrderRuntimeRow[];
@@ -424,6 +431,22 @@ export async function saveChartOrderAction({
     };
   }
 
+  if (normalized.action === "confirm") {
+    const chartViewPermission = resolveWorkspacePermission(permissionAdapter, {
+      sessionUserId: actorUserId,
+      workspaceId,
+      requiredPermission: "chart:view",
+    });
+
+    if (!chartViewPermission.allowed) {
+      return {
+        ok: false,
+        status: chartViewPermission.denialReason === "unauthenticated" ? 401 : 403,
+        denialReason: chartViewPermission.denialReason ?? "permission_missing",
+      };
+    }
+  }
+
   const result = await gateway.saveOrderAction({
     action: normalized.action as ChartOrderActionKind,
     actorUserId: actorUserId ?? "",
@@ -448,12 +471,13 @@ export async function saveChartOrderAction({
   }
 
   if (normalized.action === "confirm") {
-    if (!result.serverAtomic) {
+    if (!result.serverAtomic || !result.billingSummary) {
       return { ok: false, status: 500, error: "db_write_failed" };
     }
     return {
       ok: true,
       status: 200,
+      billingSummary: result.billingSummary,
       etag: result.etag,
       rows: result.rows,
       billingCandidates: result.billingCandidates,
@@ -667,9 +691,19 @@ export function createMockChartOrderActionGateway(
                 unitPrice: row.unitPriceSnapshot ?? 0,
               }))
           : undefined;
+      const etag = mockChartActionEtag(runtimeRows);
       return {
         ok: true,
-        etag: mockChartActionEtag(runtimeRows),
+        billingSummary:
+          action === "confirm"
+            ? createMockChartOrderBillingSummaryFromMutationRows({
+                encounterId,
+                etag,
+                rows,
+                workspaceId,
+              })
+            : undefined,
+        etag,
         rows: runtimeRows,
         orderActions: selectedRows,
         billingCandidates: atomicBillingCandidates,
@@ -1121,13 +1155,15 @@ function mapAtomicConfirmationResponse(
     return { ok: false, status: 500, error: "db_read_failed" };
   }
   const body = value as Record<string, unknown>;
+  const billingSummary = mapChartOrderBillingSummary(body.billingSummary);
   if (
     typeof body.commandId !== "string" ||
     typeof body.etag !== "string" ||
     !Array.isArray(body.confirmedRows) ||
     !Array.isArray(body.billingCandidates) ||
     !Array.isArray(body.queueProjectionIds) ||
-    !Array.isArray(body.tasks)
+    !Array.isArray(body.tasks) ||
+    !billingSummary
   ) {
     return { ok: false, status: 500, error: "db_read_failed" };
   }
@@ -1181,6 +1217,7 @@ function mapAtomicConfirmationResponse(
   }
   return {
     ok: true,
+    billingSummary,
     etag: body.etag,
     rows,
     orderActions: rows.map(runtimeRowToActionLine),

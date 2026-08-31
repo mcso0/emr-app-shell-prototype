@@ -145,6 +145,9 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
     { data: strictDraftInput(currentBody.etag) },
   );
   expect(unauthenticated.status()).toBe(401);
+  expect(unauthenticated.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=0\.0, rpc;dur=0\.0, total;dur=\d+\.\d$/,
+  );
   await expectJson(unauthenticated, {
     ok: false,
     denialReason: "unauthenticated",
@@ -180,6 +183,9 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
     },
   );
   expect(saved.status()).toBe(200);
+  expect(saved.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=\d+\.\d, rpc;dur=\d+\.\d, total;dur=\d+\.\d$/,
+  );
   expect(saved.headers()["etag"]).toBeUndefined();
   const savedBody = (await saved.json()) as {
     ok: true;
@@ -301,6 +307,43 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
     status: 403,
     denialReason: "permission_missing",
   });
+
+  let updateOnlyGatewayCalled = false;
+  const updateOnlyDenied = await saveChartOrderDraft({
+    actorUserId: "user-update-only",
+    workspaceId,
+    input: strictDraftInput(),
+    gateway: {
+      async saveOrderDraft() {
+        updateOnlyGatewayCalled = true;
+        throw new Error("gateway must not run without chart:view");
+      },
+    },
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-update-only", status: "active" }],
+      memberships: [
+        {
+          id: "membership-update-only",
+          workspaceId,
+          userId: "user-update-only",
+          roles: [],
+          permissionRole: {
+            key: "chart-update-only",
+            label: "Chart update only",
+            roleType: "custom",
+            permissionIds: ["chart:update"],
+          },
+          status: "active",
+        },
+      ],
+    }),
+  });
+  expect(updateOnlyDenied).toMatchObject({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
+  expect(updateOnlyGatewayCalled).toBe(false);
 
   const crossWorkspaceDenied = await saveChartOrderDraft({
     actorUserId: "user-vet",

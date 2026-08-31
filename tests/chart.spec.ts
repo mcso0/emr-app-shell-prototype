@@ -117,6 +117,12 @@ async function getChartOrderAction(page: Page, name: string | RegExp) {
   return action;
 }
 
+function getChartSelectedOrderConfirmAction(page: Page) {
+  return page
+    .getByRole("toolbar", { name: "선택 행 작업" })
+    .getByRole("button", { name: "선택 확정" });
+}
+
 async function dismissChartOrderActionMenu(page: Page) {
   const menu = page.getByRole("menu", { name: "Plan/Order 작업" });
   await expect(menu).toBeVisible();
@@ -377,7 +383,9 @@ async function confirmChartOrderCatalogSelection(
   dialog: Locator,
   count: number,
 ) {
-  await expect(dialog.getByText(`선택한 오더 ${count}개`, { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText(`선택한 오더 ${count}개`, { exact: true }),
+  ).toBeVisible();
   await dialog.getByRole("button", { name: "선택 완료", exact: true }).click();
 }
 
@@ -1048,7 +1056,8 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "Plan/Order 작업",
   );
 
-  await expect(page.locator("[data-slot='chart-soap-toolbar']")).toHaveCount(0);
+  await expect(page.locator("[data-slot='chart-soap-toolbar']")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
   await expect(subjectPanel.getByLabel("SOAP 블록 문서")).toBeVisible();
   await expect(
     page.locator("[data-slot='chart-assessment-toolbar']"),
@@ -2039,9 +2048,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(inlineHistoryItem).not.toContainText("완료");
   await expect(inlineHistoryItem).not.toContainText(oldEncounterNo);
   await expect(
-    page.getByTestId(
-      `chart-diagnosis-history-item-${current.encounter.id}`,
-    ),
+    page.getByTestId(`chart-diagnosis-history-item-${current.encounter.id}`),
   ).toHaveCount(0);
 
   const diagnosisHistorySearch = page.getByLabel("진단 이력 검색");
@@ -4253,58 +4260,61 @@ test("chart SOAP reconciles a committed response-loss retry without a false conf
   let readCount = 0;
   let committedNote: Record<string, unknown> | null = null;
 
-  await page.route("**/api/workspaces/clair-demo/chart/soap-notes**", async (route) => {
-    const request = route.request();
-    if (request.method() === "GET") {
-      readCount += 1;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/soap-notes**",
+    async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        readCount += 1;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            status: 200,
+            soapNote: committedNote,
+          }),
+        });
+        return;
+      }
+
+      const input = request.postDataJSON() as {
+        blockDocument: unknown;
+        encounterId: string;
+      };
+      patchCount += 1;
+      expect(request.headers()["x-request-id"]).toMatch(/^chart-soap-/);
+
+      if (patchCount === 1) {
+        committedNote = {
+          id: "soap-response-loss",
+          encounterId: input.encounterId,
+          authorUserId: "user-vet",
+          subjective: "response loss",
+          objective: "",
+          assessment: "",
+          plan: "",
+          blockDocument: input.blockDocument,
+          status: "autosaved",
+          autosavedAt: "2026-08-31T10:00:00.000Z",
+          createdAt: "2026-08-31T10:00:00.000Z",
+          updatedAt: "2026-08-31T10:00:00.000Z",
+        };
+        await route.abort("connectionreset");
+        return;
+      }
+
       await route.fulfill({
-        status: 200,
+        status: 409,
         contentType: "application/json",
         body: JSON.stringify({
-          ok: true,
-          status: 200,
-          soapNote: committedNote,
+          ok: false,
+          status: 409,
+          denialReason: "soap_note_conflict",
         }),
       });
-      return;
-    }
-
-    const input = request.postDataJSON() as {
-      blockDocument: unknown;
-      encounterId: string;
-    };
-    patchCount += 1;
-    expect(request.headers()["x-request-id"]).toMatch(/^chart-soap-/);
-
-    if (patchCount === 1) {
-      committedNote = {
-        id: "soap-response-loss",
-        encounterId: input.encounterId,
-        authorUserId: "user-vet",
-        subjective: "response loss",
-        objective: "",
-        assessment: "",
-        plan: "",
-        blockDocument: input.blockDocument,
-        status: "autosaved",
-        autosavedAt: "2026-08-31T10:00:00.000Z",
-        createdAt: "2026-08-31T10:00:00.000Z",
-        updatedAt: "2026-08-31T10:00:00.000Z",
-      };
-      await route.abort("connectionreset");
-      return;
-    }
-
-    await route.fulfill({
-      status: 409,
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: false,
-        status: 409,
-        denialReason: "soap_note_conflict",
-      }),
-    });
-  });
+    },
+  );
 
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history");
   const soapDocument = page.getByLabel("SOAP 블록 문서");
@@ -4322,7 +4332,9 @@ test("chart SOAP reconciles a committed response-loss retry without a false conf
   await saveError.getByRole("button", { name: "다시 저장" }).click();
 
   await expect(
-    page.getByText("임상 기록은 서버에 반영되었습니다. 중복 저장하지 말고 관리자에게 변경 이력 상태를 확인해 주세요."),
+    page.getByText(
+      "임상 기록은 서버에 반영되었습니다. 중복 저장하지 말고 관리자에게 변경 이력 상태를 확인해 주세요.",
+    ),
   ).toBeVisible();
   await expect(saveError).toHaveCount(0);
   expect(patchCount).toBe(2);
@@ -5034,7 +5046,9 @@ test("chart safety context and confirmation dialogs identify the active patient"
   );
 
   await page.getByRole("button", { name: "Plan/Order 작업" }).click();
-  await expect(page.getByRole("menuitem", { name: "Order 확정" })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "Order 확정" })).toHaveCount(
+    0,
+  );
   await dismissChartOrderActionMenu(page);
 
   await page.getByRole("button", { name: "진료 완료" }).click();
@@ -5049,7 +5063,9 @@ test("chart safety context and confirmation dialogs identify the active patient"
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
-  await expect(selectionActions.getByRole("button", { name: "선택 확정" })).toBeEnabled();
+  await expect(
+    selectionActions.getByRole("button", { name: "선택 확정" }),
+  ).toBeEnabled();
   await selectionActions.getByRole("button", { name: "선택 확정" }).click();
   const orderConfirmDialog = page.getByRole("dialog");
   await expect(orderConfirmDialog.getByText("Order 확정 확인")).toBeVisible();
@@ -5081,9 +5097,12 @@ test("chart keeps confirmation selection-scoped and billing encounter-scoped", a
       name: "Order 청구",
     }),
   ).toBeVisible();
-  await page.getByTestId("chart-order-footer").getByRole("button", {
-    name: "금액 상세",
-  }).click();
+  await page
+    .getByTestId("chart-order-footer")
+    .getByRole("button", {
+      name: "금액 상세",
+    })
+    .click();
   const detailAside = page.getByLabel("Plan/Order 금액 상세");
   await expect(detailAside).toBeVisible();
   await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCount(0);
@@ -5266,9 +5285,9 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await expect(maropitantQuantity).toHaveValue("1");
   await maropitantQuantity.fill("0");
 
-  await expect(
-    page.getByTestId("chart-order-save-status"),
-  ).toContainText("변경 대기 1건 · 입력 확인 필요 1건");
+  await expect(page.getByTestId("chart-order-save-status")).toContainText(
+    "변경 대기 1건 · 입력 확인 필요 1건",
+  );
 
   await maropitantQuantity.fill("2");
   await page
@@ -5647,7 +5666,7 @@ test("chart continuously edits a 20-row mixed draft with keyboard focus preserve
   await firstQuantityInput.focus();
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.type("2");
-  await page.keyboard.press("Tab");
+  await firstQuantityInput.press("Tab");
   await expect(firstQuantityInput).not.toBeFocused();
   const focusedElement = page.locator(":focus");
   await expect(focusedElement).toHaveCount(1);
@@ -6272,8 +6291,9 @@ test("chart order autosave preserves local edits and blocks confirmation on ETag
   const conflict = page.getByTestId("chart-order-draft-conflict");
   await expect(conflict).toContainText("현재 편집값은 덮어쓰지 않았습니다");
   await expect(billingName).toHaveValue("다른 기기와 충돌하는 로컬 편집값");
-  await expect(await getChartOrderAction(page, "Order 확정")).toBeDisabled();
-  await dismissChartOrderActionMenu(page);
+  await expect(
+    page.getByRole("button", { name: "Maropitant 16mg T 확정" }),
+  ).toBeDisabled();
   await expect(
     conflict.getByRole("button", { name: "서버 값 다시 불러오기" }),
   ).toBeVisible();
@@ -6370,7 +6390,7 @@ async function verifyChartConfirmationRetry(page: Page) {
 
   await page.getByRole("switch", { name: "Maropitant 16mg T 긴급" }).check();
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
-  await (await getChartOrderAction(page, "Order 확정")).click();
+  await getChartSelectedOrderConfirmAction(page).click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
   const confirmButton = confirmDialog.getByRole("button", {
     name: "Order 확정",
@@ -6508,9 +6528,7 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   });
   await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
   await expect(dialog.getByText("108개", { exact: true })).toBeVisible();
-  const selectedColumn = dialog.locator(
-    'section[aria-label="선택한 오더"]',
-  );
+  const selectedColumn = dialog.locator('section[aria-label="선택한 오더"]');
   const selectedViewport = selectedColumn.locator(
     '[data-slot="scroll-area-viewport"]',
   );
@@ -6784,9 +6802,7 @@ test("chart order catalog lets veterinarians deselect unconfirmed draft orders a
   await expect(candidate).toHaveAttribute("aria-selected", "true");
 
   await candidate.click();
-  await dialog
-    .getByRole("button", { name: "선택 완료", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: "선택 완료", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(
     page.getByLabel("Maropitant 16mg T 청구서명 수정", { exact: true }),
@@ -7141,7 +7157,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await addedRow
     .getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" })
     .click();
-  await (await getChartOrderAction(page, "Order 확정")).click();
+  await getChartSelectedOrderConfirmAction(page).click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
   await expect(confirmDialog).toBeVisible();
   const draftSaveResponse = page.waitForResponse(
@@ -7202,7 +7218,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
         }),
     ),
   ).toBe(true);
-  await expect(addedRow).toContainText(/확정|수납 후보/);
+  await expect(addedRow).toContainText(/확정|수납 후보|청구됨/);
 
   await page.reload();
   const restoredRow = page
@@ -7335,7 +7351,6 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
     .getByRole("checkbox", { name: "구토 기본 세트 선택" })
     .click();
 
-  await (await getChartOrderAction(page, /Order 업데이트/)).click();
   await expect
     .poll(() =>
       draftPatchBodies.some(
@@ -7677,8 +7692,11 @@ test("chart confirmation continues after an ambiguous draft response only when r
   );
 
   await page.goto(kongScenarioUrl);
+  await page
+    .getByLabel(`${displayName} 청구서명 수정`)
+    .fill(`${displayName} updated`);
   await page.getByRole("checkbox", { name: `${displayName} 선택` }).check();
-  await (await getChartOrderAction(page, "Order 확정")).click();
+  await getChartSelectedOrderConfirmAction(page).click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
   await confirmDialog.getByRole("button", { name: "Order 확정" }).click();
 

@@ -234,6 +234,15 @@ begin
       )
     )
   );
+  if not (v_saved ? 'billingSummary')
+    or v_saved -> 'billingSummary' is distinct from
+      public.clair_get_chart_order_billing_summary(
+        'workspace-clair-cheongdam',
+        '95000000-0000-4000-8000-000000000002'
+      )
+  then
+    raise exception 'phase5_draft_mutation_summary_mismatch';
+  end if;
 
   v_confirmed := public.clair_confirm_chart_order_candidates(
     'workspace-clair-cheongdam',
@@ -272,6 +281,15 @@ begin
     ),
     'phase5-amend-0001'
   );
+  if not (v_result ? 'billingSummary')
+    or v_result -> 'billingSummary' is distinct from
+      public.clair_get_chart_order_billing_summary(
+        'workspace-clair-cheongdam',
+        '95000000-0000-4000-8000-000000000002'
+      )
+  then
+    raise exception 'phase5_execution_mutation_summary_mismatch';
+  end if;
   if (v_result ->> 'revisionNo')::integer <> 2 then
     raise exception 'phase5_amend_revision_mismatch';
   end if;
@@ -297,6 +315,36 @@ begin
     '{"billingName":"Phase5 Lab corrected","quantity":2,"unitPrice":9000}'::jsonb,
     'phase5-billing-0001'
   );
+  -- Change the current Summary without touching the idempotent mutation's
+  -- stored result, then verify replay returns the newly computed Summary.
+  perform public.clair_save_chart_order_draft(
+    'workspace-clair-cheongdam',
+    '49110000-0000-4000-8000-000000000003',
+    '95000000-0000-4000-8000-000000000002',
+    jsonb_build_object(
+      'expectedEtag', public.clair_get_chart_order_draft(
+        'workspace-clair-cheongdam',
+        '95000000-0000-4000-8000-000000000002'
+      ) -> 'etag',
+      'rows', jsonb_build_array(
+        jsonb_build_object(
+          'rowType', 'individual',
+          'orderId', '95000000-0000-4000-8000-000000000105',
+          'workspaceCatalogItemId', 'phase5-imaging',
+          'quantity', 1,
+          'detailInputs', jsonb_build_object(
+            'bodyRegion', 'thorax',
+            'position', 'VD',
+            'viewCount', 2,
+            'contrastRequired', false,
+            'sedationRequired', false
+          ),
+          'detailSchemaVersion', 1,
+          'priority', 'normal'
+        )
+      )
+    )
+  );
   v_replay := public.clair_mutate_chart_order_execution(
     'workspace-clair-cheongdam',
     '49110000-0000-4000-8000-000000000003',
@@ -307,9 +355,38 @@ begin
     '{"billingName":"Phase5 Lab corrected","quantity":2,"unitPrice":9000}'::jsonb,
     ' phase5-billing-0001 '
   );
-  if v_replay is distinct from v_result then
+  if v_replay - 'billingSummary' is distinct from
+    v_result - 'billingSummary'
+  then
     raise exception 'phase5_mutation_replay_not_deterministic';
   end if;
+  if not (v_replay ? 'billingSummary')
+    or v_replay -> 'billingSummary' is not distinct from
+      v_result -> 'billingSummary'
+    or v_replay -> 'billingSummary' is distinct from
+      public.clair_get_chart_order_billing_summary(
+        'workspace-clair-cheongdam',
+        '95000000-0000-4000-8000-000000000002'
+      )
+  then
+    raise exception 'phase5_execution_replay_summary_not_current';
+  end if;
+
+  perform public.clair_save_chart_order_draft(
+    'workspace-clair-cheongdam',
+    '49110000-0000-4000-8000-000000000003',
+    '95000000-0000-4000-8000-000000000002',
+    jsonb_build_object(
+      'expectedEtag', public.clair_get_chart_order_draft(
+        'workspace-clair-cheongdam',
+        '95000000-0000-4000-8000-000000000002'
+      ) -> 'etag',
+      'rows', '[]'::jsonb,
+      'removedOrderIds', jsonb_build_array(
+        '95000000-0000-4000-8000-000000000105'
+      )
+    )
+  );
 
   v_rejected := false;
   begin

@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import { resolveServerChartEncounterId } from "../src/features/chart/server-encounter-id-bridge-core";
 import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
+import { createMockChartOrderBillingSummaryFromMutationRows } from "../src/features/chart/chart-order-billing-summary-contract";
 import {
   createMockChartOrderActionGateway,
   createSupabaseChartOrderActionGateway,
@@ -74,6 +75,9 @@ test("order action route confirms selected orders via mock fallback and reads af
     { data: validConfirmInput },
   );
   expect(unauthenticated.status()).toBe(401);
+  expect(unauthenticated.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=0\.0, rpc;dur=0\.0, total;dur=\d+\.\d$/,
+  );
   await expectJson(unauthenticated, {
     ok: false,
     denialReason: "unauthenticated",
@@ -113,6 +117,9 @@ test("order action route confirms selected orders via mock fallback and reads af
     },
   );
   expect(saved.status()).toBe(200);
+  expect(saved.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=\d+\.\d, rpc;dur=\d+\.\d, total;dur=\d+\.\d$/,
+  );
   expect(saved.headers()["etag"]).toBeUndefined();
   const savedBody = (await saved.json()) as {
     ok: true;
@@ -557,6 +564,43 @@ test("order action core rejects missing order ids, permission gaps, and encounte
     denialReason: "permission_missing",
   });
 
+  let updateOnlyGatewayCalled = false;
+  const updateOnlyDenied = await saveChartOrderAction({
+    actorUserId: "user-update-only",
+    workspaceId,
+    input: validConfirmInput,
+    gateway: {
+      async saveOrderAction() {
+        updateOnlyGatewayCalled = true;
+        throw new Error("gateway must not run without chart:view");
+      },
+    },
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-update-only", status: "active" }],
+      memberships: [
+        {
+          id: "membership-update-only",
+          workspaceId,
+          userId: "user-update-only",
+          roles: [],
+          permissionRole: {
+            key: "chart-update-only",
+            label: "Chart update only",
+            roleType: "custom",
+            permissionIds: ["chart:update"],
+          },
+          status: "active",
+        },
+      ],
+    }),
+  });
+  expect(updateOnlyDenied).toMatchObject({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
+  expect(updateOnlyGatewayCalled).toBe(false);
+
   const crossWorkspaceDenied = await saveChartOrderAction({
     actorUserId: "user-vet",
     workspaceId: "other-workspace",
@@ -678,6 +722,22 @@ test("order action Supabase gateway sends confirmation through one idempotent at
       calls.push({ functionName, args });
       return {
         data: {
+          billingSummary: createMockChartOrderBillingSummaryFromMutationRows({
+            encounterId: persistedEncounterId,
+            etag: '"billing-confirmed"',
+            rows: [
+              {
+                billingCandidateStatus: "candidate_created",
+                billingReflectionEnabled: true,
+                lineTotalSnapshot: 30_000,
+                orderConfirmationStatus: "confirmed",
+                orderId: persistedOrderId,
+                rowType: "individual",
+                status: "confirmed",
+              },
+            ],
+            workspaceId,
+          }),
           commandId: "00000000-0000-4000-8000-000000000401",
           etag,
           confirmedRows: [],
@@ -758,9 +818,9 @@ test("order action route wires only server-owned action, billing, and fulfillmen
   expect(routeSource).not.toContain("createSupabaseOrderCatalogGateway");
   expect(routeSource).not.toContain("catalogGateway: client");
   expect(routeSource).toContain("createSupabaseInvoiceCandidateSyncGateway");
-  expect(routeSource).toContain("invoiceCandidateGateway: client");
+  expect(routeSource).toContain("invoiceCandidateGateway: permissionContext.client");
   expect(routeSource).toContain("createSupabaseFulfillmentWorkItemGateway");
-  expect(routeSource).toContain("fulfillmentGateway: client");
+  expect(routeSource).toContain("fulfillmentGateway: permissionContext.client");
 });
 
 test("order catalog Supabase gateway reads workspace chart-search rows from RPC", async () => {

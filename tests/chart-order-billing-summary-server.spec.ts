@@ -32,6 +32,30 @@ const summary: ChartOrderBillingSummary = {
   unfinishedOrders: [{ orderId: "order-2", name: "Chemistry 17종", status: "in_progress" }],
 };
 
+test("billing summary GET returns ordered Server-Timing without exposing request identifiers", async ({
+  request,
+}) => {
+  const response = await request.get(
+    `/api/workspaces/${workspaceId}/chart/order-billing-summary?encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-vet" } },
+  );
+  expect(response.status()).toBe(200);
+  const serverTiming = response.headers()["server-timing"];
+  expect(serverTiming).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=\d+\.\d, rpc;dur=\d+\.\d, total;dur=\d+\.\d$/,
+  );
+  expect(serverTiming).not.toContain(workspaceId);
+  expect(serverTiming).not.toContain(encounterId);
+
+  const denied = await request.get(
+    `/api/workspaces/${workspaceId}/chart/order-billing-summary?encounterId=${encounterId}`,
+  );
+  expect(denied.status()).toBe(401);
+  expect(denied.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=0\.0, rpc;dur=0\.0, total;dur=\d+\.\d$/,
+  );
+});
+
 test("live billing snapshots are bound to the active actor session and workspace", () => {
   const sessionA = {
     id: "session-a",
