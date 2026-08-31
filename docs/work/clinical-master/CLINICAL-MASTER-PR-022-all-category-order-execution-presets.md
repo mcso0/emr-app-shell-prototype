@@ -3,7 +3,7 @@ id: "CLINICAL-MASTER-PR-022"
 type: "Work Item"
 title: "All-category clinical-master order execution presets"
 description: "Adds a generic, evidence-labeled execution-preset contract for every clinical-master order category and carries editable defaults through workspace adoption into immutable chart snapshots."
-status: "human_review"
+status: "blocked"
 area: "clinical-master"
 priority: "P0"
 tags: ["clinical-master", "order-presets", "workspace-adoption", "chart-orders", "supabase", "synthetic-demo"]
@@ -19,7 +19,8 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-020-workspace-dispensing-preset-management.md"
 dependencies: ["CLINICAL-MASTER-PR-016", "CLINICAL-MASTER-PR-017", "CLINICAL-MASTER-PR-020"]
 updated: "2026-08-31"
-remote_writes: 0
+remote_writes: 8
+remote_publish_outcome: "rolled_back"
 ---
 
 # Clinical Master PR-022: All-category order execution presets
@@ -40,7 +41,9 @@ patient, provider, ward, device, or price authority into the central master.
 - Implementation worktree:
   `/Users/iseung-ug/project/emr-app-shell-prototype/.worktrees/clinical-master-execution-presets-20260831`
 - Branch: `codex/clinical-master-execution-presets-20260831`
-- Starting `origin/main`: `2aa94a1f554256f7203a391412cb2965badabdbe`
+- Rebased `origin/main` baseline: `4a160fdad66953cc8d5b666f17ad8424aa00b1a9`
+- Candidate commit at remote execution gate:
+  `1c75aa04079bcdda36e50bfcc9ce0bf4350f4494`
 - The primary checkout and the prior audit worktree are excluded from edits,
   staging, reset, stash, checkout, and cleanup.
 - Live read-only evidence found 510 published normal master orders: 108 complete
@@ -180,7 +183,7 @@ action, present:
   `02c4ad67463545fa502e263fd7681b203b3e866702d23cbf364edbfe6276f6c0`.
 - Frozen live 510-row lineage SHA-256:
   `b4d56f15dfcf53e867db2e022f6e7c742c2354b507eb4a88feb981b351b039bb`.
-- All 13 changed specs with the normal Next server: 168/171 PASS. The three
+- All 13 changed specs with the normal Next server: 169/172 PASS. The three
   failures are the pre-existing 56px expected versus 44px current Hospital
   Admin header geometry; all preset/catalog/chart/fulfillment specs pass.
 - The three route tests that cannot run without a base URL: 3/3 PASS under the
@@ -197,16 +200,42 @@ action, present:
 - Six PR-022 migrations apply and reapply; compatibility-backfill audit remains
   exactly 324; required-default/resolver and preset-identity negative gates
   reject invalid inputs.
+- Performance migration static spec 6/6 and related publisher regression
+  24/24 PASS;
+  exact rollback-only publish returns 689 records with preset version/current
+  `630/522`, manifest 689, review events 1070, unsafe/lineage mismatch 0, and
+  restores the `108/108` baseline with no release or manifest residue.
+- The expanded rehearsal checks actual function owner/security-definer/search
+  path/ACL state, old/new validator equivalence across all nine supported
+  clinical order types, negative clinical gates, digest-marker absent/wrong/
+  exact paths, and GUC/data residue after normal, retry, and timeout rollback.
+  An independent latest run returned first publish 3.224s, retry 1.376s, and
+  no residue after the forced 1.5s timeout.
+- Buffer-cold exact-baseline benchmark: old publisher
+  `6.122/5.703/5.646s` (median 5.703s), candidate
+  `3.477/3.082/3.136s` (median 3.136s), candidate 3/3 under 60s.
 - A hospital-admin membership assigned a permission role without
   `service_catalog:manage` is denied for both `accept_source` and `dismiss` with
   SQLSTATE `42501`; the test transaction rolls back.
-- Independent security hard gate: APPROVE, P0/P1 0. This approves the local
-  boundary only, not any remote operation.
+- Independent security hard gate: feature candidate APPROVE with P0/P1 0;
+  performance candidate LOCAL APPROVE with High/Medium/Low 0/0/0 and related
+  publisher spec independent replay 24/24 PASS. This approves the exact local
+  boundary only, not the behind-17 branch as a PR candidate or any remote
+  operation.
+- Performance candidate working-tree SHA packet: migration
+  `aaa9795baf380e16d24973e344e5e3be2bf2b6696ef614326520cc8885b0a495`,
+  exact payload file
+  `834812eaea2afb2fafb93ea3b0a23efb5bc7df54ea3ac8977983683523c4e278`,
+  rollback-only rehearsal
+  `746afecaea71f157ecf4f250d9c0b343d7536cf2364c78bf432522d12aacbb03`,
+  static spec
+  `a21815e3d662b10430432d61f67550d989dd37533046708f467db5b97a2f2427`.
+  These are uncommitted file hashes, not a PR/merge SHA or remote approval.
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS.
 - `npm run build`: PASS with one pre-existing PRD-viewer NFT trace warning.
-- `npm run docs:check`: PASS, 955 docs/agent Markdown files.
-- `npm run security:secrets`: PASS, 3,893 tracked files.
+- `npm run docs:check`: PASS, 956 docs/agent Markdown files.
+- `npm run security:secrets`: PASS, 3,928 tracked files.
 - `git diff --check`: PASS.
 
 Implementation report:
@@ -218,7 +247,26 @@ Implementation report:
 
 The local candidate is implemented and verified through deterministic artifact
 checks, focused application tests, production build, security checks, and an
-isolated Supabase publish/adopt/retry/customization rehearsal. All 522 current
-presets remain synthetic and clinically inactive. The item is handed off for
-human review; no remote write, commit, pull request, deployment, or clinical
-activation is authorized by this local work item.
+isolated Supabase publish/adopt/retry/customization rehearsal. The approved
+remote packet applied all six PR-022 migrations to project
+`qmerxgzrwaaahpkhjqlc`; foundation readback was current/version `108/108`,
+backfill audits `324`, eligible orders `510`, and foreign catalog `0`.
+
+The first 689-record publish returned Cloudflare 524 at 09:50:56 UTC and a
+subsequent SQL readback proved complete rollback. An independently approved
+single retry used the same semantic payload with whitespace removed and passed
+all preflight gates, but it returned 524 again at 10:04:13 UTC. Immediate SQL,
+CLI login-role, and advisor checks timed out. After connection recovery, the
+authoritative 10:19:53 UTC readback returned active publisher backends 0,
+release/incomplete release `0/0`, current/version presets `108/108`, and
+eligible orders `510`, proving the second attempt also fully rolled back.
+
+Status is therefore **BLOCKED / NEW PERFORMANCE CANDIDATE APPROVAL REQUIRED**.
+A third call to the old publisher, workspace adoption, migration repair,
+staging/pg_cron workaround, push/PR/merge, and deployment are prohibited. The
+local performance candidate removes duplicate schema construction and the
+digest-identical second canonicalization without changing diagnosis dispatch,
+API, ACL, fingerprint, manifest, trigger, or transaction boundaries. It passed
+the exact rollback-only rehearsal and 60s local gate, but local timing does not
+prove the remote 524 is resolved. Independent review, a new exact SHA packet,
+and new approval remain required before any remote write.

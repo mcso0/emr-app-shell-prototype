@@ -180,6 +180,38 @@ Queue projection, and one Billing candidate. PR #640 merged at
 `clinical_use_allowed = false`; this is not clinical approval or real-hospital
 launch readiness.
 
+CLINICAL-MASTER-PR-022 is blocked at its remote publisher approval gate. The approved
+packet applied six additive execution-preset migrations to the shared
+synthetic/demo project; foundation readback was current/version presets
+`108/108`, backfill audits `324`, eligible published-normal orders `510`, and
+foreign catalog `0`. The first 689-record publish returned Cloudflare 524 and
+was proven fully rolled back. The independently approved single minified retry
+also returned 524. Immediate SQL connections, CLI login-role creation, and
+advisor checks timed out, but the recovered 10:19:53 UTC authoritative readback
+returned active publisher backends 0, release/incomplete `0/0`, current/version
+presets `108/108`, and eligible orders `510`, proving complete rollback. No
+third call to the old publisher, workspace adoption, PR/merge, deployment, or
+clinical activation is allowed. A local performance-only candidate now removes
+the measured duplicate schema construction and second canonicalization while
+preserving the diagnosis dispatcher, API, ACL, fingerprint, manifest, trigger,
+and transaction contracts. On an isolated exact 510-order/108-preset baseline,
+cold rollback-only runs improved from a 5.703s median to 3.136s; all three were
+under 60s. The reproducible rehearsal also verified 689 records, preset
+version/current `630/522`, manifest 689, review events 1070, synthetic-inactive
+and lineage mismatches 0, and rollback residue 0. This does not prove remote
+524 resolution. The expanded rollback-only gate also passed actual function
+owner/security-definer/search-path/ACL inspection, all-nine-type validator
+equivalence, negative clinical-use/status/detail-field rejection, absent/wrong/
+exact digest-marker paths, retry idempotency, and forced-timeout residue checks.
+An independent rerun returned first publish 3.224s and retry 1.376s. The
+working-tree migration SHA-256 is
+`aaa9795baf380e16d24973e344e5e3be2bf2b6696ef614326520cc8885b0a495`;
+it is not a Git candidate SHA or remote approval. Independent final security
+review is High/Medium/Low `0/0/0` and approves the exact isolated local files.
+The current branch is still 17 commits behind `origin/main`, so safe
+current-main rebasing, a new candidate commit/SHA packet, and new remote
+approval remain required before applying the migration or publishing.
+
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,
 and diagnosis-to-disease-group link tables with typed guards, RLS/no-policy
