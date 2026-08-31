@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "clinical-master-execution-preset-release-frozen-orders/v1",
+  "capturedAt": "2026-08-31",
+  "captureMode": "read_only_live_current_revision_snapshot",
+  "entries": [
+    {
+      "masterKey": "cm.order.consult.initial",
+      "masterRecordId": "5e40ba8e-597a-4067-99b0-91a6ec60bb2f",
+      "currentRevision": 2,
+      "currentReleaseId": "98383567-0b0b-4114-b78b-e845d8932ea2",
+      "releaseNo": 6,
+      "releaseKey": "cm.release.airtable.operational-pilot.v2",
+      "snapshotSha256": "a8f028ea29c6c24982ed7ead0d7c6c9778c49861e77c46a774435b3fbdc880fd",
+      "record": {
+        "masterKey": "cm.order.consult.initial",
+        "recordType": "order",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "Initial Consultation Changed",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR operational pilot fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-23",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "classificationPathKey": "cm.path.consultation",
+          "defaultSalesUnitCode": "case",
+          "defaultBillingReflectionEnabled": true,
+          "defaultQuantity": 1,
+          "species": [
+            "cat",
+            "dog"
+          ]
+        }
+      },
+      "labOrderProfile": null
+    },
+    {
+      "masterKey": "phase1.optionb.v1.order.metabolic",
+      "masterRecordId": "b9deb110-8f3b-494b-835b-4270e733eac2",
+      "currentRevision": 1,
+      "currentReleaseId": "b3865d12-daa9-4404-935e-9f95f5f87f94",
+      "releaseNo": 2,
+      "releaseKey": "phase1-optionb-lab-v1",
+      "snapshotSha256": "50cec96dae46164bc6d9d09aaef8d20661c23fab3cc5162491e3819c769cbb00",
+      "record": {
+        "masterKey": "phase1.optionb.v1.order.metabolic",
+        "recordType": "order",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "en",
+            "nameKind": "preferred",
+            "name": "Synthetic Basic Metabolic Panel",
+            "searchable": true,
+            "sortOrder": 0
+          },
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "합성 기초 혈액검사",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "Phase 1 Option B durable synthetic fixture",
+          "referenceUri": null,
+          "sourceVersion": null,
+          "accessedAt": null,
+          "licenseNotes": null
+        },
+        "detail": {
+          "classificationPathKey": "phase1a2.fallback.path.lab",
+          "defaultSalesUnitCode": "EA",
+          "defaultBillingReflectionEnabled": true,
+          "defaultQuantity": 1,
+          "species": [
+            "dog"
+          ]
+        }
+      },
+      "labOrderProfile": {
+        "orderMasterKey": "phase1.optionb.v1.order.metabolic",
+        "labTestMasterKey": null,
+        "labPanelMasterKey": "phase1.optionb.v1.panel.metabolic",
+        "specimenMasterKey": "phase1.optionb.v1.specimen.serum"
+      }
+    }
+  ],
+  "artifactSha256": "18cb04b939264fac974b62617ba8d6538429ecd23792bc342a04431abeb2d57f"
+}

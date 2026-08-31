@@ -29,18 +29,43 @@ const stagingMutationMigration = existsSync(stagingMutationMigrationPath)
   : "";
 const routePath =
   "src/app/api/workspaces/[workspaceId]/hospital-admin/order-catalog/route.ts";
-const routeSource = existsSync(routePath) ? readFileSync(routePath, "utf8") : "";
+const routeSource = existsSync(routePath)
+  ? readFileSync(routePath, "utf8")
+  : "";
 
 function permissionAdapter(options: { permissionIds?: ["*"] | string[] } = {}) {
   return createMockWorkspacePermissionAdapter({
-    users: [{ id: "user-admin", status: "active" }, { id: "user-vet", status: "active" }],
+    users: [
+      { id: "user-admin", status: "active" },
+      { id: "user-vet", status: "active" },
+    ],
     memberships: [
-      { id: "membership-admin", workspaceId: "clair-demo", userId: "user-admin", roles: ["hospital_admin"], status: "active" },
-      { id: "membership-vet", workspaceId: "clair-demo", userId: "user-vet", roles: ["vet"], status: "active" },
+      {
+        id: "membership-admin",
+        workspaceId: "clair-demo",
+        userId: "user-admin",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-vet",
+        workspaceId: "clair-demo",
+        userId: "user-vet",
+        roles: ["vet"],
+        status: "active",
+      },
     ],
     permissionPolicies: [
-      { workspaceId: "clair-demo", role: "hospital_admin", permissionIds: (options.permissionIds ?? ["*"]) as never },
-      { workspaceId: "clair-demo", role: "vet", permissionIds: ["service_catalog:view"] as never },
+      {
+        workspaceId: "clair-demo",
+        role: "hospital_admin",
+        permissionIds: (options.permissionIds ?? ["*"]) as never,
+      },
+      {
+        workspaceId: "clair-demo",
+        role: "vet",
+        permissionIds: ["service_catalog:view"] as never,
+      },
     ],
   });
 }
@@ -62,7 +87,9 @@ test("workspace preset initialization is idempotent and preserves deterministic 
   expect(first.createdCount).toBe(defaultSystemOrderPresets.length);
   expect(second).toMatchObject({ createdCount: 0, updatedCount: 0 });
   expect(second.items).toHaveLength(first.items.length);
-  expect(second.items.map((item) => item.id)).toEqual(expect.arrayContaining(["ord-lab-cbc-baso", "ord-med-maropitant"]));
+  expect(second.items.map((item) => item.id)).toEqual(
+    expect.arrayContaining(["ord-lab-cbc-baso", "ord-med-maropitant"]),
+  );
   expect(second.items).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -73,13 +100,113 @@ test("workspace preset initialization is idempotent and preserves deterministic 
         customizedFields: [],
         presetMergeStatus: "current",
       }),
-    ])
+    ]),
   );
+});
+
+test("generic execution defaults copy through workspace merge and immutable snapshots", async () => {
+  const cbcPreset = defaultSystemOrderPresets.find(
+    (preset) => preset.presetId === "std-ord-lab-cbc-baso",
+  );
+  expect(cbcPreset).toBeTruthy();
+  const v1Defaults = {
+    specimenType: "edta_whole_blood",
+    testPanel: "cbc",
+    collectionCondition: "fresh_same_day",
+    nested: { source: "master" },
+  };
+  const v1Policies = {
+    specimenType: "derived_from_profile",
+    testPanel: "derived_from_profile",
+    collectionCondition: "preset_fixed",
+  };
+  const seed = initializeWorkspaceOrderCatalogFromPresets({
+    now: "2026-05-25T00:00:00.000Z",
+    presets: [{ ...cbcPreset!, defaultDetailInputs: v1Defaults }],
+    workspaceId: "clair-demo",
+  });
+  const seedItem = seed.items.find(
+    (item) => item.standardOrderId === "std-ord-lab-cbc-baso",
+  );
+  expect(seedItem?.defaultDetailInputs).toEqual(v1Defaults);
+  expect(seedItem?.defaultDetailInputs).not.toBe(v1Defaults);
+
+  const v2Defaults = {
+    ...v1Defaults,
+    collectionCondition: "fasted_if_possible",
+  };
+  const merged = initializeWorkspaceOrderCatalogFromPresets({
+    existingItems: seed.items,
+    now: "2026-05-25T01:00:00.000Z",
+    presets: [
+      { ...cbcPreset!, presetVersion: "v4", defaultDetailInputs: v2Defaults },
+    ],
+    workspaceId: "clair-demo",
+  });
+  const mergedItem = merged.items.find(
+    (item) => item.standardOrderId === "std-ord-lab-cbc-baso",
+  );
+  expect(mergedItem?.defaultDetailInputs).toEqual(v2Defaults);
+
+  const snapshot = createOrderPricingSnapshot(mergedItem!);
+  expect(snapshot.defaultDetailInputs).toEqual(v2Defaults);
+  expect(snapshot.defaultDetailInputs).not.toBe(
+    mergedItem?.defaultDetailInputs,
+  );
+  (
+    snapshot.defaultDetailInputs as { nested: { source: string } }
+  ).nested.source = "snapshot";
+  expect(mergedItem?.defaultDetailInputs).toEqual(v2Defaults);
+
+  const lineageSnapshot = createOrderPricingSnapshot({
+    ...mergedItem!,
+    defaultDetailInputPolicies: v1Policies,
+    executionPresetLineage: {
+      sourceExecutionPresetId: "00000000-0000-5000-8000-000000000022",
+      sourceExecutionPresetRevision: 2,
+      sourceExecutionPresetSha256: "a".repeat(64),
+    },
+  });
+  expect(lineageSnapshot.defaultDetailInputPolicies).toEqual(v1Policies);
+  expect(lineageSnapshot.executionPresetLineage).toEqual({
+    sourceExecutionPresetId: "00000000-0000-5000-8000-000000000022",
+    sourceExecutionPresetRevision: 2,
+    sourceExecutionPresetSha256: "a".repeat(64),
+  });
+});
+
+test("dispensing snapshots fall back to medication defaults unless a generic preset is present", async () => {
+  const gateway = createMockOrderCatalogGateway();
+  const catalog = await gateway.listAdminCatalog({ workspaceId: "clair-demo" });
+  const medication = catalog.items.find(
+    (item) => item.id === "ord-med-maropitant",
+  );
+  expect(medication?.defaultDetailInputs).toBeUndefined();
+  expect(medication?.medicationMetadata?.defaultDetailInputs).toBeDefined();
+
+  const fallbackSnapshot = createOrderPricingSnapshot(medication!);
+  expect(fallbackSnapshot.defaultDetailInputs).toMatchObject({
+    dose: 1,
+    doseUnit: "tablet",
+    frequency: "sid",
+    durationDays: 3,
+    totalQuantity: 3,
+  });
+
+  const genericDefaults = { dose: 2, doseUnit: "tablet", frequency: "bid" };
+  const directSnapshot = createOrderPricingSnapshot({
+    ...medication!,
+    defaultDetailInputs: genericDefaults,
+  });
+  expect(directSnapshot.defaultDetailInputs).toEqual(genericDefaults);
+  expect(directSnapshot.defaultDetailInputs).not.toBe(genericDefaults);
 });
 
 test("preset merge auto-updates unmodified rows and preserves customized rows", async () => {
   const now = "2026-05-25T00:00:00.000Z";
-  const cbcPreset = defaultSystemOrderPresets.find((preset) => preset.presetId === "std-ord-lab-cbc-baso");
+  const cbcPreset = defaultSystemOrderPresets.find(
+    (preset) => preset.presetId === "std-ord-lab-cbc-baso",
+  );
   expect(cbcPreset).toBeTruthy();
   const nextCbcPreset = {
     ...cbcPreset!,
@@ -100,7 +227,11 @@ test("preset merge auto-updates unmodified rows and preserves customized rows", 
     presets: [nextCbcPreset],
     workspaceId: "clair-demo",
   });
-  expect(unmodifiedMerge).toMatchObject({ createdCount: 0, updatedCount: 1, preservedCount: 0 });
+  expect(unmodifiedMerge).toMatchObject({
+    createdCount: 0,
+    updatedCount: 1,
+    preservedCount: 0,
+  });
   expect(unmodifiedMerge.items[0]).toMatchObject({
     sourcePresetVersion: "v4",
     lastAutoMergedPresetVersion: "v4",
@@ -119,7 +250,7 @@ test("preset merge auto-updates unmodified rows and preserves customized rows", 
           lastCustomizedAt: "2026-05-25T00:30:00.000Z",
           lastCustomizedByUserId: "user-admin",
         }
-      : item
+      : item,
   );
   const customizedMerge = initializeWorkspaceOrderCatalogFromPresets({
     existingItems: customizedItems,
@@ -127,7 +258,11 @@ test("preset merge auto-updates unmodified rows and preserves customized rows", 
     presets: [nextCbcPreset],
     workspaceId: "clair-demo",
   });
-  expect(customizedMerge).toMatchObject({ createdCount: 0, updatedCount: 1, preservedCount: 0 });
+  expect(customizedMerge).toMatchObject({
+    createdCount: 0,
+    updatedCount: 1,
+    preservedCount: 0,
+  });
   expect(customizedMerge.items[0]).toMatchObject({
     sourcePresetVersion: "v4",
     lastAutoMergedPresetVersion: "v4",
@@ -200,9 +335,9 @@ test("workspace dispensing creation stays pending until veterinarian approval", 
   });
   expect(pendingChart.ok).toBe(true);
   if (pendingChart.ok) {
-    expect(pendingChart.rows.map((row) => row.workspaceCatalogItemId)).not.toContain(
-      created.item.id,
-    );
+    expect(
+      pendingChart.rows.map((row) => row.workspaceCatalogItemId),
+    ).not.toContain(created.item.id);
   }
 
   const adminReview = await mutateOrderCatalogItem({
@@ -251,9 +386,9 @@ test("workspace dispensing creation stays pending until veterinarian approval", 
   });
   expect(approvedChart.ok).toBe(true);
   if (approvedChart.ok) {
-    expect(approvedChart.rows.map((row) => row.workspaceCatalogItemId)).toContain(
-      created.item.id,
-    );
+    expect(
+      approvedChart.rows.map((row) => row.workspaceCatalogItemId),
+    ).toContain(created.item.id);
   }
 });
 
@@ -330,11 +465,25 @@ test("admin read includes paused rows while chart search excludes paused rows an
     permissionAdapter: permissionAdapter(),
   });
 
-  expect(admin).toMatchObject({ ok: true, items: expect.arrayContaining([expect.objectContaining({ id: "ord-paused-example" })]) });
+  expect(admin).toMatchObject({
+    ok: true,
+    items: expect.arrayContaining([
+      expect.objectContaining({ id: "ord-paused-example" }),
+    ]),
+  });
   expect(chart).toMatchObject({ ok: true });
   if (chart.ok) {
-    expect(chart.rows.map((row) => row.sourcePresetId)).not.toContain("std-ord-paused-example");
-    expect(chart.rows).toEqual(expect.arrayContaining([expect.objectContaining({ rowType: "set", sourcePresetId: "set-vomit-basic" })]));
+    expect(chart.rows.map((row) => row.sourcePresetId)).not.toContain(
+      "std-ord-paused-example",
+    );
+    expect(chart.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rowType: "set",
+          sourcePresetId: "set-vomit-basic",
+        }),
+      ]),
+    );
   }
 });
 
@@ -343,16 +492,28 @@ test("order mutations require service catalog manage permission and pause future
   const denied = await mutateOrderCatalogItem({
     actorUserId: "user-vet",
     workspaceId: "clair-demo",
-    input: { action: "pause", itemId: "ord-lab-cbc-baso", expectedCatalogRevision: 1 },
+    input: {
+      action: "pause",
+      itemId: "ord-lab-cbc-baso",
+      expectedCatalogRevision: 1,
+    },
     gateway,
     permissionAdapter: permissionAdapter(),
   });
-  expect(denied).toMatchObject({ ok: false, status: 403, denialReason: "permission_missing" });
+  expect(denied).toMatchObject({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
 
   const paused = await mutateOrderCatalogItem({
     actorUserId: "user-admin",
     workspaceId: "clair-demo",
-    input: { action: "pause", itemId: "ord-lab-cbc-baso", expectedCatalogRevision: 1 },
+    input: {
+      action: "pause",
+      itemId: "ord-lab-cbc-baso",
+      expectedCatalogRevision: 1,
+    },
     gateway,
     permissionAdapter: permissionAdapter(),
   });
@@ -373,7 +534,10 @@ test("order mutations require service catalog manage permission and pause future
     permissionAdapter: permissionAdapter(),
   });
   expect(chart.ok).toBe(true);
-  if (chart.ok) expect(chart.rows.map((row) => row.sourcePresetId)).not.toContain("std-ord-lab-cbc-baso");
+  if (chart.ok)
+    expect(chart.rows.map((row) => row.sourcePresetId)).not.toContain(
+      "std-ord-lab-cbc-baso",
+    );
 });
 
 test("catalog update and pause reject a missing or non-positive CAS revision", async () => {
@@ -392,12 +556,24 @@ test("catalog update and pause reject a missing or non-positive CAS revision", a
   const zeroRevision = await mutateOrderCatalogItem({
     actorUserId: "user-admin",
     workspaceId: "clair-demo",
-    input: { action: "pause", itemId: "ord-lab-cbc-baso", expectedCatalogRevision: 0 },
+    input: {
+      action: "pause",
+      itemId: "ord-lab-cbc-baso",
+      expectedCatalogRevision: 0,
+    },
     gateway,
     permissionAdapter: permissionAdapter(),
   });
-  expect(missingRevision).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
-  expect(zeroRevision).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
+  expect(missingRevision).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+  });
+  expect(zeroRevision).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+  });
 });
 
 test("order catalog mutations emit safe audit events with changed field metadata", async () => {
@@ -419,6 +595,10 @@ test("order catalog mutations emit safe audit events with changed field metadata
       expectedCatalogRevision: 1,
       patch: {
         billingName: "CBC 감사 테스트",
+        defaultDetailInputs: {
+          specimenType: "edta_whole_blood",
+          collectionCondition: "fresh_same_day",
+        },
         priceKrw: 13000,
       },
     },
@@ -441,10 +621,14 @@ test("order catalog mutations emit safe audit events with changed field metadata
     after: expect.objectContaining({
       billingName: "CBC 감사 테스트",
       priceKrw: 13000,
+      defaultDetailInputs: {
+        specimenType: "edta_whole_blood",
+        collectionCondition: "fresh_same_day",
+      },
     }),
     metadata: {
       action: "update",
-      changedFields: ["billingName", "priceKrw"],
+      changedFields: ["billingName", "defaultDetailInputs", "priceKrw"],
       source: "order-catalog-admin-mutation",
     },
   });
@@ -461,9 +645,7 @@ test("database-audited dispensing mutations do not emit a duplicate server audit
   const auditGateway = createMockLiveAuditAppendGateway();
   const gateway = {
     ...baseGateway,
-    async mutateOrder(
-      input: Parameters<typeof baseGateway.mutateOrder>[0],
-    ) {
+    async mutateOrder(input: Parameters<typeof baseGateway.mutateOrder>[0]) {
       const result = await baseGateway.mutateOrder(input);
       return result.ok
         ? { ...result, databaseAuditWritten: true as const }
@@ -588,10 +770,21 @@ test("Supabase order catalog gateway persists create update and pause mutations"
       if (functionName === "clair_update_order_catalog_item") {
         const itemId = String(args.p_item_id);
         const row = rows.find((candidate) => candidate.id === itemId);
-        if (!row) return { data: null, error: { message: "order_catalog_item_not_found" } };
+        if (!row)
+          return {
+            data: null,
+            error: { message: "order_catalog_item_not_found" },
+          };
         const patch = args.p_patch as Record<string, unknown>;
-        if (Object.prototype.hasOwnProperty.call(patch, "sourceMasterRevision")) {
-          return { data: null, error: { message: "catalog_protected_field_rejected:sourceMasterRevision" } };
+        if (
+          Object.prototype.hasOwnProperty.call(patch, "sourceMasterRevision")
+        ) {
+          return {
+            data: null,
+            error: {
+              message: "catalog_protected_field_rejected:sourceMasterRevision",
+            },
+          };
         }
         Object.entries(patch).forEach(([key, value]) => {
           row[camelToSnake(key)] = value;
@@ -631,6 +824,10 @@ test("Supabase order catalog gateway persists create update and pause mutations"
         roundingRule: "as_is",
         linkedLabItemIds: [],
         linkedLabCategoryIds: [],
+        defaultDetailInputs: {
+          specimenType: "serum",
+          testPanel: "chemistry_basic",
+        },
         pricingRule: {
           priceBasis: "fixed_order_price",
           priceKrw: 12000,
@@ -649,6 +846,10 @@ test("Supabase order catalog gateway persists create update and pause mutations"
     ok: true,
     item: expect.objectContaining({
       billingName: "DEN-302 청구명",
+      defaultDetailInputs: {
+        specimenType: "serum",
+        testPanel: "chemistry_basic",
+      },
       customizationState: "detached",
       lastCustomizedByUserId: "user-admin",
     }),
@@ -710,8 +911,66 @@ test("Supabase order catalog gateway persists create update and pause mutations"
   });
   expect(readback).toMatchObject({
     ok: true,
-    items: [expect.objectContaining({ id: createdId, availabilityStatus: "paused" })],
+    items: [
+      expect.objectContaining({ id: createdId, availabilityStatus: "paused" }),
+    ],
   });
+});
+
+test("admin catalog deploy-order fallback selects the complete execution contract", async () => {
+  let selectedColumns = "";
+  const query = {
+    select(columns: string) {
+      selectedColumns = columns;
+      return query;
+    },
+    eq() {
+      return query;
+    },
+    order() {
+      return query;
+    },
+    then<TResult1, TResult2>(
+      onfulfilled?:
+        | ((value: {
+            data: [];
+            error: null;
+          }) => TResult1 | PromiseLike<TResult1>)
+        | null,
+      onrejected?:
+        ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+    ) {
+      return Promise.resolve({ data: [] as [], error: null }).then(
+        onfulfilled,
+        onrejected,
+      );
+    },
+  };
+  const gateway = createSupabaseOrderCatalogGateway({
+    from(table: "order_catalog_items") {
+      expect(table).toBe("order_catalog_items");
+      return query as never;
+    },
+    async rpc(functionName: string) {
+      expect(functionName).toBe("clair_list_order_catalog_admin_v2");
+      return { data: null, error: { message: "deploy_order_fallback" } };
+    },
+  });
+
+  await expect(
+    gateway.listAdminCatalog({ workspaceId: "clair-demo" }),
+  ).resolves.toEqual({ ok: true, items: [] });
+  for (const column of [
+    "clinical_order_type",
+    "is_external_lab",
+    "destination_module",
+    "execution_mode",
+    "detail_schema_version",
+    "detail_field_schema",
+    "billing_eligible",
+  ]) {
+    expect(selectedColumns.split(", ")).toContain(column);
+  }
 });
 
 test("order set expansion preserves child order snapshots and expansion order", async () => {
@@ -725,10 +984,19 @@ test("order set expansion preserves child order snapshots and expansion order", 
 
   expect(result).toMatchObject({
     ok: true,
-    parentSnapshot: expect.objectContaining({ sourcePresetId: "set-vomit-basic", appliedAmountBasis: "included_order_sum" }),
+    parentSnapshot: expect.objectContaining({
+      sourcePresetId: "set-vomit-basic",
+      appliedAmountBasis: "included_order_sum",
+    }),
     rows: [
-      expect.objectContaining({ setItemId: "setitem-vomit-baso", sortOrder: 10 }),
-      expect.objectContaining({ setItemId: "setitem-vomit-maropitant", sortOrder: 20 }),
+      expect.objectContaining({
+        setItemId: "setitem-vomit-baso",
+        sortOrder: 10,
+      }),
+      expect.objectContaining({
+        setItemId: "setitem-vomit-maropitant",
+        sortOrder: 20,
+      }),
     ],
   });
 });
@@ -762,16 +1030,34 @@ test("medication vaccine and pricing snapshots remain stable after admin item up
     permissionAdapter: permissionAdapter(),
   });
   expect(before.ok).toBe(true);
-  const medication = before.ok ? before.items.find((item) => item.id === "ord-med-maropitant") : undefined;
-  const vaccine = before.ok ? before.items.find((item) => item.id === "ord-vaccine-cat-core") : undefined;
-  expect(medication?.medicationMetadata).toMatchObject({ administrationRoute: "PO", storageMethod: "room_temp" });
-  expect(vaccine?.vaccineMetadata).toMatchObject({ vaccineClassification: "core", doseSequenceLabel: "1차" });
+  const medication = before.ok
+    ? before.items.find((item) => item.id === "ord-med-maropitant")
+    : undefined;
+  const vaccine = before.ok
+    ? before.items.find((item) => item.id === "ord-vaccine-cat-core")
+    : undefined;
+  expect(medication?.medicationMetadata).toMatchObject({
+    administrationRoute: "PO",
+    storageMethod: "room_temp",
+  });
+  expect(vaccine?.vaccineMetadata).toMatchObject({
+    vaccineClassification: "core",
+    doseSequenceLabel: "1차",
+  });
 
   const snapshot = createOrderPricingSnapshot(medication as OrderCatalogItem);
   await mutateOrderCatalogItem({
     actorUserId: "user-admin",
     workspaceId: "clair-demo",
-    input: { action: "update", itemId: "ord-med-maropitant", expectedCatalogRevision: 1, patch: { priceKrw: 9900, pricingRule: { ...medication!.pricingRule, priceKrw: 9900 } } },
+    input: {
+      action: "update",
+      itemId: "ord-med-maropitant",
+      expectedCatalogRevision: 1,
+      patch: {
+        priceKrw: 9900,
+        pricingRule: { ...medication!.pricingRule, priceKrw: 9900 },
+      },
+    },
     gateway,
     permissionAdapter: permissionAdapter(),
   });
@@ -808,12 +1094,24 @@ test("order catalog audit event migration extends allowed live audit event types
 });
 
 test("staging order catalog mutation migration enables admin write and member read", () => {
-  expect(stagingMutationMigration).toContain("alter table public.order_catalog_items enable row level security");
-  expect(stagingMutationMigration).toContain("order_catalog_items_workspace_admin_insert");
-  expect(stagingMutationMigration).toContain("order_catalog_items_workspace_admin_update");
-  expect(stagingMutationMigration).toContain("private.clair_is_workspace_admin(workspace_id)");
-  expect(stagingMutationMigration).toContain("private.clair_is_active_workspace_member(workspace_id)");
-  expect(stagingMutationMigration).toContain("grant select, insert, update on public.order_catalog_items to authenticated");
+  expect(stagingMutationMigration).toContain(
+    "alter table public.order_catalog_items enable row level security",
+  );
+  expect(stagingMutationMigration).toContain(
+    "order_catalog_items_workspace_admin_insert",
+  );
+  expect(stagingMutationMigration).toContain(
+    "order_catalog_items_workspace_admin_update",
+  );
+  expect(stagingMutationMigration).toContain(
+    "private.clair_is_workspace_admin(workspace_id)",
+  );
+  expect(stagingMutationMigration).toContain(
+    "private.clair_is_active_workspace_member(workspace_id)",
+  );
+  expect(stagingMutationMigration).toContain(
+    "grant select, insert, update on public.order_catalog_items to authenticated",
+  );
   expect(stagingMutationMigration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
   );
@@ -822,7 +1120,10 @@ test("staging order catalog mutation migration enables admin write and member re
 function createOrderCatalogTableBuilder(rows: Record<string, unknown>[]) {
   const state = {
     filters: [] as Array<[string, string]>,
-    mutation: null as null | { type: "insert" | "update"; value: Record<string, unknown> },
+    mutation: null as null | {
+      type: "insert" | "update";
+      value: Record<string, unknown>;
+    },
   };
 
   const builder = {
@@ -848,8 +1149,14 @@ function createOrderCatalogTableBuilder(rows: Record<string, unknown>[]) {
       return builder;
     },
     then<TResult1, TResult2>(
-      onfulfilled?: ((value: { data: Record<string, unknown>[] | Record<string, unknown> | null; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
-      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+      onfulfilled?:
+        | ((value: {
+            data: Record<string, unknown>[] | Record<string, unknown> | null;
+            error: null;
+          }) => TResult1 | PromiseLike<TResult1>)
+        | null,
+      onrejected?:
+        ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
     ) {
       return Promise.resolve(runQuery(false)).then(onfulfilled, onrejected);
     },
@@ -879,7 +1186,10 @@ function createOrderCatalogTableBuilder(rows: Record<string, unknown>[]) {
   return builder;
 }
 
-function toOrderCatalogDbRow(item: Record<string, unknown>, workspaceId: string) {
+function toOrderCatalogDbRow(
+  item: Record<string, unknown>,
+  workspaceId: string,
+) {
   const row: Record<string, unknown> = {
     id: item.id,
     workspace_id: workspaceId,
@@ -903,9 +1213,11 @@ function toOrderCatalogDbRow(item: Record<string, unknown>, workspaceId: string)
     care_guide: item.careGuide,
     care_guide_delivery_enabled: item.careGuideDeliveryEnabled,
     internal_instruction: item.internalInstruction,
-    internal_instruction_delivery_enabled: item.internalInstructionDeliveryEnabled,
+    internal_instruction_delivery_enabled:
+      item.internalInstructionDeliveryEnabled,
     tax_included: item.taxIncluded,
     rounding_rule: item.roundingRule,
+    default_detail_inputs: item.defaultDetailInputs,
     pricing_rule: item.pricingRule,
     medication_metadata: item.medicationMetadata,
     vaccine_metadata: item.vaccineMetadata,

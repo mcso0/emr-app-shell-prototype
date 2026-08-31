@@ -114,6 +114,46 @@ function createServiceReviewDispensingMasterItem(index: number) {
   };
 }
 
+function createGenericCatalogItem(
+  clinicalOrderType: "imaging" | "system_exam" | "other",
+  defaultDetailInputs: Record<string, unknown>,
+) {
+  const base = createServiceReviewDispensingMasterItem(0);
+  const categoryGroup =
+    clinicalOrderType === "imaging"
+      ? "imaging"
+      : clinicalOrderType === "other"
+        ? "misc"
+        : "lab";
+  const destinationModule =
+    clinicalOrderType === "imaging" ? "imaging" : "chart_only";
+
+  return {
+    ...base,
+    id: `catalog-${clinicalOrderType}`,
+    aliases: [],
+    availabilityStatus: "active",
+    categoryGroup,
+    categoryLabel:
+      clinicalOrderType === "imaging"
+        ? "방사선"
+        : clinicalOrderType === "system_exam"
+          ? "계통검사"
+          : "기타",
+    clinicalOrderType,
+    defaultDetailInputs,
+    defaultDestinationModule: destinationModule,
+    destinationModule,
+    dispensingLineage: undefined,
+    detailSchemaVersion: 1,
+    medicationMetadata: undefined,
+    originType: "clair_master",
+    presetMergeStatus: "current",
+    standardOrderId: `master-${clinicalOrderType}`,
+    standardOrderName: `${clinicalOrderType} master order`,
+  } as unknown as OrderCatalogItem;
+}
+
 test("priced service-review dispensing rows map to effective use without true activation", () => {
   const source = createServiceReviewDispensingMasterItem(
     0,
@@ -137,6 +177,250 @@ test("priced service-review dispensing rows map to effective use without true ac
       availabilityStatus: "pending_activation",
       priceKrw: 14_500,
       pricingRule: { priceKrw: 14_500 },
+    },
+  });
+});
+
+test("hospital admin prefers generic dispensing defaults over legacy nested metadata", () => {
+  const source = createServiceReviewDispensingMasterItem(
+    0,
+  ) as unknown as OrderCatalogItem;
+  source.defaultDetailInputs = {
+    doseBasis: "patient",
+    dose: 2,
+    doseUnit: "capsule",
+    route: "PO",
+    frequency: "sid",
+    durationDays: 3,
+    totalQuantity: 6,
+    totalQuantityUnit: "capsule",
+    medicationInstruction: "before_meal",
+    storageMethod: "room_temp",
+    compoundNote: "generic note",
+    guardianNote: "generic guardian note",
+  };
+  source.medicationMetadata = {
+    ...source.medicationMetadata!,
+    defaultDetailInputs: {
+      ...source.medicationMetadata!.defaultDetailInputs,
+      dose: 0.25,
+      doseUnit: "tablet",
+    },
+  };
+
+  const hospitalOrder = mapWorkspaceCatalogItemToHospitalOrder(source);
+
+  expect(hospitalOrder.dispensingPreset).toMatchObject({
+    dose: 2,
+    doseUnit: "capsule",
+    medicationInstruction: "before_meal",
+  });
+});
+
+test("hospital admin falls back to nested dispensing defaults when generic defaults are empty", () => {
+  const source = createServiceReviewDispensingMasterItem(
+    0,
+  ) as unknown as OrderCatalogItem;
+  source.defaultDetailInputs = {};
+
+  const hospitalOrder = mapWorkspaceCatalogItemToHospitalOrder(source);
+
+  expect(hospitalOrder.dispensingPreset).toMatchObject({
+    dose: 0.5,
+    doseUnit: "tablet",
+    medicationInstruction: "after_meal",
+  });
+});
+
+test("hospital admin mirrors edited dispensing defaults to generic and nested mutation fields", () => {
+  const source = createServiceReviewDispensingMasterItem(
+    0,
+  ) as unknown as OrderCatalogItem;
+  const hospitalOrder = mapWorkspaceCatalogItemToHospitalOrder(source);
+  const mutation = buildWorkspaceCatalogMutationFromHospitalOrder({
+    draft: {
+      ...hospitalOrder,
+      dispensingPreset: {
+        ...hospitalOrder.dispensingPreset!,
+        dose: 2,
+        doseUnit: "capsule",
+      },
+    },
+    source,
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(mutation.action).toBe("update");
+  if (mutation.action !== "update") {
+    throw new Error("Expected an update mutation");
+  }
+  const genericDefaults = mutation.patch.defaultDetailInputs as Record<
+    string,
+    unknown
+  >;
+  const medicationDefaults = mutation.patch.medicationMetadata
+    ?.defaultDetailInputs as Record<string, unknown>;
+
+  expect(genericDefaults).toEqual(medicationDefaults);
+  expect(genericDefaults).not.toBe(medicationDefaults);
+  expect(genericDefaults).toMatchObject({ dose: 2, doseUnit: "capsule" });
+
+  genericDefaults.dose = 99;
+  expect(medicationDefaults.dose).toBe(2);
+});
+
+test("hospital admin maps and updates generic defaults for non-dispensing orders", () => {
+  const source = createGenericCatalogItem("imaging", {
+    bodyRegion: "흉부",
+    position: "right_lateral",
+    viewCount: 2,
+    contrastRequired: false,
+  });
+
+  const hospitalOrder = mapWorkspaceCatalogItemToHospitalOrder(source);
+
+  expect(hospitalOrder).toMatchObject({
+    categoryId: "imaging",
+    subcategoryId: "radiography",
+    clinicalOrderType: "imaging",
+    detailSchemaVersion: 1,
+    defaultDetailInputs: source.defaultDetailInputs,
+  });
+  expect(hospitalOrder.defaultDetailInputs).not.toBe(
+    source.defaultDetailInputs,
+  );
+
+  const mutation = buildWorkspaceCatalogMutationFromHospitalOrder({
+    draft: {
+      ...hospitalOrder,
+      defaultDetailInputs: {
+        ...hospitalOrder.defaultDetailInputs,
+        imagingProtocol: "흉부 2-view, 호기말 촬영",
+      },
+    },
+    source,
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(mutation.action).toBe("update");
+  if (mutation.action !== "update") {
+    throw new Error("Expected an update mutation");
+  }
+  expect(mutation.patch.defaultDetailInputs).toEqual({
+    bodyRegion: "흉부",
+    position: "right_lateral",
+    viewCount: 2,
+    contrastRequired: false,
+    imagingProtocol: "흉부 2-view, 호기말 촬영",
+  });
+  expect(mutation.patch.defaultDetailInputs).not.toBe(
+    hospitalOrder.defaultDetailInputs,
+  );
+});
+
+test("hospital admin preserves explicit system-exam and other catalog paths", () => {
+  const systemExam = mapWorkspaceCatalogItemToHospitalOrder(
+    createGenericCatalogItem("system_exam", {
+      bodySystem: "호흡기계",
+      examScope: "호흡기계 평가",
+      examMethod: "청진",
+    }),
+  );
+  const other = mapWorkspaceCatalogItemToHospitalOrder(
+    createGenericCatalogItem("other", { structuredValue: "보호자 동의서" }),
+  );
+
+  expect(systemExam).toMatchObject({
+    categoryId: "lab",
+    subcategoryId: "system-exam",
+    clinicalOrderType: "system_exam",
+  });
+  expect(other).toMatchObject({
+    categoryId: "misc",
+    subcategoryId: "other",
+    clinicalOrderType: "other",
+  });
+});
+
+test("hospital admin edits schema-backed generic defaults for an existing imaging order", async ({
+  page,
+}) => {
+  const imagingItem = createGenericCatalogItem("imaging", {
+    bodyRegion: "흉부",
+    position: "right_lateral",
+    viewCount: 2,
+    contrastRequired: false,
+    sedationRequired: false,
+  });
+  let updateBody: Record<string, unknown> | undefined;
+
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog",
+    async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            items: [imagingItem],
+            capabilities: {
+              canManageCatalog: true,
+              canAuthorDispensing: true,
+              canApproveDispensing: false,
+            },
+          }),
+        });
+        return;
+      }
+      if (route.request().method() === "PATCH") {
+        updateBody = route.request().postDataJSON() as Record<string, unknown>;
+        const patch = (updateBody.patch ?? {}) as Record<string, unknown>;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            item: {
+              ...imagingItem,
+              ...patch,
+              catalogRevision: 2,
+              defaultDetailInputs: patch.defaultDetailInputs,
+            },
+          }),
+        });
+        return;
+      }
+      await route.continue();
+    },
+  );
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  await sidePanel.getByRole("button", { name: /^영상검사/ }).click();
+  await page.getByTestId("hospital-order-row-catalog-imaging").click();
+
+  const drawer = page.getByTestId("hospital-order-drawer");
+  await expect(
+    drawer.getByTestId("hospital-order-default-details"),
+  ).toBeVisible();
+  await expect(drawer.getByLabel("부위")).toHaveValue("흉부");
+  await expect(drawer.getByLabel("View 수")).toHaveValue("2");
+  await drawer
+    .getByLabel("촬영 프로토콜")
+    .fill("흉부 2-view, 호기말 촬영");
+  await drawer.getByRole("button", { name: "저장" }).click();
+  await page.getByRole("button", { name: "저장" }).last().click();
+
+  await expect(page.getByTestId("hospital-order-mutation-status")).toContainText(
+    "저장했습니다",
+  );
+  expect(updateBody?.patch).toMatchObject({
+    defaultDetailInputs: {
+      bodyRegion: "흉부",
+      position: "right_lateral",
+      viewCount: 2,
+      imagingProtocol: "흉부 2-view, 호기말 촬영",
     },
   });
 });

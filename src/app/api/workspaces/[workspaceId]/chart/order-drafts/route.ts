@@ -1,5 +1,6 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
 import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import { resolveWorkspacePermission } from "@/features/auth/permission-resolver";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
@@ -13,8 +14,17 @@ import {
   readChartOrderDraft,
   saveChartOrderDraft,
   type ChartOrderDraftInput,
+  type ChartOrderDraftRowInput,
   type SupabaseChartOrderDraftRpcClient,
 } from "@/features/chart/server-order-draft-persistence";
+import {
+  createSupabaseChartPreconsultationContextGateway,
+  type SupabaseChartPreconsultationContextClient,
+} from "@/features/chart/server-preconsultation-context-core";
+import {
+  createSupabaseOrderCatalogGateway,
+  type SupabaseOrderCatalogRpcClient,
+} from "@/features/hospital-admin/server-order-catalog-core";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import {
   resolveServerChartEncounterId,
@@ -156,6 +166,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       ),
     );
   }
+  const draftRows = input.rows;
   if (
     input.removedOrderIds !== undefined &&
     !Array.isArray(input.removedOrderIds)
@@ -214,20 +225,74 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       }),
     );
   }
-  const { resolvedEncounter } = permissionContext;
-  const result = await timing.measure("rpc", () =>
-    saveChartOrderDraft({
+  const { client, permissionAdapter, resolvedEncounter } = permissionContext;
+  if (client && permissionAdapter) {
+    const updatePermission = resolveWorkspacePermission(permissionAdapter, {
+      sessionUserId: identity.actorUserId,
+      workspaceId,
+      requiredPermission: "chart:update",
+    });
+    if (!updatePermission.allowed) {
+      const status =
+        updatePermission.denialReason === "unauthenticated" ? 401 : 403;
+      return timing.respond(
+        Response.json(
+          {
+            ok: false,
+            status,
+            denialReason:
+              updatePermission.denialReason ?? "permission_missing",
+          },
+          { status },
+        ),
+      );
+    }
+    const viewPermission = resolveWorkspacePermission(permissionAdapter, {
+      sessionUserId: identity.actorUserId,
+      workspaceId,
+      requiredPermission: "chart:view",
+    });
+    if (!viewPermission.allowed) {
+      const status =
+        viewPermission.denialReason === "unauthenticated" ? 401 : 403;
+      return timing.respond(
+        Response.json(
+          {
+            ok: false,
+            status,
+            denialReason: viewPermission.denialReason ?? "permission_missing",
+          },
+          { status },
+        ),
+      );
+    }
+  }
+  const result = await timing.measure("rpc", async () => {
+    const runtimeRows = client
+      ? await resolveConsultationRuntimeRows({
+          client:
+            client as unknown as ConsultationRuntimeResolutionInput["client"],
+          encounterId: resolvedEncounter.encounterId,
+          rows: draftRows,
+          workspaceId,
+        })
+      : draftRows;
+    return saveChartOrderDraft({
       actorUserId: identity.actorUserId,
       workspaceId,
-      input: { ...input, encounterId: resolvedEncounter.encounterId },
-      permissionAdapter: permissionContext.permissionAdapter,
-      gateway: permissionContext.client
+      input: {
+        ...input,
+        encounterId: resolvedEncounter.encounterId,
+        ...(runtimeRows ? { rows: runtimeRows } : {}),
+      },
+      permissionAdapter,
+      gateway: client
         ? createSupabaseChartOrderDraftGateway(
-            permissionContext.client as unknown as SupabaseChartOrderDraftRpcClient,
+            client as unknown as SupabaseChartOrderDraftRpcClient,
           )
         : undefined,
-    }),
-  );
+    });
+  });
 
   return timing.respond(Response.json(result, { status: result.status }));
 }
@@ -239,4 +304,136 @@ async function readJsonBody(request: Request): Promise<ChartOrderDraftInput> {
   } catch {
     return {};
   }
+}
+
+type ConsultationRuntimeResolutionInput = {
+  client: SupabaseChartPreconsultationContextClient &
+    SupabaseOrderCatalogRpcClient;
+  encounterId: string;
+  rows: ChartOrderDraftRowInput[];
+  workspaceId: string;
+};
+
+async function resolveConsultationRuntimeRows({
+  client,
+  encounterId,
+  rows,
+  workspaceId,
+}: ConsultationRuntimeResolutionInput): Promise<ChartOrderDraftRowInput[]> {
+  const [contextResult, catalogResult] = await Promise.all([
+    createSupabaseChartPreconsultationContextGateway(client).readContext({
+      encounterId,
+      workspaceId,
+    }),
+    createSupabaseOrderCatalogGateway(client).listChartSearch({ workspaceId }),
+  ]);
+  const primaryVeterinarianId =
+    contextResult.ok ? contextResult.context.veterinarian?.id : undefined;
+  const consultationCatalogItemIds = new Set(
+    catalogResult.rows
+      .filter(
+        (row) =>
+          row.rowType === "individual" &&
+          row.clinicalOrderType === "consultation" &&
+          typeof row.workspaceCatalogItemId === "string",
+      )
+      .map((row) => row.workspaceCatalogItemId as string),
+  );
+  const consultationSetChildKeys = new Set<string>();
+  const catalogGateway = createSupabaseOrderCatalogGateway(client);
+  await Promise.all(
+    rows
+      .filter(
+        (row): row is Extract<ChartOrderDraftRowInput, { rowType: "set" }> =>
+          row.rowType === "set" && Boolean(row.childInputs?.length),
+      )
+      .map(async (row) => {
+        const preview = await catalogGateway.previewOrderSet?.({
+          encounterId,
+          orderSetId: row.sourceSetId,
+          revisionId: row.sourceSetRevisionId,
+          selectionIntent: row.selectionIntent,
+          workspaceId,
+        });
+        if (!preview?.ok) return;
+        for (const item of preview.preview.items) {
+          if (item.appliedSnapshot?.clinicalOrderType !== "consultation") {
+            continue;
+          }
+          consultationSetChildKeys.add(
+            buildConsultationSetChildKey(
+              row.sourceSetId,
+              row.sourceSetRevisionId,
+              item.revisionItemId,
+            ),
+          );
+        }
+      }),
+  );
+
+  return rows.map((row) => {
+    if (row.rowType === "individual") {
+      if (!consultationCatalogItemIds.has(row.workspaceCatalogItemId)) {
+        return row;
+      }
+      return {
+        ...row,
+        ...mergeConsultationRuntimeInput({
+          detailInputs: row.detailInputs,
+          detailSchemaVersion: row.detailSchemaVersion,
+          primaryVeterinarianId,
+        }),
+      };
+    }
+
+    const childInputs = row.childInputs?.map((child) => {
+      const isConsultation = consultationSetChildKeys.has(
+        buildConsultationSetChildKey(
+          row.sourceSetId,
+          row.sourceSetRevisionId,
+          child.revisionItemId,
+        ),
+      );
+      if (!isConsultation) return child;
+      return {
+        ...child,
+        ...mergeConsultationRuntimeInput({
+          detailInputs: child.detailInputs,
+          detailSchemaVersion: child.detailSchemaVersion,
+          primaryVeterinarianId,
+        }),
+      };
+    });
+    return childInputs ? { ...row, childInputs } : row;
+  });
+}
+
+function mergeConsultationRuntimeInput({
+  detailInputs,
+  detailSchemaVersion,
+  primaryVeterinarianId,
+}: {
+  detailInputs?: Record<string, unknown>;
+  detailSchemaVersion?: number;
+  primaryVeterinarianId?: string;
+}) {
+  const nextDetailInputs = { ...(detailInputs ?? {}) };
+  const normalizedPrimaryVeterinarianId = primaryVeterinarianId?.trim();
+  if (normalizedPrimaryVeterinarianId) {
+    nextDetailInputs.responsibleClinicianId = normalizedPrimaryVeterinarianId;
+  } else {
+    delete nextDetailInputs.responsibleClinicianId;
+  }
+  return {
+    detailInputs: nextDetailInputs,
+    detailSchemaVersion: detailSchemaVersion ?? 1,
+  };
+}
+
+function buildConsultationSetChildKey(
+  sourceSetId: string,
+  sourceSetRevisionId: string,
+  revisionItemId: string,
+) {
+  return `${sourceSetId}:${sourceSetRevisionId}:${revisionItemId}`;
 }

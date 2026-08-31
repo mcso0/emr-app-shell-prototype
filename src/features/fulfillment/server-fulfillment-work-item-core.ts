@@ -2924,6 +2924,9 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
   ) {
     return null;
   }
+  // system_exam completes in the chart with no fulfillment destination. A
+  // queue projection carrying that type is invalid and must fail closed.
+  if (row.clinicalOrderType === "system_exam") return null;
   const sourceSnapshot = row.sourceSnapshot as FulfillmentSourceSnapshot;
   const frozenSnapshot =
     asSnapshotRecord(
@@ -2995,6 +2998,7 @@ function isClinicalOrderType(value: unknown): value is ClinicalOrderType {
     "dispensing",
     "treatment",
     "hospitalization",
+    "system_exam",
     "other",
   ].includes(String(value));
 }
