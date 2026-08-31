@@ -302,6 +302,43 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
     denialReason: "permission_missing",
   });
 
+  let updateOnlyGatewayCalled = false;
+  const updateOnlyDenied = await saveChartOrderDraft({
+    actorUserId: "user-update-only",
+    workspaceId,
+    input: strictDraftInput(),
+    gateway: {
+      async saveOrderDraft() {
+        updateOnlyGatewayCalled = true;
+        throw new Error("gateway must not run without chart:view");
+      },
+    },
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-update-only", status: "active" }],
+      memberships: [
+        {
+          id: "membership-update-only",
+          workspaceId,
+          userId: "user-update-only",
+          roles: [],
+          permissionRole: {
+            key: "chart-update-only",
+            label: "Chart update only",
+            roleType: "custom",
+            permissionIds: ["chart:update"],
+          },
+          status: "active",
+        },
+      ],
+    }),
+  });
+  expect(updateOnlyDenied).toMatchObject({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
+  expect(updateOnlyGatewayCalled).toBe(false);
+
   const crossWorkspaceDenied = await saveChartOrderDraft({
     actorUserId: "user-vet",
     workspaceId: "other-workspace",

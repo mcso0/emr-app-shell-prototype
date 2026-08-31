@@ -62,6 +62,93 @@ export type ChartOrderBillingSummary = {
   workspaceId: string;
 };
 
+export type ChartOrderBillingSummaryMutationRow = {
+  billingCandidateStatus?: string | null;
+  billingEligible?: boolean;
+  billingReflectionEnabled?: boolean;
+  lineTotalSnapshot?: number | null;
+  orderConfirmationStatus?: string;
+  orderId: string;
+  rowType?: "individual" | "set" | "set_child";
+  status?: string;
+};
+
+export function createMockChartOrderBillingSummaryFromMutationRows({
+  encounterId,
+  etag,
+  generatedAt = new Date().toISOString(),
+  rows,
+  workspaceId,
+}: {
+  encounterId: string;
+  etag: string;
+  generatedAt?: string;
+  rows: ChartOrderBillingSummaryMutationRow[];
+  workspaceId: string;
+}): ChartOrderBillingSummary {
+  const activeRows = rows.filter((row) => row.status !== "cancelled");
+  const topLevelRows = activeRows.filter((row) => row.rowType !== "set_child");
+  const billableRows = activeRows.filter(
+    (row) =>
+      row.billingEligible !== false &&
+      row.billingReflectionEnabled !== false &&
+      typeof row.lineTotalSnapshot === "number" &&
+      row.lineTotalSnapshot > 0,
+  );
+  const confirmedRows = billableRows.filter((row) =>
+    row.orderConfirmationStatus === "confirmed" ||
+    row.orderConfirmationStatus === "billed",
+  );
+  const draftRows = billableRows.filter((row) =>
+    row.orderConfirmationStatus !== "confirmed" &&
+    row.orderConfirmationStatus !== "billed",
+  );
+  const requestableRows = confirmedRows.filter(
+    (row) => row.billingCandidateStatus === "candidate_created",
+  );
+  const confirmed = sumMutationRows(confirmedRows);
+  const draft = sumMutationRows(draftRows);
+
+  return {
+    amounts: {
+      confirmed,
+      discount: 0,
+      draft,
+      estimatedTotal: confirmed + draft,
+      gross: confirmed + draft,
+      outstanding: 0,
+      paid: 0,
+      requestableTotal: sumMutationRows(requestableRows),
+      surcharge: 0,
+      tax: 0,
+    },
+    context: null,
+    currency: "KRW",
+    encounterId,
+    etag,
+    generatedAt,
+    invoiceId: null,
+    orderCounts: {
+      cancelled: rows.filter((row) => row.status === "cancelled" && row.rowType !== "set_child").length,
+      confirmed: topLevelRows.filter((row) =>
+        row.orderConfirmationStatus === "confirmed" ||
+        row.orderConfirmationStatus === "billed",
+      ).length,
+      draft: topLevelRows.filter((row) =>
+        row.orderConfirmationStatus !== "confirmed" &&
+        row.orderConfirmationStatus !== "billed",
+      ).length,
+      recheck: topLevelRows.filter((row) => row.status === "re_requested").length,
+      requested: topLevelRows.filter((row) => row.billingCandidateStatus === "invoice_linked").length,
+      requestable: requestableRows.length,
+      total: topLevelRows.length,
+    },
+    requestableOrderIds: requestableRows.map((row) => row.orderId),
+    unfinishedOrders: [],
+    workspaceId,
+  };
+}
+
 export type ChartOrderBillingRequestInput = {
   acknowledgeUnfinished?: boolean;
   encounterId?: string;
@@ -191,4 +278,11 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function sumMutationRows(rows: ChartOrderBillingSummaryMutationRow[]) {
+  return rows.reduce(
+    (sum, row) => sum + (typeof row.lineTotalSnapshot === "number" ? row.lineTotalSnapshot : 0),
+    0,
+  );
 }

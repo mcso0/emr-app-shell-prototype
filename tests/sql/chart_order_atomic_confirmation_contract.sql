@@ -340,6 +340,15 @@ begin
       )
     )
   );
+  if not (v_saved ? 'billingSummary')
+    or v_saved -> 'billingSummary' is distinct from
+      public.clair_get_chart_order_billing_summary(
+        'workspace-clair-cheongdam',
+        '94000000-0000-4000-8000-000000000002'
+      )
+  then
+    raise exception 'phase4_draft_mutation_summary_mismatch';
+  end if;
 
   v_confirmed := public.clair_confirm_chart_order_candidates(
     'workspace-clair-cheongdam',
@@ -357,6 +366,15 @@ begin
   );
 
   v_command_id := (v_confirmed ->> 'commandId')::uuid;
+  if not (v_confirmed ? 'billingSummary')
+    or v_confirmed -> 'billingSummary' is distinct from
+      public.clair_get_chart_order_billing_summary(
+        'workspace-clair-cheongdam',
+        '94000000-0000-4000-8000-000000000002'
+      )
+  then
+    raise exception 'phase4_confirmation_mutation_summary_mismatch';
+  end if;
   if jsonb_array_length(v_confirmed -> 'tasks') <> 9
     or jsonb_array_length(v_confirmed -> 'queueProjectionIds') <> 4
     or jsonb_array_length(v_confirmed -> 'billingCandidates') <> 6
@@ -366,6 +384,32 @@ begin
   then
     raise exception 'phase4_confirmation_result_shape_mismatch';
   end if;
+
+  perform public.clair_save_chart_order_draft(
+    'workspace-clair-cheongdam',
+    '49110000-0000-4000-8000-000000000003',
+    '94000000-0000-4000-8000-000000000002',
+    jsonb_build_object(
+      'expectedEtag', v_confirmed #> '{remainingDraft,etag}',
+      'rows', jsonb_build_array(
+        jsonb_build_object(
+          'rowType', 'individual',
+          'orderId', '94000000-0000-4000-8000-000000000103',
+          'workspaceCatalogItemId', 'phase4-imaging',
+          'quantity', 2,
+          'detailInputs', jsonb_build_object(
+            'bodyRegion', 'abdomen',
+            'position', 'VD',
+            'viewCount', 2,
+            'contrastRequired', false,
+            'sedationRequired', false
+          ),
+          'detailSchemaVersion', 1,
+          'priority', 'normal'
+        )
+      )
+    )
+  );
 
   v_replayed := public.clair_confirm_chart_order_candidates(
     'workspace-clair-cheongdam',
@@ -381,9 +425,51 @@ begin
     v_saved ->> 'etag',
     'phase4-confirm-0001'
   );
-  if v_replayed is distinct from v_confirmed then
+  if v_replayed - 'billingSummary' is distinct from
+    v_confirmed - 'billingSummary'
+  then
     raise exception 'phase4_idempotent_result_not_deterministic';
   end if;
+  if not (v_replayed ? 'billingSummary')
+    or v_replayed -> 'billingSummary' is not distinct from
+      v_confirmed -> 'billingSummary'
+    or v_replayed -> 'billingSummary' is distinct from
+      public.clair_get_chart_order_billing_summary(
+        'workspace-clair-cheongdam',
+        '94000000-0000-4000-8000-000000000002'
+      )
+  then
+    raise exception 'phase4_confirmation_replay_summary_not_current';
+  end if;
+
+  perform public.clair_save_chart_order_draft(
+    'workspace-clair-cheongdam',
+    '49110000-0000-4000-8000-000000000003',
+    '94000000-0000-4000-8000-000000000002',
+    jsonb_build_object(
+      'expectedEtag', public.clair_get_chart_order_draft(
+        'workspace-clair-cheongdam',
+        '94000000-0000-4000-8000-000000000002'
+      ) -> 'etag',
+      'rows', jsonb_build_array(
+        jsonb_build_object(
+          'rowType', 'individual',
+          'orderId', '94000000-0000-4000-8000-000000000103',
+          'workspaceCatalogItemId', 'phase4-imaging',
+          'quantity', 1,
+          'detailInputs', jsonb_build_object(
+            'bodyRegion', 'abdomen',
+            'position', 'VD',
+            'viewCount', 2,
+            'contrastRequired', false,
+            'sedationRequired', false
+          ),
+          'detailSchemaVersion', 1,
+          'priority', 'normal'
+        )
+      )
+    )
+  );
 
   begin
     perform public.clair_confirm_chart_order_candidates(
