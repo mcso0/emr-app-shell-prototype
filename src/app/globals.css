@@ -2,8 +2,11 @@
 @import "shadcn/tailwind.css";
 @import "tw-animate-css";
 @import "pretendard/dist/web/variable/pretendardvariable.css";
+@import "@blocknote/shadcn/style.css";
 @import "../styles/tokens/shadcn.css";
 @import "../styles/tokens/emr-foundation.css";
+
+@source "../../node_modules/@blocknote/shadcn";
 
 @custom-variant dark (&:is(.dark *));
 
