@@ -1,6 +1,9 @@
 import { BlockNoteSchema, defaultBlockSpecs } from "@blocknote/core";
 import { createReactBlockSpec } from "@blocknote/react";
 
+import { createLegacySoapDocumentInput } from "@/features/chart/chart-soap-document";
+import type { SoapNote } from "@/types/emr-domain";
+
 export const soapSectionKinds = [
   "subjective",
   "objective",
@@ -31,6 +34,10 @@ const soapSectionBlock = createReactBlockSpec(
       systemLabel: {
         default: "기본 SOAP",
       },
+      scope: {
+        default: "default",
+        values: ["default", "system"] as const,
+      },
     },
     content: "none",
   },
@@ -40,6 +47,7 @@ const soapSectionBlock = createReactBlockSpec(
         className="chart-soap-section-marker"
         data-soap-kind={block.props.kind}
         data-soap-system={block.props.systemLabel}
+        data-soap-scope={block.props.scope}
         contentEditable={false}
       >
         <span className="chart-soap-section-code" aria-hidden="true">
@@ -56,7 +64,13 @@ const soapSectionBlock = createReactBlockSpec(
 
 export const chartSoapBlockSchema = BlockNoteSchema.create({
   blockSpecs: {
-    ...defaultBlockSpecs,
+    paragraph: defaultBlockSpecs.paragraph,
+    heading: defaultBlockSpecs.heading,
+    bulletListItem: defaultBlockSpecs.bulletListItem,
+    numberedListItem: defaultBlockSpecs.numberedListItem,
+    checkListItem: defaultBlockSpecs.checkListItem,
+    quote: defaultBlockSpecs.quote,
+    divider: defaultBlockSpecs.divider,
     soapSection: soapSectionBlock(),
   },
 });
@@ -71,11 +85,13 @@ function createSectionBlock({
   kind,
   label,
   systemLabel,
+  scope,
 }: {
   content: string;
   kind: SoapSectionKind;
   label: string;
   systemLabel: string;
+  scope: "default" | "system";
 }): ChartSoapPartialBlock {
   return {
     type: "soapSection",
@@ -83,6 +99,7 @@ function createSectionBlock({
       kind,
       label,
       systemLabel,
+      scope,
     },
     children: [
       {
@@ -104,6 +121,7 @@ export function createDefaultSoapTemplateBlocks(
       kind: "subjective",
       label: "주관적 · 보호자 진술",
       systemLabel: "기본 SOAP",
+      scope: "default",
     }),
     createSectionBlock({
       content: withSampleContent
@@ -112,6 +130,7 @@ export function createDefaultSoapTemplateBlocks(
       kind: "objective",
       label: "객관적 · 신체검사 소견",
       systemLabel: "기본 SOAP",
+      scope: "default",
     }),
     createSectionBlock({
       content: withSampleContent
@@ -120,6 +139,7 @@ export function createDefaultSoapTemplateBlocks(
       kind: "assessment",
       label: "평가 · 임상 판단",
       systemLabel: "기본 SOAP",
+      scope: "default",
     }),
     createSectionBlock({
       content: withSampleContent
@@ -128,6 +148,7 @@ export function createDefaultSoapTemplateBlocks(
       kind: "plan",
       label: "계획 · 치료 및 추적",
       systemLabel: "기본 SOAP",
+      scope: "default",
     }),
   ];
 }
@@ -139,24 +160,34 @@ export function createMusculoskeletalSoapTemplateBlocks(): ChartSoapPartialBlock
       kind: "subjective",
       label: "주관적 · 파행 문진",
       systemLabel: "근골격계",
+      scope: "system",
     }),
     createSectionBlock({
       content: "보행 평가, 관절 가동 범위, 촉진 통증, 부종 및 좌우 대칭",
       kind: "objective",
       label: "객관적 · 근골격 검사",
       systemLabel: "근골격계",
+      scope: "system",
     }),
     createSectionBlock({
       content: "문제 목록과 감별 진단",
       kind: "assessment",
       label: "평가 · 감별 진단",
       systemLabel: "근골격계",
+      scope: "system",
     }),
     createSectionBlock({
       content: "영상검사, 통증 조절, 활동 제한 및 재검 계획",
       kind: "plan",
       label: "계획 · 검사 및 처치",
       systemLabel: "근골격계",
+      scope: "system",
     }),
   ];
+}
+
+export function createLegacySoapTemplateBlocks(
+  soapNote?: Pick<SoapNote, "subjective" | "objective" | "assessment" | "plan"> | null,
+): ChartSoapPartialBlock[] {
+  return createLegacySoapDocumentInput(soapNote) as ChartSoapPartialBlock[];
 }

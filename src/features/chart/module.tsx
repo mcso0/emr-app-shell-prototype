@@ -177,7 +177,6 @@ import { loadChartPatientHistoryPage } from "@/features/chart/chart-patient-hist
 import type { ChartPatientHistoryRecord } from "@/features/chart/chart-patient-history";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
-import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
 import {
   ChartCollapsiblePanel,
   ChartCollapsiblePanelGroup,
@@ -229,7 +228,16 @@ import {
   type ChartOrderBillingSummaryFreshness,
 } from "@/features/chart/components/chart-order-finance-footer";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
-import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
+import { ChartSoapLiveBlockEditor } from "@/features/chart/components/chart-soap-live-block-editor";
+import { createLegacySoapTemplateBlocks } from "@/features/chart/components/chart-soap-block-schema";
+import type { ChartSoapBlock, ChartSoapPartialBlock } from "@/features/chart/components/chart-soap-block-schema";
+import {
+  SOAP_BLOCK_DOCUMENT_SCHEMA_VERSION,
+  areSoapBlockDocumentsEqual,
+} from "@/features/chart/chart-soap-document";
+import {
+  SoapAutosaveCoordinator,
+} from "@/features/chart/chart-soap-autosave-coordinator";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import { useChartStore } from "@/features/chart/store";
 import { useChartPatientGuardianProfileActions } from "@/features/chart/use-chart-patient-guardian-profile-actions";
@@ -300,18 +308,25 @@ import type {
   Encounter,
   ServiceItemType,
   SoapNote,
+  SoapBlockDocument,
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 
 type ChartBundle = ChartEncounterBundle;
 type OrderFilter = "all" | ClinicalOrderType;
 type SoapSaveState =
-  "idle" | "loading" | "saving" | "saved" | "error" | "conflict";
+  | "idle"
+  | "saving"
+  | "saved"
+  | "saved_with_warning"
+  | "error"
+  | "conflict";
 type ChartSoapNoteRouteResponse =
   | {
       ok: true;
       status: number;
       soapNote: SoapNote | null;
+      auditRecorded?: boolean;
     }
   | {
       ok: false;
@@ -772,11 +787,6 @@ const getDiagnosisSystemLabel = (diagnosis: Diagnosis) => {
 
   return "기타";
 };
-
-const getSoapSystemLabel = (diagnosis: Diagnosis) =>
-  "systemLabel" in diagnosis && typeof diagnosis.systemLabel === "string"
-    ? diagnosis.systemLabel
-    : getDiagnosisSystemLabel(diagnosis);
 
 type DiagnosisCatalogItem = AssessmentClassificationCatalogItem;
 
@@ -2251,111 +2261,6 @@ function ChartHistoryItem({
   );
 }
 
-const soapTemplateRows = [
-  { label: "주관적", valueKey: "subjective" },
-  { label: "객관적", valueKey: "objective" },
-  { label: "평가", valueKey: "assessment" },
-  { label: "계획", valueKey: "plan" },
-] as const;
-
-const soapDefaultTemplate: Record<
-  (typeof soapTemplateRows)[number]["valueKey"],
-  string
-> = {
-  subjective: "보호자 진술:",
-  objective: "신체검사 소견:",
-  assessment: "평가:",
-  plan: "계획:",
-};
-
-const soapSystemOptions = [
-  "소화기",
-  "호흡기",
-  "피부",
-  "전신",
-  "예방",
-  "검사",
-  "기타",
-] as const;
-const SOAP_VISIBLE_SYSTEM_TAB_COUNT = 3;
-
-type SoapEditorField = {
-  id: (typeof soapTemplateRows)[number]["valueKey"];
-  label: string;
-  value: string;
-};
-
-type SoapSectionState = {
-  id: string;
-  systemLabel?: string;
-  title: string;
-  fields: SoapEditorField[];
-  content: string;
-  status?: SoapNote["status"];
-  statusAt?: string;
-  attachmentCount: number;
-  deletable: boolean;
-  version: number;
-};
-
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-
-function buildSoapEditorFields(
-  soapNote?: SoapNote,
-  useDefaultTemplate = true,
-): SoapEditorField[] {
-  return soapTemplateRows.map(({ label, valueKey }) => ({
-    id: valueKey,
-    label,
-    value:
-      soapNote?.[valueKey] ??
-      (useDefaultTemplate ? soapDefaultTemplate[valueKey] : ""),
-  }));
-}
-
-const buildSystemSoapId = (systemLabel: string) => `system-${systemLabel}`;
-
-const createSystemSoapSection = (systemLabel: string): SoapSectionState => ({
-  id: buildSystemSoapId(systemLabel),
-  systemLabel,
-  title: systemLabel,
-  fields: buildSoapEditorFields(),
-  content: buildSoapDocumentHtml(buildSoapEditorFields()),
-  status: "draft",
-  statusAt: undefined,
-  attachmentCount: 0,
-  deletable: true,
-  version: 0,
-});
-
-const stripHtml = (value: string) =>
-  value
-    .replace(/<[^>]*>/g, "")
-    .replaceAll("&nbsp;", " ")
-    .trim();
-
-function buildSoapDocumentHtml(fields: SoapEditorField[]) {
-  return fields
-    .map((field) => {
-      const value = stripHtml(field.value);
-      return `<p><strong>${escapeHtml(field.label)}</strong></p><p>${escapeHtml(value)}</p>`;
-    })
-    .join("");
-}
-
-const hasMeaningfulSoapContent = (section: SoapSectionState) => {
-  const plainValue = stripHtml(section.content);
-  const templateValue = stripHtml(
-    buildSoapDocumentHtml(buildSoapEditorFields()),
-  );
-  return Boolean(plainValue && plainValue !== templateValue);
-};
-
 const hasSavedSoapContent = (soapNote?: SoapNote | null) =>
   Boolean(
     soapNote &&
@@ -2367,40 +2272,25 @@ const hasSavedSoapContent = (soapNote?: SoapNote | null) =>
     ].some((value) => Boolean(value?.trim())),
   );
 
-function getDemoActorHeader(session: AuthSession | null) {
-  return getDemoActorHeaders(session);
-}
-
-function extractSoapFieldsFromHtml(content: string) {
-  const fallback = {
-    subjective: stripHtml(content),
-    objective: "",
-    assessment: "",
-    plan: "",
-  };
-
-  if (typeof document === "undefined") return fallback;
-
-  const labelToField = new Map<string, keyof typeof fallback>(
-    soapTemplateRows.map(({ label, valueKey }) => [label, valueKey]),
-  );
-  const root = document.createElement("div");
-  root.innerHTML = content;
-  const paragraphs = Array.from(root.querySelectorAll("p"));
-  const fields = { ...fallback, subjective: "" };
-  let foundStructuredField = false;
-
-  for (let index = 0; index < paragraphs.length; index += 1) {
-    const label = paragraphs[index]?.textContent?.trim() ?? "";
-    const field = labelToField.get(label);
-
-    if (!field) continue;
-
-    fields[field] = paragraphs[index + 1]?.textContent?.trim() ?? "";
-    foundStructuredField = true;
+function getSoapInitialBlockContent(soapNote?: SoapNote): ChartSoapPartialBlock[] {
+  if (soapNote?.blockDocument?.blocks.length) {
+    return soapNote.blockDocument.blocks as ChartSoapPartialBlock[];
   }
 
-  return foundStructuredField ? fields : fallback;
+  return createLegacySoapTemplateBlocks(soapNote);
+}
+
+function snapshotSoapBlockDocument(
+  blocks: readonly ChartSoapBlock[],
+): SoapBlockDocument {
+  return {
+    schemaVersion: SOAP_BLOCK_DOCUMENT_SCHEMA_VERSION,
+    blocks: JSON.parse(JSON.stringify(blocks)) as unknown[],
+  };
+}
+
+function getDemoActorHeader(session: AuthSession | null) {
+  return getDemoActorHeaders(session);
 }
 
 async function loadChartSoapNote({
@@ -2435,14 +2325,14 @@ async function loadChartSoapNote({
 
 async function saveChartSoapNote({
   actorHeaders,
-  content,
+  blockDocument,
   encounterId,
   expectedUpdatedAt,
   mode,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
-  content: string;
+  blockDocument: SoapBlockDocument;
   encounterId: string;
   expectedUpdatedAt?: string | null;
   mode: "autosave" | "manual_save";
@@ -2455,13 +2345,14 @@ async function saveChartSoapNote({
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-request-id": createChartSoapRequestId(),
           ...(actorHeaders ?? {}),
         },
         body: JSON.stringify({
           encounterId,
           expectedUpdatedAt,
           mode,
-          ...extractSoapFieldsFromHtml(content),
+          blockDocument,
         }),
       },
     );
@@ -2476,6 +2367,11 @@ async function saveChartSoapNote({
   } catch {
     return { ok: false, status: 500, error: "db_write_failed" };
   }
+}
+
+function createChartSoapRequestId() {
+  const randomId = globalThis.crypto?.randomUUID?.();
+  return `chart-soap-${randomId ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
 }
 
 async function loadChartCompletion({
@@ -3370,7 +3266,6 @@ async function cancelEncounterRoute({
 function SoapPanel({
   actorHeaders,
   collapseContentId,
-  diagnoses,
   encounterId,
   loading,
   onCollapse,
@@ -3381,7 +3276,6 @@ function SoapPanel({
 }: {
   actorHeaders?: Record<string, string>;
   collapseContentId: string;
-  diagnoses: Diagnosis[];
   encounterId: string;
   loading: boolean;
   onCollapse: () => void;
@@ -3390,377 +3284,165 @@ function SoapPanel({
   writeDisabled: boolean;
   workspaceId: string;
 }) {
-  const defaultSection = useMemo<SoapSectionState>(() => {
-    const fields = buildSoapEditorFields(soapNote);
-
-    return {
-      id: "default",
-      title: "기본 SOAP",
-      fields,
-      content: buildSoapDocumentHtml(fields),
-      status: soapNote?.status,
-      statusAt:
-        soapNote?.signedAt ?? soapNote?.autosavedAt ?? soapNote?.updatedAt,
-      attachmentCount: 0,
-      deletable: false,
-      version: 0,
-    };
-  }, [soapNote]);
-  const [sectionOverrides, setSectionOverrides] = useState<
-    Record<string, SoapSectionState>
-  >({});
-  const [manualSystemLabels, setManualSystemLabels] = useState<string[]>([]);
-  const [deletedSystemLabels, setDeletedSystemLabels] = useState<string[]>([]);
-  const [activeSoapId, setActiveSoapId] = useState("default");
-  const [deleteSoapId, setDeleteSoapId] = useState<string | null>(null);
-  const [resetSoapId, setResetSoapId] = useState<string | null>(null);
-  const [pendingDefaultContent, setPendingDefaultContent] = useState<
-    string | null
-  >(null);
+  const [editorContent, setEditorContent] = useState<ChartSoapPartialBlock[]>(
+    () => getSoapInitialBlockContent(soapNote),
+  );
+  const [editorVersion, setEditorVersion] = useState(0);
+  const [notice, setNotice] = useState(
+    "블록 왼쪽의 + 또는 / 명령으로 SOAP 템플릿과 내용을 추가할 수 있습니다.",
+  );
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [saveState, setSaveState] = useState<SoapSaveState>("idle");
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
-  const latestDefaultContentRef = useRef(defaultSection.content);
-  const expectedUpdatedAtRef = useRef<string | null>(
+  const locallyEditedRef = useRef(false);
+  const saveAfterEditorReadyRef = useRef(false);
+  const lastSavedUpdatedAtRef = useRef<string | null>(null);
+  const lastHydratedUpdatedAtRef = useRef<string | null>(
     soapNote?.updatedAt ?? null,
   );
 
-  const diagnosisSystemSections = useMemo(() => {
-    const labels = diagnoses.map(getSoapSystemLabel).filter(Boolean);
-    return Array.from(new Set(labels));
-  }, [diagnoses]);
+  const coordinator = useMemo(
+    () =>
+      new SoapAutosaveCoordinator({
+        expectedUpdatedAt: null,
+        request: async ({ document, expectedUpdatedAt, mode }) => {
+          const result = await saveChartSoapNote({
+            actorHeaders,
+            blockDocument: document,
+            encounterId,
+            expectedUpdatedAt,
+            mode,
+            workspaceId,
+          });
 
-  const systemLabels = useMemo(() => {
-    const labels = [
-      ...diagnosisSystemSections.filter(
-        (systemLabel) => !deletedSystemLabels.includes(systemLabel),
-      ),
-      ...manualSystemLabels,
-    ];
-    return Array.from(new Set(labels));
-  }, [deletedSystemLabels, diagnosisSystemSections, manualSystemLabels]);
-
-  const soapSections = useMemo(
-    () => [
-      sectionOverrides.default ?? defaultSection,
-      ...systemLabels.map((systemLabel) => {
-        const id = buildSystemSoapId(systemLabel);
-        return sectionOverrides[id] ?? createSystemSoapSection(systemLabel);
-      }),
-    ],
-    [defaultSection, sectionOverrides, systemLabels],
-  );
-  const resolvedActiveSoapId = soapSections.some(
-    (section) => section.id === activeSoapId,
-  )
-    ? activeSoapId
-    : "default";
-  const activeSection =
-    soapSections.find((section) => section.id === resolvedActiveSoapId) ??
-    soapSections[0];
-  const addedSystemLabels = new Set(
-    soapSections
-      .map((section) => section.systemLabel)
-      .filter(
-        (systemLabel): systemLabel is string => typeof systemLabel === "string",
-      ),
-  );
-  const systemSections = soapSections.filter(
-    (section) => section.id !== "default",
-  );
-  const visibleSystemSections = systemSections.slice(
-    0,
-    SOAP_VISIBLE_SYSTEM_TAB_COUNT,
-  );
-  const overflowSystemSections = systemSections.slice(
-    SOAP_VISIBLE_SYSTEM_TAB_COUNT,
-  );
-  const activeInOverflow = overflowSystemSections.some(
-    (section) => section.id === resolvedActiveSoapId,
-  );
-  const deleteTarget = soapSections.find(
-    (section) => section.id === deleteSoapId,
-  );
-  const resetTarget = soapSections.find(
-    (section) => section.id === resetSoapId,
-  );
-
-  const updateSectionOverride = useCallback((section: SoapSectionState) => {
-    setSectionOverrides((currentOverrides) => ({
-      ...currentOverrides,
-      [section.id]: section,
-    }));
-  }, []);
-
-  const updateActiveSoapContent = (content: string) => {
-    if (writeDisabled) return;
-    if (!activeSection) return;
-    if (content === activeSection.content) return;
-    updateSectionOverride({ ...activeSection, content });
-    if (activeSection.id === "default") {
-      latestDefaultContentRef.current = content;
-      setPendingDefaultContent(content);
-      setSaveState("saving");
-    }
-  };
-
-  const persistDefaultSoapContent = useCallback(
-    async (content: string, mode: "autosave" | "manual_save") => {
-      if (writeDisabled) return;
-      if (mode === "manual_save") setPendingDefaultContent(null);
-      setSaveErrorMessage(null);
-      setSaveState("saving");
-      const result = await saveChartSoapNote({
-        actorHeaders,
-        content,
-        encounterId,
-        expectedUpdatedAt: expectedUpdatedAtRef.current,
-        mode,
-        workspaceId,
-      });
-
-      if (!result.ok || !result.soapNote) {
-        if (!result.ok && result.denialReason === "soap_note_conflict") {
-          setSaveErrorMessage(null);
-          setSaveState("conflict");
-          return;
-        }
-        setSaveErrorMessage(
-          !result.ok && result.denialReason === "permission_missing"
-            ? "SOAP 저장 권한이 없어 서버에 반영하지 못했습니다."
-            : "입력한 내용은 화면에 남아 있지만 서버에 저장되지 않았습니다.",
-        );
-        setSaveState("error");
-        return;
-      }
-
-      setSaveErrorMessage(null);
-      setSaveState("saved");
-      latestDefaultContentRef.current = content;
-      expectedUpdatedAtRef.current = result.soapNote.updatedAt;
-      onPersistedSoapNote(result.soapNote);
-      updateSectionOverride({
-        ...defaultSection,
-        content,
-        status: result.soapNote.status,
-        statusAt:
-          result.soapNote.signedAt ??
-          result.soapNote.autosavedAt ??
-          result.soapNote.updatedAt,
-        version: defaultSection.version + 1,
-      });
-    },
-    [
-      actorHeaders,
-      defaultSection,
-      encounterId,
-      onPersistedSoapNote,
-      updateSectionOverride,
-      workspaceId,
-      writeDisabled,
-    ],
-  );
-
-  useEffect(() => {
-    latestDefaultContentRef.current = defaultSection.content;
-  }, [defaultSection.content]);
-
-  useEffect(() => {
-    expectedUpdatedAtRef.current = soapNote?.updatedAt ?? null;
-  }, [soapNote?.updatedAt]);
-
-  useEffect(() => {
-    if (pendingDefaultContent === null) return;
-
-    const timerId = window.setTimeout(() => {
-      void persistDefaultSoapContent(pendingDefaultContent, "autosave");
-      setPendingDefaultContent(null);
-    }, 800);
-
-    return () => window.clearTimeout(timerId);
-  }, [pendingDefaultContent, persistDefaultSoapContent]);
-
-  const addSystemSoap = (systemLabel: string, shouldActivate: boolean) => {
-    if (writeDisabled) return;
-    const nextSection = createSystemSoapSection(systemLabel);
-    setDeletedSystemLabels((currentLabels) =>
-      currentLabels.filter((label) => label !== systemLabel),
-    );
-    setManualSystemLabels((currentLabels) => {
-      if (
-        currentLabels.includes(systemLabel) ||
-        diagnosisSystemSections.includes(systemLabel)
-      )
-        return currentLabels;
-      return [...currentLabels, systemLabel];
-    });
-    setSectionOverrides((currentOverrides) =>
-      currentOverrides[nextSection.id]
-        ? currentOverrides
-        : {
-            ...currentOverrides,
-            [nextSection.id]: nextSection,
-          },
-    );
-    if (shouldActivate) {
-      setActiveSoapId(nextSection.id);
-    }
-  };
-
-  const confirmDeleteSoap = () => {
-    if (writeDisabled) return;
-    if (!deleteTarget?.deletable) return;
-
-    const sectionToRestore = deleteTarget;
-    const targetIndex = soapSections.findIndex(
-      (section) => section.id === deleteTarget.id,
-    );
-    const nextActiveId =
-      targetIndex > 0
-        ? (soapSections[targetIndex - 1]?.id ?? "default")
-        : "default";
-
-    if (deleteTarget.systemLabel) {
-      setDeletedSystemLabels((currentLabels) =>
-        currentLabels.includes(deleteTarget.systemLabel!)
-          ? currentLabels
-          : [...currentLabels, deleteTarget.systemLabel!],
-      );
-      setManualSystemLabels((currentLabels) =>
-        currentLabels.filter((label) => label !== deleteTarget.systemLabel),
-      );
-    }
-    setSectionOverrides((currentOverrides) => {
-      const nextOverrides = { ...currentOverrides };
-      delete nextOverrides[deleteTarget.id];
-      return nextOverrides;
-    });
-
-    setActiveSoapId(nextActiveId);
-    setDeleteSoapId(null);
-
-    toast.success(`${sectionToRestore.title} SOAP를 삭제했습니다.`, {
-      action: {
-        label: "되돌리기",
-        onClick: () => {
-          if (sectionToRestore.systemLabel) {
-            setDeletedSystemLabels((currentLabels) =>
-              currentLabels.filter(
-                (label) => label !== sectionToRestore.systemLabel,
-              ),
-            );
-            setManualSystemLabels((currentLabels) =>
-              currentLabels.includes(sectionToRestore.systemLabel!)
-                ? currentLabels
-                : [...currentLabels, sectionToRestore.systemLabel!],
-            );
+          if (!result.ok || !result.soapNote) {
+            return result.ok
+              ? { ok: false, status: 500, error: "db_write_failed" }
+              : result;
           }
-          updateSectionOverride(sectionToRestore);
-          setActiveSoapId(sectionToRestore.id);
+
+          return {
+            ok: true,
+            soapNote: result.soapNote,
+            auditRecorded: result.auditRecorded ?? true,
+          };
         },
+        reconcileConflict: async ({ document }) => {
+          const latest = await loadChartSoapNote({
+            actorHeaders,
+            encounterId,
+            workspaceId,
+          });
+          if (
+            !latest.ok ||
+            !latest.soapNote?.blockDocument ||
+            !areSoapBlockDocumentsEqual(latest.soapNote.blockDocument, document)
+          ) {
+            return null;
+          }
+
+          return {
+            ok: true,
+            soapNote: latest.soapNote,
+            auditRecorded: false,
+          };
+        },
+        onPersisted: () => undefined,
+        onStateChange: () => undefined,
+      }),
+    [actorHeaders, encounterId, workspaceId],
+  );
+
+  useEffect(() => {
+    coordinator.setCallbacks(
+      (savedSoapNote) => {
+        lastSavedUpdatedAtRef.current = savedSoapNote.updatedAt;
+        onPersistedSoapNote(savedSoapNote);
       },
-    });
-  };
-
-  const confirmResetSoap = () => {
-    if (writeDisabled) return;
-    if (!resetTarget) return;
-
-    const previousSection = resetTarget;
-    const resetFields = buildSoapEditorFields();
-    updateSectionOverride({
-      ...resetTarget,
-      fields: resetFields,
-      content: buildSoapDocumentHtml(resetFields),
-      version: resetTarget.version + 1,
-    });
-    setResetSoapId(null);
-
-    toast.success(
-      `${previousSection.title} 내용을 기본 템플릿으로 초기화했습니다.`,
-      {
-        action: {
-          label: "되돌리기",
-          onClick: () => {
-            updateSectionOverride(previousSection);
-            setActiveSoapId(previousSection.id);
-          },
-        },
+      (state, result) => {
+        setSaveState(state);
+        if (state === "error") {
+          const failedResult =
+            result && !result.ok ? result : undefined;
+          setSaveErrorMessage(
+            failedResult?.denialReason === "permission_missing"
+              ? "SOAP 저장 권한이 없어 서버에 반영하지 못했습니다."
+              : "입력한 내용은 화면에 남아 있지만 서버에 저장되지 않았습니다.",
+          );
+        } else {
+          setSaveErrorMessage(null);
+        }
       },
     );
+  }, [coordinator, onPersistedSoapNote]);
+
+  useEffect(() => () => coordinator.dispose(), [coordinator]);
+
+  useEffect(() => {
+    coordinator.setExpectedUpdatedAt(soapNote?.updatedAt ?? null);
+
+    if (
+      !soapNote?.updatedAt ||
+      soapNote.updatedAt === lastHydratedUpdatedAtRef.current ||
+      soapNote.updatedAt === lastSavedUpdatedAtRef.current ||
+      locallyEditedRef.current
+    ) {
+      return;
+    }
+
+    lastHydratedUpdatedAtRef.current = soapNote.updatedAt;
+    setEditorContent(getSoapInitialBlockContent(soapNote));
+    setEditorVersion((current) => current + 1);
+  }, [coordinator, soapNote]);
+
+  const handleEditorReady = useCallback(
+    (blocks: readonly ChartSoapBlock[]) => {
+      const document = snapshotSoapBlockDocument(blocks);
+      if (saveAfterEditorReadyRef.current) {
+        saveAfterEditorReadyRef.current = false;
+        locallyEditedRef.current = true;
+        coordinator.change(document);
+      } else {
+        coordinator.hydrate(document);
+      }
+    },
+    [coordinator],
+  );
+
+  const handleDocumentChange = useCallback(
+    (blocks: readonly ChartSoapBlock[]) => {
+      if (writeDisabled) return;
+      locallyEditedRef.current = true;
+      coordinator.change(snapshotSoapBlockDocument(blocks));
+    },
+    [coordinator, writeDisabled],
+  );
+
+  const confirmReset = () => {
+    if (writeDisabled) return;
+    saveAfterEditorReadyRef.current = true;
+    setEditorContent(createLegacySoapTemplateBlocks(null));
+    setEditorVersion((current) => current + 1);
+    setResetDialogOpen(false);
+    setNotice("기본 SOAP 템플릿으로 초기화했습니다.");
   };
 
-  const soapTabItems = [
-    { value: "default", label: "기본 S/O" },
-    ...visibleSystemSections.map((section) => ({
-      value: section.id,
-      label: section.title,
-    })),
-  ];
-  const soapTabs = (
-    <div className="relative z-20 flex min-w-0 flex-1 items-stretch gap-2.5">
-      <ChartLineTabGroup
-        aria-label="SOAP 분류"
-        items={soapTabItems}
-        value={resolvedActiveSoapId}
-        onValueChange={setActiveSoapId}
-      />
-      {overflowSystemSections.length ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label="SOAP 더보기"
-            aria-pressed={activeInOverflow}
-            className={cn(
-              "inline-flex h-full shrink-0 items-center gap-1 px-2 emr-text-body font-semibold  outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
-              activeInOverflow ? "text-foreground" : "text-muted-foreground",
-            )}
-          >
-            더보기
-            <Badge variant="outline" className="ml-1 px-1.5 text-[10px]">
-              {overflowSystemSections.length}
-            </Badge>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-44">
-            {overflowSystemSections.map((section) => (
-              <DropdownMenuItem
-                key={section.id}
-                className="h-8 cursor-pointer justify-between"
-                onClick={() => setActiveSoapId(section.id)}
-              >
-                <span>{section.title}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`${section.title} SOAP 삭제`}
-                  disabled={writeDisabled}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setDeleteSoapId(section.id);
-                  }}
-                >
-                  <CdsActionsXIcon className="size-3" />
-                </Button>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
-    </div>
-  );
   const activeStatusText = loading
     ? "SOAP 정보를 불러오는 중"
-    : saveState === "loading"
-      ? "저장 상태 확인 중"
-      : saveState === "saving"
-        ? "자동저장 중"
-        : saveState === "conflict"
-          ? "저장 충돌"
-          : saveState === "error"
-            ? "저장 실패"
-            : getSoapSectionStatusText(
-                activeSection?.status,
-                activeSection?.statusAt,
-              );
+    : saveState === "saving"
+      ? "자동저장 중"
+      : saveState === "saved"
+        ? "저장됨"
+        : saveState === "saved_with_warning"
+          ? "SOAP 저장됨 · 변경 이력 기록 확인 필요"
+          : saveState === "conflict"
+            ? "저장 충돌"
+            : saveState === "error"
+              ? "저장 실패"
+              : getSoapSectionStatusText(
+                  soapNote?.status,
+                  soapNote?.signedAt ?? soapNote?.autosavedAt ?? soapNote?.updatedAt,
+                );
 
   return (
     <section
@@ -3768,8 +3450,17 @@ function SoapPanel({
       className={chartWorkspacePanelClassName}
     >
       <div className="relative z-30 flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
-        <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
-          Subject/Object
+        <h2
+          aria-label="Subject/Object"
+          className="flex min-w-0 items-center gap-2 truncate text-sm font-semibold leading-5 text-foreground"
+        >
+          <span>Subject/Object</span>
+          <span
+            aria-hidden="true"
+            className="truncate emr-text-micro font-normal text-muted-foreground"
+          >
+            {activeStatusText}
+          </span>
         </h2>
         <ChartPanelActionGroup>
           <ChartPanelCollapseButton
@@ -3779,6 +3470,13 @@ function SoapPanel({
             panelId="soap"
           />
           <ChartPanelIconButton label="패널 확대 준비 중" disabled />
+          <ChartPanelIconButton
+            label="SOAP 저장"
+            disabled={writeDisabled}
+            onClick={() => coordinator.saveNow()}
+          >
+            <CdsActionsSaveIcon />
+          </ChartPanelIconButton>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -3786,132 +3484,84 @@ function SoapPanel({
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  className="size-7 rounded-lg text-[var(--emr-text-secondary)]"
-                  aria-label="SOAP 추가"
-                  disabled={writeDisabled}
+                  aria-label="SOAP 작업"
+                  className="size-7 rounded-lg text-muted-foreground"
                 >
-                  <CdsActionsPlusIcon className="size-3.5" />
+                  <CdsFilesMoreHorizontalIcon className="size-3.5" />
                 </Button>
               }
             />
             <DropdownMenuContent align="end" className="w-40">
-              {soapSystemOptions.map((systemLabel) => {
-                const alreadyAdded = addedSystemLabels.has(systemLabel);
-
-                return (
-                  <DropdownMenuItem
-                    key={systemLabel}
-                    className="h-8 cursor-pointer justify-between"
-                    disabled={writeDisabled || alreadyAdded}
-                    onClick={() => addSystemSoap(systemLabel, true)}
-                  >
-                    <span>{systemLabel}</span>
-                    {alreadyAdded ? (
-                      <Badge variant="outline">이미 추가됨</Badge>
-                    ) : null}
-                  </DropdownMenuItem>
-                );
-              })}
+              <DropdownMenuItem
+                className="h-8 cursor-pointer"
+                disabled={writeDisabled}
+                onClick={() => setResetDialogOpen(true)}
+              >
+                <CdsActionsRotateCcwIcon data-icon="inline-start" />
+                기본 템플릿으로 초기화
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="h-8" disabled>
+                이미지 · 동영상 연동 준비 중
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {activeSection ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`${activeSection.title}${activeSection.title.endsWith("SOAP") ? "" : " SOAP"} 작업`}
-                    className="size-7 rounded-lg text-muted-foreground"
-                  >
-                    <CdsFilesMoreHorizontalIcon className="size-3.5" />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem
-                  className="h-8 cursor-pointer"
-                  disabled={writeDisabled || activeSection.id !== "default"}
-                  onClick={() =>
-                    void persistDefaultSoapContent(
-                      latestDefaultContentRef.current,
-                      "manual_save",
-                    )
-                  }
-                >
-                  <CdsActionsSaveIcon data-icon="inline-start" />
-                  SOAP 저장
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="h-8 cursor-pointer"
-                  disabled={writeDisabled}
-                  onClick={() => setResetSoapId(activeSection.id)}
-                >
-                  <CdsActionsRotateCcwIcon data-icon="inline-start" />
-                  초기화
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="h-8 cursor-pointer"
-                  disabled={writeDisabled}
-                  onClick={() => {
-                    updateSectionOverride({
-                      ...activeSection,
-                      attachmentCount: activeSection.attachmentCount + 1,
-                    });
-                  }}
-                >
-                  첨부
-                  {activeSection.attachmentCount
-                    ? ` ${activeSection.attachmentCount}`
-                    : ""}
-                </DropdownMenuItem>
-                {activeSection.deletable ? (
-                  <DropdownMenuItem
-                    className="h-8 cursor-pointer text-destructive focus:text-destructive"
-                    disabled={writeDisabled}
-                    onClick={() => setDeleteSoapId(activeSection.id)}
-                  >
-                    <CdsActionsTrash2Icon data-icon="inline-start" />
-                    삭제
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
         </ChartPanelActionGroup>
       </div>
-      <div
-        data-slot="chart-soap-toolbar"
-        className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-border-default)] px-3"
-      >
-        {soapTabs}
-      </div>
+
+      {notice ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="shrink-0 border-b border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-4 py-1.5 emr-text-metadata text-[var(--emr-status-info-text)]"
+        >
+          {notice}
+        </div>
+      ) : null}
+
+      {soapNote?.blockDocumentError === "invalid_stored_document" ? (
+        <EmrInlineAlert
+          severity="warning"
+          title="저장된 블록 문서를 열 수 없어 기존 SOAP 내용으로 복원했습니다"
+          className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
+          testId="chart-soap-document-recovery-warning"
+        >
+          현재 화면의 내용을 확인한 뒤 저장하면 지원되는 문서 형식으로 다시 기록됩니다.
+        </EmrInlineAlert>
+      ) : null}
+
       {saveState === "conflict" ? (
         <div
           role="alert"
           className="border-b border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-4 py-2 text-sm text-[var(--emr-status-warning-text)]"
         >
-          다른 탭이나 사용자가 먼저 SOAP를 저장했습니다. 현재 입력은 유지되며,
-          최신 내용을 확인한 뒤 다시 저장해 주세요.
+          다른 탭이나 사용자가 먼저 SOAP를 저장했습니다. 현재 입력은 이 화면에 유지됩니다.
+          서버 최신본을 확인하기 전에는 자동으로 덮어쓰지 않습니다.
         </div>
       ) : null}
+
+      {saveState === "saved_with_warning" ? (
+        <EmrInlineAlert
+          severity="warning"
+          title="SOAP는 저장되었지만 변경 이력 기록을 확인해야 합니다"
+          className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
+          testId="chart-soap-audit-warning"
+        >
+          임상 기록은 서버에 반영되었습니다. 중복 저장하지 말고 관리자에게 변경 이력 상태를 확인해 주세요.
+        </EmrInlineAlert>
+      ) : null}
+
       {saveState === "error" ? (
         <EmrInlineAlert
           severity="error"
           title="SOAP를 저장하지 못했습니다"
-          className="mx-3 mb-2 mt-2 w-auto shrink-0 emr-text-metadata"
+          className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
           action={
             <Button
               size="sm"
               variant="outline"
               disabled={writeDisabled}
-              onClick={() =>
-                void persistDefaultSoapContent(
-                  latestDefaultContentRef.current,
-                  "manual_save",
-                )
-              }
+              onClick={() => coordinator.retry()}
             >
               다시 저장
             </Button>
@@ -3922,6 +3572,7 @@ function SoapPanel({
             "입력한 내용은 화면에 남아 있지만 서버에 저장되지 않았습니다."}
         </EmrInlineAlert>
       ) : null}
+
       {loading ? (
         <div className="border-b border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] px-4 py-2">
           <ChartPanelPendingState
@@ -3930,63 +3581,38 @@ function SoapPanel({
           />
         </div>
       ) : null}
+
       <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
         <span className="sr-only" aria-live="polite">
           {activeStatusText}
         </span>
-        {activeSection ? (
-          <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
-            <SoapRichTextEditor
-              key={`${soapNote?.id ?? "empty"}-${soapNote?.updatedAt ?? "initial"}-${activeSection.id}-${activeSection.version}`}
-              disabled={writeDisabled}
-              initialContent={activeSection.content}
-              label={activeSection.title}
-              onContentChange={updateActiveSoapContent}
-            />
-          </div>
-        ) : null}
+        <ChartSoapLiveBlockEditor
+          key={`${encounterId}-${editorVersion}`}
+          disabled={writeDisabled}
+          initialContent={editorContent}
+          onDocumentChange={handleDocumentChange}
+          onNotice={setNotice}
+          onReady={handleEditorReady}
+        />
       </div>
+
       <Dialog
-        open={deleteSoapId !== null}
-        onOpenChange={(open) => !open && setDeleteSoapId(null)}
+        open={resetDialogOpen}
+        onOpenChange={setResetDialogOpen}
       >
-        {deleteTarget ? (
-          <EmrConfirmDialogContent
-            title={`${deleteTarget.title} SOAP 삭제`}
-            description={
-              hasMeaningfulSoapContent(deleteTarget)
-                ? "작성된 SOAP 내용이 삭제됩니다. 계속할까요?"
-                : "이 SOAP 탭을 삭제할까요?"
-            }
-            cancelLabel="취소"
-            confirmLabel="삭제"
-            confirmButtonVariant="destructive"
-            confirmDisabled={writeDisabled}
-            onCancel={() => setDeleteSoapId(null)}
-            onConfirm={confirmDeleteSoap}
-          />
-        ) : null}
-      </Dialog>
-      <Dialog
-        open={resetSoapId !== null}
-        onOpenChange={(open) => !open && setResetSoapId(null)}
-      >
-        {resetTarget ? (
-          <EmrConfirmDialogContent
-            title={`${resetTarget.title} SOAP 초기화`}
-            description="현재 SOAP의 주관적, 객관적, 평가, 계획 내용을 기본 템플릿으로 되돌립니다."
-            cancelLabel="취소"
-            confirmLabel="초기화"
-            confirmDisabled={writeDisabled}
-            onCancel={() => setResetSoapId(null)}
-            onConfirm={confirmResetSoap}
-          />
-        ) : null}
+        <EmrConfirmDialogContent
+          title="SOAP 기본 템플릿으로 초기화"
+          description="현재 블록 문서를 주관적, 객관적, 평가, 계획 기본 템플릿으로 바꾸고 자동저장합니다."
+          cancelLabel="취소"
+          confirmLabel="초기화"
+          confirmDisabled={writeDisabled}
+          onCancel={() => setResetDialogOpen(false)}
+          onConfirm={confirmReset}
+        />
       </Dialog>
     </section>
   );
 }
-
 function AssessmentPanel({
   classificationCatalog,
   classificationCatalogDiseaseGroups,
@@ -12678,10 +12304,9 @@ export function ChartContent({
               }
             >
               <SoapPanel
-                key={`chart-soap-${bundle.encounter.id}-${effectiveLatestSoap?.id ?? "empty"}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
+                key={`chart-soap-${bundle.encounter.id}`}
                 actorHeaders={actorHeaders}
                 collapseContentId="chart-soap-panel-content"
-                diagnoses={diagnosisRows}
                 encounterId={bundle.encounter.id}
                 loading={soapLoading}
                 onCollapse={() => setClinicalPanelCollapsed("soap", true)}
