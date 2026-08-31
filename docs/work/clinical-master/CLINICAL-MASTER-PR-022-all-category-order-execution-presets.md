@@ -19,7 +19,7 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-020-workspace-dispensing-preset-management.md"
 dependencies: ["CLINICAL-MASTER-PR-016", "CLINICAL-MASTER-PR-017", "CLINICAL-MASTER-PR-020"]
 updated: "2026-08-31"
-remote_writes: 8
+remote_writes: 11
 remote_publish_outcome: "rolled_back"
 ---
 
@@ -45,9 +45,10 @@ patient, provider, ward, device, or price authority into the central master.
 - Historical candidate commit used at the completed remote execution gate:
   `1c75aa04079bcdda36e50bfcc9ce0bf4350f4494`
 - Current-main feature commit: `b465608c`.
-- The final local candidate is rebased and exactly 3 commits ahead / 0 behind
-  `origin/main`. Its final branch-head SHA is read from Git after documentation
-  finalization; it is not a remote execution approval.
+- The separately approved performance-candidate branch-head was
+  `4549c6fd36b9347e05361b0d63a610ac33dfd10f`, rebased exactly 3 commits ahead /
+  0 behind that `origin/main` baseline at execution time. The later approval
+  and remote rollback evidence are recorded below.
 - The primary checkout and the prior audit worktree are excluded from edits,
   staging, reset, stash, checkout, and cleanup.
 - Live read-only evidence found 510 published normal master orders: 108 complete
@@ -258,6 +259,24 @@ action, present:
   `744673aef64ff67dae7239a21fb781f8a487d49dedc0951283e9e66fe2083fb7`,
   and static spec
   `92e04acdb2f7268654f5df29c680d2bfff92cf98d9fafaadb75717a6d1af6f6e`.
+- Approved remote performance-candidate packet on commit
+  `4549c6fd36b9347e05361b0d63a610ac33dfd10f`: performance and compatibility
+  migrations applied as history `20260831122808` / `20260831122838`; post-apply
+  function owner/config/ACL, public writer MD5, `510/108/108`, audit `324`, and
+  frozen stable-key/lineage SHA gates PASS.
+- Exact payload SHA
+  `834812eaea2afb2fafb93ea3b0a23efb5bc7df54ea3ac8977983683523c4e278`
+  was verified as 1,982,060 bytes, 689 records / 522 orders, with unsafe preset
+  count 0. Its single remote publisher call timed out at 60 seconds with
+  SQLSTATE `57014`.
+- Immediate authoritative readback at 2026-08-31 12:37:27 UTC: target release
+  0, manifest 0, execution preset version/current `108/108`, master orders 510,
+  active publisher/adopter backends 0. Independent boundary verdict:
+  **COMPLETE ROLLBACK / SAFE STOP**. Adoption was not called.
+- Post-apply read-only advisors returned security `INFO 91 / WARN 187` and
+  performance `INFO 402 / WARN 13`; no clean-advisor claim is made. Master
+  release/current-preset covering-index notices are investigation inputs, not
+  a proven timeout cause.
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS.
 - `npm run build`: PASS with one pre-existing PRD-viewer NFT trace warning.
@@ -272,29 +291,24 @@ Implementation report:
 
 ## Current Status
 
-The local candidate is implemented and verified through deterministic artifact
-checks, focused application tests, production build, security checks, and an
-isolated Supabase publish/adopt/retry/customization rehearsal. The approved
-remote packet applied all six PR-022 migrations to project
-`qmerxgzrwaaahpkhjqlc`; foundation readback was current/version `108/108`,
-backfill audits `324`, eligible orders `510`, and foreign catalog `0`.
+The implementation and local verification remain complete. The first approved
+remote packet applied the six PR-022 foundation migrations; both earlier
+publisher calls returned Cloudflare 524 and were proven fully rolled back.
 
-The first 689-record publish returned Cloudflare 524 at 09:50:56 UTC and a
-subsequent SQL readback proved complete rollback. An independently approved
-single retry used the same semantic payload with whitespace removed and passed
-all preflight gates, but it returned 524 again at 10:04:13 UTC. Immediate SQL,
-CLI login-role, and advisor checks timed out. After connection recovery, the
-authoritative 10:19:53 UTC readback returned active publisher backends 0,
-release/incomplete release `0/0`, current/version presets `108/108`, and
-eligible orders `510`, proving the second attempt also fully rolled back.
+A separate approval then authorized the exact performance candidate at commit
+`4549c6fd36b9347e05361b0d63a610ac33dfd10f`. Project
+`qmerxgzrwaaahpkhjqlc` now has the performance and consultation runtime
+compatibility migrations applied as history `20260831122808` and
+`20260831122838`. All post-apply security and frozen baseline gates passed.
+The exact 689/522 payload was called once under a 60-second statement timeout
+and returned SQLSTATE `57014`. Immediate readback showed target release 0,
+manifest 0, preset version/current `108/108`, master orders 510, and no active
+publisher/adopter backend, proving complete rollback. Adoption was not called.
 
-Status is therefore **BLOCKED / NEW PERFORMANCE CANDIDATE APPROVAL REQUIRED**.
-A third call to the old publisher, workspace adoption, migration repair,
-staging/pg_cron workaround, push/PR/merge, and deployment are prohibited. The
-local performance candidate removes duplicate schema construction and the
-digest-identical second canonicalization without changing diagnosis dispatch,
-API, ACL, fingerprint, manifest, trigger, or transaction boundaries. It passed
-the exact rollback-only rehearsal and 60s local gate, but local timing does not
-prove the remote 524 is resolved. The final independent local review is
-High/Medium/Low 0/0/0. A new exact SHA packet and new approval remain required
-before either final local migration or any publish/adoption remote write.
+Status remains **BLOCKED / NEW PERFORMANCE CANDIDATE APPROVAL REQUIRED**. The
+two new migrations remain applied, but publisher replay, workspace adoption,
+migration/history repair, deletion, staging/pg_cron workaround, push/PR/merge,
+deployment, and clinical activation are prohibited. Local 3-second timing did
+not resolve the remote 60-second behavior. The next attempt requires read-only
+remote bottleneck analysis, a different candidate, new exact SHA packet,
+isolated verification, independent security review, and separate approval.

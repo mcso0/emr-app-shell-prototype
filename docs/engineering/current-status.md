@@ -180,52 +180,31 @@ Queue projection, and one Billing candidate. PR #640 merged at
 `clinical_use_allowed = false`; this is not clinical approval or real-hospital
 launch readiness.
 
-CLINICAL-MASTER-PR-022 is blocked at its remote publisher approval gate. The approved
-packet applied six additive execution-preset migrations to the shared
-synthetic/demo project; foundation readback was current/version presets
-`108/108`, backfill audits `324`, eligible published-normal orders `510`, and
-foreign catalog `0`. The first 689-record publish returned Cloudflare 524 and
-was proven fully rolled back. The independently approved single minified retry
-also returned 524. Immediate SQL connections, CLI login-role creation, and
-advisor checks timed out, but the recovered 10:19:53 UTC authoritative readback
-returned active publisher backends 0, release/incomplete `0/0`, current/version
-presets `108/108`, and eligible orders `510`, proving complete rollback. No
-third call to the old publisher, workspace adoption, PR/merge, deployment, or
-clinical activation is allowed. A local performance-only candidate now removes
-the measured duplicate schema construction and second canonicalization while
-preserving the diagnosis dispatcher, API, ACL, fingerprint, manifest, trigger,
-and transaction contracts. On an isolated exact 510-order/108-preset baseline,
-cold rollback-only runs improved from a 5.703s median to 3.136s; all three were
-under 60s. The reproducible rehearsal also verified 689 records, preset
-version/current `630/522`, manifest 689, review events 1070, synthetic-inactive
-and lineage mismatches 0, and rollback residue 0. This does not prove remote
-524 resolution. The expanded rollback-only gate also passed actual function
-owner/security-definer/search-path/ACL inspection, all-nine-type validator
-equivalence, negative clinical-use/status/detail-field rejection, absent/wrong/
-exact digest-marker paths, retry idempotency, and forced-timeout residue checks.
-An ownership-preserving isolated clone with the current-main billing, realtime,
-and SOAP migrations applied around PR-022 returned marker-absent fallback
-3.581s, wrong-digest fallback 2.927s, first publish 2.888s, retry 1.296s, and
-SQLSTATE `57014` with zero residue after a forced 1.5s timeout. The performance
-migration SHA-256 is
-`aaa9795baf380e16d24973e344e5e3be2bf2b6696ef614326520cc8885b0a495`;
-it is not a Git candidate SHA or remote approval. Independent final security
-review after the current-main rebase found that the later billing/Realtime
-wrapper had replaced the consultation clinician normalization and that
-`chart:view` was checked after privileged encounter reads. Final migration
-`20260831120100` restores clinician normalization, billing summary, and
-Realtime in one transaction; checks actor, membership, `chart:update`, and
-`chart:view` before encounter/catalog reads; and re-closes all base-function
-ACLs. Fresh chronological and current-main-first isolated clones converge on
-the same final function definition MD5, `supabase_admin` owner,
-`SECURITY DEFINER`, empty `search_path`, and authenticated-only public ACL.
-Both compatibility rehearsals pass, including the update-only nonexistent-
-encounter `42501` denial. The final independent verdict is High/Medium/Low
-`0/0/0`, LOCAL APPROVE for the exact local files. The branch is rebased onto
-`origin/main` `00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f` and, after the final
-compatibility closeout commit, is 3 commits ahead / 0 behind. A new exact-SHA
-remote approval remains required before applying the performance and
-compatibility migrations or publishing.
+CLINICAL-MASTER-PR-022 is blocked after the approved performance-candidate
+remote publish fully rolled back. The earlier packet applied six additive
+execution-preset migrations; both earlier 689-record publisher calls returned
+Cloudflare 524 and were later proven fully rolled back. Candidate commit
+`4549c6fd36b9347e05361b0d63a610ac33dfd10f` then received a separate exact-SHA
+approval. Its performance migration and final consultation runtime
+compatibility migration were applied to the shared synthetic/demo project as
+history `20260831122808` and `20260831122838`. Post-apply owner/config/ACL,
+public writer MD5 `a85f22b4af1e2cb1e5262b3ce0993a30`, foundation `510/108/108`,
+backfill audit `324`, and frozen stable-key/lineage SHA gates passed. The exact
+1,982,060-byte payload contained 689 records / 522 orders and only
+`synthetic_unreviewed`, `clinicalUseAllowed=false` presets. Its one approved
+publisher call used `lock_timeout=5s` and `statement_timeout=60s` and was
+canceled with SQLSTATE `57014`. The immediate 2026-08-31 12:37:27 UTC readback
+returned target release 0, manifest 0, preset version/current `108/108`, master
+orders 510, and active publisher/adopter backends 0. Independent boundary
+review therefore classifies it as **COMPLETE ROLLBACK / SAFE STOP**. The two new
+migrations remain applied because they preserve performance and consultation/
+billing/Realtime permission-order fixes, but publisher replay, workspace
+adoption, history repair, deletion, PR/merge, deployment, and clinical
+activation are prohibited. Local 3-second rehearsal performance did not
+predict the remote 60-second result. The next remote attempt requires read-only
+remote bottleneck analysis, a different performance candidate, a new exact SHA
+packet, isolated verification, independent security review, and separate
+approval.
 
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,

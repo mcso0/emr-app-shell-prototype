@@ -2,8 +2,8 @@
 title: "CLAiR 전 카테고리 마스터 오더 실행 프리셋 구현 보고서"
 date: "2026-08-31"
 work_item: "CLINICAL-MASTER-PR-022"
-status: "local_candidate_verified_remote_approval_required"
-remote_writes: 8
+status: "remote_publish_rolled_back_new_candidate_required"
+remote_writes: 11
 remote_publish_outcome: "rolled_back"
 clinical_use_allowed: false
 ---
@@ -22,7 +22,7 @@ clinical_use_allowed: false
 - 확정 시점의 유효 세부값은 오더 snapshot으로 고정되며, 이후 마스터·워크스페이스 변경이 과거 확정 기록을 바꾸지 않는다.
 - 전용 `system_exam` 타입은 차트에서 완료되며 처치·검사·조제 fulfillment queue로 전달되지 않는다.
 
-로컬 기능 구현, publisher 성능 후보, current-main 상담/billing/Realtime 최종 호환 보완의 격리 DB 검증과 독립 재심사는 완료됐다. 최종 exact-file 판정은 High/Medium/Low `0/0/0`, LOCAL APPROVE다. 승인된 원격 Supabase에는 기존 PR-022 migration 6개만 적용돼 있고, 689-record 게시 호출 두 번은 모두 약 120초 뒤 Cloudflare 524로 끝난 뒤 완전 rollback됐다. 새 performance·호환 migration은 원격에 적용하지 않았으며 세 번째 게시, workspace adoption, GitHub PR/merge, Vercel 배포도 수행하지 않았다. 모든 프리셋은 `synthetic_unreviewed`, `clinicalUseAllowed=false` 계약을 유지하며 임상 승인이나 실제 진료 활성화를 의미하지 않는다.
+로컬 기능 구현, publisher 성능 후보, current-main 상담/billing/Realtime 최종 호환 보완의 격리 DB 검증과 독립 재심사는 완료됐다. 최종 exact-file 판정은 High/Medium/Low `0/0/0`, LOCAL APPROVE였다. 별도 승인 뒤 원격 Supabase에는 기존 PR-022 migration 6개와 performance·compatibility migration 2개가 적용됐다. 이전 689-record 게시 호출 두 번은 Cloudflare 524, 새 성능 후보의 단 한 번 게시 호출은 SQLSTATE `57014`로 끝났고 세 실행 모두 완전 rollback됐다. workspace adoption, GitHub PR/merge, Vercel 배포는 수행하지 않았다. 모든 프리셋은 `synthetic_unreviewed`, `clinicalUseAllowed=false` 계약을 유지하며 임상 승인이나 실제 진료 활성화를 의미하지 않는다.
 
 ## 2. 요청을 구현 계약으로 정리한 내용
 
@@ -251,10 +251,10 @@ negative control인 `clair-foreign-demo`는 catalog 0개를 유지했다.
 - 청담의 전체 `orders` hash 변동은 확정 기록이 아니라 `draft`, revision 0, 빈 confirmed snapshot인 한 행의 동시 변경으로 좁혀졌다. 확정 14건의 immutable fingerprint `7164b275604d4b233e14bb1e18b30d02b4811bc9b24df0ec14d38a25430d39b0`와 fulfillment fingerprint는 그대로였다. actor audit가 없어 이를 특정 사용자의 autosave로 단정하지는 않았다.
 - 첫 게시 호출은 1,982,060-byte 원본 JSON으로 실행되어 2026-08-31 09:50:56 UTC에 524가 발생했다. 이후 readback은 release 0, current/version `108/108`, eligible 510, active publish 0으로 완전 rollback을 증명했다.
 - 독립 검토가 공백만 제거한 1,443,553-byte 동일 semantic JSON의 단 한 번 재시도를 승인했다. 재시도 직전 release 0, current/version `108/108`, eligible 510, 위 확정/fulfillment/catalog/foreign gate가 모두 통과했다.
-- 두 번째이자 마지막 게시 호출도 2026-08-31 10:04:13 UTC에 524로 끝났다. 직후 Supabase SQL readback, CLI login role, security/performance advisor가 모두 `Connection terminated due to connection timeout`을 반환해 결과를 임시로 unknown으로 차단했다.
+- 첫 원격 packet의 두 번째이자 당시 마지막 게시 호출도 2026-08-31 10:04:13 UTC에 524로 끝났다. 직후 Supabase SQL readback, CLI login role, security/performance advisor가 모두 `Connection terminated due to connection timeout`을 반환해 결과를 임시로 unknown으로 차단했다.
 - 연결 회복 뒤 2026-08-31 10:19:53 UTC의 단일 권위 쿼리는 active publisher backend 0, release 0, incomplete release 0, current/version preset `108/108`, eligible order 510을 반환했다. 따라서 두 번째 publish도 **완전 rollback**으로 확정한다.
 
-원격 안전 판정은 **BLOCKED / NEW PERFORMANCE CANDIDATE APPROVAL REQUIRED**다. 기존 publisher의 세 번째 호출, workspace adoption, migration repair, staging/pg_cron 우회, GitHub PR/merge와 배포는 계속 금지한다. 아래 performance migration과 current-main 최종 호환 migration은 격리 구현·측정을 마쳤지만, 새 exact SHA packet과 별도 승인을 받기 전에는 원격에 적용하거나 호출하지 않는다.
+첫 원격 packet 종료 당시 안전 판정은 **BLOCKED / NEW PERFORMANCE CANDIDATE APPROVAL REQUIRED**였다. 기존 publisher의 세 번째 호출, workspace adoption, migration repair, staging/pg_cron 우회, GitHub PR/merge와 배포를 금지하고 아래 performance migration과 current-main 최종 호환 migration을 별도 candidate로 분리했다. 이 candidate의 이후 승인·적용·rollback 결과는 6.10에 기록한다.
 
 ### 6.7 Publisher timeout 원인 조사와 성능 구현
 
@@ -299,7 +299,7 @@ negative control인 `clair-foreign-demo`는 catalog 0개를 유지했다.
 
 ### 6.9 로컬 최종 candidate exact SHA packet
 
-아래 SHA는 current-main 재배치와 최종 호환 보완 뒤 전용 worktree 파일의 정확한 내용 hash다. 기능 commit은 `b465608c`, base는 `origin/main` `00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f`이며 최종 closeout commit 뒤 branch는 3 commits ahead / 0 behind다. 최종 branch-head SHA는 보고서 문서화를 마친 뒤 Git에서 별도로 읽는다. 이 표와 로컬 commit은 원격 실행 승인이 아니다.
+아래 SHA는 current-main 재배치와 최종 호환 보완 뒤 전용 worktree 파일의 정확한 내용 hash다. 기능 commit은 `b465608c`, 별도로 승인된 실행 시점 branch-head는 `4549c6fd36b9347e05361b0d63a610ac33dfd10f`, base는 `origin/main` `00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f`였다. 이 표 자체가 승인은 아니며, 6.10의 별도 승인과 원격 실행 결과가 실제 승인 범위를 기록한다.
 
 | 파일 | SHA-256 |
 | --- | --- |
@@ -310,6 +310,45 @@ negative control인 `clair-foreign-demo`는 catalog 0개를 유지했다.
 | `20260831120100_clinical_master_consultation_runtime_billing_realtime_compatibility.sql` | `6a952519fb7c762d1f5da931b166b7605ddbb54deff58a567ef98091f44f788f` |
 | consultation compatibility rollback-only rehearsal SQL | `744673aef64ff67dae7239a21fb781f8a487d49dedc0951283e9e66fe2083fb7` |
 | consultation compatibility static/rehearsal spec | `92e04acdb2f7268654f5df29c680d2bfff92cf98d9fafaadb75717a6d1af6f6e` |
+
+### 6.10 승인된 성능 후보 원격 실행 결과
+
+승욱의 별도 승인 뒤 candidate commit
+`4549c6fd36b9347e05361b0d63a610ac33dfd10f`과 위 exact file SHA packet으로
+Supabase project `qmerxgzrwaaahpkhjqlc`에 원격 실행했다.
+
+- publisher 직전 read-only gate는 선행 함수 누락 0, target release 0,
+  active publisher/adopter backend 0, master/eligible order `510/510`, execution
+  preset version/current `108/108`, compatibility backfill audit `324`였다.
+  stable-key SHA-256 `2197c142243464c7d14ffc1ae921106ed609084fb960fd4eba2c309f6fe80164`와
+  lineage SHA-256 `b4d56f15dfcf53e867db2e022f6e7c742c2354b507eb4a88feb981b351b039bb`도
+  동결값과 같았다.
+- performance migration은 history `20260831122808`, consultation runtime
+  compatibility migration은 history `20260831122838`로 순서대로 적용됐다.
+  적용 뒤 private publisher owner/config/ACL, public writer definition MD5
+  `a85f22b4af1e2cb1e5262b3ce0993a30`, authenticated-only public execute,
+  retained base writer client execute 회수와 `510/108/108` 기준선을 확인했다.
+- exact payload는 file SHA-256
+  `834812eaea2afb2fafb93ea3b0a23efb5bc7df54ea3ac8977983683523c4e278`,
+  1,982,060 bytes, 689 records / 522 orders였고, 모든 preset이
+  `synthetic_unreviewed`, `clinicalUseAllowed=false`였다.
+- publisher는 `lock_timeout=5s`, `statement_timeout=60s`의 명시적 transaction에서
+  정확히 한 번 호출됐다. 결과는 cumulative publisher line 606 assignment에서
+  SQLSTATE `57014` statement timeout이었다.
+- 2026-08-31 12:37:27 UTC의 즉시 readback은 target release 0, manifest 0,
+  preset version/current `108/108`, master order 510, active backend 0을 반환했다.
+  따라서 이 실행은 **완전 rollback**이며 partial release나 채택 가능한 release가 없다.
+- 적용 후 read-only advisor는 security `INFO 91 / WARN 187`, performance
+  `INFO 402 / WARN 13`을 반환했다. clean advisor 결과를 주장하지 않는다.
+  이 중 master release/current preset의 covering-index 경고는 다음 원격 병목
+  조사 입력으로 보존하되, 기존 경고와의 delta나 timeout 원인으로 아직 단정하지 않는다.
+
+독립 boundary review의 최종 판정은 **COMPLETE ROLLBACK / SAFE STOP**이다.
+두 migration은 권한·호환성 개선으로 유지하지만 publisher 재호출, workspace
+adoption, migration/history repair, release/preset 삭제는 실행하지 않는다. 로컬
+3초대 성능 결과와 달리 이 후보는 원격 60초 gate를 통과하지 못했으므로, 다음
+원격 시도는 원격 전용 병목 조사, 새 performance candidate와 exact SHA, 격리
+검증, 독립 재심사, 별도 승인 이후에만 가능하다.
 
 ## 7. 코드 검증 결과
 
@@ -378,28 +417,28 @@ current-main 재배치 뒤 독립 hard gate는 처음에 **High 0 / Medium 2 / L
 - 결정론적 프리셋·계통검사·최종 release compiler 3개
 - 동결 fixture와 최종 게시 입력
 - generic execution preset foundation, runtime transport, publish/adopt, system exam, publisher, consultation resolver migration 6개
-- 로컬 전용 publisher performance migration과 current-main 상담/billing/Realtime 최종 호환 migration, 두 rollback-only rehearsal과 집중 회귀 spec
+- publisher performance migration과 current-main 상담/billing/Realtime 최종 호환 migration, 두 rollback-only rehearsal과 집중 회귀 spec
 - 병원관리 catalog read/write/UI
 - 차트 초안 prefill·runtime resolver·확정 snapshot transport
 - fulfillment의 `system_exam` queue 차단
 - 타입·도메인 계약과 집중 테스트
 - 작업 항목, 구현 보고서, 문서 내비게이션
 
-기존 확정 기록과 fulfillment를 바꾸는 DML, Airtable, Vercel 배포, dependency version은 변경하지 않았다. 승인된 원격 Supabase에는 migration 6개와 두 publisher 시도가 실행됐지만 adoption은 실행하지 않았다. `npm ci --ignore-scripts`는 검증용 로컬 `node_modules`만 준비했으며 package manifest/lockfile은 수정하지 않았다.
+기존 확정 기록과 fulfillment를 바꾸는 DML, Airtable, Vercel 배포, dependency version은 변경하지 않았다. 승인된 원격 Supabase에는 기존 PR-022 migration 6개에 더해 performance와 consultation runtime compatibility migration이 적용됐다. 이전 publisher 두 호출은 524, 새 성능 후보의 단 한 번 호출은 SQLSTATE `57014`로 끝났고 세 실행 모두 완전 rollback됐다. adoption은 실행하지 않았다. `npm ci --ignore-scripts`는 검증용 로컬 `node_modules`만 준비했으며 package manifest/lockfile은 수정하지 않았다.
 
 ## 10. 현재 차단 조건과 재개 계획
 
-1. 기존 publisher를 세 번째로 호출하지 않는다.
-2. 완료된 로컬 hard-gate 판정과 exact file SHA packet을 보존한다.
-3. current-main 재배치 후보의 최종 branch-head SHA와 exact file SHA를 동결한 뒤, 별도 원격 쓰기 승인을 받는다.
-4. 새 승인 뒤 performance migration과 최종 호환 migration 두 개만 원격 적용하고 function owner/config/ACL과 기존 `108/108` 기준선을 다시 읽는다.
-5. 689/522 payload를 한 번 게시하고 release 1, `630/522`, manifest 689, mismatch 0, 522개 synthetic inactive, 확정/fulfillment/catalog/foreign 불변을 확인한다.
-6. publisher 성공 증거 뒤에만 세 workspace adoption, advisor, 인증 병원관리·차트 smoke를 진행한다.
-7. GitHub push/PR/merge와 Ready deployment는 별도 전달 범위로 유지한다.
+1. SQLSTATE `57014`로 끝난 candidate publisher를 재호출하지 않는다.
+2. 원격에 적용된 performance와 consultation runtime compatibility migration은 유지하고 history repair나 역방향 rollback을 하지 않는다.
+3. workspace adoption, release/preset 삭제, backend cancel, Airtable, GitHub push/PR/merge와 Vercel 배포를 진행하지 않는다.
+4. 원격 60초 timeout의 DB 단계·lock·table/index 상태를 read-only로 조사하고, 현재 performance migration과 다른 새 candidate를 만든다.
+5. 새 candidate는 exact 689/522 payload로 격리 성능·원자성·ACL/RLS·fingerprint·foreign/customization 불변을 다시 증명한다.
+6. 새 commit과 exact file SHA를 동결하고 독립 security boundary review와 별도 원격 쓰기 승인을 받는다.
+7. 새 publisher 성공 증거가 생긴 뒤에만 세 workspace adoption, advisor, 인증 병원관리·차트 smoke를 진행한다.
 8. 임상 검토 전에는 계속 `clinicalUseAllowed=false`를 유지한다.
 
 ## 11. 현재 결론
 
 “마스터에 프리셋 세부값이 있고, 워크스페이스로 함께 복사되며, 병원이 수정·사용 중지하고, 차트 추가 시 자동 입력되고, 확정 후에는 불변으로 남는가?”에 대한 로컬 구현 답은 **예**다.
 
-“지금 원격 병원에서 바로 임상 사용 가능한가?”에 대한 답은 **아니오**다. 원격 migration foundation은 적용됐지만 publish는 두 번 모두 완전 rollback됐고 adoption은 실행되지 않았다. 성능 candidate는 로컬 격리 검증을 통과했지만 아직 원격 적용·게시 승인을 받지 않았다. 새 exact SHA 승인, 원격 publish/adoption 검증, 합성 프리셋 임상 검토와 별도 활성화가 남아 있다.
+“지금 원격 병원에서 바로 임상 사용 가능한가?”에 대한 답은 **아니오**다. 원격에는 기존 foundation과 새 performance·compatibility migration까지 적용됐지만, 승인된 성능 후보 publish도 60초 timeout 뒤 완전 rollback됐고 adoption은 실행되지 않았다. 새 원인 조사와 performance candidate, exact SHA 승인, 원격 publish/adoption 검증, 합성 프리셋 임상 검토와 별도 활성화가 남아 있다.
