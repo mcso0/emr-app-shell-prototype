@@ -4,6 +4,12 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import {
+  createMockChartOrderBillingSummaryFromMutationRows,
+  mapChartOrderBillingSummary,
+  type ChartOrderBillingSummary,
+} from "@/features/chart/chart-order-billing-summary-contract";
+import { mockOrders } from "@/mocks/emr-domain";
 
 export const chartOrderExecutionMutationActions = [
   "amend",
@@ -57,7 +63,11 @@ export type ChartOrderExecutionMutationDenialReason =
   | "task_unavailable";
 
 export type ChartOrderExecutionMutationGatewayResult =
-  | { ok: true; mutation: ChartOrderExecutionMutationResult }
+  | {
+      ok: true;
+      billingSummary: ChartOrderBillingSummary;
+      mutation: ChartOrderExecutionMutationResult;
+    }
   | {
       ok: false;
       status: 403;
@@ -94,6 +104,7 @@ type MutationField =
 export type ChartOrderExecutionMutationSaveResult =
   | {
       ok: true;
+      billingSummary: ChartOrderBillingSummary;
       status: 200;
       mutation: ChartOrderExecutionMutationResult;
       enforcedBy: "chart-order-execution-mutation";
@@ -162,6 +173,19 @@ export async function mutateChartOrderExecution({
     };
   }
 
+  const chartViewPermission = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: actorUserId,
+    workspaceId,
+    requiredPermission: "chart:view",
+  });
+  if (!chartViewPermission.allowed) {
+    return {
+      ok: false,
+      status: chartViewPermission.denialReason === "unauthenticated" ? 401 : 403,
+      denialReason: chartViewPermission.denialReason ?? "permission_missing",
+    };
+  }
+
   const result = await gateway.mutateOrderExecution({
     action: validInput.action,
     actorUserId: actorUserId ?? "",
@@ -181,6 +205,7 @@ export async function mutateChartOrderExecution({
 
   return {
     ok: true,
+    billingSummary: result.billingSummary,
     status: 200,
     mutation: result.mutation,
     enforcedBy: "chart-order-execution-mutation",
@@ -223,8 +248,11 @@ export function createSupabaseChartOrderExecutionMutationGateway(
       );
       if (error) return mapMutationError(error.message);
       const mutation = mapMutationResult(data);
-      return mutation
-        ? { ok: true, mutation }
+      const billingSummary = isPlainObject(data)
+        ? mapChartOrderBillingSummary(data.billingSummary)
+        : null;
+      return mutation && billingSummary
+        ? { ok: true, billingSummary, mutation }
         : { ok: false, status: 500, error: "invalid_rpc_result" };
     },
   };
@@ -251,7 +279,16 @@ export function createMockChartOrderExecutionMutationGateway(
       const existing = requests.get(key);
       if (existing) {
         return existing.request === request
-          ? { ok: true, mutation: existing.result }
+          ? {
+              ok: true,
+              billingSummary: buildMockExecutionBillingSummary(
+                input.workspaceId,
+                input.orderId,
+                existing.result,
+                now(),
+              ),
+              mutation: existing.result,
+            }
           : { ok: false, status: 409, denialReason: "idempotency_conflict" };
       }
 
@@ -281,7 +318,16 @@ export function createMockChartOrderExecutionMutationGateway(
         revisionNo: input.expectedRevisionNo + 1,
       };
       requests.set(key, { request, result: mutation });
-      return { ok: true, mutation };
+      return {
+        ok: true,
+        billingSummary: buildMockExecutionBillingSummary(
+          input.workspaceId,
+          input.orderId,
+          mutation,
+          now(),
+        ),
+        mutation,
+      };
     },
   };
 }
@@ -431,6 +477,31 @@ function mapMutationResult(value: unknown): ChartOrderExecutionMutationResult | 
     orderRevisionId: value.orderRevisionId,
     revisionNo: value.revisionNo,
   };
+}
+
+function buildMockExecutionBillingSummary(
+  workspaceId: string,
+  orderId: string,
+  mutation: ChartOrderExecutionMutationResult,
+  generatedAt: string,
+) {
+  const encounterId = mockOrders.find(
+    (order) => order.workspaceId === workspaceId && order.id === orderId,
+  )?.encounterId ?? `encounter-${orderId}`;
+  return createMockChartOrderBillingSummaryFromMutationRows({
+    encounterId,
+    etag: `"mock-execution-${mutation.revisionNo}"`,
+    generatedAt,
+    rows: [
+      {
+        orderConfirmationStatus: "confirmed",
+        orderId,
+        rowType: "individual",
+        status: mutation.order.orderStatus === "cancelled" ? "cancelled" : "confirmed",
+      },
+    ],
+    workspaceId,
+  });
 }
 
 function mapMutationError(message?: string): ChartOrderExecutionMutationGatewayResult {

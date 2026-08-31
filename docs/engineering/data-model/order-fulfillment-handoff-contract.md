@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-31
+last_updated: 2026-08-31
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -126,6 +126,32 @@ Type-specific `detail` examples:
 - `clair_sync_billing_invoice_candidates` validates the same workspace/encounter/order scope, excludes cancelled and non-billable rows, lazily creates a draft invoice anchor when needed, upserts deterministic invoice lines, and recalculates invoice totals from server-owned order snapshots.
 
 The PR-017 path consolidates stale-summary validation, candidate selection, invoice-line linkage, invoice total refresh, candidate status update, and audit into `clair_request_chart_order_billing`. It holds the encounter billing advisory lock, accepts only server-derived requestable IDs, and records an actor/workspace/encounter-bound idempotency command so a lost success response can be replayed without duplicating the invoice, line, audit event, or command. `order_billing_candidates` is the invoice-line authority after a billing-only correction; its billing name, quantity, unit price, and amount must exactly match the generated line. The legacy two-RPC action remains compatibility code but is not the footer action authority.
+
+`CLINICAL-BILLING-PR-020` makes the current Summary part of the existing chart
+mutation success contract. `clair_save_chart_order_draft`,
+`clair_confirm_chart_order_candidates`, and
+`clair_mutate_chart_order_execution` keep their public names and input
+signatures, finish the existing mutation first, and then compute
+`billingSummary` in the same database transaction. An idempotent replay must
+reuse the existing mutation result but recompute the current Summary; it must
+not persist or replay a historical Summary snapshot. Their renamed base
+functions are not executable by API roles, while the public wrappers retain
+actor equality, active workspace membership, and the existing action-specific
+permission checks. Because the returned Summary contains chart and financial
+read data, every Summary-bearing mutation also requires `chart:view`; a custom
+role with only `chart:update`, `order:update`, or `billing:issue` must not gain
+Summary access through the mutation response.
+
+The chart client accepts a mutation Summary only when both `workspaceId` and
+`encounterId` match the active chart. Accepting it invalidates older Summary GET
+sequences and updates Summary, ETag, freshness, and error state as one
+authoritative transition. A normal successful mutation therefore has no
+trailing Summary GET. GET remains the recovery path for initial entry, safe
+focus/visibility return, revision conflict, lost-response readback, and explicit
+retry. While a draft is unsaved, the UI may apply only its order amount delta to
+the last server Summary; discounts, surcharges, tax, payment, outstanding,
+invoice, and billing authority stay server-owned. Preview, invalid, failed,
+conflicted, stale, and unauthoritative states must keep `Order 청구` disabled.
 
 `DEN-349` originally fixed candidate promotion language around a user-facing `청구 확정` step:
 

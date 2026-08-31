@@ -74,6 +74,7 @@ test("persisted order edits refresh the authoritative footer amount without relo
   let summaryReads = 0;
   let mutationPersisted = false;
   let readsAfterMutation = 0;
+  let mutationRequests = 0;
 
   await page.route(
     "**/api/workspaces/clair-demo/chart/order-billing-summary*",
@@ -98,6 +99,7 @@ test("persisted order edits refresh the authoritative footer amount without relo
         return;
       }
       const response = await route.fetch();
+      mutationRequests += 1;
       const body = route.request().postDataJSON() as {
         rows?: Array<{ orderId?: string; quantity?: number }>;
       };
@@ -108,7 +110,18 @@ test("persisted order edits refresh the authoritative footer amount without relo
         estimatedTotal = 139_000;
         mutationPersisted = true;
       }
-      await route.fulfill({ response });
+      const responseBody = (await response.json()) as Record<string, unknown>;
+      await route.fulfill({
+        response,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...responseBody,
+          billingSummary: createSummary({
+            etag: '"billing-draft-response"',
+            estimatedTotal,
+          }),
+        }),
+      });
     },
   );
 
@@ -117,13 +130,18 @@ test("persisted order edits refresh the authoritative footer amount without relo
   await expect(footer).toContainText("134,500원");
 
   await page.getByLabel("Maropitant 16mg T 수량 수정").fill("2");
+  await expect(footer).toContainText("오더 예상 총액");
+  await expect(footer).toContainText("예상 · 저장 중");
+  await expect(footer).toContainText("139,000원");
   await expect(page.getByTestId("chart-order-save-status")).toContainText(
     "저장됨",
     { timeout: 10_000 },
   );
 
-  await expect.poll(() => readsAfterMutation).toBeGreaterThan(0);
+  await expect.poll(() => mutationRequests).toBe(1);
+  expect(readsAfterMutation).toBe(0);
   await expect(footer).toContainText("139,000원");
+  await expect(footer).toContainText("청구 예상 총액");
 });
 
 test("focus revalidation ignores an older response that finishes last", async ({
@@ -291,6 +309,146 @@ test("a delayed GET cannot overwrite a successful billing POST summary", async (
   ).toBeDisabled();
 });
 
+test("a delayed GET cannot overwrite the Summary returned by a draft mutation", async ({
+  page,
+}) => {
+  let delayFocusRead = false;
+  let mutationRequests = 0;
+  let releaseDelayedRead!: () => void;
+  const delayedReadGate = new Promise<void>((resolve) => {
+    releaseDelayedRead = resolve;
+  });
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
+    async (route) => {
+      if (!delayFocusRead) {
+        await fulfillSummary(
+          route,
+          createSummary({ etag: '"billing-initial"', estimatedTotal: 100_000 }),
+        );
+        return;
+      }
+      await delayedReadGate;
+      await fulfillSummary(
+        route,
+        createSummary({ etag: '"billing-old-get"', estimatedTotal: 110_000 }),
+      );
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.fallback();
+        return;
+      }
+      mutationRequests += 1;
+      const response = await route.fetch();
+      const body = (await response.json()) as Record<string, unknown>;
+      await route.fulfill({
+        response,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...body,
+          billingSummary: createSummary({
+            etag: '"billing-draft-success"',
+            estimatedTotal: 120_000,
+          }),
+        }),
+      });
+    },
+  );
+
+  await page.goto(scenarioUrl);
+  const footer = page.getByTestId("chart-order-footer");
+  await expect(footer).toContainText("100,000원");
+
+  delayFocusRead = true;
+  await dispatchWindowFocus(page);
+  await page.getByLabel("Maropitant 16mg T 수량 수정").fill("2");
+  await expect.poll(() => mutationRequests, { timeout: 5_000 }).toBe(1);
+  await expect(footer).toContainText("120,000원");
+
+  releaseDelayedRead();
+  await page.waitForTimeout(100);
+  await expect(footer).toContainText("120,000원");
+  await expect(footer).not.toContainText("110,000원");
+});
+
+test("invalid quantity keeps the last server amount and blocks billing", async ({
+  page,
+}) => {
+  let mutationRequests = 0;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
+    (route) =>
+      fulfillSummary(
+        route,
+        createSummary({ etag: '"billing-initial"', estimatedTotal: 100_000 }),
+      ),
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() === "PATCH") mutationRequests += 1;
+      await route.fallback();
+    },
+  );
+
+  await page.goto(scenarioUrl);
+  const footer = page.getByTestId("chart-order-footer");
+  await expect(footer).toContainText("100,000원");
+  await page.getByRole("textbox", { name: /수량 수정/ }).first().fill("0");
+
+  await expect(footer).toContainText("입력 확인 필요 · 금액 미반영");
+  await expect(footer).toContainText("100,000원");
+  await expect(
+    footer.getByRole("button", { name: "Order 청구" }),
+  ).toBeDisabled();
+  await page.waitForTimeout(850);
+  expect(mutationRequests).toBe(0);
+});
+
+test("a failed draft save restores the last server amount and blocks billing", async ({
+  page,
+}) => {
+  let mutationRequests = 0;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
+    (route) =>
+      fulfillSummary(
+        route,
+        createSummary({ etag: '"billing-initial"', estimatedTotal: 100_000 }),
+      ),
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.fallback();
+        return;
+      }
+      mutationRequests += 1;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, status: 500, error: "db_write_failed" }),
+      });
+    },
+  );
+
+  await page.goto(scenarioUrl);
+  const footer = page.getByTestId("chart-order-footer");
+  await page.getByRole("textbox", { name: /수량 수정/ }).first().fill("2");
+  await expect(footer).toContainText("오더 예상 총액");
+  await expect.poll(() => mutationRequests, { timeout: 5_000 }).toBe(1);
+  await expect(footer).toContainText("저장 실패 · 금액 미반영");
+  await expect(footer).toContainText("100,000원");
+  await expect(
+    footer.getByRole("button", { name: "Order 청구" }),
+  ).toBeDisabled();
+});
+
 test("a persisted draft is reflected when the following confirmation fails", async ({
   page,
 }) => {
@@ -319,7 +477,18 @@ test("a persisted draft is reflected when the following confirmation fails", asy
       }
       const response = await route.fetch();
       draftPersisted = true;
-      await route.fulfill({ response });
+      const responseBody = (await response.json()) as Record<string, unknown>;
+      await route.fulfill({
+        response,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...responseBody,
+          billingSummary: createSummary({
+            etag: '"billing-draft-saved"',
+            estimatedTotal: 104_500,
+          }),
+        }),
+      });
     },
   );
   await page.route(
@@ -353,7 +522,7 @@ test("a persisted draft is reflected when the following confirmation fails", asy
     .click();
 
   await expect.poll(() => confirmationRequests).toBeGreaterThan(0);
-  await expect.poll(() => readsAfterDraft).toBeGreaterThan(0);
+  expect(readsAfterDraft).toBe(0);
   await expect(footer).toContainText("104,500원");
 });
 
