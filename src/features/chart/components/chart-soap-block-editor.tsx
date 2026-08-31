@@ -4,10 +4,8 @@ import { useMemo, useState } from "react";
 import { ko } from "@blocknote/core/locales";
 import { filterSuggestionItems } from "@blocknote/core/extensions";
 import {
-  getDefaultReactSlashMenuItems,
   SuggestionMenuController,
   useCreateBlockNote,
-  type DefaultReactSuggestionItem,
 } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 
@@ -16,170 +14,14 @@ import {
   CdsActionsPlusSquareIcon,
   CdsActionsRotateCcwIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import {
-  CdsCommunicationCameraIcon,
-  CdsCommunicationVideoIcon,
-} from "@/components/cds-icons/communication-and-media";
 import { CdsContentCommandIcon } from "@/components/cds-icons/content-and-editor";
-import {
-  CdsMedicalClipboardPenIcon,
-  CdsMedicalScanLineIcon,
-} from "@/components/cds-icons/medical-and-domain";
 
 import {
   chartSoapBlockSchema,
   createDefaultSoapTemplateBlocks,
-  createMusculoskeletalSoapTemplateBlocks,
-  type ChartSoapBlock,
-  type ChartSoapBlockEditorInstance,
-  type ChartSoapPartialBlock,
 } from "./chart-soap-block-schema";
+import { buildSoapCommandItems } from "./chart-soap-block-commands";
 import styles from "./chart-soap-block-editor.module.css";
-
-const mediaMenuTitles = new Set([
-  ko.slash_menu.image.title,
-  ko.slash_menu.video.title,
-  ko.slash_menu.audio.title,
-  ko.slash_menu.file.title,
-]);
-
-function hasSoapSystem(
-  editor: ChartSoapBlockEditorInstance,
-  systemLabel: string,
-): boolean {
-  let found = false;
-  editor.forEachBlock((block) => {
-    if (
-      block.type === "soapSection" &&
-      block.props.systemLabel === systemLabel
-    ) {
-      found = true;
-      return false;
-    }
-    return true;
-  });
-  return found;
-}
-
-function insertSoapTemplate(
-  editor: ChartSoapBlockEditorInstance,
-  blocks: ChartSoapPartialBlock[],
-) {
-  if (!blocks.length) return;
-
-  const cursorBlock = editor.getTextCursorPosition().block;
-  let rootBlock: ChartSoapBlock = cursorBlock;
-  let parentBlock = editor.getParentBlock(rootBlock);
-  while (parentBlock) {
-    rootBlock = parentBlock;
-    parentBlock = editor.getParentBlock(rootBlock);
-  }
-
-  const insertedBlocks =
-    rootBlock.id === cursorBlock.id
-      ? editor.replaceBlocks([cursorBlock], blocks).insertedBlocks
-      : (() => {
-          editor.removeBlocks([cursorBlock]);
-          return editor.insertBlocks(blocks, rootBlock, "after");
-        })();
-  const lastInsertedBlock = insertedBlocks.at(-1);
-  if (!lastInsertedBlock) return;
-  const editableChild = lastInsertedBlock.children.at(0);
-
-  if (editableChild) {
-    editor.setTextCursorPosition(editableChild, "end");
-  }
-}
-
-export function buildSoapSuggestionItems({
-  editor,
-  onNotice,
-}: {
-  editor: ChartSoapBlockEditorInstance;
-  onNotice: (message: string) => void;
-}): DefaultReactSuggestionItem[] {
-  const insertTemplate = ({
-    blocks,
-    systemLabel,
-  }: {
-    blocks: ChartSoapPartialBlock[];
-    systemLabel: string;
-  }) => {
-    if (hasSoapSystem(editor, systemLabel)) {
-      onNotice(`${systemLabel} 템플릿이 이미 문서에 있습니다.`);
-      return;
-    }
-
-    insertSoapTemplate(editor, blocks);
-    onNotice(`${systemLabel} 템플릿을 추가했습니다.`);
-  };
-
-  const templateItems: DefaultReactSuggestionItem[] = [
-    {
-      title: "기본 SOAP 템플릿",
-      subtext: "주관적·객관적·평가·계획 블록을 한 번에 추가합니다.",
-      aliases: ["soap", "so", "기본", "주관적", "객관적", "평가", "계획"],
-      group: "SOAP 템플릿",
-      icon: <CdsMedicalClipboardPenIcon size={18} />,
-      onItemClick: () =>
-        insertTemplate({
-          blocks: createDefaultSoapTemplateBlocks(),
-          systemLabel: "기본 SOAP",
-        }),
-    },
-    {
-      title: "근골격계 SOAP 템플릿",
-      subtext: "파행 문진·근골격 검사·감별 진단·처치 블록을 추가합니다.",
-      aliases: ["근골격", "파행", "관절", "musculoskeletal"],
-      group: "SOAP 템플릿",
-      icon: <CdsMedicalScanLineIcon size={18} />,
-      onItemClick: () =>
-        insertTemplate({
-          blocks: createMusculoskeletalSoapTemplateBlocks(),
-          systemLabel: "근골격계",
-        }),
-    },
-  ];
-
-  const defaultItems = getDefaultReactSlashMenuItems(editor).filter(
-    (item) => !mediaMenuTitles.has(item.title),
-  );
-
-  const integrationItems: DefaultReactSuggestionItem[] = [
-    {
-      title: "이미지 추가 · 준비 중",
-      subtext: "임상 첨부 저장소와 권한 계약이 연결되면 활성화됩니다.",
-      aliases: ["image", "사진", "첨부"],
-      badge: "미연동",
-      group: "외부 연동",
-      icon: <CdsCommunicationCameraIcon size={18} />,
-      onItemClick: () =>
-        onNotice("이미지 추가는 임상 첨부 저장소 연동 후 활성화됩니다."),
-    },
-    {
-      title: "동영상 추가 · 준비 중",
-      subtext: "임상 미디어 저장·조회 계약이 연결되면 활성화됩니다.",
-      aliases: ["video", "동영상", "영상"],
-      badge: "미연동",
-      group: "외부 연동",
-      icon: <CdsCommunicationVideoIcon size={18} />,
-      onItemClick: () =>
-        onNotice("동영상 추가는 임상 미디어 저장소 연동 후 활성화됩니다."),
-    },
-    {
-      title: "광학검사 불러오기 · 미연동",
-      subtext: "권한이 있는 연결 장치와 검사 결과가 있을 때만 활성화됩니다.",
-      aliases: ["광학", "검사", "device", "optical"],
-      badge: "장치 필요",
-      group: "외부 연동",
-      icon: <CdsMedicalScanLineIcon size={18} />,
-      onItemClick: () =>
-        onNotice("연결된 광학검사 장치와 검사 결과가 없어 사용할 수 없습니다."),
-    },
-  ];
-
-  return [...templateItems, ...defaultItems, ...integrationItems];
-}
 
 export function ChartSoapBlockEditor() {
   const [documentJson, setDocumentJson] = useState("");
@@ -194,13 +36,13 @@ export function ChartSoapBlockEditor() {
       ...ko,
       placeholders: {
         ...ko.placeholders,
-        default: "내용을 입력하거나 '/'를 눌러 블록을 추가하세요.",
-        emptyDocument: "'/'를 눌러 SOAP 템플릿을 추가하세요.",
+        default: "내용을 입력하거나, ‘/’를 입력하세요",
+        emptyDocument: "내용을 입력하거나, ‘/’를 입력하세요",
       },
     },
   });
   const suggestionItems = useMemo(
-    () => buildSoapSuggestionItems({ editor, onNotice: setNotice }),
+    () => buildSoapCommandItems({ editor, onNotice: setNotice }),
     [editor],
   );
 

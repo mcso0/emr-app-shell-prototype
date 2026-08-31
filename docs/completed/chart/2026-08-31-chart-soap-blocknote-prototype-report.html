@@ -96,7 +96,7 @@
 
       <a
         class="review-link"
-        href="http://127.0.0.1:6011/?path=/story/features-chart-soap-blocknote-prototype--representative-review"
+        href="http://127.0.0.1:6012/?path=/story/features-chart-soap-live-blocknote-figma-prototype--representative-review"
       >인터랙티브 시안 열기</a>
 
       <h2>기획·UX 스펙</h2>
@@ -106,7 +106,7 @@
         <li><code>/</code>와 왼쪽 <code>+</code>는 같은 블록·SOAP 템플릿 메뉴를 연다.</li>
         <li>텍스트 선택 시 BlockNote 기본 플로팅 포맷 툴바를 사용한다.</li>
         <li>기본 SOAP와 근골격계 SOAP 템플릿을 한 번에 삽입한다.</li>
-        <li>이미지·동영상·광학검사는 연동 계약 전까지 “미연동”으로 안내하고 삽입하지 않는다.</li>
+        <li>이미지·동영상은 브라우저 세션 안에서 추가하고 인라인 미리보기·재생을 시험한다. 광학검사는 장치 계약 전까지 “장치 필요”로 유지한다.</li>
       </ul>
 
       <h2>이번에 변경한 것</h2>
@@ -114,6 +114,7 @@
         <li><code>@blocknote/core</code>, <code>react</code>, <code>shadcn</code> 0.54.0을 정확 버전으로 추가</li>
         <li>SOAP 섹션 커스텀 블록과 두 종류의 한국어 템플릿 추가</li>
         <li>BlockNote의 메뉴·드래그·선택 툴바는 유지하고 CLAiR 토큰과 Pretendard만 적용</li>
+        <li>BlockNote 기본 이미지·동영상 블록, 업로드 패널, 이미지 미리보기 전환, 영상 재생 컨트롤을 세션 전용 object URL로 연결</li>
         <li>향후 저장 정본 검토를 위한 BlockNote JSON 인스펙터 추가</li>
       </ul>
 
@@ -121,7 +122,7 @@
       <table>
         <tr>
           <th>PASS · 인터랙션</th>
-          <td>SOAP 삽입, 슬래시 메뉴, 왼쪽 추가·드래그 컨트롤, 선택 툴바, 초기화, JSON</td>
+          <td>35개 Storybook 상호작용: SOAP 삽입, 슬래시·플러스 메뉴, 왼쪽 추가·드래그 컨트롤, 선택 툴바, 접는 제목, 기본 블록 입력, 이미지·영상 업로드/미리보기/재생, 잘못된 파일 복구, 320px 반응형</td>
         </tr>
         <tr>
           <th>PASS · 빌드</th>
@@ -138,7 +139,7 @@
 
       <h2>현재 경계와 다음 결정</h2>
       <p class="caveat">
-        이번 시안은 네트워크·DB에 저장하지 않고 라이브 진료 화면도 교체하지 않았다.
+        이번 시안의 로컬 미디어 URL은 새로고침 시 유지되지 않으며 네트워크·DB에 저장하지 않고 라이브 진료 화면도 교체하지 않았다.
         승인 후 다음 작업에서 BlockNote JSON 정본, 기존 S/O/A/P 필드 호환 투영,
         과거 기록 hydration, autosave·충돌·감사 계약을 먼저 정한 뒤 라이브 에디터를
         전환한다. 그 전까지 기존 직접 Tiptap 의존성은 제거하지 않는다.
