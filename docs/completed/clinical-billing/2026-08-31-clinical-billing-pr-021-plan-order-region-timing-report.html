@@ -56,7 +56,7 @@
         <table>
           <thead><tr><th>항목</th><th>결과</th><th>판단</th></tr></thead>
           <tbody>
-            <tr><td>기존 Vercel 함수</td><td><code>iad1</code>, 합성 저장 확정 약 2.1–2.8초</td><td>데이터 리전과 장거리 경로</td></tr>
+            <tr><td>기존 Vercel 함수</td><td><code>iad1</code>, 합성 편집 30회: 예상 median/p95 56/207ms, 확정 median/p95 2,579/3,388ms</td><td>확정 경로 지연 재현. 700ms debounce와 UI overhead 포함</td></tr>
             <tr><td>Supabase</td><td><code>ap-southeast-2</code>, ACTIVE_HEALTHY</td><td><code>syd1</code> 정렬 조건 충족</td></tr>
             <tr><td>Summary 30회 warm</td><td>median 0.691ms, p95 7.635ms</td><td>DB p95 200ms 기준 미만</td></tr>
             <tr><td>latest Task lookup</td><td>7 candidates, 5.710ms, index scan, disk read 0</td><td>새 인덱스 근거 없음</td></tr>
@@ -72,7 +72,8 @@
           <li><span class="ok">PASS:</span> 공식 Vercel 문서에서 project-level <code>vercel.json</code> region 설정을 확인했다.</li>
           <li><span class="ok">PASS:</span> secret scan, docs links, diff whitespace, 전체 ESLint, TypeScript, production build.</li>
           <li><span class="ok">PASS:</span> Preview <code>dpl_9uBmmV3NiuA2txZVbh3ggGuo7A32</code> Ready, Vercel inspect에서 Next.js Lambda <code>syd1</code> 배치 확인.</li>
-          <li><span class="warn">STAGING GATE:</span> 인증된 Summary GET 30회 HTTP median/p95는 고정 스테이징 전환 승인 뒤 timing header로 수집한다. 브라우저 세션을 추출하거나 auth 경계를 약화하지 않는다.</li>
+          <li><span class="ok">PASS:</span> 기존 고정 스테이징에서 합성 수량 편집 30회 후 201,000원으로 복구했고, 직접 Summary readback도 1건·201,000원으로 일치했다.</li>
+          <li><span class="warn">STAGING GATE:</span> 순수 Summary GET route 30회 HTTP median/p95는 고정 스테이징 전환 승인 뒤 timing header로 수집한다. 브라우저 세션을 추출하거나 auth 경계를 약화하지 않는다.</li>
         </ul>
       </section>
 

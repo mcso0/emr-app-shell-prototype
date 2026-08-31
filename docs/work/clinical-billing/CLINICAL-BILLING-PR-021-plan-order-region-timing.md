@@ -49,10 +49,14 @@ region before considering any database index.
 
 ## Baseline And Index Decision
 
-- The PR-020 fixed-staging synthetic edit took approximately 2.1–2.8 seconds
-  from save start to authoritative amount while its Functions were in `iad1`.
-  This is preliminary mutation evidence, not a 30-request HTTP Summary
-  benchmark.
+- On the current `iad1` fixed staging, 30 alternating quantity edits on one
+  synthetic order measured client-observed preview median 56ms / p95 207ms and
+  edit-to-authoritative median 2,579ms / p95 3,388ms (min 2,018ms, max
+  4,869ms). This includes the 700ms continuous-input debounce and browser/UI
+  overhead, so it is a user-perceived mutation baseline rather than pure route
+  execution time.
+- A final synthetic restore completed in 2,221ms. Direct Summary readback then
+  confirmed one draft order and 201,000원, matching the UI.
 - Thirty warm calls to the internal Summary function on the same synthetic
   encounter measured median 0.691ms and p95 7.635ms.
 - The latest-Task lateral lookup on a seeded `clair-demo` encounter with seven
@@ -60,11 +64,11 @@ region before considering any database index.
   `order_tasks_workspace_id_order_id_attempt_no_key` index, and read zero disk
   blocks.
 - These results do not meet the plan's DB-index trigger. PR-021 adds no index.
-- The exact authenticated 30-request HTTP baseline remains a fixed-staging gate:
-  current browser isolation permits UI smoke but does not expose session
-  material to command-line benchmarking. It must be collected through the
-  deployed timing header after the approved fixed-staging transition without
-  weakening auth or inspecting browser storage.
+- The exact authenticated 30-request Summary GET route baseline remains a
+  fixed-staging gate: current browser isolation permits UI state measurement
+  but does not expose session material to command-line benchmarking. It must be
+  collected through the deployed timing header after the approved fixed-staging
+  transition without weakening auth or inspecting browser storage.
 
 ## Done When
 
