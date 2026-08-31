@@ -1,6 +1,6 @@
 ---
 id: "CLINICAL-BILLING-PR-020"
-status: "human_review"
+status: "done"
 area: "clinical-billing"
 priority: "P0"
 target_pr: "#681"
@@ -101,3 +101,22 @@ boundaries.
 - A pull request may provide a Preview candidate, but remote DB migration,
   fixed staging, `main`, and production remain blocked until the exact source
   SHA, target, migration, smoke path, and rollback candidate receive approval.
+
+## Release Evidence
+
+- GitHub PR `#681` merged to `staging` as
+  `e230d2db56283e913da32c2c737cf7df48db214e`; Release Check run
+  `33363968392` passed.
+- Approved migration
+  `20260831053359_chart_order_mutation_billing_summary.sql` was applied to the
+  inspected `ap-southeast-2` shared staging project. Remote wrapper/base ACL,
+  synthetic atomic-confirmation and revision replay, and rollback residue
+  checks passed.
+- Fixed staging alias run `33364502104` passed for Vercel deployment
+  `dpl_CXPRbT2rhYgKQgToa5kcnifbVY2o` built from the same merge SHA.
+- Authenticated synthetic smoke showed the estimate in 64ms on the measured
+  restore edit, changed the authoritative amount from 201,000원 to 402,000원,
+  and restored it to 201,000원. The two normal saves produced two mutation
+  PATCH requests and zero trailing Summary GET requests.
+- `origin/main` and the production deployment remained unchanged. Region and
+  request-stage performance work continues in `CLINICAL-BILLING-PR-021`.

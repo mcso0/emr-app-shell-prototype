@@ -34,6 +34,7 @@ import {
 } from "@/features/fulfillment/server-fulfillment-work-item";
 import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
+import { createServerTimingRecorder } from "@/lib/http/server-timing";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -100,22 +101,29 @@ export async function GET(request: Request, { params }: RouteContext) {
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  const { workspaceId } = await params;
-  const serverSession = await readServerSession();
-  const identity = resolveRoleUpdateActorIdentity({
-    serverSession,
-    demoHeaderUserId: request.headers.get(demoSessionUserIdHeader),
+  const timing = createServerTimingRecorder({
+    method: "PATCH",
+    route: "chart_order_action",
   });
+  const { workspaceId } = await params;
+  const identity = await timing.measure("session", async () =>
+    resolveRoleUpdateActorIdentity({
+      serverSession: await readServerSession(),
+      demoHeaderUserId: request.headers.get(demoSessionUserIdHeader),
+    }),
+  );
 
   if (!identity.ok) {
-    return Response.json(
-      {
-        ok: false,
-        denialReason: identity.denialReason,
-        sessionStatus: identity.sessionStatus,
-        sessionReason: identity.sessionReason,
-      },
-      { status: 401 }
+    return timing.respond(
+      Response.json(
+        {
+          ok: false,
+          denialReason: identity.denialReason,
+          sessionStatus: identity.sessionStatus,
+          sessionReason: identity.sessionReason,
+        },
+        { status: 401 },
+      ),
     );
   }
 
@@ -125,7 +133,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     workspaceId,
     operation: "chart_order_action_save",
   });
-  if (rateLimitResponse) return rateLimitResponse;
+  if (rateLimitResponse) return timing.respond(rateLimitResponse);
 
   const input = await readJsonBody(request);
   const expectedEtagHeader = request.headers.get(
@@ -133,67 +141,82 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   );
   if (input.expectedEtag !== undefined || Array.isArray(input.orderIds)) {
     if (!expectedEtagHeader || !input.expectedEtag) {
-      return Response.json(
-        { ok: false, status: 428, error: "if_match_required", message: "오더 버전 확인이 필요합니다." },
-        { status: 428 },
+      return timing.respond(
+        Response.json(
+          { ok: false, status: 428, error: "if_match_required", message: "오더 버전 확인이 필요합니다." },
+          { status: 428 },
+        ),
       );
     }
     if (expectedEtagHeader !== input.expectedEtag) {
-      return Response.json(
-        { ok: false, status: 400, error: "etag_header_body_mismatch", message: "오더 버전 정보가 일치하지 않습니다." },
-        { status: 400 },
+      return timing.respond(
+        Response.json(
+          { ok: false, status: 400, error: "etag_header_body_mismatch", message: "오더 버전 정보가 일치하지 않습니다." },
+          { status: 400 },
+        ),
       );
     }
   }
-  const client = identity.source === "supabase_session" ? await createClient() : null;
-  const resolvedEncounter = await resolveServerChartEncounterId({
-    client: client as unknown as SupabaseEncounterIdBridgeClient | null,
-    encounterId: input.encounterId,
-    workspaceId,
+  const permissionContext = await timing.measure("permission", async () => {
+    const client = identity.source === "supabase_session" ? await createClient() : null;
+    const resolvedEncounter = await resolveServerChartEncounterId({
+      client: client as unknown as SupabaseEncounterIdBridgeClient | null,
+      encounterId: input.encounterId,
+      workspaceId,
+    });
+    if (!resolvedEncounter.ok) return { ok: false as const, resolvedEncounter };
+    const permissionAdapter = client
+      ? await loadWorkspacePermissionAdapterFromDb({
+          gateway: createSupabaseWorkspacePermissionGateway(
+            client as unknown as SupabaseWorkspacePermissionClient,
+          ),
+          workspaceId,
+          sessionUserId: identity.actorUserId,
+        })
+      : undefined;
+    return { ok: true as const, client, permissionAdapter, resolvedEncounter };
   });
-  if (!resolvedEncounter.ok) {
-    return Response.json(resolvedEncounter, { status: resolvedEncounter.status });
+  if (!permissionContext.ok) {
+    return timing.respond(
+      Response.json(permissionContext.resolvedEncounter, {
+        status: permissionContext.resolvedEncounter.status,
+      }),
+    );
   }
-  const permissionAdapter = client
-    ? await loadWorkspacePermissionAdapterFromDb({
-        gateway: createSupabaseWorkspacePermissionGateway(
-          client as unknown as SupabaseWorkspacePermissionClient
-        ),
-        workspaceId,
-        sessionUserId: identity.actorUserId,
-      })
-    : undefined;
-  const result = await saveChartOrderAction({
-    actorUserId: identity.actorUserId,
-    workspaceId,
-    input: { ...input, encounterId: resolvedEncounter.encounterId },
-    permissionAdapter,
-    gateway: client
-      ? createSupabaseChartOrderActionGateway(
-          client as unknown as SupabaseChartOrderActionRpcClient
-        )
-      : undefined,
-    auditGateway: client
-      ? createSupabaseLiveAuditAppendGateway(
-          client as unknown as SupabaseLiveAuditAppendRpcClient
-        )
-      : undefined,
-    fulfillmentGateway: client
-      ? createSupabaseFulfillmentWorkItemGateway(
-          client as unknown as SupabaseFulfillmentWorkItemRpcClient
-        )
-      : undefined,
-    // The chart core dispatches billing side effects only through the
-    // authenticated chart:update wrapper; the private helper is unreachable.
-    invoiceCandidateGateway: client
-      ? createSupabaseInvoiceCandidateSyncGateway(
-          client as unknown as SupabaseInvoiceCandidateSyncRpcClient
-        )
-      : undefined,
-    auditRequestId: getAuditRequestId(request),
-  });
+  const { resolvedEncounter } = permissionContext;
+  const result = await timing.measure("rpc", () =>
+    saveChartOrderAction({
+      actorUserId: identity.actorUserId,
+      workspaceId,
+      input: { ...input, encounterId: resolvedEncounter.encounterId },
+      permissionAdapter: permissionContext.permissionAdapter,
+      gateway: permissionContext.client
+        ? createSupabaseChartOrderActionGateway(
+            permissionContext.client as unknown as SupabaseChartOrderActionRpcClient,
+          )
+        : undefined,
+      auditGateway: permissionContext.client
+        ? createSupabaseLiveAuditAppendGateway(
+            permissionContext.client as unknown as SupabaseLiveAuditAppendRpcClient,
+          )
+        : undefined,
+      fulfillmentGateway: permissionContext.client
+        ? createSupabaseFulfillmentWorkItemGateway(
+            permissionContext.client as unknown as SupabaseFulfillmentWorkItemRpcClient,
+          )
+        : undefined,
+      // The chart core dispatches billing side effects only through the
+      // authenticated chart:update wrapper; the private helper is unreachable.
+      invoiceCandidateGateway: permissionContext.client
+        ? createSupabaseInvoiceCandidateSyncGateway(
+            permissionContext.client as unknown as SupabaseInvoiceCandidateSyncRpcClient,
+          )
+        : undefined,
+      auditRequestId: getAuditRequestId(request),
+    }),
+  );
 
-  return Response.json(result, { status: result.status });
+  return timing.respond(Response.json(result, { status: result.status }));
 }
 
 async function readJsonBody(request: Request): Promise<ChartOrderActionInput> {

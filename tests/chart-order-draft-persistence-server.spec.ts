@@ -145,6 +145,9 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
     { data: strictDraftInput(currentBody.etag) },
   );
   expect(unauthenticated.status()).toBe(401);
+  expect(unauthenticated.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=0\.0, rpc;dur=0\.0, total;dur=\d+\.\d$/,
+  );
   await expectJson(unauthenticated, {
     ok: false,
     denialReason: "unauthenticated",
@@ -180,6 +183,9 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
     },
   );
   expect(saved.status()).toBe(200);
+  expect(saved.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=\d+\.\d, rpc;dur=\d+\.\d, total;dur=\d+\.\d$/,
+  );
   expect(saved.headers()["etag"]).toBeUndefined();
   const savedBody = (await saved.json()) as {
     ok: true;
