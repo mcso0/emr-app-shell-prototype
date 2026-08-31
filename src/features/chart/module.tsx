@@ -228,6 +228,7 @@ import {
   type ChartOrderBillingSummaryFreshness,
 } from "@/features/chart/components/chart-order-finance-footer";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
+import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
 import { ChartSoapLiveBlockEditor } from "@/features/chart/components/chart-soap-live-block-editor";
 import { createLegacySoapTemplateBlocks } from "@/features/chart/components/chart-soap-block-schema";
 import type { ChartSoapBlock, ChartSoapPartialBlock } from "@/features/chart/components/chart-soap-block-schema";
@@ -787,6 +788,15 @@ const getDiagnosisSystemLabel = (diagnosis: Diagnosis) => {
 
   return "기타";
 };
+
+const getSoapSystemLabel = (diagnosis: Diagnosis) =>
+  "systemLabel" in diagnosis && typeof diagnosis.systemLabel === "string"
+    ? diagnosis.systemLabel
+    : getDiagnosisSystemLabel(diagnosis);
+
+const SOAP_VISIBLE_SYSTEM_TAB_COUNT = 3;
+
+const buildSystemSoapId = (systemLabel: string) => `system-${systemLabel}`;
 
 type DiagnosisCatalogItem = AssessmentClassificationCatalogItem;
 
@@ -3266,6 +3276,7 @@ async function cancelEncounterRoute({
 function SoapPanel({
   actorHeaders,
   collapseContentId,
+  diagnoses,
   encounterId,
   loading,
   onCollapse,
@@ -3276,6 +3287,7 @@ function SoapPanel({
 }: {
   actorHeaders?: Record<string, string>;
   collapseContentId: string;
+  diagnoses: Diagnosis[];
   encounterId: string;
   loading: boolean;
   onCollapse: () => void;
@@ -3288,9 +3300,7 @@ function SoapPanel({
     () => getSoapInitialBlockContent(soapNote),
   );
   const [editorVersion, setEditorVersion] = useState(0);
-  const [notice, setNotice] = useState(
-    "블록 왼쪽의 + 또는 / 명령으로 SOAP 템플릿과 내용을 추가할 수 있습니다.",
-  );
+  const [activeSoapId, setActiveSoapId] = useState("default");
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [saveState, setSaveState] = useState<SoapSaveState>("idle");
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
@@ -3300,6 +3310,38 @@ function SoapPanel({
   const lastHydratedUpdatedAtRef = useRef<string | null>(
     soapNote?.updatedAt ?? null,
   );
+  const diagnosisSystemTabs = useMemo(
+    () =>
+      Array.from(new Set(diagnoses.map(getSoapSystemLabel).filter(Boolean))).map(
+        (label) => ({
+          id: buildSystemSoapId(label),
+          label,
+        }),
+      ),
+    [diagnoses],
+  );
+  const visibleSystemTabs = diagnosisSystemTabs.slice(
+    0,
+    SOAP_VISIBLE_SYSTEM_TAB_COUNT,
+  );
+  const overflowSystemTabs = diagnosisSystemTabs.slice(
+    SOAP_VISIBLE_SYSTEM_TAB_COUNT,
+  );
+  const resolvedActiveSoapId =
+    activeSoapId === "default" ||
+    diagnosisSystemTabs.some((tab) => tab.id === activeSoapId)
+      ? activeSoapId
+      : "default";
+  const activeInOverflow = overflowSystemTabs.some(
+    (tab) => tab.id === resolvedActiveSoapId,
+  );
+  const soapTabItems = [
+    { value: "default", label: "기본 S/O" },
+    ...visibleSystemTabs.map((tab) => ({
+      value: tab.id,
+      label: tab.label,
+    })),
+  ];
 
   const coordinator = useMemo(
     () =>
@@ -3424,7 +3466,7 @@ function SoapPanel({
     setEditorContent(createLegacySoapTemplateBlocks(null));
     setEditorVersion((current) => current + 1);
     setResetDialogOpen(false);
-    setNotice("기본 SOAP 템플릿으로 초기화했습니다.");
+    toast.success("기본 SOAP 템플릿으로 초기화했습니다.");
   };
 
   const activeStatusText = loading
@@ -3509,15 +3551,49 @@ function SoapPanel({
         </ChartPanelActionGroup>
       </div>
 
-      {notice ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="shrink-0 border-b border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-4 py-1.5 emr-text-metadata text-[var(--emr-status-info-text)]"
-        >
-          {notice}
+      <div
+        data-slot="chart-soap-toolbar"
+        className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-border-default)] px-3"
+      >
+        <div className="relative z-20 flex min-w-0 flex-1 items-stretch gap-2.5">
+          <ChartLineTabGroup
+            aria-label="SOAP 분류"
+            items={soapTabItems}
+            value={resolvedActiveSoapId}
+            onValueChange={setActiveSoapId}
+          />
+          {overflowSystemTabs.length ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label="SOAP 더보기"
+                aria-pressed={activeInOverflow}
+                className={cn(
+                  "inline-flex h-full shrink-0 items-center gap-1 px-2 emr-text-body font-semibold outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+                  activeInOverflow
+                    ? "text-foreground"
+                    : "text-muted-foreground",
+                )}
+              >
+                더보기
+                <Badge variant="outline" className="ml-1 px-1.5 text-[10px]">
+                  {overflowSystemTabs.length}
+                </Badge>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
+                {overflowSystemTabs.map((tab) => (
+                  <DropdownMenuItem
+                    key={tab.id}
+                    className="h-8 cursor-pointer"
+                    onClick={() => setActiveSoapId(tab.id)}
+                  >
+                    {tab.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       {soapNote?.blockDocumentError === "invalid_stored_document" ? (
         <EmrInlineAlert
@@ -3591,7 +3667,7 @@ function SoapPanel({
           disabled={writeDisabled}
           initialContent={editorContent}
           onDocumentChange={handleDocumentChange}
-          onNotice={setNotice}
+          onNotice={(message) => toast.info(message)}
           onReady={handleEditorReady}
         />
       </div>
@@ -12307,6 +12383,7 @@ export function ChartContent({
                 key={`chart-soap-${bundle.encounter.id}`}
                 actorHeaders={actorHeaders}
                 collapseContentId="chart-soap-panel-content"
+                diagnoses={diagnosisRows}
                 encounterId={bundle.encounter.id}
                 loading={soapLoading}
                 onCollapse={() => setClinicalPanelCollapsed("soap", true)}

@@ -794,6 +794,16 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
     page.getByRole("heading", { name: "Subject/Object" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "소화기", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "블록 왼쪽의 + 또는 / 명령으로 SOAP 템플릿과 내용을 추가할 수 있습니다.",
+      { exact: true },
+    ),
+  ).toHaveCount(0);
   await expect(page.getByLabel("SOAP 블록 문서")).toBeVisible();
   await expect(
     page.getByText("주관적 · 보호자 진술", { exact: true }),
