@@ -75,6 +75,9 @@ test("order action route confirms selected orders via mock fallback and reads af
     { data: validConfirmInput },
   );
   expect(unauthenticated.status()).toBe(401);
+  expect(unauthenticated.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=0\.0, rpc;dur=0\.0, total;dur=\d+\.\d$/,
+  );
   await expectJson(unauthenticated, {
     ok: false,
     denialReason: "unauthenticated",
@@ -114,6 +117,9 @@ test("order action route confirms selected orders via mock fallback and reads af
     },
   );
   expect(saved.status()).toBe(200);
+  expect(saved.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=\d+\.\d, rpc;dur=\d+\.\d, total;dur=\d+\.\d$/,
+  );
   expect(saved.headers()["etag"]).toBeUndefined();
   const savedBody = (await saved.json()) as {
     ok: true;
@@ -812,9 +818,9 @@ test("order action route wires only server-owned action, billing, and fulfillmen
   expect(routeSource).not.toContain("createSupabaseOrderCatalogGateway");
   expect(routeSource).not.toContain("catalogGateway: client");
   expect(routeSource).toContain("createSupabaseInvoiceCandidateSyncGateway");
-  expect(routeSource).toContain("invoiceCandidateGateway: client");
+  expect(routeSource).toContain("invoiceCandidateGateway: permissionContext.client");
   expect(routeSource).toContain("createSupabaseFulfillmentWorkItemGateway");
-  expect(routeSource).toContain("fulfillmentGateway: client");
+  expect(routeSource).toContain("fulfillmentGateway: permissionContext.client");
 });
 
 test("order catalog Supabase gateway reads workspace chart-search rows from RPC", async () => {

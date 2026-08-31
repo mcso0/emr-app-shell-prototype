@@ -134,12 +134,18 @@ test("execution mutation route keeps identity and capability enforcement server-
   const route = `/api/workspaces/${workspaceId}/chart/order-execution-mutations`;
   const unauthenticated = await request.post(route, { data: validInput });
   expect(unauthenticated.status()).toBe(401);
+  expect(unauthenticated.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=0\.0, rpc;dur=0\.0, total;dur=\d+\.\d$/,
+  );
 
   const amended = await request.post(route, {
     data: validInput,
     headers: { "x-clair-demo-session-user-id": "user-vet" },
   });
   expect(amended.status()).toBe(200);
+  expect(amended.headers()["server-timing"]).toMatch(
+    /^session;dur=\d+\.\d, permission;dur=\d+\.\d, rpc;dur=\d+\.\d, total;dur=\d+\.\d$/,
+  );
   await expect(amended.json()).resolves.toMatchObject({
     ok: true,
     enforcedBy: "chart-order-execution-mutation",

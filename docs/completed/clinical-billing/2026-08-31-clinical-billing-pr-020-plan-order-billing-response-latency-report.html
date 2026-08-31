@@ -31,9 +31,9 @@
   <body>
     <main>
       <header>
-        <p class="eyebrow">CLINICAL-BILLING-PR-020 · Candidate</p>
+        <p class="eyebrow">CLINICAL-BILLING-PR-020 · Fixed staging verified</p>
         <h1>Plan/Order 금액 반영 지연 개선</h1>
-        <p class="meta">2026-08-31 · 최신 origin/main 기반 독립 clean worktree · 원격 DB 및 배포 미적용</p>
+        <p class="meta">2026-08-31 · staging merge e230d2db · shared migration applied · production unchanged</p>
       </header>
 
       <section class="summary">
@@ -75,14 +75,16 @@
           <li><span class="ok">PASS:</span> secret scan, docs links, diff whitespace, ESLint, TypeScript, production build.</li>
           <li><span class="ok">PASS:</span> 인앱 브라우저에서 40ms 이내 예상 상태 확인, 저장 뒤 139,000원 서버 금액 전환, invalid 입력 시 직전 금액 유지와 청구 비활성화, console error 0건.</li>
           <li><span class="ok">APPROVE:</span> 독립 workspace·권한·RPC·ACL 경계 리뷰에서 P0–P3 추가 발견 0건.</li>
+          <li><span class="ok">PASS:</span> PR #681 Release Check와 staging 병합, 승인된 shared Supabase migration의 원격 ACL·합성 rollback 검증.</li>
+          <li><span class="ok">PASS:</span> 고정 스테이징 합성 smoke에서 64ms 예상 표시, 201,000원→402,000원→201,000원 확정 전환, 정상 mutation 2회와 후속 Summary GET 0회.</li>
         </ul>
       </section>
 
       <section>
-        <h2>릴리스 경계와 다음 단계</h2>
+        <h2>릴리스 상태와 다음 단계</h2>
         <ul>
-          <li><span class="warn">미적용:</span> remote Supabase migration, fixed staging, main, production.</li>
-          <li>원격 적용은 exact candidate SHA, 대상 project, migration 파일, smoke 경로, rollback 후보를 포함한 별도 승인 패킷 뒤에만 진행한다.</li>
+          <li><span class="ok">적용:</span> staging, 승인된 shared Supabase migration, fixed staging deployment <code>dpl_CXPRbT2rhYgKQgToa5kcnifbVY2o</code>.</li>
+          <li><span class="warn">미적용:</span> <code>main</code>과 production. 기존 production deployment와 alias는 변경하지 않았다.</li>
           <li>다음 순차 단계는 개인정보 없는 <code>Server-Timing</code> 계측과 확인된 Supabase 리전에 맞춘 Vercel 함수 리전 정렬이다.</li>
         </ul>
       </section>
