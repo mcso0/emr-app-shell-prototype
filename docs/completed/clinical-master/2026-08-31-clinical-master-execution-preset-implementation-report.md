@@ -526,9 +526,11 @@ workspace adoption 뒤 새 release의 검토 결정을 영속화하는 별도 pa
 current는 revision 2라서, trigger가 `accept_source`를 fail closed로 거부하는 것이
 정상이다. 임상 검증이 연기된 현재 범위에서는 이 108개를 강제로 재게시하지 않고
 각 workspace의 기존 profile-matched 프리셋을 보존한 채 이번 update를 `dismiss`했다.
-나머지 414개는 exact current preset을 `accept_source`했다. packet은 exact target,
-release, row count와 expected revision을 잠그며, `BEGIN`/`ROLLBACK` 리허설과 잔여물
-0 확인 뒤 독립 검토 High/Medium/Low `0/0/0` 승인을 받고 영속 실행했다.
+나머지 414개 current-scope 행은 demo·청담에서 414개를 `accept_source`했고,
+pilot에서는 413개를 `accept_source`, 이미 current였던 1개를 auto-resolve했다.
+packet은 exact target, release, row count와 expected revision을 잠그며,
+`BEGIN`/`ROLLBACK` 리허설과 잔여물 0 확인 뒤 독립 검토 High/Medium/Low `0/0/0`
+승인을 받고 영속 실행했다.
 
 | 워크스페이스 | catalog / preset 연결 / 빈 기본값 | 활성 / 사용 중지 | 이번 release 결정 | 차트 검색 프리셋 행 |
 | --- | --- | --- | --- | --- |
